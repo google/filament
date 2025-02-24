@@ -34,6 +34,12 @@ object KTX1Loader {
         var srgb = false
     }
 
+    class IndirectLightBundle(val indirectLight: IndirectLight? = null, val cubemap: Texture? = null) {
+    }
+
+    class SkyboxBundle(val skybox: Skybox? = null, val cubemap: Texture? = null) {
+    }
+
     /**
      * Consumes the content of a KTX file and produces a [Texture] object.
      *
@@ -56,10 +62,15 @@ object KTX1Loader {
      * @param options Loader options.
      * @return The resulting Filament texture, or null on failure.
      */
-    fun createIndirectLight(engine: Engine, buffer: Buffer, options: Options = Options()): IndirectLight {
+    fun createIndirectLight(engine: Engine, buffer: Buffer, options: Options = Options()): IndirectLightBundle {
         val nativeEngine = engine.nativeObject
-        val nativeIndirectLight = nCreateIndirectLight(nativeEngine, buffer, buffer.remaining(), options.srgb)
-        return IndirectLight(nativeIndirectLight)
+        val sphericalHarmonics = getSphericalHarmonics(buffer)
+        if (sphericalHarmonics == null) {
+            return IndirectLightBundle()
+        }
+        val ktxTexture = createTexture(engine, buffer, options)
+        val nativeIndirectLight = nCreateIndirectLight(nativeEngine, ktxTexture.nativeObject, sphericalHarmonics)
+        return IndirectLightBundle(IndirectLight(nativeIndirectLight), ktxTexture)
     }
 
     /**
@@ -70,10 +81,11 @@ object KTX1Loader {
      * @param options Loader options.
      * @return The resulting Filament texture, or null on failure.
      */
-    fun createSkybox(engine: Engine, buffer: Buffer, options: Options = Options()): Skybox {
+    fun createSkybox(engine: Engine, buffer: Buffer, options: Options = Options()): SkyboxBundle {
         val nativeEngine = engine.nativeObject
-        val nativeSkybox = nCreateSkybox(nativeEngine, buffer, buffer.remaining(), options.srgb)
-        return Skybox(nativeSkybox)
+        val ktxTexture = createTexture(engine, buffer, options)
+        val nativeSkybox = nCreateSkybox(nativeEngine, ktxTexture.nativeObject)
+        return SkyboxBundle(Skybox(nativeSkybox), ktxTexture)
     }
 
     /**
@@ -89,7 +101,7 @@ object KTX1Loader {
     }
 
     private external fun nCreateKTXTexture(nativeEngine: Long, buffer: Buffer, remaining: Int, srgb: Boolean): Long
-    private external fun nCreateIndirectLight(nativeEngine: Long, buffer: Buffer, remaining: Int, srgb: Boolean): Long
+    private external fun nCreateIndirectLight(nativeEngine: Long, ktxTexture: Long, sphericalHarmonics: FloatArray) : Long
     private external fun nGetSphericalHarmonics(buffer: Buffer, remaining: Int, outSphericalHarmonics: FloatArray): Boolean
-    private external fun nCreateSkybox(nativeEngine: Long, buffer: Buffer, remaining: Int, srgb: Boolean): Long
+    private external fun nCreateSkybox(nativeEngine: Long, ktxTexture: Long) : Long
 }
