@@ -1,0 +1,228 @@
+Name 
+
+    EXT_gpu_program_parameters 
+
+Name Strings 
+
+    GL_EXT_gpu_program_parameters 
+
+Contributors
+
+    Pat Brown
+    Haroon Sheikh
+   
+Contact 
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com) 
+    Geoff Stahl, Apple Computer, Inc. (gstahl 'at' apple.com)
+
+Status 
+
+    Shipping for GeForce 8 Series (November 2006) 
+
+Version 
+
+    Last Modified Date:         4/17/08
+    Revision:                   7
+
+Number 
+
+    320 
+
+Dependencies 
+
+    ARB_vertex_program or ARB_fragment_program is required. 
+
+    This specification is written against the spec language from the 
+    ARB_vertex_program extension. 
+
+Overview 
+
+    This extension provides a new set of procedures to load multiple 
+    consecutive program environment parameters more efficiently, via a single 
+    GL call instead of multiple calls.  This will reduce the amount of CPU 
+    overhead involved in loading parameters. 
+
+    With the existing ARB_vertex_program and ARB_fragment_program APIs, 
+    program parameters must be loaded one at a time, via separate calls. 
+    While the NV_vertex_program extension provides a set of similar functions 
+    that can be used to load program environment parameters (which are 
+    equivalent to "program parameters" in NV_vertex_program), no such function 
+    exists for program local parameters. 
+
+New Procedures and Functions 
+
+    void ProgramEnvParameters4fvEXT(enum target, uint index, sizei count, 
+                                   const float *params); 
+
+    void ProgramLocalParameters4fvEXT(enum target, uint index, sizei count, 
+                                     const float *params); 
+
+New Tokens 
+    
+    None. 
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation) 
+
+    (modify ARB_vertex_program and ARB_fragment_program, add paragraph after
+    introduction of ProgramEnvParameter* calls) 
+
+    The command 
+
+      void ProgramEnvParameters4fvEXT(enum target, uint index, sizei count, 
+                                      const float *params); 
+
+    updates the values of the program environment parameters numbered <index>
+    through <index> + <count> - 1 for the given program target <target>.
+    <params> points to an array of 4*<count> values, where the first four are
+    used to update the program environment parameter numbered <index> and the
+    last four update the program environment parameter numbered <index> +
+    <count> - 1.  The error INVALID_VALUE is generated if <count> is less than
+    zero or if the sum of <index> and <count> is greater than the number of
+    program environment parameters supported by <target>.
+
+    (modify ARB_vertex_program and ARB_fragment_program, add paragraph after
+    introduction of ProgramLocalParameter* calls) 
+
+    The command 
+
+      void ProgramLocalParameters4fvEXT(enum target, uint index, sizei count, 
+                                        const float *params); 
+
+    updates the values of the program local parameters numbered <index>
+    through <index> + <count> - 1 belonging to the program object currently
+    bound to <target>.  <params> points to an array of 4*<count> values, where
+    the first four are used to update the program local parameter numbered
+    <index> and the last four update the program local parameter numbered
+    <index> + <count> - 1.  The error INVALID_VALUE is generated if <count> is
+    less than zero or if the sum of <index> and <count> is greater than the
+    number of program local parameters supported by <target>.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization) 
+
+    None. 
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment 
+Operations and the Frame Buffer) 
+
+    None. 
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions) 
+
+    None. 
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and 
+State Requests) 
+
+    None. 
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance) 
+
+    None. 
+
+Additions to the AGL/GLX/WGL Specifications 
+
+    None. 
+
+GLX Protocol 
+
+    Two new GL commands are added.  The following commands are sent to the
+    server as part of a glXRender request:
+
+        ProgramEnvParameters4fvEXT 
+            2           16+16*n         rendering command length 
+            2           4281            rendering command opcode 
+            4           ENUM            target 
+            4           CARD32          index 
+            4           CARD32          n 
+            16*n        FLOAT32         params 
+
+        ProgramLocalParameters4fvEXT 
+            2           16+16*n         rendering command length 
+            2           4282            rendering command opcode 
+            4           ENUM            target 
+            4           CARD32          index 
+            4           CARD32          n 
+            16*n        FLOAT32         params 
+
+Errors 
+
+    INVALID_VALUE is generated by ProgramEnvParameters4fvEXT or
+    ProgramLocalParameters4fvEXT if <count> is less than zero.
+
+    INVALID_VALUE is generated by ProgramEnvParameters4fvEXT if <index> plus
+    <count> is greater than the number of program environment parameters
+    supported by <target>.
+
+    INVALID_VALUE is generated by ProgramLocalParameters4fvEXT if <index> plus
+    <count> is greater than the number of program local parameters supported
+    by <target>.
+
+New State 
+
+    None. 
+
+Issues 
+
+    (1) Should a set of ProgramEnvParameters*EXT() calls be added, or is using 
+        NV_vertex_program's ProgramParameters*NV() sufficient? 
+
+      RESOLVED:  We should add an ARB-style ProgramEnvParameters*() call for 
+      naming consistency. Also ProgramParameters*NV() are not available on 
+      all platforms.
+
+    (2) Should an equivalent set of calls be added to query multiple program 
+        parameters at once? 
+
+      RESOLVED:  No. 
+
+    (3) Should double-precision versions be supported? 
+
+      RESOLVED:  No.  Double-precision parameter values will be converted to 
+      single-precision in current driver implementations, anyway. 
+
+    (4) Why is this spec called "EXT_gpu_program_parameters"?
+
+      RESOLVED:  The functionality provided by this spec applies to more than
+      one program type.  The term "GPU" was used in the extension name to
+      indicate functionality common to all supported program types, which are
+      commonly executed on a GPU.
+
+    (5) Is it an error to load multiple parameters with a <count> of zero?
+
+      RESOLVED:  No.  However, it was illegal in versions of the spec prior to
+      9/27/07.  The spec was changed to resolve differences between the
+      shipping implementations from NVIDIA (which did enforce the error) and
+      Apple (which did not).  The new behavior is more consistent with the
+      standard OpenGL practice of allowing zero to be passed to GLsizei
+      parameters, and avoids the need for special-case behavior to
+      handle/avoid zero counts in both drivers and applications.  Since
+      loading zero program parameters has no actual effect, the only
+      difference between the two behaviors is the update of the GL error
+      state.
+
+
+Revision History 
+
+    Rev.    Date    Author    Changes 
+    ----  --------  --------  -------------------------------------------- 
+    7     04/17/08  pbrown    Fix GLX protocol section to indicate two
+                              functions instead of four.
+
+    6     09/27/07  pbrown    Change the spec to indicate that it's not
+                              illegal to load zero parameters, just
+                              pointless.
+
+    5     11/06/06  mjk       Indicate shipping
+
+    4     06/28/06  barthold  Make clear that this spec modifies both
+                              ARB_vertex_program and ARB_fragment_program.
+
+    3     06/27/06  pbrown    Fix incorrect error language in checking the
+                              sum of <index> and <count>, added an issue
+                              about the spec name.
+
+    2     06/02/06  haroon    Changed to EXT. Added contributors.
+
+    1     04/24/06  pbrown    Initial revision. 
+

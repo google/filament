@@ -1,0 +1,133 @@
+syntax = "proto2";
+
+package protobuf_mutator;
+
+import "google/protobuf/any.proto";
+
+message Msg {
+  enum Enum {
+    ENUM_0 = 0;
+    ENUM_1 = 1;
+    ENUM_2 = 2;
+    ENUM_3 = 3;
+    ENUM_4 = 4;
+    ENUM_5 = 5;
+    ENUM_6 = 6;
+    ENUM_7 = 7;
+    ENUM_8 = 8;
+    ENUM_9 = 9;
+  }
+
+  message SubMsg {
+    optional int64 optional_int64 = 1;
+  }
+
+  required double required_double = 1;
+  required float required_float = 2;
+  required int32 required_int32 = 3;
+  required int64 required_int64 = 4;
+  required uint32 required_uint32 = 5;
+  required uint64 required_uint64 = 6;
+  required sint32 required_sint32 = 7;
+  required sint64 required_sint64 = 8;
+  required fixed32 required_fixed32 = 9;
+  required fixed64 required_fixed64 = 10;
+  required sfixed32 required_sfixed32 = 11;
+  required sfixed64 required_sfixed64 = 12;
+  required bool required_bool = 13;
+  required string required_string = 14;
+  required bytes required_bytes = 15;
+  required Enum required_enum = 16;
+  required SubMsg required_msg = 17;
+
+  optional double optional_double = 18;
+  optional float optional_float = 19;
+  optional int32 optional_int32 = 20;
+  optional int64 optional_int64 = 21;
+  optional uint32 optional_uint32 = 22;
+  optional uint64 optional_uint64 = 23;
+  optional sint32 optional_sint32 = 24;
+  optional sint64 optional_sint64 = 25;
+  optional fixed32 optional_fixed32 = 26;
+  optional fixed64 optional_fixed64 = 27;
+  optional sfixed32 optional_sfixed32 = 28;
+  optional sfixed64 optional_sfixed64 = 29;
+  optional bool optional_bool = 30;
+  optional string optional_string = 31;
+  optional bytes optional_bytes = 32;
+  optional Enum optional_enum = 33;
+  optional Msg optional_msg = 34;
+
+  repeated double repeated_double = 35;
+  repeated float repeated_float = 36;
+  repeated int32 repeated_int32 = 37;
+  repeated int64 repeated_int64 = 38;
+  repeated uint32 repeated_uint32 = 39;
+  repeated uint64 repeated_uint64 = 40;
+  repeated sint32 repeated_sint32 = 41;
+  repeated sint64 repeated_sint64 = 42;
+  repeated fixed32 repeated_fixed32 = 43;
+  repeated fixed64 repeated_fixed64 = 44;
+  repeated sfixed32 repeated_sfixed32 = 45;
+  repeated sfixed64 repeated_sfixed64 = 46;
+  repeated bool repeated_bool = 47;
+  repeated string repeated_string = 48;
+  repeated bytes repeated_bytes = 49;
+  repeated Enum repeated_enum = 50;
+  repeated Msg repeated_msg = 51;
+
+  oneof OneOf {
+    double oneof_double = 52;
+    float oneof_float = 53;
+    int32 oneof_int32 = 54;
+    int64 oneof_int64 = 55;
+    uint32 oneof_uint32 = 56;
+    uint64 oneof_uint64 = 57;
+    sint32 oneof_sint32 = 58;
+    sint64 oneof_sint64 = 59;
+    fixed32 oneof_fixed32 = 60;
+    fixed64 oneof_fixed64 = 61;
+    sfixed32 oneof_sfixed32 = 62;
+    sfixed64 oneof_sfixed64 = 63;
+    bool oneof_bool = 64;
+    string oneof_string = 65;
+    bytes oneof_bytes = 66;
+    Enum oneof_enum = 67;
+    Msg oneof_msg = 68;
+  }
+
+  optional SubMsg sub_message = 69;
+
+  required group Group = 70 {
+    required bool required_bool = 1;
+    optional bool optional_bool = 2;
+    repeated bool repeated_bool = 3;
+  }
+
+  message EmptyMessage {}
+
+  message RegressionMessage {
+    enum SingleValueEnum { ENUM_0 = 0; }
+    optional SingleValueEnum enum = 2;
+  }
+
+  message SmallMessage {
+    enum Enum {
+      ENUM_0 = 0;
+      ENUM_1 = 1;
+      ENUM_2 = 2;
+      ENUM_3 = 3;
+    }
+
+    optional bool opt_bool = 1;
+    optional Enum opt_enum = 2;
+  }
+
+  message MapMessage {
+    map<string, int32> map1 = 1;
+    map<int32, Msg> map2 = 2;
+  }
+
+  optional google.protobuf.Any any = 90;
+}
+

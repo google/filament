@@ -1,0 +1,240 @@
+Name
+
+    WGL_I3D_gamma
+
+Name Strings
+
+    WGL_I3D_gamma
+
+Contact
+
+    Dale Kirkland, Intense3D (kirkland 'at' intense3d.com)
+
+Status
+
+    Complete
+
+Version
+
+    Date: 04/17/2000   Revision 1.0
+
+Number
+
+    251
+
+Dependencies
+
+    The extension is written against the OpenGL 1.2.1 Specification
+    although it should work on any previous OpenGL specification.
+
+    The WGL_EXT_extensions_string extension is required.
+
+Overview
+
+    The gamma extension provides an interface to read and load the
+    gamma table.  Other options such as having gamma only affect
+    OpenGL windows can also be set.
+
+IP Status
+
+    None
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    BOOL wglGetGammaTableParametersI3D(HDC hDC,
+                                       int iAttribute,
+                                       int *piValue)
+
+    BOOL wglSetGammaTableParametersI3D(HDC hDC,
+                                       int iAttribute,
+                                       const int *piValue)
+
+    BOOL wglGetGammaTableI3D(HDC hDC,
+                             int iEntries,
+                             USHORT *puRed,
+                             USHORT *puGreen,
+                             USHORT *puBlue)
+
+    BOOL wglSetGammaTableI3D(HDC hDC,
+                             int iEntries,
+                             const USHORT *puRed,
+                             const USHORT *puGreen,
+                             const USHORT *puBlue)
+
+New Tokens
+
+    Accepted by the <iAttribute> parameter of wglGetGammaTableParametersI3D:
+
+      WGL_GAMMA_TABLE_SIZE_I3D            0x204E
+      WGL_GAMMA_EXCLUDE_DESKTOP_I3D       0x204F
+
+    Accepted by the <iAttribute> parameter of wglSetGammaTableParametersI3D:
+
+      WGL_GAMMA_EXCLUDE_DESKTOP_I3D       0x204F
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+Additions to the WGL Specification
+
+    Gamma correction for each monitor that supports a gamma table is
+    controlled by loading the gamma table and setting the appropriate
+    parameters.  The function wglSetGammaTableI3D loads the gamma
+    table:
+
+      BOOL wglSetGammaTableI3D(HDC hDC,
+                               int iEntries,
+                               const USHORT *puRed,
+                               const USHORT *puGreen,
+                               const USHORT *puBlue)
+
+    <hDC> is a device context for the graphics adapter or a window
+    residing on a monitor whose graphics adapter supports the gamma
+    extension.  For multiple monitor systems, only the gamma table
+    associated with <hDC> is loaded.
+
+    The red, green, and blue data for the gamma table are pointed to by
+    <puRed>, <puGreen> and <puBlue> respectively.  Each color array
+    must contain <iEntries> entries.  Gamma entries     specified outside
+    the hardware gamma table are ignored.
+
+    The red, green, and blue data is defined using 16-bit precision.
+    If the hardware gamma table has less than 16 bits of precision, the
+    data is shifted down so that only the most-significant bits are
+    used without rounding.
+
+    The current gamma table can be obtained by calling the function
+    wglGetGammaTableI3D:
+
+      BOOL wglGetGammaTableI3D(HDC hDC,
+                               int iEntries,
+                               USHORT *puRed,
+                               USHORT *puGreen,
+                               USHORT *puBlue)
+
+    <hDC> is a device context for the graphics adapter or a window
+    residing on a monitor whose graphics adapter supports the gamma
+    extension.  For multiple monitor systems, only the gamma table
+    associated with <hDC> is read.
+
+    <puRed>, <puGreen> and <puBlue> each point to an unsigned-short
+    array containing <iEntries>.  If <iEntries> is larger than the
+    hardware gamma table, only the number of entries that correspond to
+    the size of the hardware gamma table will be returned.
+
+    The red, green and blue data is defined using 16-bit precision
+    according to the description above.  If the hardware gamma table
+    has less than 16 bits of precision, the data is shifted up.
+
+    Gamma table parameters can be set with the function
+    wglSetGammaTableParametersI3D:
+
+      BOOL wglSetGammaTableParametersI3D(HDC hDC,
+                                         int iAttribute,
+                                         const int *piValue)
+
+    <hDC> is a device context for the graphics adapter or a window
+    residing on a monitor whose graphics adapter supports the gamma
+    extension.  For multiple monitor systems, only the gamma table
+    associated with <hDC> is set.
+
+    <iAttribute> must be one of the following values:
+
+      WGL_GAMMA_EXCLUDE_DESKTOP_I3D
+            If the value pointed to by <piValue> is non-zero, only the
+            contents of OpenGL windows are gamma corrected; the
+            desktop will not be gamma corrected.  If the value pointed
+            to by <piValue> is zero, all windows and the desktop are
+            gamma corrected.  This value defaults to zero.
+
+    Gamma table parameters can be queried with the function
+    wglGetGammaTableParametersI3D:
+
+      BOOL wglGetGammaTableParametersI3D(HDC hDC,
+                                         int iAttribute,
+                                         int *piValue)
+
+    <hDC> is a device context for the graphics adapter or a window
+    residing on a monitor whose graphics adapter supports the gamma
+    extension.  For multiple monitor systems, only the gamma table
+    parameters associated with <hDC> are returned.
+
+    <iAttribute> must be one of the following values:
+
+      WGL_GAMMA_EXCLUDE_DESKTOP_I3D
+            Returns the current setting for desktop gamma correction.
+            If the value returned in the location pointed to by
+            <piValue> is non-zero, only the contents of OpenGL windows
+            are gamma corrected; the desktop will not be gamma
+            corrected.
+
+      WGL_GAMMA_TABLE_SIZE_I3D
+            Returns the number of entries in the hardware gamma table.
+
+Dependencies on WGL_EXT_extensions_string
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress.  Because this extension is a WGL extension, it
+    is not included in the GL_EXTENSIONS string.  Its existence can be
+    determined with the WGL_EXT_extensions_string extension.
+
+Errors
+
+    If the function succeeds, a value of TRUE is returned.  If the
+    function fails, a value of FALSE is returned.  To get extended
+    error information, call GetLastError.
+
+      ERROR_DC_NOT_FOUND         The <hDC> was not valid.
+
+      ERROR_NO_SYSTEM_RESOURCES  There is no support for a gamma table
+                                 for the adapter specified by <hDC>.
+
+      ERROR_INVALID_DATA         <iAttribute> is not a valid value.
+
+      ERROR_INVALID_DATA         <iEntries> is not a positive value.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    11/24/1999  0.1  First draft.
+    11/29/1999  0.2  Changed wglGetGammaTableI3D and
+                     wglSetGammaTableI3D to accept three pointers, one
+                     each for the red, green, and blue data for the
+                     gamma table.
+    04/17/2000  1.0  Fixed a few typos.
+                     Driver released to ISVs.

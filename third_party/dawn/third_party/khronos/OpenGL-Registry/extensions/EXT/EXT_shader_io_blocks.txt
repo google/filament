@@ -1,0 +1,1037 @@
+Name
+
+    EXT_shader_io_blocks
+
+Name String
+
+    GL_EXT_shader_io_blocks
+
+Contact
+
+    Jon Leech (oddhack 'at' sonic.net)
+    Daniel Koch, NVIDIA (dkoch 'at' nvidia.com)
+
+Contributors
+
+    Daniel Koch, NVIDIA (dkoch 'at' nvidia.com)
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+    Slawomir Grajewski, Intel
+    Graham Connor, Imagination
+    Ben Bowman, Imagination
+    Jonathan Putsman, Imagination
+
+Notice
+
+    Copyright (c) 2008-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+    Portions Copyright (c) 2013-2014 NVIDIA Corporation.
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: October 8, 2014
+    Revision: 8
+
+Number
+
+    OpenGL ES Extension #180
+
+Dependencies
+
+    OpenGL ES 3.1 and OpenGL ES Shading Language 3.10 are required.
+
+    This specification is written against the OpenGL ES 3.1 (March 17,
+    2014) and OpenGL ES 3.10 Shading Language (March 17, 2014)
+    Specifications.
+
+    OES_shader_multisample_interpolation trivially affects the definition of
+    this extension.
+
+    EXT_geometry_shader interacts with this extension.
+
+    EXT_tessellation_shader interacts with this extension.
+
+Overview
+
+    This extension extends the functionality of interface blocks to
+    support input and output interfaces in the OpenGL ES Shading Language.
+
+    Input and output interface blocks are used for forming the
+    interfaces between vertex, tessellation control, tessellation
+    evaluation, geometry and fragment shaders. This accommodates passing
+    arrays between stages, which otherwise would require multi-dimensional
+    array support for tessellation control outputs and for tessellation
+    control, tessellation evaluation, and geometry shader inputs.
+
+    This extension provides support for application defined
+    interface blocks which are used for passing application-specific
+    information between shader stages.
+
+    This extension moves the built-in "per-vertex" in/out variables
+    to a new built-in gl_PerVertex block. This is necessary for
+    tessellation and geometry shaders which require a separate
+    instance for each vertex, but it can also be useful for vertex
+    shaders.
+
+    Finally, this extension allows the redeclaration of the
+    gl_PerVertex block in order to reduce the set of variables that must
+    be passed between shaders.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 7 of the OpenGL ES 3.1 Specification (Programs and Shaders)
+
+    Modify section 7.4.1 "Shader Interface Matching":
+
+    When multiple shader stages are active, the outputs of one stage form an
+    interface with the inputs of the next stage.  At each such interface,
+    shader inputs are matched up against outputs from the previous stage:
+
+      * An output block is considered to match an input block in the
+        subsequent shader if the two blocks have the same block name, and
+        the members of the block match exactly in name, type, qualification,
+        and declaration order.
+
+      * An output variable is considered to match an input variable in the
+        subsequent shader if:
+
+        - the two variables match in name, type, and qualification; or
+
+        - the two variables are declared with the same location layout
+          qualifier and match in type and qualification.
+
+    Variables or block members declared as structures are considered to
+    match in type if and only if structure members match in name, type,
+    qualification, and declaration order. Variables or block members
+    declared as arrays are considered to match in type only if both
+    declarations specify the same element type and array size. The rules for
+    determining if variables or block members match in qualification are
+    found in the OpenGL ES Shading Language Specification.
+
+    For program objects containing multiple shaders, LinkProgram will check
+    for mismatches on interfaces between shader stages in the program being
+    linked and generate a link error if a mismatch is detected. A link error
+    will be generated if any statically referenced input variable or block
+    does not have a matching output.
+
+    With separable program objects ...
+
+    At an interface between program objects, the set of inputs and outputs
+    are considered to match exactly if and only if:
+
+      * Every declared input block or variable has a matching output,
+        as described above.
+
+      * There are no output blocks or user-defined output variables declared
+        without a matching input block or variable declaration.
+
+      * All matched input and output variables (in a block or otherwise) have
+        identical precision qualification.
+
+    When the set of inputs and outputs ...
+
+                                                                            [allow but not require
+                                                                             redeclaration]
+    When using any built-in input or output in the gl_PerVertex block in
+    separable program objects, shader code may redeclare that block prior
+    to use. If the shader does not redeclare the block, the intrinsically
+    declared definition of that block will be used.
+
+    A separable program will fail to link if:
+
+      * the shader uses a built-in block member not found in the
+        (re)declaration of that block.
+
+    There is one exception to this rule described below.
+
+    As described above, an exact interface match requires matching built-in
+    input and output blocks. At an interface between two non-fragment shader
+    stages, the gl_PerVertex input and output blocks are considered to match
+    if and only if the block members match exactly in name, type,
+    qualification, and declaration order. At an interface involving the
+    fragment shader stage, the presence or absence of any built-in output
+                                                                            [Relax per Issue 9]
+    does not affect interface matching. At an interface involving the
+    vertex shader stage, built-in outputs not found in a block in the
+    vertex shader are considered to match the corresponding inputs found
+    in the gl_PerVertex input block of the subsequent non-fragment stage,
+    provided they match in precision qualification.
+
+    Built-in inputs or outputs not found in blocks do not affect interface
+    matching. Any such built-in inputs are well-defined unless they are
+    derived from built-in outputs not written by the previous shader stage.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Additions to the OpenGL ES Shading Language 3.10 Specification
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_EXT_shader_io_blocks : <behavior>
+
+    where <behavior> is as specified in section 3.4.
+
+    A new preprocessor #define is added to the OpenGL ES Shading Language:
+
+      #define GL_EXT_shader_io_blocks 1
+
+    If the EXT_geometry_shader extension is enabled, the
+    EXT_shader_io_blocks extension is also implicitly enabled.
+
+    If the EXT_tessellation_shader extension is enabled, the
+    EXT_shader_io_blocks extension is also implicitly enabled.
+
+
+    Modify section 3.8 "Identifiers:"
+
+    Replace the second paragraph with the following:
+
+    Identifiers starting with "gl_" are reserved for use by OpenGL ES, and
+    may not be declared in a shader as either a variable or a function; this
+    results in a compile-time error. However, as noted in the specification,
+    there are some cases where previously declared variables can be redeclared,
+    and predeclared "gl_" names are allowed to be redeclared in a shader only
+    for these specific purposes. More generally, it is a compile-time error to
+    redeclare a variable, including those starting "gl_".
+
+
+    Modify section 4.3.4 "Input Variables":
+
+    Add following the first paragraph on p. 39:
+
+    ... superfluous declarations of input variables.
+
+    Only the input variables that are statically read need to be written by
+    the previous stage; it is allowed to have superfluous declarations of
+    input variables. This is shown in the following table.
+
+[?? clarify this is for internal interfaces only]
+    -----------------------------------------------------------------------------------
+    |                             | Consuming Shader (input variables)                |
+    |  Treatment of Mismatched    +---------------------------------------------------+
+    |     Input Variables         | No          | Declared but  | Declared and        |
+    |                             | Declaration | no Static Use | Static Use          |
+    +-----------------------------+-------------+---------------+---------------------|
+    |            | No Declaration | Allowed     | Allowed       | Link-Time Error     |
+    | Generating |----------------+-------------+---------------+---------------------|
+    | Shader     | Declared but   | Allowed     | Allowed       | Allowed (values     |
+    | (output    | no Static Use  |             |               | are undefined)      |
+    | variables) |----------------+-------------+---------------+---------------------|
+    |            | Declared and   |             |               | Allowed (values are |
+    |            | Static Use     | Allowed     | Allowed       | potentially undef.) |
+    |            |                |             |               |                     |
+    -----------------------------------------------------------------------------------
+
+    Consumption errors are based on static use only. Compilation may
+    generate a warning, but not an error, for any dynamic use the compiler
+    can deduce that might cause consumption of undefined values.
+
+    See section 7 "Built-in Variables" ...
+
+
+    (Modify the first paragraph, starting "The output of the vertex shader",
+    on p. 41):
+
+    The fragment shader inputs form an interface with the last active shader
+    in the vertex processing pipeline. For this interface, the last active
+    shader stage output variables and fragment shader input variables of the
+    same name must match in type and qualification, with a few exceptions...
+
+
+    (Modify the third paragraph on p. 41):
+
+    Shaders can ensure matches across such interfaces either by using input
+    and output layout qualifiers (sections 4.4.1 "Input Layout Qualifiers"
+    and 4.4.2 "Output Layout Qualifiers") or by using identical input and
+    output declarations of blocks or variables. Complete rules for interface
+    matching are found ...
+
+
+    Modify section 4.3.9 "Interface Blocks":
+
+    Input, output, uniform, and buffer variable declarations can be grouped
+    into named interface blocks to provide coarser granularity backing than
+    is achievable with individual declarations. They can have an optional
+    instance name, used in the shader to reference their members. An output
+    block of one programmable stage is backed by a corresponding input block
+    in the subsequent programmable stage. A uniform block is backed by the
+    application with a buffer object. A block of buffer variables, called a
+    shader storage block, is also backed by the application with a buffer
+    object. It is a compile-time error to have an input block in a vertex
+    shader or an output block in a fragment shader; these uses are reserved
+    for future use.
+
+    An interface block is started by an "in", "out", "uniform", or "buffer"
+    keyword, followed by a block name, followed by an open curly brace ( { )
+    as follows:
+
+    (modify the grammar rules after the third paragraph)
+
+      interface-block:
+        layout-qualifier_opt interface-storage-qualifier block-name
+        { member-list } instance-name_opt ;
+
+      interface-storage-qualifier:
+        in
+        out
+        uniform
+        buffer
+
+        ...
+
+    Each of the above elements ...
+
+    ... with four uniforms grouped inside it.
+
+    Types and declarators are the same as for other input, output, uniform,
+    and buffer variable declarations outside blocks, with these exceptions:
+
+    * opaque types are not allowed
+    * structure definitions cannot be nested inside a block
+
+    Any of these would result in a compile-time error. Otherwise, built-in
+    types, previously declared structures, and arrays of these are allowed
+    as the type of a declarator in the same manner they are allowed outside
+    a block.
+
+    If no optional qualifier is used in a member-declaration, the
+    qualification of the variable is just in, out, uniform, or buffer as
+    determined by interface-storage-qualifier. If optional qualifiers are
+    used, they can include interpolation qualifiers and storage qualifiers,
+    and they must declare an input, output, or uniform variable consistent
+    with the interface qualifier of the block: input, output, uniform, and
+    buffer variables can only be declared in in, out, uniform, and shader
+    storage blocks, respectively.
+
+    Repeating the "in", "out", "uniform", or "buffer" interface qualifier
+    for a member's storage qualifier is optional. "centroid in" and "sample
+    in" variables are consistent with "in" blocks, and "centroid out" and
+    "sample out" variables are consistent with "out" blocks.
+
+    A <shader interface> is defined to be one of these:
+
+        * All the uniform variables of a program. This spans all compilation
+          units linked together within one program.
+        * All the buffer blocks declared in a program.
+        * The boundary between adjacent programmable pipeline stages: This
+          spans all the outputs declared in all compilation units of the
+          first stage and all the inputs declared in all compilation units
+          of the second stage. Note that the fragment shader is considered
+          to have a shared boundary with the previous adjacent stage even
+          though in practice, all values passed from prior stages to the
+          fragment shader first pass through the rasterizer and
+          interpolator.
+
+    The block name (block-name) is used to match interfaces: an output block
+    of one pipeline stage will be matched to an input block with the same
+    name in the subsequent pipeline stage. For uniform or shader storage
+    blocks, the application uses the block name to identify the block. Block
+    names have no other use within a shader beyond interface matching; it is
+    a compile-time error to use a block name at global scope for anything
+    other than as a block name (e.g., use of a block name for a global
+    variable name or function name is currently reserved). It is a
+    compile-time error to use the same block name for more than one block
+    declaration in the same shader interface (as defined above) within one
+    shader, even if the block contents are identical.
+
+    Matched block names within a shader interface (as defined above) must
+    match in terms of having the same number of declarations with the same
+    sequence of types, precisions, and the same sequence of member names, as
+    well as having the same member-wise layout qualification (see next
+    section). Matched uniform block names (but not input or output block
+    names) must also either all be lacking an instance name or all having an
+    instance name, putting their members at the same scoping level. When
+    instance names are present on matched block names, it is allowed for the
+    instance names to differ; they need not match for the blocks to match.
+    Furthermore, if a matching block is declared as an array, then the array
+    sizes must also match (or follow array matching rules for the interface
+    between a vertex and a geometry shader). Any mismatch will generate a
+    link-time error. A block name is allowed to have different definitions
+    in different interfaces within the same shader, allowing, for example,
+    an input block and output block to have the same name.
+
+    If an instance name (instance-name) is not used, the names declared
+    inside the block are scoped at the global level and accessed as if they
+    were declared outside the block. If an instance name is used, then it
+    puts all the members inside a scope within its own name space, accessed
+    with the field selector ( . ) operator (analogously to structures). For
+    example,
+
+        uniform Transform_1
+        {
+            mat4 modelview;  // API will use "modelview"
+        }
+        uniform Transform_2
+        {
+            mat4 projection; // API will use "Transform_2.projection"
+        } transform_2;       // instance name
+        mat4 projection;     // different than transform_2.projection
+        mat4 modelview;      // illegal, already defined
+
+    Outside the shading language (i.e., in the API), members are similarly
+    identified except the block name is always used in place of the instance
+    name (API accesses are to interfaces, not to shaders). If there is no
+    instance name, then the API does not use the block name to access a
+    member, just the member name.
+
+    Within an interface, all declarations of the same global name must be
+    for the same object and must match in type and in whether they declare a
+    variable or member of a block with no instance name. The API also needs
+    this name to uniquely identify an object in the interface. It is a
+    link-time error if any particular interface contains
+
+        * two different blocks, each having no instance name, and each
+          having a member of the same name, or
+        * a variable outside a block, and a block with no instance name,
+          where the variable has the same name as a member in the block.
+
+        out Vertex {
+            vec4 Position;  // API transform/feedback will use "Vertex.Position"
+            vec2 Texture;
+        } Coords;           // shader will use "Coords.Position"
+        out Vertex2 {
+            vec4 Color;     // API will use "Color"
+            float Color2;
+        };
+        // in same program as Vertex2 above:
+        out Vertex3 {
+            float Intensity;
+            vec4 Color;     // ERROR, name collision with Color in Vertex2
+        };
+        float Color2;       // ERROR, collides with Color2 in Vertex2
+
+    For blocks declared as arrays, the array index must also be included
+    when accessing members, as in this example
+
+        uniform Transform { // API uses "Transform[2]" to refer to instance 2
+            mat4 ModelViewMatrix;
+            mat4 ModelViewProjectionMatrix;
+            float Deformation;
+        } transforms[4];
+        ...
+        ... = transforms[2].ModelViewMatrix; // shader access of instance 2
+        // API uses "Transform.ModelViewMatrix" to query an offset or other query
+
+    For uniform or shader storage blocks declared as an array, each
+    individual array element corresponds to a separate buffer object,
+    backing one instance of the block. As the array size indicates the
+    number of buffer objects needed, uniform and shader storage block array
+    declarations must specify an array size. All indices used to index a
+    uniform or shader storage block array must be constant integral
+    expressions.
+
+    When using OpenGL ES API entry points to identify the name of an
+    individual block in an array of blocks, the name string must include an
+    array index (e.g., Transform[2]). When using OpenGL ES API entry points
+    to refer to offsets or other characteristics of a block member, an array
+    index must not be specified (e.g., Transform.ModelViewMatrix).
+
+    There are implementation dependent limits on the number of uniform
+    blocks and the number of shader storage blocks that can be used per
+    stage. If either limit is exceeded, it will cause a link-time error.
+
+
+    Modify section 4.4 "Layout Qualifiers":
+
+    Layout qualifiers can appear in several forms of declaration. They can
+    appear as part of an interface block definition or block member, as
+    shown in the grammar in the previous section. They can also appear with
+    just an interface qualifier (a storage qualifier that is "in", "out", or
+    "uniform") to establish layouts of other declarations made with that
+    interface qualifier:
+
+      layout-qualifier interface-qualifier ;
+
+    ...
+
+    The layout-qualifier expands to
+
+      layout-qualifier :
+        layout ( layout-qualifier-id-list )
+
+      layout-qualifier-id-list :
+        layout-qualifier-id
+        layout-qualifier-id , layout-qualifier-id-list
+
+      layout-qualifier-id
+        layout-qualifier-name
+        layout-qualifier-name = layout-qualifier-value
+
+    The tokens used for layout-qualifier-name are identifiers, not keywords.
+    Generally, they can be listed in any order. Order-dependent meanings
+    exist only if explicitly called out below. Similarly, these identifiers
+    are not case sensitive, unless explicitly noted otherwise.
+
+    More than one layout qualifier may appear in a single declaration.
+    Additionally, the same layout-qualifier-name can occur multiple times
+    within a layout qualifier or across multiple layout qualifiers in the
+    same declaration. When the same layout-qualifier-name occurs multiple
+    times, in a single declaration, the last occurrence overrides the former
+    occurrence(s). Further, if such a layout-qualifier-name will effect
+    subsequent declarations or other observable behavior, it is only the
+    last occurrence that will have any effect, behaving as if the earlier
+    occurrence(s) within the declaration are not present. This is also true
+    for overriding layout-qualifier-names, where one overrides the other
+    (e.g., row_major vs. column_major); only the last occurrence has any
+    effect.
+
+      [[ The last paragraph of this section in GLSL 4.40 and the really nice
+         table of layout qualifiers from different stages could be inserted
+         at this point, but aren't necessary. ]]
+
+    4.4.1 Input Layout Qualifiers
+
+    Some input layout qualifiers apply to all shader languages and some
+    apply only to specific languages. The latter are discussed in separate
+    sections below.
+
+    All shaders, except compute shaders, allow "location" layout qualifiers
+    on input variable declarations, input block declarations, and input
+    block member declarations.
+
+    The layout qualifier identifier for inputs is:
+
+      layout-qualifier-id
+        location = integer-constant
+
+    Only one argument is accepted.  For example,
+
+      layout(location = 3) in vec4 normal;
+
+    will establish that the shader input <normal> is assigned to vector
+    location number 3. For vertex shader inputs, the location specifies the
+    number of the vertex attribute from which input values are taken. For
+    inputs of all other shader types, the location specifies a vector number
+    that can be used to match against outputs from a previous shader stage,
+    even if that shader is in a different program object.
+
+    The following language describes how many locations are consumed by a
+    given type.  However, geometry shader inputs, tessellation control shader
+    inputs and outputs, and tessellation evaluation inputs all have an
+    additional level of arrayness relative to other shader inputs and outputs.
+    This outer array level is removed from the type before considering how
+    many locations the type consumes.
+
+    If a shader input is any scalar or vector type, it will consume a single
+    location.
+
+    If the declared input (after potentially removing an outer array level as
+    just described above) is an array of size <n> and each of the elements
+    takes <m> locations, it will be assigned <m> * <n> consecutive locations
+    starting with the location specified. For example,
+
+      layout (location = 6) in vec4 colors[3];
+
+    will establish that the shader input <colors> is assigned to vector
+    location numbers 6, 7, and 8.
+
+    If the declared input is an <n> x <m> matrix, it will be assigned multiple
+    locations starting with the location specified. The number of locations
+    assigned for each matrix will be the same as for an <n>-element array of
+    <m>-component vectors. For example,
+
+      layout (location = 9) in mat4 transforms[2];
+
+    will establish that shader input <transforms> is assigned to vector
+    locations 9-16, with <transforms[0]> being assigned to locations 9-12,
+    and <transforms[1]> being assigned to locations 13-16.
+
+    If the declared input is a structure or block, its members will be
+    assigned consecutive locations in their order of declaration, with the
+    first member assigned the location provided in the layout qualifier. For
+    a structure, this process applies to the entire structure. It is a
+    compile-time error to use a location qualifier on a member of a
+    structure. For a block, this process applies to the entire block, or
+    until the first member is reached that has a location layout qualifier.
+    When a block member is declared with a location qualifier, its location
+    comes from that qualifier: The member's location qualifier overrides the
+    block-level declaration. Subsequent members are again assigned
+    consecutive locations, based on the newest location, until the next
+    member declared with a location qualifier. The values used for locations
+    do not have to be declared in increasing order.
+
+    If a block has no block-level location layout qualifier, it is required
+    that either all or none of its members have a location layout qualifier,
+    or a compile-time error results.
+
+    The locations consumed by block and structure members are determined by
+    applying the rules above recursively as though the structure member were
+    declared as an input variable of the same type. For example:
+
+      layout(location = 3) in struct S {
+          vec3 a;                         // gets location 3
+          mat2 b;                         // gets locations 4 and 5
+          vec4 c[2];                      // gets locations 6 and 7
+          layout (location = 8) vec2 A;   // ERROR, can't use on struct member
+      } s;
+
+      layout(location = 4) in block {
+          vec4 d;                         // gets location 4
+          vec4 e;                         // gets location 5
+          layout(location = 7) vec4 f;    // gets location 7
+          vec4 g;                         // gets location 8
+          layout (location = 1) vec4 h;   // gets location 1
+          vec4 i;                         // gets location 2
+          vec4 j;                         // gets location 3
+          vec4 k;                         // ERROR, location 4 already used
+      };
+
+    The number of input locations available to a shader is limited. For
+    vertex shaders, the limit is the advertised number of vertex attributes.
+    For all other shaders, the limit is implementation-dependent and must be
+    no less than one fourth of the advertised maximum input component count.
+    A program will fail to link if any attached shader uses a location
+    greater than or equal to the number of supported locations, unless
+    device-dependent optimizations are able to make the program fit within
+    available hardware resources.
+
+    A program will fail to link if explicit location assignments leave the
+    linker unable to find space for other variables without explicit
+    assignments.
+
+    For the purposes of determining if a non-vertex input matches an output
+    from a previous shader stage, the location layout qualifier (if any)
+    must match.
+
+    If a vertex shader input variable with no location assigned in the
+    shader text has a location specified through the OpenGL ES API, the
+    API-assigned location will be used. Otherwise, such variables will
+    be assigned a location by the linker. See section 2.11.5 "Vertex
+    Attributes" of the OpenGL ES 3.1 Graphics System Specification for
+    more details.
+
+    It is an error if more than one input or element of a matrix input is
+    bound to the same location.
+
+
+    Add new subsection 4.4.1.fs:
+
+    4.4.1.fs Fragment Shader Inputs
+
+    Fragment shaders can have an input layout for redeclaring the built-in
+    variable gl_FragCoord:
+
+      in vec4 gl_FragCoord; // redeclaration that changes nothing is allowed
+
+    The built-in gl_FragCoord is only predeclared in fragment shaders, so
+    redeclaring it in any other shader language results in a compile-time
+    error.
+
+    Fragment shaders also allow the following layout qualifier on "in" only
+    (not with variable declarations)
+
+          layout-qualifier-id
+                early_fragment_tests
+
+    to request that fragment tests be performed before fragment shader
+    execution, as described in section 3.9.2 "Early Fragment Tests" of the
+    OpenGL ES Specification.
+
+    For example, specifying
+
+        layout(early_fragment_tests) in;
+
+    will make per-fragment tests be performed before fragment shader
+    execution. In addition, it is an error to statically write to
+    gl_FragDepth in the fragment shader.
+
+    If this is not declared, per-fragment tests will be performed after
+    fragment shader execution.
+
+    4.4.1.1 Compute Shader Inputs ...
+
+
+    Replace section 4.4.2
+
+    4.4.2 Output Layout Qualifiers
+
+    Some output layout qualifiers apply to all shader languages and some
+    apply only to specific languages. The latter are discussed in separate
+    sections below.
+
+    As with input layout qualifiers, all shaders except compute shaders
+    allow location layout qualifiers on output variable declarations, output
+    block declarations, and output block member declarations.
+
+    The layout qualifier identifier for outputs is:
+
+      layout-qualifier-id
+          location = integer-constant
+
+                                                                            [remove language for
+                                                                             for indexed outputs]
+    The usage and rules for applying the location qualifier to blocks and
+    structures are exactly as described in section 4.4.1 "Input Layout
+    Qualifiers".
+
+
+    This qualifier may appear at most once with a declaration. For example,
+
+      layout(location = 3) out vec4 color;
+
+    will establish that the fragment shader output color is assigned to
+    fragment color 3.
+
+    For fragment shader outputs, the location specifies the color output
+    number receiving the values of the output. For outputs of all other
+    shader stages, the location specifies a vector number that can be used
+    to match against inputs in a subsequent shader stage, even if that
+    shader is in a different program object.
+
+    Declared outputs of scalar or vector type consume a single location.
+
+    If the declared output is an array, it will be assigned consecutive
+    locations starting with the location specified. For example,
+
+      layout(location = 2) out vec4 colors[3];
+
+    will establish that <colors> is assigned to vector location numbers 2,
+    3, and 4.
+
+    If the declared output is an n x m matrix, it will be assigned multiple
+    locations starting with the location specified. The number of locations
+    assigned will be the same as for an n-element array of m-component
+    vectors.
+
+    If the declared output is a structure, its members will be assigned
+    consecutive locations in the order of declaration, with the first member
+    assigned the location specified for the structure. The number of
+    locations consumed by a structure member is determined by applying the
+    rules above recursively as though the structure member were declared as
+    an output variable of the same type.
+
+    Location layout qualifiers may be used on output variables declared as
+    structures, but it is a compile-time error to use them on individual
+    members. Location layout qualifiers may be used on output blocks and
+    output block members.
+
+    The number of output locations available to a shader is limited. For
+    fragment shaders, the limit is the advertised number of draw buffers.
+    For all other shaders, the limit is implementation-dependent and must be
+    no less than one fourth of the advertised maximum output component
+    count (compute shaders have no outputs.) A program will fail to link if
+    any attached shader uses a location greater than or equal to the number
+    of supported locations, unless device-dependent optimizations are able
+    to make the program fit within available hardware resources.
+    Compile-time errors may also be given if at compile time it is known the
+    link will fail. A negative output location will result in a compile-time
+    error.
+
+    A program will fail to link if any of the following occur:
+
+      * any two fragment shader output variables are assigned to the same
+        location
+      * if any two output variables from the same vertex stage are assigned
+        to the same location.
+
+    For all shader types, a program will fail to link if explicit location
+    assignments leave the linker unable to find space for other variables
+    without explicit assignments.
+
+    If an output variable has no location assigned in the shader text, it
+    will be assigned a location by the linker. See section 3.9.2 "Shader
+    Execution" of the OpenGL ES Specification for more details.
+
+    For the purposes of determining if a non-fragment output matches an
+    input from a subsequent shader stage, the location layout qualifier (if
+    any) must match.
+
+
+    (Add new subsection 4.4.2.fs):
+
+    4.4.2.fs Fragment Outputs
+
+    Fragment shaders can have an output layout for redeclaring the built-in
+    variable gl_FragDepth:
+
+      out float gl_FragDepth; // redeclaration that changes nothing is allowed
+
+    The built-in gl_FragDepth is only predeclared in fragment shaders, so
+    redeclaring it in any other shader language results in a compile-time
+    error.
+
+
+    (Remove subsection 4.5.1 "Linking of Vertex Outputs and Fragment
+    Inputs". Note that the table from this section is moved to section
+    4.3.4, while most of the interface matching language is now dealt with
+    in "Shader Interface Matching" in the OpenGL ES Specification as
+    modified by this extension.)
+
+
+    (Modify the first two paragraphs of section 7.1 "Vertex Shader Special
+    Variables", moving one paragraph up one level to the introduction of
+    chapter 7):
+
+    7 Built-in Variables
+
+    Some OpenGL operations occur in fixed functionality and need to provide
+    values to or receive values from shader executables. Shaders communicate
+    with fixed-function OpenGL pipeline stages, and optionally with other
+    shader executables, through the use of built-in input and output
+    variables.
+
+    7.1 Vertex Shader Special Variables
+
+    In the vertex language, the built-ins are intrinsically declared as
+    follows:
+
+      in highp int gl_VertexID;
+      in highp int gl_InstanceID;
+
+      out gl_PerVertex {
+          highp vec4  gl_Position;
+          highp float gl_PointSize;
+      };
+
+    The variable gl_Position is intended for writing the homogeneous vertex
+    position. It can be written at any time during shader execution. This
+    value will be used by the following shader stage, or if there are no
+    other shaders prior to the fragment shader, by primitive assembly,
+    clipping, culling, and other fixed functionality operations that operate
+    on primitives after vertex processing has occurred. Its value is
+    undefined after vertex processing if the vertex shader does not write
+    gl_Position.
+
+    The variable gl_PointSize ...
+
+    Add a new section 7.io following section 7.3 "Built-In Uniform State":
+
+    7.io Redeclaring Built-in Blocks
+
+                                                                            [allow but not
+                                                                             require redecl.]
+    The gl_PerVertex block can be redeclared in a shader to explicitly
+    indicate what subset of the members will be used. This is necessary to
+    establish the interface between multiple programs. If the gl_PerVertex
+    block is not redefined in a given program, the intrinsically declared
+    definition of that block is used for the program interface.
+
+    For example:
+
+      out gl_PerVertex {
+        highp vec4 gl_Position;   // will use gl_Position
+        highp float gl_PointSize; // will use gl_PointSize
+        highp vec4 t;             // error, only gl_PerVertex members allowed
+      }; // no other members of gl_PerVertex will be used
+
+    This establishes the output interface the shader will use with the
+    subsequent pipeline stage. It must be a subset of the built-in members
+    of gl_PerVertex. Such a redeclaration can also add the invariant
+    qualifier and interpolation qualifiers.
+
+    Other layout qualifiers, like location, cannot be added to such a
+    redeclaration, unless specifically stated.
+
+    If a built-in interface block is redeclared, it must appear in the
+    shader before any use of any member included in the built-in
+    declaration, or a compile-time error will result. It is also a
+    compile-time error to redeclare the block more than once or to redeclare
+    a built-in block and then use a member from that built-in block that was
+    not included in the redeclaration. Also, if a built-in interface block
+    is redeclared, no member of the built-in declaration can be redeclared
+    outside the block redeclaration. If multiple shaders using members of a
+    built-in block belonging to the same interface are linked together in
+    the same program, they must all redeclare the built-in block in the same
+    way, as described in section 4.3.7 "Interface Blocks" for interface
+    block matching, or a link-time error will result. It will also be a
+    link-time error if some shaders in a program redeclare a specific
+    built-in interface block while another shader in that program does not
+    redeclare that interface block yet still uses a member of that interface
+    block. If a built-in block interface is formed across shaders in
+    different programs, the shaders must all redeclare the built-in block in
+    the same way (as described for a single program), or the values passed
+    along the interface are undefined.
+
+Dependencies on OES_shader_multisample_interpolation
+
+    If OES_shader_multisample_interpolation is not supported, references to
+    "sample in", "sample out" and the extension should be ignored.
+
+Dependencies on EXT_geometry_shader
+
+    If EXT_geometry_shader is enabled, this extension is implicitly
+    enabled for geometry shaders.
+
+    If EXT_geometry_shader is not supported, ignore all references to
+    geometry shaders.
+
+Dependencies on EXT_tessellation_shader
+
+    If EXT_tessellation_shader is enabled, this extension is implicitly
+    enabled for tessellation control and evaluation shaders.
+
+    If EXT_tessellation_shader is not supported, ignore all references to
+    tessellation shaders.
+
+Issues
+
+    (1) What functionality was removed from interface blocks relative to
+        GL 4.4?
+
+      - Interactions with features not supported by the underlying
+        ES 3.1 API and Shading Language, including:
+          * gl_ClipDistance shader inputs and outputs.
+          * "component" layout
+          * location aliasing
+          * fragment shader output "index" layout
+          * fragment shader gl_FragDepth layout "depth*" qualifiers
+          * double-precision scalars and vectors
+          * matching across shader stages with different qualifiers (other
+            than precision and "in"/"out").
+          * References allowing or assuming more than one shader object per
+            pipeline stage.
+          * gl_PerFragment is not added (only exists in compatibility profile).
+
+    (2) What functionality was changed and added relative to interface blocks
+        in GL 4.4?
+
+      - separable shaders are not required to redeclare the gl_PerVertex block.
+      - clarifications on types allowed for vertex and fragment shader inputs
+        from ES 3.0.
+
+    (3) Are any grammar additions required in chapter 9?
+
+    There may be something needed for supporting interface blocks on in/out
+    declarations, but I believe not, since the existing GLSL-ES 3.10 grammar
+    already has these as storage_qualifier tokens.
+
+    (4) Shader Interface Matching rules have been updated to relax precision
+        matching on shader outputs and inputs, as previously required in ES
+        3.0. This was changed during 3.1 development but is now proposed to
+        return to 3.0 behavior, matching this extension.
+
+    RESOLVED. Per Bug 11189, when using a program that contains both sides
+    of an interface, the precision qualifier on inputs/outputs does not need
+    to match.  However for two separable programs, the precision qualifiers
+    on inputs/outputs are required to match on the external interfaces.
+    Failing to do so results in a validation error.
+
+    (5) In section 4.3.7 "Interface Matching", the corresponding part of
+        desktop GLSL 4.40 (pp. 49-50) has some material that's very
+        different than GLSL-ES language. Still need to review its
+        applicability here.
+
+    UNRESOLVED.  This should be addressed by rebasing on the ES 3.1 specs.
+
+    (6) Should we allow re-declaring the gl_PerVertex block?
+
+    DISCUSSION:  If we do, we need to update Section 3.8 with language from
+    Section 3.7 in the GLSL 4.4 spec about redeclaring 'gl_' variables.
+    If we don't, applications will always pay the space for gl_PointSize,
+    and would never be able to have 'invariant' or different interpolation
+    or precision qualifiers on vertex, tessellation, or geometry shader
+    built-in outputs. This seems undesirable.
+
+    RESOLVED: Yes. Section 3.8 updated.
+
+    (7) What is the behavior of LinkProgram with respect to gl_PerVertex
+        blocks?
+
+    DISCUSSION:
+    a) When using monolithic programs, gl_PerVertex does not need to be
+       redeclared in any shader stage.
+
+    b) When using separable programs with only OpenGL ES 3.1-level
+       functionality (vertex and fragment only), gl_PerVertex does not need to
+       be redeclared.  In fact, gl_PerVertex can't be redeclared, since no
+       language mechanism exists in unextended ES 3.1 to do so.  Adding such a
+       requirement merely due to the presence of this extension would break
+       valid OpenGL ES 3.1-level applications.  The lack of a redeclaration
+       requirement in OpenGL ES 3.1 is a difference relative to OpenGL 4.1,
+       but the reasons why we added this requirement in OpenGL 4.1 (many
+       shader stages, a larger set of built-ins, and the desire to be able to
+       treat gl_PerVertex members like other "regular" varyings) don't exist
+       in unextended ES 3.1.
+
+    c) When using separable programs, any shader with the ability to redeclare
+       gl_PerVertex could require redeclaration when any of its members are
+       used. This would be mostly compatible with OpenGL 4.1, which requires
+       all stages to redeclare and provides the ability to do so in all
+       stages. However, since the intrinsically declared gl_PerVertex blocks
+       are actually fairly small in ES, redeclaring gl_PerVertex is optional
+       in ES. The basic rules here are:
+
+       - gl_PerVertex exists iff EXT_shader_io_blocks is enabled.
+       - EXT_shader_io_blocks is always enabled if EXT_geometry_shader
+         or EXT_tesselation_shader is enabled.
+       - EXT_shader_io_blocks can be optionally enabled for VS and FS.
+
+    (8) What happens when you use the following together in a program
+    pipeline?
+      - a separable vertex-only program A which doesn't enable
+          EXT_shader_io_blocks, and
+      - a separable program B containing a tessellation or geometry shader
+
+    DISCUSSION: This was not an issue in OpenGL because separable shaders
+    were added (in GL 4.1) after geometry shaders and input blocks were
+    added (in GL 3.2), so any separable program with a vertex shader could
+    redeclare gl_PerVertex. There are basically 3 options:
+
+    a) Driver has to make any combination of VS outputs in A and redeclared
+       input gl_PerVertex block in B work correctly.
+    b) Lack of redeclaring gl_PerVertex in A implies interface mismatch with
+       redeclared gl_PerVertex in B. Per the standard rules, if there is no
+       complete interface match, all inputs are undefined except for
+       individual variables that match by location, just as with user-
+       defined variables.  Built-ins can't be assigned numeric locations, so
+       would be considered not to match.
+    c) It is an error. The vertex shader must be modified to support
+       being used in combination with geometry and tessellation shaders.
+
+    RESOLVED: (a) There will only be one or at most two (if
+    EXT_geometry_point_size is enabled) outputs from the vertex shader
+    that would need to be matched up with the gl_PerVertex block in the
+    next shader. It doesn't seem onerous to just make it work, and it is
+    desirable to be able to just drop a geometry shader into an otherwise
+    valid ES 3.1 application without modifying the vertex shader.
+
+    (9) Why are there so many edits to section 4.4.1 and 4.4.2 and what
+    really changed?
+
+    Some of this is due to restructuring to create subsections specific to
+    different shader stages, some appears to be correct (but potentially
+    redundant) language from GLSL 4.40, and some is useful block-related
+    language.
+
+    (10) One of the new matching requirements for ES 3.1 is that
+    interpolation qualifies don't need to match. Is that true for block
+    members as well, or just loose variables?
+
+    RESOLVED.  This is true for block members as well.
+    In general, we'll allow the same rules for matching variables and
+    block members. Then a block matches iff the block members match.
+
+[?? still need to apply/verify edits for this].
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------- ---------------------------------------------------
+      1   12/19/13  dkoch     Extracted functionality from EXT_geometry_shader v9
+      2   01/16/14  dkoch     Fix a couple typos. Removed contraditory sentence.
+      3   02/12/14  dkoch     Resolve issues 5, 8, and 9 and supporting edits.
+                              Incorporate clarifications from Bug 11362.
+      4   02/27/14  dkoch     Add issue 11. Edits for this still pending.
+      5   03/09/14  Jon Leech Rebase on OpenGL ES 3.1 and change suffix to EXT.
+      6   03/26/14  dkoch     Update contributors.
+      7   03/28/14  Jon Leech Sync with released ES 3.1 specs. Reflow text.
+      8   08/10/14  jhf       Removed contradictory language forbidding
+                              location layout qualifiers on output blocks
+                              or output block members (Bug 12831)

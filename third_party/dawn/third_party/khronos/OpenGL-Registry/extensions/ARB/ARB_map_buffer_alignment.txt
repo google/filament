@@ -1,0 +1,163 @@
+Name
+
+    ARB_map_buffer_alignment
+
+Name Strings
+
+    GL_ARB_map_buffer_alignment
+
+Contact
+
+    Piers Daniell, NVIDIA Corporation (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Jeff Bolz, NVIDIA
+    Pat Brown, NVIDIA
+
+Notice
+
+    Copyright (c) 2011-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on 2011/06/20.
+    Approved by the Khronos Promoters on 2011/07/29.
+
+Version
+
+    Last Modified Date:         July 28, 2011
+    Revision:                   5
+
+Number
+
+    ARB Extension #113
+
+Dependencies
+
+    OpenGL 2.1 is required.
+    
+    If ARB_map_buffer_range is NOT supported, ignore references to
+    MapBufferRange.
+    
+    This extension is written against The OpenGL 4.1 (Compatibility Profile)
+    specification.
+
+Overview
+
+    This extension adds a requirement to the pointer returned by MapBuffer
+    and MapBufferRange that they provide a minimum of 64 byte alignment to
+    support processing of the data directly with special CPU instructions
+    like SSE and AVX.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+        MIN_MAP_BUFFER_ALIGNMENT                        0x90BC
+
+Changes to Section 2.9.3 (Mapping and Unmapping Buffer Data), page 60
+
+    In the third paragraph of the section that starts:
+    
+    "Pointer values returned by MapBufferRange may not be passed..."
+    
+    insert the following sentence at the start of the paragraph:
+    
+    "If no error occurs, the pointer value returned by MapBufferRange must
+    reflect an allocation aligned to the value of MIN_MAP_BUFFER_ALIGNMENT
+    basic machine units.  Subtracting <offset> basic machine units from the
+    returned pointer will always produce a multiple of the value of
+    MIN_MAP_BUFFER_ALIGNMENT."
+    
+    On page 63, which describes MapBuffer, after the sentence that ends:
+    
+    "... value of the access enum parameter passed to MapBuffer."
+    
+    Add the following sentence:
+    
+    "The pointer value returned by MapBuffer must be aligned to
+    the value of MIN_MAP_BUFFER_ALIGNMENT basic machine units."
+    
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    Get Value                        Type  Get Command     Minimum Value    Description             Sec.     Attribute
+    ---------                        ----  -----------     -------------    -------------------     -----    ---------
+    MIN_MAP_BUFFER_ALIGNMENT         Z+    GetIntegerv     64               Minimum byte alignment  2.9.3    -
+                                                                            of the pointer returned
+                                                                            by MapBuffer and
+                                                                            MapBufferRange.
+
+Issues
+
+    1) Why 64 byte alignment and not 16 (like DX) or something else?
+    
+    RESOLVED: A 16 byte alignment is good for SSE, which uses a 128 bit
+    register file. However, with the advent of AVX, which has a 256 bit
+    register file, and the potential for even wider register files in the
+    near future, 64 byte alignment seemed like a safe choice.
+
+    2) What alignment should be used for MapBufferRange when <offset> is
+    non-zero?
+
+    RESOLVED:  The pointer returned should be consistent with the base of the
+    buffer being aligned.  For example, if a buffer was mapped with an
+    <offset> of 24 bytes on an implementation with a
+    MIN_MAP_BUFFER_ALIGNMENT of 64, the value of the pointer returned
+    would have a value of the form 64*<N>+24 for some integer <N>.
+
+    3) How should the minimum alignment be exposed?
+
+    RESOLVED:  Provide an implementation-dependent constant that can be
+    queried.  Implementations that align buffers to >64-byte boundaries for
+    whatever reason could advertise higher alignment values.  Since the
+    minimum alignment is 64 bytes, an application using this extension need
+    not check the implementation's advertised alignment unless it requires an
+    alignment larger than this minimum.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------------
+    5     07/28/11  pbrown    Rename MINIMUM_MAP_BUFFER_ALIGNMENT to
+                              MIN_MAP_BUFFER_ALIGNMENT to match usual API
+                              naming conventions (bug 7825).
+
+    4     06/20/11  pdaniell  Assign enum value.
+    
+    3     06/06/11  Jon Leech Minor typos for consistency with core spec.
+
+    2     05/19/11  pbrown    Change spec language to require MapBufferRange
+                              to return a pointer consistent with the base
+                              being aligned.  Add a couple issues.  Minor 
+                              wording changes (bug 7663).
+
+    1     05/05/11  pdaniell  Initial version.

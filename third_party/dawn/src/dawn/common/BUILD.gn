@@ -1,0 +1,370 @@
+# Copyright 2019 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("../../../scripts/dawn_overrides_with_defaults.gni")
+
+import("//build_overrides/build.gni")
+import("${dawn_root}/generator/dawn_generator.gni")
+import("${dawn_root}/scripts/dawn_features.gni")
+
+# Use Chromium's dcheck_always_on when available so that we respect it when
+# running tests on the GPU builders
+if (build_with_chromium) {
+  import("//build/config/dcheck_always_on.gni")
+} else {
+  dcheck_always_on = false
+}
+
+if (build_with_chromium) {
+  import("//build/config/sanitizers/sanitizers.gni")
+} else {
+  use_fuzzing_engine = false
+}
+
+###############################################################################
+# Common dawn configs
+###############################################################################
+
+config("internal_config") {
+  include_dirs = [
+    "${target_gen_dir}/../../../src",
+    "${dawn_root}/src",
+  ]
+
+  defines = []
+  if (dawn_always_assert || dcheck_always_on || is_debug ||
+      use_fuzzing_engine) {
+    defines += [ "DAWN_ENABLE_ASSERTS" ]
+  }
+
+  if (build_with_chromium || use_fuzzing_engine) {
+    # Does a hard abort when an assertion fails so that fuzzers catch and parse the failure.
+    # Also call abort() so chrome can dump crash stach in console.
+    defines += [ "DAWN_ABORT_ON_ASSERT" ]
+  }
+
+  if (use_fuzzing_engine) {
+    # Disable logging to make fuzzing more efficient.
+    defines += [ "DAWN_DISABLE_LOGGING" ]
+  }
+
+  if (dawn_enable_d3d11) {
+    defines += [ "DAWN_ENABLE_BACKEND_D3D11" ]
+  }
+  if (dawn_enable_d3d12) {
+    defines += [ "DAWN_ENABLE_BACKEND_D3D12" ]
+  }
+  if (dawn_enable_metal) {
+    defines += [ "DAWN_ENABLE_BACKEND_METAL" ]
+  }
+  if (dawn_enable_null) {
+    defines += [ "DAWN_ENABLE_BACKEND_NULL" ]
+  }
+  if (dawn_enable_opengl) {
+    defines += [ "DAWN_ENABLE_BACKEND_OPENGL" ]
+  }
+  if (dawn_enable_desktop_gl) {
+    defines += [ "DAWN_ENABLE_BACKEND_DESKTOP_GL" ]
+  }
+  if (dawn_enable_opengles) {
+    defines += [ "DAWN_ENABLE_BACKEND_OPENGLES" ]
+  }
+  if (dawn_enable_vulkan) {
+    defines += [ "DAWN_ENABLE_BACKEND_VULKAN" ]
+  }
+
+  # OS_CHROMEOS cannot be autodetected in runtime and
+  # cannot be detected with regular compiler macros either.
+  # Inject it from the build system
+  if (is_chromeos) {
+    defines += [ "DAWN_OS_CHROMEOS" ]
+  }
+
+  if (dawn_use_wayland) {
+    defines += [ "DAWN_USE_WAYLAND" ]
+  }
+  if (dawn_use_x11) {
+    defines += [ "DAWN_USE_X11" ]
+  }
+  if (dawn_use_windows_ui) {
+    defines += [ "DAWN_USE_WINDOWS_UI" ]
+  }
+
+  if (dawn_enable_error_injection) {
+    defines += [ "DAWN_ENABLE_ERROR_INJECTION" ]
+  }
+
+  # Only internal Dawn targets can use this config, this means only targets in
+  # this BUILD.gn file and related subdirs.
+  visibility = [
+    "${dawn_root}/samples/dawn/*",
+    "${dawn_root}/src/dawn/*",
+  ]
+
+  cflags = []
+
+  # Enable more warnings that were found when using Dawn in other projects.
+  # Add them only when building in standalone because we control which clang
+  # version we use. Otherwise we risk breaking projects depending on Dawn when
+  # the use a different clang version.
+  if (dawn_standalone && is_clang) {
+    cflags += [
+      "-Wconditional-uninitialized",
+      "-Wcstring-format-directive",
+      "-Wctad-maybe-unsupported",
+      "-Wc++11-narrowing",
+      "-Wdeprecated-copy",
+      "-Wdeprecated-copy-dtor",
+      "-Wduplicate-enum",
+      "-Wextra-semi",
+      "-Wextra-semi-stmt",
+      "-Wimplicit-fallthrough",
+      "-Winconsistent-missing-destructor-override",
+      "-Winvalid-offsetof",
+      "-Wmissing-field-initializers",
+      "-Wnon-c-typedef-for-linkage",
+      "-Wpessimizing-move",
+      "-Wrange-loop-analysis",
+      "-Wredundant-move",
+      "-Wshadow-field",
+      "-Wstrict-prototypes",
+      "-Wsuggest-destructor-override",
+      "-Wsuggest-override",
+      "-Wtautological-unsigned-zero-compare",
+      "-Wunreachable-code-aggressive",
+      "-Wunused-but-set-variable",
+      "-Wunused-macros",
+    ]
+
+    if (is_win) {
+      cflags += [
+        # clang-cl doesn't know -pedantic, pass it explicitly to the clang driver
+        "/clang:-pedantic",
+
+        # Allow the use of __uuidof()
+        "-Wno-language-extension-token",
+      ]
+    } else {
+      cflags += [ "-pedantic" ]
+    }
+  }
+
+  if (!is_clang && is_win) {
+    # Dawn extends wgpu enums with internal enums.
+    # MSVC considers these invalid switch values. crbug.com/dawn/397.
+    cflags += [ "/wd4063" ]
+
+    # MSVC things that a switch over all the enum values of an enum class is
+    # not sufficient to cover all control paths. Turn off this warning so that
+    # the respective clang warning tells us where to add switch cases
+    # (otherwise we have to add default: DAWN_UNREACHABLE() that silences clang too)
+    cflags += [ "/wd4715" ]
+
+    if (dawn_is_winuwp) {
+      # /ZW makes sure we don't add calls that are forbidden in UWP.
+      # and /EHsc is required to be used in combination with it,
+      # even if it is already added by the windows GN defaults,
+      # we still add it to make every /ZW paired with a /EHsc
+      cflags_cc = [
+        "/ZW:nostdlib",
+        "/EHsc",
+      ]
+    }
+  }
+}
+
+###############################################################################
+# Common dawn library
+###############################################################################
+
+dawn_generator("dawn_version_gen") {
+  script = "${dawn_root}/generator/dawn_version_generator.py"
+  args = [
+    "--dawn-dir",
+    rebase_path("${dawn_root}", root_build_dir),
+  ]
+
+  # We can use the explicit version file if it is generated instead of relying
+  # on the existence of git.
+  if (dawn_version_file != "") {
+    args += [
+      "--version-file",
+      rebase_path(dawn_version_file, root_build_dir),
+    ]
+  }
+
+  outputs = [ "src/dawn/common/Version_autogen.h" ]
+}
+
+dawn_generator("dawn_gpu_info_gen") {
+  script = "${dawn_root}/generator/dawn_gpu_info_generator.py"
+  args = [
+    "--gpu-info-json",
+    rebase_path("${dawn_root}/src/dawn/gpu_info.json", root_build_dir),
+  ]
+  outputs = [
+    "src/dawn/common/GPUInfo_autogen.h",
+    "src/dawn/common/GPUInfo_autogen.cpp",
+  ]
+}
+
+group("abseil") {
+  # When building within Chromium or ANGLE we need to include "//third_party/abseil-cpp:absl" while
+  # it's beneficial to be more specific with standalone Dawn, especially when it comes to
+  # including it as a dependency in other projects (such as Skia).
+  if (build_with_chromium || build_with_angle) {
+    public_deps = [ "$dawn_abseil_dir:absl" ]
+  } else {
+    public_deps = [
+      "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_set",
+      "${dawn_root}/third_party/gn/abseil-cpp:inlined_vector",
+    ]
+  }
+}
+
+# This GN file is discovered by all Chromium builds, but common doesn't support
+# all of Chromium's OSes so we explicitly make the target visible only on
+# systems we know Dawn is able to compile on.
+if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
+    is_ios) {
+  static_library("common") {
+    sources = [
+      "AlignedAlloc.cpp",
+      "AlignedAlloc.h",
+      "Alloc.h",
+      "Assert.cpp",
+      "Assert.h",
+      "BitSetIterator.h",
+      "Compiler.h",
+      "Constants.h",
+      "ContentLessObjectCache.h",
+      "ContentLessObjectCacheable.h",
+      "CoreFoundationRef.h",
+      "DynamicLib.cpp",
+      "DynamicLib.h",
+      "Enumerator.h",
+      "FutureUtils.cpp",
+      "FutureUtils.h",
+      "GPUInfo.cpp",
+      "GPUInfo.h",
+      "HashUtils.h",
+      "IOKitRef.h",
+      "LinkedList.h",
+      "Log.cpp",
+      "Log.h",
+      "MatchVariant.h",
+      "Math.cpp",
+      "Math.h",
+      "Mutex.cpp",
+      "Mutex.h",
+      "MutexProtected.h",
+      "NSRef.h",
+      "NonCopyable.h",
+      "NonMovable.h",
+      "Numeric.h",
+      "PlacementAllocated.h",
+      "Platform.h",
+      "Preprocessor.h",
+      "Range.h",
+      "Ref.h",
+      "RefBase.h",
+      "RefCounted.cpp",
+      "RefCounted.h",
+      "RefCountedWithExternalCount.h",
+      "Result.cpp",
+      "Result.h",
+      "SerialMap.h",
+      "SerialQueue.h",
+      "SerialStorage.h",
+      "SlabAllocator.cpp",
+      "SlabAllocator.h",
+      "StackAllocated.h",
+      "StringViewUtils.cpp",
+      "StringViewUtils.h",
+      "SystemUtils.cpp",
+      "SystemUtils.h",
+      "TypeTraits.h",
+      "TypedInteger.h",
+      "UnderlyingType.h",
+      "WGSLFeatureMapping.h",
+      "WeakRef.h",
+      "WeakRefSupport.cpp",
+      "WeakRefSupport.h",
+      "egl_platform.h",
+      "ityp_array.h",
+      "ityp_bitset.h",
+      "ityp_span.h",
+      "ityp_stack_vec.h",
+      "ityp_vector.h",
+      "vulkan_platform.h",
+      "xlib_with_undefs.h",
+    ]
+    sources += get_target_outputs(":dawn_gpu_info_gen")
+
+    public_deps = [
+      ":abseil",
+      ":dawn_gpu_info_gen",
+      ":dawn_version_gen",
+      "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
+      "${dawn_root}/src/utils:utils",
+    ]
+
+    if (is_apple) {
+      sources += [
+        "IOSurfaceUtils.cpp",
+        "IOSurfaceUtils.h",
+      ]
+    }
+
+    if (is_mac) {
+      sources += [ "SystemUtils_mac.mm" ]
+    }
+
+    # Note that while this doesn't make `internal_config` a public config of
+    # Dawn libraries because `:common` is only used as a private deps of Dawn
+    # targets, so `internal_config` doesn't leak out of Dawn.
+    public_configs = [ ":internal_config" ]
+    deps = [
+      "${dawn_root}/include/dawn:cpp_headers",
+      "${dawn_root}/include/dawn:headers",
+    ]
+
+    if (is_win) {
+      sources += [
+        "WindowsUtils.cpp",
+        "WindowsUtils.h",
+        "windows_with_undefs.h",
+      ]
+    }
+    if (dawn_enable_vulkan) {
+      public_deps += [ "${dawn_vulkan_headers_dir}:vulkan_headers" ]
+    }
+    if (is_android) {
+      libs = [ "log" ]
+    }
+  }
+}

@@ -1,0 +1,150 @@
+Name
+
+    GL_ARB_robustness_isolation
+
+Name Strings
+
+    GL_ARB_robustness_application_isolation
+    GL_ARB_robustness_share_group_isolation
+
+Contributors
+
+    Tim Johansson, Opera (timj 'at' opera.com)
+    Chris Marrin, Apple (cmarrin 'at' apple.com)
+    Bill Licea-Kane (bill.licea-kane 'at' amd.com)
+    XYZ
+
+Contact
+
+    Kenneth Russell, Google (kbr 'at' google.com)
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. 
+    Approved by the ARB on 2012/06/18.
+    Ratified by the Khronos Board of Promoters on 2012/07/27.
+
+Version
+
+    Last Modified Date: August 13, 2012
+    Revision: 3
+
+Number
+
+    ARB Extension #126
+
+Dependencies
+
+    GL_ARB_robustness is required.
+
+Overview
+
+    GL_ARB_robustness and supporting window system extensions allow
+    creating an OpenGL context supporting graphics reset notification
+    behavior.  GL_ARB_robustness_isolation provides stronger
+    guarantees about the possible side-effects of a graphics reset.
+
+    It is expected that there may be a performance cost associated
+    with isolating an application or share group from other contexts
+    on the GPU. For this reason, GL_ARB_robustness_isolation is
+    phrased as an opt-in mechanism, with a new context creation bit
+    defined in the window system bindings. It is expected that
+    implementations might only advertise the strings in this extension
+    if both the implementation supports the desired isolation
+    properties, and the context was created with the appropriate reset
+    isolation bit.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None.
+
+New Types
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to section 2.6 "Graphics Reset Recovery" defined in
+GL_ARB_robustness
+
+      If the graphics driver advertises the
+      GL_ARB_robustness_application_isolation extension string, then
+      the driver guarantees that if a particular application causes a
+      graphics reset to occur:
+
+      1. No other application on the system is affected by the
+         graphics reset.
+
+      2. No other application on the system receives any notification
+         that the graphics reset occurred.
+    
+      If the graphics driver advertises the
+      GL_ARB_robustness_share_group_isolation extension string, then
+      the driver guarantees that if a context in a particular share
+      group causes a graphics reset to occur:
+
+      1. No other share group within the application is affected by
+         the graphics reset. Additionally, no other application on the
+         system is affected by the graphics reset.
+
+      2. No other share group within the application receives any
+         notification that the graphics reset occurred. Additionally,
+         no other application on the system receives any notification
+         that the graphics reset occurred.
+
+Additions to the AGL/GLX/WGL specifications
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Sample Code
+
+    TBD
+
+Issues
+
+    None
+
+Revision History
+
+    Rev.    Date       Author     Changes
+    ----  ------------ ---------  ----------------------------------------
+      3   08/13/12     Jon Leech  Renumbered from #144 to #126
+      2   24 Apr 2012  kbr        Indicated that isolation is opt-in mechanism based on feedback from Bill Licea-Kane
+      1   17 Aug 2011  kbr        Initial version

@@ -1,0 +1,283 @@
+Name
+
+    EXT_shader_implicit_conversions
+
+Name Strings
+
+    GL_EXT_shader_implicit_conversions
+
+Contact
+
+    Jon Leech (oddhack 'at' sonic.net)
+    Daniel Koch, NVIDIA (dkoch 'at' nvidia.com)
+
+Contributors
+
+    Slawomir Grajewski, Intel
+    Contributors to ARB_gpu_shader5
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+    Portions Copyright (c) 2013-2014 NVIDIA Corporation.
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: April 1, 2014
+    Revision: 6
+
+Number
+
+    OpenGL ES Extension #179
+
+Dependencies
+
+    OpenGL ES 3.1 and OpenGL ES Shading Language 3.10 are required.
+
+    This specification is written against the OpenGL ES 3.10 Shading
+    Language (March 17, 2014) Specification.
+
+Overview
+
+    This extension provides support for implicitly converting signed integer
+    types to unsigned types, as well as more general implicit conversion and
+    function overloading infrastructure to support new data types introduced by
+    other extensions.
+
+Modifications to The OpenGL ES Shading Language Specification, Version 3.10
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_EXT_shader_implicit_conversions : <behavior>
+
+    where <behavior> is as specified in section 3.4.
+
+    A new preprocessor #define is added to the OpenGL ES Shading Language:
+
+      #define GL_EXT_shader_implicit_conversions        1
+
+
+    Add new section 4.1.10 following section 4.1.9 "Arrays":
+
+    4.1.10 Implicit Conversions
+
+    In some situations, an expression and its type will be implicitly
+    converted to a different type. The following table shows all allowed
+    implicit conversions:
+
+                                Can be implicitly
+        Type of expression        converted to
+        ---------------------   -----------------
+        int                     uint, float
+        ivec2                   uvec2, vec2
+        ivec3                   uvec3, vec3
+        ivec4                   uvec4, vec4
+        uint                    float
+        uvec2                   vec2
+        uvec3                   vec3
+        uvec4                   vec4
+
+    No implicit conversions are provided to convert from unsigned to signed
+    integer types or from floating-point to integer types. There are no
+    implicit array or structure conversions.
+
+    When an implicit conversion is done, it is not a re-interpretation of
+    the expression's bit pattern, but a conversion of its value to an
+    equivalent value in the new type. For example, the integer value -5 will
+    be converted to the floating-point value -5.0. Integer values having
+    more bits of precision than a single-precision floating-point mantissa
+    will lose precision when converted to float.
+
+    When performing implicit conversion for binary operators, there may be
+    multiple data types to which the two operands can be converted. For
+    example, when adding an int value to a uint value, both values can be
+    implicitly converted to uint and float. In such cases, a floating-point
+    type is chosen if either operand has a floating-point type. Otherwise,
+    an unsigned integer type is chosen if either operand has an unsigned
+    integer type. Otherwise, a signed integer type is chosen. If operands
+    can be implicitly converted to multiple data types deriving from the
+    same base data type, the type with the smallest component size is used.
+    The conversions in the table above are done only as indicated by other
+    sections of this specification.
+
+
+    Modify Section 5.9 "Expressions", p. 81:
+
+    (modify the specified items in the bulleted list as follows, adding
+    support for implicit conversion between signed and unsigned types)
+
+    Expressions in the shading language are built from the following:
+
+    * The arithmetic binary operators add (+), subtract (-), multiply (*),
+      and divide (/) operate on integer and floating-point scalars, vectors,
+      and matrices. If the fundamental types in the operands do not match,
+      then the conversions from section 4.1.10 "Implicit Conversions" are
+      applied to create matching types. All arithmetic binary operators ...
+
+    * The operator modulus (%) operates on signed or unsigned integer
+      scalars or integer vectors. If the fundamental types of the operands
+      do not match, the conversions from Section &4.1.10 "Implicit
+      Conversions" are applied to produce matching types. The operands
+      cannot be vectors of differing size ...
+
+    * The relational operators greater than (>), less than (<), greater than
+      or equal (>=), and less than or equal (<=) operate only on scalar
+      integer and scalar floating-point expressions. The result is scalar
+      Boolean. Either the operands' types must match, or the conversions
+      from section 4.1.10 "Implicit Conversions" will be applied to obtain
+      matching types. To do component-wise relational comparisons ...
+
+    * The equality operators equal (==), and not equal (!=) operate on all
+      types. They result in a scalar Boolean. If the operand types do not
+      match, then there must be a conversion from section 4.1.10 "Implicit
+      Conversions" applied to one operand that can make them match, in which
+      case this conversion is done. For vectors, matrices, structures, ...
+
+    * The ternary selection operator (?:). It operates on three expressions
+      (exp1 ? exp2 : exp3). This operator evaluates the first expression,
+      which must result in a scalar Boolean. If the result is true, it
+      selects to evaluate the second expression, otherwise it selects to
+      evaluate the third expression. Only one of the second and third
+      expressions is evaluated. The second and third expressions can be any
+      type, as long their types match, or there is a conversion in section
+      4.1.10 "Implicit Conversions" that can be applied to one of the
+      expressions to make their types match. This resulting matching type is
+      the type of the entire expression.
+
+
+    Modify Section 6.1, Function Definitions, p. 88
+
+    (modify description of overloading)
+
+    Function names can be overloaded.  The same function name can be used for
+    multiple functions, as long as the parameter types differ.  If a function
+    name is declared twice with the same parameter types, then the return
+    types and all qualifiers must also match, and it is the same function
+    being declared.  For example,
+
+      vec4 f(in vec4 x, out vec4  y);   // (A)
+      vec4 f(in vec4 x, out uvec4 y);   // (B) okay, different argument type
+      vec4 f(in ivec4 x, out uvec4 y);  // (C) okay, different argument type
+
+      int  f(in vec4 x, out ivec4 y);  // error, only return type differs
+      vec4 f(in vec4 x, in  vec4  y);  // error, only qualifier differs
+      vec4 f(const in vec4 x, out vec4 y);  // error, only qualifier differs
+
+    When function calls are resolved, an exact type match for all the
+    arguments is sought. If an exact match is found, all other functions are
+    ignored, and the exact match is used. If no exact match is found, then
+    the implicit conversions in section 4.1.10 (Implicit Conversions) will
+    be applied to find a match. Mismatched types on input parameters ("in"
+    or default) must have a conversion from the calling argument type to the
+    formal parameter type. Mismatched types on output parameters ("out")
+    must have a conversion from the formal parameter type to the calling
+    argument type.
+
+    If implicit conversions can be used to find more than one matching
+    function, a single best-matching function is sought. To determine a best
+    match, the conversions between calling argument and formal parameter
+    types are compared for each function argument and pair of matching
+    functions. After these comparisons are performed, each pair of matching
+    functions are compared. A function definition A is considered a better
+    match than function definition B if:
+
+      * for at least one function argument, the conversion for that argument
+        in A is better than the corresponding conversion in B; and
+
+      * there is no function argument for which the conversion in B is
+        better than the corresponding conversion in A.
+
+    If a single function definition is considered a better match than every
+    other matching function definition, it will be used. Otherwise, a
+    compile-time semantic error for an ambiguous overloaded function call
+    occurs.
+
+    To determine whether the conversion for a single argument in one match
+    is better than that for another match, the rule that an exact match is
+    better than a match involving any implicit conversion is used.
+
+    If this rule does not apply to a particular pair of conversions,
+    neither conversion is considered better than the other.
+
+    For the function prototypes (A), (B), and (C) above, the following
+    examples show how the rules apply to different sets of calling argument
+    types:
+
+      f(vec4, vec4);        // exact match of vec4 f(in vec4 x, out vec4 y)
+      f(vec4, uvec4);       // exact match of vec4 f(in vec4 x, out ivec4 y)
+      f(ivec4, vec4);       // NOT matched.  All three match by implicit
+                            //   conversion.  (C) is better than (A) and (B)
+                            //   on the first argument.  (A) is better than
+                            //   (B) and (C).
+
+    User-defined functions can have multiple ...
+
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    Note: These issues apply specifically to the definition of the
+    EXT_shader_implicit_conversions specification, which is based on the
+    OpenGL extension ARB_gpu_shader5 as updated in OpenGL 4.x. Resolved issues
+    from ARB_gpu_shader5 have been removed, but some remain applicable to this
+    extension. ARB_gpu_shader5 can be found in the OpenGL Registry.
+
+    (1) What functionality was removed relative to ARB_gpu_shader5?
+
+      - everything unrelated to implicit conversions and function overloading.
+      - Interactions with features not supported by the underlying
+        ES 3.1 API and Shading Language, including:
+        * interactions with ARB_gpu_shader_fp64 and NV_gpu_shader, including
+          support for double-precision in implicit conversions and function
+          overload resolution
+        * shading language function overloading rules involving the type
+          double
+
+    (2) What functionality was changed and added relative to
+        ARB_gpu_shader5?
+
+        None.
+
+    (3) Are the function overloading rules and examples correct?
+
+    RESOLVED. Rules 2 and 3 as given in the GLSL 4.40 specification do not
+    apply to ESSL, because there are no double types. There is a bug in the
+    example
+
+      f(vec4, ivec4);       // matched to vec4 f(in vec4 x, out vec4 y)
+                            // (A) better than (B) for 2nd argument
+                            //   argument (rule 2), same on first argument.
+
+    both because this example is incorrect WRT the overloading rules
+    starting with GLSL 4.00.4, and because the overloading rules in ESSL are
+    simpler. This example has been removed (see bug 11178).
+
+Revision History
+
+    Revision 1, 2013/11/20 (Daniel Koch)
+        - Initial version extracted from EXT_gpu_shader5 rev 2.
+
+    Revision 2, 2013/11/21 (Jon Leech)
+        - Resolve function overloading issue 7, per bug 11178.
+
+    Revision 3, 2013/12/18 (Daniel Koch)
+        - minor cleanup
+
+    Revision 4, 2014/03/10 (Jon Leech)
+        - Rebase on OpenGL ES 3.1 and change suffix to EXT.
+
+    Revision 5, 2014/03/26 (Jon Leech)
+        - Sync with released ES 3.1 specs.
+
+    Revision 6, 2014/04/01 (Daniel Koch)
+        - update contributors

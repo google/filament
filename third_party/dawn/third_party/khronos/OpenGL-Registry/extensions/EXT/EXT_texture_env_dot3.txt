@@ -1,0 +1,142 @@
+Name
+
+    EXT_texture_env_dot3
+
+Name Strings
+
+    GL_EXT_texture_env_dot3
+
+Contact
+
+    Dan Ginsburg, AMD (dan.ginsburg 'at' amd.com)
+    Dave Gosselin
+
+Notice
+
+    Copyright ATI Technologies, 2000.
+
+IP Status
+
+    None
+
+Version
+
+    Last Modified Date: 2006/11/04 13:54:17 Revision: 1.3
+
+Number
+
+    220
+
+Dependencies
+
+    EXT_texture_env_combine is required and is modified by this extension
+    ARB_multitexture affects the definition of this extension
+
+Overview
+
+    Adds new operation to the texture combiner operations.
+
+        DOT3_RGB_EXT                    Arg0 <dotprod> Arg1
+        DOT3_RGBA_EXT                   Arg0 <dotprod> Arg1
+
+    where Arg0, Arg1 are derived from
+
+        PRIMARY_COLOR_EXT       primary color of incoming fragment
+        TEXTURE                 texture color of corresponding texture unit
+        CONSTANT_EXT            texture environment constant color
+        PREVIOUS_EXT            result of previous texture environment; on
+                                texture unit 0, this maps to PRIMARY_COLOR_EXT
+
+    This operaion can only be performed if SOURCE0_RGB_EXT,
+    SOURCE1_RGB_EXT are defined.
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv,
+    and TexEnviv when the <pname> parameter value is COMBINE_RGB_EXT
+
+        DOT3_RGB_EXT                                    0x8740
+        DOT3_RGBA_EXT                                   0x8741
+
+
+Additions to Chapter 2 of the OpenGL 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2 Specification (Rasterization)
+
+    Added to subsection 3.8.9, before the paragraph describing the
+    state requirements:
+
+    If the value of TEXTURE_ENV_MODE is COMBINE_EXT, the form of the
+    texture function depends on the values of COMBINE_RGB_EXT and
+    COMBINE_ALPHA_EXT, according to table 3.20.  The RGB and ALPHA
+    results of the texture function are not multiplied by the values
+    of RGB_SCALE_EXT and ALPHA_SCALE, respectively.  The results are
+    clamped to [0,1].
+
+
+        COMBINE_RGB_EXT         Texture Function
+        ------------------      ----------------
+        DOT3_RGB_EXT            4*((Arg0_r - 0.5)*(Arg1_r - 0.5) +
+                                   (Arg0_g - 0.5)*(Arg1_g - 0.5) +
+                                   (Arg0_b - 0.5)*(Arg1_b - 0.5))
+                                This value is placed into all three
+                                r,g,b components of the output.
+        DOT3_RGBA_EXT           4*((Arg0_r - 0.5)*(Arg1_r - 0.5) +
+                                   (Arg0_g - 0.5)*(Arg1_g - 0.5) +
+                                   (Arg0_b - 0.5)*(Arg1_b - 0.5))
+                                This value is placed into all four
+                                r,g,b,a components of the output.
+
+
+        Table 3.20: COMBINE_EXT texture functions
+    
+
+Additions to Chapter 4 of the OpenGL 1.2 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+Modifications to EXT_texture_env_combine
+
+Dependencies on ARB_multitexture
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    None
+

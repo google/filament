@@ -1,0 +1,323 @@
+Name
+
+    SGIS_texture_lod
+
+Name Strings
+
+    GL_SGIS_texture_lod
+
+Version
+
+    $Date: 1997/05/30 01:34:44 $ $Revision: 1.8 $
+
+Number
+
+    24
+
+Dependencies
+
+    EXT_texture is required
+    EXT_texture3D affects the definition of this extension
+    EXT_texture_object affects the definition of this extension
+    SGI_detail_texture affects the definition of this extension
+    SGI_sharpen_texture affects the definition of this extension
+
+Overview
+
+    This extension imposes two constraints related to the texture level of
+    detail parameter LOD, which is represented by the Greek character lambda
+    in the GL Specification.  One constraint clamps LOD to a specified
+    floating point range.  The other limits the selection of mipmap image
+    arrays to a subset of the arrays that would otherwise be considered.
+
+    Together these constraints allow a large texture to be loaded and
+    used initially at low resolution, and to have its resolution raised
+    gradually as more resolution is desired or available.  Image array
+    specification is necessarily integral, rather than continuous.  By
+    providing separate, continuous clamping of the LOD parameter, it is
+    possible to avoid "popping" artifacts when higher resolution images
+    are provided.
+
+    Note: because the shape of the mipmap array is always determined by
+    the dimensions of the level 0 array, this array must be loaded for
+    mipmapping to be active.  If the level 0 array is specified with a
+    null image pointer, however, no actual data transfer will take
+    place.  And a sufficiently tuned implementation might not even
+    allocate space for a level 0 array so specified until true image
+    data were presented.
+
+Issues
+
+    *   Should detail and sharpen texture operate when the level 0 image
+        is not being used?
+
+        A: Sharpen yes, detail no.
+
+    *   Should the shape of the mipmap array be determined by the
+        dimensions of the level 0 array, regardless of the base level?
+
+        A: Yes, this is the better solution.  Driving everything from
+           the base level breaks the proxy query process, and allows
+           mipmap arrays to be placed arbitrarily.  The issues of
+           requiring a level 0 array are partially overcome by the use
+           of null-point loads, which avoid data transfer and,
+           potentially, data storage allocation.
+
+    *   With the arithmetic as it is, a linear filter might access an
+        array past the limit specified by MAX_LEVEL or p.  But the
+        results of this access are not significant, because the blend
+        will weight them as zero.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameteri, TexParameterf,
+    TexParameteriv, TexParameterfv, GetTexParameteriv, and GetTexParameterfv:
+
+        TEXTURE_MIN_LOD_SGIS            0x813A
+        TEXTURE_MAX_LOD_SGIS            0x813B
+        TEXTURE_BASE_LEVEL_SGIS         0x813C
+        TEXTURE_MAX_LEVEL_SGIS          0x813D
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    GL Specification Table 3.7 is updated as follows:
+
+        Name                            Type        Legal Values
+        ----                            ----        ------------
+        TEXTURE_WRAP_S                  integer     CLAMP, REPEAT
+        TEXTURE_WRAP_T                  integer     CLAMP, REPEAT
+        TEXTURE_WRAP_R_EXT              integer     CLAMP, REPEAT
+        TEXTURE_MIN_FILTER              integer     NEAREST, LINEAR,
+                                                    NEAREST_MIPMAP_NEAREST,
+                                                    NEAREST_MIPMAP_LINEAR,
+                                                    LINEAR_MIPMAP_NEAREST,
+                                                    LINEAR_MIPMAP_LINEAR,
+                                                    FILTER4_SGIS
+        TEXTURE_MAG_FILTER              integer     NEAREST, LINEAR,
+                                                    FILTER4_SGIS,
+                                                    LINEAR_DETAIL_SGIS,
+                                                    LINEAR_DETAIL_ALPHA_SGIS,
+                                                    LINEAR_DETAIL_COLOR_SGIS,
+                                                    LINEAR_SHARPEN_SGIS,
+                                                    LINEAR_SHARPEN_ALPHA_SGIS,
+                                                    LINEAR_SHARPEN_COLOR_SGIS
+        TEXTURE_BORDER_COLOR            4 floats    any 4 values in [0,1]
+        DETAIL_TEXTURE_LEVEL_SGIS       integer     any non-negative integer
+        DETAIL_TEXTURE_MODE_SGIS        integer     ADD, MODULATE
+        TEXTURE_MIN_LOD_SGIS            float       any value
+        TEXTURE_MAX_LOD_SGIS            float       any value
+        TEXTURE_BASE_LEVEL_SGIS         integer     any non-negative integer
+        TEXTURE_MAX_LEVEL_SGIS          integer     any non-negative integer
+
+        Table 3.7: Texture parameters and their values.
+
+    Base Array
+    ----------
+
+    Although it is not explicitly stated, it is the clear intention
+    of the OpenGL specification that texture minification filters
+    NEAREST and LINEAR, and all texture magnification filters, be
+    applied to image array zero.  This extension introduces a
+    parameter, BASE_LEVEL, that explicitly specifies which array
+    level is used for these filter operations.  Base level is specified
+    for a specific texture by calling TexParameteri, TexParameterf,
+    TexParameteriv, or TexParameterfv with <target> set to TEXTURE_1D,
+    TEXTURE_2D, or TEXTURE_3D_EXT, <pname> set to TEXTURE_BASE_LEVEL_SGIS,
+    and <param> set to (or <params> pointing to) the desired value.  The
+    error INVALID_VALUE is generated if the specified BASE_LEVEL is
+    negative.
+
+    Level of Detail Clamping
+    ------------------------
+
+    The level of detail parameter LOD is defined in the first paragraph
+    of Section 3.8.1 (Texture Minification) of the GL Specification, where
+    it is represented by the Greek character lambda.  This extension
+    redefines the definition of LOD as follows:
+
+        LOD'(x,y) = log_base_2 (Q(x,y))
+
+
+               /  MAX_LOD       LOD' > MAX_LOD
+        LOD = (   LOD'          LOD' >= MIN_LOD and LOD' <= MAX_LOD
+               \  MIN_LOD       LOD' < MIN_LOD
+                \ undefined     MIN_LOD > MAX_LOD
+
+    The variable Q in this definition represents the Greek character rho,
+    as it is used in the OpenGL Specification.  (Recall that Q is computed
+    based on the dimensions of the BASE_LEVEL image array.)  MIN_LOD is the
+    value of the per-texture variable TEXTURE_MIN_LOD_SGIS, and MAX_LOD is
+    the value of the per-texture variable TEXTURE_MAX_LOD_SGIS.
+
+    Initially TEXTURE_MIN_LOD_SGIS and TEXTURE_MAX_LOD_SGIS are -1000 and
+    1000 respectively, so they do not interfere with the normal operation of
+    texture mapping.  These values are respecified for a specific texture
+    by calling TexParameteri, TexParemeterf, TexParameteriv, or
+    TexParameterfv with <target> set to TEXTURE_1D, TEXTURE_2D, or
+    TEXTURE_3D_EXT, <pname> set to TEXTURE_MIN_LOD_SGIS or
+    TEXTURE_MAX_LOD_SGIS, and <param> set to (or <params> pointing to) the
+    new value.  It is not an error to specify a maximum LOD value that is
+    less than the minimum LOD value, but the resulting LOD values are
+    not defined.
+
+    LOD is clamped to the specified range prior to any use.  Specifically,
+    the mipmap image array selection described in the Mipmapping Subsection
+    of the GL Specification is based on the clamped LOD value.  Also, the 
+    determination of whether the minification or magnification filter is
+    used is based on the clamped LOD.
+
+    Mipmap Completeness
+    -------------------
+
+    The GL Specification describes a "complete" set of mipmap image arrays
+    as array levels 0 through p, where p is a well defined function of the
+    dimensions of the level 0 image.  This extension modifies the notion
+    of completeness: instead of requiring that all arrays 0 through p
+    meet the requirements, only arrays 0 and arrays BASE_LEVEL through
+    MAX_LEVEL (or p, whichever is smaller) must meet these requirements.
+    The specification of BASE_LEVEL was described above.  MAX_LEVEL is
+    specified by calling TexParameteri, TexParemeterf, TexParameteriv, or
+    TexParameterfv with <target> set to TEXTURE_1D, TEXTURE_2D, or
+    TEXTURE_3D_EXT, <pname> set to TEXTURE_MAX_LEVEL_SGIS, and <param> set
+    to (or <params> pointing to) the desired value.  The error
+    INVALID_VALUE is generated if the specified MAX_LEVEL is negative.
+    If MAX_LEVEL is smaller than BASE_LEVEL, or if BASE_LEVEL is greater
+    than p, the set of arrays is incomplete.
+
+    Array Selection
+    ---------------
+
+    Magnification and non-mipmapped minification are always performed
+    using only the BASE_LEVEL image array.  If the minification filter
+    is one that requires mipmapping, one or two array levels are
+    selected using the equations in the table below, and the LOD value
+    is clamped to a maximum value that insures that no array beyond
+    the limits specified by MAX_LEVEL and p is accessed.
+
+        Minification Filter         Maximum LOD     Array level(s)
+        -------------------         -----------     --------------
+        NEAREST_MIPMAP_NEAREST      M + 0.4999      floor(B + 0.5)
+        LINEAR_MIPMAP_NEAREST       M + 0.4999      floor(B + 0.5)
+        NEAREST_MIPMAP_LINEAR       M               floor(B), floor(B)+1
+        LINEAR_MIPMAP_LINEAR        M               floor(B), floor(B)+1
+
+        where:
+
+            M = min(MAX_LEVEL,p) - BASE_LEVEL
+            B = BASE_LEVEL + LOD
+
+    For NEAREST_MIPMAP_NEAREST and LINEAR_MIPMAP_NEAREST the specified
+    image array is filtered according to the rules for NEAREST or
+    LINEAR respectively.  For NEAREST_MIPMAP_LINEAR and
+    LINEAR_MIPMAP_LINEAR both selected arrays are filtered according to
+    the rules for NEAREST or LINEAR, respectively.  The resulting values
+    are then blended as described in the Mipmapping section of the
+    OpenGL specification.
+
+    Additional Filters
+    ------------------
+    
+    Sharpen filters (described in SGIS_sharpen_texture) operate on array
+    levels BASE_LEVEL and BASE_LEVEL+1.  If the minimum of MAX_LEVEL and p
+    is not greater than BASE_LEVEL, then sharpen texture reverts to a
+    LINEAR magnification filter.  Detail filters (described in
+    SGIS_detail_texture) operate only when BASE_LEVEL is zero.
+
+    Texture Capacity
+    ----------------
+
+    In Section 3.8 the OpenGL specification states:
+    
+        "In order to allow the client to meaningfully query the maximum
+         image array sizes that are supported, an implementation must not
+         allow an image array of level one or greater to be created if a
+         `complete' set of image arrays consistent with the requested
+         array could not be supported."
+
+    Given this extension's redefinition of completeness, the above
+    paragraph should be rewritten to indicate that all levels of the
+    `complete' set of arrays must be supportable.  E.g.
+
+        "In order to allow the client to meaningfully query the maximum
+         image array sizes that are supported, an implementation must not
+         allow an image array of level one or greater to be created if a
+         `complete' set of image arrays (all levels 0 through p) consistent
+         with the requested array could not be supported."
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not supported, references to 3D texture mapping and
+    to TEXTURE_3D_EXT in this document are invalid and should be ignored.
+
+Dependencies on EXT_texture_object
+
+    If EXT_texture_object is implemented, the state values named
+
+        TEXTURE_MIN_LOD_SGIS
+        TEXTURE_MAX_LOD_SGIS
+        TEXTURE_BASE_LEVEL_SGIS
+        TEXTURE_MAX_LEVEL_SGIS
+
+    are added to the state vector of each texture object. When an attribute
+    set that includes texture information is popped, the bindings and
+    enables are first restored to their pushed values, then the bound
+    textures have their LOD and LEVEL parameters restored to their pushed
+    values.
+
+Dependencies on SGIS_detail_texture
+
+    If SGIS_detail_texture is not supported, references to detail texture
+    mapping in this document are invalid and should be ignored.
+
+Dependencies on SGIS_sharpen_texture
+
+    If SGIS_sharpen_texture is not supported, references to sharpen texture
+    mapping in this document are invalid and should be ignored.
+
+Errors
+
+    INVALID_VALUE is generated if an attempt is made to set
+    TEXTURE_BASE_LEVEL_SGIS or TEXTURE_MAX_LEVEL_SGIS to a negative value.
+
+New State
+
+                                                                Initial
+    Get Value                   Get Command         Type        Value   Attrib
+    ---------                   -----------         ----        ------- ------
+    TEXTURE_MIN_LOD_SGIS        GetTexParameterfv   n x R       -1000   texture
+    TEXTURE_MAX_LOD_SGIS        GetTexParameterfv   n x R        1000   texture
+    TEXTURE_BASE_LEVEL_SGIS     GetTexParameteriv   n x R           0   texture
+    TEXTURE_MAX_LEVEL_SGIS      GetTexParameteriv   n x R        1000   texture
+
+New Implementation Dependent State
+
+    None

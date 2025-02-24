@@ -1,0 +1,295 @@
+{
+    "_comment": [
+        "Copyright 2019 The Dawn & Tint Authors",
+        "",
+        "Redistribution and use in source and binary forms, with or without",
+        "modification, are permitted provided that the following conditions are met:",
+        "",
+        "  1. Redistributions of source code must retain the above copyright notice, this",
+        "     list of conditions and the following disclaimer.",
+        "",
+        "  2. Redistributions in binary form must reproduce the above copyright notice,",
+        "     this list of conditions and the following disclaimer in the documentation",
+        "     and/or other materials provided with the distribution.",
+        "",
+        "  3. Neither the name of the copyright holder nor the names of its",
+        "     contributors may be used to endorse or promote products derived from",
+        "     this software without specific prior written permission.",
+        "  ",
+        "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"",
+        "AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE",
+        "IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE",
+        "DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE",
+        "FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL",
+        "DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR",
+        "SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER",
+        "CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,",
+        "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE",
+        "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
+    ],
+
+    "_doc": "See docs/dawn/codegen.md",
+
+    "commands": {
+        "buffer map async": [
+            { "name": "buffer id", "type": "ObjectId", "id_type": "buffer" },
+            { "name": "event manager handle", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "mode", "type": "map mode" },
+            { "name": "offset", "type": "uint64_t"},
+            { "name": "size", "type": "uint64_t"}
+        ],
+        "buffer update mapped data": [
+            { "name": "buffer id", "type": "ObjectId", "id_type": "buffer" },
+            { "name": "write data update info length", "type": "uint64_t" },
+            { "name": "write data update info", "type": "uint8_t", "annotation": "const*", "length": "write data update info length", "skip_serialize": true},
+            { "name": "offset", "type": "uint64_t"},
+            { "name": "size", "type": "uint64_t"}
+        ],
+        "device create buffer": [
+            { "name": "device id", "type": "ObjectId", "id_type": "device" },
+            { "name": "descriptor", "type": "buffer descriptor", "annotation": "const*" },
+            { "name": "result", "type": "ObjectHandle", "handle_type": "buffer" },
+            { "name": "read handle create info length", "type": "uint64_t" },
+            { "name": "read handle create info", "type": "uint8_t", "annotation": "const*", "length": "read handle create info length", "skip_serialize": true},
+            { "name": "write handle create info length", "type": "uint64_t" },
+            { "name": "write handle create info", "type": "uint8_t", "annotation": "const*", "length": "write handle create info length", "skip_serialize": true}
+        ],
+        "device create compute pipeline async": [
+            { "name": "device id", "type": "ObjectId", "id_type": "device"},
+            { "name": "event manager handle", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "pipeline object handle", "type": "ObjectHandle", "handle_type": "compute pipeline"},
+            { "name": "descriptor", "type": "compute pipeline descriptor", "annotation": "const*"}
+        ],
+        "device create render pipeline async": [
+            { "name": "device id", "type": "ObjectId", "id_type": "device" },
+            { "name": "event manager handle", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "pipeline object handle", "type": "ObjectHandle", "handle_type": "render pipeline"},
+            { "name": "descriptor", "type": "render pipeline descriptor", "annotation": "const*"}
+        ],
+        "device pop error scope": [
+            { "name": "device id", "type": "ObjectId", "id_type": "device" },
+            { "name": "event manager handle", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" }
+        ],
+        "unregister object": [
+            { "name": "object type", "type": "ObjectType" },
+            { "name": "object id", "type": "ObjectId" }
+        ],
+        "queue on submitted work done": [
+            { "name": "queue id", "type": "ObjectId", "id_type": "queue" },
+            { "name": "event manager handle", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" }
+        ],
+        "queue write buffer": [
+            {"name": "queue id", "type": "ObjectId", "id_type": "queue" },
+            {"name": "buffer id", "type": "ObjectId", "id_type": "buffer" },
+            {"name": "buffer offset", "type": "uint64_t"},
+            {"name": "data", "type": "uint8_t", "annotation": "const*", "length": "size", "wire_is_data_only": true},
+            {"name": "size", "type": "uint64_t"}
+        ],
+        "queue write texture": [
+            {"name": "queue id", "type": "ObjectId", "id_type": "queue" },
+            {"name": "destination", "type": "texel copy texture info", "annotation": "const*"},
+            {"name": "data", "type": "uint8_t", "annotation": "const*", "length": "data size", "wire_is_data_only": true},
+            {"name": "data size", "type": "uint64_t"},
+            {"name": "data layout", "type": "texel copy buffer layout", "annotation": "const*"},
+            {"name": "writeSize", "type": "extent 3D", "annotation": "const*"}
+        ],
+        "shader module get compilation info": [
+            { "name": "shader module id", "type": "ObjectId", "id_type": "shader module" },
+            { "name": "event manager handle", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" }
+        ],
+        "surface get current texture": [
+            { "name": "surface id", "type": "ObjectId", "id_type": "surface" },
+            { "name": "configured device id", "type": "ObjectId", "id_type": "device" },
+            { "name": "texture handle", "type": "ObjectHandle", "handle_type": "texture" }
+        ],
+        "instance request adapter": [
+            { "name": "instance id", "type": "ObjectId", "id_type": "instance" },
+            { "name": "event manager handle", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "adapter object handle", "type": "ObjectHandle", "handle_type": "adapter"},
+            { "name": "options", "type": "request adapter options", "annotation": "const*", "optional": true }
+        ],
+        "adapter request device": [
+            { "name": "adapter id", "type": "ObjectId", "id_type": "adapter" },
+            { "name": "event manager handle", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "device object handle", "type": "ObjectHandle", "handle_type": "device"},
+            { "name": "device lost future", "type": "future" },
+            { "name": "descriptor", "type": "device descriptor", "annotation": "const*" }
+        ]
+    },
+    "return commands": {
+        "buffer map async callback": [
+            { "name": "event manager", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "status", "type": "map async status" },
+            { "name": "message", "type": "string view" },
+            { "name": "read data update info length", "type": "uint64_t" },
+            { "name": "read data update info", "type": "uint8_t", "annotation": "const*", "length": "read data update info length", "skip_serialize": true }
+        ],
+        "device create compute pipeline async callback": [
+            { "name": "event manager", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "status", "type": "create pipeline async status" },
+            { "name": "message", "type": "string view"}
+        ],
+        "device create render pipeline async callback": [
+            { "name": "event manager", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "status", "type": "create pipeline async status" },
+            { "name": "message", "type": "string view"}
+        ],
+        "device uncaptured error callback": [
+            { "name": "device", "type": "ObjectHandle", "handle_type": "device" },
+            { "name": "type", "type": "error type"},
+            { "name": "message", "type": "string view"}
+        ],
+        "device logging callback": [
+            { "name": "device", "type": "ObjectHandle", "handle_type": "device" },
+            { "name": "type", "type": "logging type"},
+            { "name": "message", "type": "string view" }
+        ],
+        "device lost callback" : [
+            { "name": "event manager", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "reason", "type": "device lost reason" },
+            { "name": "message", "type": "string view"}
+        ],
+        "device pop error scope callback": [
+            { "name": "event manager", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "status", "type": "pop error scope status" },
+            { "name": "type", "type": "error type" },
+            { "name": "message", "type": "string view"}
+        ],
+        "queue work done callback": [
+            { "name": "event manager", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "status", "type": "queue work done status" }
+        ],
+        "shader module get compilation info callback": [
+            { "name": "event manager", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "status", "type": "compilation info request status" },
+            { "name": "info", "type": "compilation info", "annotation": "const*", "optional": true }
+        ],
+        "instance request adapter callback": [
+            { "name": "event manager", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "status", "type": "request adapter status" },
+            { "name": "message", "type": "string view" },
+            { "name": "info", "type": "adapter info", "annotation": "const*", "optional": "true" },
+            { "name": "limits", "type": "supported limits", "annotation": "const*", "optional": "true" },
+            { "name": "features count", "type": "uint32_t"},
+            { "name": "features", "type": "feature name", "annotation": "const*", "length": "features count"}
+        ],
+        "adapter request device callback": [
+            { "name": "event manager", "type": "ObjectHandle" },
+            { "name": "future", "type": "future" },
+            { "name": "status", "type": "request device status" },
+            { "name": "message", "type": "string view" },
+            { "name": "limits", "type": "supported limits", "annotation": "const*", "optional": "true" },
+            { "name": "features count", "type": "uint32_t"},
+            { "name": "features", "type": "feature name", "annotation": "const*", "length": "features count"}
+        ]
+    },
+    "special items": {
+        "client_side_structures": [
+            "FutureWaitInfo",
+            "SurfaceDescriptorFromWindowsCoreWindow",
+            "SurfaceDescriptorFromWindowsSwapChainPanel",
+            "SurfaceSourceMetalLayer",
+            "SurfaceSourceWindowsHWND",
+            "SurfaceSourceXlibWindow",
+            "SurfaceSourceWaylandSurface",
+            "SurfaceSourceAndroidNativeWindow",
+            "SurfaceSourceXCBWindow"
+        ],
+        "client_side_commands": [
+            "AdapterCreateDevice",
+            "AdapterGetFeatures",
+            "AdapterGetFormatCapabilities",
+            "AdapterGetInfo",
+            "AdapterGetInstance",
+            "AdapterGetLimits",
+            "AdapterHasFeature",
+            "AdapterRequestDevice",
+            "BufferMapAsync",
+            "BufferGetConstMappedRange",
+            "BufferGetMappedRange",
+            "BufferGetMapState",
+            "BufferGetSize",
+            "BufferGetUsage",
+            "DeviceCreateBuffer",
+            "DeviceCreateComputePipelineAsync",
+            "DeviceCreateRenderPipelineAsync",
+            "DeviceGetAdapter",
+            "DeviceGetAdapterInfo",
+            "DeviceGetFeatures",
+            "DeviceGetLimits",
+            "DeviceGetLostFuture",
+            "DeviceHasFeature",
+            "DevicePopErrorScope",
+            "DevicePopErrorScopeF",
+            "DevicePopErrorScope2",
+            "DeviceSetLoggingCallback",
+            "InstanceGetWGSLLanguageFeatures",
+            "InstanceHasWGSLLanguageFeature",
+            "InstanceCreateSurface",
+            "InstanceRequestAdapter",
+            "ShaderModuleGetCompilationInfo",
+            "QuerySetGetType",
+            "QuerySetGetCount",
+            "QueueOnSubmittedWorkDone",
+            "QueueWriteBuffer",
+            "QueueWriteTexture",
+            "SurfaceGetCapabilities",
+            "SurfaceGetCurrentTexture",
+            "SurfaceGetPreferredFormat",
+            "TextureGetWidth",
+            "TextureGetHeight",
+            "TextureGetDepthOrArrayLayers",
+            "TextureGetMipLevelCount",
+            "TextureGetSampleCount",
+            "TextureGetDimension",
+            "TextureGetFormat",
+            "TextureGetUsage"
+        ],
+        "client_handwritten_commands": [
+            "AdapterGetInstance",
+            "BufferDestroy",
+            "BufferUnmap",
+            "DeviceCreateErrorBuffer",
+            "DeviceDestroy",
+            "DeviceGetQueue",
+            "DeviceGetSupportedSurfaceUsage",
+            "DeviceInjectError",
+            "InstanceProcessEvents",
+            "InstanceWaitAny",
+            "SurfaceConfigure",
+            "SurfaceUnconfigure"
+        ],
+        "client_special_objects": [
+            "Adapter",
+            "Buffer",
+            "Device",
+            "Instance",
+            "QuerySet",
+            "Queue",
+            "ShaderModule",
+            "Surface",
+            "SurfaceCapabilities",
+            "Texture"
+        ],
+        "server_custom_pre_handler_commands": [
+            "BufferDestroy",
+            "BufferUnmap"
+        ]
+    }
+}

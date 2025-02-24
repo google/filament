@@ -1,0 +1,625 @@
+Name
+
+    EXT_YUV_target
+
+Name Strings
+
+    GL_EXT_YUV_target
+
+Contributors
+
+    Amit Bansal
+    Arshad Bebal
+    Jeff Leger
+    Jing Zhou
+    Maurice Ribble
+    Prabindh Sundareson
+    Jan-Harald Fredriksen
+    Daniel Koch
+    Jamie Gennis
+    Mark Callow
+    Pat Brown
+    Andrew Garrard
+    Etay Meiri
+    Weifeng Zhang
+
+Contacts
+
+    Jeff Leger  <jleger@qti.qualcomm.com>
+
+Status
+
+    Complete.
+
+Version
+
+    April 6, 2018 (version 17)
+
+Number
+
+    OpenGL ES Extension #222
+
+Dependencies
+
+    Requires OpenGL ES 3.0 and ESSL 3.0.
+    Requires EGL 1.4 and following EGL extension:
+
+    EGL_KHR_image_base
+    OES_EGL_image_external
+
+    This extension is written based on the wording of the OpenGL ES 3.0
+    Specification and OpenGL ES Shading Language 3.0.
+
+    This extension interacts with OpenGL ES 3.1. See issue 1 and 13 for
+    more details.
+
+    This extension interacts with OES_tessellation_shader &
+    OES_geometry shader see first issue for more details.
+
+    This extension borrows texture function names from the
+    OES_EGL_image_external_essl3. This extension is compatible with
+    OES_EGL_image_external_essl3 and can coexist but does not require it.
+
+    This extension interacts with EXT_shader_framebuffer_fetch. see
+    issue 7 for more details.
+
+Overview
+
+    This extension adds support for three new YUV related items: first
+    rendering to YUV images, second sampling from YUV images while keeping the
+    data in YUV space, third it defines a new built in function that does
+    conversion from RGB to YUV with controls to choose ITU-R BT.601-7,
+    ITU-R BT.601-7 Full range (JFIF images), or ITU-R BT.709-5 standard.
+
+    This new functionality is layered on top of the OES_EGL_image_external
+    extension.
+
+    To perform the YUV rendering capability in this extension an application
+    will attach a texture to the framebuffer object as the color attachment.
+    If the texture has a target type of TEXTURE_EXTERNAL_OES with YUV color
+    format then the GL driver can use this framebuffer object as the render
+    target, TEXTURE_EXTERNAL_OES target with RGB color format are not allowed
+    with this extension.
+
+New Types & Keywords
+
+    A new OpenGL GLSL extension flag is added:
+
+        #extension GL_EXT_YUV_target
+
+    When the above GLSL extension is specified, one new sampler type
+    will be available for sampling the 2D texture:
+
+        __samplerExternal2DY2YEXT
+
+    The "__samplerExternal2DY2YEXT" is used to sample a YUV texture image and
+    output color value without any color conversion.
+
+    Whenever a YUV sample is output from the sampler, the format of the YUV
+    will be as if YUV 4:4:4 format is output. This also means that the Y
+    sample maps to component R, the U sample maps to component G, the V sample
+    maps to component B, and the component A will be 1.0f.
+
+    The RGB sample output will be the same as in OpenGL ES specification.
+
+    Here is one example:
+
+        uniform __samplerExternal2DY2YEXT   u_sTexture;
+
+    When the above GLSL extension is specified, one new additional type will be
+    available to specify color space standard formula for yuv to rgb transformation.
+
+        yuvCscStandardEXT
+
+    The value of new type can be specified using one of three new keywords
+    itu_601, itu_601_full_range and itu_709.
+
+    For example:
+
+    yuvCscStandardEXT conv_standard = itu_601;
+    yuvCscStandardEXT conv_standard = itu_601_full_range;
+    yuvCscStandardEXT conv_standard = itu_709;
+
+    Keyword itu_601 means color conversion is required using the formula
+    specified in the ITU-R BT.601. Similarly keyword itu_601_full_range
+    means conversion is done using ITU BT.601 full range formula as specified
+    in JFIF standard while keyword itu_709 specify ITU-R BT.709 standard. Note
+    that new yuvCscStandardEXT type can't be use for any other purpose apart
+    from specifying color standard value to newly introduced color conversion
+    built in functions mentioned below.
+
+New Built-in function
+
+    When the new GLSL extension is specified, two new built in functions
+    will be available for rgb to yuv or yuv to rgb color space conversion.
+
+        vec3 rgb_2_yuv(vec3 color, yuvCscStandardEXT conv_standard);
+
+    The function rgb_2_yuv will apply rgb to yuv color conversion
+    transformation on "color" value using the formula specified as per new type
+    yuvCscStandardEXT variable. The first input parameter supposed to specify
+    rgb value using x, y & z channels of a vec3 variable, correspondingly
+    return value of this function will have transformed y, u and v value in its
+    x, y and z channel. Precision of the input color will define the precision
+    used for color space conversion and for output yuv color value.
+
+        vec3 yuv_2_rgb (vec3 color, yuvCscStandardEXT conv_standard);
+
+    The function yuv_2_rgb will apply yuv to rgb color conversion
+    transformation on "color" value using the formula specified as per new type
+    yuvCscStandardEXT variable. The first input parameter supposed to specify
+    yuv value using x, y & z channels of a vec3 variable, correspondingly
+    return value of this function will have transformed r, g and b value in its
+    x, y and z channel. Precision of the input color will define the precision
+    used for color space conversion and for output yuv color value.
+
+New layout qualifier
+
+    A shader which produces yuv format color output must qualify the fragment
+    shader output variable with new yuv layout qualifier as described below.
+
+    layout (yuv) out vec4 color;
+
+    The new yuv layout qualifier can't be combined with any other layout qualifier,
+    can only be used with fragment shader outputs and would be available only when
+    the new GLSL extension is specified. Additionally if the shader qualifies
+    fragment shader output with the new yuv qualifier and write depth or multiple
+    color output, it would cause compilation failure.
+
+New Tokens
+
+    Returned in the <type> parameter of GetActiveUniform:
+
+        SAMPLER_EXTERNAL_2D_Y2Y_EXT                         0x8BE7
+
+Reuse tokens as in extension "OES_EGL_image_external."
+
+    Accepted as a target in the <target> parameter of BindTexture,
+    EGLImageTargetTexture2DOES, and FramebufferTexture2D:
+
+        TEXTURE_EXTERNAL_OES                                0x8D65
+
+    Accepted as <value> in GetIntegerv() and GetFloatv() queries:
+
+        TEXTURE_BINDING_EXTERNAL_OES                        0x8D67
+
+    Accepted as <value> in GetTexParameter*() queries:
+
+        REQUIRED_TEXTURE_IMAGE_UNITS_OES                    0x8D68
+
+Addition to Chapter 3 of the OpenGL ES 3.0 specification
+
+    Add a new section: "3.8.18 External Textures," which follows section
+    "3.8.17 Shader Exponent Texture Color Conversion." The wording will
+    be the same as in extension "OES_EGL_image_external."
+
+Changes to Section 4.4.2 "Attaching Images to Framebuffer Objects"
+
+    At the end of subsection "Attaching Texture Images to a Framebuffer," add
+    the following paragraphs:
+
+      from
+        "If texture is not zero, then texture must either name an existing
+        two dimensional texture object and textarget must be TEXTURE_2D or
+        texture must name an existing cube map...."
+
+      to
+        "If texture is not zero, then texture must either name an existing
+        two dimensional texture object and textarget must be TEXTURE_2D or
+        TEXTURE_EXTERNAL_OES or texture must name an existing cube map...."
+
+      from
+        "If textarget is TEXTURE_2D, level must be greater than or equal to
+        zero and no larger than log2 of the value of MAX_TEXTURE_SIZE.
+        Otherwise, an INVALID_VALUE error is generated.
+          The command..."
+      to
+        "If textarget is TEXTURE_2D, level must be greater than or equal to
+        zero and no larger than log2 of the value of MAX_TEXTURE_SIZE.
+        Otherwise, an INVALID_VALUE error is generated. If textarget is
+        TEXTURE_EXTERNAL_OES and attachment is other than COLOR_ATTACHMENT0,
+        an INVALID_OPERATION error is generated.
+          The command..."
+
+     Add an additional sentence at the end of above paragraph:
+
+        "Since TEXTURE_EXTERNAL_OES texture target can only be specified
+        using an EGLImage, yuv formats can be rendered by attaching
+        TEXTURE_EXTERNAL_OES textarget via EGLImage."
+
+Changes to Section 4.2.3 "Clearing the Buffers"
+        from
+        "Unsigned normalized fixed-point RGBA color buffers are cleared to color
+        values derived by clamping each component of the clear color to the range
+        [0; 1], then converting the (possibly sRGB converted and/or dithered) color
+        to fixed-point using equations 2.3 or 2.4, respectively. The result of
+        clearing integer color buffers with Clear is undefined."
+
+        to
+        "Unsigned normalized fixed-point RGBA color buffers are cleared to color
+        values derived by clamping each component of the clear color to the range
+        [0; 1], then converting the (possibly sRGB converted and/or dithered) color
+        to fixed-point using equations 2.3 or 2.4, respectively. When clearing YUV
+        Color Buffers, clear color should be defined in yuv color space and so
+        floating point r, g, and b value will be mapped to corresponding y, u and v
+        value and alpha channel will be ignored. The result of clearing integer
+        color buffers with Clear is undefined."
+
+Changes to Section 4.4.3 "Fine Control of Buffer Updates"
+
+        from
+        "ColorMask is used to mask the writing of R, G, B and A values to all active
+         draw buffers. r, g, b, and a indicate whether R, G, B, or A values, respectively,
+         are written or not (a value of TRUE means that the corresponding value is written).
+         In the initial state, all color values are enabled for writing for all draw
+         buffers..."
+
+        to
+        "ColorMask is used to mask the writing of R, G, B and A values to all active
+         draw buffers. r, g, b, and a indicate whether R, G, B, or A values, respectively,
+         are written or not (a value of TRUE means that the corresponding value is written)
+         except when the color buffer is in YUV color space, in that case setting any one
+         of the r, g, b, and a values as false would generate draw time INVALID_OPERATION error.
+         In the initial state, all color values are enabled for writing for all draw
+         buffers..."
+
+Changes to Section 4.1.7 "Blending"
+
+        from
+        "Blending applies only if the color buffer has a fixed-point format. If the color
+         buffer has an integer format, proceed to the next operation."
+
+        to
+        "Blending applies only if the color buffer has a fixed-point format and non YUV space
+         format color buffer. If the color buffer has an integer, proceed to the next
+         operation. If color buffer format is  YUV color space, it will generate
+         draw time INVALID_OPERATION error."
+
+Changes to 4.2.1 "Selecting Buffers for Writing"
+        from
+        "If some, but not all user-defined output variables are written, the values of
+         fragment colors corresponding to unwritten variables are similarly undefined.
+         The order of writes..."
+
+        to
+        "If some, but not all user-defined output variables are written, the values of
+         fragment colors corresponding to unwritten variables are similarly undefined unless
+         any of the fragment output is qualified with yuv format qualifier. In later case
+         compiler would restrict usage of yuv format qualifier up to a single color output.
+         The order of writes..."
+
+Changes to section 4.4.4 ("Framebuffer Completeness")
+        from
+        "An internal format is color-renderable if it is one of the formats from table
+         3.12 noted as color-renderable or if it is unsized format RGBA or RGB. No
+         other formats,"
+
+        to
+        "An internal format is color-renderable if it is one of the formats from table
+         3.12 noted as color-renderable or if it is unsized format RGBA or RGB or if it is
+         YUV color space format supported by implementation. No other formats,"
+
+Changes to section 3.7 ("Keywords") of the OpenGL ES Shading Language
+specification
+
+    - Add to the list of keywords:
+
+        __samplerExternal2DY2YEXT
+        yuvCscStandardExt 
+        itu_601 
+        itu_601_full_range 
+        itu_709
+        
+        
+
+Changes to section 4.1 ("Basic Types") of the OpenGL ES Shading Language
+specification
+    - Add to the list of Transparent types:
+        "yuvCscStandardExt    a value type to specify color space standard formula for 
+        transformation between yuv and rgb, taking values of itu_601, itu_601_full_range, 
+        itu_709"
+
+    - Add to the list of Floating Point Sampler Types (opaque):
+
+        "__samplerExternal2DY2YEXT   a handle for accessing an external 2D texture
+        whose underneath format is YUV"
+
+    - Add a paragraph at the end of the section:
+
+        "The __samplerExternal2DY2YEXT and yuvCscStandardExt types are optional and must 
+        be enabled by
+
+         #extension GL_EXT_YUV_target : enable
+         
+         No type constructor or type conversion is allowed on yuvCscStandardExt. A value
+         of itu_601, itu_601_full_range, itu_709, or a variable typed as yuvCscStandardExt 
+         can be used as an argument to user-defined functions and the built-in functions yuv_2_rgb and 
+         rgb_2_yuv. Other than the assignment operator, any other operations on this type 
+         of values or variables will be treated as a compilation error."
+
+Changes to section 4.5.4 ("Default Precision Qualifiers") of the OpenGL ES
+Shading Language specification
+
+    - Add to the list of "vertex language has the following predeclared
+    globally scoped default precision statements:"
+
+        "precision lowp __samplerExternal2DY2YEXT;"
+
+    - Add to the list of "fragment language has the following predeclared
+    globally scoped default precision statements:"
+
+        "precision lowp __samplerExternal2DY2YEXT;"
+
+Changes to section 8.8 ("Texture Lookup Functions") of the OpenGL ES Shading
+Language specification
+
+    - Add to the table the following sampler functions:
+
+      "highp ivec2 textureSize(__samplerExternal2DY2YEXT sampler, int lod)
+       vec4 texture(__samplerExternal2DY2YEXT sampler, vec2 P [, float bias] )
+       vec4 textureProj(__samplerExternal2DY2YEXT sampler, vec3 P [, float bias] )
+       vec4 textureProj(__samplerExternal2DY2YEXT sampler, vec4 P [, float bias])
+       vec4 texelFetch(__samplerExternal2DY2YEXT sampler, ivec2 P, int lod)"
+
+Add a new section 8.10 "Conversion Functions between YUV and RGB"
+
+    - Add a new table containing 2 entries:
+        
+        vec3 rgb_2_yuv(vec3 color, yuvCscStandardEXT conv_standard);
+        apply rgb to yuv color conversion transformation on "color" value 
+        using the formula specified by conv_standard. 
+
+        vec3 yuv_2_rgb(vec3 color, yuvCscStandardEXT conv_standard);
+        apply yuv to rgb color conversion transformation on "color" value
+        using the formula specified by conv_standard.
+    
+Compatibility with OpenGL ES 3.1 and ESSL 3.10
+
+    This extension is expected to work without modification with OpenGL ES 3.1
+    and  ESSL 3.10. Some further clarification in issue 1, 9 and 13.
+
+Issues
+
+    1. Do we want to explicitly disallow "__samplerExternal2DY2YEXT" from use in other
+    shader apart from fragment shader e.g. vertex, compute, geometry and tessellation
+    shaders?
+
+    RESOLVED: No, modern unified shader hardware supports YUV texture sampling in all
+    of the shader stages, we should keep this enable irrespective of shader stage.
+
+    2. What happens if the input source isn't in the expected color space for built in
+    functions or lets say there is cross conversion between different color space
+    conversion standards e.g. 601 RGB to 709 YUV etc or yuv layout qualified color
+    output is actually written with in rgb color space?
+
+    RESOLVED: Implementation can't determine how the input pixel has been
+    manipulated before producing the shader outputs, so results would be
+    undefined in this case.
+
+    3. What happens if the source formats aren't the expected format for sampler?
+
+    RESOLVED: Non-YUV format will generate a draw time INVALID_OPERATION error.
+
+    4. Is the depth or stencil behaviour changed when rendering to yuv surfaces.
+
+    RESOLVED: The depth and stencil buffers will work the same when rendering
+    to RGB or YUV surfaces, however when shader output is qualified with yuv
+    layout qualifier, writing out gl_FragDepth would cause compilation failure.
+
+    5. Should this extension include support for renderbuffers or just
+    renderable textures?
+
+    RESOLVED: Renderbuffers doesn't add any functionality so it will not be
+    included.
+
+    6. Is BlitFramebuffer or CopyTex[Sub]Image supported with YUV renderable
+    surfaces?
+
+    RESOLVED: No. There is a lot of driver complexity in supporting and
+    testing case. Using these calls with a YUV source or destination
+    will cause an INVALID_OPERATION error.
+
+    7. Does EXT_shader_framebuffer_fetch work with YUV renderable surfaces?
+
+    RESOLVED: Yes. The next question is the result before or after
+    sub-sampling?  To give maximum flexibility to hardware either of these
+    options is acceptable.
+
+    8. Should we add support for BT.2020?
+
+    RESOLVED: Currently No, If require BT.2020 functionality can be achieved
+    using __samplerExternal2DY2YEXT and user defined matrix. To keep the spec
+    simple, we just want to have only three currently.
+
+    9. Should sampling return samples converted in to linear space or raw
+    samples?
+
+    RESOLVED: This extension will return raw samples. If the YUV data is
+    encoded in a non-linear space, as is common, the returned samples will be
+    in the non-linear space. If the data is encoded linearly, the returned
+    samples will be linear.
+
+    10. Are there specific requirements on how a lower resolution UV plane must
+    be sampled during rendering?
+
+    RESOLVED: To allow maximum flexibility in hardware at this time this
+    extension does not define how this sampling must be performed. Even if we
+    decide to define this behaviour in future, it would be more appropriate to
+    do it via a separate EGL extension.
+
+    11. How goes gl_FragCoord work with a lower resolution UV plane?
+
+    RESOLVED: It is expected to work as if that plane was rendered at full
+    resolution.  The exception to this is talked about in issue #11 where
+    there is some flexibility in subpixel sampling.
+
+    12. Should we add YUV format support for image load store in this extension or
+    is it valid to use new yuv format layout qualifier with image load store ?
+
+    RESOLVED: No, Since that would require major changes, we should do this with
+    a separate extension, currently using new yuv format qualifier with image load
+    store would cause compilation failure.
+
+    13. How can we defines color standard matrix other than provided via built-in
+    functions e.g. full range BT.709 or adding compensation for the different colour
+    primaries of the different standards ?
+
+    RESOLVED: This extension defines built in utility functions for some of the
+    common color conversion standard, however its no way limit an app to certain
+    standard of output data. App can define own color matrix for such purpose
+    and use with either __samplerExternal2DY2YEXT or sampler2D.
+
+    14. What happens if shader produce a color output qualified with yuv layout
+    qualifier and current draw FBO format isn't YUV or draw FBO format is in
+    YUV color space but shader output isn't qualified with yuv layout qualifier.
+
+    RESOLVED: In order to write YUV color output, shader color output must be
+    qualified with yuv layout qualifier and draw FBO format needs to be in YUV
+    color space otherwise lack of any of these would cause INVALID_OPERATION
+    error.
+
+    15. What happens if shader produce yuv color output which is out of range
+    as per definition of color space format of rendering surface e.g. full range
+    output when the output color space is limited or similarly input to one of
+    built in color conversion functions or to the new __samplerExternal2DY2YEXT
+    is out of range.
+
+    RESOLVED: If shader yuv color output or input values to one of the built in
+    color conversion functions or to the new __samplerExternal2DY2YEXT are not
+    within the specified range of the format, results would be undefined values.
+
+   16. How ReadPixels operate for YUV render target?
+
+   RESOLVED: ReadPixels will convert YUV to RGBA under the current spec
+   requirement to support format RGBA and type UNSIGNED_BYTE combination  for
+   the normalized fixed point surfaces depending upon format and color space
+   standard of currently bound rendering surface.
+
+Known Quality Issues
+
+    Since YUV is a lossy compressed format and UV values represent sampling at
+    even locations, there may be minor quality issues along the primitive edges
+    or for scissor when its X or Y set to an odd value. In case of YUV
+    primitive rendering if geometry is animated, there may be more artifacts as
+    edges might flicker and sparkle frame to frame.  Another way to explain
+    this corruption is that sometimes the different planes are stored at
+    different resolutions so the different interpolation for different planes
+    causes these artifacts.
+
+    Due to nature of CbCr subsampling, there might be artifacts along the primitive
+    edges if there are  partially covered pixels. Since commonly used 4:2:0 YUV
+    formats writes out 1 pixel for a block of 2x2 pixels, depending upon how
+    subsampled pixel output is calculated, there may always be artifacts around the
+    primitive edges for partially covered pixels e.g. implementation might always
+    decide to choose CbCr subsample cosited with top left pixel 2x2 Y plane block
+    based on this single pixel coverage. This could help to avoid artifacts in more
+    key cases e.g. along the diagonal of quad when its drawn using triangle strip
+    but it may cause artifacts in other cases when we have partially covered
+    pixels around the primitive edges visible after using very high zoom factor.
+
+Dependencies on EGL_KHR_image, EGL_KHR_image_base, and EGL 1.4
+
+    If EGL 1.2 is not supported, or if neither the EGL_OES_image nor
+    EGL_OES_image_base extensions is supported, all discussion of
+    EGLImages should be ignored, and any calls to either
+    EGLImageTargetTexture2DOES or FramebufferTexture2D with
+    TEXTURE_EXTERNAL_OES textarget should generate the error
+    INVALID_OPERATION.
+
+Dependencies on OES_EGL_image_external
+
+    This extension is built on top of the OES_EGL_image_external extension.
+    It can coexist with the OES_EGL_image_external extension.
+
+Revision History
+    #17 (April 6, 2018, H1Gdev)
+        - Fix typo.
+    #16 (June 8, 2016, Jeff Leger)
+        - Add yuvCscStandardExt itu_* to the list of keywords
+        - Add yuvCscStandardExt as a basic type and clarify that this type
+          can only be used in assignments or as a function argument.
+        - Add rgb_2_yuv and yuv_2_rgb as built-in functions
+          (Bug 15704).
+
+    #15 (April 23, 2015, Jon Leech)
+        - Fix typo EGLImageTargetTexImage2DOES -> EGLImageTargetTexture2DOES
+          (Bug 8114).
+
+    #14 (February 10, 2015, Amit Bansal)
+        - Removed YUV_EXT and Y_EXT tokens hard requirement for ReadPixels,
+          current plan is to propose it later as separate extension once we
+          have more corresponding compelling use cases.
+        - Adding interaction wording with EXT_shader_framebuffer_fetch
+        - Removed duplicated image load store issue.
+        - Further clarification about usage of yuv layout qualifier
+
+    #13 (January 23, 2015, Amit Bansal)
+        - added texture built in functions from OES_EGL_image_external_essl3
+        - Added explicit clarification in overview section about RGB external images
+        - Interaction with geometry & tessellation shaders w.r.t. issue 1
+
+    #12 (December 12, 2014, Amit Bansal)
+        - Added new yuv qualifiers and corresponding draw time checks
+          requirement issues
+        - Clarification regarding yuvCscStandardEXT type usage
+        - Output clamping requirement issue
+        - New YUV_EXT and Y_EXT tokens for ReadPixels
+        - Changed blending & color mask behaviour to draw time error.
+        - Some language clean up
+
+    #11 (September 30, 2014, Amit Bansal)
+        - Changed couple of issues to spec language
+        - Reworded some issues after recent spec updates
+
+    #10 (August 12, 2013, Maurice Ribble)
+       - Changed from QCOM to EXT extension
+       - Reworded issue 16 based on Mark Callow's suggestion
+       - Updated names of SAMPLER_EXTERNAL_2D_Y2Y_EXT,
+         __samplerExternal2DY2YEXT, and yuvCscStandardEXT
+
+    #9  (August 6, 2013, Maurice Ribble)
+       - Added issues 15-18
+
+    #8  (July 12, 2013, Maurice Ribble)
+       - Some language cleanup
+       - Changed some edge case errors to be more consistent
+       - Updates based on feedback from other khronos members
+       - Added issues 10-14
+
+    #7  (June 27, 2013, Maurice Ribble)
+       - Some language cleanup
+
+    #6  (May 16, 2013, Amit Bansal)
+       - Correcting spacing
+       - Modified overview to keep only one sampler and add new built-in
+       - Defined new types for built in and removed previous layouts
+       - Removed the separate GL functions for external attachment
+       - Modified description of sections meant for spec
+       - Modified issues to reflect layout and built in function update
+       - Changed proposed to resolved for finalized issues
+       - Move precision issue to the description of built in function
+
+    #5  (March 14, 2013, Jing zhou)
+       - Minor rewording on same of proposals for the Issues
+       - Assign new token IDs from reserved QCOM ID block
+
+    #4  (March 4, 2013, Maurice Ribble)
+       - First round of cleanup and todos
+
+    #3  (February 19, 2013, Amit Bansal)
+       - Modified glReadPixels()issue section
+
+    #2  (January 9, 2013, Amit Bansal)
+       - Changed the OES suffix to QCOM as extension is still pending to be
+         approved.
+       - Removed EGLImageTargetTexture2DOES from New Procedures and Functions
+         category
+       - Corrected error in FramebufferRenderbuffer2DExternalQCOM name at line
+         167.
+       - Modified description of FramebufferTexture2DExternalQCOM to reflect
+         argument changes correctly
+       - Corrected typo extension to extension
+       - Finished the documentation of final proposal for issue 2 & 3.
+       - Added a new Known Quality Issue section and text corresponding to it
+
+    #1 - (Oct 1, 2012) Original Draft

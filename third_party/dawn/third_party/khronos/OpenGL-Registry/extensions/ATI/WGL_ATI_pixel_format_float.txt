@@ -1,0 +1,299 @@
+Name
+
+    WGL_ATI_pixel_format_float
+
+Name Strings
+
+    WGL_ATI_pixel_format_float
+
+Contact
+
+    Rob Mace, AMD (rob.mace 'at' amd.com)
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: November 4, 2006
+    Revision: 6
+
+Number
+
+    278
+
+Dependencies
+
+    WGL_ARB_pixel_format is required.
+
+    This extension is written against the OpenGL 1.3 Specification.
+
+
+Overview
+
+    This extension adds pixel formats with floating-point RGBA color
+    components.
+
+    The size of each float components is specified using the same
+    WGL_RED_BITS_ARB, WGL_GREEN_BITS_ARB, WGL_BLUE_BITS_ARB and
+    WGL_ALPHA_BITS_ARB pixel format attributes that are used for
+    defining the size of fixed-point components.  32 bit floating-
+    point components are in the standard IEEE float format.  16 bit
+    floating-point components have 1 sign bit, 5 exponent bits,
+    and 10 mantissa bits. 
+
+    In standard OpenGL RGBA color components are normally clamped to
+    the range [0,1].  The color components of a float buffer are
+    clamped to the limits of the range representable by their format.
+
+
+Issues
+
+    1. Should we expose a GL_FLOAT16_ATI pixel type?
+
+       RESOLUTION:  This will be exposed in a separate extension.
+
+
+New Procedures and Functions
+
+   None
+
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        RGBA_FLOAT_MODE_ATI                     0x8820
+        COLOR_CLEAR_UNCLAMPED_VALUE_ATI         0x8835
+
+    Accepted as a value in the <piAttribIList> and <pfAttribFList>
+    parameter arrays of wglChoosePixelFormatARB, and returned in the
+    <piValues> parameter array of wglGetPixelFormatAttribivARB, and the
+    <pfValues> parameter array of wglGetPixelFormatAttribfvARB:
+
+        WGL_TYPE_RGBA_FLOAT_ATI                 0x21A0
+
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL
+Operation)
+
+    Add a new Section 2.1.2, (p. 6):
+
+      2.1.2  16 Bit Floating-Point
+
+      A 16 bit floating-point number has 1 sign bit (s), 5 exponent
+      bits (e), and 10 mantissa bits (m).  The value (v) of a 16 bit
+      floating-point number is determined by the following pseudo code:
+
+        if (e != 0)
+            v = (-1)^s * 2^(e-15) * 1.m  # normalized
+        else if (f == 0)
+            v = (-1)^s * 0               # zero
+        else
+            v = (-1)^s * 2^(e-14) * 0.m  # denormalized
+
+      It is acceptable for an implementation to treat denormalized 16 bit
+      floating-point numbers as zero.
+
+      There are no NAN or infinity values for 16 bit floating-point.
+
+
+
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    Section 3.6.4, (p. 92), Add to figure 3.7 a block to "final
+    conversion" for "RGBA float pixel data out" that says "clamp
+    to float format range".
+
+    Section 3.6.4, (p. 102), change the first paragraph of the "Final
+    Conversion" to:
+
+      For a color index, final conversion consists of masking the bits
+      of the index to the left of the binary point by 2^n - 1, where n
+      is the number of bits in an index buffer.  For RGBA components the
+      conversion is based on whether the components in the destination
+      color buffer are fixed-point or floating-point. For fixed-point
+      destination buffers components are clamped to [0,1]. The resulting
+      values are converted to fixed-point according to the rules given in
+      section 2.13.9 (Final Color Processing).  For floating-point
+      destination buffers components are clamped to the limits of the
+      range representable by the destination format.
+
+
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Chapter 4 Introduction, (p. 156), change the first line of the third
+    paragraph to:
+
+      Color buffers consist of either unsigned integer color indices,
+      RGB and optionally A unsigned integer values, of RGBA floating-
+      point values.
+
+    Section 4.1.7, (p. 162), change the third paragraph of the page to:
+
+      Fixed-point destination (framebuffer) components and source
+      (fragment) components are taken to be values represented according
+      to the scheme given in section 2.13.9 (Final Color Processing).
+      Floating-point destination and source components are taken as is.
+      Constant color components are taken to be floating-point values.
+
+    Section 4.1.7, (p. 163), change the forth line of the second paragraph
+    of "Using BlendFunc" to:
+
+      If destination color components are fixed-point, each floating-
+      point value in this quadruplet is clamped to [0,1] and converted
+      back to a fixed-point value in the manner described in section
+      2.13.9.
+
+    Section 4.1.8, (p. 165), insert after the first sentence:
+
+      Dithering has no effect if the destination color buffer components
+      are floating-point.
+
+    Section 4.1.9, (p. 165), insert after the first sentence:
+
+      Logical operation has no effect if the destination color buffer
+      components are floating-point.
+
+    Section 4.2.3, (p. 170), change the third paragraph to:
+
+          void ClearColor(float r, float g, float b, float a);
+ 
+      sets the clear value for the color buffers in RGBA mode.  When
+      clearing a fixed-point color buffer each of the specified
+      components is clamped to [0; 1] and converted to fixed-point
+      according to the rules of section 2.13.9.  When clearing a
+      floating-point color buffer the specified components are not
+      clamped.
+
+    Section 4.3.2, (p. 176), change the "Conversion of RGBA values" to:
+
+      This step applies only if the GL is in RGBA mode, and then only
+      if format is neither STENCIL INDEX nor DEPTH COMPONENT.  The R,
+      G, B, and A values form a group of elements.  When reading from a
+      fixed-point color buffer each element is taken to be a fixed-point
+      value in [0; 1] with m bits, where m is the number of bits in the
+      corresponding color component of the selected buffer (see
+      section 2.13.9).
+
+    Section 4.3.2, (p. 177), change the second paragraph of the "Final
+    Conversion" to:
+
+      For a fixed-point RGBA color buffer, each component is first
+      clamped to [0,1].  For floating-point RGBA color buffer, components
+      are not clamped if the <type> is FLOAT, clamped to [0,1] if the
+      <type> is unsigned, and clamped to [-1,1] if the <type> is signed.
+      After clamping the appropriate conversion formula from table 4.7
+      is applied to the component.
+
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special 
+Functions)
+
+    None
+
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and
+State Requests)
+
+    None
+
+
+Additions to the GLX Specification
+
+    This specification is written for WGL.
+
+GLX Protocol
+
+    This specification is written for WGL.
+
+Additions to the WGL Specification
+
+
+    Modify the values accepted by WGL_PIXEL_TYPE_ARB to:
+
+        WGL_PIXEL_TYPE_ARB
+        The type of pixel data. This can be set to WGL_TYPE_RGBA_ARB,
+        WGL_TYPE_RGBA_FLAOT_ARB, or WGL_TYPE_COLORINDEX_ARB.
+
+
+Dependencies on WGL_ARB_pixel_format
+
+    The WGL_ARB_pixel_format extension must be used to determine a
+    pixel format with float components.
+
+
+Dependencies on WGL_ARB_extensions_string
+
+    Because this extension is a WGL extension, it is not included in
+    the GL_EXTENSIONS string.  Its existence can be determined with
+    the WGL_ARB_extensions_string extension.
+
+
+Errors
+  
+    None
+
+
+New State
+
+    (table 6.19, p227) modify COLOR_CLEAR_VALUE and add
+    COLOR_CLEAR_UNCLAMPED_VALUE:
+
+    Get Value                        Type   Get Command  Initial Value  Description         Section  Attribute
+    -------------------------------  -----  -----------  -------------  ------------------  -------  ------------
+    COLOR_CLEAR_VALUE                C      GetFloatv    0,0,0,0        Color buffer clear  4.2.3    color-buffer
+                                                                        value (RGBA mode)
+                                                                        clamped to [0,1]
+    COLOR_CLEAR_UNCLAMPED_VALUE_ATI  4 x R  GetFloatv    0,0,0,0        Color buffer clear  4.2.3    color-buffer
+                                                                        value (RGBA mode)
+                                                                        unclamped
+
+
+    (table 6.28, p236) add the following entry:
+
+    Get Value             Type   Get Command   Minimum Value  Description      Section   Attribute
+    --------------------  -----  ------------  -------------  ---------------  --------  ----------
+    RGBA_FLOAT_MODE_ATI   B      GetBooleanv   -              True if RGBA     2.7       -
+                                                              components are
+                                                              floats
+
+
+New Implementation Dependent State
+
+    None
+
+
+Revision History
+
+   Date: 11/4/2006
+   Revision: 6
+      - Updated contact info after ATI/AMD merger.
+
+   Date: 12/4/2002
+   Revision: 5
+      - Added Section 2.1.2 16 Bit Floating-Point.
+
+   Date: 9/12/2002
+   Revision: 4
+      - Fixed typo, CLEAR_COLOR_VALUE is really COLOR_CLEAR_VALUE.
+
+   Date: 9/11/2002
+   Revision: 3
+      - Added enum numbers to New Tokens.
+      - Added CLEAR_COLOR_UNCLAMPED_VALUE_ATI and defined behavior of
+        CLEAR_COLOR_VALUE.
+      - Added description of change to figure 3.7.
+      - Clarified float clamping in section 3.6.4.
+
+   Date: 9/9/2002
+   Revision: 2
+      - Changed wording of how float clamping is described in Overview.
+
+   Date: 9/6/2002
+   Revision: 1
+      - First draft for circulation.

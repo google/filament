@@ -1,0 +1,3 @@
+LIBRARY test_icd_version_7_without_exports
+EXPORTS
+    vk_icdGetInstanceProcAddr

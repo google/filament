@@ -1,0 +1,538 @@
+<html>
+
+<head>
+<title>How to Create Khronos API Extensions</title>
+</head>
+
+<body>
+<h1>How to Create Khronos API Extensions</h1>
+
+<p> This document outlines the steps to create, define, and use
+    an extension for some of the APIs supported by Khronos. It
+    is currently focused on OpenGL, OpenGL ES, GLX, and EGL.
+    Some discussion of OpenVG and WGL is also included.
+
+<ul>
+    <li><a href="#spec">Specifying</a> an extension prior to coding it.
+    <li><a href="#implementation">Implementing</a> an extension (this
+	discusses only aspects of the implemention visible to users -
+	primarily determining if the extension is available and
+	defining its interface in header files.
+    <li><a href="#using">Using</a> an extension in an application (this
+	discusses the mechanics of using an extension if and only if
+	it's supported by an implementation).
+</ul>
+
+<p><hr>
+
+<a name="spec"></a>
+<h2>Specification</h2>
+
+<p> When initially creating an extension, take the following steps:
+
+<ul>
+    <li><a href="#spec_existing">Determine if an existing extension</a>
+	can be used, instead of writing a new one. This may involve
+	reuse of an existing specification, or
+	<a href="promoting.html">promotion</a> to multivendor or
+	Khronos-approved status. In either case, coordinate this use
+	with the vendor(s) defining and shipping the existing extension.
+    <li>If no suitable extension already exists, determine if you can
+	<a href="#spec_category">agree on a multivendor or Khronos
+	extension</a>, or if the extension must be specific to a single
+	vendor.
+    <li>Develop and <a href="#spec_writing">write an extension
+	specification</a>, following the <a href="#spec_naming">naming
+	conventions</a>.
+    <li>When you're ready to release the extension, freeze the
+	specification and <a href="#spec_registry">add it to the
+	registry</a> maintained by Khronos. At this time (but not
+	before), you can obtain permanent token (enumerant) assignments.
+    <li>When shipping an extension, make sure that its interfaces are
+	defined in header files accessible to ISVs. If the extension is
+	Khronos-approved, use the Khronos-provided headers.
+</ul>
+
+<a name="spec_existing"></a>
+<h3>Is there already an extension that does what I want?</h3>
+
+<p> Specifications for extensions that have already been developed can
+be obtained from the <a href="http://opengl.org/registry/"> Extension
+Registry</a> maintained by Khronos. Since we are just getting started
+with most of the Khronos APIs, the registry currently contains only
+OpenGL, GLX, and WGL extension specifications.
+
+<p> It's possible that additional extensions may have been submitted to
+the registry but not yet updated on the website, or that another
+licensee may be working on a similar extension but not yet have released
+the specification. So it's worth asking on the appropriate Working
+Group mailing list if anyone has defined related functionality already.
+
+<a name="spec_category"></a>
+<h3>Should the extension be Khronos-approved, multivendor, or specific
+    to a single vendor?</h3>
+
+<p> OpenGL's history has made clear that ISVs do <b>not</b> want to deal
+    with vendor-specific extensions if they can possibly avoid it. So if
+    the functionality being exposed is going to be available on multiple
+    platforms - as most will - it's a good idea to agree on a single
+    extension with other vendors providing that functionality. This
+    makes it easier for ISVs to justify using extensions.
+
+<p> If the functionality is well-understood, it may be appropriate to
+    define a <b>Khronos-approved extension</b>. This is the most
+    &quot;blessed&quot; category of extension; it goes through the
+    entire standards process, and is approved by the group, but remains
+    optional functionality. Many core features have been promoted
+    directly from existing Khronos-approved extensions.
+
+<p> If Khronos as a whole isn't ready to deal with the extension, but
+    other vendors are, then it should be defined as a <b>multivendor
+    extension</b>. The interested parties can develop the specification
+    entirely among themselves, outside the standards process; or they
+    may be able to use Khronos Working Groups as a forum to develop the
+    specification.
+
+<p> In some cases, vendors may share a common core of functionality,
+    with vendor-specific additional features. Here, it may make sense to
+    agree on a multivendor extension to access the core, with additional
+    vendor-specific extensions layered on the core exposing unique
+    features.
+
+<p> Finally, some extensions will probably have to remain proprietary.
+
+<a name="spec_writing"></a>
+<h3>How do I write a specification?</h3>
+
+<p> Start with the <a href="template.txt">template</a> for writing
+    extension specifications. There are different templates for
+    different APIs, but general comments apply:
+
+<ul>
+<li> It's important to think about all the different areas of the core
+    language specification(s) that are affected. How are queries for
+    state handled? What attribute group does new state belong in? How
+    are existing calls modified or expanded in scope? How are existing
+    objects affected by use of the extension? The template helps with
+    this by at least reminding you to consider each part of the core
+    language specification.
+<li> Extension specifications must be written against a specific version
+    of the core API specification. If possible, it's highly preferable
+    to write against the most recent public version. &quot;Written
+    against&quot; means that new language must be written as
+    well-defined modifications to the Specification being referenced. It
+    should be possible for someone not involved with the development of
+    an extension to sit down with a copy of the Specification and the
+    extension and produce a merged document identical to that you
+    intended.
+<li> Extension specifications may also be specified as Docbook XML
+    documents, although we're still using plain text for the most part.
+    Docbook is a very powerful structural representation of documents,
+    but we're still feeling our way into using it. Known <a
+    href="toolchain.html">Docbook tools and editors</a> are described
+    elsewhere.
+</ul>
+
+<p> One complete, shipping example to refer to is the
+    <a href="../specs/EXT/fog_coord.txt">Fog Coordinate</a> OpenGL extension
+    specification.
+<!-- (<a href="fog_coord.xml">Docbook source</a>). -->
+
+<a name="spec_naming"></a>
+<h3>Naming Conventions</h3>
+
+<p> API entry points and enumerants in an extension must be named
+according to the <a href="syntaxrules.txt">syntax rules</a> specific to
+that API. In particular, follow the sections &quot;Extension name
+rules&quot; and &quot;Shared extensions&quot;.
+
+<p> All extensions must be named and the name included in the extension
+specification. The extension name is of the form
+<tt>&quot;api_category_name&quot;</tt> where
+
+<ul>
+<li> <tt>&quot;api&quot;</tt> identifies the API
+    (<tt>&quot;GL&quot;</tt> for OpenGL and OpenGL ES;
+    <tt>&quot;EGL&quot;</tt>, <tt>&quot;GLX&quot;</tt>, and
+    <tt>&quot;WGL&quot;</tt> for the corresponding window-system
+    abstraction APIs EGL, GLX, and WGL; <tt>&quot;GLU&quot;</tt> for the
+    OpenGL Utility Library; and <tt>&quot;OVG&quot;</tt> for OpenVG.
+
+    (<b>Note</b>: OpenMAX, OpenSL, OpenML TBD).
+
+<li> <tt>&quot;category&quot;</tt> identifies the extension category.
+    For a vendor-specific extension, the category is a 2-3 letter string
+    identifying the vendor: <tt>&quot;NV&quot;</tt> for NVIDIA,
+    <tt>&quot;ATI&quot;</tt> for ATI, etc. For a multivendor extensions,
+    the category is <tt>&quot;EXT&quot;</tt>. For Khronos-approved
+    extensions, one of several API-specific categories is used
+    (<tt>&quot;ARB&quot;</tt> for OpenGL extensions,
+    <tt>&quot;OES&quot;</tt> for OpenGL ES extensions,
+    <tt>&quot;OML&quot;</tt> for OpenML extensions, and so on).
+
+<li> <tt>&quot;name&quot;</tt> is one or more words separated by
+    underscores, providing a short label for the extension.
+    Conventionally the name is entirely lower-case.
+</ul>
+
+<p> For example, the extension name
+    <tt>&quot;GL_EXT_framebuffer_object&quot;</tt> is used for a
+    multivendor OpenGL extension adding support for framebuffer objects.
+
+<p> Choose names that are
+
+<ul>
+<li> Short.
+<li> Meaningful.
+<li> Not prefixes of any existing extension name (disregarding the
+    category). For example, <tt>&quot;GL_ARB_fog&quot;</tt> is a prefix
+    of <tt>&quot;GL_EXT_fog_coord&quot;</tt>, so should not be chosen.
+<li> Not prefixed by any existing extension name (again, disregarding
+    the category).
+</ul>
+
+<p> The goal is for names to be clear, but not at the cost of confusion
+    or ambiguity.
+
+
+<h4> Advertising Extension Names to Applications </h4>
+
+<p> Each Khronos API provides a way of describing the supported
+    extensions at compile- and run-time. This is done by a combination
+    of preprocessor tokens in header files, and queryable extension
+    strings.
+
+<p> <b>OpenGL and OpenGL ES</b> #define a preprocessor token
+    corresponding to the extension name in <tt>&lt;GL/gl.h&gt;</tt> (or
+    an include file that <tt>gl.h</tt> includes, such as the
+    <tt>glext.h</tt> header provided in the registry). When this token
+    is defined, it indicates that the function prototypes and enumerant
+    definitions required to use the extension are available at compile
+    time.
+
+<p> If an OpenGL or OpenGL ES extension is supported at runtime, the
+    extension name must also be included in the string returned by
+    <tt>glGetString(GL_EXTENSIONS)</tt>.
+
+<p> <b>GLX</b> #defines a preprocessor token corresponding to the
+    extension name in <tt>&lt;GL/glx.h&gt;</tt> (or an include file that
+    <tt>glx.h</tt> includes, such as the <tt>glxext.h</tt> header
+    provided in the registry). When this token is defined, it indicates
+    that the function prototypes and enumerant definitions required to
+    use the extension are available at compile time.
+
+<p> If a GLX extension is supported at runtime, the extension name must
+    also be included in the strings returned by
+    <b>glXQueryExtensionsString</b>, <b>glXGetClientString</b>, and/or
+    <b>glXQueryServerString</b> (see below for a description of the
+    different routines).
+
+<p> <b>WGL</b> #defines a preprocessor token corresponding to the
+    extension name in the <tt>wglext.h</tt> header provided in the
+    registry (the wgl.h supplied with Microsoft Windows does not
+    #include <tt>wglext.h</tt>, or define any extensions itself). When
+    this token is defined, it indicates that the function prototypes and
+    enumerant definitions required to use the extension are available at
+    compile time.
+
+<p> If a WGL extension is supported at runtime, the extension name must
+    also be included in the string returned by
+    <b>wglGetExtensionsStringEXT</b>.
+
+<p> <b>OpenVG</b> extension conventions are <i>To Be Determined</i>.
+
+<p> Note that extensions can have both OpenGL components and windowing
+    system components. For example, the ARB multisampling extension
+    modifies both GLX and OpenGL. In this case there will be two tokens
+    associated with the extension (e.g., <tt>GL_ARB_multisample</tt> and
+    <tt>GLX_ARB_multisample</tt>) and the extension will be advertised
+    by both OpenGL and GLX.
+
+<a name="spec_registry"></a>
+<h3>Extension Registry</h3>
+
+<p> Khronos keeps a registry of extension specifications, enumerated
+    type values, GLX codes (vendor private opcodes, vendor private with
+    reply opcodes, new visual attribute type values, GLX error codes and
+    GLX event codes), OpenGL rendering codes for GLX, and OpenGL
+    rendering codes for GLS and extension numbers. Vendors shipping
+    extensions using any of these values must obtain them from Khronos.
+
+<p> If an extension defines new OpenGL enumerant names, values for those
+    names must be requested in one or more blocks of 16 values. If an
+    extension defines new OpenGL rendering commands then you need to
+    register GLS rendering codes for it. If you want the extensions to
+    work with the X windowing system (i.e., with GLX), then you must
+    request GLX opcodes and define GLX protocol for it.
+
+<p> There are detailed <a href="enums.html">enumerant allocation
+    policies</a> for OpenGL, GLX, and WGL enumerants.
+
+<p> All new extensions must have a number associated with them for
+    documentation purposes. If an extension depends on another
+    extension, the other extension must have a lower number. (Note that
+    when an extension is deprecated, the number associated with it is
+    not reassigned.) This number will also be assigned by Khronos when
+    you register the extension.
+
+<p> Include all new enumerated values, GLX codes, and the extension
+    number in the specification.
+
+<p> Once you have completed the extension, please make it available to
+    other Khronos members and application developers, by submitting the
+    extension specification to the Khronos Registrar for inclusion in
+    the public registry.
+
+<p><hr>
+
+<a name="implementation"></a>
+<h2>Implementing and Advertising Extensions</h2>
+
+<h4><u>Errors</u></h4>
+
+<p> Whenever possible, extensions should use existing errors instead of
+    defining new error returns. For GLX, if a new protocol error is
+    introduced, then an error number must be obtained from and
+    registered with Khronos.
+
+<p> Vendors may ship a single OpenGL library, containing extensions, for
+    a variety of platforms. It is possible that some of the extension
+    routines defined in the library may not be supported on some of the
+    platforms. If this is the case and an application calls a routine
+    that is not supported by the current OpenGL renderer then a
+    <tt>GL_INVALID_OPERATION</tt> error should be returned.
+
+<h4><u>OpenGL Extension Availability</u></h4>
+
+<p> OpenGL extensions must be advertised in the extension string
+    returned by <b>glGetString</b>. Note that in a client-server
+    environment, this call returns the set of extensions that can be
+    supported on the connection. GLX client libraries must send a
+    <b>glXClientInfo</b> request to the server at start up time (if the
+    client libarary is 1.1 or later) indicating the version of the
+    client library and the OpenGL extensions that it supports. Then,
+    when <b>glGetString</b> is called, the client issues a GetString
+    request. The server intersects the set of extensions that the client
+    supports with the set of extensions that it supports (if a
+    <b>glXClientInfo</b> request was never received then the server
+    assumes that the client supports no OpenGL extensions) and returns
+    the result to the client. The client library then appends any
+    client-side only extensions to the list and returns the result.
+
+<p> Extension names for all known OpenGL extensions are #defined in the
+    <tt>glext.h</tt> header included in the registry.
+
+<h4><u>EGL Extension Availability</u></h4>
+
+<p> EGL extensions must be advertised in the extension string returned
+    by <tt>eglQueryString(EGL_EXTENSIONS)</tt>. Extension names for all
+    known EGL extensions are #defined in the <tt>eglext.h</tt> header
+    included in the registry.
+
+<h4><u>GLX Extension Availability</u></h4>
+
+<p> GLX client-side extensions must be advertised in the extension
+    string returned by <b>glXGetClientString</b>; server-side extensions
+    must be advertised in the extension string returned by
+    <b>glXQueryServerString</b>.
+
+<p> <b>glXQueryExtensionsString</b> returns the list of extensions that
+    can be supported on the connection. The client then issues a
+    <b>glXQueryServerString</b> request, intersects the returned string
+    with the set of extensions it can support and then appends any
+    client-side only extensions to the list.
+
+<p> Extension names for all known GLX extensions are #defined in the
+    <tt>glxext.h</tt> header included in the registry.
+
+<h4><u>WGL Extension Availability</u></h4>
+
+<p> WGL initially had no mechanism for returning its own extensions
+    string. For this reason, WGL extension names were initially
+    advertised in the GL extensions string returned by
+    <b>glGetString</b>. With the creation of a more formal WGL extension
+    mechanism, all implementations offering WGL extensions should export
+    the <tt>WGL_EXT_extensions_string</tt> extension, and should
+    advertise WGL extensions in the extensions string returned by the
+    <b>wglGetExtensionsStringEXT</b> interface defined by
+    <tt>WGL_EXT_extensions_string</tt>, as well as via
+    <b>glGetString</b>, for compatibility with older programs.</p>
+
+<p> Extension names for all known WGL extensions are #defined in the
+    <tt>wglext.h</tt> header included in the registry.
+
+<p><hr>
+
+<a name="using"></a>
+<h2>Use of Extensions</h2>
+
+<h4><u>Using OpenGL Extensions</u></h4>
+
+<p> Programmers that wish to use a particular OpenGL extension should
+    check both compile-time defines (to ensure that the extension is
+    supported by the library they are compiling against) and the
+    extension string returned by <b>glGetString</b> (to ensure that the
+    renderer supports the extension). For Windows, extensions usually
+    are not defined at link time, and function pointers to extension
+    APIs should be obtained by calling <b>wglGetProcAddress</b>.
+
+<p> For example, the following code could be used to check whether the
+    renderer supports an OpenGL extension called
+    <tt>GL_EXT_new_extension</tt>. This code would need to be executed
+    after the context had been made current:
+
+<blockquote><pre><tt>
+    static GLboolean CheckExtension(char *extName, const char *extString)
+    {
+	/*
+	 ** Search for extName in the extensions string.  Use of strstr()
+	 ** is not sufficient because extension names can be prefixes of
+	 ** other extension names.  Could use strtok() but the constant
+	 ** string returned by glGetString can be in read-only memory.
+	 */
+	char *p = (char *)extString;
+	char *end;
+	int extNameLen;
+
+	extNameLen = strlen(extName);
+	end = p + strlen(p);
+
+	while (p < end) {
+	    int n = strcspn(p, " ");
+	    if ((extNameLen == n) && (strncmp(extName, p, n) == 0)) {
+		return GL_TRUE;
+	    }
+	    p += (n + 1);
+	}
+	return GL_FALSE;
+    }
+
+    const GLubyte *ext_string;
+    int new_ext_supported = GL_FALSE;
+
+    if (CheckExtension("GL_EXT_new_extension", glGetString(GL_EXTENSIONS)))
+	new_ext_supported = GL_TRUE;
+</tt></pre></blockquote>
+
+<p> If the renderer supports the extension, then it is safe to use it at
+    runtime. (Note that in a client-server environment,
+    <b>glGetString</b> will only return the set of extensions that can
+    be supported by the client and server.) However, compile time checks
+    must be made to ensure that the library that you are linked against
+    supports the extension. For example:
+
+<blockquote><pre><tt>
+    #ifdef GL_EXT_new_extension
+	if (new_ext_supported)
+	    glNewExtensionEXT()
+    #endif
+</tt></pre></blockquote>
+
+<p> For a Windows OpenGL implementation, extensions are usually
+    dynamically loaded from the device driver, rather than statically
+    linked. Function pointers to extension APIs are obtained from
+    <b>wglGetProcAddress</b> and use to invoke the extension. For
+    example:
+
+<blockquote><pre><tt>
+    typedef void (WINAPI *PFNGLNEWEXTENSIONEXTPROC)();
+    PFNGLNEWEXTENSIONEXTPROC *glNewExtensionEXT = NULL;
+
+    /* Do this once, after context creation */
+    #ifdef GL_EXT_new_extension
+	if (new_ext_supported)
+	    glNewExtensionEXT = (PFNGLNEWEXTENSIONEXTPROC)
+		wglGetProcAddress("glNewExtensionEXT");
+    #endif
+
+    /* Do this when calling the extension */
+    #ifdef GL_EXT_new_extension
+	if (new_ext_supported)
+	    (*glNewExtensionEXT)();
+    #endif
+</tt></pre></blockquote>
+
+<h4><u>Using EGL Extensions</u></h4>
+
+<p> Before using an EGL extension, check for the extension name in both
+    the compile-time #defines and the extension string returned by
+    <tt>eglGetString(EGL_EXTENSIONS)</tt>. For example, this code could
+    be used to check whether an extension called
+    <tt>EGL_OES_new_extension</tt> can be used.
+
+<blockquote><pre><tt>
+	EGLDisplay dpy; // Initialized elsewhere
+	int new_ext_supported = FALSE;
+
+	if (CheckExtension("EGL_OES_new_extension",
+			       eglGetString(display, EGL_EXTENSIONS));
+		new_ext_supported = TRUE;
+    #endif
+</tt></pre></blockquote>
+
+<p> If the extension is supported, then it is safe to use it at runtime.
+    However, compile time checks must be made to ensure that you can
+    call the extension. For example:
+
+<blockquote><pre><tt>
+    #ifdef EGL_OES_new_extension
+	if (new_ext_supported)
+	    eglNewExtensionEXT(...);
+    #endif
+</tt></pre></blockquote>
+
+<h4><u>Using GLX Extensions</u></h4>
+
+<p> Before using a GLX extension, programmers should check the compile
+    time defines and the extension string returned by
+    <b>glXQueryExtensionsString</b>.
+
+<p> The following code could be used to check whether an extension
+    called <tt>GLX_EXT_new_extension</tt> can be used on the connection.
+    This code would be executed after the connection had been opened and
+    the existence of the GLX extension had been established.
+
+<blockquote><pre><tt>
+	Display *dpy;
+	int new_ext_supported = GL_FALSE;
+	int major, minor, screen;
+
+	if (!glXQueryVersion(dpy, &major, &minor))
+	    exit(1);
+	screen = DefaultScreen(dpy);
+
+    #ifdef GLX_VERSION_1_1
+	if (minor > 0 || major > 1)
+	    if (CheckExtension("GLX_EXT_new_extension",
+			       glXQueryExtensionsString(dpy, screen)))
+		new_ext_supported = GL_TRUE;
+    #endif
+</tt></pre></blockquote>
+
+<p> If the extension is supported on the connection, then it is safe to
+    use it at runtime. However, compile time checks must be made to
+    ensure that the library that you are linked against supports the
+    extension. For example:
+
+<blockquote><pre><tt>
+    #ifdef GLX_EXT_new_extension
+	if (new_ext_supported)
+	    glXNewExtensionEXT(...);
+    #endif
+</tt></pre></blockquote>
+
+<h4><u>Using WGL Extensions</u></h4>
+
+<p> Before using a WGL extension, check for its presence in the WGL
+    extensions string. Note that the WGL extension string query is
+    itself an extension; if not supported, WGL extensions are also
+    advertised in the base GL extensions string.
+
+    <p> <i>Code snippet should go here</i>
+
+<p> <hr>
+
+<p> Last modified August 13, 2006 by Jon Leech
+
+</body>
+</html>

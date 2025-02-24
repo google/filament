@@ -1,0 +1,125 @@
+XXX - Not complete yet!!!
+
+Name
+
+    S3_s3tc
+
+Name Strings
+
+    GL_S3_s3tc
+
+Contact
+
+    Unknown.
+
+IP Status
+
+    There is significant IP associated with the S3TC format. In 1999 S3
+    told the OpenGL ARB that they would not license it for general use
+    in OpenGL. IHVs shipping this extension probably have executed
+    licenses directly with S3 or its successors (Sonic Blue, S3
+    Graphics).
+
+    The current ownership of the S3TC IP is unknown to the ARB. It is
+    known that when S3 exited the graphics hardware business, part of
+    their operations were sold to ATI and part were spun off to a joint
+    Taiwanese venture with Via Technologies, called S3 Graphics.
+
+Status
+
+    Shipping in several vendor drivers.
+    Deprecated in favor of EXT_texture_compression_s3tc.
+
+Version
+
+    Unknown
+
+Number
+
+    276
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    The extension is not specified; only the new tokens are known.
+
+Overview
+
+    This extension allows specifying texture data in compressed S3TC
+    format.
+
+Issues
+
+  * Need a specification, at least at a functional level. No
+    detailed online documentation can be found in Google, only
+    enum values.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the ??? parameter of ??? (presumably by the <format>
+    argument of TexImage2D?):
+
+        RGB_S3TC                            0x83A0
+        RGB4_S3TC                           0x83A1
+        RGBA_S3TC                           0x83A2
+        RGBA4_S3TC                          0x83A3
+        RGBA_DXT5_S3TC                      0x83A4
+        RGBA4_DXT5_S3TC                     0x83A5
+
+Additions to Chapter 2 of the OpenGL 1.2 Specification (OpenGL Operation)
+
+    Unknown.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    Unknown. Probably only changes to accepted client texture formats
+    for 2D textures.
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Unknown.
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    Unknown.
+
+Additions to Chapter 6 of the OpenGL 1.2 Specification (State and State
+Requests)
+
+    Unknown.
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    Unknown.
+
+Additions to the GLX / WGL / AGL Specifications
+
+    None
+
+GLX Protocol
+
+    Unknown. Passing compressed data would affect the computed data
+    size, so some enhancements to the existing TexImage2D protocol might
+    be needed.
+
+Errors
+
+    Unknown.
+
+New State
+
+    Unknown.
+
+Revision History
+
+  * Revision 2, January 17, 2003 (Mark Kilgard) - Document
+    RGBA_DXT5_S3TC and RGBA4_DXT5_S3TC enumerants. Update status as
+    deprecated in favor of EXT_texture_compression_s3tc spec.
+
+  * Revision 1, December 18, 2002 (Jon Leech) - Minimal documentation on
+    the extension based on public header files.

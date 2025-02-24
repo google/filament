@@ -1,0 +1,136 @@
+Name
+
+    EXT_explicit_device
+
+Name Strings
+
+    EGL_EXT_explicit_device
+
+Contributors
+
+    Adam Jackson
+    Nicolai Haehnle
+    Daniel Stone
+    Kyle Brenneman
+
+Contacts
+
+    Adam Jackson <ajax@redhat.com>
+
+Status
+
+    Complete
+
+Version
+
+    Version 3, 2022-04-21
+
+Number
+
+    EGL Extension #148
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires EGL_EXT_platform_base and EGL_EXT_device_enumeration.
+
+    EGL_EXT_platform_device trivially interacts with this extension.
+
+    This extension is written against the EGL 1.5 Specification.
+
+Overview
+
+    A system may support rendering with multiple devices for the same
+    windowing system. In that case, an EGL implementation must select a
+    default device based on the native display.
+
+    This extension allows an application to explicitly request a device
+    to use for rendering instead of the implementation's default.
+
+    This differs from EGL_EXT_platform_device in that
+    EGL_EXT_platform_device uses an EGLDeviceEXT instead of a native
+    display. Thus, EGL_EXT_platform_device allows offscreen rendering
+    to a pbuffer or FBO, but it does not require or use a windowing
+    system, and thus does not allow pixmap or window surfaces.
+
+    Using EGL_EXT_explicit_device with EGL_MESA_platform_surfaceless is
+    functionally identical to EGL_EXT_platform_device.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to the EGL Specification
+
+    None
+
+New Behavior
+
+    If EGL_DEVICE_EXT is specified as an attribute for
+    eglGetPlatformDisplay, the value of the attribute is interpreted as
+    an EGLDeviceEXT as returned by eglQueryDevicesEXT.
+
+    If the EGL_DEVICE_EXT attribute is EGL_NO_DEVICE_EXT, then the
+    implementation will select a device automatically, as it would
+    normally.
+
+    If the EGL_DEVICE_EXT attribute is not EGL_NO_DEVICE_EXT, then the
+    implementation will use the specified device for rendering. If the
+    EGL_DEVICE_EXT attribute does not name a valid EGLDeviceEXT, then
+    EGL_BAD_DEVICE_EXT is generated.
+
+    An implementation might not support all devices for all native
+    displays. If the device and native display are not compatible for
+    any reason, then EGL_BAD_MATCH is generated.
+
+    If EGL_EXT_platform_device is supported, passing EGL_DEVICE_EXT as an
+    attribute to eglGetPlatformDisplay(EGL_PLATFORM_DEVICE_EXT) generates
+    EGL_BAD_ATTRIBUTE.
+
+Issues
+
+    1. Should we have a separate function to query whether a device is
+       compatible with a native display?
+
+       RESOLVED: No. A separate query might require duplicating a lot of
+       the work that eglGetPlatformDisplay and eglInitialize would do,
+       which could be very slow.
+
+    2. If an implementation can't support a device with a particular
+       native display, then should it fail in eglGetPlatformDisplay, or
+       can it defer any compatibility checks until eglInitialize?
+
+       RESOLVED: eglGetPlatformDisplay must check for compatibility and
+       should fail if the device and native display are not supported.
+
+       Without a separate function to check for compatibility, the only
+       way for an application to know which devices can work with a
+       native display is to try to use each device and see if it gets an
+       error. If the error is in eglInitialize, then an application
+       would have to create (and leak) a bunch of EGLDisplay handles
+       that it never intends to use.
+
+Revision History
+
+    Version 3, 2022-04-21 (Kyle Brenneman)
+        - Require eglGetPlatformDisplay (instead of eglInitialize) check
+          whether the device is supported with the native display.
+
+    Version 2, 2017-08-08 (Adam Jackson)
+        - Renamed from MESA_platform_device to EXT_explicit_device
+        - Make it an error to use this new attribute in conjunction with
+          EGL_EXT_platform_device
+
+    Version 1, 2017-07-14 (Adam Jackson)
+        - Initial version

@@ -1,0 +1,88 @@
+// Copyright 2021 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+// An IDL file that provides stub definitions for dictionaries and interfaces
+// used by the webgpu.idl file
+//
+// The [LegacyNoInterfaceObject] annotation asks idlgen to not create a global constructor for
+// an interface. It is a real WebIDL annotation but we use it liberally here.
+// https://webidl.spec.whatwg.org/#LegacyNoInterfaceObject
+
+dictionary EventInit {
+  boolean bubbles = false;
+  boolean cancelable = false;
+  boolean composed = false;
+};
+
+[LegacyNoInterfaceObject] interface Navigator {};
+
+[LegacyNoInterfaceObject] interface Event {
+  readonly attribute boolean bubbles;
+  readonly attribute boolean cancelable;
+  attribute boolean returnValue;
+};
+
+[LegacyNoInterfaceObject] interface WorkerNavigator{};
+
+[LegacyNoInterfaceObject] interface EventListener {
+  undefined handleEvent(Event event);
+};
+
+[LegacyNoInterfaceObject] interface EventTarget {
+  undefined addEventListener(DOMString type, EventListener? callback, optional (AddEventListenerOptions or boolean) options);
+  undefined removeEventListener(DOMString type, EventListener? callback, optional (EventListenerOptions or boolean) options);
+  boolean dispatchEvent(Event event);
+};
+
+dictionary EventListenerOptions { boolean capture = false; };
+
+dictionary AddEventListenerOptions : EventListenerOptions {
+  boolean passive = false;
+  boolean once = false;
+};
+
+typedef(Int8Array or Int16Array or Int32Array or Uint8Array or Uint16Array or
+        Uint32Array or Float32Array or Float64Array or
+        DataView) ArrayBufferView;
+
+typedef(ArrayBufferView or ArrayBuffer) BufferSource;
+
+// NAPI doesn't have SharedArrayBuffer so comment out that part of AllowSharedBufferSource.
+typedef (ArrayBuffer or /* SharedArrayBuffer or [AllowShared] */ ArrayBufferView) AllowSharedBufferSource;
+
+// Interfaces used in the WebGPU IDL that don't have an equivalent in the NAPI world.
+[LegacyNoInterfaceObject] interface DOMException {};
+[LegacyNoInterfaceObject] interface EventHandler{};
+[LegacyNoInterfaceObject] interface HTMLCanvasElement {};
+[LegacyNoInterfaceObject] interface HTMLImageElement {};
+[LegacyNoInterfaceObject] interface HTMLVideoElement {};
+[LegacyNoInterfaceObject] interface ImageBitmap {};
+[LegacyNoInterfaceObject] interface ImageData {};
+[LegacyNoInterfaceObject] interface OffscreenCanvas {};
+[LegacyNoInterfaceObject] interface VideoFrame {};
+
+enum PredefinedColorSpace { "srgb", "display-p3" };

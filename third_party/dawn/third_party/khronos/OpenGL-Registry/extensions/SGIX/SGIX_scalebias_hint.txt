@@ -1,0 +1,96 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_scalebias_hint
+
+Name Strings
+
+    GL_SGIX_scalebias_hint
+
+Contact
+
+    SGI
+
+Status
+
+    XXX - Not complete yet!!!
+
+Version
+
+    $Date$
+
+Number
+
+    236
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension adds an precision hint for scaling and biasing
+    arithmetic. For large scale factors, hinting GL_NICEST produces the
+    most accurate results. The hint only applies to Octane2 VPro
+    graphics systems, to work around a hardware issue.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <target> parameter of glHint and by the <pname>
+    parameter of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+	SCALEBIAS_HINT_SGIX		0x8322
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Fragments and the
+Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    Add to section 5.6 ("Hints"):
+
+    If the <target> argument of Hint is specified as SCALEBIAS_HINT,
+    then the <hint> argument indicates the desired precision of
+    geometric transformations around the near clip plane (XXX - is this
+    really what's going on?). The NICEST hint trades off performance for
+    increased clip accuracy.
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    Get Value		    Get Command     Type    Value	    Attrib
+    ---------		    -----------     ----    -------	    ------
+    SCALEBIAS_HINT_SGIX     GetIntegerv     Z3	    DONT_CARE	    hint
+
+New Implementation Dependent State
+
+    None

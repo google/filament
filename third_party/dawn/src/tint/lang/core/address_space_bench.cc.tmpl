@@ -1,0 +1,30 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate address_space_bench.cc
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/core/core.def" -}}
+{{- Import "src/tint/utils/templates/enums.tmpl.inc" -}}
+{{- $enum := ($I.Sem.Enum "address_space") -}}
+
+#include "src/tint/lang/core/address_space.h"
+
+#include <array>
+
+#include "benchmark/benchmark.h"
+
+namespace tint::core {
+namespace {
+
+{{ Eval "BenchmarkParseEnum" $enum }}
+
+}  // namespace
+}  // namespace tint::core

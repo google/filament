@@ -1,0 +1,187 @@
+XXX - not done yet
+
+Name
+
+    SGIX_fragment_lighting_space
+
+Name Strings
+
+    GL_SGIX_fragment_lighting_space
+
+Version
+
+    $Date: 1998/05/12 23:52:07 $ $Revision: 1.14 $
+
+Number
+
+    118
+
+Dependencies
+
+    EXT_fragment_lighting is required.
+    EXT_coordinate_frame is required.
+
+Overview
+
+    This extension specifies that the fragment lighting vectors including
+    the view vector, light vectors, halfangle vectors and 
+    spotlight direction vectors, be transformed into either eye-space, 
+    object-space or tangent-space on a per-vertex basis. 
+    The default is eye-space. 
+
+    Combined with the ability to take a normal vector from texture memory,
+    as specified by the SGIX_light_texture extension, 
+    the ability to transform other shading vectors to the same space 
+    as the normal vector allows advanced shading effects such as 
+    bump mapping to be realized.
+
+    The tangent-space transform uses the per-vertex tangent and binormal
+    vector introduced by the EXT_coordinate_frame extension.
+
+Issues
+
+    * A suggestion for a different way to attack this is to introduce the
+    concept of a per-vertex matrix which is applied to lighting vectors.
+    Coupled with a new matrix-gen function, we could generate the necessary 
+    per-vertex matrices.
+
+    * Are we really dependent upon fragment light?
+
+    Theoretically, no, but doing lighting in a space other than 
+    eye-space doesn't help one much unless we can do something 
+    like get normal vectors from texture.  
+    For that reason it doesn't seem to make sense to burden per-vertex
+    lighting with this generality.
+
+    * If we are dependent upon fragment light are we not also dependent
+    upon SGIX_light_texture? 
+
+    It would seem to make little sense to implement light_space and not
+    light texture because the combination of the two of them is what
+    makes bump mapping possible. But since there is nothing gained by
+    making light_space dependent upon light_texture we won't make it
+    dependent upon light_texture
+
+New Procedures and Functions
+
+    FragmentLightSpaceSGIX(enum space);
+
+New Tokens
+
+    Accepted by the <space> parameter of FragmentLightSpaceSGIX:
+
+	EYE_SPACE_SGIX			0x8436
+	TANGENT_SPACE_SGIX		0x8437
+	OBJECT_SPACE_SGIX		0x8438
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+	FRAGMENT_LIGHT_SPACE_SGIX	0x843D
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+ 
+    The fragment_light.spec section 3.9.2 Lighting Operation is amended: 
+
+    If FragmentLightSpaceSGIX specifies 
+    EYE_SPACE_SGIX            <default> 
+    then calculations are carried out in eye space.
+
+    If FragmentLightSpaceSGIX specifies 
+    TANGENT_SPACE_SGIX  
+    then calculations are carried out in tangent space  by
+    constructing an orthonormal basis from the per-vertex tangent,
+    binormal and normal vectors and using that matrix to transform
+    eye-space shading vectors into tangent space on a 
+    per-vertex basis. The vectors are normalized before being passed
+    to the rasterization stage where the fragment lighting calculations 
+    are performed.
+
+    The matrix is constructed as follows:
+
+    if NORMALIZE is enabled,
+	b = cross(normal,tangent);
+	t = cross(b,n);
+	t = normalize(t);
+	b = normalize(b);
+	n = normalize(normal);
+    else
+	t = tangent
+	b = binormal
+	n = normal
+
+    the matrix
+
+    M  = ( t - - )
+	 ( b - - )
+	 ( n - - )
+
+    maps (1,0,0) to t,
+         (0,1,0) to b,
+         (0,0,1) to n.
+
+    Because it is an orthogonal matrix, its inverse is its transpose:
+
+    Mi = ( t b n )
+	 ( | | | )
+	 ( | | | )
+
+    and maps t to (1,0,0),
+             b to (0,1,0),
+             n to (0,0,1), ie, maps vectors to tangent space.
+
+    Any shading vectors required by the fragment lighting rasterization
+    stages, which could include the view vector V, light vector VPli, 
+    halfangle vector hi and spotlight direction vector, sdli, 
+    are first computed in eye space on a per-vertex basis and then 
+    transformed by Mi to the tangent space shading vectors, Vts, Ltsi, Htsi, sdltsi.
+
+    if FragmentLightSpaceSGIX specifies 
+    OBJECT_SPACE_SGIX  
+    then fragment lighting calculations can be carried out in object space 
+    by transforming the eye-space shading vectors by the 
+    inverse of the current modelview matrix and subsequently normalizing 
+    them.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    tables are extended with state values from New State section
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    XXX - not yet complete
+
+Errors
+
+    INVALID_ENUM is generated if FragmentLightSpaceSGIX parameter
+    <space> is not EYE_SPACE_SGIX, OBJECT_SPACE_SGIX, or TANGENT_SPACE_SGIX.
+
+    INVALID_OPERATION is generated if FragmentLightSpaceSGIX is called
+    between the execution of Begin and the corresponding execution of End.
+
+New State
+    Get Value			Get Command	Type	Initial Value	Attribute
+    ---------			-----------	----	-------------	---------
+    FRAGMENT_LIGHT_SPACE_SGIX	GetIntegerv	Z3	EYE_SPACE_SGIX	lighting/enable
+
+New Implementation Dependent State
+
+    None
+

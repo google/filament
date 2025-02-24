@@ -1,0 +1,135 @@
+XXX - Obsolete; implemented as part of GL_SGIX_igloo_interface
+
+Name
+
+    IGLOO_viewport_offsetXXX
+
+    This not an EXT, SGI, SGIS, or SGIX extension. It violates the prefix rules.
+    Also the XXX violates the no-caps in the body of the name rule.
+
+Name Strings
+
+    GL_IGLOO_viewport_offsetXXX
+
+    These strings should never be returned by glGetString,
+    because I don't expect the get in this  extension to be implemented
+    The extension should remain incomplete.
+    The name string here is used solely in the registry.
+
+Version
+
+    $Date: 1999/04/03 08:40:52 $ $Revision: 1.2 $
+
+Number
+
+    None
+
+    Do we number these???
+
+
+Dependencies
+
+
+    This extension has *NO* dependencies.
+
+Overview
+
+    When Viewport_Offset is enabled then the viewport transformation is becomes
+
+
+    x_w = (p_x/2) x_d + o_x + 0.5
+    y_w = (p_y/2) y_d + o_y + 0.5
+    z_w = . . . same as before.
+
+    I believe that this is only useful for emulating IrisGL on top of OpenGL.
+
+
+New Procedures and Functions
+
+
+    There are no new Procedures for this extension
+New Tokens
+
+*	This list should be complete.  It should separate the new tokens
+*	based on which procedures and parameters accept them, and explicitly
+*	list those procedures and parameters.  Token suffixes must match the
+*	prefix chosen for the extension name.  For example:
+*
+*	Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+*	GetFloatv, and GetDoublev:
+*
+*	    NEW_TOKEN_SGI
+
+    IGLOO_OFFSET_VIEWPORT_XXX Is accepted by glEnable and glDisable.
+
+    Probably not accepted by the <pname> parameter of glGetBooleanv, and
+    glIsEnabled.
+
+    (I do not expect glGet to accept this in most implementations,
+    but techically it should since this is user state.)
+
+    If glEnable or glDisable generates an INVALID_ENUM then
+    this extension is not available.
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+
+
+    Section 2.9.1  (Controlling the viewport)
+    now reads:
+
+    "The vertex's window coordinates, (x_w) are given by
+				      (y_w)
+				      (z_w),
+
+    (x_w)   ((p_x/2)x_d + o_x + offset)     )
+    (y_w) = ((p_y/2)y_d + o_y + offset)     )
+    (z_w)   ([unchanged from versions 1.0]) )
+
+    where offset equals 0.5 if IGLOO_OFFSET_VIEWPORT_XXX is enabled, and 0.0 if it is
+    disabled.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    NONE
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    NONE
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+*	List commands that are not included in display lists (typically Get*
+*	commands)
+
+    glGet(IGLOO_OFFSET_VIEWPORT_XXX)  will probably not be part of any real implementation.
+    glEnable is already display listable and remains so.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+
+   There is one new bit of state.
+   This bit is TRUE if IGLOO_OFFSET_VIEWPORT_XXX is enabled
+   and FALSE otherwise.  While this is technically user state, it is not
+   needed by IGLOO. . .
+   It's default value is FALSE.
+
+Additions to the GLX Specification
+    No additions are needed for the GLX Specification
+
+Errors
+    There is no new Error state, but glEnable/glDisable now accepts a the new token.
+
+
+
+New State
+
+*	Description of all state values in table format.  Note that client
+*	state should have "client" listed in the Attrib column.
+
+								Initial
+    Get Value				Get Command	Type	Value	Attrib
+    ---------				-----------	----	------- ------
+    IGLOO_OFFSET_VIEWPORT_XXX		glGetBooleanv	Bool	FALSE	enable
+

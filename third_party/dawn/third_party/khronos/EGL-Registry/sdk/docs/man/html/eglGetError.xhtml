@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglGetError - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglGetError">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglGetError — 
+            return error information
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLint <strong class="fsfunc">eglGetError</strong>(</code>
+              </td>
+              <td><code>void)</code>;</td>
+              <td> </td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglGetError</code> returns the error of the last
+            called <abbr class="acronym">EGL</abbr> function in the current thread.
+            Initially, the error is set to <code class="constant">EGL_SUCCESS</code>.
+        </p>
+        <p>
+            When an EGL function could potentially generate several
+            different errors (for example, when passed both a bad attribute
+            name, and a bad attribute value for a legal attribute name), the
+            implementation may choose to generate any one of the applicable
+            errors.
+        </p>
+        <p>
+            The following errors are currently defined:
+        </p>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_SUCCESS</code>
+              </span>
+            </dt>
+            <dd>
+              <p>The last function succeeded without error.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_NOT_INITIALIZED</code>
+              </span>
+            </dt>
+            <dd>
+              <p>EGL is not initialized, or could not be initialized,
+                for the specified EGL display connection.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_ACCESS</code>
+              </span>
+            </dt>
+            <dd>
+              <p>EGL cannot access a requested resource
+                (for example a context is bound in another thread).
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_ALLOC</code>
+              </span>
+            </dt>
+            <dd>
+              <p>EGL failed to allocate resources for the requested
+                operation.</p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_ATTRIBUTE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>An unrecognized attribute or attribute value was
+                passed in the attribute list.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_CONTEXT</code>
+              </span>
+            </dt>
+            <dd>
+              <p>An <span class="type">EGLContext</span> argument does not name a
+                valid EGL rendering context.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_CONFIG</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                An <span class="type">EGLConfig</span> argument does not name a valid
+                EGL frame buffer configuration.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_CURRENT_SURFACE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>The current surface of the calling thread is a window,
+                pixel buffer or pixmap that is no longer valid.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_DISPLAY</code>
+              </span>
+            </dt>
+            <dd>
+              <p>An <span class="type">EGLDisplay</span> argument does not name a
+                valid EGL display connection.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_SURFACE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>An <span class="type">EGLSurface</span> argument does not name a
+                valid surface (window, pixel buffer or pixmap) configured for
+                GL rendering.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_MATCH</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Arguments are inconsistent (for example, a valid
+                context requires buffers not supplied by a valid surface).
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_PARAMETER</code>
+              </span>
+            </dt>
+            <dd>
+              <p>One or more argument values are invalid.</p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_NATIVE_PIXMAP</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                A <span class="type">NativePixmapType</span> argument does not refer to
+                a valid native pixmap.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BAD_NATIVE_WINDOW</code>
+              </span>
+            </dt>
+            <dd>
+              <p>A <span class="type">NativeWindowType</span> argument does not refer
+                to a valid native window.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONTEXT_LOST</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                A power management event has occurred. The application must destroy all
+                contexts and reinitialise OpenGL ES state and objects to continue rendering.
+            </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            A call to <code class="function">eglGetError</code> sets the error to
+            <code class="constant">EGL_SUCCESS</code>.
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

@@ -1,0 +1,348 @@
+XXX - Not complete yet!!!
+
+Name
+
+    REND_screen_coordinates
+
+Name Strings
+
+    GL_REND_screen_coordinates
+
+Version
+
+    $Date: 1998/06/15 20:37:15 $ $Revision: 1.1 $
+
+Number
+
+    155
+
+Dependencies
+
+    OpenGL 1.1 is required
+    EXT_fog_coord affects the definition of this extension.
+    EXT_cull_vertex affects the definition of this extension.
+
+Overview
+
+    This extension allows the specification of screen coordinate vertex
+    data. Screen coordinate vertices completely bypass transformation,
+    texture generation, lighting and frustum clipping. It also allow for
+    fewer floating point computations to the performed by OpenGL.
+
+    If we get screen coordinate inputs then in order to perspectively
+    correct data (eg texture), the input data currently has to be
+    specified in one of the following manners
+
+	1. Specify all the data normally
+	   eg.
+		  glTexture2T(s, t);
+	   and the coordinates as
+		  glVertex4T(x*w, y*w, z*w, w);
+	or
+	2. Divide each data by w
+	   eg.
+		  glTexture4T(s/w, t/w, r/w, q/w);
+	   and the coordinates as
+		  glVertex3T(x, y, z);
+
+    Most hardware already performs some form of correction of the
+    coordinate data with respect to the w term prior to interpolation.
+    This is normally in the form of a multiplication of the terms by the
+    inverse w. It would be much more efficient to simply specify screen
+    coordinates as shown in the following example
+	   glTexture2T(s, t, r, q);
+    and the coordinates as
+	   glVertex4T(x, y, z, w);
+    and allow the hardware to bring the interpolated terms into a linear
+    screen space.
+
+    Additionally if the application derives screen coordinates it is
+    also highly likely that the 1/w term may already be computed. So it
+    would be advantageous to be able to specify 1/w directly instead of
+    w in the input screen coordinates.
+
+    For hardware that linearly interpolates data, the hardware
+    interpolates the following data:
+	s/w, t/w, r/w, q/w, x, y, z
+    If the input w represents the original 1/w, then the hardware can
+    avoid the division and instead interpolate:
+	s*w, t*w, r*w, q*w, x, y, z
+
+
+Issues
+
+    * Should screen coordinates have been done as a hint instead of
+      an enable bit?
+
+    RESOLVED: Since this extension specifies changes the semantics of
+    OpenGL, we need to make this an enable bit
+
+    * Should the texture matrix be applied to the input screen
+      coordinates?
+
+    This spec assumes that the texture matrix is applied
+
+    * Should the raster position valid be set to invalid when screen
+      coordinates are enabled.
+
+    RESOLVED: Raster position can still be defined. But the raster
+    position calls should act similar to the vertex specification calls.
+    So the raster position calls will be specifying screen space
+    coordinates. The raster position will always be valid. The
+
+    raster eye z will be defined to be 0 always.
+
+    * Should we allow evaluators in screen space?
+
+    This spec is written assuming the evaluators will act as if it is
+    disabled
+
+    * Should we ignore selection if screen coordinates is enabled, or
+      select everything?
+
+    * Should we ignore feedback in screen coordinates is enabled, or
+      return everything?
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable and IsEnabled:
+
+    SCREEN_COORDINATES_REND	0x8490
+    INVERTED_SCREEN_W_REND	0x8491
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    Section 2.6 Begin/End Paradigm
+
+    <p 13, amend paragraph 1>
+	These associated colors are either based on the current color or
+	produced by lighting, depending on whether or not lighting is
+	enabled and whether or not screen coordinates are enabled.
+	Texture coordinates are similarly associated with each vertex.
+	Fig 2.2 summarizes the association of auxiliary data with a
+	transformed vertex to produce a processed vertex.
+
+    <p 13, amend paragraph 2> ...
+	Vertices and normals are transformed, colors may be affected or
+	replaced by lighting and texture coordinates are transformed and
+	possibly affected by a texture coordinate generation function.
+	However, if screen coordinates has been enabled, then neither
+	the vertices nor the normal undergo any transformation, the
+	current colors are not modifies by lighting, the texture
+	coordinates are transformed but are not affected by texture
+	coordinate generation functions.
+
+    <p 13, amend figure 2.2>
+	If screen coordinate vertex data is enabled, then the
+	coordinates are not transformed.
+
+    <p 13, amend figure 2.3>
+	If screen coordinate vertex data is enabled, then clipping is
+	bypassed.
+
+    Section 2.7
+
+    <p 20, add after paragraph 1>
+	If SCREEN_COORDINATES is enabled then the x, y, z and w values
+	represent screen coordinate values. Additionally if
+	INVERTED_SCREEN_W is enabled then the w coodinate is treated as
+	the actual 1/w coordinate.
+
+    Section 2.10
+
+    <p 28, modify paragraph 1>
+	Vertices, normals and texture coordinates are transformed before
+	their coordinates are used to produce an image in the
+	framebuffer. However if screen coordinates are enabled then only
+	the texture coordinate may undergo a transformation.
+
+    Section 2.10.4
+
+    <p 36, modify paragraph 1>
+	Texture coordinates associated with a vertex may either be taken
+	from the current texture coordinates or generated according to a
+	function dependant on vertex coordinates. However if screen
+	coordinate data is enabled then the texture coordinate
+	associated with the vertex always comes from the current
+	texture.
+
+    Section 2.12
+
+    <p 41, modify paragraph 2>
+	The coordinates are treated as if they were specified in a
+	Vertex command. The x, y, z, and w coordinates are transformed
+	by the current model-view and perspective matrices if screen
+	coordinates is disabled. These coordinates, along with the
+	current values, are used to generate a color and texture
+	coordinates just as is done for a vertex. The color and textures
+	coordinates so produced replace the color and texture
+	coordinates stored in the current raster position's associated
+	data. The distance from the origin of the eye coordinate system
+	to the vertex as transformed by only the current model-view
+	matrix replaces the current raster distance if screen
+	coordinates is disabled. If screen coordinates are enabled then
+	the current raster distance is always 0. This distance can be
+	approximted (see section 3.10).
+
+    <p 42, Modify figure 2.7>
+	If screen coordinate vertex data is enabled then the associated
+	data always gets the texture coordinates from the current
+	texture coordinate and the color from the current color
+	(lighting and texgen are as if they are disabled).
+
+    <p 43, Modify figure 2.9>
+	If screen coordinate vertex data is enabled then lighting and
+	color clipping is bypassed.
+
+    Section 2.13
+
+    <p 43, Modify paragraph 1>
+	Next lighting, if enabled and screen coordinate data is not
+	enabled, produces either a color index or primary and secondary
+	colors. ...
+
+
+    Section 2.13.8
+
+    <p 54, modify paragraph 1>
+	After lighting, clamping or masking, and possibly flat shading,
+	colors are clipped if screen coordinate data is not enabled. ...
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    Section 3.4.1
+
+    <p 66, modify equation 3.2>
+	If inverted screen w disabled or screen coordinate data is
+	disabled
+
+		(1-t) fa/wa + t fb/wb
+	    f =-----------------------
+		(1-t) Aa/wa + t Ab/wb
+
+	otherwise
+
+		(1-t) fa.wa + t fb.wb
+	    f =-----------------------
+		(1-t) Aa.wa + t Ab.wb
+
+     Section 3.5
+
+     <p 71, modify equation 3.4>
+	If inverted screen w disabled or screen coordinate data is
+	disabled
+		a.fa/wa + b.fb/wb + c.fc/wc
+	    f =-----------------------------
+		a.Aa/wa + b.Ab/wb + c.Ac/wc
+
+	otherwise
+		a.fa.wa + b.fb.wb + c.fc.wc
+	    f =-----------------------------
+		a.Aa.wa + b.Ab.wb + c.Ac.wc
+
+     Section 3.10
+
+     <p 139, modify paragraph 2>
+	This factor f is computed according to one of three equations:
+
+	    f = exp(-d.z),		    (3.24)
+			  2
+	    f = exp(-(d.z) ), or	    (3.25)
+
+		e - z
+	    f = ------			    (3.26)
+		e - s
+	(z is the eye coordinate distance from the eye, (0,0,0,1) in
+
+	eye coordinates, to the fragment center if screen coordinates is
+	disabled, z is 0 otherwise). ....
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations and the Framebuffer)
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    Section 5.1
+
+    <p 166, append at the end of paragraph 1>
+	Evaluators act as if they are disabled if screen coordinate data
+	is enabled.
+
+    Section 5.2
+
+    <p 172, append at the end paragraph 1>
+	If screen coordinate data is enabled then the primitives are
+	always selected.
+
+    Section 5.3
+
+    <p 175, append to the end of paragraph 1>
+	If screen coordinate data is enabled then every primitive is
+	always added to the feedback buffer if it is not an image
+	rectangle based primitive (bitmap or DrawPixels or CopyPixels).
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    Section 6.2.1
+
+    <p 199, add to the end of Table 6.7>
+    Get Value		Type Get Command   Initial   Description Sec. Attribute
+					   Value
+    ---------		---- -----------   --------  ----------- ---- ---------
+    SCREEN_COORDINATES	B    IsEnabled	   False     Input coord -    enable
+						     system
+    INVERTED_SCREEN_W	B    IsEnabled	   False     Screen coor 2.7  enable
+						     w semantics
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Dependencies on EXT_fog_coord
+
+     If EXT_fog_coord is supported then the section 3.10 is
+     further modified to read:
+
+	This factor f is computed according to one of three equations:
+
+	    f = exp(-d.c),		    (3.24)
+			  2
+	    f = exp(-(d.c) ), or	    (3.25)
+
+		e - c
+	    f = ------			    (3.26)
+		e - s
+	If the fog source (as defined below) is FRAGMENT_DEPTH, then c
+	is the eye coordinate distance from the eye (0,0,0,1) in eye
+	coordinates, to the fragment center if screen coordinates is
+	disabled. If screen coordinates is enabled then it is always 0.
+	If the fog source is FOG_COORDINATE, then c is the interpolated
+	value of the fog coordinate for this fragment. ...
+
+Dependencies on EXT_cull_vertex
+    If screen coordinates are enabled and EXT_cull_vertex is supported,
+    then vertex culling is never performed regardless of whether
+    CULL_VERTEX_EXT is enabled or not.
+
+Errors
+
+    None.
+
+New State
+
+    Get Value		Get Command    Type    Initial Value Attribute
+    ---------		-----------    ----    ------------- ---------
+    SCREEN_COORDINATES	IsEnabled     1* x B   False	      enable
+
+    INVERTED_SCREEN_W	IsEnabled     1* x B   False	      enable
+
+New Implementation Dependent State
+
+    None.

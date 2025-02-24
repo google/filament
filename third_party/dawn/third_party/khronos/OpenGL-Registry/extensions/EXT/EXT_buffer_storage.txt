@@ -1,0 +1,523 @@
+Name
+
+    EXT_buffer_storage
+
+Name Strings
+
+    GL_EXT_buffer_storage
+
+Contact
+
+    Daniel Koch, NVIDIA Corporation (dkoch 'at' nvidia.com)
+
+Contributors
+
+    Jonas Gustavsson, Sony Mobile
+    Slawomir Grajewski, Intel
+    Klaus Gerlicher, NVIDIA
+    Contributors to ARB_buffer_storage
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+    Portions Copyright (c) 2014 NVIDIA Corporation.
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date:   May 1, 2015
+    Author Revision:      3
+
+Number
+
+    OpenGL ES Extension #239
+
+Dependencies
+
+    OpenGL ES 3.1 is required.
+
+    This extension is written against the OpenGL ES 3.1 (June 4, 2014)
+    Specification.
+
+    The definition of this extension is affected by the presence of
+    GL_EXT_direct_state_access.
+
+Overview
+
+    OpenGL ES has long supported buffer objects as a means of storing data
+    that may be used to source vertex attributes, pixel data for textures,
+    uniforms and other elements. In un-extended ES, buffer data stores
+    are mutable - that is, they may be de-allocated or resized while they
+    are in use. The GL_EXT_texture_storage extension added immutable storage
+    for texture objects (and was subsequently incorporated into OpenGL ES 3.0).
+    This extension further applies the concept of immutable storage to
+    buffer objects. If an implementation is aware of a buffer's immutability,
+    it may be able to make certain assumptions or apply particular
+    optimizations in order to increase performance or reliability.
+
+    Furthermore, this extension allows applications to pass additional
+    information about a requested allocation to the implementation which it
+    may use to select memory heaps, caching behavior or allocation strategies.
+
+    Finally, this extension introduces the concept of persistent client
+    mappings of buffer objects, which allow clients to retain pointers to a
+    buffer's data store returned as the result of a mapping, and to issue
+    drawing commands while those mappings are in place.
+
+New Procedures and Functions
+
+    void BufferStorageEXT(enum target,
+                          sizeiptr size,
+                          const void * data,
+                          bitfield flags);
+
+    When EXT_direct_state_access is present:
+
+    void NamedBufferStorageEXT(uint buffer,
+                               sizeiptr size,
+                               const void * data,
+                               bitfield flags);
+
+New Tokens
+
+    Accepted in the <flags> parameter of BufferStorageEXT and
+    NamedBufferStorageEXT:
+
+        MAP_READ_BIT                                0x0001 (existing)
+        MAP_WRITE_BIT                               0x0002 (existing)
+        MAP_PERSISTENT_BIT_EXT                      0x0040
+        MAP_COHERENT_BIT_EXT                        0x0080
+        DYNAMIC_STORAGE_BIT_EXT                     0x0100
+        CLIENT_STORAGE_BIT_EXT                      0x0200
+
+    Accepted as part of the <access> parameter to MapBufferRange:
+
+        MAP_PERSISTENT_BIT_EXT                      0x0040 (as above)
+        MAP_COHERENT_BIT_EXT                        0x0080 (as above)
+
+    Accepted by the <pname> parameter of GetBufferParameter{i|i64}v:
+
+        BUFFER_IMMUTABLE_STORAGE_EXT                0x821F
+        BUFFER_STORAGE_FLAGS_EXT                    0x8220
+
+    Accepted by the <barriers> parameter of MemoryBarrier:
+
+        CLIENT_MAPPED_BUFFER_BARRIER_BIT_EXT        0x00004000
+
+IP Status
+
+    No known IP claims.
+
+Additions to Chapter 2 of the OpenGL ES 3.1 Specification
+(OpenGL ES Fundamentals)
+
+    Insert before the last line of Section 2.6.2, "Buffer Objects", p. 24:
+
+    Under certain circumstances, the data store of a buffer object may
+    be shared between the client and server and accessed simultaneously
+    by both.
+
+Additions to Chapter 6 of the OpenGL ES 3.1 Specification (Buffer Objects)
+
+    Modify Section 6.1 (Creating and Binding Buffer Objects)
+
+    Append to Table 6.2, "Buffer object parameters and their values", p.49:
+
+        +------------------------------+---------+---------+------------------+
+        |                              |         | Initial | Legal            |
+        | Name                         | Type    | Value   | Values           |
+        +------------------------------+---------+---------+------------------+
+        | BUFFER_IMMUTABLE_STORAGE_EXT | boolean | FALSE   | TRUE, FALSE      |
+        | BUFFER_STORAGE_FLAGS_EXT     | int     | 0       | See section 6.2  |
+        +------------------------------+---------+---------+------------------+
+
+
+    Modify Section 6.2, (Creating and Modifying Buffer Object Data Stores),
+    p. 57 as follows:
+
+    The data store of a buffer object is created by calling
+
+        void BufferStorageEXT(enum target,
+                              sizeiptr size,
+                              const void * data,
+                              bitfield flags);
+
+    with <target> set to one of the targets listed in Table 6.1, <size> set to
+    the size of the data store in basic machine units and <flags> containing
+    a bitfield describing the intended usage of the data store. The data
+    store of the buffer object bound to <target> is allocated as a result of
+    a call to this function and cannot be de-allocated until the buffer is
+    deleted with a call to DeleteBuffers. Such a store may not be
+    re-allocated through further calls to BufferStorageEXT or BufferData.
+
+    <data> specifies the address in client memory of the data that should
+    be used to initialize the buffer's data store. If <data> is NULL, the
+    data store of the buffer is created, but contains undefined data.
+    Otherwise, <data> should point to an array of at least <size> basic
+    machine units.
+
+    <flags> is the bitwise OR of flags describing the intended usage
+    of the buffer object's data store by the application. Valid flags and
+    their meanings are as follows:
+
+        DYNAMIC_STORAGE_BIT_EXT   The contents of the data store may be
+    updated after creation through calls to BufferSubData. If this bit is not
+    set, the buffer content may not be directly updated by the client. The
+    <data> argument may be used to specify the initial content of the buffer's
+    data store regardless of the presence of the DYNAMIC_STORAGE_BIT_EXT.
+    Regardless of the presence of this bit, buffers may always be updated
+    with server-side calls such as CopyBufferSubData.
+
+        MAP_READ_BIT  The data store may be mapped by the client for
+    read access and a pointer in the client's address space obtained that may
+    be read from.
+
+        MAP_WRITE_BIT  The data store may be mapped by the client for
+    write access and a pointer in the client's address space obtained that may
+    be written to.
+
+        MAP_PERSISTENT_BIT_EXT  The client may request that the server read from
+    or write to the buffer while it is mapped. The client's pointer to the
+    data store remains valid so long as the data store is mapped, even during
+    execution of drawing or dispatch commands.
+
+        MAP_COHERENT_BIT_EXT  Shared access to buffers that are simultaneously
+    mapped for client access and are used by the server will be coherent, so
+    long as that mapping is performed using MapBufferRange. That is, data
+    written to the store by either the client or server will be visible to any
+    subsequently issued GL commands with no further action taken by the
+    application. In particular:
+
+        - If MAP_COHERENT_BIT_EXT is not set and the client performs a write
+          followed by a call to one of the FlushMapped*BufferRange commands
+          with a range including the written range, then in subsequent
+          commands the server will see the writes.
+
+        - If MAP_COHERENT_BIT_EXT is set and the client performs a write, then in
+          subsequent commands the server will see the writes.
+
+        - If MAP_COHERENT_BIT_EXT is not set and the server performs a write, the
+          application must call MemoryBarrier with the
+          CLIENT_MAPPED_BUFFER_BARRIER_BIT_EXT set and then call FenceSync with
+          SYNC_GPU_COMMANDS_COMPLETE (or Finish). Then the CPU will see the
+          writes after the sync is complete.
+
+        - If MAP_COHERENT_BIT_EXT is set and the server does a write, the app must
+          call FenceSync with SYNC_GPU_COMMANDS_COMPLETE (or Finish). Then the
+          CPU will see the writes after the sync is complete.
+
+        CLIENT_STORAGE_BIT_EXT  When all other criteria for the buffer storage
+    allocation are met, this bit may be used by an implementation to determine
+    whether to use storage that is local to the server or to the client to
+    serve as the backing store for the buffer.
+
+    If <flags> contains MAP_PERSISTENT_BIT_EXT, it must also contain at least one
+    of MAP_READ_BIT or MAP_WRITE_BIT.
+
+    It is an error to specify MAP_COHERENT_BIT_EXT without also specifying
+    MAP_PERSISTENT_BIT_EXT.
+
+    BufferStorageEXT deletes any existing data store, and sets the values of
+    the buffer object's state variables as shown in table 6.3.
+
+    If any portion of the buffer object is mapped in the current context or
+    any context current to another thread, it is as though UnmapBuffer (see
+    section 6.3.1) is executed in each such context prior to deleting the
+    existing data store.
+
+    Name                         | Value for               | Value for
+                                 | BufferData              | *BufferStorageEXT
+    -----------------------------+-------------------------+------------------
+    BUFFER_SIZE                  | <size>                  | <size>
+    BUFFER_USAGE                 | <usage>                 | DYNAMIC_DRAW
+    BUFFER_ACCESS                | READ_WRITE              | READ_WRITE
+    BUFFER_ACCESS_FLAGS          | 0                       | 0
+    BUFFER_IMMUTABLE_STORAGE_EXT | FALSE                   | TRUE
+    BUFFER_MAPPED                | FALSE                   | FALSE
+    BUFFER_MAP_POINTER           | NULL                    | NULL
+    BUFFER_MAP_OFFSET            | 0                       | 0
+    BUFFER_MAP_LENGTH            | 0                       | 0
+    BUFFER_STORAGE_FLAGS_EXT     | MAP_READ_BIT |          | <flags>
+                                 | MAP_WRITE_BIT |         |
+                                 | DYNAMIC_STORAGE_BIT_EXT |
+        Table 6.3: Buffer object state after calling BufferData,
+        BufferStorageEXT, or NamedBufferStorageEXT.
+
+    A mutable data store may be allocated for a buffer object by calling
+
+        void BufferData(...)
+
+        <include the remainder of Section 6.2 as written, and then append>.
+
+    Calling BufferData is equivalent to calling BufferStorageEXT with
+    <target>, <size> and <data> as specified, and <flags> set to the logical
+    OR of DYNAMIC_STORAGE_BIT_EXT, MAP_READ_BIT and MAP_WRITE_BIT. The GL will
+    use the value of <usage> parameter to BufferData as a hint to further
+    determine the intended use of the buffer. However, BufferStorageEXT
+    allocates immutable storage whereas BufferData allocates mutable storage.
+    Thus, when a buffer's data store is allocated through a call to BufferData,
+    the buffer's BUFFER_IMMUTABLE_STORAGE_EXT flags is set to FALSE.
+
+    Add the following errors:
+
+    An INVALID_OPERATION error is generated by BufferData and BufferStorageEXT
+    if the BUFFER_IMMUTABLE_STORAGE_EXT flag of the buffer bound to <target> is
+    set to TRUE.
+
+    An INVALID_OPERATION error is generated by BufferSubData if the
+    BUFFER_IMMUTABLE_STORAGE_EXT flag of the buffer bound to <target> is TRUE
+    and the value of BUFFER_STORAGE_FLAGS_EXT for the buffer does not have
+    the DYNAMIC_STORAGE_BIT_EXT set.
+
+    The command:
+
+        void NamedBufferStorageEXT(uint buffer,
+                                   sizeiptr size,
+                                   const void * data,
+                                   bitfield flags);
+
+    behaves similarly to BufferStorageEXT, except that the buffer whose storage
+    is to be defined is specified by <buffer> rather than by the current
+    binding to <target>.
+
+    Add the following error:
+
+    An INVALID_OPERATION error is generated by NamedBufferStorageEXT if
+    the BUFFER_IMMUTABLE_STORAGE_EXT flag of <buffer> is set to TRUE.
+
+
+    Modify Section 6.3, (Mapping and Unmapping Buffer Data)
+
+    Add to the bulleted list describing flags that modify buffer mappings,
+    p.54.
+
+        * MAP_PERSISTENT_BIT_EXT indicates that it is not an error for the GL to
+          read data from or write data to the buffer while it is mapped (see
+          section 6.3.2). If this bit is set, the value of
+          BUFFER_STORAGE_FLAGS_EXT for the buffer being mapped must include
+          MAP_PERSISTENT_BIT_EXT.
+
+        * MAP_COHERENT_BIT_EXT indicates that the mapping should be performed
+          coherently. That is, such a mapping follows the rules set forth in
+          section 6.2, "Creating and Modifying Buffer Object Data Stores".
+          If this bit is set, the value of BUFFER_STORAGE_FLAGS_EXT for the
+          buffer being mapped must include MAP_COHERENT_BIT.
+
+
+    Add the following to the description of FlushMappedBufferRange, p.56:
+
+    If a buffer range is mapped with both the MAP_PERSISTENT_BIT_EXT and
+    MAP_FLUSH_EXPLICIT_BIT set, then FlushMappedBufferRange may be called to
+    ensure that data written by the client into the flushed region becomes
+    visible to the server. Data written to a coherent store will always
+    become visible to the server after an unspecified period of time.
+
+
+    Modify Section 6.3.2, "Effects of Mapping Buffers on Other GL Commands"
+    to read:
+
+    Any GL command which attempts to read from, write to, or change the state
+    of a buffer object may generate an INVALID_OPERATION error if all or part
+    of the buffer object is mapped, unless it was allocated by a call to
+    *BufferStorageEXT with the MAP_PERSISTENT_BIT_EXT included in <flags>.
+    However, only commands which explicitly describe this error are required
+    to do so. If an error is not generated, using such commands to perform
+    invalid reads, writes, or state changes will have undefined results and
+    may result in GL interruption or termination.
+
+
+    Modify Section 6.7, (Buffer Object State), p. 62:
+
+        Add the following required state to a buffer object:
+
+        ..., a boolean indicating whether or not buffer storage is
+    immutable, an unsigned integer storing the flags with which it was
+    allocated, ...
+
+Additions to Chapter 7 of the OpenGL ES 3.1 Specification,
+(Programs and Shaders)
+
+    Add to the list of flags accepted by the <barriers> parameter to
+    MemoryBarrier in Section 7.11.2, "Shader Memory Access Synchronization":
+
+        * CLIENT_MAPPED_BUFFER_BARRIER_BIT_EXT: Access by the client to
+          persistent mapped regions of buffer objects will reflect data written
+          by shaders prior to the barrier. Note that this may cause additional
+          synchronization operations.
+
+New State
+
+    Append to Table 20.4, "Buffer Object State", p.355:
+
+    +------------------------------+------+----------------------+---------------+---------------------------------+------------+
+    | Get Value                    | Type | Get Command          | Initial Value | Description                     | Sec.       |
+    +------------------------------+------+----------------------+---------------+---------------------------------+------------+
+    | BUFFER_IMMUTABLE_STORAGE_EXT | B    | GetBufferParameteriv | FALSE         | TRUE if buffer's data store is  | 6          |
+    |                              |      |                      |               | immutable, FALSE otherwise      |            |
+    | BUFFER_STORAGE_FLAGS_EXT     | Z+   | GetBufferParameteriv | 0             | The buffer object's storage     | 6          |
+    |                              |      |                      |               | flags.                          |            |
+    +------------------------------+------+----------------------+---------------+---------------------------------+------------+
+
+New Implementation Dependent State
+
+    None.
+
+Errors
+
+    INVALID_OPERATION is generated by BufferStorageEXT if zero is bound to
+    <target>.
+
+    INVALID_OPERATION is generated by BufferStorageEXT, NamedBufferStorageEXT
+    and BufferData if the BUFFER_IMMUTABLE_STORAGE flag of the buffer bound to
+    <target> is TRUE.
+
+    INVALID_VALUE is generated by BufferStorageEXT and NamedBufferStorageEXT
+    if <size> is less than or equal to zero.
+
+    INVALID_VALUE is generated by BufferStorageEXT and NamedBufferStorageEXT
+    if <flags> has any bits set other than those defined above.
+
+    INVALID_VALUE is generated by BufferStorageEXT and NamedBufferStorageEXT if
+    <flags> contains MAP_PERSISTENT_BIT_EXT but does not contain
+    at least one of MAP_READ_BIT or
+    MAP_WRITE_BIT.
+
+    INVALID_VALUE is generated by BufferStorageEXT and NamedBufferStorageEXT if
+    <flags> contains MAP_COHERENT_BIT_EXT, but does not also
+    contain MAP_PERSISTENT_BIT_EXT.
+
+    INVALID_OPERATION is generated by MapBufferRange if any of MAP_READ_BIT,
+    MAP_WRITE_BIT, MAP_PERSISTENT_BIT_EXT, or MAP_COHERENT_BIT_EXT are included in
+    <access>, but the same bit is not included in the buffer's storage
+    flags.
+
+    OUT_OF_MEMORY is generated by BufferStorageEXT and NamedBufferStorageEXT if
+    the GL is not able to allocate a data store with the properties requested
+    in <flags>.
+
+    *REMOVE* all errors generated by any command should they detect access to
+    a mapped buffer and replace with language such as:
+
+    INVALID_OPERATION is generated by <command> if the buffer is currently
+    mapped by MapBufferRange unless it was mapped with the
+    MAP_PERSISTENT_BIT_EXT included in <access>.
+
+
+Dependencies on GL_EXT_direct_state_access
+
+    If GL_EXT_direct_state_access is not supported, remove all references to
+    NamedBufferStorageEXT.
+
+Conformance Tests
+
+    TBD
+
+Usage Examples
+
+    Example 1: Updating the content of a buffer which does not have the
+    DYNAMIC flag set:
+
+    // Allocate two buffers, one of which will be our 'staging buffer'.
+    GLuint bufs[2];
+    glGenBuffers(2, &bufs[0]);
+
+    // Client can map this buffer for write.
+    // One could possibly make this mapping persistent.
+    glBindBuffer(GL_COPY_READ_BUFFER, bufs[0]);
+    glBufferStorageEXT(GL_COPY_READ_BUFFER, size, NULL,
+                    GL_MAP_WRITE_BIT);
+
+    // Client cannot read or write this buffer, server can do both.
+    glBindBuffer(GL_COPY_WRITE_BUFFER, bufs[1]);
+    glBufferStorageEXT(GL_COPY_WRITE_BUFFER, size, NULL, 0);
+
+    // Now, map the staging buffer to put data into it.
+    void * data = glMapBufferRange(GL_COPY_READ_BUFFER, 0, size,
+                                   GL_MAP_WRITE_BIT |
+                                   GL_MAP_INVALIDATE_BUFFER_BIT);
+    memcpy(data, source_data, size);
+    glUnmapBuffer(GL_COPY_READ_BUFFER);
+
+    // Copy from the staging buffer to the server-side buffer.
+    glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, size);
+
+    Example 2: Read from framebuffer into a buffer mapped into client's
+    address space:
+
+    // Create buffer, allocate storage, and create a persistent map.
+    GLuint pbo;
+    glGenBuffers(1, &pbo);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+    glBufferStorageEXT(GL_PIXEL_PACK_BUFFER, size, NULL,
+                    GL_MAP_READ_BIT |
+                    GL_MAP_PERSISTENT_BIT_EXT);
+
+    void * data = glMapBufferRange(GL_PIXEL_PACK_BUFFER,
+                                   GL_MAP_READ_BIT |
+                                   GL_MAP_PERSISTENT_BIT_EXT);
+
+    glReadPixels(0, 0, width, height, format, type, NULL);
+    glMemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT_EXT);
+    GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+    // Do stuff to use time...
+    ReallyExpensiveFunction();
+
+    glClientWaitSync(fence);
+
+    // Use the data written to the buffer
+    UseDataInMemory(data);
+
+
+Issues
+
+    Note: These issues apply specifically to the definition of the
+    EXT_buffer_storage specification, which is based on the OpenGL
+    extension ARB_buffer_storage as updated in OpenGL 4.5. For the full
+    set of historical issues, see ARB_buffer_storage which can be found
+    in the OpenGL Registry.
+
+    (1) What functionality was changed relative to ARB_buffer_storage?
+
+       - added EXT suffixes
+       - rebased against ES 3.1
+       - removed passing reference to ClearBufferSubData which doesn't exist
+         in OpenGL ES yet.
+
+    (2) What commands are affected by the relaxed errors for persistently
+        mapped buffers?
+
+        RESOLVED: In GL 4.5 the following commands have the relaxed
+        language BufferSubData, ClearBufferSubData, CopyBufferSubData,
+        GetBufferSubData and InvalidateBufferSubData. Of these commands
+        the only ones that apply to ES 3.1 are BufferSubData and
+        CopyBufferSubData. However, if additional extensions add any of
+        the other commands and EXT_buffer_storage is supported, they
+        would have the same behavior in ES.
+
+    (3) Should we keep interactions with the NamedBufferStorageEXT
+        DSA command and interactions with EXT_direct_state_access?
+
+        UNRESOLVED. TBD if there is interest in a DSA extension
+        based on ARB_direct_state_access.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     1    09/17/14  dkoch     EXT version based on ARB_buffer_storage v.24
+
+     2    03/27/15  dkoch     Update status, clarify dependencies and tokens
+
+     3    05/01/15  dkoch     Change description of MAP_COHERENT_BIT for
+                              buffer storage so that barriers with 
+                              CLIENT_MAPPED_BUFFER_BARRIER_BIT do not need
+                              to make CPU writes visible to the GPU in
+                              this case without an explicit flush (Bug
+                              13578, sync w/ ARB_buffer_storage v.25).

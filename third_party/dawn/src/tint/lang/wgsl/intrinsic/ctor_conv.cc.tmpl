@@ -1,0 +1,32 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate ctor_conv_intrinsic.cc
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/wgsl/wgsl.def" -}}
+
+#include "src/tint/lang/wgsl/intrinsic/ctor_conv.h"
+
+namespace tint::wgsl::intrinsic {
+
+const char* str(CtorConv i) {
+    switch (i) {
+        case CtorConv::kNone:
+            return "<none>";
+{{- range $I.Sem.ConstructorsAndConverters  }}
+        case CtorConv::k{{Title .Name}}:
+            return "{{.Name}}";
+{{- end  }}
+    }
+    return "<unknown>";
+}
+
+}  // namespace tint::wgsl::intrinsic

@@ -1,0 +1,296 @@
+XXX - Almost complete; needs GLX protocol.
+
+Name
+
+    SGIX_instruments
+
+Name Strings
+
+    GL_SGIX_instruments
+
+Version
+
+    $Date: 1997/09/18 01:12:38 $ $Revision: 1.6 $
+
+Number
+
+    55
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension allows the gathering and return of performance
+    measurements from within the graphics pipeline by adding
+    instrumentation.
+
+    There are two reasons to do this.  The first is as a part of some
+    type of fixed-frame-rate load management scheme.  If we know that
+    the pipeline is stalled or struggling to process the amount of
+    data we have given it so far, we can reduce the level of detail of
+    the remaining objects in the current frame or the next frame, or
+    adjust the framebuffer resolution for the next frame if we have a
+    video-zoom capability available.  We can call this type of
+    instrumentation Load Monitoring.
+
+    The second is for performance tuning and debugging of an
+    application. It might tell us how many triangles were culled or
+    clipped before being rasterized.  We can call this simply Tuning.
+
+    Load Monitoring requires that the instrumentation and the access
+    of the measurements be efficient, otherwise the instrumentation
+    itself will reduce performance more than any load-management
+    scheme could hope to offset.  Tuning does not have the same
+    requirements.
+
+    The proposed extension adds a call to setup a measurements return
+    buffer, similar to FeedbackBuffer but with an asynchrounous
+    behavior to prevent filling the pipeline with NOP's while waiting
+    for the data to be returned.
+
+    Note that although the extension has been specified without any
+    particular instruments, defining either a device dependent or
+    device independent instrument should be as simple as introducing
+    an extension consisting primarily of a new enumerant to identify
+    the instrument.
+
+New Procedures and Functions
+
+    void InstrumentsBufferSGIX(sizei size, int *buf)
+
+    void StartInstrumentsSGIX(void)
+
+    void StopInstrumentsSGIX(int marker)
+
+    void ReadInstrumentsSGIX(int marker)
+
+    int PollInstrumentsSGIX(int *markerp)
+
+    int GetInstrumentsSGIX(void)
+
+    An example of using the calls to test the extension:
+{
+#ifdef GL_SGIX_instruments
+
+   static GLint buffer[64];
+   void *bufp;
+   int id, count0, count1, r;
+
+   /* define the buffer to hold the measurments */
+   glInstrumentsBufferSGIX(sizeof(buffer)/sizeof(GLint), (GLint *) buffer);
+
+   /* enable the instruments from which one wishes to take measurements */
+   glEnable(<an enum for instrument in use>);
+
+   glStartInstrumentsSGIX();
+   /* insert GL commands here */
+   glReadInstrumentsSGIX(14);
+   /* insert GL commands here */
+   glStopInstrumentsSGIX(15);
+
+   /* the number of msrmnts since the buffer was specified can be queried */
+   glGetIntegerv(GL_INSTRUMENT_MEASUREMENTS_SGIX,&r); /* r should be 2 */
+
+   glGetPointervEXT(GL_INSTRUMENT_BUFFER_SGIX,&bufp);
+   /* bufp should be equal to buffer */
+
+   /*
+    * we can do a GetInstrumentsSGIX before or after the calls to
+    * PollInstrumentsSGIX but to be sure of exactly what
+    * measurements are in the buffer, we can use PollInstrumentsSGIX.
+    */
+   count0 = glGetInstrumentsSGIX();
+   /* count0 will be a count of from 0 to 2 multiples of the size
+    * in words of the instrument measurement we have enabled.
+    * If buffer was overflowed, count0 will be 1.
+    */
+
+   while (!(r = glPollInstrumentsSGIX(&id))) ;
+   /* if r is -1, we have overflowed, if it is 1, id will
+    * have the value of the marker passed in with the first
+    * measurement request (should be 14)
+    */
+
+   while (!(r = glPollInstrumentsSGIX(&id))) ;
+   /* see the note on the first poll; id should be 15 */
+
+   count1 = glGetInstrumentsSGIX();
+   /* the sum of count0 and count1 should be 2 times
+    * the size in words of an instrument measurement
+    * that we have enabled.
+    */
+
+#endif
+}
+
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+    INSTRUMENT_MEASUREMENTS_SGIX
+
+    Accepted by the <pname> parameter of GetPointervEXT:
+
+    INSTRUMENT_BUFFER_POINTER_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    The following commands are not included in display lists:
+
+        InstrumentsBufferSGIX
+        PollInstrumentsSGIX
+        GetInstrumentsSGIX
+
+    Add a section 5.X entitled  Instruments:
+
+    Instruments provide a method to measure performance of the GL
+    pipeline and identify possible bottlenecks. This information may
+    be useful in feedback-based load management schemes which attempt
+    to maintain a constant frame-rate.  A set of functions is provided
+    which allows an asynchronous implementation such that the graphics
+    pipeline need not be stalled while measurements are returned to
+    the client.
+
+    A buffer in which to collect instrument measurements is defined
+    with InstrumentsBufferSGIX, where <size> defines the size of the
+    buffer.  If <buf> has been previously defined with a prior call,
+    the buffer is reset, that is, measurements taken after the call to
+    InstrumentsBufferSGIX will be written to the start of the buffer.
+    Otherwise the buffer will be processed in a way that allows
+    asynchronous writing to the buffer from the graphics pipeline. If
+    <buf> is zero, then any resources allocated to prepare the buffer
+    for writing from the graphics pipeline from a previous call will
+    be freed. If <buf> is non-zero, but is different from a previous
+    call, the old buffer is considered to be replaced by the new
+    buffer and any allocated resources involved in preparing the old
+    buffer for writing are freed.
+
+    If <size> is negative an INVALID_VALUE is generated.
+
+    An INVALID_OPERATION is generated if InstrumentsBufferSGIX is
+    called between Begin/End.
+
+    If there are multiple instruments enabled, the measurement for
+    each enabled instrument can appear in the buffer in any order for
+    a given measurement.
+
+    The buffer address can be queried with glGetPointervEXT using
+    <pname> GL_INSTRUMENT_BUFFER_POINTER.
+
+    To start the enabled instrument(s) before taking a measurement
+    execute StartInstrumentsSGIX. To stop the enabled instruments and
+    take a measurement use StopInstrumentsSGIX. The parameter <marker>
+    is passed through the pipe and written back to the buffer to ease
+    the task of interpreting the buffer.
+
+    To take an instrument measurement use ReadInstrumentsSGIX.  The
+    parameter <marker> is processed as with StopInstrumentsSGIX.
+
+    An INVALID_OPERATION is generated if StartInstrumentsSGIX is
+    executed twice without an intervening execution of
+    StopInstrumentsSGIX or InstrumentsBufferSGIX. Symetrically, an
+    INVALID_OPERATION is generated if StopInstrumentsSGIX is executed
+    twice without an intervening execution of StartInstrumentsSGIX.
+    ReadInstrumentsSGIX will generate an INVALID_OPERATION if executed
+    after an execution of StopInstruments without an intervening
+    execution of StopInstrumentsSGIX or InstrumentsBufferSGIX.
+
+    Executing any of StartInstrumentsSGIX, StopInstrumentsSGIX,
+    ReadInstruments without a successful call to InstrumentsBufferSGIX
+    to define a buffer will generate an INVALID_OPERATION.  Executing
+    any of StartInstrumentsSGIX, StopInstrumentsSGIX, ReadInstruments
+    between Begin/End will generate an INVALID_OPERATION
+
+    If no instruments are enabled, executions of StartInstrumentsSGIX,
+    StopInstrumentsSGIX, ReadInstruments will not write measurements
+    to the buffer.
+
+    The number of measurements taken since the buffer was reset can be
+    queried with glGet using <pname> GL_INSTRUMENT_MEASUREMENTS.
+
+    To determine whether a measurement of the enabled instruments has
+    been written to the buffer call PollInstrumentsSGIX.  If a new
+    measurement has appeared in the buffer since the last call to
+    PollInstrumentsSGIX, 1 will be returned, otherwise zero is
+    returned.  If 1 is returned, the value of marker associated with
+    the measurement and passed to StopInstrumentsSGIX or
+    ReadInstrumentsSGIX is written into the integer referred to by
+    <markerp>. The measurements will appear in the buffer in the order
+    in which they were requested. If the buffer is overflowed,
+    PollInstrumentsSGIX may return -1 as soon as the overflow is
+    detected, even if the measurement being polled for did not cause
+    the overflow. An implementation may choose to delay reporting the
+    overflow until the measurement that caused the overflow is the one
+    being polled.
+
+    To get a total count of the number of new valid words written to
+    the buffer call GetInstrumentsSGIX. The value returned is the
+    number of ints that have been written to the buffer since the last
+    call to GetInstrumentsSGIX. GetInstrumentsSGIX can be used
+    independently of PollInstrumentsSGIX. If the buffer has been
+    overflowed since the last call to GetInstrumentsSGIX, -1 is
+    returned for the count.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    The GL_INSTRUMENT_BUFFER_POINTER_SGIX enum should be added to the
+    list of enum's recognized by GetPointerv.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    XXX - not yet complete
+
+Errors
+
+    An INVALID_OPERATION is generated if any of the instruments
+    functions or procedures are called within Begin/End.
+
+    When calling glInstrumentsBufferSGIX, an INVALID_VALUE is
+    generated if <size> is negative.
+
+    An INVALID_OPERATION is generated if two StartInstrumentsSGIX are
+    called without an intervening call to StopInstrumentsSGIX or
+    InstrumentsBufferSGIX. Symetrically, an INVALID_OPERATION is
+    generated if StopInstrumentsSGIX is called twice without an
+    intervening StartInstrumentsSGIX.  ReadInstrumentsSGIX will
+    generate an INVALID_OPERATION if called after a call to
+    StopInstruments without an intervening call to StopInstrumentsSGIX
+    or InstrumentsBufferSGIX.
+
+    Calling any of StartInstrumentsSGIX, StopInstrumentsSGIX,
+    ReadInstruments without a successful call to InstrumentsBufferSGIX
+    to define a buffer will generate an INVALID_OPERATION.
+
+New State
+
+    Initial                             Initial
+    Get Value                           Get Command     Type    Value   Attrib
+    ---------                           -----------     ----    -----   ------
+    INSTRUMENT_MEASUREMENTS_SGIX        GetInteger      Z       0         -
+    INSTRUMENT_BUFFER_POINTER_SGIX      GetPointervEXT  Y       0         -
+
+New Implementation Dependent State
+
+    None
+

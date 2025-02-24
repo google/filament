@@ -1,0 +1,145 @@
+Name
+
+    SGIX_pixel_texture
+
+Name Strings
+
+    GL_SGIX_pixel_texture
+
+Version
+
+    Last Modified Date: January 17, 2017
+
+Number
+
+    499
+    (previously #15a, which collided with SGIS_pixel_texture)
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension allows the color components of pixel groups to be used as
+    texture coordinates, effectively converting a color image into a texture
+    coordinate image.  Because texture mapping is essentially a
+    multidimensional table lookup, this conversion supports multidimensional
+    color lookups for images.  Such multidimensional lookups can be used to
+    implement very accurate color space conversions.
+
+Issues
+
+    *	Should LOD be supported?
+
+New Procedures and Functions
+
+    void PixelTexGenSGIX(enum mode);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and
+    by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+        PIXEL_TEX_GEN_SGIX                      = 0x8139
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        PIXEL_TEX_GEN_MODE_SGIX                 = 0x832B
+	
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    This extension modifies the "Conversion to Fragments" subsection of
+    section 3.6.3 (Rasterization of Pixel Rectangles) of the GL
+    Specification.  The paragraph beginning with "A fragment arising from a
+    group consisting of color data ..." is replaced by the following:
+
+    A fragment arising from a group consisting of color index data takes on
+    the color index of the group; the depth and texture coordinates are
+    taken from the current raster positions associated data.  Likewise, a
+    fragment arising from a depth component takes the component's depth
+    value; the color and texture coordinates are given by those associated
+    with the current raster position.  Groups arising from DrawPixels with a
+    <format> of STENCIL_INDEX are treated specially and are described in
+    section 4.3.1.
+
+    The treatment of fragments arising from groups consisting of RGBA color
+    data is affected by pixel texgen, which is enabled and disabled by
+    calling Enable and Disable with PIXEL_TEX_GEN_SGIX passed as the <cap>
+    parameter.
+
+    When pixel texgen enabled, a fragment arising from a group consisting of
+    RGBA color data takes its depth component from the current raster position
+    depth, and the texture coordinates are assigned as follows:
+
+      Pixel group's red becomes the fragment S texture coordinate
+      Pixel group's green becomes the fragment T texture coordinate
+      Pixel group's blue becomes the fragment R texture coordinate
+      Pixel group's alpha becomes the fragment Q texture coordinate
+
+    The assignment of the fragment color components is determined by value of
+    PIXEL_TEX_GEN_MODE_SGIX as defined as defined by the following table:
+
+      PIXEL_TEX_GEN_MODE_SGIX    Fragment's color component value 
+      value		            R          G         B          A
+      -----------------------    -------    -------   -------    -------
+      NONE         	         PG's R     PG's G    PG's B     PG's A
+      ALPHA      	         PG's R     PG's G    PG's B     CRP's A
+      RGB			 CRP's R    CRP's G   CRP's B    PG's A
+      RGBA       	         CRP's R    CRP's G   CRP's B    CRP's A
+
+      Assignment of pixel group and current raster position color data to a
+      fragment arising from an RGBA color pixel group when pixel texgen is
+      enabled.  The value of PIXEL_TEX_GEN_MODE_SGIX in the first column
+      controls the assignment of fragment color components in second thru the
+      fifth columns.  PG, CRP, R, G, B, A are abbreviations of "current raster
+      position", "pixel group", "red", "green", "blue", and "alpha"
+      respectively.  
+
+    The <mode> parameter of PixelTexGenSGIX is used to set the value of
+    PIXEL_TEX_GEN_MODE_SGIX.  (It is NONE by default.)
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    The operation of pixel texgen during pixel copy operations is
+    identical to the operation during pixel drawing.  Because PixelTexGenSGIX
+    defines the rasterization of pixel groups, it has no effect on texture
+    definitions or on pixel query (ReadPixels) operations.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated if PixelTexGenSGIX parameter <mode> is not NONE,
+    ALPHA, RGB, or RGBA. 
+
+    INVALID_OPERATION is generated if PixelTexGenSGIX is called between
+    execution of Begin and the execution of the corresponding End.
+
+New State
+
+    Get Value			Get Command	Type	Initial Value	Attrib
+    ---------			-----------	----	-------------	------
+    PIXEL_TEX_GEN_SGIX		IsEnabled	B	FALSE		pixel
+    PIXEL_TEX_GEN_MODE_SGIX	GetIntegerv	Z4	NONE		pixel
+
+New Implementation Dependent State
+
+    None

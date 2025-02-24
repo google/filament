@@ -1,0 +1,14 @@
+# Copyright 2023 The Khronos Group Inc.
+# Copyright 2023 Valve Corporation
+# Copyright 2023 LunarG, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Use defaults from the Google style with the following exceptions:
+BasedOnStyle: Google
+IndentWidth: 4
+AccessModifierOffset: -2
+ColumnLimit: 132
+SortIncludes: false
+...

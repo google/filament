@@ -1,0 +1,109 @@
+
+%dx.types.Handle = type { i8* }
+%dx.types.ResRet.f32 = type { float, float, float, float, i32 }
+%dx.types.CBufRet.f32 = type { float, float, float, float }
+%dx.types.f32 = type { float }
+%dx.types.i8x48 = type { [48 x i8] }
+%dx.types.Sampler = type opaque
+
+define void @main() {
+entry:
+  %0 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 0, i32 0, i1 false)
+  %1 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+  %2 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 3, i32 0, i32 0, i1 false)
+  %3 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %4 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %5 = call %dx.types.ResRet.f32 @dx.op.sample.f32(i32 60, %dx.types.Handle %0, %dx.types.Handle %2, float %3, float %4, float undef, float undef, i32 0, i32 0, i32 undef, float 0.000000e+00), !dx.precise !19
+  %6 = extractvalue %dx.types.ResRet.f32 %5, 0
+  %7 = extractvalue %dx.types.ResRet.f32 %5, 1
+  %8 = extractvalue %dx.types.ResRet.f32 %5, 2
+  %9 = extractvalue %dx.types.ResRet.f32 %5, 3
+  %10 = call %dx.types.CBufRet.f32 @dx.op.cbufferLoadLegacy.f32(i32 59, %dx.types.Handle %1, i32 0)
+  %11 = extractvalue %dx.types.CBufRet.f32 %10, 0
+  %12 = extractvalue %dx.types.CBufRet.f32 %10, 1
+  %13 = extractvalue %dx.types.CBufRet.f32 %10, 2
+  %14 = extractvalue %dx.types.CBufRet.f32 %10, 3
+  %15 = fmul float %6, %11
+  %16 = fmul float %7, %12
+  %17 = fmul float %8, %13
+  %18 = fmul float %9, %14
+  %19 = call %dx.types.CBufRet.f32 @dx.op.cbufferLoadLegacy.f32(i32 59, %dx.types.Handle %1, i32 1)
+  %20 = extractvalue %dx.types.CBufRet.f32 %19, 0
+  %21 = extractvalue %dx.types.CBufRet.f32 %19, 1
+  %22 = extractvalue %dx.types.CBufRet.f32 %19, 2
+  %23 = extractvalue %dx.types.CBufRet.f32 %19, 3
+  %24 = call %dx.types.CBufRet.f32 @dx.op.cbufferLoadLegacy.f32(i32 59, %dx.types.Handle %1, i32 2)
+  %25 = extractvalue %dx.types.CBufRet.f32 %24, 0
+  %26 = extractvalue %dx.types.CBufRet.f32 %24, 1
+  %27 = extractvalue %dx.types.CBufRet.f32 %24, 2
+  %28 = extractvalue %dx.types.CBufRet.f32 %24, 3
+  %29 = call float @dx.op.tertiary.f32(i32 46, float %15, float %20, float %25), !dx.precise !19
+  %30 = call float @dx.op.tertiary.f32(i32 46, float %16, float %21, float %26), !dx.precise !19
+  %31 = call float @dx.op.tertiary.f32(i32 46, float %17, float %22, float %27), !dx.precise !19
+  %32 = call float @dx.op.tertiary.f32(i32 46, float %18, float %23, float %28), !dx.precise !19
+  %33 = fsub float -0.000000e+00, %29
+  %34 = fsub float -0.000000e+00, %30
+  %35 = fsub float -0.000000e+00, %31
+  %36 = fsub float -0.000000e+00, %32
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 0, float %33), !dx.precise !19
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 1, float %34), !dx.precise !19
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 2, float %35), !dx.precise !19
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 3, float %36), !dx.precise !19
+  ret void
+}
+
+; Function Attrs: nounwind readonly
+declare %dx.types.Handle @dx.op.createHandle(i32, i8, i32, i32, i1) #0
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.loadInput.f32(i32, i32, i32, i8, i32) #1
+
+; Function Attrs: nounwind readonly
+declare %dx.types.ResRet.f32 @dx.op.sample.f32(i32, %dx.types.Handle, %dx.types.Handle, float, float, float, float, i32, i32, i32, float) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.f32(i32, i32, float) #2
+
+; Function Attrs: nounwind readonly
+declare float @dx.op.tempRegLoad.f32(i32, i32) #0
+
+; Function Attrs: nounwind readonly
+declare %dx.types.CBufRet.f32 @dx.op.cbufferLoadLegacy.f32(i32, %dx.types.Handle, i32) #0
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.tertiary.f32(i32, float, float, float) #1
+
+; Function Attrs: nounwind
+declare void @dx.op.storeOutput.f32(i32, i32, i32, i8, float) #2
+
+attributes #0 = { nounwind readonly }
+attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind }
+
+!dx.version = !{!0}
+!dx.valver = !{!0}
+!dx.shaderModel = !{!1}
+!dx.resources = !{!2}
+!dx.entryPoints = !{!10}
+!llvm.ident = !{!18}
+
+!0 = !{i32 1, i32 0}
+!1 = !{!"ps", i32 6, i32 0}
+!2 = !{!3, null, !6, !8}
+!3 = !{!4}
+!4 = !{i32 0, %dx.types.f32 addrspace(1)* undef, !"T0", i32 0, i32 0, i32 1, i32 2, i32 0, !5}
+!5 = !{i32 0, i32 9}
+!6 = !{!7}
+!7 = !{i32 0, %dx.types.i8x48 addrspace(2)* undef, !"CB0", i32 0, i32 0, i32 1, i32 48, null}
+!8 = !{!9}
+!9 = !{i32 0, %dx.types.Sampler addrspace(1)* undef, !"S0", i32 0, i32 0, i32 1, i32 0, null}
+!10 = !{void ()* @main, !"main", !11, !2, !17}
+!11 = !{!12, !15, null}
+!12 = !{!13}
+!13 = !{i32 0, !"COORD", i8 9, i8 0, !14, i8 2, i32 1, i8 4, i32 0, i8 0, null}
+!14 = !{i32 0}
+!15 = !{!16}
+!16 = !{i32 0, !"SV_Target", i8 9, i8 16, !14, i8 0, i32 1, i8 4, i32 0, i8 0, null}
+!17 = !{i32 0, i64 256}
+!18 = !{!"dxbc2dxil 1.2"}
+!19 = !{i32 1}

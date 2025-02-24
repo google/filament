@@ -1,0 +1,4 @@
+LIBRARY 🌋
+EXPORTS
+    vk_icdGetInstanceProcAddr
+    vk_icdNegotiateLoaderICDInterfaceVersion
