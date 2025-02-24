@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread half2x3* u;
+};
+
+void f(tint_module_vars_struct tint_module_vars) {
+  float2x3 v = float2x3((*tint_module_vars.u));
+}

@@ -1,0 +1,70 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 43
+; Schema: 0
+               OpCapability Shader
+               OpCapability ImageQuery
+         %24 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %t_f "t_f"
+               OpName %t_i "t_i"
+               OpName %t_u "t_u"
+               OpName %main "main"
+               OpName %fdims "fdims"
+               OpName %idims "idims"
+               OpName %udims "udims"
+               OpDecorate %t_f DescriptorSet 0
+               OpDecorate %t_f Binding 0
+               OpDecorate %t_i DescriptorSet 0
+               OpDecorate %t_i Binding 1
+               OpDecorate %t_u DescriptorSet 0
+               OpDecorate %t_u Binding 2
+      %float = OpTypeFloat 32
+          %3 = OpTypeImage %float 3D 0 0 0 1 Unknown
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+        %t_f = OpVariable %_ptr_UniformConstant_3 UniformConstant
+        %int = OpTypeInt 32 1
+          %7 = OpTypeImage %int 3D 0 0 0 1 Unknown
+%_ptr_UniformConstant_7 = OpTypePointer UniformConstant %7
+        %t_i = OpVariable %_ptr_UniformConstant_7 UniformConstant
+       %uint = OpTypeInt 32 0
+         %11 = OpTypeImage %uint 3D 0 0 0 1 Unknown
+%_ptr_UniformConstant_11 = OpTypePointer UniformConstant %11
+        %t_u = OpVariable %_ptr_UniformConstant_11 UniformConstant
+       %void = OpTypeVoid
+         %15 = OpTypeFunction %void
+     %uint_1 = OpConstant %uint 1
+      %int_1 = OpConstant %int 1
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+       %main = OpFunction %void None %15
+         %16 = OpLabel
+      %fdims = OpVariable %_ptr_Function_v3uint Function
+      %idims = OpVariable %_ptr_Function_v3uint Function
+      %udims = OpVariable %_ptr_Function_v3uint Function
+         %17 = OpLoad %3 %t_f None
+         %18 = OpImageQueryLevels %uint %17
+         %19 = OpISub %uint %18 %uint_1
+         %21 = OpBitcast %uint %int_1
+         %23 = OpExtInst %uint %24 UMin %21 %19
+         %25 = OpImageQuerySizeLod %v3uint %17 %23
+               OpStore %fdims %25
+         %29 = OpLoad %7 %t_i None
+         %30 = OpImageQueryLevels %uint %29
+         %31 = OpISub %uint %30 %uint_1
+         %32 = OpBitcast %uint %int_1
+         %33 = OpExtInst %uint %24 UMin %32 %31
+         %34 = OpImageQuerySizeLod %v3uint %29 %33
+               OpStore %idims %34
+         %36 = OpLoad %11 %t_u None
+         %37 = OpImageQueryLevels %uint %36
+         %38 = OpISub %uint %37 %uint_1
+         %39 = OpBitcast %uint %int_1
+         %40 = OpExtInst %uint %24 UMin %39 %38
+         %41 = OpImageQuerySizeLod %v3uint %36 %40
+               OpStore %udims %41
+               OpReturn
+               OpFunctionEnd

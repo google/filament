@@ -1,0 +1,92 @@
+; Test: Samples_SpvParserTest_GlslStd450_Inting_IntingIntingInting_Scalar_0.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+%2 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %100 "main"
+OpExecutionMode %100 LocalSize 1 1 1
+OpName %u1 "u1"
+OpName %u2 "u2"
+OpName %u3 "u3"
+OpName %i1 "i1"
+OpName %i2 "i2"
+OpName %i3 "i3"
+OpName %f1 "f1"
+OpName %f2 "f2"
+OpName %f3 "f3"
+OpName %v2u1 "v2u1"
+OpName %v2u2 "v2u2"
+OpName %v2u3 "v2u3"
+OpName %v2i1 "v2i1"
+OpName %v2i2 "v2i2"
+OpName %v2i3 "v2i3"
+OpName %v2f1 "v2f1"
+OpName %v2f2 "v2f2"
+OpName %v2f3 "v2f3"
+OpName %v3f1 "v3f1"
+OpName %v3f2 "v3f2"
+OpName %v4f1 "v4f1"
+OpName %v4f2 "v4f2"
+%void = OpTypeVoid
+%26 = OpTypeFunction %void
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%float = OpTypeFloat 32
+%uint_10 = OpConstant %uint 10
+%uint_15 = OpConstant %uint 15
+%uint_20 = OpConstant %uint 20
+%int_30 = OpConstant %int 30
+%int_35 = OpConstant %int 35
+%int_40 = OpConstant %int 40
+%float_50 = OpConstant %float 50
+%float_60 = OpConstant %float 60
+%float_70 = OpConstant %float 70
+%v2uint = OpTypeVector %uint 2
+%v2int = OpTypeVector %int 2
+%v2float = OpTypeVector %float 2
+%v3float = OpTypeVector %float 3
+%v4float = OpTypeVector %float 4
+%44 = OpConstantComposite %v2uint %uint_10 %uint_20
+%45 = OpConstantComposite %v2uint %uint_20 %uint_10
+%46 = OpConstantComposite %v2uint %uint_15 %uint_15
+%47 = OpConstantComposite %v2int %int_30 %int_40
+%48 = OpConstantComposite %v2int %int_40 %int_30
+%49 = OpConstantComposite %v2int %int_35 %int_35
+%50 = OpConstantComposite %v2float %float_50 %float_60
+%51 = OpConstantComposite %v2float %float_60 %float_50
+%52 = OpConstantComposite %v2float %float_70 %float_70
+%53 = OpConstantComposite %v3float %float_50 %float_60 %float_70
+%54 = OpConstantComposite %v3float %float_60 %float_70 %float_50
+%55 = OpConstantComposite %v4float %float_50 %float_50 %float_50 %float_50
+%100 = OpFunction %void None %26
+%56 = OpLabel
+%u1 = OpCopyObject %uint %uint_10
+%u2 = OpCopyObject %uint %uint_15
+%u3 = OpCopyObject %uint %uint_20
+%i1 = OpCopyObject %int %int_30
+%i2 = OpCopyObject %int %int_35
+%i3 = OpCopyObject %int %int_40
+%f1 = OpCopyObject %float %float_50
+%f2 = OpCopyObject %float %float_60
+%f3 = OpCopyObject %float %float_70
+%v2u1 = OpCopyObject %v2uint %44
+%v2u2 = OpCopyObject %v2uint %45
+%v2u3 = OpCopyObject %v2uint %46
+%v2i1 = OpCopyObject %v2int %47
+%v2i2 = OpCopyObject %v2int %48
+%v2i3 = OpCopyObject %v2int %49
+%v2f1 = OpCopyObject %v2float %50
+%v2f2 = OpCopyObject %v2float %51
+%v2f3 = OpCopyObject %v2float %52
+%v3f1 = OpCopyObject %v3float %53
+%v3f2 = OpCopyObject %v3float %54
+%v4f1 = OpCopyObject %v4float %55
+%v4f2 = OpCopyObject %v4float %v4f1
+%1 = OpExtInst %int %2 SClamp %i1 %i2 %i3
+OpReturn
+OpFunctionEnd
+

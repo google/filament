@@ -1,0 +1,68 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 46
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %40 "tint_entry_point" %gl_VertexIndex %gl_Position %gl_PointSize
+               OpDecorate %gl_VertexIndex BuiltIn VertexIndex
+               OpDecorate %gl_Position BuiltIn Position
+               OpDecorate %gl_PointSize BuiltIn PointSize
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%gl_VertexIndex = OpVariable %_ptr_Input_uint Input
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%gl_Position = OpVariable %_ptr_Output_v4float Output
+%_ptr_Output_float = OpTypePointer Output %float
+%gl_PointSize = OpVariable %_ptr_Output_float Output
+        %int = OpTypeInt 32 1
+         %12 = OpTypeFunction %int
+      %int_0 = OpConstant %int 0
+         %17 = OpTypeFunction %float %int
+       %bool = OpTypeBool
+         %23 = OpTypeFunction %bool %float
+         %26 = OpConstantNull %float
+         %29 = OpTypeFunction %v4float %uint
+     %v4bool = OpTypeVector %bool 4
+    %float_1 = OpConstant %float 1
+         %37 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+         %39 = OpConstantNull %v4float
+       %void = OpTypeVoid
+         %42 = OpTypeFunction %void
+         %10 = OpFunction %int None %12
+         %13 = OpLabel
+               OpReturnValue %int_0
+               OpFunctionEnd
+         %15 = OpFunction %float None %17
+         %16 = OpFunctionParameter %int
+         %18 = OpLabel
+         %19 = OpConvertSToF %float %16
+               OpReturnValue %19
+               OpFunctionEnd
+         %20 = OpFunction %bool None %23
+         %22 = OpFunctionParameter %float
+         %24 = OpLabel
+         %25 = OpFUnordNotEqual %bool %22 %26
+               OpReturnValue %25
+               OpFunctionEnd
+         %27 = OpFunction %v4float None %29
+         %28 = OpFunctionParameter %uint
+         %30 = OpLabel
+         %31 = OpFunctionCall %int %10
+         %32 = OpFunctionCall %float %15 %31
+         %33 = OpFunctionCall %bool %20 %32
+         %35 = OpCompositeConstruct %v4bool %33 %33 %33 %33
+         %36 = OpSelect %v4float %35 %37 %39
+               OpReturnValue %36
+               OpFunctionEnd
+         %40 = OpFunction %void None %42
+         %43 = OpLabel
+         %44 = OpLoad %uint %gl_VertexIndex None
+         %45 = OpFunctionCall %v4float %27 %44
+               OpStore %gl_Position %45 None
+               OpStore %gl_PointSize %float_1 None
+               OpReturn
+               OpFunctionEnd

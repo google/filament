@@ -1,0 +1,19 @@
+; Test: SpvParserTest_Impl_GenericVulkanShader_VulkanMemoryModel.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 5
+; Schema: 0
+OpCapability Shader
+OpCapability VulkanMemoryModel
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical Vulkan
+OpEntryPoint GLCompute %1 "main"
+OpExecutionMode %1 LocalSize 1 1 1
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%1 = OpFunction %void None %3
+%4 = OpLabel
+OpReturn
+OpFunctionEnd
+

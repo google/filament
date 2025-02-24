@@ -1,0 +1,53 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 36
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpName %f "f"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %r "r"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %half = OpTypeFloat 16
+     %v2half = OpTypeVector %half 2
+ %mat4v2half = OpTypeMatrix %v2half 4
+%half_n0x1p_0 = OpConstant %half -0x1p+0
+%half_n0x1p_1 = OpConstant %half -0x1p+1
+          %9 = OpConstantComposite %v2half %half_n0x1p_0 %half_n0x1p_1
+%half_n0x1_8p_1 = OpConstant %half -0x1.8p+1
+%half_n0x1p_2 = OpConstant %half -0x1p+2
+         %12 = OpConstantComposite %v2half %half_n0x1_8p_1 %half_n0x1p_2
+%half_n0x1_4p_2 = OpConstant %half -0x1.4p+2
+%half_n0x1_8p_2 = OpConstant %half -0x1.8p+2
+         %15 = OpConstantComposite %v2half %half_n0x1_4p_2 %half_n0x1_8p_2
+%half_n0x1_cp_2 = OpConstant %half -0x1.cp+2
+%half_n0x1p_3 = OpConstant %half -0x1p+3
+         %18 = OpConstantComposite %v2half %half_n0x1_cp_2 %half_n0x1p_3
+          %a = OpConstantComposite %mat4v2half %9 %12 %15 %18
+     %v4half = OpTypeVector %half 4
+ %mat2v4half = OpTypeMatrix %v4half 2
+%half_0x1p_0 = OpConstant %half 0x1p+0
+%half_0x1p_1 = OpConstant %half 0x1p+1
+%half_0x1_8p_1 = OpConstant %half 0x1.8p+1
+%half_0x1p_2 = OpConstant %half 0x1p+2
+         %24 = OpConstantComposite %v4half %half_0x1p_0 %half_0x1p_1 %half_0x1_8p_1 %half_0x1p_2
+%half_0x1_4p_2 = OpConstant %half 0x1.4p+2
+%half_0x1_8p_2 = OpConstant %half 0x1.8p+2
+%half_0x1_cp_2 = OpConstant %half 0x1.cp+2
+%half_0x1p_3 = OpConstant %half 0x1p+3
+         %29 = OpConstantComposite %v4half %half_0x1_4p_2 %half_0x1_8p_2 %half_0x1_cp_2 %half_0x1p_3
+          %b = OpConstantComposite %mat2v4half %24 %29
+ %mat2v2half = OpTypeMatrix %v2half 2
+          %f = OpFunction %void None %3
+          %4 = OpLabel
+          %r = OpMatrixTimesMatrix %mat2v2half %a %b
+               OpReturn
+               OpFunctionEnd

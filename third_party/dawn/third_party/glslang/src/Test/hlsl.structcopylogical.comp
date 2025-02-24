@@ -1,0 +1,28 @@
+struct MyStruct {
+    uint a;
+    uint b;
+    uint c;
+};
+
+struct MyStructs {
+    uint count;
+    MyStruct data[];
+};
+
+StructuredBuffer<MyStructs> sb;
+StructuredBuffer<MyStruct> o;
+
+groupshared MyStruct s[128];
+static const MyStruct deflt = { 1u, 2u, 3u };
+
+[numthreads(128, 1, 1)]
+void main(uint id : SV_GroupIndex)
+{
+        s[0] = deflt;
+        uint count = sb.Load(0).count;
+        MyStruct ms = id > count ? s[id - count] : sb.Load(0).data[id];
+
+        InterlockedAdd(o[0].a, ms.a);
+        InterlockedAdd(o[0].b, ms.b);
+        InterlockedAdd(o[0].c, ms.c);
+}

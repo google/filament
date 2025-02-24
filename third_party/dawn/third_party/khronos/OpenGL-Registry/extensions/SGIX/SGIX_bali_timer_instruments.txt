@@ -1,0 +1,156 @@
+XXX - incomplete
+
+Name
+
+    SGIX_bali_timer_instruments
+
+Name Strings
+
+    GL_SGIX_bali_timer_instruments
+
+Version
+
+    $Date: 1998/10/02 18:20:29 $  prf $Revision: 1.2 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    SGIX_instruments is required
+    
+Overview
+
+    This extension defines two timing-related instruments: one to 
+    measure the time spent in the geometry subsystem, and another
+    to measure the time spent in the rasterization subsystem.  These
+    instruments can be used to balance the load of the two subsystems 
+    and to fine-tune application performance.
+    
+
+Issues
+
+    XXX
+    
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable and IsEnabled:
+
+        BALI_GEOM_TIMER_INSTRUMENT      0xXXXX
+        BALI_RASTER_TIMER_INSTRUMENT    0xXXXX
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        BALI_INSTRUMENT_TIME_UNIT       0xXXXX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+    
+    Add to the end of section 5.X entitled Instruments:
+
+    Timer instruments provide a method to measure and regulate the 
+    performance of the GL pipeline in terms of geometry and 
+    rasterization.  Because most applications tend to be limited by
+    either geometry processing or rasterization, timer instruments 
+    will enable an application to identify possible bottlenecks and 
+    undesired distribution of work between the two subsystems, and 
+    thereby to improve load-management.  
+
+    If BALI_GEOM_TIMER_INSTRUMENT is enabled and the instruments have
+    been started via a call to StartInstrumentsSGIX, a counter of the 
+    amount of time spent in geometry subsystem is maintained.  A 
+    similar counter is maintained for the time spend on rasterization 
+    if BALI_RASTER_TIMER_INSTRUMENT is enabled.
+
+    The actual amount of time spent on geometry processing and 
+    rasterization returned by BALI_GEOM_TIMER_INSTRUMENT and 
+    BALI_RASTER_TIMER_INSTRUMENT, respectively, is calculated using 
+    the real time clock of the scalar processor (SP).  The values
+    returned by these instruments will be measured in time units.  The
+    length of a time unit can be queried using the enum
+    INSTRUMENT_TIME_UNIT_SGIX (see Chapter 6).  This number will be 
+    affected by processor speed and other implementation-specific 
+    considerations.  
+
+    Each response from BALI_GEOM_TIMER_INSTRUMENT and 
+    BALI_RASTER_TIMER_INSTRUMENT uses 6 32-bit words of the buffer.
+    The first word (index 0) will be the enum name of the instrument
+    (BALI_GEOM_TIMER_INSTRUMENT or BALI_RASTER_TIMER_INSTRUMENT).  The
+    second word (index 1) of the instrument is the size in words of 
+    all the data returned by the instrument, which is six for the 
+    instruments defined in this extension.  The fourth word (index 3) 
+    will be the instrument value.  (The preceeding word (index 2) 
+    would be a dummy word.)  In future implementations, a 64-bit value
+    may be used for the instrument value (this will occupy indices 2 
+    and 3) instead of a 32-bit value.  The fifth word (index 4) will be
+    another dummy value. The sixth word (index 5) will contain the marker 
+    passed to StopInstrumentsSGIX or ReadInstrumentsSGIX.  
+    The following is a simple diagram of how this information will be 
+    passed down the pipe. Since the host and the pipe will be communicating 
+    with 64-bits, three 64-bit packets will be sent across the pipe for each 
+    measurement that is made.
+    
+
+            -------------------------------------------------
+            |                       |                       |
+            | [enabled enum name]   |    [size in words]    |
+            |                       |                       |
+            -------------------------------------------------
+
+            -------------------------------------------------
+            |                       |                       |
+            |        [dummy]        |   [instrument value]  |
+            |                       |                       |
+            -------------------------------------------------
+
+            -------------------------------------------------
+            |                       |                       |
+            |       [dummy]         |       [marker]        |
+            |                       |                       |
+            -------------------------------------------------
+
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    XXX    
+
+Additions to the GLX Specification
+
+    XXX
+
+Errors
+
+    None
+
+New State
+
+    Initial                       Initial
+    Get Value                   Get Command	Type    Value   Attrib
+    ---------				    -----------	----	-----	------
+    INSTRUMENT_TIME_UNIT_SGIX   GetInteger    Z       0        -
+
+New Implementation Dependent State
+
+    None
+
+    
+        
+

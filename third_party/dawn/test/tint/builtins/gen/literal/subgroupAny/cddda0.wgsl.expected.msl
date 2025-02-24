@@ -1,0 +1,38 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int* prevent_dce;
+};
+
+int subgroupAny_cddda0() {
+  bool res = simd_any(true);
+  return select(0, 1, all((res == false)));
+}
+
+fragment void fragment_main(device int* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupAny_cddda0();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int* prevent_dce;
+};
+
+int subgroupAny_cddda0() {
+  bool res = simd_any(true);
+  return select(0, 1, all((res == false)));
+}
+
+kernel void compute_main(device int* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupAny_cddda0();
+}

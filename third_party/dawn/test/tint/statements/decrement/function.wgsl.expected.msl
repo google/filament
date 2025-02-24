@@ -1,0 +1,7 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void v() {
+  int i = 0;
+  i = as_type<int>((as_type<uint>(i) - as_type<uint>(1)));
+}

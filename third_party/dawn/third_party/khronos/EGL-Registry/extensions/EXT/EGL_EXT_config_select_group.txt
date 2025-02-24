@@ -1,0 +1,111 @@
+Name
+
+    EGL_EXT_config_select_group
+
+Name Strings
+
+    EGL_EXT_config_select_group
+
+Contributors
+
+    Hal Gentz <zegentzy@protonmail.com>
+    Adam Jackson <ajax@redhat.com>
+    Robert Mader <robert.mader@posteo.de>
+
+Contacts
+
+    Hal Gentz <zegentzy@protonmail.com>
+
+Status
+
+    Draft
+
+Version
+
+    Version 4, 2021-06-24
+
+Number
+
+    EGL Extension #145
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    This extension is written against the wording of the 2014.08.27 revision
+    of the EGL 1.5 Specification.
+
+Overview
+
+    This extension provides a mechanism to lower the config selection priority
+    of the configs returned by eglChooseConfig. A new config attribute is
+    introduced, providing a way for the implementation to group configs into
+    different config selection categories.  The config selection priorities of
+    all the configs in one category may be higher or lower than the ones in
+    other categories.  The config selection priorities in one category follow
+    the rules of eglChooseConfig. See also GLX_SGIX_visual_select_group.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as a new EGLConfig attribute:
+
+        EGL_CONFIG_SELECT_GROUP_EXT                0x34C0
+
+Additions to the EGL 1.5 Specification
+
+    In section 3.4 "Configuration Management", under the "Buffer Descriptions
+    and Attributes" heading, append to table 3.1 the following:
+
+    "EGL_CONFIG_SELECT_GROUP_EXT | integer | the config select group"
+
+    In section 3.4 "Configuration Management", under the "Other EGLConfig
+    Attribute Descriptions" heading, append to the end the following:
+
+    "The attribute EGL_CONFIG_SELECT_GROUP_EXT is used to specify the config
+    selection category of the config. Configs in the i-th category have a higher
+    config selection priority than those found in the (i+1)-th category.
+
+    "The attribute EGL_CONFIG_SELECT_GROUP_EXT is used by the implementation to
+    override the default sorting rules, by collecting configurations into
+    groups. It is not accepted by the <attrib_list> parameter of
+    eglChooseConfig, but it is accepted as the <attribute> in
+    eglGetConfigAtrrib."
+
+    In section 3.4 "Configuration Management", under the "Sorting of EGLConfigs"
+    heading, append to table 3.4 the following:
+
+    "EGL_CONFIG_SELECT_GROUP_EXT | 0 | Ignore | Smaller | 0"
+
+    In section 3.4 "Configuration Management", under the "Sorting of EGLConfigs"
+    heading, append before the list entry which starts with "1. Special: by
+    EGL_CONFIG_CAVEAT" the following entry:
+
+    "0. Smaller EGL_CONFIG_SELECT_GROUP_EXT."
+
+Issues
+
+    None
+
+Revision History
+
+    Version 4, 2021-06-24 (Robert Mader)
+        - Moved to EXT, changed enum value to 0x34C0.
+
+    Version 3, 2020-04-06 (Robert Mader)
+        - Changed enum value to 0x31DF, added contributors.
+
+    Version 2, 2019-07-11 (Hal Gentz)
+        - Resolved issues pointed out by Adam Jackson.
+
+    Version 1, 2019-06-21 (Hal Gentz)
+        - Initial draft

@@ -1,0 +1,9 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  bool v = true;
+  bool2 v2 = bool2(v);
+  bool3 v3 = bool3(v);
+  bool4 v4 = bool4(v);
+}

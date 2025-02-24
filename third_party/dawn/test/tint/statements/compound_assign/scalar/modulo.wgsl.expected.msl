@@ -1,0 +1,22 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S {
+  int a;
+};
+
+struct tint_module_vars_struct {
+  device S* v;
+};
+
+int tint_mod_i32(int lhs, int rhs) {
+  uint const v_1 = uint((lhs == (-2147483647 - 1)));
+  bool const v_2 = bool((v_1 & uint((rhs == -1))));
+  uint const v_3 = uint((rhs == 0));
+  int const v_4 = select(rhs, 1, bool((v_3 | uint(v_2))));
+  return as_type<int>((as_type<uint>(lhs) - as_type<uint>(as_type<int>((as_type<uint>((lhs / v_4)) * as_type<uint>(v_4))))));
+}
+
+void foo(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.v).a = tint_mod_i32((*tint_module_vars.v).a, 2);
+}

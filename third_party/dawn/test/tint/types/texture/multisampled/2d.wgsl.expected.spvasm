@@ -1,0 +1,55 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 28
+; Schema: 0
+               OpCapability Shader
+               OpCapability ImageQuery
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %t_f "t_f"
+               OpName %t_i "t_i"
+               OpName %t_u "t_u"
+               OpName %main "main"
+               OpName %fdims "fdims"
+               OpName %idims "idims"
+               OpName %udims "udims"
+               OpDecorate %t_f DescriptorSet 0
+               OpDecorate %t_f Binding 0
+               OpDecorate %t_i DescriptorSet 0
+               OpDecorate %t_i Binding 1
+               OpDecorate %t_u DescriptorSet 0
+               OpDecorate %t_u Binding 2
+      %float = OpTypeFloat 32
+          %3 = OpTypeImage %float 2D 0 0 1 1 Unknown
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+        %t_f = OpVariable %_ptr_UniformConstant_3 UniformConstant
+        %int = OpTypeInt 32 1
+          %7 = OpTypeImage %int 2D 0 0 1 1 Unknown
+%_ptr_UniformConstant_7 = OpTypePointer UniformConstant %7
+        %t_i = OpVariable %_ptr_UniformConstant_7 UniformConstant
+       %uint = OpTypeInt 32 0
+         %11 = OpTypeImage %uint 2D 0 0 1 1 Unknown
+%_ptr_UniformConstant_11 = OpTypePointer UniformConstant %11
+        %t_u = OpVariable %_ptr_UniformConstant_11 UniformConstant
+       %void = OpTypeVoid
+         %15 = OpTypeFunction %void
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+       %main = OpFunction %void None %15
+         %16 = OpLabel
+      %fdims = OpVariable %_ptr_Function_v2uint Function
+      %idims = OpVariable %_ptr_Function_v2uint Function
+      %udims = OpVariable %_ptr_Function_v2uint Function
+         %17 = OpLoad %3 %t_f None
+         %18 = OpImageQuerySize %v2uint %17
+               OpStore %fdims %18
+         %22 = OpLoad %7 %t_i None
+         %23 = OpImageQuerySize %v2uint %22
+               OpStore %idims %23
+         %25 = OpLoad %11 %t_u None
+         %26 = OpImageQuerySize %v2uint %25
+               OpStore %udims %26
+               OpReturn
+               OpFunctionEnd

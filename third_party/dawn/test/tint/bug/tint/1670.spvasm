@@ -1,0 +1,49 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 28
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 460
+               OpName %main "main"
+               OpName %m2i "m2i"
+               OpName %m2 "m2"
+               OpName %m3i "m3i"
+               OpName %m3 "m3"
+               OpName %m4i "m4i"
+               OpName %m4 "m4"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%mat2v2float = OpTypeMatrix %v2float 2
+%_ptr_Function_mat2v2float = OpTypePointer Function %mat2v2float
+    %v3float = OpTypeVector %float 3
+%mat3v3float = OpTypeMatrix %v3float 3
+%_ptr_Function_mat3v3float = OpTypePointer Function %mat3v3float
+    %v4float = OpTypeVector %float 4
+%mat4v4float = OpTypeMatrix %v4float 4
+%_ptr_Function_mat4v4float = OpTypePointer Function %mat4v4float
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+        %m2i = OpVariable %_ptr_Function_mat2v2float Function
+         %m2 = OpVariable %_ptr_Function_mat2v2float Function
+        %m3i = OpVariable %_ptr_Function_mat3v3float Function
+         %m3 = OpVariable %_ptr_Function_mat3v3float Function
+        %m4i = OpVariable %_ptr_Function_mat4v4float Function
+         %m4 = OpVariable %_ptr_Function_mat4v4float Function
+         %12 = OpLoad %mat2v2float %m2
+         %13 = OpExtInst %mat2v2float %1 MatrixInverse %12
+               OpStore %m2i %13
+         %19 = OpLoad %mat3v3float %m3
+         %20 = OpExtInst %mat3v3float %1 MatrixInverse %19
+               OpStore %m3i %20
+         %26 = OpLoad %mat4v4float %m4
+         %27 = OpExtInst %mat4v4float %1 MatrixInverse %26
+               OpStore %m4i %27
+               OpReturn
+               OpFunctionEnd

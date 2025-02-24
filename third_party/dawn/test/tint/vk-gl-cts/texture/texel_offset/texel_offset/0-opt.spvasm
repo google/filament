@@ -1,0 +1,39 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %result %gl_FragCoord
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 430
+               OpName %main "main"
+               OpName %result "result"
+               OpName %gl_FragCoord "gl_FragCoord"
+               OpDecorate %result Location 0
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+     %result = OpVariable %_ptr_Output_v4float Output
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_float = OpTypePointer Input %float
+  %float_255 = OpConstant %float 255
+     %uint_1 = OpConstant %uint 1
+    %float_0 = OpConstant %float 0
+       %main = OpFunction %void None %6
+         %17 = OpLabel
+         %18 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_0
+         %19 = OpLoad %float %18
+         %20 = OpExtInst %float %1 Floor %19
+         %21 = OpFDiv %float %20 %float_255
+         %22 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_1
+         %23 = OpLoad %float %22
+         %24 = OpExtInst %float %1 Floor %23
+         %25 = OpFDiv %float %24 %float_255
+         %26 = OpCompositeConstruct %v4float %21 %25 %float_0 %float_0
+               OpStore %result %26
+               OpReturn
+               OpFunctionEnd

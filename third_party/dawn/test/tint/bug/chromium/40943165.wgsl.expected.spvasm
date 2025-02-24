@@ -1,0 +1,58 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 35
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %F "F" %F_local_invocation_index_Input
+               OpExecutionMode %F LocalSize 1 1 1
+               OpName %W "W"
+               OpName %F_local_invocation_index_Input "F_local_invocation_index_Input"
+               OpName %F_inner "F_inner"
+               OpName %mat2x2 "mat2x2"
+               OpName %F "F"
+               OpDecorate %F_local_invocation_index_Input BuiltIn LocalInvocationIndex
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%mat2v2float = OpTypeMatrix %v2float 2
+%_ptr_Workgroup_mat2v2float = OpTypePointer Workgroup %mat2v2float
+          %W = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%F_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void %uint
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+         %19 = OpConstantNull %mat2v2float
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+%_ptr_Workgroup_v2float = OpTypePointer Workgroup %v2float
+     %uint_0 = OpConstant %uint 0
+    %float_0 = OpConstant %float 0
+         %31 = OpTypeFunction %void
+    %F_inner = OpFunction %void None %12
+     %mat2x2 = OpFunctionParameter %uint
+         %13 = OpLabel
+         %14 = OpULessThan %bool %mat2x2 %uint_1
+               OpSelectionMerge %17 None
+               OpBranchConditional %14 %18 %17
+         %18 = OpLabel
+               OpStore %W %19 None
+               OpBranch %17
+         %17 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %23 = OpAccessChain %_ptr_Workgroup_v2float %W %uint_0
+         %26 = OpLoad %v2float %23 None
+         %27 = OpCompositeConstruct %v2float %float_0 %float_0
+         %29 = OpFAdd %v2float %26 %27
+               OpStore %23 %29 None
+               OpReturn
+               OpFunctionEnd
+          %F = OpFunction %void None %31
+         %32 = OpLabel
+         %33 = OpLoad %uint %F_local_invocation_index_Input None
+         %34 = OpFunctionCall %void %F_inner %33
+               OpReturn
+               OpFunctionEnd

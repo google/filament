@@ -1,0 +1,33 @@
+                                  OpCapability Shader
+                                  OpMemoryModel Logical GLSL450
+                                  OpEntryPoint GLCompute %f "f"
+                                  OpExecutionMode %f LocalSize 1 1 1
+                                  OpName %SSBO "SSBO"
+                                  OpMemberName %SSBO 0 "m"
+                                  OpName %ssbo "ssbo"
+                                  OpName %f "f"
+                                  OpDecorate %SSBO Block
+                                  OpMemberDecorate %SSBO 0 Offset 0
+                                  OpMemberDecorate %SSBO 0 ColMajor
+                                  OpMemberDecorate %SSBO 0 MatrixStride 16
+                                  OpDecorate %ssbo DescriptorSet 0
+                                  OpDecorate %ssbo Binding 0
+                         %float = OpTypeFloat 32
+                       %v2float = OpTypeVector %float 2
+                   %mat2v2float = OpTypeMatrix %v2float 2
+                          %SSBO = OpTypeStruct %mat2v2float
+       %_ptr_StorageBuffer_SSBO = OpTypePointer StorageBuffer %SSBO
+                          %ssbo = OpVariable %_ptr_StorageBuffer_SSBO StorageBuffer
+                          %void = OpTypeVoid
+                             %7 = OpTypeFunction %void
+                          %uint = OpTypeInt 32 0
+                        %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_mat2v2float = OpTypePointer StorageBuffer %mat2v2float
+                             %f = OpFunction %void None %7
+                            %10 = OpLabel
+                            %14 = OpAccessChain %_ptr_StorageBuffer_mat2v2float %ssbo %uint_0
+                            %15 = OpLoad %mat2v2float %14
+                            %16 = OpAccessChain %_ptr_StorageBuffer_mat2v2float %ssbo %uint_0
+                                  OpStore %16 %15
+                                  OpReturn
+                                  OpFunctionEnd

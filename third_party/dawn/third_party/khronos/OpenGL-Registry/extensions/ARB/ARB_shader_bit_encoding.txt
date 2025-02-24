@@ -1,0 +1,136 @@
+Name
+
+    ARB_shader_bit_encoding
+
+Name Strings
+
+    GL_ARB_shader_bit_encoding
+
+Contributors
+
+    Bill Licea-Kane
+
+Contact
+
+    Bill Licea-Kane (bill 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Date: March 21, 2010
+    Revision: 3
+    $Id$
+
+Number
+
+    ARB Extension #82
+
+Dependencies
+
+    This extension is written against Version 1.50 (Revision 09) of the OpenGL
+    Shading Language Specification.
+
+    This extension is based on ARB_gpu_shader5.
+
+Overview
+
+    This extension trivially adds built-in functions for getting/setting
+    the bit encoding for floating-point values in the OpenGL Shading Language.
+
+    These functions are pulled out of ARB_gpu_shader5, since support for such
+    built-in functions exists in current hardware.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 8 of the OpenGL Shading Language 1.50 Specification
+(Built-in Functions)
+    
+
+    Modify Section 8.3, Common Functions, p. 84
+
+    (add functions to get/set the bit encoding for floating-point values)
+
+    32-bit floating-point data types in the OpenGL shading language are
+    specified to be encoded according to the IEEE specification for
+    single-precision floating-point values.  The functions below allow shaders
+    to convert floating-point values to and from signed or unsigned integers
+    representing their encoding.
+
+    To obtain signed or unsigned integer values holding the encoding of a
+    floating-point value, use:
+
+      genIType floatBitsToInt(genType value);
+      genUType floatBitsToUint(genType value);
+
+    Conversions are done on a component-by-component basis.
+
+    To obtain a floating-point value corresponding to a signed or unsigned
+    integer encoding, use:
+
+      genType intBitsToFloat(genIType value);
+      genType uintBitsToFloat(genUType value);
+
+
+
+Issues
+
+    1) What should this extension be called?
+
+    Resolved.  Currently ARB_shader_bit_encoding.
+
+    2) Are there other built-in functions from ARB_gpu_shader5 that should
+    be pulled in here?
+
+    Resolved.  Given the deadline, hearing no additional candidates for
+    exposing in current hardware, no.
+
+    3) Are there other issues?
+
+    Resolved.  Certainly.  They will be found in ARB_gpu_shader5.  This
+    extension will track resolutions of ARB_gpu_shader5.  It is a simple
+    subset of ARB_gpu_shader5.
+ 
+
+Revision History
+
+    2009-10-08
+    1, wwlk
+    first draft
+
+    2009-10-22
+    2, wwlk
+    Rename to ARB (draft!)
+    No additional features have been proposed.
+
+    2010-03-21
+    3, pbrown
+    Update to rename references to "EXT_gpu_shader5" to "ARB_gpu_shader5".

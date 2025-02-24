@@ -1,0 +1,20 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct main_inputs {
+  int loc0 [[user(locn0)]] [[flat]];
+  uint loc1 [[user(locn1)]] [[flat]];
+  float loc2 [[user(locn2)]];
+  float4 loc3 [[user(locn3)]];
+};
+
+void main_inner(int loc0, uint loc1, float loc2, float4 loc3) {
+  int const i = loc0;
+  uint const u = loc1;
+  float const f = loc2;
+  float4 const v = loc3;
+}
+
+fragment void v_1(main_inputs inputs [[stage_in]]) {
+  main_inner(inputs.loc0, inputs.loc1, inputs.loc2, inputs.loc3);
+}

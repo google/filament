@@ -1,0 +1,501 @@
+Name
+
+    KHR_partial_update
+
+Name Strings
+
+    EGL_KHR_partial_update
+
+Contributors
+
+    Ray Smith
+    Tom Cooksey
+    James Jones
+    Chad Versace
+    Jesse Hall
+
+Contact
+
+    Ray Smith, ARM (Raymond.Smith 'at' arm.com)
+
+IP Status
+
+    No known claims.
+
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Complete.
+    Approved by the EGL Working Group on September 17, 2014.
+    Approved by the Khronos Board of Promoters on November 7, 2014.
+
+Version
+
+    Version 12, September 12, 2014
+
+Number
+
+    EGL Extension #83
+
+Extension Type
+
+    EGL display extension
+
+Dependencies
+
+    EGL 1.4 or later is required.
+
+    Written based on the EGL 1.5 specification (March 12, 2014).
+
+    The behavior of part of this extension is different depending on whether the
+    EGL_EXT_buffer_age extension is also present.
+
+    This extension trivially interacts with EGL_KHR_swap_buffers_with_damage and
+    EGL_EXT_swap_buffers_with_damage. This extension is worded against the KHR
+    version, but the interactions with the EXT version are identical.
+
+New Procedures and Functions
+
+
+    EGLBoolean eglSetDamageRegionKHR(EGLDisplay dpy,
+                                     EGLSurface surface,
+                                     EGLint *rects,
+                                     EGLint n_rects);
+
+New Tokens
+
+    Accepted in the <attribute> parameter of eglQuerySurface:
+
+        EGL_BUFFER_AGE_KHR           0x313D
+
+Overview
+
+    The aim of this extension is to allow efficient partial updates for postable
+    surfaces. It allows implementations to completely avoid processing areas of
+    the surface which have not changed between frames, allowing increased
+    efficiency.
+
+    It does so by providing information and guarantees about the content of the
+    current back buffer which allow the application to "repair" only areas that
+    have become out of date since the particular back buffer was last used.
+
+    The information provided is in the form of the "age" of the buffer, that is,
+    how many frames ago it was last used as the back buffer for the surface. If
+    the application tracks what changes it has made to the surface since this
+    back buffer was last used, it can bring the entire back buffer up to date by
+    only re-rendering the areas it knows to be out of date.
+
+    Use of this extension provides a more efficient alternative to
+    EGL_BUFFER_PRESERVED swap behaviour. EGL_BUFFER_PRESERVED typically implies
+    an expensive full-frame copy at the beginning of the frame, as well as a
+    dependency on the previous frame. Usage of this extension avoids both and
+    requires only the necessary updates to a back buffer to be made.
+
+Terminology
+
+    This extension and the EGL_KHR_swap_buffers_with_damage extension both use
+    the word "damage" for subtly but significantly different purposes:
+
+    "Surface damage" is what the EGL_KHR_swap_buffers_with_damage extension
+    is concerned with. This is the area of the *surface* that changes between
+    frames for that surface. It concerns the differences between two buffers -
+    the current back buffer and the current front buffer. It is useful only to
+    the consumer.
+
+    "Buffer damage" is what the EGL_KHR_partial_update extension is concerned
+    with. This is the area of a particular buffer that has changed since that
+    same buffer was last used. As it only concerns changes to a single buffer,
+    there is no dependency on the next or previous frames or any other buffer.
+    It therefore cannot be used to infer anything about changes to the surface,
+    which requires linking one frame or buffer to another. Buffer damage is
+    therefore only useful to the producer.
+
+    Following are examples of the two different damage types. Note that the
+    final surface content is the same in both cases, but the damaged areas
+    differ according to the type of damage being discussed.
+
+Surface damage example (EGL_KHR_swap_buffers_with_damage)
+
+    The surface damage for frame n is the difference between frame n and frame
+    (n-1), and represents the area that a compositor must recompose.
+
+      Frame 0     Frame 1     Frame 2     Frame 3     Frame 4
+    +---------+ +---------+ +---------+ +---------+ +---------+
+    |         | |#########| |#########| |#########| |#########|
+    |         | |         | |#########| |#########| |#########| Final surface
+    |         | |         | |         | |#########| |#########|   content
+    |         | |         | |         | |         | |#########|
+    +---------+ +---------+ +---------+ +---------+ +---------+
+
+    +---------+ +---------+ +---------+ +---------+ +---------+
+    |@@@@@@@@@| |@@@@@@@@@| |         | |         | |         |
+    |@@@@@@@@@| |         | |@@@@@@@@@| |         | |         | Surface damage
+    |@@@@@@@@@| |         | |         | |@@@@@@@@@| |         |
+    |@@@@@@@@@| |         | |         | |         | |@@@@@@@@@|
+    +---------+ +---------+ +---------+ +---------+ +---------+
+
+Buffer damage example (EGL_KHR_partial_update)
+
+    The buffer damage for a frame is the area changed since that same buffer was
+    last used. If the buffer has not been used before, the buffer damage is the
+    entire area of the buffer.
+
+    The buffer marked with an 'X' in the top left corner is the buffer that is
+    being used for that frame. This is the buffer to which the buffer age and
+    the buffer damage relate.
+
+    Note that this example shows a double buffered surface - the actual number
+    of buffers could be different and variable throughout the lifetime of the
+    surface. The age *must* therefore be queried for every frame.
+
+      Frame 0     Frame 1     Frame 2     Frame 3     Frame 4
+    +---------+ +---------+ +---------+ +---------+ +---------+
+    |         | |#########| |#########| |#########| |#########|
+    |         | |         | |#########| |#########| |#########| Final surface
+    |         | |         | |         | |#########| |#########|   content
+    |         | |         | |         | |         | |#########|
+    +---------+ +---------+ +---------+ +---------+ +---------+
+
+    X---------+ +---------+ X---------+ +---------+ X---------+
+    |         | |         | |#########| |#########| |#########|
+    |         | |         | |#########| |#########| |#########| Buffer 1 content
+    |         | |         | |         | |         | |#########|
+    |         | |         | |         | |         | |#########|
+    +---------+ +---------+ +---------+ +---------+ +---------+
+
+                X---------+ +---------+ X---------+ +---------+
+                |#########| |#########| |#########| |#########|
+                |         | |         | |#########| |#########| Buffer 2 content
+                |         | |         | |#########| |#########|
+                |         | |         | |         | |         |
+                +---------+ +---------+ +---------+ +---------+
+
+         0           0           2           2           2      Buffer age
+
+    +---------+ +---------+ +---------+ +---------+ +---------+
+    |@@@@@@@@@| |@@@@@@@@@| |@@@@@@@@@| |         | |         |
+    |@@@@@@@@@| |@@@@@@@@@| |@@@@@@@@@| |@@@@@@@@@| |         | Buffer damage
+    |@@@@@@@@@| |@@@@@@@@@| |         | |@@@@@@@@@| |@@@@@@@@@|
+    |@@@@@@@@@| |@@@@@@@@@| |         | |         | |@@@@@@@@@|
+    +---------+ +---------+ +---------+ +---------+ +---------+
+
+
+Add a new section entitled "Partial updates to postable surfaces" to section
+3.5:
+
+    The "damage region" defines the area of the buffer to which all rendering
+    commands must be restricted. It applies only for surfaces which can be
+    posted, as described in section 3.10, and only when the swap behavior is
+    EGL_BUFFER_DESTROYED.
+
+    The contents of the buffer outside of the damage region may always be relied
+    upon to contain the same content as the last time they were defined for the
+    current back buffer. See section 3.5.6 for how to query when the current
+    back buffer was last used, and therefore what those contents are.
+
+    If EGL_EXT_buffer_age is supported, the contents of the buffer inside the
+    damage region may also be relied upon to contain the same content as the
+    last time they were defined for the current back buffer. If
+    EGL_EXT_buffer_age is not supported, the contents of the buffer inside the
+    damage region are always undefined after calling eglSwapBuffers.
+
+    Setting the damage region appropriately can be used to efficiently update
+    only the necessary areas inbetween frames.
+
+    After posting the back buffer, the damage region is set to the full
+    dimensions of the surface. The damage region can only be changed by the
+    application before any client API commands that draw to the surface have
+    been made. After this, the damage region is frozen until the back buffer is
+    posted again.
+
+    Use the command
+        EGLBoolean eglSetDamageRegionKHR(
+                            EGLDisplay dpy,
+                            EGLSurface surface,
+                            EGLint *rects,
+                            EGLint n_rects)
+
+    to set the damage region.
+
+    The damage region for <surface> is set to the area described by <n_rects> and
+    <rects> if all of the following conditions are met:
+
+    * <surface> is the current draw surface of the calling thread
+    * <surface> is a postable surface
+    * There have been no client API commands which result with rendering to
+      <surface> since eglSwapBuffers was last called with <surface>, or since
+      <surface> was created in case eglSwapBuffers has not yet been called with
+      <surface>.
+    * The surface's swap behavior is EGL_BUFFER_DESTROYED
+
+    <n_rects> specifies the number of rectangles comprising the damage region.
+    <rects> is a pointer to a list of values describing the rectangles. The list
+    should consist of <n_rects> groups of four values, with each group
+    representing a single rectangle in surface coordinates in the form {x, y,
+    width, height}. Coordinates are specified relative to the lower left corner
+    of the surface. It is not necessary to avoid overlaps of the specified
+    rectangles. Rectangles that lie (partially) outside of the current surface
+    dimensions (as queryable via the EGL_WIDTH and EGL_HEIGHT attributes) will
+    be clamped to the current surface dimensions.
+
+    If <n_rects> is zero, <rects> is ignored and the damage region is set to the
+    full dimensions of the surface.
+
+    If <n_rects> is not zero but the rectangles in <rects> describe a region of
+    zero area after clamping, the damage region is set to the empty region.
+
+    If <rects> contains more than (4 * <n_rects>) values, the remaining values
+    are ignored. If <rects> contains fewer than (4 * <n_rects>) values, the
+    behavior is undefined, up to and including program termination.
+
+    At all times, any client API rendering which falls outside of the damage
+    region results in undefined framebuffer contents for the entire framebuffer.
+    It is the client's responsibility to ensure that rendering is confined to
+    the current damage area.
+
+    If any client API commands resulting in rendering to <surface> have been
+    issued since eglSwapBuffers was last called with <surface>, or since the
+    surface was created in case eglSwapBuffers has not yet been called on it,
+    attempting to set the damage region will result in undefined framebuffer
+    contents for the entire framebuffer.
+
+    Errors
+    ------
+    eglSetDamageRegionKHR returns EGL_FALSE on failure:
+    * If <surface> is not a postable surface, an EGL_BAD_MATCH error is
+      generated
+    * If <surface> is not the current draw surface for the calling thread, an
+      EGL_BAD_MATCH error is generated
+    * If the value of EGL_SWAP_BEHAVIOR for <surface> is not
+      EGL_BUFFER_DESTROYED, an EGL_BAD_MATCH error is generated
+    * If eglSetDamageRegionKHR has already been called on <surface> since the
+      most recent frame boundary, an EGL_BAD_ACCESS error is generated
+    * If the EGL_BUFFER_AGE_KHR attribute of <surface> has not been queried
+      since the most recent frame boundary, an EGL_BAD_ACCESS error is generated
+
+Add before the final paragraph in section 3.5.6 "Surface Attributes":
+
+    Querying EGL_BUFFER_AGE_KHR returns the age of the color contents of the
+    current back buffer as the number of frames elapsed since it was most
+    recently defined.  Under certain conditions described below, applications
+    can, in conjunction with the surface's damage region (see section 3.5.1),
+    use this age to safely rely on the contents of old back buffers to reduce
+    the amount of redrawing they do each frame.
+
+    To query the age of a surface, it must be the current draw surface for the
+    calling thread.
+
+        Function name
+        --------------------
+        eglSwapBuffers
+        eglSwapBuffersWithDamageKHR
+
+        Table 3.X, Frame Boundary Functions
+
+    Buffers' ages are initialized to 0 at buffer creation time. When a frame
+    boundary is reached, the following occurs before any exchanging or copying
+    of color buffers:
+
+        * The current back buffer's age is set to 1.
+        * Any other color buffers' ages are incremented by 1 if
+          their age was previously greater than 0.
+
+    For example, with a double buffered surface and an implementation that swaps
+    via buffer exchanges, the age would usually be 2. With a triple buffered
+    surface the age would usually be 3. An age of 1 usually means the previous
+    swap was implemented as a copy. An age of 0 means the buffer has only just
+    been initialized and the contents are undefined. Single buffered surfaces
+    have no frame boundaries and therefore always have an age of 0.
+
+    Where specified in terms of the current damage region (see section 3.5.6),
+    the relevant part of a buffer's content is considered defined when the
+    buffer's age is a value greater than 0.
+
+    Frame boundaries are the only events that can set a buffer's age to a
+    positive value. Once EGL_BUFFER_AGE_KHR has been queried then it can be
+    assumed that the age will remain valid until the next frame boundary. EGL
+    implementations are permitted, but not required, to reset the buffer age in
+    response to pixel ownership test changes for any pixels within the drawable,
+    or if new pixels are added to or removed from the drawable, i.e., the
+    drawable is resized. A reset of this nature does not affect the age of
+    content for pixels that pass the pixel ownership test before and after the
+    event that caused the reset.  In other words, applications can assume that
+    no event will invalidate the content of pixels that continuously pass the
+    pixel ownership test between when the buffer age was queried and the
+    following frame boundary.  It is up to applications to track pixel ownership
+    using data collected from relevant window system events, such as
+    configuration and expose events on the X11 platform.
+
+    EGL_BUFFER_AGE_KHR state is a property of the EGL surface that owns the
+    buffers and lives in the address space of the application.  That is, if an
+    EGL surface has been created from a native window or pixmap that may be
+    shared between processes, the buffer age is not guaranteed to be
+    synchronized across the processes. Binding and unbinding a surface to and
+    from one or more contexts in the same address space will not affect the ages
+    of any buffers in that surface.
+
+Add to the list of errors for eglQuerySurface at the end of section 3.5.6
+"Surface Attributes":
+
+    If <attribute> is EGL_BUFFER_AGE_KHR and <surface> is not the current draw
+    surface for the calling thread, an EGL_BAD_SURFACE error is generated.
+
+Add to the end of section 3.10.1.1 "Native Window Resizing":
+
+    If eglSetDamageRegionKHR has been called with anything other than zero for
+    <n_rects>, a surface resize will cause the damage region to become
+    undefined. This will effectively cause the entire framebuffer content to
+    become undefined until the next frame.
+
+Dependencies on EGL_KHR_swap_buffers_with_damage
+
+    If EGL_KHR_swap_buffers_with_damage is not supported, all references to
+    eglSwapBuffersWithDamageKHR are removed.
+
+Issues
+
+ 1) What should happen if the client renders outside of the damage area?
+
+    RESOLVED: The entire framebuffer content will be undefined.
+
+    DISCUSSION: The definedness of different parts of the buffer varies across
+    implementations, making it hard to define, and providing any more specific
+    information may encourage improper and non-portable use of this extension.
+
+ 2) How does this interact with EGL_EXT_buffer_age?
+
+    RESOLVED: The initial content of the damage area differs depending on
+    whether EGL_EXT_buffer_age is present or not, making this extension fully
+    backwards compatible with EGL_EXT_buffer_age, while not depending on it.
+
+ 3) How does this interact with EGL_KHR_swap_buffers_with_damage?
+
+    RESOLVED: It does not interact materially with
+    EGL_KHR_swap_buffers_with_damage, except for the trivial interaction with
+    eglSwapBuffersWithDamageKHR being a frame boundary function if the extension
+    is also supported.
+
+    DISCUSSION: This extension only provides a way to efficiently update the
+    back buffer for a surface. It does not have any effect on the subsequent
+    posting of that buffer. For maximum efficiency, applications should use both
+    EGL_KHR_partial_update and EGL_KHR_swap_buffers_with_damage simultaneously.
+
+ 4) How does this interact with EGL_BUFFER_PRESERVED?
+
+    RESOLVED: It is an error to call eglSetDamageRegionKHR with a surface with
+    EGL_BUFFER_PRESERVED swap behavior. However, it is not an error to query the
+    age of the buffer in this case.
+
+    DISCUSSION: A layered extension will be proposed to guarantee that the age
+    of a buffer is always 1 after the first frame for a surface. This will
+    provide similar (but not identical) semantics to EGL_BUFFER_PRESERVED for
+    applications that need it.
+
+ 5) How does surface resizing affect the damage region?
+
+    RESOLVED: The damage region becomes undefined if a surface resize occurs
+    after it has been set to anything except the full buffer. Because rendering
+    outside the damage area results in undefined framebuffer contents, this
+    effectively means that the entire framebuffer content becomes undefined
+    until the next frame.
+
+ 6) What happens if the damage region is set after any client rendering
+    commands?
+
+    OPTION 1: An error is returned. Detecting this condition is non-trivial in
+    some implementations.
+
+    OPTION 2: The entire framebuffer contents become undefined.
+
+    RESOLVED: Option 2.
+
+ 7) Should the entire region be provided in advance of any rendering, or should
+    each region be supplied immediately before the rendering commands for that
+    region, and multiple regions can be defined per frame?
+
+    RESOLVED: The entire region must be provided in advance of any rendering.
+
+ 8) What should be the behavior if eglSetDamageRegionKHR is called multiple
+    times before the first rendering command?
+
+    RESOLVED: This is an error. The entire region must be provided during a
+    single call, with no overwrite or modify behavior needed.
+
+ 9) Is it allowed to set the damage region when the buffer age has not been
+    queried?
+
+    RESOLVED: This is an error.  This could only make sense when the damage
+    region is the entire buffer, which it is initially anyway. Otherwise the
+    undamaged area needs to be defined to an age that the application doesn't
+    know about. It's not clear that this would ever be useful to the
+    application, because it can't know at this point which areas it needs to
+    update.
+
+10) What is the behavior if, after clamping, the damage region is empty?
+
+    RESOLVED: The damage region is set to empty.
+
+
+Revision History
+
+    Version 1, 28/01/2014
+     - Initial draft
+    Version 2, 05/02/2014
+     - Removed clip behavior, replaced with undefined framebuffer contents if
+       client renders outside of given damage region
+     - Renamed to EGL_KHR_partial_update from EGL_KHR_frame_clip
+     - Added detailed parameter descriptions and error conditions
+     - Added dependency on GL_XXX_damage_region
+     - Defined interactions with EGL_EXT_buffer_age
+    Version 3, 04/03/2014
+     - Removed dependency on GL_XXX_damage_region
+     - Changed error on defining damage region after drawcalls to be undefined
+       rendering results instead
+     - Redefined interactions with EGL_EXT_buffer_age to allow both to exist
+    Version 4, 20/03/2014
+     - Modified language to allow use with EGLStream producer surfaces
+     - Clarified that surface must be the current *draw* surface
+     - Changed n_rects=0 behavior to set the damage region to the entire surface
+     - Clarified that rendering outside the damage region results in the entire
+       framebuffer becoming undefined
+    Version 5, 20/03/2014
+     - Updated to be based on EGL 1.5 spec
+    Version 6, 23/04/2014
+     -Added the pixel ownership logic from EGL_EXT_buffer_age
+     -Ported over the detailed description of buffer age from EGL_EXT_buffer_age
+     -Added a "New Functions" and "New Tokens" section.
+     -Added dependencies on EGL_EXT_swap_buffers_with_damage
+    Version 7, 20/05/2014
+     - Removing a couple of now-obsolete sentences
+     - An age of 1 *usually* means the previous swap was implemented as a copy.
+     - Reworded "For the purposes of buffer age tracking..." to reference the
+       conditions under which the different parts of the buffer are actually
+       defined, which depend on the damage region
+    Version 8, 20/05/2014
+     - Added issues list
+    Version 9, 12/08/2014
+     - Removed outdated modification to "Posting to a Window"
+     - Changed names and order of rects/n_rects to match
+       EGL_EXT_swap_buffers_with_damage
+     - Resolved issue 3 on EGL_EXT_swap_buffers_with_damage interactions
+     - Resolved issue 4 on EGL_BUFFER_PRESERVED swap behavior
+     - Resolved issue 5 on surface resize behavior
+     - Resolved issue 7 on multiple calls to eglSetDamageRegionKHR
+     - Added issue 8 and suggested resolution
+     - Added issue 9 and suggested resolution
+     - Added issue 10 and suggested resolution
+    Version 10, 19/08/2014
+     - Added section on terminology and damage types
+    Version 11, 10/09/2014
+     - Resolved outstanding issues
+    Version 12, 12/09/2014
+     - Added the restriction that you can only query the age of a surface while
+       it is the current draw surface.
+    Version 13, 18/09/2015
+     - Marked as a Display extension
+     - Changed remaining references to EGL_EXT_swap_buffers_with_damage to
+       EGL_KHR_swap_buffers_with_damage

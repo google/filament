@@ -1,0 +1,62 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 0
+; Bound: 36
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main" %local_invocation_index_1
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %local_invocation_index_1 "local_invocation_index_1"
+               OpName %arg_0 "arg_0"
+               OpName %atomicCompareExchangeWeak_83580d "atomicCompareExchangeWeak_83580d"
+               OpName %__atomic_compare_exchange_resultu32 "__atomic_compare_exchange_resultu32"
+               OpMemberName %__atomic_compare_exchange_resultu32 0 "old_value"
+               OpMemberName %__atomic_compare_exchange_resultu32 1 "exchanged"
+               OpName %res "res"
+               OpName %compute_main_inner "compute_main_inner"
+               OpName %local_invocation_index "local_invocation_index"
+               OpName %compute_main "compute_main"
+               OpDecorate %local_invocation_index_1 BuiltIn LocalInvocationIndex
+               OpMemberDecorate %__atomic_compare_exchange_resultu32 0 Offset 0
+               OpMemberDecorate %__atomic_compare_exchange_resultu32 1 Offset 4
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%local_invocation_index_1 = OpVariable %_ptr_Input_uint Input
+%_ptr_Workgroup_uint = OpTypePointer Workgroup %uint
+      %arg_0 = OpVariable %_ptr_Workgroup_uint Workgroup
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+       %bool = OpTypeBool
+%__atomic_compare_exchange_resultu32 = OpTypeStruct %uint %bool
+     %uint_2 = OpConstant %uint 2
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+%_ptr_Function___atomic_compare_exchange_resultu32 = OpTypePointer Function %__atomic_compare_exchange_resultu32
+         %21 = OpConstantNull %__atomic_compare_exchange_resultu32
+         %22 = OpTypeFunction %void %uint
+         %28 = OpConstantNull %uint
+   %uint_264 = OpConstant %uint 264
+%atomicCompareExchangeWeak_83580d = OpFunction %void None %6
+          %9 = OpLabel
+        %res = OpVariable %_ptr_Function___atomic_compare_exchange_resultu32 Function %21
+         %17 = OpAtomicCompareExchange %uint %arg_0 %uint_2 %uint_0 %uint_0 %uint_1 %uint_1
+         %18 = OpIEqual %bool %17 %uint_1
+         %10 = OpCompositeConstruct %__atomic_compare_exchange_resultu32 %17 %18
+               OpStore %res %10
+               OpReturn
+               OpFunctionEnd
+%compute_main_inner = OpFunction %void None %22
+%local_invocation_index = OpFunctionParameter %uint
+         %25 = OpLabel
+               OpAtomicStore %arg_0 %uint_2 %uint_0 %28
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %31 = OpFunctionCall %void %atomicCompareExchangeWeak_83580d
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %6
+         %33 = OpLabel
+         %35 = OpLoad %uint %local_invocation_index_1
+         %34 = OpFunctionCall %void %compute_main_inner %35
+               OpReturn
+               OpFunctionEnd

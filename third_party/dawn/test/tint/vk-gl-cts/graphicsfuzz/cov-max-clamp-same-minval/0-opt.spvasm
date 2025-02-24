@@ -1,0 +1,56 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %buf0 "buf0"
+               OpMemberName %buf0 0 "one"
+               OpName %_ ""
+               OpName %_GLF_color "_GLF_color"
+               OpMemberDecorate %buf0 0 Offset 0
+               OpDecorate %buf0 Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+       %buf0 = OpTypeStruct %int
+%_ptr_Uniform_buf0 = OpTypePointer Uniform %buf0
+          %_ = OpVariable %_ptr_Uniform_buf0 Uniform
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+      %int_1 = OpConstant %int 1
+       %bool = OpTypeBool
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_1 = OpConstant %float 1
+    %float_0 = OpConstant %float 0
+         %19 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+         %20 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+       %main = OpFunction %void None %7
+         %21 = OpLabel
+         %22 = OpAccessChain %_ptr_Uniform_int %_ %int_0
+         %23 = OpLoad %int %22
+         %24 = OpAccessChain %_ptr_Uniform_int %_ %int_0
+         %25 = OpLoad %int %24
+         %26 = OpAccessChain %_ptr_Uniform_int %_ %int_0
+         %27 = OpLoad %int %26
+         %28 = OpExtInst %int %1 SClamp %25 %27 %int_1
+         %29 = OpExtInst %int %1 SMax %23 %28
+         %30 = OpIEqual %bool %29 %int_1
+               OpSelectionMerge %31 None
+               OpBranchConditional %30 %32 %33
+         %32 = OpLabel
+               OpStore %_GLF_color %19
+               OpBranch %31
+         %33 = OpLabel
+               OpStore %_GLF_color %20
+               OpBranch %31
+         %31 = OpLabel
+               OpReturn
+               OpFunctionEnd

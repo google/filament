@@ -1,0 +1,15 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  const device float4* S;
+};
+
+float4 func(const device float4* const pointer) {
+  return (*pointer);
+}
+
+kernel void v(const device float4* S [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.S=S};
+  float4 const r = func(tint_module_vars.S);
+}

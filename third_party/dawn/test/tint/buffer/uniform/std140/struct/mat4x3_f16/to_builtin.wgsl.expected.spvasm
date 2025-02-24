@@ -1,0 +1,81 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 43
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+         %37 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpMemberName %S_std140 0 "before"
+               OpMemberName %S_std140 1 "m_col0"
+               OpMemberName %S_std140 2 "m_col1"
+               OpMemberName %S_std140 3 "m_col2"
+               OpMemberName %S_std140 4 "m_col3"
+               OpMemberName %S_std140 5 "after"
+               OpName %S_std140 "S_std140"
+               OpMemberName %u_block_std140 0 "inner"
+               OpName %u_block_std140 "u_block_std140"
+               OpName %f "f"
+               OpName %t "t"
+               OpName %l "l"
+               OpName %a "a"
+               OpMemberDecorate %S_std140 0 Offset 0
+               OpMemberDecorate %S_std140 1 Offset 8
+               OpMemberDecorate %S_std140 2 Offset 16
+               OpMemberDecorate %S_std140 3 Offset 24
+               OpMemberDecorate %S_std140 4 Offset 32
+               OpMemberDecorate %S_std140 5 Offset 64
+               OpDecorate %_arr_S_std140_uint_4 ArrayStride 128
+               OpMemberDecorate %u_block_std140 0 Offset 0
+               OpDecorate %u_block_std140 Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+        %int = OpTypeInt 32 1
+       %half = OpTypeFloat 16
+     %v3half = OpTypeVector %half 3
+   %S_std140 = OpTypeStruct %int %v3half %v3half %v3half %v3half %int
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_S_std140_uint_4 = OpTypeArray %S_std140 %uint_4
+%u_block_std140 = OpTypeStruct %_arr_S_std140_uint_4
+%_ptr_Uniform_u_block_std140 = OpTypePointer Uniform %u_block_std140
+          %1 = OpVariable %_ptr_Uniform_u_block_std140 Uniform
+       %void = OpTypeVoid
+         %13 = OpTypeFunction %void
+%_ptr_Uniform_v3half = OpTypePointer Uniform %v3half
+     %uint_0 = OpConstant %uint 0
+     %uint_2 = OpConstant %uint 2
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+ %mat4v3half = OpTypeMatrix %v3half 4
+     %v4half = OpTypeVector %half 4
+ %mat3v4half = OpTypeMatrix %v4half 3
+          %f = OpFunction %void None %13
+         %14 = OpLabel
+         %15 = OpAccessChain %_ptr_Uniform_v3half %1 %uint_0 %uint_2 %uint_1
+         %20 = OpLoad %v3half %15 None
+         %21 = OpAccessChain %_ptr_Uniform_v3half %1 %uint_0 %uint_2 %uint_2
+         %22 = OpLoad %v3half %21 None
+         %23 = OpAccessChain %_ptr_Uniform_v3half %1 %uint_0 %uint_2 %uint_3
+         %25 = OpLoad %v3half %23 None
+         %26 = OpAccessChain %_ptr_Uniform_v3half %1 %uint_0 %uint_2 %uint_4
+         %27 = OpLoad %v3half %26 None
+         %29 = OpCompositeConstruct %mat4v3half %20 %22 %25 %27
+          %t = OpTranspose %mat3v4half %29
+         %33 = OpAccessChain %_ptr_Uniform_v3half %1 %uint_0 %uint_0 %uint_2
+         %34 = OpLoad %v3half %33 None
+         %35 = OpVectorShuffle %v3half %34 %34 2 0 1
+          %l = OpExtInst %half %37 Length %35
+         %38 = OpAccessChain %_ptr_Uniform_v3half %1 %uint_0 %uint_0 %uint_2
+         %39 = OpLoad %v3half %38 None
+         %40 = OpVectorShuffle %v3half %39 %39 2 0 1
+         %41 = OpCompositeExtract %half %40 0
+          %a = OpExtInst %half %37 FAbs %41
+               OpReturn
+               OpFunctionEnd

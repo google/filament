@@ -1,0 +1,114 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 29
+; Schema: 0
+               OpCapability Shader
+               OpCapability GroupNonUniformVote
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %subgroupAll_c962bd "subgroupAll_c962bd"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+        %int = OpTypeInt 32 1
+%prevent_dce_block = OpTypeStruct %int
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %6 = OpTypeFunction %int
+       %bool = OpTypeBool
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+       %true = OpConstantTrue %bool
+%_ptr_Function_bool = OpTypePointer Function %bool
+      %false = OpConstantFalse %bool
+      %int_1 = OpConstant %int 1
+      %int_0 = OpConstant %int 0
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+     %uint_0 = OpConstant %uint 0
+%subgroupAll_c962bd = OpFunction %int None %6
+          %7 = OpLabel
+        %res = OpVariable %_ptr_Function_bool Function
+          %8 = OpGroupNonUniformAll %bool %uint_3 %true
+               OpStore %res %8
+         %15 = OpLoad %bool %res None
+         %16 = OpLogicalEqual %bool %15 %false
+         %18 = OpSelect %int %16 %int_1 %int_0
+               OpReturnValue %18
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %23
+         %24 = OpLabel
+         %25 = OpFunctionCall %int %subgroupAll_c962bd
+         %26 = OpAccessChain %_ptr_StorageBuffer_int %1 %uint_0
+               OpStore %26 %25 None
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 29
+; Schema: 0
+               OpCapability Shader
+               OpCapability GroupNonUniformVote
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %subgroupAll_c962bd "subgroupAll_c962bd"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+        %int = OpTypeInt 32 1
+%prevent_dce_block = OpTypeStruct %int
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %6 = OpTypeFunction %int
+       %bool = OpTypeBool
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+       %true = OpConstantTrue %bool
+%_ptr_Function_bool = OpTypePointer Function %bool
+      %false = OpConstantFalse %bool
+      %int_1 = OpConstant %int 1
+      %int_0 = OpConstant %int 0
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+     %uint_0 = OpConstant %uint 0
+%subgroupAll_c962bd = OpFunction %int None %6
+          %7 = OpLabel
+        %res = OpVariable %_ptr_Function_bool Function
+          %8 = OpGroupNonUniformAll %bool %uint_3 %true
+               OpStore %res %8
+         %15 = OpLoad %bool %res None
+         %16 = OpLogicalEqual %bool %15 %false
+         %18 = OpSelect %int %16 %int_1 %int_0
+               OpReturnValue %18
+               OpFunctionEnd
+%compute_main = OpFunction %void None %23
+         %24 = OpLabel
+         %25 = OpFunctionCall %int %subgroupAll_c962bd
+         %26 = OpAccessChain %_ptr_StorageBuffer_int %1 %uint_0
+               OpStore %26 %25 None
+               OpReturn
+               OpFunctionEnd

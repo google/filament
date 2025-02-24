@@ -1,0 +1,604 @@
+Name
+
+    EXT_vertex_attrib_64bit
+
+Name Strings
+
+    GL_EXT_vertex_attrib_64bit
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Barthold Lichtenbelt, NVIDIA
+    Bill Licea-Kane, AMD
+    Eric Werness, NVIDIA
+    Graham Sellers, AMD
+    Greg Roth, NVIDIA
+    Jeff Bolz, NVIDIA
+    Nick Haemel, AMD
+    Pierre Boudier, AMD
+    Piers Daniell, NVIDIA
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         03/21/2010
+    Revision:                   5
+
+Number
+
+    387
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 specification
+    (Compatibility Profile).
+
+    This extension is written against version 1.50 (revision 09) of the OpenGL
+    Shading Language Specification.
+
+    OpenGL 3.0 and GLSL 1.30 are required.
+
+    ARB_gpu_shader_fp64 (or equivalent functionality) is required.
+
+    This extension interacts with OpenGL 3.1 implementations not supporting
+    ARB_compatibility and with the core profile of OpenGL 3.2.
+
+    This extension interacts with EXT_direct_state_access.
+
+    This extension interacts with NV_gpu_shader5.
+
+    This extension interacts with NV_vertex_attrib_integer_64bit.
+
+Overview
+
+    This extension provides OpenGL shading language support for vertex shader
+    inputs with 64-bit floating-point components and OpenGL API support for
+    specifying the value of those inputs using vertex array or immediate mode
+    entry points.  This builds on the support for general-purpose support for
+    64-bit floating-point values in the ARB_gpu_shader_fp64 extension.
+
+    This extension provides a new class of vertex attribute functions,
+    beginning with "VertexAttribL" ("L" for "long"), that can be used to
+    specify attributes with 64-bit floating-point components.  This extension
+    provides no automatic type conversion between attribute and shader
+    variables; single-precision attributes are not automatically converted to
+    double-precision or vice versa.  For shader variables with 64-bit
+    component types, the "VertexAttribL" functions must be used to specify
+    attribute values.  For other shader variables, the "VertexAttribL"
+    functions must not be used.  If a vertex attribute is specified using the
+    wrong attribute function, the values of the corresponding shader input are
+    undefined.  This approach requiring matching types is identical to that
+    used for the "VertexAttribI" functions provided by OpenGL 3.0 and the
+    EXT_gpu_shader4 extension.
+
+    Additionally, some vertex shader inputs using the wider 64-bit components
+    may count double against the implementation-dependent limit on the number
+    of vertex shader attribute vectors.  A 64-bit scalar or a two-component
+    vector consumes only a single generic vertex attribute; three- and
+    four-component "long" may count as two.  This approach is similar to the
+    one used in the current GL where matrix attributes consume multiple
+    attributes.
+
+    Note that 64-bit generic vertex attributes were nominally supported
+    beginning with the introduction of vertex shaders in OpenGL 2.0.  However,
+    the OpenGL Shading Language at the time had no support for 64-bit data
+    types, so any such values were automatically converted to 32-bit.
+
+    Support for 64-bit floating-point vertex attributes in this extension can
+    be combined with other extensions.  In particular, this extension provides
+    an entry point that can be used with EXT_direct_state_access to directly
+    set state for any vertex array object.  Also, the related
+    NV_vertex_attrib_integer_64bit extension provides an entry point to
+    specify bindless vertex attribute arrays with 64-bit components, integer
+    or floating-point.
+
+
+New Procedures and Functions
+
+    void VertexAttribL1dEXT(uint index, double x);
+    void VertexAttribL2dEXT(uint index, double x, double y);
+    void VertexAttribL3dEXT(uint index, double x, double y, double z);
+    void VertexAttribL4dEXT(uint index, double x, double y, double z, double w);
+    void VertexAttribL1dvEXT(uint index, const double *v);
+    void VertexAttribL2dvEXT(uint index, const double *v);
+    void VertexAttribL3dvEXT(uint index, const double *v);
+    void VertexAttribL4dvEXT(uint index, const double *v);
+
+    void VertexAttribLPointerEXT(uint index, int size, enum type, sizei stride,
+                                 const void *pointer);
+
+    void GetVertexAttribLdvEXT(uint index, enum pname, double *params);
+
+    void VertexArrayVertexAttribLOffsetEXT(uint vaobj, uint buffer,
+                                           uint index, int size,
+                                           enum type, sizei stride,
+                                           intptr offset);
+
+    (note:  VertexArrayVertexAttribLOffsetEXT is provided only if
+    EXT_direct_state_access_memory is supported.)
+
+New Tokens
+
+    Returned in the <type> parameter of GetActiveAttrib:
+
+        DOUBLE
+        DOUBLE_VEC2_EXT                                 0x8FFC
+        DOUBLE_VEC3_EXT                                 0x8FFD
+        DOUBLE_VEC4_EXT                                 0x8FFE
+        DOUBLE_MAT2_EXT                                 0x8F46
+        DOUBLE_MAT3_EXT                                 0x8F47
+        DOUBLE_MAT4_EXT                                 0x8F48
+        DOUBLE_MAT2x3_EXT                               0x8F49
+        DOUBLE_MAT2x4_EXT                               0x8F4A
+        DOUBLE_MAT3x2_EXT                               0x8F4B
+        DOUBLE_MAT3x4_EXT                               0x8F4C
+        DOUBLE_MAT4x2_EXT                               0x8F4D
+        DOUBLE_MAT4x3_EXT                               0x8F4E
+
+    Note: These enums are defined in ARB_gpu_shader_fp64, which is required
+    by this extension. They are included here only for completeness.
+
+Additions to Chapter 2 of the OpenGL 3.2 (Compatibility Profile) Specification
+(OpenGL Operation)
+
+    Modify Section 2.7, Vertex Specification (p. 24)
+
+    (delete third paragraph, p. 33, beginning with "The resulting attribute
+    values are undefined")
+
+    (rework the description of the VertexAttribI* commands, and add support
+    for new VertexAttribL* commands, p. 33)
+
+    To load values into a generic shader attribute declared as a signed or
+    unsigned integer or integer vector, use the commands
+
+      void VertexAttribI{1,2,3,4}{i,ui}( uint index, T values );
+      void VertexAttribI{1,2,3,4}{i,ui}v( uint index, T values );
+      void VertexAttribI4{b,s,ub,us}v( uint index, T values );
+
+    These commands specify values that are extended to full signed or unsigned
+    integers, then loaded into the generic attribute at slot index in the same
+    fashion as described above.
+
+    To load values into a generic shader attribute declared as a double, or
+    into vectors or matrices thereof, use the commands
+
+      void VertexAttribL{1,2,3,4}dEXT(uint index, T values);
+      void VertexAttribL{1,2,3,4}dvEXT(uint index, T values);
+
+    These commands specify one, two, three or four values.  Note that attribute
+    variables declared with "double" types must be loaded with
+    VertexAttribL*d{v}EXT; loading attributes with VertexAttrib*d{v} will
+    produce undefined results.
+
+    For all VertexAttrib* commands, the error INVALID_VALUE is generated if
+    <index> is greater than or equal to MAX_VERTEX_ATTRIBS.
+
+    The full set of VertexAttrib* commands specify generic attributes with
+    components one of six data types:
+
+      * floating-point values (VertexAttrib*),
+      * signed or unsigned integers (VertexAttribI*), and
+      * double-precision floating-point values (VertexAttribL*d*)
+
+    The values loaded into a shader attribute variable bound to generic
+    attribute <index> are undefined if the data type of the attribute
+    components specified by the most recent VertexAttrib* command do not match
+    the data type of the variable.
+
+
+    Modify Section 2.8, Vertex Arrays, p. 34
+
+    (insert new paragraph after first paragraph, p. 37)  
+
+    The command
+
+      void VertexAttribLPointerEXT(uint index, int size, enum type,
+                                   sizei stride, const void *pointer);
+
+    specifies state for a generic vertex attribute array associated with a
+    shader attribute variable declared with 64-bit double precision components.
+    <type> must be DOUBLE.  <index>, <size>, and <stride> behave as defined in
+    all other vertex commands; <size> may be one, two, three or four.
+
+    Each component of an array specified by VertexAttribLPointerEXT will be
+    encoded into one or more generic attribute components as specified for the
+    VertexAttribL* commands in Section 2.7.  The error INVALID_VALUE is
+    generated if <index> is greater than or equal to MAX_VERTEX_ATTRIBS.
+
+
+    (modify pseudo-code, p. 38, to handle VertexAttribLPointerEXT)
+
+      ...
+      for (j = 1; j < genericAttributes; j++) {
+        if (generic vertex attribute j array enabled) {
+          if (generic attribute j array set by VertexAttribLPointerEXT) {
+            VertexAttribL[size][type]v(j, generic vertex attribute j
+                                          array element i);
+          } else if (generic attribute j array set by VertexAttribIPointer) {
+            VertexAttribI[size][type]v(j, generic vertex attribute j
+                                          array element i);
+          } else if (generic vertex attribute j array normalization flag 
+                     is set, and type is not FLOAT or DOUBLE) {
+            VertexAttrib[size]N[type]v(j, generic vertex attribute j
+                                          array element i);
+          } else {
+            VertexAttrib[size][type]v(j, generic vertex attribute j 
+                                         array element i);
+          }
+        }
+      }
+
+        if (generic attribute 0 array enabled) {
+          if (generic attribute 0 array set by VertexAttribLPointers) {
+            VertexAttribL[size][type]v(0, generic vertex attribute 0
+                                          array element i);
+          } else if (generic attribute 0 array set by VertexAttribIPointer) {
+            VertexAttribI[size][type]v(0, generic vertex attribute 0
+                                          array element i);
+          } else if (generic vertex attribute 0 array normalization flag 
+                     is set, and type is not FLOAT or DOUBLE) {
+            VertexAttrib[size]N[type]v(0, generic vertex attribute 0
+                                          array element i);
+          } else {
+            VertexAttrib[size][type]v(0, generic vertex attribute 0
+                                         array element i);
+          }
+        } else if (vertex array enabled) {
+          ...
+
+
+    Modify the "Add to the end of Section 2.10 (Vertex Array Objects)" section
+    of EXT_direct_state_access
+
+    (add a new function prototype to the initial list of commands)
+
+      void VertexArrayVertexAttribLOffsetEXT(uint vaobj, uint buffer,
+                                             uint index, int size,
+                                             enum type, sizei stride,
+                                             intptr offset);
+
+    (No edits are made to the language added in this section.  The same
+    general rules described in EXT_direct_state_access apply here -- <vaobj>
+    identifies a vertex array object used instead of the currently bound one,
+    <buffer> is used in place of the buffer object bound to ARRAY_BUFFER, and
+    the command otherwise behaves like VertexAttribLPointerEXT with <pointer>
+    set to <offset>.)
+
+
+    Modify Section 2.14.3, Vertex Attributes, p. 86
+
+    (replace last paragraph, p. 86)
+
+    When an attribute variable declared using one of the scalar or vector data
+    types enumerated in Table X.1 and is bound to a generic attribute index
+    <i>, its value(s) are taken from the components of generic attribute <i>.
+    Scalars are extracted from the x component; two-, three-, and
+    four-component vectors are extracted from the, (x, y), (x, y, z), or (x,
+    y, z, w) components, respectively.
+
+      Data type                         Command
+      -------------------------------   ----------------------------------
+      int    int8_t  int16_t  int32_t   VertexAttribI1i
+      ivec2  i8vec2  i16vec2  i32vec2   VertexAttribI2i
+      ivec3  i8vec3  i16vec3  i32vec3   VertexAttribI3i
+      ivec4  i8vec4  i16vec4  i32vec4   VertexAttribI4i
+
+      uint   uint8_t uint16_t uint32_t  VertexAttribI1ui
+      ivec2  i8vec2  i16vec2  u32vec2   VertexAttribI2ui
+      ivec3  i8vec3  i16vec3  u32vec3   VertexAttribI3ui
+      uvec4  u8vec4  u16vec4  u32vec4   VertexAttribI4ui
+
+      float  float16_t float32_t        VertexAttrib1{f,b,s,i,ub,us,ui,d}
+      vec2   f16vec2   f32vec2          VertexAttrib2{f,b,s,i,ub,us,ui,d}
+      vec3   f16vec3   f32vec3          VertexAttrib3{f,b,s,i,ub,us,ui,d}
+      vec4   f16vec4   f32vec4          VertexAttrib4{f,b,s,i,ub,us,ui,d}
+
+      double    float64_t               VertexAttribL1dEXT
+      dvec2     f64vec2                 VertexAttribL2dEXT
+      dvec3     f64vec3                 VertexAttribL3dEXT
+      dvec4     f64vec4                 VertexAttribL4dEXT
+
+
+      Table X.1:  Scalar and vector vertex attribute types and VertexAttrib*
+      commands used to set the values of the corresponding generic attribute.
+
+    For the 64-bit double precision types listed in Table X.1, no default
+    attribute values are provided if the values of the vertex attribute variable
+    are specified with fewer components than required for the attribute
+    variable.  For example, the fourth component of a variable of type dvec4
+    will be undefined if specified using VertexAttribL3dvEXT or using a vertex
+    array specified with VertexAttribLPointerEXT and a size of three.
+
+
+    (modify the second paragraph, p. 87) ... exceeds MAX_VERTEX_ATTRIBS.  For
+    the purposes of this comparison, attribute variables of the type dvec3,
+    dvec4, dmat2x3, dmat2x4, dmat3, dmat3x4, dmat4x3, and dmat4 may count as
+    consuming twice as many attributes as equivalent single-precision types.
+
+    (extend the list of types in the first paragraph, p. 88)
+    ... UNSIGNED_INT_VEC3, UNSIGNED_INT_VEC4, DOUBLE, DOUBLE_VEC2,
+    DOUBLE_VEC3, DOUBLE_VEC4, DOUBLE_MAT2, DOUBLE_MAT3, DOUBLE_MAT4,
+    DOUBLE_MAT2x3, DOUBLE_MAT2x4, DOUBLE_MAT3x2, DOUBLE_MAT3x4, DOUBLE_MAT4x2,
+    or DOUBLE_MAT4x3.
+
+    (add the following entries to table 2.13: OpenGL Shading Language type
+     tokens returned by GetActiveUniform and GetActiveUniformsiv, and
+     corresponding shading language keywords declaring each such type., p. 96)
+
+                    Type Name Token    |    Keyword
+                    ---------------------------------
+                    DOUBLE             |    double
+                    DOUBLE_VEC2        |    dvec2
+                    DOUBLE_VEC3        |    dvec3
+                    DOUBLE_VEC4        |    dvec4
+                    DOUBLE_MAT2        |    dmat2
+                    DOUBLE_MAT3        |    dmat3
+                    DOUBLE_MAT4        |    dmat4
+                    DOUBLE_MAT2x3      |    dmat2x3
+                    DOUBLE_MAT2x4      |    dmat2x4
+                    DOUBLE_MAT3x2      |    dmat3x2
+                    DOUBLE_MAT3x4      |    dmat3x4
+                    DOUBLE_MAT4x2      |    dmat4x2
+                    DOUBLE_MAT4x3      |    dmat4x3
+
+Additions to Chapter 3 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    Modify Section 5.4.1, Commands Not Usable in Display Lists, p. 358
+
+    (add to "Vertex arrays" list) VertexAttribLPointerEXT, and
+    VertexAttribVertexAttribLOffsetEXT.
+
+    (note:  GetVertexAttribL* commands are also not allowed in display lists,
+    but is already covered by blanket language in "Other queries")
+
+
+Additions to Chapter 6 of the OpenGL 3.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    Modify Section 6.1.15, Shader and Program Queries, p. 384
+
+    (add to the last list of commands, p. 387)
+
+      void GetVertexAttribLdvEXT(uint index, enum pname, double *params);
+
+    (modify the third paragraph, p. 388) The query CURRENT_VERTEX_ATTRIB
+    returns the current value for the generic attribute
+    <index>. GetVertexAttribdv and GetVertexAttribfv read and return the
+    current attribute values as four single-precision floating-point values;
+    GetVertexAttribiv reads them as floating-point values and converts them to
+    four integer values; GetVertexAttribIiv reads and returns them as signed
+    integers; GetVertexAttribIuiv reads and returns them as four unsigned
+    integers; GetVertexAttribLdv reads and returns them as four double-precision
+    floating-point values.  The results of the query are undefined if the
+    current attribute values are read using one data type but were specified
+    using a different one.  The error INVALID_OPERATION is generated if index
+    is zero, as there is no current value for generic attribute zero.
+
+
+Additions to Appendix A of the OpenGL 3.2 (Compatibility Profile)
+Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Modifications to The OpenGL Shading Language Specification, Version 1.50
+(Revision 09)
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_EXT_vertex_attrib_64bit : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_EXT_vertex_attrib_64bit    1
+
+
+    Modify Section 4.3.4, Inputs, p. 31
+
+    (modify third paragraph of the section, p. 31, allowing double-precision
+    vertex shader inputs) ... Vertex shader inputs can only be single- or
+    double-precision floating-point scalars, vectors, or matrices, or signed
+    and unsigned integers and integer vectors.  Vertex shader inputs can also
+    form arrays of these types, but not structures.
+
+
+GLX Protocol
+
+    !!! TBD !!!
+
+Dependencies on OpenGL 3.1 and OpenGL 3.2
+
+    When using an OpenGL 3.1 context without support for the ARB_compatibility
+    extension or the core profile of OpenGL 3.2, remove the pseudocode
+    describing the operation of ArrayElement.  The core profile specifies
+    commands like DrawArrays and DrawElements more concisely.  Additionally,
+    remove edits relevant to (deleted) display list functionality.
+
+Dependencies on EXT_direct_state_access
+
+    If EXT_direct_state_access is not supported, references to the function
+    VertexArrayVertexAttribLOffsetEXT should be removed.
+
+Dependencies on NV_gpu_shader5
+
+    If NV_gpu_shader5 is not supported, references to the sized data types
+    provided by these extensions (e.g., int8_t, float16_t, u16vec4, f64vec2)
+    in Table X.1 should be removed.  The full set of types in the table is
+    provided for completeness.
+
+Dependencies on NV_vertex_attrib_integer_64bit
+
+    The extension NV_vertex_attrib_integer_64bit provides similar
+    VertexAttribL* support for 64-bit signed and unsigned integer vertex
+    shader inputs.  That extension also uses the VertexAttribLPointerEXT
+    function to specify 64-bit integer vertex attribute arrays.
+
+    Even if an application only uses 64-bit floating-point values in their
+    vertex shader, NV_vertex_attrib_integer_64bit may still be useful.  That
+    extension also provides the VertexAttribLFormatNV function, which allows
+    the "bindless" vertex attribute array support provided by the
+    NV_vertex_buffer_unified_memory extension to be used with 64-bit
+    components, integer or floating-point.
+
+Errors
+
+    For all VertexAttrib*EXT commands, the error INVALID_VALUE is generated if
+    <index> is greater than or equal to MAX_VERTEX_ATTRIBS.
+
+    For VertexAttribLPointerEXT, VertexAttribLFormatEXT, and
+    VertexArrayVertexAttribLOffsetEXT, the error INVALID_VALUE is generated if
+    <index> is greater than or equal to MAX_VERTEX_ATTRIBS.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) Should we allow 64-bit double-precision vertex attributes in the OpenGL
+        API?  If so, how should we handle 64-bit double-precision values?
+
+      RESOLVED:  Yes, we will allow vertex shader inputs to have any scalar
+      or vector type, including sized types.  Doubles appear to the API as any
+      other type.  The new 'L' versions of the entry points are added to
+      distinguish 64-bit attributes from existing DOUBLE support, where doubles
+      are down-converted to floats.
+
+    (2) How does the handling of 64-bit vertex attribute components in this
+        extension interact with the existing vertex attribute functions that
+        support doubles?
+
+      UNRESOLVED:  While it is possible for fixed-function pipeline
+      implementations to operate directly on doubles, most (if not all) such
+      implementations simply convert doubles to floats.  The OpenGL Shading
+      Language has not supported double-precision types to date, so all
+      previous shading language inputs needed to be converted to float by
+      necessity.
+
+      While it would be possible to support the existing double-precision
+      vertex APIs (e.g., VertexAttrib4dv) to feed shading language variables
+      with double-precision types, any such approach involves the prohibitive
+      dynamic typing overhead discussed above.  As a result, we chose to
+      create a parallel VertexAttribL* API.  
+
+      A similar approach was chosen for the integer attributes in OpenGL 3.0,
+      where there was a pre-existing set of vertex APIs that accepted integers
+      that were converted to floating-point values via straight value
+      conversion or normalization.  Re-using existing integer APIs to feed the
+      (new) integer variable types would have required similarly expensive
+      dynamic typing.
+
+    (3) How should we handle vertex attributes for three- and four-component
+        vectors with double-precision components?  How do we support these
+        with vertex arrays?
+
+      RESOLVED:  Double-precision attributes may end up consuming twice as
+      many 'slots' as their single precision counterparts.  Counting rules are
+      spelled out in this document.  The actual allocation of these slots is
+      virtualized by the driver and at the API level, they appear as
+      attributes of any other type would.
+
+      Note that implementations are permitted (but not required) to count
+      double-precision vertex shader inputs as consuming no more input vectors
+      than corresponding single-precision types.
+
+    (4) Are default values supported for vertex attributes with 64-bit
+        components?
+
+      RESOLVED:  No.  With existing APIs, calling VertexAttrib3f() defines a
+      FOUR-component vector where the fourth component assumes the value 1.0.
+      No such defaults are provided for 64-bit components; if you load the
+      values of an attribute of type "dvec4" with VertexAttribL3dv(), the
+      value of the fourth component of the attribute variable will be
+      undefined.
+
+      The APIs for loading 64-bit vertex attributes were designed to limit the
+      amount of data type conversion required of the implementation; providing
+      new type-dependent default values runs contrary to that design.  
+
+      Note that the original defaults were present in part to accommodate
+      fixed-function vertex and fragment processing, where certain operations
+      were defined in the most general form but reasonable defaults allowed
+      targeted optimizations.  For example, vertex transformations were
+      defined to operate on four-component object coordinates, even though
+      four-component input positions are relatively rare.  Specifying a
+      default W value of 1.0 allows for a fully-general implementation that
+      doesn't need to do special cases based on the input position, but can
+      still choose to do so as an optimization.  Programmable shaders, on the
+      other hand, can easily be written to ignore irrelevant components and
+      substitute constants themselves.
+
+    (5) Should this have a separate extension string entry or be simply
+        implied by extensions such as ARB_gpu_shader5 or ARB_gpu_shader_fp64?
+
+      RESOLVED:  Treat as a separate extension, since there may be several
+      such extensions with varying capabilities.
+
+      Additionally, we provide a separate GLSL "#extension" identifier for
+      this extension because ARB_gpu_shader_fp64 was adopted without support
+      for vertex inputs with 64-bit components.
+
+    (6) How does this extension provide 64-bit vertex attribute components for
+        assembly programs supported by NV_gpu_program5?
+
+      RESOLVED:  NV_gpu_program5 allows programs to declare input variables
+      with 64-bit components using the "LONG ATTRIB" declaration syntax.
+      These inputs will be matched up against corresponding vertex attributes
+      in the same manner as with GLSL.  Also, as with GLSL, the values of each
+      vertex program input must be specified with the correct API function
+      (VertexAttrib* vs. VertexAttribL*).
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     5    03/21/10  pbrown    Minor wording updates to the spec overview, 
+                              dependencies, issues, and body.
+
+     4    01/29/10  pbrown    Update extension to accomodate the removal of
+                              fp64 vertex inputs from ARB_gpu_shader_fp64 (bug
+                              5953).  The API support for enumerating fp64
+                              inputs and the GLSL support allowing fp64 vertex
+                              inputs now belongs to this extension.  For the
+                              GLSL support, we add a "#extension" token to
+                              specify that fp64 vertex inputs should be
+                              allowed.  Also, update several issues.
+
+     3              gsellers  Updates based on discussion
+
+     2              gsellers  EXT'ify.
+
+     1              pbrown    Internal revisions.
+
+

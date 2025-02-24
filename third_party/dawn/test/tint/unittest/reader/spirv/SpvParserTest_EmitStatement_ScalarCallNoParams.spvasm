@@ -1,0 +1,25 @@
+; Test: SpvParserTest_EmitStatement_ScalarCallNoParams.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "x_100"
+OpExecutionMode %100 OriginUpperLeft
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%uint = OpTypeInt 32 0
+%5 = OpTypeFunction %uint
+%uint_42 = OpConstant %uint 42
+%50 = OpFunction %uint None %5
+%7 = OpLabel
+OpReturnValue %uint_42
+OpFunctionEnd
+%100 = OpFunction %void None %3
+%8 = OpLabel
+%1 = OpFunctionCall %uint %50
+OpReturn
+OpFunctionEnd
+

@@ -1,0 +1,166 @@
+Name
+
+    NV_delay_before_swap
+
+Name Strings
+
+    WGL_NV_delay_before_swap
+
+Contributors
+
+    Jeannot Breton, NVIDIA
+    Eric Werness, NVIDIA
+    Andy Ritger, NVIDIA
+    James Jones, NVIDIA
+    Cass Everitt, NVIDIA
+    John Carmack, id Software
+
+Contact
+
+    Jeannot Breton, NVIDIA Corporation (jbreton 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         02/04/2013
+    Revision:                   2
+
+Number
+
+    OpenGL Extension #436
+
+Dependencies
+
+    OpenGL 2.1 is required.
+
+Overview
+
+    For most interactive applications, the standard rendering loop responding
+    to input events on a frame granularity is sufficient.  Some more demanding
+    applications may want to exchange performance for the ability to sample
+    input closer to the final frame swap and adjust rendering accordingly. 
+    This extension adds functionality to allow the application to wait until a
+    specified time before a swapbuffers command would be able to execute.
+    
+    
+New Procedures and Functions
+
+    BOOL wglDelayBeforeSwapNV(HDC hDC, GLfloat seconds)
+
+    
+New Tokens
+
+    None
+
+Additions to the WGL Specification
+
+        BOOL wglDelayBeforeSwapNV(HDC hDC, GLfloat seconds)
+
+    wglDelayBeforeSwapNV blocks the CPU until <seconds> seconds before a
+    synchronized swap would occur on the window associated with <hDC>.  It also
+    returns a boolean value equal to TRUE when the implementation had to wait
+    for the synchronized swap and FALSE otherwise.
+    
+    The parameter <hDC> must be a valid device context associated with a
+    graphic adapter.  If <hDC> is not valid, GetLastError will return 
+    WGL_INVALID_HDC, wglDelayBeforeSwapNV will return FALSE and will not wait
+    for the swap.  If <hDC> is not associated with a graphic adapter,
+    GetLastError will return ERROR_DC_NOT_FOUND, wglDelayBeforeSwapNV will
+    return FALSE and will not wait for the swap.
+
+    The parameter <seconds> accepts positive floating point values not larger
+    than the length in seconds of the swap period on the associated window.
+    When buffer swaps are synchronized, the swap period is composed of one or
+    multiple video frame periods.  A video frame period is the time required by
+    the monitor to display a full frame of video data.  A swap interval set to
+    a value of 2 means that the color buffers will be swapped at most every
+    other video frame.  If <seconds> is smaller than 0, GetLastError will
+    return ERROR_INVALID_DATA, wglDelayBeforeSwapNV will return FALSE and will
+    not wait for the end of the swap period.  If <seconds> is greater than a 
+    swap period, wglDelayBeforeSwapNV will return immediately without 
+    generating any error and the return value will be FALSE. 
+
+    The application should use a <seconds> delay large enough to have time to
+    complete its work before the end of the swap period.  If <seconds> is close
+    to 0.0, the application may miss the end of the swap period and it will
+    have to wait an additional swap period before it can swap.
+    
+    If wglDelayBeforeSwapNV detects that there is less than <seconds> seconds
+    before the end of the swap period, it will return immediately and the 
+    return value will be FALSE. The implementation will not wait an additional
+    video frame period to have an exact delay of <seconds> seconds.
+
+    If buffer swaps are unsynchronized, wglDelayBeforeSwapNV will return
+    immediately and the return value will be FALSE.  It could happen for
+    multiple reasons, for example if the swap interval is equal to 0, if the
+    window is in a mode switch or if no monitors are active.
+
+
+Usage Examples
+
+    Here is a simple example that shows how an application can use
+    WGL_NV_delay_before_swap to lower input latency when rendering its frames.
+
+    void DrawFrame()
+    {
+        // Render the slowest part of the frame
+        DrawScene();
+        // Make sure there's no remaining work on the GPU
+        glFinish();
+        // Wait for the end of the swap period
+        wglDelayBeforeSwapNV(hDC, 0.0015);
+        
+        // Sample inputs and adjust the image before the SwapBuffer
+        
+        SwapBuffer(hDC); 
+    }
+    
+Issues
+
+    (1) What happens if wglDelayBeforeSwapNV is called and the <seconds> delay
+        is larger than the time left until the end of the swap period?
+       
+        RESOLVED.  The function returns immediately.  We also added a return
+        value to wglDelayBeforeSwapNV to help the application detects this
+        situation.  When wglDelayBeforeSwapNV returns FALSE, but didn't
+        generate any error, it means that it didn't have to wait because it got
+        called less than <seconds> seconds before the end of the swap period.
+
+    (2) Should we add a function that return the amount of time until the end
+        of the swap period?
+        
+        RESOLVED.  It would be nice to know exactly when the current swap
+        period is going to end, but in some configurations it's not possible
+        to return a value that we can guarantee will always be accurate.
+
+    (3) How does wglDelayBeforeSwapNV interact with WGL_EXT_swap_control_tear?
+
+    	RESOLVED. wglDelayBeforeSwapNV always attempts to stall until the
+    	specified time before the SwapBuffers command could complete. With
+    	swap_control_tear, the swap will wait until a fixed swap period if
+    	possible, but perform an unsynchronized swap otherwise. If the
+    	swapbuffers would wait, then wglDelayBeforeSwapNV will wait similarly if
+    	required, but if the swap period is already past and the swapbuffers
+    	would execute unsynchronized, then wglDelayBeforeSwapNV would return
+    	immediately.
+
+    (4) Why does this extension delay before execution of SwapBuffers rather
+        than on a potential swap period?
+
+	RESOLVED. Given that the expected use case is to wait until before the
+	SwapBuffers would execute to sample input, having any cases where the
+	behavior of the delay mismatches the behavior of the swap (such as
+	swap_control_tear or swap_interval!=1) can cause significant issues in
+	when the input is sampled.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     2    02/04/13  jbreton    Add a return value to wglDelayBeforeSwapNV.
+                               Add an example and issues (1) and (2)
+     
+     1    01/29/13  jbreton    Internal revisions.

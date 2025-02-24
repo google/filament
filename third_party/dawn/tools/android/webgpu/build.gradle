@@ -1,0 +1,133 @@
+// Copyright 2024 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+plugins {
+    id 'com.android.library'
+    id 'maven-publish'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.android.application' apply false
+}
+
+android {
+    namespace 'net.android.webgpu'
+    defaultConfig {
+        minSdkVersion 26
+        compileSdk 34
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_shared'
+                version '3.22.1'
+                targets 'webgpu_c_bundled', 'webgpu_wrapper_tests'
+            }
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+        }
+    }
+    buildFeatures {
+        prefab true
+        prefabPublishing true
+    }
+    prefab {
+        webgpu_c_bundled {
+            headers "src/main/cpp/gen/include"
+        }
+        webgpu_wrapper_tests {
+            name "webgpu_wrapper_tests"
+        }
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    kotlin {
+        explicitApi()
+    }
+    compileOptions {
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    sourceSets {
+        main {
+            java.srcDirs += "$project.projectDir/../../../out/Debug/gen/java"
+        }
+    }
+    packagingOptions {
+        pickFirst 'lib/x86/libc++_shared.so'
+        pickFirst 'lib/x86_64/libc++_shared.so'
+        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
+        pickFirst 'lib/arm64-v8a/libc++_shared.so'
+    }
+    ndkVersion '27.0.12077973'
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.test.ext:junit-gtest:1.0.0-alpha01'
+    implementation 'com.android.ndk.thirdparty:googletest:1.11.0-beta-1'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.reflections:reflections:0.10.2'
+    testImplementation("org.jetbrains.kotlin:kotlin-reflect")
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
+    testImplementation("org.mockito:mockito-core:5.12.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.3.1")
+
+    androidTestImplementation 'androidx.test.ext:junit-ktx:1.2.1'
+    androidTestImplementation 'androidx.test:runner:1.6.1'
+    androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4'
+}
+
+project.afterEvaluate {
+    publishing {
+        publications {
+            libraryProject(MavenPublication) {
+                setGroupId 'net.android'
+                setArtifactId 'webgpu'
+                version '1.1.34'
+                artifact bundleReleaseAar
+            }
+        }
+    }
+}
+
+tasks.register('generateBindings', Exec) {
+    workingDir('../../..')
+    commandLine 'python3', 'generator/dawn_json_generator.py',
+    '--template-dir', 'generator/templates',
+    '--output-dir', "$project.projectDir/../../../out/Debug/gen",
+    '--dawn-json', 'src/dawn/dawn.json',
+    '--targets', 'kotlin',
+    '--kotlin-json', 'src/dawn/dawn_kotlin.json',
+    '--jinja2-path', 'third_party/jinja2'
+}
+
+preBuild {
+    dependsOn generateBindings
+}

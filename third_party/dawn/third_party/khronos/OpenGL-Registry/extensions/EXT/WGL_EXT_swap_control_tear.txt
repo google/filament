@@ -1,0 +1,124 @@
+Name
+
+    EXT_swap_control_tear
+
+Name Strings
+
+    WGL_EXT_swap_control_tear
+    
+Contact
+
+    Piers Daniell, NVIDIA (pdaniell 'at' nvidia.com)
+    
+Contributors
+
+    Antonio Tejada, NVIDIA
+    Jeff Bolz, NVIDIA
+    Pat Brown, NVIDIA
+    Udo Lugauer, NVIDIA
+
+Status
+
+    Complete. Shipping with NVIDIA Forceware 285.62 and AMD Catalyst 11.10
+    drivers. 
+
+Version
+
+    Last Modified Date:         03/16/2011
+    Author revision:            1
+
+Number
+
+    415
+
+Dependencies
+
+    WGL_EXT_extensions_string is required.
+    
+    WGL_EXT_swap_control is required.
+
+Overview
+
+    This extension extends the existing WGL_EXT_swap_control extension
+    by allowing a negative <interval> parameter to wglSwapIntervalEXT.
+    The negative <interval> allows late swaps to occur without
+    synchronization to the video frame. This reduces the visual stutter
+    on late frames and reduces the stall on subsequent frames.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to the WGL Specification
+
+    In the section that starts:
+
+    "wglSwapIntervalEXT specifies the minimum number of video frame periods
+    per buffer swap for the window associated with the current context."
+
+    After the following paragraph:
+
+    "If <interval> is set to a value of 0, buffer swaps are not synchron-
+    ized to a video frame.  The <interval> value is silently clamped to
+    the maximum implementation-dependent value supported before being
+    stored."
+
+    Add the following paragraph:
+
+    "If <interval> is negative, the minimum number of video frames between
+    buffer swaps is the absolute value of <interval>. In this case, if 
+    abs(<interval>) video frames have already passed from the previous swap 
+    when the swap is ready to be performed, the swap will occur without
+    synchronization to a video frame. When an unsynchronized swap happens,
+    the missed frame will count towards the minimum number of video frames
+    for the next swap."
+
+Dependencies on WGL_EXT_extensions_string
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress.  Because this extension is a WGL extension, it
+    is not included in the GL_EXTENSIONS string.  Its existence can be
+    determined with the WGL_EXT_extensions_string extension.
+
+Errors
+
+    In the section that starts:
+
+    "If the function succeeds, the return value is TRUE. If the function
+    fails, the return value is FALSE.  To get extended error information,
+    call GetLastError."
+    
+    Remove the following error:
+
+       ERROR_INVALID_DATA      The <interval> parameter is negative.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    1) This extension doesn't provide a way to know when a video frame was
+       missed and an unsynchronized swap was performed.
+    
+       UNRESOLVED: This extensions isn't meant to solve the issue of repeated
+       tearing if the application falls behind the vsync. This extension just
+       eliminates the extra stall that will occur if the application misses
+       the target vsync. The application can use a CPU timer or the GL timer
+       queries to determine if it is falling behind continually and can
+       adjust it's workload appropriatly.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+      1   03/16/11  pdaniell  Initial version.

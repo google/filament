@@ -1,0 +1,291 @@
+Name
+
+    AMD_transform_feedback4
+
+Name Strings
+
+    GL_AMD_transform_feedback4
+
+Contributors
+
+    Graham Sellers, AMD
+    Eric Zolnowski, AMD
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         31/04/2014
+    Author Revision:            5
+
+Number
+
+    OpenGL Extension #450
+
+Dependencies
+
+    OpenGL 4.0 or ARB_transform_feedback3 is required.
+
+    This extension is written against the OpenGL Specification, Version 4.4
+    (Core Profile).
+
+    This extension is written against the OpenGL Shading Language (GLSL)
+    Specification, Version 4.40
+
+Overview
+
+    Transform feedback is a mechanism to record the output of the vertex,
+    tessellation evaluation or geometry shader into one or more buffers for
+    further processing, recursive rendering or read-back by the client.
+    ARB_transform_feedback3 (and OpenGL 4.0) extended the transform feedback
+    subsystem to allow multiple streams of primitive information to be
+    captured. However, it imposed a limitation that the primitive type for all
+    streams must be POINTS if more than one stream is to be captured.
+    AMD_transform_feedback3_lines_triangles relaxed that restriction to allow
+    lines or triangles to be captured, in the case where multiple streams are
+    to be processed. However, it still required that all streams share the same
+    primitive type. Additionally, with all current extensions to transform
+    feedback, only a single primitive stream may be rasterized.
+
+    This extension enhances transform feedback in two significant ways. First,
+    it allows multiple transform feedback streams to be captured, each with its
+    own, independent primitve type. Second, it allows any combination of streams
+    to be rasterized. As an example, this enables the geometry shader to take
+    a single stream of triangle geometry and emit filled triangles with a
+    wireframe outline and a point at each vertex, all in a single pass through
+    the input vertices. Combined with features such those provided by
+    ARB_viewport_array, layered rendering, shader subroutines and so on, an
+    application can render several views of its geoemtry, each with a
+    radically different style, all in a single pass.
+
+IP Status
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <pname> parameter of Enablei, Disablei and IsEnabledi:
+
+        STREAM_RASTERIZATION_AMD                        0x91A0
+
+Additions to Chapter 11 of the OpenGL 4.4 (Core Profile) Specification
+(Programmable Vertex Processing)
+
+    Modify subsection 11.3.4.3, "Geometry Shader Vertex Streams":
+
+    Replace the second to last paragraph of the subsection with:
+
+        The primitives emitted to all vertex streams are passed to the transform
+    feedback stage to be captured and written to buffer objects in the manner
+    specified by the transform feedback state. The primitives emitted to vertex
+    streams for which rasterization is enabled are then passed to subsequent
+    pipeline stages for clipping, rasterization, and subsequent fragment
+    processing.
+
+    Replace the last paragraph of the subsection with:
+
+        Geometry shaders that emit vertices to multiple vertex streams may
+    generate a different primitive type on each stream. Any combination of
+    streams may be rasterized (see Section 3.1). This allows a geometry shader
+    to transform a single input vertex stream into multiple primitives of
+    different types, all of which may be rasterized.
+
+Additions to Chapter 14 of the OpenGL 4.4 (Core Profile) Specification
+(Fixed-Function Primitive Assembly and Rasterization)
+
+    Modify Section 14.1 "Discarding Primitives Before Rasterization", p. 409:
+
+        Primitives sent to any vertex stream (see section 13.2) may be processed
+    further. When geometry shaders are disabled, all vertices are considered
+    to be emitted to stream zero.
+        Primitives can be optionally discarded before rasterization but after
+    the optional transform feedback stage (see section 13.2). All primitives
+    may be discarded by calling Enable with RASTERIZER_DISCARD. When enabled,
+    primitives emitted to any stream are discarded. When enabled,
+    RASTERIZER_DISCARD also causes the Clear and ClearBuffer* commands to be
+    ignored. When RASTERIZER_DISCARD is disabled, primitives emitted on streams
+    for which rasterization is enabled are passed through to the rasterization
+    stage to be processed normally. Rasterization for specific streams may be
+    enabled by calling Enablei (or disabled by calling Disablei) with the
+    constant STREAM_RASTERIZATION_AMD and the index of the selected stream.
+    Initially, rasterization is enabled for stream zero and is disabled for all
+    other streams.
+        If primitives are emitted on more than one stream for which
+    rasterization is enabled, the order of rasterization of primitives on
+    different streams is undefined. However, it is guaranteed that all
+    primitives emitted on a single stream are rasterized in the order in which
+    they are generated, and that all primitives generated by a single invocation
+    of a geometry shader are rasterized in stream order, starting with the
+    lowest numbered stream.
+
+Additions to Chapter 15 of the OpenGL 4.4 (Core Profile) Specification
+(Programmable Fragment Processing)
+
+    Modify Section 15.2, "Shader Execution"
+
+    Insert the following paragraph to subsection 15.2.2, "Shader Inputs",
+    after the paragraph describing gl_SamplePosition on p. 433:
+
+        The built-in read-only variable gl_StreamID contains the index of the
+    vertex stream from which the vertices forming the primitive currently being
+    rasterized were taken. User defined input varying variables belonging to
+    this stream have defined values, whilst all other user defined input
+    variables are undefined. When no geometry shader is active, gl_StreamID
+    is zero. When a geometry shader is active and writes to multiple output
+    vertex streams for which rasterization is enabled, gl_StreamID may range
+    from zero to the value of MAX_VERTEX_STREAMS - 1.
+
+Modifications to Chapter 4 of the OpenGL Shading Language Specification,
+Version 4.40 (Variables and Types)
+
+    Append to the end of Section 4.4.1 "Input Layout Qualifiers"
+
+        The identifier <stream> is used to specify that a fragment shader input
+    variable or block is associated with a particular vertex stream (numbered
+    beginning with zero). A default stream number may be declared at global
+    scope by qualifying interface qualifier out as in this example:
+
+        layout (stream = 1) in;
+
+        The stream number specified in such a declaration replaces any previous
+    default and applies to all subsequent block and variable declarations until
+    a new default is established. The initial default stream number is zero.
+
+        Each input block or non-block input variable is associated with a
+    vertex stream. If the block or variable is declared with the <stream>
+    identifier, it is associated with the specified stream; otherwise, it is
+    associated with the current default stream. A block member may be declared
+    with a stream identifier, but the specified stream must match the stream
+    associated with the containing block. One example:
+
+        layout (stream = 1) in;            // default is now stream 1
+        out vec4 var1;                     // var1 belongs to default stream (1)
+        layout (stream = 2) in Block1 {    // "Block1" belongs to stream 2
+            layout (stream = 2) vec4 var2; // redundant block member stream decl
+            layout (stream = 3) vec2 var3; // ILLEGAL (must match block stream)
+            vec3 var4;                     // belongs to stream 2
+        };
+        layout (stream = 0) in;             // default is now stream 0
+        in vec4 var5;                       // var5 belongs to default stream (0)
+        in Block2 {                         // "Block2" belongs to default stream (0)
+            vec4 var6;
+        };
+        layout ( stream = 3) in vec4 var7;  // var7 belongs to stream 3
+
+        Each fragment processed by the fragment shader receives its input
+    variables from a specific stream corresponding to the stream upon which the
+    source vertices were emitted in the geometry shader.  Each invocation of
+    the fragment shader processes a fragment belonging to a primitive generated
+    from vertices emitted to a single stream. The index of the stream to which
+    these vertices belong is available in the built-in variable gl_StreamID
+    (see Section 7.1, "Built-in Language Variables"). Only those input variables
+    belonging to the current stream have defined values. Reading from a variable
+    belonging to any other stream may cause undefined behavior, including
+    program termination.
+
+Modifications to Chapter 7 of the OpenGL Shading Language Specification,
+Version 4.40 (Built-in Variables)
+
+    Add to the list of built-in variables in the fragment language, sec. 7.1,
+    p.122.
+
+        in int gl_StreamID;
+
+    Insert the following paragraph after the description of gl_SamplePosition
+    on p.122:
+
+    The input variable gl_StreamID indicates the vertex stream from which
+    vertices were taken to generate the primitive to which the current fragment
+    belongs. This information may be used to deduce which of the fragment
+    shader input variables contain defined values. Reading from input variables
+    belonging to a vertex stream other than that indicated by gl_StreamID
+    may produce undefined behavior, possibly including application termination.
+
+Modifications to Chapter 8 of the OpenGL Shading Language Specification,
+Version 4.40 (Built-in Functions)
+
+    Remove the final paragraph of section 8.15 "Geometry Shader Functions" on
+    p.180, which disallows shaders with multiple streams that are not all
+    set to POINTS primitive type.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    INVALID_VALUE is generated by Enablei, Disablei and IsEnabledi if <target>
+    is STREAM_RASTERIZATION_AMD and <index> is greater than or equal to
+    MAX_VERTEX_STREAMS_AMD.
+
+New State
+
+    Append to table 23.9, Rasterization
+
+    +---------------------------------------------------+-----------+-------------------+---------------+-----------------------------------------------+-------+
+    |                                                   |           | Get               | Initial       |                                               |       |
+    | Get Value                                         | Type      | Command           | Value         | Description                                   | Sec.  |
+    +---------------------------------------------------+-----------+-------------------+---------------+-----------------------------------------------+-------+
+    | STREAM_RASTERIZATION_AMD                          | nxB       | GetBoolean        | See 14.1      | Per stream rasterizer enable                  | 14.1  |
+    +---------------------------------------------------+-----------+-------------------+---------------+-----------------------------------------------+-------+
+
+Issues
+
+    1) Why is rasterization order undefined?
+
+    DISCUSSION: Implementations typically break large draws into chunks and
+    process each separately. Within each chunk, the rasterization order is
+    guaranteed. Between chunks, ordering is also guaranteed - everything in
+    early chunks is rasterized before later chunks. However, this means
+    that primitives emitted to higher numbered streams in early chunks will
+    be rasterized before primitives emitted to lower numbered streams in
+    later chunks. Because the boundaries between chunks are not necessarily
+    in fixed positions, it is not possible to specify where they will be and
+    therefore guarantee rasterization order.
+
+    2) Is this still useful then?
+
+    RESOLVED: Yes, sure. If rendering is order independent (depth test on,
+    blending off for example), or can be guaranteed to not overlap (viewport
+    arrays, layered rendering and so on), it makes no difference whether
+    rasterization order between streams is guaranteed or not.
+
+    3) What's the need for multiple 'streams' in the fragment shader?
+
+    DISCUSSION: In unextended OpenGL, the inputs to the fragment shader are
+    derived from the vertices generated on stream 0 in the geometry shader
+    (the vertex shader always writes to stream 0). When multiple streams can
+    be rasterized, the fragment shader can be invoked as part of a primitive
+    on any stream. As each stream can have wildly different outputs in the
+    geometry shader, it is really not possible to have only a single set
+    of inputs in the fragment shader. Therefore, we expose each stream
+    independently. Only those variables written by the geometry shader on the
+    stream from which the current primitive was generated will be defined,
+    and the others will likely have garbage in them (aliases of the real
+    variables). That stream is given by the new gl_StreamID built-in in the
+    fragment shader. Other built-in variables (such as gl_FragCoord) are
+    always available on any stream.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  ----------  --------  -----------------------------------------
+    5     31/04/2014  gsellers  Update for OpenGL 4.4, ready for posting.
+    4     12/03/2012  gsellers  Update against OpenGL 4.3.
+    3     05/01/2011  gsellers  Assign enumerants
+    2     10/14/2010  gsellers  Add fragment shader streams.
+    1     10/11/2010  gsellers  Initial revision

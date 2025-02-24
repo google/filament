@@ -1,0 +1,52 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 21
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %u_block 0 "inner"
+               OpName %u_block "u_block"
+               OpMemberName %s_block 0 "inner"
+               OpName %s_block "s_block"
+               OpName %main "main"
+               OpName %x "x"
+               OpMemberDecorate %u_block 0 Offset 0
+               OpMemberDecorate %u_block 0 ColMajor
+               OpMemberDecorate %u_block 0 MatrixStride 16
+               OpDecorate %u_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpMemberDecorate %s_block 0 Offset 0
+               OpMemberDecorate %s_block 0 ColMajor
+               OpMemberDecorate %s_block 0 MatrixStride 16
+               OpDecorate %s_block Block
+               OpDecorate %7 DescriptorSet 0
+               OpDecorate %7 Binding 1
+               OpDecorate %7 Coherent
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%mat4v4float = OpTypeMatrix %v4float 4
+    %u_block = OpTypeStruct %mat4v4float
+%_ptr_Uniform_u_block = OpTypePointer Uniform %u_block
+          %1 = OpVariable %_ptr_Uniform_u_block Uniform
+    %s_block = OpTypeStruct %mat4v4float
+%_ptr_StorageBuffer_s_block = OpTypePointer StorageBuffer %s_block
+          %7 = OpVariable %_ptr_StorageBuffer_s_block StorageBuffer
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+%_ptr_Uniform_mat4v4float = OpTypePointer Uniform %mat4v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_mat4v4float = OpTypePointer StorageBuffer %mat4v4float
+       %main = OpFunction %void None %12
+         %13 = OpLabel
+         %14 = OpAccessChain %_ptr_Uniform_mat4v4float %1 %uint_0
+          %x = OpLoad %mat4v4float %14 None
+         %19 = OpAccessChain %_ptr_StorageBuffer_mat4v4float %7 %uint_0
+               OpStore %19 %x None
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,164 @@
+Name
+
+    AMD_shader_stencil_value_export
+
+Name Strings
+
+    GL_AMD_shader_stencil_value_export
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         12/12/2013
+    Author Revision:            2
+
+Number
+
+    OpenGL Extension #444
+
+Dependencies
+
+    OpenGL 2.0 or ARB_fragment_shader is required.
+
+    The AMD_shader_stencil_export extension affects the definition of this
+    extension.
+
+    The AMD_stencil_operation_extended extension is required.
+
+    This extension is written against the OpenGL Shading Language (GLSL)
+    Specification, Version 4.00.7.
+
+Overview
+
+    OpenGL includes stencil testing functionality that allows an application
+    specified value (the reference value) to be compared against the content
+    of a stencil buffer and fragments kept or discarded based on the results
+    of this test. In addition to updating the stencil buffer with simple
+    operations such as inversion or incrementation, this reference value may be
+    written directly into the stencil buffer.
+
+        AMD_stencil_operation_extended further extended the number of
+    operations that may be performed on the stencil buffer to include logical
+    and arithmetic operations. It also introduced new state, the stencil
+    operation source value, to allow these new operations to be performed on
+    the stencil buffer using an application supplied constant value as a source
+    value, rather than the reference value used in the stencil test.
+
+        The AMD_shader_stencil_export extension allowed the reference value
+    used for the stencil test to be generated and exported from a fragment
+    shader. This extension provides similar functionality for the stencil
+    operation source value, allowing it to be generated in and exported from
+    the fragment shader too.
+
+IP Status
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Modifications to the OpenGL 4.0 (Core Profile) Specification
+
+    None.
+
+Modifications to Chapter 3 of the OpenGL Shading Language Specification,
+Version 4.00.7
+
+    Add new Section 3.3.x, GL_AMD_shader_stencil_value_export Extension, p.15
+
+    3.3.x GL_AMD_shader_stencil_value_export
+
+    To use the GL_AMD_shader_stencil_value_export extension in a shader it must
+    be enabled using the #extension directive.
+
+    The shading language preprocessor #define GL_AMD_shader_stencil_value_export
+    will be defined to 1 if the GL_AMD_shader_stencil_value_export extension is
+    supported.
+
+Modifications to Chapter 7 of the OpenGL Shading Language Specification,
+Version 4.00.7 (Built-in Variables)
+
+    Modify Section 7.1, "Built-in Language Variables":
+
+    Add to the list of built-in special variables for the fragment language,
+    p.86:
+
+        out int gl_FragStencilValueAMD;
+
+    Insert the following paragraph, after the paragraph describing
+    gl_FragStencilRefAMD (as introduced by AMD_shader_stencil_export) on p.89:
+
+    Writing to gl_FragStencilValueAMD will establish the stencil operation
+    source value for the fragment being processed. Only the least significant
+    STENCIL_BITS bits of the integer gl_FragStencilValueAMD are considered and
+    higher order bits are discarded. If stencil buffering is enabled and no
+    shader writes to gl_FragStencilValueAMD, the fixed function value for
+    stencil operation source will be used as the fragment's stencil operation
+    source value. If a shader statically assignes a value to
+    gl_FragStencilValueAMD, and there is an execution path through the shader
+    that does not set gl_FragStencilValueAMD, then the value of the fragment's
+    stencil operation source value may be undefined for executions of the
+    shader that take that path. That is, if the set of linked shaders
+    statically contain a write to gl_FragStencilValueAMD, then it is
+    responsible for always writing it.
+
+    Modify the paragraph on p.89, describing the 'discard' keyword:
+
+    If a shader executes the discard keyword, the fragment is discarded, and
+    the values of any user-defined fragment outputs, gl_FragDepth,
+    gl_FragStencilRefAMD, and gl_FragStencilValueAMD become irrelevant.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Dependencies on AMD_shader_stencil_export
+
+    If AMD_shader_stencil_export is not supported, remove all references to
+    gl_FragStencilRefAMD.
+
+Issues
+
+    1) What is the behavior of gl_FragStencilValueAMD with respect to masks,
+       significant bits and so on?
+
+    The behavior of the value written to gl_FragStencilValueAMD is the same
+    as that of the fixed function value set through glStencilOpValueAMD. That
+    is, the value is not masked until the result of the operation is written
+    to the stencil buffer. Bits that cannot be represented by the stencil
+    buffer are simply discarded.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  ----------  --------  -----------------------------------------
+    2     12/12/2013  gsellers  Minor cleanup ready for posting.
+    1     06/10/2010  gsellers  Initial revision

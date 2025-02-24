@@ -1,0 +1,215 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 106
+; Schema: 0
+               OpCapability Shader
+               OpCapability StorageImageExtendedFormats
+               OpCapability ImageQuery
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %t_rgba8unorm "t_rgba8unorm"
+               OpName %t_rgba8snorm "t_rgba8snorm"
+               OpName %t_rgba8uint "t_rgba8uint"
+               OpName %t_rgba8sint "t_rgba8sint"
+               OpName %t_rgba16uint "t_rgba16uint"
+               OpName %t_rgba16sint "t_rgba16sint"
+               OpName %t_rgba16float "t_rgba16float"
+               OpName %t_r32uint "t_r32uint"
+               OpName %t_r32sint "t_r32sint"
+               OpName %t_r32float "t_r32float"
+               OpName %t_rg32uint "t_rg32uint"
+               OpName %t_rg32sint "t_rg32sint"
+               OpName %t_rg32float "t_rg32float"
+               OpName %t_rgba32uint "t_rgba32uint"
+               OpName %t_rgba32sint "t_rgba32sint"
+               OpName %t_rgba32float "t_rgba32float"
+               OpName %main "main"
+               OpName %dim1 "dim1"
+               OpName %dim2 "dim2"
+               OpName %dim3 "dim3"
+               OpName %dim4 "dim4"
+               OpName %dim5 "dim5"
+               OpName %dim6 "dim6"
+               OpName %dim7 "dim7"
+               OpName %dim8 "dim8"
+               OpName %dim9 "dim9"
+               OpName %dim10 "dim10"
+               OpName %dim11 "dim11"
+               OpName %dim12 "dim12"
+               OpName %dim13 "dim13"
+               OpName %dim14 "dim14"
+               OpName %dim15 "dim15"
+               OpName %dim16 "dim16"
+               OpDecorate %t_rgba8unorm DescriptorSet 0
+               OpDecorate %t_rgba8unorm Binding 0
+               OpDecorate %t_rgba8unorm NonReadable
+               OpDecorate %t_rgba8snorm DescriptorSet 0
+               OpDecorate %t_rgba8snorm Binding 1
+               OpDecorate %t_rgba8snorm NonReadable
+               OpDecorate %t_rgba8uint DescriptorSet 0
+               OpDecorate %t_rgba8uint Binding 2
+               OpDecorate %t_rgba8uint NonReadable
+               OpDecorate %t_rgba8sint DescriptorSet 0
+               OpDecorate %t_rgba8sint Binding 3
+               OpDecorate %t_rgba8sint NonReadable
+               OpDecorate %t_rgba16uint DescriptorSet 0
+               OpDecorate %t_rgba16uint Binding 4
+               OpDecorate %t_rgba16uint NonReadable
+               OpDecorate %t_rgba16sint DescriptorSet 0
+               OpDecorate %t_rgba16sint Binding 5
+               OpDecorate %t_rgba16sint NonReadable
+               OpDecorate %t_rgba16float DescriptorSet 0
+               OpDecorate %t_rgba16float Binding 6
+               OpDecorate %t_rgba16float NonReadable
+               OpDecorate %t_r32uint DescriptorSet 0
+               OpDecorate %t_r32uint Binding 7
+               OpDecorate %t_r32uint NonReadable
+               OpDecorate %t_r32sint DescriptorSet 0
+               OpDecorate %t_r32sint Binding 8
+               OpDecorate %t_r32sint NonReadable
+               OpDecorate %t_r32float DescriptorSet 0
+               OpDecorate %t_r32float Binding 9
+               OpDecorate %t_r32float NonReadable
+               OpDecorate %t_rg32uint DescriptorSet 0
+               OpDecorate %t_rg32uint Binding 10
+               OpDecorate %t_rg32uint NonReadable
+               OpDecorate %t_rg32sint DescriptorSet 0
+               OpDecorate %t_rg32sint Binding 11
+               OpDecorate %t_rg32sint NonReadable
+               OpDecorate %t_rg32float DescriptorSet 0
+               OpDecorate %t_rg32float Binding 12
+               OpDecorate %t_rg32float NonReadable
+               OpDecorate %t_rgba32uint DescriptorSet 0
+               OpDecorate %t_rgba32uint Binding 13
+               OpDecorate %t_rgba32uint NonReadable
+               OpDecorate %t_rgba32sint DescriptorSet 0
+               OpDecorate %t_rgba32sint Binding 14
+               OpDecorate %t_rgba32sint NonReadable
+               OpDecorate %t_rgba32float DescriptorSet 0
+               OpDecorate %t_rgba32float Binding 15
+               OpDecorate %t_rgba32float NonReadable
+      %float = OpTypeFloat 32
+          %3 = OpTypeImage %float 3D 0 0 0 2 Rgba8
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+%t_rgba8unorm = OpVariable %_ptr_UniformConstant_3 UniformConstant
+          %7 = OpTypeImage %float 3D 0 0 0 2 Rgba8Snorm
+%_ptr_UniformConstant_7 = OpTypePointer UniformConstant %7
+%t_rgba8snorm = OpVariable %_ptr_UniformConstant_7 UniformConstant
+       %uint = OpTypeInt 32 0
+         %10 = OpTypeImage %uint 3D 0 0 0 2 Rgba8ui
+%_ptr_UniformConstant_10 = OpTypePointer UniformConstant %10
+%t_rgba8uint = OpVariable %_ptr_UniformConstant_10 UniformConstant
+        %int = OpTypeInt 32 1
+         %14 = OpTypeImage %int 3D 0 0 0 2 Rgba8i
+%_ptr_UniformConstant_14 = OpTypePointer UniformConstant %14
+%t_rgba8sint = OpVariable %_ptr_UniformConstant_14 UniformConstant
+         %18 = OpTypeImage %uint 3D 0 0 0 2 Rgba16ui
+%_ptr_UniformConstant_18 = OpTypePointer UniformConstant %18
+%t_rgba16uint = OpVariable %_ptr_UniformConstant_18 UniformConstant
+         %21 = OpTypeImage %int 3D 0 0 0 2 Rgba16i
+%_ptr_UniformConstant_21 = OpTypePointer UniformConstant %21
+%t_rgba16sint = OpVariable %_ptr_UniformConstant_21 UniformConstant
+         %24 = OpTypeImage %float 3D 0 0 0 2 Rgba16f
+%_ptr_UniformConstant_24 = OpTypePointer UniformConstant %24
+%t_rgba16float = OpVariable %_ptr_UniformConstant_24 UniformConstant
+         %27 = OpTypeImage %uint 3D 0 0 0 2 R32ui
+%_ptr_UniformConstant_27 = OpTypePointer UniformConstant %27
+  %t_r32uint = OpVariable %_ptr_UniformConstant_27 UniformConstant
+         %30 = OpTypeImage %int 3D 0 0 0 2 R32i
+%_ptr_UniformConstant_30 = OpTypePointer UniformConstant %30
+  %t_r32sint = OpVariable %_ptr_UniformConstant_30 UniformConstant
+         %33 = OpTypeImage %float 3D 0 0 0 2 R32f
+%_ptr_UniformConstant_33 = OpTypePointer UniformConstant %33
+ %t_r32float = OpVariable %_ptr_UniformConstant_33 UniformConstant
+         %36 = OpTypeImage %uint 3D 0 0 0 2 Rg32ui
+%_ptr_UniformConstant_36 = OpTypePointer UniformConstant %36
+ %t_rg32uint = OpVariable %_ptr_UniformConstant_36 UniformConstant
+         %39 = OpTypeImage %int 3D 0 0 0 2 Rg32i
+%_ptr_UniformConstant_39 = OpTypePointer UniformConstant %39
+ %t_rg32sint = OpVariable %_ptr_UniformConstant_39 UniformConstant
+         %42 = OpTypeImage %float 3D 0 0 0 2 Rg32f
+%_ptr_UniformConstant_42 = OpTypePointer UniformConstant %42
+%t_rg32float = OpVariable %_ptr_UniformConstant_42 UniformConstant
+         %45 = OpTypeImage %uint 3D 0 0 0 2 Rgba32ui
+%_ptr_UniformConstant_45 = OpTypePointer UniformConstant %45
+%t_rgba32uint = OpVariable %_ptr_UniformConstant_45 UniformConstant
+         %48 = OpTypeImage %int 3D 0 0 0 2 Rgba32i
+%_ptr_UniformConstant_48 = OpTypePointer UniformConstant %48
+%t_rgba32sint = OpVariable %_ptr_UniformConstant_48 UniformConstant
+         %51 = OpTypeImage %float 3D 0 0 0 2 Rgba32f
+%_ptr_UniformConstant_51 = OpTypePointer UniformConstant %51
+%t_rgba32float = OpVariable %_ptr_UniformConstant_51 UniformConstant
+       %void = OpTypeVoid
+         %54 = OpTypeFunction %void
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+       %main = OpFunction %void None %54
+         %55 = OpLabel
+       %dim1 = OpVariable %_ptr_Function_v3uint Function
+       %dim2 = OpVariable %_ptr_Function_v3uint Function
+       %dim3 = OpVariable %_ptr_Function_v3uint Function
+       %dim4 = OpVariable %_ptr_Function_v3uint Function
+       %dim5 = OpVariable %_ptr_Function_v3uint Function
+       %dim6 = OpVariable %_ptr_Function_v3uint Function
+       %dim7 = OpVariable %_ptr_Function_v3uint Function
+       %dim8 = OpVariable %_ptr_Function_v3uint Function
+       %dim9 = OpVariable %_ptr_Function_v3uint Function
+      %dim10 = OpVariable %_ptr_Function_v3uint Function
+      %dim11 = OpVariable %_ptr_Function_v3uint Function
+      %dim12 = OpVariable %_ptr_Function_v3uint Function
+      %dim13 = OpVariable %_ptr_Function_v3uint Function
+      %dim14 = OpVariable %_ptr_Function_v3uint Function
+      %dim15 = OpVariable %_ptr_Function_v3uint Function
+      %dim16 = OpVariable %_ptr_Function_v3uint Function
+         %56 = OpLoad %3 %t_rgba8unorm None
+         %57 = OpImageQuerySize %v3uint %56
+               OpStore %dim1 %57
+         %61 = OpLoad %7 %t_rgba8snorm None
+         %62 = OpImageQuerySize %v3uint %61
+               OpStore %dim2 %62
+         %64 = OpLoad %10 %t_rgba8uint None
+         %65 = OpImageQuerySize %v3uint %64
+               OpStore %dim3 %65
+         %67 = OpLoad %14 %t_rgba8sint None
+         %68 = OpImageQuerySize %v3uint %67
+               OpStore %dim4 %68
+         %70 = OpLoad %18 %t_rgba16uint None
+         %71 = OpImageQuerySize %v3uint %70
+               OpStore %dim5 %71
+         %73 = OpLoad %21 %t_rgba16sint None
+         %74 = OpImageQuerySize %v3uint %73
+               OpStore %dim6 %74
+         %76 = OpLoad %24 %t_rgba16float None
+         %77 = OpImageQuerySize %v3uint %76
+               OpStore %dim7 %77
+         %79 = OpLoad %27 %t_r32uint None
+         %80 = OpImageQuerySize %v3uint %79
+               OpStore %dim8 %80
+         %82 = OpLoad %30 %t_r32sint None
+         %83 = OpImageQuerySize %v3uint %82
+               OpStore %dim9 %83
+         %85 = OpLoad %33 %t_r32float None
+         %86 = OpImageQuerySize %v3uint %85
+               OpStore %dim10 %86
+         %88 = OpLoad %36 %t_rg32uint None
+         %89 = OpImageQuerySize %v3uint %88
+               OpStore %dim11 %89
+         %91 = OpLoad %39 %t_rg32sint None
+         %92 = OpImageQuerySize %v3uint %91
+               OpStore %dim12 %92
+         %94 = OpLoad %42 %t_rg32float None
+         %95 = OpImageQuerySize %v3uint %94
+               OpStore %dim13 %95
+         %97 = OpLoad %45 %t_rgba32uint None
+         %98 = OpImageQuerySize %v3uint %97
+               OpStore %dim14 %98
+        %100 = OpLoad %48 %t_rgba32sint None
+        %101 = OpImageQuerySize %v3uint %100
+               OpStore %dim15 %101
+        %103 = OpLoad %51 %t_rgba32float None
+        %104 = OpImageQuerySize %v3uint %103
+               OpStore %dim16 %104
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,1013 @@
+Name
+
+    ATI_fragment_shader
+
+Name Strings
+
+    GL_ATI_fragment_shader
+
+Contributors
+
+    Dan Ginsburg
+    Evan Hart
+    Jason Mitchell
+    
+Contact
+
+    Benj Lipchak, AMD (benj.lipchak 'at' amd.com)
+
+Status
+
+    Shipping (version 1.0)
+
+Version
+
+    Last Modified Date: November 4, 2006
+    Author Revision: 1.8
+
+Number
+
+    245
+
+Dependencies
+
+    ARB_multitexture is required by this extension.
+    ARB_shadow interacts with this extension.
+    The extension is written against the OpenGL 1.2.1 Specification.
+
+Overview
+
+    This extension exposes a powerful fragment shading model which
+    provides a very general means of expressing fragment color blending
+    and dependent texture address modification.  The programming is
+    a register-based model in which there is a fixed number of 
+    instructions, texture lookups, read/write registers, and constants.
+
+    The fragment shader extension provides a unified instruction set
+    for operating on address or color data and eliminates the 
+    distinction between the two.  This extension provides all the 
+    interfaces necessary to fully expose this programmable fragment 
+    shader in GL.
+
+    Although conceived as a device-independent extension which would 
+    expose the capabilities of future generations of hardware, changing 
+    trends in programmable hardware have affected the lifespan of this 
+    extension.  For this reason you will now find a fixed set of 
+    features and resources exposed, and the queries to determine this 
+    set have been deprecated.
+
+Issues
+    
+    None
+
+
+New Procedures and Functions
+
+    uint GenFragmentShadersATI (uint range);
+
+    void BindFragmentShaderATI (uint id);
+
+    void DeleteFragmentShaderATI (uint id);
+
+    void BeginFragmentShaderATI (void);
+
+    void EndFragmentShaderATI (void);
+
+    void PassTexCoordATI (uint dst, uint coord, enum swizzle);
+
+    void SampleMapATI (uint dst, uint interp, enum swizzle);
+
+    void ColorFragmentOp1ATI (enum op, uint dst, uint dstMask, 
+                              uint dstMod, uint arg1, uint arg1Rep, 
+                              uint arg1Mod);
+
+    void ColorFragmentOp2ATI (enum op, uint dst, uint dstMask, 
+                              uint dstMod, uint arg1, uint arg1Rep, 
+                              uint arg1Mod, uint arg2, uint arg2Rep, 
+                              uint arg2Mod);
+
+    void ColorFragmentOp3ATI (enum op, uint dst, uint dstMask, 
+                              uint dstMod, uint arg1, uint arg1Rep, 
+                              uint arg1Mod, uint arg2, uint arg2Rep, 
+                              uint arg2Mod, uint arg3, uint arg3Rep, 
+                              uint arg3Mod);
+
+    void AlphaFragmentOp1ATI (enum op, uint dst, uint dstMod, 
+                              uint arg1, uint arg1Rep, uint arg1Mod);
+
+    void AlphaFragmentOp2ATI (enum op, uint dst, uint dstMod, 
+                              uint arg1, uint arg1Rep, uint arg1Mod, 
+                              uint arg2, uint arg2Rep, uint arg2Mod);
+
+    void AlphaFragmentOp3ATI (enum op, uint dst, uint dstMod, 
+                              uint arg1, uint arg1Rep, uint arg1Mod,
+                              uint arg2, uint arg2Rep, uint arg2Mod,
+                              uint arg3, uint arg3Rep, uint arg3Mod);
+
+    void SetFragmentShaderConstantATI (uint dst, const float *value);
+
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        FRAGMENT_SHADER_ATI                   0x8920
+    
+    Accepted by the <dst> and <argN> parameters of 
+    ColorFragmentOp[1..3]ATI and AlphaFragmentOp[1..3]ATI, and by the 
+    <dst> and <coord> parameters of PassTexCoordATI, and by the <dst> 
+    and <interp> parameters of SampleMapATI:
+
+        REG_0_ATI                             0x8921
+        REG_1_ATI                             0x8922
+        REG_2_ATI                             0x8923
+        REG_3_ATI                             0x8924
+        REG_4_ATI                             0x8925
+        REG_5_ATI                             0x8926
+
+    Accepted by the <dst> parameter of SetFragmentShaderConstantATI and 
+    the <argN> parameter of ColorFragmentOp[1..3]ATI and 
+    AlphaFragmentOp[1..3]ATI:
+
+        CON_0_ATI                             0x8941
+        CON_1_ATI                             0x8942
+        CON_2_ATI                             0x8943
+        CON_3_ATI                             0x8944
+        CON_4_ATI                             0x8945
+        CON_5_ATI                             0x8946
+        CON_6_ATI                             0x8947
+        CON_7_ATI                             0x8948
+    
+    Accepted by the <op> parameter of ColorFragmentOp1ATI and 
+    AlphaFragmentOp1ATI:
+
+        MOV_ATI                               0x8961
+
+    Accepted by the <op> parameter of ColorFragmentOp2ATI and 
+    AlphaFragmentOp2ATI:
+
+        ADD_ATI                               0x8963
+        MUL_ATI                               0x8964
+        SUB_ATI                               0x8965
+        DOT3_ATI                              0x8966
+        DOT4_ATI                              0x8967
+
+    Accepted by the <op> parameter of ColorFragmentOp3ATI and 
+    AlphaFragmentOp3ATI:
+
+        MAD_ATI                               0x8968
+        LERP_ATI                              0x8969
+        CND_ATI                               0x896A
+        CND0_ATI                              0x896B
+        DOT2_ADD_ATI                          0x896C
+
+    Accepted by the <argN> parameter of ColorFragmentOp[1..3]ATI and 
+    AlphaFragmentOp[1..3]ATI:
+
+        ZERO
+        ONE
+        PRIMARY_COLOR_ARB
+        SECONDARY_INTERPOLATOR_ATI            0x896D
+
+    Accepted by the <interp> parameter of SampleMapATI and the <coord> 
+    parameter of PassTexCoordATI:
+
+        TEXTURE0_ARB
+        TEXTURE1_ARB
+        TEXTURE2_ARB
+        TEXTURE3_ARB
+        TEXTURE4_ARB
+        TEXTURE5_ARB
+        TEXTURE6_ARB
+        TEXTURE7_ARB
+
+    Accepted by the <swizzle> parameter of SampleMapATI and 
+    PassTexCoordATI:
+
+        SWIZZLE_STR_ATI                       0x8976
+        SWIZZLE_STQ_ATI                       0x8977
+        SWIZZLE_STR_DR_ATI                    0x8978
+        SWIZZLE_STQ_DQ_ATI                    0x8979
+    
+    Accepted by the <dstMask> parameter of ColorFragmentOp[1..3]ATI:
+    
+        NONE
+        RED_BIT_ATI                           0x00000001
+        GREEN_BIT_ATI                         0x00000002
+        BLUE_BIT_ATI                          0x00000004           
+
+    Accepted by the <argNRep> parameter of ColorFragmentOp[1..3]ATI and 
+    AlphaFragmentOp[1..3]ATI:
+
+        NONE
+        RED
+        GREEN
+        BLUE
+        ALPHA
+
+    Accepted by the <dstMod> parameter of ColorFragmentOp[1..3]ATI and
+    AlphaFragmentOp[1..3]ATI:
+
+        NONE
+        2X_BIT_ATI                            0x00000001
+        4X_BIT_ATI                            0x00000002
+        8X_BIT_ATI                            0x00000004
+        HALF_BIT_ATI                          0x00000008
+        QUARTER_BIT_ATI                       0x00000010
+        EIGHTH_BIT_ATI                        0x00000020
+        SATURATE_BIT_ATI                      0x00000040
+    
+
+    Accepted by the <argNMod> parameter of ColorFragmentOp[1..3]ATI and 
+    AlphaFragmentOp[1..3]ATI:
+
+        2X_BIT_ATI                            0x00000001
+        COMP_BIT_ATI                          0x00000002
+        NEGATE_BIT_ATI                        0x00000004
+        BIAS_BIT_ATI                          0x00000008    
+
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL 
+Operation)
+
+    None
+
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    Add New Subsection after 3.8.10, (p. 138)
+
+    3.8.11  Fragment Shaders
+
+    By default, the current texture environment is used to determine
+    how textures are combined for rasterization.  However, by enabling
+    FRAGMENT_SHADER_ATI, the currently bound fragment shader is used to 
+    determine how textures are combined.  The fragment shader replaces 
+    the traditional texture environment by exposing a fragment shading 
+    model which provides a very general means of expressing fragment 
+    color blending and dependent texture address modification.  The 
+    distinction between texture address and color data becomes 
+    irrelevant in the fragment shader as the two can be used 
+    interchangeably.
+
+    A shader is defined between a BeginFragmentShaderATI and 
+    EndFragmentShaderATI block.  These commands are defined as follows:
+
+      void BeginFragmentShaderATI(void);
+      void EndFragmentShaderATI(void);
+
+    Although there is no restriction as to which GL operations may be
+    specified between BeginFragmentShaderATI and EndFragmentShaderATI,
+    only the following operations will be compiled into a shader: 
+    PassTexCoordATI, SampleMapATI, ColorFragmentOp[1..3]ATI, 
+    AlphaFragmentOp[1..3]ATI, and SetFragmentShaderContantATI.
+     
+    In addition to a default fragment shader, named shaders can be 
+    created.  The namespace for shaders is unsigned integers with zero 
+    reserved by the GL.  A shader is created by binding an unused name 
+    using:
+      
+      void BindFragmentShaderATI(uint id);
+
+    where <id> is the unused name.  Once a shader has been created it
+    can be rebound as the active shader by calling 
+    BindFragmentShaderATI.  A shader can be deleted, freeing the name, 
+    by calling:
+
+      void DeleteFragmentShaderATI(uint id);
+
+    where <id> is the name to be deleted.  Unique names can be generated
+    using:
+
+      uint GenFragmentShadersATI(uint range);
+
+    where <range> is the number of contiguous ids that should be 
+    created.  It returns an integer n such that <range> contiguous empty 
+    shader ids, with values n, n+1, ..., n+<range>-1, are created.  If 
+    <range> is 0, if there is no group of <range> contiguous names
+    available, or if any error is generated, no shaders are generated,
+    and 0 is returned.
+
+    If FRAGMENT_SHADER_ATI is enabled, but the currently bound shader is
+    invalid, the results of drawing commands are undefined.  A shader 
+    may be invalid because it is currently being specified (i.e., a 
+    drawing command within a Begin/EndFragmentShader pair), or due to 
+    some error during the specification of a shader.
+
+    There are three types of data that can be in a fragment shader:
+    registers, constants, and interpolators.  The 6 REG_x_ATI registers 
+    can be used as source or destination in any color or alpha 
+    instruction.  The final result of the shader is whatever value is in 
+    REG_0_ATI.  This value will be the final color of the output 
+    fragment passed.
+
+    There are 8 constant registers available, CON_0_ATI through 
+    CON_7_ATI.  CON_x_ATI constants can be used as source in any color 
+    or alpha instruction, but at most 2 different constants may be used 
+    as source arguments in each instruction.
+
+    Additionally, the primary and secondary color interpolators are 
+    available as source in any color or alpha instruction, but only in 
+    the last pass of the shader (i.e., the only pass of a one-pass 
+    shader or the second pass of a two-pass shader).
+
+    Either one or two passes may be specified in a shader.  Each pass 
+    may use up to 8 pairs of instructions for a total of at most 16 
+    pairs in the shader.  A pair consists of one color instruction and 
+    one alpha instruction.
+
+    The first instructions specified in each pass of a shader are "free" 
+    instructions in that they don't count against the 8 instructions 
+    available in each pass.  They are routing instructions which specify 
+    from where the contents of the registers come.  The first occurance 
+    of one of these free instructions marks the beginning of a pass in 
+    the shader.  They are specified with SampleMapATI and 
+    PassTexCoordATI.
+
+    The entry point:
+
+      void PassTexCoordATI (uint dst, uint coord, enum swizzle);
+
+    specifies that the value present in <coord> is passed directly into 
+    the contents of <dst> (one of the registers REG_x_ATI).  This value 
+    is then available for use as a source argument to subsequent color 
+    and alpha instructions following in the same pass.  <coord> may 
+    either be the texture coordinates on a texture unit (TEXTUREx_ARB), 
+    or in the case of a two-pass shader's second pass, it may be the 
+    value of a register set in the first pass (REG_x_ATI).
+
+    Note that in order to preserve the contents of a register from the 
+    first pass to the second, there must be a PassTexCoordATI 
+    instruction in the setup for the second pass that assigns that 
+    register to itself.  For example: 
+
+      PassTexCoordATI(REG_1_ATI, REG_1_ATI, SWIZZLE_STR_ATI); 
+
+    will preserve the first 3 components of REG_1_ATI for use in the 
+    second pass.
+
+    The entry point:
+
+      void SampleMapATI (uint dst, uint interp, enum swizzle);
+
+    specifies that the value present in the texture data bound on the 
+    unit associated with <dst> will be written to that register.  A 
+    value for <dst> of REG_x_ATI means that TEXTUREx_ARB will be 
+    sampled, and the result written to REG_x_ATI.  The <interp> 
+    parameter specifies which texture coordinate interpolator is used to 
+    sample the map.  A value of REG_x_ATI for <interp> in the second 
+    pass of a two-pass shader will do dependent texture read sampling 
+    using the value in register x.  Otherwise, specifying TEXTUREx_ARB 
+    will sample the map using the texture coordinates on unit x.
+
+    Only the first 3 components of <coord> or <interp> are used in 
+    PassTexCoordATI and SampleMapATI, respectively.  The swizzle 
+    parameter is used to select which of the 4 original components of 
+    the source register or texture coordinates will be mapped to the 3 
+    available positions, and whether or not a projection will occur.  
+
+    Table 3.20 shows the <swizzle> modes:
+
+
+                           Coordinates Used for 1D or      Coordinates Used for
+      Swizzle              2D SampleMap and PassTexCoord   3D or cubemap SampleMap
+      -------              -----------------------------   -----------------------
+      SWIZZLE_STR_ATI      (s, t, r, undefined)            (s, t, r, undefined)
+      SWIZZLE_STQ_ATI      (s, t, q, undefined)            (s, t, q, undefined)
+      SWIZZLE_STR_DR_ATI   (s/r, t/r, 1/r, undefined)      (undefined)
+      SWIZZLE_STQ_DQ_ATI   (s/q, t/q, 1/q, undefined)      (undefined)
+
+         Table 3.20 Coordinate swizzles
+
+
+    Each texture coordinate source (TEXTUREx_ARB) used as a <coord> 
+    and/or <interp> can only draw upon STR or STQ components throughout 
+    the shader.  For example, if TEXTURE2_ARB is used in a SampleMapATI 
+    with <swizzle> SWIZZLE_STR_ATI, it cannot be used again later with a 
+    <swizzle> of SWIZZLE_STQ_ATI.  The projection, however, may vary.  
+    It would be okay to later use TEXTURE2_ARB with a <swizzle> of 
+    SWIZZLE_STR_DR_ATI.
+
+    Additionally, when the <coord> or <interp> is a register (in the 
+    second pass of a two-pass shader), only SWIZZLE_STR_ATI and 
+    SWIZZLE_STR_DR_ATI are allowed.  Note that if this is a 
+    PassTexCoord, the fourth component (alpha channel if the register 
+    contains RGBA) is not passed along and the fourth component of <dst> 
+    becomes undefined.
+
+    The color and alpha instructions performed in the shader are 
+    specified with the following entry points:
+
+      void ColorFragmentOp1ATI (enum op, uint dst, uint dstMask, uint dstMod, 
+                                uint arg1, uint arg1Rep, uint arg1Mod);
+      void ColorFragmentOp2ATI (enum op, uint dst, uint dstMask, uint dstMod, 
+                                uint arg1, uint arg1Rep, uint arg1Mod,
+                                uint arg2, uint arg2Rep, uint arg2Mod);
+      void ColorFragmentOp3ATI (enum op, uint dst, uint dstMask, uint dstMod,
+                                uint arg1, uint arg1Rep, uint arg1Mod,
+                                uint arg2, uint arg2Rep, uint arg2Mod,
+                                uint arg3, uint arg3Rep, uint arg3Mod);
+      void AlphaFragmentOp1ATI (enum op, uint dst, uint dstMod, 
+                                uint arg1, uint arg1Rep, uint arg1Mod);
+      void AlphaFragmentOp2ATI (enum op, uint dst, uint dstMod, 
+                                uint arg1, uint arg1Rep, uint arg1Mod, 
+                                uint arg2, uint arg2Rep, uint arg2Mod);
+      void AlphaFragmentOp3ATI (enum op, uint dst, uint dstMod, 
+                                uint arg1, uint arg1Rep, uint arg1Mod,
+                                uint arg2, uint arg2Rep, uint arg2Mod,
+                                uint arg3, uint arg3Rep, uint arg3Mod);
+
+    A ColorFragmentOp[1..3]ATI followed by an AlphaFragmentOp[1..3]ATI 
+    is considered to be an instruction pair, and 8 such pairs may be
+    specified per pass.  The color and alpha instructions of a pair are 
+    executed in parallel: the result of the color instruction cannot 
+    affect the source arguments of the alpha instruction.  Both a color 
+    and an alpha instruction need not be specified for every pair; the
+    necessary color or alpha no-op is automatically inserted by the GL
+    to complete each instruction pair.
+
+    The <op> parameter specifies the instruction to perform on the 
+    sources.   
+
+    Table 3.21 shows the effect of each <op>.  R(d), G(d), and B(d) are 
+    the destination values when using the instruction on color and A(d) 
+    is the destination value when using the instruction on alpha.
+
+
+      Op                    Result
+      --                    ------
+      ADD_ATI               R(d) = R(a1) + R(a2)
+                            G(d) = G(a1) + G(a2)
+                            B(d) = B(a1) + B(a2)
+                            A(d) = A(a1) + A(a2)
+
+      SUB_ATI               R(d) = R(a1) - R(a2)
+                            G(d) = G(a1) - G(a2)
+                            B(d) = B(a1) - B(a2)
+                            A(d) = A(a1) - A(a2)
+
+      MUL_ATI               R(d) = R(a1) * R(a2)
+                            G(d) = G(a1) * G(a2)
+                            B(d) = B(a1) * B(a2)
+                            A(d) = A(a1) * A(a2)
+
+      MAD_ATI               R(d) = R(a1) * R(a2) + R(a3)
+                            G(d) = G(a1) * G(a2) + G(a3)
+                            B(d) = B(a1) * B(a2) + B(a3)
+                            A(d) = A(a1) * A(a2) + A(a3)
+
+      LERP_ATI***           R(d) = R(a1) * R(a2) + (1 - R(a1)) * R(a3)
+                            G(d) = G(a1) * G(a2) + (1 - G(a1)) * G(a3)
+                            B(d) = B(a1) * B(a2) + (1 - B(a1)) * B(a3)
+                            A(d) = A(a1) * A(a2) + (1 - A(a1)) * A(a3)
+
+      MOV_ATI               R(d) = R(a1)
+                            G(d) = G(a1)
+                            B(d) = B(a1)
+                            A(d) = A(a1)
+
+      CND_ATI               R(d) = (R(a3) > 0.5) ? R(a1) : R(a2)
+                            G(d) = (G(a3) > 0.5) ? G(a1) : G(a2)
+                            B(d) = (B(a3) > 0.5) ? B(a1) : B(a2)
+                            A(d) = (A(a3) > 0.5) ? A(a1) : A(a2)
+
+      CND0_ATI              R(d) = (R(a3) >= 0) ? R(a1) : R(a2)
+                            G(d) = (G(a3) >= 0) ? G(a1) : G(a2)
+                            B(d) = (B(a3) >= 0) ? B(a1) : B(a2)
+                            A(d) = (A(a3) >= 0) ? A(a1) : A(a2)
+
+      DOT2_ADD_ATI*         R(d) = G(d) = B(d) = A(d) = R(a1) * R(a2) + 
+                                                        G(a1) * G(a2) + 
+                                                        B(a3)                  
+
+      DOT3_ATI*             R(d) = G(d) = B(d) = A(d) = R(a1) * R(a2) +
+                                                        G(a1) * G(a2) +
+                                                        B(a1) * B(a2)
+
+      DOT4_ATI* **          R(d) = G(d) = B(d) = A(d) = R(a1) * R(a2) +
+                                                        G(a1) * G(a2) +
+                                                        B(a1) * B(a2) +
+                                                        A(a1) * A(a2)
+
+         Table 3.21 Color and Alpha Fragment Shader Instructions
+
+         Special Notes:
+           *   - DOT2_ADD_ATI/DOT3_ATI/DOT4_ATI can only be specified as
+                 an alpha instruction directly after being specified as
+                 a color instruction.  When specified as an alpha 
+                 instruction, the parameters are ignored, although they 
+                 should be valid enumerants in order to compile.  The 
+                 result of the color instruction will simply be placed
+                 in the alpha <dst>.
+
+           **  - After a DOT4_ATI color instruction is specified, the
+                 only alpha instruction that can immediately follow is a 
+                 DOT4_ATI.  This is because the DOT4 color instruction 
+                 implicitely uses an alpha instruction to calculate the 
+                 result.  If another type of alpha instruction is 
+                 desired after a DOT4_ATI color instruction is issued, 
+                 there are two choices: either issue another color 
+                 instruction first, or issue the DOT4_ATI alpha 
+                 instruction followed by the desired alpha instruction.
+
+           *** - The blend factor (a1) of LERP_ATI must be in the range
+                 [0,1] or the results are undefined.
+
+    The <dst> parameter specifies to which register (REG_x_ATI) the 
+    result of the instruction is written.
+
+    The <dstMask> parameter specifies which of the color components in 
+    <dst> will be written (ColorFragmentOp[1..3]ATI only).  This can 
+    either be NONE, in which case there is no mask and everything is 
+    written, or the bitwise-or of RED_BIT_ATI, GREEN_BIT_ATI, and 
+    BLUE_BIT_ATI.
+
+    The <dstMod> parameter specifies which modifications are performed
+    on each component of the destination.  The result can be modulated
+    by specifying either 2X_BIT_ATI, 4X_BIT_ATI, 8X_BIT_ATI, 
+    HALF_BIT_ATI, QUARTER_BIT_ATI, or EIGHTH_BIT_ATI.  These are all 
+    mutually exclusive, and can optionally be bitwise-or'd with 
+    SATURATE_BIT_ATI, which clamps the result after any modulation 
+    occurs.  
+
+    Table 3.22 shows the result of each <dstMod> modification.
+
+
+      Modifier                Result
+      --------                ------
+      NONE                    d = d
+      2X_BIT_ATI              d = 2 * d
+      4X_BIT_ATI              d = 4 * d
+      8X_BIT_ATI              d = 8 * d
+      HALF_BIT_ATI            d = d / 2
+      QUARTER_BIT_ATI         d = d / 4
+      EIGHTH_BIT_ATI          d = d / 8
+      SATURATE_BIT_ATI        d = clamp(d) to range [0, 1]
+         
+         Table 3.22 Result of destination modification     
+
+
+    Note that the internal precision of the fragment shader allows 
+    values in the range [-8, 8].  
+     
+    The <argN> parameter specifies the source argument.  The source can 
+    come from REG_x_ATI, CON_x_ATI, ZERO, ONE, PRIMARY_COLOR_ARB, or 
+    SECONDARY_INTERPOLATOR_ATI.  Note that in a two-pass shader, 
+    PRIMARY_COLOR_ARB and SECONDARY_INTERPOLATOR_ATI cannot be used in 
+    the first pass of the shader.
+
+    Each argument has an <argNRep> parameter which specifies the 
+    replication of each component.  
+
+    Table 3.23 shows the result of each <argNRep> source replication.
+
+
+      Replication             Result
+      -----------             -----                 
+      NONE                    R(s) = R(s)
+                              G(s) = G(s)
+                              B(s) = B(s)
+                              A(s) = A(s)
+
+      RED                     R(s) = R(s)
+                              G(s) = R(s)
+                              B(s) = R(s)
+                              A(s) = R(s)
+
+      GREEN                   R(s) = G(s)
+                              G(s) = G(s)
+                              B(s) = G(s)
+                              A(s) = G(s)
+
+      BLUE                    R(s) = B(s)
+                              G(s) = B(s)
+                              B(s) = B(s)
+                              A(s) = B(s)
+
+      ALPHA                   R(s) = A(s)
+                              G(s) = A(s)
+                              B(s) = A(s)
+                              A(s) = A(s)
+
+         Table 3.23 Result of source replication
+
+
+    Each argument also has an <argNMod> parameter which specifies 
+    modifiers to each component.  A value of NONE specifies that no 
+    modifiers are present.  Otherwise, the bitwise-or of NEGATE_BIT_ATI, 
+    BIAS_BIT_ATI, and 2X_BIT_ATI can be specified as modifiers.  
+
+    Table 3.24 shows the result of each <argNMod> source modifier.
+
+
+      Modifier                Result
+      --------                ------
+      NONE                    s = s
+      NEGATE_BIT_ATI          s = -s
+      COMP_BIT_ATI            s = 1 - s
+      BIAS_BIT_ATI            s = s - 0.5
+      2X_BIT_ATI              s = 2 * s
+           
+         Table 3.24 Result of source modification
+
+
+    If multiple source modifiers are applied, the order of operations is
+    COMP, BIAS, SCALE, then NEGATE.  The following equation shows the 
+    order of operations if all modifiers were to be applied:
+	  
+         s = -(2 * ((1.0 - s) - 0.5))
+     
+    In order to set the constants that can be used by shader 
+    instructions, the entry point:
+
+      void SetFragmentShaderConstantATI (uint dst, const float *value);
+
+    is used.  The <dst> parameter specifies which of the constants 
+    (CON_x_ATI) to set.  The <value> pointer must contain four floating 
+    point values in the range [0, 1] to set the components of the 
+    constant.  Constant registers loaded with floating point values 
+    outside of this range will have undefined values.  Calls to this 
+    function which occur inside a shader definition are automatically 
+    bound when the shader is bound.  This means that shader constants 
+    have scope: if SetFragmentShaderConstantATI is called outside a 
+    shader definition, it is bound globally.  However, if that same 
+    shader constant is set inside the shader, it overrides the global 
+    definition when bound.
+
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Framebuffer)
+
+    None
+
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special 
+Functions)
+
+    Modify Section 5.4, Display Lists (p. 175)
+
+    (modify last paragraph, p. 178) ... These are: IsList, GenLists,
+    ..., GenFragmentShadersATI, DeleteFragmentShadersATI, 
+    BeginFragmentShaderATI, EndFragmentShaderATI, PassTexCoordATI,
+    SampleMapATI, ColorFragmentOp[1..3]ATI, AlphaFragmentOp[1..3]ATI, 
+    as well as IsEnabled and all of the Get commands (see Chapter 6).
+
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None
+
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+
+Interactions with ARB_shadow
+
+    The texture comparison introduced by ARB_shadow can be expressed in 
+    terms of a fragment shader, and in fact use the same internal 
+    resources on some implementations.  Therefore, if fragment shader 
+    mode is enabled, the GL behaves as if TEXTURE_COMPARE_MODE_ARB is 
+    NONE.
+
+
+Errors
+  
+    The error INVALID_VALUE is generated if GenFragmentShadersATI is
+    called where <range> is zero.
+
+    The error INVALID_OPERATION is generated if GenFragmentShadersATI, 
+    BindFragmentShaderATI, DeleteFragmentShaderATI, or 
+    BeginFragmentShaderATI are specified inside a 
+    Begin/EndFragmentShaderATI pair.
+
+    The error INVALID_OPERATION is generated if EndFragmentShaderATI, 
+    PassTexCoordATI, SampleMapATI, ColorFragmentOp[1..3]ATI, or 
+    AlphaFragmentOp[1..3]ATI is specified outside a 
+    Begin/EndFragmentShaderATI pair.
+   
+    The error INVALID_OPERATION is generated by EndFragmentShaderATI if 
+    <argN> passed to ColorFragmentOp[1..3]ATI or 
+    AlphaFragmentOp[1..3]ATI is PRIMARY_COLOR_ARB or 
+    SECONDARY_INTERPOLATOR_ATI on the first pass of a two-pass shader, 
+    or if the shader cannot be compiled due to some other 
+    implementation-dependent limitation.  EndFragmentShaderATI will 
+    still have a side-effect if this error is encountered: the 
+    Begin/EndFragmentShaderATI pair will be closed, and the current 
+    shader will be undefined.
+
+    The error INVALID_OPERATION is generated by PassTexCoordATI or 
+    SampleMapATI if two shader passes have already been specified, or if 
+    the same <dst> register is specified twice in the same pass.
+
+    The error INVALID_OPERATION is generated by PassTexCoordATI or 
+    SampleMapATI if <coord> passed to PassTexCoordATI or <interp> passed 
+    to SampleMapATI is a register in the first pass, or a register with 
+    SWIZZLE_STQ_ATI or SWIZZLE_STQ_DQ_ATI <swizzle> in the second pass, 
+    or if different <swizzle> parameters are specified for the same 
+    <coord> or <interp> in the same pass.
+
+    The error INVALID_OPERATION is generated by ColorFragmentOp[1..3]ATI 
+    or AlphaFragmentOp[1..3]ATI if more than 8 instructions have been 
+    specified for a shader pass.
+
+    The error INVALID_OPERATION is generated by ColorFragmentOp[1..3]ATI 
+    if <argN> is SECONDARY_INTERPOLATOR_ATI and <argNRep> is ALPHA, or 
+    by AlphaFragmentOp[1..3]ATI if <argN> is SECONDARY_INTERPOLATOR_ATI
+    and <argNRep> is ALPHA or NONE, or by ColorFragmentOp2ATI if <op> is
+    DOT4_ATI and <argN> is SECONDARY_INTERPOLATOR_ATI and <argNRep> is
+    ALPHA or NONE.
+
+    The error INVALID_OPERATION is generated by ColorFragmentOp3ATI or 
+    AlphaFragmentOp3ATI if all three <argN> parameters are constants, 
+    and all three are different.
+
+    The error INVALID_OPERATION is generated by AlphaFragmentOp[2..3]ATI 
+    if <op> is DOT3_ATI, DOT4_ATI, or DOT2_ADD_ATI and there was no 
+    matching ColorFragmentOp[2..3]ATI immediately preceding, or if <op> 
+    is not DOT4_ATI and the immediately preceding ColorFragmentOp2ATI 
+    specifies an <op> of DOT4_ATI.
+
+    The error INVALID_ENUM is generated if <dst> passed to 
+    PassTexCoordATI, SampleMapATI, ColorFragmentOp[1..3]ATI, or 
+    AlphaFragmentOp[1..3]ATI is not a valid register or is greater than 
+    the number of texture units available on the implementation.
+
+    The error INVALID_ENUM is generated if <coord> passed to 
+    PassTexCoordATI or <interp> passed to SampleMapATI is not a valid 
+    register or texture unit, or the register or texture unit is greater 
+    than the number of texture units available on the implementation.
+
+    The error INVALID_ENUM is generated if <argN> passed to 
+    ColorFragmentOp[1..3]ATI or AlphaFragmentOp[1..3]ATI is not a valid 
+    constant, interpolator, or register.
+
+    The error INVALID_ENUM is generated if <dstMod> passed to 
+    ColorFragmentOp[1..3]ATI or AlphaFragmentOp[1..3]ATI contains 
+    multiple mutually exclusive modifier bits, not counting 
+    SATURATE_BIT_ATI.
+
+
+New State
+
+                                            Initial
+    Get Value            Type  Get Command  Value    Description             Sec.    Attribute
+    ---------            ----  -----------  -------  -----------             ------  ---------
+    FRAGMENT_SHADER_ATI   B    IsEnabled    False    Fragment shader enable  3.8.11  enable
+
+    Table X.6.  New Accessible State Introduced by ATI_fragment_shader.
+
+
+    Get Value    Type    Get Command   Initial Value  Description          Sec     Attribute
+    ---------    ------  -----------   -------------  -------------------  ------  ---------
+    -            6xR4    -             undefined      temporary registers  3.8.11  -
+
+    Table X.9.  Fragment Shader Per-fragment Execution State.  All per-fragment
+    execution state registers are uninitialized at the beginning of program
+    execution.
+
+
+New Implementation Dependent State
+
+    None
+
+
+Deprecated Functionality
+
+    The following queryable implementation-dependent constants are 
+    described here for backward-compatibility.  They are now specified 
+    to always return fixed values on all implementations, and are thus 
+    obsolete.
+
+    The number of available registers can be queried by doing a glGet on 
+    NUM_FRAGMENT_REGISTERS_ATI.  This refers to the number of 
+    REG_x_ATI's, and is now fixed at 6.
+
+    The number of available constants can be queried by doing a glGet on 
+    NUM_FRAGMENT_CONSTANTS.  This refers to the number of CON_x_ATI's, 
+    and is now fixed at 8.
+
+    The number of passes, instructions per pass, and total instructions
+    available to a shader can be queried using glGet.  Querying for 
+    NUM_PASSES_ATI returns the maximum number of passes that the shader 
+    can perform, now fixed at 2.  Querying for 
+    NUM_INSTRUCTIONS_PER_PASS_ATI returns the maximum number of 
+    instructions available on a given pass, now fixed at 8.  Finally, 
+    NUM_INSTRUCTIONS_TOTAL_ATI returns the maximum number of total 
+    instructions available to a shader, now fixed at 16 (2 per pass).  
+
+    COLOR_ALPHA_PAIRING_ATI can be queried by glGet to determine if each
+    ColorFragmentOp[1..3]ATI/AlphaFragmentOp[1..3]ATI pair counts as one 
+    instruction against the limit, or if each color and alpha 
+    instruction is counted individually (i.e., each pair counts as two 
+    instructions).  This query now always returns TRUE: each pair counts 
+    as one instruction against the 8 instructions allowed per pass.
+
+    The number of components available in a coordinate interpolator, 
+    passed in as <interp> to SampleMapATI or <coord> to PassTexCoord, 
+    can be queried using NUM_INTERPOLATOR_COMPONENTS_ATI.  This query 
+    now always returns 3, meaning the fourth component is ignored.
+
+    The number of components passed in the registers via PassTexCoord 
+    from the first pass to the second can be queried using 
+    NUM_LOOPBACK_COMPONENTS_ATI.  This query now always returns 3, 
+    meaning the fourth component of <dst> is undefined.
+
+
+Sample Usage
+
+    The following is an example that simulates a chrome surface:
+
+      shadername = glGenFragmentShadersATI(1);
+      glBindFragmentShaderATI(shadername);
+      glBeginFragmentShaderATI();
+
+      // Pass 1
+      glPassTexCoordATI(GL_REG_1_ATI, GL_TEXTURE1_ARB, GL_SWIZZLE_STR_ATI); // N
+      glPassTexCoordATI(GL_REG_2_ATI, GL_TEXTURE2_ARB, GL_SWIZZLE_STR_ATI); // light to vertex vector in light space
+      glPassTexCoordATI(GL_REG_3_ATI, GL_TEXTURE3_ARB, GL_SWIZZLE_STR_ATI); // H
+      glSampleMapATI(GL_REG_4_ATI, GL_TEXTURE4_ARB, GL_SWIZZLE_STR_ATI);    // L (sample cubemap normalizer)
+
+      // reg4 = N.L
+      glColorFragmentOp2ATI(GL_DOT3_ATI, GL_REG_4_ATI, GL_NONE, GL_NONE,
+                            GL_REG_1_ATI, GL_NONE, GL_NONE,
+                            GL_REG_4_ATI, GL_NONE, GL_2X_BIT_ATI|GL_BIAS_BIT_ATI);
+
+      // reg1 = N.H
+      glColorFragmentOp2ATI(GL_DOT3_ATI, GL_REG_1_ATI, GL_NONE, GL_NONE,
+                            GL_REG_1_ATI, GL_NONE, GL_NONE,
+                            GL_REG_3_ATI, GL_NONE, GL_NONE);
+
+      // reg1(green) = H.H (aka |H|^2)
+      glColorFragmentOp2ATI(GL_DOT3_ATI, GL_REG_1_ATI, GL_GREEN_BIT_ATI, GL_NONE,
+                            GL_REG_3_ATI, GL_NONE, GL_NONE,
+                            GL_REG_3_ATI, GL_NONE, GL_NONE);
+
+      // reg2 = |light to vertex|^2
+      glColorFragmentOp2ATI(GL_DOT3_ATI, GL_REG_2_ATI, GL_NONE, GL_NONE,
+                            GL_REG_2_ATI, GL_NONE, GL_NONE,
+                            GL_REG_2_ATI, GL_NONE, GL_NONE);
+
+      // Pass 2
+      glSampleMapATI(GL_REG_0_ATI, GL_TEXTURE5_ARB, GL_SWIZZLE_STR_ATI); // sample enviroment map using eye vector
+      glSampleMapATI(GL_REG_2_ATI, GL_REG_2_ATI, GL_SWIZZLE_STR_ATI);    // sample attenuation map
+      glSampleMapATI(GL_REG_3_ATI, GL_REG_1_ATI, GL_SWIZZLE_STR_ATI);    // sample specular NHHH map = (N.H)^256
+      glPassTexCoordATI(GL_REG_4_ATI, GL_REG_4_ATI, GL_SWIZZLE_STR_ATI); // pass N.L through
+
+      // reg3 = (N.H)^256 * (N.L) 
+      // this ensures a pixel is only lit if facing the light (since the specular exponent
+      // makes negative N.H positive we must do this)
+      glColorFragmentOp2ATI(GL_MUL_ATI, GL_REG_3_ATI, GL_NONE, GL_NONE,
+                            GL_REG_3_ATI, GL_NONE, GL_NONE,
+                            GL_REG_4_ATI, GL_NONE, GL_NONE);
+
+      // reg3 = specular * environment map
+      glColorFragmentOp2ATI(GL_MUL_ATI, GL_REG_3_ATI, GL_NONE, GL_NONE,
+                            GL_REG_0_ATI, GL_NONE, GL_NONE,
+                            GL_REG_3_ATI, GL_NONE, GL_NONE);
+
+      // reg4 = diffuse * environment map
+      glColorFragmentOp2ATI(GL_MUL_ATI, GL_REG_4_ATI, GL_NONE, GL_NONE,
+                            GL_REG_0_ATI, GL_NONE, GL_NONE,
+                            GL_REG_4_ATI, GL_NONE, GL_NONE);
+
+      // reg0 = (specular * environment map) + (diffuse * environment map)
+      glColorFragmentOp2ATI(GL_ADD_ATI, GL_REG_0_ATI, GL_NONE, GL_NONE,
+                            GL_REG_3_ATI, GL_NONE, GL_NONE,
+                            GL_REG_4_ATI, GL_NONE, GL_NONE);
+
+      // apply point light attenuation
+      glColorFragmentOp2ATI(GL_MUL_ATI, GL_REG_0_ATI, GL_NONE, GL_SATURATE_BIT_ATI,
+                            GL_REG_0_ATI, GL_NONE, GL_NONE,
+                            GL_REG_2_ATI, GL_RED, GL_NONE);
+      glEndFragmentShaderATI();
+
+
+Revision History
+
+    Date: 11/4/2006
+    Revision: 1.8
+      - Updated contact info after ATI/AMD merger.
+
+    Date: 8/21/2002
+    Revision: 1.7
+      - Fixed lack of comma typo in glAlphaFragmentOp2ATI prototypes.
+
+    Date: 8/1/2002
+    Revision: 1.6
+      - Changed DeleteFragmentShaderATI behavior to silently ignore the 
+        deletion of non-existent or default shaders.
+
+    Date: 6/5/2002
+    Revision: 1.5
+      - Added interaction with ARB_shadow.
+
+    Date: 5/30/2002
+    Revision: 1.4
+      - Specified that LERP's blend factor must be in the range [0,1].
+      - Added error condition when trying to use secondary color in DOT4
+        color instruction when replication is GL_NONE or GL_ALPHA.
+
+    Date: 5/21/2002
+    Revision: 1.3
+      - Made number of registers (REG_x_ATI) explicit: 6.
+      - Changed CND0_ATI definition from >0 to >=0.
+      - Added wording to emphasize [0,1] range for constants.
+      - Added wording to reflect that EndFragmentShaderATI will close
+        Begin/End pair even if error is encountered.
+      - Added wording to reflect parallelism of color/alpha pairs.
+      - Added error condition when trying to use secondary color alpha.
+      - Added error condition when generating shader IDs with <range> 0.
+      - Added display list exclusion for everything except 
+        BindFragmentShaderATI and SetFragmentShaderConstantATI.
+      - Cleaned up, fixed typos, and reformatted.
+      - Added New State section.
+      - Replaced sample code.
+
+    Date: 4/19/2002
+    Revision: 1.2
+      - Updated swizzle table to indicate that projected texcoords are
+        undefined when used in conjunction with cubemaps or 3D textures.
+
+    Date: 3/20/2002
+    Revision: 1.1
+      - Made resource availability explicit.
+      - Deprecated implementation-dependent constant queries.
+      - Added various error conditions described in prose of spec.
+      - Changed PRIMARY_COLOR_EXT to PRIMARY_COLOR_ARB.
+      - Cleaned up and fixed typos throughout.
+
+    Date: 1/2/2002
+    Revision: 1.02
+      - Added note that PRIMARY_COLOR_EXT and SECONDARY_INTERPOLATOR_ATI can not
+        be used on the first pass of a two pass shader.  Also added error
+        for this case to Errors section.
+      - Added note that in order to save the contents of a register from the 
+        first pass to the second, there has to be a PassTexCoordATI() on that
+        register to itself on the next pass.
+      - Changed PRIMARY_COLOR to PRIMARY_COLOR_EXT.
+
+    Date: 10/15/2001
+    Revision: 1.01
+      - Fixed typos in example program.
+      - Added language about the shader result being placed in REG_0_ATI.
+      - Specify range supported [-8..8].
+      - Added notes on how to specify whether DOT4/DOT3/DOT2_ADD result 
+        goes to alpha channel.
+
+    Date: 8/21/2001
+    Revision: 1.0
+      - Added equation for source modifiers.
+
+    Date: 8/6/2001
+    Revision: 0.6
+      - Added restraint that only SWIZZLE_STR_ATI and SWIZZLE_STR_DR_ATI
+        can be used on the second pass when the source is a register.
+
+    Date: 6/29/2001
+    Revision: 0.5
+      - Removed glTexProjectATI and change glSampleMapATI/glPassTexCoordATI to
+        take a <swizzle> parameter instead of <project>.
+      - Changed MAD_ATI from (a + b * c) to (a * b + c).
+
+    Date: 6/11/2001
+    Revision: 0.4
+      - Removed FRAC_ATI.
+      - Added <project> parameter to SampleMapATI and PassTexCoordATI to
+        match current implementation.
+
+    Date: 5/01/2001
+    Revision: 0.3
+      - Added COLOR_ALPHA_PAIRING_ATI.
+      - Attempted to clarify definition of SampleMapATI in the documentation
+        section.  Changed <map> to <interp>.
+      - Added TexProjectATI and documented texture projection modes to allow
+        implementations that only support 3-tuples to select between (s, t, r)
+        and (s, t, q) coordinates.
+
+    Date: 4/19/2001
+    Revision: 0.2
+      - Removed <dstRot> from ColorFragmentOp[1..3]ATI.
+      - Changed SHADER_ATI to FRAGMENT_SHADER_ATI.
+      - Fixed the <op>'s in the New Tokens section to go to the proper
+        Color/AlphaOp functions.
+      - Added ZERO and ONE constants.
+      - Made number of passes queryable: removed NUM_PASSn_INSTRUCTIONS_ATI, 
+        replaced with NUM_PASSES_ATI, NUM_INSTRUCTIONS_PER_PASS_ATI, and
+        NUM_INSTRUCTIONS_TOTAL_ATI.
+      - Documented when new pass starts (SampleMapATI/PassCoordATI).
+      - Added NUM_INPUT_INTERPOLATOR_COMPONENTS_ATI/NUM_LOOPBACK_COMPONENTS_ATI.
+      - Fixed sample usage to not do a dependent read on the base map.
+
+    Date: 4/16/2001
+    Revision: 0.1
+      - First draft

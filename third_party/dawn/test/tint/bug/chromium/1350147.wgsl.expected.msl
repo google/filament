@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void original_clusterfuzz_code() {
+}
+
+void more_tests_that_would_fail() {
+  float const a = 1.47112762928009033203f;
+  float const b = 0.09966865181922912598f;
+  float const a_1 = 2.5f;
+  float const b_1 = 2.5f;
+}

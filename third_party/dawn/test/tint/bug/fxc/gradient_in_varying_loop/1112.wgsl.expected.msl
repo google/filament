@@ -1,0 +1,78 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  sampler Sampler;
+  texture2d<float, access::sample> randomTexture;
+};
+
+struct main_outputs {
+  float4 tint_symbol [[color(0)]];
+};
+
+struct main_inputs {
+  float2 vUV [[user(locn0)]];
+};
+
+float4 main_inner(float2 vUV, tint_module_vars_struct tint_module_vars) {
+  float3 const random = tint_module_vars.randomTexture.sample(tint_module_vars.Sampler, vUV).xyz;
+  int i = 0;
+  {
+    uint2 tint_loop_idx = 0u;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      if ((i < 1)) {
+      } else {
+        break;
+      }
+      float3 const offset = float3(random.x);
+      bool v = false;
+      if ((offset.x < 0.0f)) {
+        v = true;
+      } else {
+        v = (offset.y < 0.0f);
+      }
+      bool v_1 = false;
+      if (v) {
+        v_1 = true;
+      } else {
+        v_1 = (offset.x > 1.0f);
+      }
+      bool v_2 = false;
+      if (v_1) {
+        v_2 = true;
+      } else {
+        v_2 = (offset.y > 1.0f);
+      }
+      if (v_2) {
+        i = as_type<int>((as_type<uint>(i) + as_type<uint>(1)));
+        {
+          uint const tint_low_inc = (tint_loop_idx.x + 1u);
+          tint_loop_idx.x = tint_low_inc;
+          uint const tint_carry = uint((tint_low_inc == 0u));
+          tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        }
+        continue;
+      }
+      float const sampleDepth = 0.0f;
+      i = as_type<int>((as_type<uint>(i) + as_type<uint>(1)));
+      {
+        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        tint_loop_idx.x = tint_low_inc;
+        uint const tint_carry = uint((tint_low_inc == 0u));
+        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+      }
+      continue;
+    }
+  }
+  return float4(1.0f);
+}
+
+fragment main_outputs v_3(main_inputs inputs [[stage_in]], sampler Sampler [[sampler(0)]], texture2d<float, access::sample> randomTexture [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.Sampler=Sampler, .randomTexture=randomTexture};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main_inner(inputs.vUV, tint_module_vars);
+  return tint_wrapper_result;
+}

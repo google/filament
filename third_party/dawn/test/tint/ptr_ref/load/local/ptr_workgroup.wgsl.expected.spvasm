@@ -1,0 +1,55 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 30
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %main_local_invocation_index_Input
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %i "i"
+               OpName %main_local_invocation_index_Input "main_local_invocation_index_Input"
+               OpName %main_inner "main_inner"
+               OpName %tint_local_index "tint_local_index"
+               OpName %i "p"
+               OpName %u "u"
+               OpName %main "main"
+               OpDecorate %main_local_invocation_index_Input BuiltIn LocalInvocationIndex
+        %int = OpTypeInt 32 1
+%_ptr_Workgroup_int = OpTypePointer Workgroup %int
+          %i = OpVariable %_ptr_Workgroup_int Workgroup
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%main_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void %uint
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+      %int_0 = OpConstant %int 0
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+    %int_123 = OpConstant %int 123
+      %int_1 = OpConstant %int 1
+         %26 = OpTypeFunction %void
+ %main_inner = OpFunction %void None %10
+%tint_local_index = OpFunctionParameter %uint
+         %11 = OpLabel
+         %12 = OpULessThan %bool %tint_local_index %uint_1
+               OpSelectionMerge %15 None
+               OpBranchConditional %12 %16 %15
+         %16 = OpLabel
+               OpStore %i %int_0 None
+               OpBranch %15
+         %15 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+               OpStore %i %int_123 None
+         %22 = OpLoad %int %i None
+          %u = OpIAdd %int %22 %int_1
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %26
+         %27 = OpLabel
+         %28 = OpLoad %uint %main_local_invocation_index_Input None
+         %29 = OpFunctionCall %void %main_inner %28
+               OpReturn
+               OpFunctionEnd

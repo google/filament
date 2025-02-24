@@ -1,0 +1,634 @@
+Name
+
+    ARB_vertex_blend
+
+Name Strings
+
+    GL_ARB_vertex_blend
+
+Contact
+
+    Evan Hart, NVIDIA (ehart 'at' nvidia.com)
+    Tom Frisinger, AMD (tom.frisinger 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2000-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on September 19, 2000.
+
+Version
+
+    Last Modified Date: November 4, 2006
+    Revision: 1.3
+
+Number
+
+    ARB Extension #15
+
+Dependencies
+
+    OpenGL 1.0 is required.
+    This extension is written against the OpenGL 1.2.1 Specification.
+
+Overview
+
+    This extension provides the ability to replace the single
+    modelview transformation with a set of n vertex units. (Where
+    n is constrained to an implementation defined maximum.) Each
+    unit has its own modelview transform matrix. For each unit,
+    there is a current weight associated with the vertex. When
+    this extension is enabled the vertices are transformed by
+    the modelview matrices of all of the enabled units. Afterward,
+    these results are scaled by the weights for the respective
+    units and then summed to create the eye-space vertex. A
+    similar procedure is followed for the normals, except they
+    are transformed by the inverse transpose of the modelview
+    matrices.
+
+    This extension is an orthoganalized version of functionality
+    already provided by other 3D graphics API's.
+
+    
+IP Status
+
+    Unknown, but believed to be none. 
+
+Issues
+
+
+    Should an indexed form of matrix addressing be used?
+
+        No, this should be added as an additional extension.
+
+    Should integer blending weights be allowed?
+
+        Yes, this was an over-sight in the original spec. Integer
+        formats allow for the potential to provide smaller data
+        types to the API. Integer data types are always mapped
+        to floats in the same manner as colors.
+
+    Should the blending weights be forced to sum to 1?
+
+        No, it should be provided as a convenience to developers,
+        since it is the most common case. Additionally, it should
+        be noted that even if the weights do not sum to one,
+        the result of the modelview transformation provides an
+        eye coordinate whose homogenous coordinate is equivalent
+        to the homogeneous coordinate after the transformation
+        had the weights been scaled to sum to one.
+
+        Additionally, NORMALIZE should in general be left on to
+        prevent non-unit normals.
+    
+    What about projective modelview matrices?  
+
+        Projective modelview matrices can cause problems with many
+        other features in GL, so this should not be a problem in
+        practice. This extension makes no attempts to handle
+        projective modelview matrices.
+
+    Should the set of modelview matrices affect parts of GL other
+      than vertices?
+
+        No, this seems to confuse the operation, and it forces
+        vertex components to affect setting of GL state.
+      
+    Some transformations may cause the normals to be transformed in
+      such a way that they no longer represent the tangent plane to
+      the surface.
+
+        This is a basic property of the math of the technique. In
+        general with these varying transformations, it is impossible
+        to maintain the normal as the tangent plane to the surface
+        without topological information. 
+
+        Lacking the topological data, the best approximation is to
+        transform the normals by the inverse transpose of the
+        blend of the modelview matrices. As the inverse per-vertex
+        may be computationally impractical, a slightly less accurate
+        blend of inverse transpose matrices is allowed as the
+        transformation.
+
+        When the less accurate blend is used, the normals will only
+        be identical to the normals formed by the more correct math
+        when the blending matrices are pair-wise orthogonal and
+        the sum of the square of the weights is equal to one.
+        
+    Should weights be specified as vectors rather than independent
+      scalars?
+
+        Yes, this removes little flexibility and significantly
+        reduces the call overhead.
+
+
+New Procedures and Functions
+
+    void Weight{bsifd ubusui}vARB(int size, T* weights)
+
+    void WeightPointerARB(int size, enum type, sizei stride,
+                          void *pointer)
+
+    void VertexBlendARB(int count)
+
+
+New Tokens
+
+    Accepted by the <value> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+      MAX_VERTEX_UNITS_ARB            0x86A4
+      ACTIVE_VERTEX_UNITS_ARB         0x86A5
+
+    Accepted by the <cap> parameters of Enable and Disable, by the
+    <value> parameter of IsEnabled, GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+      WEIGHT_SUM_UNITY_ARB            0x86A6
+      VERTEX_BLEND_ARB                0x86A7
+
+    Accepted by the <mode> parameter of MatrixMode and by the
+    <value> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev.
+
+      MODELVIEW0_ARB:                 0x1700 (alias to MODELVIEW)
+      MODELVIEW1_ARB:                 0x850a
+      MODELVIEW2_ARB:                 0x8722
+      MODELVIEW3_ARB:                 0x8723
+      MODELVIEW4_ARB:                 0x8724
+      MODELVIEW5_ARB:                 0x8725
+      MODELVIEW6_ARB:                 0x8726
+      MODELVIEW7_ARB:                 0x8727
+      MODELVIEW8_ARB:                 0x8728
+      MODELVIEW9_ARB:                 0x8729
+      MODELVIEW10_ARB:                0x872A
+      MODELVIEW11_ARB:                0x872B
+      MODELVIEW12_ARB:                0x872C
+      MODELVIEW13_ARB:                0x872D
+      MODELVIEW14_ARB:                0x872E
+      MODELVIEW15_ARB:                0x872F
+      MODELVIEW16_ARB:                0x8730
+      MODELVIEW17_ARB:                0x8731
+      MODELVIEW18_ARB:                0x8732
+      MODELVIEW19_ARB:                0x8733
+      MODELVIEW20_ARB:                0x8734
+      MODELVIEW21_ARB:                0x8735
+      MODELVIEW22_ARB:                0x8736
+      MODELVIEW23_ARB:                0x8737
+      MODELVIEW24_ARB:                0x8738
+      MODELVIEW25_ARB:                0x8739
+      MODELVIEW26_ARB:                0x873A
+      MODELVIEW27_ARB:                0x873B
+      MODELVIEW28_ARB:                0x873C
+      MODELVIEW29_ARB:                0x873D
+      MODELVIEW30_ARB:                0x873E
+      MODELVIEW31_ARB:                0x873F
+      
+    Accepted by the <value> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+    
+      CURRENT_WEIGHT_ARB              0x86A8 
+      
+    Accepted by the <value> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+      WEIGHT_ARRAY_TYPE_ARB           0x86A9
+      WEIGHT_ARRAY_STRIDE_ARB         0x86AA
+      WEIGHT_ARRAY_SIZE_ARB           0x86AB
+
+    Accepted by the <pname> parameter of GetPointerv:
+      WEIGHT_ARRAY_POINTER_ARB        0x86AC
+
+    Accepted by the <cap> parameters of EnableClientState and
+    DisableClientState, by the <value> parameter of IsEnabled,
+    GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+      WEIGHT_ARRAY_ARB                0x86AD
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (Operation)
+
+    - (2.6, p. 12) Second paragraph changed to:
+
+          "Each vertex is specified with two, three, or four
+          coordinates. In addition, a current normal, current texture
+          coordinates, current color, and a set of current weights
+          may be used in processing each vertex. Normals are used
+          by the GL in lighting calculations; the current normal is
+          a three-dimensional vector that may be set by sending three
+          coordinates that specify it. Texture coordinates determine
+          how a texture image is mapped onto a primitive. Weights are
+          used to blend between vertex transformations."
+
+    - (2.6.3, p. 19) First paragraph changed to:
+
+          "The only GL commands that are allowed within Begin/End
+          pairs are the commands for specifying vertex coordinates,
+          vertex color, normal coordinates, texture coordinates, and
+          weights (Vertex, Color, Index, Normal, TexCoord,
+          WeightvARB), the ArrayElement command (see section 2.8),
+          the EvalCoord and EvalPoint commands (see section 5.1),
+          commands for specifying lighting material parameters
+          (Material commands; see section 2.13.2), display list
+          invocation commands (CallList and CallLists; see section
+          5.4), and the EdgeFlag command. Executing any other GL
+          command between the execution of Begin and the
+          corresponding execution of End results in the error
+          INVALID_OPERATION. Executing Begin after Begin has already
+          been executed but before an End is executed generates the
+          INVALID_OPERATION error, as does executing End without a
+          previous corresponding Begin." 
+
+    - (2.7, p. 20) Added after the third paragraph:
+
+          "The current weights are set using
+
+              void Weight{bsifd ubusui}vARB(int size, T* weights);
+
+          the floating point values are assigned to the current
+                  weight vector. The first <size> current weights are
+                  replaced with <weights> such that:
+                  
+                      w[i] = <weights>[i]
+                 
+                  When WEIGHT_SUM_UNITY_ARB is enabled, 
+                  
+                                              <size>-1 
+                      w[<size>] = 1 - SUM <weights>[i]
+                                                          i=0
+
+                  otherwise the rest of the current weights are set to
+                  0. If <size> is greater than MAX_VERTEX_UNITS_ARB or if
+                  WEIGHT_SUM_UNITY_ARB is enabled and <size> equals
+                  MAX_VERTEX_UNITS_ARB, then the error INVALID_VALUE is
+                  generated. When the values are supplied as byte, short,
+                  int, or their unsigned counterparts, they are converted to
+                  floating-point values as indicated for the corresponding
+                  type in Table 2.6."
+
+    - (2.8, p. 21) First paragraph changed to read:
+
+          "The vertex specification commands described in section 2.7
+          accept data in almost any format, but their use requires
+          many command executions to specify even simple geometry.
+          Vertex data may also be placed into arrays that are stored
+          in the client's address space. Blocks of data in these
+          arrays may then be used to specify multiple geometric
+          primitives through the execution of a single GL command.
+          The client may specify an implementation dependent set of
+          arrays: one each to store edge flags, texture coordinates,
+          colors, color indices, normals, vertices, and weights.
+                  The commands
+
+              void EdgeFlagPointer( sizei stride, void *pointer);
+
+              void TexCoordPointer( int size, enum type, sizei stride,
+                void *pointer );
+
+              void ColorPointer( int size, enum type, sizei stride,
+                void *pointer );
+
+              void IndexPointer( enum type, sizei stride, void 
+                *pointer );
+
+              void NormalPointer( enum type, sizei stride, void
+                *pointer );
+
+              void VertexPointer( int size, enum type, sizei stride,
+                void *pointer );
+
+              void WeightPointerARB( int size, enum type,
+                            sizei stride, void *pointer)
+
+          describe the locations and organizations of these arrays.
+          For each command, type specifies the data type of the
+          values stored in the array. Because edge flags are always
+          type boolean, EdgeFlagPointer has no type argument. Size,
+          when present, indicates the number of values per vertex
+          that are stored in the array. Because normals are always
+          specified with three values, NormalPointer has no size
+          argument. Likewise, because color indices, edge flags, and
+          weights are always specified with a single value,
+          IndexPointer, and EdgeFlagPointer also have no size
+                  argument. Table 2.4 indicates the allowable values for size
+                  and type (when present). For type the values BYTE, SHORT,
+                  INT, FLOAT, and DOUBLE indicates types byte, short, int,
+                  float, and double, respectively; and the values
+                  UNSIGNED_BYTE, UNSIGNED_SHORT, and UNSIGNED_INT indicate
+                  types ubyte, ushort, and uint, respectively. The error
+                  INVALID_VALUE is generated if size is specified with
+                  a value other than that indicated in the table, or if the
+                  <size> parameter to WeightPointerARB is outside the range
+                  allowed for WeightvARB in section 2.7."
+         
+    - (2.8, p. 22) Change table 2.4 to read:
+
+          Command            Sizes    Types                     
+          -------            -----    -----
+          VertexPointer      2,3,4    short, int, float, double
+          NormalPointer      3        byte, short, int, float, double
+          ColorPointer       3,4      byte, ubyte, short, ushort,
+                                      int, uint, float, double
+          IndexPointer       1        ubyte, short, int, float,
+                                      double
+          TexCoordPointer    1,2,3,4  short, int, float, double
+          EdgeFlagPointer    1        boolean
+          WeightPointerARB   1 ...    byte, ubyte, short, ushort,
+                         MAX_VERTEX_UNITS_ARB int, uint, float, double
+
+
+    - (2.8 p. 23) Change paragraph two to:
+
+          "An individual array is enabled or disabled by calling one
+      of
+
+              void EnableClientState( enum array );
+              void DisableClientState( enum array );
+
+          with array set to EDGE_FLAG_ARRAY, TEXTURE_COORD_ARRAY,
+          COLOR_ARRAY, INDEX_ARRAY, NORMAL_ARRAY, VERTEX_ARRAY, or
+          WEIGHT_ARRAY_ARB, for the edge flag, texture coordinate,
+          color, color index, normal, vertex, or weight array,
+          respectively."
+
+    - (2.8 p. 23) Change paragraph three to:
+
+          "The ith element of every enabled array is transferred to
+          the GL by calling
+
+              void ArrayElement( int i );
+
+          For each enabled array, it is as though the corresponding
+          command form section 2.7 or 2.6.2 were called with a
+          pointer to element i. For the vertex array, the
+          corresponding command is Vertex[size][type]v, where size is
+          one of [2,3,4], and type is one of [s,i,f,d], corresponding
+          to array types short, int, float, and double respectively.
+          The corresponding commands for the edge flag, texture
+          coordinate, color, color index, normal, and weight arrays
+          are EdgeFlagv, TexCoord[size][type]v, Color[size][type]v,
+          Index[type]v, Normal[type]v, and Weight[type]vARB,
+          respectively. The <size> parameter to WeightvARB is the
+                  current <size> for the weight array. If the vertex array
+                  is enabled, it is as though Vertex[size][type]v is executed
+                  last, after the executions of the other corresponding
+                  commands."
+
+    - (2.10 p. 28) Added after the second paragraph:
+
+          "Alternatively, the model-view transformation may be
+          performed by a set of model-view matrices when vertex
+          blending is enabled. Enabling and disabling of vertex
+          blending is handled by Enable or Disable with the argument
+          of VERTEX_BLEND_ARB. When blending is enabled, the vertex
+          is transformed by multiple model-view transformations.
+                  The number of active transformations applied is set by
+
+                      void VertexBlendARB(int count)
+                  
+                  where count is the number of transformations to blend.
+                  If count is greater than the implementation defined
+                  maximum number of transformations reported in 
+                  MAX_VERTEX_UNITS_ARB, then the error
+                  INVALID_VALUE is generated."
+
+    - (2.10 p. 29) Add after the second paragraph:
+
+          "When vertex blending is enabled, the vertex's eye
+          coordinates are found as:
+
+            (xe)    n-1               (xo)
+            (ye)  =  SUM  w_i * M_i * (yo)
+            (ze)    i=0               (zo)
+            (we)                      (wo)
+
+          where M_i is the i'th model-view matrix, w_i is the
+                  vertex's associated weight for vertex unit i, 
+
+                        and
+
+                        n = ACTIVE_VERTEX_UNITS_ARB
+                        "
+
+    - (2.10.2 p. 31) Change the first paragraph to:
+
+          "The projection matrix and model-view matrices are set
+          with a variety of commands. The affected matrix is
+          determined by the current matrix mode. The current
+          matrix mode is set with
+
+            void MatrixMode( enum mode );
+
+          which takes one of the pre-defined constants TEXTURE,
+          MODELVIEW, COLOR, PROJECTION, or MODELVIEWn_ARB. TEXTURE
+          is described later in section 2.10.2, and COLOR is
+          described in section 3.6.3. If the current matrix mode is
+          MODELVIEW, the matrix operations apply to the model-view
+          matrix; if PROJECTION, then they apply to the projection
+          matrix; if MODLEVIEWn_ARB, then they apply to the n'th
+          model-view matrix. MODELVIEW0_ARB is aliased to
+          MODELVIEW."  
+
+        - (2.10.2 p. 34) Changed the second paragraph to read:
+
+              "There is a stack of matrices for each of the matrix
+                  modes. For MODELVIEWn mode, the stack depth is at least 32
+                  (that is, there is a stack of at least 32 MODELVIEWn
+                  matrices). Additionally, all modelview matrices must
+                  have the same stack depth. ..."
+
+        - (2.10.2 p. 34) Changed the third paragraph to read:
+
+              "... and a stack of at least 32 4 x 4 matrices with an
+                  associated stack pointer for each MODELVIEWn. ..."
+          
+
+    - (2.10.3 p. 35) Added after the third paragraph:
+
+          "When vertex blending is enabled, the normal is transformed
+          to eye space by:
+
+                                              n-1
+              (nx' ny' nz') = (nx ny nz) Inv ( SUM w_i * Mu_i)
+                                              i=0
+          
+            Alternatively implementations may choose to transform the
+          normal to eye-space by:
+          
+                              n-1
+              (nx' ny' nz') =  SUM w_i * (nx ny nz) Inv(Mu_i)
+                              i=0
+
+          where Mu_i is the upper leftmost 3x3 matrix taken from the
+          model-view for vertex unit i, w_i is the vertex's
+          associated weight for vertex unit i, and
+
+                        n = ACTIVE_VERTEX_UNITS_ARB"
+
+
+    - (2.10.3 p. 36) Added after the second paragraph:
+
+          "When vertex blending is enabled, rescaling is applied
+          within each vertex unit independently. The rescale factor
+          for each unit is derived from the modelview matrix for that
+          unit. Normalization is applied to the transformed, blended
+          normal."
+
+Additions to Chapter 3:
+
+      None
+
+Additions to Chapter 4:
+
+      None
+
+Additions to Chapter 5:
+
+      None 
+
+Additions to Chapter 6:
+
+      None
+
+Additions to the GLX Specification
+
+      None
+
+GLX Protocol
+
+    Nine new GL rendering commandsl are added. The following commands
+    are sent to the server as part of a glXRender request:
+
+           WeightbvARB
+
+                2    8+n    rendering command length
+                2    220    rendering command opcode
+                4    INT32  size
+                1*n  INT8   weights
+           
+           WeightubvARB
+
+                2    8+n    rendering command length
+                2    221    rendering command opcode
+                4    INT32  size
+                1*n  CARD8  weights
+           
+           WeightsvARB
+
+                2    8+2*n  rendering command length
+                2    222    rendering command opcode
+                4    INT32  size
+                2*n  INT16  weights
+
+           WeightusvARB
+
+                2    8+2*n  rendering command length
+                2    223    rendering command opcode
+                4    INT32  size
+                2*n  CARD16 weights
+
+           WeightivARB
+
+                2    8+4*n  rendering command length
+                2    224    rendering command opcode
+                4    INT32  size
+                4*n  INT32  weights
+
+           WeightuivARB
+
+                2    8+4*n  rendering command length
+                2    225    rendering command opcode
+                4    INT32  size
+                4*n  CARD32 weights
+
+           VertexBlendARB
+
+                2    8      rendering command length
+                2    226    rendering command opcode
+                4    INT32  count
+
+        WeightfvARB
+
+            2           8+4*n           rendering command length
+            2           227             rendering command opcode
+            4           INT32           size
+            4*n         FLOAT32         weights
+
+        WeightdvARB
+
+            2           8+8*n           rendering command length
+            2           228             rendering command opcode
+            4           INT32           size
+            8*n         FLOAT64         weights
+
+Errors
+      
+      INVALID_VALUE is generated if the <size> parameter for
+          WeightvARB or WeightPointerARB is greater than
+          MAX_VERTEX_UNITS_ARB, or if WEIGHT_SUM_UNITY_ARB is enabled
+          and <size> is equal to MAX_VERTEX_UNITS_ARB
+
+          INVALID_VALUE is generated if the <count> parameter to
+          VertexBlendARB is greater than MAX_VERTEX_UNITS_ARB or
+      if <count> is equal to zero.
+
+New State
+
+      Modified State in Table 6.5:
+
+Get Value                Get Command Type     Initial Value Attribute
+---------                ----------- ----     ------------- ---------
+CURRENT_WEIGHT_ARB       GetFloatv   Rn       n=0 - 1.0     current
+                                              n>0 - 0.0 
+    
+      Modified State in Table 6.6:
+
+Get Value                 Get Command Type   Initial Value Attribute
+---------                 ----------- ----   ------------- --------- 
+WEIGHT_ARRAY_ARB          IsEnabled   1*B    False         vert-array
+WEIGHT_ARRAY_TYPE_ARB     GetIntegerv 1*Z2   FLOAT         vert-array
+WEIGHT_ARRAY_SIZE_ARB     GetIntegerv 1*Z+   0             vert-array
+WEIGHT_ARRAY_STRIDE_ARB   GetIntegerv 1*Z+   0             vert-array
+WEIGHT_ARRAY_POINTER_ARB  GetPointerv 1*Y    0             vert-array
+
+
+      Modified state in Table 6.7:
+
+Get Value                Get Command Type     Initial Value Attribute
+---------                ----------- ----     ------------- ---------
+MODELVIEWn_ARB           GetFloatv   1*32*xM4 Identity          -
+ACTIVE_VERTEX_UNITS_ARB  GetIntegerv Z+       1             transform
+VERTEX_BLEND_ARB         IsEnabled   B        False         transform
+                                                            enable
+
+      Modified state in Table 6.25:
+
+Get Value                Get Command Type     Minmum Value  Attribute
+---------                ----------- ----     ------------  ---------
+MAX_VERTEX_UNITS_ARB     GetIntegerv Z+       2                 -
+
+Additions to Appendix A:
+
+      None
+
+Revision History
+
+  * 1.0 (October 16, 2000) - initial version
+
+  * 1.1 (March 12, 2002) - added GLX protocol for Weight[df]v
+
+  * 1.2 (March 21, 2002) - correct Weightdv protocol
+
+  * 1.3 (November 4, 2006) - updated contact info after ATI/AMD merger

@@ -1,0 +1,140 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct Scene {
+  /* 0x0000 */ float4 vEyePosition;
+};
+
+struct Material_packed_vec3 {
+  /* 0x0000 */ float4 vDiffuseColor;
+  /* 0x0010 */ packed_float3 vAmbientColor;
+  /* 0x001c */ float placeholder;
+  /* 0x0020 */ packed_float3 vEmissiveColor;
+  /* 0x002c */ float placeholder2;
+};
+
+struct Mesh {
+  /* 0x0000 */ float visibility;
+};
+
+struct tint_module_vars_struct {
+  thread float* fClipDistance3;
+  thread float* fClipDistance4;
+  const constant Scene* x_29;
+  const constant Material_packed_vec3* x_49;
+  const constant Mesh* x_137;
+  thread float4* glFragColor;
+  thread bool* continue_execution;
+};
+
+struct main_out {
+  float4 glFragColor_1;
+};
+
+struct main_outputs {
+  float4 main_out_glFragColor_1 [[color(0)]];
+};
+
+struct main_inputs {
+  float fClipDistance3_param [[user(locn2)]];
+  float fClipDistance4_param [[user(locn3)]];
+};
+
+void main_1(tint_module_vars_struct tint_module_vars) {
+  float3 viewDirectionW = 0.0f;
+  float4 baseColor = 0.0f;
+  float3 diffuseColor = 0.0f;
+  float alpha = 0.0f;
+  float3 normalW = 0.0f;
+  float2 uvOffset = 0.0f;
+  float3 baseAmbientColor = 0.0f;
+  float glossiness = 0.0f;
+  float3 diffuseBase = 0.0f;
+  float shadow = 0.0f;
+  float4 refractionColor = 0.0f;
+  float4 reflectionColor = 0.0f;
+  float3 emissiveColor = 0.0f;
+  float3 finalDiffuse = 0.0f;
+  float3 finalSpecular = 0.0f;
+  float4 color = 0.0f;
+  float const x_9 = (*tint_module_vars.fClipDistance3);
+  if ((x_9 > 0.0f)) {
+    (*tint_module_vars.continue_execution) = false;
+  }
+  float const x_17 = (*tint_module_vars.fClipDistance4);
+  if ((x_17 > 0.0f)) {
+    (*tint_module_vars.continue_execution) = false;
+  }
+  float4 const x_34 = (*tint_module_vars.x_29).vEyePosition;
+  float3 const x_38 = float3(0.0f);
+  viewDirectionW = normalize((float3(x_34.x, x_34.y, x_34.z) - x_38));
+  baseColor = float4(1.0f);
+  float4 const x_52 = (*tint_module_vars.x_49).vDiffuseColor;
+  diffuseColor = float3(x_52.x, x_52.y, x_52.z);
+  float const x_60 = (*tint_module_vars.x_49).vDiffuseColor.w;
+  alpha = x_60;
+  float3 const x_62 = float3(0.0f);
+  float3 const x_64 = float3(0.0f);
+  uvOffset = float2(0.0f);
+  float4 const x_74 = float4(0.0f);
+  float4 const x_76 = baseColor;
+  float3 const v = float3(x_76.x, x_76.y, x_76.z);
+  float3 const x_78 = (v * float3(x_74.x, x_74.y, x_74.z));
+  float4 const x_79 = baseColor;
+  baseColor = float4(x_78.x, x_78.y, x_78.z, x_79.w);
+  baseAmbientColor = float3(1.0f);
+  glossiness = 0.0f;
+  diffuseBase = float3(0.0f);
+  shadow = 1.0f;
+  refractionColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+  reflectionColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+  float3 const x_94 = float3((*tint_module_vars.x_49).vEmissiveColor);
+  emissiveColor = x_94;
+  float3 const x_96 = diffuseBase;
+  float3 const x_97 = diffuseColor;
+  float3 const x_99 = emissiveColor;
+  float3 const x_103 = float3((*tint_module_vars.x_49).vAmbientColor);
+  float4 const x_108 = baseColor;
+  finalDiffuse = (clamp((((x_96 * x_97) + x_99) + x_103), float3(0.0f), float3(1.0f)) * float3(x_108.x, x_108.y, x_108.z));
+  finalSpecular = float3(0.0f);
+  float3 const x_113 = finalDiffuse;
+  float3 const x_114 = baseAmbientColor;
+  float3 const x_116 = finalSpecular;
+  float4 const x_118 = reflectionColor;
+  float4 const x_121 = refractionColor;
+  float3 const v_1 = (((x_113 * x_114) + x_116) + float3(x_118.x, x_118.y, x_118.z));
+  float3 const x_123 = (v_1 + float3(x_121.x, x_121.y, x_121.z));
+  float const x_124 = alpha;
+  color = float4(x_123.x, x_123.y, x_123.z, x_124);
+  float4 const x_129 = color;
+  float3 const x_132 = max(float3(x_129.x, x_129.y, x_129.z), float3(0.0f));
+  float4 const x_133 = color;
+  color = float4(x_132.x, x_132.y, x_132.z, x_133.w);
+  float const x_140 = (*tint_module_vars.x_137).visibility;
+  float const x_142 = color.w;
+  color.w = (x_142 * x_140);
+  float4 const x_147 = color;
+  (*tint_module_vars.glFragColor) = x_147;
+}
+
+main_out main_inner(float fClipDistance3_param, float fClipDistance4_param, tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.fClipDistance3) = fClipDistance3_param;
+  (*tint_module_vars.fClipDistance4) = fClipDistance4_param;
+  main_1(tint_module_vars);
+  main_out const v_2 = main_out{.glFragColor_1=(*tint_module_vars.glFragColor)};
+  if (!((*tint_module_vars.continue_execution))) {
+    discard_fragment();
+  }
+  return v_2;
+}
+
+fragment main_outputs v_3(main_inputs inputs [[stage_in]], const constant Scene* x_29 [[buffer(0)]], const constant Material_packed_vec3* x_49 [[buffer(1)]], const constant Mesh* x_137 [[buffer(2)]]) {
+  thread float fClipDistance3 = 0.0f;
+  thread float fClipDistance4 = 0.0f;
+  thread float4 glFragColor = 0.0f;
+  thread bool continue_execution = true;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.fClipDistance3=(&fClipDistance3), .fClipDistance4=(&fClipDistance4), .x_29=x_29, .x_49=x_49, .x_137=x_137, .glFragColor=(&glFragColor), .continue_execution=(&continue_execution)};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.main_out_glFragColor_1 = main_inner(inputs.fClipDistance3_param, inputs.fClipDistance4_param, tint_module_vars).glFragColor_1;
+  return tint_wrapper_result;
+}

@@ -1,0 +1,40 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint4* prevent_dce;
+};
+
+uint4 subgroupExclusiveAdd_ec300f() {
+  uint4 arg_0 = uint4(1u);
+  uint4 res = simd_prefix_exclusive_sum(arg_0);
+  return res;
+}
+
+fragment void fragment_main(device uint4* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupExclusiveAdd_ec300f();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint4* prevent_dce;
+};
+
+uint4 subgroupExclusiveAdd_ec300f() {
+  uint4 arg_0 = uint4(1u);
+  uint4 res = simd_prefix_exclusive_sum(arg_0);
+  return res;
+}
+
+kernel void compute_main(device uint4* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupExclusiveAdd_ec300f();
+}

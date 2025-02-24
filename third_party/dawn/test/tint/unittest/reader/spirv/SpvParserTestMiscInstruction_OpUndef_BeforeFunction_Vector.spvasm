@@ -1,0 +1,33 @@
+; Test: SpvParserTestMiscInstruction_OpUndef_BeforeFunction_Vector.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+%void = OpTypeVoid
+%6 = OpTypeFunction %void
+%bool = OpTypeBool
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%float = OpTypeFloat 32
+%v2bool = OpTypeVector %bool 2
+%v2uint = OpTypeVector %uint 2
+%v2int = OpTypeVector %int 2
+%v2float = OpTypeVector %float 2
+%4 = OpUndef %v2bool
+%1 = OpUndef %v2uint
+%2 = OpUndef %v2int
+%3 = OpUndef %v2float
+%100 = OpFunction %void None %6
+%19 = OpLabel
+%14 = OpCopyObject %v2bool %4
+%11 = OpCopyObject %v2uint %1
+%12 = OpCopyObject %v2int %2
+%13 = OpCopyObject %v2float %3
+OpReturn
+OpFunctionEnd
+

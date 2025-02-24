@@ -1,0 +1,102 @@
+;
+; vtx_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 40
+; Schema: 0
+               OpCapability Shader
+         %27 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %vtx_main "vtx_main" %vtx_main_vertex_index_Input %vtx_main_position_Output %vtx_main___point_size_Output
+               OpName %vtx_main_vertex_index_Input "vtx_main_vertex_index_Input"
+               OpName %vtx_main_position_Output "vtx_main_position_Output"
+               OpName %vtx_main___point_size_Output "vtx_main___point_size_Output"
+               OpName %vtx_main_inner "vtx_main_inner"
+               OpName %VertexIndex "VertexIndex"
+               OpName %vtx_main "vtx_main"
+               OpDecorate %vtx_main_vertex_index_Input BuiltIn VertexIndex
+               OpDecorate %vtx_main_position_Output BuiltIn Position
+               OpDecorate %vtx_main___point_size_Output BuiltIn PointSize
+               OpDecorate %_arr_v2float_uint_3 ArrayStride 8
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%vtx_main_vertex_index_Input = OpVariable %_ptr_Input_uint Input
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%vtx_main_position_Output = OpVariable %_ptr_Output_v4float Output
+%_ptr_Output_float = OpTypePointer Output %float
+%vtx_main___point_size_Output = OpVariable %_ptr_Output_float Output
+    %v2float = OpTypeVector %float 2
+     %uint_3 = OpConstant %uint 3
+%_arr_v2float_uint_3 = OpTypeArray %v2float %uint_3
+%_ptr_Private__arr_v2float_uint_3 = OpTypePointer Private %_arr_v2float_uint_3
+    %float_0 = OpConstant %float 0
+  %float_0_5 = OpConstant %float 0.5
+         %16 = OpConstantComposite %v2float %float_0 %float_0_5
+ %float_n0_5 = OpConstant %float -0.5
+         %19 = OpConstantComposite %v2float %float_n0_5 %float_n0_5
+         %21 = OpConstantComposite %v2float %float_0_5 %float_n0_5
+         %15 = OpConstantComposite %_arr_v2float_uint_3 %16 %19 %21
+         %10 = OpVariable %_ptr_Private__arr_v2float_uint_3 Private %15
+         %24 = OpTypeFunction %v4float %uint
+     %uint_2 = OpConstant %uint 2
+%_ptr_Private_v2float = OpTypePointer Private %v2float
+    %float_1 = OpConstant %float 1
+       %void = OpTypeVoid
+         %36 = OpTypeFunction %void
+%vtx_main_inner = OpFunction %v4float None %24
+%VertexIndex = OpFunctionParameter %uint
+         %25 = OpLabel
+         %26 = OpExtInst %uint %27 UMin %VertexIndex %uint_2
+         %29 = OpAccessChain %_ptr_Private_v2float %10 %26
+         %31 = OpLoad %v2float %29 None
+         %32 = OpCompositeConstruct %v4float %31 %float_0 %float_1
+               OpReturnValue %32
+               OpFunctionEnd
+   %vtx_main = OpFunction %void None %36
+         %37 = OpLabel
+         %38 = OpLoad %uint %vtx_main_vertex_index_Input None
+         %39 = OpFunctionCall %v4float %vtx_main_inner %38
+               OpStore %vtx_main_position_Output %39 None
+               OpStore %vtx_main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd
+;
+; frag_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 16
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %frag_main "frag_main" %frag_main_loc0_Output
+               OpExecutionMode %frag_main OriginUpperLeft
+               OpName %frag_main_loc0_Output "frag_main_loc0_Output"
+               OpName %frag_main_inner "frag_main_inner"
+               OpName %frag_main "frag_main"
+               OpDecorate %frag_main_loc0_Output Location 0
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%frag_main_loc0_Output = OpVariable %_ptr_Output_v4float Output
+          %6 = OpTypeFunction %v4float
+    %float_1 = OpConstant %float 1
+    %float_0 = OpConstant %float 0
+          %8 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+       %void = OpTypeVoid
+         %13 = OpTypeFunction %void
+%frag_main_inner = OpFunction %v4float None %6
+          %7 = OpLabel
+               OpReturnValue %8
+               OpFunctionEnd
+  %frag_main = OpFunction %void None %13
+         %14 = OpLabel
+         %15 = OpFunctionCall %v4float %frag_main_inner
+               OpStore %frag_main_loc0_Output %15 None
+               OpReturn
+               OpFunctionEnd

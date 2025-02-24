@@ -1,0 +1,20 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentInputs {
+  float4 position;
+  bool front_facing;
+  uint sample_index;
+  uint sample_mask;
+};
+
+void main_inner(FragmentInputs inputs) {
+  if (inputs.front_facing) {
+    float4 const foo = inputs.position;
+    uint const bar = (inputs.sample_index + inputs.sample_mask);
+  }
+}
+
+fragment void v(float4 FragmentInputs_position [[position]], bool FragmentInputs_front_facing [[front_facing]], uint FragmentInputs_sample_index [[sample_id]], uint FragmentInputs_sample_mask [[sample_mask]]) {
+  main_inner(FragmentInputs{.position=FragmentInputs_position, .front_facing=FragmentInputs_front_facing, .sample_index=FragmentInputs_sample_index, .sample_mask=FragmentInputs_sample_mask});
+}

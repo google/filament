@@ -1,0 +1,63 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 320
+               OpName %main "main"
+               OpName %m "m"
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%mat2v2float = OpTypeMatrix %v2float 2
+%_ptr_Function_mat2v2float = OpTypePointer Function %mat2v2float
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+         %13 = OpConstantComposite %v2float %float_1 %float_2
+    %float_3 = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+         %16 = OpConstantComposite %v2float %float_3 %float_4
+         %17 = OpConstantComposite %mat2v2float %13 %16
+  %float_0_5 = OpConstant %float 0.5
+  %float_1_5 = OpConstant %float 1.5
+         %20 = OpConstantComposite %v2float %float_0_5 %float_1_5
+         %21 = OpConstantComposite %mat2v2float %20 %13
+       %bool = OpTypeBool
+     %v2bool = OpTypeVector %bool 2
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_0 = OpConstant %float 0
+         %27 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+         %28 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+       %main = OpFunction %void None %6
+         %29 = OpLabel
+          %m = OpVariable %_ptr_Function_mat2v2float Function
+         %30 = OpTranspose %mat2v2float %17
+         %31 = OpFDiv %float %float_1 %float_2
+         %32 = OpMatrixTimesScalar %mat2v2float %30 %31
+               OpStore %m %32
+         %33 = OpLoad %mat2v2float %m
+         %34 = OpCompositeExtract %v2float %33 0
+         %35 = OpCompositeExtract %v2float %21 0
+         %36 = OpFOrdEqual %v2bool %34 %35
+         %37 = OpAll %bool %36
+         %38 = OpCompositeExtract %v2float %33 1
+         %39 = OpCompositeExtract %v2float %21 1
+         %40 = OpFOrdEqual %v2bool %38 %39
+         %41 = OpAll %bool %40
+         %42 = OpLogicalAnd %bool %37 %41
+               OpSelectionMerge %43 None
+               OpBranchConditional %42 %44 %45
+         %44 = OpLabel
+               OpStore %_GLF_color %27
+               OpBranch %43
+         %45 = OpLabel
+               OpStore %_GLF_color %28
+               OpBranch %43
+         %43 = OpLabel
+               OpReturn
+               OpFunctionEnd

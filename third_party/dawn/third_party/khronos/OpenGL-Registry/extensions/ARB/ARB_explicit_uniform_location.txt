@@ -1,0 +1,475 @@
+Name
+
+    ARB_explicit_uniform_location
+
+Name Strings
+
+    GL_ARB_explicit_uniform_location
+
+Contact
+
+    Piers Daniell, NVIDIA (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Bruce Merry
+    Christophe Riccio, AMD
+    Pat Brown, NVIDIA
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date:         05/15/2012
+    Revision:                   6
+
+Number
+
+    ARB Extension #128
+
+Dependencies
+
+    Requires OpenGL 3.3 or ARB_explicit_attrib_location.
+    
+    This extension interacts with ARB_shader_subroutine.
+
+    This extension is written against the OpenGL 4.2 (Compatibility Profile)
+    and the OpenGL Shading Language 4.20.11 specification.
+
+Overview
+
+    This extension provides a method to pre-assign uniform locations to
+    uniform variables in the default uniform block, including subroutine
+    uniforms. This allows an application to modify the uniform values without
+    requiring a GL query like GetUniformLocation, GetSubroutineUniformLocation
+    and GetSubroutineIndex.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, GetDoublev, and GetInteger64v:
+    
+        MAX_UNIFORM_LOCATIONS                           0x826E  
+    
+Additions to Chapter 2 of the OpenGL 4.2 Specification (OpenGL Operation)
+
+    Section 2.14.7 "Uniform Variables":
+
+    Modify the third paragraph on page 114 to read:
+    
+    "When a program is successfully linked, all active uniforms, except for
+    atomic counters, belonging to the program object's default uniform block
+    are initialized as defined by the version of the OpenGL Shading Language
+    used to compile the program. A successful link will also generate a
+    location for any active uniform in the default uniform block which don't
+    already have an explicit location defined in the shader. The generated
+    locations will never take the location of a uniform with an explicit
+    location defined in the shader, even if that uniform is determined to
+    be inactive. The values of active uniforms in the default uniform block
+    can be changed using this location and the appropriate Uniform* command
+    (see below). These generated locations are invalidated and new ones
+    assigned after each successful re-link. The explicitly defined locations
+    and the generated locations must be in the range of 0 to
+    MAX_UNIFORM_LOCATIONS minus one."
+    
+    Section 2.14.8 "Subroutine Uniform Variables":
+    
+    Modify the last paragraph on page 136 to read:
+    
+    "The command
+
+        int GetSubroutineUniformLocation(uint program, enum shadertype,
+                                         const char *name);
+        
+    will return the location of the subroutine uniform variable <name> in the
+    shader stage of type <shadertype> attached to <program>, with behavior
+    otherwise identical to GetUniformLocation. The value -1 will be returned
+    if <name> is not the name of an active subroutine uniform. The subroutine
+    uniform may have an explicit location specified in the shader. At link
+    time, all active subroutine uniforms without an explicit location will be
+    assigned a unique location. The value ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS
+    is the largest assigned or generated location plus one. An assigned
+    location will never take the location of an explicitly assigned location
+    in, even if that subroutine uniform is inactive. Between the location 0
+    and ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS minus one there may be unused
+    locations either because they weren't assigned a subroutine uniform or
+    because the subroutine uniform was determined to be inactive by the
+    linker. These locations will be ignored when assigning the subroutine
+    index as described below.
+
+    There is an implementation-dependent limit on the number of active
+    subroutine uniform locations in each shader stage; a program will fail
+    to link if the number of subroutine uniform locations required is greater
+    than the value of MAX_SUBROUTINE_UNIFORM_LOCATIONS or if an explicit
+    subroutine uniform location is outside this limit. If <program> has not
+    been successfully linked, the error INVALID_OPERATION will be generated.
+    For active subroutine uniforms declared as arrays, the declared array
+    elements are assigned consecutive locations.
+
+    Each function in a shader associated with a subroutine type is considered
+    an active subroutine, unless the compiler conclusively determines that
+    the function could never be assigned to an active subroutine uniform.
+    The subroutine functions can be assigned an explicit index in the shader
+    between 0 and MAX_SUBROUTINES minus one. At link time, all active
+    subroutines without an explicit index will be assigned an index between 0
+    and ACTIVE_SUBROUTINES minus one. An assigned index will never take the
+    same index of an explicitly assigned index in the shader, even if that
+    subroutine is inactive. Between index 0 and ACTIVE_SUBROUTINES minus one
+    there may be unused indices either because they weren't assigned an
+    index by the linker or because the subroutine was determined to be
+    inactive by the linker. If there are no explicitly defined subroutine
+    indices in the shader the implementation must assign indices between
+    0 and ACTIVE_SUBROUTINES minus one with no index unused. It is
+    recommended, but not required, the application assigns a range of tightly
+    packed indices starting from zero to avoid indices between 0 and
+    ACTIVE_SUBROUTINES minus one being unused.
+    
+    The index can be queried with the command:
+
+        uint GetSubroutineIndex(uint program, enum shadertype,
+                                const char *name);
+                                
+    where name is the null-terminated name of a function in the shader stage
+    of type <shadertype> attached to <program>. The value INVALID_INDEX will
+    be returned if name is not the name of an active subroutine in the shader
+    stage. After the program has been linked, the subroutine index will not
+    change unless the program is re-linked."
+
+    Modify the second paragraph on page 138 to read:
+    
+    "The name of an active subroutine can be queried given its subroutine
+    index with the command:
+
+        void GetActiveSubroutineName(uint program, enum shadertype, uint index,
+                                     sizei bufsize, dizei *length, char *name);
+
+    <program> and <shadertype> specify the program and shader stage. <index>
+    must be a subroutine index in the range from zero to the value of
+    ACTIVE_SUBROUTINES minus one for the shader stage. If <index> is greater
+    than or equal to the value of ACTIVE_SUBROUTINES, the error INVALID_VALUE
+    is generated. The name of the selected subroutine is returned as a null-
+    terminated string in name. The actual number of characters written into
+    name, excluding the null terminator, is returned in length. If length is
+    NULL, no length is returned. If the index refers to an unused subroutine
+    index, the string returned in <name> is an empty string and the length
+    returned is zero. ..."
+
+    Modify the last paragraph on page 138 to read:
+    
+    "The command
+
+        void UniformSubroutinesuiv(enum shadertype, sizei count,
+                                   const uint *indices);
+                                   
+    will load all active subroutine uniforms for shader stage <shadertype>
+    with subroutine indices from <indices>, storing <indices>[i] into the
+    uniform at location i. Any locations between 0 and
+    ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS minus one which are not used will be
+    ignored. If <count> is not equal to the value of
+    ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS for the program currently in use at
+    shader stage <shadertype>, or if the uniform at location i is used and
+    the value in <indices>[i] is greater than or equal to the value
+    of ACTIVE_SUBROUTINES for the shader stage, the error INVALID_VALUE is
+    generated. If the value of <indices>[i] for a used location specifies an
+    unused index the error INVALID_VALUE is generated. If, for any subroutine
+    index being loaded to a particular uniform location, the function
+    corresponding to the subroutine index was not associated (as defined in
+    section 6.1.2 of the OpenGL Shading Language Specification) with the type
+    of the subroutine variable at that location, then the error
+    INVALID_OPERATION is generated. If no program is active, the error
+    INVALID_OPERATION is generated."
+
+Additions to Chapter 6 of the OpenGL 4.2 Specification (OpenGL Operation)
+
+    Section 6.1.18 "Shader and Program Queries":
+    
+    Modify the second paragraph on page 501:
+    
+    "The command
+
+        void GetUniformSubroutineuiv(enum shadertype, int location, uint *params);
+        
+    returns the value of the subroutine uniform at location <location> for 
+    shader stage <shadertype> of the current program. If <location> is
+    greater than or equal to the value of ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS
+    for the shader currently in use at shader stage <shadertype>, the error
+    INVALID_VALUE is generated. If <location> represents an unused location,
+    the value INVALID_INDEX is returned and no error is generated. If no
+    program is active, the error INVALID_OPERATION is generated."
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Dependencies on ARB_shader_subroutine
+
+    If ARB_shader_subroutine is not supported, remove all references to
+    subroutine uniform locations and subroutine indices.
+
+GLX protocol
+
+    None
+
+Errors
+
+    INVALID_VALUE is generated if an unused index is assigned to an
+    active and used subroutine uniform variable by UniformSubroutinesuiv.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    Changes to table 6.64, p. 568 (Implementation Dependent Values)
+
+                                                   Minimum
+    Get Value                  Type    Get Command Value   Description                  Sec.    Attribute
+    ---------                  ----    ----------- ------- -----------                  ----    ---------
+    MAX_UNIFORM_LOCATIONS      Z+      GetIntegerv 1024    Maximum number of user-      2.14.7  -
+                                                           assignable uniform locations
+
+Modifications to The OpenGL Shading Language Specification, Version 4.20.06
+
+    Including the following line in a shader can be used to control
+    the language feature described in thie extension:
+
+      #extension GL_ARB_explicit_uniform_location : <behavior>
+
+    where <behavior> is as described in section 3.3.
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_ARB_explicit_uniform_location 1
+
+    Insert a new section called 4.4.3 "Uniform Variable Layout Qualifiers":
+    
+    "Layout qualifiers can be used for uniform variables and subroutine
+    uniforms. The layout qualifier identifiers for uniform variables and
+    subroutine uniforms are:
+        layout-qualifier-id
+            location = integer-constant
+    
+    The location idenifier can be used with default-block uniform
+    variables and subroutine uniforms. The location specifies the
+    location by which the OpenGL API can reference the uniform and update its value.
+    Individual elements of a uniform array are assigned consecutive locations
+    with the first element taking location <location>. No two default-block
+    uniform variables in the program can have the same location, even if they
+    are unused, otherwise a compiler or linker error will be generated. No two
+    subroutine uniform variables can have the same location in the same shader
+    stage, otherwise a compiler or linker error will be generated. Valid
+    locations for default-block uniform variable locations are in the range of
+    0 to the implementation-defined maximum number of uniform locations. Valid
+    locations for subroutine uniforms are in the range of 0 to the
+    implementation-defined per-stage maximum number of subroutine uniform
+    locations minus one.
+    
+    Locations can be assigned to default-block uniform arrays and structures.
+    The first inner-most scalar, vector or matrix member or element takes the
+    specified <location> and the compiler assigns the next inner-most member
+    or element the next incremental location value. Each subsequent inner-most
+    member or element gets incremental locations for the entire structure or
+    array. This rule applies to nested structures and arrays and gives each
+    inner-most scalar, vector, or matrix type a unique location. For arrays
+    without an explicit size, the size is calculated based on its static
+    usage. When the linker generates locations for uniforms without an
+    explicit location, it assumes for all uniforms with an explicit location
+    all their array elements and structure members are used and the linker
+    will not generate a conflicting location, even if that element of member
+    is deemed unused."
+    
+    Insert a new section called 4.4.4 "Subroutine Function Layout Qualifiers":
+    
+    "Layout qualifiers can be used for subroutine functions. The layout
+    qualifier identifiers for subroutine functions are:
+        layout-qualifier-id
+            index = integer-constant
+            
+    Each subroutine with an index qualifier in the shader must be given
+    a unique index, otherwise a compile or link error will be generated. The
+    indices must be in the range of 0 to the implementation defined maximum
+    number of subroutines minus one. It's recommended, but not required, that
+    the shader assigns a range of tightly packed <index> values starting
+    from zero so that the GL subroutine function enumeration API returns a
+    non-empty name for all active indices."
+
+Issues
+
+    1) Can the application mix uniforms with explicit locations with
+    regular uniforms without explicit locations?
+    
+    RESOLVED: Yes, uniform locations assigned automatically at link time
+    will not alias any uniform with explicit locations, even if those
+    uniforms are inactive.
+    
+    2) Can the application mix subroutine uniforms with explicit locations
+    with subroutine uniforms without explicit locations? Also, can the
+    application mix subroutines with explicit indices with subroutines
+    without an index specified.
+
+    RESOLVED: Yes, any subroutine uniforms without an explicit location
+    will be assigned a location between 0 and
+    ACTIVE_UNIFORM_SUBROUTINE_LOCATIONS minus 1 with a location that
+    has not been used by the shader, regardless of whether it refers
+    to a subroutine uniform that is unused. The value of
+    ACTIVE_UNIFORM_SUBROUTINE_LOCATIONS is calculated as the max of
+    the explicit location and automatically assigned location. If
+    there are unused locations between 0 and
+    ACTIVE_UNIFORM_SUBROUTINE_LOCATION, these will be ignored by
+    UniformSubroutinesiv(). Similarily with the subroutine
+    indices, the linker will allocate unused indices to the subroutines
+    without an explicit index and the value of ACTIVE_SUBROUTINES
+    will be the max of the largest explicit index and the linker
+    assigned index. There may be unused indices between 0 and
+    ACTIVE_SUBROUTINES minus 1 and UniformSubroutinesiv() will return
+    an error if the app attempts to use an unused index with an active
+    and used subroutine uniform.
+    
+    3) How should an application determine unique default-block uniform
+    variable locations?
+    
+    RESOLVED: Each transparent basic-type uniform variable consumes exactly
+    one location, regarless of it's type. Transparent basic-types, as defined
+    in section 4.1 are booleans, integers, floats, doubles, vectors and
+    matrices. An array of basic-type uniforms consumes consecutive locations,
+    incrementing by one for each consecutive element. Structures of
+    basic-type uniforms assign consecutive locations to each member
+    where the first base member takes the first location. These rules apply
+    recursively to nested structures and arrays assigning consecutive
+    locations each consecutive basic-type variable.
+    
+    Any uniform variables without an explicit location assigned will be
+    assigned a unique location by the linker. It's implementation defined
+    what locations the linker chooses for these variables, the only
+    requirement being that these generated locations do not alias any
+    explicitly defined locations.
+    
+    Note that subroutine uniform variables are not in the same namespace
+    as default-block uniform variables. Subroutine uniform locations
+    are per shader stage rather than per program and they are referenced
+    through a different API so can have the same locations as uniform
+    variables.
+    
+    4) What happens if Uniform* is called with an explicitly defined
+    uniform location, but that uniform is deemed inactive by the
+    linker?
+    
+    RESOLVED: The call is ignored for inactive uniform variables and
+    no error is generated. Uniforms without an explicit location that
+    are determined to be inactive return -1 for the the location when
+    GetUniformLocation is queried. Calling Uniform* with a location
+    of -1 is also ignored. That behavior isn't changed.
+    
+    5) What is the value of ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS after
+    successfully compiling and linking a program?
+    
+    RESOLVED: The value of ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS is
+    calculated per shader stage to be the max of the explicitly
+    defined subroutine uniform variable locations and the generated
+    locations for subroutine uniform variables without a defined
+    location. The consequence of this is that there will be some
+    locations between 0 and ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS minus one
+    that are unused. UniformSubroutinesuiv ignores index entries for
+    unused locations.
+    
+    6) Does the application need to query ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS
+    to figure out the <count> parameter to UniformSubroutine?
+    
+    RESOLVED: No, it doesn't have to. If the application knows the shader
+    source and it only uses explicit subroutine uniform variables locations
+    it can figure out ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS by simply taking the
+    maximum location defined plus one. If there are generated subroutine
+    uniform locations the application will need to query
+    ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS like before.
+
+    7) What is the value of ACTIVE_SUBROUTINES after successfully compiling
+    and linking a program?
+    
+    RESOLVED: The value of ACTIVE_SUBROUTINES is calculated per shader
+    stage to be the max of the explicitly defined subroutine index
+    values and the generated indices for subroutines without a defined
+    index. The consequence of this is that there will be some invalid
+    indices between 0 and ACTIVE_SUBROUTINES minus one which don't
+    reference any subroutine. If GetActiveSubroutineName is called with
+    one of these unused indices, no error is generated but the <name>
+    returned will be an empty string and the <length> will be zero.
+
+    8) Does the query for ACTIVE_UNIFORMS in the program include inactive
+    uniform variables with explicit locations?
+    
+    RESOLVED: No, only the active default-block uniforms are included in
+    this count. It's only the <location> of inactive uniform variables that
+    can be used with existing GL fuctions like Uniform*, UniformMatrix*,
+    ProgramUniform*, etc. and are ignored. Otherwise these inactive uniforms
+    operate like they did before this extension.
+    
+    9) Should we introduce the concept of "location" in addition to the
+    existing "index" for subroutine functions? This would make it more
+    consistent with regular uniforms. You would use the "index" property
+    for the purposes of enumerating the enties with GetActiveSubroutineName
+    and "location" for the purposes of UniformSubroutinesuiv. This will
+    avoid the issue of GetActiveSubroutineName having possibly empty
+    strings returned for indices between 0 and ACTIVE_SUBROUTINES-1.
+    
+    RESOLVED: No, not at this time. The downside of introducing a "location"
+    property is that we'll need to introduce a new function called
+    GetSubroutineLocation, which would return an "int" where -1 means
+    invalid location, and then use these values instead of indexes with
+    UniformSubroutinesuiv. Unfortunately, UniformSubroutinesuiv takes
+    an array of "uints". Also, it would be quite confusing to have both
+    GetSubroutineLocation and GetSubroutineIndex, especially for existing
+    apps that already used GetSubroutineIndex. It would be tricky to
+    specify which should be used and tricky the support the transition
+    of apps between OpenGL 4.2 and OpenGL 4.3 usage. And that complexity
+    feels less attractive than the benefit of solving the enumeration
+    issue. Apps that tightly pack their index assignments won't have
+    a problem so in practice a holey enumeration would be an app choice.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------------
+    6     05/15/12  pdaniell  Fix the Errors section to match the added
+                              spec language.
+
+    5     04/26/12  pdaniell  Add issue #9 and resolve all issues based on
+                              Dublin face to face discussion. Minor edits
+                              based on feedback from criccio.
+
+    4     04/25/12  pdaniell  Edits based on feedback from pbrown.
+
+    3     04/24/12  pdaniell  Further improvements and clarifications. Add
+                              MAX_UNIFORM_LOCATIONS.
+
+    2     04/23/12  pdaniell  Fixes and improvements based on bmerry's
+                              feedback and discussions with pbrown. Add
+                              new issues.
+
+    1     10/26/11  pdaniell  Initial version.

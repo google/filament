@@ -1,0 +1,143 @@
+; Test: Images_SpvParserHandleTest_DeclUnderspecifiedHandle_Variable_2.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 124
+; Schema: 0
+OpCapability Shader
+OpCapability Sampled1D
+OpCapability Image1D
+OpCapability StorageImageExtendedFormats
+OpCapability ImageQuery
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+OpDecorate %10 DescriptorSet 0
+OpDecorate %10 Binding 0
+OpDecorate %10 NonReadable
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%int_1 = OpConstant %int 1
+%int_2 = OpConstant %int 2
+%int_3 = OpConstant %int 3
+%int_4 = OpConstant %int 4
+%uint_0 = OpConstant %uint 0
+%uint_1 = OpConstant %uint 1
+%uint_2 = OpConstant %uint 2
+%uint_3 = OpConstant %uint 3
+%uint_4 = OpConstant %uint 4
+%uint_100 = OpConstant %uint 100
+%v2int = OpTypeVector %int 2
+%v3int = OpTypeVector %int 3
+%v4int = OpTypeVector %int 4
+%v2uint = OpTypeVector %uint 2
+%v3uint = OpTypeVector %uint 3
+%v4uint = OpTypeVector %uint 4
+%v2float = OpTypeVector %float 2
+%v3float = OpTypeVector %float 3
+%v4float = OpTypeVector %float 4
+%28 = OpConstantNull %float
+%float_0 = OpConstant %float 0
+%float_1 = OpConstant %float 1
+%float_2 = OpConstant %float 2
+%float_3 = OpConstant %float 3
+%float_4 = OpConstant %float 4
+%float_7 = OpConstant %float 7
+%35 = OpConstantNull %v2float
+%36 = OpConstantNull %v3float
+%37 = OpConstantNull %v4float
+%38 = OpConstantComposite %v2int %int_1 %int_2
+%39 = OpConstantComposite %v3int %int_1 %int_2 %int_3
+%40 = OpConstantComposite %v4int %int_1 %int_2 %int_3 %int_4
+%41 = OpConstantComposite %v2uint %uint_1 %uint_2
+%42 = OpConstantComposite %v3uint %uint_1 %uint_2 %uint_3
+%43 = OpConstantComposite %v4uint %uint_1 %uint_2 %uint_3 %uint_4
+%44 = OpConstantComposite %v2float %float_1 %float_2
+%45 = OpConstantComposite %v2float %float_2 %float_1
+%46 = OpConstantComposite %v3float %float_1 %float_2 %float_3
+%47 = OpConstantComposite %v4float %float_1 %float_2 %float_3 %float_4
+%float_0_200000003 = OpConstant %float 0.200000003
+%49 = OpTypeSampler
+%50 = OpTypeImage %float 1D 0 0 0 1 Unknown
+%51 = OpTypeImage %float 2D 0 0 0 1 Unknown
+%52 = OpTypeImage %float 2D 0 0 1 1 Unknown
+%53 = OpTypeImage %float 2D 0 1 0 1 Unknown
+%54 = OpTypeImage %float 2D 0 1 1 1 Unknown
+%55 = OpTypeImage %float 3D 0 0 0 1 Unknown
+%56 = OpTypeImage %float Cube 0 0 0 1 Unknown
+%57 = OpTypeImage %float Cube 0 1 0 1 Unknown
+%58 = OpTypeImage %float 1D 0 0 0 2 Rg32f
+%59 = OpTypeImage %float 2D 0 0 0 2 Rg32f
+%60 = OpTypeImage %float 2D 0 1 0 2 Rg32f
+%61 = OpTypeImage %float 3D 0 0 0 2 Rg32f
+%62 = OpTypeImage %uint 1D 0 0 0 1 Unknown
+%63 = OpTypeImage %uint 2D 0 0 0 1 Unknown
+%64 = OpTypeImage %uint 2D 0 0 1 1 Unknown
+%65 = OpTypeImage %uint 2D 0 1 0 1 Unknown
+%66 = OpTypeImage %uint 2D 0 1 1 1 Unknown
+%67 = OpTypeImage %uint 3D 0 0 0 1 Unknown
+%68 = OpTypeImage %uint Cube 0 0 0 1 Unknown
+%69 = OpTypeImage %uint Cube 0 1 0 1 Unknown
+%70 = OpTypeImage %uint 1D 0 0 0 2 Rg32ui
+%71 = OpTypeImage %uint 2D 0 0 0 2 Rg32ui
+%72 = OpTypeImage %uint 2D 0 1 0 2 Rg32ui
+%73 = OpTypeImage %uint 3D 0 0 0 2 Rg32ui
+%74 = OpTypeImage %int 1D 0 0 0 1 Unknown
+%75 = OpTypeImage %int 2D 0 0 0 1 Unknown
+%76 = OpTypeImage %int 2D 0 0 1 1 Unknown
+%77 = OpTypeImage %int 2D 0 1 0 1 Unknown
+%78 = OpTypeImage %int 2D 0 1 1 1 Unknown
+%79 = OpTypeImage %int 3D 0 0 0 1 Unknown
+%80 = OpTypeImage %int Cube 0 0 0 1 Unknown
+%81 = OpTypeImage %int Cube 0 1 0 1 Unknown
+%82 = OpTypeImage %int 1D 0 0 0 2 Rg32i
+%83 = OpTypeImage %int 2D 0 0 0 2 Rg32i
+%84 = OpTypeImage %int 2D 0 1 0 2 Rg32i
+%85 = OpTypeImage %int 3D 0 0 0 2 Rg32i
+%_ptr_UniformConstant_49 = OpTypePointer UniformConstant %49
+%_ptr_UniformConstant_50 = OpTypePointer UniformConstant %50
+%_ptr_UniformConstant_51 = OpTypePointer UniformConstant %51
+%_ptr_UniformConstant_52 = OpTypePointer UniformConstant %52
+%_ptr_UniformConstant_53 = OpTypePointer UniformConstant %53
+%_ptr_UniformConstant_54 = OpTypePointer UniformConstant %54
+%_ptr_UniformConstant_55 = OpTypePointer UniformConstant %55
+%_ptr_UniformConstant_56 = OpTypePointer UniformConstant %56
+%_ptr_UniformConstant_57 = OpTypePointer UniformConstant %57
+%_ptr_UniformConstant_58 = OpTypePointer UniformConstant %58
+%_ptr_UniformConstant_59 = OpTypePointer UniformConstant %59
+%_ptr_UniformConstant_60 = OpTypePointer UniformConstant %60
+%_ptr_UniformConstant_61 = OpTypePointer UniformConstant %61
+%_ptr_UniformConstant_62 = OpTypePointer UniformConstant %62
+%_ptr_UniformConstant_63 = OpTypePointer UniformConstant %63
+%_ptr_UniformConstant_64 = OpTypePointer UniformConstant %64
+%_ptr_UniformConstant_65 = OpTypePointer UniformConstant %65
+%_ptr_UniformConstant_66 = OpTypePointer UniformConstant %66
+%_ptr_UniformConstant_67 = OpTypePointer UniformConstant %67
+%_ptr_UniformConstant_68 = OpTypePointer UniformConstant %68
+%_ptr_UniformConstant_69 = OpTypePointer UniformConstant %69
+%_ptr_UniformConstant_70 = OpTypePointer UniformConstant %70
+%_ptr_UniformConstant_71 = OpTypePointer UniformConstant %71
+%_ptr_UniformConstant_72 = OpTypePointer UniformConstant %72
+%_ptr_UniformConstant_73 = OpTypePointer UniformConstant %73
+%_ptr_UniformConstant_74 = OpTypePointer UniformConstant %74
+%_ptr_UniformConstant_75 = OpTypePointer UniformConstant %75
+%_ptr_UniformConstant_76 = OpTypePointer UniformConstant %76
+%_ptr_UniformConstant_77 = OpTypePointer UniformConstant %77
+%_ptr_UniformConstant_78 = OpTypePointer UniformConstant %78
+%_ptr_UniformConstant_79 = OpTypePointer UniformConstant %79
+%_ptr_UniformConstant_80 = OpTypePointer UniformConstant %80
+%_ptr_UniformConstant_81 = OpTypePointer UniformConstant %81
+%_ptr_UniformConstant_82 = OpTypePointer UniformConstant %82
+%_ptr_UniformConstant_83 = OpTypePointer UniformConstant %83
+%_ptr_UniformConstant_84 = OpTypePointer UniformConstant %84
+%_ptr_UniformConstant_85 = OpTypePointer UniformConstant %85
+%10 = OpVariable %_ptr_UniformConstant_58 UniformConstant
+%1 = OpFunction %void None %3
+%123 = OpLabel
+OpReturn
+OpFunctionEnd
+

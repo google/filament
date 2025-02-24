@@ -1,0 +1,273 @@
+XXX - Not complete yet!!!
+
+Name
+
+    EXT_display_color_table
+
+Name Strings
+
+    WGL_EXT_display_color_table
+
+Version
+
+    $Date: 1999/04/03 08:41:11 $ $Revision: 1.3 $
+
+Number
+
+    167
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides the means to define display color lookup tables
+    and associate them with rendering contexts. This is used primarily for
+    color gamut adjustment (e.g. gamma correction). It may also be used for
+    special effects like screen flashing, so it's important that creating
+    and binding tables be efficient.
+
+    Display color tables are an extension to the WGL window system interface
+    layer defined by Microsoft, not an OpenGL core extension. Because WGL
+    provides no built-in extension mechanism, the presence of the extension
+    is advertised through the OpenGL GL_EXTENSIONS string. Once the
+    extension is known to exist, the address of the entry points required
+    must be obtained via wglGetProcAddress().
+
+    There is an existing SetDeviceGammaRamp entry point in the Windows API.
+    It's apparently not implemented on NT, and only allows specifying 8-bit
+    LUT entries, which is inadequate for many applications. There may also
+    be concerns with the Windows API's ability to support secondary display
+    devices, like 3dfx Voodoo. Finally (as pointed out by Rendition),
+    putting gamma table definition in WGL allows the table updates to be
+    synchronized with the rest of the WGL/OpenGL command stream sent to
+    hardware, and to take place during vertical blanking.
+
+Issues
+
+    * What do we do for devices that support the extension, but don't allow
+	changing their default ramp?
+
+    * We probably want LUT 0 to be whatever is defined by the system, not
+       default to a linear ramp.
+
+    * Are tables persistent (or would we like them to be persistent) across
+	application invocations, ala the XSGIvcSetChannelGammaMap calls?
+
+    * How do we signal errors in WGL? For the moment, I assume they return a
+	status value which is WGL_OK or an error indicating the problem.
+
+    * Use GL or Windows types for parameters? Consistency with
+	existing WGL calls indicates we should use Windows types.
+
+    * How are table IDs obtained (defined by the system or arbitrary app
+	choice)? How many tables are allowed?
+
+    * What should the format and mapping of table entries be? GLfloat (or
+	perhaps GLclampf?) would be easiest, but might present performance
+	issues. Rendition suggests that most devices use 8-bit LUTs, for
+	which unsigned byte entries is sufficient. It may make sense to
+	allow two formats (ubyte and ushort), like the XSGIvc GLX extension.
+
+    * Do we want some sort of enable/disable to make a drawable start using
+	the table?
+
+    * Do we need query functions to identify the table bound to the current
+	drawable and its contents?
+
+    * How much math describing the table lookup process is needed?
+
+    * What's the relative order of retrace, display table update, and buffer
+	swap? What happens when a drawable is rebound several times prior to
+	retrace (sure, the latest one takes effect, but should we be
+	precise?)
+
+    * What happens when we have a frame buffer with different numbers of
+	bits for R, G, and B (e.g. 565 RGB)? Resampling as defined will
+	ensure that we get the right number of table entries, but the
+	definition implies that table entries for different color components
+	of the same intensity will actually be found at different indices!
+	This seems non-intuitive. Maybe specify tables for each component
+	separately?
+
+New Procedures and Functions
+
+    GLboolean wglCreateDisplayColorTableEXT(GLushort id);
+
+    GLboolean wglLoadDisplayColorTableEXT(GLushort *table, GLuint length);
+
+    GLboolean wglBindDisplayColorTableEXT(GLushort id);
+
+    void wglDestroyDisplayColorTableEXT(GLushort id);
+
+New Tokens
+
+    None
+
+Additions to the WGL Specification (assuming WGL ever gets a spec)
+
+    wglStatus is an enumerated type representing success or failure codes
+    for WGL operations.
+
+    Display Color Tables
+    --------------------
+
+    Display color tables provide a means for mapping color component
+    intensities in the video output hardware. Each RGB color component is
+    looked up in separate tables to produce a new output component.
+
+    Because display color tables are implemented in the output hardware,
+    they operate on the contents of the color buffer and do not appear in
+    the OpenGL state machine. They only operate on full-color pixel format
+    descriptors (PFDs).
+
+    Display color tables are associated with a drawable and ideally affect
+    only the pixels belonging to that drawable. However, hardware may be
+    restricted to a single global table, affecting all displayed pixels. In
+    this case, WGL is responsible for switching among multiple display color
+    tables so that the table corresponding to the currently selected
+    drawable is active. (We could definitely say more about how this
+    happens. Do we *want* to set policy, say by analogy to the GDI palette
+    manager? Does Windows let applications know when the focus has changed,
+    so that this is even possible?)
+
+    To create a display color table, call
+
+	wglStatus wglCreateDisplayColorTableEXT(GLuint id);
+
+    <id> is an identifier for the new table. If the table is successfully
+    created, TRUE is returned. The initial state of the table is a
+    two-element table with first element (0,0,0) and second element
+    (65535,65535,65535). This defines a linear table which has the effect of
+    passing frame buffer colors through unchanged.
+
+    WGL_OK is returned if the table is created. WGL_INVALID_VALUE is
+    returned if <id> refers to an existing color table, or if no more tables
+    can be created.
+
+
+    To bind a display color table, call
+
+	wglStatus wglBindDisplayColorTableEXT(GLuint id);
+
+    <id> is the identifier of a display color table created by
+    wglCreateDisplayColorTableEXT, or 0. If the table exists and can be
+    bound, WGL_OK is returned and the new table is bound to the drawable
+    associated with the current context. [The binding is *not* to the
+    context; this would make rebinding contexts to drawables very hairy.]
+
+    If the table does not exist, WGL_INVALID_VALUE is returned. If the table
+    cannot be bound, WGL_INVALID_OPERATION is returned. [What are the
+    failure modes? Color index PFDs? Drawables that are not Windows, like
+    printers and metafiles? Anything else?]
+
+    When a drawable is first created, display color table 0 is bound to it.
+    Table 0 is always present; its contents are the same two-element table
+    initially defined by wglCreateDisplayColorTableEXT. The contents of
+    table 0 cannot be changed. It may be rebound to a drawable at any time.
+
+    When a table is bound, it should take effect at the start of the next
+    vertical retrace interval. If the implementation cannot support this
+    behavior, the table should take effect immediately.
+
+
+    To redefine the contents of the display color table bound to the
+    drawable associated with the current rendering context, call
+
+	wglStatus wglLoadDisplayColorTableEXT(GLushort *table, GLuint length);
+
+    <table> points to an array of <length> 3-element entries. Each entry
+    defines color intensities for red, green, and blue components in that
+    order. The minimum display intensity (black) is represented by 0 and the
+    maximum display intensity is represented by the value 65535. [Say
+    something about nonlinearities in the output device? Probably not.]
+
+    When a table is redefined, the change takes effect in exactly the same
+    way as when a table is initially bound to a drawable.
+
+    WGL_OK is returned if the table is successfully reloaded. [Return
+    something if the table is unwriteable?]
+
+
+    To destroy a display color table, call
+
+	wglStatus wglDestroyDisplayColorTableEXT(GLushort id);
+
+    <id> is the identifier of a display color table. If the table exists and
+    is not bound to a drawable, it is removed and WGL_OK is returned. All
+    resources associated with the table are reclaimed.
+
+    If the table does not exist, or <id> is 0, no action is taken and
+    WGL_INVALID_VALUE is returned.
+
+    If the table exists but is bound to a drawable, no action is taken and
+    WGL_INVALID_OPERATION is returned.
+
+    [Do we want to be able to destroy a bound table? Could just revert to
+    table 0. But this implies a search of all drawables, either at
+    destruction time or when they are made current or otherwise accessed.]
+
+
+    Mapping Display Color Table Entries To Hardware
+    -----------------------------------------------
+
+    Hardware table entries corresponding to the table specified by the
+    application are calculated whenever a table is created or reloaded with
+    wglLoadDisplayColorTableEXT. The size of hardware tables depends on the
+    bit resolution of the red, green, and blue color components, and may be
+    different than the number of table entries specified by the user.
+
+    The internal format of hardware tables is inaccessible. For purposes of
+    the abstract model presented here, it is assumed that table entries are
+    represented with the same number of bits as the corresponding color
+    buffer component.
+
+    In the remainder of this section, assume that B is a positive integer
+    defining the number of bits assigned to any one color component in the
+    frame buffer and N is the number of entries in the table (the <length>
+    parameter passed to wglLoadDisplayColorTableEXT). A color component C is
+    looked up by interpreting its binary bit pattern as an unsigned integer,
+    and using that value as an index into the appropriate red, green, or
+    blue hardware table. The hardware table entry at that index replaces C.
+
+    If 2**B == N, then there is a one-to-one correspondence between the
+    application table and the hardware table. Each element of the hardware
+    table is defined by rescaling the corresponding element of the
+    application table, according to the following algorithm:
+
+	for (i = 0; i < N; i++) {
+	    for (c = 0; c < 3; c++)
+		hw_table[i][c] = app_table[i][c] * 2**B / 65535;
+	}
+
+    If 2**B != N, then there are more or fewer application table elements
+    than hardware table elements. Hardware elements are generated by
+    linearly interpolating the two closest application table elements
+    according to the following algorithm:
+
+	for (i = 0; i < 2**B; i++) {
+	    float index = i * (N / (float)2**B);
+	    float frac = index - floor(index);
+
+	    for (c = 0; c < 3; c++)
+		hw_table[i][c] = app_table[floor(index)][c] * (1-frac) +
+				 app_table[ceil(index)][c] * frac;
+	}
+
+Errors
+
+    TBD
+
+New State
+
+					Initial
+    Get Value	Get Command	Type	Value	Attrib
+    ---------	-----------	----	------- ------
+    -		-		N*Z+	2	-	    [table size]
+    -		-		N*table 0,0,0	-	    [tables]
+					65535,65535,65535
+
+New Implementation Dependent State
+
+    None

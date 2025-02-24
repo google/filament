@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct DrawIndirectArgs {
+  /* 0x0000 */ atomic_uint vertexCount;
+};
+
+struct tint_module_vars_struct {
+  device DrawIndirectArgs* drawOut;
+  thread uint* cubeVerts;
+};
+
+void computeMain_inner(uint3 global_id, tint_module_vars_struct tint_module_vars) {
+  uint const firstVertex = atomic_fetch_add_explicit((&(*tint_module_vars.drawOut).vertexCount), (*tint_module_vars.cubeVerts), memory_order_relaxed);
+}
+
+kernel void computeMain(uint3 global_id [[thread_position_in_grid]], device DrawIndirectArgs* drawOut [[buffer(0)]]) {
+  thread uint cubeVerts = 0u;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.drawOut=drawOut, .cubeVerts=(&cubeVerts)};
+  computeMain_inner(global_id, tint_module_vars);
+}

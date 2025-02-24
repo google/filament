@@ -1,0 +1,255 @@
+#!/usr/bin/env bash
+# Copyright 2022 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+set -e # Fail on any error.
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd )"
+ROOT_DIR="$( cd "$SCRIPT_DIR/.." >/dev/null 2>&1 && pwd )"
+
+POSSIBLE_BUILD_SYSTEMS="[gn|cmake]"
+POSSIBLE_BUILD_TYPES="[debug|release]"
+POSSIBLE_BUILD_ARCHS="[native|x86]"
+BUILD_FUZZER=""
+
+BUILD_SYSTEM=""
+BUILD_TYPE=""
+BUILD_ARCH=""
+FORCE=""
+VERBOSE=""
+REMOTEEXEC=""
+
+function show_usage() {
+  echo "setup-build [-f] $POSSIBLE_BUILD_SYSTEMS $POSSIBLE_BUILD_TYPES $POSSIBLE_BUILD_ARCHS [fuzz|fuzzer]"
+  echo
+  echo "Creates a build directory in <dawn>/out using either GN or CMake, then"
+  echo "updates the '<dawn>/out/active' symlink to point to the build directory."
+  echo
+  echo "Options:"
+  echo "  -h, --help    Print this help, then exit"
+  echo "  -v, --verbose Print the generate command"
+  echo "  -f, --force   Force rewrite of args.gn with specified options,"
+  echo "                even if args.gn exists"
+  echo "  gn            Create GN build configuration"
+  echo "  cmake         Create CMake build configuration"
+  echo "  release       Make a release build"
+  echo "  debug         Make a debug build"
+  echo "  fuzz, fuzzer  Build fuzzers. Forces Clang to be used"
+  echo "  native        Target the machine you're running on"
+  echo "  x86           Target a 32-bit x86 (adds -m32 to compiler flags)"
+  echo "  remoteexec    Use remoteexec to improve compile time"
+  if [[ ! -z "$1" ]]; then
+    echo
+    echo "$1"
+  fi
+  exit 1
+}
+
+function set_build_system() {
+  if [[ ! -z "$BUILD_SYSTEM" ]]; then
+    echo "conflicting build systems $BUILD_SYSTEM and $1"
+    exit 1
+  fi
+  BUILD_SYSTEM=$1
+}
+
+function set_build_type() {
+  if [[ ! -z "$BUILD_TYPE" ]]; then
+    echo "conflicting build types $BUILD_TYPE and $1"
+    exit 1
+  fi
+  BUILD_TYPE=$1
+}
+
+function set_build_arch() {
+  if [[ ! -z "$BUILD_ARCH" ]]; then
+    echo "conflicting build architectures $BUILD_ARCH and $1"
+    exit 1
+  fi
+  BUILD_ARCH=$1
+}
+
+for arg in "$@"; do
+  lowered_arg=$(echo "$arg" | tr '[:upper:]' '[:lower:]') # lowercase
+  case $lowered_arg in
+    "gn")
+      set_build_system $lowered_arg
+    ;;
+    "cmake")
+      set_build_system $lowered_arg
+    ;;
+    "debug")
+      set_build_type $lowered_arg
+    ;;
+    "release")
+      set_build_type $lowered_arg
+    ;;
+    "x86")
+      set_build_arch $lowered_arg
+    ;;
+    "native")
+    ;;
+    "fuzz" | "fuzzer")
+      BUILD_FUZZER=1
+    ;;
+    "--force" | "-f")
+      FORCE=1
+    ;;
+    "--verbose" | "-v")
+      VERBOSE=1
+    ;;
+    "remoteexec")
+      REMOTEEXEC=1
+    ;;
+    "--help" | "-help" | "-h")
+      show_usage
+    ;;
+    *)
+      show_usage "unknown argument '$arg'"
+    ;;
+  esac
+done
+
+if [[ -z "$BUILD_SYSTEM" ]]; then
+  show_usage "build system $POSSIBLE_BUILD_SYSTEMS is required"
+fi
+
+if [[ -z "$BUILD_TYPE" ]]; then
+  show_usage "build type $POSSIBLE_BUILD_TYPES required"
+fi
+
+BUILD_DIR="$BUILD_SYSTEM-$BUILD_TYPE"
+if [[ ! -z "$BUILD_ARCH" ]]; then
+  BUILD_DIR+="-$BUILD_ARCH"
+fi
+if [[ ! -z "$BUILD_FUZZER" ]]; then
+  BUILD_DIR+="-fuzz"
+fi
+
+function generate() {
+  pushd "$ROOT_DIR" > /dev/null
+    test -n "$VERBOSE" && echo mkdir -p "out/$BUILD_DIR"
+    mkdir -p "out/$BUILD_DIR"
+    rm -fr "out/active" || true
+    ln -s "$BUILD_DIR" "out/active"
+    test -n "$VERBOSE" && echo "$@"
+    "$@"
+  popd > /dev/null
+}
+
+case $BUILD_SYSTEM in
+  "gn")
+    GN_ARGS=""
+    case $BUILD_TYPE in
+      "debug")
+        GN_ARGS+="is_debug=true"
+      ;;
+      "release")
+        GN_ARGS+="is_debug=false"
+      ;;
+      *)
+        show_usage "invalid build type '$BUILD_TYPE'"
+      ;;
+    esac
+    case $BUILD_ARCH in
+      "")
+      ;;
+      "x86")
+        GN_ARGS+=" target_cpu=\"x86\""
+      ;;
+      *)
+        show_usage "invalid build architecture '$BUILD_ARCH'"
+      ;;
+    esac
+    if [[ -n "$BUILD_FUZZER" ]]; then
+        GN_ARGS+=" use_libfuzzer=true"
+        GN_ARGS+=" tint_build_ir_binary=true"
+        GN_ARGS+=" tint_build_ir_fuzzer=true"
+    fi
+    if [[ -n "$REMOTEEXEC" ]]; then
+        GN_ARGS+=" use_remoteexec=true"
+    fi
+    if [[ -z "$FORCE" && -f "$ROOT_DIR/out/$BUILD_DIR/args.gn" ]]; then
+      generate "gn" "gen" "out/active" # keep existing args
+    else
+      generate "gn" "gen" "out/active" "--args=$GN_ARGS"
+    fi
+  ;;
+  "cmake")
+    CMAKE_FLAGS=()
+    CMAKE_FLAGS+=("-DTINT_BUILD_GLSL_WRITER=1")
+    CMAKE_FLAGS+=("-DTINT_BUILD_HLSL_WRITER=1")
+    CMAKE_FLAGS+=("-DTINT_BUILD_MSL_WRITER=1")
+    CMAKE_FLAGS+=("-DTINT_BUILD_SPV_WRITER=1")
+    CMAKE_FLAGS+=("-DTINT_BUILD_WGSL_WRITER=1")
+    CMAKE_FLAGS+=("-DTINT_BUILD_TINTD=1")
+    CMAKE_FLAGS+=("-DDAWN_BUILD_NODE_BINDINGS=1")
+    if [[ -n "$BUILD_FUZZER" ]]; then
+        CMAKE_FLAGS+=("-DCMAKE_CXX_COMPILER=clang++")
+        CMAKE_FLAGS+=("-DCMAKE_C_COMPILER=clang")
+        CMAKE_FLAGS+=("-DTINT_BUILD_FUZZERS=ON")
+        CMAKE_FLAGS+=("-DDAWN_BUILD_PROTOBUF=ON")
+        CMAKE_FLAGS+=("-DTINT_BUILD_IR_FUZZER=ON")
+        CMAKE_FLAGS+=("-DTINT_BUILD_IR_BINARY=ON")
+        CMAKE_FLAGS+=("-DDAWN_USE_BUILT_DXC=ON")  # TODO(b/348200364)
+    fi
+    if [[ -x $(command -v ccache) ]]; then
+      CMAKE_FLAGS+=("-DCMAKE_CXX_COMPILER_LAUNCHER=ccache")
+    fi
+    case $BUILD_TYPE in
+      "debug")
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=Debug")
+      ;;
+      "release")
+        CMAKE_FLAGS+=("-DCMAKE_BUILD_TYPE=RelWithDebInfo")
+      ;;
+      *)
+        show_usage "invalid build type '$BUILD_TYPE'"
+      ;;
+    esac
+    case $BUILD_ARCH in
+      "")
+      ;;
+      "x86")
+        CMAKE_FLAGS+=("-DCMAKE_CXX_FLAGS=-m32")
+        CMAKE_FLAGS+=("-DCMAKE_C_FLAGS=-m32")
+      ;;
+      *)
+        show_usage "invalid build architecture '$BUILD_ARCH'"
+      ;;
+    esac
+    generate "cmake"             \
+             "-S" "."            \
+             "-B" "out/active"   \
+             "-GNinja"           \
+             "${CMAKE_FLAGS[@]}"
+  ;;
+  *)
+    echo "invalid build system '$BUILD_SYSTEM'"
+    show_usage
+  ;;
+esac

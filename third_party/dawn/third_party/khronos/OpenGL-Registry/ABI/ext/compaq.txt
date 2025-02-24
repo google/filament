@@ -1,0 +1,7 @@
+From: "Stockwell, Bruce" <Bruce.Stockwell 'at' compaq.com>
+Date: Tue, 30 Nov 1999 10:16:29 -0500
+
+PowerStorm 300/350 extension support (Tru64 UNIX and Windows NT):
+
+GL_EXT_texture_object
+GL_EXT_vertex_array

@@ -1,0 +1,26 @@
+; Test: Samples_SpvModuleScopeVarParserTest_ComputeBuiltin_Load_Direct_3.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 13
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint GLCompute %3 "main" %gl_LocalInvocationID
+OpExecutionMode %3 LocalSize 1 1 1
+OpDecorate %gl_LocalInvocationID BuiltIn LocalInvocationId
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%v3uint = OpTypeVector %uint 3
+%v3int = OpTypeVector %int 3
+%_ptr_Input_v3int = OpTypePointer Input %v3int
+%gl_LocalInvocationID = OpVariable %_ptr_Input_v3int Input
+%3 = OpFunction %void None %5
+%12 = OpLabel
+%2 = OpLoad %v3int %gl_LocalInvocationID
+OpReturn
+OpFunctionEnd
+

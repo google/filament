@@ -1,0 +1,58 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 19
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpMemberName %S 0 "member_bool"
+               OpMemberName %S 1 "member_i32"
+               OpMemberName %S 2 "member_u32"
+               OpMemberName %S 3 "member_f32"
+               OpMemberName %S 4 "member_v2i32"
+               OpMemberName %S 5 "member_v3u32"
+               OpMemberName %S 6 "member_v4f32"
+               OpMemberName %S 7 "member_m2x3"
+               OpMemberName %S 8 "member_arr"
+               OpMemberName %S_inner 0 "a"
+               OpName %S_inner "S_inner"
+               OpMemberName %S 9 "member_struct"
+               OpName %S "S"
+               OpName %s "s"
+               OpMemberDecorate %S 0 Offset 0
+               OpMemberDecorate %S 1 Offset 4
+               OpMemberDecorate %S 2 Offset 8
+               OpMemberDecorate %S 3 Offset 12
+               OpMemberDecorate %S 4 Offset 16
+               OpMemberDecorate %S 5 Offset 32
+               OpMemberDecorate %S 6 Offset 48
+               OpMemberDecorate %S 7 Offset 64
+               OpMemberDecorate %S 7 ColMajor
+               OpMemberDecorate %S 7 MatrixStride 16
+               OpDecorate %_arr_float_uint_4 ArrayStride 4
+               OpMemberDecorate %S 8 Offset 96
+               OpMemberDecorate %S_inner 0 Offset 0
+               OpMemberDecorate %S 9 Offset 112
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %bool = OpTypeBool
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+      %float = OpTypeFloat 32
+      %v2int = OpTypeVector %int 2
+     %v3uint = OpTypeVector %uint 3
+    %v4float = OpTypeVector %float 4
+    %v3float = OpTypeVector %float 3
+%mat2v3float = OpTypeMatrix %v3float 2
+     %uint_4 = OpConstant %uint 4
+%_arr_float_uint_4 = OpTypeArray %float %uint_4
+    %S_inner = OpTypeStruct %float
+          %S = OpTypeStruct %bool %int %uint %float %v2int %v3uint %v4float %mat2v3float %_arr_float_uint_4 %S_inner
+          %s = OpConstantNull %S
+       %main = OpFunction %void None %3
+          %4 = OpLabel
+               OpReturn
+               OpFunctionEnd

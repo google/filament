@@ -1,0 +1,15 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  bool x = false;
+  bool y = false;
+  bool v = false;
+  if (x) {
+    v = true;
+  } else {
+    v = false;
+  }
+  if (v) {
+  }
+}

@@ -1,0 +1,151 @@
+
+XXX - Not complete.
+
+Name
+
+    SGIX_ycrcb
+
+Name Strings
+
+    GL_SGIX_ycrcb
+
+Version
+
+    $Date: 1996/11/21 00:52:30 $ $Revision: 1.2 $
+
+Number
+
+    101 
+
+Dependencies
+
+    EXT_texture3D affects the definition of this extension
+    EXT_subtexture affects the definition of this extension
+    EXT_histogram affects the definition of this extension
+    EXT_convolution affects the definition of this extension
+    SGI_color_table affects the definition of this extension
+
+
+Overview
+
+    This extension provides a method for OpenGL to read and store 
+    images that are defined in standard YCRCB 422 and 444 video formats.
+    As with the CYMK extension, conversion to RGBA takes place immediately 
+    following the unpack pixel store, and preceding the pack pixel store 
+    operations, and is only available on transfers to and from memory.  
+    The algorithms that convert between YCRCB and RGBA are "black-box"
+    in nature, and left undefined by the extension.
+
+    Two new formats are added, YCRCB_422_SGIX and YCRCB_444_SGIX.
+
+    To handle the difference in sampling rate for 422 video, the pixel 
+    storage operations treat YCRCB_422_SGIX as a 2 component format,
+    where the first component represents chroma, and the second luma.
+    The chroma component alternates between Cb and Cr values on
+    a per pixel basis.  If the specified image <width> parameter is not
+    a multiple of 2, then fragments or texels that result from processing 
+    the <width>th column of pixels will have undefined color value.
+     
+    YCRCB_444_SGIX is defined as a 3 component format representing 
+    the Cb, Y, and Cr values per pixel.
+ 
+    As with the CMYK extension, this extension doesn't preclude the 
+    possiblity of other higher quality conversion methods.
+
+Issues
+
+    * What is standard packing for 444 YCRCB pixels?
+      Does the 601 standard specify pixel alignment? 
+
+    * YCRCB_420_SGIX and other formats?
+
+    * should there be conversion quality hint? 
+
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <format> parameter of DrawPixels, ReadPixels,
+    TexImage1D, TexImage2D, TexImage3DEXT, TexImage4DSGIS, TexSubImage1DEXT,
+    TexSubImage2DEXT, TexSubImage3DEXT, TexSubImage4DSGIS, GetTexImage,
+    ColorTableSGI, GetColorTableSGI, ConvolutionFilter1DEXT,
+    ConvolutionFilter2DEXT, ConvolutionFilter3DEXT, GetConvolutionFilterEXT,
+    SeparableFilter2DEXT, SeparableFilter3DEXT, GetSeparableFilterEXT,
+    GetHistogramEXT, and GetMinmaxEXT:
+
+	YCRCB_422_SGIX
+	YCRCB_444_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    Two entries are added to table 3.5 (DrawPixels and ReadPixels formats):
+
+									Target
+	Name			Type		Elements		Buffer
+	----			----		--------		------
+	YCRCB_422_SGIX		Component	[Cb,Cr] chroma value,	Color
+						Y luminance value	
+
+	YCRCB_444_SGIX		Component	Cb chroma value,	Color
+						Y luminance value,
+						Cr chroma value
+
+	Table 3.5: DrawPixels and ReadPixels formats.  The third column
+	gives a description of and the number and order of elements in a
+	group.
+
+    The new formats YCRCB_422_SGIX and YCRCB_444_SGIX are added to the 
+    discussion of Conversion to RGB.  If the format is either of these two 
+    values, then the chroma and luminance values in each group are converted
+    to R, G, and B values using an undefined algorithm.  
+    If the format is YCRCB_422_SGIX, the conversion algorithm may produce 
+    undefined RGB values for final pixel of any row where the rowlength
+    is not a multiple of 2.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The new formats are added to the discussion of Obtaining Pixels from the
+    Framebuffer.  
+
+    The new formats are added to the discussion of Index Lookup.
+
+    A new section, "Conversion to YCrCb," is added immediately following the
+    section "Conversion to L."
+
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None 
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+

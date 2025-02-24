@@ -1,0 +1,176 @@
+Name
+
+    ATI_meminfo
+
+Name Strings
+
+    GL_ATI_meminfo
+
+Contributors
+
+    Roy Blackmer, ATI Technologies
+    Bruno Stefanizzi, ATI Technologies
+    Andreas Wolf, ATI Technologies
+    Evan Hart, ATI Technologies
+
+Contact
+
+    Bruno Stefanizzi, AMD (bruno.stefanizzi 'at' amd.com)
+
+Status
+
+    ???
+
+Version
+
+    Date: March 2, 2009
+    Revision: 0.2
+
+Number
+
+    359
+
+Dependencies
+
+    OpenGL 1.1 is required
+
+    ARB_vertex_buffer_object affects the defintion of this extension
+
+    EXT_framebuffer_object affects the definition of this extension
+
+    This extension is written against the 2.0 version of the OpenGL
+    Specification, modified with EXT_framebuffer_object.
+
+Overview
+
+    Traditionally, OpenGL has treated resource management as a task of hardware
+    virtualization hidden from applications. While providing great portability,
+    this shielding of information can prevent applications from making
+    intelligent decisions on the management of resources they create. For
+    instance, an application may be better served by choosing a different
+    rendering method if there is not sufficient resources to efficiently
+    utilize its preferred method.
+
+Issues
+
+    1) Revealing the management of memory directly is somewhat controversial,
+       is this really desirable?
+
+        The intent of this extension is to provide insight into the consumption
+        of memory. It does not require that exact values be returned. The
+        information is intended to be a hint to the application about the
+        status at a particular moment in time. As such, the value returned does
+        not need to reveal the exact information, but instead it could return
+        a conservative value of 80% of actual availability. In any case, it is
+        highly reccommended that the information be returned in kilobytes.
+
+    2) Memory can come from different pools that may interact. How should this
+        be dealt with?
+
+        The queries will enumerate different classes of memory based on modern
+        OpenGL paradigms. The classes defined so far are texture, vertex
+        buffer, an render buffer. These correspond to API visible capabilities
+        such as readable, writable, and mapable. The memory between these pools
+        may often be shared, so allocations in one pool may reduce all pools. 
+
+    3) Are the abreviations and names correct?
+
+        Probably not.
+
+    4) How should the values be returned?
+
+        Returning all information about a memory type in a single query is
+        most optimal. Values are returned as 4 integers: total pool available,
+        largest pool available, total auxilliary pool available, and largest
+        auxilliary pool available. Auxilliary pool are for remote memory.
+
+New Functions and Procedures
+
+    None
+
+New Tokens
+
+    Accepted by the <value> parameter of GetIntegerv:
+
+        VBO_FREE_MEMORY_ATI                     0x87FB
+        TEXTURE_FREE_MEMORY_ATI                 0x87FC
+        RENDERBUFFER_FREE_MEMORY_ATI            0x87FD
+
+Additions to Chapter 2 of the 2.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 2.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 2.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 2.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 2.0 Specification (State and State Requests)
+
+    Section 6.1.x, Memory Information Queries
+
+    Inserted between sections 6.1.14 and 6.1.15 
+
+    Information on the current memory resources available can be queried
+    by specifying VBO_FREE_MEMORY_ATI, TEXTURE_FREE_MEMORY_ATI, or
+    RENDERBUFFER_FREE_MEMORY_ATI as the value parameter to  GetIntergerv.
+    These return the memory status for pools of memory used for vertex
+    buffer objects, textures, and render buffers respectively. The 
+    memory status is not meant to be an exact measurement of the system's
+    current status (though it may be in some implementations), but it is
+    instead meant to represent the present load such that an application
+    can make decisions on how aggressive it can be on the allocation of
+    resources without overloading the system. The query returns a 4-tuple
+    integer where the values are in Kbyte and have the following meanings:
+
+      param[0] - total memory free in the pool
+      param[1] - largest available free block in the pool
+      param[2] - total auxiliary memory free
+      param[3] - largest auxiliary free block
+
+    These values are only useful as a hint as the implementation cannot
+    guarantee the lack of allocations between commands, and the
+    information may have changed before the attempt to use it. Auxiliary
+    memory is memory that an implementation may use as a backup to its
+    primary pool for a certain type of allocation. The pools are not
+    guaranteed to be either independent or shared, as this is an
+    implementation choice. 
+
+Additions to the OpenGL Shading Language specification
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on ARB_vertex_buffer_object or OpenGL version 1.5
+
+    If ARB_vertex_buffer_object or OpenGL version 1.5 is supportedd, then
+    the query for VBO_FREE_MEMORY_ATI is available.
+
+Dependencies on EXT_framebuffer_object
+
+    If EXT_framebuffer_object is implemented, then the query for
+    RENDERBUFFER_FREE_MEMORY_ATI is available.
+
+Errors
+
+    None
+
+GLX protocol
+
+    None
+
+Revision History
+
+    2009/03/02 (Jon Leech) - format version 0.2 received from ATI
+    to remove GL_ prefix, assign extension number.

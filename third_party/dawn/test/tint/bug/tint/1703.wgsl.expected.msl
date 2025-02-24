@@ -1,0 +1,29 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread float4* my_global;
+  const constant float* my_uniform;
+  texture2d<float, access::sample> my_texture;
+  sampler my_sampler;
+};
+
+void foo_member_initialize(tint_module_vars_struct tint_module_vars) {
+  bool2 vb2 = false;
+  vb2.x = ((*tint_module_vars.my_global).z != 0.0f);
+  vb2.x = ((*tint_module_vars.my_uniform) == -1.0f);
+  vb2 = bool2(((*tint_module_vars.my_uniform) == -1.0f), false);
+  if (vb2.x) {
+    float4 const r = tint_module_vars.my_texture.sample(tint_module_vars.my_sampler, float2(0.0f), bias(clamp(0.0f, -16.0f, 15.9899997711181640625f)));
+  }
+}
+
+void foo_default_initialize(tint_module_vars_struct tint_module_vars) {
+  bool2 vb2 = false;
+  vb2.x = ((*tint_module_vars.my_global).z != 0.0f);
+  vb2.x = ((*tint_module_vars.my_uniform) == -1.0f);
+  vb2 = bool2(false);
+  if (vb2.x) {
+    float4 const r = tint_module_vars.my_texture.sample(tint_module_vars.my_sampler, float2(0.0f), bias(clamp(0.0f, -16.0f, 15.9899997711181640625f)));
+  }
+}

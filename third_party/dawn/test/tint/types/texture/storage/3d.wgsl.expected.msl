@@ -1,0 +1,41 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture3d<float, access::write> t_rgba8unorm;
+  texture3d<float, access::write> t_rgba8snorm;
+  texture3d<uint, access::write> t_rgba8uint;
+  texture3d<int, access::write> t_rgba8sint;
+  texture3d<uint, access::write> t_rgba16uint;
+  texture3d<int, access::write> t_rgba16sint;
+  texture3d<float, access::write> t_rgba16float;
+  texture3d<uint, access::write> t_r32uint;
+  texture3d<int, access::write> t_r32sint;
+  texture3d<float, access::write> t_r32float;
+  texture3d<uint, access::write> t_rg32uint;
+  texture3d<int, access::write> t_rg32sint;
+  texture3d<float, access::write> t_rg32float;
+  texture3d<uint, access::write> t_rgba32uint;
+  texture3d<int, access::write> t_rgba32sint;
+  texture3d<float, access::write> t_rgba32float;
+};
+
+kernel void v(texture3d<float, access::write> t_rgba8unorm [[texture(0)]], texture3d<float, access::write> t_rgba8snorm [[texture(1)]], texture3d<uint, access::write> t_rgba8uint [[texture(2)]], texture3d<int, access::write> t_rgba8sint [[texture(3)]], texture3d<uint, access::write> t_rgba16uint [[texture(4)]], texture3d<int, access::write> t_rgba16sint [[texture(5)]], texture3d<float, access::write> t_rgba16float [[texture(6)]], texture3d<uint, access::write> t_r32uint [[texture(7)]], texture3d<int, access::write> t_r32sint [[texture(8)]], texture3d<float, access::write> t_r32float [[texture(9)]], texture3d<uint, access::write> t_rg32uint [[texture(10)]], texture3d<int, access::write> t_rg32sint [[texture(11)]], texture3d<float, access::write> t_rg32float [[texture(12)]], texture3d<uint, access::write> t_rgba32uint [[texture(13)]], texture3d<int, access::write> t_rgba32sint [[texture(14)]], texture3d<float, access::write> t_rgba32float [[texture(15)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.t_rgba8unorm=t_rgba8unorm, .t_rgba8snorm=t_rgba8snorm, .t_rgba8uint=t_rgba8uint, .t_rgba8sint=t_rgba8sint, .t_rgba16uint=t_rgba16uint, .t_rgba16sint=t_rgba16sint, .t_rgba16float=t_rgba16float, .t_r32uint=t_r32uint, .t_r32sint=t_r32sint, .t_r32float=t_r32float, .t_rg32uint=t_rg32uint, .t_rg32sint=t_rg32sint, .t_rg32float=t_rg32float, .t_rgba32uint=t_rgba32uint, .t_rgba32sint=t_rgba32sint, .t_rgba32float=t_rgba32float};
+  uint3 dim1 = uint3(tint_module_vars.t_rgba8unorm.get_width(0u), tint_module_vars.t_rgba8unorm.get_height(0u), tint_module_vars.t_rgba8unorm.get_depth(0u));
+  uint3 dim2 = uint3(tint_module_vars.t_rgba8snorm.get_width(0u), tint_module_vars.t_rgba8snorm.get_height(0u), tint_module_vars.t_rgba8snorm.get_depth(0u));
+  uint3 dim3 = uint3(tint_module_vars.t_rgba8uint.get_width(0u), tint_module_vars.t_rgba8uint.get_height(0u), tint_module_vars.t_rgba8uint.get_depth(0u));
+  uint3 dim4 = uint3(tint_module_vars.t_rgba8sint.get_width(0u), tint_module_vars.t_rgba8sint.get_height(0u), tint_module_vars.t_rgba8sint.get_depth(0u));
+  uint3 dim5 = uint3(tint_module_vars.t_rgba16uint.get_width(0u), tint_module_vars.t_rgba16uint.get_height(0u), tint_module_vars.t_rgba16uint.get_depth(0u));
+  uint3 dim6 = uint3(tint_module_vars.t_rgba16sint.get_width(0u), tint_module_vars.t_rgba16sint.get_height(0u), tint_module_vars.t_rgba16sint.get_depth(0u));
+  uint3 dim7 = uint3(tint_module_vars.t_rgba16float.get_width(0u), tint_module_vars.t_rgba16float.get_height(0u), tint_module_vars.t_rgba16float.get_depth(0u));
+  uint3 dim8 = uint3(tint_module_vars.t_r32uint.get_width(0u), tint_module_vars.t_r32uint.get_height(0u), tint_module_vars.t_r32uint.get_depth(0u));
+  uint3 dim9 = uint3(tint_module_vars.t_r32sint.get_width(0u), tint_module_vars.t_r32sint.get_height(0u), tint_module_vars.t_r32sint.get_depth(0u));
+  uint3 dim10 = uint3(tint_module_vars.t_r32float.get_width(0u), tint_module_vars.t_r32float.get_height(0u), tint_module_vars.t_r32float.get_depth(0u));
+  uint3 dim11 = uint3(tint_module_vars.t_rg32uint.get_width(0u), tint_module_vars.t_rg32uint.get_height(0u), tint_module_vars.t_rg32uint.get_depth(0u));
+  uint3 dim12 = uint3(tint_module_vars.t_rg32sint.get_width(0u), tint_module_vars.t_rg32sint.get_height(0u), tint_module_vars.t_rg32sint.get_depth(0u));
+  uint3 dim13 = uint3(tint_module_vars.t_rg32float.get_width(0u), tint_module_vars.t_rg32float.get_height(0u), tint_module_vars.t_rg32float.get_depth(0u));
+  uint3 dim14 = uint3(tint_module_vars.t_rgba32uint.get_width(0u), tint_module_vars.t_rgba32uint.get_height(0u), tint_module_vars.t_rgba32uint.get_depth(0u));
+  uint3 dim15 = uint3(tint_module_vars.t_rgba32sint.get_width(0u), tint_module_vars.t_rgba32sint.get_height(0u), tint_module_vars.t_rgba32sint.get_depth(0u));
+  uint3 dim16 = uint3(tint_module_vars.t_rgba32float.get_width(0u), tint_module_vars.t_rgba32float.get_height(0u), tint_module_vars.t_rgba32float.get_depth(0u));
+}

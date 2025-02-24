@@ -1,0 +1,78 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %theSSBO "theSSBO"
+               OpMemberName %theSSBO 0 "out_data"
+               OpName %_ ""
+               OpMemberDecorate %theSSBO 0 Offset 0
+               OpDecorate %theSSBO BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+    %float_1 = OpConstant %float 1
+       %uint = OpTypeInt 32 0
+       %bool = OpTypeBool
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+        %int = OpTypeInt 32 1
+    %theSSBO = OpTypeStruct %int
+%_ptr_Uniform_theSSBO = OpTypePointer Uniform %theSSBO
+          %_ = OpVariable %_ptr_Uniform_theSSBO Uniform
+      %int_0 = OpConstant %int 0
+     %int_42 = OpConstant %int 42
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+      %int_1 = OpConstant %int 1
+%mat2v2float = OpTypeMatrix %v2float 2
+    %float_0 = OpConstant %float 0
+         %22 = OpConstantComposite %v2float %float_1 %float_0
+         %23 = OpConstantComposite %v2float %float_0 %float_1
+         %24 = OpConstantComposite %mat2v2float %22 %23
+         %25 = OpConstantComposite %v2float %float_1 %float_1
+         %26 = OpUndef %mat2v2float
+       %main = OpFunction %void None %6
+         %27 = OpLabel
+         %28 = OpAccessChain %_ptr_Uniform_int %_ %int_0
+               OpStore %28 %int_42
+               OpBranch %29
+         %29 = OpLabel
+         %30 = OpPhi %mat2v2float %26 %27 %24 %31
+         %32 = OpPhi %int %int_1 %27 %33 %31
+         %34 = OpSGreaterThan %bool %32 %int_0
+               OpLoopMerge %35 %31 None
+               OpBranchConditional %34 %31 %35
+         %31 = OpLabel
+         %33 = OpISub %int %32 %int_1
+               OpBranch %29
+         %35 = OpLabel
+         %36 = OpCompositeExtract %v2float %30 0
+         %37 = OpFSub %v2float %36 %22
+         %38 = OpCompositeExtract %v2float %30 1
+         %39 = OpFSub %v2float %38 %23
+         %40 = OpCompositeConstruct %mat2v2float %37 %39
+         %41 = OpVectorTimesMatrix %v2float %25 %40
+               OpBranch %42
+         %42 = OpLabel
+               OpLoopMerge %43 %44 None
+               OpBranch %45
+         %45 = OpLabel
+         %46 = OpCompositeExtract %float %41 0
+         %47 = OpFOrdLessThan %bool %float_1 %46
+               OpSelectionMerge %48 None
+               OpBranchConditional %47 %49 %48
+         %49 = OpLabel
+               OpBranch %43
+         %48 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+               OpBranch %43
+         %44 = OpLabel
+               OpBranch %42
+         %43 = OpLabel
+               OpReturn
+               OpFunctionEnd

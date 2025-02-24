@@ -1,0 +1,56 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+void select_9b478d() {
+  int res = 1;
+}
+
+fragment void fragment_main() {
+  select_9b478d();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+void select_9b478d() {
+  int res = 1;
+}
+
+kernel void compute_main() {
+  select_9b478d();
+}
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexOutput {
+  float4 pos;
+};
+
+struct vertex_main_outputs {
+  float4 VertexOutput_pos [[position]];
+};
+
+void select_9b478d() {
+  int res = 1;
+}
+
+VertexOutput vertex_main_inner() {
+  VertexOutput out = {};
+  out.pos = float4(0.0f);
+  select_9b478d();
+  return out;
+}
+
+vertex vertex_main_outputs vertex_main() {
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = vertex_main_inner().pos;
+  return tint_wrapper_result;
+}

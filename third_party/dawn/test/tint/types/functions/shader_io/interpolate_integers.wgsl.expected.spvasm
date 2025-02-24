@@ -1,0 +1,166 @@
+;
+; vert_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 35
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %vert_main "vert_main" %vert_main_loc0_Output %vert_main_loc1_Output %vert_main_loc2_Output %vert_main_loc3_Output %vert_main_position_Output %vert_main___point_size_Output
+               OpName %vert_main_loc0_Output "vert_main_loc0_Output"
+               OpName %vert_main_loc1_Output "vert_main_loc1_Output"
+               OpName %vert_main_loc2_Output "vert_main_loc2_Output"
+               OpName %vert_main_loc3_Output "vert_main_loc3_Output"
+               OpName %vert_main_position_Output "vert_main_position_Output"
+               OpName %vert_main___point_size_Output "vert_main___point_size_Output"
+               OpName %vert_main_inner "vert_main_inner"
+               OpMemberName %Interface 0 "i"
+               OpMemberName %Interface 1 "u"
+               OpMemberName %Interface 2 "vi"
+               OpMemberName %Interface 3 "vu"
+               OpMemberName %Interface 4 "pos"
+               OpName %Interface "Interface"
+               OpName %vert_main "vert_main"
+               OpDecorate %vert_main_loc0_Output Location 0
+               OpDecorate %vert_main_loc0_Output Flat
+               OpDecorate %vert_main_loc1_Output Location 1
+               OpDecorate %vert_main_loc1_Output Flat
+               OpDecorate %vert_main_loc2_Output Location 2
+               OpDecorate %vert_main_loc2_Output Flat
+               OpDecorate %vert_main_loc3_Output Location 3
+               OpDecorate %vert_main_loc3_Output Flat
+               OpDecorate %vert_main_position_Output BuiltIn Position
+               OpDecorate %vert_main___point_size_Output BuiltIn PointSize
+               OpMemberDecorate %Interface 0 Offset 0
+               OpMemberDecorate %Interface 1 Offset 4
+               OpMemberDecorate %Interface 2 Offset 16
+               OpMemberDecorate %Interface 3 Offset 32
+               OpMemberDecorate %Interface 4 Offset 48
+        %int = OpTypeInt 32 1
+%_ptr_Output_int = OpTypePointer Output %int
+%vert_main_loc0_Output = OpVariable %_ptr_Output_int Output
+       %uint = OpTypeInt 32 0
+%_ptr_Output_uint = OpTypePointer Output %uint
+%vert_main_loc1_Output = OpVariable %_ptr_Output_uint Output
+      %v4int = OpTypeVector %int 4
+%_ptr_Output_v4int = OpTypePointer Output %v4int
+%vert_main_loc2_Output = OpVariable %_ptr_Output_v4int Output
+     %v4uint = OpTypeVector %uint 4
+%_ptr_Output_v4uint = OpTypePointer Output %v4uint
+%vert_main_loc3_Output = OpVariable %_ptr_Output_v4uint Output
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%vert_main_position_Output = OpVariable %_ptr_Output_v4float Output
+%_ptr_Output_float = OpTypePointer Output %float
+%vert_main___point_size_Output = OpVariable %_ptr_Output_float Output
+  %Interface = OpTypeStruct %int %uint %v4int %v4uint %v4float
+         %21 = OpTypeFunction %Interface
+         %23 = OpConstantNull %Interface
+       %void = OpTypeVoid
+         %26 = OpTypeFunction %void
+    %float_1 = OpConstant %float 1
+%vert_main_inner = OpFunction %Interface None %21
+         %22 = OpLabel
+               OpReturnValue %23
+               OpFunctionEnd
+  %vert_main = OpFunction %void None %26
+         %27 = OpLabel
+         %28 = OpFunctionCall %Interface %vert_main_inner
+         %29 = OpCompositeExtract %int %28 0
+               OpStore %vert_main_loc0_Output %29 None
+         %30 = OpCompositeExtract %uint %28 1
+               OpStore %vert_main_loc1_Output %30 None
+         %31 = OpCompositeExtract %v4int %28 2
+               OpStore %vert_main_loc2_Output %31 None
+         %32 = OpCompositeExtract %v4uint %28 3
+               OpStore %vert_main_loc3_Output %32 None
+         %33 = OpCompositeExtract %v4float %28 4
+               OpStore %vert_main_position_Output %33 None
+               OpStore %vert_main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd
+;
+; frag_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 36
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %frag_main "frag_main" %frag_main_loc0_Input %frag_main_loc1_Input %frag_main_loc2_Input %frag_main_loc3_Input %frag_main_position_Input %frag_main_loc0_Output
+               OpExecutionMode %frag_main OriginUpperLeft
+               OpName %frag_main_loc0_Input "frag_main_loc0_Input"
+               OpName %frag_main_loc1_Input "frag_main_loc1_Input"
+               OpName %frag_main_loc2_Input "frag_main_loc2_Input"
+               OpName %frag_main_loc3_Input "frag_main_loc3_Input"
+               OpName %frag_main_position_Input "frag_main_position_Input"
+               OpName %frag_main_loc0_Output "frag_main_loc0_Output"
+               OpName %frag_main_inner "frag_main_inner"
+               OpMemberName %Interface 0 "i"
+               OpMemberName %Interface 1 "u"
+               OpMemberName %Interface 2 "vi"
+               OpMemberName %Interface 3 "vu"
+               OpMemberName %Interface 4 "pos"
+               OpName %Interface "Interface"
+               OpName %inputs "inputs"
+               OpName %frag_main "frag_main"
+               OpDecorate %frag_main_loc0_Input Location 0
+               OpDecorate %frag_main_loc0_Input Flat
+               OpDecorate %frag_main_loc1_Input Location 1
+               OpDecorate %frag_main_loc1_Input Flat
+               OpDecorate %frag_main_loc2_Input Location 2
+               OpDecorate %frag_main_loc2_Input Flat
+               OpDecorate %frag_main_loc3_Input Location 3
+               OpDecorate %frag_main_loc3_Input Flat
+               OpDecorate %frag_main_position_Input BuiltIn FragCoord
+               OpDecorate %frag_main_loc0_Output Location 0
+               OpMemberDecorate %Interface 0 Offset 0
+               OpMemberDecorate %Interface 1 Offset 4
+               OpMemberDecorate %Interface 2 Offset 16
+               OpMemberDecorate %Interface 3 Offset 32
+               OpMemberDecorate %Interface 4 Offset 48
+        %int = OpTypeInt 32 1
+%_ptr_Input_int = OpTypePointer Input %int
+%frag_main_loc0_Input = OpVariable %_ptr_Input_int Input
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%frag_main_loc1_Input = OpVariable %_ptr_Input_uint Input
+      %v4int = OpTypeVector %int 4
+%_ptr_Input_v4int = OpTypePointer Input %v4int
+%frag_main_loc2_Input = OpVariable %_ptr_Input_v4int Input
+     %v4uint = OpTypeVector %uint 4
+%_ptr_Input_v4uint = OpTypePointer Input %v4uint
+%frag_main_loc3_Input = OpVariable %_ptr_Input_v4uint Input
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%frag_main_position_Input = OpVariable %_ptr_Input_v4float Input
+%_ptr_Output_int = OpTypePointer Output %int
+%frag_main_loc0_Output = OpVariable %_ptr_Output_int Output
+  %Interface = OpTypeStruct %int %uint %v4int %v4uint %v4float
+         %22 = OpTypeFunction %int %Interface
+       %void = OpTypeVoid
+         %27 = OpTypeFunction %void
+%frag_main_inner = OpFunction %int None %22
+     %inputs = OpFunctionParameter %Interface
+         %23 = OpLabel
+         %24 = OpCompositeExtract %int %inputs 0
+               OpReturnValue %24
+               OpFunctionEnd
+  %frag_main = OpFunction %void None %27
+         %28 = OpLabel
+         %29 = OpLoad %int %frag_main_loc0_Input None
+         %30 = OpLoad %uint %frag_main_loc1_Input None
+         %31 = OpLoad %v4int %frag_main_loc2_Input None
+         %32 = OpLoad %v4uint %frag_main_loc3_Input None
+         %33 = OpLoad %v4float %frag_main_position_Input None
+         %34 = OpCompositeConstruct %Interface %29 %30 %31 %32 %33
+         %35 = OpFunctionCall %int %frag_main_inner %34
+               OpStore %frag_main_loc0_Output %35 None
+               OpReturn
+               OpFunctionEnd

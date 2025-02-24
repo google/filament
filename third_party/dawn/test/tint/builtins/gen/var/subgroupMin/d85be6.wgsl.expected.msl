@@ -1,0 +1,40 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device half2* prevent_dce;
+};
+
+half2 subgroupMin_d85be6() {
+  half2 arg_0 = half2(1.0h);
+  half2 res = simd_min(arg_0);
+  return res;
+}
+
+fragment void fragment_main(device half2* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupMin_d85be6();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device half2* prevent_dce;
+};
+
+half2 subgroupMin_d85be6() {
+  half2 arg_0 = half2(1.0h);
+  half2 res = simd_min(arg_0);
+  return res;
+}
+
+kernel void compute_main(device half2* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupMin_d85be6();
+}

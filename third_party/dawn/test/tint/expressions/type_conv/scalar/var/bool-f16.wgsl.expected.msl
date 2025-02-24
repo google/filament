@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread bool* u;
+};
+
+void f(tint_module_vars_struct tint_module_vars) {
+  half const v = half((*tint_module_vars.u));
+}

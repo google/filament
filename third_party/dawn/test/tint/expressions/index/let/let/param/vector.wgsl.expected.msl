@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+float f(int x) {
+  float3 const v = float3(1.0f, 2.0f, 3.0f);
+  int const i = x;
+  return v[min(uint(i), 2u)];
+}

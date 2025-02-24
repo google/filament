@@ -1,0 +1,128 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 66
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpMemberName %S 0 "a"
+               OpMemberName %S 1 "b"
+               OpMemberName %S 2 "c"
+               OpName %S "S"
+               OpMemberName %ubuffer_block 0 "inner"
+               OpName %ubuffer_block "ubuffer_block"
+               OpMemberName %sbuffer_block 0 "inner"
+               OpName %sbuffer_block "sbuffer_block"
+               OpName %wbuffer "wbuffer"
+               OpName %foo "foo"
+               OpName %u "u"
+               OpName %s "s"
+               OpName %w "w"
+               OpName %tint_store_and_preserve_padding "tint_store_and_preserve_padding"
+               OpName %value_param "value_param"
+               OpName %tint_store_and_preserve_padding_0 "tint_store_and_preserve_padding"
+               OpName %value_param_0 "value_param"
+               OpName %unused_entry_point "unused_entry_point"
+               OpMemberDecorate %S 0 Offset 0
+               OpMemberDecorate %S 1 Offset 12
+               OpDecorate %_arr_v3uint_uint_4 ArrayStride 16
+               OpMemberDecorate %S 2 Offset 16
+               OpMemberDecorate %ubuffer_block 0 Offset 0
+               OpDecorate %ubuffer_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpMemberDecorate %sbuffer_block 0 Offset 0
+               OpDecorate %sbuffer_block Block
+               OpDecorate %9 DescriptorSet 0
+               OpDecorate %9 Binding 1
+               OpDecorate %9 Coherent
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+     %uint_4 = OpConstant %uint 4
+%_arr_v3uint_uint_4 = OpTypeArray %v3uint %uint_4
+          %S = OpTypeStruct %v3uint %uint %_arr_v3uint_uint_4
+%ubuffer_block = OpTypeStruct %S
+%_ptr_Uniform_ubuffer_block = OpTypePointer Uniform %ubuffer_block
+          %1 = OpVariable %_ptr_Uniform_ubuffer_block Uniform
+%sbuffer_block = OpTypeStruct %S
+%_ptr_StorageBuffer_sbuffer_block = OpTypePointer StorageBuffer %sbuffer_block
+          %9 = OpVariable %_ptr_StorageBuffer_sbuffer_block StorageBuffer
+%_ptr_Workgroup_S = OpTypePointer Workgroup %S
+    %wbuffer = OpVariable %_ptr_Workgroup_S Workgroup
+       %void = OpTypeVoid
+         %16 = OpTypeFunction %void
+%_ptr_Uniform_S = OpTypePointer Uniform %S
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_S = OpTypePointer StorageBuffer %S
+         %29 = OpConstantNull %S
+         %31 = OpTypeFunction %void %S
+%_ptr_StorageBuffer_v3uint = OpTypePointer StorageBuffer %v3uint
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+     %uint_1 = OpConstant %uint 1
+         %44 = OpTypeFunction %void %_arr_v3uint_uint_4
+%_ptr_Function__arr_v3uint_uint_4 = OpTypePointer Function %_arr_v3uint_uint_4
+       %bool = OpTypeBool
+     %uint_2 = OpConstant %uint 2
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+        %foo = OpFunction %void None %16
+         %17 = OpLabel
+         %18 = OpAccessChain %_ptr_Uniform_S %1 %uint_0
+          %u = OpLoad %S %18 None
+         %22 = OpAccessChain %_ptr_StorageBuffer_S %9 %uint_0
+          %s = OpLoad %S %22 None
+         %25 = OpAccessChain %_ptr_StorageBuffer_S %9 %uint_0
+          %w = OpLoad %S %25 None
+         %27 = OpFunctionCall %void %tint_store_and_preserve_padding %29
+               OpStore %wbuffer %29 None
+               OpReturn
+               OpFunctionEnd
+%tint_store_and_preserve_padding = OpFunction %void None %31
+%value_param = OpFunctionParameter %S
+         %32 = OpLabel
+         %33 = OpAccessChain %_ptr_StorageBuffer_v3uint %9 %uint_0 %uint_0
+         %35 = OpCompositeExtract %v3uint %value_param 0
+               OpStore %33 %35 None
+         %36 = OpAccessChain %_ptr_StorageBuffer_uint %9 %uint_0 %uint_1
+         %39 = OpCompositeExtract %uint %value_param 1
+               OpStore %36 %39 None
+         %40 = OpCompositeExtract %_arr_v3uint_uint_4 %value_param 2
+         %41 = OpFunctionCall %void %tint_store_and_preserve_padding_0 %40
+               OpReturn
+               OpFunctionEnd
+%tint_store_and_preserve_padding_0 = OpFunction %void None %44
+%value_param_0 = OpFunctionParameter %_arr_v3uint_uint_4
+         %45 = OpLabel
+         %46 = OpVariable %_ptr_Function__arr_v3uint_uint_4 Function
+               OpStore %46 %value_param_0
+               OpBranch %48
+         %48 = OpLabel
+               OpBranch %51
+         %51 = OpLabel
+         %53 = OpPhi %uint %uint_0 %48 %54 %50
+               OpLoopMerge %52 %50 None
+               OpBranch %49
+         %49 = OpLabel
+         %55 = OpUGreaterThanEqual %bool %53 %uint_4
+               OpSelectionMerge %57 None
+               OpBranchConditional %55 %58 %57
+         %58 = OpLabel
+               OpBranch %52
+         %57 = OpLabel
+         %59 = OpAccessChain %_ptr_StorageBuffer_v3uint %9 %uint_0 %uint_2 %53
+         %61 = OpAccessChain %_ptr_Function_v3uint %46 %53
+         %63 = OpLoad %v3uint %61 None
+               OpStore %59 %63 None
+               OpBranch %50
+         %50 = OpLabel
+         %54 = OpIAdd %uint %53 %uint_1
+               OpBranch %51
+         %52 = OpLabel
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %16
+         %65 = OpLabel
+               OpReturn
+               OpFunctionEnd

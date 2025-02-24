@@ -1,0 +1,62 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct UBO {
+  /* 0x0000 */ int dynamic_idx;
+};
+
+struct Result {
+  /* 0x0000 */ int out;
+};
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct S {
+  tint_array<int, 64> data;
+};
+
+struct tint_module_vars_struct {
+  const constant UBO* ubo;
+  device Result* result;
+  threadgroup S* s;
+};
+
+struct tint_symbol_1 {
+  S tint_symbol;
+};
+
+void f_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  {
+    uint v = 0u;
+    v = tint_local_index;
+    while(true) {
+      uint const v_1 = v;
+      if ((v_1 >= 64u)) {
+        break;
+      }
+      (*tint_module_vars.s).data[v_1] = 0;
+      {
+        v = (v_1 + 1u);
+      }
+      continue;
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  (*tint_module_vars.s).data[min(uint((*tint_module_vars.ubo).dynamic_idx), 63u)] = 1;
+  (*tint_module_vars.result).out = (*tint_module_vars.s).data[3u];
+}
+
+kernel void f(uint tint_local_index [[thread_index_in_threadgroup]], const constant UBO* ubo [[buffer(0)]], device Result* result [[buffer(1)]], threadgroup tint_symbol_1* v_2 [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.ubo=ubo, .result=result, .s=(&(*v_2).tint_symbol)};
+  f_inner(tint_local_index, tint_module_vars);
+}

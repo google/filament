@@ -1,0 +1,170 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 18
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpName %modf_45005f "modf_45005f"
+               OpMemberName %__modf_result_vec3_f16 0 "fract"
+               OpMemberName %__modf_result_vec3_f16 1 "whole"
+               OpName %__modf_result_vec3_f16 "__modf_result_vec3_f16"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %__modf_result_vec3_f16 0 Offset 0
+               OpMemberDecorate %__modf_result_vec3_f16 1 Offset 8
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %half = OpTypeFloat 16
+     %v3half = OpTypeVector %half 3
+%__modf_result_vec3_f16 = OpTypeStruct %v3half %v3half
+%_ptr_Function___modf_result_vec3_f16 = OpTypePointer Function %__modf_result_vec3_f16
+%half_n0x1pn1 = OpConstant %half -0x1p-1
+         %11 = OpConstantComposite %v3half %half_n0x1pn1 %half_n0x1pn1 %half_n0x1pn1
+%half_n0x1p_0 = OpConstant %half -0x1p+0
+         %13 = OpConstantComposite %v3half %half_n0x1p_0 %half_n0x1p_0 %half_n0x1p_0
+         %10 = OpConstantComposite %__modf_result_vec3_f16 %11 %13
+%modf_45005f = OpFunction %void None %3
+          %4 = OpLabel
+        %res = OpVariable %_ptr_Function___modf_result_vec3_f16 Function
+               OpStore %res %10
+               OpReturn
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %3
+         %16 = OpLabel
+         %17 = OpFunctionCall %void %modf_45005f
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 18
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %modf_45005f "modf_45005f"
+               OpMemberName %__modf_result_vec3_f16 0 "fract"
+               OpMemberName %__modf_result_vec3_f16 1 "whole"
+               OpName %__modf_result_vec3_f16 "__modf_result_vec3_f16"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %__modf_result_vec3_f16 0 Offset 0
+               OpMemberDecorate %__modf_result_vec3_f16 1 Offset 8
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %half = OpTypeFloat 16
+     %v3half = OpTypeVector %half 3
+%__modf_result_vec3_f16 = OpTypeStruct %v3half %v3half
+%_ptr_Function___modf_result_vec3_f16 = OpTypePointer Function %__modf_result_vec3_f16
+%half_n0x1pn1 = OpConstant %half -0x1p-1
+         %11 = OpConstantComposite %v3half %half_n0x1pn1 %half_n0x1pn1 %half_n0x1pn1
+%half_n0x1p_0 = OpConstant %half -0x1p+0
+         %13 = OpConstantComposite %v3half %half_n0x1p_0 %half_n0x1p_0 %half_n0x1p_0
+         %10 = OpConstantComposite %__modf_result_vec3_f16 %11 %13
+%modf_45005f = OpFunction %void None %3
+          %4 = OpLabel
+        %res = OpVariable %_ptr_Function___modf_result_vec3_f16 Function
+               OpStore %res %10
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %3
+         %16 = OpLabel
+         %17 = OpFunctionCall %void %modf_45005f
+               OpReturn
+               OpFunctionEnd
+;
+; vertex_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 40
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %vertex_main "vertex_main" %vertex_main_position_Output %vertex_main___point_size_Output
+               OpName %vertex_main_position_Output "vertex_main_position_Output"
+               OpName %vertex_main___point_size_Output "vertex_main___point_size_Output"
+               OpName %modf_45005f "modf_45005f"
+               OpMemberName %__modf_result_vec3_f16 0 "fract"
+               OpMemberName %__modf_result_vec3_f16 1 "whole"
+               OpName %__modf_result_vec3_f16 "__modf_result_vec3_f16"
+               OpName %res "res"
+               OpName %vertex_main_inner "vertex_main_inner"
+               OpMemberName %VertexOutput 0 "pos"
+               OpName %VertexOutput "VertexOutput"
+               OpName %out "out"
+               OpName %vertex_main "vertex_main"
+               OpDecorate %vertex_main_position_Output BuiltIn Position
+               OpDecorate %vertex_main___point_size_Output BuiltIn PointSize
+               OpMemberDecorate %__modf_result_vec3_f16 0 Offset 0
+               OpMemberDecorate %__modf_result_vec3_f16 1 Offset 8
+               OpMemberDecorate %VertexOutput 0 Offset 0
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%vertex_main_position_Output = OpVariable %_ptr_Output_v4float Output
+%_ptr_Output_float = OpTypePointer Output %float
+%vertex_main___point_size_Output = OpVariable %_ptr_Output_float Output
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+       %half = OpTypeFloat 16
+     %v3half = OpTypeVector %half 3
+%__modf_result_vec3_f16 = OpTypeStruct %v3half %v3half
+%_ptr_Function___modf_result_vec3_f16 = OpTypePointer Function %__modf_result_vec3_f16
+%half_n0x1pn1 = OpConstant %half -0x1p-1
+         %17 = OpConstantComposite %v3half %half_n0x1pn1 %half_n0x1pn1 %half_n0x1pn1
+%half_n0x1p_0 = OpConstant %half -0x1p+0
+         %19 = OpConstantComposite %v3half %half_n0x1p_0 %half_n0x1p_0 %half_n0x1p_0
+         %16 = OpConstantComposite %__modf_result_vec3_f16 %17 %19
+%VertexOutput = OpTypeStruct %v4float
+         %23 = OpTypeFunction %VertexOutput
+%_ptr_Function_VertexOutput = OpTypePointer Function %VertexOutput
+         %27 = OpConstantNull %VertexOutput
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+         %32 = OpConstantNull %v4float
+    %float_1 = OpConstant %float 1
+%modf_45005f = OpFunction %void None %9
+         %10 = OpLabel
+        %res = OpVariable %_ptr_Function___modf_result_vec3_f16 Function
+               OpStore %res %16
+               OpReturn
+               OpFunctionEnd
+%vertex_main_inner = OpFunction %VertexOutput None %23
+         %24 = OpLabel
+        %out = OpVariable %_ptr_Function_VertexOutput Function %27
+         %28 = OpAccessChain %_ptr_Function_v4float %out %uint_0
+               OpStore %28 %32 None
+         %33 = OpFunctionCall %void %modf_45005f
+         %34 = OpLoad %VertexOutput %out None
+               OpReturnValue %34
+               OpFunctionEnd
+%vertex_main = OpFunction %void None %9
+         %36 = OpLabel
+         %37 = OpFunctionCall %VertexOutput %vertex_main_inner
+         %38 = OpCompositeExtract %v4float %37 0
+               OpStore %vertex_main_position_Output %38 None
+               OpStore %vertex_main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd

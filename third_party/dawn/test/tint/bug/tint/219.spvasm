@@ -1,0 +1,30 @@
+           OpCapability Shader
+           OpMemoryModel Logical Simple
+           OpEntryPoint GLCompute %100 "main"
+           OpExecutionMode %100 LocalSize 1 1 1
+   %void = OpTypeVoid
+ %voidfn = OpTypeFunction %void
+   %uint = OpTypeInt 32 0
+ %uint_0 = OpConstant %uint 0
+  %float = OpTypeFloat 32
+%v2float = OpTypeVector %float 2
+%ptr_v2f = OpTypePointer Function %v2float
+  %ptr_f = OpTypePointer Function %float
+%floatfn = OpTypeFunction %float %ptr_v2f
+
+    %200 = OpFunction %float None %floatfn
+    %201 = OpFunctionParameter %ptr_v2f
+
+    %210 = OpLabel
+    %211 = OpAccessChain %ptr_f %201 %uint_0
+    %212 = OpLoad %float %211
+           OpReturnValue %212
+           OpFunctionEnd
+
+
+    %100 = OpFunction %void None %voidfn
+     %10 = OpLabel
+     %11 = OpVariable %ptr_v2f Function
+      %f = OpFunctionCall %float %200 %11
+           OpReturn
+           OpFunctionEnd

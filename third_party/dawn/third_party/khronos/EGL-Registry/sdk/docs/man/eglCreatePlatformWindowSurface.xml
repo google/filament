@@ -1,0 +1,296 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglCreatePlatformWindowSurface">
+    <info>
+         <copyright>
+             <year>2003-2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglCreatePlatformWindowSurface</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglCreatePlatformWindowSurface</refname>
+        <refpurpose>
+            create a new <acronym>EGL</acronym> on-screen rendering surface
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLSurface <function>eglCreatePlatformWindowSurface</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLConfig <parameter>config</parameter></paramdef>
+                <paramdef>void * <parameter>native_window</parameter></paramdef>
+                <paramdef>EGLAttrib const * <parameter>attrib_list</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>Specifies the EGL display connection.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>config</parameter></term>
+                <listitem>
+                    <para>Specifies the EGL frame buffer configuration that defines the
+                    frame buffer resource available to the surface.</para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>native_window</parameter></term>
+                <listitem><para>Specifies the native window.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attrib_list</parameter></term>
+                <listitem><para>
+                    Specifies a list of attributes for the window surface.
+                    May be <constant>NULL</constant> or empty
+                    (first attribute is <constant>EGL_NONE</constant>).
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglCreatePlatformWindowSurface</function> creates an
+            on-screen EGL window surface and returns a handle to it. Any EGL
+            context created with a compatible <type>EGLConfig</type> can be
+            used to render into this surface.
+        </para>
+        <para>
+            If <function>eglCreatePlatformWindowSurface</function> fails to
+            create a window surface, <constant>EGL_NO_SURFACE</constant> is
+            returned.
+        </para>
+        <para>
+            <parameter>native_window</parameter> must belong to the same
+            platform as <parameter>display</parameter>, and EGL considers
+            the returned <type>EGLSurface</type> as belonging to that same
+            platform. The EGL extension that defines the platform to which
+            <parameter>display</parameter> belongs also defines the
+            requirements for the <parameter>native_window</parameter>
+            parameter.
+        </para>
+        <para>
+            Surface attributes are specified as a list of
+            attribute-value pairs, terminated with
+            <constant>EGL_NONE</constant>. Accepted attributes
+            are:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_GL_COLORSPACE</constant></term>
+                <listitem>
+                <para>
+                    Specifies the color space used by OpenGL and OpenGL ES
+                    when rendering to the surface. If its value is
+                    <constant>EGL_GL_COLORSPACE_SRGB</constant>, then a
+                    non-linear, perceptually uniform color space is assumed,
+                    with a corresponding
+                    <constant>GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING</constant>
+                    value of <constant>GL_SRGB</constant>. If its value is
+                    <constant>EGL_GL_COLORSPACE_LINEAR</constant>, then a
+                    linear color space is assumed, with a corresponding
+                    <constant>GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING</constant>
+                    value of <constant>GL_LINEAR</constant>. The default
+                    value of <constant>EGL_GL_COLORSPACE</constant> is
+                    <constant>EGL_GL_COLORSPACE_LINEAR</constant>.
+                </para>
+                <para>
+                    Note that the <constant>EGL_GL_COLORSPACE</constant>
+                    attribute is used only by OpenGL and OpenGL ES contexts
+                    supporting sRGB framebuffers. EGL itself does not
+                    distinguish multiple colorspace models. Refer to the
+                    ``sRGB Conversion'' sections of the OpenGL 4.6 and
+                    OpenGL ES 3.2 Specifications for more information.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_RENDER_BUFFER</constant></term>
+                <listitem>
+                <para>
+                    Specifies which buffer should be used for client API
+                    rendering to the window. If its value is
+                    <constant>EGL_SINGLE_BUFFER</constant>, then client
+                    APIs should render directly into the visible window.
+                    If its value is
+                    <constant>EGL_BACK_BUFFER</constant>, then client
+                    APIs should render into the back buffer. The default
+                    value of <constant>EGL_RENDER_BUFFER</constant> is
+                    <constant>EGL_BACK_BUFFER</constant>.
+                </para>
+                <para>
+                    Client APIs may not be able to respect the requested
+                    rendering buffer. To determine the actual buffer
+                    being rendered to by a context, call
+                    <citerefentry><refentrytitle>eglQueryContext</refentrytitle></citerefentry>.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_VG_ALPHA_FORMAT</constant></term>
+                <listitem>
+                <para>
+                    Specifies how alpha values are interpreted by OpenVG
+                    when rendering to the surface. If its value is
+                    <constant>EGL_VG_ALPHA_FORMAT_NONPRE</constant>,
+                    then alpha values are not premultipled. If its value
+                    is <constant>EGL_VG_ALPHA_FORMAT_PRE</constant>,
+                    then alpha values are premultiplied. The default
+                    value of <constant>EGL_VG_ALPHA_FORMAT</constant> is
+                    <constant>EGL_VG_ALPHA_FORMAT_NONPRE</constant>.
+                </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_VG_COLORSPACE</constant></term>
+                <listitem>
+                <para>
+                    Specifies the color space used by OpenVG when
+                    rendering to the surface. If its value is
+                    <constant>EGL_VG_COLORSPACE_sRGB</constant>, then a
+                    non-linear, perceptually uniform color space is
+                    assumed, with a corresponding
+                    <type>VGImageFormat</type> of form
+                    <constant>VG_s*</constant>. If its value is
+                    <constant>EGL_VG_COLORSPACE_LINEAR</constant>, then
+                    a linear color space is assumed, with a
+                    corresponding <type>VGImageFormat</type> of form
+                    <constant>VG_l*</constant>. The default value of
+                    <constant>EGL_VG_COLORSPACE</constant> is
+                    <constant>EGL_VG_COLORSPACE_sRGB</constant>.
+                </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+        <para>
+            Any EGL rendering context that was created with respect to
+            <parameter>config</parameter> can be used to render into the
+            surface. Use
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>
+            to attach an EGL rendering context to the surface.
+        </para>
+        <para>
+            Use
+            <citerefentry><refentrytitle>eglQuerySurface</refentrytitle></citerefentry>
+            to retrieve the ID of <parameter>config</parameter>.
+        </para>
+        <para>
+            Use
+            <citerefentry><refentrytitle>eglDestroySurface</refentrytitle></citerefentry>
+            to destroy the surface.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            Attribute <constant>EGL_GL_COLORSPACE</constant> is supported
+            only if the EGL version is 1.5 or greater.
+        </para>
+        <para>
+            Attributes <constant>EGL_RENDER_BUFFER</constant>,
+            <constant>EGL_VG_ALPHA_FORMAT</constant>, and
+            <constant>EGL_VG_COLORSPACE</constant>, and the
+            corresponding attribute values, are supported only if the
+            EGL version is 1.2 or greater.
+        </para>
+        <!-- Might want to mention aliasing of EGL_VG_* -> EGL_* that occurred in EGL 1.3 -->
+        <para>
+            The <constant>EGL_VG_ALPHA_FORMAT</constant> and
+            <constant>EGL_VG_COLORSPACE</constant> attributes are used only
+            by OpenVG and EGL itself. Refer to section 11.2 of the OpenVG
+            1.0 specification for more information. The platform's use and
+            interpretation of alpha values is outside the scope of EGL.
+            However, the preferred behavior is for platforms to ignore the
+            value of <constant>EGL_VG_ALPHA_FORMAT</constant> when
+            compositing window surfaces.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            If <parameter>display</parameter> and
+            <parameter>native_window</parameter> do not belong to the same
+            platform, then undefined behavior occurs.
+        </para>
+        <para>
+            <constant>EGL_NO_SURFACE</constant> is returned if creation of
+            the surface fails.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_CONFIG</constant> is generated if
+            <parameter>config</parameter> is not a valid EGL frame buffer
+            configuration.
+        </para>
+        <para>
+            <constant>EGL_BAD_NATIVE_WINDOW</constant> may be generated if
+            <parameter>native_window</parameter> is not a valid native
+            window for the same platform as <parameter>display</parameter>.
+        </para>
+        <para>
+            <constant>EGL_BAD_ATTRIBUTE</constant> is generated if
+            <parameter>attrib_list</parameter> contains an invalid window attribute
+            or if an attribute value is not recognized or is out of range.
+        </para>
+        <para>
+            <constant>EGL_BAD_ALLOC</constant> is generated if there is
+            already an <type>EGLSurface</type> associated with
+            <parameter>native_window</parameter> (as a result of a previous
+            <function>eglCreatePlatformWindowSurface</function> call).
+        </para>
+        <para>
+            <constant>EGL_BAD_ALLOC</constant> is generated if the
+            implementation cannot allocate resources for the new EGL window.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if the pixel
+            format of <parameter>native_window</parameter> does not
+            correspond to the format, type, and size of the color buffers
+            required by <parameter>config</parameter>.
+            <constant>EGL_BAD_MATCH</constant> is generated if the pixel
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if
+            <parameter>config</parameter> does not support rendering to
+            windows (the <constant>EGL_SURFACE_TYPE</constant> attribute
+            does not contain <constant>EGL_WINDOW_BIT</constant>).
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if
+            <parameter>config</parameter> does not support the specified
+            OpenVG alpha format attribute (the value of
+            <constant>EGL_VG_ALPHA_FORMAT</constant> is
+            <constant>EGL_VG_ALPHA_FORMAT_PRE</constant> and the
+            <constant>EGL_VG_ALPHA_FORMAT_PRE_BIT</constant> is not set
+            in the <constant>EGL_SURFACE_TYPE</constant> attribute of
+            <parameter>config</parameter>) or colorspace attribute (the
+            value of <constant>EGL_VG_COLORSPACE</constant> is
+            <constant>EGL_VG_COLORSPACE_LINEAR</constant> and the
+            <constant>EGL_VG_COLORSPACE_LINEAR_IT</constant> is not set
+            in the <constant>EGL_SURFACE_TYPE</constant> attribute of
+            <parameter>config</parameter>).
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglDestroySurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetConfigs</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglQuerySurface</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

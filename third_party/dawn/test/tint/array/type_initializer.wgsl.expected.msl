@@ -1,0 +1,37 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int* s;
+};
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+kernel void v(device int* s [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.s=s};
+  int const x = 42;
+  tint_array<int, 4> const empty = tint_array<int, 4>{};
+  tint_array<int, 4> const nonempty = tint_array<int, 4>{1, 2, 3, 4};
+  tint_array<int, 4> const nonempty_with_expr = tint_array<int, 4>{1, x, as_type<int>((as_type<uint>(x) + as_type<uint>(1))), nonempty[3u]};
+  tint_array<tint_array<tint_array<int, 4>, 3>, 2> const nested_empty = tint_array<tint_array<tint_array<int, 4>, 3>, 2>{};
+  tint_array<tint_array<tint_array<int, 4>, 3>, 2> const nested_nonempty = tint_array<tint_array<tint_array<int, 4>, 3>, 2>{tint_array<tint_array<int, 4>, 3>{tint_array<int, 4>{1, 2, 3, 4}, tint_array<int, 4>{5, 6, 7, 8}, tint_array<int, 4>{9, 10, 11, 12}}, tint_array<tint_array<int, 4>, 3>{tint_array<int, 4>{13, 14, 15, 16}, tint_array<int, 4>{17, 18, 19, 20}, tint_array<int, 4>{21, 22, 23, 24}}};
+  tint_array<int, 4> const v_1 = tint_array<int, 4>{1, 2, x, as_type<int>((as_type<uint>(x) + as_type<uint>(1)))};
+  tint_array<tint_array<tint_array<int, 4>, 3>, 2> const nested_nonempty_with_expr = tint_array<tint_array<tint_array<int, 4>, 3>, 2>{tint_array<tint_array<int, 4>, 3>{v_1, tint_array<int, 4>{5, 6, nonempty[2u], as_type<int>((as_type<uint>(nonempty[3u]) + as_type<uint>(1)))}, nonempty}, nested_nonempty[1u]};
+  int const subexpr_empty = 0;
+  int const subexpr_nonempty = 3;
+  int const subexpr_nonempty_with_expr = tint_array<int, 4>{1, x, as_type<int>((as_type<uint>(x) + as_type<uint>(1))), nonempty[3u]}[2u];
+  tint_array<int, 4> const subexpr_nested_empty = tint_array<int, 4>{};
+  tint_array<int, 4> const subexpr_nested_nonempty = tint_array<int, 4>{5, 6, 7, 8};
+  tint_array<int, 4> const subexpr_nested_nonempty_with_expr = tint_array<tint_array<int, 4>, 2>{tint_array<int, 4>{1, x, as_type<int>((as_type<uint>(x) + as_type<uint>(1))), nonempty[3u]}, nested_nonempty[1u][2u]}[1u];
+  (*tint_module_vars.s) = as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(empty[0u]) + as_type<uint>(nonempty[0u])))) + as_type<uint>(nonempty_with_expr[0u])))) + as_type<uint>(nested_empty[0u][0u][0u])))) + as_type<uint>(nested_nonempty[0u][0u][0u])))) + as_type<uint>(nested_nonempty_with_expr[0u][0u][0u])))) + as_type<uint>(subexpr_empty)))) + as_type<uint>(subexpr_nonempty)))) + as_type<uint>(subexpr_nonempty_with_expr)))) + as_type<uint>(subexpr_nested_empty[0u])))) + as_type<uint>(subexpr_nested_nonempty[0u])))) + as_type<uint>(subexpr_nested_nonempty_with_expr[0u])));
+}

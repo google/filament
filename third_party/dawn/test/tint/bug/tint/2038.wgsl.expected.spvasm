@@ -1,0 +1,49 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 22
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %output_block 0 "inner"
+               OpName %output_block "output_block"
+               OpName %main "main"
+               OpDecorate %_arr_uint_uint_2 ArrayStride 4
+               OpMemberDecorate %output_block 0 Offset 0
+               OpDecorate %output_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+     %uint_2 = OpConstant %uint 2
+%_arr_uint_uint_2 = OpTypeArray %uint %uint_2
+%output_block = OpTypeStruct %_arr_uint_uint_2
+%_ptr_StorageBuffer_output_block = OpTypePointer StorageBuffer %output_block
+          %1 = OpVariable %_ptr_StorageBuffer_output_block StorageBuffer
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+       %bool = OpTypeBool
+      %false = OpConstantFalse %bool
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+       %main = OpFunction %void None %9
+         %10 = OpLabel
+               OpSelectionMerge %11 None
+               OpBranchConditional %false %12 %11
+         %12 = OpLabel
+         %15 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %uint_0
+               OpStore %15 %uint_1 None
+               OpBranch %11
+         %11 = OpLabel
+               OpSelectionMerge %19 None
+               OpBranchConditional %false %20 %19
+         %20 = OpLabel
+         %21 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %uint_1
+               OpStore %21 %uint_1 None
+               OpBranch %19
+         %19 = OpLabel
+               OpReturn
+               OpFunctionEnd

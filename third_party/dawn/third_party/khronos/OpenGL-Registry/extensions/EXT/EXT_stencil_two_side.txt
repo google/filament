@@ -1,0 +1,499 @@
+Name
+
+    EXT_stencil_two_side
+
+Name Strings
+
+    GL_EXT_stencil_two_side
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2001-2002.
+
+Status
+
+    Implemented in CineFX (NV30) Emulation driver, August 2002.
+    Shipping in Release 40 NVIDIA driver for CineFX hardware, January 2003.
+
+Version
+
+    Last Modified Date:  09/15/2005
+    Revision:            2
+
+Number
+
+    268
+
+Dependencies
+
+    Written based on the OpenGL 1.3 specification.
+
+    NV_packed_depth_stencil affects the definition of this extension.
+
+    OpenGL 2.0 affects the definition of this extension.
+
+Overview
+
+    This extension provides two-sided stencil testing where the
+    stencil-related state (stencil operations, reference value, compare
+    mask, and write mask) may be different for front- and back-facing
+    polygons.  Two-sided stencil testing may improve the performance
+    of stenciled shadow volume and Constructive Solid Geometry (CSG)
+    rendering algorithms.
+
+Issues
+
+    Is this sufficient for shadow volume stencil update in a single pass?
+
+      RESOLUTION:  Yes.
+
+      An application that wishes to increment the stencil value for
+      rasterized depth-test passing fragments of front-facing polygons and
+      decrement the stencil value for rasterized fragments of depth-test
+      passing back-facing polygons in a single pass can use the following
+      configuration:
+
+        glDepthMask(0);
+        glColorMask(0,0,0,0);
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_STENCIL_TEST);
+        glEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);
+
+        glActiveStencilFaceEXT(GL_BACK);
+        glStencilOp(GL_KEEP,            // stencil test fail
+                    GL_KEEP,            // depth test fail
+                    GL_DECR_WRAP_EXT);  // depth test pass
+        glStencilMask(~0);
+        glStencilFunc(GL_ALWAYS, 0, ~0);
+
+        glActiveStencilFaceEXT(GL_FRONT);
+        glStencilOp(GL_KEEP,            // stencil test fail
+                    GL_KEEP,            // depth test fail
+                    GL_INCR_WRAP_EXT);  // depth test pass
+        glStencilMask(~0);
+        glStencilFunc(GL_ALWAYS, 0, ~0);
+
+        renderShadowVolumePolygons();
+
+      Notice the use of EXT_stencil_wrap to avoid saturating decrements
+      losing the shadow volume count.  An alternative, using the
+      conventional GL_INCR and GL_DECR operations, is to clear the stencil
+      buffer to one half the stencil buffer value range, say 128 for an
+      8-bit stencil buffer.  In the case, a pixel is "in shadow" if the
+      final stencil value is greater than 128 and "out of shadow" if the
+      final stencil value is 128.  This does still create a potential
+      for stencil value overflow if the stencil value saturates due
+      to an increment or decrement.  However saturation is less likely
+      with two-sided stencil testing than the conventional two-pass
+      approach because front- and back-facing polygons are mixed together,
+      rather than processing batches of front-facing then back-facing
+      polygons.
+
+      Contrast the two-sided stencil testing approach with the more
+      or less equivalent approach using facingness-independent stencil
+      testing:
+
+        glDepthMask(0);
+        glColorMask(0,0,0,0);
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_STENCIL_TEST);
+
+        glStencilMask(~0);
+        glStencilFunc(GL_ALWAYS, 0, ~0);
+
+        // Increment for front faces
+        glCullFace(GL_BACK);
+        glStencilOp(GL_KEEP,   // stencil test fail
+                    GL_KEEP,   // depth test fail
+                    GL_INCR);  // depth test pass
+
+        renderShadowVolumePolygons();
+
+        // Decrement for back faces
+        glCullFace(GL_FRONT);
+        glStencilOp(GL_KEEP,   // stencil test fail
+                    GL_KEEP,   // depth test fail
+                    GL_DECR);  // depth test pass
+
+        renderShadowVolumePolygons();
+
+      Notice that all the render work implicit
+      in renderShadowVolumePolygons is performed twice with the
+      conventional approach, but only once with the two-sided stencil
+      testing approach.
+
+    Should there be just front and back stencil test state, or should
+    the stencil write mask also have a front and back state?
+
+      RESOLUTION:  Both the stencil test and stencil write mask state
+      should have front and back versions.
+
+      The shadow volume application for two-sided stencil testing does
+      not require differing front and back versions of the stencil write
+      mask, but we anticipate other applications where front and back
+      write masks may be useful.
+
+      For example, it may be useful to draw a convex polyhedra such that
+      (assuming the stencil bufer is cleared to the binary value 1010):
+
+      1) front-facing polygons that pass the depth test set stencil bit 0
+
+      2) front-facing polygons that fail the depth test zero stencil bit 1
+
+      3) back-facing polygons that pass the depth test set stencil bit 2
+
+      4) back-facing polygons that fail the depth test zero stencil bit 3
+
+      This could be accomplished in a single rendering pass using:
+
+        glStencilMask(~0);
+        glStencilClear(0xA);
+        glClear(GL_STENCIL_BUFFER_BIT);
+
+        glDepthMask(0);
+        glColorMask(0,0,0,0);
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_STENCIL_TEST);
+        glEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);
+
+        glActiveStencilFaceEXT(GL_BACK);
+        glStencilOp(GL_KEEP,      // stencil test fail
+                    GL_ZERO,      // depth test fail
+                    GL_REPLACE);  // depth test pass
+        glStencilMask(0xC);
+        glStencilFunc(GL_ALWAYS, 0x4, ~0);
+
+        glActiveStencilFaceEXT(GL_FRONT);
+        glStencilOp(GL_KEEP,      // stencil test fail
+                    GL_ZERO,      // depth test fail
+                    GL_REPLACE);  // depth test pass
+        glStencilMask(0x3);
+        glStencilFunc(GL_ALWAYS, 0x1, ~0);
+
+        renderConvexPolyhedra();
+
+    Is there a performance advantage to using two-sided stencil testing?
+
+      RESOLUTION:  It depends.
+
+      In a fill-rate limited situation, rendering front-facing primitives,
+      then back-facing primitives in two passes will generate the same
+      number of rasterized fragments as rendering front- and back-facing
+      primitives in a single pass.
+
+      However, in other situations that are CPU-limited,
+      transform-limited, or setup-limited, two-sided stencil testing can
+      be faster than the conventional two-pass face culling rendering
+      approaches.  For example, if a lengthy vertex program is executed
+      for every shadow volume vertex, rendering the shadow volume with
+      a single two-sided stencil testing pass is advantageous.
+
+      Often applications using stencil shadow volume techniques require
+      substantial CPU resources to determine potential silhouette
+      boundaries to project shadow volumes from.  If the shadow volume
+      geometry generated by the CPU is only required to be sent to the GL
+      once per-frame (rather than twice with the conventional technique),
+      that can ease the CPU burden required to implement stenciled shadow
+      volumes.
+
+    Should GL_FRONT_AND_BACK be accepted by glActiveStencilFaceEXT?
+
+      RESOLUTION:  No.
+
+      GL_FRONT_AND_BACK is useful when materials are being updated for
+      two-sided lighting because the front and back material are often
+      identical and may change frequently (glMaterial calls are allowed
+      within glBegin/glEnd pairs).
+
+      Two-sided stencil has no similiar performance justification.
+
+      It is also likely that forcing implementations to support this mode
+      would increase the amount of overhead required to set stencil
+      state, even for applications that don't use two-sided stencil.
+
+    How should the two-sided stencil enable operate?
+
+      RESOLUTION:  It should be modeled after the way two-sided lighting
+      works.  There is a GL_LIGHTING enable and then an additional
+      two-sided lighting mode.  Unlike two-sided lighting which is a
+      light model boolean, the two-sided stencil testing is a standard
+      enable named GL_STENCIL_TEST_TWO_SIDE_EXT.
+
+      Here is the pseudo-code for the stencil testing enables:
+
+        if (glIsEnabled(GL_STENCIL_TEST)) {
+          if (glIsEnabled(GL_STENCIL_TEST_TWO_SIDE_EXT) && primitiveType == polygon) {
+            use two-sided stencil testing
+          } else {
+            use conventional stencil testing
+          }
+        } else {
+          no stencil testing
+        }
+
+    How should the two-sided stencil interact with glPolygonMode?
+
+      RESOLUTION:  Primitive type is determined by the begin mode
+      so GL_TRIANGLES, GL_TRIANGLE_STRIP, GL_QUAD_STRIP, GL_QUADS,
+      GL_TRIANGLE_FAN, and GL_POLYGON generate polygon primitives.  If the
+      polygon mode is set such that lines or points are rasterized,
+      two-sided stencil testing still operates based on the original
+      polygon facingness if stencil testing and two-sided stencil testing
+      are enabled.
+
+      This is consistent with how two-sided lighting and face culling
+      interact with glPolygonMode.
+
+New Procedures and Functions
+
+    void ActiveStencilFaceEXT(enum face);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        STENCIL_TEST_TWO_SIDE_EXT                 0x8910
+
+    Accepted by the <face> parameter of ActiveStencilFaceEXT:
+
+        FRONT
+        BACK
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        ACTIVE_STENCIL_FACE_EXT                   0x8911
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+ -- Section 4.1.5 "Stencil test"
+
+    Replace the first paragraph in the section with:
+
+    "The stencil test conditionally discards a fragment based on the
+    outcome of a comparison between the value in the stencil buffer at
+    location (xw,yw) and a reference value.
+
+    The test is enabled or disabled with the Enable and Disable commands,
+    using the symbolic constant STENCIL_TEST.  When disabled, the stencil
+    test and associated modifications are not made, and the fragment is
+    always passed.
+
+    Stencil testing may operate in a two-sided mode.  Two-sided stencil
+    testing is enabled or disabled with the Enable and Disable commands,
+    using the symbolic constant STENCIL_TEST_TWO_SIDE_EXT.  When stencil
+    testing is disabled, the state of two-sided stencil testing does
+    not affect fragment processing.
+
+    There are two sets of stencil-related state, the front stencil
+    state set and the back stencil state set.  When two-sided stencil
+    testing is enabled, stencil tests and writes use the front set of
+    stencil state when processing fragments rasterized from non-polygon
+    primitives (points, lines, bitmaps, image rectangles) and front-facing
+    polygon primitives while the back set of stencil state is used when
+    processing fragments rasterized from back-facing polygon primitives.
+    For the purposes of two-sided stencil testing, a primitive is still
+    considered a polygon even if the polygon is to be rasterized as
+    points or lines due to the current polygon mode.  Whether a polygon
+    is front- or back-facing is determined in the same manner used for
+    two-sided lighting and face culling (see sections 2.13.1 and 3.5.1).
+    When two-sided stencil testing is disabled, the front set of stencil
+    state is always used when stencil testing fragments.
+
+    The active stencil face determines whether stencil-related commands
+    update the front or back stencil state.  The active stencil face is
+    set with:
+
+      void ActiveStencilFace(enum face);
+
+    where face is either FRONT or BACK.  Stencil commands (StencilFunc,
+    StencilOp, and StencilMask) that update the stencil state update the
+    front stencil state if the active stencil face is FRONT and the back
+    stencil state if the active stencil face is BACK.  Additionally,
+    queries of stencil state return the front or back stencil state
+    depending on the current active stencil face.
+
+    The stencil test state is controlled with
+
+       void StencilFunc(enum func, int ref, uint mask);
+       void StencilOp(enum sfail, enum dpfail, enum dppass);"
+
+    Replace the third and second to the last sentence in the last
+    paragraph in section 4.1.5 with:
+
+    "In the initial state, stencil testing and two-sided stencil testing
+    are both disabled, the front and back stencil reference values are
+    both zero, the front and back stencil comparison functions are ALWAYS,
+    and the front and back stencil mask are both all ones.  Initially,
+    both the three front and the three back stencil operations are KEEP."
+
+ -- Section 4.2.2 "Fine Control of Buffer Updates"
+
+    Replace the last sentence of the third paragraph with:
+
+    "The initial state is for both the front and back stencil plane mask
+    to be all ones.  The clear operation always uses the front stencil
+    write mask when clearing the stencil buffer."
+
+ -- Section 4.3.1 "Writing to the Stencil Buffer or to the Depth and
+    Stencil Buffers"
+
+    Replace the final sentence in the first paragraph with:
+
+    "Finally, each stencil index is written to its indicated location
+    in the framebuffer, subject to the current front stencil mask state
+    (set with StencilMask), and if a depth component is present, if the
+    setting of DepthMask is not FALSE, it is also written to the
+    framebuffer; the setting of DepthTest is ignored."
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX, WGL, and AGL Specification
+
+    None
+
+GLX Protocol
+
+    A new GL rendering command is added. The following command is sent to the 
+    server as part of a glXRender request:
+
+        ActiveStencilFaceEXT
+            2           8               rendering command length
+            2           4220            rendering command opcode
+            4           ENUM            face
+
+Interactions with OpenGL 2.0
+
+    OpenGL 2.0 provides similar "separate stencil" functionality with an API
+    based on the ATI_separate_stencil extension.  In the OpenGL 2.0 API, there
+    is no enable; instead, new functions are provided that set both front and
+    back state simultaneously.  Non-separate stencil functions (e.g.,
+    StencilFunc, StencilOp) set *both* back and front state.  In this
+    extension, they set either front or back state depending on the active
+    stencil face.
+
+    Implementations supporting both this extension and OpenGL 2.0 will need to
+    support both styles of two-sided stencil usage without API modification,
+    which is ugly since the OpenGL 2.0 API does not have an enable for
+    two-sided functionality -- it's always on.  To achieve this, we provide
+    three different sets of stencil state:
+
+      - front state
+      - "OpenGL 2.0" back state
+      - "EXT_stencil_two_side" back state
+
+    OpenGL 2.0 separate stencil functions set the front and "OpenGL 2.0" back
+    state.  Non-separate stencil functions use the stencil face selector to
+    determine what to set:  FRONT (the default) sets both front and "OpenGL
+    2.0" back state; BACK sets "EXT_stencil_two_side" back state.
+
+    If the two-sided stencil enable in this extension is set, implying
+    EXT_stencil_two_side usage, we choose between the front state and the
+    EXT_stencil_two_side back state.  Those two sets of state are set
+    appropriately when using the active stencil face selector provided by this
+    extension.
+
+    If the two-sided stencil enable in this extension is not set, implying
+    either OpenGL 2.0 or "one-sided" EXT_stencil_two_side usage, we choose
+    between the front state and the OpenGL 2.0 back state.  In OpenGL 2.0
+    usage, the separate stencil functions set either of these two pieces of
+    state appropriately, and the non-separate stencil functions set both.  In
+    "one-sided" EXT_stencil_two_side usage, the separate stencil functions
+    from OpenGL 2.0 will not be used.  Any time the non-separate functions set
+    the front state (active face == FRONT), they also set the OpenGL 2.0 back
+    state, so the front and back state used will always be identical in this
+    case.
+
+    The relevant spec language changes in the OpenGL 2.0 specification are:
+
+    (modify 2nd paragraph, p. 202) There are three sets of stencil-related
+    state, the front stencil state set, the OpenGL 2.0 back stencil state set,
+    and the EXT_stencil_two_side back stencil state set.  Stencil tests and
+    writes use the front set of stencil state when processing fragments
+    rasterized from non-polygon primitives (points, lines, bitmaps, image
+    rectangles) and front-facing polygon primitives.  When processing
+    fragments rasterized from back-facing polygon primitives, stencil tests
+    and writes use the OpenGL 2.0 back stencil state set when
+    STENCIL_TEST_TWO_SIDE_EXT is disabled and the EXT_stencil_two_side back
+    stencil state set otherwise. ...
+
+    (modify 3rd paragraph, p. 202) StencilFuncSeparate and StencilOpSeparate
+    take a face argument which can be FRONT, BACK, or FRONT_AND_BACK and
+    indicates which set of state is affected.  If <face> is BACK or
+    FRONT_AND_BACK, the OpenGL 2.0 back stencil state is modified, but the
+    EXT_stencil_two_side state is not.  StencilFunc and StencilOp set state
+    based on the active stencil face.  If the active stencil face is FRONT,
+    the corresponding front and OpenGL 2.0 back stencil state are set to
+    identical values.  If the active stencil face is BACK, the corresponding
+    EXT_stencil_two_side back state is set.
+
+Errors
+
+    None
+
+New State
+
+(table 6.15, page 205) amend the following entries:
+
+Get Value                  Type  Get Command  Initial Value  Description          Sec    Attribute
+-------------------------  ----  -----------  -------------  -------------------  -----  --------------
+STENCIL_FUNC               2xZ8  GetIntegerv  ALWAYS         Stencil function     4.1.4  stencil-buffer
+STENCIL_VALUE_MASK         2xZ+  GetIntegerv  1's            Stencil mask         4.1.4  stencil-buffer
+STENCIL_REF                2xZ+  GetIntegerv  0              Stencil reference    4.1.4  stencil-buffer
+                                                             value
+STENCIL_FAIL               2xZ6  GetIntegerv  KEEP           Stencil fail action  4.1.4  stencil-buffer
+STENCIL_PASS_DEPTH_FAIL    2xZ6  GetIntegerv  KEEP           Stencil depth        4.1.4  stencil-buffer
+                                                             buffer fail action
+STENCIL_PASS_DEPTH_PASS    2xZ6  GetIntegerv  KEEP           Stencil depth        4.1.4  stencil-buffer
+                                                             buffer pass action
+
+[Type field is amended with "2x" prefix.]
+
+(table 6.15, page 205) add the following entries:
+
+Get Value                  Type  Get Command  Initial Value  Description        Sec    Attribute
+-------------------------  ----  -----------  -------------  -----------------  ------ ---------------------
+STENCIL_TEST_TWO_SIDE_EXT  B     IsEnabled    False          Two-sided stencil  4.1.4  stencil-buffer/enable
+                                                             test enable 
+ACTIVE_STENCIL_FACE_EXT    Z2    GetIntegerv  FRONT          Active stencil     4.1.4  stencil-buffer
+                                                             face selector
+
+(table 6.16, page 205) ammend the following entry:
+
+Get Value                  Type  Get Command  Initial Value  Description        Sec    Attribute
+-------------------------  ----  -----------  -------------  -----------------  ------ --------------
+STENCIL_WRITE_MASK         2xZ+  GetIntegerv  1's            Stencil buffer     4.2.2  stencil-buffer
+                                                             writemask
+
+[Type field is amended with "2x" prefix.]
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  --------------------------------------------
+    2     09/15/05  pbrown    Clarified interaction with OpenGL 2.0 two-
+                              sided stencil.
+
+    1     01/08/03  mjk       Initial revision.

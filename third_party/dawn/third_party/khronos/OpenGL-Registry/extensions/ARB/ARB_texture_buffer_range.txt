@@ -1,0 +1,270 @@
+Name
+
+    ARB_texture_buffer_range
+
+Name Strings
+
+    GL_ARB_texture_buffer_range
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Jon Leech
+    Mark Kilgard, NVIDIA
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date: August 7, 2013
+    Version: 8
+
+Number
+
+    ARB Extension #139
+
+Dependencies
+
+    ARB_texture_buffer_object or OpenGL 3.1 is required.
+
+    The definition of this extension is dependent on EXT_direct_state_access.
+
+    This extension is written against the OpenGL 4.2 (Core) Specification.
+
+Overview
+
+    ARB_texture_buffer_object (which was promoted to core in OpenGL 3.1)
+    introduced the ability to attach the data store of a buffer object
+    to a buffer texture and access it from shaders. The extension only allows
+    the entire store of the buffer object to the texture. This extension
+    expands on this and allows a sub-range of the buffer's data store to
+    be attached to a texture. This can be used, for example, to allow multiple
+    buffer textures to be backed by independent sub-ranges of the same buffer
+    object, or for different sub-ranges of a single buffer object to be used
+    for different purposes.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+        void TexBufferRange(enum target,
+                            enum internalformat,
+                            uint buffer,
+                            intptr offset,
+                            sizeiptr size);
+
+    When EXT_direct_state_access is present:
+
+        void TextureBufferRangeEXT(uint texture,
+                                   enum target,
+                                   enum internalformat,
+                                   uint buffer,
+                                   intptr offset,
+                                   sizeiptr size);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetTexLevelParameter:
+
+        TEXTURE_BUFFER_OFFSET                               0x919D
+        TEXTURE_BUFFER_SIZE                                 0x919E
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        TEXTURE_BUFFER_OFFSET_ALIGNMENT                     0x919F
+
+Additions to Chapter 2 of the OpenGL 4.2 (Core Profile) Specification
+(OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Core Profile) Specification
+(Rasterization)
+
+Modifications to Section 3.8.7 "Buffer Textures"
+
+    Change the description of TexBuffer as follows:
+
+        The command
+
+        void TexBufferRange(enum target,
+                            enum internalformat,
+                            uint buffer,
+                            intptr offset,
+                            sizeiptr size);
+
+    attaches the range of the storage for the buffer object named <buffer>
+    for <size> basic machine units, starting at <offset> (also in basic machine
+    units) to the active buffer texture, and specifies an internal format
+    for the texel array found in the range of the attached buffer object. If
+    <buffer> is zero, then any buffer object attached to the buffer texture
+    is detached, the values <offset> and <size> are ignored and the state for
+    <offset> and <size> for the buffer texture are reset to zero. If <buffer>
+    is non-zero, but is not the name of a buffer object, the error
+    INVALID_OPERATION is generated. If <offset> is negative or if <size> is
+    less than or equal to zero or if <offset> + <size> is greater than the
+    value of BUFFER_SIZE for the buffer bound to <target>, of if <offset> is
+    not an integer multiple of TEXTURE_BUFFER_OFFSET_ALIGNMENT, then the error
+    INVALID_VALUE is generated. <internalformat> specifies the storage format
+    and must be one of the sized internal formats found in Table 3.15.
+
+        The command
+
+        void TextureBufferRangeEXT(uint texture,
+                                   enum target,
+                                   enum internalformat,
+                                   uint buffer,
+                                   intptr offset,
+                                   sizeiptr size);
+
+    behaves identically to TexBufferRange, except rather than updating the
+    currently bound texture object for the texture unit indicated by the current
+    active texture state, the texture object named <texture> is updated
+    directly. <texture> must be a name returned from a previous call to
+    GenTextures or be that of an existing texture matching <target>. If <texture>
+    is not the name of an existing texture, one is created with the name
+    <texture> for <target>.
+
+        The command
+
+        void TexBuffer(enum target,
+                       enum internalformat,
+                       uint buffer);
+
+    is equivalent to calling TexBufferRange with the <target>, <internalformat>
+    and <buffer> parameters as specified, with <offset> set to zero, and
+    <size> set to the value of BUFFER_SIZE for <buffer>.
+
+        When a range of the storage of a buffer object is attached to a buffer
+    texture, the range of the buffer's data store is taken as the texture's
+    texel array. The number of texels in the buffer texture's texel array is
+    given by
+
+                    |                 <size>                 |
+                    |  ------------------------------------  |
+                    |_  <components> x sizeof(<base_type>)  _|
+
+    where <components> and <base_type> are the element count and base type for
+    elements, as specified in Table 3.15.
+
+Modifications to Section 3.9.15 "Texture and Proxy State"
+
+    Add to the state required for buffer textures:
+    
+    ... The buffer texture target has associated an integer containing the name
+    of the buffer object that provided the data store for the texture,
+    initially zero, and two pointer sized integers containing the offset and
+    range of the buffer object's data store, also initially zero.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Core Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Core Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Core Profile) Specification
+(State and State Requests)
+
+    None.
+
+Errors
+
+    INVALID_ENUM is generated by TexBufferRange if <target> is not
+    TEXTURE_BUFFER.
+
+    INVALID_VALUE is generated by TexBufferRange if <offset> is less than zero.
+
+    INVALID_VALUE is generated by TexBufferRange if <size> is less than zero.
+
+    INVALID_VALUE is generated by TexBufferRange if <offset> + <size> is
+    greater than the value of BUFFER_SIZE for <buffer>.
+
+    INVALID_VALUE is generated by TexBufferRange if <offset> is not
+    an integer multiple of the value of TEXTURE_BUFFER_OFFSET_ALIGNMENT.
+
+New State
+
+    Append to Table 6.17. Textures (state per texture image)
+
+    +-------------------------+---------+----------------------+---------------+------------------------------------------+
+    | Get Value               | Type    | Get Command          | Initial Value | Description                              |
+    +-------------------------+---------+----------------------+---------------+------------------------------------------+
+    | TEXTURE_BUFFER_OFFSET   |  n x Z  | GetTexLevelParameter | 0             | Offset into buffer's data store used for |
+    |                         |         |                      |               | the active image unit's buffer texture   |
+    | TEXTURE_BUFFER_SIZE     |  n x Z  | GetTexLevelParameter | 0             | Size of the buffer's data store used for |
+    |                         |         |                      |               | the active image unit's buffer texture   |
+    +-------------------------+---------+----------------------+---------------+------------------------------------------+
+
+New Implementation Dependent State
+
+    +---------------------------------+------+-------------+------------+----------------------------+---------+-----------+
+    |                                 |      |             | Minimum    |                            |         |           |
+    | Get Value                       | Type | Get Command | Value      | Description                | Sec     | Attribute |
+    +---------------------------------+------+-------------+------------+----------------------------+---------+-----------+
+    | TEXTURE_BUFFER_OFFSET_ALIGNMENT | Z+   | GetIntegerv | 1          | Minimum required alignment | 3.8.7   | -         |
+    |                                 |      |             |            | for texture buffer offsets |         |           |
+    +---------------------------------+------+-------------+------------+----------------------------+---------+-----------+
+
+Conformance Tests
+
+    TBD
+
+Issues
+
+    1) Do we need to have restrictions on the alignment of <offset> and/or
+       <size> for TexBufferRange?
+
+       RESOLVED: Yes for offset, no for range. The minimum value here is 1,
+       essentially making it optional for offsets.
+
+Dependencies on EXT_direct_state_access
+
+    If EXT_direct_state_access is not supported, remove all references to
+    TextureBufferRangeEXT.
+
+Revision History
+
+    Rev.  Date        Author    Changes
+    ----  ----------  --------  -----------------------------------------
+     8    08/07/2013  mjk       Better indicate DSA entrypoints
+     7    05/29/2012  Jon Leech Fix capitalization of <internalformat>.
+     6    05/02/2012  drakos    Add EXT suffix to TextureBufferRange.
+     5    04/30/2012  gsellers  Assign token values.
+                                Add more error behavior.
+                                Minor fixes.
+     4    04/26/2012  gsellers  Clarify that <offset> and <size> are reset for
+                                TexBOs when a buffer is unbound.
+     3    04/02/2012  gsellers  Update token names. Correct typos. (bug 8131).
+                                Add TEXTURE_BUFFER_OFFSET_ALIGNMENT.
+                                Resolve issue (1).
+     2    12/19/2011  gsellers  Document interaction with EXT_dsa. Rename to
+                                ARB. Remove ARB suffixes from APIs and tokens.
+     1    09/26/2011  gsellers  Initial draft

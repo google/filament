@@ -1,0 +1,56 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %_ %position %frag_color
+               OpSource GLSL 430
+               OpName %main "main"
+               OpName %gl_PerVertex "gl_PerVertex"
+               OpMemberName %gl_PerVertex 0 "gl_Position"
+               OpMemberName %gl_PerVertex 1 "gl_PointSize"
+               OpMemberName %gl_PerVertex 2 "gl_ClipDistance"
+               OpName %_ ""
+               OpName %position "position"
+               OpName %frag_color "frag_color"
+               OpName %block0 "block0"
+               OpMemberName %block0 0 "in_color"
+               OpName %__0 ""
+               OpMemberDecorate %gl_PerVertex 0 BuiltIn Position
+               OpMemberDecorate %gl_PerVertex 1 BuiltIn PointSize
+               OpMemberDecorate %gl_PerVertex 2 BuiltIn ClipDistance
+               OpDecorate %gl_PerVertex Block
+               OpDecorate %position Location 0
+               OpDecorate %frag_color Location 0
+               OpMemberDecorate %block0 0 Offset 0
+               OpDecorate %block0 Block
+               OpDecorate %__0 DescriptorSet 0
+               OpDecorate %__0 Binding 1
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+%_arr_float_uint_1 = OpTypeArray %float %uint_1
+%gl_PerVertex = OpTypeStruct %v4float %float %_arr_float_uint_1
+%_ptr_Output_gl_PerVertex = OpTypePointer Output %gl_PerVertex
+          %_ = OpVariable %_ptr_Output_gl_PerVertex Output
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+   %position = OpVariable %_ptr_Input_v4float Input
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %frag_color = OpVariable %_ptr_Output_v4float Output
+     %block0 = OpTypeStruct %v4float
+%_ptr_Uniform_block0 = OpTypePointer Uniform %block0
+        %__0 = OpVariable %_ptr_Uniform_block0 Uniform
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+       %main = OpFunction %void None %10
+         %23 = OpLabel
+         %24 = OpLoad %v4float %position
+         %25 = OpAccessChain %_ptr_Output_v4float %_ %int_0
+               OpStore %25 %24
+         %26 = OpAccessChain %_ptr_Uniform_v4float %__0 %int_0
+         %27 = OpLoad %v4float %26
+               OpStore %frag_color %27
+               OpReturn
+               OpFunctionEnd

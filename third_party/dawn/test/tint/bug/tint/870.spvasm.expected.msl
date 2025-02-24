@@ -1,0 +1,46 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct sspp962805860buildInformationS {
+  /* 0x0000 */ float4 footprint;
+  /* 0x0010 */ float4 offset;
+  /* 0x0020 */ int essence;
+  /* 0x0024 */ tint_array<int, 6> orientation;
+  /* 0x003c */ tint_array<int8_t, 4> tint_pad;
+};
+
+struct x_B4_BuildInformation {
+  /* 0x0000 */ sspp962805860buildInformationS passthru;
+};
+
+struct tint_module_vars_struct {
+  const device x_B4_BuildInformation* sspp962805860buildInformation;
+};
+
+void main_1(tint_module_vars_struct tint_module_vars) {
+  tint_array<int, 6> orientation = {};
+  tint_array<int, 6> const x_23 = (*tint_module_vars.sspp962805860buildInformation).passthru.orientation;
+  orientation[0u] = x_23[0u];
+  orientation[1u] = x_23[1u];
+  orientation[2u] = x_23[2u];
+  orientation[3u] = x_23[3u];
+  orientation[4u] = x_23[4u];
+  orientation[5u] = x_23[5u];
+}
+
+fragment void v(const device x_B4_BuildInformation* sspp962805860buildInformation [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sspp962805860buildInformation=sspp962805860buildInformation};
+  main_1(tint_module_vars);
+}

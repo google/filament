@@ -1,0 +1,38 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device half4* prevent_dce;
+};
+
+half4 subgroupInclusiveMul_4430d5() {
+  half4 res = simd_prefix_inclusive_product(half4(1.0h));
+  return res;
+}
+
+fragment void fragment_main(device half4* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupInclusiveMul_4430d5();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device half4* prevent_dce;
+};
+
+half4 subgroupInclusiveMul_4430d5() {
+  half4 res = simd_prefix_inclusive_product(half4(1.0h));
+  return res;
+}
+
+kernel void compute_main(device half4* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupInclusiveMul_4430d5();
+}

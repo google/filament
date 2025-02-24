@@ -1,0 +1,67 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct strided_arr {
+  /* 0x0000 */ float2 el;
+  /* 0x0008 */ tint_array<int8_t, 8> tint_pad;
+};
+
+struct SSBO {
+  /* 0x0000 */ tint_array<strided_arr, 2> m;
+};
+
+struct tint_module_vars_struct {
+  device SSBO* ssbo;
+};
+
+tint_array<strided_arr, 2> mat2x2_stride_16_to_arr(float2x2 m) {
+  strided_arr const v = strided_arr{.el=m[0u]};
+  return tint_array<strided_arr, 2>{v, strided_arr{.el=m[1u]}};
+}
+
+float2x2 arr_to_mat2x2_stride_16(tint_array<strided_arr, 2> arr) {
+  return float2x2(arr[0u].el, arr[1u].el);
+}
+
+void tint_store_and_preserve_padding_1(device strided_arr* const target, strided_arr value_param) {
+  (*target).el = value_param.el;
+}
+
+void tint_store_and_preserve_padding(device tint_array<strided_arr, 2>* const target, tint_array<strided_arr, 2> value_param) {
+  {
+    uint v_1 = 0u;
+    v_1 = 0u;
+    while(true) {
+      uint const v_2 = v_1;
+      if ((v_2 >= 2u)) {
+        break;
+      }
+      tint_store_and_preserve_padding_1((&(*target)[v_2]), value_param[v_2]);
+      {
+        v_1 = (v_2 + 1u);
+      }
+      continue;
+    }
+  }
+}
+
+void f_1(tint_module_vars_struct tint_module_vars) {
+  tint_store_and_preserve_padding((&(*tint_module_vars.ssbo).m), mat2x2_stride_16_to_arr(arr_to_mat2x2_stride_16((*tint_module_vars.ssbo).m)));
+}
+
+kernel void f(device SSBO* ssbo [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.ssbo=ssbo};
+  f_1(tint_module_vars);
+}

@@ -1,0 +1,56 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 33
+; Schema: 0
+               OpCapability Shader
+         %23 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpName %runtime_in "runtime_in"
+               OpMemberName %__frexp_result_vec2_f32 0 "fract"
+               OpMemberName %__frexp_result_vec2_f32 1 "exp"
+               OpName %__frexp_result_vec2_f32 "__frexp_result_vec2_f32"
+               OpName %res "res"
+               OpName %fract "fract"
+               OpName %exp "exp"
+               OpMemberDecorate %__frexp_result_vec2_f32 0 Offset 0
+               OpMemberDecorate %__frexp_result_vec2_f32 1 Offset 8
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+ %float_1_25 = OpConstant %float 1.25
+ %float_3_75 = OpConstant %float 3.75
+ %runtime_in = OpConstantComposite %v2float %float_1_25 %float_3_75
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+%__frexp_result_vec2_f32 = OpTypeStruct %v2float %v2int
+%_ptr_Function___frexp_result_vec2_f32 = OpTypePointer Function %__frexp_result_vec2_f32
+%float_0_625 = OpConstant %float 0.625
+%float_0_9375 = OpConstant %float 0.9375
+         %16 = OpConstantComposite %v2float %float_0_625 %float_0_9375
+      %int_1 = OpConstant %int 1
+      %int_2 = OpConstant %int 2
+         %19 = OpConstantComposite %v2int %int_1 %int_2
+         %15 = OpConstantComposite %__frexp_result_vec2_f32 %16 %19
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Function_v2int = OpTypePointer Function %v2int
+     %uint_1 = OpConstant %uint 1
+       %main = OpFunction %void None %3
+          %4 = OpLabel
+        %res = OpVariable %_ptr_Function___frexp_result_vec2_f32 Function
+               OpStore %res %15
+         %22 = OpExtInst %__frexp_result_vec2_f32 %23 FrexpStruct %runtime_in
+               OpStore %res %22 None
+               OpStore %res %15 None
+         %24 = OpAccessChain %_ptr_Function_v2float %res %uint_0
+      %fract = OpLoad %v2float %24 None
+         %29 = OpAccessChain %_ptr_Function_v2int %res %uint_1
+        %exp = OpLoad %v2int %29 None
+               OpReturn
+               OpFunctionEnd

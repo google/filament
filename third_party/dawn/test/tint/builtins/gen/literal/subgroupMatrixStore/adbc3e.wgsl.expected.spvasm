@@ -1,0 +1,55 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 25
+; Schema: 0
+               OpCapability Shader
+               OpCapability VulkanMemoryModel
+               OpCapability VulkanMemoryModelDeviceScope
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpCapability CooperativeMatrixKHR
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %SB_RW 0 "arg_0"
+               OpName %SB_RW "SB_RW"
+               OpName %sb_rw "sb_rw"
+               OpName %subgroupMatrixStore_adbc3e "subgroupMatrixStore_adbc3e"
+               OpName %compute_main "compute_main"
+               OpDecorate %_runtimearr_half ArrayStride 2
+               OpMemberDecorate %SB_RW 0 Offset 0
+               OpDecorate %SB_RW Block
+               OpDecorate %sb_rw DescriptorSet 0
+               OpDecorate %sb_rw Binding 0
+       %half = OpTypeFloat 16
+%_runtimearr_half = OpTypeRuntimeArray %half
+      %SB_RW = OpTypeStruct %_runtimearr_half
+%_ptr_StorageBuffer_SB_RW = OpTypePointer StorageBuffer %SB_RW
+      %sb_rw = OpVariable %_ptr_StorageBuffer_SB_RW StorageBuffer
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+%_ptr_StorageBuffer__runtimearr_half = OpTypePointer StorageBuffer %_runtimearr_half
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+         %15 = OpTypeCooperativeMatrixKHR %half %uint_3 %uint_8 %uint_8 %uint_0
+         %14 = OpConstantNull %15
+%_ptr_StorageBuffer_half = OpTypePointer StorageBuffer %half
+     %uint_1 = OpConstant %uint 1
+%subgroupMatrixStore_adbc3e = OpFunction %void None %8
+          %9 = OpLabel
+         %10 = OpAccessChain %_ptr_StorageBuffer__runtimearr_half %sb_rw %uint_0
+         %18 = OpAccessChain %_ptr_StorageBuffer_half %10 %uint_1
+               OpCooperativeMatrixStoreKHR %18 %14 %uint_1 %uint_1 NonPrivatePointer
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %8
+         %23 = OpLabel
+         %24 = OpFunctionCall %void %subgroupMatrixStore_adbc3e
+               OpReturn
+               OpFunctionEnd

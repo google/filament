@@ -1,0 +1,21 @@
+; Test: SpvModuleScopeVarParserTest_PrivateVar.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 53
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+OpName %my_own_private_idaho "my_own_private_idaho"
+%float = OpTypeFloat 32
+%_ptr_Private_float = OpTypePointer Private %float
+%my_own_private_idaho = OpVariable %_ptr_Private_float Private
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%1 = OpFunction %void None %5
+%6 = OpLabel
+OpReturn
+OpFunctionEnd
+

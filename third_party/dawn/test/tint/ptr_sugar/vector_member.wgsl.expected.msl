@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void deref() {
+  int3 a = 0;
+  thread int3* const p = (&a);
+  int b = (*p).x;
+  (*p).x = 42;
+}
+
+void no_deref() {
+  int3 a = 0;
+  thread int3* const p = (&a);
+  int b = (*p).x;
+  (*p).x = 42;
+}
+
+kernel void v() {
+  deref();
+  no_deref();
+}

@@ -1,0 +1,158 @@
+Name
+
+    GREMEDY_frame_terminator
+
+Name Strings
+
+    GL_GREMEDY_frame_terminator
+
+Contributors
+
+    Yaki Tebeka
+
+Contact
+
+    Yaki Tebeka, Graphic Remedy (yaki 'at' gremedy.com)
+
+Status
+
+    Implemented by gDEBugger (Version 3.2 or later)
+
+Version
+
+    Last Modified Date: September 20, 2007
+    Author Revision: 1.0
+
+Number
+
+    345
+
+Dependencies
+
+    OpenGL 1.0 is required.
+    
+    The extension is written against the OpenGL 1.5 Specification.
+
+Overview
+
+    This extension defines a mechanism that enables marking the end 
+    of render frames within the OpenGL stream.
+    
+    When debugging or profiling an OpenGL application, the debuggers
+    and profilers needs to know when a render frame is ended. This
+    is important for frame per second measurements, statistical analysis, 
+    marking and clearing stream loggers logs, performance counters 
+    sampling and more.
+    
+    When an application uses off screen buffers, the debugger / profiler
+    cannot be guaranteed that the application will call a certain function at
+    the end of each off-screen frame (e.g: SwapBuffers / glClear / etc). 
+    This extension enables the application to notify the debugger / profiler 
+    whenever a render frame is ended.
+    
+    This extension is mainly useful for debuggers and profilers. It is not 
+    expected that standard drivers would implement this extension. The main
+    point of having this extension is to allow applications to have a clean 
+    way of accessing this functionality only when they are run under the 
+    control of a debugger / profiler, without having to recompile or change 
+    the application source code.
+    
+IP Status
+
+    No known IP claims
+
+Issues
+
+   (1) Should it be legal to call this inside Begin/End?
+    
+    RESOLVED: no.
+    
+    A render frame cannot end within a Begin/End block.
+        
+New Procedures and Functions
+
+    void FrameTerminatorGREMEDY(void);
+
+New Types
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 1.5 Specification
+(OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.5 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.5 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.5 Specification
+(Special Functions)
+
+    Add section 5.8 on page 212
+    
+    5.8 Frame Terminator
+    
+    The command
+    
+        void FrameTerminatorGREMEDY(void);
+    
+    can be used to insert a frame terminator marker into the command stream.
+    This frame terminator marker can be used by appropriate debugging tools / 
+    profiling tools / profiling drivers for frame per second measurements, 
+    statistical analysis, marking and clearing stream loggers logs, performance 
+    counters sampling and more. This command has no influence on the rendered 
+    image or the OpenGL state.
+
+
+Additions to Chapter 6 of the OpenGL 1.5 Specification (State and State
+Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.5 Specification (Invariance)
+
+    None
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Dependencies on EXT_extension_name
+
+    None
+
+Errors
+
+    The error INVALID_OPERATION is generated if any of the commands
+    defined in this extension is executed between the execution of Begin
+    and the corresponding execution of End.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Sample Code
+
+    None
+
+Revision History
+
+    1.0, 09/20/07 yt:   - Initial revision

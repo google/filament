@@ -1,0 +1,70 @@
+//
+// vert_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct Interface {
+  int i;
+  uint u;
+  int4 vi;
+  uint4 vu;
+  float4 pos;
+};
+
+struct vert_main_outputs {
+  int Interface_i [[user(locn0)]] [[flat]];
+  uint Interface_u [[user(locn1)]] [[flat]];
+  int4 Interface_vi [[user(locn2)]] [[flat]];
+  uint4 Interface_vu [[user(locn3)]] [[flat]];
+  float4 Interface_pos [[position]];
+};
+
+Interface vert_main_inner() {
+  return Interface{};
+}
+
+vertex vert_main_outputs vert_main() {
+  Interface const v = vert_main_inner();
+  vert_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.Interface_i = v.i;
+  tint_wrapper_result.Interface_u = v.u;
+  tint_wrapper_result.Interface_vi = v.vi;
+  tint_wrapper_result.Interface_vu = v.vu;
+  tint_wrapper_result.Interface_pos = v.pos;
+  return tint_wrapper_result;
+}
+//
+// frag_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct Interface {
+  int i;
+  uint u;
+  int4 vi;
+  uint4 vu;
+  float4 pos;
+};
+
+struct frag_main_outputs {
+  int tint_symbol [[color(0)]];
+};
+
+struct frag_main_inputs {
+  int Interface_i [[user(locn0)]] [[flat]];
+  uint Interface_u [[user(locn1)]] [[flat]];
+  int4 Interface_vi [[user(locn2)]] [[flat]];
+  uint4 Interface_vu [[user(locn3)]] [[flat]];
+};
+
+int frag_main_inner(Interface inputs) {
+  return inputs.i;
+}
+
+fragment frag_main_outputs frag_main(frag_main_inputs inputs [[stage_in]], float4 Interface_pos [[position]]) {
+  frag_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = frag_main_inner(Interface{.i=inputs.Interface_i, .u=inputs.Interface_u, .vi=inputs.Interface_vi, .vu=inputs.Interface_vu, .pos=Interface_pos});
+  return tint_wrapper_result;
+}

@@ -1,0 +1,7 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void v() {
+  int i = 123;
+  int const u = as_type<int>((as_type<uint>(i) + as_type<uint>(1)));
+}

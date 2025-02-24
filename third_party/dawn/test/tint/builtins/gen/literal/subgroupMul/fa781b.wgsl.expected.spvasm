@@ -1,0 +1,104 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 24
+; Schema: 0
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %subgroupMul_fa781b "subgroupMul_fa781b"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+%prevent_dce_block = OpTypeStruct %v3uint
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %7 = OpTypeFunction %v3uint
+     %uint_3 = OpConstant %uint 3
+     %uint_1 = OpConstant %uint 1
+         %11 = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void
+%_ptr_StorageBuffer_v3uint = OpTypePointer StorageBuffer %v3uint
+     %uint_0 = OpConstant %uint 0
+%subgroupMul_fa781b = OpFunction %v3uint None %7
+          %8 = OpLabel
+        %res = OpVariable %_ptr_Function_v3uint Function
+          %9 = OpGroupNonUniformIMul %v3uint %uint_3 Reduce %11
+               OpStore %res %9
+         %15 = OpLoad %v3uint %res None
+               OpReturnValue %15
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %18
+         %19 = OpLabel
+         %20 = OpFunctionCall %v3uint %subgroupMul_fa781b
+         %21 = OpAccessChain %_ptr_StorageBuffer_v3uint %1 %uint_0
+               OpStore %21 %20 None
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 24
+; Schema: 0
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %subgroupMul_fa781b "subgroupMul_fa781b"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+%prevent_dce_block = OpTypeStruct %v3uint
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %7 = OpTypeFunction %v3uint
+     %uint_3 = OpConstant %uint 3
+     %uint_1 = OpConstant %uint 1
+         %11 = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void
+%_ptr_StorageBuffer_v3uint = OpTypePointer StorageBuffer %v3uint
+     %uint_0 = OpConstant %uint 0
+%subgroupMul_fa781b = OpFunction %v3uint None %7
+          %8 = OpLabel
+        %res = OpVariable %_ptr_Function_v3uint Function
+          %9 = OpGroupNonUniformIMul %v3uint %uint_3 Reduce %11
+               OpStore %res %9
+         %15 = OpLoad %v3uint %res None
+               OpReturnValue %15
+               OpFunctionEnd
+%compute_main = OpFunction %void None %18
+         %19 = OpLabel
+         %20 = OpFunctionCall %v3uint %subgroupMul_fa781b
+         %21 = OpAccessChain %_ptr_StorageBuffer_v3uint %1 %uint_0
+               OpStore %21 %20 None
+               OpReturn
+               OpFunctionEnd

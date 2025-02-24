@@ -1,0 +1,228 @@
+Name
+
+    NV_texture_expand_normal
+
+Name Strings
+
+    GL_NV_texture_expand_normal
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2002.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Implemented, November 2002
+    Shipping in Release 40 NVIDIA driver for CineFX hardware, January 2003.
+
+Version
+
+    Last Modified:      2005/06/16
+    NVIDIA Revision:    4
+
+Number
+
+    286
+
+Support
+
+    NVIDIA plans to discontinue this extension for future GPU
+    architectures.  Support for NV3x (GeForce FX), NV4x (GeForce 6
+    Series), and G7x (GeForce 7x00) architectures will continue.
+
+    As an alternative to the EXT_texture_expand_normal functionality,
+    developers can either use the signed fixed-point texture formats
+    provided by NV_texture_shader (such as GL_SIGNED_RGBA8_NV) or perform
+    the "expand normal" operation with shader instructions (typically
+    just a MAD)..
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+Overview
+
+    This extension provides a remapping mode where unsigned texture
+    components (in the range [0,1]) can be treated as though they
+    contained signed data (in the range [-1,+1]).  This allows
+    applications to easily encode signed data into unsigned texture
+    formats.
+
+    The functionality of this extension is nearly identical to the
+    EXPAND_NORMAL_NV remapping mode provided in the NV_register_combiners
+    extension, although it applies even if register combiners are used.
+
+Issues
+
+    (1) When is the remapping applied?
+
+      RESOLVED:  It would be possible to remap after loading each texel,
+      remap after all filtering is done, or something in between.
+      Ignoring implementation-dependent rounding errors, it really
+      doesn't matter.
+
+      The spec language says that the remapping is applied after filtering
+      texel values within each level.  For LINEAR_MIPMAP_LINEAR, this
+      means that the remapping is "done" twice.  This approach was chosen
+      solely to simplify the spec language, and does not necessarily
+      reflect NVIDIA's implementation.
+
+    (2) Should the remapping mode apply to textures with signed
+    components?
+
+      RESOLVED:  No -- the EXPAND_NORMAL_NV mapping is ignored for
+      such textures.
+
+    (3) NV_texture_shader provides several internal formats with a mix
+    of signed and unsigned components.  For example, the base formats
+    DSDT_MAG_NV, and DSDT_MAG_INTENSITY_NV have this property, and
+    there is a variant of RGBA where the RGB components are signed,
+    but the A component is unsigned.  What should happen in this case?
+
+      RESOLVED:  The unsigned components are remapped; the signed
+      components are unmodified.
+
+    (4) What should be said about signed fixed-point precision and range
+    of actual implementations?
+
+      RESOLVED:  The fundamental problem is that it is not possible
+      to derive a linear mapping taking unsigned values that exactly
+      represents -1.0, 0.0, and +1.0.
+
+      The mapping chosen for current NVIDIA implementations does not
+      exactly represent +1.0.  For an n-bit fixed-point component,
+      0 maps to -1.0, 2^(n-1) maps to 0.0, and 2^n-1 (maximum value)
+      maps to 1.0 - 1/(2^(n-1)).  This same conversion is applied to
+      stored textures using the signed texture types in NV_texture_shader.
+
+      This specification is written using the conventional OpenGL mapping
+      where -1.0 and +1.0 can be represented exactly, but 0.0 can not.
+      The specification is simpler and avoids precision-dependent language
+      describing the mapping.  We expect some leeway in how the remapping
+      is applied.
+
+      This issue is discussed in more detail in the issues section
+      of the NV_texture_shader specification (the question is phrased
+      identically).
+
+    (5) Are texture border color components remapped?
+
+      RESOLVED:  Yes -- if the border values are used for filtering,
+      border color components are remapped identically to normal texel
+      components.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <pname> parameters of TexParameteri,
+    TexParameteriv, TexParameterf, TexParameterfv, GetTexParameteri,
+    and GetTexParameteriv:
+
+        TEXTURE_UNSIGNED_REMAP_MODE_NV               0x888F
+
+
+Additions to Chapter 2 of the OpenGL 1.4 Specification (OpenGL Operation)
+
+    None.
+
+
+Additions to Chapter 3 of the OpenGL 1.4 Specification (Rasterization)
+
+    Modify Section 3.8.4, Texture Parameters, p.135
+
+    (modify Table 3.19, p. 137)
+
+        Name                Type   Legal Values
+        -----------------   ----   ----------------------
+        TEXTURE_UNSIGNED_   enum   EXPAND_NORMAL_NV, NONE
+          REMAP_MODE_NV
+
+
+    Modify Section 3.8.8,  Texture Minification, p.140
+
+    (add after the last paragraph before the "Mipmapping" subsection,
+    p. 144)
+
+    After the texture filter is applied, the filtered texture values are
+    optionally rescaled, converting unsigned texture components encoded
+    in the range [0,1] to signed values in the range [-1,+1].  If the
+    texture parameter TEXTURE_UNSIGNED_REMAP_MODE_NV is EXPAND_NORMAL_NV,
+    the filtered values for each unsigned component of the texture is
+    transformed by
+
+        tau = 2 * tau - 1.
+
+    For components
+
+Additions to Chapter 4 of the OpenGL 1.4 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+
+Additions to Chapter 5 of the OpenGL 1.4 Specification (Special Functions)
+
+    None.
+
+
+Additions to Chapter 6 of the OpenGL 1.4 Specification (State and
+State Requests)
+
+    None.
+
+
+Additions to Appendix A of the OpenGL 1.4 Specification (Invariance)
+
+    None.
+
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+
+Errors
+
+    None.
+
+
+New State
+
+(add to table 6.15, p. 230)
+                                                         Initial
+Get Value                       Type  Get Command        Value   Description         Sec.   Attribute
+------------------------------  ----  -----------------  ------- ------------------  -----  ---------
+TEXTURE_UNSIGNED_REMAP_MODE_NV  nxZ2  GetTexParameteriv  NONE    unsigned component  3.8.8  texture
+                                                                 remapping
+
+
+Revision History
+
+Rev.    Date    Author   Changes
+----  -------- --------  --------------------------------------------
+ 4    06/14/05  mjk      Add to-be-discontinued "Status" message and
+                         discussion of alternatives.
+
+ 3    10/07/02  pbrown   Minor wording changes on precision issues -- this
+                         remapping should produce roughly the same results
+                         as storing the texture in signed form.
+
+ 2    10/07/02  pbrown   Added issue about where the remapping is applied,
+                         and what happens to border colors.
+
+ 1    10/07/02  pbrown   Initial revision.

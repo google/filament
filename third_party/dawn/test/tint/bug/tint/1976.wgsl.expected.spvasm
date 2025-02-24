@@ -1,0 +1,62 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 35
+; Schema: 0
+               OpCapability Shader
+               OpCapability ImageQuery
+         %30 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %texture0 "texture0"
+               OpMemberName %Results 0 "colorSamples"
+               OpName %Results "Results"
+               OpMemberName %results_block 0 "inner"
+               OpName %results_block "results_block"
+               OpName %main "main"
+               OpDecorate %texture0 DescriptorSet 0
+               OpDecorate %texture0 Binding 0
+               OpDecorate %_arr_float_uint_4 ArrayStride 4
+               OpMemberDecorate %Results 0 Offset 0
+               OpMemberDecorate %results_block 0 Offset 0
+               OpDecorate %results_block Block
+               OpDecorate %5 DescriptorSet 0
+               OpDecorate %5 Binding 2
+               OpDecorate %5 Coherent
+      %float = OpTypeFloat 32
+          %3 = OpTypeImage %float 2D 0 0 1 1 Unknown
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+   %texture0 = OpVariable %_ptr_UniformConstant_3 UniformConstant
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_float_uint_4 = OpTypeArray %float %uint_4
+    %Results = OpTypeStruct %_arr_float_uint_4
+%results_block = OpTypeStruct %Results
+%_ptr_StorageBuffer_results_block = OpTypePointer StorageBuffer %results_block
+          %5 = OpVariable %_ptr_StorageBuffer_results_block StorageBuffer
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+%_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+     %uint_0 = OpConstant %uint 0
+     %v2uint = OpTypeVector %uint 2
+     %uint_1 = OpConstant %uint 1
+         %23 = OpConstantComposite %v2uint %uint_1 %uint_1
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+         %26 = OpConstantNull %v2int
+    %v4float = OpTypeVector %float 4
+      %int_0 = OpConstant %int 0
+       %main = OpFunction %void None %14
+         %15 = OpLabel
+         %16 = OpAccessChain %_ptr_StorageBuffer_float %5 %uint_0 %uint_0 %uint_0
+         %19 = OpLoad %3 %texture0 None
+         %20 = OpImageQuerySize %v2uint %19
+         %22 = OpISub %v2uint %20 %23
+         %25 = OpBitcast %v2uint %26
+         %29 = OpExtInst %v2uint %30 UMin %25 %22
+         %31 = OpImageFetch %v4float %19 %29 Sample %int_0
+         %34 = OpCompositeExtract %float %31 0
+               OpStore %16 %34 None
+               OpReturn
+               OpFunctionEnd

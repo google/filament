@@ -1,0 +1,44 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 24
+; Schema: 0
+               OpCapability Shader
+         %19 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %i_block 0 "inner"
+               OpName %i_block "i_block"
+               OpName %v1 "v1"
+               OpName %main "main"
+               OpMemberDecorate %i_block 0 Offset 0
+               OpDecorate %i_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+       %uint = OpTypeInt 32 0
+    %i_block = OpTypeStruct %uint
+%_ptr_Uniform_i_block = OpTypePointer Uniform %i_block
+          %1 = OpVariable %_ptr_Uniform_i_block Uniform
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%_ptr_Private_v3float = OpTypePointer Private %v3float
+          %9 = OpConstantNull %v3float
+         %v1 = OpVariable %_ptr_Private_v3float Private %9
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+     %uint_0 = OpConstant %uint 0
+     %uint_2 = OpConstant %uint 2
+%_ptr_Private_float = OpTypePointer Private %float
+    %float_1 = OpConstant %float 1
+       %main = OpFunction %void None %12
+         %13 = OpLabel
+         %14 = OpAccessChain %_ptr_Uniform_uint %1 %uint_0
+         %17 = OpLoad %uint %14 None
+         %18 = OpExtInst %uint %19 UMin %17 %uint_2
+         %21 = OpAccessChain %_ptr_Private_float %v1 %18
+               OpStore %21 %float_1 None
+               OpReturn
+               OpFunctionEnd

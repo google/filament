@@ -1,0 +1,38 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct Result {
+  /* 0x0000 */ tint_array<float, 1> values;
+};
+
+struct tint_module_vars_struct {
+  depth2d<float, access::sample> tex;
+  device Result* result;
+  const constant tint_array<uint4, 1>* tint_storage_buffer_sizes;
+};
+
+void main_inner(uint3 GlobalInvocationId, tint_module_vars_struct tint_module_vars) {
+  device float* const v = (&(*tint_module_vars.result).values[min(((GlobalInvocationId.y * 128u) + GlobalInvocationId.x), ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 4u) - 1u))]);
+  int const v_1 = int(GlobalInvocationId.x);
+  int2 const v_2 = int2(v_1, int(GlobalInvocationId.y));
+  uint const v_3 = min(uint(0), (tint_module_vars.tex.get_num_mip_levels() - 1u));
+  uint2 const v_4 = (uint2(tint_module_vars.tex.get_width(v_3), tint_module_vars.tex.get_height(v_3)) - uint2(1u));
+  (*v) = tint_module_vars.tex.read(min(uint2(v_2), v_4), v_3);
+}
+
+kernel void v_5(uint3 GlobalInvocationId [[thread_position_in_grid]], depth2d<float, access::sample> tex [[texture(0)]], device Result* result [[buffer(0)]], const constant tint_array<uint4, 1>* tint_storage_buffer_sizes [[buffer(30)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.tex=tex, .result=result, .tint_storage_buffer_sizes=tint_storage_buffer_sizes};
+  main_inner(GlobalInvocationId, tint_module_vars);
+}

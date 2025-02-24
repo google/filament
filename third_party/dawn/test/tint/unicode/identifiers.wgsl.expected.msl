@@ -1,0 +1,11 @@
+#include <metal_stdlib>
+using namespace metal;
+
+float v(int v_1) {
+  return float(v_1);
+}
+
+fragment void v_2() {
+  int v_3 = 0;
+  float const v_4 = v(v_3);
+}

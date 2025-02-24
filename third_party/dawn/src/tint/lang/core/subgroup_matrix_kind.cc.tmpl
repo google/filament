@@ -1,0 +1,27 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate subgroup_matrix_kind.cc
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/core/core.def" -}}
+{{- Import "src/tint/utils/templates/enums.tmpl.inc" -}}
+{{- $enum := ($I.Sem.Enum "subgroup_matrix_kind") -}}
+
+#include "src/tint/lang/core/subgroup_matrix_kind.h"
+
+namespace tint::core {
+
+{{ Eval "ParseEnum" $enum}}
+
+{{ Eval "EnumOStream" $enum}}
+
+}  // namespace tint::core
+

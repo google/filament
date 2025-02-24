@@ -1,0 +1,41 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct Constants {
+  /* 0x0000 */ uint zero;
+};
+
+struct Result {
+  /* 0x0000 */ uint value;
+};
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct TestData {
+  /* 0x0000 */ tint_array<atomic_int, 3> data;
+};
+
+struct tint_module_vars_struct {
+  const constant Constants* constants;
+  device Result* result;
+  device TestData* s;
+};
+
+int runTest(tint_module_vars_struct tint_module_vars) {
+  return atomic_load_explicit((&(*tint_module_vars.s).data[min((0u + uint((*tint_module_vars.constants).zero)), 2u)]), memory_order_relaxed);
+}
+
+kernel void v(const constant Constants* constants [[buffer(0)]], device Result* result [[buffer(1)]], device TestData* s [[buffer(2)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.constants=constants, .result=result, .s=s};
+  (*tint_module_vars.result).value = uint(runTest(tint_module_vars));
+}

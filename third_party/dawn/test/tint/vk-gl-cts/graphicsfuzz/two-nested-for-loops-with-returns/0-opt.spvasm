@@ -1,0 +1,102 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %nb_mod_ "nb_mod("
+               OpName %s "s"
+               OpName %i "i"
+               OpName %GLF_live1i "GLF_live1i"
+               OpName %GLF_live1_looplimiter2 "GLF_live1_looplimiter2"
+               OpName %doesNotMatter "doesNotMatter"
+               OpMemberName %doesNotMatter 0 "_compute_data"
+               OpName %_ ""
+               OpDecorate %_runtimearr_float ArrayStride 4
+               OpMemberDecorate %doesNotMatter 0 Offset 0
+               OpDecorate %doesNotMatter BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+         %14 = OpTypeFunction %float
+%_ptr_Function_float = OpTypePointer Function %float
+    %float_0 = OpConstant %float 0
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_5 = OpConstant %int 5
+    %int_800 = OpConstant %int 800
+       %bool = OpTypeBool
+      %int_0 = OpConstant %int 0
+     %int_20 = OpConstant %int 20
+    %float_1 = OpConstant %float 1
+   %float_42 = OpConstant %float 42
+      %int_1 = OpConstant %int 1
+%_runtimearr_float = OpTypeRuntimeArray %float
+%doesNotMatter = OpTypeStruct %_runtimearr_float
+%_ptr_Uniform_doesNotMatter = OpTypePointer Uniform %doesNotMatter
+          %_ = OpVariable %_ptr_Uniform_doesNotMatter Uniform
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+         %29 = OpUndef %int
+         %30 = OpUndef %float
+       %main = OpFunction %void None %12
+         %31 = OpLabel
+         %32 = OpFunctionCall %float %nb_mod_
+         %33 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %int_0
+               OpStore %33 %32
+               OpReturn
+               OpFunctionEnd
+    %nb_mod_ = OpFunction %float None %14
+         %34 = OpLabel
+          %s = OpVariable %_ptr_Function_float Function
+          %i = OpVariable %_ptr_Function_int Function
+ %GLF_live1i = OpVariable %_ptr_Function_int Function
+%GLF_live1_looplimiter2 = OpVariable %_ptr_Function_int Function
+               OpStore %s %float_0
+               OpStore %i %int_5
+               OpBranch %35
+         %35 = OpLabel
+               OpLoopMerge %36 %37 None
+               OpBranch %38
+         %38 = OpLabel
+         %39 = OpSLessThan %bool %int_5 %int_800
+               OpBranchConditional %39 %40 %36
+         %40 = OpLabel
+               OpStore %GLF_live1i %int_0
+               OpBranch %41
+         %41 = OpLabel
+               OpLoopMerge %42 %43 None
+               OpBranch %44
+         %44 = OpLabel
+         %45 = OpSLessThan %bool %int_0 %int_20
+               OpBranchConditional %45 %46 %42
+         %46 = OpLabel
+         %47 = OpSGreaterThanEqual %bool %29 %int_5
+               OpSelectionMerge %48 None
+               OpBranchConditional %47 %49 %48
+         %49 = OpLabel
+         %50 = OpFAdd %float %float_0 %float_1
+               OpStore %s %50
+               OpBranch %42
+         %48 = OpLabel
+               OpReturnValue %float_42
+         %43 = OpLabel
+               OpBranch %41
+         %42 = OpLabel
+         %51 = OpPhi %float %float_0 %44 %50 %49
+         %52 = OpConvertSToF %float %int_5
+         %53 = OpFOrdLessThanEqual %bool %52 %51
+               OpSelectionMerge %54 None
+               OpBranchConditional %53 %55 %54
+         %55 = OpLabel
+               OpBranch %36
+         %54 = OpLabel
+               OpReturnValue %float_42
+         %37 = OpLabel
+               OpBranch %35
+         %36 = OpLabel
+         %56 = OpPhi %float %float_0 %38 %51 %55
+               OpReturnValue %56
+               OpFunctionEnd

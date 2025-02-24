@@ -1,0 +1,45 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void v() {
+  uint out = 0u;
+  {
+    uint2 tint_loop_idx = 0u;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      bool tint_continue = false;
+      switch(2) {
+        case 1:
+        {
+          tint_continue = true;
+          break;
+        }
+        default:
+        {
+          break;
+        }
+      }
+      if (tint_continue) {
+        {
+          uint const tint_low_inc = (tint_loop_idx.x + 1u);
+          tint_loop_idx.x = tint_low_inc;
+          uint const tint_carry = uint((tint_low_inc == 0u));
+          tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+          if (true) { break; }
+        }
+        continue;
+      }
+      out = (out + 1u);
+      {
+        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        tint_loop_idx.x = tint_low_inc;
+        uint const tint_carry = uint((tint_low_inc == 0u));
+        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        if (true) { break; }
+      }
+      continue;
+    }
+  }
+}

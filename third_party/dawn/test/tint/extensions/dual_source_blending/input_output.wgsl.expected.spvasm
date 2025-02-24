@@ -1,0 +1,77 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 37
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %frag_main "frag_main" %frag_main_loc0_Input %frag_main_loc1_Input %frag_main_loc0_idx0_Output %frag_main_loc0_idx1_Output
+               OpExecutionMode %frag_main OriginUpperLeft
+               OpName %frag_main_loc0_Input "frag_main_loc0_Input"
+               OpName %frag_main_loc1_Input "frag_main_loc1_Input"
+               OpName %frag_main_loc0_idx0_Output "frag_main_loc0_idx0_Output"
+               OpName %frag_main_loc0_idx1_Output "frag_main_loc0_idx1_Output"
+               OpName %frag_main_inner "frag_main_inner"
+               OpMemberName %FragOutput 0 "color"
+               OpMemberName %FragOutput 1 "blend"
+               OpName %FragOutput "FragOutput"
+               OpMemberName %FragInput 0 "a"
+               OpMemberName %FragInput 1 "b"
+               OpName %FragInput "FragInput"
+               OpName %in "in"
+               OpName %output "output"
+               OpName %frag_main "frag_main"
+               OpDecorate %frag_main_loc0_Input Location 0
+               OpDecorate %frag_main_loc1_Input Location 1
+               OpDecorate %frag_main_loc0_idx0_Output Location 0
+               OpDecorate %frag_main_loc0_idx0_Output Index 0
+               OpDecorate %frag_main_loc0_idx1_Output Location 0
+               OpDecorate %frag_main_loc0_idx1_Output Index 1
+               OpMemberDecorate %FragOutput 0 Offset 0
+               OpMemberDecorate %FragOutput 1 Offset 16
+               OpMemberDecorate %FragInput 0 Offset 0
+               OpMemberDecorate %FragInput 1 Offset 16
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%frag_main_loc0_Input = OpVariable %_ptr_Input_v4float Input
+%frag_main_loc1_Input = OpVariable %_ptr_Input_v4float Input
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%frag_main_loc0_idx0_Output = OpVariable %_ptr_Output_v4float Output
+%frag_main_loc0_idx1_Output = OpVariable %_ptr_Output_v4float Output
+ %FragOutput = OpTypeStruct %v4float %v4float
+  %FragInput = OpTypeStruct %v4float %v4float
+         %13 = OpTypeFunction %FragOutput %FragInput
+%_ptr_Function_FragOutput = OpTypePointer Function %FragOutput
+         %17 = OpConstantNull %FragOutput
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+       %void = OpTypeVoid
+         %29 = OpTypeFunction %void
+%frag_main_inner = OpFunction %FragOutput None %13
+         %in = OpFunctionParameter %FragInput
+         %14 = OpLabel
+     %output = OpVariable %_ptr_Function_FragOutput Function %17
+         %18 = OpAccessChain %_ptr_Function_v4float %output %uint_0
+         %22 = OpCompositeExtract %v4float %in 0
+               OpStore %18 %22 None
+         %23 = OpAccessChain %_ptr_Function_v4float %output %uint_1
+         %25 = OpCompositeExtract %v4float %in 1
+               OpStore %23 %25 None
+         %26 = OpLoad %FragOutput %output None
+               OpReturnValue %26
+               OpFunctionEnd
+  %frag_main = OpFunction %void None %29
+         %30 = OpLabel
+         %31 = OpLoad %v4float %frag_main_loc0_Input None
+         %32 = OpLoad %v4float %frag_main_loc1_Input None
+         %33 = OpCompositeConstruct %FragInput %31 %32
+         %34 = OpFunctionCall %FragOutput %frag_main_inner %33
+         %35 = OpCompositeExtract %v4float %34 0
+               OpStore %frag_main_loc0_idx0_Output %35 None
+         %36 = OpCompositeExtract %v4float %34 1
+               OpStore %frag_main_loc0_idx1_Output %36 None
+               OpReturn
+               OpFunctionEnd

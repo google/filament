@@ -1,0 +1,82 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglWaitGL">
+    <info>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglWaitGL</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglWaitGL</refname>
+        <refpurpose>
+            Complete GL execution prior to subsequent native rendering
+            calls
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglWaitGL</function></funcdef>
+                <void/>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            All OpenGL ES rendering calls for the currently bound OpenGL
+            ES context made prior to <function>eglWaitGL</function> are
+            guaranteed to be executed before native rendering calls made
+            after <function>eglWaitGL</function>. The same result can be
+            achieved using
+            <citerefentry><refentrytitle>glFinish</refentrytitle></citerefentry>.
+        </para>
+        <para>
+            <function>eglWaitGL</function> is ignored if there is no
+            current EGL rendering context for OpenGL ES.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglWaitClient</function> is supported only if the
+            EGL version is 1.2 or greater.
+        </para>
+        <para>
+            <function>eglWaitClient</function> is a generalized version
+            of <function>eglWaitGL</function>, supporting multiple
+            client APIs. For backwards compatibility,
+            <function>eglWaitGL</function> continues to be supported and
+            is equivalent to the series of commands
+        </para>
+        <programlisting>
+              EGLenum api = <function>eglQueryAPI</function>();
+              <function>eglBindAPI</function>(<constant>EGL_OPENGL_ES_API</constant>);
+              <function>eglWaitClient</function>();
+              <function>eglBindAPI</function>(api);
+        </programlisting>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned if
+            <function>eglWaitGL</function> fails,
+            <constant>EGL_TRUE</constant> otherwise.
+        </para>
+        <para>
+            <constant>EGL_BAD_CURRENT_SURFACE</constant> is generated if
+            the surface associated with the current context has a native
+            window or pixmap, and that window or pixmap is no longer
+            valid.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>glFinish</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitClient</refentrytitle></citerefentry>
+            <citerefentry><refentrytitle>eglWaitNative</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

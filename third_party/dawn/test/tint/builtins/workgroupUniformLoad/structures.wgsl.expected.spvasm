@@ -1,0 +1,54 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpMemberName %Inner 0 "b"
+               OpMemberName %Inner 1 "v"
+               OpMemberName %Inner 2 "m"
+               OpName %Inner "Inner"
+               OpMemberName %Outer 0 "a"
+               OpName %Outer "Outer"
+               OpName %v "v"
+               OpName %foo "foo"
+               OpName %unused_entry_point "unused_entry_point"
+               OpMemberDecorate %Inner 0 Offset 0
+               OpMemberDecorate %Inner 1 Offset 16
+               OpMemberDecorate %Inner 2 Offset 32
+               OpMemberDecorate %Inner 2 ColMajor
+               OpMemberDecorate %Inner 2 MatrixStride 16
+               OpDecorate %_arr_Inner_uint_4 ArrayStride 80
+               OpMemberDecorate %Outer 0 Offset 0
+       %bool = OpTypeBool
+        %int = OpTypeInt 32 1
+      %v4int = OpTypeVector %int 4
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%mat3v3float = OpTypeMatrix %v3float 3
+      %Inner = OpTypeStruct %bool %v4int %mat3v3float
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_Inner_uint_4 = OpTypeArray %Inner %uint_4
+      %Outer = OpTypeStruct %_arr_Inner_uint_4
+%_ptr_Workgroup_Outer = OpTypePointer Workgroup %Outer
+          %v = OpVariable %_ptr_Workgroup_Outer Workgroup
+         %15 = OpTypeFunction %Outer
+       %void = OpTypeVoid
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+         %24 = OpTypeFunction %void
+        %foo = OpFunction %Outer None %15
+         %16 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %21 = OpLoad %Outer %v None
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+               OpReturnValue %21
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %24
+         %25 = OpLabel
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,22 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct main_inputs {
+  float none [[user(locn0)]];
+  float flat [[user(locn1)]] [[flat]];
+  float perspective_center [[user(locn2)]] [[center_perspective]];
+  float perspective_centroid [[user(locn3)]] [[centroid_perspective]];
+  float perspective_sample [[user(locn4)]] [[sample_perspective]];
+  float linear_center [[user(locn5)]] [[center_no_perspective]];
+  float linear_centroid [[user(locn6)]] [[centroid_no_perspective]];
+  float linear_sample [[user(locn7)]] [[sample_no_perspective]];
+  float perspective_default [[user(locn8)]] [[center_perspective]];
+  float linear_default [[user(locn9)]] [[center_no_perspective]];
+};
+
+void main_inner(float none, float flat, float perspective_center, float perspective_centroid, float perspective_sample, float linear_center, float linear_centroid, float linear_sample, float perspective_default, float linear_default) {
+}
+
+fragment void v(main_inputs inputs [[stage_in]]) {
+  main_inner(inputs.none, inputs.flat, inputs.perspective_center, inputs.perspective_centroid, inputs.perspective_sample, inputs.linear_center, inputs.linear_centroid, inputs.linear_sample, inputs.perspective_default, inputs.linear_default);
+}

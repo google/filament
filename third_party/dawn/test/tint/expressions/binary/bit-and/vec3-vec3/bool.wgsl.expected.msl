@@ -1,0 +1,9 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  bool3 const a = bool3(true, true, false);
+  bool3 const b = bool3(true, false, true);
+  uint3 const v = uint3(a);
+  bool3 const r = bool3((v & uint3(b)));
+}

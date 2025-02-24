@@ -1,0 +1,181 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct Params {
+  /* 0x0000 */ uint filterDim;
+  /* 0x0004 */ uint blockDim;
+};
+
+struct Flip {
+  /* 0x0000 */ uint value;
+};
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_packed_vec3_f32_array_element {
+  packed_float3 packed;
+};
+
+struct tint_module_vars_struct {
+  sampler samp;
+  const constant Params* params;
+  texture2d<float, access::sample> inputTex;
+  texture2d<float, access::write> outputTex;
+  const constant Flip* flip;
+  threadgroup tint_array<tint_array<tint_packed_vec3_f32_array_element, 256>, 4>* tile;
+};
+
+struct tint_symbol_1 {
+  tint_array<tint_array<tint_packed_vec3_f32_array_element, 256>, 4> tint_symbol;
+};
+
+uint tint_div_u32(uint lhs, uint rhs) {
+  return (lhs / select(rhs, 1u, (rhs == 0u)));
+}
+
+void main_inner(uint3 WorkGroupID, uint3 LocalInvocationID, uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  {
+    uint v = 0u;
+    v = tint_local_index;
+    while(true) {
+      uint const v_1 = v;
+      if ((v_1 >= 1024u)) {
+        break;
+      }
+      (*tint_module_vars.tile)[(v_1 / 256u)][(v_1 % 256u)].packed = packed_float3(float3(0.0f));
+      {
+        v = (v_1 + 64u);
+      }
+      continue;
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  uint const filterOffset = tint_div_u32(((*tint_module_vars.params).filterDim - 1u), 2u);
+  uint const v_2 = min(uint(0), (tint_module_vars.inputTex.get_num_mip_levels() - 1u));
+  uint2 const dims = uint2(tint_module_vars.inputTex.get_width(v_2), tint_module_vars.inputTex.get_height(v_2));
+  uint2 const v_3 = ((WorkGroupID.xy * uint2((*tint_module_vars.params).blockDim, 4u)) + (LocalInvocationID.xy * uint2(4u, 1u)));
+  uint2 const baseIndex = (v_3 - uint2(filterOffset, 0u));
+  {
+    uint r = 0u;
+    while(true) {
+      if ((r < 4u)) {
+      } else {
+        break;
+      }
+      {
+        uint c = 0u;
+        while(true) {
+          if ((c < 4u)) {
+          } else {
+            break;
+          }
+          uint2 loadIndex = (baseIndex + uint2(c, r));
+          if (((*tint_module_vars.flip).value != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          threadgroup packed_float3* const v_4 = (&(*tint_module_vars.tile)[min(r, 3u)][min(((4u * LocalInvocationID.x) + c), 255u)].packed);
+          float2 const v_5 = (float2(loadIndex) + float2(0.25f));
+          float2 const v_6 = (v_5 / float2(dims));
+          (*v_4) = packed_float3(tint_module_vars.inputTex.sample(tint_module_vars.samp, v_6, level(0.0f)).xyz);
+          {
+            c = (c + 1u);
+          }
+          continue;
+        }
+      }
+      {
+        r = (r + 1u);
+      }
+      continue;
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  {
+    uint r = 0u;
+    while(true) {
+      if ((r < 4u)) {
+      } else {
+        break;
+      }
+      {
+        uint c = 0u;
+        while(true) {
+          if ((c < 4u)) {
+          } else {
+            break;
+          }
+          uint2 writeIndex = (baseIndex + uint2(c, r));
+          if (((*tint_module_vars.flip).value != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          uint const center = ((4u * LocalInvocationID.x) + c);
+          bool v_7 = false;
+          if ((center >= filterOffset)) {
+            v_7 = (center < (256u - filterOffset));
+          } else {
+            v_7 = false;
+          }
+          bool v_8 = false;
+          if (v_7) {
+            v_8 = all((writeIndex < dims));
+          } else {
+            v_8 = false;
+          }
+          if (v_8) {
+            float3 acc = float3(0.0f);
+            {
+              uint2 tint_loop_idx = 0u;
+              uint f = 0u;
+              while(true) {
+                if (all((tint_loop_idx == uint2(4294967295u)))) {
+                  break;
+                }
+                if ((f < (*tint_module_vars.params).filterDim)) {
+                } else {
+                  break;
+                }
+                uint i = ((center + f) - filterOffset);
+                float3 const v_9 = acc;
+                float const v_10 = (1.0f / float((*tint_module_vars.params).filterDim));
+                acc = (v_9 + (v_10 * float3((*tint_module_vars.tile)[min(r, 3u)][min(i, 255u)].packed)));
+                {
+                  uint const tint_low_inc = (tint_loop_idx.x + 1u);
+                  tint_loop_idx.x = tint_low_inc;
+                  uint const tint_carry = uint((tint_low_inc == 0u));
+                  tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+                  f = (f + 1u);
+                }
+                continue;
+              }
+            }
+            uint2 const v_11 = writeIndex;
+            tint_module_vars.outputTex.write(float4(acc, 1.0f), v_11);
+          }
+          {
+            c = (c + 1u);
+          }
+          continue;
+        }
+      }
+      {
+        r = (r + 1u);
+      }
+      continue;
+    }
+  }
+}
+
+kernel void v_12(uint3 WorkGroupID [[threadgroup_position_in_grid]], uint3 LocalInvocationID [[thread_position_in_threadgroup]], uint tint_local_index [[thread_index_in_threadgroup]], sampler samp [[sampler(0)]], const constant Params* params [[buffer(0)]], texture2d<float, access::sample> inputTex [[texture(0)]], texture2d<float, access::write> outputTex [[texture(1)]], const constant Flip* flip [[buffer(1)]], threadgroup tint_symbol_1* v_13 [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.samp=samp, .params=params, .inputTex=inputTex, .outputTex=outputTex, .flip=flip, .tile=(&(*v_13).tint_symbol)};
+  main_inner(WorkGroupID, LocalInvocationID, tint_local_index, tint_module_vars);
+}

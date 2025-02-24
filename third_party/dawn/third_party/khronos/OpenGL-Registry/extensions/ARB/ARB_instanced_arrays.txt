@@ -1,0 +1,594 @@
+Name
+
+    ARB_instanced_arrays
+
+Name Strings
+
+    GL_ARB_instanced_arrays
+
+Contributors
+
+    Michael Gold, NVIDIA
+    James Helferty, TransGaming Inc.
+    Daniel Koch, TransGaming Inc.
+    John Rosasco, Apple
+    Mark Kilgard, NVIDIA
+    Piers Daniell, NVIDIA
+
+Contact
+
+    James Helferty, TransGaming Inc. (james 'at' transgaming.com)
+    Daniel Koch, TransGaming Inc. (daniel 'at' transgaming.com)
+
+Notice
+
+    Copyright (c) 2008-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Approved by the ARB on July 11, 2008.
+
+Version
+
+    Last Modified Date:  August 8, 2013
+    Author Revision: 7
+
+    EXT_direct_state_access interacton added with revision 7.
+
+Number
+
+    ARB Extension #49
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+    This extension is written against the OpenGL 2.1 Specification.
+
+    ARB_draw_instanced affects the definition of this extension.
+    
+    EXT_draw_instanced affects the definition of this extension.
+    
+    EXT_gpu_shader4 affects the definition of this extension.
+
+Overview
+
+    A common use case in GL for some applications is to be able to
+    draw the same object, or groups of similar objects that share
+    vertex data, primitive count and type, multiple times.  This 
+    extension provides a means of accelerating such use cases while 
+    restricting the number of API calls, and keeping the amount of 
+    duplicate data to a minimum.
+    
+    In particular, this extension specifies an alternative to the 
+    read-only shader variable introduced by ARB_draw_instanced.  It
+    uses the same draw calls introduced by that extension, but 
+    redefines them so that a vertex shader can instead use vertex 
+    array attributes as a source of instance data.
+    
+    This extension introduces an array "divisor" for generic
+    vertex array attributes, which when non-zero specifies that the
+    attribute is "instanced."  An instanced attribute does not
+    advance per-vertex as usual, but rather after every <divisor>
+    conceptual draw calls.
+    
+    (Attributes which aren't instanced are repeated in their entirety
+    for every conceptual draw call.)
+    
+    By specifying transform data in an instanced attribute or series
+    of instanced attributes, vertex shaders can, in concert with the 
+    instancing draw calls, draw multiple instances of an object with 
+    one draw call.
+
+IP Status
+
+    No known IP claims.
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetVertexAttribdv,
+    GetVertexAttribfv, and GetVertexAttribiv:
+
+        VERTEX_ATTRIB_ARRAY_DIVISOR_ARB                 0x88FE
+
+New Procedures and Functions
+
+    void VertexAttribDivisorARB(uint index, uint divisor);
+
+    When EXT_direct_state_access is present:
+
+        void VertexArrayVertexAttribDivisorEXT(uint vaobj, uint index, uint divisor);
+
+Additions to Chapter 2 of the OpenGL 2.1 Specification
+(OpenGL Operation)
+
+    Modify section 2.8 (Vertex Arrays), p. 23
+    
+    (remove modifications to section 2.8 made by ARB_draw_instanced
+    and EXT_draw_instanced, and replace everything from the second 
+    paragraph, p. 27 through the second paragraph, p. 30)
+    The internal counter <instanceID> is a 32-bit integer value which
+    may be read by a vertex program as <vertex.instance>, as described
+    in section 2.X.3.2, or vertex shader as <gl_InstanceIDARB>, as
+    described in section 2.15.4.2.  The value of this counter is
+    always zero, except as noted.
+
+    The command
+
+        void VertexAttribDivisorARB(uint index, uint divisor);
+
+    modifies the rate at which generic vertex attributes advance when
+    rendering multiple instances of primitives in a single draw call.
+    If <divisor> is zero, the attribute at slot <index> advances once
+    per vertex.  If <divisor> is non-zero, the attribute advances once
+    per <divisor> instances of the set(s) of vertices being rendered.
+    An attribute is referred to as <instanced> if its <divisor> value
+    is non-zero.
+
+    The function
+
+        void ArrayElementInstanced( int i, int instance );
+
+    does not exist in the GL, but is used to describe functionality in
+    the rest of this section.  This function transfers the <i>th
+    element of every enabled, non-instanced array and the 
+    floor(<instance>/<divisor>)'th element of every enabled instanced 
+    array to the GL. The effect of ArrayElementInstanced(i) is the 
+    same as the effect of the command sequence
+
+        if (normal array enabled)
+            Normal3[type]v(normal array element i);
+        if (color array enabled)
+            Color[size][type]v(color array element i);
+        if (secondary color array enabled)
+            SecondaryColor3[type]v(secondary color array element i);
+        if (fog coordinate array enabled)
+            FogCoord[type]v(fog coordinate array element i);
+        for (j = 0; j < textureUnits; j++) {
+            if (texture coordinate set j array enabled)
+                MultiTexCoord[size][type]v(TEXTURE0 + j, texture coordinate set j array element i);
+        }
+        if (color index array enabled)
+            Index[type]v(color index array element i);
+        if (edge flag array enabled)
+            EdgeFlagv(edge flag array element i);
+        for (j = 1; j < genericAttributes; j++) {
+            if (generic vertex attribute j array enabled) {
+                if (VERTEX_ATTRIB_ARRAY_DIVISOR_ARB[j] > 0)
+                    k = floor(instance / VERTEX_ATTRIB_ARRAY_DIVISOR_ARB[j]);
+                else
+                    k = i;
+                if (generic vertex attribute j array normalization flag is set, and
+                    type is not FLOAT or DOUBLE)
+                    VertexAttrib[size]N[type]v(j, generic vertex attribute j array element k);
+                else
+                    VertexAttrib[size][type]v(j, generic vertex attribute j array element k);
+            }
+        }
+        if (generic attribute array 0 enabled) {
+            if (VERTEX_ATTRIB_ARRAY_DIVISOR_ARB[0] > 0)
+                k = floor(instance / VERTEX_ATTRIB_ARRAY_DIVISOR_ARB[0]);
+            else
+                k = i;
+            if (generic vertex attribute 0 array normalization flag is set, and
+                type is not FLOAT or DOUBLE)
+                VertexAttrib[size]N[type]v(0, generic vertex attribute 0 array element k);
+            else
+                VertexAttrib[size][type]v(0, generic vertex attribute 0 array element k);
+        } else if (vertex array enabled) {
+            Vertex[size][type]v(vertex array element i);
+        }
+    
+    where <textureUnits> and <genericAttributes> give the number of
+    texture coordinate sets and generic vertex attributes supported by
+    the implementation, respectively.  "[size]" and "[type]"
+    correspond to the size and type of the corresponding array.  For
+    generic vertex attributes, it is assumed that a complete set of
+    vertex attribute commands exists, even though not all such
+    functions are provided by the GL.
+
+    The command
+
+        void ArrayElement( int i );
+
+    behaves identically to ArrayElementInstanced with the instance
+    set to zero; it is equivalent to calling
+
+        ArrayElementInstanced(i, 0);
+
+    Changes made to array data between the execution of Begin and the
+    corresponding execution of End may affect calls to ArrayElement
+    that are made within the same Begin/End period in non-sequential
+    ways. That is, a call to ArrayElement that precedes a change to
+    array data may access the changed data, and a call that follows a
+    change to array data may access original data.
+
+    Specifying i < 0 results in undefined behavior. Generating the
+    error INVALID VALUE is recommended in this case.
+
+    The function
+
+        void DrawArraysOneInstance( enum mode, int first, sizei count, int instance );
+
+    does not exist in the GL, but is used to describe functionality in
+    the rest of this section.  This function constructs a sequence of
+    geometric primitives using elements <first> through <first> +
+    <count> - 1 of each enabled, non-instanced array and the
+    <instance>th element of each enabled, instanced array.  <mode>
+    specifies what kind of primitives are constructed; it accepts the
+    same token values as the mode parameter of the Begin command. The
+    effect of
+
+        DrawArraysOneInstance (mode, first, count, int instance);
+
+    is the same as the effect of the command sequence
+
+        Begin(mode);
+        for (int i = 0; i < count ; i++)
+            ArrayElementInstanced(first+ i, instance);
+        End();
+
+    with one exception: the current normal coordinates, color,
+    secondary color, color index, edge flag, fog coordinate, texture
+    coordinates, and generic attributes are each indeterminate after
+    execution of DrawArraysOneInstance, if the corresponding array is
+    enabled. Current values corresponding to disabled arrays are not
+    modified by the execution of DrawArraysOneInstance.
+
+    Specifying first < 0 results in undefined behavior.  Generating
+    the error INVALID_VALUE is recommended in this case.
+
+    The command
+
+        void DrawArrays( enum mode, int first, sizei count );
+
+    behaves identically to DrawArraysOneInstance with the instance
+    set to zero; the effect of calling
+
+        DrawArrays(mode, first, count);
+
+    is equivalent to the command sequence:
+
+        if (mode or count is invalid )
+            generate appropriate error
+        else
+            DrawArraysOneInstance(mode, first, count, 0);
+
+    The command
+
+        void DrawArraysInstancedARB(enum mode, int first, sizei count,
+                sizei primcount);
+
+    behaves identically to DrawArrays except that <primcount>
+    instances of the range of elements are executed, the value of
+    <instanceID> advances for each iteration, and the instanced
+    elements advance per instance depending on the value of the divisor
+    for that vertex attribute set with VertexAttribDivisorARB.  It has the 
+    same effect as:
+
+        if (mode or count is invalid)
+            generate appropriate error
+        else {
+            for (i = 0; i < primcount; i++) {
+                instanceID = i;
+                DrawArraysOneInstance(mode, first, count, i);
+            }
+            instanceID = 0;
+        }
+
+    The command
+
+        void MultiDrawArrays( enum mode, int *first,
+            sizei *count, sizei primcount );
+
+    behaves identically to DrawArraysInstancedARB except that
+    <primcount> separate ranges of elements are specified instead,
+    all elements are treated as though they are not instanced,
+    and the value of <instanceID> stays at 0.  It has the same
+    effect as:
+
+        if (mode is invalid)
+            generate appropriate error
+        else {
+            for (i = 0; i < primcount; i++) {
+                if (count[i] > 0)
+                    DrawArraysOneInstance(mode, first[i], count[i], 0);
+            }
+        }
+
+    The function
+
+        void DrawElementsOneInstance( enum mode, sizei count, enum type,
+            void *indices );
+
+    does not exist in the GL, but is used to describe functionality in
+    the rest of this section.  This function constructs a sequence of
+    geometric primitives using the <count> elements whose indices are
+    stored in indices. <type> must be one of UNSIGNED_BYTE,
+    UNSIGNED_SHORT, or UNSIGNED_INT, indicating that the values in
+    <indices> are indices of GL type ubyte, ushort, or uint
+    respectively. <mode> specifies what kind of primitives are
+    constructed; it accepts the same token values as the mode
+    parameter of the Begin command. The effect of
+
+        DrawElementsOneInstance (mode, count, type, indices);
+
+    is the same as the effect of the command sequence
+
+        Begin(mode);
+        for (int i = 0; i < count ; i++)
+            ArrayElementInstanced(indices[i], instance);
+        End();
+
+    with one exception: the current normal coordinates, color,
+    secondary color, color index, edge flag, fog coordinate, texture
+    coordinates, and generic attributes are each indeterminate after
+    execution of DrawElementsOneInstance, if the corresponding array is
+    enabled. Current values corresponding to disabled arrays are not
+    modified by the execution of DrawElementsOneInstance.
+
+    The command
+
+        void DrawElements( enum mode, sizei count, enum type,
+            void *indices );
+
+    behaves identically to DrawElementsOneInstance with the instance
+    paremeter set to zero; the effect of calling
+
+        DrawElements(mode, count, type, indices);
+
+    is equivalent to the command sequence:
+
+        if (mode, count or type is invalid )
+            generate appropriate error
+        else
+            DrawElementsOneInstance(mode, count, type, indices, 0);
+
+    The command
+
+        void DrawElementsInstancedARB(enum mode, sizei count, enum type,
+                const void *indices, sizei primcount);
+
+    behaves identically to DrawElements except that <primcount>
+    instances of the set of elements are executed, the value of
+    <instanceID> advances between each set, and the instance
+    advances between each set.  It has the same effect as:
+
+        if (mode, count, or type is invalid )
+            generate appropriate error
+        else {
+            for (int i = 0; i < primcount; i++) {
+                instanceID = i;
+                DrawElementsOneInstance(mode, count, type, indices, i);
+            }
+            instanceID = 0;
+        }
+
+    The command
+
+        void MultiDrawElements( enum mode, sizei *count,
+            enum type, void **indices, sizei primcount );
+
+    behaves identically to DrawElementsInstancedARB except that
+    <primcount> separate sets of elements are specified instead, all
+    elements are treated as though they are not instanced, and the
+    value of <instanceID> stays at 0.  It has the same effect as:
+
+        if (mode, count, or type is invalid )
+            generate appropriate error
+        else {
+            for (int i = 0; i < primcount; i++)
+                DrawElementsOneInstance(mode, count[i], type, indices[i], 0);
+        }
+
+    The command
+
+        void DrawRangeElements( enum mode, uint start,
+            uint end, sizei count, enum type, void *indices );
+
+    is a restricted form of DrawElements. ...
+
+    Modify section 2.8 (Vertex Arrays), p. 23
+    
+    (remove section before final paragraph, p. 30, that was added by
+    ARB_draw_instanced and EXT_draw_instanced)
+
+    Modify section 2.8 (Vertex Arrays), p. 33
+  
+    (in the list of client state required to implement vertex arrays add)
+    ... <n> integers representing vertex attribute divisors, ...
+
+    (in the list of initial state add)
+    ... the divisors are each zero, ...
+
+Additions to Chapter 5 of the OpenGL 2.1 Specification
+(Special Functions)
+
+    The error INVALID_OPERATION is generated if DrawArraysInstancedARB
+    or DrawElementsInstancedARB is called during display list
+    compilation.
+
+Additions to Chapter 6 of the OpenGL 2.1 Specification (State and State
+Requests)
+
+    In section 6.1.14, add to the list of pnames accepted by
+    GetVertexAttrib*v: VERTEX_ATTRIB_ARRAY_DIVISOR_ARB
+
+************************************************************************
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+Dependencies on OpenGL 1.4
+
+    If OpenGL 1.4 is not supported, all discussion of MultiDrawArrays
+    and MultiDrawElements should be removed from section 2.8.
+
+Dependencies on ARB_draw_instanced
+
+    If neither ARB_draw_instanced nor EXT_draw_instanced is supported,
+    all references to instanceID should be removed from section 2.8.
+    
+    If ARB_draw_instanced is not supported, all references to gl_InstanceIDARB
+    should be removed from section 2.8.  This extension will introduce
+    the following additional New Procedures and Functions:
+
+        void DrawArraysInstancedARB(enum mode, int first, sizei count,
+                sizei primcount);
+        void DrawElementsInstancedARB(enum mode, sizei count, enum type,
+                const void *indices, sizei primcount);
+
+Dependencies on EXT_draw_instanced
+    
+    If EXT_draw_instanced is supported, then DrawArraysInstancedEXT
+    is aliased to DrawArraysInstancedARB, and DrawElementsInstancedEXT
+    is aliased to DrawElementsInstancedARB.
+    
+    If neither ARB_draw_instanced nor EXT_draw_instanced is supported,
+    all references to instanceID should be removed from section 2.8.
+
+Dependencies on EXT_gpu_shader4
+
+    If EXT_gpu_shader4 is not supported, all references to gl_InstanceID 
+    should be removed from section 2.8.
+
+Dependencies on EXT_direct_state_access
+
+    When EXT_direct_state_access is present, add a new entry point that takes a
+    vertex array object handle:
+
+        void VertexArrayVertexAttribDivisorEXT(uint vaobj, uint index, uint divisor);
+
+    This command behaves identically to glVertexAttribDivisorEXT
+    except it modifies the state of the vertex array object named
+    by its initial vaobj parameter (rather than the currently bound
+    vertex array object).  The vertex array object named by vaobj must
+    be generated by GenVertexArrays (and not since deleted); otherwise
+    an INVALID_OPERATION error is generated.
+
+    GetVertexArrayIntegeri_vEXT must accept VERTEX_ATTRIB_ARRAY_DIVISOR_ARB to return
+    the vertex array object's vertex attrib array divisor state.
+
+Errors
+
+    INVALID_VALUE is generated by VertexAttribDivisorARB if <index>
+    is greater than or equal to MAX_VERTEX_ATTRIBS.
+
+    INVALID_ENUM is generated by DrawElementsInstancedARB if <type> is
+    not one of UNSIGNED_BYTE, UNSIGNED_SHORT or UNSIGNED_INT.
+
+    INVALID_VALUE is generated by DrawArraysInstancedARB if <first> is
+    less than zero.
+
+New State
+
+    Changes to table 6.7, p. 268 (Vertex Array Data)
+
+                                                         Initial
+    Get Value                        Type     Get Command      Value    Description       Sec.  Attribute
+    ---------                        ----     -----------      -------  -----------       ----  ---------
+    VERTEX_ATTRIB_ARRAY_DIVISOR_ARB  16+ xZ+  GetVertexAttrib  0        Instance Divisor  2.8   vertex-array
+
+Issues
+
+    1) Should legacy arrays be supported, or only generic vertex
+       attribs?
+
+        Resolved: It is possible to render instanced objects which use
+        legacy array types but only the generic arrays may have a
+        divisor.
+
+    2) Should generic attrib zero be instance-able?
+
+        Resolved: Yes. This was added in revision 5 of the spec.
+
+        Prior to revision 5 of this spec, attempting to call 
+        VertexAttribDivisorARB with attrib=0 generated INVALID_VALUE. 
+        It was originally thought that this implied issuing a vertex at 
+        lower frequency than the associated attribs (due to the special 
+        properties of vertex attribute zero in GL 2.x and the compatibility
+        profiles).  That would be true if the immediate-mode model of 
+        instancing was to make an attribute call only once every <N> vertices
+        for instanced attributes -- you wouldn't want to specify a new vertex
+        once every <N> vertices! But that's not the model -- the frequency 
+        <N> is only used to translate an incoming array element <i> into an 
+        attribute index <k>.  Immediate mode calls are still specified as 
+        happening for every vertex. Given this definition, it is not 
+        necessary to do anything differently for attribute zero.
+
+    3) How is ArrayElement affected by this extension?
+
+        Resolved: Arrays with a non-zero divisor return the first
+        element of the array, as if instanceID is fixed at zero.  This
+        allows legacy varray draw calls to give instancing behavior
+        but are still defined in terms of ArrayElement.
+
+    4) Should DrawArraysInstanced and DrawElementsInstanced be compiled
+       into display lists?
+
+        Resolved: No, calling these during display list compilation
+        generate INVALID_OPERATION.  This matches EXT_draw_instanced
+        and ARB_draw_instanced.
+
+    5) Is it useful to have instancing for the MultiDraw* functions?
+
+        Resolved: We will follow the lead of EXT_draw_instanced and 
+        ARB_draw_instanced in not extending these functions.
+
+    6) This extension must elaborate on the definition of functions 
+       added by ARB_draw_instanced.  How do we do this in a manner such
+       that both extensions may coexist?
+       
+        Resolved: This extension is specified so that it applies on
+        top of ARB_draw_instanced and EXT_draw_instanced.  As a 
+        result, some portions modified by those extensions are 
+        replaced in this extension.  In the event that those
+        extensions are not supported, this extension reintroduces
+        the draw calls from ARB_draw_instanced.
+
+    7) How should EXT_direct_state_access interact with this extension?
+
+        Resolved:  Add glVertexArrayVertexAttribDivisorEXT selector-free
+        vertex array object command and glGetVertexArrayIntegeri_vEXT
+        query must accept VERTEX_ATTRIB_ARRAY_DIVISOR_ARB to return the
+        vertex array object's vertex attrib array divisor state.
+
+        The DSA interaction was added July 2013.  If implementations
+        respond to a wglGetProcAddress, etc. query for
+        "glVertexArrayVertexAttribDivisorEXT" with a NULL pointer,
+        the DSA functionality is not available.
+
+Revision History
+
+    #7 August 6, 2013 mjk
+       - Add EXT_direct_state_access interaction
+    #6 February 11, 2010 dgkoch
+       - sync language with GL3.3, add required and initial state for divisors
+    #5 January 13, 2010 dgkoch
+       - update spec so that specifying a divisor on vertex attrib 0 is legal (5796)
+       - update resolution of Issue 2 appropriately.
+    #4 January 1, 2010, Jon Leech
+       - Correct Errors section to match spec body
+    #3 July 8, 2008, jhelferty
+       - expanded Overview
+       - changed name of GLSL instance ID variable to follow naming conventions,
+         and match ARB_draw_instanced.
+       - made dependencies and interactions more explicit
+    #2 May 14 2008, jhelferty
+       - changed pname to VERTEX_ATTRIB_ARRAY_DIVISOR_ARB
+       - added dependencies on ARB_draw_instanced
+       - update to GL 2.1 language
+    #1 May 12 2008, dgkoch
+       - copied from NVX_instanced_arrays and renamed. removed original revision history

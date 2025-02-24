@@ -1,0 +1,66 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 36
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpMemberName %S 0 "a"
+               OpName %S "S"
+               OpMemberName %v_block 0 "inner"
+               OpName %v_block "v_block"
+               OpName %foo "foo"
+               OpName %tint_div_i32 "tint_div_i32"
+               OpName %lhs "lhs"
+               OpName %rhs "rhs"
+               OpName %unused_entry_point "unused_entry_point"
+               OpMemberDecorate %S 0 Offset 0
+               OpMemberDecorate %v_block 0 Offset 0
+               OpDecorate %v_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+        %int = OpTypeInt 32 1
+          %S = OpTypeStruct %int
+    %v_block = OpTypeStruct %S
+%_ptr_StorageBuffer_v_block = OpTypePointer StorageBuffer %v_block
+          %1 = OpVariable %_ptr_StorageBuffer_v_block StorageBuffer
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+      %int_2 = OpConstant %int 2
+         %20 = OpTypeFunction %int %int %int
+      %int_0 = OpConstant %int 0
+       %bool = OpTypeBool
+%int_n2147483648 = OpConstant %int -2147483648
+     %int_n1 = OpConstant %int -1
+      %int_1 = OpConstant %int 1
+        %foo = OpFunction %void None %8
+          %9 = OpLabel
+         %10 = OpAccessChain %_ptr_StorageBuffer_int %1 %uint_0 %uint_0
+         %14 = OpLoad %int %10 None
+         %15 = OpFunctionCall %int %tint_div_i32 %14 %int_2
+               OpStore %10 %15 None
+               OpReturn
+               OpFunctionEnd
+%tint_div_i32 = OpFunction %int None %20
+        %lhs = OpFunctionParameter %int
+        %rhs = OpFunctionParameter %int
+         %21 = OpLabel
+         %22 = OpIEqual %bool %rhs %int_0
+         %25 = OpIEqual %bool %lhs %int_n2147483648
+         %27 = OpIEqual %bool %rhs %int_n1
+         %29 = OpLogicalAnd %bool %25 %27
+         %30 = OpLogicalOr %bool %22 %29
+         %31 = OpSelect %int %30 %int_1 %rhs
+         %33 = OpSDiv %int %lhs %31
+               OpReturnValue %33
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %8
+         %35 = OpLabel
+               OpReturn
+               OpFunctionEnd

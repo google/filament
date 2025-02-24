@@ -1,0 +1,40 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate access.h
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/core/core.def" -}}
+{{- Import "src/tint/utils/templates/enums.tmpl.inc" -}}
+{{- $enum := ($I.Sem.Enum "access") -}}
+
+#ifndef SRC_TINT_LANG_CORE_ACCESS_H_
+#define SRC_TINT_LANG_CORE_ACCESS_H_
+
+#include <cstdint>
+
+#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/rtti/traits.h"
+
+namespace tint::core {
+
+/// Address space of a given pointer.
+{{ Eval "DeclareEnum" $enum}}
+
+}  // namespace tint::core
+
+namespace tint {
+
+/// Access reflection information
+TINT_REFLECT_ENUM_RANGE(core::{{ Eval "EnumName" $enum }}, {{Eval "EnumFirst" $enum }}, {{Eval "EnumLast" $enum}});
+
+}  // namespace tint
+
+#endif  // SRC_TINT_LANG_CORE_ACCESS_H_

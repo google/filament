@@ -1,0 +1,390 @@
+{
+    "$schema": "https://schema.khronos.org/vulkan/profiles-0.8.2-276.json#",
+    "capabilities": {
+        "vulkan10requirements": {
+            "features": {
+                "VkPhysicalDeviceFeatures": {
+                    "robustBufferAccess": true
+                }
+            }
+        },
+        "vulkan11requirements": {
+            "features": {
+                "VkPhysicalDeviceVulkan11Features": {
+                    "multiview": true
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceVulkan11Properties": {
+                    "maxMultiviewViewCount": 6,
+                    "maxMultiviewInstanceIndex": 134217727
+                }
+            }
+        },
+        "vulkan12requirements": {
+            "features": {
+                "VkPhysicalDeviceVulkan12Features": {
+                    "uniformBufferStandardLayout": true,
+                    "subgroupBroadcastDynamicId": true,
+                    "imagelessFramebuffer": true,
+                    "separateDepthStencilLayouts": true,
+                    "hostQueryReset": true,
+                    "timelineSemaphore": true,
+                    "shaderSubgroupExtendedTypes": true
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceVulkan12Properties": {
+                    "maxTimelineSemaphoreValueDifference": 2147483647
+                }
+            }
+        },
+        "vulkan13requirements": {
+            "features": {
+                "VkPhysicalDeviceVulkan12Features": {
+                    "vulkanMemoryModel": true,
+                    "vulkanMemoryModelDeviceScope": true,
+                    "bufferDeviceAddress": true
+                },
+                "VkPhysicalDeviceVulkan13Features": {
+                    "robustImageAccess": true,
+                    "shaderTerminateInvocation": true,
+                    "shaderZeroInitializeWorkgroupMemory": true,
+                    "synchronization2": true,
+                    "shaderIntegerDotProduct": true,
+                    "maintenance4": true,
+                    "pipelineCreationCacheControl": true,
+                    "subgroupSizeControl": true,
+                    "computeFullSubgroups": true,
+                    "shaderDemoteToHelperInvocation": true,
+                    "inlineUniformBlock": true,
+                    "dynamicRendering": true
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceVulkan13Properties": {
+                    "maxBufferSize": 1073741824,
+                    "maxInlineUniformBlockSize": 256,
+                    "maxPerStageDescriptorInlineUniformBlocks": 4,
+                    "maxPerStageDescriptorUpdateAfterBindInlineUniformBlocks": 4,
+                    "maxDescriptorSetInlineUniformBlocks": 4,
+                    "maxDescriptorSetUpdateAfterBindInlineUniformBlocks": 4,
+                    "maxInlineUniformTotalSize": 256
+                }
+            }
+        },
+        "vulkan10requirements_roadmap2022": {
+            "features": {
+                "VkPhysicalDeviceFeatures": {
+                    "fullDrawIndexUint32": true,
+                    "imageCubeArray": true,
+                    "independentBlend": true,
+                    "sampleRateShading": true,
+                    "drawIndirectFirstInstance": true,
+                    "depthClamp": true,
+                    "depthBiasClamp": true,
+                    "samplerAnisotropy": true,
+                    "occlusionQueryPrecise": true,
+                    "fragmentStoresAndAtomics": true,
+                    "shaderStorageImageExtendedFormats": true,
+                    "shaderUniformBufferArrayDynamicIndexing": true,
+                    "shaderSampledImageArrayDynamicIndexing": true,
+                    "shaderStorageBufferArrayDynamicIndexing": true,
+                    "shaderStorageImageArrayDynamicIndexing": true
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceProperties": {
+                    "limits": {
+                        "maxImageDimension1D": 8192,
+                        "maxImageDimension2D": 8192,
+                        "maxImageDimensionCube": 8192,
+                        "maxImageArrayLayers": 2048,
+                        "maxUniformBufferRange": 65536,
+                        "bufferImageGranularity": 4096,
+                        "maxPerStageDescriptorSamplers": 64,
+                        "maxPerStageDescriptorUniformBuffers": 15,
+                        "maxPerStageDescriptorStorageBuffers": 30,
+                        "maxPerStageDescriptorSampledImages": 200,
+                        "maxPerStageDescriptorStorageImages": 16,
+                        "maxPerStageResources": 200,
+                        "maxDescriptorSetSamplers": 576,
+                        "maxDescriptorSetUniformBuffers": 90,
+                        "maxDescriptorSetStorageBuffers": 96,
+                        "maxDescriptorSetSampledImages": 1800,
+                        "maxDescriptorSetStorageImages": 144,
+                        "maxFragmentCombinedOutputResources": 16,
+                        "maxComputeWorkGroupInvocations": 256,
+                        "maxComputeWorkGroupSize": [ 256, 256, 64 ],
+                        "subTexelPrecisionBits": 8,
+                        "mipmapPrecisionBits": 6,
+                        "maxSamplerLodBias": 14,
+                        "standardSampleLocations": true,
+                        "maxColorAttachments": 7
+                    }
+                }
+            }
+        },
+        "vulkan10optionals_roadmap2022": {
+            "features": {
+                "VkPhysicalDeviceFeatures": {
+                    "largePoints": true,
+                    "wideLines": true
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceProperties": {
+                    "limits": {
+                        "pointSizeGranularity": 0.125,
+                        "lineWidthGranularity": 0.5
+                    }
+                }
+            }
+        },
+        "vulkan11requirements_roadmap2022": {
+            "features": {
+                "VkPhysicalDeviceVulkan11Features": {
+                    "samplerYcbcrConversion": true
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceVulkan11Properties": {
+                    "subgroupSize": 4,
+                    "subgroupSupportedStages": [ "VK_SHADER_STAGE_COMPUTE_BIT", "VK_SHADER_STAGE_FRAGMENT_BIT" ],
+                    "subgroupSupportedOperations": [ "VK_SUBGROUP_FEATURE_BASIC_BIT", "VK_SUBGROUP_FEATURE_VOTE_BIT", "VK_SUBGROUP_FEATURE_ARITHMETIC_BIT", "VK_SUBGROUP_FEATURE_BALLOT_BIT", "VK_SUBGROUP_FEATURE_SHUFFLE_BIT", "VK_SUBGROUP_FEATURE_SHUFFLE_RELATIVE_BIT", "VK_SUBGROUP_FEATURE_QUAD_BIT" ]
+                }
+            }
+        },
+        "vulkan12requirements_roadmap2022": {
+            "features": {
+                "VkPhysicalDeviceVulkan12Features": {
+                    "samplerMirrorClampToEdge": true,
+                    "descriptorIndexing": true,
+                    "shaderUniformTexelBufferArrayDynamicIndexing": true,
+                    "shaderStorageTexelBufferArrayDynamicIndexing": true,
+                    "shaderUniformBufferArrayNonUniformIndexing": true,
+                    "shaderSampledImageArrayNonUniformIndexing": true,
+                    "shaderStorageBufferArrayNonUniformIndexing": true,
+                    "shaderStorageImageArrayNonUniformIndexing": true,
+                    "shaderUniformTexelBufferArrayNonUniformIndexing": true,
+                    "shaderStorageTexelBufferArrayNonUniformIndexing": true,
+                    "descriptorBindingSampledImageUpdateAfterBind": true,
+                    "descriptorBindingStorageImageUpdateAfterBind": true,
+                    "descriptorBindingStorageBufferUpdateAfterBind": true,
+                    "descriptorBindingUniformTexelBufferUpdateAfterBind": true,
+                    "descriptorBindingStorageTexelBufferUpdateAfterBind": true,
+                    "descriptorBindingUpdateUnusedWhilePending": true,
+                    "descriptorBindingPartiallyBound": true,
+                    "descriptorBindingVariableDescriptorCount": true,
+                    "runtimeDescriptorArray": true,
+                    "scalarBlockLayout": true
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceVulkan12Properties": {
+                    "shaderSignedZeroInfNanPreserveFloat16": true,
+                    "shaderSignedZeroInfNanPreserveFloat32": true,
+                    "maxPerStageDescriptorUpdateAfterBindSamplers": 500000,
+                    "maxPerStageDescriptorUpdateAfterBindUniformBuffers": 12,
+                    "maxPerStageDescriptorUpdateAfterBindStorageBuffers": 500000,
+                    "maxPerStageDescriptorUpdateAfterBindSampledImages": 500000,
+                    "maxPerStageDescriptorUpdateAfterBindStorageImages": 500000,
+                    "maxPerStageDescriptorUpdateAfterBindInputAttachments": 7,
+                    "maxPerStageUpdateAfterBindResources": 500000,
+                    "maxDescriptorSetUpdateAfterBindSamplers": 500000,
+                    "maxDescriptorSetUpdateAfterBindUniformBuffers": 72,
+                    "maxDescriptorSetUpdateAfterBindUniformBuffersDynamic": 8,
+                    "maxDescriptorSetUpdateAfterBindStorageBuffers": 500000,
+                    "maxDescriptorSetUpdateAfterBindStorageBuffersDynamic": 4,
+                    "maxDescriptorSetUpdateAfterBindSampledImages": 500000,
+                    "maxDescriptorSetUpdateAfterBindStorageImages": 500000,
+                    "maxDescriptorSetUpdateAfterBindInputAttachments": 7
+                }
+            }
+        },
+        "vulkan13requirements_roadmap2022": {
+            "extensions": {
+                "VK_KHR_global_priority": 1
+            },
+            "features": {
+                "VkPhysicalDeviceVulkan13Features": {
+                    "descriptorBindingInlineUniformBlockUpdateAfterBind": true
+                }
+            }
+        },
+        "vulkan10requirements_roadmap2024": {
+            "features": {
+                "VkPhysicalDeviceFeatures": {
+                    "multiDrawIndirect": true,
+                    "shaderInt16": true,
+                    "shaderImageGatherExtended": true
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceProperties": {
+                    "limits": {
+                        "timestampComputeAndGraphics": true,
+                        "maxColorAttachments": 8,
+                        "maxBoundDescriptorSets": 7
+                    }
+                }
+            }
+        },
+        "vulkan11requirements_roadmap2024": {
+            "features": {
+                "VkPhysicalDeviceVulkan11Features": {
+                    "shaderDrawParameters": true,
+                    "storageBuffer16BitAccess": true
+                }
+            }
+        },
+        "vulkan12requirements_roadmap2024": {
+            "features": {
+                "VkPhysicalDeviceVulkan12Features": {
+                    "shaderInt8": true,
+                    "shaderFloat16": true,
+                    "storageBuffer8BitAccess": true
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceVulkan12Properties": {
+                    "shaderRoundingModeRTEFloat16": true,
+                    "shaderRoundingModeRTEFloat32": true
+                }
+            }
+        },
+        "vulkan13requirements_roadmap2024": {
+            "features": {
+                "VkPhysicalDeviceVulkan13Features": {
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceVulkan13Properties": {
+                }
+            }
+        },
+        "vulkanextensionrequirements_roadmap2024": {
+            "extensions": {
+                "VK_KHR_dynamic_rendering_local_read": 1,
+                "VK_KHR_load_store_op_none": 1,
+                "VK_KHR_shader_quad_control": 1,
+                "VK_KHR_shader_maximal_reconvergence": 1,
+                "VK_KHR_shader_subgroup_uniform_control_flow": 1,
+                "VK_KHR_shader_subgroup_rotate": 1,
+                "VK_KHR_shader_float_controls2": 1,
+                "VK_KHR_shader_expect_assume": 1,
+                "VK_KHR_line_rasterization": 1,
+                "VK_KHR_vertex_attribute_divisor": 1,
+                "VK_KHR_index_type_uint8": 1,
+                "VK_KHR_map_memory2": 1,
+                "VK_KHR_maintenance5": 1,
+                "VK_KHR_push_descriptor": 1
+            }
+        }
+    },
+    "profiles": {
+        "VP_KHR_roadmap_2024": {
+            "version": 1,
+            "api-version": "1.3.276",
+            "label": "Khronos Vulkan Roadmap 2024 profile",
+            "description": "This roadmap profile is intended to be supported by newer devices shipping in 2024 across mainstream smartphone, tablet, laptops, console and desktop devices.",
+            "profiles": [
+                "VP_KHR_roadmap_2022"
+            ],
+            "capabilities": [
+                "vulkan10requirements_roadmap2024",
+                "vulkan11requirements_roadmap2024",
+                "vulkan12requirements_roadmap2024",
+                "vulkan13requirements_roadmap2024",
+                "vulkanextensionrequirements_roadmap2024"
+            ]
+        },
+        "VP_KHR_roadmap_2022": {
+            "version": 1,
+            "api-version": "1.3.204",
+            "label": "Khronos Vulkan Roadmap 2022 profile",
+            "description": "This roadmap profile is intended to be supported by newer devices shipping in 2022 across mainstream smartphone, tablet, laptops, console and desktop devices.",
+            "contributors": {
+                "Tobias Hector": {
+                    "company": "AMD",
+                    "email": "tobias.hector@amd.com",
+                    "contact": true
+                },
+                "Christophe Riccio": {
+                    "company": "LunarG",
+                    "email": "christophe@lunarg.com",
+                    "contact": true
+                }
+            },
+            "history": [
+	        {
+	            "revision": 9,
+	            "date": "2024-01-16",
+	            "author": "Tobias Hector",
+	            "comment": "Add Roadmap 2024 profile"
+	        },
+                {
+                    "revision": 8,
+                    "date": "2023-11-02",
+                    "author": "Christophe Riccio",
+                    "comment": "Remove unreferenced capabilities blocks that were written against Vulkan 1.2 for testing before Vulkan 1.3 was released"
+                },
+                {
+                    "revision": 7,
+                    "date": "2022-11-16",
+                    "author": "Christophe Riccio",
+                    "comment": "Fix wideLines and largePoints that are optionals"
+                },
+                {
+                    "revision": 6,
+                    "date": "2022-11-02",
+                    "author": "Christophe Riccio",
+                    "comment": "Fix roadmap 2022 maxInlineUniformTotalSize limit, 256 instead of 4"
+                },
+                {
+                    "revision": 5,
+                    "date": "2022-05-02",
+                    "author": "Christophe Riccio",
+                    "comment": "Add missing dynamicRendering that is a Vulkan 1.3 requirement"
+                },
+                {
+                    "revision": 4,
+                    "date": "2022-03-08",
+                    "author": "Christophe Riccio",
+                    "comment": "Refactor requirements per Vulkan API version"
+                },
+                {
+                    "revision": 3,
+                    "date": "2022-03-08",
+                    "author": "Christophe Riccio",
+                    "comment": "Fix Vulkan 1.3.204 API version requirement"
+                },
+                {
+                    "revision": 2,
+                    "date": "2022-01-03",
+                    "author": "Christophe Riccio",
+                    "comment": "Rebase against Vulkan 1.3.203 revision"
+                },
+                {
+                    "revision": 1,
+                    "date": "2021-12-08",
+                    "author": "Christophe Riccio",
+                    "comment": "Initial revision"
+                }
+            ],
+            "capabilities": [
+                "vulkan10requirements",
+                "vulkan10requirements_roadmap2022",
+                "vulkan11requirements",
+                "vulkan11requirements_roadmap2022",
+                "vulkan12requirements",
+                "vulkan12requirements_roadmap2022",
+                "vulkan13requirements",
+                "vulkan13requirements_roadmap2022"
+            ],
+            "optionals": [
+                "vulkan10optionals_roadmap2022"
+            ]
+        }
+    }
+}

@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device float2* prevent_dce;
+};
+
+float2 dpdy_a8b56e() {
+  float2 res = dfdy(float2(1.0f));
+  return res;
+}
+
+fragment void fragment_main(device float2* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = dpdy_a8b56e();
+}

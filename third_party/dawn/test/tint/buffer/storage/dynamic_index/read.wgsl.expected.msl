@@ -1,0 +1,119 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_packed_vec3_f32_array_element {
+  /* 0x0000 */ packed_float3 packed;
+  /* 0x000c */ tint_array<int8_t, 4> tint_pad;
+};
+
+struct Inner_packed_vec3 {
+  /* 0x0000 */ float scalar_f32;
+  /* 0x0004 */ int scalar_i32;
+  /* 0x0008 */ uint scalar_u32;
+  /* 0x000c */ tint_array<int8_t, 4> tint_pad_1;
+  /* 0x0010 */ float2 vec2_f32;
+  /* 0x0018 */ int2 vec2_i32;
+  /* 0x0020 */ uint2 vec2_u32;
+  /* 0x0028 */ tint_array<int8_t, 8> tint_pad_2;
+  /* 0x0030 */ packed_float3 vec3_f32;
+  /* 0x003c */ tint_array<int8_t, 4> tint_pad_3;
+  /* 0x0040 */ packed_int3 vec3_i32;
+  /* 0x004c */ tint_array<int8_t, 4> tint_pad_4;
+  /* 0x0050 */ packed_uint3 vec3_u32;
+  /* 0x005c */ tint_array<int8_t, 4> tint_pad_5;
+  /* 0x0060 */ float4 vec4_f32;
+  /* 0x0070 */ int4 vec4_i32;
+  /* 0x0080 */ uint4 vec4_u32;
+  /* 0x0090 */ float2x2 mat2x2_f32;
+  /* 0x00a0 */ tint_array<tint_packed_vec3_f32_array_element, 2> mat2x3_f32;
+  /* 0x00c0 */ float2x4 mat2x4_f32;
+  /* 0x00e0 */ float3x2 mat3x2_f32;
+  /* 0x00f8 */ tint_array<int8_t, 8> tint_pad_6;
+  /* 0x0100 */ tint_array<tint_packed_vec3_f32_array_element, 3> mat3x3_f32;
+  /* 0x0130 */ float3x4 mat3x4_f32;
+  /* 0x0160 */ float4x2 mat4x2_f32;
+  /* 0x0180 */ tint_array<tint_packed_vec3_f32_array_element, 4> mat4x3_f32;
+  /* 0x01c0 */ float4x4 mat4x4_f32;
+  /* 0x0200 */ tint_array<tint_packed_vec3_f32_array_element, 2> arr2_vec3_f32;
+};
+
+struct S_packed_vec3 {
+  /* 0x0000 */ tint_array<Inner_packed_vec3, 1> arr;
+};
+
+struct tint_module_vars_struct {
+  const device S_packed_vec3* sb;
+  device int* s;
+  const constant tint_array<uint4, 1>* tint_storage_buffer_sizes;
+};
+
+int tint_f32_to_i32(float value) {
+  return select(2147483647, select((-2147483647 - 1), int(value), (value >= -2147483648.0f)), (value <= 2147483520.0f));
+}
+
+tint_array<float3, 2> tint_load_array_packed_vec3(const device tint_array<tint_packed_vec3_f32_array_element, 2>* const from) {
+  return tint_array<float3, 2>{float3((*from)[0u].packed), float3((*from)[1u].packed)};
+}
+
+void main_inner(uint idx, tint_module_vars_struct tint_module_vars) {
+  float const scalar_f32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].scalar_f32;
+  int const scalar_i32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].scalar_i32;
+  uint const scalar_u32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].scalar_u32;
+  float2 const vec2_f32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].vec2_f32;
+  int2 const vec2_i32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].vec2_i32;
+  uint2 const vec2_u32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].vec2_u32;
+  float3 const vec3_f32 = float3((*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].vec3_f32);
+  int3 const vec3_i32 = int3((*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].vec3_i32);
+  uint3 const vec3_u32 = uint3((*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].vec3_u32);
+  float4 const vec4_f32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].vec4_f32;
+  int4 const vec4_i32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].vec4_i32;
+  uint4 const vec4_u32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].vec4_u32;
+  float2x2 const mat2x2_f32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].mat2x2_f32;
+  tint_array<tint_packed_vec3_f32_array_element, 2> const v = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].mat2x3_f32;
+  float2x3 const mat2x3_f32 = float2x3(float3(v[0u].packed), float3(v[1u].packed));
+  float2x4 const mat2x4_f32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].mat2x4_f32;
+  float3x2 const mat3x2_f32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].mat3x2_f32;
+  tint_array<tint_packed_vec3_f32_array_element, 3> const v_1 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].mat3x3_f32;
+  float3x3 const mat3x3_f32 = float3x3(float3(v_1[0u].packed), float3(v_1[1u].packed), float3(v_1[2u].packed));
+  float3x4 const mat3x4_f32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].mat3x4_f32;
+  float4x2 const mat4x2_f32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].mat4x2_f32;
+  tint_array<tint_packed_vec3_f32_array_element, 4> const v_2 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].mat4x3_f32;
+  float4x3 const mat4x3_f32 = float4x3(float3(v_2[0u].packed), float3(v_2[1u].packed), float3(v_2[2u].packed), float3(v_2[3u].packed));
+  float4x4 const mat4x4_f32 = (*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].mat4x4_f32;
+  tint_array<float3, 2> const arr2_vec3_f32 = tint_load_array_packed_vec3((&(*tint_module_vars.sb).arr[min(idx, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 544u) - 1u))].arr2_vec3_f32));
+  int const v_3 = as_type<int>((as_type<uint>(tint_f32_to_i32(scalar_f32)) + as_type<uint>(scalar_i32)));
+  int const v_4 = as_type<int>((as_type<uint>(v_3) + as_type<uint>(int(scalar_u32))));
+  int const v_5 = as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(v_4) + as_type<uint>(tint_f32_to_i32(vec2_f32.x))))) + as_type<uint>(vec2_i32.x)));
+  int const v_6 = as_type<int>((as_type<uint>(v_5) + as_type<uint>(int(vec2_u32.x))));
+  int const v_7 = as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(v_6) + as_type<uint>(tint_f32_to_i32(vec3_f32.y))))) + as_type<uint>(vec3_i32.y)));
+  int const v_8 = as_type<int>((as_type<uint>(v_7) + as_type<uint>(int(vec3_u32.y))));
+  int const v_9 = as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(v_8) + as_type<uint>(tint_f32_to_i32(vec4_f32.z))))) + as_type<uint>(vec4_i32.z)));
+  int const v_10 = as_type<int>((as_type<uint>(v_9) + as_type<uint>(int(vec4_u32.z))));
+  int const v_11 = as_type<int>((as_type<uint>(v_10) + as_type<uint>(tint_f32_to_i32(mat2x2_f32[0u].x))));
+  int const v_12 = as_type<int>((as_type<uint>(v_11) + as_type<uint>(tint_f32_to_i32(mat2x3_f32[0u].x))));
+  int const v_13 = as_type<int>((as_type<uint>(v_12) + as_type<uint>(tint_f32_to_i32(mat2x4_f32[0u].x))));
+  int const v_14 = as_type<int>((as_type<uint>(v_13) + as_type<uint>(tint_f32_to_i32(mat3x2_f32[0u].x))));
+  int const v_15 = as_type<int>((as_type<uint>(v_14) + as_type<uint>(tint_f32_to_i32(mat3x3_f32[0u].x))));
+  int const v_16 = as_type<int>((as_type<uint>(v_15) + as_type<uint>(tint_f32_to_i32(mat3x4_f32[0u].x))));
+  int const v_17 = as_type<int>((as_type<uint>(v_16) + as_type<uint>(tint_f32_to_i32(mat4x2_f32[0u].x))));
+  int const v_18 = as_type<int>((as_type<uint>(v_17) + as_type<uint>(tint_f32_to_i32(mat4x3_f32[0u].x))));
+  int const v_19 = as_type<int>((as_type<uint>(v_18) + as_type<uint>(tint_f32_to_i32(mat4x4_f32[0u].x))));
+  (*tint_module_vars.s) = as_type<int>((as_type<uint>(v_19) + as_type<uint>(tint_f32_to_i32(arr2_vec3_f32[0u].x))));
+}
+
+kernel void v_20(uint idx [[thread_index_in_threadgroup]], const device S_packed_vec3* sb [[buffer(1)]], device int* s [[buffer(0)]], const constant tint_array<uint4, 1>* tint_storage_buffer_sizes [[buffer(30)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb=sb, .s=s, .tint_storage_buffer_sizes=tint_storage_buffer_sizes};
+  main_inner(idx, tint_module_vars);
+}

@@ -1,0 +1,47 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color %gl_FragCoord
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 430
+               OpName %main "main"
+               OpName %_GLF_color "_GLF_color"
+               OpName %gl_FragCoord "gl_FragCoord"
+               OpDecorate %_GLF_color Location 0
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_float = OpTypePointer Input %float
+%float_0_00390625 = OpConstant %float 0.00390625
+        %int = OpTypeInt 32 1
+     %uint_1 = OpConstant %uint 1
+    %float_1 = OpConstant %float 1
+       %main = OpFunction %void None %6
+         %18 = OpLabel
+         %19 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_0
+         %20 = OpLoad %float %19
+         %21 = OpFMul %float %20 %float_0_00390625
+         %22 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_0
+         %23 = OpLoad %float %22
+         %24 = OpConvertFToS %int %23
+         %25 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_1
+         %26 = OpLoad %float %25
+         %27 = OpConvertFToS %int %26
+         %28 = OpBitwiseXor %int %24 %27
+         %29 = OpConvertSToF %float %28
+         %30 = OpFMul %float %29 %float_0_00390625
+         %31 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_1
+         %32 = OpLoad %float %31
+         %33 = OpFMul %float %32 %float_0_00390625
+         %34 = OpCompositeConstruct %v4float %21 %30 %33 %float_1
+               OpStore %_GLF_color %34
+               OpReturn
+               OpFunctionEnd

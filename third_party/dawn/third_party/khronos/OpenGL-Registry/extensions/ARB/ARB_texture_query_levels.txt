@@ -1,0 +1,407 @@
+Name
+
+    ARB_texture_query_levels
+
+Name Strings
+
+    GL_ARB_texture_query_levels
+
+Contact
+
+    Christophe Riccio, AMD (christophe.riccio'at'amd.com)
+    
+Contributors  
+    
+    Pat Brown, NVIDIA
+    Bruce Merry
+    
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date: June 6, 2012
+    Revision: 10
+
+Number
+
+    ARB Extension #140
+
+Dependencies
+
+    OpenGL 3.0 is required.
+
+    OpenGL Shading Language 1.30 is required
+
+    This extension is written against the OpenGL 4.2 specification and 
+    version 4.20 of the OpenGL Shading Language Specification.
+
+Overview
+
+    This extension provides a new set of texture functions
+    (textureQueryLevels) in the OpenGL Shading Language that exposes the
+    number of accessible mipmap levels in the texture associated with a GLSL
+    sampler variable.  The set of accessible levels includes all the levels of
+    the texture defined either through TexImage*, TexStorage*, or TextureView*
+    (ARB_texture_view) APIs that are not below the TEXTURE_BASE_LEVEL or above
+    the TEXTURE_MAX_LEVEL parameters.  For textures defined with TexImage*,
+    the set of resident levels is somewhat implementation-dependent.  For
+    fully defined results, applications should use TexStorage*/TextureView
+    unless the texture has a full mipmap chain and is used with a mipmapped
+    minification filter.
+
+    These functions means that shaders are not required to manually recompute,
+    approximate, or maintain a uniform holding a pre-computed level count,
+    since the true level count is already available to the
+    implementation. This value can be used to avoid black or leaking pixel
+    artifacts for rendering methods which are using texture images as memory
+    pages (eg: virtual textures); methods that can't only rely on the fixed
+    pipeline texture functions which take advantage of TEXTURE_MAX_LEVEL for
+    their sampling.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 4.2 (Core Profile) Specification
+(OpenGL Operation)
+
+    Modify Section 2.11.12, Shader Execution, p. 106
+
+    (retitle "Texture Size Query" sub-section, p. 109 to "Texture Queries")
+
+    (modify the first paragraph of "Texture Queries", p. 109, renaming
+    "texture size" to "textureSize()") The OpenGL Shading Language
+    textureSize() functions provide...
+
+    (add a new paragraph at the end of the now-renamed "Texture Queries"
+    section, p. 109)
+
+    The OpenGL Shading Language textureQueryLevels() functions provide the
+    ability to query the number of accessible mipmap levels in a texture
+    object associated with a sampler uniform.  If the sampler is associated
+    with an immutable-format texture object (section 3.9.16), the value
+    returned will be:
+
+      min(TEXTURE_IMMUTABLE_LEVELS - 1, TEXTURE_MAX_LEVEL) - 
+        TEXTURE_BASE_LEVEL + 1
+
+    where TEXTURE_IMMUTABLE_LEVELS gives the number of levels present in the
+    immutable-format texture and TEXTURE_BASE_LEVEL and TEXTURE_MAX_LEVEL are
+    the values of these texture parameters (section 3.9.8).  Otherwise, the
+    value returned will be an implementation-dependent value between zero and
+
+      q - TEXTURE_BASE_LEVEL + 1
+
+    where <q> is the maximum mipmap level specified in the "Mipmapping"
+    section of section 3.9.11.  The value returned in this case must satisfy
+    the following constraints:
+
+      - If all levels of the texture have zero size, zero must be returned.
+
+      - If the texture is complete, a non-zero value must be returned.
+
+      - If the texture object is complete and is accessed with a minification
+        filter requiring mipmaps, q - TEXTURE_BASE_LEVEL + 1 must be returned.
+
+
+Additions to Chapter 3 of the OpenGL 4.2 (Core Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Core Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Core Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Core Profile) Specification
+(State and State Requests)
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Modifications to The OpenGL Shading Language Specification, Version 4.20.8
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_texture_query_levels
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_ARB_texture_query_levels 1
+
+    Add to section 8.9.1 "Texture Query Functions"
+        
+    Syntax:
+
+      int textureQueryLevels(gsampler1D sampler);
+      int textureQueryLevels(gsampler2D sampler);
+      int textureQueryLevels(gsampler3D sampler);
+      int textureQueryLevels(gsamplerCube sampler);
+      int textureQueryLevels(gsampler1DArray sampler);
+      int textureQueryLevels(gsampler2DArray sampler);
+      int textureQueryLevels(gsamplerCubeArray sampler);
+      int textureQueryLevels(gsampler1DShadow sampler);
+      int textureQueryLevels(gsampler2DShadow sampler);
+      int textureQueryLevels(gsamplerCubeShadow sampler);
+      int textureQueryLevels(gsampler1DArrayShadow sampler);
+      int textureQueryLevels(gsampler2DArrayShadow sampler);
+      int textureQueryLevels(gsamplerCubeArrayShadow sampler);
+
+    Description:
+
+      The textureQueryLevels functions return the number of mipmap levels
+      accessible in the texture associated with <sampler>, as defined in the
+      OpenGL Specification.  The value zero will be returned if no texture or
+      an incomplete texture is associated with <sampler>.
+      textureQueryLevels() is available in all shader stages.
+
+Conformance Tests
+
+    <TBD>
+
+Issues
+
+    (1) Is the value returned by textureQueryLevels clamped by the number of 
+        levels present in a texture? (bug 7941)
+
+      RESOLVED:  Yes, the set of accessible levels needs to be computed by
+      intersecting the set of levels present in the texture, with the range of
+      levels between TEXTURE_BASE_LEVEL and TEXTURE_MAX_LEVEL.
+
+      The number of accessible texture levels will be the value
+
+         TEXTURE_MAX_LEVEL - TEXTURE_BASE_LEVEL + 1
+
+      if both parameters are set to accurately reflect the set of resident
+      levels.  However, it isn't necessary to set either texture parameter,
+      and the default value for TEXTURE_MAX_LEVEL (1000) doesn't accurately
+      reflect the total number of levels.  As a result, the value returned
+      needs to intersect the range between the base and maximum levels with
+      the actual set of levels present in a texture.
+
+      For immutable format textures (from OpenGL 4.2 and ARB_texture_storage),
+      the set of present levels is well-defined, taken from the parameter
+      <levels> of TextureStorage*D.  If a texture is created immutable then we
+      could clamp the value returned by textureQueryLevels to the number of
+      levels.  For other textures, the set of levels present and resident in
+      the texture is less well-defined since levels can be added or removed at
+      random.
+       
+    (2) What value is returned for textures that have an incomplete set of  
+        mipmaps?  
+
+      RESOLVED:  The values returned in this case are largely
+      implementation-dependent.  Textures have two different notions of
+      completeness:
+
+      - A texture is "mipmap complete" if it has a full set of mipmaps, from
+        the base level down to the smallest (1x1) level appropriate for the
+        base level.  If a texture sets TEXTURE_MAX_LEVEL, any levels smaller
+        than the size of the maximum level need not be present for a texture
+        to be mipmap complete.  Note that immutable format textures will
+        always be considered mipmap complete.
+
+      - A texture that is not "complete" typically can not be used for texture
+        mapping.  A texture that is not mipmap complete can still be
+        considered complete, as long as it isn't used with a mipmapped
+        minification filter.
+      
+      Immutable-format TexStorage* textures always specify a full set of
+      mipmap levels and are always considered mipmap complete; however,
+      applications can add (or delete) mipmap levels to TexImage* textures at
+      arbitrary times.  
+
+      If the texture has some (but not all) of the mipmaps necessary to be
+      mipmap complete, an implementation might choose to manage the texture in
+      a number of different ways:
+
+        - don't allocate any texture memory (if the texture is incomplete)
+
+        - allocate memory for only the base level (which is the only one that
+          can be accessed with a non-mipmapped minification filter)
+
+        - allocate memory for the subset of the full mipmap chain that is
+          defined, even if some of these levels are inaccessible
+
+        - speculatively allocate memory for the entire mipmap chain
+
+      We specify the result to be implementation-dependent to (a) allow for
+      implementations of this function that return the number of levels
+      resident in the underlying texture memory allocation and (b) to not
+      force implementation to change their memory management of TexImage*
+      textures for this case.
+
+      We do require implementations to return a non-zero value for textures
+      that are complete, even if they aren't mipmap complete.  For example, a
+      TexImage* texture with only the base level is usable when used with a
+      LINEAR minification filter and should have an allocation with at least
+      one level present.
+        
+    (3) What values are returned by the built-in for textures that aren't
+        complete or aren't defined at all?
+        
+      RESOLVED:  As with the mipmap-incomplete case, the value returned is
+      largely implementation-dependent, even though the incomplete texture
+      can't be used for texture mapping.
+
+      With separate sampler objects, it's worth noting that the same texture
+      object may be considered complete when used in conjunction with one
+      sampler object but might be incomplete when used with a different
+      sampler object.  For example, a texture with only a single level defined
+      will be complete when used with a minification filter of LINEAR, but not
+      with LINEAR_MIPMAP_LINEAR.  We allow implementations to return zero in
+      this case, but would also allow them to return non-zero values (possibly
+      obtained because the texture object is actually usable in another
+      texture image unit).
+
+      We do require implementations to return zero if the texture has no
+      defined levels (the default state for a new texture object).
+
+      Note that in both the core and compatibility profiles of OpenGL 4.2, it
+      doesn't appear to be possible to have a texture image unit with no
+      texture bound.  glBindTexture(target,0) binds the "default texture" for
+      <target>, not "no texture".  The default texture may have images defined
+      if TexImage* is called when it is bound.  If these default textures were
+      removed in a future version of OpenGL, textureQueryLevels() should
+      return zero if the associated texture image unit has no texture bound.
+
+    (4) For non-immutable format textures, what happens if
+        textureQueryLevels() is called for a texture that *is* mipmap complete
+        but is not accessed with a mipmapped minification filter?
+
+      RESOLVED:  The value returned is implementation-dependent.
+
+      To get fully defined results with TexImage* textures, the texture should
+      be mipmap complete and accessed with a mipmapped minification filter.
+      In that case, the value returned is well-defined and must be consistent
+      with an allocation holding the full mipmap chain.
+
+      The undefined behavior here permit implementations to defer the download
+      of "extra" mipmap levels until they are actually required.  For textures
+      without immutable formats, mipmap levels can be added or removed at any
+      time and implementations may choose to modify the set of levels resident
+      for a texture based on the minification filter.  Consider the following
+      code sequence:
+
+        create level 0 of a 2D texture (256x256)
+        set the texture's min filter to LINEAR
+        (A) render using the texture
+        create level 1 of a 2D texture (128x128) 
+        (B) render using the texture
+        create levels 2..8 of a 2D texture (64x64 down to 1x1)
+        (C) render using the texture
+        set the texture's min filter to LINEAR_MIPMAP_LINEAR
+        (D) render using the texture
+        set the texture's min filter to LINEAR
+        (E) render using the texture
+
+      This texture will be complete each time rendering will be performed, but
+      will be mipmap complete only for primitives (C), (D), and (E).  For
+      primitives (A) and (B), only the 256x256 texture will be accessible.  An
+      implementation might make the 128x128 level resident for (B), but it
+      might defer this operation since the 128x128 level isn't actually needed
+      and further mipmap level changes might occur.  For primitive (C), the
+      texture is mipmap complete, but the non-zero mipmap levels still aren't
+      needed.  For primitive (D), all nine levels need to be resident, and
+      that's what textureQueryLevels() should return.  For primitive (E), it
+      seems likely that implementations will keep all levels resident, even
+      though only the base level is needed.  However, they could theoretically
+      evict the non-base levels if required to free up texture memory.
+
+Revision History
+
+    Revision 10, 2012/06/06 (pbrown)
+      - Mark issues (2) through (4) as resolved.
+      - Add warnings in overview and issues about undefined values for
+        TexImage* textures and recommending the use of a mipmapped
+        minification filter for fully defined results.
+
+    Revision 9, 2012/06/01 (pbrown)
+      - Update issues (1) through (4) to reflect edits from previous revisions
+        of this spec.  Leaving issues (2) through (4) unresolved pending final
+        approval of previous edits.
+
+    Revision 8, 2012/05/31 (pbrown)
+      - (bug 7941) Update the language describing the values returned for
+        TexImage* textures.  The value is implementation-dependent, but must
+        be in the range 0..q-BASE_LEVEL+1, and must satisfy the following
+        constraints:
+          - fully undefined textures must return zero 
+          - complete textures must return at least one
+          - complete textures with a mipmapped min filter must return
+            q-BASE_LEVEL+1 
+
+    Revision 7, 2012/05/17 (criccio)
+      - Fix textureQueryLevels calculation for immutable texture. 
+        min(TEXTURE_IMMUTABLE_LEVELS - 1, TEXTURE_MAX_LEVEL) instead of 
+        min(TEXTURE_IMMUTABLE_LEVELS, TEXTURE_MAX_LEVEL)
+
+    Revision 6, 2012/05/16 (pbrown)
+      - Add explicit language describing the set of values that will be
+        returned for all the various cases (immutable format textures, mutable
+        textures that are mipmap complete or not, incomplete or unbound
+        textures).
+      - Specify the level count to include only those levels between the base
+        level and the maximum level.
+      - Update the introduction.
+      - Update the discussion for issues 1, 2, and 3.  
+      - Add issue 4, describing what happens for mipmap complete textures that
+        don't need to be (because they're used with non-mipmapped filters).
+        Implementations are allowed but not required to treat the entire
+        mipmap chain as resident.
+
+    Revision 5, 2012/04/30 (criccio)
+      - Resolved issue 2 and 3
+
+    Revision 4, 2012/04/26 (criccio)
+      - Resolved issue 1 for mutable texture
+      - Added issue 2, 3 from Pat's comments
+      
+    Revision 3, 2012/03/15 (criccio)
+      - Added issue
+      
+    Revision 2, 2011/11/01 (criccio)
+      - Updated overview
+          
+    Revision 1, 2011/10/24 (criccio)
+      - First draft

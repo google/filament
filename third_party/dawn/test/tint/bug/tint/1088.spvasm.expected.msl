@@ -1,0 +1,87 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct strided_arr {
+  /* 0x0000 */ float el;
+  /* 0x0004 */ tint_array<int8_t, 12> tint_pad_1;
+};
+
+struct LeftOver {
+  /* 0x0000 */ float4x4 worldViewProjection;
+  /* 0x0040 */ float time;
+  /* 0x0044 */ tint_array<int8_t, 12> tint_pad;
+  /* 0x0050 */ tint_array<float4x4, 2> test2;
+  /* 0x00d0 */ tint_array<strided_arr, 4> test;
+};
+
+struct tint_module_vars_struct {
+  thread float3* position_1;
+  const constant LeftOver* x_14;
+  thread float2* vUV;
+  thread float2* uv;
+  thread float3* normal;
+  thread float4* gl_Position;
+};
+
+struct main_out {
+  float4 gl_Position;
+  float2 vUV_1;
+};
+
+struct main_outputs {
+  float4 main_out_gl_Position [[position]];
+  float2 main_out_vUV_1 [[user(locn0)]];
+};
+
+struct main_inputs {
+  float3 position_1_param [[attribute(0)]];
+  float2 uv_param [[attribute(2)]];
+  float3 normal_param [[attribute(1)]];
+};
+
+void main_1(tint_module_vars_struct tint_module_vars) {
+  float4 q = 0.0f;
+  float3 p = 0.0f;
+  q = float4((*tint_module_vars.position_1).x, (*tint_module_vars.position_1).y, (*tint_module_vars.position_1).z, 1.0f);
+  p = q.xyz;
+  p.x = (p.x + sin((((*tint_module_vars.x_14).test[0u].el * (*tint_module_vars.position_1).y) + (*tint_module_vars.x_14).time)));
+  p.y = (p.y + sin(((*tint_module_vars.x_14).time + 4.0f)));
+  float4x4 const v = (*tint_module_vars.x_14).worldViewProjection;
+  (*tint_module_vars.gl_Position) = (v * float4(p.x, p.y, p.z, 1.0f));
+  (*tint_module_vars.vUV) = (*tint_module_vars.uv);
+  (*tint_module_vars.gl_Position).y = ((*tint_module_vars.gl_Position).y * -1.0f);
+}
+
+main_out main_inner(float3 position_1_param, float2 uv_param, float3 normal_param, tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.position_1) = position_1_param;
+  (*tint_module_vars.uv) = uv_param;
+  (*tint_module_vars.normal) = normal_param;
+  main_1(tint_module_vars);
+  return main_out{.gl_Position=(*tint_module_vars.gl_Position), .vUV_1=(*tint_module_vars.vUV)};
+}
+
+vertex main_outputs v_1(main_inputs inputs [[stage_in]], const constant LeftOver* x_14 [[buffer(0)]]) {
+  thread float3 position_1 = 0.0f;
+  thread float2 vUV = 0.0f;
+  thread float2 uv = 0.0f;
+  thread float3 normal = 0.0f;
+  thread float4 gl_Position = 0.0f;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.position_1=(&position_1), .x_14=x_14, .vUV=(&vUV), .uv=(&uv), .normal=(&normal), .gl_Position=(&gl_Position)};
+  main_out const v_2 = main_inner(inputs.position_1_param, inputs.uv_param, inputs.normal_param, tint_module_vars);
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.main_out_gl_Position = v_2.gl_Position;
+  tint_wrapper_result.main_out_vUV_1 = v_2.vUV_1;
+  return tint_wrapper_result;
+}

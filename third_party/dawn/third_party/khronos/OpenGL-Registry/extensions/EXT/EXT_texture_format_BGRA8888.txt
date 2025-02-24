@@ -1,0 +1,153 @@
+Name
+
+    EXT_texture_format_BGRA8888
+
+Name Strings
+
+    GL_EXT_texture_format_BGRA8888
+
+Notice
+
+    Copyright Imagination Technologies Limited, 2005.
+
+Contact
+
+    Imagination Technologies
+
+Status
+
+    Shipping
+
+Version
+
+    1.3, 12 September 2016
+
+Number
+
+    OpenGL ES Extension #51
+
+Dependencies
+
+    The extension is written against the OpenGLES 1.0 Specification,
+    which in turn is based OpenGL 1.3. Thus this spec is effectively
+    written against OpenGL 1.3 but does not address sections explicitly
+    removed or reduced by OpenGL-ES 1.0.
+    
+    This extension has interactions with the OpenGL ES 2.0 API.
+
+Overview
+
+    This extension provides an additional format and type combination
+    for use when specifying texture data.  The current allowed combinations
+    are:
+
+    Internal Format     External Format Type                    Bytes per Pixel
+    ---------------     --------------- ----                    ---------------
+    RGBA                RGBA             UNSIGNED_BYTE          4
+    RGB                 RGB              UNSIGNED_BYTE          3
+    RGBA                RGBA             UNSIGNED_SHORT_4_4_4_4 2
+    RGBA                RGBA             UNSIGNED_SHORT_5_5_5_1 2
+    RGB                 RGB              UNSIGNED_SHORT_5_6_5   2
+    LUMINANCE_ALPHA     LUMINANCE_ALPHA  UNSIGNED_BYTE          2
+    LUMINANCE           LUMINANCE        UNSIGNED_BYTE          1
+    ALPHA               ALPHA            UNSIGNED_BYTE          1
+
+
+   This table is extended to include format BGRA_EXT and type UNSIGNED_BYTE:
+
+    Internal Format     External Format Type                    Bytes per Pixel
+    ---------------     --------------- ----                    ---------------
+    BGRA_EXT            BGRA_EXT        UNSIGNED_BYTE           4
+    RGBA                RGBA            UNSIGNED_BYTE           4
+    RGB                 RGB             UNSIGNED_BYTE           3
+    RGBA                RGBA            UNSIGNED_SHORT_4_4_4_4  2
+    RGBA                RGBA            UNSIGNED_SHORT_5_5_5_1  2
+    RGB                 RGB             UNSIGNED_SHORT_5_6_5    2
+    LUMINANCE_ALPHA     LUMINANCE_ALPHA UNSIGNED_BYTE           2
+    LUMINANCE           LUMINANCE       UNSIGNED_BYTE           1
+    ALPHA               ALPHA           UNSIGNED_BYTE           1
+    
+    This format is renderable in versions of OpenGL ES from 2.0 onwards.
+
+IP Status
+
+    Unknown
+
+Issues
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <format> and <internalformat> parameters of TexImage2D
+    and the <format> parameter of TexSubImage2D:
+
+        GL_BGRA_EXT                                     0x80E1
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX / WGL / AGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+    
+Interactions with the OpenGL ES 2.0 specification
+
+    Add the following entry to Table 4.5: Renderbuffer image formats,
+    showing their renderable type (color-, depth-, or stencil-renderable)
+    and the number of bits each format contains for color (R, G, B, A),
+    depth (D), and stencil (S) components:
+    
+    |-----------------|------------------|------|------|------|------|------|------|
+    | Sized           | Renderable       | R    | G    | B    | A    | D    | S    |
+    | Internal Format | Type             | bits | bits | bits | bits | bits | bits |
+    |-----------------|------------------|------|------|------|------|------|------|
+    | GL_BGRA_EXT     | color-renderable | 8    | 8    | 8    | 8    |      |      |
+    |-----------------|------------------|------|------|------|------|------|------|
+
+Revision History
+
+    0.1,  26/04/2005  sks:  Initial revision.
+    1.0,  08/05/2005  gdc:  Final revision.
+    1.1,  19/03/2009  Jon Leech: add extension number and fix tabbing /
+                      whitespace issues.
+    1.2,  26/10/2009  Benj Lipchak: add EXT suffix to BGRA token.
+    1.3,  12/09/2016  Tobias Hector: Added interaction with ES 2.0 (made it renderable).
+                      Also made revision dates use the same (dd/mm/yyyy) format.

@@ -1,0 +1,38 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct g_packed_vec3 {
+  /* 0x0000 */ packed_uint3 a;
+  /* 0x000c */ tint_array<int8_t, 4> tint_pad;
+};
+
+struct h {
+  /* 0x0000 */ uint a;
+};
+
+struct tint_module_vars_struct {
+  const constant g_packed_vec3* i;
+  device h* j;
+};
+
+uint tint_dot(uint3 lhs, uint3 rhs) {
+  return (((lhs * rhs).x + (lhs * rhs).y) + (lhs * rhs).z);
+}
+
+kernel void v(const constant g_packed_vec3* i [[buffer(0)]], device h* j [[buffer(1)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.i=i, .j=j};
+  uint const l = tint_dot(uint3((*tint_module_vars.i).a), uint3((*tint_module_vars.i).a));
+  (*tint_module_vars.j).a = (*tint_module_vars.i).a.x;
+}

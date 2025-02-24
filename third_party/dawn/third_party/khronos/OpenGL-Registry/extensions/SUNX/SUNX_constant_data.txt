@@ -1,0 +1,159 @@
+
+Name
+    SUNX_constant_data
+
+Name Strings
+
+    GL_SUNX_constant_data
+
+Contact
+
+    Ron Bielaski, Sun (Ron.Bielaski 'at' eng.sun.com)
+    Jack Middleton, Sun (Jack.Middleton 'at' eng.sun.com)
+
+Status
+
+    Shipping 
+
+Version
+
+    $Date: 1999/12/28 01:40:37 $ $Revision: 1.5 $
+    SUN Date: 99/06/25 15:06:46  Revision: 1.2
+
+Number
+
+    163
+
+Dependencies
+
+   None
+
+Overview
+
+   This extension allows the pixel data specified by the
+   application to be used internally without making a second copy.
+   This extension affects how the pixel data in client memory is
+   interpreted and therefore affects DrawPixels, Bitmap,
+   PolygonStipple, TexImage1D, TexImage2D, TexImage3DEXT,
+   ColorTableSGI.
+
+New Procedures and Functions
+
+    void FinishTextureSUNX(void)
+
+New Tokens
+
+   Accepted by the <pname> parameter PixelStore*()
+
+	UNPACK_CONSTANT_DATA_SUNX		0x81D5
+	
+   Accepted by <pname> parameter of GetTexLevelParameter()
+
+	TEXTURE_CONSTANT_DATA_SUNX		0x81D6
+
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+When TexImage1D(), TexImage2D(), TexImage3DEXT() is called,
+specifying PixelStore*() with pname UNPACK_CONSTANT_DATA_SUNX set to
+TRUE will allow the implementation to use the application provided data
+pointer internally thereby avoiding a second copy. If pixel transfer is
+enabled when using this pixel store mode or if the constant directive
+cannot be honored , then the constant directive will be ignored and a
+copy will be made internally. Thus, specifying "constant" data
+directive does not prohibit the implementation from making a copy,
+rather it is treated as a hint by the implementation to avoid making a
+second copy if possible. Note that if UNPACK_CONSTANT_DATA_SUNX is set
+to TRUE, and all the pixel store values are not default values then the
+constant hint will not be honored. 
+
+
+A TexSubImage*() will always make a copy of the existing texture
+image before updating the subimage except when the scenario given below
+is true.
+
+If a TexSubImage1D(), TexSubImage2D(), TexSubImage3DEXT() is
+called with PixelStore pname UNPACK_CONSTANT_DATA_SUNX set to TRUE on a
+constant texture, then the address of the start of the texture image is
+computed using the specified xoffset, yoffset, zoffset. If this
+computed address matches the start address of the currently used
+constant texture then no action is taken. If the addresses do not match
+then a copy is first made of the entire texture and then the subimage
+is updated in this copy. A texture is a "constant texture" if at the
+time of the specification of the texture no copy was made. This
+attribute can be queried as described later.
+
+Before an application changes a part or all of the texture image that
+has been specified as a constant texture image, it is necessary to
+call FinishTextureSUNX() to ensure that the library has completed all
+its processing with the currently specified constant texture image
+before the changes are applied to this constant texture image by the
+application.
+
+If a CopyTexImage[1/2/3]D or CopyTexSubImage[1/2/3]D is made and
+the existing texture image is constant, then a copy is made
+internally before executing the CopyTex* calls.
+
+
+In immediate mode, for DrawPixels()/Bitmap(), specifying constant data
+is not meaningful since data does not have a life beyond the call
+itself.
+
+A texture image/raster image or bitmap could be specified as constant
+at the time of the creation of the display list. If pixelmap/pixel
+transfer is enabled before calling the display list, then a copy is
+made internally and the data is no longer constant.
+
+It is invalid to specify a texture subimage as constant in a display
+list. Doing so, will result in an INVALID_OPERATION error.
+
+Query support
+-------------
+The pixel store value for the constant data that has been set can be
+inquired using Get() with pname set to UNPACK_CONSTANT_DATA_SUNX.
+
+When TexImage*D() is executed with target PROXY_TEXTURE_[1,2,3]D then
+the state value of TEXTURE_CONSTANT_DATA_SUNX will be set to 0 if
+the texture data cannot be stored as constant, otherwise the value
+will be 1.
+
+The constant nature of the texture data can be inquired using
+GetTexLevelParameter*() with pname TEXTURE_CONSTANT_DATA_SUNX and
+target PROXY_TEXTURE_[1,2,3]D . If the target is TEXTURE_[1,2,3]D and
+pname is TEXTURE_CONSTANT_DATA_SUNX, then the value returned is TRUE
+if the the texture image defined at this level is currently
+constant.
+
+Note that a texture image may become non-constant (that is an internal
+copy may be made) at the time when the texture is used rather than at a
+time when the texture is specified. If interested, an application could
+inquire the constant nature of the texture data after the texture has
+been used for rendering.
+
+Additions to the GLX / WGL / AGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    ???
+    (will affect both pixel pack/unpack and texture state)
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    6/24/99 - Updated name string to SUNX instead of SUN.
+    Added fields from the new extension template.
+
+

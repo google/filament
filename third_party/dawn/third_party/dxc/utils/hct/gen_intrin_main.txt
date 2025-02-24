@@ -1,0 +1,1139 @@
+// Copyright (C) Microsoft Corporation. All rights reserved.
+// This file is distributed under the University of Illinois Open Source License. See LICENSE.TXT for details.
+//
+// See hctdb.py for the implementation of intrinsic file processing.
+//
+// Intrinsic declarations are grouped into namespaces that
+// turn into qualifiers for the generated names.  This lets
+// intrinsics be grouped into sets such as base function-style
+// intrinsics, Texture1D intrinsics, etc.
+//
+// Intrinsic declarations are a line of the form:
+//
+//   <type> \[\[[attr]\]\] <name>([<qual> <type> <name> [, ... ]]) [ : <op>]
+//
+// <name> is a C++ identifier for the intrinsic or argument name.
+//
+// <op> is the D3DIOP_* (or D3DMOP_* if the namespace has "Method"
+// in the name) enumerant.  By default it's the same as the intrinsic
+// name, but <op> can be given to set it arbitrarily.
+//
+// <qual> is one of "in", "out" or "inout" plus optional qualifiers
+//   "col_major", "row_major".
+// variadic functions assume <qual> of "in" for any arguments that are not
+// explicitly specified.
+//
+// <type> is where most of the work goes.  <type> lets you
+// specify particular types and layouts for arguments and
+// also lets you indicate which types must share characteristics
+// with other types.  <type> can be a simple scalar like "bool"
+// or it can require an N-vector with "bool<N>" or an N-by-M
+// matrix with "bool<N, M>".  You can refer to input columns
+// and rows with r, c, r2 and c2, so "float<r, r>" means a
+// float matrix with the same number of rows and columns and
+// the size comes from the parse input.  "<>" means any kind
+// of layout is acceptable.
+//
+// Basic types are bool, int, uint, u64, float, sampler1d, sampler2d,
+// sampler3d, sampler_cube, sampler_cmp, sampler, wave and void.
+// There are meta-types too: any_int, uint_only, numeric and any.
+//
+// Along with a type and layout you can also give relations
+// between types in an intrinsic.  The types of an intrinsic
+// are indexed start with 0 at the return type and increasing
+// left to right (first argument is 1, second is 2, etc.).
+// $match<X, Y> says that the template type (layout) of
+// a particular type must match the template type of the X'th
+// type and that the component type (base type) of a particular
+// type must match the component type of the Y'th type.
+// For example, in "float<> acos(in $match<0, 0> float<> x)" the
+// $match<0, 0> means that both the template and component type
+// of the argument must match that of the return type (index 0).
+// The float<> means that any layout (scalar/vector/matrix) of
+// floats is acceptable, and then the parameter and return
+// type must match.
+//
+// A value of -1 for X in $match is a special marker for
+// object method intrinsics meaning that the type is taken
+// from the object's template type.
+//
+// A value of -1 for Y in $match is a special marker for
+// object method intrinsics meaning that the component type
+// of the type is taken from the first subelement of the
+// object's template type.
+//
+// Certain $match situations are aliased for readability
+// and conciseness.
+//
+//   $classT - This equates to $match<-1, 0> void and is
+//             used for method return types that are set from
+//             the object template type.
+//
+//   $funcT  - This equates to $match<-3, 0> void and is
+//             used for method return types that are set from
+//             the function template type.
+//
+//   $typeN - This equates to $match<N, N> <argtypeN> and is
+//            shorthand for a direct match of another type.
+//            For example, in "$type1 abs(in numeric<> x)" the
+//            $type means that the return type is a direct match
+//            of the argument type ($type cannot be used on the
+//            first argument since there's nothing to match at
+//            that point and can't refer to the return type as
+//            it is matched after the inputs).
+//
+
+namespace Intrinsics {
+
+int<4> [[rn]] D3DCOLORtoUBYTE4(in $match<0, 1> float<4> x) : d3dcolortoubyte4;
+uint [[rn]]  GetRenderTargetSampleCount() : rtsampleinfo;
+float<2> [[rn]] GetRenderTargetSamplePosition(in int s) : rtsamplepos;
+void [[]]   abort();
+$type1 [[rn,unsigned_op=uabs]] abs(in numeric<> x);
+$type1 [[rn]] acos(in float_like<> x);
+bool [[rn]] all(in any<> x);
+void [[]] AllMemoryBarrier() : syncallmemory_ug;
+void [[]] AllMemoryBarrierWithGroupSync() : syncgroupandallmemory_ug;
+bool [[rn]] any(in any<> x);
+double<> [[rn]] asdouble(in $match<0, 1> uint<> x, in $match<0, 2> uint<> y) : reinterpret_fuse_double;
+float<> [[rn]] asfloat(in $match<0, 1> numeric32_only<> x) : reinterpret_float;
+float16_t<> [[rn]] asfloat16(in $match<0,1> numeric16_only<> x) : reinterpret_float16;
+int16_t<> [[rn]] asint16(in $match<0,1> numeric16_only<> x) : reinterpret_int16;
+$type1 [[rn]] asin(in float_like<> x);
+int<> [[rn]] asint(in $match<0, 1> numeric32_only<> x) : reinterpret_int;
+void [[]] asuint(in double<> d, out $match<1, 2> uint<> x, out $match<1, 3> uint<> y) : reinterpret_split_double_uint;
+uint<> [[rn]] asuint(in $match<0, 1> numeric32_only<> x) : reinterpret_uint;
+uint16_t<> [[rn]] asuint16(in $match<0,1> numeric16_only<> x) : reinterpret_uint16;
+$type1 [[rn]] atan(in float_like<> x);
+$type1 [[rn]] atan2(in float_like<> x, in $type1 y);
+$type1 [[rn]] ceil(in float_like<> x);
+$type1 [[rn,unsigned_op=uclamp]] clamp(in numeric<> x, in $type1 min, in $type1 max);
+void [[]] clip(in float<> x);
+$type1 [[rn]] cos(in float_like<> x);
+$type1 [[rn]] cosh(in float_like<> x);
+$match<1, 0> uint<> [[rn]] countbits(in any_int<> x);
+$type1 [[rn]] cross(in float_like<3> a, in $type1 b);
+$type1 [[rn]] ddx(in float_like<> x);
+$type1 [[rn]] ddx_coarse(in float_like<> x);
+$type1 [[rn]] ddx_fine(in float_like<> x);
+$type1 [[rn]] ddy(in float_like<> x);
+$type1 [[rn]] ddy_coarse(in float_like<> x);
+$type1 [[rn]] ddy_fine(in float_like<> x);
+$type1 [[rn]] degrees(in float_like<> x);
+$match<0, 1> float_like [[rn]] determinant(in float_like<r, r> x);
+void [[]] DeviceMemoryBarrier() : syncdevicememory_ug;
+void [[]] DeviceMemoryBarrierWithGroupSync() : syncgroupanddevicememory_ug;
+$match<0, 1> float_like [[rn]] distance(in float_like<c> a, in $type1 b);
+$match<0, 1> numeric [[rn,unsigned_op=udot]] dot(in numeric<c> a, in $type1 b);
+$type1 [[rn]] dst(in numeric<4> a, in $type1 b);
+// void errorf(in string Format, ...);
+$type1 [[rn]] EvaluateAttributeAtSample(in numeric<> value, in uint index);
+$type1 [[rn]] EvaluateAttributeCentroid(in numeric<> value);
+$type1 [[rn]] EvaluateAttributeSnapped(in numeric<> value, in int<2> offset);
+$type1 [[rn]] GetAttributeAtVertex(in numeric<> value, in uint VertexID);
+$type1 [[rn]] exp(in float_like<> x);
+$type1 [[rn]] exp2(in float_like<> x);
+float<> [[rn]] f16tof32(in uint<> x);
+// Use float for DXIL don't support f16 on f32tof16.
+uint<> [[rn]] f32tof16(in float<> x);
+$type1 [[rn]] faceforward(in float_like<c> N, in $type1 I, in $type1 Ng);
+$match<1, 0> uint<> [[rn,unsigned_op=ufirstbithigh,overload=0]] firstbithigh(in any_int<> x);
+$match<1, 0> uint<> [[rn]] firstbitlow(in any_int<> x);
+$type1 [[rn]] floor(in float_like<> x);
+$type1 [[rn]] fma(in double_only<> a, in $type1 b, in $type1 c);
+$type1 [[rn]] fmod(in float_like<> a, in $type1 b);
+$type1 [[rn]] frac(in float_like<> x);
+$type1 [[]] frexp(in float<> x, out $type1 exp);
+$type1 [[rn]] fwidth(in float_like<> x);
+void [[]] GroupMemoryBarrier() : syncsharedmemory;
+void [[]] GroupMemoryBarrierWithGroupSync() : syncgroupandsharedmemory;
+// 64-bit integers interlocks
+void [[]] InterlockedAdd(ref int64_only result, in u64 value);
+void [[]] InterlockedAdd(ref int64_only result, in u64 value, out any_int64 original) : interlockedadd_immediate;
+void [[unsigned_op=InterlockedUMin,overload=0]] InterlockedMin(ref int64_only result, in any_int64 value) : interlockedmin;
+void [[unsigned_op=InterlockedUMin,overload=0]] InterlockedMin(ref int64_only result, in any_int64 value, out any_int64 original) : interlockedmin_immediate;
+void [[unsigned_op=InterlockedUMax,overload=0]] InterlockedMax(ref int64_only result, in any_int64 value) : interlockedmax;
+void [[unsigned_op=InterlockedUMax,overload=0]] InterlockedMax(ref int64_only result, in any_int64 value, out any_int64 original) : interlockedmax_immediate;
+void [[]] InterlockedAnd(ref int64_only result, in u64 value);
+void [[]] InterlockedAnd(ref int64_only result, in u64 value, out any_int64 original) : interlockedand_immediate;
+void [[]] InterlockedOr(ref int64_only result, in u64 value);
+void [[]] InterlockedOr(ref int64_only result, in u64 value, out any_int64 original) : interlockedor_immediate;
+void [[]] InterlockedXor(ref int64_only result, in u64 value);
+void [[]] InterlockedXor(ref int64_only result, in u64 value, out any_int64 original) : interlockedxor_immediate;
+void [[]] InterlockedCompareStore(ref int64_only result, in u64 compare, in u64 value);
+void [[]] InterlockedExchange(ref int64_only result, in any_int64 value, out any_int64 original);
+void [[]] InterlockedCompareExchange(ref int64_only result, in u64 compare, in u64 value, out any_int64 original);
+// floating point interlocks
+void [[]] InterlockedExchange(ref float32_only result, in float value, out float original);
+void [[]] InterlockedCompareStoreFloatBitwise(ref float32_only result, in float compare, in float value);
+void [[]] InterlockedCompareExchangeFloatBitwise(ref float32_only result, in float compare, in float value, out float original);
+// 32-bit integer interlocks
+void [[]] InterlockedAdd(ref int32_only result, in uint value);
+void [[]] InterlockedAdd(ref int32_only result, in uint value, out any_int32 original) : interlockedadd_immediate;
+void [[unsigned_op=InterlockedUMin,overload=0]] InterlockedMin(ref int32_only result, in any_int32 value) : interlockedmin;
+void [[unsigned_op=InterlockedUMin,overload=0]] InterlockedMin(ref int32_only result, in any_int32 value, out any_int32 original) : interlockedmin_immediate;
+void [[unsigned_op=InterlockedUMax,overload=0]] InterlockedMax(ref int32_only result, in any_int32 value) : interlockedmax;
+void [[unsigned_op=InterlockedUMax,overload=0]] InterlockedMax(ref int32_only result, in any_int32 value, out any_int32  original) : interlockedmax_immediate;
+void [[]] InterlockedAnd(ref int32_only result, in uint value);
+void [[]] InterlockedAnd(ref int32_only result, in uint value, out any_int32 original) : interlockedand_immediate;
+void [[]] InterlockedOr(ref int32_only result, in uint value);
+void [[]] InterlockedOr(ref int32_only result, in uint value, out any_int32 original) : interlockedor_immediate;
+void [[]] InterlockedXor(ref int32_only result, in uint value);
+void [[]] InterlockedXor(ref int32_only result, in uint value, out any_int32 original) : interlockedxor_immediate;
+void [[]] InterlockedCompareStore(ref int32_only result, in uint compare, in uint value);
+void [[]] InterlockedExchange(ref int32_only result, in uint value, out any_int32 original);
+void [[]] InterlockedCompareExchange(ref int32_only result, in uint compare, in uint value, out any_int32 original);
+$match<1, 0> bool<> [[rn]] isfinite(in float<> x);
+$match<1, 0> bool<> [[rn]] isinf(in float<> x);
+$match<1, 0> bool<> [[rn]] isnan(in float<> x);
+$type1 [[rn]] ldexp(in float_like<> x, in $type1 exp);
+$match<0, 1> float_like [[rn]] length(in float_like<c> x);
+$type1 [[rn]] lerp(in float_like<> a, in $type1 b, in $type1 s);
+$match<0, 1> float_like<4> [[rn]] lit(in float_like l, in $match<2, 1> float_like h, in $match<3, 1> float_like m);
+$type1 [[rn]] log(in float_like<> x);
+$type1 [[rn]] log10(in float_like<> x);
+$type1 [[rn]] log2(in float_like<> x);
+$type1 [[rn,unsigned_op=umad]] mad(in numeric<> a, in $type1 b, in $type1 c);
+$type1 [[rn,unsigned_op=umax]] max(in numeric<> a, in $type1 b);
+$type1 [[rn,unsigned_op=umin]] min(in numeric<> a, in $type1 b);
+$type1 [[]] modf(in float_like<> x, out $type1 ip);
+uint<4> [[rn]] msad4(in uint reference, in uint<2> source, in uint<4> accum);
+numeric [[rn,unsigned_op=umul]] mul(in $match<1, 0> numeric a, in $match<2, 0> numeric b) : mul_ss;
+numeric<c2> [[rn,unsigned_op=umul]] mul(in $match<1, 0> numeric a, in $match<2, 0> numeric<c2> b) : mul_sv;
+numeric<r2, c2> [[rn,unsigned_op=umul]] mul(in $match<1, 0> numeric a, in $match<2, 0> numeric<r2, c2> b) : mul_sm;
+numeric<c> [[rn,unsigned_op=umul]] mul(in $match<1, 0> numeric<c> a, in $match<2, 0> numeric b) : mul_vs;
+numeric [[rn,unsigned_op=umul]] mul(in $match<1, 0> numeric<c> a, in $match<2, 0> numeric<c> b) : mul_vv;
+numeric<c2> [[rn,unsigned_op=umul]] mul(in $match<1, 0> numeric<c> a, in col_major $match<2, 0> numeric<c, c2> b) : mul_vm;
+numeric<r, c> [[rn,unsigned_op=umul]] mul(in $match<1, 0> numeric<r, c> a, in $match<2, 0> numeric b) : mul_ms;
+numeric<r> [[rn,unsigned_op=umul]] mul(in row_major $match<1, 0> numeric<r, c> a, in $match<2, 0> numeric<c> b) : mul_mv;
+numeric<r, c2> [[rn,unsigned_op=umul]] mul(in row_major $match<1, 0> numeric<r, c> a, in col_major $match<2, 0> numeric<c, c2> b) : mul_mm;
+$type1 [[rn]] normalize(in float_like<c> x);
+$type1 [[rn]] pow(in float_like<> x, in $type1 y);
+void [[]] printf(in string Format, ...);
+void [[]] Process2DQuadTessFactorsAvg(in float<4> RawEdgeFactors, in float<2> InsideScale, out float<4> RoundedEdgeFactors, out float<2> RoundedInsideFactors, out float<2> UnroundedInsideFactors) : ptf_2dqavg;
+void [[]] Process2DQuadTessFactorsMax(in float<4> RawEdgeFactors, in float<2> InsideScale, out float<4> RoundedEdgeFactors, out float<2> RoundedInsideFactors, out float<2> UnroundedInsideFactors) : ptf_2dqmax;
+void [[]] Process2DQuadTessFactorsMin(in float<4> RawEdgeFactors, in float<2> InsideScale, out float<4> RoundedEdgeFactors, out float<2> RoundedInsideFactors, out float<2> UnroundedInsideFactors) : ptf_2dqmin;
+void [[]] ProcessIsolineTessFactors(in float<1> RawDetailFactor, in float<1> RawDensityFactor, out float<1> RoundedDetailFactorr, out float<1> RoundedDensityFactor) : ptf_i;
+void [[]] ProcessQuadTessFactorsAvg(in float<4> RawEdgeFactors, in float<1> InsideScale, out float<4> RoundedEdgeFactors, out float<2> RoundedInsideFactors, out float<2> UnroundedInsideFactors) : ptf_qavg;
+void [[]] ProcessQuadTessFactorsMax(in float<4> RawEdgeFactors, in float<1> InsideScale, out float<4> RoundedEdgeFactors, out float<2> RoundedInsideFactors, out float<2> UnroundedInsideFactors) : ptf_qmax;
+void [[]] ProcessQuadTessFactorsMin(in float<4> RawEdgeFactors, in float<1> InsideScale, out float<4> RoundedEdgeFactors, out float<2> RoundedInsideFactors, out float<2> UnroundedInsideFactors) : ptf_qmin;
+void [[]] ProcessTriTessFactorsAvg(in float<3> RawEdgeFactors, in float<1> InsideScale, out float<3> RoundedEdgeFactors, out float<1> RoundedInsideFactor, out float<1> UnroundedInsideFactor) : ptf_tmin;
+void [[]] ProcessTriTessFactorsMax(in float<3> RawEdgeFactors, in float<1> InsideScale, out float<3> RoundedEdgeFactors, out float<1> RoundedInsideFactor, out float<1> UnroundedInsideFactor) : ptf_tmax;
+void [[]] ProcessTriTessFactorsMin(in float<3> RawEdgeFactors, in float<1> InsideScale, out float<3> RoundedEdgeFactors, out float<1> RoundedInsideFactor, out float<1> UnroundedInsideFactor) : ptf_tavg;
+$type1 [[rn]] radians(in float_like<> x);
+$type1 [[rn]] rcp(in any_float<> x) : rcp_approx;
+$type1 [[rn]] reflect(in float_like<c> i, in $type1 n);
+$type1 [[rn]] refract(in float_like<c> i, in $type1 n, in $match<3, 1> float_like ri);
+$type1 [[rn]] reversebits(in any_int<> x);
+$type1 [[rn]] round(in float_like<> x);
+$type1 [[rn]] rsqrt(in float_like<> x);
+$type1 [[rn]] saturate(in any_float<> x);
+$match<1, 0> int<> [[rn,unsigned_op=usign,overload=0]] sign(in numeric<> x);
+$type1 [[rn]] sin(in float_like<> x);
+void [[]] sincos(in float_like<> x, out $type1 s, out $type1 c);
+$type1 [[rn]] sinh(in float_like<> x);
+$type1 [[rn]] smoothstep(in float_like<> a, in $type1 b, in $type1 x);
+void [[]] source_mark();
+$type1 [[rn]] sqrt(in float_like<> x);
+$type1 [[rn]] step(in float_like<> a, in $type1 x);
+$type1 [[rn]] tan(in float_like<> x);
+$type1 [[rn]] tanh(in float_like<> x);
+float_like<4> [[ro]] tex1D(in sampler1d s, in float_like x) : tex1d;
+float_like<4> [[ro]] tex1D(in sampler1d s, in float_like<1> x, in $type2 ddx, in $type2 ddy) : tex1d_dd;
+float_like<4> [[ro]] tex1Dbias(in sampler1d s, in float_like<4> x) : tex1d_bias;
+float_like<4> [[ro]] tex1Dgrad(in sampler1d s, in float_like<1> x, in $type2 ddx, in $type2 ddy) : tex1d_dd;
+float_like<4> [[ro]] tex1Dlod(in sampler1d s, in float_like<4> x) : tex1d_lod;
+float_like<4> [[ro]] tex1Dproj(in sampler1d s, in float_like<4> x) : tex1d_proj;
+float_like<4> [[ro]] tex2D(in sampler2d s, in float_like<2> x) : tex2d;
+float_like<4> [[ro]] tex2D(in sampler2d s, in float_like<2> x, in $type2 ddx, in $type2 ddy) : tex2d_dd;
+float_like<4> [[ro]] tex2Dbias(in sampler2d s, in float_like<4> x) : tex2d_bias;
+float_like<4> [[ro]] tex2Dgrad(in sampler2d s, in float_like<2> x, in $type2 ddx, in $type2 ddy) : tex2d_dd;
+float_like<4> [[ro]] tex2Dlod(in sampler2d s, in float_like<4> x) : tex2d_lod;
+float_like<4> [[ro]] tex2Dproj(in sampler2d s, in float_like<4> x) : tex2d_proj;
+float_like<4> [[ro]] tex3D(in sampler3d s, in float_like<3> x) : tex3d;
+float_like<4> [[ro]] tex3D(in sampler3d s, in float_like<3> x, in $type2 ddx, in $type2 ddy) : tex3d_dd;
+float_like<4> [[ro]] tex3Dbias(in sampler3d s, in float_like<4> x) : tex3d_bias;
+float_like<4> [[ro]] tex3Dgrad(in sampler3d s, in float_like<3> x, in $type2 ddx, in $type2 ddy) : tex3d_dd;
+float_like<4> [[ro]] tex3Dlod(in sampler3d s, in float_like<4> x) : tex3d_lod;
+float_like<4> [[ro]] tex3Dproj(in sampler3d s, in float_like<4> x) : tex3d_proj;
+float_like<4> [[ro]] texCUBE(in sampler_cube s, in float_like<3> x) : texcube;
+float_like<4> [[ro]] texCUBE(in sampler_cube s, in float_like<3> x, in $type2 ddx, in $type2 ddy) : texcube_dd;
+float_like<4> [[ro]] texCUBEbias(in sampler_cube s, in float_like<4> x) : texcube_bias;
+float_like<4> [[ro]] texCUBEgrad(in sampler_cube s, in float_like<3> x, in $type2 ddx, in $type2 ddy) : texcube_dd;
+float_like<4> [[ro]] texCUBElod(in sampler_cube s, in float_like<4> x) : texcube_lod;
+float_like<4> [[ro]] texCUBEproj(in sampler_cube s, in float_like<4> x) : texcube_proj;
+$match<1, 1> any<c, r> [[rn]] transpose(in any<r, c> x);
+$type1 [[rn]] trunc(in float_like<> x);
+bool [[rn]] CheckAccessFullyMapped(in uint_only status) : check_access_fully_mapped;
+uint<c> [[rn]] AddUint64(in $match<1, 0> uint<c> a, in $match<2, 0> uint<c> b) : adduint64;
+$type1 [[rn]] NonUniformResourceIndex(in any<> index) : nonuniform_resource_index;
+
+// Wave intrinsics. Only those that depend on the exec mask are marked as wave-sensitive
+bool   [[wv]] WaveIsFirstLane();
+uint   [[ro]] WaveGetLaneIndex();
+uint   [[rn]] WaveGetLaneCount();
+bool   [[wv]] WaveActiveAnyTrue(in bool cond);
+bool   [[wv]] WaveActiveAllTrue(in bool cond);
+$match<1, 0> bool<> [[wv]] WaveActiveAllEqual(in any<> value);
+uint<4> [[wv]] WaveActiveBallot(in bool cond);
+$type1 [[]] WaveReadLaneAt(in any<> value, in uint lane);
+$type1 [[wv]] WaveReadLaneFirst(in any<> value);
+uint   [[wv]] WaveActiveCountBits(in bool value);
+$type1 [[unsigned_op=WaveActiveUSum,wv]] WaveActiveSum(in numeric<> value);
+$type1 [[unsigned_op=WaveActiveUProduct,wv]] WaveActiveProduct(in numeric<> value);
+$type1 [[wv]] WaveActiveBitAnd(in uint_only<> value);
+$type1 [[wv]] WaveActiveBitOr(in uint_only<> value);
+$type1 [[wv]] WaveActiveBitXor(in uint_only<> value);
+$type1 [[unsigned_op=WaveActiveUMin,wv]] WaveActiveMin(in numeric<> value);
+$type1 [[unsigned_op=WaveActiveUMax,wv]] WaveActiveMax(in numeric<> value);
+uint   [[wv]] WavePrefixCountBits(in bool value);
+$type1 [[unsigned_op=WavePrefixUSum,wv]] WavePrefixSum(in numeric<> value);
+$type1 [[unsigned_op=WavePrefixUProduct,wv]] WavePrefixProduct(in numeric<> value);
+uint<4> [[wv]] WaveMatch(in numeric<> value);
+$type1 [[wv]] WaveMultiPrefixBitAnd(in any_int<> value, in uint<4> mask);
+$type1 [[wv]] WaveMultiPrefixBitOr(in any_int<> value, in uint<4> mask);
+$type1 [[wv]] WaveMultiPrefixBitXor(in any_int<> value, in uint<4> mask);
+uint [[wv]] WaveMultiPrefixCountBits(in bool value, in uint<4> mask);
+$type1 [[unsigned_op=WaveMultiPrefixUProduct,wv]] WaveMultiPrefixProduct(in numeric<> value, in uint<4> mask);
+$type1 [[unsigned_op=WaveMultiPrefixUSum,wv]] WaveMultiPrefixSum(in numeric<> value, in uint<4> mask);
+$type1 [[]] QuadReadLaneAt(in numeric<> value, in uint quadLane);
+$type1 [[]] QuadReadAcrossX(in numeric<> value);
+$type1 [[]] QuadReadAcrossY(in numeric<> value);
+$type1 [[]] QuadReadAcrossDiagonal(in numeric<> value);
+bool [[]] QuadAny(in bool cond);
+bool [[]] QuadAll(in bool cond);
+
+// Raytracing
+void [[]]  TraceRay(in acceleration_struct AccelerationStructure, in uint RayFlags, in uint InstanceInclusionMask, in uint RayContributionToHitGroupIndex, in uint MultiplierForGeometryContributionToHitGroupIndex, in uint MissShaderIndex, in ray_desc Ray, inout udt Payload);
+
+bool [[]]  ReportHit(in float THit, in uint HitKind, in udt Attributes);
+void [[]]  CallShader(in uint ShaderIndex, inout udt Parameter);
+void [[]]  IgnoreHit();
+void [[]]  AcceptHitAndEndSearch();
+uint<3> [[rn]] DispatchRaysIndex();
+uint<3> [[rn]] DispatchRaysDimensions();
+// group: Ray Vectors
+float<3> [[rn]] WorldRayOrigin();
+float<3> [[rn]] WorldRayDirection();
+float<3> [[rn]] ObjectRayOrigin();
+float<3> [[rn]] ObjectRayDirection();
+// group: RayT
+float [[rn]] RayTMin();
+float [[rn]] RayTCurrent();
+// group: Raytracing uint System Values
+uint [[rn]] PrimitiveIndex();
+uint [[rn]] InstanceID();
+uint [[rn]] InstanceIndex();
+uint [[rn]] GeometryIndex();
+uint [[rn]] HitKind();
+uint [[rn]] RayFlags();
+// group: Ray Transforms
+float<3,4> [[rn]] ObjectToWorld();
+float<3,4> [[rn]] WorldToObject();
+float<3,4> [[rn]] ObjectToWorld3x4();
+float<3,4> [[rn]] WorldToObject3x4();
+float<4,3> [[rn]] ObjectToWorld4x3();
+float<4,3> [[rn]] WorldToObject4x3();
+
+// Packed dot products with accumulate:
+$type3 [[rn]] dot4add_u8packed(in uint a, in $type1 b, in uint c);
+$type3 [[rn]] dot4add_i8packed(in uint a, in $type1 b, in int c);
+$type3 [[rn]] dot2add(in float16_t<2> a, in $type1 b, in float c);
+
+// Unpacking intrinsics
+int16_t<4> [[rn]] unpack_s8s16(in p32i8 pk);
+uint16_t<4> [[rn]] unpack_u8u16(in p32u8 pk);
+int<4> [[rn]] unpack_s8s32(in p32i8 pk);
+uint<4> [[rn]] unpack_u8u32(in p32u8 pk);
+
+// Packing intrinsics
+p32i8 [[rn]] pack_s8(in any_int16or32<4> v);
+p32u8 [[rn]] pack_u8(in any_int16or32<4> v);
+p32i8 [[rn]] pack_clamp_s8(in sint16or32_only<4> v);
+p32u8 [[rn]] pack_clamp_u8(in sint16or32_only<4> v);
+
+// Mesh shader intrinsics:
+void [[]] SetMeshOutputCounts(in uint numVertices, in uint numPrimitives);
+
+// Amplification shader intrinsics:
+void [[]] DispatchMesh(in uint threadGroupCountX, in uint threadGroupCountY, in uint threadGroupCountZ, in udt meshPayload);
+
+// Return true if the current lane is a helper lane
+bool [[ro]] IsHelperLane();
+
+// HL Op for allocating ray query object that default constructor uses
+uint [[hidden]] AllocateRayQuery(in uint flags);
+
+resource [[hidden]] CreateResourceFromHeap(in uint index);
+
+// Replacement for vector logical &&, ||, and ternary conditional operators,
+// For use when HLSL changes to support short-circuiting and only scalar
+// conditions to maintain clarity.
+$match<1, 0> bool<> [[rn]] and(in bool<> x, in $type1 y);
+$match<1, 0> bool<> [[rn]] or(in bool<> x, in $type1 y);
+$type2 [[rn]] select(in bool<> cond, in $match<1, 2> any<> t, in $type2 f);
+$type2 [[rn]] select(in bool cond, in any_sampler t, in $type2 f);
+
+// Work Graph intrinsics
+void [[]] Barrier(in uint MemoryTypeFlags, in uint SemanticFlags);
+void [[]] Barrier(in NodeRecordOrUAV o, in uint SemanticFlags);
+
+uint [[]] GetRemainingRecursionLevels();
+
+} namespace
+
+
+// SPIRV Change Starts
+namespace VkIntrinsics {
+
+u64 [[]] ReadClock(in uint scope);
+$funcT [[ro]] RawBufferLoad(in u64 addr);
+$funcT [[ro]] RawBufferLoad(in u64 addr, in uint alignment);
+void [[]] RawBufferStore(in u64 addr, in $funcT value);
+void [[]] RawBufferStore(in u64 addr, in $funcT value, in uint alignment);
+void [[]] ext_execution_mode(in uint mode, ...);
+void [[]] ext_execution_mode_id(in uint mode, ...);
+
+} namespace
+// SPIRV Change Ends
+
+namespace StreamMethods {
+
+void [[]] Append(in $match<-1, 1> void x) : stream_append;
+void [[]] RestartStrip() : stream_restart;
+
+} namespace
+
+namespace Texture1DMethods {
+// Use float for DXIL don't support f16 on CalcLOD.
+float [[ro]] CalculateLevelOfDetail(in any_sampler s, in float<1> x) : tex1d_t_calc_lod;
+float [[ro]] CalculateLevelOfDetailUnclamped(in any_sampler s, in float<1> x) : tex1d_t_calc_lod_unclamped;
+void [[]] GetDimensions(in uint x, out uint_only width, out $type2 levels) : resinfo_uint;
+void [[]] GetDimensions(in uint x, out float_like width, out $type2 levels) : resinfo;
+void [[]] GetDimensions(out uint_only width) : resinfo_o;
+void [[]] GetDimensions(out float_like width) : resinfo_o;
+$classT [[ro]] Load(in int<2> x) : tex1d_t_load;
+$classT [[ro]] Load(in int<2> x, in int<1> o) : tex1d_t_load_o;
+$classT [[]] Load(in int<2> x, in int<1> o, out uint_only status) : tex1d_t_load_o_s;
+$classT [[ro]] Sample(in sampler s, in float<1> x) : tex1d_t;
+$classT [[ro]] Sample(in sampler s, in float<1> x, in int<1> o) : tex1d_t_o;
+$classT [[ro]] SampleBias(in sampler s, in float<1> x, in float bias) : tex1d_t_bias;
+$classT [[ro]] SampleBias(in sampler s, in float<1> x, in float bias, in int<1> o) : tex1d_t_bias_o;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<1> x, in float compareValue) : tex1d_t_comp;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<1> x, in float compareValue, in int<1> o) : tex1d_t_comp_o;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<1> x, in float compareValue, in float bias) : tex1d_t_comp_bias;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<1> x, in float compareValue, in float bias, in int<1> o) : tex1d_t_comp_bias_o;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<1> x, in float compareValue, in $type2 ddx, in $type2 ddy) : tex1d_t_comp_dd;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<1> x, in float compareValue, in $type2 ddx, in $type2 ddy, in int<1> o) : tex1d_t_comp_dd_o;
+float_like [[ro]] SampleCmpLevel(in sampler_cmp s, in float<1> x, in float compareValue, in float lod);
+float_like [[ro]] SampleCmpLevel(in sampler_cmp s, in float<1> x, in float compareValue, in float lod, in int<1> o);
+float_like [[ro]] SampleCmpLevelZero(in sampler_cmp s, in float<1> x, in float compareValue) : tex1d_t_comp_lz;
+float_like [[ro]] SampleCmpLevelZero(in sampler_cmp s, in float<1> x, in float compareValue, in int<1> o) : tex1d_t_comp_lz_o;
+$classT [[ro]] SampleGrad(in sampler s, in float<1> x, in $type2 ddx, in $type2 ddy) : tex1d_t_dd;
+$classT [[ro]] SampleGrad(in sampler s, in float<1> x, in $type2 ddx, in $type2 ddy, in int<1> o) : tex1d_t_dd_o;
+$classT [[ro]] SampleLevel(in sampler s, in float<1> x, in float lod) : tex1d_t_lod;
+$classT [[ro]] SampleLevel(in sampler s, in float<1> x, in float lod, in int<1> o) : tex1d_t_lod_o;
+$classT [[ro]] Sample(in sampler s, in float<1> x, in int<1> o, in float clamp) : tex1d_t_o_cl;
+$classT [[]] Sample(in sampler s, in float<1> x, in int<1> o, in float clamp, out uint_only status) : tex1d_t_o_cl_s;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<1> x, in float compareValue, in int<1> o, in float clamp) : tex1d_t_comp_o_cl;
+float_like [[]] SampleCmp(in sampler_cmp s, in float<1> x, in float compareValue, in int<1> o, in float clamp, out uint_only status) : tex1d_t_comp_o_cl_s;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<1> x, in float compareValue, in float bias, in int<1> o, in float clamp) : tex1d_t_comp_bias_o_cl;
+float_like [[]] SampleCmpBias(in sampler_cmp s, in float<1> x, in float compareValue, in float bias, in int<1> o, in float clamp, out uint_only status) : tex1d_t_comp_bias_o_cl_s;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<1> x, in float compareValue, in $type2 ddx, in $type2 ddy, in int<1> o, in float clamp) : tex1d_t_comp_dd_o_cl;
+float_like [[]] SampleCmpGrad(in sampler_cmp s, in float<1> x, in float compareValue, in $type2 ddx, in $type2 ddy, in int<1> o, in float clamp, out uint_only status) : tex1d_t_comp_dd_o_cl_s;
+float_like [[]] SampleCmpLevel(in sampler_cmp s, in float<1> x, in float compareValue, in float lod, in int<1> o, out uint_only status);
+float_like [[]] SampleCmpLevelZero(in sampler_cmp s, in float<1> x, in float compareValue, in int<1> o, out uint_only status) : tex1d_t_comp_o_s;
+$classT [[]] SampleLevel(in sampler s, in float<1> x, in float lod, in int<1> o, out uint_only status) : tex1d_t_lod_o_s;
+$classT [[ro]] SampleBias(in sampler s, in float<1> x, in float bias, in int<1> o, in float clamp) : tex1d_t_bias_o_cl;
+$classT [[]] SampleBias(in sampler s, in float<1> x, in float bias, in int<1> o, in float clamp, out uint_only status) : tex1d_t_bias_o_cl_s;
+$classT [[]] SampleGrad(in sampler s, in float<1> x, in $type2 ddx, in $type2 ddy, in int<1> o, in float clamp) : tex1d_t_dd_o_cl;
+$classT [[]] SampleGrad(in sampler s, in float<1> x, in $type2 ddx, in $type2 ddy, in int<1> o, in float clamp, out uint_only status) : tex1d_t_dd_o_cl_s;
+} namespace
+
+namespace Texture1DArrayMethods {
+
+float [[ro]] CalculateLevelOfDetail(in any_sampler s, in float<1> x) : tex1d_t_calc_lod_array;
+float [[ro]] CalculateLevelOfDetailUnclamped(in any_sampler s, in float<1> x) : tex1d_t_calc_lod_unclamped_array;
+void [[]] GetDimensions(in uint x, out uint_only width, out $type2 elements, out $type2 levels) : resinfo_uint;
+void [[]] GetDimensions(in uint x, out float_like width, out $type2 elements, out $type2 levels) : resinfo;
+void [[]] GetDimensions(out uint_only width, out $type1 elements) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 elements) : resinfo_o;
+$classT [[ro]] Load(in int<3> x) : tex1d_t_load_array;
+$classT [[ro]] Load(in int<3> x, in int<1> o) : tex1d_t_load_array_o;
+$classT [[]] Load(in int<3> x, in int<1> o, out uint_only status) : tex1d_t_load_array_o_s;
+$classT [[ro]] Sample(in sampler s, in float<2> x) : tex1d_t_array;
+$classT [[ro]] Sample(in sampler s, in float<2> x, in int<1> o) : tex1d_t_array_o;
+$classT [[ro]] SampleBias(in sampler s, in float<2> x, in float bias) : tex1d_t_bias_array;
+$classT [[ro]] SampleBias(in sampler s, in float<2> x, in float bias, in int<1> o) : tex1d_t_bias_array_o;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<2> x, in float compareValue) : tex1d_t_comp_array;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<2> x, in float compareValue, in int<1> o) : tex1d_t_comp_array_o;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<2> x, in float compareValue, in float bias) : tex1d_t_comp_bias_array;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<2> x, in float compareValue, in float bias, in int<1> o) : tex1d_t_comp_bias_array_o;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<2> x, in float compareValue, in $match<2, 2> float<1> ddx, in $match<2, 2> float<1> ddy) : tex1d_t_comp_dd_array;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<2> x, in float compareValue, in $match<2, 2> float<1> ddx, in $match<2, 2> float<1> ddy, in int<1> o) : tex1d_t_comp_dd_array_o;
+float_like [[ro]] SampleCmpLevel(in sampler_cmp s, in float<2> x, in float compareValue, in float lod);
+float_like [[ro]] SampleCmpLevel(in sampler_cmp s, in float<2> x, in float compareValue, in float lod, in int<1> o);
+float_like [[ro]] SampleCmpLevelZero(in sampler_cmp s, in float<2> x, in float compareValue) : tex1d_t_comp_lz_array;
+float_like [[ro]] SampleCmpLevelZero(in sampler_cmp s, in float<2> x, in float compareValue, in int<1> o) : tex1d_t_comp_lz_array_o;
+$classT [[ro]] SampleGrad(in sampler s, in float<2> x, in $match<2, 2> float<1> ddx, in $match<2, 2> float<1> ddy) : tex1d_t_dd_array;
+$classT [[ro]] SampleGrad(in sampler s, in float<2> x, in $match<2, 2> float<1> ddx, in $match<2, 2> float<1> ddy, in int<1> o) : tex1d_t_dd_array_o;
+$classT [[ro]] SampleLevel(in sampler s, in float<2> x, in float lod) : tex1d_t_lod_array;
+$classT [[ro]] SampleLevel(in sampler s, in float<2> x, in float lod, in int<1> o) : tex1d_t_lod_array_o;
+$classT [[ro]] Sample(in sampler s, in float<2> x, in int<1> o, in float clamp) : tex1d_t_array_o_cl;
+$classT [[]] Sample(in sampler s, in float<2> x, in int<1> o, in float clamp, out uint_only status) : tex1d_t_array_o_cl_s;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<2> x, in float compareValue, in int<1> o, in float clamp) : tex1d_t_comp_array_o_cl;
+float_like [[]] SampleCmp(in sampler_cmp s, in float<2> x, in float compareValue, in int<1> o, in float clamp, out uint_only status) : tex1d_t_comp_array_o_cl_s;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<2> x, in float compareValue, in float bias, in int<1> o, in float clamp) : tex1d_t_comp_bias_array_o_cl;
+float_like [[]] SampleCmpBias(in sampler_cmp s, in float<2> x, in float compareValue, in float bias, in int<1> o, in float clamp, out uint_only status) : tex1d_t_comp_bias_array_o_cl_s;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<2> x, in float compareValue, in $match<2, 2> float<1> ddx, in $match<2, 2> float<1> ddy, in int<1> o, in float clamp) : tex1d_t_comp_dd_array_o_cl;
+float_like [[]] SampleCmpGrad(in sampler_cmp s, in float<2> x, in float compareValue, in $match<2, 2> float<1> ddx, in $match<2, 2> float<1> ddy, in int<1> o, in float clamp, out uint_only status) : tex1d_t_comp_dd_array_o_cl_s;
+float_like [[]] SampleCmpLevel(in sampler_cmp s, in float<2> x, in float compareValue, in float lod, in int<1> o, out uint_only status);
+float_like [[]] SampleCmpLevelZero(in sampler_cmp s, in float<2> x, in float compareValue, in int<1> o, out uint_only status) : tex1d_t_comp_array_o_s;
+$classT [[]] SampleLevel(in sampler s, in float<2> x, in float lod, in int<1> o, out uint_only status) : tex1d_t_lod_array_o_s;
+$classT [[ro]] SampleBias(in sampler s, in float<2> x, in float bias, in int<1> o, in float clamp) : tex1d_t_bias_array_o_cl;
+$classT [[]] SampleBias(in sampler s, in float<2> x, in float bias, in int<1> o, in float clamp, out uint_only status) : tex1d_t_bias_array_o_cl_s;
+$classT [[ro]] SampleGrad(in sampler s, in float<2> x, in $match<2, 2> float<1> ddx, in $match<2, 2> float<1> ddy, in int<1> o, in float clamp) : tex1d_t_dd_array_o_cl;
+$classT [[]] SampleGrad(in sampler s, in float<2> x, in $match<2, 2> float<1> ddx, in $match<2, 2> float<1> ddy, in int<1> o, in float clamp, out uint_only status) : tex1d_t_dd_array_o_cl_s;
+} namespace
+
+namespace Texture2DMethods {
+
+float [[ro]] CalculateLevelOfDetail(in any_sampler s, in float<2> x) : tex2d_t_calc_lod;
+float [[ro]] CalculateLevelOfDetailUnclamped(in any_sampler s, in float<2> x) : tex2d_t_calc_lod_unclamped;
+$match<0, -1> void<4> [[ro]] Gather(in sampler s, in float<2> x) : tex2d_t_gather;
+$match<0, -1> void<4> [[ro]] Gather(in sampler s, in float<2> x, in int<2> o) : tex2d_t_gather_o;
+$match<0, -1> void<4> [[ro]] GatherAlpha(in sampler s, in float<2> x) : tex2d_t_gather_alpha;
+$match<0, -1> void<4> [[ro]] GatherAlpha(in sampler s, in float<2> x, in int<2> o) : tex2d_t_gather_alpha_o;
+$match<0, -1> void<4> [[ro]] GatherAlpha(in sampler s, in float<2> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_alpha_o4;
+$match<0, -1> void<4> [[ro]] GatherBlue(in sampler s, in float<2> x) : tex2d_t_gather_blue;
+$match<0, -1> void<4> [[ro]] GatherBlue(in sampler s, in float<2> x, in int<2> o) : tex2d_t_gather_blue_o;
+$match<0, -1> void<4> [[ro]] GatherBlue(in sampler s, in float<2> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_blue_o4;
+$match<0, -1> void<4> [[ro]] GatherCmp(in sampler_cmp s, in float<2> x, in float compareValue) : tex2d_t_gather_comp;
+$match<0, -1> void<4> [[ro]] GatherCmp(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o) : tex2d_t_gather_comp_o;
+$match<0, -1> void<4> [[ro]] GatherCmpAlpha(in sampler_cmp s, in float<2> x, in float compareValue) : tex2d_t_gather_comp_alpha;
+$match<0, -1> void<4> [[ro]] GatherCmpAlpha(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o) : tex2d_t_gather_comp_alpha_o;
+$match<0, -1> void<4> [[ro]] GatherCmpAlpha(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_comp_alpha_o4;
+$match<0, -1> void<4> [[ro]] GatherCmpBlue(in sampler_cmp s, in float<2> x, in float compareValue) : tex2d_t_gather_comp_blue;
+$match<0, -1> void<4> [[ro]] GatherCmpBlue(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o) : tex2d_t_gather_comp_blue_o;
+$match<0, -1> void<4> [[ro]] GatherCmpBlue(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_comp_blue_o4;
+$match<0, -1> void<4> [[ro]] GatherCmpGreen(in sampler_cmp s, in float<2> x, in float compareValue) : tex2d_t_gather_comp_green;
+$match<0, -1> void<4> [[ro]] GatherCmpGreen(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o) : tex2d_t_gather_comp_green_o;
+$match<0, -1> void<4> [[ro]] GatherCmpGreen(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_comp_green_o4;
+$match<0, -1> void<4> [[ro]] GatherCmpRed(in sampler_cmp s, in float<2> x, in float compareValue) : tex2d_t_gather_comp_red;
+$match<0, -1> void<4> [[ro]] GatherCmpRed(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o) : tex2d_t_gather_comp_red_o;
+$match<0, -1> void<4> [[ro]] GatherCmpRed(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_comp_red_o4;
+$match<0, -1> void<4> [[ro]] GatherGreen(in sampler s, in float<2> x) : tex2d_t_gather_green;
+$match<0, -1> void<4> [[ro]] GatherGreen(in sampler s, in float<2> x, in int<2> o) : tex2d_t_gather_green_o;
+$match<0, -1> void<4> [[ro]] GatherGreen(in sampler s, in float<2> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_green_o4;
+$match<0, -1> void<4> [[ro]] GatherRed(in sampler s, in float<2> x) : tex2d_t_gather_red;
+$match<0, -1> void<4> [[ro]] GatherRed(in sampler s, in float<2> x, in int<2> o) : tex2d_t_gather_red_o;
+$match<0, -1> void<4> [[ro]] GatherRed(in sampler s, in float<2> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_red_o4;
+void [[]] GetDimensions(in uint x, out uint_only width, out $type2 height, out $type2 levels) : resinfo_uint;
+void [[]] GetDimensions(in uint x, out float_like width, out $type2 height, out $type2 levels) : resinfo;
+void [[]] GetDimensions(out uint_only width, out $type1 height) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 height) : resinfo_o;
+$classT [[ro]] Load(in int<3> x) : tex2d_t_load;
+$classT [[ro]] Load(in int<3> x, in int<2> o) : tex2d_t_load_o;
+$classT [[]] Load(in int<3> x, in int<2> o, out uint_only status) : tex2d_t_load_o_s;
+$classT [[ro]] Sample(in sampler s, in float<2> x) : tex2d_t;
+$classT [[ro]] Sample(in sampler s, in float<2> x, in int<2> o) : tex2d_t_o;
+$classT [[ro]] SampleBias(in sampler s, in float<2> x, in float bias) : tex2d_t_bias;
+$classT [[ro]] SampleBias(in sampler s, in float<2> x, in float bias, in int<2> o) : tex2d_t_bias_o;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<2> x, in float compareValue) : tex2d_t_comp;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o) : tex2d_t_comp_o;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<2> x, in float compareValue, in float bias) : tex2d_t_comp_bias;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<2> x, in float compareValue, in float bias, in int<2> o) : tex2d_t_comp_bias_o;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<2> x, in float compareValue, in $type2 ddx, in $type2 ddy) : tex2d_t_comp_dd;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<2> x, in float compareValue, in $type2 ddx, in $type2 ddy, in int<2> o) : tex2d_t_comp_dd_o;
+float_like [[ro]] SampleCmpLevel(in sampler_cmp s, in float<2> x, in float compareValue, in float lod);
+float_like [[ro]] SampleCmpLevel(in sampler_cmp s, in float<2> x, in float compareValue, in float lod, in int<2> o);
+float_like [[ro]] SampleCmpLevelZero(in sampler_cmp s, in float<2> x, in float compareValue) : tex2d_t_comp_lz;
+float_like [[ro]] SampleCmpLevelZero(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o) : tex2d_t_comp_lz_o;
+$classT [[ro]] SampleGrad(in sampler s, in float<2> x, in $type2 ddx, in $type2 ddy) : tex2d_t_dd;
+$classT [[ro]] SampleGrad(in sampler s, in float<2> x, in $type2 ddx, in $type2 ddy, in int<2> o) : tex2d_t_dd_o;
+$classT [[ro]] SampleLevel(in sampler s, in float<2> x, in float lod) : tex2d_t_lod;
+$classT [[ro]] SampleLevel(in sampler s, in float<2> x, in float lod, in int<2> o) : tex2d_t_lod_o;
+$classT [[ro]] Sample(in sampler s, in float<2> x, in int<2> o, in float clamp) : tex2d_t_o_cl;
+$classT [[]] Sample(in sampler s, in float<2> x, in int<2> o, in float clamp, out uint_only status) : tex2d_t_o_cl_s;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o, in float clamp) : tex2d_t_comp_o_cl;
+float_like [[]] SampleCmp(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o, in float clamp, out uint_only status) : tex2d_t_comp_o_cl_s;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<2> x, in float compareValue, in float bias, in int<2> o, in float clamp) : tex2d_t_comp_bias_o_cl;
+float_like [[]] SampleCmpBias(in sampler_cmp s, in float<2> x, in float compareValue, in float bias, in int<2> o, in float clamp, out uint_only status) : tex2d_t_comp_bias_o_cl_s;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<2> x, in float compareValue, in $type2 ddx, in $type2 ddy, in int<2> o, in float clamp) : tex2d_t_comp_dd_o_cl;
+float_like [[]] SampleCmpGrad(in sampler_cmp s, in float<2> x, in float compareValue, in $type2 ddx, in $type2 ddy, in int<2> o, in float clamp, out uint_only status) : tex2d_t_comp_dd_o_cl_s;
+float_like [[]] SampleCmpLevel(in sampler_cmp s, in float<2> x, in float compareValue, in float lod, in int<2> o, out uint_only status);
+float_like [[]] SampleCmpLevelZero(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_comp_o_s;
+$classT [[]] SampleLevel(in sampler s, in float<2> x, in float lod, in int<2> o, out uint_only status) : tex2d_t_lod_o_s;
+$classT [[ro]] SampleBias(in sampler s, in float<2> x, in float bias, in int<2> o, in float clamp) : tex2d_t_bias_o_cl;
+$classT [[]] SampleBias(in sampler s, in float<2> x, in float bias, in int<2> o, in float clamp, out uint_only status) : tex2d_t_bias_o_cl_s;
+$classT [[ro]] SampleGrad(in sampler s, in float<2> x, in $type2 ddx, in $type2 ddy, in int<2> o, in float clamp) : tex2d_t_dd_o_cl;
+$classT [[]] SampleGrad(in sampler s, in float<2> x, in $type2 ddx, in $type2 ddy, in int<2> o, in float clamp, out uint_only status) : tex2d_t_dd_o_cl_s;
+$match<0, -1> void<4> [[]] Gather(in sampler s, in float<2> x, in int<2> o, out uint_only status) : tex2d_t_gather_o_s;
+$match<0, -1> void<4> [[]] GatherRed(in sampler s, in float<2> x, in int<2> o, out uint_only status) : tex2d_t_gather_red_o_s;
+$match<0, -1> void<4> [[]] GatherRed(in sampler s, in float<2> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_red_o4_s;
+$match<0, -1> void<4> [[]] GatherGreen(in sampler s, in float<2> x, in int<2> o, out uint_only status) : tex2d_t_gather_green_o_s;
+$match<0, -1> void<4> [[]] GatherGreen(in sampler s, in float<2> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_green_o4_s;
+$match<0, -1> void<4> [[]] GatherBlue(in sampler s, in float<2> x, in int<2> o, out uint_only status) : tex2d_t_gather_blue_o_s;
+$match<0, -1> void<4> [[]] GatherBlue(in sampler s, in float<2> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_blue_o4_s;
+$match<0, -1> void<4> [[]] GatherAlpha(in sampler s, in float<2> x, in int<2> o, out uint_only status) : tex2d_t_gather_alpha_o_s;
+$match<0, -1> void<4> [[]] GatherAlpha(in sampler s, in float<2> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_alpha_o4_s;
+
+$match<0, -1> void<4> [[]] GatherCmp(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_gather_comp_o_s;
+$match<0, -1> void<4> [[]] GatherCmpRed(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_gather_comp_red_o_s;
+$match<0, -1> void<4> [[]] GatherCmpGreen(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_gather_comp_green_o_s;
+$match<0, -1> void<4> [[]] GatherCmpBlue(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_gather_comp_blue_o_s;
+$match<0, -1> void<4> [[]] GatherCmpAlpha(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_gather_comp_alpha_o_s;
+
+$match<0, -1> void<4> [[]] GatherCmpRed(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_comp_red_o4_s;
+$match<0, -1> void<4> [[]] GatherCmpGreen(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_comp_green_o4_s;
+$match<0, -1> void<4> [[]] GatherCmpBlue(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_comp_blue_o4_s;
+$match<0, -1> void<4> [[]] GatherCmpAlpha(in sampler_cmp s, in float<2> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_comp_alpha_o4_s;
+$match<0, -1> void<4> [[ro]] GatherRaw(in sampler s, in float<2> x);
+$match<0, -1> void<4> [[ro]] GatherRaw(in sampler s, in float<2> x, in int<2> o);
+$match<0, -1> void<4> [[]] GatherRaw(in sampler s, in float<2> x, in int<2> o, out uint_only status);
+} namespace
+
+namespace Texture2DMSMethods {
+
+void [[]] GetDimensions(out uint_only width, out $type1 height, out $type2 samples) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 height, out $type2 samples) : resinfo_o;
+float_like<2> [[ro]] GetSamplePosition(in int s) : samplepos;
+$classT [[]] Load(in int<2> x, in int s) : texture2d_ms;
+$classT [[]] Load(in int<2> x, in int s, in int<2> o) : texture2d_ms_o;
+$classT [[]] Load(in int<2> x, in int s, in int<2> o, out uint_only status) : texture2d_ms_o_s;
+
+} namespace
+
+namespace Texture2DArrayMethods {
+
+float [[ro]] CalculateLevelOfDetail(in any_sampler s, in float<2> x) : tex2d_t_calc_lod_array;
+float [[ro]] CalculateLevelOfDetailUnclamped(in any_sampler s, in float<2> x) : tex2d_t_calc_lod_unclamped_array;
+$match<0, -1> void<4> [[ro]] Gather(in sampler s, in float<3> x) : tex2d_t_gather_array;
+$match<0, -1> void<4> [[ro]] Gather(in sampler s, in float<3> x, in int<2> o) : tex2d_t_gather_array_o;
+$match<0, -1> void<4> [[ro]] GatherAlpha(in sampler s, in float<3> x) : tex2d_t_gather_alpha_array;
+$match<0, -1> void<4> [[ro]] GatherAlpha(in sampler s, in float<3> x, in int<2> o) : tex2d_t_gather_alpha_array_o;
+$match<0, -1> void<4> [[ro]] GatherAlpha(in sampler s, in float<3> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_alpha_array_o4;
+$match<0, -1> void<4> [[ro]] GatherBlue(in sampler s, in float<3> x) : tex2d_t_gather_blue_array;
+$match<0, -1> void<4> [[ro]] GatherBlue(in sampler s, in float<3> x, in int<2> o) : tex2d_t_gather_blue_array_o;
+$match<0, -1> void<4> [[ro]] GatherBlue(in sampler s, in float<3> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_blue_array_o4;
+$match<0, -1> void<4> [[ro]] GatherCmp(in sampler_cmp s, in float<3> x, in float compareValue) : tex2d_t_gather_comp_array;
+$match<0, -1> void<4> [[ro]] GatherCmp(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o) : tex2d_t_gather_comp_array_o;
+$match<0, -1> void<4> [[ro]] GatherCmpAlpha(in sampler_cmp s, in float<3> x, in float compareValue) : tex2d_t_gather_comp_alpha_array;
+$match<0, -1> void<4> [[ro]] GatherCmpAlpha(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o) : tex2d_t_gather_comp_alpha_array_o;
+$match<0, -1> void<4> [[ro]] GatherCmpAlpha(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_comp_alpha_array_o4;
+$match<0, -1> void<4> [[ro]] GatherCmpBlue(in sampler_cmp s, in float<3> x, in float compareValue) : tex2d_t_gather_comp_blue_array;
+$match<0, -1> void<4> [[ro]] GatherCmpBlue(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o) : tex2d_t_gather_comp_blue_array_o;
+$match<0, -1> void<4> [[ro]] GatherCmpBlue(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_comp_blue_array_o4;
+$match<0, -1> void<4> [[ro]] GatherCmpGreen(in sampler_cmp s, in float<3> x, in float compareValue) : tex2d_t_gather_comp_green_array;
+$match<0, -1> void<4> [[ro]] GatherCmpGreen(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o) : tex2d_t_gather_comp_green_array_o;
+$match<0, -1> void<4> [[ro]] GatherCmpGreen(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_comp_green_array_o4;
+$match<0, -1> void<4> [[ro]] GatherCmpRed(in sampler_cmp s, in float<3> x, in float compareValue) : tex2d_t_gather_comp_red_array;
+$match<0, -1> void<4> [[ro]] GatherCmpRed(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o) : tex2d_t_gather_comp_red_array_o;
+$match<0, -1> void<4> [[ro]] GatherCmpRed(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_comp_red_array_o4;
+$match<0, -1> void<4> [[ro]] GatherGreen(in sampler s, in float<3> x) : tex2d_t_gather_green_array;
+$match<0, -1> void<4> [[ro]] GatherGreen(in sampler s, in float<3> x, in int<2> o) : tex2d_t_gather_green_array_o;
+$match<0, -1> void<4> [[ro]] GatherGreen(in sampler s, in float<3> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_green_array_o4;
+$match<0, -1> void<4> [[ro]] GatherRed(in sampler s, in float<3> x) : tex2d_t_gather_red_array;
+$match<0, -1> void<4> [[ro]] GatherRed(in sampler s, in float<3> x, in int<2> o) : tex2d_t_gather_red_array_o;
+$match<0, -1> void<4> [[ro]] GatherRed(in sampler s, in float<3> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4) : tex2d_t_gather_red_array_o4;
+void [[]] GetDimensions(in uint x, out uint_only width, out $type2 height, out $type2 elements, out $type2 levels) : resinfo_uint;
+void [[]] GetDimensions(in uint x, out float_like width, out $type2 height, out $type2 elements, out $type2 levels) : resinfo;
+void [[]] GetDimensions(out uint_only width, out $type1 height, out $type1 elements) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 height, out $type1 elements) : resinfo_o;
+$classT [[ro]] Load(in int<4> x) : tex2d_t_load_array;
+$classT [[ro]] Load(in int<4> x, in int<2> o) : tex2d_t_load_array_o;
+$classT [[]] Load(in int<4> x, in int<2> o, out uint_only status) : tex2d_t_load_array_o_s;
+$classT [[ro]] Sample(in sampler s, in float<3> x) : tex2d_t_array;
+$classT [[ro]] Sample(in sampler s, in float<3> x, in int<2> o) : tex2d_t_array_o;
+$classT [[ro]] SampleBias(in sampler s, in float<3> x, in float bias) : tex2d_t_bias_array;
+$classT [[ro]] SampleBias(in sampler s, in float<3> x, in float bias, in int<2> o) : tex2d_t_bias_array_o;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<3> x, in float compareValue) : tex2d_t_comp_array;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o) : tex2d_t_comp_array_o;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<3> x, in float compareValue, in float bias) : tex2d_t_comp_bias_array;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<3> x, in float compareValue, in float bias, in int<2> o) : tex2d_t_comp_bias_array_o;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<3> x, in float compareValue, in $match<2, 2> float<2> ddx, in $match<2, 2> float<2> ddy) : tex2d_t_comp_dd_array;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<3> x, in float compareValue, in $match<2, 2> float<2> ddx, in $match<2, 2> float<2> ddy, in int<2> o) : tex2d_t_comp_dd_array_o;
+float_like [[ro]] SampleCmpLevel(in sampler_cmp s, in float<3> x, in float compareValue, in float lod);
+float_like [[ro]] SampleCmpLevel(in sampler_cmp s, in float<3> x, in float compareValue, in float lod, in int<2> o);
+float_like [[ro]] SampleCmpLevelZero(in sampler_cmp s, in float<3> x, in float compareValue) : tex2d_t_comp_lz_array;
+float_like [[ro]] SampleCmpLevelZero(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o) : tex2d_t_comp_lz_array_o;
+$classT [[ro]] SampleGrad(in sampler s, in float<3> x, in $match<2, 2> float<2> ddx, in $match<2, 2> float<2> ddy) : tex2d_t_dd_array;
+$classT [[ro]] SampleGrad(in sampler s, in float<3> x, in $match<2, 2> float<2> ddx, in $match<2, 2> float<2> ddy, in int<2> o) : tex2d_t_dd_array_o;
+$classT [[ro]] SampleLevel(in sampler s, in float<3> x, in float lod) : tex2d_t_lod_array;
+$classT [[ro]] SampleLevel(in sampler s, in float<3> x, in float lod, in int<2> o) : tex2d_t_lod_array_o;
+$classT [[ro]] Sample(in sampler s, in float<3> x, in int<2> o, in float clamp) : tex2d_t_array_o_cl;
+$classT [[]] Sample(in sampler s, in float<3> x, in int<2> o, in float clamp, out uint_only status) : tex2d_t_array_o_cl_s;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o, in float clamp) : tex2d_t_comp_array_o_cl;
+float_like [[]] SampleCmp(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o, in float clamp, out uint_only status) : tex2d_t_comp_array_o_cl_s;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<3> x, in float compareValue, in float bias, in int<2> o, in float clamp) : tex2d_t_comp_bias_array_o_cl;
+float_like [[]] SampleCmpBias(in sampler_cmp s, in float<3> x, in float compareValue, in float bias, in int<2> o, in float clamp, out uint_only status) : tex2d_t_comp_bias_array_o_cl_s;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<3> x, in float compareValue, in $match<2, 2> float<2> ddx, in $match<2, 2> float<2> ddy, in int<2> o, in float clamp) : tex2d_t_comp_dd_array_o_cl;
+float_like [[]] SampleCmpGrad(in sampler_cmp s, in float<3> x, in float compareValue, in $match<2, 2> float<2> ddx, in $match<2, 2> float<2> ddy, in int<2> o, in float clamp, out uint_only status) : tex2d_t_comp_dd_array_o_cl_s;
+float_like [[]] SampleCmpLevel(in sampler_cmp s, in float<3> x, in float compareValue, in float lod, in int<2> o, out uint_only status);
+float_like [[]] SampleCmpLevelZero(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_comp_array_o_s;
+$classT [[]] SampleLevel(in sampler s, in float<3> x, in float lod, in int<2> o, out uint_only status) : tex2d_t_lod_array_o_s;
+$classT [[ro]] SampleBias(in sampler s, in float<3> x, in float bias, in int<2> o, in float clamp) : tex2d_t_bias_array_o_cl;
+$classT [[]] SampleBias(in sampler s, in float<3> x, in float bias, in int<2> o, in float clamp, out uint_only status) : tex2d_t_bias_array_o_cl_s;
+$classT [[ro]] SampleGrad(in sampler s, in float<3> x, in $match<2, 2> float<2> ddx, in $match<2, 2> float<2> ddy, in int<2> o, in float clamp) : tex2d_t_dd_array_o_cl;
+$classT [[]] SampleGrad(in sampler s, in float<3> x, in $match<2, 2> float<2> ddx, in $match<2, 2> float<2> ddy, in int<2> o, in float clamp, out uint_only status) : tex2d_t_dd_array_o_cl_s;
+$match<0, -1> void<4> [[]] Gather(in sampler s, in float<3> x, in int<2> o, out uint_only status) : tex2d_t_gather_array_o_s;
+$match<0, -1> void<4> [[]] GatherRed(in sampler s, in float<3> x, in int<2> o, out uint_only status) : tex2d_t_gather_red_array_o_s;
+$match<0, -1> void<4> [[]] GatherRed(in sampler s, in float<3> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_red_array_o4_s;
+$match<0, -1> void<4> [[]] GatherGreen(in sampler s, in float<3> x, in int<2> o, out uint_only status) : tex2d_t_gather_green_array_o_s;
+$match<0, -1> void<4> [[]] GatherGreen(in sampler s, in float<3> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_green_array_o4_s;
+$match<0, -1> void<4> [[]] GatherBlue(in sampler s, in float<3> x, in int<2> o, out uint_only status) : tex2d_t_gather_blue_array_o_s;
+$match<0, -1> void<4> [[]] GatherBlue(in sampler s, in float<3> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_blue_array_o4_s;
+$match<0, -1> void<4> [[]] GatherAlpha(in sampler s, in float<3> x, in int<2> o, out uint_only status) : tex2d_t_gather_alpha_array_o_s;
+$match<0, -1> void<4> [[]] GatherAlpha(in sampler s, in float<3> x, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_alpha_array_o4_s;
+$match<0, -1> void<4> [[]] GatherCmp(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_gather_comp_array_o_s;
+$match<0, -1> void<4> [[]] GatherCmpRed(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_gather_comp_red_array_o_s;
+$match<0, -1> void<4> [[]] GatherCmpGreen(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_gather_comp_green_array_o_s;
+$match<0, -1> void<4> [[]] GatherCmpBlue(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_gather_comp_blue_array_o_s;
+$match<0, -1> void<4> [[]] GatherCmpAlpha(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o, out uint_only status) : tex2d_t_gather_comp_alpha_array_o_s;
+$match<0, -1> void<4> [[]] GatherCmpRed(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_comp_red_array_o4_s;
+$match<0, -1> void<4> [[]] GatherCmpGreen(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_comp_green_array_o4_s;
+$match<0, -1> void<4> [[]] GatherCmpBlue(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_comp_blue_array_o4_s;
+$match<0, -1> void<4> [[]] GatherCmpAlpha(in sampler_cmp s, in float<3> x, in float compareValue, in int<2> o1, in int<2> o2, in int<2> o3, in int<2> o4, out uint_only status) : tex2d_t_gather_comp_alpha_array_o4_s;
+$match<0, -1> void<4> [[ro]] GatherRaw(in sampler s, in float<3> x);
+$match<0, -1> void<4> [[ro]] GatherRaw(in sampler s, in float<3> x, in int<2> o);
+$match<0, -1> void<4> [[]] GatherRaw(in sampler s, in float<3> x, in int<2> o, out uint_only status);
+} namespace
+
+namespace Texture2DArrayMSMethods {
+
+void [[]] GetDimensions(out uint_only width, out $type1 height, out $type1 elements, out $type1 samples) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 height, out $type1 elements, out $type1 samples) : resinfo_o;
+float_like<2> [[ro]] GetSamplePosition(in int s) : samplepos;
+$classT [[ro]] Load(in int<3> x, in int s) : texture2darray_ms;
+$classT [[ro]] Load(in int<3> x, in int s, in int<2> o) : texture2darray_ms_o;
+$classT [[]] Load(in int<3> x, in int s, in int<2> o, out uint_only status) : texture2darray_ms_o_s;
+
+} namespace
+
+namespace Texture3DMethods {
+
+float [[ro]] CalculateLevelOfDetail(in sampler s, in float<3> x) : tex3d_t_calc_lod;
+float [[ro]] CalculateLevelOfDetailUnclamped(in sampler s, in float<3> x) : tex3d_t_calc_lod_unclamped;
+void [[]] GetDimensions(in uint x, out uint_only width, out $type2 height, out $type2 depth, out $type2 levels) : resinfo_uint;
+void [[]] GetDimensions(in uint x, out float_like width, out $type2 height, out $type2 depth, out $type2 levels) : resinfo;
+void [[]] GetDimensions(out uint_only width, out $type1 height, out $type1 depth) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 height, out $type1 depth) : resinfo_o;
+$classT [[ro]] Load(in int<4> x) : tex3d_t_load;
+$classT [[ro]] Load(in int<4> x, in int<3> o) : tex3d_t_load_o;
+$classT [[]] Load(in int<4> x, in int<3> o, out uint_only status) : tex3d_t_load_o_s;
+$classT [[ro]] Sample(in sampler s, in float<3> x) : tex3d_t;
+$classT [[ro]] Sample(in sampler s, in float<3> x, in int<3> o) : tex3d_t_o;
+$classT [[ro]] SampleBias(in sampler s, in float<3> x, in float bias) : tex3d_t_bias;
+$classT [[ro]] SampleBias(in sampler s, in float<3> x, in float bias, in int<3> o) : tex3d_t_bias_o;
+$classT [[ro]] SampleGrad(in sampler s, in float<3> x, in $type2 ddx, in $type2 ddy) : tex3d_t_dd;
+$classT [[ro]] SampleGrad(in sampler s, in float<3> x, in $type2 ddx, in $type2 ddy, in int<3> o) : tex3d_t_dd_o;
+$classT [[ro]] SampleLevel(in sampler s, in float<3> x, in float lod) : tex3d_t_lod;
+$classT [[ro]] SampleLevel(in sampler s, in float<3> x, in float lod, in int<3> o) : tex3d_t_lod_o;
+$classT [[ro]] Sample(in sampler s, in float<3> x, in int<3> o, in float clamp) : tex3d_t_o_cl;
+$classT [[]] Sample(in sampler s, in float<3> x, in int<3> o, in float clamp, out uint_only status) : tex3d_t_o_cl_s;
+$classT [[]] SampleLevel(in sampler s, in float<3> x, in float lod, in int<3> o, out uint_only status) : tex3d_t_lod_o_s;
+$classT [[ro]] SampleBias(in sampler s, in float<3> x, in float bias, in int<3> o, in float clamp) : tex3d_t_bias_o_cl;
+$classT [[]] SampleBias(in sampler s, in float<3> x, in float bias, in int<3> o, in float clamp, out uint_only status) : tex3d_t_bias_o_cl_s;
+$classT [[ro]] SampleGrad(in sampler s, in float<3> x, in $type2 ddx, in $type2 ddy, in int<3> o, in float clamp) : tex3d_t_dd_o_cl;
+$classT [[]] SampleGrad(in sampler s, in float<3> x, in $type2 ddx, in $type2 ddy, in int<3> o, in float clamp, out uint_only status) : tex3d_t_dd_o_cl_s;
+} namespace
+
+namespace TextureCUBEMethods {
+
+float [[ro]] CalculateLevelOfDetail(in any_sampler s, in float<3> x) : texcube_t_calc_lod;
+float [[ro]] CalculateLevelOfDetailUnclamped(in any_sampler s, in float<3> x) : texcube_t_calc_lod_unclamped;
+$match<0, -1> void<4> [[ro]] Gather(in sampler s, in float<3> x) : texcube_t_gather;
+$match<0, -1> void<4> [[ro]] GatherAlpha(in sampler s, in float<3> x) : texcube_t_gather_alpha;
+$match<0, -1> void<4> [[ro]] GatherBlue(in sampler s, in float<3> x) : texcube_t_gather_blue;
+$match<0, -1> void<4> [[ro]] GatherCmp(in sampler_cmp s, in float<3> x, in float compareValue) : texcube_t_gather_comp;
+$match<0, -1> void<4> [[ro]] GatherCmpAlpha(in sampler_cmp s, in float<3> x, in float compareValue) : texcube_t_gather_comp_alpha;
+$match<0, -1> void<4> [[ro]] GatherCmpBlue(in sampler_cmp s, in float<3> x, in float compareValue) : texcube_t_gather_comp_blue;
+$match<0, -1> void<4> [[ro]] GatherCmpGreen(in sampler_cmp s, in float<3> x, in float compareValue) : texcube_t_gather_comp_green;
+$match<0, -1> void<4> [[ro]] GatherCmpRed(in sampler_cmp s, in float<3> x, in float compareValue) : texcube_t_gather_comp_red;
+$match<0, -1> void<4> [[ro]] GatherGreen(in sampler s, in float<3> x) : texcube_t_gather_green;
+$match<0, -1> void<4> [[ro]] GatherRed(in sampler s, in float<3> x) : texcube_t_gather_red;
+void [[]] GetDimensions(in uint x, out uint_only width, out $type2 height, out $type2 levels) : resinfo_uint;
+void [[]] GetDimensions(in uint x, out float_like width, out $type2 height, out $type2 levels) : resinfo;
+void [[]] GetDimensions(out uint_only width, out $type1 height) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 height) : resinfo_o;
+$classT [[ro]] Sample(in sampler s, in float<3> x) : texcube_t;
+$classT [[ro]] SampleBias(in sampler s, in float<3> x, in float bias) : texcube_t_bias;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<3> x, in float c) : texcube_t_comp;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<3> x, in float compareValue, in float bias) : texcube_t_comp_bias;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<3> x, in float compareValue, in $type2 ddx, in $type2 ddy) : texcube_t_comp_dd;
+float_like [[ro]] SampleCmpLevel(in sampler_cmp s, in float<3> x, in float c, in float lod);
+float_like [[ro]] SampleCmpLevelZero(in sampler_cmp s, in float<3> x, in float c) : texcube_t_comp_lz;
+$classT [[ro]] SampleGrad(in sampler s, in float<3> x, in $type2 ddx, in $type2 ddy) : texcube_t_dd;
+$classT [[ro]] SampleLevel(in sampler s, in float<3> x, in float lod) : texcube_t_lod;
+$classT [[ro]] Sample(in sampler s, in float<3> x, in float clamp) : texcube_t_cl;
+$classT [[]] Sample(in sampler s, in float<3> x, in float clamp, out uint_only status) : texcube_t_cl_s;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<3> x, in float compareValue, in float clamp) : texcube_t_comp_cl;
+float_like [[]] SampleCmp(in sampler_cmp s, in float<3> x, in float compareValue, in float clamp, out uint_only status) : texcube_t_comp_cl_s;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<3> x, in float compareValue, in float bias, in float clamp) : texcube_t_comp_bias_cl;
+float_like [[]] SampleCmpBias(in sampler_cmp s, in float<3> x, in float compareValue, in float bias, in float clamp, out uint_only status) : texcube_t_comp_bias_cl_s;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<3> x, in float compareValue, in $type2 ddx, in $type2 ddy, in float clamp) : texcube_t_comp_dd_o_cl;
+float_like [[]] SampleCmpGrad(in sampler_cmp s, in float<3> x, in float compareValue, in $type2 ddx, in $type2 ddy, in float clamp, out uint_only status) : texcube_t_comp_dd_o_cl_s;
+float_like [[]] SampleCmpLevel(in sampler_cmp s, in float<3> x, in float compareValue, in float lod, out uint_only status);
+float_like [[]] SampleCmpLevelZero(in sampler_cmp s, in float<3> x, in float compareValue, out uint_only status) : texcube_t_comp_s;
+$classT [[]] SampleLevel(in sampler s, in float<3> x, in float lod, out uint_only status) : texcube_t_lod_s;
+$classT [[ro]] SampleBias(in sampler s, in float<3> x, in float bias, in float clamp) : texcube_t_bias_cl;
+$classT [[]] SampleBias(in sampler s, in float<3> x, in float bias, in float clamp, out uint_only status) : texcube_t_bias_cl_s;
+$classT [[ro]] SampleGrad(in sampler s, in float<3> x, in $type2 ddx, in $type2 ddy, in float clamp) : texcube_t_dd_cl;
+$classT [[]] SampleGrad(in sampler s, in float<3> x, in $type2 ddx, in $type2 ddy, in float clamp, out uint_only status) : texcube_t_dd_cl_s;
+$match<0, -1> void<4> [[]] Gather(in sampler s, in float<3> x, out uint_only status) : texcube_t_gather_s;
+$match<0, -1> void<4> [[]] GatherRed(in sampler s, in float<3> x, out uint_only status) : texcube_t_gather_red_s;
+$match<0, -1> void<4> [[]] GatherGreen(in sampler s, in float<3> x, out uint_only status) : texcube_t_gather_green_s;
+$match<0, -1> void<4> [[]] GatherBlue(in sampler s, in float<3> x, out uint_only status) : texcube_t_gather_blue_s;
+$match<0, -1> void<4> [[]] GatherAlpha(in sampler s, in float<3> x, out uint_only status) : texcube_t_gather_alpha_s;
+$match<0, -1> void<4> [[]] GatherCmp(in sampler_cmp s, in float<3> x, in float compareValue, out uint_only status) : texcube_t_gather_comp_s;
+$match<0, -1> void<4> [[]] GatherCmpRed(in sampler_cmp s, in float<3> x, in float compareValue, out uint_only status) : texcube_t_gather_comp_red_s;
+$match<0, -1> void<4> [[]] GatherCmpGreen(in sampler_cmp s, in float<3> x, in float compareValue, out uint_only status) : texcube_t_gather_comp_green_s;
+$match<0, -1> void<4> [[]] GatherCmpBlue(in sampler_cmp s, in float<3> x, in float compareValue, out uint_only status) : texcube_t_gather_comp_blue_s;
+$match<0, -1> void<4> [[]] GatherCmpAlpha(in sampler_cmp s, in float<3> x, in float compareValue, out uint_only status) : texcube_t_gather_comp_alpha_s;
+} namespace
+
+namespace TextureCUBEArrayMethods {
+
+float [[ro]] CalculateLevelOfDetail(in any_sampler s, in float<3> x) : texcube_t_calc_lod_array;
+float [[ro]] CalculateLevelOfDetailUnclamped(in any_sampler s, in float<3> x) : texcube_t_calc_lod_unclamped_array;
+$match<0, -1> void<4> [[ro]] Gather(in sampler s, in float<4> x) : texcube_t_gather_array;
+$match<0, -1> void<4> [[ro]] GatherAlpha(in sampler s, in float<4> x) : texcube_t_gather_alpha_array;
+$match<0, -1> void<4> [[ro]] GatherBlue(in sampler s, in float<4> x) : texcube_t_gather_blue_array;
+$match<0, -1> void<4> [[ro]] GatherCmp(in sampler_cmp s, in float<4> x, in float compareValue) : texcube_t_gather_comp_array;
+$match<0, -1> void<4> [[ro]] GatherCmpAlpha(in sampler_cmp s, in float<4> x, in float compareValue) : texcube_t_gather_comp_alpha_array;
+$match<0, -1> void<4> [[ro]] GatherCmpBlue(in sampler_cmp s, in float<4> x, in float compareValue) : texcube_t_gather_comp_blue_array;
+$match<0, -1> void<4> [[ro]] GatherCmpGreen(in sampler_cmp s, in float<4> x, in float compareValue) : texcube_t_gather_comp_green_array;
+$match<0, -1> void<4> [[ro]] GatherCmpRed(in sampler_cmp s, in float<4> x, in float compareValue) : texcube_t_gather_comp_red_array;
+$match<0, -1> void<4> [[ro]] GatherGreen(in sampler s, in float<4> x) : texcube_t_gather_green_array;
+$match<0, -1> void<4> [[ro]] GatherRed(in sampler s, in float<4> x) : texcube_t_gather_red_array;
+void [[]] GetDimensions(in uint x, out uint_only width, out $type2 height, out $type2 elements, out $type2 levels) : resinfo_uint;
+void [[]] GetDimensions(in uint x, out float_like width, out $type2 height, out $type2 elements, out $type2 levels) : resinfo;
+void [[]] GetDimensions(out uint_only width, out $type1 height, out $type1 elements) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 height, out $type1 elements) : resinfo_o;
+$classT [[ro]] Sample(in sampler s, in float<4> x) : texcube_t_array;
+$classT [[ro]] SampleBias(in sampler s, in float<4> x, in float bias) : texcube_t_bias_array;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<4> x, in float c) : texcube_t_comp_array;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<4> x, in float compareValue, in float bias) : texcube_t_comp_bias_array;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<4> x, in float compareValue, in $match<2, 2> float<3> ddx, in $match<2, 2> float<3> ddy) : texcube_t_comp_dd_array;
+float_like [[ro]] SampleCmpLevel(in sampler_cmp s, in float<4> x, in float c, in float lod);
+float_like [[ro]] SampleCmpLevelZero(in sampler_cmp s, in float<4> x, in float c) : texcube_t_comp_lz_array;
+$classT [[ro]] SampleGrad(in sampler s, in float<4> x, in $match<2, 2> float<3> ddx, in $match<2, 2> float<3> ddy) : texcube_t_dd_array;
+$classT [[ro]] SampleLevel(in sampler s, in float<4> x, in float lod) : texcube_t_lod_array;
+$classT [[ro]] Sample(in sampler s, in float<4> x, in float clamp) : texcube_t_array_cl;
+$classT [[]] Sample(in sampler s, in float<4> x, in float clamp, out uint_only status) : texcube_t_array_cl_s;
+float_like [[ro]] SampleCmp(in sampler_cmp s, in float<4> x, in float compareValue, in float clamp) : texcube_t_comp_array_cl;
+float_like [[]] SampleCmp(in sampler_cmp s, in float<4> x, in float compareValue, in float clamp, out uint_only status) : texcube_t_comp_array_cl_s;
+float_like [[ro]] SampleCmpBias(in sampler_cmp s, in float<4> x, in float compareValue, in float bias, in float clamp) : texcube_t_comp_bias_array_cl;
+float_like [[]] SampleCmpBias(in sampler_cmp s, in float<4> x, in float compareValue, in float bias, in float clamp, out uint_only status) : texcube_t_comp_bias_array_cl_s;
+float_like [[ro]] SampleCmpGrad(in sampler_cmp s, in float<4> x, in float compareValue, in $match<2, 2> float<3> ddx, in $match<2, 2> float<3> ddy, in float clamp) : texcube_t_comp_dd_array_cl;
+float_like [[]] SampleCmpGrad(in sampler_cmp s, in float<4> x, in float compareValue, in $match<2, 2> float<3> ddx, in $match<2, 2> float<3> ddy, in float clamp, out uint_only status) : texcube_t_comp_dd_array_cl_s;
+float_like [[]] SampleCmpLevel(in sampler_cmp s, in float<4> x, in float compareValue, in float lod, out uint_only status);
+float_like [[]] SampleCmpLevelZero(in sampler_cmp s, in float<4> x, in float compareValue, out uint_only status) : texcube_t_comp_array_s;
+$classT [[]] SampleLevel(in sampler s, in float<4> x, in float lod, out uint_only status) : texcube_t_lod_array_s;
+$classT [[ro]] SampleBias(in sampler s, in float<4> x, in float bias, in float clamp) : texcube_t_bias_array_cl;
+$classT [[]] SampleBias(in sampler s, in float<4> x, in float bias, in float clamp, out uint_only status) : texcube_t_bias_array_cl_s;
+$classT [[ro]] SampleGrad(in sampler s, in float<4> x, in $match<2, 2> float<3> ddx, in $match<2, 2> float<3> ddy, in float clamp) : texcube_t_dd_array_cl;
+$classT [[]] SampleGrad(in sampler s, in float<4> x, in $match<2, 2> float<3> ddx, in $match<2, 2> float<3> ddy, in float clamp, out uint_only status) : texcube_t_dd_array_cl_s;
+$match<0, -1> void<4> [[]] Gather(in sampler s, in float<4> x, out uint_only status) : texcube_t_gather_array_s;
+$match<0, -1> void<4> [[]] GatherRed(in sampler s, in float<4> x, out uint_only status) : texcube_t_gather_red_array_s;
+$match<0, -1> void<4> [[]] GatherGreen(in sampler s, in float<4> x, out uint_only status) : texcube_t_gather_green_array_s;
+$match<0, -1> void<4> [[]] GatherBlue(in sampler s, in float<4> x, out uint_only status) : texcube_t_gather_blue_array_s;
+$match<0, -1> void<4> [[]] GatherAlpha(in sampler s, in float<4> x, out uint_only status) : texcube_t_gather_alpha_array_s;
+$match<0, -1> void<4> [[]] GatherCmp(in sampler_cmp s, in float<4> x, in float compareValue, out uint_only status) : texcube_t_gather_comp_array_s;
+$match<0, -1> void<4> [[]] GatherCmpRed(in sampler_cmp s, in float<4> x, in float compareValue, out uint_only status) : texcube_t_gather_comp_red_array_s;
+$match<0, -1> void<4> [[]] GatherCmpGreen(in sampler_cmp s, in float<4> x, in float compareValue, out uint_only status) : texcube_t_gather_comp_green_array_s;
+$match<0, -1> void<4> [[]] GatherCmpBlue(in sampler_cmp s, in float<4> x, in float compareValue, out uint_only status) : texcube_t_gather_comp_blue_array_s;
+$match<0, -1> void<4> [[]] GatherCmpAlpha(in sampler_cmp s, in float<4> x, in float compareValue, out uint_only status) : texcube_t_gather_comp_alpha_array_s;
+} namespace
+
+namespace BufferMethods {
+
+void [[]] GetDimensions(out uint_only width) : bufinfo;
+$classT [[ro]] Load(in int<1> x) : buffer_load;
+$classT [[]] Load(in int<1> x, out uint_only status) : buffer_load_s;
+
+} namespace
+
+namespace RWTexture1DMethods {
+
+void [[]] GetDimensions(out uint_only width) : resinfo_o;
+void [[]] GetDimensions(out float_like width) : resinfo_o;
+$classT [[ro]] Load(in int<1> x) : rwtex1d_load;
+$classT [[]] Load(in int<1> x, out uint_only status) : rwtex1d_load_s;
+} namespace
+
+namespace RWTexture1DArrayMethods {
+
+void [[]] GetDimensions(out uint_only width, out $type1 elements) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 elements) : resinfo_o;
+$classT [[ro]] Load(in int<2> x) : rwtex1d_load_array;
+$classT [[]] Load(in int<2> x, out uint_only status) : rwtex1d_load_array_s;
+} namespace
+
+namespace RWTexture2DMethods {
+
+void [[]] GetDimensions(out uint_only width, out $type1 height) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 height) : resinfo_o;
+$classT [[ro]] Load(in int<2> x) : rwtex2d_load;
+$classT [[]] Load(in int<2> x, out uint_only status) : rwtex2d_load_s;
+} namespace
+
+namespace RWTexture2DArrayMethods {
+
+void [[]] GetDimensions(out uint_only width, out $type1 height, out $type1 elements) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 height, out $type1 elements) : resinfo_o;
+$classT [[ro]] Load(in int<3> x) : rwtex2d_load_array;
+$classT [[]] Load(in int<3> x, out uint_only status) : rwtex2d_load_array_s;
+} namespace
+
+namespace RWTexture2DMSMethods {
+
+void [[]] GetDimensions(out uint_only width, out $type1 height, out $type2 samples);
+void [[]] GetDimensions(out float_like width, out $type1 height, out $type2 samples);
+float_like<2> [[ro]] GetSamplePosition(in int s);
+$classT [[ro]] Load(in int<2> x, in int s);
+$classT [[]] Load(in int<2> x, in int s, out uint_only status);
+} namespace
+
+namespace RWTexture2DMSArrayMethods {
+
+void [[]] GetDimensions(out uint_only width, out $type1 height, out $type1 elements, out $type1 samples);
+void [[]] GetDimensions(out float_like width, out $type1 height, out $type1 elements, out $type1 samples);
+float_like<2> [[ro]] GetSamplePosition(in int s);
+$classT [[ro]] Load(in int<3> x, in int s);
+$classT [[]] Load(in int<3> x, in int s, out uint_only status);
+} namespace
+
+namespace RWTexture3DMethods {
+
+void [[]] GetDimensions(out uint_only width, out $type1 height, out $type1 depth) : resinfo_uint_o;
+void [[]] GetDimensions(out float_like width, out $type1 height, out $type1 depth) : resinfo_o;
+$classT [[ro]] Load(in int<3> x) : rwtex3d_load;
+$classT [[]] Load(in int<3> x, out uint_only status) : rwtex3d_load_s;
+} namespace
+
+namespace RWBufferMethods {
+
+void [[]] GetDimensions(out uint_only width) : bufinfo;
+$classT [[ro]] Load(in int x) : rwbuffer_load;
+$classT [[]] Load(in int x, out uint_only status) : rwbuffer_load_s;
+
+} namespace
+
+namespace ByteAddressBufferMethods {
+
+void [[]] GetDimensions(out uint_only width) : bufinfo;
+$funcT [[ro]] Load(in uint byteOffset) : byteaddress_load;
+uint<2> [[ro]] Load2(in uint byteOffset) : byteaddress_load;
+uint<3> [[ro]] Load3(in uint byteOffset) : byteaddress_load;
+uint<4> [[ro]] Load4(in uint byteOffset) : byteaddress_load;
+$funcT [[]] Load(in uint byteOffset, out uint_only status) : byteaddress_load_s;
+uint<2> [[]] Load2(in uint byteOffset, out uint_only status) : byteaddress_load_s;
+uint<3> [[]] Load3(in uint byteOffset, out uint_only status) : byteaddress_load_s;
+uint<4> [[]] Load4(in uint byteOffset, out uint_only status) : byteaddress_load_s;
+
+} namespace
+
+namespace RWByteAddressBufferMethods {
+
+void [[]] GetDimensions(out uint_only width) : bufinfo;
+$funcT [[ro]] Load(in uint byteOffset) : byteaddress_load;
+uint<2> [[ro]] Load2(in uint byteOffset) : byteaddress_load;
+uint<3> [[ro]] Load3(in uint byteOffset) : byteaddress_load;
+uint<4> [[ro]] Load4(in uint byteOffset) : byteaddress_load;
+$funcT [[]] Load(in uint byteOffset, out uint_only status) : byteaddress_load_s;
+uint<2> [[]] Load2(in uint byteOffset, out uint_only status) : byteaddress_load_s;
+uint<3> [[]] Load3(in uint byteOffset, out uint_only status) : byteaddress_load_s;
+uint<4> [[]] Load4(in uint byteOffset, out uint_only status) : byteaddress_load_s;
+void [[]] Store(in uint byteOffset, in $funcT value) : byteaddress_store;
+void [[]] Store2(in uint byteOffset, in uint<2> value) : byteaddress_store;
+void [[]] Store3(in uint byteOffset, in uint<3> value) : byteaddress_store;
+void [[]] Store4(in uint byteOffset, in uint<4> value) : byteaddress_store;
+// 64-bit integer interlocks
+void [[]] InterlockedAdd64(in uint byteOffset, in u64 value);
+void [[]] InterlockedAdd64(in uint byteOffset, in u64 value, out any_int64 original) : interlockedadd_immediate;
+void [[unsigned_op=InterlockedUMin,overload=1]] InterlockedMin64(in uint byteOffset, in any_int64 value) : interlockedmin;
+void [[unsigned_op=InterlockedUMin,overload=1]] InterlockedMin64(in uint byteOffset, in any_int64 value, out any_int64 original) : interlockedmin_immediate;
+void [[unsigned_op=InterlockedUMax,overload=1]] InterlockedMax64(in uint byteOffset, in any_int64 value) : interlockedmax;
+void [[unsigned_op=InterlockedUMax,overload=1]] InterlockedMax64(in uint byteOffset, in any_int64 value, out any_int64 original) : interlockedmax_immediate;
+void [[]] InterlockedAnd64(in uint byteOffset, in u64 value);
+void [[]] InterlockedAnd64(in uint byteOffset, in u64 value, out any_int64 original) : interlockedand_immediate;
+void [[]] InterlockedOr64(in uint byteOffset, in u64 value);
+void [[]] InterlockedOr64(in uint byteOffset, in u64 value, out any_int64 original) : interlockedor_immediate;
+void [[]] InterlockedXor64(in uint byteOffset, in u64 value);
+void [[]] InterlockedXor64(in uint byteOffset, in u64 value, out any_int64 original) : interlockedxor_immediate;
+void [[]] InterlockedCompareStore64(in uint byteOffset, in u64 compare, in u64 value);
+void [[]] InterlockedExchange64(in uint byteOffset, in any_int64 value, out any_int64 original);
+void [[]] InterlockedCompareExchange64(in uint byteOffset, in u64 compare, in u64 value, out any_int64 original);
+// floating point interlocks
+void [[]] InterlockedExchangeFloat(in uint byteOffest, in float value, out float original);
+void [[]] InterlockedCompareStoreFloatBitwise(in uint byteOffest, in float compare, in float value);
+void [[]] InterlockedCompareExchangeFloatBitwise(in uint byteOffest, in float compare, in float value, out float original);
+// 32-bit integer interlocks
+void [[]] InterlockedAdd(in uint byteOffset, in uint value);
+void [[]] InterlockedAdd(in uint byteOffset, in uint value, out uint original) : interlockedadd_immediate;
+void [[unsigned_op=InterlockedUMin,overload=1]] InterlockedMin(in uint byteOffset, in any_int32 value) : interlockedmin;
+void [[unsigned_op=InterlockedUMin,overload=1]] InterlockedMin(in uint byteOffset, in any_int32 value, out uint original) : interlockedmin_immediate;
+void [[unsigned_op=InterlockedUMax,overload=1]] InterlockedMax(in uint byteOffset, in any_int32 value) : interlockedmax;
+void [[unsigned_op=InterlockedUMax,overload=1]] InterlockedMax(in uint byteOffset, in any_int32 value, out uint original) : interlockedmax_immediate;
+void [[]] InterlockedAnd(in uint byteOffset, in uint value);
+void [[]] InterlockedAnd(in uint byteOffset, in uint value, out uint original) : interlockedand_immediate;
+void [[]] InterlockedOr(in uint byteOffset, in uint value);
+void [[]] InterlockedOr(in uint byteOffset, in uint value, out uint original) : interlockedor_immediate;
+void [[]] InterlockedXor(in uint byteOffset, in uint value);
+void [[]] InterlockedXor(in uint byteOffset, in uint value, out uint original) : interlockedxor_immediate;
+void [[]] InterlockedCompareStore(in uint byteOffset, in uint compare, in uint value);
+void [[]] InterlockedExchange(in uint byteOffset, in uint value, out uint original);
+void [[]] InterlockedCompareExchange(in uint byteOffset, in uint compare, in uint value, out uint original);
+
+} namespace
+
+namespace StructuredBufferMethods {
+
+void [[]] GetDimensions(out uint_only count, out uint_only stride) : bufinfo;
+$classT [[ro]] Load(in int x) : structured_buffer_load;
+$classT [[]] Load(in int x, out uint_only status) : structured_buffer_load_s;
+
+} namespace
+
+namespace RWStructuredBufferMethods {
+
+void [[]] GetDimensions(out uint_only count, out uint_only stride) : bufinfo;
+uint [[]] IncrementCounter() : structuredbuffer_inc;
+uint [[]] DecrementCounter() : structuredbuffer_dec;
+$classT [[ro]] Load(in int x) : rwstructured_buffer_load;
+$classT [[]] Load(in int x, out uint_only status) : rwstructured_buffer_load_s;
+
+} namespace
+
+namespace AppendStructuredBufferMethods {
+
+void [[]] GetDimensions(out uint_only count, out uint_only stride) : bufinfo;
+void [[]] Append(in $match<-1,0> void value ) : structuredbuffer_append;
+
+} namespace
+
+namespace ConsumeStructuredBufferMethods {
+
+void [[]] GetDimensions(out uint_only count, out uint_only stride) : bufinfo;
+$classT [[]] Consume() : structuredbuffer_consume;
+
+} namespace
+
+namespace FeedbackTexture2DMethods {
+
+void [[]] WriteSamplerFeedback(in Texture2D t, in sampler s, in float<2> x);
+void [[]] WriteSamplerFeedback(in Texture2D t, in sampler s, in float<2> x, in float clamp);
+void [[]] WriteSamplerFeedbackBias(in Texture2D t, in sampler s, in float<2> x, in float bias);
+void [[]] WriteSamplerFeedbackBias(in Texture2D t, in sampler s, in float<2> x, in float bias, in float clamp);
+void [[]] WriteSamplerFeedbackGrad(in Texture2D t, in sampler s, in float<2> x, in float<2> ddx, in float<2> ddy);
+void [[]] WriteSamplerFeedbackGrad(in Texture2D t, in sampler s, in float<2> x, in float<2> ddx, in float<2> ddy, in float clamp);
+void [[]] WriteSamplerFeedbackLevel(in Texture2D t, in sampler s, in float<2> x, in float lod);
+
+} namespace
+
+namespace FeedbackTexture2DArrayMethods {
+
+void [[]] WriteSamplerFeedback(in Texture2DArray t, in sampler s, in float<3> x);
+void [[]] WriteSamplerFeedback(in Texture2DArray t, in sampler s, in float<3> x, in float clamp);
+void [[]] WriteSamplerFeedbackBias(in Texture2DArray t, in sampler s, in float<3> x, in float bias);
+void [[]] WriteSamplerFeedbackBias(in Texture2DArray t, in sampler s, in float<3> x, in float bias, in float clamp);
+void [[]] WriteSamplerFeedbackGrad(in Texture2DArray t, in sampler s, in float<3> x, in float<2> ddx, in float<2> ddy);
+void [[]] WriteSamplerFeedbackGrad(in Texture2DArray t, in sampler s, in float<3> x, in float<2> ddx, in float<2> ddy, in float clamp);
+void [[]] WriteSamplerFeedbackLevel(in Texture2DArray t, in sampler s, in float<3> x, in float lod);
+
+} namespace
+
+namespace RayQueryMethods {
+
+void [[]] TraceRayInline(in acceleration_struct AccelerationStructure, in uint RayFlags, in uint InstanceInclusionMask, in ray_desc Ray);
+bool [[]] Proceed();
+void [[]] Abort();
+void [[]] CommitNonOpaqueTriangleHit();
+void [[]] CommitProceduralPrimitiveHit(in float t);
+uint [[ro]] CommittedStatus();
+uint [[ro]] CandidateType();
+float<3,4> [[ro]] CandidateObjectToWorld3x4();
+float<4,3> [[ro]] CandidateObjectToWorld4x3();
+float<3,4> [[ro]] CandidateWorldToObject3x4();
+float<4,3> [[ro]] CandidateWorldToObject4x3();
+float<3,4> [[ro]] CommittedObjectToWorld3x4();
+float<4,3> [[ro]] CommittedObjectToWorld4x3();
+float<3,4> [[ro]] CommittedWorldToObject3x4();
+float<4,3> [[ro]] CommittedWorldToObject4x3();
+bool [[ro]] CandidateProceduralPrimitiveNonOpaque();
+bool [[ro]] CandidateTriangleFrontFace();
+bool [[ro]] CommittedTriangleFrontFace();
+float<2> [[ro]] CandidateTriangleBarycentrics();
+float<2> [[ro]] CommittedTriangleBarycentrics();
+uint [[ro]] RayFlags();
+float<3> [[ro]] WorldRayOrigin();
+float<3> [[ro]] WorldRayDirection();
+float [[ro]] RayTMin();
+float [[ro]] CandidateTriangleRayT();
+float [[ro]] CommittedRayT();
+uint [[ro]] CandidateInstanceIndex();
+uint [[ro]] CandidateInstanceID();
+uint [[ro]] CandidateGeometryIndex();
+uint [[ro]] CandidatePrimitiveIndex();
+float<3> [[ro]] CandidateObjectRayOrigin();
+float<3> [[ro]] CandidateObjectRayDirection();
+uint [[ro]] CommittedInstanceIndex();
+uint [[ro]] CommittedInstanceID();
+uint [[ro]] CommittedGeometryIndex();
+uint [[ro]] CommittedPrimitiveIndex();
+float<3> [[ro]] CommittedObjectRayOrigin();
+float<3> [[ro]] CommittedObjectRayDirection();
+uint [[ro]] CandidateInstanceContributionToHitGroupIndex();
+uint [[ro]] CommittedInstanceContributionToHitGroupIndex();
+
+} namespace
+
+// Work Graphs objects and methods
+
+// EmptyNodeInput
+namespace EmptyNodeInputMethods {
+    uint [[ro]] Count();
+} namespace
+
+// RWDispatchNodeInputRecord methods (in addition to Get)
+namespace RWDispatchNodeInputRecordMethods {
+    bool [[]] FinishedCrossGroupSharing();
+} namespace
+
+// GroupNodeInputRecords methods (in addition to Get and array access subscript)
+namespace GroupNodeInputRecordsMethods {
+  uint [[ro]] Count();
+} namespace
+
+// NodeOutput
+namespace NodeOutputMethods {
+    $match<0,-2> ThreadNodeOutputRecords [[]] GetThreadNodeOutputRecords(in uint numRecords);
+    $match<0,-2> GroupNodeOutputRecords [[]] GetGroupNodeOutputRecords(in uint numRecords);
+    bool [[]] IsValid();
+} namespace
+
+// EmptyNodeOutput
+namespace EmptyNodeOutputMethods {
+    void [[]] GroupIncrementOutputCount(in uint count);
+    void [[]] ThreadIncrementOutputCount(in uint count);
+    bool [[]] IsValid();
+} namespace
+
+// ThreadNodeOutputRecords, GroupNodeOutputRecords
+namespace GroupOrThreadNodeOutputRecordsMethods {
+    void [[]] OutputComplete();
+} namespace
+
+// SPIRV Change Starts
+
+namespace VkSubpassInputMethods {
+$classT [[]] SubpassLoad() : subpassinput_load;
+} namespace
+
+namespace VkSubpassInputMSMethods {
+$classT [[]] SubpassLoad(in int sample) : subpassinputms_load;
+} namespace
+
+// SPIRV Change Ends
+

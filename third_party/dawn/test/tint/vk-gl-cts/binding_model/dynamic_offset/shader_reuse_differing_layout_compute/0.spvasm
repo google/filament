@@ -1,0 +1,35 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 430
+               OpName %main "main"
+               OpName %block0 "block0"
+               OpMemberName %block0 0 "data"
+               OpName %_ ""
+               OpMemberDecorate %block0 0 Offset 0
+               OpDecorate %block0 Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 1
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+     %block0 = OpTypeStruct %v4float
+%_ptr_StorageBuffer_block0 = OpTypePointer StorageBuffer %block0
+          %_ = OpVariable %_ptr_StorageBuffer_block0 StorageBuffer
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+    %float_3 = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+         %16 = OpConstantComposite %v4float %float_1 %float_2 %float_3 %float_4
+%_ptr_StorageBuffer_v4float = OpTypePointer StorageBuffer %v4float
+       %main = OpFunction %void None %6
+         %18 = OpLabel
+         %19 = OpAccessChain %_ptr_StorageBuffer_v4float %_ %int_0
+               OpStore %19 %16
+               OpReturn
+               OpFunctionEnd

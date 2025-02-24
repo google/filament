@@ -1,0 +1,100 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 22
+; Schema: 0
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %subgroupInclusiveAdd_7ed675 "subgroupInclusiveAdd_7ed675"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+%prevent_dce_block = OpTypeStruct %uint
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %6 = OpTypeFunction %uint
+     %uint_3 = OpConstant %uint 3
+     %uint_1 = OpConstant %uint 1
+%_ptr_Function_uint = OpTypePointer Function %uint
+       %void = OpTypeVoid
+         %16 = OpTypeFunction %void
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+     %uint_0 = OpConstant %uint 0
+%subgroupInclusiveAdd_7ed675 = OpFunction %uint None %6
+          %7 = OpLabel
+        %res = OpVariable %_ptr_Function_uint Function
+          %8 = OpGroupNonUniformIAdd %uint %uint_3 InclusiveScan %uint_1
+               OpStore %res %8
+         %13 = OpLoad %uint %res None
+               OpReturnValue %13
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %16
+         %17 = OpLabel
+         %18 = OpFunctionCall %uint %subgroupInclusiveAdd_7ed675
+         %19 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0
+               OpStore %19 %18 None
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 22
+; Schema: 0
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %subgroupInclusiveAdd_7ed675 "subgroupInclusiveAdd_7ed675"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+%prevent_dce_block = OpTypeStruct %uint
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %6 = OpTypeFunction %uint
+     %uint_3 = OpConstant %uint 3
+     %uint_1 = OpConstant %uint 1
+%_ptr_Function_uint = OpTypePointer Function %uint
+       %void = OpTypeVoid
+         %16 = OpTypeFunction %void
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+     %uint_0 = OpConstant %uint 0
+%subgroupInclusiveAdd_7ed675 = OpFunction %uint None %6
+          %7 = OpLabel
+        %res = OpVariable %_ptr_Function_uint Function
+          %8 = OpGroupNonUniformIAdd %uint %uint_3 InclusiveScan %uint_1
+               OpStore %res %8
+         %13 = OpLoad %uint %res None
+               OpReturnValue %13
+               OpFunctionEnd
+%compute_main = OpFunction %void None %16
+         %17 = OpLabel
+         %18 = OpFunctionCall %uint %subgroupInclusiveAdd_7ed675
+         %19 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0
+               OpStore %19 %18 None
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S {
+  int m;
+  float4x4 n;
+};
+
+float f() {
+  S a = S{};
+  return a.n[2u].y;
+}

@@ -1,0 +1,6 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  bool4 v = bool4(false);
+}

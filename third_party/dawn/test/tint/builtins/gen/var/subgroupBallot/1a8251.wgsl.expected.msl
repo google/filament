@@ -1,0 +1,58 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint4* prevent_dce;
+  thread uint2* tint_subgroup_size_mask;
+};
+
+uint4 tint_subgroup_ballot(bool pred, tint_module_vars_struct tint_module_vars) {
+  uint2 const v = as_type<uint2>((simd_vote::vote_t)simd_ballot(pred));
+  return uint4((v & (*tint_module_vars.tint_subgroup_size_mask)), 0u, 0u);
+}
+
+uint4 subgroupBallot_1a8251(tint_module_vars_struct tint_module_vars) {
+  bool arg_0 = true;
+  uint4 res = tint_subgroup_ballot(arg_0, tint_module_vars);
+  return res;
+}
+
+fragment void fragment_main(uint tint_subgroup_size [[threads_per_simdgroup]], device uint4* prevent_dce [[buffer(0)]]) {
+  thread uint2 tint_subgroup_size_mask = 0u;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .tint_subgroup_size_mask=(&tint_subgroup_size_mask)};
+  (*tint_module_vars.tint_subgroup_size_mask).x = select((4294967295u >> (32u - tint_subgroup_size)), 4294967295u, (tint_subgroup_size > 32u));
+  (*tint_module_vars.tint_subgroup_size_mask).y = select(0u, (4294967295u >> (64u - tint_subgroup_size)), (tint_subgroup_size > 32u));
+  (*tint_module_vars.prevent_dce) = subgroupBallot_1a8251(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint4* prevent_dce;
+  thread uint2* tint_subgroup_size_mask;
+};
+
+uint4 tint_subgroup_ballot(bool pred, tint_module_vars_struct tint_module_vars) {
+  uint2 const v = as_type<uint2>((simd_vote::vote_t)simd_ballot(pred));
+  return uint4((v & (*tint_module_vars.tint_subgroup_size_mask)), 0u, 0u);
+}
+
+uint4 subgroupBallot_1a8251(tint_module_vars_struct tint_module_vars) {
+  bool arg_0 = true;
+  uint4 res = tint_subgroup_ballot(arg_0, tint_module_vars);
+  return res;
+}
+
+kernel void compute_main(uint tint_subgroup_size [[threads_per_simdgroup]], device uint4* prevent_dce [[buffer(0)]]) {
+  thread uint2 tint_subgroup_size_mask = 0u;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .tint_subgroup_size_mask=(&tint_subgroup_size_mask)};
+  (*tint_module_vars.tint_subgroup_size_mask).x = select((4294967295u >> (32u - tint_subgroup_size)), 4294967295u, (tint_subgroup_size > 32u));
+  (*tint_module_vars.tint_subgroup_size_mask).y = select(0u, (4294967295u >> (64u - tint_subgroup_size)), (tint_subgroup_size > 32u));
+  (*tint_module_vars.prevent_dce) = subgroupBallot_1a8251(tint_module_vars);
+}

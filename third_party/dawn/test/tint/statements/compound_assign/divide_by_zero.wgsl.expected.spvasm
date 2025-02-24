@@ -1,0 +1,95 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 62
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %a "a"
+               OpName %b "b"
+               OpName %foo "foo"
+               OpName %maybe_zero "maybe_zero"
+               OpName %tint_div_i32 "tint_div_i32"
+               OpName %lhs "lhs"
+               OpName %rhs "rhs"
+               OpName %tint_mod_i32 "tint_mod_i32"
+               OpName %lhs_0 "lhs"
+               OpName %rhs_0 "rhs"
+               OpName %unused_entry_point "unused_entry_point"
+        %int = OpTypeInt 32 1
+%_ptr_Private_int = OpTypePointer Private %int
+          %4 = OpConstantNull %int
+          %a = OpVariable %_ptr_Private_int Private %4
+      %float = OpTypeFloat 32
+%_ptr_Private_float = OpTypePointer Private %float
+          %8 = OpConstantNull %float
+          %b = OpVariable %_ptr_Private_float Private %8
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void %int
+    %float_0 = OpConstant %float 0
+         %33 = OpTypeFunction %int %int %int
+      %int_0 = OpConstant %int 0
+       %bool = OpTypeBool
+%int_n2147483648 = OpConstant %int -2147483648
+     %int_n1 = OpConstant %int -1
+      %int_1 = OpConstant %int 1
+         %60 = OpTypeFunction %void
+        %foo = OpFunction %void None %12
+ %maybe_zero = OpFunctionParameter %int
+         %13 = OpLabel
+         %14 = OpLoad %int %a None
+         %15 = OpFunctionCall %int %tint_div_i32 %14 %maybe_zero
+               OpStore %a %15 None
+         %17 = OpLoad %int %a None
+         %18 = OpFunctionCall %int %tint_mod_i32 %17 %maybe_zero
+               OpStore %a %18 None
+         %20 = OpLoad %float %b None
+         %21 = OpFDiv %float %20 %float_0
+               OpStore %b %21 None
+         %23 = OpLoad %float %b None
+         %24 = OpFRem %float %23 %float_0
+               OpStore %b %24 None
+         %25 = OpConvertSToF %float %maybe_zero
+         %26 = OpLoad %float %b None
+         %27 = OpFDiv %float %26 %25
+               OpStore %b %27 None
+         %28 = OpConvertSToF %float %maybe_zero
+         %29 = OpLoad %float %b None
+         %30 = OpFRem %float %29 %28
+               OpStore %b %30 None
+               OpReturn
+               OpFunctionEnd
+%tint_div_i32 = OpFunction %int None %33
+        %lhs = OpFunctionParameter %int
+        %rhs = OpFunctionParameter %int
+         %34 = OpLabel
+         %35 = OpIEqual %bool %rhs %int_0
+         %38 = OpIEqual %bool %lhs %int_n2147483648
+         %40 = OpIEqual %bool %rhs %int_n1
+         %42 = OpLogicalAnd %bool %38 %40
+         %43 = OpLogicalOr %bool %35 %42
+         %44 = OpSelect %int %43 %int_1 %rhs
+         %46 = OpSDiv %int %lhs %44
+               OpReturnValue %46
+               OpFunctionEnd
+%tint_mod_i32 = OpFunction %int None %33
+      %lhs_0 = OpFunctionParameter %int
+      %rhs_0 = OpFunctionParameter %int
+         %49 = OpLabel
+         %50 = OpIEqual %bool %rhs_0 %int_0
+         %51 = OpIEqual %bool %lhs_0 %int_n2147483648
+         %52 = OpIEqual %bool %rhs_0 %int_n1
+         %53 = OpLogicalAnd %bool %51 %52
+         %54 = OpLogicalOr %bool %50 %53
+         %55 = OpSelect %int %54 %int_1 %rhs_0
+         %56 = OpSDiv %int %lhs_0 %55
+         %57 = OpIMul %int %56 %55
+         %58 = OpISub %int %lhs_0 %57
+               OpReturnValue %58
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %60
+         %61 = OpLabel
+               OpReturn
+               OpFunctionEnd

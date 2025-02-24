@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  float2 v2 = float2(1.0f);
+  float3 v3 = float3(1.0f);
+  float4 v4 = float4(1.0f);
+}

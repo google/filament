@@ -1,0 +1,120 @@
+# Copyright 2018 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# This files imports the overrides for Dawn but sets the defaults so that
+# projects including Dawn don't have to set dirs if they happen to use the
+# same.
+# It takes advantage of GN's variable scoping rules to define global variables
+# inside if constructs.
+
+import("//build_overrides/dawn.gni")
+
+if (!defined(dawn_standalone)) {
+  dawn_standalone = false
+}
+
+if (!defined(dawn_has_build)) {
+  dawn_has_build = true
+}
+
+dawn_has_fuzzers = dawn_has_build
+
+if (!defined(dawn_root)) {
+  dawn_root = get_path_info("..", "abspath")
+}
+dawn_gen_root = get_path_info("${dawn_root}", "gen_dir")
+
+if (!defined(dawn_jinja2_dir)) {
+  dawn_jinja2_dir = "//third_party/jinja2"
+}
+
+if (!defined(dawn_glfw_dir)) {
+  dawn_glfw_dir = "//third_party/glfw"
+}
+
+if (!defined(dawn_googletest_dir)) {
+  dawn_googletest_dir = "//third_party/googletest"
+}
+
+if (!defined(dawn_spirv_tools_dir)) {
+  dawn_spirv_tools_dir = "//third_party/spirv-tools/src"
+}
+
+if (!defined(dawn_swiftshader_dir)) {
+  # Default to swiftshader not being available.
+  dawn_swiftshader_dir = ""
+}
+
+if (!defined(dawn_vulkan_headers_dir)) {
+  dawn_vulkan_headers_dir = "//third_party/vulkan-headers/src"
+}
+
+if (!defined(dawn_vulkan_loader_dir)) {
+  # Default to the Vulkan loader not being available except in standalone.
+  dawn_vulkan_loader_dir = ""
+  if (dawn_standalone) {
+    dawn_vulkan_loader_dir = "//third_party/vulkan-loader/src"
+  }
+}
+
+if (!defined(dawn_vulkan_utility_libraries_dir)) {
+  dawn_vulkan_utility_libraries_dir =
+      "//third_party/vulkan-utility-libraries/src"
+}
+
+if (!defined(dawn_vulkan_validation_layers_dir)) {
+  # Default to VVLs not being available.
+  dawn_vulkan_validation_layers_dir = ""
+}
+
+if (!defined(dawn_abseil_dir)) {
+  dawn_abseil_dir = "//third_party/abseil-cpp"
+}
+
+if (!defined(dawn_dxc_dir)) {
+  dawn_dxc_dir = "//third_party/dxc"
+}
+
+if (!defined(dawn_dxheaders_dir)) {
+  dawn_dxheaders_dir = "//third_party/dxheaders"
+}
+
+if (!defined(dawn_version_file)) {
+  dawn_version_file = ""
+}
+
+if (!defined(dawn_opengl_registry_dir)) {
+  dawn_opengl_registry_dir = "${dawn_root}/third_party/khronos/OpenGL-Registry"
+}
+
+if (!defined(dawn_egl_registry_dir)) {
+  dawn_egl_registry_dir = "${dawn_root}/third_party/khronos/EGL-Registry"
+}
+
+if (!defined(dawn_emscripten_dir)) {
+  dawn_emscripten_dir = ""
+}

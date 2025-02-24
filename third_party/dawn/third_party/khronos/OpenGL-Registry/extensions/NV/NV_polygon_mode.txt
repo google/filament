@@ -1,0 +1,188 @@
+Name
+
+    NV_polygon_mode
+
+Name Strings
+
+    GL_NV_polygon_mode
+
+Contact
+
+    James Helferty, NVIDIA Corporation (jhelferty 'at' nvidia.com)
+
+Contributors
+
+    James Helferty, NVIDIA Corporation
+    Daniel Koch, NVIDIA Corporation
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date:         Sept 11, 2014
+    Revision:                   1
+
+Number
+
+    OpenGL ES Extension #238
+
+Dependencies
+
+    This extension is written against the OpenGL ES 3.1 (June 4, 2014)
+    specification, but can apply to earlier versions.
+
+    This extension trivially interacts with NV_draw_texture
+
+Overview
+
+    This extension adds a PolygonModeNV entry point which can be used to change
+    the polygon rasterization method. Using this extension, state consistent
+    with rendering triangle primitives can trivially be toggled to render
+    primitives as lines or points. In addition, independent enables are
+    provided for polygon offset in conjunction with these new point and line
+    polygon modes.
+
+    This introduces a level of support for PolygonMode comparable with the
+    OpenGL 4.3 core profile.
+
+New Procedures and Functions
+
+    void PolygonModeNV(enum face, enum mode);
+
+New Tokens
+
+    Accepted by the <pname> parameter to GetIntegerv:
+
+        POLYGON_MODE_NV                             0x0B40
+
+    Accepted by the <pname> parameter to IsEnabled:
+
+        POLYGON_OFFSET_POINT_NV                     0x2A01
+        POLYGON_OFFSET_LINE_NV                      0x2A02
+
+    Returned by GetIntegerv, GetFloatv, and GetInteger64v when <pname> is
+    POLYGON_MODE_NV:
+
+        POINT_NV                                    0x1B00
+        LINE_NV                                     0x1B01
+        FILL_NV                                     0x1B02
+
+Additions to Chapter 13 of the OpenGL 3.1 Specification (Fixed-Function
+Primitive Assembly and Rasterization)
+
+    Insert new section 13.5.1pm, "Options Controlling Polygon Rasterization"
+    between section 13.5.1 and 13.5.2:
+
+    The interpretation of polygons for rasterization is controlled using
+
+        void PolygonModeNV( enum face, enum mode );
+
+    <face> must be FRONT_AND_BACK, indicating that the rasterizing method
+    described by <mode> replaces the rasterizing method for both front- and
+    back-facing polygons. <mode> is one of the symbolic constants POINT_NV,
+    LINE_NV, or FILL_NV. Calling PolygonModeNV with POINT_NV causes the
+    vertices of a polygon to be treated, for rasterization purposes, as if they
+    had been drawn with <mode> POINTS. LINE_NV causes edges to be rasterized as
+    line segments. FILL_NV is the default mode of polygon rasterization,
+    corresponding to the description in section 13.5.1.  Note that these modes
+    affect only the final rasterization of polygons: in particular, a polygon's
+    vertices are lit, and the polygon is clipped and possibly culled before
+    these modes are applied.
+
+    Modify Section 13.5.2, "Depth Offset" as follows:
+
+    Replace the second-last paragraph that begins "Boolean state value
+    POLYGON_OFFSET_FILL determines whether <o> is applied during the
+    rasterization of polygons..." with:
+
+    Boolean state values POLYGON_OFFSET_POINT_NV, POLYGON_OFFSET_LINE_NV, and
+    POLYGON_OFFSET_FILL determine whether <o> is applied during the
+    rasterization of polygons in POINT_NV, LINE_NV, and FILL_NV modes. These
+    boolean state values are enabled and disabled as argument values to the
+    commands Enable and Disable.  If POLYGON_OFFSET_POINT_NV is enabled, <o> is
+    added to the depth value of each fragment produced by the rasterization of
+    a polygon in POINT_NV mode.  Likewise, if POLYGON_OFFSET_LINE_NV or
+    POLYGON_OFFSET_FILL is enabled, <o> is added to the depth value of each
+    fragment produced by the rasterization of a polygon in LINE_NV or FILL_NV
+    modes, respectively.
+
+    Modify Section 13.5.3, "Polygon Multisample Rasterization" as follows:
+
+    Append the paragraph:
+
+    The rasterization described above applies only to the FILL_NV state of
+    PolygonModeNV. For POINT_NV and LINE_NV, the rasterizations described in
+    sections 13.3.2 (Point Multisample Rasterization) and 13.4.4 (Line
+    Multisample Rasterization) apply.
+
+    Modify Section 13.5.4 "Polygon Rasterization State"
+
+    The state required for polygon rasterization consists of whether point,
+    line, and fill mode polygon offsets are enabled or disabled, and the factor
+    and bias values of the polygon offset equation. The initial polygon offset
+    factor and bias values are both 0; initially polygon offset is disabled for
+    all modes. The initial state for PolygonModeNV is FILL_NV.
+
+Additions to Chapter 15 of the OpenGL 3.1 Specification (Writing Fragments and
+Samples to the Framebuffer)
+
+    Modify Section 15.1.4, "Stencil Test" as follows:
+
+    Replace the third paragraph with:
+
+    There are two sets of stencil-related state, the front stencil state set
+    and the back stencil state set. Stencil tests and writes use the front set
+    of stencil state when processing fragments rasterized from non-polygon
+    primitives (points and lines) and front-facing polygon primitives while the
+    back set of stencil state is used when processing fragments rasterized from
+    back-facing polygon primitives. For the purposes of stencil testing, a
+    primitive is still considered a polygon even if the polygon is to be
+    rasterized as points or lines due to the current polygon mode. Whether a
+    polygon is front- or back-facing is determined in the same manner used for
+    face culling (see section 13.5.1).
+
+Interactions with NV_draw_texture
+
+    In NV_draw_texture, change references to PolygonMode to PolygonModeNV, and
+    disregard the interaction ignoring PolygonMode for ES.
+
+New State
+
+    Modify Table 20.6, Rasterization
+
+    Add:
+
+                                          Initial
+    Get Value               Type Get Command  Value  Description                  Sec.
+    ----------------------- ---- ----------- ------- --------------------------- ------
+    POLYGON_MODE_NV          E   GetIntegerv FILL_NV Polygon rasterization mode  13.5.1pm
+                                                     (front & back)
+    POLYGON_OFFSET_POINT_NV  B   IsEnabled   FALSE   Polygon offset enable for   13.5.2
+                                                     POINT_NV mode rasterization
+    POLYGON_OFFSET_LINE_NV   B   IsEnabled   FALSE   Polygon offset enable for   13.5.2
+                                                     LINE_NV mode rasterization
+
+    Change description for POLYGON_OFFSET_FILL to "Polygon offset enable for
+    FILL_NV mode rasterization"
+
+Errors
+
+    An INVALID_ENUM error is generated by PolygonModeNV if <face> is not
+    FRONT_AND_BACK.
+
+    An INVALID_ENUM error is generated by PolygonModeNV if <mode> is not one of
+    POINT_NV, LINE_NV, or FILL_NV.
+
+Issues
+
+    1. How does PolygonModeNV interact with tessellation shaders?
+
+    See Issue 29 of ARB_tessellation_shader.
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  --------  ---------  -----------------------------------------
+     1    09/10/14  jhelferty  Initial revision.

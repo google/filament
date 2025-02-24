@@ -1,0 +1,636 @@
+Name 
+
+    EXT_provoking_vertex
+
+Name Strings
+
+    GL_EXT_provoking_vertex
+
+Contributors
+
+    Cynthia Allison, NVIDIA
+    Gregory Roth, NVIDIA
+    Daniel Koch, TransGaming
+    Gavriel State, TransGaming
+    Jason Green, TransGaming
+    Ian Romanick, Intel
+    Marcus Steyer, NVIDIA
+    Pat Brown, NVIDIA
+    Stefan Dosinger, CodeWeavers
+    Henri Verbeet, CodeWeavers
+
+Contact
+
+    Mark Kilgard, NVIDIA (mjk 'at' nvidia.com)
+
+Status
+
+    Implemented by NVIDIA, March 2009
+
+Version
+
+    Last Modified Date:  May 11, 2009
+    Version:             12
+
+Number
+
+    364
+
+Dependencies
+
+    This extension is written against the OpenGL 2.1 Specification but
+    can apply to any prior specification.
+
+    ARB_geometry_shader4, EXT_geometry_shader4, NV_geometry_shader4,
+    and NV_gpu_program4 interact with this extension
+
+    EXT_transform_feedback, NV_transform_feedback, and the transform
+    feedback functionality made core by OpenGL 3.0 are clarified by
+    this extension.
+
+Overview
+
+    This extension provides an alternative provoking vertex convention
+    for rendering lines, triangles, and (optionally depending on the
+    implementation) quads.
+
+    The provoking vertex of a primitive is the vertex that determines the
+    constant primary and secondary colors when flat shading is enabled.
+
+    In OpenGL, the provoking vertex for triangle, quad, line, and
+    (trivially) point primitives is the last vertex used to assemble
+    the primitive.  The polygon primitive is an exception in OpenGL where
+    the first vertex of a polygon primitive determines the color of the
+    polygon, even if actually broken into triangles and/or quads.
+
+    See section 2.14.7 (Flatshading) of the OpenGL 2.1 specification,
+    particularly Table 2.12 for more details.
+
+    Alternatively the provoking vertex could be the first vertex of
+    the primitive.  Other APIs with flat-shading functionality such
+    as Reality Lab and Direct3D have adopted the "first vertex of the
+    primitive" convention to determine the provoking vertex.  However,
+    these APIs lack quads so do not have a defined provoking vertex
+    convention for quads.
+
+    The motivation for this extension is to allow applications developed
+    for APIs with a "first vertex of the primitive" provoking vertex to
+    be easily converted to OpenGL.
+
+New Procedures and Functions
+
+    void ProvokingVertexEXT(enum mode);
+
+New Tokens
+
+    Accepted by the <mode> parameter of ProvokingVertexEXT:
+
+        FIRST_VERTEX_CONVENTION_EXT                   0x8E4D
+        LAST_VERTEX_CONVENTION_EXT                    0x8E4E
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        PROVOKING_VERTEX_EXT                          0x8E4F
+        QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION_EXT  0x8E4C
+
+Additions to Chapter 2 of the OpenGL 2.1 Specification (OpenGL Operation)
+
+ -- Section 2.14.7 "Flatshading" (page 69)
+
+    Replace the entire section with:
+
+    "A primitive may be flatshaded, meaning that all vertices of the
+    primitive are assigned the same color index or the same primary or
+    secondary colors.  These colors are the colors of the vertex that
+    spawned the primitive.  Table 2.12 summaries the possibilities.
+
+    Flatshading is controlled by
+
+       void ShadeModel(enum shadeMode);
+       void ProvokingVertexEXT(enum provokeMode);
+    
+    shadeMode value must be either the symbolic constants SMOOTH or FLAT.
+    If shadeMode is SMOOTH (the initial state), the vertex colors are
+    treated individually.  If shadeMode is FLAT, flatshading is turned on.
+
+    provokeMode value must be either FIRST_VERTEX_CONVENTION_EXT
+    or LAST_VERTEX_CONVENTION_EXT.  If provokeMode is
+    LAST_VERTEX_CONVENTION_EXT (the initial state), the "last vertex
+    convention" column of table 2.12 applies when flat shading; otherwise,
+    the "first vertex convention" column applies when flat shading.
+    The provoking vertex behavior of quad primitives is implementation
+    dependent.  Implementations can choose to either respect (follow)
+    the state set by ProvokingVertexEXT for quad primitives (and, in
+    this case, return true for the QUADS_FOLLOW_PROVOKING_VERTEX_EXT
+    implementation-dependent state) or unconditionally implement the
+    last vertex convention for quad primitives (and, in this case,
+    return false for QUADS_FOLLOW_PROVOKING_VERTEX_EXT).
+
+    ShadeModel and ProvokingVertexEXT each require one bit of state.
+
+                                     First vertex  Last vertex
+        Primitive type of polygon i  convention    convention
+        ===========================  ============  ==================================================
+        point                             i        i                                                   <- same
+
+        independent line                  2i-1     2i 
+        line loop                         i        i+1, if i<n
+                                                   1,   if i==n
+        line strip                        i        i+1
+
+        independent triangle              3i-2     3i
+        triangle strip                    i        i+2
+        triangle fan                      i+1      i+2
+
+        independent quad                  4i-3     4i,   if QUADS_FOLLOW_PROVOKING_VERTEX_EXT = true
+                                          4i       4i,   if QUADS_FOLLOW_PROVOKING_VERTEX_EXT = false  <- same
+        quad strip                        2i-1     2i+2, if QUADS_FOLLOW_PROVOKING_VERTEX_EXT = true
+                                          2i+2     2i+2, if QUADS_FOLLOW_PROVOKING_VERTEX_EXT = false  <- same
+
+        single polygon (i=1)              1        1                                                   <- same
+
+        line adjacency                    4i-2     4i-1
+        line strip adjacency              i+1      i+2
+        triangle adjacency                6i-5     6i-1
+        triangle strip adjacency          2i-1     2i+3
+
+    Table 2.12: Polygon flatshading color selection.  The color used for
+    flat shading the ith polygon generated by the indicated Begin/End
+    type are derived from the current color (if lighting is disabled)
+    in effect when the indicated vertex is specified.  If lighting
+    is enabled or a vertex shader is used, the colors are produced
+    by lighting or vertex shading (respectively) the indicated vertex.
+    Vertices are numbered 1 through n, where n is the number of vertices
+    between the Begin/End pair."
+
+Additions to Chapter 3 of the OpenGL 2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 2.1 Specification (Special
+Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 2.1 Specification (State and
+State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Additions to the OpenGL Shading Language
+
+    None
+
+Dependencies on ARB_geometry_shader4, EXT_geometry_shader4,
+NV_geometry_shader4, and/or NV_gpu_program4:
+
+    If none of ARB_geometry_shader4, EXT_geometry_shader4,
+    NV_geometry_shader4, or NV_gpu_program4 are supported, ignore
+    the rows of table 2.12 for line adjacency, line strip adjacency,
+    triangle adjacency, and triangle strip adjacency.
+
+Dependencies on EXT_transform_feedback, NV_transform_feedback, and/or the
+transform feedback functionality integrated into the core by OpenGL 3.0:
+    
+    Clarify the statement describing when transform feedback occurs
+    (in section 2.18 of the OpenGL 3.1 specification) to read:
+
+    "The vertices are fed back after vertex color clamping, but before
+    flatshading and clipping."
+
+    (The "flatshading and" phrase is newly clarifying.)
+
+GLX Protocol
+
+    A new GL rendering command is added. The following command is sent to the 
+    server as part of a glXRender request:
+
+        ProvokingVertexEXT
+            2           8          rendering command length
+            2           4227       rendering command opcode
+            4           ENUM       provokeMode
+
+Errors
+
+    INVALID_ENUM is generated when ProvokingVertexEXT is called with
+    a <provokeMode> that is not either FIRST_VERTEX_CONVENTION_EXT or
+    LAST_VERTEX_CONVENTION_EXT.
+
+New State
+
+(table 6.11, page 276) add the following entry:
+
+Get Value             Type  Get Command  Initial Value               Description       Sec     Attribute
+--------------------  ----  -----------  --------------------------  ----------------  ------  ---------
+PROVOKING_VERTEX_EXT  Z2    GetIntegerv  LAST_VERTEX_CONVENTION_EXT  Provoking vertex  2.14.7  lighting
+                                                                     convention
+
+(table 6.36, page 301) add the following entry:
+
+Get Value                          Type  Get Command  Initial Value  Description        Sec     Attribute
+---------------------------------  ----  -----------  -------------  -----------------  ------  ---------
+QUADS_FOLLOW_PROVOKING_VERTEX_EXT  B     GetBooleanv  -              True if quad       2.14.7  -
+                                                                     primitives follow
+                                                                     provoking vertex
+                                                                     convention
+
+New Implementation Dependent State
+
+    None
+
+NVIDIA Implementation Details
+
+    GeForce 8 (G8x, G9x, GT1xx) and up GPUs report true for
+    QUADS_FOLLOW_PROVOKING_VERTEX_EXT.
+
+    GeForce 6 and 7 (NV4x, G7x) GPUs report false for
+    QUADS_FOLLOW_PROVOKING_VERTEX_EXT.
+
+Issues
+
+    1.  What should this extension be called?
+
+        RESOLVED:  EXT_provoking_vertex
+
+        The phrase "provoking vertex" is not used in the core OpenGL
+        specification but it is the accepted jargon for the functionality
+        in question.
+
+    2.  How should quads be handled?
+
+        RESOLVED:  Ideally, quadrilateral primitives (GL_QUADS and
+        GL_QUAD_STRIP) would follow the provoking vertex mode.
+
+        Other existing APIs with different flatshading conventions do
+        not support quads.
+
+        Rather than force support for both the first and last convention
+        for quads (which no other API supports), instead this extension
+        provides implementations the flexibility to advertise whether
+        or not quads respect the provoking vertex or not.
+
+        This resolution ensures more hardware vendors can support
+        this extension.  Hardware vendors which support both OpenGL and
+        Direct3D's provoking vertex conventions must have support for
+        "first vertex" for triangles and lines because Direct3D demands
+        these conventions.  Direct3D does not demand a convention for
+        quads.  However every vendor supporting OpenGL can support the
+        "last vertex" mode for quads.  Leaving the quad behavior up
+        to the OpenGL implementation means hardware can simply always
+        switch to the OpenGL quad behavior when emitting quads.
+
+        See issue #12 for more details about how the
+        implementation-dependent handling of quads is advertised.
+
+    3.  How should the specification language be written for this
+        extension?
+
+        RESOLVED:  Update table 2.12 for all supported primitives.
+
+        The current language describes how points and lines are handled
+        in prose but the behavior for triangles, quads, and polygons is
+        specified in table 2.12.
+
+        Put all the Begin/End batch types in a single table with two
+        columns specifying the "first vertex convention" and "last vertex
+        convention" provoking vertex modes respectively.
+
+        A unified table is less ambiguous than a combination of a table
+        and prose.
+
+    4.  What token names for the provoking vertex conventions should
+        be used?
+
+        RESOLVED:  GL_FIRST_VERTEX_CONVENTION_EXT and
+        GL_LAST_VERTEX_CONVENTION_EXT (the initial state, consistent
+        with OpenGL's unextended operation).
+
+        The word "convention" is used because (see issue #2), the "first
+        vertex" or "last vertex" rules are not iron-clad as they may or
+        may do not apply to quads.
+
+        The provoking vertex behavior for polygons and triangle fans
+        also isn't strictly first or last vertex:  Polygons always use
+        the first vertex (no matter the provoking vertex convention).
+        Triangle fans don't really use the first vertex (the spoke vertex)
+        when using the "first vertex" provoking vertex rule; see issue #7.
+
+    5.  IRIS GL had a provoking vertex convention for polygons where the
+        last vertex of a polygon primitive determined the flat shaded
+        color of the polygon.  Should we support this convention?
+
+        RESOLVED:  No.
+
+        Interesting IRIS GL applications relying on this convention
+        are assuredly non-existent at this point.  This convention
+        also requires waiting until all the vertices for a polygon
+        (which OpenGL does not bound) are specified before the polygon
+        can begin being rasterized.  The IRIS GL convention was dubious
+        for this reason and OpenGL's designers were correct to abandon
+        IRIS GL's polygon provoking vertex convention.
+
+    6.  How should line loops behave?
+
+        RESOLVED:  Line loops in GL_FIRST_VERTEX_CONVENTION_EXT mode
+        should behave as though it were a line strip with the first
+        vertex repeated at the end.  In other words, the first vertex
+        of the line loop provokes the color for the line primitive that
+        closes the line loop.
+
+        Direct3D does not support line loops.
+
+    7.  How are triangle fans handled?
+
+        RESOLVED:  The first vertex of a triangle fan is the spoke vertex.
+        Triangle fans in GL_FIRST_VERTEX_CONVENTION_EXT mode should use
+        the first non-spoke vertex of the primitive as the provoking
+        vertex.  In other words, the spoke vertex is never the provoking
+        vertex (in either convention).
+
+        The rationale for this is to match DirectX 9's triangle
+        fan behavior.  The rationale for the DirectX 9 behavior is
+        (presumably) that if the spoke vertex was considered the "first
+        vertex" of every primitive in a triangle fan, every flat shaded
+        primitive in a triangle fan would necessarily have the spoke
+        vertex's color, which isn't very interesting.
+
+        (DirectX 10 does not support triangle fans.)
+
+    8.  How does the provoking vertex convention affect primitives
+        generated by a geometry shader?
+
+        RESOLVED:  The provoking vertex convention affects primitives
+        whether they are generated by geometry shaders or conventional
+        (non-geometry shader) primitive assembly.
+
+        Geometry shaders only generate point, line strips, and triangle
+        strips (not line loops, triangle fans, polygons, or quads).
+        (So the GL_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION_EXT is
+        irrelevant when a geometry program or shader is active.)
+
+        This makes the supporting the first and last vertex conventions
+        for primitives generated by geometry shaders "simple" because in
+        the points, line strip, and triangle strip cases, the convention
+        really is to use either first or last vertex to define the
+        provoking vertex (no caveats).
+
+        There's no special specification language to support the fact that
+        the provoking vertex convention applies to primitives generated
+        by geometry shaders because flat shading behavior is described
+        in Chapter 3's rasterization discussion which is all subsequent
+        to the geometry shader processing inserted into Chapter 2.
+
+        DirectX 10 geometry shaders can output flat attributes according
+        to Direct3D's "first vertex provokes" convention for line and
+        triangle output primitives from a geometry shader.  So matching
+        the DirectX 10 geometry shader behavior for flat shading requires
+        setting the provoking vertex to GL_FIRST_VERTEX_CONVENTION_EXT.
+
+        This said, the OpenGL default convention of "last vertex" for the
+        provoking vertex tends to be more useful for geometry shaders.
+        By deferring the computation of the flat shaded color to the
+        last vertex of every primitive, that tends to give the geometry
+        shader compiler the maximum allowance for scheduling computation
+        and texturing operations required to compute the flat shaded
+        color as long as possible (that is, until the last vertex of
+        the primitive).
+
+    9.  Should there be an OPTION or #pragma for geometry shader assembly
+        and GLSL respectively to request the specific provoking vertex
+        convention for the shader?
+
+        RESOLVED:  No.
+
+        The provoking vertex is context state that doesn't belong within
+        a shader as a pragma anymore than the stencil state belongs
+        within the shader.  Overriding context state based on a pragma
+        in a shader introduces unfortunate validation interactions that
+        will slow down shader binds.
+
+        Geometry shaders written for DirectX 10 and using flat attributes
+        expect the "first vertex" provoking vertex convention but the
+        application is better off specifying the proper provoking vertex
+        convention for shaders just as is done with other context state.
+
+        TransGaming supports this resolution to not support a pragma.
+
+    10. How do geometry shader input primitives interact with this
+        extension?
+
+        RESOLVED:  Table 2.12 includes the new primitives types
+        introduced by geometry shaders (GL_LINES_ADJACENCY_ARB,
+        GL_LINE_STRIP_ADJACENCY_ARB, GL_TRIANGLES_ADJACENCY_ARB, and
+        GL_TRIANGLE_STRIP_ADJACENCY_ARB).  However the entries for these
+        primitive types are only relevant when these new primitive types
+        are used with NO geometry shader enabled.
+
+        When a geometry shader is enabled, the only primitive output types
+        are points, line strips, and triangle strips.
+
+    11. To what attribute set should the provoking vertex belong?
+
+        RESOLVED:  Lighting (GL_LIGHTING_BIT).
+
+        This is because the provoking vertex bit is described in the
+        same context as the shade model (GL_SHADE_MODEL) setting, and
+        the shade model state is part of the lighting attribute set.
+
+    12. How should the allowance for handling quadrilateral primitives
+        be advertised?
+
+        RESOLVED:  Because this extension is intended to facilitate
+        supporting Direct3D content that depends on the Direct3D's
+        provoking vertex convention yet Direct3D does not support quad
+        primitives (as OpenGL provides with GL_QUAD_STRIP and GL_QUADS),
+        the particular provoking vertex behavior of quads is not crucial
+        to this extension's intended application.
+
+        In the interest of making this extension's functionality for
+        triangle and line primitives broadly available (the primitives
+        Direct3D does support with a first vertex provoking vertex
+        convention), this extension does not mandate a single uniform
+        behavior for quad primitives.  Mandating a particular behavior
+        for quad primitives would, for some implementations, encumber the
+        performance of this extension in the non-quad case or make this
+        implementation of this extension needlessly complex to implement.
+
+        Instead the GL_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION_EXT
+        implementation-dependent boolean indicates whether or not quads
+        (generated by GL_QUADS or GL_QUAD_STRIP) should abide by the
+        provoking vertex convention or not.
+
+        Whether or not the GL_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION_EXT
+        state is true or false, the provoking vertex behavior of quads
+        is well-defined in either case.
+
+        The recommended, though implementation-dependent, value for
+        GL_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION_EXT is true because
+        this means quads, will like lines and triangles, follow the
+        GL_PROVOKING_VERTEX_EXT state as indicated.
+
+    13. How does the provoking vertex state interact with primitive
+        restart?
+
+        RESOLVED:  Orthogonally so no specific specification language
+        describing the interaction is required.
+
+        Specifically a primitive restart acts as a glEnd/glBegin
+        sequence so it restarts the primitive numbering to 1 for the
+        vertex immediately following the restart index.
+
+    14. Should the provoking vertex behavior apply to both the primary
+        and secondary color?
+
+        RESOLVED:  Yes, the provoking vertex decides both the primary and
+        secondary color of a flat-shaded primitive.  That's consistent
+        with Direct3D's provoking vertex convention as well as OpenGL's
+        current behavior.
+
+    15. Should the provoking vertex behavior be specified with a
+        glEnable/glDisable token instead of glProvokingVertexEXT?
+
+        RESOLVED:  The provoking vertex API is closely related
+        to glShadeModel which uses an enumerated mode rather than
+        glEnable/glDisable to specify flat or smooth shading so the API
+        mimics the glShadeModel approach.
+
+        This results in a fairly readable API usage that is more easily
+        groaked by unfamiliar programmers:
+
+            glProvokingVertexEXT(GL_FIRST_VERTEX_CONVENTION_EXT);
+
+        instead of:
+
+             glEnable(GL_FIRST_VERTEX_CONVENTION_EXT);
+
+        It is also not clear that the provoking vertex convention is
+        really a single enable.  The convention behaves differently
+        depending on the primitive type.  For example, GL_POLYGON always
+        uses the first vertex as the provoking vertex regardless of the
+        provoking vertex state.
+
+    16. Does the OpenGL Shading Language (GLSL) 1.30 "flat" varying
+        qualifier respect the provoking vertex state?
+
+        RESOLVED:  Yes.
+
+        The GLSL 1.30 specification says "This variable [qualified as
+        flat] will come from a single provoking vertex, as described by
+        the OpenGL Graphics System Specification."  This extension amends
+        how the provoking vertex is described so no GLSL specification
+        update is required.  This does imply that user-declared varyings
+        in a GLSL shader declared with "flat" will have the provoking
+        vertex convention applied to determine their value.
+
+    17. How does the provoking vertex apply to Direct3D 10?
+
+        RESOLVED:  Direct3D 10 has deprecated the D3DSHADEMODE state for
+        controlling flat or smooth (Gouraud) shading.  However there is
+        still the concept of a provoking vertex (called the "leading
+        vertex" by Direct3D 10) which still corresponds to this
+        extension's "first vertex" convention.
+
+        Use of the leading (provoking) vertex for constant (flat)
+        interpolation is indicated by Direct3D 10's "nointerpolation"
+        variable storage class (sometimes called an interpolation
+        modifier).
+
+    18. Does the NV_gpu_program4 "FLAT" attribute modifier respect the
+        provoking vertex state?
+
+        RESOLVED:  Yes.  NVIDIA's NV_gpu_program4 extension, describing
+        an OpenGL assembly for Shader Model 4.0, allows a FLAT modifier
+        to be specified for fragment program inputs.  The NV_gpu_program4
+        specification says "If an attribute is flat-shaded, it will be
+        taken from the output attribute of the provoking vertex of the
+        primitive using the same data type." This extension amends
+        how the provoking vertex is described so no NV_gpu_program4
+        specification update is required.
+
+    19. How does this extension interact with transform feedback?
+
+        RESOLVED:  Attribute components written out by transform feedback
+        are NOT affected by the flatshading or provoking vertex state.
+
+        While this specification is written against OpenGL 2.1, transform
+        feedback was made core functionality with OpenGL 3.0 and then
+        the order of the transform feedback was moved in the OpenGL
+        3.1 specification.  Therefore the subsequent discussion uses
+        the more recent 3.1 sectioning.
+
+        Specifically the OpenGL 3.1 specification (section 2.18: Transform
+        Feedback) says "The vertices are fed back after vertex color
+        clamping, but before clipping."
+
+        This statement is unclear because flatshading (section 2.13.7:
+        Flatshading) happens inbetween vertex color clamping (section
+        2.13.6: Clamping or Masking) and primitive clipping (section 2.20:
+        Primitive Clipping).
+
+        Base on this issue the sentence is clarified to read: "The
+        vertices are fed back after vertex color clamping, but before
+        [flatshading and] clipping."
+
+        For reference, the original EXT_transform_feedback extension has
+        this same language ("The vertices are fed back after vertex color
+        clamping, but before clipping.") but follows that sentence with:
+        "If a geometry shader is active, the vertices recorded are those
+        emitted from the geometry shader."  Technically geometry shading
+        takes place prior to even vertex color clamping.
+
+        Clearly flat shading needs to happen prior to clipping so that
+        clipped vertices can share the flat shaded attributes of the
+        primitive prior to any potential clipping.
+
+        This resolution is consistent with DirectX 10's behavior.
+        Technically, DirectX 10 says that vertices output through
+        transform feedback (which DirectX 10 calls "stream output")
+        only have to be defined for constant attributes of the primitive's
+        leading vertex (constant attributes are those that OpenGL would
+        call flatshaded).  Other constant attributes for non-leading
+        vertices may be undefined.  Leaving such constant attributes
+        undefined is undesirable, particularly given how OpenGL operates.
+        It is well-defined and more useful to simply output the value
+        of the vertex's attribute prior to any flatshading.  This is
+        particularly desirable for OpenGL because with this extension
+        (and even prior to supporting this extension), the provoking
+        vertex is not always the leading vertex.
+
+        To clarify further, while this resolution is consistent with
+        DirectX 10, an OpenGL implementation that supports transform
+        feedback has no undefined behavior specified.  The simplest way
+        to describe what happens is that attribute components written
+        out by transform feedback are the attribute component values
+        of vertices AFTER (optional) geometry shading and vertex color
+        clamping but PRIOR to flatshading and primitive clipping.
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  -------- ---------  ---------------------------------------------
+     12   5/11/09  mjk        Resolve issue 12 with feedback from
+                              Daniel Koch
+     11   4/17/09  mjk        grammar and typo fixes
+     10   3/26/09  mjk        typo fixes, more contributors listed, clarify
+                              transform feedback interaction
+      9   3/12/09  mjk        dependencies on geometry shading extensions
+      8   3/11/09  mjk        Fix issues 2, 4 & 7, add issues 16, 17, & 18
+      7   3/7/09   mjk        Fix line adj typo, re-order table
+      6   3/3/09   mjk        Assign enums, add issues 11-15
+      5   1/16/08  mjk        Geometry shader interactions
+      4   1/6/08   mjk        Add line loop behavior,
+                              change triangle fan
+      3   1/31/07  mjk        Jamie review feedback
+      2   1/24/07  mjk        Fix quad entries in table
+      1   1/11/07  mjk        Initial version
+

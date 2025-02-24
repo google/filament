@@ -1,0 +1,1355 @@
+Name
+
+    ARB_fragment_shader
+
+Name Strings
+
+    GL_ARB_fragment_shader
+
+Contributors
+
+    Dave Baldwin
+    Pat Brown
+    Evan Hart
+    Phil Huxley
+    Dale Kirkland
+    John Kessenich
+    Steve Koren
+    Jon Leech
+    Bill Licea-Kane
+    Benjamin Lipchak
+    Barthold Lichtenbelt
+    Kent Lin
+    Jeremy Morris
+    Teri Morrison
+    Glenn Ortner
+    Randi Rost
+    Jeremy Sandmel
+
+    The ARB_fragment_program working group members. Several concepts and
+    chunks of text are copied from the ARB_fragment_program specification.
+
+Contact
+
+    Barthold Lichtenbelt, 3Dlabs, Inc. (barthold 'at' 3dlabs.com)
+    Randi Rost, 3Dlabs, Inc. (rost 'at' 3dlabs.com)
+
+Notice
+
+    Copyright (c) 2003-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    As described in the Contributor License, which can be found at
+    http://www.3dlabs.com/support/developer/ogl2/specs/3dlabs_contributor.pdf.
+
+Status
+
+    Complete. Approved by the ARB on June 11, 2003.
+    Updated revision 0.79 approved by the ARB on June 17, 2004.
+
+Version
+
+    Last Modified Date: December 12, 2006
+    Author Revision: 0.80
+
+Number
+
+    ARB Extension #32
+
+Dependencies
+
+    OpenGL 1.0 is required.
+
+    This extension is written against version 1.10 of the OpenGL Shading
+    Language Specification.
+
+    The extension is written against the OpenGL 1.4 Specification.
+
+    The ARB_shader_objects extension is required.
+
+    This extension interacts with the ARB_vertex_shader extension.
+
+Overview
+
+    This extension adds functionality to define fragment shader objects. A
+    fragment shader object is a shader object (see the ARB_shader_objects
+    extension) that, when attached to a program object, can be compiled and
+    linked to produce an executable that runs on the fragment processor in
+    OpenGL. The fragment processor is a programmable unit that replaces the
+    OpenGL 1.4 fixed-function texturing, color sum and fog stages. This
+    extension also defines how such an executable interacts with the fixed
+    functionality fragment processing of OpenGL 1.4. The language used to
+    write fragment shaders is not discussed here. That language is defined
+    in the OpenGL Shading Language specification as the Fragment Shading
+    Language.
+
+Issues
+    1) Can you clarify texture unit, texture image unit and texture
+       coordinate sets please?
+
+    DISCUSSION: In 'old style' GL a texture unit consists of a texture
+    coordinate processing unit (consisting of a texture matrix stack and
+    texture coordinate generation state), and a texture image unit, with all
+    the texture state defined in section 3.8, as well as texture environment
+    state, as defined in section 3.8.12. The implementation dependent number
+    of supported texture units in 'old style' GL is MAX_TEXTURE_UNITS.
+
+    In this specification a texture unit consist of one or both of a texture
+    image unit, and a texture coordinate set. The implementation dependent
+    number of supported texture image units is MAX_TEXTURE_IMAGE_UNITS_ARB
+    and the number of supported texture coordinate sets is
+    MAX_TEXTURE_COORDS_ARB.
+
+    The maximum available multi-texture stages (to the fixed-function
+    pipeline) are MAX_TEXTURE_UNITS. A fragment shader has access to at
+    least MAX_TEXTURE_UNITS texture image units, and possibly more, up to
+    MAX_TEXTURE_IMAGE_UNITS_ARB. Where MAX_TEXTURE_IMAGE_UNITS_ARB is equal
+    or greater than MAX_TEXTURE_UNITS.
+
+    RESOLUTION: Yes
+
+    2) Should we split the number of available texture coordinate sets and
+       texture units?
+
+    DISCUSSION: Some implementations might provide for more texture image
+    units than texture coordinate sets. Texture coordinates for the 'new'
+    texture image units can be derived from other texture coordinates, or
+    provided through a texture lookup. These new texture coordinates can be
+    used to index different textures bound to different texture image units.
+
+    RESOLUTION: YES, splitting this is useful.
+
+    3) Is the texture environment state associated with all texture image
+       units?
+
+    DISCUSSION: A fragment shader has access to the texture environment
+    color through the shader built-in array gl_TexEnvColor. This array has
+    MAX_TEXTURE_IMAGE_UNITS_ARB elements. It is also possible, and useful,
+    to set the texture environment state TEXTURE_LOD_BIAS for all texture
+    image units. All other texture environment state is not accessible to a
+    fragment shader (for example, TEXTURE_ENV_MODE, COMBINE_RGB etc).
+    However, an application can still set this state (and query it).
+
+    Note that fixed-function GL caps the number of supported texture stages
+    to MAX_TEXTURE_UNITS. This limit is generally below the number of
+    texture image units available to a fragment shader. Each of these
+    MAX_TEXTURE_UNITS texture stages need all texture environment state for
+    the multi-texture pipeline to function correctly. Texture units above
+    this limit still have all the texture environment state associated with
+    it, even although this state is not accessible in a fragment shader.
+
+    Note that ARB_fragment_program also does this, except that it caps
+    access to the texture environment state to the first MAX_TEXTURE_UNITS
+    texture image units.
+
+    RESOLUTION: Yes.
+
+    4) What to do about invariance rules (Appendix A)?
+
+    DISCUSSION: Numerous rules and proposals have been discussed. In the
+    end, simplicity is an important goal. It is always possible to later add
+    more invariance rules, if it turns out to be desirable.
+
+    RESOLUTION: The same shader will produce the same result when run
+    multiple times with the same input. The wording 'the same shader' means
+    a program object that is populated with the same source strings, which
+    are compiled and then linked, possibly multiple times. This program
+    object is executed using the same GL state vector.
+
+    Besides the above general statement, we will limit this specification to
+    one invariance rule with respect to depth produced by a fragment shader:
+
+    All shaders that either conditionally or unconditionally copy the input
+    gl_FragCoord.z to the output gl_FragDepth are depth-invariant with
+    respect to each other, for those fragments where this copy actually is
+    done.
+
+    Note that a fragment shader that does not write to gl_FragDepth is
+    depth-invariant with fixed function (since fixed function depth will be
+    used for the fragment when gl_FragDepth is not written).
+
+    See also Appendix A.
+
+    5) Should the output from the pixel rectangle rasterization and bitmap
+       rasterization stages feed into a fragment shader?
+
+    DISCUSSION: See also Issue 2 in the OpenGL Shading Language
+    specification. Future API additions could make the operations DrawPixels
+    performs programmable. For the list of specific operations that could be
+    replaced see Section 3.6.4, Figure 3.7 in the OpenGL 1.4 specification.
+    Combined with the proposed pack/unpack language, and the proposed pack
+    and unpack processors, such a future extension will become an extremely
+    powerful and flexible imaging pipeline.
+
+    Most of the harder parts to implement the functionality in Figure 3.7
+    result from the imaging subset. A conceivable way to implement this
+    functionality is by using the programmable fragment unit. However, if
+    the results from the pixel rectangle and bitmap rasterization stages did
+    feed into the fragment shader, then implementing all the functionality
+    in Figure 3.7 might become hard or impossible, when a fragment shader is
+    also active. A possibility that was considered was to say that if a
+    fragment shader was active, pixel transfer functionality such as scale
+    and bias, color matrix, lookup, etc., was disabled. A fragment shader
+    could perform these kinds of operations, after all.
+
+    ARB_fragment_program does feed the result of pixel rectangle and bitmap
+    rasterization into the fragment shader.
+
+    RESOLUTION: Yes, this allows fragment shaders to do image processing
+    type of operations on pixel rectangles and bitmaps.
+
+    Note that a fragment shader that is processing fragments resulting from
+    rasterization of pixel rectangles or bitmaps, can only reference
+    built-in varying variables starting with "gl_" (gl_Color,
+    gl_SecondaryColor, gl_TexCoord[] and gl_FogFragCoord). The fragments
+    produced as a result of rasterizing a pixel rectangle or bitmap have
+    associated values for those varying variables. If the fragment shader
+    uses a user-defined varying, results are undefined.
+
+    6) What about clamping and conversion for color and depth output
+       variables?
+
+    DISCUSSION: The output variables gl_FragDepth and gl_FragColor are in
+    floating point format. However, the GL 1.4 pipeline following the
+    fragment shader expects these values to be in fixed-point, and clamped
+    to the range [0,1].
+
+    RESOLUTION: Color and depth values written by the fragment shader will
+    be automatically clamped to the range [0,1] and then converted, as
+    appropriate, to a fixed-point representation. See section 3.11.6.
+
+    7) What about clamping and conversion for color and depth input varying
+       variables?
+
+    DISCUSSION: This ties in with issue 18 in the ARB_vertex_shader
+    specification. There are three cases to consider:
+
+      1) An ARB_vertex_shader shader writing colors that are consumed by an
+         ARB_fragment_shader shader.
+      2) An ARB_vertex_program shader writing colors that are consumed by an
+         ARB_fragment_shader shader.
+      3) Fixed functionality vertex processing outputting colors that are
+         consumed by an ARB_fragment_shader shader.
+
+    Fixed function vertex processing as well as ARB_vertex_shader and
+    ARB_vertex_program do clamp colors automatically to [0,1]. In all three
+    cases colors are next converted to fixed-point (section 2.13.9).
+
+    RESOLUTION: Depth and color values will be converted to floating-point
+    before entering the fragment shader.
+
+    8) What controls the value of the shader built-in Boolean
+       gl_FrontFacing?
+
+    DISCUSSION: The OpenGL Shading Language says the following: "The
+    fragment shader has access to the read-only built-in variable
+    gl_FrontFacing whose value is true if the fragment belongs to a
+    front-facing primitive."
+
+    This specification defines when a fragment is considered front-facing.
+
+    A fragment derives its facing direction from the primitive that
+    generates the fragment. All fragments generated by primitives other than
+    polygons, triangles, or quadrilaterals are considered to be front
+    facing. For all other fragments (including ones resulting from point-
+    and line-mode polygons) the determination is made by examining the sign
+    of the area computed by equation 2.6 of section 2.13.1 (including the
+    possible reversal of this sign as indicated by the last call to
+    FrontFace). If the sign is positive then the fragments are front facing;
+    otherwise, they are back facing.
+
+    ARB_vertex_shader has an enable called VERTEX_PROGRAM_TWO_SIDE_ARB. If
+    false, the front color is always selected. However, this enable does not
+    apply to the front or back facing determination of a fragment. The value
+    of VERTEX_PROGRAM_TWO_SIDE_ARB does not affect the value of
+    gl_FrontFacing. Thus you can have the following situation:
+
+      * VERTEX_PROGRAM_TWO_SIDE_ARB = FALSE. Which forces the front color to
+        always be selected. Thus gl_Color and gl_SecondaryColor (read-only
+        accessible in the fragment shader) have the values of the varyings
+        gl_FrontColor and gl_FrontSecondaryColor (written by the vertex
+        shader).
+      * The primitive is a polygon and is determined to be back-facing.
+        gl_FrontFacing therefore = FALSE.
+
+    RESOLUTION: Depending on the primitive type it is either always front
+    facing, or it is determined by he sign of the polygon's area computed in
+    window coordinates.
+
+    9) OpenGL provides a hierarchy of texture enables (cube map, 3D, 2D,
+       1D). Should samplers override that hierarchy and select specific
+       texture targets?
+
+    DISCUSSION: How samplers work is explained in issue 25 of the
+    ARB_shader_objects specification.
+
+    RESOLUTION: Yes. This removes a potential pitfall for developers:
+    Leaving the hierarchy of enables in an undesired state. It makes shaders
+    more readable as the intent of the code is more obvious. It allows
+    compilers to be more aggressive as to which texture coordinate
+    components are "don't cares" without having to recompile programs when
+    fixed-function texture enables change.
+
+    Note that the ARB_shader_objects specification states that it is not
+    allowed to have samplers of different types point to the same texture
+    image unit. For example, it is not possible to request a 2D and a 3D
+    texture lookup using the same texture image unit within a program
+    object.
+
+    10) Is Depth Offset applied to the window z value before it enters the
+        fragment shader?
+
+    DISCUSSION: Depth Offset (polygon offset) is discussed in section 3.5.5
+    of the GL 1.4 spec. Depth offset is considered part of the rasterization
+    stage, which happens prior to processing of a fragment shader.
+
+    RESOLUTION: As in the base OpenGL specification, the depth offset
+    generated by polygon offset is added during polygon rasterization. The
+    depth value provided to shaders in the built-in gl_FragCoord.z already
+    includes polygon offset, if enabled. If the depth value is replaced by a
+    fragment shader, the polygon offset value will NOT be recomputed and
+    added back after shader execution.
+
+    NOTE: This is probably not desirable for fragment shaders that modify
+    depth values since the partials used to generate the offset may not
+    match the partials of the computed depth value.
+
+    11) Should gl_FragColor be aliased to gl_FragData[0]?
+
+    RESOLUTION: No. A shader should write either gl_FragColor, or
+    gl_FragData[n], but not both.
+
+    12) Should gl_FragData[n] be clamped?
+
+    RESOLUTION: gl_FragData[] is basically an array of colors. The values in
+    this array might or might not be actual color data, just as is true for
+    the output variable gl_FragColor. The data assigned to gl_FragData[n]
+    will be clamped to [0,1]. This restriction can be lifted by a separate
+    extension, for example by the proposed color_clamp_control extension.
+
+    13) What texture operations are not affected by a fragment shader
+        performing a texture lookup?
+
+    RESOLUTION: Whether or not a fragment shader is active, the following
+    operations still behave as specified:
+
+      * texture image specification (pp. 119-128)
+      * alternate texture image specification (pp. 128-132)
+      * compressed texture image specification (pp. 132-135)
+      * texture parameters behave as specified even when a texture is
+        accessed from within a fragment shader (pp. 135-147)
+      * texture state and proxy state (pp. 148-149)
+      * texture object specification (pp. 149-152)
+      * texture comparison modes (p. 157)
+
+    14) What is the interaction with a possible MRT (Multiple Render Target)
+        extension?
+
+    The OpenGL Shading Language defines the array gl_FragData[] to output
+    values to multiple buffers. There are two situations to consider.
+
+      1) There is no MRT extension support. A shader can statically assign a
+         value to either gl_FragColor or gl_FragData[0] (but not both).
+         Either way the same buffer will be targeted.
+      2) There is MRT support. In this case what happens is defined in the
+         relevant MRT extension documentation.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <shaderType> argument of CreateShaderObjectARB and
+    returned by the <params> parameter of GetObjectParameter{fi}vARB:
+
+        FRAGMENT_SHADER_ARB                             0x8B30
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        MAX_FRAGMENT_UNIFORM_COMPONENTS_ARB             0x8B49
+        MAX_TEXTURE_COORDS_ARB                          0x8871
+        MAX_TEXTURE_IMAGE_UNITS_ARB                     0x8872
+
+    Accepted by the <target> parameter of Hint and the <pname> parameter of
+    GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+        FRAGMENT_SHADER_DERIVATIVE_HINT_ARB             0x8B8B
+
+Additions to Chapter 2 of the OpenGL 1.4 Specification (OpenGL Operation)
+
+    Modify Section 2.1.1, Floating-Point Computation (p. 6)
+
+    (modify first paragraph, p. 6) ... are accurate to about 1 part in 10^5.
+    The maximum representable magnitude of a floating-point number used to
+    represent positional, normal or texture coordinates must be at least
+    2^32. The maximum representable magnitude for colors must be at least
+    2^10. The maximum representable magnitude for all other floating-point
+    values must be at least 2^32.
+
+    Modify Section 2.7, Vertex Specification (p. 19)
+
+    (modify second paragraph, p. 20) Implementations support more than one
+    set of texture coordinates. The commands
+
+        void MultiTexCoord{1234}{sifd}(enum texture, T coords)
+        void MultiTexCoord{1234}{sifd}v(enum texture, T coords)
+
+    take the coordinate set to be modified as the <texture> parameter.
+    <texture> is a symbolic constant of the form TEXTUREi, indicating that
+    texture coordinate set i is to be modified. The constants obey TEXTUREi
+    = TEXTURE0 + i (i is in the range 0 to k-1, where k is the
+    implementation-dependent number of texture units defined by
+    MAX_TEXTURE_COORDS_ARB).
+
+    Modify Section 2.8, Vertex Arrays (p. 23)
+
+    (modify first paragraph, p. 23) ... The client may specify up to 7 plus
+    the value of MAX_TEXTURE_COORDS_ARB arrays: one each to store vertex
+    coordinates...
+
+    (modify first paragraph, p. 25) The command
+
+        void ClientActiveTexture(enum texture)
+
+    is used to select the vertex array client state parameters to be
+    modified by the TexCoordPointer command and the array affected by
+    EnableClientState and DisableClientState with parameter
+    TEXTURE_COORD_ARRAY. This command sets the client state variable
+    CLIENT_ACTIVE_TEXTURE. Each texture coordinate set has a client state
+    vector which is selected when this command is invoked. This state vector
+    includes the vertex array state. This call also selects the texture
+    coordinate set state used for queries of client state.
+
+
+    (modify first paragraph, p. 30) If the number of supported texture
+    coordinate sets (the value of MAX_TEXTURE_COORDS_ARB) is k, ...
+
+    Modify Section 2.10.2, Matrices (p. 33)
+
+    (modify first paragraph, p. 37) For each texture coordinate set, a 4x4
+    matrix is applied to the corresponding texture coordinates. This matrix
+    is applied as...
+
+    (modify third and fourth paragraphs, p. 37) The command
+
+        void ActiveTexture(enum texture)
+
+    specifies the active texture unit selector, ACTIVE_TEXTURE. Each texture
+    unit contains up to two distinct sub-units: a texture coordinate
+    processing unit (consisting of a texture matrix stack and texture
+    coordinate generation state) and a texture image unit (consisting of all
+    the texture state defined in Section 3.8). In implementations with a
+    different number of supported texture coordinate sets and texture image
+    units, some texture units may consist of only one of the two sub-units.
+
+    The active texture unit selector specifies the texture coordinate set
+    accessed by commands involving texture coordinate processing. Such
+    commands include those accessing the current matrix stack (if
+    MATRIX_MODE is TEXTURE), TexGen (section 2.10.4), Enable/Disable (if any
+    texture coordinate generation enum is selected), as well as queries of
+    the current texture coordinates and current raster texture coordinates.
+    If the texture coordinate set number corresponding to the current value
+    of ACTIVE_TEXTURE is greater than or equal to the
+    implementation-dependent constant MAX_TEXTURE_COORDS_ARB, the error
+    INVALID_OPERATION is generated by any such command.
+
+    The active texture unit selector also selects the texture image unit
+    accessed by commands involving texture image processing (section 3.8).
+    Such commands include all variants of TexEnv, TexParameter, and TexImage
+    commands, BindTexture, Enable/Disable for any texture target (e.g.,
+    TEXTURE_2D), and queries of all such state. If the texture image unit
+    number corresponding to the current value of ACTIVE_TEXTURE is greater
+    than or equal to the implementation-dependent constant
+    MAX_TEXTURE_IMAGE_UNITS_ARB, the error INVALID_OPERATION is generated by
+    any such command.
+
+    ActiveTexture generates the error INVALID_ENUM if an invalid <texture>
+    is specified. <texture> is a symbolic constant of the form TEXTUREi,
+    indicating that texture unit i is to be modified. The constants obey
+    TEXTUREi = TEXTURE0 + i (i is in the range 0 to k-1, where k is the
+    larger of the MAX_TEXTURE_COORDS_ARB and MAX_TEXTURE_IMAGE_UNITS_ARB).
+
+    For compatibility with old OpenGL specifications, the
+    implementation-dependent constant MAX_TEXTURE_UNITS specifies the number
+    of conventional texture units supported by the implementation. Its value
+    must be no larger than the minimum of MAX_TEXTURE_COORDS_ARB and
+    MAX_TEXTURE_IMAGE_UNITS_ARB.
+
+    (modify third paragraph, p. 38) The state required to implement
+    transformations consists of a 4-valued integer indicating the current
+    matrix mode, one stack of at least two 4x4 matrices for each of COLOR,
+    PROJECTION, each texture coordinate set, and TEXTURE and a stack of at
+    least 32 4x4 matrices for MODELVIEW. Each matrix stack has an associated
+    stack pointer. Initially, there is only one matrix on each stack, and
+    all matrices are set to the identity. The initial matrix mode is
+    MODELVIEW. The initial value of ACTIVE_TEXTURE is TEXTURE0.
+
+Additions to Chapter 3 of the OpenGL 1.4 Specification (Rasterization)
+
+    (Modify first paragraph, p. 61)... Figure 3.1 diagrams the rasterization
+    process. The color value assigned to a fragment is initially determined
+    by the rasterization operations (sections 3.3 through 3.7) and modified
+    by either the execution of the texturing, color sum, and fog operations
+    as defined in sections 3.8, 3.9, and 3.10, or of a fragment shader
+    defined in section 3.11. The final depth value is initially determined
+    by the rasterization operations and may be modified or replaced by a
+    fragment shader. The results from rasterizing a point, line, polygon,
+    pixel rectangle or bitmap can be routed through a fragment shader.
+
+    (modify Figure 3.1)
+
+
+                     _ +---------------+      switch depending on a
+                     /||    Point      |\     fragment shader being active
+                    /  | Rasterization | \              o-------------+
+                   /   +---------------+ -++-++--->o                  |
+           From   /    +---------------+ / | ||         o             |
+        Primitive ---> |     Line      |/  | ||         |             |
+         Assembly \    | Rasterization |  /  ||         |             |
+                   \   +---------------+ /   ||         |             |
+                    \  +---------------+/    ||   +-----+-----+  +----+-----+
+                     \||    Polygon    |     ||   | Texturing |  | Fragment |
+                     - | Rasterization |    / |   +-----+-----+  | Shader   |
+                       +---------------+   /  |         |        +----+-----+
+                       +---------------+  /   |   +-----+-----+       |
+                       |     Pixel     | /    |   | Color Sum |       |
+        DrawPixels --> |   Rectangle   |/    /    +-----+-----+       |
+                       | Rasterization |    /           |             V
+                       +---------------+   /      +-----+-----+
+                       +---------------+  /       |    Fog    |---> Fragments
+          Bitmap ----> |    Bitmap     | /        +-----------+
+                       | Rasterization |/
+                       +---------------+
+
+    Modify Section 3.3.1, Basic Point Rasterization (p. 67)
+
+    (modify last paragraph, p. 67) All fragments produced in rasterizing a
+    non-antialiased point are assigned the same associated data, which are
+    those of the vertex corresponding to the point. If a fragment shader is
+    active (see section 3.11) the texture coordinates s, t, r, and q are
+    passed on directly. Otherwise, the texture coordinates s, t, and r are
+    replaced by s/q, t/q, and r/q, respectively, and if q is less than or
+    equal to zero, the results are undefined.
+
+    (modify second paragraph p. 68) If antialiasing is enabled, then point
+    rasterization produces a fragment for each fragment square that
+    intersects the region lying within the circle having diameter equal to
+    the current point width and centered at the point's (Xw, Yw) (figure
+    3.3). The coverage value for each fragment in the window coordinate area
+    of the intersection of the circular region with the corresponding
+    fragment square (but see section 3.2). This value is saved and used in
+    the final step of rasterization (section 3.12). The data associated with
+    each fragment are otherwise the data associated with the point being
+    rasterized, with the exception of the texture coordinates. If a fragment
+    shader is active, texture coordinates s, t, r, and q are passed on
+    directly. Otherwise, the texture coordinates s, t, and r are replaced by
+    s/q, t/q, and r/q, respectively, and if q is less than or equal to zero,
+    the results are undefined.
+
+    Modify Section 3.4.1, Basic Line Segment Rasterization (p. 71)
+
+    (modify last paragraph, p. 72) ... or the s, t, r, or q texture
+    coordinate or the clip w coordinate (the depth value, window z, must be
+    found using equation 3.5, below), is found as
+
+       (Equation 3.4)
+
+    where fa and fb are the data associated with the starting and ending
+    endpoints of the segment, respectively; wa and wb are the clip w
+    coordinates of the starting and ending endpoints of the segments,
+    respectively. When there is no fragment shader active (see section
+    3.11), alpha a = alpha b = 1 for all data except texture coordinates, in
+    which case alpha a = qa and alpha b = qb (qa and qb are the homogeneous
+    texture coordinates at the starting and ending endpoints of the segment;
+    results are undefined if either of these is less than or equal to 0).
+    When a fragment shader is active, alpha a = alpha b = 1 for all
+    components (i.e., q is interpolated along with s, t, and r). Note that
+    linear interpolation would use ...
+
+    ... A GL implementation may choose to approximate equation 3.4 with 3.5,
+    but this will normally lead to unacceptable distortion effects when
+    interpolating texture coordinates or clip w coordinates.
+
+    Modify Section 3.5.1, Basic Polygon Rasterization (p. 77)
+
+    (modify fourth paragraph, p. 78) ... When no fragment shader is active
+    (section 3.11), alpha a = alpha b = alpha c = 1 except for texture s, t,
+    and r coordinates, for which alpha a = qa, alpha b = qb, and alpha c =
+    qc (if any of qa, qb, or qc are less than or equal to zero, results are
+    undefined). When a fragment shader is active, alpha a = alpha b = alpha
+    c = 1 for all components (i.e., q is interpolated along with s, t, and
+    r). ...
+
+    (modify first paragraph p. 79) this may yield acceptable results for
+    color values (it must be used for depth values), but will normally lead
+    to unacceptable distortion effects if used for texture coordinates or
+    clip w coordinates.
+
+    Modify Section 3.6.4, Rasterization of Pixel Rectangles (p. 95)
+
+    (modify third paragraph, p. 106) A fragment arising from a group
+    consisting of color data ...,and texture coordinates are taken from the
+    current raster position's associated texture coordinates. If a fragment
+    shader is active (see section 3.11) the texture coordinates s, t, r, and
+    q are passed on directly. Otherwise, the texture coordinates s, t, and r
+    are replaced by s/q, t/q, and r/q, respectively, and if q is less than
+    or equal to zero, the results are undefined. Groups arising from
+    DrawPixels ...
+
+    Modify Section 3.7, Bitmaps (p. 116)
+
+    (modify first paragraph, p. 118) ...The associated data for each
+    fragment are those associated with the current raster position. If a
+    fragment shader is active (see section 3.11) the texture coordinates s,
+    t, r, and q are passed on directly. Otherwise, the texture coordinates
+    s, t, and r are replaced by s/q, t/q, and r/q, respectively, and if q is
+    less than or equal to zero, the results are undefined. Once the
+    fragments have been produced,...
+
+    Modify Section 3.8, Texturing (p. 118)
+
+    (change the first full paragraph on p. 119) The GL provides two ways to
+    specify the details of how texturing of a primitive is effected. The
+    first is referred to as fixed functionality, and is described in this
+    section. The second is referred to as a fragment shader, and is
+    described in section 3.11. The specification of the image to be texture
+    mapped and the means by which the image is filtered when applied to the
+    primitive are common to both methods and are discussed in this section.
+    The fixed functionality method for determining what RGBA value is
+    produced is also described in this section. If a fragment shader is
+    active, the method for determining the RGBA value is specified by an
+    application-supplied fragment shader as described in the OpenGL Shading
+    Language Specification.
+
+    Modify Section 3.8.8, Texture Minification (p. 140)
+
+    (change the first paragraph of the "Scale Factor and Level of Detail"
+    section)
+
+    The choice is governed by a scale factor rho(x,y) and the level of
+    detail parameter lambda(x,y), defined as
+
+    lambda_base(x,y) = log2[rho(x,y)]                                  3.16a
+
+    lambda'(x,y) = lambda_base(x,y) +                                  3.16b
+                   clamp(texobj_bias + texunit_bias + fragshader_bias)
+
+                  |------- lod_max    lambda' > lod_max
+    lambda(x,y) = |        lambda'    lod_min <= lambda' <= lod_max    3.16c
+                  |        lod_min    lambda' < lod_min
+                  |------- undefined  lod_min > lod_max
+
+    texobj_bias is the value of TEXTURE_LOD_BIAS for the bound texture
+    object (as described in section 3.8.4), and texunit_bias is the value of
+    TEXTURE_LOD_BIAS for the current texture unit (as described in section
+    3.8.13). fragshader_bias is the value of the optional bias parameter in
+    the texture lookup functions available to a fragment shader. If a
+    fragment shader is active, but the bias parameter is not provided, or if
+    no fragment shader is active, then fragshader_bias is zero. The sum of
+    these values is clamped to the range [-max_bias, max_bias] where
+    max_bias is the value of the implementation defined constant
+    MAX_TEXTURE_LOD_BIAS.
+
+    Modify Section 3.8.15, Texture Application (p. 158)
+
+    (modify fifth paragraph, p. 158) Texturing is enabled and disabled
+    individually for each texture unit. If texturing is disabled for one of
+    the units, then the fragment resulting from the previous unit is passed
+    unaltered to the following unit. Individual texture units beyond those
+    specified by MAX_TEXTURE_UNITS are always treated as disabled.
+
+    Modify Section 3.9, Color Sum (p. 160)
+
+    (add a new sentence before first paragraph, p. 160) If no fragment
+    shader is active (see Section 3.11), a color sum operation is performed
+    involving the primary and secondary colors.
+
+    (change the last sentence of the section, p. 160) Color sum has no
+    effect in color index mode or if a fragment shader is active.
+
+    Modify Section 3.10, Fog (p. 160)
+
+    (Change the first sentence, p. 160) If no fragment shader is active (see
+    Section 3.11) and fog is enabled, an operation is performed that blends
+    a fog color with a rasterized fragment's ....
+
+    Modify Section 3.11, Antialiasing Application
+
+    Rename this section to Section 3.12.
+
+    Add Section 3.11, Fragment Shaders
+
+    The sequence of operations that are applied to fragments that result
+    from rasterizing a point, line segment, polygon, pixel rectangle or
+    bitmap as described in Sections 3.8 through 3.10 is a
+    fixed-functionality method for processing such fragments. Applications
+    can more generally describe the operations that occur on such fragments
+    by using a "fragment shader".
+
+    A fragment shader is an array of strings containing source code for the
+    operations that are meant to occur on each fragment that results from
+    rasterizing a point, line segment, polygon, pixel rectangle or bitmap.
+    The language used for fragment shaders is described in the OpenGL
+    Shading Language Specification.
+
+    A fragment shader only applies when the GL is in RGBA mode. Its
+    operation in color index mode is undefined.
+
+    Section 3.11.1 Creating and Using a Fragment Shader
+
+    In order to create a fragment shader, call CreateShaderObjectARB with a
+    <shaderType> of FRAGMENT_SHADER_ARB. The source code for the fragment
+    shader can be specified using the ShaderSourceARB command. A fragment
+    shader is compiled by calling CompileShaderARB and attached to a program
+    object by calling AttachObjectARB. When LinkProgramARB is issued, all of
+    the attached shader objects of type FRAGMENT_SHADER_ARB are linked
+    together to create an executable program that can be used to process
+    fragments that arise from rasterizing points, line segments, polygons,
+    pixel rectangles or bitmpas. This executable program will become part of
+    current state when UseProgramObjectARB is issued.
+
+    CreateShaderObjectARB will set the object specific parameter
+    OBJECT_SUBTYPE_ARB to FRAGMENT_SHADER_ARB.
+
+    Section 3.11.2 Uniform Variables
+
+    A fragment shader may define one or more "uniform" variables. These
+    values are expected to remain constant over a primitive or a sequence of
+    primitives. The OpenGL Shading Language Specification defines a set of
+    built-in uniform variables for fragment shaders that correspond to the
+    state that GL manages for the purpose of processing fragments that are
+    generated by the rasterization of points, line segments, and polygons.
+    The amount of storage that is available for fragment shader uniform
+    variables is specified by the implementation dependent constant
+    MAX_FRAGMENT_UNIFORM_COMPONENTS_ARB. This value represents the number of
+    individual floating point values, or individual integer values, or
+    individual Boolean values that can be held in uniform variable storage
+    for a fragment shader. A link error will be generated if an attempt is
+    made to utilize more than the space available for fragment shader
+    uniform variables.
+
+    Section 3.11.3 Varying Variables
+
+    A fragment shader consumes the data produced as a result of the
+    rasterization of points, line segments, polygons, pixel rectangles or
+    bitmaps. If no vertex shader is active, the data that is available to
+    the fragment shader at each fragment consists of the same types of data
+    that are normally associated with a fragment for fixed functionality
+    fragment processing, namely, the fragment's coordinate, color, secondary
+    color, texture coordinates, fog coordinate, and eyeZ. The OpenGL Shading
+    Language Specification defines a set of built-in varying variables that
+    can be used to access these values within a fragment shader.
+
+    When a vertex shader is active, it may define one or more "varying"
+    variables (see Section 2.15.4 and the OpenGL Shading Language
+    Specification). These values are expected to be interpolated across the
+    primitive being rendered. The results of these interpolations are
+    available within a fragment shader through varying variables that are
+    defined as varying variables in the fragment shader with the same names
+    as those defined in the vertex shader.
+
+    Section 3.11.4 Fragment Shader Execution Environment
+
+    If a fragment shader is active, the executable version of the fragment
+    shader is used to process incoming fragment values that are the result
+    of point, line segment, polygon, pixel rectangle or bitmap rasterization
+    rather than the fixed functionality fragment processing described in
+    Sections 3.8-3.10. In particular,
+
+      * the texture environments and texture functions described in Section
+        3.8.13 are not applied (pp. 152-157)
+      * texture application as described in Section 3.8.15 is not applied.
+        (pp. 158- 160)
+      * color sum as described in Section 3.9 is not applied (p. 160)
+      * fog as described in Section 3.10 is not applied (p. 160-162)
+
+    When a texture lookup is performed in a fragment shader, the GL computes
+    the filtered texture value ? in the manner described in sections 3.8.8
+    and 3.8.9, and converts it to a texture source color C_s according to
+    table 3.21 (section 3.8.13). The GL returns a four-component vector
+    (R_s, G_s, B_s, A_s) to the fragment shader. For the purposes of
+    level-of-detail calculations, the derivates du/dx, du/dy, dv/dx, dv/dy,
+    dw/dx and dw/dy may be approximated by a differencing algorithm as
+    detailed in section 8.8 of the OpenGL Shading Language specification.
+
+    Texture comparison requires the fragment shader to use the shadow
+    versions of the texture lookup functions. This in turn means that
+    samplers of type sampler1DShadow or sampler2DShadow or
+    sampler2DRectShadow need to be used to indicate the texture image unit
+    that has a depth texture bound to it.
+
+    The results of a texture lookup function are undefined if:
+
+      * The sampler used in a texture lookup function is of type sampler1D
+        or sampler2D or sampler2DRect, and the texture object's internal
+        format is DEPTH_COMPONENT, and the TEXTURE_COMPARE_MODE is not NONE.
+      * The sampler used in a texture lookup function is of type
+        sampler1DShadow or sampler2DShadow or sampler2DRectShadow, and the
+        texture object's internal format is DEPTH_COMPONENT, and the
+        TEXTURE_COMPARE_MODE is NONE.
+      * The sampler used in a texture lookup function is of type
+        sampler1DShadow or sampler2DShadow or sampler2DRectShadow, and the
+        texture object's internal format is not DEPTH_COMPONENT_ARB.
+
+    If a fragment shader uses a sampler which associated texture object is
+    not complete, as defined in section 3.8.10, the texture image unit will
+    return (R, G, B, A) = (0, 0, 0, 1).
+
+    The number of separate texture units that can be accessed from within a
+    fragment shader during the rendering of a single primitive is specified
+    by the implementation- dependent constant MAX_TEXTURE_IMAGE_UNITS_ARB.
+
+    A fragment shader has access to the read-only built-in variable
+    gl_FrontFacing whose value is true if the fragment belongs to a
+    front-facing primitive. A fragment derives its facing direction from the
+    primitive that generates the fragment. All fragments generated by
+    primitives other than polygons, triangles, or quadrilaterals are
+    considered to be front facing. For all other fragments (including ones
+    resulting from point- and line-mode polygons) the determination is made
+    by examining the sign of the area computed by equation 2.6 of section
+    2.13.1 (including the possible reversal of this sign as indicated by the
+    last call to FrontFace). If the sign is positive then the fragments are
+    front facing; otherwise, they are back facing.
+
+    When processing fragments resulting from the rasterization of a pixel
+    rectangle or bitmap, results are undefined if the fragment shader uses a
+    varying variable that is not a built-in varying variable (see Section
+    7.6 of the Shading Language Specification for a list).
+
+    Section 3.11.5 Fragment Shader Input
+
+    The OpenGL Shading Language specification describes the values that are
+    available as inputs to the fragment shader. This section is concerned
+    with the built-in variables gl_FragCood, gl_Color and gl_SecondaryColor.
+
+    The built-in gl_FragCoord holds the window relative coordinates x, y, z,
+    and 1/w for the fragment. The "z" component of gl_FragCoord undergoes an
+    implied conversion to floating point. This conversion must leave the
+    values 0 and 1 invariant. Note that this "z" component already has a
+    polygon offset added in, if enabled. The 1/w value is computed from the
+    Wc coordinate (see Section 2.10), which is the result of the product of
+    the projection matrix and the vertex's eye coordinates.
+
+    The built-in variables gl_Color and gl_SecondaryColor hold the "r", "g",
+    "b", and "a" components, respectively, of the fragment color and
+    secondary color. Each fixed-point color component undergoes an implied
+    conversion to floating point. This conversion must leave the values 0
+    and 1 invariant.
+
+    Section 3.11.6 Fragment Shader Output
+
+    The OpenGL Shading Language specification describes the values that may
+    be output by a fragment shader. These are gl_FragColor, gl_FragData[n],
+    and gl_FragDepth. The final fragment color values or the final fragment
+    data values written by a fragment shader are clamped to the range [0,1]
+    and then converted to fixed-point as described in section 2.13.9, Final
+    Color Processing. The final fragment depth written by a fragment shader
+    is first clamped to [0,1] and then converted to fixed-point as if it
+    were a window z value. See Section 2.10.1, Controlling the Viewport.
+    Note that the depth range computation is NOT applied here, only the
+    conversion to fixed-point.
+
+    The OpenGL Shading Language specification defines what happens when
+    color, fragment data and/or depth are not written. Those rules are
+    repeated here.
+
+    Writing to gl_FragColor specifies the fragment color that will be used
+    by the subsequent fixed functionality pipeline. If subsequent fixed
+    functionality consumes fragment color and an execution of a fragment
+    shader does not write a value to gl_FragColor then the fragment color
+    consumed is undefined.
+
+    The variable gl_FragData is an array. Writing to gl_FragData[n]
+    specifies the fragment data that will be used by the subsequent fixed
+    functionality pipeline for data n. If subsequent fixed functionality
+    consumes fragment data and an execution of a fragment shader does not
+    write a value to it, then the fragment data consumed is undefined.
+
+    If a shader statically assigns a value to gl_FragColor, it may not
+    assign a value to any element of gl_FragData. If a shader statically
+    writes a value to any element of gl_FragData, it may not assign a value
+    to gl_FragColor. That is, a shader may assign values to either
+    gl_FragColor or gl_FragData, but not both..
+
+    Writing to gl_FragDepth will establish the depth value for the fragment
+    being processed. If depth buffering is enabled, and a shader does not
+    write gl_FragDepth, then the fixed function value for depth will be used
+    as the fragment's depth value. If a shader statically assigns a value to
+    gl_FragDepth, and there is an execution path through the shader that
+    does not set gl_FragDepth, then the value of the fragment's depth may be
+    undefined for some executions of the shader. That is, if a shader
+    statically contains a write to gl_FragDepth, then it is responsible for
+    always writing it.
+
+    Note, a shader contains a static assignment to a variable x if, after
+    pre-processing, the shader contains a statement that would write to x,
+    whether or not run-time flow of control will cause that statement to be
+    executed.
+
+    Section 3.11.7 Required State
+
+    Besides the required state outlined in the ARB_shader_objects extension
+    document, the following state per program object is also required:
+
+      * An array of MAX_FRAGMENT_UNIFORM_COMPONENTS_ARB words that holds
+        uniform values.
+
+    Modify Section 3.12, Multisample Point Fade
+
+    Rename this section to Section 3.13.
+
+
+Additions to Chapter 4 of the OpenGL 1.4 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.4 Specification (Special Functions)
+
+    Modify Section 5.6, Hints (p. 203)
+
+    (add to the paragraph describing the hints)... the desired quality and
+    performance of compressing texture images;
+    FRAGMENT_SHADER_DERIVATIVE_HINT_ARB, indicating the desired derivative
+    accuracy for the fragment processing built-in functions dFdx, dFdy and
+    fwidth. Hint must be one of FASTEST, ...
+
+Additions to Chapter 6 of the OpenGL 1.4 Specification (State and State Requests)
+
+    Modify Section 6.1.2, Data Conversions (p. 205)
+
+    (add to end of last paragraph, p. 206) Queries of texture state
+    variables corresponding to a texture coordinate processing unit (namely,
+    TexGen state and enables, and matrices) will produce an
+    INVALID_OPERATION error if the value of ACTIVE_TEXTURE is greater than
+    or equal to MAX_TEXTURE_COORDS_ARB. All other texture state queries will
+    result in an INVALID_OPERATION error if the value of ACTIVE_TEXTURE is
+    greater than or equal to MAX_TEXTURE_IMAGE_UNITS_ARB.
+
+    Modify section 6.1.12 Object Queries.
+
+    The commands
+
+        void GetObjectParameter{if}vARB(handleARB obj, enum pname, T params)
+
+    return object specific parameter values for object <obj> in <params>.
+    The parameter value to return is specified by <pname>.
+
+    If <pname> is OBJECT_TYPE_ARB, GetObjectParameter{if}vARB returns
+    PROGRAM_OBJECT_ARB if <obj> references a program object. It returns
+    SHADER_OBJECT_ARB if <obj> references any shader object. If <obj> is not
+    of type PROGRAM_OBJECT_ARB or SHADER_OBJECT_ARB, the error
+    INVALID_OPERATION is generated.
+
+    If <pname> is OBJECT_SUBTYPE_ARB, GetObjectParameter{if}vARB returns
+    FRAGMENT_SHADER_ARB if <obj> references a shader object. If <obj> is not
+    of type SHADER_OBJECT_ARB, the error INVALID_OPERATION is generated.
+
+
+Additions to Appendix A of the OpenGL 1.4 Specification (Invariance)
+
+    Add to end of Section A.3 (p. 250):
+
+    The same fragment shader will produce the same result when run multiple
+    times with the same input. The wording 'the same shader' means a program
+    object that is populated with the same source strings, which are
+    compiled and then linked, possibly multiple times. This program object
+    is then executed using the same GL state vector.
+
+    All fragment shaders that either conditionally or unconditionally assign
+    gl_FragCoord.z to gl_FragDepth are depth-invariant with respect to each
+    other, for those fragments where the assignment to gl_FragDepth actually
+    is done.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Interactions with ARB_vertex_program and ARB_fragment_program
+
+    Mixing a high level ARB_fragment_shader shader with a low level
+    ARB_vertex_program shader is allowed. However, a high level
+    ARB_fragment_shader shader and a low level ARB_fragment_program shader
+    cannot be active at the same time.
+
+Interactions with ARB_fragment_program
+
+    Enabling an ARB_fragment_shader shader by issuing the command
+    UseProgramObjectARB(), with a handle which is not zero, results in any
+    low level fragment shader to be ignored and overrides the enable
+    FRAGMENT_PROGRAM_ARB. Note that the value for FRAGMENT_PROGRAM_ARB does
+    not change by installing an ARB_fragment_shader shader.
+
+    The following enumerants are borrowed from ARB_fragment_program. Their
+    usage and meaning has stayed the same:
+
+        MAX_TEXTURE_COORDS_ARB                          0x8871
+        MAX_TEXTURE_IMAGE_UNITS_ARB                     0x8872
+
+Interactions with ARB_vertex_shader
+
+    If ARB_vertex_shader is present, then this extension does not also
+    define the new token SHADER_OBJECT_ARB.
+
+    If ARB_vertex_shader is not present, the wording of Section 3.11.3
+    Varying Variables needs to be modified to omit references to the vertex
+    shader.
+
+Errors
+
+    The error INVALID_OPERATION is generated by any command accessing
+    texture coordinate processing state if the texture unit number
+    corresponding to the current value of ACTIVE_TEXTURE is greater than or
+    equal to the implementation-dependent constant MAX_TEXTURE_COORDS_ARB.
+
+    The error INVALID_OPERATION is generated by any command accessing
+    texture image processing state if the texture unit number corresponding
+    to the current value of ACTIVE_TEXTURE is greater than or equal to the
+    implementation-dependent constant MAX_TEXTURE_IMAGE_UNITS_ARB.
+
+    The error INVALID_VALUE is generated by any command that takes one or
+    more handles as input, and one or more of these handles are not an
+    object handle generated by OpenGL.
+
+    The error INVALID_OPERATION is generated by GetObjectParameter{if}vARB
+    if <pname> is OBJECT_TYPE_ARB and <obj> is not of type
+    PROGRAM_OBJECT_ARB or SHADER_OBJECT_ARB.
+
+    The error INVALID_OPERATION is generated by GetObjectParameter{if}vARB
+    if <pname> is OBJECT_SUBTYPE_ARB and <obj> is not of type
+    SHADER_OBJECT_ARB.
+
+New State
+                                                                 Initial
+    Get Value              Type       Get Command                Value        Description          Sec.   Attribute
+    ---------              -----      -----------------------  -------------  -----------          ----   ---------
+    OBJECT_TYPE_ARB        Z2         GetObjectParameterivARB   SHADER_OBJECT  Type of object      3.11.1        -
+    OBJECT_SUBTYPE_ARB     Z2         GetObjectParameterivARB  FRAGMENT_SHADER Sub type of object  3.11.1        -
+
+    Table X Shader object state.
+
+    (Add the following hint to Table 6.26, p. 241.)
+
+                                                                 Initial
+    Get Value              Type       Get Command                Value        Description          Sec.   Attribute
+    ---------              -----      -----------------------  -------------  -----------          ----   ---------
+    FRAGMENT_SHADER_DERIVATIVE_HINT                                            fragment shader
+                           Z3         GetIntegerv               DONT_CARE      derivative accuracy  5.6    hint
+                                                                               hint
+
+New Implementation Dependent State
+                                                                      Minimum
+    Get Value                           Type  Get Command   Value   Description            Sec.  Attr.
+    ---------                           ----  -----------  -------  -----------            ----  -----
+    MAX_FRAGMENT_UNIFORM_COMPONENTS_ARB Z+   GetIntegerv     64     Number of words        3.11.2   -
+                                                                    for fragment shader
+                                                                    uniform variables
+    MAX_TEXTURE_IMAGE_UNITS_ARB         Z+   GetIntegerv     2      Number of separate     3.11.4   -
+                                                                    texture image units
+    MAX_TEXTURE_COORDS_ARB              Z+    GetIntegerv    2      number of texture      2.7      -
+                                                                    coordinate sets
+
+Sample Usage
+
+    The code below is taken from the sample section in ARB_vertex_shader and
+    expanded to include a fragment shader.
+
+    GLboolean init(GLcharARB *vertexShader, GLcharARB *fragmentShader)
+    {
+        const GLcharARB    *pInfoLog;
+        GLboolean compiled = GL_FALSE;
+        GLboolean linked   = GL_FALSE;
+        GLint     length;
+
+        //
+        // Create shader and program objects.
+        //
+        ProgramObject      = glCreateProgramObjectARB();
+        VertexShaderObject = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
+        FragmentShaderObject = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
+
+
+        length = strlen(vertexShader);
+        glShaderSourceARB(VertexShaderObject, 1, &vertexShader, &length);
+        glShaderSourceARB(FragmentShaderObject, 1, &fragmentShader, NULL);
+
+        //
+        // OpenGL made a copy of the shaders, we can free our copy
+        //
+        free(vertexShader);
+        free(fragmentShader);
+
+        //
+        // Compile the vertex and fragment shader, and print out the
+        // compiler log file.
+        //
+        glCompileShaderARB(VertexShaderObject);
+        glGetObjectParameterivARB(VertexShaderObject,
+                                  GL_OBJECT_COMPILE_STATUS_ARB, &compiled);
+
+        glGetObjectParameterivARB(VertexShaderObject,
+                                 GL_OBJECT_INFO_LOG_LENGTH_ARB, &maxLength);
+        pInfoLog = (GLcharARB *) malloc(maxLength * sizeof(GLcharARB));
+        glGetInfoLogARB(VertexShaderObject, maxLength, &length, pInfoLog);
+        printf("%s", pInfoLog);
+        free(pInfoLog);
+
+        if (!compiled) {
+            printf("Compile failed\n");
+            return GL_FALSE;
+        }
+
+        glCompileShaderARB(FragmentShaderObject);
+        glGetObjectParameterivARB(FragmentShaderObject,
+                                  GL_OBJECT_COMPILE_STATUS_ARB, &compiled);
+
+        glGetObjectParameterivARB(FragmentShaderObject,
+                                 GL_OBJECT_INFO_LOG_LENGTH_ARB, &maxLength);
+        pInfoLog = (GLcharARB *) malloc(maxLength * sizeof(GLcharARB));
+        glGetInfoLogARB(FragmentShaderObject, maxLength, NULL, pInfoLog);
+        printf("%s", pInfoLog);
+        free(pInfoLog);
+
+        if (!compiled) {
+            printf("Compile failed\n");
+            return GL_FALSE;
+        }
+
+        //
+        // Populate the program object with the compiled shadera
+        //
+        glAttachObjectARB(ProgramObject, VertexShaderObject);
+        glAttachObjectARB(ProgramObject, FragmentShaderObject);
+
+        //
+        // We want the shader objects to go away as soon as it is detached
+        // from the program object it is attached to. We can simply call
+        // delete now to achieve that. Note that calling delete on a program
+        // object will result in all shaders attached to that program object
+        // to be detached. If delete has been called for the shader objects,
+        // calling delete on the program object will result in the shader
+        // objects being deleted as well.
+        //
+        glDeleteObjectARB(VertexShaderObject);
+        glDeleteObjectARB(FragmentShaderObject);
+
+        //
+        // Link the program object and print out the linker log file
+        //
+        glLinkProgramARB(ProgramObject);
+        glGetObjectParameterivARB(ProgramObject,
+                                  GL_OBJECT_LINK_STATUS_ARB, &linked);
+
+        glGetObjectParameterivARB(ProgramObject,
+                                 GL_OBJECT_INFO_LOG_LENGTH_ARB, &maxLength);
+        pInfoLog = (GLcharARB *) malloc(maxLength * sizeof(GLcharARB));
+        glGetInfoLogARB(ProgramObject, maxLength, NULL, pInfoLog);
+
+        printf("%s\n", pInfoLog);
+        free(pInfoLog);
+
+        //
+        // If all went well, make the program object part of the current state
+        //
+        if (linked) {
+            glUseProgramObjectARB(ProgramObject);
+            return GL_TRUE;
+        } else {
+            return GL_FALSE;
+        }
+    }
+
+Revision History
+
+    Revision 0.5, 6/6/2002
+      - First draft for circulation
+    Revision 0.51, 6/10/2002
+      - Listed all varyings that a fragment shader can access
+      - Clarified section 3.11.6
+      - Added more to the 'Interaction with GL2_vertex_shader' section
+    Revision 0.52, 6/12/2002
+      - Now references V1.0 of the OpenGL Shading Language Specification
+      - Fixed minor typos
+      - Accepted by the GL2 working group
+    Revision 0.52, 10/17/2002
+      - Removed IsObjectGL2()
+      - Expanded GetObjectParameter{if}GL2. Added OBJECT_SUBTYPE_GL2.
+    Revision 0.53, 10/18/2002
+      - Forgot to add _GL2 to the end of MAX_FP_TEXTURE_UNITS_GL2.
+      - Added language disallowing mixing GL2 high level vertex shader with
+        low level ARB vertex program or fragment program.
+    Revision 0.54, 10/24/2002
+      - Removed the resource limit section and move it to GL2_shader_objects
+      - Clarified some sections across the document
+      - Based on ARB_fragment_program split a texture unit into two sub
+        units. This resulted in expanding Section 2 significantly.
+      - Expanded section 6
+      - Expanded Errors section
+      - Added sample usage
+    Revision 0.6, 10/29/2002
+      - Now written against the OpenGL 1.4 specification.
+      - Second distribution to the GL2 working group.
+    Revision 0.61, 11/26/2002
+      - Renamed MAX_FP_TEXTURE_UNITS to MAX_FRAGMENT_TEXTURE_UNITS.
+      - Updated list of contributors.
+      - Allowed mixing of a high level GL2 fragment shader with a low level
+        ARB_vertex_program shader.
+    Revision 0.62, 12/04/2002
+      - Changed issue 3 wording to make the number of texture image units
+        and coordinates units independent from each other.
+      - Changed MAX_FRAGMENT_UNIFORM_FLOATS_GL2 to
+        MAX_FRAGMENT_UNIFORM_WORDS_GL2. Also changed language in paragraph
+        3.11.2 clarifying this new constant.
+      - Added issue number 5.
+    Revision 0.63, 02/13/2003
+      - Consistently used 'texture coordinate set'
+      - Changed 3.11.5, fragment shader output. Colors are clamped, and
+        depths are clamped then converted to fixed point.
+      - Added Section 3.11.4.1 Fragment Shader Texturing
+    Revision 0.64, 02/21/2003
+      - Modified section 2.10.1
+      - Added color conversion to fixed-point to the values written to
+        gl_FragColor. Section 3.11.5.
+    Revision 0.65, 03/06/2003
+      - Added a third LOD bias parameter to section 3.8.8 (comes from the
+        texture lookup functions).
+      - Added issues 6 and 7.
+      - Added clip w coordinate interpolation for lines and polygons.
+      - Upgraded colors and texture coordinates to be full floating point
+        citizens, section 2.1.1.
+      - Updated the interactions section.
+      - Renamed MAX_FRAGMENT_TEXTURE_UNITS_GL2 to
+        MAX_TEXTURE_IMAGE_UNITS_ARB
+    Revision 0.66, 03/26/2003
+      - Expanded issues 2 and 3.
+      - Added modification to section 3.8.15.
+      - Updated contributors list. Who else?
+      - Updated IP Status section to point to the contributors agreement.
+    Revision 0.67, 04/09/2003
+      - Added required state section.
+      - Renamed handle to handleGL2
+    Revision 0.68, 05/08/2003
+      - Changed MAX_FRAGMENT_UNIFORM_WORDS_GL2 to
+        MAX_FRAGMENT_UNIFORM_COMPONENTS_GL2
+      - Updated example section to reflect the latest API changes
+      - Changed the location of the Contributors License to a publicly
+        accessible place on www.3dlabs.com.
+      - Re-worded the introduction.
+      - Added OBJECT_TYPE_GL2 to the list of new tokens.
+      - Moved issue 3 up to be issue 1.
+      - Re-wrote section 3.8, introduction.
+      - Added issue 8.
+      - Added front/back facing language to section 3.11.4
+      - Re-wrote issue 3.
+      - Added language to appendix A. Invariance.
+      - Added section 3.11.5 Fragment Shader Input
+      - Added issue 9
+      - Fixed section 3.11.4. Texture enables are ignored.
+      - Added issue 10.
+      - Added a note about polygon offset to section 3.11.5.
+      - Reversed the resolution of issue 5. Changed chapter 3 to reflect
+        this.
+      - Updated sample code to reflect latest API names.
+      - Updated errors section.
+      - Numerous small fixes based on Pat's comments.
+      - Depth values are converted to floating point before entering the
+        fragment shader. Updated issue 7 to reflect this.
+      - Fixed up the state tables.
+      - Updated section 3.11.4. Clarified depth texture comparison mode when
+        a fragment shader is active.
+      - Added Jon Leech, Evan Hart, Benjamin Lipchak and Jeremy Sandmel to
+        the list of contributors.
+    Revision 0.69, 05/09/2003
+      - Added to issue 5. In this case fragment shader should only reference
+        built- in varying variables s (starting with "gl_"). Also added spec
+        language to section 3.11.4.
+      - Added one more paragraph to issue 4, invariance. If you do not write
+        to gl_FragDepth you're depth invariant with fixed-function.
+      - Explained 'statically assigned'
+      - Assigned enum values.
+      - Version approved by the ARB-GL2 working group.
+    Revision 0.70, 05/14/2003
+      - Section 3.8.15 clarified.
+      - Issue 8 intended to explain what happens when
+        VERTEX_PROGRAM_TWO_SIDE_ARB is false, not true. Fixed.
+      - Clarified fragment front/back facing selection when in polygon point
+        or line mode.
+      - Fixed typos.
+      - Renamed all GL2 occurrences to ARB.
+      - Added SHADER_OBJECT_ARB to the list of new tokens.
+      - Deleted reference to AppendShader (this call no longer exist).
+    Revision 0.71, 06/30/2003
+      - Removed section 2.13.9. It no longer applies.
+      - The dynamic range of colors is left at 2^10, only texture
+        coordinates are upgraded to 2^32 (Section 2.1.1).
+      - Updated Sample Usage section.
+      - Added fixed-point conversion rule for color and secondary color.
+        Section 3.11.5.
+      - General language cleanup.
+      - Version approved as ARB extension
+    Revision 0.72, 02/23/2004
+      - Fixed the last part of section 3.4.1, basic line segment
+        rasterization.
+      - Removed SHADER_OBJECT_ARB, OBJECT_TYPE_ARB and OBJECT_SUBTYPE_ARB
+        tokens from the New Tokens section. They are already defined in
+        ARB_shader_objects. Also removed references to these in Chapter 6,
+        GetObjectParameter{fi}v and the Errors section.
+      - Added the official extension number (32). Edited the Status
+        paragraph.
+    Revision 0.73, 03/11/2004
+      - Added language to specify when texture lookups are undefined when
+        mixing shadow and non shadow samplers with texture objects with or
+        without depth components and different texture compare modes set.
+    Revision 0.74, 03/12/2004
+      - Added sampler2DRect and sampler2DRectShadow to the previous changes.
+    Revision 0.75, 03/16/2004
+      - Fixed up the sampler language from version 0.74.
+      - Updated section 3.11.6, Fragment Shader Output to incorporate the
+        new gl_FragData[] output array. Added related issues 11 and 12.
+    Revision 0.76, 03/19/2004
+      - Added a hint DERIVATIVE_ACCURACY_HINT to section 5.6 and the New
+        Tokens section.
+    Revision 0.77, 03/31/2004
+      - Added language to section 3.11.4 specifying that derivatives for LOD
+        calculations may be approximated.
+      - Moved spec language related to texture operations not affected by a
+        fragment shader from section 3.11.4 to issue 13.
+      - Added language to section 3.11.4, copied from the vertex shader, how
+        the filtered texture value is computed. Also added language that the
+        LOD could be computed using derivatives computed using a
+        differencing algorithm.
+      - Renamed DERIVATIVE_ACCURACY_HINT_ARB to
+        FRAGMENT_SHADER_DERIVATIVE_HINT_ARB and added it to the state
+        tables.
+      - Updated issue 12. gl_FragData will be clamped to [0,1]
+      - Added issue 14, explaining the interaction with MRT.
+      - Updated the shading language version this spec references to version
+        100.53.
+      - Added clamping to [0,1] for output color and fragData back into
+        section 3.11.6. Also updated the language in 3.11.6 to be the same
+        as in the OpenGL Shading Language document.
+      - Version voted on and approved by the workgroup.
+    Revision 0.78, 04/06/2004
+      - Minor language changes to issues 12 and 14.
+      - Updated the Shading Language Version referenced to the now official
+        version 1.10.
+    Revision 0.79, 05/14/2004
+      - Listed that FRAGMENT_SHADER_DERIVATIVE_HINT is also accepted by the
+        Get* commands under the New Tokens section.
+      - Updated issue 14. Punted most of it to the MRT extension document.
+    Revision 0.80, 12/12/2006
+      - Fixed spelling of glGetObjectParameterivARB in sample code.

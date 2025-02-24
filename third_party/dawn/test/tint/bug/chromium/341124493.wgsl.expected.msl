@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void F() {
+  bool b = false;
+  if (false) {
+  }
+}

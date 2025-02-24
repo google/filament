@@ -1,0 +1,71 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 43
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %t "t"
+               OpName %m "m"
+               OpName %f "f"
+               OpName %v "v"
+               OpName %tint_v3f16_to_v3i32 "tint_v3f16_to_v3i32"
+               OpName %value "value"
+               OpName %unused_entry_point "unused_entry_point"
+       %half = OpTypeFloat 16
+%_ptr_Private_half = OpTypePointer Private %half
+          %4 = OpConstantNull %half
+          %t = OpVariable %_ptr_Private_half Private %4
+     %v3half = OpTypeVector %half 3
+          %7 = OpTypeFunction %v3half
+%half_0x1p_0 = OpConstant %half 0x1p+0
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v3int = OpTypeVector %int 3
+%_ptr_Function_v3int = OpTypePointer Function %v3int
+         %24 = OpTypeFunction %v3int %v3half
+%half_n0x1_ffcp_15 = OpConstant %half -0x1.ffcp+15
+         %28 = OpConstantComposite %v3half %half_n0x1_ffcp_15 %half_n0x1_ffcp_15 %half_n0x1_ffcp_15
+       %bool = OpTypeBool
+     %v3bool = OpTypeVector %bool 3
+%int_n2147483648 = OpConstant %int -2147483648
+         %33 = OpConstantComposite %v3int %int_n2147483648 %int_n2147483648 %int_n2147483648
+%half_0x1_ffcp_15 = OpConstant %half 0x1.ffcp+15
+         %36 = OpConstantComposite %v3half %half_0x1_ffcp_15 %half_0x1_ffcp_15 %half_0x1_ffcp_15
+%int_2147483647 = OpConstant %int 2147483647
+         %39 = OpConstantComposite %v3int %int_2147483647 %int_2147483647 %int_2147483647
+          %m = OpFunction %v3half None %7
+          %8 = OpLabel
+               OpStore %t %half_0x1p_0 None
+         %10 = OpLoad %half %t None
+         %11 = OpCompositeConstruct %v3half %10 %10 %10
+               OpReturnValue %11
+               OpFunctionEnd
+          %f = OpFunction %void None %14
+         %15 = OpLabel
+          %v = OpVariable %_ptr_Function_v3int Function
+         %16 = OpFunctionCall %v3half %m
+         %17 = OpFunctionCall %v3int %tint_v3f16_to_v3i32 %16
+               OpStore %v %17
+               OpReturn
+               OpFunctionEnd
+%tint_v3f16_to_v3i32 = OpFunction %v3int None %24
+      %value = OpFunctionParameter %v3half
+         %25 = OpLabel
+         %26 = OpConvertFToS %v3int %value
+         %27 = OpFOrdGreaterThanEqual %v3bool %value %28
+         %32 = OpSelect %v3int %27 %26 %33
+         %35 = OpFOrdLessThanEqual %v3bool %value %36
+         %38 = OpSelect %v3int %35 %32 %39
+               OpReturnValue %38
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %14
+         %42 = OpLabel
+               OpReturn
+               OpFunctionEnd

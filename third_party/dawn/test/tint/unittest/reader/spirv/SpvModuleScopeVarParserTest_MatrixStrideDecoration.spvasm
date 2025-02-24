@@ -1,0 +1,30 @@
+; Test: SpvModuleScopeVarParserTest_MatrixStrideDecoration.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 11
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+OpName %myvar "myvar"
+OpDecorate %myvar DescriptorSet 0
+OpDecorate %myvar Binding 0
+OpDecorate %_struct_3 Block
+OpMemberDecorate %_struct_3 0 MatrixStride 64
+OpMemberDecorate %_struct_3 0 Offset 0
+OpMemberDecorate %_struct_3 0 ColMajor
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v2float = OpTypeVector %float 2
+%mat3v2float = OpTypeMatrix %v2float 3
+%_struct_3 = OpTypeStruct %mat3v2float
+%_ptr_StorageBuffer__struct_3 = OpTypePointer StorageBuffer %_struct_3
+%myvar = OpVariable %_ptr_StorageBuffer__struct_3 StorageBuffer
+%1 = OpFunction %void None %5
+%10 = OpLabel
+OpReturn
+OpFunctionEnd
+

@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<float, access::read_write> tex;
+};
+
+kernel void v(texture2d<float, access::read_write> tex [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.tex=tex};
+  tint_module_vars.tex.write(float4(0.0f), uint2(int2(0)));
+  const_cast<texture2d<float, access::read_write>thread &>(tint_module_vars.tex).fence();
+}

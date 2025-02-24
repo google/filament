@@ -1,0 +1,27 @@
+; Test: SpvModuleScopeVarParserTest_StorageBuffer_NonWritable_NotAllMembers.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 9
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+OpDecorate %1 DescriptorSet 0
+OpDecorate %1 Binding 0
+OpDecorate %_struct_3 Block
+OpMemberDecorate %_struct_3 0 NonWritable
+OpMemberDecorate %_struct_3 0 Offset 0
+OpMemberDecorate %_struct_3 1 Offset 4
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%_struct_3 = OpTypeStruct %float %float
+%_ptr_StorageBuffer__struct_3 = OpTypePointer StorageBuffer %_struct_3
+%1 = OpVariable %_ptr_StorageBuffer__struct_3 StorageBuffer
+%2 = OpFunction %void None %5
+%8 = OpLabel
+OpReturn
+OpFunctionEnd
+

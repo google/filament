@@ -1,0 +1,37 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragOutput {
+  float4 color;
+  float4 blend;
+};
+
+struct FragInput {
+  float4 a;
+  float4 b;
+};
+
+struct frag_main_outputs {
+  float4 FragOutput_color [[color(0)]] [[index(0)]];
+  float4 FragOutput_blend [[color(0)]] [[index(1)]];
+};
+
+struct frag_main_inputs {
+  float4 FragInput_a [[user(locn0)]];
+  float4 FragInput_b [[user(locn1)]];
+};
+
+FragOutput frag_main_inner(FragInput in) {
+  FragOutput output = {};
+  output.color = in.a;
+  output.blend = in.b;
+  return output;
+}
+
+fragment frag_main_outputs frag_main(frag_main_inputs inputs [[stage_in]]) {
+  FragOutput const v = frag_main_inner(FragInput{.a=inputs.FragInput_a, .b=inputs.FragInput_b});
+  frag_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.FragOutput_color = v.color;
+  tint_wrapper_result.FragOutput_blend = v.blend;
+  return tint_wrapper_result;
+}

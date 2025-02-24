@@ -1,0 +1,36 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_packed_vec3_f16_array_element {
+  /* 0x0000 */ packed_half3 packed;
+  /* 0x0006 */ tint_array<int8_t, 2> tint_pad;
+};
+
+struct tint_module_vars_struct {
+  thread half3x3* m;
+  device tint_array<tint_packed_vec3_f16_array_element, 3>* out;
+};
+
+void tint_store_and_preserve_padding(device tint_array<tint_packed_vec3_f16_array_element, 3>* const target, half3x3 value_param) {
+  (*target)[0u].packed = packed_half3(value_param[0u]);
+  (*target)[1u].packed = packed_half3(value_param[1u]);
+  (*target)[2u].packed = packed_half3(value_param[2u]);
+}
+
+kernel void f(device tint_array<tint_packed_vec3_f16_array_element, 3>* out [[buffer(0)]]) {
+  thread half3x3 m = half3x3(half3(0.0h, 1.0h, 2.0h), half3(3.0h, 4.0h, 5.0h), half3(6.0h, 7.0h, 8.0h));
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.m=(&m), .out=out};
+  tint_store_and_preserve_padding(tint_module_vars.out, half3x3((*tint_module_vars.m)));
+}

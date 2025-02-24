@@ -1,0 +1,311 @@
+Name
+
+    APPLE_fence
+
+Name Strings
+
+    GL_APPLE_fence
+
+Contact
+
+    Geoff Stahl, Apple (gstahl 'at' apple.com)
+
+Status
+
+    Shipping as of August 24, 2002 (Mac OS X v10.2)
+
+Version
+
+    $Date: 2002/08/23 00:31:45 $ $Revision: 1.3 $
+	
+Number
+
+    272
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension is provided a finer granularity of synchronizing GL command
+    completion than offered by standard OpenGL, which currently offers only two
+    mechanisms for synchronization: Flush and Finish. Since Flush merely assures
+    the user that the commands complete in a finite (though undetermined) amount
+    of time, it is, thus, of only modest utility.  Finish, on the other hand,
+    stalls CPU execution until all pending GL commands have completed forcing
+    completely synchronous operation, which most often not the desired result.
+    This extension offers a middle ground - the ability to "finish" a subset of
+    the command stream, and the ability to determine whether a given command has
+    completed or not.
+
+    This extension introduces the concept of a "fence" to the OpenGL command
+    stream with SetFenceAPPLE.  Once the fence is inserted into the command
+    stream, it can be tested for its completion with TestFenceAPPLE. Moreover,
+    the application may also request a partial Finish up to a particular "fence"
+    using the FinishFenceAPPLE command -- that is, all commands prior to the
+    fence will be forced to complete until control is returned to the calling
+    process.  These new mechanisms allow for synchronization between the host
+    CPU and the GPU, which may be accessing the same resources (typically
+    memory).
+
+    Fences are created and deleted, as are other objects in OpenGL, specifically
+    with GenFencesAPPLE and DeleteFencesAPPLE.  The former returns a list of
+    unused fence names and the later deletes the provided list of fence names.
+
+    In addition to being able to test or finish a fence this extension allows
+    testing for other types of completion, including texture objects, vertex
+    array objects, and draw pixels. This allows the client to use
+    TestObjectAPPLE or FinishObjectAPPLE with FENCE_APPLE, TEXTURE,
+    VERTEX_ARRAY, or DRAW_PIXELS_APPLE with the same type of results as
+    TestFenceAPPLE and FinishFenceAPPLE.  Specifically, using the FENCE_APPLE
+    type is equivalent to calling TestFenceAPPLE or FinishFenceAPPLE with the
+    particular fence name.  Using TEXTURE as the object type tests or waits for
+    completion of a specific texture, meaning when there are no pending
+    rendering commands which use that texture object. Using the VERTEX_ARRAY
+    type will test or wait for drawing commands using that particular vertex
+    array object name.  Finally, DRAW_PIXELS_APPLE will wait or test for
+    completion of all pending DrawPixels commands.  These tests and finishes
+    operate with the same limitations and results as test and finish fence.
+
+    One use of this extension is in conjunction with APPLE_vertex_array_range to
+    determine when graphics hardware has completed accessing vertex data from a
+    vertex array range.  Once a fence has been tested TRUE or finished, all
+    vertex indices issued before the fence must have completed being accessed.
+    This ensures that the vertex data memory corresponding to the issued vertex
+    indices can be safely modified (assuming no other outstanding vertex indices
+    are issued subsequent to the fence).
+    
+Issues
+
+	How is TestObjectAPPLE or FinishObjectAPPLE used with DRAW_PIXELS_APPLE?
+		
+		Resolution:  Currently there is no support DrawPixels with storage using
+		the APPLE_client_storage extension and thus this option has no utility,
+		due to implementation specifics, which always copy the DrawPixels
+		buffer, thus allowing the client to immediately modify the data used by
+		DrawPixels.  Once the APPLE_client_storage extension is supported,
+		DrawPixels modification synchronization will be required after drawing
+		with a buffer, which resides in client space.
+
+    Do we need an IsFenceAPPLE command?
+
+        RESOLUTION:  Yes.  IsFenceAPPLE makes APPLE_fence's API orthogonal to
+        other OpenGL object interfaces, and can be used as any other Is...
+        command would be.
+
+    Are the fences sharable between multiple contexts?
+
+        RESOLUTION:  No.
+
+    What is the relative performance of the calls?
+
+        Execution of a SetFenceAPPLE is not free.  In the initial
+        implementation, a Flush is generated.  This will likely change for
+        future implementations and should not be depended on.  A Finish will not
+        be generated in any case.
+
+    Is the TestFenceAPPLE call really necessary?  How often would this be used
+    compared to the FinishFenceAPPLE call (which also flushes to ensure this
+    happens in finite time)?
+
+        TestFenceAPPLE allows clients to provide logic to handle
+        synchronization issues rather than forcing completely synchronous
+        operation at the point of testing or finishing.
+
+    Should we allow these commands to be compiled within display list?
+    Which ones?  How about within Begin/End pairs?
+
+        RESOLUTION:  DeleteFencesAPPLE, GenFencesAPPLE, TestFenceAPPLE,
+        TestObjectAPPLE, and IsFenceAPPLE are executed immediately while
+        FinishFenceAPPLE, FinishObjectAPPLE and SetFenceAPPLE are compiled. 
+        None of these commands are allowed within Begin/End pairs.
+
+New Procedures and Functions
+
+	void GenFencesAPPLE(sizei n, uint *fences);
+
+	void DeleteFencesAPPLE(sizei n, const uint *fences);
+
+	void SetFenceAPPLE(uint fence);
+
+	boolean IsFenceAPPLE(uint fence);
+
+	boolean TestFenceAPPLE(uint fence);
+
+	void FinishFenceAPPLE(uint fence);
+
+	boolean TestObjectAPPLE(enum object, uint name);
+
+	void FinishObjectAPPLE(enum object, int name);
+
+New Tokens
+
+    Accepted by the <object> parameter of TestObjectAPPLE and FinishObjectAPPLE:
+
+        DRAW_PIXELS_APPLE                    0x8A0A
+        FENCE_APPLE                          0x8A0B
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    Add to the end of Section 5.4 "Display Lists"
+
+    "DeleteFencesAPPLE, GenFencesAPPLE, TestFenceAPPLE, IsFenceAPPLE, and
+    TestObjectAPPLE are not complied into display lists but are executed
+    immediately."
+
+    After the discussion of Flush and Finish (Section 5.5) add a
+    description of the fence operations:
+
+    "5.X  Fences
+
+    The command 
+
+       void SetFenceAPPLE(uint fence);
+
+    sets a fence within the GL command stream and assigns the fence a status of
+    FALSE. No other state is affected by execution of the fence command.  A
+    fence's state can be queried by calling the command
+
+      boolean TestFenceAPPLE(uint fence);
+
+    The command
+
+      void FinishFenceAPPLE(uint fence);
+
+    forces all GL commands prior to the fence to complete. FinishFenceAPPLE does
+    not return until all effects from these commands on GL client and server
+    state and the frame buffer are fully realized.
+
+    The fence must first be created before it can be used.  The command
+
+      void GenFencesAPPLE(sizei n, uint *fences);
+
+    returns n previously unused fence names in fences.  These names are marked
+    as used for the purposes of GenFencesAPPLE only and acquire boolean state
+    only when they have been set.
+
+    Fences are deleted by calling
+
+      void DeleteFencesAPPLE(sizei n, const uint *fences);
+
+    fences contains n names of fences to be deleted.  After a fence is deleted,
+    it has no state, and its name is again unused.  Unused names in fences are
+    silently ignored.
+
+    If the fence passed to TestFenceAPPLE or FinishFenceAPPLE is not the name of
+    a fence, the error INVALID_OPERATION is generated.  In this case,
+    TestFenceAPPLE will return TRUE, for the sake of consistency. Note, fences
+    that have note been set prior to calling TestFenceAPPLE or FinishFenceAPPLE
+    act as if the state is TRUE and the fence command has already been
+    completed.  In other words TestFenceAPPLE returns TRUE and FinishFenceAPPLE
+    will not block on fences that have not been set.
+
+    State must be maintained to indicate which fence integers are currently used
+    or set.  In the initial state, no indices are in use. When a fence integer
+    is set, status of the fence is also maintained.  The status is a boolean.
+
+    Once the status of a fence has been finished (via FinishFenceAPPLE) or
+    tested and the returned status is TRUE (via TestFenceAPPLE), the status
+    remains TRUE until the next SetFenceAPPLE of the fence.
+    
+    The command
+    
+      boolean TestObjectAPPLE(enum object, uint name);
+    
+    and the command
+
+      void FinishObjectAPPLE(enum object, int name);
+    
+    work in a similar fashion to TestFenceAPPLE and FinishFenceAPPLE but on
+    other types of "objects".  Both of these commands take an object, which can
+    be FENCE_APPLE, TEXTURE, VERTEX_ARRAY, or DRAW_PIXELS_APPLE and an object
+    name. These commands are useful for synchronizing the update of buffers for
+    textures, draw pixels, or vertex arrays, especially when using extensions
+    such as Apple's vertex array range or client storage.
+
+    If the object parameter for TestObjectAPPLE or FinishObjectAPPLE is
+    FENCE_APPLE then these commands work in exactly the same manner as
+    TestFenceAPPLE and FinishFenceAPPLE, respectively.  If the object parameter
+    is TEXTURE then these routines test or finish the use of a texture object,
+    thus FinishObjectAPPLE will block and TestFenceAPPLE will return FALSE while
+    there are pending rendering commands utilizing the texture object in
+    question. If the object parameter is VERTEX_ARRAY, FinishObjectAPPLE will
+    block and TestFenceAPPLE will return FALSE while there are pending rendering
+    commands utilizing the vertex array object in question.  Note, in both these
+    cases object name 0 will work as expected, thus testing or finishing the
+    default texture or vertex array object. If the object parameter is
+    DRAW_PIXELS_APPLE, FinishObjectAPPLE will block and TestFenceAPPLE will
+    return FALSE while there are pending DrawPixels commands.  For all other
+    cases, assuming a valid object type and name are used, FinishObjectAPPLE
+    will return immediately and TestFenceAPPLE will return TRUE.
+
+    INVALID_OPERATION error is generated if FinishObjectAPPLE or TestFenceAPPLE
+    is called with either an invalid object type enumeration or a name, which is
+    not the name of a valid object of the type specified in the object
+    parameter.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and State Requests)
+
+    Insert new section after Section 6.1.10 "Minmax Query"
+
+    "6.1.11 Fence Query
+
+    The command
+
+      boolean IsFenceAPPLE(uint fence);
+
+    returns TRUE if texture is the name of a fence.  If fence is not the name of
+    a fence, or if an error condition occurs, IsFenceAPPLE returns FALSE.  A
+    name returned by GenFencesAPPLE, but not yet set via SetFenceAPPLE, is not
+    the name of a fence.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_VALUE is generated if GenFencesAPPLE parameter <n> is negative.
+
+    INVALID_VALUE is generated if DeleteFencesAPPLE parameter <n> is negative.
+
+    INVALID_OPERATION is generated if the fence used in TestFenceAPPLE or
+    FinishFenceAPPLE is not the name of a fence. 
+    
+    INVALID_OPERATION is generated if the object name used in TestObjectAPPLE or
+    FinishObjectAPPLE is not the name of an object of the type requested in the
+    object parameter.
+
+    INVALID_OPERATION is generated if any of the commands defined in
+    this extension is executed between the execution of Begin and the
+    corresponding execution of End.
+    
+    INVALID_VALUE is generated if DeleteFencesAPPLE or GenFencesAPPLE are
+    called where n is negative.
+
+New State
+	
+	None
+
+New Implementation Dependent State
+
+    None
+
+Implementation Details
+
+    This section describes implementation-defined limits:
+
+        SetFenceAPPLE calls are not free.  They should be used prudently, and a
+        "good number" of commands should be sent between calls to SetFenceAPPLE.
+        Testing or finishing a fence may cause a Flush if commands up to the
+        fence being tested have not been submitted to the hardware.
+
+Revision History
+
+	None
+

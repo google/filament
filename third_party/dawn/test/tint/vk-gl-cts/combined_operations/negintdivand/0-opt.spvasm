@@ -1,0 +1,46 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %_ %position %frag_color
+               OpSource GLSL 430
+               OpName %main "main"
+               OpName %gl_PerVertex "gl_PerVertex"
+               OpMemberName %gl_PerVertex 0 "gl_Position"
+               OpMemberName %gl_PerVertex 1 "gl_PointSize"
+               OpMemberName %gl_PerVertex 2 "gl_ClipDistance"
+               OpName %_ ""
+               OpName %position "position"
+               OpName %frag_color "frag_color"
+               OpMemberDecorate %gl_PerVertex 0 BuiltIn Position
+               OpMemberDecorate %gl_PerVertex 1 BuiltIn PointSize
+               OpMemberDecorate %gl_PerVertex 2 BuiltIn ClipDistance
+               OpDecorate %gl_PerVertex Block
+               OpDecorate %position Location 0
+               OpDecorate %frag_color Location 1
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+%_arr_float_uint_1 = OpTypeArray %float %uint_1
+%gl_PerVertex = OpTypeStruct %v4float %float %_arr_float_uint_1
+%_ptr_Output_gl_PerVertex = OpTypePointer Output %gl_PerVertex
+          %_ = OpVariable %_ptr_Output_gl_PerVertex Output
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+   %position = OpVariable %_ptr_Input_v4float Input
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %frag_color = OpVariable %_ptr_Output_v4float Output
+  %float_0_5 = OpConstant %float 0.5
+       %main = OpFunction %void None %8
+         %20 = OpLabel
+         %21 = OpLoad %v4float %position
+         %22 = OpAccessChain %_ptr_Output_v4float %_ %int_0
+               OpStore %22 %21
+         %23 = OpLoad %v4float %position
+         %24 = OpVectorTimesScalar %v4float %23 %float_0_5
+               OpStore %frag_color %24
+               OpReturn
+               OpFunctionEnd

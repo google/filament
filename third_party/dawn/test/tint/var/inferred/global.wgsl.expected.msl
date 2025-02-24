@@ -1,0 +1,73 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct MyStruct {
+  float f1;
+};
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_module_vars_struct {
+  thread int* v1;
+  thread uint* v2;
+  thread float* v3;
+  thread int3* v4;
+  thread uint3* v5;
+  thread float3* v6;
+  thread MyStruct* v7;
+  thread tint_array<float, 10>* v8;
+  thread int* v9;
+  thread uint* v10;
+  thread float* v11;
+  thread MyStruct* v12;
+  thread MyStruct* v13;
+  thread tint_array<float, 10>* v14;
+  thread int3* v15;
+  thread float3* v16;
+};
+
+kernel void f() {
+  thread int v1 = 1;
+  thread uint v2 = 1u;
+  thread float v3 = 1.0f;
+  thread int3 v4 = int3(1);
+  thread uint3 v5 = uint3(1u, 2u, 3u);
+  thread float3 v6 = float3(1.0f, 2.0f, 3.0f);
+  thread MyStruct v7 = MyStruct{.f1=1.0f};
+  thread tint_array<float, 10> v8 = tint_array<float, 10>{};
+  thread int v9 = 0;
+  thread uint v10 = 0u;
+  thread float v11 = 0.0f;
+  thread MyStruct v12 = MyStruct{};
+  thread MyStruct v13 = MyStruct{};
+  thread tint_array<float, 10> v14 = tint_array<float, 10>{};
+  thread int3 v15 = int3(1, 2, 3);
+  thread float3 v16 = float3(1.0f, 2.0f, 3.0f);
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v1=(&v1), .v2=(&v2), .v3=(&v3), .v4=(&v4), .v5=(&v5), .v6=(&v6), .v7=(&v7), .v8=(&v8), .v9=(&v9), .v10=(&v10), .v11=(&v11), .v12=(&v12), .v13=(&v13), .v14=(&v14), .v15=(&v15), .v16=(&v16)};
+  int const l1 = (*tint_module_vars.v1);
+  uint const l2 = (*tint_module_vars.v2);
+  float const l3 = (*tint_module_vars.v3);
+  int3 const l4 = (*tint_module_vars.v4);
+  uint3 const l5 = (*tint_module_vars.v5);
+  float3 const l6 = (*tint_module_vars.v6);
+  MyStruct const l7 = (*tint_module_vars.v7);
+  tint_array<float, 10> const l8 = (*tint_module_vars.v8);
+  int const l9 = (*tint_module_vars.v9);
+  uint const l10 = (*tint_module_vars.v10);
+  float const l11 = (*tint_module_vars.v11);
+  MyStruct const l12 = (*tint_module_vars.v12);
+  MyStruct const l13 = (*tint_module_vars.v13);
+  tint_array<float, 10> const l14 = (*tint_module_vars.v14);
+  int3 const l15 = (*tint_module_vars.v15);
+  float3 const l16 = (*tint_module_vars.v16);
+}

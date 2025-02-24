@@ -1,0 +1,49 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct S {
+  /* 0x0000 */ float f;
+  /* 0x0004 */ uint u;
+  /* 0x0008 */ tint_array<int8_t, 120> tint_pad;
+  /* 0x0080 */ float4 v;
+  /* 0x0090 */ tint_array<int8_t, 112> tint_pad_1;
+};
+
+struct tint_module_vars_struct {
+  device S* output;
+};
+
+struct frag_main_inputs {
+  float S_f [[user(locn0)]];
+  uint S_u [[user(locn1)]] [[flat]];
+};
+
+void tint_store_and_preserve_padding(device S* const target, S value_param) {
+  (*target).f = value_param.f;
+  (*target).u = value_param.u;
+  (*target).v = value_param.v;
+}
+
+void frag_main_inner(S input, tint_module_vars_struct tint_module_vars) {
+  float const f = input.f;
+  uint const u = input.u;
+  float4 const v = input.v;
+  tint_store_and_preserve_padding(tint_module_vars.output, input);
+}
+
+fragment void frag_main(frag_main_inputs inputs [[stage_in]], float4 S_v [[position]], device S* output [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.output=output};
+  frag_main_inner(S{.f=inputs.S_f, .u=inputs.S_u, .v=S_v}, tint_module_vars);
+}

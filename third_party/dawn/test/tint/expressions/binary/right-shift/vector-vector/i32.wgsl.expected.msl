@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  int3 const a = int3(1, 2, 3);
+  uint3 const b = uint3(4u, 5u, 6u);
+  int3 const r = (a >> (b & uint3(31u)));
+}

@@ -1,0 +1,60 @@
+# Sub-workflow to manage commenting on and closing PRs.
+name: PR Manager
+
+on:
+  workflow_dispatch:
+    inputs:
+      pullNumber:
+        type: number
+        required: true
+      state:
+        type: string
+        required: true
+      targetUrl:
+        type: string
+
+jobs:
+  imported:
+    name: PR Imported
+    if: inputs.state == 'success' || inputs.state == 'SUCCESS'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+    - uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        number: ${{ inputs.pullNumber }}
+        header: pr_was_imported # key to reuse the same comment
+        skip_unchanged: true
+        message: |
+          👋 Thanks for your contribution! Your PR has been imported to Gerrit.
+          Please visit ${{ inputs.targetUrl }} to see it and CC yourself on the change.
+          After iterating on feedback, please comment on the Gerrit review to notify reviewers.
+          All reviews are handled within Gerrit, any comments on the GitHub PR may be missed.
+          You can continue to upload commits to this PR, and they will be automatically imported
+          into Gerrit.
+
+  merged:
+    name: PR Merged
+    if: inputs.state == 'merged' || inputs.state == 'MERGED'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+    - uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        number: ${{ inputs.pullNumber }}
+        header: pr_was_merged # key to reuse the same comment
+        skip_unchanged: true
+        message: 🚀 PR was merged in ${{ inputs.targetUrl }}!
+
+    - name: Close PR
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.pulls.update({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: ${{ inputs.pullNumber }},
+            state: 'closed',
+          });

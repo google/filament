@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture1d<int, access::sample> arg_0;
+};
+
+void d(tint_module_vars_struct tint_module_vars) {
+  min(uint(0), (tint_module_vars.arg_0.get_num_mip_levels() - 1u));
+  uint const v = (uint(tint_module_vars.arg_0.get_width()) - 1u);
+  tint_module_vars.arg_0.read(min(uint(1), v));
+  float const l = 0.14112000167369842529f;
+}

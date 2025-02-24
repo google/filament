@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglGetSyncAttrib - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglGetSyncAttrib">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglGetSyncAttrib — 
+            Return an attribute of a sync object
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglGetSyncAttrib</strong>(</code>
+              </td>
+              <td>(EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLSync <var class="pdparam">sync</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint <var class="pdparam">attribute</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLAttrib *<var class="pdparam">value</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the <abbr class="acronym">EGL</abbr> display connection.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>sync</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the sync object to query.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>attribute</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Specifies the EGL sync object attribute to query.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>value</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the requested attribute value.
+                </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglGetSyncAttrib</code> is used to query
+            attributes of the sync object <em class="parameter"><code>sync</code></em>. Legal
+            values for <em class="parameter"><code>attribute</code></em> depend on the type
+            of sync object, as shown in table
+            <a class="xref" href="#tab-syncattr" title="Table 1.  Attributes accepted by eglGetSyncAttrib">Table 1, “
+                Attributes accepted by <code class="function">eglGetSyncAttrib</code>
+            ”</a>. Assuming no errors are
+            generated, <code class="constant">EGL_TRUE</code> is returned and the
+            value of the queried attribute is returned in
+            *<em class="parameter"><code>value</code></em>.
+        </p>
+        <div class="table" id="tab-syncattr">
+          <div class="table-title">Table 1. 
+                Attributes accepted by <code class="function">eglGetSyncAttrib</code>
+            </div>
+          <div class="table-contents">
+            <table style="border-collapse: collapse; border-top: 2px solid ; border-bottom: 2px solid ; border-left: 2px solid ; border-right: 2px solid ; ">
+              <colgroup>
+                <col/>
+                <col/>
+                <col/>
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style="text-align: left; border-right: 2px solid ; border-bottom: 2px solid ; ">Attribute</th>
+                  <th style="text-align: left; border-right: 2px solid ; border-bottom: 2px solid ; ">Description</th>
+                  <th style="text-align: left; border-bottom: 2px solid ; ">Supported Sync Objects</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="text-align: left; border-right: 2px solid ; border-bottom: 2px solid ; ">Attribute</td>
+                  <td style="text-align: left; border-right: 2px solid ; border-bottom: 2px solid ; ">Description</td>
+                  <td style="text-align: left; border-bottom: 2px solid ; ">Supported Sync Objects</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left; border-right: 2px solid ; border-bottom: 2px solid ; ">
+                    <code class="constant">EGL_SYNC_TYPE</code>
+                  </td>
+                  <td style="text-align: left; border-right: 2px solid ; border-bottom: 2px solid ; ">Type of the sync object</td>
+                  <td style="text-align: left; border-bottom: 2px solid ; ">All</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left; border-right: 2px solid ; border-bottom: 2px solid ; ">
+                    <code class="constant">EGL_SYNC_STATUS</code>
+                  </td>
+                  <td style="text-align: left; border-right: 2px solid ; border-bottom: 2px solid ; ">Status of the sync object</td>
+                  <td style="text-align: left; border-bottom: 2px solid ; ">All</td>
+                </tr>
+                <tr>
+                  <td style="text-align: left; border-right: 2px solid ; ">
+                    <code class="constant">EGL_SYNC_CONDITION</code>
+                  </td>
+                  <td style="text-align: left; border-right: 2px solid ; ">Signaling condition</td>
+                  <td style="text-align: left; ">
+                            <code class="constant">EGL_SYNC_FENCE</code> or
+                            <code class="constant">EGL_SYNC_CL_EVENT</code>
+                        </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <br class="table-break"/>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            On failure, <code class="function">eglGetSyncAttrib</code> returns
+            <code class="constant">EGL_FALSE</code> and *<em class="parameter"><code>value</code></em>
+            is not modified.
+        </p>
+        <p>
+            If <em class="parameter"><code>sync</code></em> is not a valid sync object for
+            <em class="parameter"><code>display</code></em>, an
+            <code class="constant">EGL_BAD_PARAMETER</code> error is generated.
+        </p>
+        <p>
+            If <em class="parameter"><code>attribute</code></em> is not one of the attributes
+            in table <a class="xref" href="#tab-syncattr" title="Table 1.  Attributes accepted by eglGetSyncAttrib">Table 1, “
+                Attributes accepted by <code class="function">eglGetSyncAttrib</code>
+            ”</a>, an
+            <code class="constant">EGL_BAD_ATTRIBUTE</code> error is generated.
+        </p>
+        <p>
+            If <em class="parameter"><code>attribute</code></em> is not supported for the
+            type of sync object passed in <em class="parameter"><code>sync</code></em>, an
+            <code class="constant">EGL_BAD_MATCH</code> error is generated.
+        </p>
+        <p>
+            If <em class="parameter"><code>display</code></em> does not match the display
+            passed to <code class="function">eglCreateSync</code> when
+            <em class="parameter"><code>sync</code></em> was created, behaviour is undefined.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            <code class="function">eglGetSyncAttrib</code> is available only if the
+            EGL version is 1.5 or greater.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglCreateSync.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateSync</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

@@ -1,0 +1,49 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 25
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %t "t"
+               OpName %m "m"
+               OpName %f "f"
+               OpName %v "v"
+               OpName %unused_entry_point "unused_entry_point"
+       %half = OpTypeFloat 16
+%_ptr_Private_half = OpTypePointer Private %half
+          %4 = OpConstantNull %half
+          %t = OpVariable %_ptr_Private_half Private %4
+     %v4half = OpTypeVector %half 4
+          %7 = OpTypeFunction %v4half
+%half_0x1p_0 = OpConstant %half 0x1p+0
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+       %bool = OpTypeBool
+     %v4bool = OpTypeVector %bool 4
+         %20 = OpConstantNull %v4half
+%_ptr_Function_v4bool = OpTypePointer Function %v4bool
+          %m = OpFunction %v4half None %7
+          %8 = OpLabel
+               OpStore %t %half_0x1p_0 None
+         %10 = OpLoad %half %t None
+         %11 = OpCompositeConstruct %v4half %10 %10 %10 %10
+               OpReturnValue %11
+               OpFunctionEnd
+          %f = OpFunction %void None %14
+         %15 = OpLabel
+          %v = OpVariable %_ptr_Function_v4bool Function
+         %16 = OpFunctionCall %v4half %m
+         %19 = OpFUnordNotEqual %v4bool %16 %20
+               OpStore %v %19
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %14
+         %24 = OpLabel
+               OpReturn
+               OpFunctionEnd

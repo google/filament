@@ -1,0 +1,54 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 25
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %S1 0 "i"
+               OpName %S1 "S1"
+               OpMemberName %S2 0 "s1"
+               OpName %S2 "S2"
+               OpMemberName %S3 0 "s2"
+               OpName %S3 "S3"
+               OpName %P "P"
+               OpMemberName %out_block 0 "inner"
+               OpName %out_block "out_block"
+               OpName %main "main"
+               OpMemberDecorate %S1 0 Offset 0
+               OpMemberDecorate %S2 0 Offset 0
+               OpMemberDecorate %S3 0 Offset 0
+               OpMemberDecorate %out_block 0 Offset 0
+               OpDecorate %out_block Block
+               OpDecorate %11 DescriptorSet 0
+               OpDecorate %11 Binding 0
+               OpDecorate %11 Coherent
+        %int = OpTypeInt 32 1
+         %S1 = OpTypeStruct %int
+         %S2 = OpTypeStruct %S1
+         %S3 = OpTypeStruct %S2
+%_ptr_Private_S3 = OpTypePointer Private %S3
+     %int_42 = OpConstant %int 42
+          %9 = OpConstantComposite %S1 %int_42
+          %8 = OpConstantComposite %S2 %9
+          %7 = OpConstantComposite %S3 %8
+          %P = OpVariable %_ptr_Private_S3 Private %7
+  %out_block = OpTypeStruct %int
+%_ptr_StorageBuffer_out_block = OpTypePointer StorageBuffer %out_block
+         %11 = OpVariable %_ptr_StorageBuffer_out_block StorageBuffer
+       %void = OpTypeVoid
+         %16 = OpTypeFunction %void
+%_ptr_Private_int = OpTypePointer Private %int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+       %main = OpFunction %void None %16
+         %17 = OpLabel
+         %18 = OpAccessChain %_ptr_Private_int %P %uint_0 %uint_0 %uint_0
+         %22 = OpLoad %int %18 None
+         %23 = OpAccessChain %_ptr_StorageBuffer_int %11 %uint_0
+               OpStore %23 %22 None
+               OpReturn
+               OpFunctionEnd

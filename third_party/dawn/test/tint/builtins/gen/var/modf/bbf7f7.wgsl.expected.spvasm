@@ -1,0 +1,166 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 18
+; Schema: 0
+               OpCapability Shader
+         %12 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpName %modf_bbf7f7 "modf_bbf7f7"
+               OpName %arg_0 "arg_0"
+               OpMemberName %__modf_result_f32 0 "fract"
+               OpMemberName %__modf_result_f32 1 "whole"
+               OpName %__modf_result_f32 "__modf_result_f32"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %__modf_result_f32 0 Offset 0
+               OpMemberDecorate %__modf_result_f32 1 Offset 4
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+%_ptr_Function_float = OpTypePointer Function %float
+ %float_n1_5 = OpConstant %float -1.5
+%__modf_result_f32 = OpTypeStruct %float %float
+%_ptr_Function___modf_result_f32 = OpTypePointer Function %__modf_result_f32
+%modf_bbf7f7 = OpFunction %void None %3
+          %4 = OpLabel
+      %arg_0 = OpVariable %_ptr_Function_float Function
+        %res = OpVariable %_ptr_Function___modf_result_f32 Function
+               OpStore %arg_0 %float_n1_5
+          %9 = OpLoad %float %arg_0 None
+         %10 = OpExtInst %__modf_result_f32 %12 ModfStruct %9
+               OpStore %res %10
+               OpReturn
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %3
+         %16 = OpLabel
+         %17 = OpFunctionCall %void %modf_bbf7f7
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 18
+; Schema: 0
+               OpCapability Shader
+         %12 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %modf_bbf7f7 "modf_bbf7f7"
+               OpName %arg_0 "arg_0"
+               OpMemberName %__modf_result_f32 0 "fract"
+               OpMemberName %__modf_result_f32 1 "whole"
+               OpName %__modf_result_f32 "__modf_result_f32"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %__modf_result_f32 0 Offset 0
+               OpMemberDecorate %__modf_result_f32 1 Offset 4
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+%_ptr_Function_float = OpTypePointer Function %float
+ %float_n1_5 = OpConstant %float -1.5
+%__modf_result_f32 = OpTypeStruct %float %float
+%_ptr_Function___modf_result_f32 = OpTypePointer Function %__modf_result_f32
+%modf_bbf7f7 = OpFunction %void None %3
+          %4 = OpLabel
+      %arg_0 = OpVariable %_ptr_Function_float Function
+        %res = OpVariable %_ptr_Function___modf_result_f32 Function
+               OpStore %arg_0 %float_n1_5
+          %9 = OpLoad %float %arg_0 None
+         %10 = OpExtInst %__modf_result_f32 %12 ModfStruct %9
+               OpStore %res %10
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %3
+         %16 = OpLabel
+         %17 = OpFunctionCall %void %modf_bbf7f7
+               OpReturn
+               OpFunctionEnd
+;
+; vertex_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 39
+; Schema: 0
+               OpCapability Shader
+         %17 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %vertex_main "vertex_main" %vertex_main_position_Output %vertex_main___point_size_Output
+               OpName %vertex_main_position_Output "vertex_main_position_Output"
+               OpName %vertex_main___point_size_Output "vertex_main___point_size_Output"
+               OpName %modf_bbf7f7 "modf_bbf7f7"
+               OpName %arg_0 "arg_0"
+               OpMemberName %__modf_result_f32 0 "fract"
+               OpMemberName %__modf_result_f32 1 "whole"
+               OpName %__modf_result_f32 "__modf_result_f32"
+               OpName %res "res"
+               OpName %vertex_main_inner "vertex_main_inner"
+               OpMemberName %VertexOutput 0 "pos"
+               OpName %VertexOutput "VertexOutput"
+               OpName %out "out"
+               OpName %vertex_main "vertex_main"
+               OpDecorate %vertex_main_position_Output BuiltIn Position
+               OpDecorate %vertex_main___point_size_Output BuiltIn PointSize
+               OpMemberDecorate %__modf_result_f32 0 Offset 0
+               OpMemberDecorate %__modf_result_f32 1 Offset 4
+               OpMemberDecorate %VertexOutput 0 Offset 0
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%vertex_main_position_Output = OpVariable %_ptr_Output_v4float Output
+%_ptr_Output_float = OpTypePointer Output %float
+%vertex_main___point_size_Output = OpVariable %_ptr_Output_float Output
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+%_ptr_Function_float = OpTypePointer Function %float
+ %float_n1_5 = OpConstant %float -1.5
+%__modf_result_f32 = OpTypeStruct %float %float
+%_ptr_Function___modf_result_f32 = OpTypePointer Function %__modf_result_f32
+%VertexOutput = OpTypeStruct %v4float
+         %22 = OpTypeFunction %VertexOutput
+%_ptr_Function_VertexOutput = OpTypePointer Function %VertexOutput
+         %26 = OpConstantNull %VertexOutput
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+         %31 = OpConstantNull %v4float
+    %float_1 = OpConstant %float 1
+%modf_bbf7f7 = OpFunction %void None %9
+         %10 = OpLabel
+      %arg_0 = OpVariable %_ptr_Function_float Function
+        %res = OpVariable %_ptr_Function___modf_result_f32 Function
+               OpStore %arg_0 %float_n1_5
+         %14 = OpLoad %float %arg_0 None
+         %15 = OpExtInst %__modf_result_f32 %17 ModfStruct %14
+               OpStore %res %15
+               OpReturn
+               OpFunctionEnd
+%vertex_main_inner = OpFunction %VertexOutput None %22
+         %23 = OpLabel
+        %out = OpVariable %_ptr_Function_VertexOutput Function %26
+         %27 = OpAccessChain %_ptr_Function_v4float %out %uint_0
+               OpStore %27 %31 None
+         %32 = OpFunctionCall %void %modf_bbf7f7
+         %33 = OpLoad %VertexOutput %out None
+               OpReturnValue %33
+               OpFunctionEnd
+%vertex_main = OpFunction %void None %9
+         %35 = OpLabel
+         %36 = OpFunctionCall %VertexOutput %vertex_main_inner
+         %37 = OpCompositeExtract %v4float %36 0
+               OpStore %vertex_main_position_Output %37 None
+               OpStore %vertex_main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd

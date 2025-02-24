@@ -1,0 +1,59 @@
+egl/	-> EGL Docbook 4.3 + OpenCL stuff
+es/	-> ES Docbook 5 + OpenCL stuff
+
+Only in es/ :
+    OK> accord.js - Javascript for accordion menus
+    OK> genheaders.py - unused
+    OK> makeindex.py - make accordion index frame
+    OK> opengl-man.css - CSS equivalent to content wrapped in old/styles-css.xsl
+    OK> start.html - start page
+    OK> ../index.html - main SDK index
+    OK>     ../top.php - top bar of interface
+    OK>     ../bottom.php - bottom section of interface
+    OK> style-index.css - CSS for index page
+
+Only in egl/ :
+    OK> EGL_300.png - icon
+    OK> KhronosLogo.jpg - icon
+    OK> index.html - main SDK index (equivalent to es/../index.php)
+    OK>     Header.html - top bar of interface
+    OK>     headBackground.jpg - background for Header.html
+    NO>     TOC.html - accordion index frame, equivalent to output of makeindex.py
+    OK>     Intro.html - equivalent to start.html
+    OK> copyright.inc.xsl - inserted by egl-man.xsl into each page
+    NO> ctop.xsl - no longer used?
+    NO> styles-css.xsl - equivalent to es/opengl-man.css
+    NO> maketoc.pl - replaced by es/makeindex.py
+
+Similar files:
+    OK> egl/egl-man.xsl - branched from opengl-man.xsl, should be compared to es/opengl-man.xsl
+    OK> egl/style.css - equivalent to es/style-index.css, includes a couple of other .css files
+    OK> egl/undohtml.css - identical, appears to reset CSS parameters
+    OK> egl/present.css - minor tweak to CSS class name, lev1 -> Level1
+    OK> egl/bullets*gif - accordion menu navigation bullets
+
+
+----------
+    Added from ES:
+	man/index.php	- navigation framework, edited for correct title and top bar height
+	man/top.php	- from ES but mostly replaced by egl/Header.html
+	man/bottom.php
+	man/headBackground.jpg - from ES
+
+	accord.js
+	bullets-{contract,end,expand}.gif - accordion menus
+	makeindex.py	- with edits for EGL instead of ES
+	present.css	- matching output of makeindex.py
+	Makefile	- with edits from egl/Makefile
+	khronos-man.css - copied from es/opengl-man.css
+	start.html	- with massive edits from egl/Intro.html
+	style-index.css - equivalent to egl/style.css
+	khronos-man.xsl - merged from egl/egl-man.xsl and es/opengl-man.xsl.
+	egl-man.xsl	- stuff from old egl/egl-man.xsl not being used
+			  (yet) in khronos-man.xsl.
+
+    Added from EGL:
+	EGL_300.png
+	KhronosLogo.jpg
+	undohtml.css
+	copyright.inc.xsl

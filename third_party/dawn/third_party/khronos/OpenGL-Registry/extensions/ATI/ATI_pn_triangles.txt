@@ -1,0 +1,232 @@
+Name
+
+    ATI_pn_triangles
+
+Name Strings
+
+    GL_ATI_pn_triangles
+
+Contact
+
+    Dan Ginsburg, AMD (dan.ginsburg 'at' amd.com)
+    Alex Vlachos
+
+Version
+
+    Last Modified Date: November 4, 2006
+    Revision: 1.2
+
+Number
+
+    246
+
+Dependencies
+
+    ARB_vertex_program and EXT_vertex_shader affect the definition of 
+    this extension.
+
+Overview
+
+    ATI_pn_triangles provides a path for enabling the GL to internally 
+    tessellate input geometry into curved patches.  The extension allows the 
+    user to tune the amount of tessellation to be performed on each triangle as 
+    a global state value.  The intent of PN Triangle tessellation is 
+    typically to produce geometry with a smoother silhouette and more organic 
+    shape.
+
+    The tessellated patch will replace the triangles input into the GL.  
+    The GL will generate new vertices in object-space, prior to geometry 
+    transformation.  Only the vertices and normals are required to produce 
+    proper results, and the rest of the information per vertex is interpolated 
+    linearly across the patch.  
+
+Issues
+
+    (1) Should this extension mandate the algorithm used to perform 
+        tessellation?
+	
+        RESOLVED: Yes, both for performance and so that the resultant 
+        geometry is consistent across implementations.
+
+    (2) What geometry modes will be supported for tessellation besides 
+        TRIANGLE based primitives? 
+
+        RESOLVED: None, only triangle based primitives: triangles, fans, 
+        and strips.
+
+    (3) How does this extension interact with the EXT_vertex_shader and 
+        ARB_vertex_program programmable vertex shader extensions?
+
+        RESOLVED: The PN Triangle tessellation algorithm requires the 
+        presence of both vertex position and normal.  Therefore, if an 
+        application enables PN Triangle tessellation and has a programmable 
+        vertex shader enabled, that shader should export the fixed-function 
+        equivalent of position and normal.  If the shader does not export
+        either the position or normal, then the results of PN Triangle
+        tessellation are undefined.
+
+
+New Procedure and Functions
+
+    PNTrianglesiATI(enum pname, int param)
+    PNTrianglesfATI(enum pname, float param)
+
+
+New Tokens
+
+    Accepted by the <target> Enable, Disable, and IsEnabled:
+
+      PN_TRIANGLES_ATI                         0x87F0
+
+    Accepted by the <value> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+      MAX_PN_TRIANGLES_TESSELATION_LEVEL_ATI   0x87F1
+
+    Accepted by the <pname> parameter of PNTriangles[if]ATI,
+    GetBooleanv, GetDoublev, GetFloatv, and GetIntegerv:
+   
+      PN_TRIANGLES_POINT_MODE_ATI              0x87F2
+      PN_TRIANGLES_NORMAL_MODE_ATI             0x87F3
+      PN_TRIANGLES_TESSELATION_LEVEL_ATI       0x87F4
+
+    Accepted by the <param> parameter of PNTriangles[if]ATI
+    when <pname> is PN_TRIANGLES_POINT_MODE_ATI:
+    
+      PN_TRIANGLES_POINT_MODE_LINEAR_ATI       0x87F5
+      PN_TRIANGLES_POINT_MODE_CUBIC_ATI        0x87F6
+
+    Accepted by the <param> parameter of PNTriangles[if]ATI
+    when <pname> is PN_TRIANGLES_NORMAL_MODE_ATI:
+    
+      PN_TRIANGLES_NORMAL_MODE_LINEAR_ATI      0x87F7
+      PN_TRIANGLES_NORMAL_MODE_QUADRATIC_ATI   0x87F8
+
+    
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (Operation)
+
+    None
+
+Additions to Chapter 3 if the OpenGL 1.2.1 Specification (Rasterization):
+
+    Add a new section "PN Triangles" after "3.10 Fog" and before "3.11 
+    Antialiasing Application":
+
+    "3.11 PN Triangles
+
+    When PN Triangle generation is enabled, each triangle-based geometric 
+    primitive is replaced with a new curved surface using the primitive 
+    vertices as control points.  The intent of PN Triangles 
+    are to take a set of triangle-based geometry and algorithmically 
+    tessellate it into a more organic shape with a smoother silhouette. 
+    The new surface can either linearly or quadratically interpolate the 
+    normals across the patch.  The vertices can be either linearly or
+    cubically interpolated across the patch.  Linear interpolation
+    of the points would be useful for getting more sample points for 
+    lighting on the same geometric shape.  All other vertex information
+    (colors, texture coordinates, fog coordinates, and vertex weights) are 
+    interpolated linearly across the patch.
+
+    PN Triangle generation is enabled and disabled with the Enable and Disable 
+    commands using the symbolic constant PN_TRIANGLES_ATI.  The level of 
+    tessellation to be performed is specified as the number of evaluation 
+    points on each edge.  Specifying 0 would use the original triangle, 1 
+    would generate one new point on each edge of the triangle, and so forth.  
+
+    The tessellation level and normal generation mode are specified with:
+
+      void PNTriangles{if}ATI(enum pname, T param)
+
+    If <pname> is PN_TRIANGLES_NORMAL_MODE_ATI then <param> must be one of the 
+    symbolic constants PN_TRIANGLES_NORMAL_MODE_LINEAR_ATI or 
+    PN_TRIANGLES_NORMAL_MODE_QUADRATIC_ATI which will select linear or
+    quadratic normal interpolation respectively.  If <pname> is 
+    PN_TRIANGLES_POINT_MODE_ATI then <param> must be one of the symbolic 
+    constants  PN_TRIANGLES_POINT_MODE_LINEAR_ATI or 
+    PN_TRIANGLES_POINT_MODE_CUBIC_ATI which will select linear or cubic 
+    interpolation respectively.  If <pname> is 
+    PN_TRIANGLES_TESSELATION_LEVEL_ATI then <param> should be a value 
+    specifying the number of evaluation points on each edge.  This value must be 
+    greater than 0 and less than or equal to the value given by 
+    MAX_PN_TRIANGLES_TESSELATION_LEVEL_ATI.  An INVALID_VALUE error will be 
+    generated if the value for <param> is less than zero or greater than the max   
+    value.
+
+    If either VERTEX_SHADER_EXT or VERTEX_SHADER_ARB are enabled, then the 
+    shader specified by the application must export both the position and normal      
+    in order for PN triangle tessellation to work correctly.  If either the   
+    position or normal are not exported by the vertex shader then the result of 
+    PN triangle tessellation is undefined."
+        
+Additions to Chapter 4:
+
+    None
+
+Additions to Chapter 5:
+
+    None
+
+Additions to Chapter 6:
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_VALUE is generated if the <param> parameter for 
+       PNTriangles{if}ATI is less than zero or greater than
+       the value given for MAX_PN_TRIANGLES_TESSELATION_LEVEL_ATI
+       when <pname> is PN_TRIANGLES_TESSELATION_LEVEL_ATI.  
+
+New State
+
+    New table after Table 6.6 Fog:
+
+    "Table 6.7  PN Triangles:
+
+Get Value                             Get Command Type    Initial Value                              Attribute
+---------                             ----------- ----    -------------                              --------- 
+PN_TRIANGLES_ATI                      IsEnabled   B       False                                      PN Triangles/enable
+PN_TRIANGLES_NORMAL_MODE_ATI          GetIntegerv Z2      PN_TRIANGLES_NORMAL_MODE_QUADRATIC_ATI     PN Triangles
+PN_TRIANGLES_POINT_MODE_ATI           GetIntegerv Z2      PN_TRIANGLES_POINT_MODE_CUBIC_ATI          PN Triangles
+PN_TRIANGLES_TESSELATION_LEVEL_ATI    GetIntegerv Z+      1                                          PN Triangles
+
+
+      Modified state in Table 6.25:
+
+Get Value                               Get Command Type     Minimum Value  Attribute
+---------                               ----------- ----     ------------   ---------
+MAX_PN_TRIANGLES_TESSELATION_LEVEL_ATI  GetIntegerv Z+       1              -
+"
+
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    Date: 11/4/2006
+    Revision: 1.2
+      - Updated contact info after ATI/AMD merger.
+
+    Date: 11/11/2002
+    Revision: 1.1
+
+      - Added issue and documentation that describes interaction between
+        PN Triangles and vertex shaders.
+
+    Date: 8/21/2001
+    Revision: 1.0
+
+      - First published version
+
+
+

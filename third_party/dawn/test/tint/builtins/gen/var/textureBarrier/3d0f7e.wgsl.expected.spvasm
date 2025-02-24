@@ -1,0 +1,26 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 12
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %textureBarrier_3d0f7e "textureBarrier_3d0f7e"
+               OpName %compute_main "compute_main"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %uint_2 = OpConstant %uint 2
+  %uint_2056 = OpConstant %uint 2056
+%textureBarrier_3d0f7e = OpFunction %void None %3
+          %4 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_2056
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %3
+         %10 = OpLabel
+         %11 = OpFunctionCall %void %textureBarrier_3d0f7e
+               OpReturn
+               OpFunctionEnd

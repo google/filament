@@ -1,0 +1,583 @@
+Name
+    
+    NV_texture_shader2
+
+Name Strings
+
+    GL_NV_texture_shader2
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 1999, 2000, 2001.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Version
+
+    NVIDIA Date:  April 29, 2004
+    Version:      9
+
+Number
+
+    231
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.2.1 specification,
+    augmented by the NV_texture_shader extension specification.
+
+    Requires support for the NV_texture_shader extension.
+
+Overview
+
+    This extension extends the NV_texture_shader functionality to
+    support texture shader operations for 3D textures.
+
+    See the NV_texture_shader extension for information about the
+    texture shader operational model.
+
+    The two new texture shader operations are:
+
+    <conventional textures>
+
+    22.  TEXTURE_3D - Accesses a 3D texture via (s/q,t/q,r/q).
+
+    <dot product textures>
+
+    23.  DOT_PRODUCT_TEXTURE_3D_NV - When preceded by two DOT_PRODUCT_NV
+         programs in the previous two texture shader stages, computes a
+         third similar dot product and composes the three dot products
+         into (s,t,r) texture coordinate set to access a 3D non-projective
+         texture.
+
+Issues
+
+    Why a separate extension?
+
+      Not all implementations of NV_texture_shader will support 3D
+      textures in hardware.
+
+      Breaking this extension out into a distinct extension allows OpenGL
+      programs that only would use 3D textures if they are supported
+      in hardware to determine whether hardware support is available by
+      explicitly looking for the NV_texture_shader2 extension.
+
+    What if an implementation wanted to support NV_texture_shader2
+    operations within a software rasterizer?
+
+      Implementations should be free to implement the 3D texture texture
+      shader operations in software.  In this case, the implementation
+      should NOT advertise the NV_texture_shader2 extension, but should
+      still accept the GL_TEXTURE_3D and GL_DOT_PRODUCT_TEXTURE_3D_NV
+      texture shader operations without an error.  Likewise, the
+      glTexImage3D command should accept the new internal texture formats,
+      formats, and types allowed by this extension should be accepted
+      without an error.
+
+      When NV_texture_shader2 is not advertised in the GL_EXTENSIONS
+      string, but the extension functionality works without GL errors,
+      programs should expect that these two texture shader operations
+      are slow.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    When the <target> and <pname> parameters of TexEnvf, TexEnvfv,
+    TexEnvi, and TexEnviv are TEXTURE_SHADER_NV and SHADER_OPERATION_NV
+    respectively, then the value of <param> or the value pointed to by
+    <params> may be:
+
+        TEXTURE_3D
+        DOT_PRODUCT_TEXTURE_3D_NV                 0x86EF
+
+    Accepted by the <format> parameter of TexImage3D and TexSubImage3D:
+
+        HILO_NV                                   0x86F4
+        DSDT_NV                                   0x86F5
+        DSDT_MAG_NV                               0x86F6
+        DSDT_MAG_VIB_NV                           0x86F7
+
+    Accepted by the <type> parameter of TexImage3D and TexSubImage3D:
+
+        UNSIGNED_INT_S8_S8_8_8_NV                 0x86DA 
+        UNSIGNED_INT_8_8_S8_S8_REV_NV             0x86DB 
+
+    Accepted by the <internalformat> parameter of TexImage3D:
+
+        SIGNED_RGBA_NV                            0x86FB
+        SIGNED_RGBA8_NV                           0x86FC
+        SIGNED_RGB_NV                             0x86FE
+        SIGNED_RGB8_NV                            0x86FF
+        SIGNED_LUMINANCE_NV                       0x8701
+        SIGNED_LUMINANCE8_NV                      0x8702
+        SIGNED_LUMINANCE_ALPHA_NV                 0x8703
+        SIGNED_LUMINANCE8_ALPHA8_NV               0x8704
+        SIGNED_ALPHA_NV                           0x8705
+        SIGNED_ALPHA8_NV                          0x8706
+        SIGNED_INTENSITY_NV                       0x8707
+        SIGNED_INTENSITY8_NV                      0x8708
+        SIGNED_RGB_UNSIGNED_ALPHA_NV              0x870C
+        SIGNED_RGB8_UNSIGNED_ALPHA8_NV            0x870D
+
+    Accepted by the <internalformat> parameter of TexImage3D:
+
+        HILO_NV
+        HILO16_NV                                 0x86F8
+        SIGNED_HILO_NV                            0x86F9
+        SIGNED_HILO16_NV                          0x86FA
+        DSDT_NV
+        DSDT8_NV                                  0x8709
+        DSDT_MAG_NV
+        DSDT8_MAG8_NV                             0x870A
+        DSDT_MAG_INTENSITY_NV                     0x86DC
+        DSDT8_MAG8_INTENSITY8_NV                  0x870B
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+     None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+ --  Section 3.8 "Texturing"
+
+     Replace the third paragraph (amended by the NV_texture_shader
+     extension) with the following that includes 3D texture references:
+
+     "The alternative to conventional texturing is the texture shaders
+     mechanism.  When texture shaders are enabled, each texture unit
+     uses one of twenty-three texture shader operations.  Twenty of the
+     twenty-three shader operations map an (s,t,r,q) texture coordinate
+     set to an RGBA color.  Of these, four texture shader operations
+     directly correspond to the 1D, 2D, 3D, and cube map conventional
+     texturing operations.  Depending on the texture shader operation,
+     the mapping from the (s,t,r,q) texture coordinate set to an RGBA
+     color may depend on the given texture unit's currently bound
+     texture object state and/or the results of previous texture
+     shader operations.  The three remaining texture shader operations
+     respectively provide a fragment culling mechanism based on texture
+     coordinates, a means to replace the fragment depth value, and a dot
+     product operation that computes a floating-point value for use by
+     subsequent texture shaders.  The specifics of each texture shader
+     operation are described in section 3.8.12."
+
+ --  Section 3.8.2 "Alternate Texture Image Specification Commands"
+
+     Amend the following text inserted by NV_texture_shader after the
+     six paragraph to include 3D texture references:
+
+     "CopyTexSubImage3D, CopyTexSubImage2D, and CopyTexSubImage1D generate
+     the error INVALID_OPERATION if the internal format of the texture
+     array to which the pixels are to be copied is one of HILO_NV,
+     HILO16_NV, SIGNED_HILO_NV, SIGNED_HILO16_NV, DSDT_NV, DSDT8_NV,
+     DSDT_MAG_NV, DSDT8_MAG8_NV, DSDT_MAG_INTENSITY_NV, or
+     DSDT8_MAG8_INTENSITY8_NV.  
+
+     TexSubImage3D, TexSubImage2D, and TexSubImage1D generate the error
+     INVALID_OPERATION if the internal format of the texture array
+     to which the texels are to be copied has a different format type
+     (according to table 3.15) than the format type of the texels being
+     specified.  Specifically, if the base internal format is not one of
+     HILO_NV, DSDT_NV, DSDT_MAG_NV, or DSDT_INTENSITY_NV, then the format
+     parameter must be one of COLOR_INDEX, RED, GREEN, BLUE, ALPHA,
+     RGB, RGBA, LUMINANCE, or LUMINANCE_ALPHA; if the base internal
+     format is HILO_NV, then the format parameter must be HILO_NV;
+     if the base internal format is DSDT_NV, then the format parameter
+     must be DSDT_NV; if the base internal format is DSDT_MAG_NV, then
+     the format parameter must be DSDT_MAG_NV; if the base internal
+     format is DSDT_MAG_INTENSITY_NV, the format parameter must be
+     DSDT_MAG_VIB_NV."
+
+ --  Section 3.8.13 "Texture Shaders"
+
+     Amend the designated paragraphs of the NV_texture_shader
+     specification to include discussion of 3D textures.
+
+     1st paragraph:
+
+     "Each texture unit is configured with one of twenty-three
+     texture shader operations.  Several texture shader operations
+     require additional state.  All per-texture shader stage state
+     is specified using the TexEnv commands with the target specified
+     as TEXTURE_SHADER_NV.  The per-texture shader state is replicated
+     per texture unit so the texture unit selected by ActiveTextureARB
+     determines which texture unit's environment is modified by TexEnv
+     calls."
+
+     3rd paragraph:
+
+     "When TexEnv is called with the target of TEXTURE_SHADER_NV,
+     SHADER_OPERATION_NV may be set to one of NONE, TEXTURE_1D,
+     TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP_ARB, PASS_THROUGH_NV,
+     CULL_FRAGMENT_NV, OFFSET_TEXTURE_2D_NV, OFFSET_TEXTURE_2D_SCALE_NV,
+     OFFSET_TEXTURE_RECTANGLE_NV, OFFSET_TEXTURE_RECTANGLE_SCALE_NV,
+     DEPENDENT_AR_TEXTURE_2D_NV, DEPENDENT_GB_TEXTURE_2D_NV,
+     DOT_PRODUCT_NV, DOT_PRODUCT_DEPTH_REPLACE_NV,
+     DOT_PRODUCT_TEXTURE_2D_NV, DOT_PRODUCT_TEXTURE_RECTANGLE_NV,
+     DOT_PRODUCT_TEXTURE_3D_NV, DOT_PRODUCT_TEXTURE_CUBE_MAP_NV,
+     DOT_PRODUCT_DIFFUSE_CUBE_MAP_NV, DOT_PRODUCT_REFLECT_CUBE_MAP_NV, or
+     DOT_PRODUCT_CONST_EYE_REFLECT_CUBE_MAP_NV.  The semantics of each of
+     these shader operations is described in section 3.8.13.1.  Not every
+     operation is supported in every texture unit.  The restrictions for
+     how these shader operations can be configured in various texture
+     units are described in section 3.8.13.2."
+
+     3.8.13.1  Texture Shader Operations
+
+     Amend tables 3.A, 3.B, 3.C, and 3.D in the NV_texture_shader
+     specification to include entries for 3D texture operations:
+
+     Table 3.A:
+
+                                                                                               texture shader
+texture shader operation i         previous texture input     texture shader operation i-1     operation i-2     texture shader operation i+1
+=================================  =========================  ===============================  ================  ================================
+TEXTURE_3D                         -                          -                                -                 -
+---------------------------------  -------------------------  -------------------------------  ----------------  --------------------------------
+DOT_PRODUCT_TEXTURE_3D_NV          shader result type must    shader operation                 shader operation  -
+                                    be one of signed HILO,     must be                          must be
+                                    unsigned HILO, all         DOT_PRODUCT_NV                   DOT_PRODUCT_NV
+                                    signed RGBA, all
+                                    unsigned RGBA
+---------------------------------  -------------------------  -------------------------------  ----------------  --------------------------------
+
+     Table 3.B:
+
+texture shader operation i         texture unit i
+=================================  =======================================
+TEXTURE_3D                         3D target must be consistent
+---------------------------------  ---------------------------------------
+DOT_PRODUCT_TEXTURE_3D_NV          3D target must be consistent
+---------------------------------  ---------------------------------------
+
+     Table 3.C:
+
+                                                          uses    uses    uses    uses             uses       offset    uses
+                                   texture                stage   stage   stage   previous  uses   offset     texture   const
+                                   coordinate  texture    result  result  result  texture   cull   texture    2D scale  eye
+texture shader operation i         set usage   target     i-1     i-2     i+1     input     modes  2D matrix  and bias  vector
+=================================  ==========  =========  ======  ======  ======  ========  =====  =========  ========  ======
+TEXTURE_3D                         s,t,r,q     3D         -       -       -       -         -      -          -         -
+---------------------------------  ----------  ---------  ------  ------  ------  --------  -----  ---------  --------  ------
+DOT_PRODUCT_TEXTURE_3D_NV          s,t,r       3D         y       y       -       y         -      -          -         -
+---------------------------------  ----------  ---------  ------  ------  ------  --------  -----  ---------  --------  ------
+
+     Table 3.D:
+
+texture shader operation i         shader stage result type       shader stage result                  texture unit RGBA color result
+=================================  =============================  ===================================  ======================================
+TEXTURE_3D                         matches 3D target type         filtered 3D target texel             if 3D target texture type is RGBA, 
+                                                                                                        filtered 3D target texel,
+                                                                                                        else (0,0,0,0)
+---------------------------------  -----------------------------  -----------------------------------  --------------------------------------
+DOT_PRODUCT_TEXTURE_3D_NV          matches 3D target type         filtered 3D target texel             if 3D target texture type is RGBA,
+                                                                                                        filtered 3D target texel,
+                                                                                                        else (0,0,0,0)   
+-------------------------------    -----------------------------  -----------------------------------  --------------------------------------
+
+     Add the following new sections specifying new 3D texture operations:
+
+     3.8.13.1.22  3D Projective Texturing
+
+     The TEXTURE_3D texture shader operation accesses the texture unit's
+     3D texture object (as described in sections 3.8.4, 3.8.5, and 3.8.6)
+     using (s/q,t/q,r/q) for the 3D texture coordinates where s, t, r,
+     and q are the homogeneous texture coordinates for the texture unit.
+     The result of the texture access becomes both the shader result and
+     texture unit RGBA result (see table 3.E).  The type of the shader
+     result depends on the format type of the accessed texture.  This mode
+     is equivalent to conventional texturing's 3D texture target.
+
+     If the texture unit's 3D texture object is not consistent, then
+     this texture shader stage is not consistent.
+
+     If this texture shader stage is not consistent, it operates as if
+     it is the NONE operation.
+
+     3.8.13.1.23  Dot Product Texture 3D
+
+     The DOT_PRODUCT_TEXTURE_3D_NV texture shader operation accesses the
+     texture unit's 3D texture object (as described in sections 3.8.4,
+     3.8.5, and 3.8.6) using (dotPP,dotP,dotC) for the 3D texture
+     coordinates.  The result of the texture access becomes both
+     the shader result and texture unit RGBA result (see table 3.E).
+     The type of the shader result depends on the format type of the
+     accessed texture.
+
+     Assuming that i is the current texture shader stage, dotPP is the
+     floating-point dot product texture shader result from the i-2
+     texture shader stage, assuming the i-2 texture shader stage's
+     operation is DOT_PRODUCT_NV.  dotP is the floating-point dot
+     product texture shader result from the i-1 texture shader stage,
+     assuming the i-1 texture shader stage's operation is DOT_PRODUCT_NV.
+     dotC is the floating-point dot product result from the current
+     texture shader stage.  dotC is computed in the identical manner
+     used to compute the floating-point result of the DOT_PRODUCT_NV
+     texture shader described in section 3.8.13.1.14.
+
+     If the previous texture input texture object specified by the
+     current texture shader stage's PREVIOUS_TEXTURE_INPUT_NV value has
+     a format type other than RGBA or HILO (the DSDT_MAG_INTENSITY_NV
+     base internal format does not count as an RGBA format type in this
+     context), then this texture shader stage is not consistent.  
+
+     If the previous texture input texture shader operation specified by
+     the current texture shader stage's PREVIOUS_TEXTURE_INPUT_NV value
+     is DOT_PRODUCT_NV, then this texture shader stage is not consistent.
+
+     If the previous texture input texture shader result specified by
+     the current texture shader stage's PREVIOUS_TEXTURE_INPUT_NV value
+     is invalid, then this texture shader stage is not consistent.
+
+     If the previous texture input shader stage specified by the current
+     texture shader stage's PREVIOUS_TEXTURE_INPUT_NV value is not
+     consistent, then this texture shader stage is not consistent.
+
+     If either the i-1 or i-2 texture shader stage operation is not
+     DOT_PRODUCT_NV, then this texture shader stage is not consistent.
+
+     If either the i-1 or i-2 texture shader stage is not consistent, then
+     this texture shader stage is not consistent.
+
+     If the texture unit's 3D texture object is not consistent, then
+     this texture shader stage is not consistent.
+
+     If this texture shader stage is not consistent, it operates as if
+     it is the NONE operation.
+
+     3.8.13.2  Texture Shader Restrictions
+
+     Amend the first four paragraphs in this section to include 3D
+     texture operations:
+
+     "There are various restrictions on possible texture shader
+     configurations.  These restrictions are described in this section.
+
+     The error INVALID_OPERATION occurs if the SHADER_OPERATION_NV
+     parameter for texture unit 0 is assigned one of
+     OFFSET_TEXTURE_2D_NV, OFFSET_TEXTURE_2D_SCALE_NV,
+     OFFSET_TEXTURE_RECTANGLE_NV, OFFSET_TEXTURE_RECTANGLE_SCALE_NV,
+     DEPENDENT_AR_TEXTURE_2D_NV, DEPENDENT_GB_TEXTURE_2D_NV,
+     DOT_PRODUCT_NV, DOT_PRODUCT_DEPTH_REPLACE_NV,
+     DOT_PRODUCT_TEXTURE_2D_NV, DOT_PRODUCT_TEXTURE_RECTANGLE_NV,
+     DOT_PRODUCT_TEXTURE_3D_NV, DOT_PRODUCT_TEXTURE_CUBE_MAP_NV,
+     DOT_PRODUCT_DIFFUSE_CUBE_MAP_NV, DOT_PRODUCT_REFLECT_CUBE_MAP_NV,
+     or DOT_PRODUCT_CONST_EYE_REFLECT_CUBE_MAP_NV.  Each of these
+     texture shaders requires a previous texture shader result that
+     is not possible for texture unit 0.  Therefore these shaders are
+     disallowed for texture unit 0.
+
+     The error INVALID_OPERATION occurs if the
+     SHADER_OPERATION_NV parameter for texture unit
+     1 is assigned one of DOT_PRODUCT_DEPTH_REPLACE_NV,
+     DOT_PRODUCT_TEXTURE_2D_NV, DOT_PRODUCT_TEXTURE_RECTANGLE_NV,
+     DOT_PRODUCT_TEXTURE_3D_NV, DOT_PRODUCT_TEXTURE_CUBE_MAP_NV,
+     DOT_PRODUCT_DIFFUSE_CUBE_MAP_NV, DOT_PRODUCT_REFLECT_CUBE_MAP_NV,
+     or DOT_PRODUCT_CONST_EYE_REFLECT_CUBE_MAP_NV.  Each of these texture
+     shaders requires either two previous texture shader results or
+     a dot product result that cannot be generated by texture unit 0.
+     Therefore these shaders are disallowed for texture unit 1.
+
+     The error INVALID_OPERATION occurs if the
+     SHADER_OPERATION_NV parameter for texture unit
+     2 is assigned one of DOT_PRODUCT_TEXTURE_3D_NV,
+     DOT_PRODUCT_TEXTURE_CUBE_MAP_NV, DOT_PRODUCT_REFLECT_CUBE_MAP_NV,
+     DOT_PRODUCT_CONST_EYE_REFLECT_CUBE_MAP_NV.  Each of these texture
+     shaders requires three previous texture shader results.  Therefore
+     these shaders are disallowed for texture unit 2."
+
+     3.8.13.3  Required State
+
+     Amend the first paragraph in this section to account for the 2 new
+     3D texture shader operations:
+
+     "The state required for texture shaders consists of a single bit to
+     indicate whether or not texture shaders are enabled, a vector of
+     three floating-point values for the constant eye vector, and n sets
+     of per-texture unit state where n is the implementation-dependent
+     number of supported texture units.  The set of per-texture unit
+     texture shader state consists of the twenty-three-valued integer
+     indicating the texture shader operation, four two-valued integers
+     indicating the cull modes, an integer indicating the previous texture
+     unit input, a two-valued integer indicating the RGBA unsigned dot
+     product mapping mode, a 2x2 floating-point matrix indicating the
+     texture offset transform, a floating-point value indicating the
+     texture offset scale, a floating-point value indicating the texture
+     offset bias, and a bit to indicate whether or not the texture shader
+     stage is consistent."
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+     None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+     None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+     None
+
+Additions to the GLX Specification
+
+     None
+
+Dependencies on other specifications
+
+     Same as the NV_texture_shader extension.
+
+Errors
+
+     The following errors are updated to reflect 3D texture operations:
+
+     INVALID_OPERATION is generated if a packed pixel format type listed
+     in table 3.8 is used with DrawPixels, ReadPixels, ColorTable,
+     ColorSubTable, ConvolutionFilter1D, ConvolutionFilter2D,
+     SeparableFilter2D, GetColorTable, GetConvolutionFilter,
+     GetSeparableFilter, GetHistogram, GetMinmax, TexImage1D, TexImage2D,
+     TexImage3D, TexSubImage1D, TexSubImage2D, TexSubImage3d, or
+     GetTexImage but the format parameter does not match on of the allowed
+     Matching Pixel Formats listed in table 3.8 for the specified packed
+     type parameter.
+
+     INVALID_OPERATION is generated when TexImage1D, TexImage2D,
+     or TexImage3D are called and the format is HILO_NV and the
+     internalformat is not one of HILO_NV, HILO16_NV, SIGNED_HILO_NV,
+     SIGNED_HILO16_NV; or if the internalformat is one of HILO_NV,
+     HILO16_NV, SIGNED_HILO_NV, or SIGNED_HILO16_NV and the format is
+     not HILO_NV.
+
+     INVALID_OPERATION is generated when TexImage3D, TexImage2D,
+     or TexImage1D is called and if the format is DSDT_NV and the
+     internalformat is not either DSDT_NV or DSDT8_NV; or if the internal
+     format is either DSDT_NV or DSDT8_NV and the format is not DSDT_NV.
+
+     INVALID_OPERATION is generated when TexImage3D, TexImage2D, or
+     TexImage1D is called and if the format is DSDT_MAG_NV and the
+     internalformat is not either DSDT_MAG_NV or DSDT8_MAG8_NV; or if
+     the internal format is either DSDT_MAG_NV or DSDT8_MAG8_NV and the
+     format is not DSDT_MAG_NV.
+
+     INVALID_OPERATION is generated when TexImage3D, TexImage2D,
+     or TexImage1D is called and if the format is DSDT_MAG_VIB_NV
+     and the internalformat is not either DSDT_MAG_INTENSITY_NV or
+     DSDT8_MAG8_INTENSITY8_NV; or if the internal format is either
+     DSDT_MAG_INTENSITY_NV or DSDT8_MAG8_INTENSITY8_NV and the format
+     is not DSDT_MAG_VIB_NV.
+
+     INVALID_OPERATION is generated when CopyTexImage2D, CopyTexImage1D,
+     CopyTexSubImage3D, CopyTexSubImage2D, or CopyTexSubImage1D is called
+     and the internal format of the texture array to which the pixels
+     are to be copied is one of HILO_NV, HILO16_NV, SIGNED_HILO_NV,
+     SIGNED_HILO16_NV, DSDT_NV, DSDT8_NV, DSDT_MAG_NV, DSDT8_MAG8_NV,
+     DSDT_MAG_INTENSITY_NV, or DSDT8_MAG8_INTENSITY8_NV.
+
+     INVALID_OPERATION is generated when TexSubImage3D, TexSubImage2D, or
+     TexSubImage1D is called and the texture array's base internal format
+     is not one of HILO_NV, DSDT_NV, DSDT_MAG_NV, or DSDT_INTENSITY_NV,
+     and the format parameter is not one of COLOR_INDEX, RED,
+     GREEN, BLUE, ALPHA, RGB, RGBA, LUMINANCE, or
+     LUMINANCE_ALPHA 
+
+     INVALID_OPERATION is generated when TexSubImage3D, TexSubImage2D, or
+     TexSubImage1D is called and the texture array's base internal format
+     is HILO_NV and the format parameter is not HILO_NV.
+
+     INVALID_OPERATION is generated when TexSubImage3D, TexSubImage2D, or
+     TexSubImage1D is called and the texture array's base internal format
+     is DSDT_NV and the format parameter is not DSDT_NV.
+
+     INVALID_OPERATION is generated when TexSubImage3D, TexSubImage2D, or
+     TexSubImage1D is called and the texture array's base internal format
+     is DSDT_MAG_NV and the format parameter is not DSDT_MAG_NV.
+
+     INVALID_OPERATION is generated when TexSubImage3D, TexSubImage2D,
+     or TexSubImage1D is called and the texture array's base internal
+     format is DSDT_MAG_INTENSITY_NV and the format parameter is not
+     DSDT_MAG_VIRBANCE_NV.
+
+     INVALID_OPERATION is generated when TexEnv is called and the
+     SHADER_OPERATION_NV parameter for texture unit 0 is assigned
+     one of OFFSET_TEXTURE_2D_NV, OFFSET_TEXTURE_2D_SCALE_NV,
+     OFFSET_TEXTURE_RECTANGLE_NV, OFFSET_TEXTURE_RECTANGLE_SCALE_NV,
+     DEPENDENT_AR_TEXTURE_2D_NV, DEPENDENT_GB_TEXTURE_2D_NV,
+     DOT_PRODUCT_NV, DOT_PRODUCT_DEPTH_REPLACE_NV,
+     DOT_PRODUCT_TEXTURE_2D_NV, DOT_PRODUCT_TEXTURE_RECTANGLE_NV,
+     DOT_PRODUCT_TEXTURE_3D_NV, DOT_PRODUCT_TEXTURE_CUBE_MAP_NV,
+     DOT_PRODUCT_DIFFUSE_CUBE_MAP_NV, DOT_PRODUCT_REFLECT_CUBE_MAP_NV.
+     or DOT_PRODUCT_CONST_EYE_REFLECT_CUBE_MAP_NV.
+
+     INVALID_OPERATION is generated when TexEnv is called
+     and the SHADER_OPERATION_NV parameter for texture
+     unit 1 is assigned one of DOT_PRODUCT_DEPTH_REPLACE_NV,
+     DOT_PRODUCT_TEXTURE_2D_NV, DOT_PRODUCT_TEXTURE_RECTANGLE_NV,
+     DOT_PRODUCT_TEXTURE_3D_NV, DOT_PRODUCT_TEXTURE_CUBE_MAP_NV,
+     DOT_PRODUCT_DIFFUSE_CUBE_MAP_NV, DOT_PRODUCT_REFLECT_CUBE_MAP_NV,
+     or DOT_PRODUCT_CONST_EYE_REFLECT_CUBE_MAP_NV.
+
+     INVALID_OPERATION is generated when TexEnv is called
+     and the SHADER_OPERATION_NV parameter for texture
+     unit 2 is assigned one of DOT_PRODUCT_TEXTURE_3D_NV,
+     DOT_PRODUCT_TEXTURE_CUBE_MAP_NV, DOT_PRODUCT_REFLECT_CUBE_MAP_NV,
+     or DOT_PRODUCT_CONST_EYE_REFLECT_CUBE_MAP_NV.
+
+     INVALID_OPERATION is generated when TexEnv is called and the
+     SHADER_OPERATION_NV parameter for texture unit n-1 (where n is the
+     number of supported texture units) is assigned either DOT_PRODUCT_NV
+     or DOT_PRODUCT_DIFFUSE_CUBE_MAP_NV.
+
+     INVALID_OPERATION is generated when GetTexImage is called with a
+     color format (one of RED, GREEN, BLUE, ALPHA, RGB, RGBA, LUMINANCE,
+     or LUMINANCE_ALPHA) when the texture image is of a format type (see
+     table 3.15) other than RGBA (the DSDT_MAG_INTENSITY_NV base internal
+     format does not count as an RGBA format type in this context).
+
+     INVALID_OPERATION is generated when GetTexImage is called with
+     a format of HILO when the texture image is of a format type (see
+     table 3.15) other than HILO.
+
+     INVALID_OPERATION is generated when GetTexImage is called with a
+     format of DSDT_NV when the texture image is of a base internal
+     format other than DSDT_NV.
+
+     INVALID_OPERATION is generated when GetTexImage is called with a
+     format of DSDT_MAG_NV when the texture image is of a base internal
+     format other than DSDT_MAG_NV.
+
+     INVALID_OPERATION is generated when GetTexImage is called with a
+     format of DSDT_MAG_VIBRANCE_NV when the texture image is of a base
+     internal format other than DSDT_MAG_INTENSITY_NV causes the error
+     INVALID_OPERATION."
+
+New State
+
+Table 6.TextureShaders.  Texture Shaders.
+
+Get Value                    Type    Get Command  Initial Value         Description          Sec     Attribute
+---------------------------  ------  -----------  --------------------  -------------------  ------  --------------
+SHADER_OPERATION_NV          TxZ23   GetTexEnviv  NONE                  Texture shader       3.8.13  texture
+                                                                        operation
+
+* Z21 in NV_texture_shader is now Z23 with NV_texture_shader2.
+
+[ The "Tx" type prefix means that the state is per-texture unit. ]
+
+[ The "Zn" type is an n-valued integer where n is the
+  implementation-dependent number of texture units supported.]
+
+New Implementation State
+
+     None
+
+Revision History
+
+     None

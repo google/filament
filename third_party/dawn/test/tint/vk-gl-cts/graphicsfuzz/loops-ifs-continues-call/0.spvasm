@@ -1,0 +1,181 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %BinarySearchObject "BinarySearchObject"
+               OpMemberName %BinarySearchObject 0 "prime_numbers"
+               OpName %binarySearch_struct_BinarySearchObject_i1_10_1_ "binarySearch(struct-BinarySearchObject-i1[10]1;"
+               OpName %obj "obj"
+               OpName %buf0 "buf0"
+               OpMemberName %buf0 0 "injectionSwitch"
+               OpName %_ ""
+               OpName %m "m"
+               OpName %i "i"
+               OpName %obj_0 "obj"
+               OpName %param "param"
+               OpName %_GLF_color "_GLF_color"
+               OpMemberDecorate %BinarySearchObject 0 RelaxedPrecision
+               OpDecorate %binarySearch_struct_BinarySearchObject_i1_10_1_ RelaxedPrecision
+               OpMemberDecorate %buf0 0 Offset 0
+               OpDecorate %buf0 Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %m RelaxedPrecision
+               OpDecorate %13 RelaxedPrecision
+               OpDecorate %14 RelaxedPrecision
+               OpDecorate %15 RelaxedPrecision
+               OpDecorate %i RelaxedPrecision
+               OpDecorate %16 RelaxedPrecision
+               OpDecorate %17 RelaxedPrecision
+               OpDecorate %18 RelaxedPrecision
+               OpDecorate %19 RelaxedPrecision
+               OpDecorate %20 RelaxedPrecision
+               OpDecorate %21 RelaxedPrecision
+               OpDecorate %22 RelaxedPrecision
+               OpDecorate %23 RelaxedPrecision
+               OpDecorate %24 RelaxedPrecision
+               OpDecorate %25 RelaxedPrecision
+               OpDecorate %26 RelaxedPrecision
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+         %28 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+    %uint_10 = OpConstant %uint 10
+%_arr_int_uint_10 = OpTypeArray %int %uint_10
+%BinarySearchObject = OpTypeStruct %_arr_int_uint_10
+%_ptr_Function_BinarySearchObject = OpTypePointer Function %BinarySearchObject
+         %34 = OpTypeFunction %int %_ptr_Function_BinarySearchObject
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+       %buf0 = OpTypeStruct %v2float
+%_ptr_Uniform_buf0 = OpTypePointer Uniform %buf0
+          %_ = OpVariable %_ptr_Uniform_buf0 Uniform
+      %int_0 = OpConstant %int 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+    %float_1 = OpConstant %float 1
+       %bool = OpTypeBool
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_1 = OpConstant %int 1
+     %int_10 = OpConstant %int 10
+      %int_3 = OpConstant %int 3
+      %int_4 = OpConstant %int 4
+     %int_11 = OpConstant %int 11
+      %int_6 = OpConstant %int 6
+     %int_17 = OpConstant %int 17
+    %float_0 = OpConstant %float 0
+     %uint_1 = OpConstant %uint 1
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+         %55 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+       %main = OpFunction %void None %28
+         %56 = OpLabel
+          %i = OpVariable %_ptr_Function_int Function
+      %obj_0 = OpVariable %_ptr_Function_BinarySearchObject Function
+      %param = OpVariable %_ptr_Function_BinarySearchObject Function
+               OpStore %i %int_0
+               OpBranch %57
+         %57 = OpLabel
+               OpLoopMerge %58 %59 None
+               OpBranch %60
+         %60 = OpLabel
+         %16 = OpLoad %int %i
+         %61 = OpSLessThan %bool %16 %int_10
+               OpBranchConditional %61 %62 %58
+         %62 = OpLabel
+         %17 = OpLoad %int %i
+         %63 = OpINotEqual %bool %17 %int_3
+               OpSelectionMerge %64 None
+               OpBranchConditional %63 %65 %64
+         %65 = OpLabel
+         %18 = OpLoad %int %i
+         %66 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %uint_0
+         %67 = OpLoad %float %66
+         %19 = OpConvertFToS %int %67
+         %20 = OpISub %int %18 %19
+         %68 = OpIEqual %bool %20 %int_4
+               OpSelectionMerge %69 None
+               OpBranchConditional %68 %70 %71
+         %70 = OpLabel
+         %21 = OpLoad %int %i
+         %72 = OpAccessChain %_ptr_Function_int %obj_0 %int_0 %21
+               OpStore %72 %int_11
+               OpBranch %69
+         %71 = OpLabel
+         %22 = OpLoad %int %i
+         %73 = OpIEqual %bool %22 %int_6
+               OpSelectionMerge %74 None
+               OpBranchConditional %73 %75 %74
+         %75 = OpLabel
+         %23 = OpLoad %int %i
+         %76 = OpAccessChain %_ptr_Function_int %obj_0 %int_0 %23
+               OpStore %76 %int_17
+               OpBranch %74
+         %74 = OpLabel
+               OpBranch %59
+         %69 = OpLabel
+               OpBranch %64
+         %64 = OpLabel
+               OpBranch %77
+         %77 = OpLabel
+               OpLoopMerge %78 %79 None
+               OpBranch %80
+         %80 = OpLabel
+               OpBranch %79
+         %79 = OpLabel
+         %81 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %uint_1
+         %82 = OpLoad %float %81
+         %83 = OpFOrdGreaterThan %bool %float_0 %82
+               OpBranchConditional %83 %77 %78
+         %78 = OpLabel
+               OpBranch %59
+         %59 = OpLabel
+         %24 = OpLoad %int %i
+         %25 = OpIAdd %int %24 %int_1
+               OpStore %i %25
+               OpBranch %57
+         %58 = OpLabel
+         %84 = OpLoad %BinarySearchObject %obj_0
+               OpStore %param %84
+         %26 = OpFunctionCall %int %binarySearch_struct_BinarySearchObject_i1_10_1_ %param
+               OpStore %_GLF_color %55
+               OpReturn
+               OpFunctionEnd
+%binarySearch_struct_BinarySearchObject_i1_10_1_ = OpFunction %int None %34
+        %obj = OpFunctionParameter %_ptr_Function_BinarySearchObject
+         %85 = OpLabel
+          %m = OpVariable %_ptr_Function_int Function
+               OpBranch %86
+         %86 = OpLabel
+               OpLoopMerge %87 %88 None
+               OpBranch %89
+         %89 = OpLabel
+         %90 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %uint_0
+         %91 = OpLoad %float %90
+         %92 = OpFOrdGreaterThan %bool %91 %float_1
+               OpBranchConditional %92 %93 %87
+         %93 = OpLabel
+         %94 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %uint_0
+         %95 = OpLoad %float %94
+         %13 = OpConvertFToS %int %95
+               OpStore %m %13
+         %14 = OpLoad %int %m
+         %96 = OpAccessChain %_ptr_Function_int %obj %int_0 %14
+         %15 = OpLoad %int %96
+         %97 = OpIEqual %bool %15 %int_1
+               OpSelectionMerge %98 None
+               OpBranchConditional %97 %99 %98
+         %99 = OpLabel
+               OpReturnValue %int_1
+         %98 = OpLabel
+               OpBranch %88
+         %88 = OpLabel
+               OpBranch %86
+         %87 = OpLabel
+               OpReturnValue %int_1
+               OpFunctionEnd

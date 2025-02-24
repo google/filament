@@ -1,0 +1,111 @@
+Name
+
+    APPLE_aux_depth_stencil
+
+Name Strings
+
+    GL_APPLE_aux_depth_stencil
+
+Contact
+
+    Bob Beretta, Apple Inc. (beretta 'at' apple.com)
+
+Version
+
+    1.0
+
+Number
+
+    370
+
+Dependencies
+
+    None
+
+Overview
+
+    Normally, each OpenGL drawable allocates at most one depth buffer and one
+    stencil buffer, regardless of how many aux buffers there are.
+
+    When the APPLE_aux_depth_stencil extension is used, and the depth buffer
+    size is non-zero, the GL silently allocates a separate depth buffer for the
+    color buffer and for each aux buffer.  Similarly, if the stencil buffer size
+    is non-zero, a separate stencil buffer is allocated for the color buffer and
+    each aux buffer.  This extension does not cause separate depth or stencil
+    buffers to be allocated for the left and right buffers of a stereo drawable.
+    A context with no aux buffers will be unaffected by this extension.  
+
+    Switching the draw or read buffer from the color buffer to an aux buffer, or
+    switching between two aux buffers, simultaneously switches the associated
+    depth and stencil buffers, for drawing or reading.
+
+    For example, if an OpenGL context has two aux buffers and non-zero depth
+    buffer size, it will have a total of three depth buffers - one associated
+    with the color buffer and one associated with each aux buffer.  If that
+    context is used to render to AUX0, then to render to AUX1, the changes to
+    the depth buffer made by the rendering to AUX1 will not affect the depth
+    buffer associated with AUX0, and vice versa.
+
+Issues
+
+    (1) Because the additional depth and stencil buffers must be present when
+    the OpenGL context is created, the extension cannot be enabled or disabled
+    after context creation.  How is it enabled?
+
+    RESOLVED:  The extension is enabled by creating the context with a pixel
+    format, or visual, specification that includes the aux_depth_stencil
+    attribure.  On MacOSX, this is done by passing the CGLPFAAuxDepthStencil
+    boolean attribute to CGLChoosePixelFormat.  If you create a context with an
+    aux_depth_stencil pixel format or visual, the context is permanently in
+    aux_depth_stencil mode.
+
+    (2) Because the extension must be enabled before a context is created, there
+    is no extension string to query.  Is there still an extension string?
+
+    RESOLVED:  The normal semantic of querying the OpenGL extension string does
+    not apply.  If the extension is not supported, the attempt to create a pixel
+    format or visual with the aux_depth_stencil attribute will fail.  However,
+    the GL_APPLE_aux_depth_stencil extension string is still exported for
+    consistency.
+
+    (3) Once a context has been created, is it possible to whether or not
+    aux_depth_stencil is active?
+
+    RESOLVED:  Yes.  GetIntegerv can be used to query AUX_DEPTH_STENCIL_APPLE to
+    see if the current context is an aux_depth_stencil context.  The return
+    value is guaranteed to be TRUE if the context was created with an
+    aux_depth_stencil pixel format, and FALSE otherwise.
+
+    (4) How does this extension interact with ARB_draw_buffers?
+
+    RESOLVED:  When a fragment program renders to multiple output color buffers,
+    only the depth and stencil buffers associated with draw buffer 0 are used.
+    The additional depth and stencil buffers created by aux_depth_stencil are
+    accessible to the fragment program only when their associated color buffer
+    is the current draw buffer 0.
+
+New Procedures and Functions
+
+    None
+ 
+New Tokens
+
+    Accepted by the <pname> parameter of GetIntegerv. 
+    
+    AUX_DEPTH_STENCIL_APPLE          0x8A14
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+Get Value                        Type    Get Command    Values        Description         Section
+-------------------------------  ------  -------------  ------------- ------------------  ------------
+AUX_DEPTH_STENCIL_APPLE          Z2      GetIntegerv    True or False aux depth stencil   -
+                                                                      enabled
+

@@ -1,0 +1,41 @@
+; Test: SpvParserTest_EmitFunctions_CalleePrecedesCaller.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 18
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %1 "x_100"
+OpExecutionMode %1 OriginUpperLeft
+OpName %root "root"
+OpName %branch "branch"
+OpName %leaf "leaf"
+OpName %leaf_result "leaf_result"
+OpName %branch_result "branch_result"
+%void = OpTypeVoid
+%8 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%12 = OpTypeFunction %uint
+%uint_0 = OpConstant %uint 0
+%root = OpFunction %void None %8
+%14 = OpLabel
+%branch_result = OpFunctionCall %uint %branch
+OpReturn
+OpFunctionEnd
+%branch = OpFunction %uint None %12
+%15 = OpLabel
+%leaf_result = OpFunctionCall %uint %leaf
+OpReturnValue %leaf_result
+OpFunctionEnd
+%leaf = OpFunction %uint None %12
+%16 = OpLabel
+OpReturnValue %uint_0
+OpFunctionEnd
+%1 = OpFunction %void None %8
+%17 = OpLabel
+OpReturn
+OpFunctionEnd
+

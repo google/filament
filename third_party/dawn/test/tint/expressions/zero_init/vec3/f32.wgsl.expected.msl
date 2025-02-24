@@ -1,0 +1,6 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  float3 v = float3(0.0f);
+}

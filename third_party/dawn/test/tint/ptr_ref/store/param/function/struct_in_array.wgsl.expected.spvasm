@@ -1,0 +1,50 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 27
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %func "func"
+               OpMemberName %str 0 "i"
+               OpName %str "str"
+               OpName %pointer_root "pointer_root"
+               OpName %pointer_indices "pointer_indices"
+               OpName %main "main"
+               OpName %F "F"
+               OpMemberDecorate %str 0 Offset 0
+               OpDecorate %_arr_str_uint_4 ArrayStride 4
+               OpDecorate %_arr_uint_uint_1 ArrayStride 4
+       %void = OpTypeVoid
+        %int = OpTypeInt 32 1
+        %str = OpTypeStruct %int
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_str_uint_4 = OpTypeArray %str %uint_4
+%_ptr_Function__arr_str_uint_4 = OpTypePointer Function %_arr_str_uint_4
+     %uint_1 = OpConstant %uint 1
+%_arr_uint_uint_1 = OpTypeArray %uint %uint_1
+         %13 = OpTypeFunction %void %_ptr_Function__arr_str_uint_4 %_arr_uint_uint_1
+%_ptr_Function_str = OpTypePointer Function %str
+         %18 = OpConstantNull %str
+         %20 = OpTypeFunction %void
+         %23 = OpConstantNull %_arr_str_uint_4
+     %uint_2 = OpConstant %uint 2
+       %func = OpFunction %void None %13
+%pointer_root = OpFunctionParameter %_ptr_Function__arr_str_uint_4
+%pointer_indices = OpFunctionParameter %_arr_uint_uint_1
+         %14 = OpLabel
+         %15 = OpCompositeExtract %uint %pointer_indices 0
+         %16 = OpAccessChain %_ptr_Function_str %pointer_root %15
+               OpStore %16 %18 None
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %20
+         %21 = OpLabel
+          %F = OpVariable %_ptr_Function__arr_str_uint_4 Function %23
+         %24 = OpCompositeConstruct %_arr_uint_uint_1 %uint_2
+         %26 = OpFunctionCall %void %func %F %24
+               OpReturn
+               OpFunctionEnd

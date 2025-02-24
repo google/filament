@@ -1,0 +1,157 @@
+Name
+
+    SGIX_video_resize
+
+Name Strings
+
+    GLX_SGIX_video_resize
+
+Version
+
+    $Date: 1999/12/28 01:40:36 $ $Revision: 1.5 $
+
+Number
+
+    83
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides a means for doing swap or frame synchronous 
+    resizing/panning of the area 
+    that is to be magnified (or passed through) to the output
+    video resolution.  The purpose of this functionality is to provide a
+    means of allowing an application to draw into a smaller viewport to
+    reduce the time spent doing pixel fill.  This reduced size viewport
+    is then magnified up to the video output resolution using the 
+    SGIX_video_resize extension.  This extension differs from SGIX_framezoom
+    (number 57) in that it is post framebuffer resizing.  Over rendering
+    at swap rates and panning at frame rates is possible using frame synchronous
+    update instead of swap synchronous update used for the fill reduction case. 
+
+Issues
+
+    This extension currently only works on an InfiniteReality and later 
+    high end machines.
+
+New Procedures and Functions
+
+    int glXBindChannelToWindowSGIX( Display *display,
+			 int screen,
+			 int channel,
+			 Window window )
+
+    int glXChannelRectSGIX(  Display *display,
+			 int screen,
+			 int channel,
+			 int x,
+			 int y,
+			 int w,
+			 int h )
+
+    int glXQueryChannelRectSGIX( Display *display,
+			 int screen,
+			 int channel,
+			 int *dx,
+			 int *dy,
+			 int *dw,
+			 int *dh )
+
+    int glXQueryChannelDeltasSGIX( Display *display,
+			 int screen,
+			 int channel,
+			 int *x,
+			 int *y,
+			 int *w,
+			 int *h )
+
+
+    int glXChannelRectSyncSGIX( Display *display,
+			 int screen,
+			 int channel,
+			 GLenum synctype)
+
+
+New Tokens
+
+    Accepted by the <synctype> parameter of glXChannelRectSyncSGIX.
+
+    GLX_SYNC_FRAME_SGIX			0x00000000
+    GLX_SYNC_SWAP_SGIX			0x00000001
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations and
+the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    glXBindChannelToWindowSGIX associates a channel with an X window id
+    so that when the Xwid is destroyed, the channel input area care 
+    revert back to the area before the bind took place.  The other reason
+    for this binding is that the bound channel only updates when a swap
+    takes place on the associated Xwid (assuming swap sync updates)
+
+    glXChannelRectSGIX sets the input video rectangle that will take
+    effect the next swap on the bound did or next frame (based on
+    glXChannelRectSyncSGIX setting.) 
+
+    glXQueryChannelRectSGIX returns the actual input area that took
+    effect given any hardware constraints on input area placement/size.
+
+    glXQueryChannelDeltasSGIX returns the resolution at which one can
+    place and size a video input area. 
+
+    glXChannelRectSyncSGIX configures the system to update video input
+    areas on complete swap buffers of bound xwids, or on frame boundries.
+
+Errors
+
+    all SGIX_video_resize commands mentioned here return GLX_BAD_CONTEXT 
+    if there is no current GLXContext.
+
+    glXChannelRectSGIX returns GLX_BAD_CONTEXT if the current context is
+    not direct, or if there is no current context.
+
+    glXChannelRectSGIX returns GLX_BAD_VALUE if the x,y,w,h rectangle specified 
+    does not fit within the channel's rectangle that was current at the time of the 
+    glXBindChannelToWindowSGIX call.
+
+    glXBindChannelToWindowSGIX returns GLX_BAD_VALUE if window passed to it
+    is invalid.
+
+    all SGIX_video_resize commands mentioned here return GLX_BAD_VALUE
+    if the specified channel is invalid or inactive.
+
+New State
+
+    Get Value                   Get Command             Type    Initial Value
+    ---------                   -----------             ----    -------------
+    [deltas]			glXQueryChannelDeltasSGIX Z+	dx=4,dy=1,dw=4,dh=1 
+    [resize rect]		glXQueryChannelRectSGIX	 Z+	current pan/zoom rect
+
+
+New Implementation Dependent State
+
+    Get Value                   Get Command             Type    Initial Value
+    ---------                   -----------             ----    -------------
+    [bound]						B	false

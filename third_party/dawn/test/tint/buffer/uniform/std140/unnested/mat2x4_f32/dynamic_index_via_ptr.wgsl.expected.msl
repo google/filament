@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  const constant float2x4* m;
+  thread int* counter;
+};
+
+int i(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.counter) = as_type<int>((as_type<uint>((*tint_module_vars.counter)) + as_type<uint>(1)));
+  return (*tint_module_vars.counter);
+}
+
+kernel void f(const constant float2x4* m [[buffer(0)]]) {
+  thread int counter = 0;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.m=m, .counter=(&counter)};
+  const constant float2x4* const p_m = tint_module_vars.m;
+  const constant float4* const p_m_i = (&(*p_m)[min(uint(i(tint_module_vars)), 1u)]);
+  float2x4 const l_m = (*p_m);
+  float4 const l_m_i = (*p_m_i);
+}

@@ -1,0 +1,39 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %color_out %gl_FragCoord
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 430
+               OpName %main "main"
+               OpName %color_out "color_out"
+               OpName %texture "texture"
+               OpName %gl_FragCoord "gl_FragCoord"
+               OpDecorate %color_out Location 0
+               OpDecorate %texture DescriptorSet 0
+               OpDecorate %texture Binding 0
+               OpDecorate %texture NonWritable
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+  %color_out = OpVariable %_ptr_Output_v4float Output
+         %11 = OpTypeImage %float 2D 0 0 0 2 Rgba8
+%_ptr_UniformConstant_11 = OpTypePointer UniformConstant %11
+    %texture = OpVariable %_ptr_UniformConstant_11 UniformConstant
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+    %v2float = OpTypeVector %float 2
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+       %main = OpFunction %void None %7
+         %17 = OpLabel
+         %18 = OpLoad %11 %texture
+         %19 = OpLoad %v4float %gl_FragCoord
+         %20 = OpVectorShuffle %v2float %19 %19 0 1
+         %21 = OpConvertFToS %v2int %20
+         %22 = OpImageRead %v4float %18 %21
+               OpStore %color_out %22
+               OpReturn
+               OpFunctionEnd

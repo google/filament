@@ -1,0 +1,440 @@
+Name
+
+    ARB_texture_float
+
+Name Strings
+
+    GL_ARB_texture_float
+
+Contributors
+
+    Pat Brown
+    Jon Leech
+    Rob Mace
+    Brian Paul
+
+Contact
+
+    Dale Kirkland, NVIDIA (dkirkland 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2004-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on October 22, 2004.
+
+Version
+
+    Based on the ATI_texture_float extension, verion 4
+
+    Last Modified Date:  February 19, 2008
+    Version:             7
+
+Number
+
+    ARB Extension #41
+
+Dependencies
+
+    This extension is written against the OpenGL 2.0 Specification
+    but will work with the OpenGL 1.5 Specification.
+
+    OpenGL 1.1 or EXT_texture is required.
+
+    This extension interacts with ARB_color_buffer_float.
+
+Overview
+
+    This extension adds texture internal formats with 16- and 32-bit
+    floating-point components.  The 32-bit floating-point components
+    are in the standard IEEE float format.  The 16-bit floating-point
+    components have 1 sign bit, 5 exponent bits, and 10 mantissa bits.
+    Floating-point components are clamped to the limits of the range
+    representable by their format.
+
+
+IP Status
+
+    SGI owns US Patent #6,650,327, issued November 18, 2003. SGI
+    believes this patent contains necessary IP for graphics systems
+    implementing floating point (FP) rasterization and FP framebuffer
+    capabilities.
+
+    SGI will not grant the ARB royalty-free use of this IP for use in
+    OpenGL, but will discuss licensing on RAND terms, on an individual
+    basis with companies wishing to use this IP in the context of
+    conformant OpenGL implementations. SGI does not plan to make any
+    special exemption for open source implementations.
+
+    Contact Doug Crisman at SGI Legal for the complete IP disclosure.
+
+Issues
+
+    1. How is this extension different from the ATI_texture_float
+       extension?
+
+       This extension expands on the definition of float16 values
+       and adds a query to determine if the components of a texture
+       are stored as floats.
+
+    2. Should the new names of the internal formats be changed to a
+       different spelling?
+
+       RESOLVED:  Internal format names have been updated to the
+       same convention as the EXT_framebuffer_object extension.
+
+    3. Is it allowable for an implementation to fall back to a non
+       floating-point internal format if it does not support the
+       requested format?
+
+       RESOLVED:  No.  An application that requests floating-point
+       formats should expect to get them.  Only the precision of the
+       internal format can be changed.  When this extension is
+       promoted to the core, this issue may need to be readdressed.
+
+    4. Do the new internal formats apply to any other commands?
+
+       RESOLVED:  Since color tables support the same <internalFormat>
+       values as textures, they are also extended with this extension,
+       except the individual component types cannot be queried.
+
+    5. Are the floating-point values clamped before they are stored
+       into the texture memory or color tables?
+
+       RESOLVED:  The values are clamped to the representatable
+       range of the storage format.  Overflows could produce
+       +/-INF and underflows could produce denorms or zero.  This
+       matches the behavior of the ATI extension.
+
+    6. Should this extension modify the clamping of the texture border
+       color components?
+
+       RESOLVED:  Yes.  The border color components are unclamped.
+       When used, the border color components are interpreted in a
+       manner consistent with the texture's internal format.  For
+       fixed-point textures, this means that the border color is
+       clamped to [0, 1] when used.
+
+    7. Are floating-point values clamped for the fixed-function GL?
+
+       RESOLVED:  This extension introduces texel values that can be
+       outside [0, 1].  No clamping occurs to these values during
+       texture filtering.  For the fixed-function pipeline, the
+       filtered texel is now clamped before it is used for texture
+       environment blending.  The ARB_color_buffer_float extension
+       can be used to control this clamping.  For the programmable
+       pipelines, no clamping occurs.
+
+    8. Should the query for the border color return the unclamped
+       values?
+
+       RESOLVED:  There is language in the ARB_color_buffer_float
+       extension that handles this.  Since there is no clamp control
+       in this specification, it would be hard to do anything other
+       than return the clamped values.
+
+New Procedures and Functions
+
+   None
+
+New Tokens
+
+    Accepted by the <value> parameter of GetTexLevelParameter:
+
+        TEXTURE_RED_TYPE_ARB             0x8C10
+        TEXTURE_GREEN_TYPE_ARB           0x8C11
+        TEXTURE_BLUE_TYPE_ARB            0x8C12
+        TEXTURE_ALPHA_TYPE_ARB           0x8C13
+        TEXTURE_LUMINANCE_TYPE_ARB       0x8C14
+        TEXTURE_INTENSITY_TYPE_ARB       0x8C15
+        TEXTURE_DEPTH_TYPE_ARB           0x8C16
+
+    Returned by the <params> parameter of GetTexLevelParameter:
+
+        UNSIGNED_NORMALIZED_ARB          0x8C17
+
+    Accepted by the <internalFormat> parameter of TexImage1D,
+    TexImage2D, and TexImage3D:
+
+        RGBA32F_ARB                      0x8814
+        RGB32F_ARB                       0x8815
+        ALPHA32F_ARB                     0x8816
+        INTENSITY32F_ARB                 0x8817
+        LUMINANCE32F_ARB                 0x8818
+        LUMINANCE_ALPHA32F_ARB           0x8819
+        RGBA16F_ARB                      0x881A
+        RGB16F_ARB                       0x881B
+        ALPHA16F_ARB                     0x881C
+        INTENSITY16F_ARB                 0x881D
+        LUMINANCE16F_ARB                 0x881E
+        LUMINANCE_ALPHA16F_ARB           0x881F
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Add a new Section 2.1.2, (p. 6):
+
+    2.1.2  16-Bit Floating-Point Numbers
+
+    A 16-bit floating-point number has a 1-bit sign (S), a 5-bit
+    exponent (E), and a 10-bit mantissa (M).  The value of a 16-bit
+    floating-point number is determined by the following:
+
+        (-1)^S * 0.0,                        if E == 0 and M == 0,
+        (-1)^S * 2^-14 * (M / 2^10),         if E == 0 and M != 0,
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if 0 < E < 31,
+        (-1)^S * INF,                        if E == 31 and M == 0, or
+        NaN,                                 if E == 31 and M != 0,
+
+    where
+
+        S = floor((N mod 65536) / 32768),
+        E = floor((N mod 32768) / 1024), and
+        M = N mod 1024.
+
+    Implementations are also allowed to use any of the following
+    alternative encodings:
+
+        (-1)^S * 0.0,                        if E == 0 and M != 0,
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if E == 31 and M == 0, or
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if E == 31 and M != 0,
+
+    Any representable 16-bit floating-point value is legal as input
+    to a GL command that accepts 16-bit floating-point data.  The
+    result of providing a value that is not a floating-point number
+    (such as infinity or NaN) to such a command is unspecified, but
+    must not lead to GL interruption or termination.  Providing a
+    denormalized number or negative zero to GL must yield predictable
+    results.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    Modify Section 3.6.3 (Pixel Transfer Modes), p. 116
+
+    (modify first paragraph, p. 118) The specified image is taken from
+    memory and processed just as if DrawPixels were called, stopping
+    after the final expansion to RGBA. The R, G, B, and A components of
+    each pixel are then scaled by the four COLOR TABLE SCALE parameters
+    and biased by the four COLOR TABLE BIAS parameters.  These
+    parameters are set by calling ColorTableParameterfv as described
+    below.  If fragment color clamping is enable or the
+    <internalformat> is fixed-point, the components are clamped to
+    [0, 1]. Otherwise, the components are not modified.
+
+    Modify Section 3.8.1 (Texture Image Specification), p. 150
+
+    (modify second paragraph, p. 151) The selected groups are processed
+    exactly as for DrawPixels, stopping just before final conversion.
+    For R, G, B, and A, if the <internalformat> of the texture is
+    fixed-point, the components are clamped to [0, 1].  Otherwise, the
+    components are not modified.  The depth value so generated is
+    clamped to [0, 1].
+
+    (modify the second paragraph, p. 152) The internal component resolution
+    is the number of bits allocated to each value in a texture image. If
+    <internalformat> is specified as a base internal format, the GL stores
+    the resulting texture with internal component resolutions of its own
+    choosing.  If a sized internal format is specified, the mapping of the
+    R, G, B, A, and depth values to texture components is equivalent to the
+    mapping of the corresponding base internal format's components, as
+    specified in table 3.15, the type (unsigned int, float, etc.) is
+    assigned the same type specified by <internalFormat>, and the memory
+    allocation per texture component is assigned by the GL to match the
+    allocations listed in table 3.16 as closely as possible. (The definition
+    of closely is left up to the implementation.  Implementations are not
+    required to support more than one resolution of each type (unsigned int,
+    float, etc.) for each base internal format.) If a compressed internal
+    format is specified, the mapping of the R, G, B, A, and depth values to
+    texture components is equivalent to the mapping of the corresponding
+    base internal format's components, as specified in table 3.15. The
+    specified image is compressed using a (possibly lossy) compression
+    algorithm chosen by the GL.
+
+    (add the following to table 3.16, p. 154)
+
+      Sized                       Base             R    G    B    A    L    I
+      Internal Format             Internal Format bits bits bits bits bits bits
+      --------------------------- --------------- ---- ---- ---- ---- ---- ----
+      RGBA32F_ARB                 RGBA            f32  f32  f32  f32
+      RGB32F_ARB                  RGB             f32  f32  f32
+      ALPHA32F_ARB                ALPHA                          f32
+      INTENSITY32F_ARB            INTENSITY                                f32
+      LUMINANCE32F_ARB            LUMINANCE                           f32
+      LUMINANCE_ALPHA32F_ARB      LUMINANCE_ALPHA                f32  f32
+      RGBA16F_ARB                 RGBA            f16  f16  f16  f16
+      RGB16F_ARB                  RGB             f16  f16  f16
+      ALPHA16F_ARB                ALPHA                          f16
+      INTENSITY16F_ARB            INTENSITY                                f16
+      LUMINANCE16F_ARB            LUMINANCE                           f16
+      LUMINANCE_ALPHA16F_ARB      LUMINANCE_ALPHA                f16  f16
+
+      Table 3.16: Correspondence of sized internal formats to base
+      internal formats, and desired component resolutions for each
+      sized internal format.  The notation <f16> and <f32> imply
+      16- and 32-bit floating-point, respectively.
+
+    Modify Section 3.8.4 (Texture Parameters), p. 166
+
+    (remove TEXTURE_BORDER_COLOR from end of first paragraph, p. 166)
+
+    ... If the values for TEXTURE_BORDER_COLOR or the value for
+    TEXTURE_PRIORITY are specified as integers, the conversion for signed
+    integers from table 2.9 is applied to convert this value to
+    floating-point.  Regardless of the original data type, the value for
+    TEXTURE_PRIORITY is clamped to lie in [0, 1].
+
+    ... If the value for TEXTURE_PRIORITY is specified as an integer,
+    the conversion for signed integers from table 2.9 is applied to
+    convert this value to floating-point, followed by clamping the
+    value to lie in [0, 1].
+
+    Modify Section 3.8.8 (Texture Minification), p. 170
+
+    (modify last paragraph, p. 174) ... If the texture contains color
+    components, the values of TEXTURE BORDER COLOR are interpreted as
+    an RGBA color to match the texture's internal format in a manner
+    consistent with table 3.15.  The border values for texture
+    components stored as fixed-point values are clamped to [0, 1]
+    before they are used.  If the texture contains depth ...
+
+    Modify Section 3.8.11 (Texture State and Proxy State) p. 178
+
+    (modify the first section, p. 178) ...Each array has associated with
+    it a width, height (two- and three-dimensional and cubemap only), and
+    depth (three-dimensional only), a border width, an integer describing
+    the internal format of the image, six integer values describing the
+    resolutions of each of the red, green, blue, alpha, luminance, and
+    intensity components of the image, six values that describe the type
+    (unsigned int, floats, etc.) of each of the red, green, blue, alpha,
+    luminance, and intensity components of the image, a boolean describing
+    whether the image is compressed or not, and an integer size of a
+    compressed image.  Each initial...
+
+    (modify the first paragraph, p. 179) ...Each proxy array includes width,
+    height (two- and three- dimensional arrays only), depth
+    (three-dimensional arrays only), border width, and internal format state
+    values, as well as state for the red, green, blue, alpha, luminance, and
+    intensity component resolutions and types (unsigned int, floats, etc.).
+    Proxy arrays do not include image data, nor do they include texture
+    properties. When TexImage3D is executed with target specified as PROXY
+    TEXTURE 3D, the three-dimensional proxy state values of the specified
+    level-of-detail are recomputed and updated. If the image array would not
+    be supported by TexImage3D called with target set to TEXTURE 3D, no
+    error is generated, but the proxy width, height, depth, border width,
+    and component resolutions are set to zero, and the component types are
+    set to NONE. If the image...
+
+    Modify Section 3.8.13 (Texture Environments and Functions), p.182
+
+    (replace the sixth paragraph of p. 183) All of these color values
+    are clamped to the range [0, 1].  The texture functions are
+    specified in tables 3.22, 3.23, and 3.24.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special
+Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Modify Section 6.1.3 (Enumerated Queries), p. 246
+
+    (modify second paragraph, p. 247) For texture images with uncompressed
+    internal formats, queries of <value> of TEXTURE_RED_TYPE_ARB,
+    TEXTURE_GREEN_TYPE_ARB, TEXTURE_BLUE_TYPE_ARB, TEXTURE_ALPHA_TYPE_ARB,
+    TEXTURE_LUMINANCE_TYPE_ARB, TEXTURE_INTENSITY_TYPE_ARB, and
+    TEXTURE_DEPTH_TYPE_ARB, return either NONE, UNSIGNED_NORMALIZED_ARB, or
+    FLOAT indicating how the components are stored, and the queries of
+    <value> of TEXTURE_RED_SIZE, TEXTURE_GREEN_SIZE, TEXTURE_BLUE_SIZE,
+    TEXTURE_ALPHA_SIZE, TEXTURE_LUMINANCE_SIZE, TEXTURE_DEPTH_SIZE, and
+    TEXTURE_INTENSITY_SIZE return the actual resolutions of the stored image
+    array components, not the resolutions specified when the image array was
+    defined.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Dependencies on ARB_color_buffer_float extension
+
+    The ARB_color_buffer_float extension allows clamping to be
+    controlled in various parts of the GL.  Specifically, clamping
+    of filtered texel values used for texture environment blending
+    can be disable.
+
+Errors
+
+    None
+
+New State
+
+    (Table 6.17, p. 278) add the following entries:
+
+    Get Value                        Type   Get Command           Minimum Value  Description      Section   Attribute
+    -------------------------------  -----  --------------------  -------------  ---------------  --------  ----------
+    TEXTURE_RED_TYPE_ARB             Z3     GetTexLevelParameter  -              storage type     6.1.3     -
+    TEXTURE_GREEN_TYPE_ARB           Z3     GetTexLevelParameter  -              storage type     6.1.3     -
+    TEXTURE_BLUE_TYPE_ARB            Z3     GetTexLevelParameter  -              storage type     6.1.3     -
+    TEXTURE_ALPHA_TYPE_ARB           Z3     GetTexLevelParameter  -              storage type     6.1.3     -
+    TEXTURE_LUMINANCE_TYPE_ARB       Z3     GetTexLevelParameter  -              storage type     6.1.3     -
+    TEXTURE_INTENSITY_TYPE_ARB       Z3     GetTexLevelParameter  -              storage type     6.1.3     -
+    TEXTURE_DEPTH_TYPE_ARB           Z3     GetTexLevelParameter  -              storage type     6.1.3     -
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  -------- ---------  ----------------------------------------
+      1   2/26/04  kirkland   Initial version based on the ATI
+                              extension.
+
+      2   3/11/04  kirkland   Updated language for float16 number
+                              handling.
+                              Added bit encodings for half values.
+                              Added an issue for color tables.
+                              Added separate queries for component
+                              types.
+                              Changed the internal format names to
+                              match the uber buffer extension.
+                              Added language to not allow textures to
+                              change the type of the internal formats,
+                              only the precision.
+
+      3   7/23/04  kirkland   Added alternative encodings options for
+                              float16 format.
+
+      4   9/17/04  kirkland   Updated to reference the OpenGL 2.0 spec.
+                              Added interaction with clamp control.
+                              Removed the clamping of color table data.
+
+      5   10/1/04  Kirkland   Updated IP section.
+                              Reviewed by the ARB and closed all
+                              UNRESOLVED issues.
+
+      6    7/6/06  pbrown     Fixed broken language for border color 
+                              handling.  TexParameteriv border colors
+                              should still be converted to integer; we
+                              only intended to remove the [0,1] clamping.
+
+      7   2/8/07   Jon Leech  Move 3.8.13 changes to appropriate section.

@@ -1,0 +1,184 @@
+Name
+
+    EXT_shader_image_load_formatted
+
+Name Strings
+
+    GL_EXT_shader_image_load_formatted
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date:         March 11, 2014
+    Revision:                   1
+
+Number
+
+    OpenGL Extension #449
+
+Dependencies
+
+    This extension is written against the OpenGL 4.3 specification
+    (Compatibility Profile).
+
+    This extension is written against version 4.30 of the OpenGL
+    Shading Language Specification.
+
+    This extension interacts with GL_NV_bindless_texture.
+
+    This extension interacts with GL_EXT_shader_image_load_store and
+    NV_gpu_program5.
+
+Overview
+
+    ARB_shader_image_load_store (and OpenGL 4.2) added support for
+    random access load and store from/to texture images, but due to 
+    hardware limitations, loads were required to declare the image
+    format in the shader source. This extension relaxes that 
+    requirement, and the return values from imageLoad can be format-
+    converted based on the format of the image binding.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 8 of the OpenGL 4.3 (Compatibility Profile) Specification
+(Rasterization)
+
+    Modify Section 8.25 Texture Image Loads and Stores, p. 284
+
+    (modify the bullet describing the format layout mismatch)
+
+    - the format layout qualifier for an image variable used for an image load 
+      (if specified) or atomic operation does not match the format of the image 
+      unit, according to table 8.33; or
+
+    (modify the first paragraph on p. 285)
+
+    Image variables used for shader loads, stores, and atomics may be declared 
+    with a format layout qualifier. If the format layout qualifier is present, 
+    then the format must match the format of the associated image unit, as 
+    enumerated in table 8.33, otherwise the access is considered to involve a 
+    format mismatch, as described above. Image variables used for atomics must 
+    be declared with a format layout qualifier. Image variables used only for
+    loads and stores may be declared without a format layout qualifier, in which
+    case the format of the image is inferred from the associated image unit.
+
+
+New Implementation Dependent State
+
+    None.
+
+New State
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+    
+Modifications to the OpenGL Shading Language Specification, Version 4.30
+
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_EXT_shader_image_load_formatted : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_EXT_shader_image_load_formatted    1
+
+
+    Modify Section 4.4.6.2 Format Layout Qualifiers (p. 71)
+    
+    (modify the second paragraph on p.71)
+    
+    Any image variable used for image atomic operations must specify a format 
+    layout qualifier; it is a compile-time error to pass an image uniform 
+    variable or function parameter declared without a format layout qualifier 
+    to an image atomic function.
+
+    Delete the last paragraph on p.71: (Uniforms not qualified with <writeonly> 
+    must have a format layout qualifier. ...)
+
+
+Errors
+
+
+
+Dependencies on NV_bindless_texture
+
+    When an image variable uses a bindless image handle, the format of the
+    image is inferred from the handle rather than "from the associated image 
+    unit".
+
+Dependencies on EXT_shader_image_load_store and NV_gpu_program5
+
+    Modify Section 2.X.4, Program Execution Environment
+
+      Instr-      Modifiers 
+      uction  V  F I C S H D  Out Inputs    Description
+      ------- -- - - - - - -  --- --------  --------------------------------
+      LOADIM  50 X X X X - F  v   vs,i      image load
+
+    (Add to "Section 2.X.6, Program Options" of the NV_gpu_program4 extension,
+    as extended by NV_gpu_program5:)
+
+      + Formatted Image Loads (EXT_shader_image_load_formatted)
+
+      If a program specifies the "EXT_shader_image_load_formatted" option, it 
+      may use the "F", "U", or "S" data types with the "LOADIM" opcodes to 
+      perform formatted image load operations.
+
+    Modify Section 2.X.8.Z, (LOADIM:  Image Load)
+
+    LOADIM supports an optional base data type (formatted) or storage modifier 
+    (unformatted).  Formatted image loads operate as described in Section 8.25. 
+    Unformatted image loads are treated as invalid unless the storage modifier 
+    matches the image unit format, as described in Table X.3.  The base data 
+    type of the result vector is derived from the storage modifier. The single 
+    operand is always interpreted as a signed integer vector.
+
+          Class      Supported Modifers
+          -------    -------------------
+          4x32       F32X4, S32X4, U32X4
+          2x32       F32X2, S32X2, U32X2
+          1x32       F32,   S32,   U32
+          1x16              S16,   U16
+          1x8               S8,    U8
+
+      Table X.3, Supported Storage Modifiers.  Unformatted image operations
+      are considered invalid unless the storage modifier is compatible with
+      the "Class" entry for the image unit format, as described in Table
+      8.33.
+
+
+Issues
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------------
+     1    01/28/14  jbolz     Internal revisions.

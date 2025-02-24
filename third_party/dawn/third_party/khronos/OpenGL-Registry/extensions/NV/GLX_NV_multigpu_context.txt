@@ -1,0 +1,142 @@
+Name
+
+    NV_multigpu_context
+
+Name Strings
+
+    GLX_NV_multigpu_context
+
+Contact
+
+    Ben Quest (bquest 'at' nvidia.com)
+
+Contributors
+
+    Ben Quest, NVIDIA
+    Joshua Schnarr, NVIDIA
+    Ralf Biermann, NVIDIA
+    Ingo Esser, NVIDIA
+    Robert Menzel, NVIDIA
+    James Jones, NVIDIA
+
+Notice
+
+    Copyright (c) 2019 NVIDIA
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date:         2019-05-17
+    Author Revision:            1
+
+Number
+
+    OpenGL Extension #545
+
+Dependencies
+
+    GLX_NV_multigpu_context is written against the GLX 1.4 and
+    GLX_ARB_create_context specifications. Both are required.
+
+    This extension interacts with NV_gpu_multicast.
+
+Overview
+
+    This extension allows the creation of an OpenGL context in a multi-GPU
+    environment with a specified multi-GPU strategy (known as SLI mode) which
+    takes precedence over process-wide multi-GPU mode settings.
+
+    The multi-GPU mode denotes vendor specific techniques to allow distributed
+    rendering on multiple GPUs, further called AFR (alternate frame rendering)
+    and Multicast (as defined in NV_gpu_multicast).
+
+    OpenGL supports multiple contexts. The semantics of switching contexts
+    is generally left to window system binding APIs such as WGL, GLX and EGL.
+    The extension GLX_NV_multigpu_context allows to specify a preferred
+    multi-GPU rendering mode per context, thus context switching can also
+    switch the current multi-GPU rendering mode.
+
+    In addition to the modes described above, this extension allows creating
+    contexts in single mode to force all rendering to be done on a single GPU,
+    and multi-display multicast mode to allow multicast rendering on a
+    multi-display configuration where displays attached to multiple GPUs are
+    linked together in a desktop configuration spanning multiple GPUs.
+
+    The implementation is platform dependent and the actual multi-GPU rendering
+    mode of the created context may vary on different hardware and operation
+    system platforms.
+
+New Procedures and Functions
+
+    None
+
+New Tokens (GLX)
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    glXCreateContextAttribsARB:
+
+        GLX_CONTEXT_MULTIGPU_ATTRIB_NV                         0x20AA
+
+    Accepted as an attribute value for GLX_CONTEXT_MULTIGPU_ATTRIB_NV in
+    the <*attrib_list> argument to glXCreateContextAttribsARB:
+
+        GLX_CONTEXT_MULTIGPU_ATTRIB_SINGLE_NV                  0x20AB
+        GLX_CONTEXT_MULTIGPU_ATTRIB_AFR_NV                     0x20AC
+        GLX_CONTEXT_MULTIGPU_ATTRIB_MULTICAST_NV               0x20AD
+        GLX_CONTEXT_MULTIGPU_ATTRIB_MULTI_DISPLAY_MULTICAST_NV 0x20AE
+
+Additions to the GLX 1.4 Specification
+
+    This extension modifies language specified in the GLX_ARB_create_context
+    extension.
+
+    Add a new paragraph to the description of glXCreateContextAttribsARB:
+
+    "The attribute name GLX_CONTEXT_MULTIGPU_ATTRIB_NV indicates the
+    preferred multi-GPU rendering mode for the OpenGL context.
+    This specified mode precedes other selected configuration settings."
+
+    Add a new context creation error to glXCreateContextAttribsARB:
+
+    "If attribute GLX_CONTEXT_MULTIGPU_ATTRIB_NV does not describe a valid and
+    supported SLI rendering mode, BadValue is generated."
+
+    Append a new paragraph to the end of section 3.5 "Rendering Contexts":
+
+    "When multiple contexts created with a multigpu context attribute are being
+    used, glXMakeCurrent and glXMakeContextCurrent will return FALSE if the
+    GLXDrawable is already current with a context using a different multigpu
+    attribute."
+
+GLX Errors
+
+    BadValue is generated if GLX_CONTEXT_MULTIGPU_ATTRIB_NV does not describe a
+    valid and supported SLI rendering mode.
+
+    GLXBadContextState is generated if glXMakeCurrent is called with a context
+    created with a different multigpu attribute than the context previously
+    current to the drawable.
+
+GLX Protocol
+
+    None
+
+New State
+
+    None
+
+Issues
+
+    All non-window-system dependent issues described in the
+    WGL_NV_multigpu_context extension specification apply equally to
+    GLX_NV_multigpu_context.
+
+Revision History
+
+ Rev.   Date      Author    Changes
+ ---- ----------  --------  ---------------------------------------------
+   1  2019-05-17  bquest    Fork from WGL_NV_multigpu_context
+

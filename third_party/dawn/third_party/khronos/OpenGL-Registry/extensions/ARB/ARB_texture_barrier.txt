@@ -1,0 +1,168 @@
+Name
+
+    ARB_texture_barrier
+
+Name Strings
+
+    GL_ARB_texture_barrier
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2014-2015 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date:         May 9, 2015
+    Revision:                   5
+
+Number
+
+    ARB Extension #167
+
+Dependencies
+
+    This extension is written against The OpenGL 4.4 (Compatibility Profile)
+    specification.
+
+Overview
+
+    This extension relaxes the restrictions on rendering to a currently
+    bound texture and provides a mechanism to avoid read-after-write
+    hazards.
+
+New Procedures and Functions
+
+    void TextureBarrier(void);
+
+New Tokens
+
+    None.
+
+Additions to Chapter 9 of the OpenGL 4.4 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify Section 9.3.1 Rendering Feedback Loops, p. 289
+
+    (Replace the complicated set of conditions with the following)
+
+    "Specifically, the values of rendered fragments are undefined if any
+    shader stage fetches texels and the same texels are written via fragment
+    shader outputs, even if the reads and writes are not in the same Draw
+    call, unless any of the following exceptions apply:
+
+    - The reads and writes are from/to disjoint sets of texels (after
+      accounting for texture filtering rules).
+
+    - There is only a single read and write of each texel, and the read is in
+      the fragment shader invocation that writes the same texel (e.g. using
+      "texelFetch2D(sampler, ivec2(gl_FragCoord.xy), 0);").
+
+    - If a texel has been written, then in order to safely read the result
+      a texel fetch must be in a subsequent Draw separated by the command
+
+        void TextureBarrier(void);
+
+      TextureBarrier() will guarantee that writes have completed and caches
+      have been invalidated before subsequent Draws are executed."
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+GLX Protocol
+
+    The following rendering command is sent to the server as
+    a glXRender request:
+
+    TextureBarrier
+
+        2      4               rendering command length
+        2      4348            rendering command opcode
+
+Issues
+
+    (1) What algorithms can take advantage of TextureBarrier?
+
+      This can be used to accomplish a limited form of programmable blending
+      for applications where a single Draw call does not self-intersect, by
+      binding the same texture as both render target and texture and applying
+      blending operations in the fragment shader. Additionally, bounding-box
+      optimizations can be used to minimize the number of TextureBarrier
+      calls between Draws. For example:
+
+        dirtybbox.empty();
+        foreach (object in scene) {
+          if (dirtybbox.intersects(object.bbox())) {
+            TextureBarrier();
+            dirtybbox.empty();
+          }
+          object.draw();
+          dirtybbox = bound(dirtybbox, object.bbox());
+        }
+
+      Another application is to render-to-texture algorithms that ping-pong
+      between two textures, using the result of one rendering pass as the input
+      to the next. Existing mechanisms require expensive FBO Binds, DrawBuffer
+      changes, or FBO attachment changes to safely swap the render target and
+      texture. With texture barriers, layered geometry shader rendering, and
+      texture arrays, an application can very cheaply ping-pong between two
+      layers of a single texture. i.e.
+
+        X = 0;
+        // Bind the array texture to a texture unit
+        // Attach the array texture to an FBO using FramebufferTexture3D
+        while (!done) {
+          // Stuff X in a constant, vertex attrib, etc.
+          Draw -
+            Texturing from layer X;
+            Writing gl_Layer = 1 - X in the geometry shader;
+
+          TextureBarrier();
+          X = 1 - X;
+        }
+
+      However, be warned that this requires geometry shaders and hence adds
+      the overhead that all geometry must pass through an additional program
+      stage, so an application using large amounts of geometry could become
+      geometry-limited or more shader-limited.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     1              jbolz     Initial revision.
+     2              mjk       Assign number.
+     3              srahman   Add glx protocol specification.
+     4    04/22/14  pdaniell  Modify for inclusion into OpenGL 4.5
+     5    05/09/15  Jon Leech Add copyright statement.

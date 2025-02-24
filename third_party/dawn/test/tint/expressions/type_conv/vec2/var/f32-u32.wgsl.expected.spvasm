@@ -1,0 +1,54 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 34
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %u "u"
+               OpName %f "f"
+               OpName %v "v"
+               OpName %tint_v2f32_to_v2u32 "tint_v2f32_to_v2u32"
+               OpName %value "value"
+               OpName %unused_entry_point "unused_entry_point"
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%_ptr_Private_v2float = OpTypePointer Private %v2float
+    %float_1 = OpConstant %float 1
+          %5 = OpConstantComposite %v2float %float_1 %float_1
+          %u = OpVariable %_ptr_Private_v2float Private %5
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+         %17 = OpTypeFunction %v2uint %v2float
+         %21 = OpConstantNull %v2float
+       %bool = OpTypeBool
+     %v2bool = OpTypeVector %bool 2
+         %25 = OpConstantNull %v2uint
+%float_4_29496704e_09 = OpConstant %float 4.29496704e+09
+         %27 = OpConstantComposite %v2float %float_4_29496704e_09 %float_4_29496704e_09
+%uint_4294967295 = OpConstant %uint 4294967295
+         %30 = OpConstantComposite %v2uint %uint_4294967295 %uint_4294967295
+          %f = OpFunction %void None %9
+         %10 = OpLabel
+         %11 = OpLoad %v2float %u None
+          %v = OpFunctionCall %v2uint %tint_v2f32_to_v2u32 %11
+               OpReturn
+               OpFunctionEnd
+%tint_v2f32_to_v2u32 = OpFunction %v2uint None %17
+      %value = OpFunctionParameter %v2float
+         %18 = OpLabel
+         %19 = OpConvertFToU %v2uint %value
+         %20 = OpFOrdGreaterThanEqual %v2bool %value %21
+         %24 = OpSelect %v2uint %20 %19 %25
+         %26 = OpFOrdLessThanEqual %v2bool %value %27
+         %29 = OpSelect %v2uint %26 %24 %30
+               OpReturnValue %29
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %9
+         %33 = OpLabel
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,83 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 42
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpMemberName %Inner 0 "m"
+               OpName %Inner "Inner"
+               OpMemberName %Outer 0 "a"
+               OpName %Outer "Outer"
+               OpMemberName %a_block 0 "inner"
+               OpName %a_block "a_block"
+               OpName %f "f"
+               OpName %p_a "p_a"
+               OpName %p_a_3 "p_a_3"
+               OpName %p_a_3_a "p_a_3_a"
+               OpName %p_a_3_a_2 "p_a_3_a_2"
+               OpName %p_a_3_a_2_m "p_a_3_a_2_m"
+               OpName %p_a_3_a_2_m_1 "p_a_3_a_2_m_1"
+               OpName %l_a "l_a"
+               OpName %l_a_3 "l_a_3"
+               OpName %l_a_3_a "l_a_3_a"
+               OpName %l_a_3_a_2 "l_a_3_a_2"
+               OpName %l_a_3_a_2_m "l_a_3_a_2_m"
+               OpName %l_a_3_a_2_m_1 "l_a_3_a_2_m_1"
+               OpName %l_a_3_a_2_m_1_0 "l_a_3_a_2_m_1_0"
+               OpMemberDecorate %Inner 0 Offset 0
+               OpMemberDecorate %Inner 0 ColMajor
+               OpMemberDecorate %Inner 0 MatrixStride 16
+               OpDecorate %_arr_Inner_uint_4 ArrayStride 64
+               OpMemberDecorate %Outer 0 Offset 0
+               OpDecorate %_arr_Outer_uint_4 ArrayStride 256
+               OpMemberDecorate %a_block 0 Offset 0
+               OpDecorate %a_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%mat2v4float = OpTypeMatrix %v4float 2
+      %Inner = OpTypeStruct %mat2v4float
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_Inner_uint_4 = OpTypeArray %Inner %uint_4
+      %Outer = OpTypeStruct %_arr_Inner_uint_4
+%_arr_Outer_uint_4 = OpTypeArray %Outer %uint_4
+    %a_block = OpTypeStruct %_arr_Outer_uint_4
+%_ptr_Uniform_a_block = OpTypePointer Uniform %a_block
+          %1 = OpVariable %_ptr_Uniform_a_block Uniform
+       %void = OpTypeVoid
+         %15 = OpTypeFunction %void
+%_ptr_Uniform__arr_Outer_uint_4 = OpTypePointer Uniform %_arr_Outer_uint_4
+     %uint_0 = OpConstant %uint 0
+%_ptr_Uniform_Outer = OpTypePointer Uniform %Outer
+     %uint_3 = OpConstant %uint 3
+%_ptr_Uniform__arr_Inner_uint_4 = OpTypePointer Uniform %_arr_Inner_uint_4
+%_ptr_Uniform_Inner = OpTypePointer Uniform %Inner
+     %uint_2 = OpConstant %uint 2
+%_ptr_Uniform_mat2v4float = OpTypePointer Uniform %mat2v4float
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+     %uint_1 = OpConstant %uint 1
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+          %f = OpFunction %void None %15
+         %16 = OpLabel
+        %p_a = OpAccessChain %_ptr_Uniform__arr_Outer_uint_4 %1 %uint_0
+      %p_a_3 = OpAccessChain %_ptr_Uniform_Outer %p_a %uint_3
+    %p_a_3_a = OpAccessChain %_ptr_Uniform__arr_Inner_uint_4 %p_a_3 %uint_0
+  %p_a_3_a_2 = OpAccessChain %_ptr_Uniform_Inner %p_a_3_a %uint_2
+%p_a_3_a_2_m = OpAccessChain %_ptr_Uniform_mat2v4float %p_a_3_a_2 %uint_0
+%p_a_3_a_2_m_1 = OpAccessChain %_ptr_Uniform_v4float %p_a_3_a_2_m %uint_1
+        %l_a = OpLoad %_arr_Outer_uint_4 %p_a None
+      %l_a_3 = OpLoad %Outer %p_a_3 None
+    %l_a_3_a = OpLoad %_arr_Inner_uint_4 %p_a_3_a None
+  %l_a_3_a_2 = OpLoad %Inner %p_a_3_a_2 None
+%l_a_3_a_2_m = OpLoad %mat2v4float %p_a_3_a_2_m None
+%l_a_3_a_2_m_1 = OpLoad %v4float %p_a_3_a_2_m_1 None
+         %39 = OpAccessChain %_ptr_Uniform_float %p_a_3_a_2_m_1 %uint_0
+%l_a_3_a_2_m_1_0 = OpLoad %float %39 None
+               OpReturn
+               OpFunctionEnd

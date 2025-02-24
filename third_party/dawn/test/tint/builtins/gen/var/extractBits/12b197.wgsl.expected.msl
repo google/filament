@@ -1,0 +1,85 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device packed_uint3* prevent_dce;
+};
+
+uint3 extractBits_12b197() {
+  uint3 arg_0 = uint3(1u);
+  uint arg_1 = 1u;
+  uint arg_2 = 1u;
+  uint const v = min(arg_1, 32u);
+  uint3 res = extract_bits(arg_0, v, min(arg_2, (32u - v)));
+  return res;
+}
+
+fragment void fragment_main(device packed_uint3* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = packed_uint3(extractBits_12b197());
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device packed_uint3* prevent_dce;
+};
+
+uint3 extractBits_12b197() {
+  uint3 arg_0 = uint3(1u);
+  uint arg_1 = 1u;
+  uint arg_2 = 1u;
+  uint const v = min(arg_1, 32u);
+  uint3 res = extract_bits(arg_0, v, min(arg_2, (32u - v)));
+  return res;
+}
+
+kernel void compute_main(device packed_uint3* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = packed_uint3(extractBits_12b197());
+}
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexOutput {
+  float4 pos;
+  uint3 prevent_dce;
+};
+
+struct vertex_main_outputs {
+  float4 VertexOutput_pos [[position]];
+  uint3 VertexOutput_prevent_dce [[user(locn0)]] [[flat]];
+};
+
+uint3 extractBits_12b197() {
+  uint3 arg_0 = uint3(1u);
+  uint arg_1 = 1u;
+  uint arg_2 = 1u;
+  uint const v = min(arg_1, 32u);
+  uint3 res = extract_bits(arg_0, v, min(arg_2, (32u - v)));
+  return res;
+}
+
+VertexOutput vertex_main_inner() {
+  VertexOutput out = {};
+  out.pos = float4(0.0f);
+  out.prevent_dce = extractBits_12b197();
+  return out;
+}
+
+vertex vertex_main_outputs vertex_main() {
+  VertexOutput const v_1 = vertex_main_inner();
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = v_1.pos;
+  tint_wrapper_result.VertexOutput_prevent_dce = v_1.prevent_dce;
+  return tint_wrapper_result;
+}

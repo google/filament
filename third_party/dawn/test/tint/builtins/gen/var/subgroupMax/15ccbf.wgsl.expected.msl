@@ -1,0 +1,40 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint4* prevent_dce;
+};
+
+uint4 subgroupMax_15ccbf() {
+  uint4 arg_0 = uint4(1u);
+  uint4 res = simd_max(arg_0);
+  return res;
+}
+
+fragment void fragment_main(device uint4* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupMax_15ccbf();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint4* prevent_dce;
+};
+
+uint4 subgroupMax_15ccbf() {
+  uint4 arg_0 = uint4(1u);
+  uint4 res = simd_max(arg_0);
+  return res;
+}
+
+kernel void compute_main(device uint4* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupMax_15ccbf();
+}

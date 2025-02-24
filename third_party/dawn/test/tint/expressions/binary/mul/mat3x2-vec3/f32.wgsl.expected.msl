@@ -1,0 +1,30 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct S_packed_vec3 {
+  /* 0x0000 */ float3x2 tint_member;
+  /* 0x0018 */ tint_array<int8_t, 8> tint_pad;
+  /* 0x0020 */ packed_float3 vector;
+  /* 0x002c */ tint_array<int8_t, 4> tint_pad_1;
+};
+
+struct tint_module_vars_struct {
+  const constant S_packed_vec3* data;
+};
+
+fragment void v(const constant S_packed_vec3* data [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.data=data};
+  float2 const x = ((*tint_module_vars.data).tint_member * float3((*tint_module_vars.data).vector));
+}

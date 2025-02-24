@@ -1,0 +1,110 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 27
+; Schema: 0
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffle
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %subgroupShuffle_e13c81 "subgroupShuffle_e13c81"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+     %v4uint = OpTypeVector %uint 4
+%prevent_dce_block = OpTypeStruct %v4uint
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %7 = OpTypeFunction %v4uint
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+     %uint_3 = OpConstant %uint 3
+     %uint_1 = OpConstant %uint 1
+         %14 = OpConstantComposite %v4uint %uint_1 %uint_1 %uint_1 %uint_1
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+       %void = OpTypeVoid
+         %21 = OpTypeFunction %void
+%_ptr_StorageBuffer_v4uint = OpTypePointer StorageBuffer %v4uint
+     %uint_0 = OpConstant %uint 0
+%subgroupShuffle_e13c81 = OpFunction %v4uint None %7
+          %8 = OpLabel
+        %res = OpVariable %_ptr_Function_v4uint Function
+          %9 = OpBitcast %uint %int_1
+         %12 = OpGroupNonUniformShuffle %v4uint %uint_3 %14 %9
+               OpStore %res %12
+         %18 = OpLoad %v4uint %res None
+               OpReturnValue %18
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %21
+         %22 = OpLabel
+         %23 = OpFunctionCall %v4uint %subgroupShuffle_e13c81
+         %24 = OpAccessChain %_ptr_StorageBuffer_v4uint %1 %uint_0
+               OpStore %24 %23 None
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 27
+; Schema: 0
+               OpCapability Shader
+               OpCapability GroupNonUniformShuffle
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %subgroupShuffle_e13c81 "subgroupShuffle_e13c81"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+     %v4uint = OpTypeVector %uint 4
+%prevent_dce_block = OpTypeStruct %v4uint
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %7 = OpTypeFunction %v4uint
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+     %uint_3 = OpConstant %uint 3
+     %uint_1 = OpConstant %uint 1
+         %14 = OpConstantComposite %v4uint %uint_1 %uint_1 %uint_1 %uint_1
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+       %void = OpTypeVoid
+         %21 = OpTypeFunction %void
+%_ptr_StorageBuffer_v4uint = OpTypePointer StorageBuffer %v4uint
+     %uint_0 = OpConstant %uint 0
+%subgroupShuffle_e13c81 = OpFunction %v4uint None %7
+          %8 = OpLabel
+        %res = OpVariable %_ptr_Function_v4uint Function
+          %9 = OpBitcast %uint %int_1
+         %12 = OpGroupNonUniformShuffle %v4uint %uint_3 %14 %9
+               OpStore %res %12
+         %18 = OpLoad %v4uint %res None
+               OpReturnValue %18
+               OpFunctionEnd
+%compute_main = OpFunction %void None %21
+         %22 = OpLabel
+         %23 = OpFunctionCall %v4uint %subgroupShuffle_e13c81
+         %24 = OpAccessChain %_ptr_StorageBuffer_v4uint %1 %uint_0
+               OpStore %24 %23 None
+               OpReturn
+               OpFunctionEnd

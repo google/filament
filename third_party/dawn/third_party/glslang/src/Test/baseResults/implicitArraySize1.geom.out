@@ -1,0 +1,99 @@
+implicitArraySize1.geom
+Shader version: 460
+invocations = -1
+max_vertices = 204
+input primitive = triangles
+output primitive = line_strip
+0:? Sequence
+0:11  Function Definition: main( ( global void)
+0:11    Function Parameters: 
+0:12    Sequence
+0:12      Function Call: f( ( global void)
+0:13      move second child to first child ( temp float)
+0:13        direct index (layout( stream=0) temp float)
+0:13          'o' (layout( stream=0) out 3-element array of float)
+0:13          Constant:
+0:13            1 (const int)
+0:13        direct index ( temp float)
+0:13          direct index ( temp 3-element array of float)
+0:13            'g' ( in 3-element array of 3-element array of float)
+0:13            Constant:
+0:13              2 (const int)
+0:13          Constant:
+0:13            1 (const int)
+0:?   Linker Objects
+0:?     'g' ( in 3-element array of 3-element array of float)
+0:?     'o' (layout( stream=0) out 3-element array of float)
+
+implicitArraySize2.geom
+Shader version: 460
+invocations = -1
+max_vertices = -1
+input primitive = none
+output primitive = none
+0:? Sequence
+0:6  Function Definition: f( ( global void)
+0:6    Function Parameters: 
+0:7    Sequence
+0:7      move second child to first child ( temp float)
+0:7        direct index (layout( stream=0) temp float)
+0:7          'o' (layout( stream=0) out unsized 2-element array of float)
+0:7          Constant:
+0:7            1 (const int)
+0:7        direct index ( temp float)
+0:7          direct index ( temp 3-element array of float)
+0:7            'g' ( in unsized 2-element array of 3-element array of float)
+0:7            Constant:
+0:7              1 (const int)
+0:7          Constant:
+0:7            1 (const int)
+0:?   Linker Objects
+0:?     'g' ( in unsized 2-element array of 3-element array of float)
+0:?     'o' (layout( stream=0) out unsized 2-element array of float)
+
+
+Linked geometry stage:
+
+ERROR: Linking geometry stage: Not all array sizes match across all geometry shaders in the program
+
+Shader version: 460
+invocations = 1
+max_vertices = 204
+input primitive = triangles
+output primitive = line_strip
+0:? Sequence
+0:11  Function Definition: main( ( global void)
+0:11    Function Parameters: 
+0:12    Sequence
+0:12      Function Call: f( ( global void)
+0:13      move second child to first child ( temp float)
+0:13        direct index (layout( stream=0) temp float)
+0:13          'o' (layout( stream=0) out 3-element array of float)
+0:13          Constant:
+0:13            1 (const int)
+0:13        direct index ( temp float)
+0:13          direct index ( temp 3-element array of float)
+0:13            'g' ( in 3-element array of 3-element array of float)
+0:13            Constant:
+0:13              2 (const int)
+0:13          Constant:
+0:13            1 (const int)
+0:6  Function Definition: f( ( global void)
+0:6    Function Parameters: 
+0:7    Sequence
+0:7      move second child to first child ( temp float)
+0:7        direct index (layout( stream=0) temp float)
+0:7          'o' (layout( stream=0) out 2-element array of float)
+0:7          Constant:
+0:7            1 (const int)
+0:7        direct index ( temp float)
+0:7          direct index ( temp 3-element array of float)
+0:7            'g' ( in 2-element array of 3-element array of float)
+0:7            Constant:
+0:7              1 (const int)
+0:7          Constant:
+0:7            1 (const int)
+0:?   Linker Objects
+0:?     'g' ( in 3-element array of 3-element array of float)
+0:?     'o' (layout( stream=0) out 3-element array of float)
+

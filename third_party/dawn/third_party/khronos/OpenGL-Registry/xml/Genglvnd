@@ -1,0 +1,4 @@
+#!/bin/sh
+for header in glcorearb.h glext.h gl.h ; do
+    ./genglvnd.py -registry drafts/GL/gl.xml drafts/GL/$header
+done

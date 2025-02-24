@@ -1,0 +1,22 @@
+; Test: SpvParserFunctionVarTest_EmitFunctionVariables_Decorate_RelaxedPrecision.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+OpName %myvar "myvar"
+OpDecorate %myvar RelaxedPrecision
+%float = OpTypeFloat 32
+%_ptr_Function_float = OpTypePointer Function %float
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%100 = OpFunction %void None %5
+%6 = OpLabel
+%myvar = OpVariable %_ptr_Function_float Function
+OpReturn
+OpFunctionEnd
+

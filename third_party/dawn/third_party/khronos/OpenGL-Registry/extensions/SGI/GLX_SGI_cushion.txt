@@ -1,0 +1,219 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGI_cushion
+
+Name Strings
+
+    GLX_SGI_cushion
+
+Version
+
+    $Date: 1997/10/13 21:16:02 $ $Revision: 1.3 $
+
+Number
+
+    62
+
+Dependencies
+
+    SGI_swap_control is required
+    SGIX_fbconfig affects the definition of this extension
+
+Overview
+
+    This extension is directed at constant frame-rate applications.  Such
+    applications are written to ensure that a new image is generated every
+    N video frame periods, where N is itself a small constant integer.
+    If the application is unable to generate a frame within N video frame
+    periods, it is said to have dropped a frame.  Dropping a frame is a
+    *bad thing*.
+
+    Constant frame-rate applications make every effort to avoid dropping
+    frames.  In particular, they monitor the utilization of graphics
+    resources during the rendering of the current frame in order to predict
+    the behavior of subsequent frames.  If such prediction indicates that
+    a frame may be dropped, the rendering complexity of the frame is
+    reduced (e.g. by using models of lower geometric resolution) so as to
+    avoid the overload condition.
+
+    Unfortunately, because exact prediction is not possible, and because
+    there is no elasticity in the buffering of images, it is necessary
+    for constant frame-rate applications to under utilize the graphics
+    hardware.  This extension adds elasticity to the buffering of completed
+    images, in order to allow constant frame-rate applications to make full
+    use of the available graphics computation without dropping frames.
+    It further allows this elasticity to be controlled by the application in
+    order to minimize the introduction of latency that could otherwise
+    occur.
+
+    Applications that will benefit from this extension include simulation,
+    walk-through, and multimedia playback.
+
+    WARNING - Silicon Graphics has filed for patent protection for some
+	      of the techniques described in this extension document.
+
+Issues
+
+    *	This spec should talk about the vertical retrace interrupt, but I
+	can't find any mention of it in any other extension.  Where is such
+	an interrupt specified?
+
+    *	Are additional queries of rendering performance required to make
+	extension useful?
+
+    *	How should this extension interact with SGI_video_sync?
+
+    *	How is the cushion value queried?
+
+    *	Can this be implemented efficiently on current hardware systems?
+
+New Procedures and Functions
+
+    void glXCushionSGI(Display *dpy, Window window, float cushion);
+
+New Tokens
+
+    Accepted by the <attribList> parameter of glXChooseVisual, and by the
+    <attrib> parameter of glXGetConfig:
+
+	GLX_CUSHION_BUFFERS_SGI
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    This extension increases the number of color buffers of a double
+    buffered visual.  The additional buffers are referred to as cushion
+    buffers.  It is not possible for an application to directly access
+    a cushion buffer -- access is provided only to the front and back
+    buffers (as before).
+
+    When glXSwapBuffers is executed, the contents of the back buffer are
+    transferred to the front buffer, which is itself appended onto a queue
+    of displayable buffers.  However, the contents of the front buffer
+    will not typically be transferred to the back buffer.  Instead, the
+    contents of the back buffer are undefined.  Said another way, the
+    front buffer is the color buffer most recently appended to the queue
+    of displayable buffers, and the back buffer is the color buffer that
+    will next be appended to this queue.
+
+    When a buffer is appended onto the queue of displayable buffers, the
+    current value of the swap interval (specified by glXSwapIntervalSGI) is
+    stored with it.  The display is always driven by the oldest displayable
+    buffer in the queue of displayable buffers.  After the oldest buffer in
+    the queue has been displayed for its specified number of video frame
+    periods, it is removed from the queue, exposing the next-to-oldest
+    buffer for display.  If there is only one buffer in the queue of
+    displayable buffers, the removal is deferred until another buffer
+    becomes displayable, and then until the next video frame boundary.
+
+    Cushion buffers are used to store displayable buffers on the queue.
+    There can be at most N+1 buffers in the queue of displayable buffers,
+    where N is the number of cushion buffers.  N is queried by calling
+    glXGetConfig with <attrib> set to GLX_CUSHION_BUFFERS_SGI.
+
+    The new command
+
+	voidglXCushionSGI(Display *dpy, Window window, float cushion)
+
+    specifies a cushion value for a window.  This value is silently clamped
+    to the continuous range [0,N], where N is the number of cushion buffers.
+    When a window is created, the cushion value is initialized to zero.
+
+    Let the remaining display time T for a buffer in the queue of
+    displayable buffers be the swap interval value for that buffer, minus
+    the (fractional) number of video periods that the buffer has already
+    been displayed.  If T thus defined would be negative, then let T be
+    the fraction of the current video display period that remains.  (During
+    the "vertical retrace period" this fraction is zero.)  Let Q be the sum
+    of the remaining display times T for each buffer in the queue of
+    displayable buffers.  If Q is greater than the product of the current
+    cushion value and the current swap interval, then glXSwapBuffers stalls
+    until at least the moment that Q becomes less than this product.  While
+    glXSwapBuffers is stalled, the queueing of the back buffer as the next
+    displayable buffer is deferred, and the calling process is either not
+    allowed to proceed (glXSwapBuffers doesn't return) or the subsequent GL
+    command is not allowed to be issued.
+    
+    (An interrupt could be generated at the moment that Q becomes equal to
+    the product of the current cushion value and the current swap interval.)
+
+    The <attribList> parameter of glXChooseVisual may include
+    GLX_CUSHION_BUFFERS_SGI, followed by an integer specifying the minimum
+    number of cushion buffers.  (If GLX_CUSHION_BUFFERS_SGI is not included
+    in the attribute list, then the minimum is zero.)  glXChooseVisual gives
+    preference to the conforming visual with the smallest number of cushion
+    buffers that is greater than or equal to the specified minimum.
+
+    Notes
+    -----
+
+	*   This extension is designed so that cushion buffers can be added
+	    to existing visuals.  It is intended that the semantics of this
+	    extension be identical to the pre-extension semantics while the
+	    cushion value is zero.  Cushion buffers need not be allocated
+	    until the cushion is set greater than zero.
+
+	*   The extension can be implemented with data copies, in which case
+	    a potentially large number of cushion buffers can be supported.
+	    Or it can be implemented using the 4 stereo buffers (and while
+	    holding the left/right signal constant at right).  Using the
+	    stereo buffers eliminates the need for data copies, thus
+	    increasing the performance.
+
+	*   This specification applies to both mono and stereo visuals,
+	    but implementations will probably not support stereo visuals.
+
+	*   An implementation can support the extension without providing
+	    any cushion buffer visuals.
+
+GLX Protocol
+
+    XXX - not done yet
+
+Dependencies on SGI_swap_control
+
+    This extension requires SGI_swap_control.
+
+Dependencies on SGI_video_sync
+
+    XXX - not done yet
+
+Dependencies on SGIX_fbconfig
+
+    XXX - not done yet
+
+Errors
+
+    XXX - not done yet
+
+New State
+						Initial
+    Get Value		Get Command	Type	Value	Attrib
+    ---------		-----------	----	-------	------
+    GLX_CUSHION_SGI	?		Z+	0.0	window state
+
+New Implementation Dependent State
+
+    None

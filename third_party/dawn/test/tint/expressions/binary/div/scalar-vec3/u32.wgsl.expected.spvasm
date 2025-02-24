@@ -1,0 +1,45 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpName %f "f"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %r "r"
+               OpName %tint_div_v3u32 "tint_div_v3u32"
+               OpName %lhs "lhs"
+               OpName %rhs "rhs"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+          %a = OpConstant %uint 4
+     %v3uint = OpTypeVector %uint 3
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+          %b = OpConstantComposite %v3uint %uint_1 %uint_2 %uint_3
+         %17 = OpTypeFunction %v3uint %v3uint %v3uint
+         %20 = OpConstantNull %v3uint
+       %bool = OpTypeBool
+     %v3bool = OpTypeVector %bool 3
+         %24 = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+          %f = OpFunction %void None %3
+          %4 = OpLabel
+         %12 = OpCompositeConstruct %v3uint %a %a %a
+          %r = OpFunctionCall %v3uint %tint_div_v3u32 %12 %b
+               OpReturn
+               OpFunctionEnd
+%tint_div_v3u32 = OpFunction %v3uint None %17
+        %lhs = OpFunctionParameter %v3uint
+        %rhs = OpFunctionParameter %v3uint
+         %18 = OpLabel
+         %19 = OpIEqual %v3bool %rhs %20
+         %23 = OpSelect %v3uint %19 %24 %rhs
+         %25 = OpUDiv %v3uint %lhs %23
+               OpReturnValue %25
+               OpFunctionEnd

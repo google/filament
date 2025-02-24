@@ -1,0 +1,34 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct UBO {
+  /* 0x0000 */ tint_array<int4, 4> data;
+  /* 0x0040 */ int dynamic_idx;
+  /* 0x0044 */ tint_array<int8_t, 12> tint_pad;
+};
+
+struct Result {
+  /* 0x0000 */ int out;
+};
+
+struct tint_module_vars_struct {
+  const constant UBO* ubo;
+  device Result* result;
+};
+
+kernel void f(const constant UBO* ubo [[buffer(0)]], device Result* result [[buffer(1)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.ubo=ubo, .result=result};
+  (*tint_module_vars.result).out = (*tint_module_vars.ubo).data[min(uint((*tint_module_vars.ubo).dynamic_idx), 3u)].x;
+}

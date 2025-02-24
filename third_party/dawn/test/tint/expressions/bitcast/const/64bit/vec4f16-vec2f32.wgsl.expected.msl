@@ -1,0 +1,6 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  float2 const b = float2(2.003662109375f, -513.03125f);
+}

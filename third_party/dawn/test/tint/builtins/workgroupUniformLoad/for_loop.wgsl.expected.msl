@@ -1,0 +1,38 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  threadgroup int* a;
+  threadgroup int* b;
+};
+
+void foo(tint_module_vars_struct tint_module_vars) {
+  {
+    uint2 tint_loop_idx = 0u;
+    int i = 0;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      int const v = i;
+      threadgroup_barrier(mem_flags::mem_threadgroup);
+      int const v_1 = (*tint_module_vars.a);
+      threadgroup_barrier(mem_flags::mem_threadgroup);
+      if ((v < v_1)) {
+      } else {
+        break;
+      }
+      {
+        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        tint_loop_idx.x = tint_low_inc;
+        uint const tint_carry = uint((tint_low_inc == 0u));
+        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+        int const v_2 = (*tint_module_vars.b);
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+        i = as_type<int>((as_type<uint>(i) + as_type<uint>(v_2)));
+      }
+      continue;
+    }
+  }
+}

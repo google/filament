@@ -1,0 +1,45 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_FragCoord %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %gl_FragCoord "gl_FragCoord"
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_float = OpTypePointer Input %float
+    %float_0 = OpConstant %float 0
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_1 = OpConstant %float 1
+         %18 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+         %19 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+       %main = OpFunction %void None %6
+         %20 = OpLabel
+         %21 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_0
+         %22 = OpLoad %float %21
+         %23 = OpFOrdLessThan %bool %22 %float_0
+         %24 = OpLogicalOr %bool %23 %true
+               OpSelectionMerge %25 None
+               OpBranchConditional %24 %26 %27
+         %26 = OpLabel
+               OpStore %_GLF_color %18
+               OpBranch %25
+         %27 = OpLabel
+               OpStore %_GLF_color %19
+               OpBranch %25
+         %25 = OpLabel
+               OpReturn
+               OpFunctionEnd

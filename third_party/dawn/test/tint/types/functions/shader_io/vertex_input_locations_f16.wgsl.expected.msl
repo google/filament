@@ -1,0 +1,31 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct main_outputs {
+  float4 tint_symbol [[position]];
+};
+
+struct main_inputs {
+  int loc0 [[attribute(0)]];
+  uint loc1 [[attribute(1)]];
+  float loc2 [[attribute(2)]];
+  float4 loc3 [[attribute(3)]];
+  half loc4 [[attribute(4)]];
+  half3 loc5 [[attribute(5)]];
+};
+
+float4 main_inner(int loc0, uint loc1, float loc2, float4 loc3, half loc4, half3 loc5) {
+  int const i = loc0;
+  uint const u = loc1;
+  float const f = loc2;
+  float4 const v = loc3;
+  half const x = loc4;
+  half3 const y = loc5;
+  return float4(0.0f);
+}
+
+vertex main_outputs v_1(main_inputs inputs [[stage_in]]) {
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main_inner(inputs.loc0, inputs.loc1, inputs.loc2, inputs.loc3, inputs.loc4, inputs.loc5);
+  return tint_wrapper_result;
+}

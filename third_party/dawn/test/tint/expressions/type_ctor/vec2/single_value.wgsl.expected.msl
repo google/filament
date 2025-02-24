@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+float2 v() {
+  return float2(0.0f);
+}
+
+void f() {
+  float2 const a = float2(1.0f);
+  float2 const b = float2(a);
+  float2 const c = float2(v());
+  float2 const d = float2((a * 2.0f));
+}

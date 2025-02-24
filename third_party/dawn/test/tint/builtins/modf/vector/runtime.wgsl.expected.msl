@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct modf_result_vec2_f32 {
+  float2 fract;
+  float2 whole;
+};
+
+kernel void v() {
+  float2 const in = float2(1.25f, 3.75f);
+  modf_result_vec2_f32 v_1 = {};
+  v_1.fract = modf(in, v_1.whole);
+  modf_result_vec2_f32 const res = v_1;
+  float2 const fract = res.fract;
+  float2 const whole = res.whole;
+}

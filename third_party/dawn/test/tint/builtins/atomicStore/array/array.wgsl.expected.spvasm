@@ -1,0 +1,67 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 39
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main" %compute_main_local_invocation_index_Input
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %wg "wg"
+               OpName %compute_main_local_invocation_index_Input "compute_main_local_invocation_index_Input"
+               OpName %compute_main_inner "compute_main_inner"
+               OpName %tint_local_index "tint_local_index"
+               OpName %compute_main "compute_main"
+               OpDecorate %_arr_uint_uint_4 ArrayStride 4
+               OpDecorate %compute_main_local_invocation_index_Input BuiltIn LocalInvocationIndex
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_uint_uint_4 = OpTypeArray %uint %uint_4
+%_ptr_Workgroup__arr_uint_uint_4 = OpTypePointer Workgroup %_arr_uint_uint_4
+         %wg = OpVariable %_ptr_Workgroup__arr_uint_uint_4 Workgroup
+%_ptr_Input_uint = OpTypePointer Input %uint
+%compute_main_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void %uint
+       %bool = OpTypeBool
+%_ptr_Workgroup_uint = OpTypePointer Workgroup %uint
+     %uint_2 = OpConstant %uint 2
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+   %uint_264 = OpConstant %uint 264
+         %35 = OpTypeFunction %void
+%compute_main_inner = OpFunction %void None %11
+%tint_local_index = OpFunctionParameter %uint
+         %12 = OpLabel
+               OpBranch %13
+         %13 = OpLabel
+               OpBranch %16
+         %16 = OpLabel
+         %18 = OpPhi %uint %tint_local_index %13 %19 %15
+               OpLoopMerge %17 %15 None
+               OpBranch %14
+         %14 = OpLabel
+         %20 = OpUGreaterThanEqual %bool %18 %uint_4
+               OpSelectionMerge %22 None
+               OpBranchConditional %20 %23 %22
+         %23 = OpLabel
+               OpBranch %17
+         %22 = OpLabel
+         %24 = OpAccessChain %_ptr_Workgroup_uint %wg %18
+               OpAtomicStore %24 %uint_2 %uint_0 %uint_0
+               OpBranch %15
+         %15 = OpLabel
+         %19 = OpIAdd %uint %18 %uint_1
+               OpBranch %16
+         %17 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %32 = OpAccessChain %_ptr_Workgroup_uint %wg %uint_1
+               OpAtomicStore %32 %uint_2 %uint_0 %uint_1
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %35
+         %36 = OpLabel
+         %37 = OpLoad %uint %compute_main_local_invocation_index_Input None
+         %38 = OpFunctionCall %void %compute_main_inner %37
+               OpReturn
+               OpFunctionEnd

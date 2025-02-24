@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void textureBarrier_3d0f7e() {
+  threadgroup_barrier(mem_flags::mem_texture);
+}
+
+kernel void compute_main() {
+  textureBarrier_3d0f7e();
+}

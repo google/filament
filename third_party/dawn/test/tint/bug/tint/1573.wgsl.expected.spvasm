@@ -1,0 +1,48 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 22
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 16 1 1
+               OpMemberName %a_block 0 "inner"
+               OpName %a_block "a_block"
+               OpName %main "main"
+               OpName %value "value"
+               OpMemberName %__atomic_compare_exchange_result_u32 0 "old_value"
+               OpMemberName %__atomic_compare_exchange_result_u32 1 "exchanged"
+               OpName %__atomic_compare_exchange_result_u32 "__atomic_compare_exchange_result_u32"
+               OpName %result "result"
+               OpMemberDecorate %a_block 0 Offset 0
+               OpDecorate %a_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpMemberDecorate %__atomic_compare_exchange_result_u32 0 Offset 0
+               OpMemberDecorate %__atomic_compare_exchange_result_u32 1 Offset 4
+       %uint = OpTypeInt 32 0
+    %a_block = OpTypeStruct %uint
+%_ptr_StorageBuffer_a_block = OpTypePointer StorageBuffer %a_block
+          %1 = OpVariable %_ptr_StorageBuffer_a_block StorageBuffer
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+%_ptr_Function_uint = OpTypePointer Function %uint
+    %uint_42 = OpConstant %uint 42
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+%__atomic_compare_exchange_result_u32 = OpTypeStruct %uint %bool
+       %main = OpFunction %void None %7
+          %8 = OpLabel
+      %value = OpVariable %_ptr_Function_uint Function
+               OpStore %value %uint_42
+         %12 = OpLoad %uint %value None
+         %13 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0
+         %16 = OpAtomicCompareExchange %uint %13 %uint_1 %uint_0 %uint_0 %12 %uint_0
+         %18 = OpIEqual %bool %16 %uint_0
+     %result = OpCompositeConstruct %__atomic_compare_exchange_result_u32 %16 %18
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,7 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  uint const a = 1073757184u;
+  int const b = as_type<int>(a);
+}

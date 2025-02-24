@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void deref() {
+  float2x3 a = float2x3(0.0f);
+  thread float2x3* const p = (&a);
+  float3 b = (*p)[0u];
+  (*p)[0u] = float3(1.0f, 2.0f, 3.0f);
+}
+
+void no_deref() {
+  float2x3 a = float2x3(0.0f);
+  thread float2x3* const p = (&a);
+  float3 b = (*p)[0u];
+  (*p)[0u] = float3(1.0f, 2.0f, 3.0f);
+}
+
+kernel void v() {
+  deref();
+  no_deref();
+}

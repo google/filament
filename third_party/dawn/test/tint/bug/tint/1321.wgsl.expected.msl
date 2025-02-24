@@ -1,0 +1,33 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+int foo() {
+  return 1;
+}
+
+fragment void v() {
+  tint_array<float, 4> arr = tint_array<float, 4>{};
+  {
+    uint2 tint_loop_idx = 0u;
+    thread float* const a = (&arr[min(uint(foo()), 3u)]);
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      float const x = (*a);
+      break;
+    }
+  }
+}

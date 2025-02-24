@@ -1,0 +1,32 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint* prevent_dce;
+  threadgroup uint* arg_0;
+};
+
+struct tint_symbol_1 {
+  uint tint_symbol;
+};
+
+uint workgroupUniformLoad_37307c(tint_module_vars_struct tint_module_vars) {
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  uint const v = (*tint_module_vars.arg_0);
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  uint res = v;
+  return res;
+}
+
+void compute_main_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  if ((tint_local_index < 1u)) {
+    (*tint_module_vars.arg_0) = 0u;
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  (*tint_module_vars.prevent_dce) = workgroupUniformLoad_37307c(tint_module_vars);
+}
+
+kernel void compute_main(uint tint_local_index [[thread_index_in_threadgroup]], device uint* prevent_dce [[buffer(0)]], threadgroup tint_symbol_1* v_1 [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .arg_0=(&(*v_1).tint_symbol)};
+  compute_main_inner(tint_local_index, tint_module_vars);
+}

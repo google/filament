@@ -1,0 +1,7 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void a(int a_1) {
+  int a_2 = a_1;
+  int b = a_2;
+}

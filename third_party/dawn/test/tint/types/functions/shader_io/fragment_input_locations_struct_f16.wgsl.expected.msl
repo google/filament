@@ -1,0 +1,33 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentInputs {
+  int loc0;
+  uint loc1;
+  float loc2;
+  float4 loc3;
+  half loc4;
+  half3 loc5;
+};
+
+struct main_inputs {
+  int FragmentInputs_loc0 [[user(locn0)]] [[flat]];
+  uint FragmentInputs_loc1 [[user(locn1)]] [[flat]];
+  float FragmentInputs_loc2 [[user(locn2)]];
+  float4 FragmentInputs_loc3 [[user(locn3)]];
+  half FragmentInputs_loc4 [[user(locn4)]];
+  half3 FragmentInputs_loc5 [[user(locn5)]];
+};
+
+void main_inner(FragmentInputs inputs) {
+  int const i = inputs.loc0;
+  uint const u = inputs.loc1;
+  float const f = inputs.loc2;
+  float4 const v = inputs.loc3;
+  half const x = inputs.loc4;
+  half3 const y = inputs.loc5;
+}
+
+fragment void v_1(main_inputs inputs [[stage_in]]) {
+  main_inner(FragmentInputs{.loc0=inputs.FragmentInputs_loc0, .loc1=inputs.FragmentInputs_loc1, .loc2=inputs.FragmentInputs_loc2, .loc3=inputs.FragmentInputs_loc3, .loc4=inputs.FragmentInputs_loc4, .loc5=inputs.FragmentInputs_loc5});
+}

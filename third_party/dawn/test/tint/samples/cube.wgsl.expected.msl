@@ -1,0 +1,72 @@
+//
+// vtx_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexOutput {
+  float4 vtxFragColor;
+  float4 Position;
+};
+
+struct VertexInput {
+  float4 cur_position;
+  float4 color;
+};
+
+struct Uniforms {
+  /* 0x0000 */ float4x4 modelViewProjectionMatrix;
+};
+
+struct tint_module_vars_struct {
+  const constant Uniforms* uniforms;
+};
+
+struct vtx_main_outputs {
+  float4 VertexOutput_vtxFragColor [[user(locn0)]];
+  float4 VertexOutput_Position [[position]];
+};
+
+struct vtx_main_inputs {
+  float4 VertexInput_cur_position [[attribute(0)]];
+  float4 VertexInput_color [[attribute(1)]];
+};
+
+VertexOutput vtx_main_inner(VertexInput input, tint_module_vars_struct tint_module_vars) {
+  VertexOutput output = {};
+  output.Position = ((*tint_module_vars.uniforms).modelViewProjectionMatrix * input.cur_position);
+  output.vtxFragColor = input.color;
+  return output;
+}
+
+vertex vtx_main_outputs vtx_main(vtx_main_inputs inputs [[stage_in]], const constant Uniforms* uniforms [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.uniforms=uniforms};
+  VertexOutput const v = vtx_main_inner(VertexInput{.cur_position=inputs.VertexInput_cur_position, .color=inputs.VertexInput_color}, tint_module_vars);
+  vtx_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_vtxFragColor = v.vtxFragColor;
+  tint_wrapper_result.VertexOutput_Position = v.Position;
+  return tint_wrapper_result;
+}
+//
+// frag_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct frag_main_outputs {
+  float4 tint_symbol [[color(0)]];
+};
+
+struct frag_main_inputs {
+  float4 fragColor [[user(locn0)]];
+};
+
+float4 frag_main_inner(float4 fragColor) {
+  return fragColor;
+}
+
+fragment frag_main_outputs frag_main(frag_main_inputs inputs [[stage_in]]) {
+  frag_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = frag_main_inner(inputs.fragColor);
+  return tint_wrapper_result;
+}

@@ -1,0 +1,53 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S0 {
+  int x;
+  atomic_uint a;
+  int y;
+  int z;
+};
+
+struct S1 {
+  int x;
+  S0 a;
+  int y;
+  int z;
+};
+
+struct S2 {
+  int x;
+  int y;
+  int z;
+  S1 a;
+};
+
+struct tint_module_vars_struct {
+  threadgroup S2* wg;
+};
+
+struct tint_symbol_1 {
+  S2 tint_symbol;
+};
+
+void compute_main_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  if ((tint_local_index < 1u)) {
+    (*tint_module_vars.wg).x = 0;
+    (*tint_module_vars.wg).y = 0;
+    (*tint_module_vars.wg).z = 0;
+    (*tint_module_vars.wg).a.x = 0;
+    (*tint_module_vars.wg).a.a.x = 0;
+    atomic_store_explicit((&(*tint_module_vars.wg).a.a.a), 0u, memory_order_relaxed);
+    (*tint_module_vars.wg).a.a.y = 0;
+    (*tint_module_vars.wg).a.a.z = 0;
+    (*tint_module_vars.wg).a.y = 0;
+    (*tint_module_vars.wg).a.z = 0;
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  atomic_store_explicit((&(*tint_module_vars.wg).a.a.a), 1u, memory_order_relaxed);
+}
+
+kernel void compute_main(uint tint_local_index [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.wg=(&(*v).tint_symbol)};
+  compute_main_inner(tint_local_index, tint_module_vars);
+}

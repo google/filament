@@ -1,0 +1,53 @@
+; Test: SpvParserFunctionVarTest_EmitStatement_UseInPhiCountsAsUse.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 102
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+%void = OpTypeVoid
+%2 = OpTypeFunction %void
+%bool = OpTypeBool
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%_ptr_Function_bool = OpTypePointer Function %bool
+%_ptr_Function_float = OpTypePointer Function %float
+%_ptr_Function_uint = OpTypePointer Function %uint
+%_ptr_Function_int = OpTypePointer Function %int
+%true = OpConstantTrue %bool
+%false = OpConstantFalse %bool
+%float_0 = OpConstant %float 0
+%float_1_5 = OpConstant %float 1.5
+%uint_0 = OpConstant %uint 0
+%uint_1 = OpConstant %uint 1
+%int_n1 = OpConstant %int -1
+%int_0 = OpConstant %int 0
+%int_1 = OpConstant %int 1
+%int_3 = OpConstant %int 3
+%uint_2 = OpConstant %uint 2
+%uint_3 = OpConstant %uint 3
+%uint_4 = OpConstant %uint 4
+%uint_5 = OpConstant %uint 5
+%v2int = OpTypeVector %int 2
+%v2float = OpTypeVector %float 2
+%mat3v2float = OpTypeMatrix %v2float 3
+%32 = OpConstantNull %v2int
+%_arr_uint_uint_2 = OpTypeArray %uint %uint_2
+%_struct_34 = OpTypeStruct %uint %float %_arr_uint_uint_2
+%100 = OpFunction %void None %2
+%10 = OpLabel
+%11 = OpLogicalAnd %bool %true %true
+%12 = OpLogicalNot %bool %11
+OpSelectionMerge %99 None
+OpBranchConditional %true %20 %99
+%20 = OpLabel
+OpBranch %99
+%99 = OpLabel
+%101 = OpPhi %bool %11 %10 %12 %20
+OpReturn
+OpFunctionEnd
+

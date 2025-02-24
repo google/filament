@@ -1,0 +1,48 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 0
+; Bound: 29
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main" %local_invocation_index_1
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %local_invocation_index_1 "local_invocation_index_1"
+               OpName %arg_0 "arg_0"
+               OpName %atomicStore_726882 "atomicStore_726882"
+               OpName %compute_main_inner "compute_main_inner"
+               OpName %local_invocation_index "local_invocation_index"
+               OpName %compute_main "compute_main"
+               OpDecorate %local_invocation_index_1 BuiltIn LocalInvocationIndex
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%local_invocation_index_1 = OpVariable %_ptr_Input_uint Input
+%_ptr_Workgroup_uint = OpTypePointer Workgroup %uint
+      %arg_0 = OpVariable %_ptr_Workgroup_uint Workgroup
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+     %uint_2 = OpConstant %uint 2
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+         %15 = OpTypeFunction %void %uint
+         %21 = OpConstantNull %uint
+   %uint_264 = OpConstant %uint 264
+%atomicStore_726882 = OpFunction %void None %6
+          %9 = OpLabel
+               OpAtomicStore %arg_0 %uint_2 %uint_0 %uint_1
+               OpReturn
+               OpFunctionEnd
+%compute_main_inner = OpFunction %void None %15
+%local_invocation_index = OpFunctionParameter %uint
+         %18 = OpLabel
+               OpAtomicStore %arg_0 %uint_2 %uint_0 %21
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %24 = OpFunctionCall %void %atomicStore_726882
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %6
+         %26 = OpLabel
+         %28 = OpLoad %uint %local_invocation_index_1
+         %27 = OpFunctionCall %void %compute_main_inner %28
+               OpReturn
+               OpFunctionEnd

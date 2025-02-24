@@ -1,0 +1,27 @@
+<dawn>/test/tint/bug/tint/2202.wgsl:7:9 warning: code is unreachable
+        let _e9 = (vec3<i32>().y >= vec3<i32>().y);
+        ^^^^^^^
+
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void v() {
+  {
+    uint2 tint_loop_idx = 0u;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      {
+        uint2 tint_loop_idx_1 = 0u;
+        while(true) {
+          if (all((tint_loop_idx_1 == uint2(4294967295u)))) {
+            break;
+          }
+          return;
+        }
+      }
+      /* unreachable */
+    }
+  }
+}

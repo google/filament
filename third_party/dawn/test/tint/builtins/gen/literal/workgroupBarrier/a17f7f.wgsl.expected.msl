@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void workgroupBarrier_a17f7f() {
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+}
+
+kernel void compute_main() {
+  workgroupBarrier_a17f7f();
+}

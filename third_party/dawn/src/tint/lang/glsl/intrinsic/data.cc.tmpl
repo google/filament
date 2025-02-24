@@ -1,0 +1,34 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate intrinsic_table.inl
+Used by BuiltinTable.cc for builtin overload resolution.
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- Import "src/tint/utils/templates/intrinsic_table_data.tmpl.inc" -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/glsl/glsl.def" -}}
+
+#include <limits>
+#include <string>
+
+#include "src/tint/lang/core/intrinsic/type_matchers.h"
+#include "src/tint/lang/glsl/intrinsic/dialect.h"
+#include "src/tint/utils/text/string_stream.h"
+
+namespace tint::glsl::intrinsic {
+
+using namespace tint::core::intrinsic;  // NOLINT(build/namespaces)
+
+{{ Eval "Data"
+  "Intrinsics" $I
+  "Name"       "Dialect::kData" -}}
+
+}  // namespace tint::glsl::intrinsic

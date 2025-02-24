@@ -1,0 +1,60 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 33
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %v "v"
+               OpName %foo "foo"
+               OpName %return_value "return_value"
+               OpName %continue_execution "continue_execution"
+               OpName %unused_entry_point "unused_entry_point"
+       %bool = OpTypeBool
+%_ptr_Workgroup_bool = OpTypePointer Workgroup %bool
+          %v = OpVariable %_ptr_Workgroup_bool Workgroup
+        %int = OpTypeInt 32 1
+          %6 = OpTypeFunction %int
+%_ptr_Function_int = OpTypePointer Function %int
+         %10 = OpConstantNull %int
+%_ptr_Function_bool = OpTypePointer Function %bool
+       %true = OpConstantTrue %bool
+       %void = OpTypeVoid
+       %uint = OpTypeInt 32 0
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+      %false = OpConstantFalse %bool
+     %int_42 = OpConstant %int 42
+      %int_0 = OpConstant %int 0
+         %31 = OpTypeFunction %void
+        %foo = OpFunction %int None %6
+          %7 = OpLabel
+%return_value = OpVariable %_ptr_Function_int Function %10
+%continue_execution = OpVariable %_ptr_Function_bool Function
+               OpStore %continue_execution %true
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %19 = OpLoad %bool %v None
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+               OpSelectionMerge %21 None
+               OpBranchConditional %19 %22 %21
+         %22 = OpLabel
+               OpStore %continue_execution %false None
+               OpStore %return_value %int_42 None
+               OpBranch %21
+         %21 = OpLabel
+         %25 = OpLoad %bool %continue_execution None
+               OpSelectionMerge %26 None
+               OpBranchConditional %25 %27 %26
+         %27 = OpLabel
+               OpStore %return_value %int_0 None
+               OpBranch %26
+         %26 = OpLabel
+         %29 = OpLoad %int %return_value None
+               OpReturnValue %29
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %31
+         %32 = OpLabel
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,86 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 46
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpMemberName %u_block_std140 0 "inner_col0"
+               OpMemberName %u_block_std140 1 "inner_col1"
+               OpMemberName %u_block_std140 2 "inner_col2"
+               OpMemberName %u_block_std140 3 "inner_col3"
+               OpName %u_block_std140 "u_block_std140"
+               OpMemberName %s_block 0 "inner"
+               OpName %s_block "s_block"
+               OpName %f "f"
+               OpMemberDecorate %u_block_std140 0 Offset 0
+               OpMemberDecorate %u_block_std140 1 Offset 4
+               OpMemberDecorate %u_block_std140 2 Offset 8
+               OpMemberDecorate %u_block_std140 3 Offset 12
+               OpDecorate %u_block_std140 Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpMemberDecorate %s_block 0 Offset 0
+               OpMemberDecorate %s_block 0 ColMajor
+               OpMemberDecorate %s_block 0 MatrixStride 4
+               OpDecorate %s_block Block
+               OpDecorate %6 DescriptorSet 0
+               OpDecorate %6 Binding 1
+               OpDecorate %6 Coherent
+       %half = OpTypeFloat 16
+     %v2half = OpTypeVector %half 2
+%u_block_std140 = OpTypeStruct %v2half %v2half %v2half %v2half
+%_ptr_Uniform_u_block_std140 = OpTypePointer Uniform %u_block_std140
+          %1 = OpVariable %_ptr_Uniform_u_block_std140 Uniform
+ %mat4v2half = OpTypeMatrix %v2half 4
+    %s_block = OpTypeStruct %mat4v2half
+%_ptr_StorageBuffer_s_block = OpTypePointer StorageBuffer %s_block
+          %6 = OpVariable %_ptr_StorageBuffer_s_block StorageBuffer
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+%_ptr_Uniform_v2half = OpTypePointer Uniform %v2half
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+%_ptr_StorageBuffer_mat4v2half = OpTypePointer StorageBuffer %mat4v2half
+%_ptr_StorageBuffer_v2half = OpTypePointer StorageBuffer %v2half
+%_ptr_Uniform_half = OpTypePointer Uniform %half
+%_ptr_StorageBuffer_half = OpTypePointer StorageBuffer %half
+          %f = OpFunction %void None %12
+         %13 = OpLabel
+         %14 = OpAccessChain %_ptr_Uniform_v2half %1 %uint_0
+         %18 = OpLoad %v2half %14 None
+         %19 = OpAccessChain %_ptr_Uniform_v2half %1 %uint_1
+         %21 = OpLoad %v2half %19 None
+         %22 = OpAccessChain %_ptr_Uniform_v2half %1 %uint_2
+         %24 = OpLoad %v2half %22 None
+         %25 = OpAccessChain %_ptr_Uniform_v2half %1 %uint_3
+         %27 = OpLoad %v2half %25 None
+         %28 = OpCompositeConstruct %mat4v2half %18 %21 %24 %27
+         %29 = OpAccessChain %_ptr_StorageBuffer_mat4v2half %6 %uint_0
+               OpStore %29 %28 None
+         %31 = OpAccessChain %_ptr_StorageBuffer_v2half %6 %uint_0 %uint_1
+         %33 = OpAccessChain %_ptr_Uniform_v2half %1 %uint_0
+         %34 = OpLoad %v2half %33 None
+               OpStore %31 %34 None
+         %35 = OpAccessChain %_ptr_StorageBuffer_v2half %6 %uint_0 %uint_1
+         %36 = OpAccessChain %_ptr_Uniform_v2half %1 %uint_0
+         %37 = OpLoad %v2half %36 None
+         %38 = OpVectorShuffle %v2half %37 %37 1 0
+               OpStore %35 %38 None
+         %39 = OpAccessChain %_ptr_StorageBuffer_v2half %6 %uint_0 %uint_0
+         %40 = OpAccessChain %_ptr_Uniform_v2half %1 %uint_1
+         %41 = OpAccessChain %_ptr_Uniform_half %40 %uint_0
+         %43 = OpLoad %half %41 None
+         %44 = OpAccessChain %_ptr_StorageBuffer_half %39 %uint_1
+               OpStore %44 %43 None
+               OpReturn
+               OpFunctionEnd

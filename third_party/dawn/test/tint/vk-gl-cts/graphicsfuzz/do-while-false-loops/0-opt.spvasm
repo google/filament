@@ -1,0 +1,113 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %f_ "f("
+               OpName %iteration "iteration"
+               OpName %k "k"
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %iteration RelaxedPrecision
+               OpDecorate %k RelaxedPrecision
+               OpDecorate %7 RelaxedPrecision
+               OpDecorate %8 RelaxedPrecision
+               OpDecorate %9 RelaxedPrecision
+               OpDecorate %10 RelaxedPrecision
+               OpDecorate %11 RelaxedPrecision
+               OpDecorate %12 RelaxedPrecision
+               OpDecorate %13 RelaxedPrecision
+               OpDecorate %14 RelaxedPrecision
+               OpDecorate %15 RelaxedPrecision
+               OpDecorate %16 RelaxedPrecision
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+         %21 = OpTypeFunction %v3float
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+    %int_100 = OpConstant %int 100
+       %bool = OpTypeBool
+      %int_1 = OpConstant %int 1
+    %float_1 = OpConstant %float 1
+    %float_0 = OpConstant %float 0
+         %30 = OpConstantComposite %v3float %float_1 %float_0 %float_0
+      %false = OpConstantFalse %bool
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+       %main = OpFunction %void None %18
+         %34 = OpLabel
+         %35 = OpFunctionCall %v3float %f_
+         %36 = OpCompositeExtract %float %35 0
+         %37 = OpCompositeExtract %float %35 1
+         %38 = OpCompositeExtract %float %35 2
+         %39 = OpCompositeConstruct %v4float %36 %37 %38 %float_1
+               OpStore %_GLF_color %39
+               OpReturn
+               OpFunctionEnd
+         %f_ = OpFunction %v3float None %21
+         %40 = OpLabel
+  %iteration = OpVariable %_ptr_Function_int Function
+          %k = OpVariable %_ptr_Function_int Function
+               OpStore %iteration %int_0
+               OpStore %k %int_0
+               OpBranch %41
+         %41 = OpLabel
+               OpLoopMerge %42 %43 None
+               OpBranch %44
+         %44 = OpLabel
+          %7 = OpLoad %int %k
+         %45 = OpSLessThan %bool %7 %int_100
+               OpBranchConditional %45 %46 %42
+         %46 = OpLabel
+          %8 = OpLoad %int %iteration
+          %9 = OpIAdd %int %8 %int_1
+               OpStore %iteration %9
+               OpBranch %43
+         %43 = OpLabel
+         %10 = OpLoad %int %k
+         %11 = OpIAdd %int %10 %int_1
+               OpStore %k %11
+               OpBranch %41
+         %42 = OpLabel
+         %12 = OpLoad %int %iteration
+         %47 = OpSLessThan %bool %12 %int_100
+               OpSelectionMerge %48 None
+               OpBranchConditional %47 %49 %50
+         %49 = OpLabel
+         %13 = OpLoad %int %iteration
+         %14 = OpISub %int %13 %int_1
+         %51 = OpConvertSToF %float %14
+         %15 = OpLoad %int %iteration
+         %16 = OpISub %int %15 %int_1
+         %52 = OpConvertSToF %float %16
+         %53 = OpCompositeConstruct %v3float %float_1 %51 %52
+               OpReturnValue %53
+         %50 = OpLabel
+               OpBranch %54
+         %54 = OpLabel
+               OpLoopMerge %55 %56 None
+               OpBranch %57
+         %57 = OpLabel
+               OpBranch %58
+         %58 = OpLabel
+               OpLoopMerge %59 %60 None
+               OpBranch %61
+         %61 = OpLabel
+               OpReturnValue %30
+         %60 = OpLabel
+               OpBranch %58
+         %59 = OpLabel
+               OpUnreachable
+         %56 = OpLabel
+               OpBranch %54
+         %55 = OpLabel
+               OpUnreachable
+         %48 = OpLabel
+               OpUnreachable
+               OpFunctionEnd

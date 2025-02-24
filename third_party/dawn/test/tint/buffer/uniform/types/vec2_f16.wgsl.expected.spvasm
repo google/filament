@@ -1,0 +1,50 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 20
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %u_block 0 "inner"
+               OpName %u_block "u_block"
+               OpMemberName %s_block 0 "inner"
+               OpName %s_block "s_block"
+               OpName %main "main"
+               OpName %x "x"
+               OpMemberDecorate %u_block 0 Offset 0
+               OpDecorate %u_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpMemberDecorate %s_block 0 Offset 0
+               OpDecorate %s_block Block
+               OpDecorate %6 DescriptorSet 0
+               OpDecorate %6 Binding 1
+               OpDecorate %6 Coherent
+       %half = OpTypeFloat 16
+     %v2half = OpTypeVector %half 2
+    %u_block = OpTypeStruct %v2half
+%_ptr_Uniform_u_block = OpTypePointer Uniform %u_block
+          %1 = OpVariable %_ptr_Uniform_u_block Uniform
+    %s_block = OpTypeStruct %v2half
+%_ptr_StorageBuffer_s_block = OpTypePointer StorageBuffer %s_block
+          %6 = OpVariable %_ptr_StorageBuffer_s_block StorageBuffer
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void
+%_ptr_Uniform_v2half = OpTypePointer Uniform %v2half
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_v2half = OpTypePointer StorageBuffer %v2half
+       %main = OpFunction %void None %11
+         %12 = OpLabel
+         %13 = OpAccessChain %_ptr_Uniform_v2half %1 %uint_0
+          %x = OpLoad %v2half %13 None
+         %18 = OpAccessChain %_ptr_StorageBuffer_v2half %6 %uint_0
+               OpStore %18 %x None
+               OpReturn
+               OpFunctionEnd

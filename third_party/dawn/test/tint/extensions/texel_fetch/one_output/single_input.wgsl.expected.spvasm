@@ -1,0 +1,41 @@
+SKIP: FAILED
+
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 17
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %f "f" %f_Input %f_loc0_Output
+               OpExecutionMode %f OriginUpperLeft
+               OpName %f_Input "f_Input"
+               OpName %f_loc0_Output "f_loc0_Output"
+               OpName %f_inner "f_inner"
+               OpName %fbf "fbf"
+               OpName %f "f"
+               OpDecorate %f_loc0_Output Location 0
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+    %f_Input = OpVariable %_ptr_Input_v4float Input
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%f_loc0_Output = OpVariable %_ptr_Output_v4float Output
+          %9 = OpTypeFunction %v4float %v4float
+       %void = OpTypeVoid
+         %13 = OpTypeFunction %void
+    %f_inner = OpFunction %v4float None %9
+        %fbf = OpFunctionParameter %v4float
+         %10 = OpLabel
+               OpReturnValue %fbf
+               OpFunctionEnd
+          %f = OpFunction %void None %13
+         %14 = OpLabel
+         %15 = OpLoad %v4float %f_Input None
+         %16 = OpFunctionCall %v4float %f_inner %15
+               OpStore %f_loc0_Output %16 None
+               OpReturn
+               OpFunctionEnd
+1:1: [VUID-StandaloneSpirv-Location-04916] Variable must be decorated with a location
+  %f_Input = OpVariable %_ptr_Input_v4float Input
+

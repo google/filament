@@ -1,0 +1,17 @@
+; Test: SpvParserTest_ConvertType_Void.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 5
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %2 "x_100"
+OpExecutionMode %2 OriginUpperLeft
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%2 = OpFunction %void None %3
+%4 = OpLabel
+OpReturn
+OpFunctionEnd
+

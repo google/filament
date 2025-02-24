@@ -1,0 +1,114 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 72
+; Schema: 0
+               OpCapability Shader
+         %26 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpMemberName %rarr_block 0 "inner"
+               OpName %rarr_block "rarr_block"
+               OpName %vector "vector"
+               OpName %idx "idx"
+               OpName %x "x"
+               OpName %matrix "matrix"
+               OpName %idx_0 "idx"
+               OpName %x_0 "x"
+               OpName %fixed_size_array "fixed_size_array"
+               OpName %arr "arr"
+               OpName %idx "idx"
+               OpName %x_1 "x"
+               OpName %runtime_size_array "runtime_size_array"
+               OpName %idx_1 "idx"
+               OpName %x_2 "x"
+               OpName %f "f"
+               OpDecorate %_runtimearr_float ArrayStride 4
+               OpMemberDecorate %rarr_block 0 Offset 0
+               OpDecorate %rarr_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpDecorate %_arr_int_uint_2 ArrayStride 4
+      %float = OpTypeFloat 32
+%_runtimearr_float = OpTypeRuntimeArray %float
+ %rarr_block = OpTypeStruct %_runtimearr_float
+%_ptr_StorageBuffer_rarr_block = OpTypePointer StorageBuffer %rarr_block
+          %1 = OpVariable %_ptr_StorageBuffer_rarr_block StorageBuffer
+    %v2float = OpTypeVector %float 2
+%mat2v2float = OpTypeMatrix %v2float 2
+%_ptr_Private_mat2v2float = OpTypePointer Private %mat2v2float
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+         %11 = OpConstantComposite %v2float %float_1 %float_2
+    %float_3 = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+         %14 = OpConstantComposite %v2float %float_3 %float_4
+         %10 = OpConstantComposite %mat2v2float %11 %14
+          %6 = OpVariable %_ptr_Private_mat2v2float Private %10
+       %void = OpTypeVoid
+         %19 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+        %idx = OpConstant %int 3
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+      %v2int = OpTypeVector %int 2
+      %int_1 = OpConstant %int 1
+      %int_2 = OpConstant %int 2
+         %29 = OpConstantComposite %v2int %int_1 %int_2
+      %idx_0 = OpConstant %int 4
+%_ptr_Private_v2float = OpTypePointer Private %v2float
+     %uint_2 = OpConstant %uint 2
+%_arr_int_uint_2 = OpTypeArray %int %uint_2
+        %arr = OpConstantComposite %_arr_int_uint_2 %int_1 %int_2
+%_ptr_Function__arr_int_uint_2 = OpTypePointer Function %_arr_int_uint_2
+%_ptr_Function_int = OpTypePointer Function %int
+      %idx_1 = OpConstant %int -1
+%_ptr_StorageBuffer__runtimearr_float = OpTypePointer StorageBuffer %_runtimearr_float
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+     %vector = OpFunction %void None %19
+         %20 = OpLabel
+         %24 = OpBitcast %uint %idx
+         %25 = OpExtInst %uint %26 UMin %24 %uint_1
+          %x = OpVectorExtractDynamic %int %29 %25
+               OpReturn
+               OpFunctionEnd
+     %matrix = OpFunction %void None %19
+         %34 = OpLabel
+         %36 = OpBitcast %uint %idx_0
+         %37 = OpExtInst %uint %26 UMin %36 %uint_1
+         %38 = OpAccessChain %_ptr_Private_v2float %6 %37
+        %x_0 = OpLoad %v2float %38 None
+               OpReturn
+               OpFunctionEnd
+%fixed_size_array = OpFunction %void None %19
+         %42 = OpLabel
+         %46 = OpVariable %_ptr_Function__arr_int_uint_2 Function
+               OpStore %46 %arr
+         %48 = OpBitcast %uint %idx
+         %49 = OpExtInst %uint %26 UMin %48 %uint_1
+         %50 = OpAccessChain %_ptr_Function_int %46 %49
+        %x_1 = OpLoad %int %50 None
+               OpReturn
+               OpFunctionEnd
+%runtime_size_array = OpFunction %void None %19
+         %54 = OpLabel
+         %56 = OpAccessChain %_ptr_StorageBuffer__runtimearr_float %1 %uint_0
+         %59 = OpArrayLength %uint %1 0
+         %60 = OpISub %uint %59 %uint_1
+         %61 = OpBitcast %uint %idx_1
+         %62 = OpExtInst %uint %26 UMin %61 %60
+         %63 = OpAccessChain %_ptr_StorageBuffer_float %1 %uint_0 %62
+        %x_2 = OpLoad %float %63 None
+               OpReturn
+               OpFunctionEnd
+          %f = OpFunction %void None %19
+         %67 = OpLabel
+         %68 = OpFunctionCall %void %vector
+         %69 = OpFunctionCall %void %matrix
+         %70 = OpFunctionCall %void %fixed_size_array
+         %71 = OpFunctionCall %void %runtime_size_array
+               OpReturn
+               OpFunctionEnd

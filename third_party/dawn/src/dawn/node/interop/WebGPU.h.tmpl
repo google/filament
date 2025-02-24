@@ -1,0 +1,302 @@
+{{/*
+ Copyright 2021 The Dawn & Tint Authors
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+ 1. Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+
+ 3. Neither the name of the copyright holder nor the names of its
+    contributors may be used to endorse or promote products derived from
+    this software without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/}}
+
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/idlgen/main.go to generate the
+WebGPU.h header file.
+
+See:
+* https://github.com/ben-clayton/webidlparser/blob/main/ast/ast.go for the AST
+  types used by this template
+* tools/src/cmd/idlgen/main.go for additional structures and functions used by
+  this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- Include "WebGPUCommon.tmpl" -}}
+
+#ifndef DAWN_NODE_GEN_INTEROP_WEBGPU_H_
+#define DAWN_NODE_GEN_INTEROP_WEBGPU_H_
+
+#include "src/dawn/node/interop/Core.h"
+
+namespace wgpu {
+namespace interop {
+
+// Initialize() registers the WebGPU types with the Napi environment
+// and returns an object containing their JavaScript interfaces.
+Napi::Object Initialize(Napi::Env env);
+
+{{  range $ := .Declarations}}
+{{-        if IsDictionary $}}{{template "Dictionary" $}}
+{{-   else if IsNamespace  $}}{{template "Namespace" $}}
+{{-   else if IsInterface  $}}{{template "Interface" $}}
+{{-   else if IsEnum       $}}{{template "Enum" $}}
+{{-   else if IsTypedef    $}}{{template "Typedef" $}}
+{{-   end}}
+{{- end}}
+
+}  // namespace interop
+}  // namespace wgpu
+
+#endif // DAWN_NODE_GEN_INTEROP_WEBGPU_H_
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Dictionary emits the C++ header declaration that defines the interop type for
+-- the given ast.Dictionary
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Dictionary"}}
+// dictionary {{$.Name}}
+class {{$.Name}} {{- if $.Inherits }} : public {{$.Inherits}}{{end}} {
+public:
+{{   range $m := $.Members}}
+{{-    if      IsInitializer $m}}  {{$.Name}}();
+{{     else if IsMember      $m}}  {{template "DictionaryMember" $m}}
+{{     end}}
+{{-  end -}}
+};
+
+template<>
+class Converter<{{$.Name}}> {
+public:
+  static Result FromJS(Napi::Env, Napi::Value, {{$.Name}}&);
+  static Napi::Value ToJS(Napi::Env, {{$.Name}});
+};
+
+std::ostream& operator<<(std::ostream& o, const {{$.Name}}& desc);
+{{end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Namespace emits the C++ header declaration that defines the interop type for
+-- the given ast.Namespace
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Namespace"}}
+// namespace {{$.Name}}
+class {{$.Name}} {
+public:
+  virtual ~{{$.Name}}();
+  {{$.Name}}();
+{{-  range $c := ConstantsOf $}}
+{{-    template "Constant" $c}}
+{{-  end}}
+};
+{{end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Interface emits the C++ header declaration that defines the interop type for
+-- the given ast.Interface
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Interface"}}
+// interface {{$.Name}}
+class {{$.Name}} {{- if $.Inherits }} : public {{$.Inherits}}{{end}} {
+public:
+  static Interface<{{$.Name}}> Bind(Napi::Env, std::unique_ptr<{{$.Name}}>&&);
+  static {{$.Name}}* Unwrap(Napi::Object);
+
+  template<typename T, typename ... ARGS>
+  static inline Interface<{{$.Name}}> Create(Napi::Env env, ARGS&& ... args) {
+    return Bind(env, std::make_unique<T>(std::forward<ARGS>(args)...));
+  }
+
+  virtual ~{{$.Name}}();
+  {{$.Name}}();
+{{-  if $s := SetlikeOf $}}
+{{-    template "InterfaceSetlike" $s}}
+{{-  end}}
+{{-  range $m := MethodsOf $}}
+{{-    template "InterfaceMethod" $m}}
+{{-  end}}
+{{-  range $a := AttributesOf $}}
+{{-    template "InterfaceAttribute" $a}}
+{{-  end}}
+{{-  range $c := ConstantsOf  $}}
+{{-    template "Constant" $c}}
+{{-  end}}
+};
+{{end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Typedef emits the C++ header declaration that defines the interop type for
+-- the given ast.Interface
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Typedef"}}
+{{-   if HasAnnotation $ "EnforceRange"}}
+using {{$.Name}} = EnforceRangeInteger<{{template "Type" $.Type}}>;
+{{-   else}}
+using {{$.Name}} = {{template "Type" $.Type}};
+{{-   end}}
+{{end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Enum emits the C++ header declaration that defines the interop type for
+-- the given ast.Enum
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Enum"}}
+enum class {{$.Name}} {
+{{-  range $ := $.Values}}
+  {{EnumEntryName $.Value}},
+{{-  end}}
+};
+
+template<>
+class Converter<{{$.Name}}> {
+public:
+  static Result FromJS(Napi::Env, Napi::Value, {{$.Name}}&);
+  static Napi::Value ToJS(Napi::Env, {{$.Name}});
+  static bool FromString(std::string, {{$.Name}}&);
+  static const char* ToString({{$.Name}});
+};
+
+std::ostream& operator<<(std::ostream& o, {{$.Name}});
+{{end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- DictionaryMember emits the C++ declaration for a single dictionary ast.Member
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "DictionaryMember"}}
+{{-   if $.Attribute}}{{template "AttributeType" $}} {{$.Name}}
+{{-     if $.Init}} = {{Eval "Literal" "Value" $.Init "Type" $.Type}}{{end}};
+{{-   else          }}{{template "Type" $.Type}} {{$.Name}}({{template "Parameters" $.Parameters}});
+{{-   end }}
+{{- end }}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- InterfaceSetlike emits the C++ methods for a setlike interface
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "InterfaceSetlike"}}
+  virtual bool has(Napi::Env, {{template "Type" $.Elem}}) = 0;
+  virtual std::vector<{{template "Type" $.Elem}}> keys(Napi::Env) = 0;
+  virtual size_t getSize(Napi::Env) = 0;
+  virtual Napi::Value iterator(const Napi::CallbackInfo& info) = 0;
+{{- /* TODO(crbug.com/dawn/1143):
+       entries, forEach, values
+       read-write: add, clear, or delete
+*/}}
+{{- end }}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- InterfaceMethod emits the C++ declaration for a single interface ast.Member
+-- method
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "InterfaceMethod"}}
+{{-   range $o := $.Overloads}}
+  virtual {{template "Type" $o.Type}} {{$.Name}}(Napi::Env{{template "ParametersWithLeadingComma" $o.Parameters}}) = 0;
+{{-   end }}
+{{- end }}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- InterfaceAttribute emits the C++ declaration for a single interface
+-- ast.Member attribute
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "InterfaceAttribute"}}
+  virtual {{template "Type" $.Type}} get{{Title $.Name}}(Napi::Env) = 0;
+{{-   if not $.Readonly}}
+  virtual void set{{Title $.Name}}(Napi::Env, {{template "Type" $.Type}} value) = 0;
+{{-   end }}
+{{- end }}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Constant emits the C++ declaration for a single ast.Member constant
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Constant"}}
+  static constexpr {{template "Type" $.Type}} {{$.Name}} = {{Eval "Literal" "Value" $.Init "Type" $.Type}};
+{{- end }}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Parameters emits the C++ comma separated list of parameter declarations for
+-- the given []ast.Parameter
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Parameters"}}
+{{-   range $i, $param := $ }}
+{{-     if $i }}, {{end}}
+{{-     template "Parameter" $param}}
+{{-   end }}
+{{- end }}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- ParametersWithLeadingComma emits the C++ comma separated list of parameter
+-- declarations for the given []ast.Parameter, starting with a leading comma
+-- for the first parameter
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "ParametersWithLeadingComma"}}
+{{-   range $i, $param := $ }}, {{/*  */}}
+{{-     template "Parameter" $param}}
+{{-   end }}
+{{- end }}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Parameter emits the C++ parameter type and name for the given ast.Parameter
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Parameter" -}}
+{{-   if      $.Init    }}{{template "Type" $.Type}} {{$.Name}}
+{{-   else if $.Optional}}std::optional<{{template "Type" $.Type}}> {{$.Name}}
+{{-   else              }}{{template "Type" $.Type}} {{$.Name}}
+{{-   end               }}
+{{- end}}

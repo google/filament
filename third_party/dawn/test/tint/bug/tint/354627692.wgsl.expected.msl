@@ -1,0 +1,44 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int* tint_member;
+};
+
+kernel void v(device int* v_1 [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.tint_member=v_1};
+  int i = (*tint_module_vars.tint_member);
+  {
+    uint2 tint_loop_idx = 0u;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      {
+        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        tint_loop_idx.x = tint_low_inc;
+        uint const tint_carry = uint((tint_low_inc == 0u));
+        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        {
+          uint2 tint_loop_idx_1 = 0u;
+          while(true) {
+            if (all((tint_loop_idx_1 == uint2(4294967295u)))) {
+              break;
+            }
+            if ((i > 5)) {
+              i = as_type<int>((as_type<uint>(i) * as_type<uint>(2)));
+              break;
+            } else {
+              i = as_type<int>((as_type<uint>(i) * as_type<uint>(2)));
+              break;
+            }
+            /* unreachable */
+          }
+        }
+        if ((i > 10)) { break; }
+      }
+      continue;
+    }
+  }
+  (*tint_module_vars.tint_member) = i;
+}

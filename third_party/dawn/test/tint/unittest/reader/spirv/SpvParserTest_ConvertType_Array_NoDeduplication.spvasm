@@ -1,0 +1,23 @@
+; Test: SpvParserTest_ConvertType_Array_NoDeduplication.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 22
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %1 "x_100"
+OpExecutionMode %1 OriginUpperLeft
+%uint = OpTypeInt 32 0
+%_struct_10 = OpTypeStruct %uint
+%_struct_11 = OpTypeStruct %uint
+%uint_1 = OpConstant %uint 1
+%_arr__struct_10_uint_1 = OpTypeArray %_struct_10 %uint_1
+%_arr__struct_11_uint_1 = OpTypeArray %_struct_11 %uint_1
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%1 = OpFunction %void None %5
+%6 = OpLabel
+OpReturn
+OpFunctionEnd
+

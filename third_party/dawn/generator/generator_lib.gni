@@ -1,0 +1,159 @@
+# Copyright 2019 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# Template to help invoking code generators based on generator_lib.py
+# Internal use only, this should only be called from templates implementing
+# generator-specific actions.
+#
+# Variables:
+#   script: Path to generator script.
+#
+#   args: List of extra command-line arguments passed to the generator.
+#
+#   outputs: List of expected outputs, generation will fail if there is a
+#     mistmatch.
+#
+#   deps: additional deps for the code generation targets.
+#
+#   generator_lib_dir: directory where generator_lib.py is located.
+#
+#   custom_gen_dir: Optional custom target gen dir. Defaults to $target_gen_dir
+#     but allows output files to not depend on the location of the BUILD.gn
+#     that generates them.
+#
+#   template_dir: Optional template root directory. Defaults to
+#     "${generator_lib_dir}/templates".
+#
+#   jinja2_path: Optional Jinja2 installation path.
+#
+#   root_dir: Optional root source dir for Python dependencies
+#     computation. Defaults to "${generator_lib_dir}/..". Any dependency
+#     outside of this directory is considered a system file and will be
+#     omitted.
+#
+template("generator_lib_action") {
+  _generator_args = []
+  if (defined(invoker.args)) {
+    _generator_args += invoker.args
+  }
+
+  assert(defined(invoker.generator_lib_dir),
+         "generator_lib_dir must be defined before calling this action!")
+
+  _template_dir = "${invoker.generator_lib_dir}/templates"
+  if (defined(invoker.template_dir)) {
+    _template_dir = invoker.template_dir
+  }
+  _generator_args += [
+    "--template-dir",
+    rebase_path(_template_dir, root_build_dir),
+  ]
+
+  if (defined(invoker.root_dir)) {
+    _generator_args += [
+      "--root-dir",
+      rebase_path(_root_dir, root_build_dir),
+    ]
+  }
+
+  if (defined(invoker.jinja2_path)) {
+    _generator_args += [
+      "--jinja2-path",
+      rebase_path(invoker.jinja2_path, root_build_dir),
+    ]
+  }
+
+  # Chooses either the default gen_dir or the custom one required by the
+  # invoker. This allows moving the definition of code generators in different
+  # BUILD.gn files without changing the location of generated file. Without
+  # this generated headers could cause issues when old headers aren't removed.
+  _gen_dir = target_gen_dir
+  if (defined(invoker.custom_gen_dir)) {
+    _gen_dir = invoker.custom_gen_dir
+  }
+
+  # For build parallelism GN wants to know the exact inputs and outputs of
+  # action targets like we use for our code generator. We avoid asking the
+  # generator about its inputs by using the "depfile" feature of GN/Ninja.
+  #
+  # A ninja limitation is that the depfile is a subset of Makefile that can
+  # contain a single target, so we output a single "JSON-tarball" instead.
+  _json_tarball = "${_gen_dir}/${target_name}.json_tarball"
+  _json_tarball_target = "${target_name}__json_tarball"
+  _json_tarball_depfile = "${_json_tarball}.d"
+
+  _generator_args += [
+    "--output-json-tarball",
+    rebase_path(_json_tarball, root_build_dir),
+    "--depfile",
+    rebase_path(_json_tarball_depfile, root_build_dir),
+  ]
+
+  # After the JSON tarball is created we need an action target to extract it
+  # with a list of its outputs. The invoker provided a list of expected
+  # outputs. To make sure the list is in sync between the generator and the
+  # build files, we write it to a file and ask the generator to assert it is
+  # correct.
+  _expected_outputs_file = "${_gen_dir}/${target_name}.expected_outputs"
+  write_file(_expected_outputs_file, invoker.outputs)
+
+  _generator_args += [
+    "--expected-outputs-file",
+    rebase_path(_expected_outputs_file, root_build_dir),
+  ]
+
+  # The code generator invocation that will write the JSON tarball, check the
+  # outputs are what's expected and write a depfile for Ninja.
+  action(_json_tarball_target) {
+    script = invoker.script
+    outputs = [ _json_tarball ]
+    depfile = _json_tarball_depfile
+    args = _generator_args
+    if (defined(invoker.deps)) {
+      deps = invoker.deps
+    }
+  }
+
+  # Extract the JSON tarball into the gen_dir
+  action(target_name) {
+    script = "${invoker.generator_lib_dir}/extract_json.py"
+    args = [
+      rebase_path(_json_tarball, root_build_dir),
+      rebase_path(_gen_dir, root_build_dir),
+    ]
+
+    deps = [ ":${_json_tarball_target}" ]
+    inputs = [ _json_tarball ]
+
+    # The expected output list is relative to the gen_dir but action
+    # target outputs are from the root dir so we need to rebase them.
+    outputs = []
+    foreach(source, invoker.outputs) {
+      outputs += [ "${_gen_dir}/${source}" ]
+    }
+  }
+}

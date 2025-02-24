@@ -1,0 +1,66 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct atomic_compare_exchange_result_u32 {
+  uint old_value;
+  bool exchanged;
+};
+
+struct SB_RW {
+  /* 0x0000 */ atomic_uint arg_0;
+};
+
+struct tint_module_vars_struct {
+  device SB_RW* sb_rw;
+};
+
+atomic_compare_exchange_result_u32 v(device atomic_uint* const atomic_ptr, uint cmp, uint val) {
+  uint old_value = cmp;
+  bool const v_1 = atomic_compare_exchange_weak_explicit(atomic_ptr, (&old_value), val, memory_order_relaxed, memory_order_relaxed);
+  return atomic_compare_exchange_result_u32{.old_value=old_value, .exchanged=v_1};
+}
+
+void atomicCompareExchangeWeak_63d8e6(tint_module_vars_struct tint_module_vars) {
+  atomic_compare_exchange_result_u32 res = v((&(*tint_module_vars.sb_rw).arg_0), 1u, 1u);
+}
+
+fragment void fragment_main(device SB_RW* sb_rw [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb_rw=sb_rw};
+  atomicCompareExchangeWeak_63d8e6(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct atomic_compare_exchange_result_u32 {
+  uint old_value;
+  bool exchanged;
+};
+
+struct SB_RW {
+  /* 0x0000 */ atomic_uint arg_0;
+};
+
+struct tint_module_vars_struct {
+  device SB_RW* sb_rw;
+};
+
+atomic_compare_exchange_result_u32 v(device atomic_uint* const atomic_ptr, uint cmp, uint val) {
+  uint old_value = cmp;
+  bool const v_1 = atomic_compare_exchange_weak_explicit(atomic_ptr, (&old_value), val, memory_order_relaxed, memory_order_relaxed);
+  return atomic_compare_exchange_result_u32{.old_value=old_value, .exchanged=v_1};
+}
+
+void atomicCompareExchangeWeak_63d8e6(tint_module_vars_struct tint_module_vars) {
+  atomic_compare_exchange_result_u32 res = v((&(*tint_module_vars.sb_rw).arg_0), 1u, 1u);
+}
+
+kernel void compute_main(device SB_RW* sb_rw [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb_rw=sb_rw};
+  atomicCompareExchangeWeak_63d8e6(tint_module_vars);
+}

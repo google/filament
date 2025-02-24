@@ -1,0 +1,22 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int4* tint_member;
+};
+
+void deref(tint_module_vars_struct tint_module_vars) {
+  device int4* const p = tint_module_vars.tint_member;
+  (*tint_module_vars.tint_member) = (*p).wzyx;
+}
+
+void no_deref(tint_module_vars_struct tint_module_vars) {
+  device int4* const p = tint_module_vars.tint_member;
+  (*tint_module_vars.tint_member) = (*p).wzyx;
+}
+
+kernel void v(device int4* v_1 [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.tint_member=v_1};
+  deref(tint_module_vars);
+  no_deref(tint_module_vars);
+}

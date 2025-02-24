@@ -1,0 +1,56 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 34
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpName %m "m"
+               OpMemberName %out_block 0 "inner"
+               OpName %out_block "out_block"
+               OpName %f "f"
+               OpMemberDecorate %out_block 0 Offset 0
+               OpMemberDecorate %out_block 0 ColMajor
+               OpMemberDecorate %out_block 0 MatrixStride 16
+               OpDecorate %out_block Block
+               OpDecorate %22 DescriptorSet 0
+               OpDecorate %22 Binding 0
+               OpDecorate %22 Coherent
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%mat3v4float = OpTypeMatrix %v4float 3
+%_ptr_Private_mat3v4float = OpTypePointer Private %mat3v4float
+    %float_0 = OpConstant %float 0
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+    %float_3 = OpConstant %float 3
+          %7 = OpConstantComposite %v4float %float_0 %float_1 %float_2 %float_3
+    %float_4 = OpConstant %float 4
+    %float_5 = OpConstant %float 5
+    %float_6 = OpConstant %float 6
+    %float_7 = OpConstant %float 7
+         %12 = OpConstantComposite %v4float %float_4 %float_5 %float_6 %float_7
+    %float_8 = OpConstant %float 8
+    %float_9 = OpConstant %float 9
+   %float_10 = OpConstant %float 10
+   %float_11 = OpConstant %float 11
+         %17 = OpConstantComposite %v4float %float_8 %float_9 %float_10 %float_11
+          %6 = OpConstantComposite %mat3v4float %7 %12 %17
+          %m = OpVariable %_ptr_Private_mat3v4float Private %6
+  %out_block = OpTypeStruct %mat3v4float
+%_ptr_StorageBuffer_out_block = OpTypePointer StorageBuffer %out_block
+         %22 = OpVariable %_ptr_StorageBuffer_out_block StorageBuffer
+       %void = OpTypeVoid
+         %27 = OpTypeFunction %void
+%_ptr_StorageBuffer_mat3v4float = OpTypePointer StorageBuffer %mat3v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+          %f = OpFunction %void None %27
+         %28 = OpLabel
+         %29 = OpLoad %mat3v4float %m None
+         %30 = OpAccessChain %_ptr_StorageBuffer_mat3v4float %22 %uint_0
+               OpStore %30 %29 None
+               OpReturn
+               OpFunctionEnd

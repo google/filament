@@ -1,0 +1,20 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<uint, access::sample> Src;
+  texture2d<uint, access::write> Dst;
+};
+
+kernel void v(texture2d<uint, access::sample> Src [[texture(0)]], texture2d<uint, access::write> Dst [[texture(1)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.Src=Src, .Dst=Dst};
+  uint4 srcValue = 0u;
+  uint const v_1 = min(uint(0), (tint_module_vars.Src.get_num_mip_levels() - 1u));
+  uint2 const v_2 = (uint2(tint_module_vars.Src.get_width(v_1), tint_module_vars.Src.get_height(v_1)) - uint2(1u));
+  uint4 const x_22 = tint_module_vars.Src.read(min(uint2(int2(0)), v_2), v_1);
+  srcValue = x_22;
+  uint const x_24 = srcValue.x;
+  uint const x_25 = (x_24 + 1u);
+  uint4 const x_27 = srcValue;
+  tint_module_vars.Dst.write(x_27.xxxx, uint2(int2(0)));
+}

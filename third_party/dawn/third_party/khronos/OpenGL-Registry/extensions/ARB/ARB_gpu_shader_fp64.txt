@@ -1,0 +1,1085 @@
+Name
+
+    ARB_gpu_shader_fp64
+
+Name Strings
+
+    GL_ARB_gpu_shader_fp64
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Barthold Lichtenbelt, NVIDIA
+    Bill Licea-Kane, AMD
+    Bruce Merry, ARM
+    Chris Dodd, NVIDIA
+    Eric Werness, NVIDIA
+    Graham Sellers, AMD
+    Greg Roth, NVIDIA
+    Jeff Bolz, NVIDIA
+    Nick Haemel, AMD
+    Pierre Boudier, AMD
+    Piers Daniell, NVIDIA
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+    
+Version
+
+    Last Modified Date:         August 27, 2012
+    NVIDIA Revision:            11
+
+Number
+
+    ARB Extension #89
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 (Compatibility Profile)
+    Specification.
+
+    This extension is written against version 1.50 (revision 09) of the OpenGL
+    Shading Language Specification.
+
+    OpenGL 3.2 and GLSL 1.50 are required.
+
+    This extension interacts with EXT_direct_state_access.
+
+    This extension interacts with NV_shader_buffer_load.
+
+Overview
+
+    This extension allows GLSL shaders to use double-precision floating-point
+    data types, including vectors and matrices of doubles.  Doubles may be
+    used as inputs, outputs, and uniforms.  
+
+    The shading language supports various arithmetic and comparison operators
+    on double-precision scalar, vector, and matrix types, and provides a set
+    of built-in functions including:
+
+      * square roots and inverse square roots;
+
+      * fused floating-point multiply-add operations;
+
+      * splitting a floating-point number into a significand and exponent
+        (frexp), or building a floating-point number from a significand and
+        exponent (ldexp);
+
+      * absolute value, sign tests, various functions to round to an integer
+        value, modulus, minimum, maximum, clamping, blending two values, step
+        functions, and testing for infinity and NaN values;
+
+      * packing and unpacking doubles into a pair of 32-bit unsigned integers;
+
+      * matrix component-wise multiplication, and computation of outer
+        products, transposes, determinants, and inverses; and
+
+      * vector relational functions.
+
+    Double-precision versions of angle, trigonometry, and exponential
+    functions are not supported.
+
+    Implicit conversions are supported from integer and single-precision
+    floating-point values to doubles, and this extension uses the relaxed
+    function overloading rules specified by the ARB_gpu_shader5 extension to
+    resolve ambiguities.
+
+    This extension provides API functions for specifying double-precision
+    uniforms in the default uniform block, including functions similar to the
+    uniform functions added by EXT_direct_state_access (if supported).
+
+    This extension provides an "LF" suffix for specifying double-precision
+    constants.  Floating-point constants without a suffix in GLSL are treated
+    as single-precision values for backward compatibility with versions not
+    supporting doubles; similar constants are treated as double-precision
+    values in the "C" programming language.
+
+    This extension does not support interpolation of double-precision values;
+    doubles used as fragment shader inputs must be qualified as "flat".
+    Additionally, this extension does not allow vertex attributes with 64-bit
+    components.  That support is added separately by EXT_vertex_attrib_64bit.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void Uniform1d(int location, double x);
+    void Uniform2d(int location, double x, double y);
+    void Uniform3d(int location, double x, double y, double z);
+    void Uniform4d(int location, double x, double y, double z, double w);
+    void Uniform1dv(int location, sizei count, const double *value);
+    void Uniform2dv(int location, sizei count, const double *value);
+    void Uniform3dv(int location, sizei count, const double *value);
+    void Uniform4dv(int location, sizei count, const double *value);
+
+    void UniformMatrix2dv(int location, sizei count, boolean transpose, 
+                          const double *value);
+    void UniformMatrix3dv(int location, sizei count, boolean transpose, 
+                          const double *value);
+    void UniformMatrix4dv(int location, sizei count, boolean transpose, 
+                          const double *value);
+    void UniformMatrix2x3dv(int location, sizei count, boolean transpose, 
+                            const double *value);
+    void UniformMatrix2x4dv(int location, sizei count, boolean transpose, 
+                            const double *value);
+    void UniformMatrix3x2dv(int location, sizei count, boolean transpose, 
+                            const double *value);
+    void UniformMatrix3x4dv(int location, sizei count, boolean transpose, 
+                            const double *value);
+    void UniformMatrix4x2dv(int location, sizei count, boolean transpose, 
+                            const double *value);
+    void UniformMatrix4x3dv(int location, sizei count, boolean transpose, 
+                            const double *value);
+
+    void GetUniformdv(uint program, int location, double *params);
+
+    (All of the following ProgramUniform* functions are supported if and only
+     if EXT_direct_state_access is supported.)
+
+    void ProgramUniform1dEXT(uint program, int location, double x);
+    void ProgramUniform2dEXT(uint program, int location, double x, double y);
+    void ProgramUniform3dEXT(uint program, int location, double x, double y,
+                             double z);
+    void ProgramUniform4dEXT(uint program, int location, double x, double y, 
+                             double z, double w);
+    void ProgramUniform1dvEXT(uint program, int location, sizei count,
+                              const double *value);
+    void ProgramUniform2dvEXT(uint program, int location, sizei count,
+                              const double *value);
+    void ProgramUniform3dvEXT(uint program, int location, sizei count,
+                              const double *value);
+    void ProgramUniform4dvEXT(uint program, int location, sizei count, 
+                              const double *value);
+
+    void ProgramUniformMatrix2dvEXT(uint program, int location, sizei count, 
+                                    boolean transpose, const double *value);
+    void ProgramUniformMatrix3dvEXT(uint program, int location, sizei count, 
+                                    boolean transpose, const double *value);
+    void ProgramUniformMatrix4dvEXT(uint program, int location, sizei count, 
+                                    boolean transpose, const double *value);
+    void ProgramUniformMatrix2x3dvEXT(uint program, int location, sizei count, 
+                                      boolean transpose, const double *value);
+    void ProgramUniformMatrix2x4dvEXT(uint program, int location, sizei count, 
+                                      boolean transpose, const double *value);
+    void ProgramUniformMatrix3x2dvEXT(uint program, int location, sizei count, 
+                                      boolean transpose, const double *value);
+    void ProgramUniformMatrix3x4dvEXT(uint program, int location, sizei count, 
+                                      boolean transpose, const double *value);
+    void ProgramUniformMatrix4x2dvEXT(uint program, int location, sizei count, 
+                                      boolean transpose, const double *value);
+    void ProgramUniformMatrix4x3dvEXT(uint program, int location, sizei count, 
+                                      boolean transpose, const double *value);
+
+New Tokens
+
+    Returned in the <type> parameter of GetActiveUniform, and
+    GetTransformFeedbackVarying:
+
+        DOUBLE
+        DOUBLE_VEC2                                     0x8FFC
+        DOUBLE_VEC3                                     0x8FFD
+        DOUBLE_VEC4                                     0x8FFE
+        DOUBLE_MAT2                                     0x8F46
+        DOUBLE_MAT3                                     0x8F47
+        DOUBLE_MAT4                                     0x8F48
+        DOUBLE_MAT2x3                                   0x8F49
+        DOUBLE_MAT2x4                                   0x8F4A
+        DOUBLE_MAT3x2                                   0x8F4B
+        DOUBLE_MAT3x4                                   0x8F4C
+        DOUBLE_MAT4x2                                   0x8F4D
+        DOUBLE_MAT4x3                                   0x8F4E
+
+
+Additions to Chapter 2 of the OpenGL 3.2 (Compatibility Profile) Specification
+(OpenGL Operation)
+
+    Modify Section 2.14.4, Uniform Variables, p. 89
+
+    (modify third paragraph, p. 90) ... uniform variable storage for a vertex
+    shader.  A uniform matrix with single- or double-precision components will
+    consume no more than 4 * min(r,c) or 8 * min(r,c) uniform components,
+    respectively.  A scalar or vector uniform with double-precision components
+    will consume no more than 2<n> components, where <n> is 1 for scalars, and
+    the component count for vectors.  A link error is generated ...
+
+    (add to Table 2.13, p. 96)
+
+      Type Name Token           Keyword
+      --------------------      ----------------
+      DOUBLE                    double
+      DOUBLE_VEC2               dvec2
+      DOUBLE_VEC3               dvec3
+      DOUBLE_VEC4               dvec4
+      DOUBLE_MAT2               dmat2
+      DOUBLE_MAT3               dmat3
+      DOUBLE_MAT4               dmat4
+      DOUBLE_MAT2x3             dmat2x3
+      DOUBLE_MAT2x4             dmat2x4
+      DOUBLE_MAT3x2             dmat3x2
+      DOUBLE_MAT3x4             dmat3x4
+      DOUBLE_MAT4x2             dmat4x2
+      DOUBLE_MAT4x3             dmat4x3
+
+    (modify list of commands at the bottom of p. 99)
+
+      void Uniform{1,2,3,4}d(int location, T value);
+      void Uniform{1,2,3,4}dv(int location, T value);
+      void UniformMatrix{2,3,4}dv
+           (int location, sizei count, boolean transpose, 
+            const double *value);
+      void UniformMatrix{2x3,3x2,2x4,4x2,3x4,4x3}dv
+           (int location, sizei count, boolean transpose, 
+            const double *value);
+
+    (insert after fourth paragraph, p. 100) The Uniform*d{v} commands will
+    load <count> sets of one to four double-precision floating-point values
+    into a uniform location defined as a double, a double vector, or an array
+    of double scalars or vectors.
+
+    (modify fifth paragraph, p. 100) The UniformMatrix{2,3,4}fv and
+    UniformMatrix{2,3,4}dv commands will load <count> 2x2, 3x3, or 4x4
+    matrices (corresponding to 2, 3, or 4 in the command name) of single- or
+    double-precision floating-point values, respectively, into ...
+
+    (replace second bullet on the middle of p. 101, regarding
+     INVALID_OPERATION errors in Uniform* comamnds)
+
+     * if the type of the uniform declared in the shader does not match the
+       component type and count indicated in the Uniform* command name (where
+       a boolean uniform component type is considered to match any of the
+       Uniform*i{v}, Uniform*ui{v}, or Uniform*f{v} commands),
+
+    (modify sixth paragraph, p. 100) The UniformMatrix{2x3,3x2,2x4,
+    4x2,3x4,4x3}fv and UniformMatrix{2x3,3x2,2x4,4x2,3x4,4x3}dv commands will
+    load <count> 2x3, 3x2, 2x4, 4x2, 3x4, or 4x3 matrices (corresponding to
+    the numbers in the command name) of single- or double-precision
+    floating-point values, respectively, into ...
+
+    (modify "Uniform Buffer Object Storage", p. 102, adding a bullet after the
+     last "Members of type", and modifying the subsequent bullet)
+
+     * Members of type double are extracted from a buffer object by reading a
+       single double-typed value at the specified offset.
+
+     * Vectors with N elements with basic data types of bool, int, uint,
+       float, or double are extracted as N values in consecutive memory
+       locations beginning at the specified offset, with components stored in
+       order with the first (X) component at the lowest offset. The GL data
+       type used for component extraction is derived according to the rules
+       for scalar members above.
+
+
+    Modify Section 2.14.6, Varying Variables, p. 106
+
+    (modify third paragraph, p. 107) ... For the purposes of counting input
+    and output components consumed by a shader, variables declared as vectors,
+    matrices, and arrays will all consume multiple components.  Each component
+    of variables declared as double-precision floating-point scalars, vectors,
+    or matrices may be counted as consuming two components.
+
+    (add after the bulleted list, p. 108) For the purposes of counting the
+    total number of components to capture, each component of outputs declared
+    as double-precision floating-point scalars, vectors, or matrices may be
+    counted as consuming two components.
+
+
+    Modify Section 2.19, Transform Feedback, p. 130
+
+    (add to end of first paragraph, p. 132) ...  The results of appending a
+    varying variable to a transform feedback buffer are undefined if any
+    component of that variable would be written at an offset not aligned to
+    the size of the component.
+
+
+Additions to Chapter 3 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 3.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    Modify Section 6.1.15, Shader and Program Queries, p. 332
+
+    (add to the first list of commands, p. 337)
+
+      void GetUniformdv(uint program, int location, double *params);
+
+
+Additions to Appendix A of the OpenGL 3.2 (Compatibility Profile)
+Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Modifications to The OpenGL Shading Language Specification, Version 1.50
+(Revision 09)
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_gpu_shader_fp64 : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_ARB_gpu_shader_fp64    1
+
+
+    Modify Section 3.6, Keywords, p. 14
+
+    (add the following to the list of keywords, p. 14)
+
+    double              dvec2           dvec3           dvec4
+
+    dmat2               dmat3           dmat4
+    dmat2x2             dmat2x3         dmat2x4
+    dmat3x2             dmat3x3         dmat3x4
+    dmat4x2             dmat4x3         dmat4x4
+
+    (remove "double", "dvec2", "dvec3", and "dvec4" from the list of
+    keywords reserved for future use, p. 15)
+
+
+    Modify Section 4.1, Basic Types, p. 17
+
+    (add to the basic "Transparent Types" table, pp. 17-18)
+    
+      Types       Meaning
+      --------    ----------------------------------------------------------
+      double      a single double-precision floating point scalar
+      dvec2       a two-component double precision floating-point vector
+      dvec3       a three component double precision floating-point vector
+      dvec4       a four component double precision floating-point vector
+
+      dmat2       a 2x2 double-precision floating-point matrix
+      dmat3       a 3x3 double-precision floating-point matrix
+      dmat4       a 4x4 double-precision floating-point matrix
+      dmat2x2     same as dmat2
+      dmat2x3     a double-precision matrix with 2 columns and 3 rows
+      dmat2x4     a double-precision matrix with 2 columns and 4 rows
+      dmat3x2     a double-precision matrix with 3 columns and 2 rows
+      dmat3x3     same as dmat3
+      dmat3x4     a double-precision matrix with 3 columns and 4 rows
+      dmat4x2     a double-precision matrix with 4 columns and 2 rows
+      dmat4x3     a double-precision matrix with 4 columns and 3 rows
+      dmat4x4     same as dmat4
+
+
+    Modify Section 4.1.4, Floats, p. 22
+
+    (modify two paragraphs of the section, adding support for doubles)
+
+    Single- and double-precision floating-point values are available for use
+    in a variety of scalar calculations.  Floating-point variables are defined
+    as in the following example:
+
+      float a, b = 1.5;
+      double c, d = 2.0LF;
+
+    As an input value to one of the processing units, a single or
+    double-precision floating-point variable is expected to match the IEEE
+    floating-point definition for precision and dynamic range of the
+    corresponding type.  It is not required that the precision of internal
+    processing for operands of type "float" match the IEEE floating-point
+    specification for floating-point operations, but the minimum guidelines
+    for precision established by the OpenGL specification must be met.
+    Treatment of conditions such as divide by 0 may lead to an unspecified
+    result, but in no case should such a condition lead to the interruption or
+    termination of processing.
+
+    (modify the grammar, p. 22, adding "L" suffix)
+
+      floating-suffix:  one of
+
+        f F lf LF
+
+    (modify last paragraph, p. 22) ...  including before a suffix.  When the
+    suffix "lf" or "LF" is present, the literal has type <double>.  Otherwise,
+    the literal has type <float>.  A leading unary ...
+
+
+    Modify Section 4.1.6, Matrices, p. 23
+
+    (modify the first paragraph of the section)
+
+    The OpenGL Shading Language has built-in types for 2×2, 2×3, 2×4, 3×2,
+    3×3, 3×4, 4×2, 4×3, and 4×4 matrices of single- and double-precision
+    floating-point numbers.  Matrix types beginning with "mat" have
+    single-precision components; matrix types beginning with "dmat" have
+    double-precision components.  The first number in the type is the number
+    of columns, the second is the number of rows. Example matrix declarations:
+
+      mat2 mat2D;
+      mat3 optMatrix;
+      mat4 view, projection;
+      mat4x4 view; // an alternate way of declaring a mat4
+      mat3x2 m; // a matrix with 3 columns and 2 rows
+      dmat4 highPrecisionMVP;
+      dmat2x4 skinnyAndTallWithBigComponents;
+
+    ...
+
+    Modify Section 4.1.10, Implicit Conversions, p. 27
+
+    (modify table of implicit conversions)
+
+                                Can be implicitly
+        Type of expression        converted to
+        ---------------------   -------------------
+        int                     uint(*), float, double
+        ivec2                   uvec2(*), vec2, dvec2
+        ivec3                   uvec3(*), vec3, dvec3
+        ivec4                   uvec4(*), vec4, dvec4
+
+        uint                    float, double
+        uvec2                   vec2, dvec2
+        uvec3                   vec3, dvec3
+        uvec4                   vec4, dvec4
+
+        float                   double
+        vec2                    dvec2
+        vec3                    dvec3
+        vec4                    dvec4
+
+        mat2                    dmat2
+        mat3                    dmat3
+        mat4                    dmat4
+        mat2x3                  dmat2x3
+        mat2x4                  dmat2x4
+        mat3x2                  dmat3x2
+        mat3x4                  dmat3x4
+        mat4x2                  dmat4x2
+        mat4x3                  dmat4x3
+
+        (*) if ARB_gpu_shader5 or NV_gpu_shader5 is supported
+
+    (modify second paragraph of the section) No implicit conversions are
+    provided to convert from unsigned to signed integer types, from
+    floating-point to integer types, or from higher-precision to
+    lower-precision types.  There are no implicit array or structure
+    conversions.
+
+    (add before the final paragraph of the section, p. 27) 
+
+    (insert before the final paragraph of the section) When performing
+    implicit conversion for binary operators, there may be multiple data types
+    to which the two operands can be converted.  For example, when adding an
+    int value to a uint value, both values can be implicitly converted to
+    uint, float, and double.  In such cases, a floating-point type is chosen
+    if either operand has a floating-point type.  Otherwise, an unsigned
+    integer type is chosen if either operand has an unsigned integer type.
+    Otherwise, a signed integer type is chosen.  If operands can be implicitly
+    converted to multiple data types deriving from the same base data type,
+    the type with the smallest component size is used.
+
+
+    Modify Section 4.3.4, Inputs, p. 31
+
+    (modify third paragraph of the section, p. 31) ... Vertex shader inputs
+    can only be single-precision floating-point scalars, vectors, or matrices,
+    or signed and unsigned integers and integer vectors.  Vertex shader inputs
+    can also form arrays of these types, but not structures.
+
+    (modify third paragraph, p. 32, allowing doubles as inputs and disallowing
+    as non-flat fragment inputs) ... Fragment inputs can only be signed and
+    unsigned integers and integer vectors, float, floating-point vectors,
+    double, double-precision vectors, single- or double-precision matrices, or
+    arrays or structures of these. Fragment shader inputs that are signed or
+    unsigned integers, integer vectors, doubles, double-precision vectors, or
+    double-precision matrices must be qualified with the interpolation
+    qualifier flat.
+
+
+    Modify Section 4.3.6, Outputs, p. 33
+
+    (modify third paragraph of the section, p. 33) They can only be float,
+    double, single- or double-precision floating-point vectors or matrices,
+    signed or unsigned integers or integer vectors, or arrays or structures of
+    any these.
+
+    (modify last paragraph, p. 33) ... Fragment outputs can only be float,
+    single-precision floating-point vectors, signed or unsigned integers or
+    integer vectors, or arrays of these. ...
+
+
+    Modify Section 5.4.1, Conversion and Scalar Constructors, p. 49
+
+    (add double to the first list of constructor examples)
+
+    Converting between scalar types is done as the following prototypes
+    indicate:
+
+      int(uint)     // converts an unsigned integer value to a signed integer
+      int(float)    // converts a float value to a signed integer
+      int(double)   // converts a double value to a signed integer
+      int(bool)     // converts a Boolean value to a signed integer
+      uint(int)     // converts a signed integer value to an unsigned integer
+      uint(float)   // converts a float value to an unsigned integer
+      uint(double)  // converts a double value to an unsigned integer
+      uint(bool)    // converts a Boolean value to an unsigned integer
+      float(int)    // converts a signed integer value to a float
+      float(uint)   // converts an unsigned integer value to a float
+      float(double) // converts a double value to a float
+      float(bool)   // converts a Boolean value to a float
+      double(int)   // converts a signed integer value to a double
+      double(uint)  // converts an unsigned integer value to a double
+      double(float) // converts a float value to a double
+      double(bool)  // converts a Boolean value to a double
+      bool(int)     // converts a signed integer value to a Boolean
+      bool(uint)    // converts an unsigned integer value to a Boolean
+      bool(float)   // converts a float value to a Boolean
+      bool(double)  // converts a double value to a Boolean
+
+    (modify second paragraph of the section, p. 49) When constructors are used
+    to convert any floating-point type to an integer, the fractional part of
+    the floating-point value is dropped. ...
+
+    (modify third paragraph of the section, p. 49) When a constructor is used
+    to convert any integer or floating-point type to bool, 0 and 0.0 are
+    converted to false, and non-zero values are converted to true.  When a
+    constructor is used to convert a bool to any integer or floating-point
+    type, false is converted to 0 or 0.0, and true is converted to 1 or 1.0.
+
+
+    Modify Section 5.4.2, Vector and Matrix Constructors, p. 50
+
+    (modify the last paragraph, p. 50) If the basic type (bool, int, uint,
+    float, or double) of a parameter to a constructor does not match the basic
+    type of the object being constructed, the scalar construction rules
+    (above) are used to convert the parameters.
+
+
+    (add to the first group of examples, p. 52)
+
+      dmat2(dvec2, dvec2)
+      dmat3(dvec3, dvec3, dvec3)
+      dmat4(dvec4, dvec4, dvec4, dvec4)
+      dmat2x4(dvec3, double,   // first column
+              double, dvec3)   // second column
+
+
+    Modify Section 5.9, Expressions, p. 57
+
+    (modify bulleted list as follows, adding support for double-precision
+    floating-point types)
+
+    Expressions in the shading language are built from the following:
+
+    * Constants of type bool, int, uint, float, double, all vector types and
+      all matrix types.
+
+    ...
+
+    * The arithmetic binary operators add (+), subtract (-), multiply (*), and
+      divide (/) operate on integer, single-precision floating-point, and
+      double-precision floating-point scalars, vectors, and matrices.  If the
+      fundamental type (integer, single-precision floating-point,
+      double-precision floating-point) of the operands do not match, the
+      conversions from Section 4.1.10 "Implicit Conversions" are applied to
+      produce matching types.  ...
+
+    * The arithmetic unary operators negate (-), post- and pre-increment and
+      decrement (-- and ++) operate on integer, single-precision
+      floating-point, or double-precision floating-point values (including
+      vectors and matrices). ...
+
+    * The relational operators greater than (>), less than (<), and less than
+      or equal (<=) operate only on scalar integer, single-precision
+      floating-point, or double-precision floating-point expressions.  The
+      result is scalar Boolean.  The fundamental type of the two operands must
+      match, either as specified, or after one of the implicit type
+      conversions specified in Section 4.1.10.  ...
+
+      ...
+
+
+    Modify Chapter 8, Built-in Functions, p. 81
+
+    (add to description of generic types, last paragraph of p. 81) ... Where
+    the input arguments (and corresponding output) can be double, dvec2,
+    dvec3, or dvec4, <genDType> is used as the argument.  ... Similarly, <mat>
+    is used for any matrix basic type with single-precision components and
+    <dmat> is used for any matrix basic type with double-precision components.
+
+
+    Modify Section 8.2, Exponential Functions, p. 83
+
+    (add overloads for double-precision square roots)
+
+      genDType sqrt(genDType x);
+      genDType inversesqrt(genDType x);
+
+
+    Modify Section 8.3, Common Functions, p. 84
+
+    (add support for double-precision floating-point multiply-add)
+
+    Syntax:
+
+      genDType fma(genDType a, genDType b, genDType c);
+
+    The function fma() performs a fused double-precision floating-point
+    multiply-add to compute the value a*b+c.  The results of fma() may not be
+    identical to evaluating the expression (a*b)+c, because the computation
+    may be performed in a single operation with intermediate precision
+    different from that used to compute a non-fma() expression.
+
+    The results of fma() are guaranteed to be invariant given fixed inputs
+    <a>, <b>, and <c>, as though the result were taken from a variable
+    declared as "precise".
+
+
+    (add support for double-precision frexp and ldexp functions)
+
+    Syntax:
+
+      genDType frexp(genDType x, out genIType exp);
+      genDType ldexp(genDType x, in genIType exp);
+
+    The function frexp() splits each double-precision floating-point number in
+    <x> into its binary significand, a floating-point number in the range
+    [0.5, 1.0), and an integral exponent of two, such that:
+
+      x = significand * 2 ^ exponent
+
+    The significand is returned by the function; the exponent is returned in
+    the parameter <exp>.  For a floating-point value of zero, the significant
+    and exponent are both zero.  For a floating-point value that is an
+    infinity or is not a number, the results of frexp() are undefined.  
+
+    If the input <x> is a vector, this operation is performed in a
+    component-wise manner; the value returned by the function and the value
+    written to <exp> are vectors with the same number of components as <x>.
+
+    The function ldexp() builds a double-precision floating-point number from
+    each significand component in <x> and the corresponding integral exponent
+    of two in <exp>, returning:
+
+      significand * 2 ^ exponent
+
+    If this product is too large to be represented as a double-precision
+    floating-point value, the result is considered undefined.
+
+    If the input <x> is a vector, this operation is performed in a
+    component-wise manner; the value passed in <exp> and returned by the
+    function are vectors with the same number of components as <x>.
+
+
+    (add overloads for double-precision functions)
+
+      genDType abs(genDType x);
+      genDType sign(genDType x);
+      genDType floor(genDType x);
+      genDType trunc(genDType x);
+      genDType round(genDType x);
+      genDType roundEven(genDType x);
+      genDType ceil(genDType x);
+      genDType fract(genDType x);
+      genDType mod(genDType x, double y);
+      genDType mod(genDType x, genDType y);
+      genDType modf(genDType x, out genDType i);
+      genDType min(genDType x, genDType y);
+      genDType min(genDType x, double y);
+      genDType max(genDType x, genDType y);
+      genDType max(genDType x, double y);
+      genDType clamp(genDType x, genDType minVal, genDType maxVal);
+      genDType clamp(genDType x, double minVal, double maxVal);
+      genDType mix(genDType x, genDType y, genDType a);
+      genDType mix(genDType x, genDType y, double a);
+      genDType mix(genDType x, genDType y, genBType a);
+      genDType step(genDType edge, genDType x);
+      genDType step(double edge, genDType x);
+      genDType smoothstep(genDType edge0, genDType edge1, genDType x);
+      genDType smoothstep(double edge0, double edge1, genDType x);
+      genBType isnan(genDType x);
+      genBType isinf(genDType x);
+
+
+    (add support for 64-bit floating-point packing and unpacking functions)
+
+    Syntax:
+
+      double   packDouble2x32(uvec2 v);
+      uvec2    unpackDouble2x32(double v);
+
+    The function packDouble2x32() returns a double obtained by packing the
+    components of a two-component unsigned integer vector into a 64-bit value
+    and interpeting its bits according to the IEEE double-precision
+    floating-point representation.  The first vector component specifies the
+    32 least significant bits; the second component specifies the 32 most
+    significant bits.
+
+    The function unpackDouble2x32() returns a two-component unsigned integer
+    vector obtained by interpreting a double using the 64-bit IEEE
+    double-precision floating-point representation and unpacking into two
+    32-bit halves.  The first component of the vector contains the 32 least
+    significant bits of the double; the second component consists the 32 most
+    significant bits.
+
+
+    Modify Section 8.4, Geometric Functions, p. 87
+
+    (add double-precision equivalents for existing geometric functions)
+
+      double length(genDType x);
+      double distance(genDType p0, genDType p1);
+      double dot(genDType x, genDType y);
+      dvec3 cross(dvec3 x, dvec3 y);
+      genDType normalize(genDType x);
+      genDType faceforward(genDType N, genDType I, genDType Nref);
+      genDType reflect(genDType I, genDType N);
+      genDType refract(genDType I, genDType N, double eta);
+
+
+    Modify Section 8.5, Matrix Functions, p. 89
+
+    (add double-precision equivalents for existing matrix functions)
+
+      dmat matrixCompMult(dmat x, dmat y);
+      dmat2 outerProduct(dvec2 c, dvec2 r);
+      dmat3 outerProduct(dvec3 c, dvec3 r);
+      dmat4 outerProduct(dvec4 c, dvec4 r);
+      dmat2x3 outerProduct(dvec3 c, dvec2 r);
+      dmat3x2 outerProduct(dvec2 c, dvec3 r);
+      dmat2x4 outerProduct(dvec4 c, dvec2 r);
+      dmat4x2 outerProduct(dvec2 c, dvec4 r);
+      dmat3x4 outerProduct(dvec4 c, dvec3 r);
+      dmat4x3 outerProduct(dvec3 c, dvec4 r);
+      dmat2 transpose(dmat2 m);
+      dmat3 transpose(dmat3 m);
+      dmat4 transpose(dmat4 m);
+      dmat2x3 transpose(dmat3x2 m);
+      dmat3x2 transpose(dmat2x3 m);
+      dmat2x4 transpose(dmat4x2 m);
+      dmat4x2 transpose(dmat2x4 m);
+      dmat3x4 transpose(dmat4x3 m);
+      dmat4x3 transpose(dmat3x4 m);
+      double determinant(dmat2 m);
+      double determinant(dmat3 m);
+      double determinant(dmat4 m);
+      dmat2 inverse(dmat2 m);
+      dmat3 inverse(dmat3 m);
+      dmat4 inverse(dmat4 m);
+
+
+    Modify Section 8.6, Vector Relational Functions, p. 90
+
+    (modify the first paragraph, p. 90, adding support for relational
+    functions operating on double precision types)
+
+    Relational and equality operators (<, <=, >, >=, ==, !=) are defined (or
+    reserved) to operate on scalars and produce scalar Boolean results.  For
+    vector results, use the following built-in functions.  In the definitions
+    below, the following terms are used as placeholders for all vector types
+    for a given fundamental data type.  In all cases, the sizes of the input
+    and return vectors for any particular call must match.
+
+        placeholder     fundamental types
+        -----------     ------------------------------------------------
+        bvec            bvec2, bvec3, bvec4
+
+        ivec            ivec2, ivec3, ivec4
+
+        uvec            uvec2, uvec3, uvec4
+
+        vec             vec2, vec3, vec4, dvec2, dvec3, dvec4
+
+
+    Modify Section 9, Shading Language Grammar, p. 92
+
+    !!! TBD !!!
+
+
+GLX Protocol
+
+    !!! TBD
+
+Dependencies on ARB_gpu_shader5
+
+    If ARB_gpu_shader5 is not supported, the changes to the function
+    overloading rules in the OpenGL Shading Language Specification provided
+    there should included in this extension.
+
+Dependencies on NV_gpu_shader5
+
+    This extension and NV_gpu_shader5 both provide support for shading
+    language variables with 64-bit components.  If both extensions are
+    supported, the various edits describing this new support should be
+    combined.
+
+Dependencies on EXT_direct_state_access
+
+    If EXT_direct_state_access is not supported, references to the
+    ProgramUniform*d*EXT functions should be removed.
+
+    If EXT_direct_state_access is supported, that specification should be
+    edited as follows:
+
+    (modify the ProgramUniform* language)
+
+    The following commands:
+
+        ....
+        void ProgramUniform{1,2,3,4}dEXT(uint program int location, T value);
+        void ProgramUniform{1,2,3,4}dvEXT (uint program, int location, 
+                                          const T *value);
+        void ProgramUniformMatrix{2,3,4}dvEXT
+             (uint program, int location, sizei count, boolean transpose, 
+              const double *value);
+        void ProgramUniformMatrix{2x3,3x2,2x4,4x2,3x4,4x3}dvEXT
+             (uint program, int location, sizei count, boolean transpose, 
+              const double *value);
+   
+    operate identically to the corresponding command where "Program" is
+    deleted from the name (and extension suffixes are dropped or updated
+    appropriately) except, rather than updating the currently active program
+    object, these "Program" commands update the program object named by the
+    <program> parameter.  ...
+
+Dependencies on NV_shader_buffer_load
+
+    If NV_shader_buffer_load is supported, that specification should be edited
+    as follows:
+
+    Modify "Section 2.20.X, Shader Memory Access" from NV_shader_buffer_load.
+
+    (add rules for loads of variables having the new data types from this
+    extension to the list of bullets following "When a shader dereferences a
+    pointer variable")
+
+      - Data of type "double" are read from or written to memory as one
+        double-typed value at the specified GPU address.
+
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) How do double-precision types interact with the rules for storing
+    uniforms in a buffer object?
+
+      RESOLVED:  The rules were already written with data types larger and
+      smaller than those in the original GLSL in mind.  Single precision
+      floats typically take four bytes; doubles take eight bytes.  The larger
+      storage requirement for doubles means a larger alignment requirement;
+      doubles still need to be size-aligned.
+
+    (2) Should double-precision vertex shader inputs be supported?
+
+      RESOLVED:  Not in this extension.  Such support will be added by the
+      EXT_vertex_attrib_64bit extension.
+
+    (3) Should double-precision fragment shader outputs be supported?
+
+      RESOLVED:  Not in this extension.  Note that we don't have
+      double-precision framebuffer formats to accept such values.
+
+    (4) Should transform feedback be able to capture double-precision
+    components?
+
+      RESOLVED:  Yes.  However, undefined behavior will occur unless all
+      components are captured to size-aligned offsets.
+
+      If any variable captured in transform feedback has double-precision
+      components, the practical requirements for defined behavior are:
+
+        (a) the offset of the base of a buffer object must be a multiple of
+            eight bytes;
+
+        (b) the amount of data captured per vertex must be a multiple of eight
+            bytes; and
+
+        (c) each double-precision variable captured must be aligned to a
+            multiple of eight bytes relative to the beginning of a vertex.
+
+      If capturing a mix of single- and double-precision components, it might
+      be necessary to use the "gl_SkipComponents1" variable from
+      ARB_transform_feedback3 to force proper alignment.
+
+      We considered the possibility of adding error checks to throw errors in
+      cases where undefined behavior might occur, but chose not to include
+      such errors.  For OpenGL 3.0-style transform feedback, cases (b) and (c)
+      are solely a function of the variables captured could be detected when a
+      program object is linked.  (Such an error would be more problematic for
+      transform feedback via NV_transform_feedback, where the set of variables
+      captured can be updated without relinking.)  For case (a), the
+      requirement of OpenGL 3.0 is that transform feedback buffer offsets must
+      be a multiple of 4 bytes; enforcing a stricter 8-byte alignment would
+      require either a backward-incompatible change or a Begin-time error to
+      checks the offset of transform feedback buffers against the current
+      program.
+
+    (5) Should we have double-precision matrix types?  We didn't add integer 
+        matrices, but integer matrix math is fairly uncommon.
+
+      RESOLVED:  Yes, we will support all matrix sizes in double-precision.
+      We will also provide double-precision equivalents for all matrix
+      operators and built-in matrix functions.
+
+    (6) What should be done to distinguish between single- and
+        double-precision floating-point constants?
+
+      RESOLVED:  We will use "LF" to identify double-precision floating-point
+      constants.  Here, we depart from the C standard.  In C, floating-point
+      constants without a suffix are implicitly double-precision and require a
+      "F" suffix to specify a single-precision constant.  However, GLSL has
+      historically provided no support for double precision.  Changing to C
+      rules would materially affect the behavior of pre-existing shaders that
+      add an #extension line for this extension, since constants with no
+      suffix have meant "float" up to now.  Additionally, such a change would
+      likely have required that we introduce implicit conversions from double
+      to float; otherwise, assigning a constant with no suffix to a float
+      would result in a compile-time error.
+
+    (7) Should we require IEEE 1394-compliant behavior for NaNs and
+        infinities?  Denorms?
+
+      RESOLVED:  Following historical precedent in the GLSL and OpenGL APIs
+      not defining special-case floating-point behavior, we chose not to do so
+      in this extension.
+
+    (8) Should we provide double-precision versions of all the built-ins that
+        take a <genType>, which are currently defined to be floats and
+        floating-point vectors?
+
+      RESOLVED:  We provide double-precision versions of most of the built-in
+      functions supported by GLSL.  We opted not to provide double-precision
+      functions for special trigonometry, exponential, derivative, and noise
+      functions.
+
+    (9) Are double-precision "varyings" (values passed between shader stages)
+        supported by this extension?  If so, is double-precision interpolation
+        is supported?
+
+      RESOLVED:  Double-precision shader inputs and outputs are supported,
+      except for vertex shader inputs and fragment shader outputs.
+      Additionally, double-precision vertex shader inputs are provided by the
+      separate extension EXT_vertex_attrib_64bit.  No known extension provides
+      double-precision fragment outputs, but that doesn't seem important since
+      OpenGL provides no pixel/texture formats with double-precision
+      components that could reasonably receive such outputs.
+
+      Interpolation not supported in this extension for double-precision
+      floating-point components.  As with integer types in OpenGL 3.0,
+      double-precision floating-point fragment shader inputs must be qualified
+      as "flat".
+
+      Note that this extension reformulates the spec language requiring "flat"
+      qualifiers, in addition to adding doubles to the list of "flat" types.
+      In GLSL 1.30, the spec applies these requirements to vertex shader
+      outputs but imposes no requirement on fragment inputs.  We move this
+      requirement to fragment inputs, since vertex shader outputs may be
+      passed to tessellation or geometry shaders without interpolation, and
+      thus without the need for qualification by "flat".
+
+    (15) Can the 64-bit uniform APIs be used to load values for uniforms of
+         type "bool", "bvec2", "bvec3", or "bvec4"?
+
+      RESOLVED:  No.  OpenGL 2.0 and beyond did allow "bool" variable to be
+      set with Uniform*i* and Uniform*f APIs, and OpenGL 3.0 extended that
+      support to Uniform*ui* for orthogonality.  But it seems pointless to
+      extended this capability forward to 64-bit Uniform APIs as well.
+
+    (19) Should we support any implicit conversion of matrix types, now that
+         we have both "mat4" and "dmat4"?
+
+      RESOLVED:  No.  It doesn't seem worth the trouble.
+
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+    11    08/27/12  pbrown    Clarify that Uniform*d can not be used to load
+                              uniforms with boolean types (bug 9345); import
+                              issue (15) on the topic from NV_gpu_shader5.
+
+    10    03/23/10  pbrown    Update issues section to include fp64 issues
+                              that were left behind in NV_gpu_shader5 when the
+                              specs were refactored.
+
+     9    02/02/10  pbrown    Specify that capturing any component at an
+                              offset that is not size-aligned results in
+                              undefined behavior (bug 5863).
+
+     8    01/29/10  pbrown    Remove shading language and API support for
+                              double-precision vertex attributes; moved to the
+                              EXT_vertex_attrib_64bit specification (bug
+                              5953).  Added clarification disallowing
+                              double-precision fragment shader outputs.
+
+     7    01/29/10  pbrown    Delete accidental modifications to the language
+                              for equal and not equal operators (bug 5904),
+                              which already supported all types.
+
+     6    01/15/10  pbrown    Modify the spec rules for counting attributes,
+                              input and output components, and components
+                              to capture in transform feedback to permit,
+                              but not require, double-precision values to
+                              require twice as many resources as single-
+                              precision equivalents (bug 5855).
+
+     5    01/14/10  pbrown    Minor updates from spec reviews.
+
+     4    12/10/09  pbrown    Functionality updates from spec review:
+                              Allow implicit conversion from mat*->dmat*.
+                              Rename fmad and [un]packFloat2x32 to fma
+                              and [un]packDouble2x32.  Add overlooked
+                              fp64 versions of geometric functions. 
+
+     3    12/10/09  pbrown    Convert from EXT to ARB.
+
+     2    12/08/09  pbrown    Miscellaneous fixes from spec review:  Clarified
+                              input/output component counting rules, where
+                              each fp64 value counts double.  General typo
+                              fixes and language clarifications.
+
+     1              pbrown    Internal revisions.

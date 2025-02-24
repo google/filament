@@ -1,0 +1,442 @@
+Name
+
+    EXT_clip_cull_distance
+
+Name Strings
+
+    GL_EXT_clip_cull_distance
+
+Contact
+
+    Maurice Ribble, Qualcomm Technologies Inc. (mribble 'at' qti.qualcomm.com)
+
+Contributors
+    Kulin Seth, Qualcomm Technologies Inc.
+    Sam Holmes, Qualcomm Technologies Inc.
+    Jeff Leger, Qualcomm Technologies Inc.
+    Daniel Koch, NVIDIA
+    Jan-Harald Fredriksen, ARM
+    Bill Licea-Kane, Qualcomm Technologies Inc.
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: March 9, 2016
+    Revision: 3
+
+Number
+
+    OpenGL ES Extension #257
+
+Dependencies
+
+    This specification is written against the OpenGL ES 3.2 Specification
+    (August 10, 2015), and the OpenGL ES 3.2 Shading Language Specification
+    (August 6, 2015) but can apply to prior specifications.
+
+    OpenGL ES 3.0 is required.
+
+    This extension interacts with OpenGL ES 3.2.
+
+    This extension interacts with OES_tessellation_shader and
+    EXT_tessellation_shader.
+
+    This extension trivially interacts with OES_tessellation_point_size
+    and EXT_tessellation_point_size.
+
+    This extension interacts with OES_geometry_shader and
+    EXT_geometry_shader.
+
+Overview
+
+    This extension adds support for hardware clip planes and cull
+    distances to OpenGL ES. The language for this extension is based
+    on the OpenGL 4.5 API Specification (May 28, 2015) and
+    ARB_clip_distance.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetInteger64v, and GetFloatv:
+
+        MAX_CLIP_DISTANCES_EXT                          0x0D32
+        MAX_CULL_DISTANCES_EXT                          0x82F9
+        MAX_COMBINED_CLIP_AND_CULL_DISTANCES_EXT        0x82FA
+
+    Accepted by the <pname> parameters of Enable, Disable and IsEnabled:
+
+        CLIP_DISTANCE0_EXT           0x3000
+        CLIP_DISTANCE1_EXT           0x3001
+        CLIP_DISTANCE2_EXT           0x3002
+        CLIP_DISTANCE3_EXT           0x3003
+        CLIP_DISTANCE4_EXT           0x3004
+        CLIP_DISTANCE5_EXT           0x3005
+        CLIP_DISTANCE6_EXT           0x3006
+        CLIP_DISTANCE7_EXT           0x3007
+
+Additions to Chapter 7 of the OpenGL ES 3.2 Specification (Programs and
+Shaders)
+
+    Modify Section 7.4.1 "Shader Interface Matching" (p. 97),
+    adding the following to the end of the third paragraph (beginning with
+    "For program objects containing mutliple shaders,..."):
+
+    "If either shader redeclares the built-in arrays gl_CullDistance[] or
+    gl_ClipDistance[] the array must have the same size in both shaders."
+
+Additions to Chapter 11 of the OpenGL ES 3.2 Specification (Programmable
+Vertex Processing)
+
+    Modify Section 11.1.3.10, "Shader Outputs" (p. 300),
+    adding the following as a new paragraph after the description of
+    gl_Position:
+
+    "The built-in output variables gl_ClipDistance and gl_CullDistance
+    respectively hold the the clip distance and cull distance used in the
+    clipping stage, as described in section 12.4. If clipping is enabled,
+    gl_ClipDistance should be written."
+
+    Modify Section 11.2.1.2.2, "Tessellation Control Shader Inputs" (p. 307),
+    replacing the last sentence of the first paragraph as follows:
+
+    "The members of each element of the gl_in array are gl_Position,
+    gl_CullDistance, and gl_ClipDistance
+        [[ If OES_tessellation_point_size or EXT_tessellation_point_size
+           are supported: ]]
+        and gl_PointSize."
+
+    Modify Section 11.2.1.2.3, "Tessellation Control Shader Outputs" (p. 308),
+    replacing the last two sentences of the first paragraph as follows:
+
+    "The members of each element of the gl_out array are gl_Position,
+    gl_ClipDistance and gl_CullDistance
+        [[ If OES_tessellation_point_size or EXT_tessellation_point_size
+           are supported: ]]
+        and gl_PointSize,
+    and behave identically to equivalently named vertex shader outputs
+    (see section 11.1.3)."
+
+    Modify Section 11.2.3.3 "Tessellation Evaluation Shader Inputs" (p. 321),
+    replacing the last sentence of the first paragraph as follows:
+
+    "The members of each element of the gl_in array are gl_Position,
+    gl_CullDistance, and gl_ClipDistance
+        [[ If OES_tessellation_point_size or EXT_tessellation_point_size
+           are supported: ]]
+        and gl_PointSize."
+
+    Modify Section 11.2.3.4, "Tessellation Evaluation Shader Outputs" (p. 322),
+    replacing the first two sentences of the first paragraph as follows:
+
+    "Tessellation evalution shaders have a number of built-in output variables
+    used to pass values to equivalent built-in input variagles read by
+    subsequent shader stages or to subsequent fixed functionality vertex
+    processing pipeline stages.  These variables are gl_Position,
+    gl_ClipDistance and gl_CullDistance
+        [[ If OES_tessellation_point_size or EXT_tessellation_point_size
+           are supported: ]]
+        and gl_PointSize,
+    and all behave identically to equivalently named vertex shader outputs
+    (see section 11.1.3)."
+
+    Modify Section 11.3.4.3, "Geometry Shader Inputs" (p. 327) by adding the
+    following two bullet points to the description of the elements of gl_in[]:
+
+    "*  Structure member gl_ClipDistance[] holds the per-vertex array of clip
+    distances, as written by the upstream shader to the built-in output variable
+    gl_ClipDistance[].
+
+     *  Structure member gl_CullDistance[] holds the per-vertex array of cull
+    distances, as written by the upstream shader to the built-in output variable
+    gl_CullDistance[]."
+
+    Modify Section 11.3.4.4 "Geometry Shader Outputs" (p. 329), adding the
+    following paragraph after the description of gl_Position:
+
+    "The built-in outputs gl_ClipDistance and gl_CullDistance hold the clip
+    distance and cull distance, respectively, used in the clipping stage, as
+    described in Section 12.4."
+
+Additions to Chapter 12 of the OpenGL ES 3.2 Specification (Fixed-Function
+Vertex Post-Processing)
+
+    Modify Section 12.4, "Primitive Clipping" (p. 341),
+    replacing the first four paragraphs with the following:
+
+    "Primitives are culled against the cull volume and then clipped to the
+    clip volume. In clip coordinates, the view volume is defined by
+                        -wc <= xc <= wc
+                        -wc <= yc <= wc
+                        -zmin <= zc <= wc.
+
+    where zmin is -wc.
+
+    This view volume may be further restricted by as many as <n>
+    client-defined halfspaces. <n> is an implementation-dependent maximum that
+    must be at least 8, and may be determined by calling GetIntegerv with
+    pname MAX_COMBINED_CLIP_AND_CULL_DISTANCES_EXT.
+
+    The cull volume is the intersection of up to the value of
+    MAX_CULL_DISTANCES_EXT client-defined half-spaces (if no client-defined
+    cull half-spaces are enabled, culling against the cull volume is skipped).
+    The number of enabled cull half-spaces is determined by the explicit or
+    implicit size of the built-in array gl_CullDistance in the last shader
+    stage before rasterization which has an active program.
+
+    A shader may write a single cull distance for each enabled cull half-space
+    to elements of the gl_CullDistance[] array. If the cull distance for any
+    enabled cull half-space is negative for all of the vertices of the
+    primitive under consideration, the primitive is discarded. Otherwise the
+    primitive is clipped against the clip volume as defined below.
+
+    The clip volume is the intersection of up to the value of
+    MAX_CLIP_DISTANCES_EXT client-defined half-spaces with the view volume
+    (if no client-defined clip half-spaces are enabled, the clip volume is
+    the view volume).
+
+    A vertex shader may write a single clip distance for each enabled clip
+    halfspace to elements of the gl_ClipDistance[] array. Clip half-space
+    <i> is then given by the set of points satisfying the inequality
+                    ci(P) >= 0,
+    where ci(P) is the value of clip distance <i> at point P. For point
+    primitives, ci(P) is simply the clip distance for the vertex in question.
+    For line and triangle primitives, per-vertex clip distances are
+    interpolated using a weighted mean, with weights derived according to the
+    algorithms described in sections 13.6 (Line Segments) and 13.7
+    (Polygons).
+
+    Client-defined clip half-spaces are enabled or disabled by calling
+    Enable or Disable with target CLIP_DISTANCE<i>_EXT, where <i> is an
+    integer between 0 and <n> - 1; specifying a value of <i> enables or
+    disables the client-defined clip half-space with index <i>. The
+    constants obey CLIP_DISTANCE<i>_EXT = CLIP_DISTANCE0_EXT + <i>.
+
+    If the primitive under consideration is a point, then clipping passes it
+    unchanged if it lies withing the clip volume; otherwise it is discarded.
+
+    If the primitive is a line segment, then clipping does nothing to it if
+    it lies entirely withing the clip volume, and discards it if it lies
+    entirely outside the volume.
+
+    If part of the line segment lies in the volume and part of it lies
+    outside, then the line segment is clipped and new vertex coordinates
+    are computed for one or both vertices. A clipped line segment endpoint
+    lies on both the original line segment and the boundary of the clip
+    volume.
+
+    This clipping produces..."
+
+    Add the following text to the end of Section 12.4:
+
+    "Primitives rendered with user-defined half-spaces must satisfy a
+    complimentary criterion. Suppose a series of primitives is drawn where
+    each vertex <i> has a single specified clip distance <di> (or a number
+    of similarly specified clip distances, if multiple half-spaces are
+    enabled). Next, suppose that the same series of primitives are drawn
+    again with each such clip distance replaced by -<di> (and the GL is
+    otherwise in the same state). In this case, primitives must not be
+    missing any pixels, nor may any pixels be drawn twice in regions where
+    those primitives are cut by the clip planes.
+
+    The state required for clipping is MAX_CLIP_DISTANCES_EXT bits indicating
+    which of the client-defined half-spaces are enabled. In the initial state,
+    all half-spaces are disabled."
+
+Additions to OpenGL ES Shading Language 3.20 Specification
+
+    Including the following line in a shader can be used to control
+    the language features described in this extension:
+
+        #extension GL_EXT_clip_cull_distance : <behavior>
+
+    where <behavior> is as described in section 3.4.
+
+    A new preprocessor #define is added to the OpenGL ES Shading Language:
+
+        #define GL_EXT_clip_cull_distance 1
+
+Additions to Chapter 7 of the OpenGL ES Shading Language 3.20 Specification
+(Built-in Variables)
+
+    Modify Section 7.1, Vertex Shader Special Variables (p. 119)
+    out gl_PerVertex
+    {
+        ...
+        highp float gl_ClipDistance[];
+        highp float gl_CullDistance[];
+
+    };
+
+    Similar changes in Geometry, Tessellation Control, Tessellation Evaluation
+    language "in gl_PerVertex" and "out gl_PerVertex" structures.
+
+    Modify Section 7.1.5 "Fragment Shader Special Variables" (p. 123)
+
+    in highp float gl_ClipDistance[];
+    in highp float gl_CullDistance[];
+
+    The variable gl_ClipDistance provides the mechanism for controlling
+    user clipping. The element gl_ClipDistance[i] specifies a clip
+    distance for each plane <i>. A distance of 0 means the vertex is on
+    the plane, a positive distance means the vertex is inside the clip
+    plane, and a negative distance means the point is outside the clip
+    plane. The clip distances will be linearly interpolated across the
+    primitive and the portion of the primitive with interpolated
+    distances less than 0 will be clipped.
+
+    The gl_ClipDistance array is predeclared as unsized and must be
+    explicitly sized by the shader either redeclaring it with a size
+    or implicitly sized by indexing it only with integral constant
+    expressions. This needs to size the array to include all the clip
+    planes that are enabled via the OpenGL ES API;
+    if the size does not include all enabled planes, results are
+    undefined. The size can be at most gl_MaxClipDistances. The
+    number of varying components (see gl_MaxVaryingComponents) consumed
+    by gl_ClipDistance will match the size of the array, no matter
+    how many planes are enabled. The shader must also set all values in
+    gl_ClipDistance that have been enabled via the OpenGL ES API,
+    or results are undefined. Values written into gl_ClipDistance
+    for planes that are not enabled have no effect.
+
+    As an output variable, gl_ClipDistance provides the place for the
+    shader to write these distances. As an input in all but the fragment
+    language, it reads the values written in the previous shader stage.
+    In the fragment language, gl_ClipDistance array contains linearly
+    interpolated values for the vertex values written by a shader to
+    the gl_ClipDistance vertex output variable. Only elements in this
+    array that have clipping enabled will have defined values.
+
+    The variable gl_CullDistance provides a mechanism for controlling
+    user culling. The element gl_CullDistance[i] specifies a cull
+    distance for plane <i>. A distance of 0 means the vertex is on the
+    plane, a positive distance means the vertex is inside the cull
+    volume, and a negative distance means the point is outside the
+    cull volume. Primitives whose vertices all have a negative clip
+    distance for plane <i> will be discarded.
+
+    The gl_CullDistance array is predeclared as unsized and must be
+    sized by the shader either redeclaring it with a size or indexing
+    it only with integral constant expressions. The size determines
+    the number and set of enabled cull distances and can be at most
+    gl_MaxCullDistances. The number of varying components
+    (see gl_MaxVaryingComponents) consumed by gl_CullDistance will
+    match the size of the array. Shaders writing gl_CullDistance must
+    write all enabled distances, or culling results are undefined.
+
+    As an output variable, gl_CullDistance provides the place for
+    the shader to write these distances. As an input in all but the
+    fragment language, it reads the values written in the previous
+    shader stage. In the fragment language, gl_CullDistance array
+    contains linearly interpolated values for the vertex values
+    written by a shader to the gl_CullDistance vertex output variable.
+
+    It is a compile-time or link-time error for the set of shaders
+    forming a program to have the sum of the sizes of the
+    gl_ClipDistance and gl_CullDistance arrays to be larger than
+    gl_MaxCombinedClipAndCullDistances.
+
+    Modify Section 7.2, "Built-In Constants" (p. 126)
+
+    const mediump int gl_MaxClipDistances = 8;
+    const mediump int gl_MaxCullDistances = 8;
+    const mediump int gl_MaxCombinedClipAndCullDistances = 8;
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+
+Dependencies on OpenGL ES 3.2
+
+    If OpenGL ES 3.2 is not supported, ignore all references
+    to geometry and tessellation shaders (unless one of the
+    following extensions is supported).
+
+Dependencies on OES_tessellation_shader and EXT_tessellation_shader
+
+    If neither OES_tessellation_shader nor EXT_tessellation_shader
+    are supported, ignore all references to tessellation shaders.
+
+Dependencies on OES_tessellation_point_size and EXT_tessellation_point_size
+
+    If neither OES_tessellation_point_size nor EXT_tessellation_point_size
+    are supported, ignore all references to gl_PointSize as inputs
+    or outputs to the tessellation stages.
+
+Dependencies on OES_geometry_shader and EXT_geometry_shader
+
+    If neither OES_geometry_shader nor EXT_geometry_shader
+    are supported, ignore all references to geometry shaders.
+
+Errors
+
+    none
+
+New State
+
+    Add the following to Table 21.6 (Transformation State), p447:
+
+                                      Initial
+    Get Value          Type   Get Command Value    Description       Sec.
+    ------------------ ------ ----------- -------- ----------------- ----
+    CLIP_DISTANCEi_EXT 8* x B IsEnabled   FALSE    ith user clipping 12.4
+                                                   plane enabled
+
+
+New Implementation Dependent State
+
+    Add the following to Table 21.40 (Implementation Dependent Values), p481:
+
+                                            Minimum
+    Get Value              Type Get Command Value    Description       Sec.
+    ---------------------- ---- ----------- -------- ----------------- ----
+    MAX_CLIP_DISTANCES_EXT Z+   GetIntegerv 8        Max. no. of user  12.4
+                                                     clipping planes
+    MAX_CULL_DISTANCE_EXT  Z+   GetIntegerv 8        Max. no. of user  12.4
+                                                     cull distances
+    MAX_COMBINED_CLIP_AND- Z+   GetIntegerv 8        Max. combined no. 12.4
+    _CULL_DISTANCES_EXT                              of user clipping
+
+Conformance Tests
+
+    Unspecified at this time.
+
+Issues
+
+    For historical issues see ARB_clip_distance
+
+    (1) If the vertex shader stages write to clip/cull distance, do further
+        vertex processing stages need to pass it through?
+
+    RESOLVED: Yes. This is how it works in OpenGL.
+
+    (2) Should we have two separate GLSL behavior:
+
+        #extension GL_EXT_clip_distance : <behavior>
+        #extension GL_EXT_cull_distance : <behavior>
+
+        or single behavior for both:
+
+        #extension GL_EXT_clip_cull_distance : <behavior>
+
+    RESOLVED: Single behavior for both the clip/cull functionality:
+
+        #extension GL_EXT_clip_cull_distance : <behavior>
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  ------  ---------------------------------
+     3    03/09/16  mribble Clean up QTI names and emails.
+
+     2    03/08/16  dkoch   Language consistency and cleanup pass.
+                            Added a bunch of missing language.
+
+     1              kseth  Initial draft

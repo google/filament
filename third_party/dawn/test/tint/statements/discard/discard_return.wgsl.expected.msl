@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread bool* continue_execution;
+};
+
+void f(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.continue_execution) = false;
+}

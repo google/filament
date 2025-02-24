@@ -1,0 +1,18 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device float* prevent_dce;
+  depth2d_array<float, access::sample> arg_0;
+  sampler arg_1;
+};
+
+float textureSampleCompare_90ae56(tint_module_vars_struct tint_module_vars) {
+  float res = tint_module_vars.arg_0.sample_compare(tint_module_vars.arg_1, float2(1.0f), 1u, 1.0f);
+  return res;
+}
+
+fragment void fragment_main(device float* prevent_dce [[buffer(0)]], depth2d_array<float, access::sample> arg_0 [[texture(0)]], sampler arg_1 [[sampler(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .arg_0=arg_0, .arg_1=arg_1};
+  (*tint_module_vars.prevent_dce) = textureSampleCompare_90ae56(tint_module_vars);
+}

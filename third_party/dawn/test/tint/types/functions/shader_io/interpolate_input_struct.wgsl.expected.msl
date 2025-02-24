@@ -1,0 +1,35 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct In {
+  float none;
+  float flat;
+  float perspective_center;
+  float perspective_centroid;
+  float perspective_sample;
+  float linear_center;
+  float linear_centroid;
+  float linear_sample;
+  float perspective_default;
+  float linear_default;
+};
+
+struct main_inputs {
+  float In_none [[user(locn0)]];
+  float In_flat [[user(locn1)]] [[flat]];
+  float In_perspective_center [[user(locn2)]] [[center_perspective]];
+  float In_perspective_centroid [[user(locn3)]] [[centroid_perspective]];
+  float In_perspective_sample [[user(locn4)]] [[sample_perspective]];
+  float In_linear_center [[user(locn5)]] [[center_no_perspective]];
+  float In_linear_centroid [[user(locn6)]] [[centroid_no_perspective]];
+  float In_linear_sample [[user(locn7)]] [[sample_no_perspective]];
+  float In_perspective_default [[user(locn8)]] [[center_perspective]];
+  float In_linear_default [[user(locn9)]] [[center_no_perspective]];
+};
+
+void main_inner(In in) {
+}
+
+fragment void v(main_inputs inputs [[stage_in]]) {
+  main_inner(In{.none=inputs.In_none, .flat=inputs.In_flat, .perspective_center=inputs.In_perspective_center, .perspective_centroid=inputs.In_perspective_centroid, .perspective_sample=inputs.In_perspective_sample, .linear_center=inputs.In_linear_center, .linear_centroid=inputs.In_linear_centroid, .linear_sample=inputs.In_linear_sample, .perspective_default=inputs.In_perspective_default, .linear_default=inputs.In_linear_default});
+}

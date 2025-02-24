@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void main_1() {
+  uint const x_88 = 58u;
+}
+
+fragment void v() {
+  main_1();
+}

@@ -1,0 +1,472 @@
+Name
+
+    NV_point_sprite
+
+Name Strings
+
+    GL_NV_point_sprite
+
+Contact
+
+    Matt Craighead, NVIDIA Corporation (mcraighead 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2001, 2002.
+
+IP Status
+
+    No known IP issues.
+
+Status
+
+    Shipping (version 1.1)
+
+Version
+
+    NVIDIA Date: March 6, 2003 (version 1.3)
+
+Number
+
+    262
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.3 specification.
+
+    Assumes support for the EXT_point_parameters extension.
+
+Overview
+
+    Applications such as particle systems usually must use OpenGL quads
+    rather than points to render their geometry, since they would like to
+    use a custom-drawn texture for each particle, rather than the
+    traditional OpenGL round antialiased points, and each fragment in
+    a point has the same texture coordinates as every other fragment.
+
+    Unfortunately, specifying the geometry for these quads can be quite
+    expensive, since it quadruples the amount of geometry required, and
+    it may also require the application to do extra processing to compute
+    the location of each vertex.
+
+    The goal of this extension is to allow such apps to use points rather
+    than quads.  When GL_POINT_SPRITE_NV is enabled, the state of point
+    antialiasing is ignored.  For each texture unit, the app can then
+    specify whether to replace the existing texture coordinates with
+    point sprite texture coordinates, which are interpolated across the
+    point.  Finally, the app can set a global parameter for the way to
+    generate the R coordinate for point sprites; the R coordinate can
+    either be zero, the input S coordinate, or the input R coordinate.
+    This allows applications to use a 3D texture to represent a point
+    sprite that goes through an animation, with filtering between frames,
+    for example.
+
+Issues
+
+    *   Should this spec say that point sprites get converted into quads?
+
+        RESOLVED: No, this would make the spec much uglier, because then
+        we'd have to say that polygon smooth and stipple get turned off,
+        etc.  Better to provide a formula for computing the texture
+        coordinates and leave them as points.
+
+    *   How are point sprite texture coordinates computed?
+
+        RESOLVED: They move smoothly as the point moves around on the
+        screen, even though the pixels touched by the point do not.  The
+        exact formula is given in the spec.  Note that point sprites' T
+        texture coordinate decreases, not increases, with Y; that is,
+        point sprite textures go top-down, not bottom-up.
+
+    *   How do point sizes for point sprites work?
+
+        RESOLVED: The original NV_point_sprite spec treated point sprites
+        as being sized like aliased points, i.e., integral sizes only.
+        This was a mistake, because it can lead to visible popping
+        artifacts.  In addition, it limits the size of points
+        unnecessarily.
+
+        This revised specification treats point sprite sizes more like
+        antialiased point sizes, but with more leniency.  Implementations
+        may choose to not clamp the point size to the antialiased point
+        size range.  The set of point sprite sizes available must be a
+        superset of the antialiased point sizes.  However, whereas
+        antialiased point sizes are all evenly spaced by the point size
+        granularity, point sprites can have an arbitrary set of sizes.
+        This lets implementations use, e.g., floating-point sizes.
+
+        It is anticipated that this behavior change will not cause any
+        problems for compatibility.  In fact, it should be beneficial to
+        quality.
+
+    *   Should there be a way to query the list of supported point sprite
+        sizes?
+
+        RESOLVED: No.  If an implementation were to use, say, a single-
+        precision IEEE float to represent point sizes, the list would be
+        rather long.
+
+    *   Do mipmaps apply to point sprites?
+
+        RESOLVED: Yes.  They are similar to quads in this respect.
+
+    *   What of this extension's state is per-texture unit and what
+        of this extension's state is state is global?
+
+        RESOLVED: The GL_POINT_SPRITE_NV enable and POINT_SPRITE_R_MODE_NV
+        state are global.  The COORD_REPLACE_NV state is per-texture unit
+        (state set by TexEnv is per-texture unit).
+
+    *   Should we create an entry point for the R mode?
+
+        RESOLVED: No, we take advantage of the existing glPointParameter
+        interface.  Unfortunately, EXT_point_parameters does not define a
+        PointParameteri entry point.  This extension adds one.  It could
+        live without, but it's a little annoying to have to use a float
+        interface to specify an enumerant.
+
+        This is definitely not TexEnv state, because it is global, not
+        per texture unit.
+
+    *   What should the suffix for PointParameteri[v] be?
+
+        RESOLVED: NV.  This is an NV extension, and therefore any new
+        entry points must be NV also.  This is a bit less aesthetically
+        pleasing than matching the EXT suffixes of EXT_point_parameters,
+        but it is the right thing to do.
+
+    *   Should there be a global on/off switch for point sprites, or
+        should the per-unit enable imply that switch?
+
+        RESOLVED: There is a global switch to turn it on and off.  This
+        is probably more convenient for both driver and app, and it
+        simplifies the spec.
+
+    *   What should the TexEnv mode for point sprites be called?
+
+        RESOLVED: After much deliberation, COORD_REPLACE_NV seems to be
+        appropriate.
+
+    *   What is the motivation for each of the three point sprite R
+        modes?
+
+        The R mode is most convenient for applications that may already
+        be drawing their own "point sprites" by rendering quads.  These
+        applications already need to put the R coordinate in R, and they
+        do not need to change their code.
+
+        The S mode is most convenient for applications that do not use
+        vertex programs, because it allows them to use TexCoord1 rather
+        than TexCoord3 to specify their third texture coordinate.  This
+        reduces the size of the vertex data.  Applications that use
+        vertex programs are largely unaffected by this, because they can
+        map the input S texture coordinate into the output R coordinate
+        if they so desire.
+
+        The zero mode may allow some applications to more easily obtain
+        the behavior they want out of the dot product functionality of
+        the NV_texture_shader extension.  It reduces these dot products
+        from three-component dot products into two-component dot
+        products.  In some implementations, it may also have higher
+        performance than the other modes.
+
+        There is no mode corresponding to the T or Q coordinates because
+        we cannot envision a scenario where such modes would be useful.
+
+    *   What is the interaction with multisample points, which are round?
+
+        RESOLVED: Point sprites are rasterized as squares, even in
+        multisample mode.  Leaving them as round points would make the
+        feature useless.
+
+    *   How does the point sprite extension interact with fragment
+        program extensions (ARB_fragment_program, NV_fragment_program,
+        etc)?
+
+        RESOLVED: The primary issue is how the interpolanted texture
+        coordinate set appears when fragment attribute variables
+        (ARB terminology) or fragment program attribute registers (NV
+        terminology) are accessed.
+
+        When point sprite is enabled and the GL_COORD_REPLACE_NV state for
+        a given texture unit is GL_TRUE, the texture coordinate set for
+        that texture unit is (s,t,r,1) where the point sprite-overriden
+        s, t, and r are described in the amended Section 3.3 below.
+        The important point is that q is forced to 1.
+
+        For fragment program extensions, q cooresponds to the w component
+        of the respective fragment attribute.
+
+    *   What push/pop attribute bits control the state of this extension?
+
+        RESOLVED:  POINT_BIT for all the state.  Also ENABLE_BIT for
+        the POINT_SPRITE_NV enable.
+
+New Procedures and Functions
+
+    void PointParameteriNV(enum pname, int param)
+    void PointParameterivNV(enum pname, const int *params)
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev, and by the <target> parameter of TexEnvi, TexEnviv,
+    TexEnvf, TexEnvfv, GetTexEnviv, and GetTexEnvfv:
+
+        POINT_SPRITE_NV                                0x8861
+
+    When the <target> parameter of TexEnvf, TexEnvfv, TexEnvi, TexEnviv,
+    GetTexEnvfv, or GetTexEnviv is POINT_SPRITE_NV, then the value of
+    <pname> may be:
+
+        COORD_REPLACE_NV                               0x8862
+
+    When the <target> and <pname> parameters of TexEnvf, TexEnvfv,
+    TexEnvi, or TexEnviv are POINT_SPRITE_NV and COORD_REPLACE_NV
+    respectively, then the value of <param> or the value pointed to by
+    <params> may be:
+
+        FALSE
+        TRUE
+
+    Accepted by the <pname> parameter of PointParameteriNV,
+    PointParameterfEXT, PointParameterivNV, PointParameterfvEXT,
+    GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+        POINT_SPRITE_R_MODE_NV                         0x8863
+
+    When the <pname> parameter of PointParameteriNV, PointParameterfEXT,
+    PointParameterivNV, or PointParameterfvEXT is
+    POINT_SPRITE_R_MODE_NV, then the value of <param> or the value
+    pointed to by <params> may be:
+
+        ZERO
+        S
+        R
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    Insert the following paragraphs after the second paragraph of section
+    3.3 (page 63):
+
+    "Point sprites are enabled or disabled by calling Enable or Disable
+    with the symbolic constant POINT_SPRITE_NV.  The default state is for
+    point sprites to be disabled.  When point sprites are enabled, the
+    state of the point antialiasing enable is ignored.
+
+    The point sprite R coordinate mode is set with one of the commands
+
+      void PointParameter{if}NV(enum pname, T param)
+      void PointParameter{if}vNV(enum pname, const T *params)
+
+    where pname is POINT_SPRITE_R_MODE_NV.  The possible values for param
+    are ZERO, S, and R.  The default value is ZERO.
+
+    The point sprite texture coordinate replacement mode is set with one
+    of the commands
+
+      void TexEnv{if}(enum target, enum pname, T param)
+      void TexEnv{if}v(enum target, enum pname, const T *params)
+
+    where target is POINT_SPRITE_NV and pname is COORD_REPLACE_NV.  The
+    possible values for param are FALSE and TRUE.  The default value for
+    each texture unit is for point sprite texture coordinate replacement
+    to be disabled."
+
+    Replace the first two sentences of the fourth paragraph of section
+    3.3 (page 63) with the following:
+
+    "The effect of a point width other than 1.0 depends on the state of
+    point antialiasing and point sprites.  If antialiasing and point
+    sprites are disabled, ..."
+
+    Replace the first sentences of the sixth paragraph of section 3.3
+    (page 64) with the following:
+
+    "If antialiasing is enabled and point sprites are disabled, ..."
+
+    Insert the following paragraphs at the end of section 3.3 (page 66):
+
+    "When point sprites are enabled, then point rasterization produces a
+    fragment for each framebuffer pixel whose center lies inside a square
+    centered at the point's (x_w, y_w), with side length equal to the
+    current point size.
+
+    All fragments produced in rasterizing a point sprite are assigned the
+    same associated data, which are those of the vertex corresponding to
+    the point, with texture coordinates s, t, and r replaced with s/q,
+    t/q, and r/q, respectively.  If q is less than or equal to zero, the
+    results are undefined.  However, for each texture unit where
+    COORD_REPLACE_NV is TRUE, these texture coordinates are replaced with
+    point sprite texture coordinates.  The s coordinate varies from 0 to
+    1 across the point horizontally, while the t coordinate varies from 0
+    to 1 vertically.  The r coordinate depends on the value of
+    POINT_SPRITE_R_MODE_NV.  If this is set to ZERO, then the r
+    coordinate is set to zero.  If it is set to S, then the r coordinate
+    is set to the s texture coordinate before coordinate replacement
+    takes place.  If it is set to R, then the r coordinate is set to the
+    r texture coordinate before coordinate replacement takes place.
+
+    The following formula is used to evaluate the s and t coordinates:
+
+      s = 1/2 + (x_f + 1/2 - x_w) / size
+      t = 1/2 - (y_f + 1/2 - y_w) / size
+
+    where size is the point's size, x_f and y_f are the (integral) window
+    coordinates of the fragment, and x_w and y_w are the exact, unrounded
+    window coordinates of the vertex for the point.
+
+    The widths supported for point sprites must be a superset of those
+    supported for antialiased points.  There is no requirement that these
+    widths must be equally spaced.  If an unsupported width is requested,
+    the nearest supported width is used instead."
+
+    Replace the text of section 3.3.1 (page 66) with the following:
+
+    "The state required to control point rasterization consists of the
+    floating-point point width, a bit indicating whether or not
+    antialiasing is enabled, a bit indicating whether or not point
+    sprites are enabled, the current value of the point sprite R
+    coordinate mode, and a bit for the point sprite texture coordinate
+    replacement mode for each texture unit."
+
+    Replace the text of section 3.3.2 (page 66) with the following:
+
+    "If MULTISAMPLE is enabled, and the value of SAMPLE_BUFFERS is one,
+    then points are rasterized using the following algorithm, regardless
+    of whether point antialiasing (POINT_SMOOTH) is enabled or disabled.
+    Point rasterization produces a fragment for each framebuffer pixel
+    with one or more sample points that intersect a region centered at
+    the point's (x_w, y_w).  This region is a circle having diameter
+    equal to the current point width if POINT_SPRITE_NV is disabled, or
+    a square with side equal to the current point width if
+    POINT_SPRITE_NV is enabled.  Coverage bits that correspond to sample
+    points that intersect the region are 1, other coverage bits are 0.
+    All data associated with each sample for the fragment are the data
+    associated with the point being rasterized, with the exception of
+    texture coordinates when POINT_SPRITE_NV is enabled; these texture
+    coordinates are computed as described in section 3.3.
+
+    Point size range and number of gradations are equivalent to those
+    supported for antialiased points when POINT_SPRITE_NV is disabled.
+    The set of point sizes supported is equivalent to those for point
+    sprites without multisample when POINT_SPRITE_NV is enabled."
+
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and
+State Requests)
+
+    None.
+
+GLX Protocol
+
+    Two new GL rendering commands are added. The following commands are
+    sent to the server as part of a glXRender request:
+
+        PointParameteriNV
+            2           12              rendering command length
+            2           4221            rendering command opcode
+            4           ENUM            pname
+                        0x8126 n==1     POINT_SIZE_MIN_ARB
+                        0x8127 n==1     POINT_SIZE_MAX_ARB
+                        0x8128 n==1     POINT_FADE_THRESHOLD_SIZE_ARB
+                        0x8863 n==1     POINT_SPRITE_R_MODE_NV
+            4           INT32           param
+
+        PointParameterivNV 
+            2           8+4*n           rendering command length
+            2           4222            rendering command opcode
+            4           ENUM            pname
+                        0x8126 n==1     POINT_SIZE_MIN_ARB
+                        0x8127 n==1     POINT_SIZE_MAX_ARB
+                        0x8128 n==1     POINT_FADE_THRESHOLD_SIZE_ARB
+                        0x8129 n==3     DISTANCE_ATTENUATION_ARB
+                        0x8863 n==1     POINT_SPRITE_R_MODE_NV
+            4*n         LISTofINT32     params
+
+Errors
+
+    None.
+
+New State
+
+(table 6.12, p. 220)
+
+    Get Value                Type    Get Command     Initial Value   Description             Sec    Attribute
+    ---------                ----    -----------     -------------   -----------             ------ ---------
+    POINT_SPRITE_NV          B       IsEnabled       False           point sprite enable     3.3    point/enable
+    POINT_SPRITE_R_MODE_NV   Z3      GetIntegerv     ZERO            R coordinate mode       3.3    point
+
+(table 6.17, p. 225)
+
+    Get Value                Type    Get Command     Initial Value   Description             Sec    Attribute
+    ---------                ----    -----------     -------------   -----------             ------ ---------
+    COORD_REPLACE_NV         2* x B  GetTexEnviv     False           coordinate replacement  3.3    point
+                                                                     enable
+
+NVIDIA Implementation Details
+
+    This extension was first supported for GeForce4 Ti only in NVIDIA's
+    Release 25 drivers.  Future drivers will support this extension on
+    all GeForce products.
+
+    However, the extension is only hardware-accelerated on the GeForce3
+    and GeForce4 Ti platforms.  In addition, there are restrictions on
+    the cases that are accelerated on the GeForce3.
+
+    In order to ensure that you get hardware acceleration on GeForce3,
+    make sure that:
+
+    1. The point sprite R mode is set to GL_ZERO.  (This is the default.)
+    2. Coordinate replacement is turned on for texture unit 3 and for no
+       other texture units.  This is non-obvious; using texture unit zero
+       will _not_ be accelerated.  Also, if coordinate replacement is off
+       for _all_ texture units, that's also unaccelerated.
+
+    So, in the typical usage case where you just want a single texture on
+    some points, you should enable TEXTURE_2D on unit 3 but disable it on
+    unit zero.
+
+    The GeForce4 Ti platform supports point sprites as large as 8192, but
+    the spacing between sizes becomes larger as the size increases.  All
+    other platforms do not support point sprite sizes above 64.
+
+ATI Implementation Details
+
+    This extension is supported on the Radeon 8000 series and later
+    platforms.
+
+    In order to ensure that Radeon 8000 series will accelerate point
+    sprite rendering using TCL hardware, make sure that the point sprite
+    R mode is set to GL_ZERO.  (This is the default.)
+
+    Radeon 8000 series can render points as large as 2047.
+
+Revision History
+
+    June 4, 2002 - Added implementation details section.  Fixed a typo in
+    the overview.  Changed behavior of point sizes so that fractional
+    sizes are allowed and so that implementations can support large point
+    sprites or use floating-point point size representations.
+    Significant rewrite of spec language to cover this new point size
+    behavior.
+
+    July 5, 2002 - Finished GLX protocol.
+
+    March 6, 2003 - Added issue to clarify Q handling for fragment
+    program extensions.  Added issue to clarify push/pop attrib handling.
+    Adjusted state tables so COORD_REPLACE_NV state appears in the
+    texture environment and generation table.

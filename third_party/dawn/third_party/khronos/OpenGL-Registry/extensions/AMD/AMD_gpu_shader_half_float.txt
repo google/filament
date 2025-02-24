@@ -1,0 +1,1093 @@
+Name
+
+    AMD_gpu_shader_half_float
+
+Name Strings
+
+    GL_AMD_gpu_shader_half_float
+
+Contact
+
+    Qun Lin, AMD (quentin.lin 'at' amd.com)
+
+Contributors
+
+    Qun Lin, AMD
+    Daniel Rakos, AMD
+    Donglin Wei, AMD
+    Graham Sellers, AMD
+    Rex Xu, AMD
+    Dominik Witczak, AMD
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         09/21/2016
+    Author Revision:            5
+
+Number
+
+    OpenGL Extension #496
+
+Dependencies
+
+    This extension is written against the OpenGL 4.5 (Core Profile)
+    Specification.
+
+    This extension is written against version 4.50 of the OpenGL Shading
+    Language Specification.
+
+    OpenGL 4.0 and GLSL 4.00 are required.
+
+    This extension interacts with ARB_gpu_shader_int64.
+
+    This extension interacts with AMD_shader_trinary_minmax.
+
+    This extension interacts with AMD_shader_explicit_vertex_parameter.
+
+Overview
+
+    This extension was developed based on the NV_gpu_shader5 extension to
+    allow implementations supporting half float in shader and expose the
+    feature without the additional requirements that are present in
+    NV_gpu_shader5.
+
+    The extension introduces the following features for all shader types:
+
+      * support for half float scalar, vector and matrix data types in shader;
+
+      * new built-in functions to pack and unpack half float types into a
+        32-bit integer vector;
+
+      * half float support for all existing single float built-in functions,
+        including angle functions, exponential functions, common functions,
+        geometric functions, matrix functions and etc.;
+
+    This extension is designed to be a functional superset of the half-precision
+    floating-point support from NV_gpu_shader5 and to keep source code compatible
+    with that, thus the new procedures, functions, and tokens are identical to
+    those found in that extension.
+
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Returned by the <type> parameter of GetActiveAttrib, GetActiveUniform, and
+    GetTransformFeedbackVarying:
+
+    (The tokens are identical to those defined in NV_gpu_shader5.)
+
+        FLOAT16_NV                                      0x8FF8
+        FLOAT16_VEC2_NV                                 0x8FF9
+        FLOAT16_VEC3_NV                                 0x8FFA
+        FLOAT16_VEC4_NV                                 0x8FFB
+
+    (New tokens)
+        FLOAT16_MAT2_AMD                                0x91C5
+        FLOAT16_MAT3_AMD                                0x91C6
+        FLOAT16_MAT4_AMD                                0x91C7
+        FLOAT16_MAT2x3_AMD                              0x91C8
+        FLOAT16_MAT2x4_AMD                              0x91C9
+        FLOAT16_MAT3x2_AMD                              0x91CA
+        FLOAT16_MAT3x4_AMD                              0x91CB
+        FLOAT16_MAT4x2_AMD                              0x91CC
+        FLOAT16_MAT4x3_AMD                              0x91CD
+
+
+Additions to Chapter 7 of the OpenGL 4.5 (Core Profile) Specification
+(Program Objects)
+
+    Modify Section 7.3.1, Program Interfaces
+
+    (add to Table 7.3, OpenGL Shading Language type tokens, p. 108)
+
+    +----------------------------+----------------+------+------+------+
+    | Type Name Token            | Keyword        |Attrib| Xfb  |Buffer|
+    +----------------------------+----------------+------+------+------+
+    | FLOAT16_NV                 | float16_t      |  *   |  *   |  *   |
+    | FLOAT16_VEC2_NV            | f16vec2        |  *   |  *   |  *   |
+    | FLOAT16_VEC3_NV            | f16vec3        |  *   |  *   |  *   |
+    | FLOAT16_VEC4_NV            | f16vec4        |  *   |  *   |  *   |
+    | FLOAT16_MAT2_AMD           | f16mat2        |  *   |  *   |  *   |
+    | FLOAT16_MAT3_AMD           | f16mat3        |  *   |  *   |  *   |
+    | FLOAT16_MAT4_AMD           | f16mat4        |  *   |  *   |  *   |
+    | FLOAT16_MAT2x3_AMD         | f16mat2x3      |  *   |  *   |  *   |
+    | FLOAT16_MAT2x4_AMD         | f16mat2x4      |  *   |  *   |  *   |
+    | FLOAT16_MAT3x2_AMD         | f16mat3x2      |  *   |  *   |  *   |
+    | FLOAT16_MAT3x4_AMD         | f16mat3x4      |  *   |  *   |  *   |
+    | FLOAT16_MAT4x2_AMD         | f16mat4x2      |  *   |  *   |  *   |
+    | FLOAT16_MAT4x3_AMD         | f16mat4x3      |  *   |  *   |  *   |
+    +----------------------------+----------------+------+------+------+
+
+
+    Modify Section 7.6.1, Loading Uniform Variables
+
+    (modify the last paragraph on p. 132)
+
+        The Uniform*f{v} commands will load count sets of one to four floating-
+    point values into a uniform defined as a float, a half float, a floating-
+    point vector, a half-precision floating-point vector or an array of either
+    of these types. Floating-point values are converted to half float by the GL
+    for uniforms defined as a half float, a half float vector or an array of
+    those.
+
+
+    Modify Section 7.6.2.1, Uniform Buffer Object Storage
+
+    (modify the first two bullets of the first paragraph on p. 136)
+
+    * Members of type bool, int, uint, float, float16_t and double are respectively
+      extracted from a buffer object by reading a single uint, int, uint, float,
+      half float or double value at the specified offset.
+
+    * Vectors with N elements with basic data types of bool, int, uint, float,
+      float16_t or double are extracted as N values in consecutive memory locations
+      beginning at the specified offset, with components stored in order with the
+      first (X) component at the lowest offset. The GL data type used for component
+      extraction is derived according to the rules for scalar members above.
+
+
+Additions to Chapter 11 of the OpenGL 4.5 (Core Profile) Specification
+(Programmable Vertex Processing)
+
+    Modify Section 11.1.1, Vertex Attributes
+
+    (modify Table 11.2, Generic attributes and vector types used by column vectors of
+    matrix variables bound to generic attribute index i. p. 366)
+
+    +------------------------------+-------------------------+-----------------------+
+    |          Data type           |Column vector type layout|     Generic           |
+    |                              |qualifier attributes used|                       |
+    +------------------------------+-------------------------+-----------------------+
+    | mat2, dmat2, f16mat2         | two-component vector    | i, i + 1              |
+    | mat2x3, dmat2x3, f16mat2x3   | three-component vector  | i, i + 1              |
+    | mat2x4, dmat2x4, f16mat2x4   | four-component vector   | i, i + 1              |
+    | mat3x2, dmat3x2, f16mat3x2   | two-component vector    | i, i + 1, i + 2       |
+    | mat3, dmat3, f16mat3         | three-component vector  | i, i + 1, i + 2       |
+    | mat3x4, dmat3x4, f16mat3x4   | four-component vector   | i, i + 1, i + 2       |
+    | mat4x2, dmat4x2, f16mat4x2   | two-component vector    | i, i + 1, i + 2, i + 3|
+    | mat4x3, dmat4x3, f16mat4x3   | three-component vector  | i, i + 1, i + 2, i + 3|
+    | mat4, dmat4, f16mat4         | four-component vector   | i, i + 1, i + 2, i + 3|
+    +------------------------------+-------------------------+-----------------------+
+
+    (modify Table 11.3: Scalar and vector vertex attribute types and VertexAttrib*
+    commands used to set the values of the corresponding generic attributes. p. 366)
+
+    +-------------------+--------------------------+
+    |   Data type       |         Command          |
+    +-------------------+--------------------------+
+    | float, float16_t  | VertexAttrib1*           |
+    | vec2, f16vec2     | VertexAttrib2*           |
+    | vec3, f16vec3     | VertexAttrib3*           |
+    | vec4, f16vec4     | VertexAttrib4*           |
+    +-------------------+--------------------------+
+
+
+    Modify Section 11.1.2.1, Output Variables
+
+    (modify the last paragraph on p. 374)
+
+    ..., each component of outputs declared as half-precision floating-point
+    scalars, vectors, or matrices is considered to consume two basic machine
+    units, and each component of any other type ...
+
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_AMD_gpu_shader_half_float : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_AMD_gpu_shader_half_float       1
+
+
+Additions to Chapter 3 of the OpenGL Shading Language Specification (Basics)
+
+
+    Modify Section 3.6, Keywords
+
+    (add the following to the list of reserved keywords at p. 18)
+
+    float16_t f16vec2 f16vec3 f16vec4
+    f16mat2  f16mat3  f16mat4
+    f16mat2x2 fl6mat2x3 f16mat2x4
+    f16mat3x2 f16mat3x3 f16mat3x4
+    f16mat4x2 f16mat4x3 f16mat4x4
+
+
+Additions to Chapter 4 of the OpenGL Shading Language Specification
+(Variables and Types)
+
+
+    Modify Section 4.1, Basic Types
+
+    (add to the basic "Transparent Types" table, p. 23)
+
+    +-----------+------------------------------------------------------------+
+    | Type      | Meaning                                                    |
+    +-----------+------------------------------------------------------------+
+    | float16_t | a half-precision floating-point scalar                     |
+    | f16vec2   | a two-component half-precision floating-point vector       |
+    | f16vec3   | a three-component half-precision floating-point vector     |
+    | f16vec4   | a four-component half-precision floating-point vector      |
+    | f16mat2   | a 2x2 half-precision floating-point matrix                 |
+    | f16mat3   | a 3x3 half-precision floating-point matrix                 |
+    | f16mat4   | a 4x4 half-precision floating-point matrix                 |
+    | f16mat2x2 | same as a f16mat2                                          |
+    | f16mat2x3 | a half-precision floating-point matrix with 2 columns and  |
+    |           | 3 rows                                                     |
+    | f16mat2x4 | a half-precision floating-point matrix with 2 columns and  |
+    |           | 4 rows                                                     |
+    | f16mat3x2 | a half-precision floating-point matrix with 3 columns and  |
+    |           | 2 rows                                                     |
+    | f16mat3x3 | same as a f16mat3                                          |
+    | f16mat3x4 | a half-precision floating-point matrix with 3 columns and  |
+    |           | 4 rows                                                     |
+    | f16mat4x2 | a half-precision floating-point matrix with 4 columns and  |
+    |           | 2 rows                                                     |
+    | f16mat4x3 | a half-precision floating-point matrix with 4 columns and  |
+    |           | 3 rows                                                     |
+    | f16mat4x4 | same as a f16mat4                                          |
+    +-----------+------------------------------------------------------------+
+
+
+    Modify Section 4.1.4, Floating-Point Variables
+
+    (replace first paragraph of the section, p. 29)
+
+    Single-precision, double-precision and half-precision floating point variables
+    are available for use in a variety of scalar calculations. Generally, the term
+    floating-point will refer to all single-, double- and half-precision floating
+    point. Floating-point variables are defined as in the following examples:
+
+        float a, b = 1.5;       // single-precision floating-point
+        double c, d = 2.0LF;    // double-precision floating-point
+        float16_t e, f = 3.0HF; // half-precision floating-point
+
+    As an input value to one of the processing units, a single-precision, double-
+    precision or half-precison floating-point variable is expected to match the
+    corresponding IEEE 754 floating-point definition in terms of precision and
+    dynamic range.
+
+    (modify grammar rule for "floating-suffix", p. 30)
+
+      floating-suffix: one of
+        f F lf LF hf HF
+
+    (modify the fourth sentence of second paragraph on p. 30)
+
+    When the suffix "lf" or "LF" is present, the literal has type double. When the
+    suffix "hf" or "HF" is present, the literal has type float16_t. Otherwise, the
+    literal has type float.
+
+
+    Modify Section 4.1.6, Matrices
+
+    (modify the second sentence in the section, p. 30)
+
+    Matrix types beginning with "mat" have single-precision components, matrix
+    types beginning with "dmat" have double-precision components and matrix types
+    beginning with "f16mat" have half-precision components.
+
+
+    Modify Section 4.1.10, Implicit Conversions
+
+    (modify the implicit conversion table on p. 37)
+
+    +-----------------------+-------------------------------------------------+
+    | Type of expression    | Can be implicitly converted to                  |
+    +-----------------------+-------------------------------------------------+
+    | int, uint, float16_t  | float                                           |
+    | ivec2, uvec2, f16vec2 | vec2                                            |
+    | ivec3, uvec3, f16vec3 | vec3                                            |
+    | ivec4, uvec4, f16vec4 | vec4                                            |
+    | f16mat2               | mat2                                            |
+    | f16mat3               | mat3                                            |
+    | f16mat4               | mat4                                            |
+    | f16mat2x3             | mat2x3                                          |
+    | f16mat2x4             | mat2x4                                          |
+    | f16mat3x2             | mat3x2                                          |
+    | f16mat3x4             | mat3x4                                          |
+    | f16mat4x2             | mat4x2                                          |
+    | f16mat4x3             | mat4x3                                          |
+    | int, uint,            | double                                          |
+    | float, float16_t      |                                                 |
+    | ivec2, uvec2,         | dvec2                                           |
+    | vec2, f16vec2         |                                                 |
+    | ivec3, uvec3,         | dvec3                                           |
+    | vec3, f16vec3         |                                                 |
+    | ivec4, uvec4,         | dvec4                                           |
+    | vec4, f16vec4         |                                                 |
+    | mat2, f16mat2,        | dmat2                                           |
+    | mat3, f16mat3         | dmat3                                           |
+    | mat4, f16mat4         | dmat4                                           |
+    | mat2x3, f16mat2x3     | dmat2x3                                         |
+    | mat2x4, f16mat2x4     | dmat2x4                                         |
+    | mat3x2, f16mat3x2     | dmat3x2                                         |
+    | mat3x4, f16mat3x4     | dmat3x4                                         |
+    | mat4x2, f16mat4x2     | dmat4x2                                         |
+    | mat4x3, f16mat4x3     | dmat4x3                                         |
+    +-----------------------+-------------------------------------------------+
+
+
+    Modify Section 4.4.2.1 Transform Feedback Layout Qualifiers
+
+    (insert after the fourth paragraph in the section on p. 70)
+
+    ... will be a multiple of 8; if applied to an aggregrate containing a
+    float16_t, the offset must also be a multiple of 2, and the space taken in
+    the buffer will be a multiple of 2.
+
+
+    Modify Section 4.7.1 Range and Precision
+
+    (insert after the first paragraph in the section on p. 85)
+
+    ... and positive and negative zeros. The precision of stored half-
+    precision floating-point variables is described in section 2.3.3.2 "16-Bit
+    Floating-Point Numbers" of OpenGL Specification.
+
+    The following rules apply to all floating operations, including single-,
+    double- and half-precision operations:...
+
+
+Additions to Chapter 5 of the OpenGL Shading Language Specification
+(Operators and Expressions)
+
+
+    Modify Section 5.4.1, Conversion and Scalar Constructors
+
+    (add after the first list of constructor examples on p. 97)
+
+      int(float16_t)    // convert a float16_t value to a signed integer
+      uint(float16_t)   // convert a float16_t value to an unsigned integer
+      bool(float16_t)   // convert a float16_t value to a Boolean
+      float(float16_t)  // convert a float16_t value to a float value
+      double(float16_t) // convert a float16_t value to a double value
+      float16_t(bool)   // convert a Boolean to a float16_t value
+      float16_t(int)    // convert a signed integer to a float16_t value
+      float16_t(uint)   // convert an unsigned integer to a float16_t value
+      float16_t(float)  // convert a float value to a float16_t value
+      float16_t(double) // convert a double value to a float16_t value
+
+    (modify the first sentence of last paragraph on p. 98)
+
+    ... other arguments.
+    If the basic type (bool, int, float, double, or float16_t) of a parameter to
+    a constructor does not match the basic type of the object being constructed,
+    the scalar construction rules (above) are used to convert the parameters.
+
+
+Additions to Chapter 6 of the OpenGL Shading Language Specification
+(Statements and Structure)
+
+
+    Modify Section 6.1, Function Defintions
+
+    (replace the second rule in third paragraph on p. 113)
+
+      2. A match involving a conversion from a signed integer, unsigned
+         integer, or floating-point type to a similar type having a larger
+         number of bits is better than a match involving any other implicit
+         conversion.
+
+Additions to Chapter 8 of the OpenGL Shading Language Specification
+(Built-in Functions)
+
+    (insert after the sixth sentence of last paragraph on p. 140)
+
+    ... genDType is used as the argument. Where the input arguments (and
+    corresponding output) can be float16_t, f16vec2, f16vec3, f16vec4,
+    genF16Type is used as the argument.
+
+
+    Modify Section 8.1, Angle and Trigonometry Functions
+
+    (add to the table of Angle and Trigonometry Functions on p. 141)
+
+    +------------------------------------------------+----------------------------------------------------+
+    | Syntax                                         | Desciption                                         |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type radians (genF16Type degrees)        | Converts degrees to radians, i.e., 180/PI *        |
+    |                                                | degrees.                                           |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type degrees (genF16Type radians)        | Converts radians to degrees, i.e., 180/PI *        |
+    |                                                | radians.                                           |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type sin (genF16Type angle)              | The standard trigonometric sine function.          |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type cos (genF16Type angle)              | The standard trigonometric cosine function         |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type tan (genF16Type angle)              | The standard trigonometric tangent.                |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type asin (genF16Type x)                 | Arc sine. Returns an angle whose sine is x. The    |
+    |                                                | range of values returned by this function is [-PI/2|
+    |                                                | , PI/2] Results are undefined if |x| > 1.          |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type acos (genF16Type x)                 | Arc cosine. Returns an angle whose cosine is x. The|
+    |                                                | range of values returned by this function is [0, p]|
+    |                                                | Results are undefined if |x| > 1.                  |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type atan (genF16Type y, genF16Type x)   | Arc tangent. Returns an angle whose tangent is y/x.|
+    |                                                | The signs of x and y are used to determine what    |
+    |                                                | quadrant the angle is in. The range of values      |
+    |                                                | returned by this function is [-PI,PI]. Results are |
+    |                                                | undefined if x and y are both 0.                   |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type atan (genF16Type y_over_x)          | Arc tangent. Returns an angle whose tangent is     |
+    |                                                | y_over_x. The range of values returned by this     |
+    |                                                | function is [-PI/2, PI/2].                         |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type sinh (genF16Type x)                 | Returns the hyperbolic sine function               |
+    |                                                | (e^x - e^-x) / 2.                                  |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type cosh (genF16Type x)                 | Returns the hyperbolic cosine function             |
+    |                                                | (e^x + e^-x) / 2.                                  |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type tanh (genF16Type x)                 | Returns the hyperbolic tangent function            |
+    |                                                | sinh(x) / cosh(x).                                 |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type asinh (genF16Type x)                | Arc hyperbolic sine; returns the inverse of sinh.  |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type acosh (genF16Type x)                | Arc hyperbolic cosine; returns the non-negative    |
+    |                                                | inverse of cosh. Results are undefined if x < 1.   |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type atanh (genF16Type x)                | Arc hyperbolic tangent; returns the inverse of     |
+    |                                                | tanh. Results are undefined if |x| >= 1.           |
+    +------------------------------------------------+----------------------------------------------------+
+
+
+    Modify Section 8.2, Exponential Functions
+
+    (add to the table of Exponential Functions on p. 143)
+
+    +------------------------------------------------+----------------------------------------------------+
+    | Syntax                                         | Desciption                                         |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type pow (genF16Type x, genF16Type y)    | Returns x raised to the y power, i.e., x^y         |
+    |                                                | Results are undefined if x < 0.                    |
+    |                                                | Results are undefined if x = 0 and y <= 0.         |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type exp (genF16Type x)                  | Returns the natural exponentiation of x, i.e., e^x.|
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type log (genF16Type x)                  | Returns the natural logarithm of x, i.e., returns  |
+    |                                                | the value y which satisfies the equation x = e^y.  |
+    |                                                | Results are undefined if x <= 0.                   |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type exp2 (genF16Type x)                 | Returns 2 raised to the x power, i.e., 2^x.        |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type log2 (genF16Type x)                 | Returns the base 2 logarithm of x, i.e., returns   |
+    |                                                | the value y which satisfies the equation x = 2^y   |
+    |                                                | Results are undefined if x <= 0.                   |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type sqrt (genF16Type x)                 | Returns sqrt(x) .Results are undefined if x < 0.   |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type inversesqrt (genF16Type x)          | Returns 1 / sqrt(x). Results are undefined if      |
+    |                                                | x <= 0.                                            |
+    +------------------------------------------------+----------------------------------------------------+
+
+
+    Modify Section 8.3, Common Functions
+
+    (add to the table of common functions on p. 144)
+
+    +------------------------------------------------+----------------------------------------------------+
+    | Syntax                                         | Desciption                                         |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type abs(genF16Type x)                   | Returns x if x >= 0; otherwise it returns -x.      |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type sign(genF16Type x)                  | Returns 1.0 if x > 0, 0.0 if x = 0, or -1.0 if x < |
+    |                                                | 0.                                                 |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type floor (genF16Type x)                | Returns a value equal to the nearest integer that  |
+    |                                                | is less than or equal to x.                        |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type trunc (genF16Type x)                | Returns a value equal to the nearest integer to x  |
+    |                                                | whose absolute value is not larger than the        |
+    |                                                | absolute value of x.                               |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type round (genF16Type x)                | Returns a value equal to the nearest integer to x. |
+    |                                                | The fraction 0.5 will round in a direction chosen  |
+    |                                                | by the implementation, presumably the direction    |
+    |                                                | that is fastest. This includes the possibility     |
+    |                                                | that round(x) returns the same value as            |
+    |                                                | roundEven(x) for all values of x.                  |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type roundEven (genF16Type x)            | Returns a value equal to the nearest integer to x. |
+    |                                                | A fractional part of 0.5 will round toward the     |
+    |                                                | nearest even integer. (Both 3.5 and 4.5 for x will |
+    |                                                | return 4.0.)                                       |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type ceil (genF16Type x)                 | Returns a value equal to the nearest integer that  |
+    |                                                | is greater than or equal to x.                     |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type fract (genF16Type x)                | Returns x - floor(x).                              |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type mod (genF16Type x, float16_t y)     | Modulus. Returns x - y * floor(x/y).               |
+    | genF16Type mod (genF16Type x, genF16Type y)    |                                                    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type modf(genF16Type x, out genF16Type i)| Returns the fractional part of x and sets i to the |
+    |                                                | integer part (as a whole number floating-point     |
+    |                                                | value). Both the return value and the output       |
+    |                                                | parameter will have the same sign as x.            |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type min(genF16Type x,                   | Returns y if y < x; otherwise it returns x.        |
+    |                genF16Type y)                   |                                                    |
+    | genF16Type min(genF16Type x,                   |                                                    |
+    |                float16_t y)                    |                                                    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type max(genF16Type x,                   | Returns y if x < y; otherwise it returns x.        |
+    |                genF16Type y)                   |                                                    |
+    | genF16Type max(genF16Type x,                   |                                                    |
+    |                float16_t y)                    |                                                    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type clamp(genF16Type x,                 | Returns min(max(x, minVal), maxVal).               |
+    |                  genF16Type minVal,            |                                                    |
+    |                  genF16Type maxVal)            | Results are undefined if minVal > maxVal.          |
+    | genF16Type clamp(genF16Type x,                 |                                                    |
+    |                  float16_t minVal,             |                                                    |
+    |                  float16_t maxVal)             |                                                    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type mix(genF16Type x,                   | Selects which vector each returned component comes |
+    |                genF16Type y,                   | from. For a component of a that is false, the      |
+    |                genF16Type a)                   | corresponding component of x is returned. For a    |
+    | genF16Type mix(genF16Type x,                   | component of a that is true, the corresponding     |
+    |                genF16Type y,                   | component of y is returned.                        |
+    |                float16_t a)                    |                                                    |
+    | genF16Type mix(genF16Type x,                   |                                                    |
+    |                genF16Type y,                   |                                                    |
+    |                genBType a)                     |                                                    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type step (genF16Type edge, genF16Type x)| Returns 0.0 if x < edge; otherwise it returns 1.0. |
+    | genF16Type step (float16_t edge, genF16Type x) |                                                    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type smoothstep (genF16Type edge0,       | Returns 0.0 if x <= edge0 and 1.0 if x >= edge1    |
+    |                        genF16Type edge1,       | and performs smooth Hermite interpolation between 0|
+    |                        genF16Type x)           | and 1 when edge0 < x < edge1. This is useful in    |
+    | genF16Type smoothstep (float16_t edge0,        | cases where you would want a threshold function    |
+    |                        float16_t edge1         | with a smooth,transition. This is equivalent to:   |
+    |                        genF16Type x)           |    genF16Type t;                                   |
+    |                                                |    t = clamp((x - edge0) / (edge1 - edge0), 0, 1); |
+    |                                                |    return t * t * (3 - 2 * t);                     |
+    |                                                |    Results are undefined if edge0 >= edge1.        |
+    +------------------------------------------------+----------------------------------------------------+
+    | genBType isnan (genF16Type x)                  | Returns true if x holds a NaN. Returns false       |
+    |                                                | otherwise. Always returns false if NaNs are not    |
+    |                                                | implemented.                                       |
+    +------------------------------------------------+----------------------------------------------------+
+    | genBType isinf (genF16Type x)                  | Returns true if x holds a positive infinity or     |
+    |                                                | negative infinity. Returns false otherwise.        |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type fma (genF16Type a, genF16Type b,    | Computes and returns a * b + c.                    |
+    |                 genF16Type c)                  |                                                    |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type frexp (genF16Type x,                | Splits x into a floating-point significand in the  |
+    |                   out genIType exp)            | range [0.5, 1.0) and an integral exponent of two,  |
+    |                                                | such that:                                         |
+    |                                                |    x = significand * 2^exp                         |
+    |                                                | The significand is returned by the function and the|
+    |                                                | exponent is returned in the parameter exp. For a   |
+    |                                                | floating-point value of zero, the significand and  |
+    |                                                | exponent are both zero. For a floating-point value |
+    |                                                | that is an infinity or is not a number, the results|
+    |                                                | are undefined.                                     |
+    +------------------------------------------------+----------------------------------------------------+
+    | genF16Type ldexp (genF16Type x,                | Builds a floating-point number from x and the      |
+    |                   in genIType exp)             | corresponding integral exponent of two in exp,     |
+    |                                                | returning:                                         |
+    |                                                |    x* 2^exp                                        |
+    |                                                | If this product is too large to be represented in  |
+    |                                                | the floating-point type, the result is undefined.  |
+    +------------------------------------------------+----------------------------------------------------+
+
+
+    Modify Section 8.4, Floating-Point Pack and Unpack Functions
+
+    (add to the table of pack and unpack functions on p. 149)
+
+    +-----------------------------------+------------------------------------------------------+
+    | Syntax                            | Desciption                                           |
+    +-----------------------------------+------------------------------------------------------+
+    | uint packFloat2x16(f16vec2 v)     | Returns an unsigned 32-bit integer obtained by       |
+    |                                   | packing the components of a two-component half-      |
+    |                                   | precision floating-point vector, respectively. The   |
+    |                                   | first vector component specifies the 16 least        |
+    |                                   | significant bits; the second component specifies the |
+    |                                   | 16 most significant bits.                            |
+    +-----------------------------------+------------------------------------------------------+
+    | f16vec2 unpackFloat2x16(uint v)   | Returns a two-component half-precision floating-point|
+    |                                   | vector built from a 32-bit unsigned integer scalar,  |
+    |                                   | respectively. The first component of the vector      |
+    |                                   | contains the 16 least significant bits of the input; |
+    |                                   | the second component contains the 16 most            |
+    |                                   | significant bits.                                    |
+    +-----------------------------------+------------------------------------------------------+
+
+
+    Modify Section 8.5 Geometric Functions
+
+    (add to table of geometric functions on p.152)
+
+    +-------------------------------------------+-----------------------------------------------+
+    | Syntax                                    | Desciption                                    |
+    +-------------------------------------------+-----------------------------------------------+
+    | float16_t length (genF16Type x)           | Returns the length of vector x, i.e.,         |
+    |                                           | sqrt(x[0]*x[0] + x[1]*x[1] + ...)             |
+    +-------------------------------------------+-----------------------------------------------+
+    | float16_t distance (genF16Type p0,        | Returns the distance between p0 and p1, i.e., |
+    |                     genF16Type p1)        | length (p0 - p1)                              |
+    +-------------------------------------------+-----------------------------------------------+
+    | float16_t dot (genF16Type x, genF16Type y)| Returns the dot product of x and y, i.e.,     |
+    |                                           | x[0]*y[0] + x[1]*y [1] + ...                  |
+    +-------------------------------------------+-----------------------------------------------+
+    | f16vec3 cross (f16vec3 x, f16vec3 y)      | Returns the cross product of x and y, i.e.,   |
+    |                                           | |x[1] * y[2] - y[1] * x[2]|                   |
+    |                                           | |x[2] * y[0] - y[2] * x[0]|                   |
+    |                                           | |x[0] * y[1] - y[0] * x[1]|                   |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type normalize (genF16Type x)       | Returns a vector in the same direction as x   |
+    |                                           | but with a length of 1.                       |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type faceforward (genF16Type N,     | If dot(Nref, I) < 0 return N, otherwise return|
+    |                         genF16Type I,     | -N.                                           |
+    |                         genF16Type Nref), |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type reflect (genF16Type I,         | For the incident vector I and surface         |
+    |                     genF16Type N)         | orientation N, returns the reflection         |
+    |                                           | direction:                                    |
+    |                                           |    I - 2 * dot(N, I) * N                      |
+    |                                           | N must already be normalized in order to      |
+    |                                           | achieve the desired result.                   |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type refract (genF16Type I,         | For the incident vector I and surface normal  |
+    |                     genF16Type N,         | N, and the ratio of indices of refraction eta,|
+    |                     float16_t eta)        | return the refraction vector. The result is   |
+    |                                           | computed by                                   |
+    |                                           |    k = 1.0 - eta * eta * (1.0 - dot(N, I) *   |
+    |                                           |                dot(N, I))                     |
+    |                                           | if (k < 0.0)                                  |
+    |                                           |     return genF16Type(0.0)                    |
+    |                                           | else                                          |
+    |                                           |    return eta * I - (eta * dot(N, I)          |
+    |                                           |                      + sqrt(k)) * N           |
+    |                                           | The input parameters for the incident vector  |
+    |                                           | I and the surface normal N must already be    |
+    |                                           | normalized to get the desired results.        |
+    +-------------------------------------------+-----------------------------------------------+
+
+
+    Modify Section, 8.6 Matrix Functions
+
+    (modify the first paragraph of the section on p. 154)
+
+    ..., there is both a single-precision floating-point version, where all
+    arguments and return values are single precision, a double-precision
+    floating-point version, where all arguments and return values are double
+    precision, and a half-precision floating-point version, where all
+    arguments and return values are half precision.
+
+
+    Modify Section, 8.7, Vector Relational Functions
+
+    (add to the table of placeholders at the top of p. 156)
+
+    +-------------+-----------------------------+
+    | Placeholder | Specific Types Allowed      |
+    +-------------+-----------------------------+
+    | f16vec      | f16vec2, f16vec3, f16vec4   |
+    +-------------+-----------------------------+
+
+    (add to the table of vector relational functions at the bottom of p. 156)
+
+    +-------------------------------------------+-----------------------------------------------+
+    | Syntax                                    | Desciption                                    |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec lessThan(f16vec x, f16vec y)         | Returns the component-wise compare of x < y.  |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec lessThanEqual(f16vec x, f16vec y)    | Returns the component-wise compare of x <= y. |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec greaterThan(f16vec x, f16vec y)      | Returns the component-wise compare of x > y.  |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec greaterThanEqual(f16vec x, f16vec y) | Returns the component-wise compare of x >= y. |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec equal(f16vec x, f16vec y)            | Returns the component-wise compare of x == y. |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec notEqual(f16vec x, f16vec y)         | Returns the component-wise compare of x != y. |
+    +-------------------------------------------+-----------------------------------------------+
+
+
+    Modify Section 8.13.1 Derivative Functions
+
+    (add to table of derivative functions on p. 181)
+
+    +-------------------------------------------+-----------------------------------------------+
+    | Syntax                                    | Description                                   |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type dFdx (genF16Type p)            | Returns either dFdxFine(p) or dFdxCoarse(p),  |
+    |                                           | based on implementation choice, presumably    |
+    |                                           | whichever is the faster, or by whichever is   |
+    |                                           | selected in the API through                   |
+    |                                           | quality-versus-speed hints.                   |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type dFdy (genF16Type p)            | Returns either dFdyFine(p) or dFdyCoarse(p),  |
+    |                                           | based on implementation choice, presumably    |
+    |                                           | whichever is the faster, or by whichever is   |
+    |                                           | selected in the API through                   |
+    |                                           | quality-versus-speed hints.                   |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type dFdxFine (genF16Type p)        | Returns the partial derivative of p with      |
+    |                                           | respect to the window x coordinate. Will use  |
+    |                                           | local differencing based on the value of p    |
+    |                                           | for the current fragment and its immediate    |
+    |                                           | neighbor(s).                                  |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type dFdyFine (genF16Type p)        | Returns the partial derivative of p with      |
+    |                                           | respect to the window y coordinate. Will use  |
+    |                                           | local differencing based on the value of p    |
+    |                                           | for the current fragment and its immediate    |
+    |                                           | neighbor(s).                                  |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type dFdxCoarse (genF16Type p)      | Returns the partial derivative of p with      |
+    |                                           | respect to the window x coordinate. Will use  |
+    |                                           | local differencing based on the value of p    |
+    |                                           | for the current fragment's neighbors, and     |
+    |                                           | will possibly, but not necessarily, include   |
+    |                                           | the value of p for the current fragment. That |
+    |                                           | is, over a given area, the implementation can |
+    |                                           | x compute derivatives in fewer unique         |
+    |                                           | locations than would be allowed for           |
+    |                                           | dFdxFine(p).                                  |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type dFdyCoarse (genF16Type p)      | Returns the partial derivative of p with      |
+    |                                           | respect to the window y coordinate. Will use  |
+    |                                           | local differencing based on the value of p    |
+    |                                           | for the current fragment's neighbors, and     |
+    |                                           | will possibly, but not necessarily, include   |
+    |                                           | the value of p for the current fragment. That |
+    |                                           | is, over a given area, the implementation can |
+    |                                           | compute y derivatives in fewer unique         |
+    |                                           | locations than would be allowed for           |
+    |                                           | dFdyFine(p).                                  |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type fwidth (genF16Type p)          | Returns abs(dFdx(p)) + abs(dFdy(p)).          |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type fwidthFine (genF16Type p)      | Returns abs(dFdxFine(p)) + abs(dFdyFine(p)).  |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type fwidthCoarse (genF16Type p)    | Returns abs(dFdxCoarse(p)) +                  |
+    |                                           |         abs(dFdyCoarse(p)).                   |
+    +-------------------------------------------+-----------------------------------------------+
+
+
+    Modify Section 8.13.2 Interpolation Functions
+
+    (add to table of interpolation functions on p. 180)
+
+    +-------------------------------------------+-----------------------------------------------+
+    | Syntax                                    | Description                                   |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type interpolateAtCentroid (        | Returns the value of the input interpolant    |
+    |            genF16Type interpolant)        | sampled at a location inside both the pixel   |
+    |                                           | and the primitive being processed. The value  |
+    |                                           | obtained would be the same value assigned to  |
+    |                                           | the input variable if declared with the       |
+    |                                           | centroid qualifier                            |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type interpolateAtSample (          | Returns the value of the input interpolant    |
+    |            genF16Type interpolant,        | variable at the location of sample number     |
+    |            int        sample)             | sample. If multisample buffers are not        |
+    |                                           | available, the input variable will be         |
+    |                                           | evaluated at the center of the pixel. If      |
+    |                                           | sample sample does not exist, the position    |
+    |                                           | used to interpolate the input variable is     |
+    |                                           | undefined.                                    |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type interpolateAtOffset (          | Returns the value of the input interpolant    |
+    |            genF16Type interpolant,        | variable sampled at an offset from the center |
+    |            f16vec2    offset)             | of the pixel specified by offset. The two     |
+    |                                           | floating-point components of offset, give the |
+    |                                           | offset in pixels in the x and y directions,   |
+    |                                           | respectively. An offset of (0, 0) identifies  |
+    |                                           | the center of the pixel. The range and        |
+    |                                           | granularity of offsets supported by this      |
+    |                                           | function isimplementation-dependent.          |
+    +-------------------------------------------+-----------------------------------------------+
+
+
+    Modify Section 9, Shading Language Grammar for Core Profile
+
+    (add to the list of tokens on p. 187)
+
+      ...
+      FLOAT16  F16VEC2  F16VEC3  F16VEC4
+      F16MAT2 F16MAT3 F16MAT4
+      F16MAT2X2 FL6MAT2X3 F16MAT2X4
+      F16MAT3X2 F16MAT3X3 F16MAT3X4
+      F16MAT4X2 F16MAT4X3 F16MAT4X4
+      ...
+      FLOAT16CONSTANT
+
+    (add to the rule of "primary_expression" on p. 188)
+
+      primary_expression:
+        ...
+        FLOAT16CONSTANT
+        ...
+
+    (add to the rule of "type_specifier_nonarray" on p. 195)
+
+      type_specifier_nonarray:
+        ...
+          FLOAT16
+          F16VEC2
+          F16VEC3
+          F16VEC4
+          F16MAT2
+          F16MAT3
+          F16MAT4
+          F16MAT2X2
+          FL6MAT2X3
+          F16MAT2X4
+          F16MAT3X2
+          F16MAT3X3
+          F16MAT3X4
+          F16MAT4X2
+          F16MAT4X3
+          F16MAT4X4
+        ...
+
+
+Dependencies on ARB_gpu_shader_int64
+
+    If the shader enables ARB_gpu_shader_int64, this extension allows
+    additional explicit conversions between half-precision floating-point
+    types and 64-bit integer types.
+
+    Modify Section 5.4.1, Conversion and Scalar Constructors
+
+    (add after the first list of constructor examples on p. 95)
+
+      int64_t(float16_t)    // convert a float16_t value to a signed 64-bit integer
+      uint64_t(float16_t)   // convert a float16_t value to an unsigned 64-bit integer
+      float16_t(int64_t)    // convert a signed 64-bit integer to a float16_t value
+      float16_t(uint64_t)   // convert an unsigned 64-bit integer to a float16_t value
+
+
+Dependencies on AMD_shader_trinary_minmax
+
+    If the shader enables AMD_shader_trinary_minmax, this extension adds
+    additional common functions.
+
+    Modify Section 8.3, Common Functions
+
+    (add to the table of common functions on p. 144)
+
+    +-------------------------------------------+-----------------------------------------------+
+    | Syntax                                    | Description                                   |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type min3(genF16Type x,             | Returns the per-component minimum value of x, |
+    |                 genF16Type y,             | y, and z.                                     |
+    |                 genF16Type z)             |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type max3(genF16Type x,             | Returns the per-component maximum value of x, |
+    |                 genF16Type y,             | y, and z.                                     |
+    |                 genF16Type z)             |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type mid3(genF16Type x,             | Returns the per-component median value of x,  |
+    |                 genF16Type y,             | y, and z.                                     |
+    |                 genF16Type z)             |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+
+
+Dependencies on AMD_shader_explicit_vertex_parameter
+
+    If the shader enables AMD_shader_explicit_vertex_parameter, this extension
+    adds additional interpolation functions.
+
+    Modify Section 8.13.2 Interpolation Functions
+
+    (add to table of interpolation functions on p. 180)
+
+    +-------------------------------------------+-----------------------------------------------+
+    | Syntax                                    | Description                                   |
+    +-------------------------------------------+-----------------------------------------------+
+    | genF16Type interpolateAtVertexAMD (       | Returns the value of the input <interpolant>  |
+    |            genF16Type interpolant,        | without any interpolation. i.e. the raw       |
+    |            uint       vertexIdx)          | output value of previous shader stage.        |
+    |                                           | <vertexIdx> selects for which vertex of the   |
+    |                                           | primitive the value of <interpolant> is       |
+    |                                           | returned.                                     |
+    |                                           |                                               |
+    |                                           | This return value is equivalent with          |
+    |                                           | interpolating the input <interpolant> using   |
+    |                                           | the following set of barycentric coordinates, |
+    |                                           | depending on the value of <vertexIdx>:        |
+    |                                           |                                               |
+    |                                           |  vertexIdx    Barycentric coordinates         |
+    |                                           |  0            I=0, J=0, K=1                   |
+    |                                           |  1            I=1, J=0, K=0                   |
+    |                                           |  2            I=0, J=1, K=0                   |
+    |                                           |                                               |
+    |                                           | However this order has no association with    |
+    |                                           | the vertex order specified by the application |
+    |                                           | in the originating draw.                      |
+    |                                           |                                               |
+    |                                           | The value of <vertexIdx> must be constant     |
+    |                                           | integer expression with a value in the range  |
+    |                                           | [0, 2].                                       |
+    +-------------------------------------------+-----------------------------------------------+
+
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) How the functionality in this extension different than the half_precision
+        floating-point types introduced by NV_gpu_shader5?
+
+      RESOLVED: This extension is designed to be source code compatible with
+      the half-precison floating-point support in NV_gpu_shader5. However, it
+      is a functional superset of that, as it adds the following additional
+      features:
+
+        * support for implicit conversions from int, uint and float to float16_t.
+
+        * support for overloaded versions of the functions, such as abs, sign, min,
+          max, clamp, and etc., that accept float16_t type or half-precision
+          floating-point type as parameters.
+
+    (2) What should be done to distinguish half-precison floating-point constants?
+
+      RESOLVED: We will use "HF" and "hf" to identify half-precision
+      floating-point constants.
+
+    (3) Should we import new uniform API to setup the float16_t type uniform in
+        default uniform block?
+
+      RESOLVED: No. float16_t isn't a IEEE standard format, CPU doesn't support
+      it directly. So most data on CPU side is stored in the form of single- or
+      double-precision floating-point precision floating-point. Uniform*f{v}'s
+      functionality is extended to support uniforms with float16_t type in this
+      extension.
+
+    (4) Should we support float16_t types as members of uniform blocks,
+        shader storage buffer blocks, or as transform feedback varyings?
+
+      RESOLVED: Yes, support all of them. float16_t types will consume two
+      basic machine units. Some examples:
+
+          struct S {
+
+              float16_t  x;     // rule 1:  align = 2, takes offsets 0-1
+              f16vec2    y;     // rule 2:  align = 4, takes offsets 4-7
+              f16vec3    z;     // rule 3:  align = 8, takes offsets 8-13
+          };
+
+          layout(column_major, std140) uniform B1 {
+
+              float16_t  a;     // rule 1:  align = 2, takes offsets 0-1
+              f16vec2    b;     // rule 2:  align = 4, takes offsets 4-7
+              f16vec3    c;     // rule 3:  align = 8, takes offsets 8-13
+              float16_t  d[2];  // rule 4:  align = 16, array stride = 16,
+                                //          takes offsets 16-47
+              f16mat2x3  e;     // rule 5:  align = 16, matrix stride = 16,
+                                //          takes offsets 48-79
+              f16mat2x3  f[2];  // rule 6:  align = 16, matrix stride = 16,
+                                //          array stride = 32, f[0] takes
+                                //          offsets 80-111, f[1] takes offsets
+                                //          112-143
+              S          g;     // rule 9:  align = 16, g.x takes offsets
+                                //          144-145, g.y takes offsets 148-151,
+                                //          g.z takes offsets 152-159
+              S          h[2];  // rule 10: align = 16, array stride = 16, h[0]
+                                //          takes offsets 160-175, h[1] takes
+                                //          offsets 176-191
+          };
+
+          layout(row_major, std430) buffer B2 {
+
+              float16_t  o;     // rule 1:  align = 2, takes offsets 0-1
+              f16vec2    p;     // rule 2:  align = 4, takes offsets 4-7
+              f16vec3    q;     // rule 3:  align = 8, takes offsets 8-13
+              float16_t  r[2];  // rule 4:  align = 2, array stride = 2, takes
+                                //          offsets 14-17
+              f16mat2x3  s;     // rule 7:  align = 4, matrix stride = 4, takes
+                                //          offsets 20-31
+              f16mat2x3  t[2];  // rule 8:  align = 4, matrix stride = 4, array
+                                //          stride = 12, t[0] takes offsets
+                                //          32-43, t[1] takes offsets 44-55
+              S          u;     // rule 9:  align = 8, u.x takes offsets
+                                //          56-57, u.y takes offsets 60-63, u.z
+                                //          takes offsets 64-69
+              S          v[2];  // rule 10: align = 8, array stride = 16, v[0]
+                                //          takes offsets 72-87, v[1] takes
+                                //          offsets 88-103
+          };
+
+    (5) In OpenGL ES Shading Language, the format of floating-point in UBO and
+        SSBO is always single-precision floating-point regardless of the precision
+        qualifier in shader. which format should be used for this extension?
+
+      RESOLVED: the format should be equal with the type declaried in shader.
+      i.e. if the block member's type is float16_t, the format in buffer is
+      half-precision floating-point. and if the block member's type is float,
+      the format is single-precision floating-point. we will provide another
+      extension to keep compatible with ES driver's behavior.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     5    09/21/16  dwitczak  Fixed minor character encoding issues.
+
+     4    08/01/16  rexu      Correct the example of offset calculation for
+                              block members. Add limitation of xfb_offset when
+                              this qualifier is applied to block members that
+                              have float16_t types.
+
+     3    07/11/16  rexu      Clarify that each component of float16_t types
+                              consume two basic machine units. Remove the
+                              interaction with NV_gpu_shader5 in that implicit
+                              conversion from int, uint and float types to
+                              float16_t types are disallowed now. Add new
+                              derivative functions: dFdxFine, dFdyFine,
+                              dFdxCoarse, dFdyCoarse, fwidthFine, fwidthCoarse.
+                              Add the interaction with AMD_shader_trinary_minmax
+                              and AMD_shader_explicit_vertex_parameter. Remove
+                              two listed issues that are no longer valid for
+                              the updated version of this extension. Remove
+                              floatBitsToInt and decide to add it when
+                              16-bit integer data type is supported.
+
+     2    07/06/16  rexu      Remove sections that involve half-precision
+                              floating-point opaque types. Modify allowed rules
+                              of implicit conversion relevant to float16_t
+                              types. Add the interaction with ARB_gpu_shader_
+                              int64. Remove the modification of the first rule
+                              of std140 layout. Provide some examples to
+                              demostrate memory storage layout of uniform
+                              blocks and shader storage blocks when they have
+                              members of float16_t types.
+
+     1    11/14/13  qlin      Initial revision.

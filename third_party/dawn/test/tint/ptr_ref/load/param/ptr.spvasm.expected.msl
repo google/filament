@@ -1,0 +1,18 @@
+#include <metal_stdlib>
+using namespace metal;
+
+int func(int value, thread int* const pointer) {
+  int const x_9 = (*pointer);
+  return as_type<int>((as_type<uint>(value) + as_type<uint>(x_9)));
+}
+
+void main_1() {
+  int i = 0;
+  i = 123;
+  int const x_19 = i;
+  int const x_18 = func(x_19, (&i));
+}
+
+kernel void v() {
+  main_1();
+}

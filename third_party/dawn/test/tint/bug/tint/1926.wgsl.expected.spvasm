@@ -1,0 +1,85 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 45
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %main_global_invocation_id_Input %main_local_invocation_id_Input %main_local_invocation_index_Input
+               OpExecutionMode %main LocalSize 256 1 1
+               OpName %sh_atomic_failed "sh_atomic_failed"
+               OpMemberName %output_block 0 "inner"
+               OpName %output_block "output_block"
+               OpName %main_global_invocation_id_Input "main_global_invocation_id_Input"
+               OpName %main_local_invocation_id_Input "main_local_invocation_id_Input"
+               OpName %main_local_invocation_index_Input "main_local_invocation_index_Input"
+               OpName %main_inner "main_inner"
+               OpName %global_id "global_id"
+               OpName %local_id "local_id"
+               OpName %tint_local_index "tint_local_index"
+               OpName %failed "failed"
+               OpName %main "main"
+               OpMemberDecorate %output_block 0 Offset 0
+               OpDecorate %output_block Block
+               OpDecorate %4 DescriptorSet 0
+               OpDecorate %4 Binding 4
+               OpDecorate %4 Coherent
+               OpDecorate %main_global_invocation_id_Input BuiltIn GlobalInvocationId
+               OpDecorate %main_local_invocation_id_Input BuiltIn LocalInvocationId
+               OpDecorate %main_local_invocation_index_Input BuiltIn LocalInvocationIndex
+       %uint = OpTypeInt 32 0
+%_ptr_Workgroup_uint = OpTypePointer Workgroup %uint
+%sh_atomic_failed = OpVariable %_ptr_Workgroup_uint Workgroup
+%output_block = OpTypeStruct %uint
+%_ptr_StorageBuffer_output_block = OpTypePointer StorageBuffer %output_block
+          %4 = OpVariable %_ptr_StorageBuffer_output_block StorageBuffer
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%main_global_invocation_id_Input = OpVariable %_ptr_Input_v3uint Input
+%main_local_invocation_id_Input = OpVariable %_ptr_Input_v3uint Input
+%_ptr_Input_uint = OpTypePointer Input %uint
+%main_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void %v3uint %v3uint %uint
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+     %uint_0 = OpConstant %uint 0
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+         %39 = OpTypeFunction %void
+ %main_inner = OpFunction %void None %18
+  %global_id = OpFunctionParameter %v3uint
+   %local_id = OpFunctionParameter %v3uint
+%tint_local_index = OpFunctionParameter %uint
+         %19 = OpLabel
+         %20 = OpULessThan %bool %tint_local_index %uint_1
+               OpSelectionMerge %23 None
+               OpBranchConditional %20 %24 %23
+         %24 = OpLabel
+               OpStore %sh_atomic_failed %uint_0 None
+               OpBranch %23
+         %23 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+     %failed = OpLoad %uint %sh_atomic_failed None
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %32 = OpCompositeExtract %uint %local_id 0
+         %33 = OpIEqual %bool %32 %uint_0
+               OpSelectionMerge %34 None
+               OpBranchConditional %33 %35 %34
+         %35 = OpLabel
+         %36 = OpAccessChain %_ptr_StorageBuffer_uint %4 %uint_0
+               OpStore %36 %failed None
+               OpBranch %34
+         %34 = OpLabel
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %39
+         %40 = OpLabel
+         %41 = OpLoad %v3uint %main_global_invocation_id_Input None
+         %42 = OpLoad %v3uint %main_local_invocation_id_Input None
+         %43 = OpLoad %uint %main_local_invocation_index_Input None
+         %44 = OpFunctionCall %void %main_inner %41 %42 %43
+               OpReturn
+               OpFunctionEnd

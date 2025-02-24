@@ -1,0 +1,123 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 62
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %deref_modf "deref_modf"
+               OpMemberName %__modf_result_f32 0 "fract"
+               OpMemberName %__modf_result_f32 1 "whole"
+               OpName %__modf_result_f32 "__modf_result_f32"
+               OpName %a "a"
+               OpName %a "p"
+               OpName %fract "fract"
+               OpName %whole "whole"
+               OpName %no_deref_modf "no_deref_modf"
+               OpName %a_0 "a"
+               OpName %a_0 "p"
+               OpName %fract_0 "fract"
+               OpName %whole_0 "whole"
+               OpName %deref_frexp "deref_frexp"
+               OpMemberName %__frexp_result_f32 0 "fract"
+               OpMemberName %__frexp_result_f32 1 "exp"
+               OpName %__frexp_result_f32 "__frexp_result_f32"
+               OpName %a_1 "a"
+               OpName %a_1 "p"
+               OpName %fract_1 "fract"
+               OpName %exp "exp"
+               OpName %no_deref_frexp "no_deref_frexp"
+               OpName %a_2 "a"
+               OpName %a_2 "p"
+               OpName %fract_2 "fract"
+               OpName %exp_0 "exp"
+               OpName %main "main"
+               OpMemberDecorate %__modf_result_f32 0 Offset 0
+               OpMemberDecorate %__modf_result_f32 1 Offset 4
+               OpMemberDecorate %__frexp_result_f32 0 Offset 0
+               OpMemberDecorate %__frexp_result_f32 1 Offset 4
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+%__modf_result_f32 = OpTypeStruct %float %float
+%_ptr_Function___modf_result_f32 = OpTypePointer Function %__modf_result_f32
+  %float_0_5 = OpConstant %float 0.5
+    %float_1 = OpConstant %float 1
+          %9 = OpConstantComposite %__modf_result_f32 %float_0_5 %float_1
+%_ptr_Function_float = OpTypePointer Function %float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+        %int = OpTypeInt 32 1
+%__frexp_result_f32 = OpTypeStruct %float %int
+%_ptr_Function___frexp_result_f32 = OpTypePointer Function %__frexp_result_f32
+ %float_0_75 = OpConstant %float 0.75
+      %int_1 = OpConstant %int 1
+         %37 = OpConstantComposite %__frexp_result_f32 %float_0_75 %int_1
+%_ptr_Function_int = OpTypePointer Function %int
+ %deref_modf = OpFunction %void None %3
+          %4 = OpLabel
+          %a = OpVariable %_ptr_Function___modf_result_f32 Function
+      %fract = OpVariable %_ptr_Function_float Function
+      %whole = OpVariable %_ptr_Function_float Function
+               OpStore %a %9
+         %12 = OpAccessChain %_ptr_Function_float %a %uint_0
+         %16 = OpLoad %float %12 None
+               OpStore %fract %16
+         %18 = OpAccessChain %_ptr_Function_float %a %uint_1
+         %20 = OpLoad %float %18 None
+               OpStore %whole %20
+               OpReturn
+               OpFunctionEnd
+%no_deref_modf = OpFunction %void None %3
+         %23 = OpLabel
+        %a_0 = OpVariable %_ptr_Function___modf_result_f32 Function
+    %fract_0 = OpVariable %_ptr_Function_float Function
+    %whole_0 = OpVariable %_ptr_Function_float Function
+               OpStore %a_0 %9
+         %25 = OpAccessChain %_ptr_Function_float %a_0 %uint_0
+         %26 = OpLoad %float %25 None
+               OpStore %fract_0 %26
+         %28 = OpAccessChain %_ptr_Function_float %a_0 %uint_1
+         %29 = OpLoad %float %28 None
+               OpStore %whole_0 %29
+               OpReturn
+               OpFunctionEnd
+%deref_frexp = OpFunction %void None %3
+         %32 = OpLabel
+        %a_1 = OpVariable %_ptr_Function___frexp_result_f32 Function
+    %fract_1 = OpVariable %_ptr_Function_float Function
+        %exp = OpVariable %_ptr_Function_int Function
+               OpStore %a_1 %37
+         %40 = OpAccessChain %_ptr_Function_float %a_1 %uint_0
+         %41 = OpLoad %float %40 None
+               OpStore %fract_1 %41
+         %43 = OpAccessChain %_ptr_Function_int %a_1 %uint_1
+         %45 = OpLoad %int %43 None
+               OpStore %exp %45
+               OpReturn
+               OpFunctionEnd
+%no_deref_frexp = OpFunction %void None %3
+         %48 = OpLabel
+        %a_2 = OpVariable %_ptr_Function___frexp_result_f32 Function
+    %fract_2 = OpVariable %_ptr_Function_float Function
+      %exp_0 = OpVariable %_ptr_Function_int Function
+               OpStore %a_2 %37
+         %50 = OpAccessChain %_ptr_Function_float %a_2 %uint_0
+         %51 = OpLoad %float %50 None
+               OpStore %fract_2 %51
+         %53 = OpAccessChain %_ptr_Function_int %a_2 %uint_1
+         %54 = OpLoad %int %53 None
+               OpStore %exp_0 %54
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %3
+         %57 = OpLabel
+         %58 = OpFunctionCall %void %deref_modf
+         %59 = OpFunctionCall %void %no_deref_modf
+         %60 = OpFunctionCall %void %deref_frexp
+         %61 = OpFunctionCall %void %no_deref_frexp
+               OpReturn
+               OpFunctionEnd

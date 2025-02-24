@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void a() {
+  int a_1 = 0;
+  switch(a_1) {
+    default:
+    {
+      return;
+    }
+  }
+  /* unreachable */
+}

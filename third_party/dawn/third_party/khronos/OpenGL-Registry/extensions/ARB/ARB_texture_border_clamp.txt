@@ -1,0 +1,182 @@
+Name
+
+    ARB_texture_border_clamp
+
+Name Strings
+
+    GL_ARB_texture_border_clamp
+
+Contact
+
+    Patrick R. Brown, Intel Corporation (patrick.r.brown 'at' intel.com)
+
+Notice
+
+    Copyright (c) 2000-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.  Approved by the ARB, 20 June 2000
+
+Version
+
+    1.0, 22 June 2000
+
+Number
+
+    ARB Extension #13
+
+Dependencies
+
+    OpenGL 1.0 is required.
+
+    This extension is written against the OpenGL 1.2.1 Specification.
+
+    This extension is based on and intended to replace
+    GL_SGIS_texture_border_clamp.
+
+Overview
+
+    The base OpenGL provides clamping such that the texture coordinates are
+    limited to exactly the range [0,1].  When a texture coordinate is clamped
+    using this algorithm, the texture sampling filter straddles the edge of
+    the texture image, taking 1/2 its sample values from within the texture
+    image, and the other 1/2 from the texture border.  It is sometimes
+    desirable for a texture to be clamped to the border color, rather than to
+    an average of the border and edge colors.
+
+    This extension defines an additional texture clamping algorithm.
+    CLAMP_TO_BORDER_ARB clamps texture coordinates at all mipmap levels such
+    that NEAREST and LINEAR filters return only the color of the border
+    texels.
+
+IP Status
+
+    No known IP issues.
+
+Issues
+
+    (1) Is this formulation correct for higher-order texture filters 
+        (e.g., cubic or anisotropic filters)?
+        
+       RESOLVED:  No.  A more appropriate formulation would clamp the texture
+       coordinates in texel space. 
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <param> parameter of TexParameteri and TexParameterf, and
+    by the <params> parameter of TexParameteriv and TexParameterfv, when their
+    <pname> parameter is TEXTURE_WRAP_S, TEXTURE_WRAP_T, or TEXTURE_WRAP_R:
+
+        CLAMP_TO_BORDER_ARB                             0x812D
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    Modify Table 3.17, p. 124, editing only the following lines:
+
+    Name              Type      Legal Values
+    ==============    =======   ====================
+    TEXTURE_WRAP_S    integer   CLAMP, CLAMP_TO_EDGE, REPEAT,
+                                CLAMP_TO_BORDER_ARB 
+    TEXTURE_WRAP_T    integer   CLAMP, CLAMP_TO_EDGE, REPEAT,
+                                CLAMP_TO_BORDER_ARB 
+    TEXTURE_WRAP_R    integer   CLAMP, CLAMP_TO_EDGE, REPEAT,
+                                CLAMP_TO_BORDER_ARB 
+
+
+    Modify Section 3.8.4, Texture Wrap Modes, p.124
+
+    (add at the end of the section, p. 125)
+
+    CLAMP_TO_BORDER_ARB clamps texture coordinates at all mipmaps such that
+    the texture filter always samples border texels for fragments whose
+    corresponding texture coordinate is sufficiently far outside the range
+    [0,1].  The color returned when clamping is derived only from the border
+    texels of the texture image, or from the constant border color if the
+    texture image does not have a border.
+
+    Texture coordinates are clamped to the range [min, max].  The minimum
+    value is defined as
+
+        min = -1 / 2N
+
+    where N is the size (not including borders) of the one-, two-, or
+    three-dimensional texture image in the direction of clamping.  The maximum
+    value is defined as
+
+        max = 1 - min
+
+    so that clamping is always symmetric about the [0,1] mapped range of a
+    texture coordinate.
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    Only the type information changes for these parameters.
+
+    (table 6.13, p. 203)
+                                                                Initial
+    Get Value                           Type    Get Command     Value   Description Sec.    Attribute
+    ---------                           ----    -----------     ------- ----------- ----    ---------
+    TEXTURE_WRAP_S                      3+ x Z4 GetTexParameter  REPEAT Texture wrap  3.8   texture
+    TEXTURE_WRAP_T                      3+ x Z4 GetTexParameter  REPEAT Texture wrap  3.8   texture
+    TEXTURE_WRAP_R                      3+ x Z4 GetTexParameter  REPEAT Texture wrap  3.8   texture
+
+Revision History
+
+    1.0,  06/22/2000 prbrown1:   Added issue w.r.t. higher order filters.
+    
+    0.2,  05/23/2000 prbrown1:   Removed dependency on SGIS_texture_filter4
+                                 per ARB guidelines.
+
+    0.1,  05/02/2000 prbrown1:   Initial revision -- mostly stolen from
+                                 GL_SGIS_texture_border_clamp.
+

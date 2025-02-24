@@ -1,0 +1,53 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 0
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %SB_RW "SB_RW"
+               OpMemberName %SB_RW 0 "arg_0"
+               OpName %sb_rw "sb_rw"
+               OpName %atomicOr_8d96a0 "atomicOr_8d96a0"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpName %compute_main "compute_main"
+               OpDecorate %SB_RW Block
+               OpMemberDecorate %SB_RW 0 Offset 0
+               OpDecorate %sb_rw DescriptorSet 0
+               OpDecorate %sb_rw Binding 0
+        %int = OpTypeInt 32 1
+      %SB_RW = OpTypeStruct %int
+%_ptr_StorageBuffer_SB_RW = OpTypePointer StorageBuffer %SB_RW
+      %sb_rw = OpVariable %_ptr_StorageBuffer_SB_RW StorageBuffer
+       %void = OpTypeVoid
+          %5 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+      %int_1 = OpConstant %int 1
+%_ptr_Function_int = OpTypePointer Function %int
+         %19 = OpConstantNull %int
+%atomicOr_8d96a0 = OpFunction %void None %5
+          %8 = OpLabel
+        %res = OpVariable %_ptr_Function_int Function %19
+         %15 = OpAccessChain %_ptr_StorageBuffer_int %sb_rw %uint_0
+          %9 = OpAtomicOr %int %15 %uint_1 %uint_0 %int_1
+               OpStore %res %9
+               OpReturn
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %5
+         %21 = OpLabel
+         %22 = OpFunctionCall %void %atomicOr_8d96a0
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %5
+         %24 = OpLabel
+         %25 = OpFunctionCall %void %atomicOr_8d96a0
+               OpReturn
+               OpFunctionEnd

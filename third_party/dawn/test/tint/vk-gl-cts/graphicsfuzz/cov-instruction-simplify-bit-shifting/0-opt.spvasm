@@ -1,0 +1,77 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %a "a"
+               OpName %buf0 "buf0"
+               OpMemberName %buf0 0 "_GLF_uniform_int_values"
+               OpName %_ ""
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %_arr_int_uint_2 ArrayStride 16
+               OpMemberDecorate %buf0 0 Offset 0
+               OpDecorate %buf0 Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+     %uint_2 = OpConstant %uint 2
+%_arr_int_uint_2 = OpTypeArray %int %uint_2
+       %buf0 = OpTypeStruct %_arr_int_uint_2
+%_ptr_Uniform_buf0 = OpTypePointer Uniform %buf0
+          %_ = OpVariable %_ptr_Uniform_buf0 Uniform
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+      %int_5 = OpConstant %int 5
+       %bool = OpTypeBool
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+       %main = OpFunction %void None %9
+         %23 = OpLabel
+          %a = OpVariable %_ptr_Function_int Function
+         %24 = OpAccessChain %_ptr_Uniform_int %_ %int_0 %int_0
+         %25 = OpLoad %int %24
+         %26 = OpShiftLeftLogical %int %25 %int_5
+         %27 = OpShiftRightArithmetic %int %int_1 %26
+         %28 = OpAccessChain %_ptr_Uniform_int %_ %int_0 %int_0
+         %29 = OpLoad %int %28
+         %30 = OpShiftRightArithmetic %int %27 %29
+               OpStore %a %30
+         %31 = OpLoad %int %a
+         %32 = OpIEqual %bool %31 %int_1
+               OpSelectionMerge %33 None
+               OpBranchConditional %32 %34 %35
+         %34 = OpLabel
+         %36 = OpAccessChain %_ptr_Uniform_int %_ %int_0 %int_1
+         %37 = OpLoad %int %36
+         %38 = OpConvertSToF %float %37
+         %39 = OpAccessChain %_ptr_Uniform_int %_ %int_0 %int_0
+         %40 = OpLoad %int %39
+         %41 = OpConvertSToF %float %40
+         %42 = OpAccessChain %_ptr_Uniform_int %_ %int_0 %int_0
+         %43 = OpLoad %int %42
+         %44 = OpConvertSToF %float %43
+         %45 = OpAccessChain %_ptr_Uniform_int %_ %int_0 %int_1
+         %46 = OpLoad %int %45
+         %47 = OpConvertSToF %float %46
+         %48 = OpCompositeConstruct %v4float %38 %41 %44 %47
+               OpStore %_GLF_color %48
+               OpBranch %33
+         %35 = OpLabel
+         %49 = OpLoad %int %a
+         %50 = OpConvertSToF %float %49
+         %51 = OpCompositeConstruct %v4float %50 %50 %50 %50
+               OpStore %_GLF_color %51
+               OpBranch %33
+         %33 = OpLabel
+               OpReturn
+               OpFunctionEnd

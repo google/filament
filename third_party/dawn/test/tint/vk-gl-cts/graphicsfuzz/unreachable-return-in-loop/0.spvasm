@@ -1,0 +1,53 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %5 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_0 = OpConstant %int 0
+       %bool = OpTypeBool
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_1 = OpConstant %float 1
+    %float_0 = OpConstant %float 0
+         %15 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+      %false = OpConstantFalse %bool
+       %true = OpConstantTrue %bool
+         %18 = OpUndef %bool
+       %main = OpFunction %void None %5
+         %19 = OpLabel
+               OpBranch %20
+         %20 = OpLabel
+         %21 = OpPhi %bool %false %19 %18 %22
+               OpLoopMerge %23 %22 None
+               OpBranch %24
+         %24 = OpLabel
+         %25 = OpPhi %bool %21 %20 %18 %26
+         %27 = OpSLessThan %bool %int_1 %int_0
+               OpLoopMerge %28 %26 None
+               OpBranchConditional %27 %29 %28
+         %29 = OpLabel
+               OpBranch %28
+         %26 = OpLabel
+               OpBranch %24
+         %28 = OpLabel
+         %30 = OpPhi %bool %25 %24 %true %29
+               OpSelectionMerge %31 None
+               OpBranchConditional %30 %23 %31
+         %31 = OpLabel
+               OpStore %_GLF_color %15
+               OpBranch %23
+         %22 = OpLabel
+               OpBranch %20
+         %23 = OpLabel
+               OpReturn
+               OpFunctionEnd

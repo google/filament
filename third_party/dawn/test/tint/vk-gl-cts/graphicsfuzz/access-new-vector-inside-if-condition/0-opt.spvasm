@@ -1,0 +1,44 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %x "x"
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %x RelaxedPrecision
+               OpDecorate %5 RelaxedPrecision
+               OpDecorate %6 RelaxedPrecision
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+    %float_1 = OpConstant %float 1
+         %15 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+      %int_3 = OpConstant %int 3
+       %bool = OpTypeBool
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_0 = OpConstant %float 0
+         %20 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+       %main = OpFunction %void None %8
+         %21 = OpLabel
+          %x = OpVariable %_ptr_Function_int Function
+               OpStore %x %int_0
+          %5 = OpLoad %int %x
+          %6 = OpExtInst %int %1 SClamp %5 %int_0 %int_3
+         %22 = OpVectorExtractDynamic %float %15 %6
+         %23 = OpFOrdGreaterThanEqual %bool %22 %float_1
+               OpSelectionMerge %24 None
+               OpBranchConditional %23 %25 %24
+         %25 = OpLabel
+               OpBranch %24
+         %24 = OpLabel
+               OpStore %_GLF_color %20
+               OpReturn
+               OpFunctionEnd

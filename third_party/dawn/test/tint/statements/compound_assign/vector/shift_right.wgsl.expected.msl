@@ -1,0 +1,14 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S {
+  int4 a;
+};
+
+struct tint_module_vars_struct {
+  device S* v;
+};
+
+void foo(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.v).a = ((*tint_module_vars.v).a >> (uint4(2u) & uint4(31u)));
+}

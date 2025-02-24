@@ -1,0 +1,47 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 22
+; Schema: 0
+               OpCapability Shader
+               OpCapability DerivativeControl
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %dpdyCoarse_870a7e "dpdyCoarse_870a7e"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+      %float = OpTypeFloat 32
+%prevent_dce_block = OpTypeStruct %float
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %6 = OpTypeFunction %float
+    %float_1 = OpConstant %float 1
+%_ptr_Function_float = OpTypePointer Function %float
+       %void = OpTypeVoid
+         %15 = OpTypeFunction %void
+%_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%dpdyCoarse_870a7e = OpFunction %float None %6
+          %7 = OpLabel
+        %res = OpVariable %_ptr_Function_float Function
+          %8 = OpDPdyCoarse %float %float_1
+               OpStore %res %8
+         %12 = OpLoad %float %res None
+               OpReturnValue %12
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %15
+         %16 = OpLabel
+         %17 = OpFunctionCall %float %dpdyCoarse_870a7e
+         %18 = OpAccessChain %_ptr_StorageBuffer_float %1 %uint_0
+               OpStore %18 %17 None
+               OpReturn
+               OpFunctionEnd

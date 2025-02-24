@@ -1,0 +1,88 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_packed_vec3_f32_array_element {
+  /* 0x0000 */ packed_float3 packed;
+  /* 0x000c */ tint_array<int8_t, 4> tint_pad;
+};
+
+struct Inner_packed_vec3 {
+  /* 0x0000 */ tint_array<tint_packed_vec3_f32_array_element, 2> m;
+  /* 0x0020 */ tint_array<int8_t, 32> tint_pad_1;
+};
+
+struct Outer_packed_vec3 {
+  /* 0x0000 */ tint_array<Inner_packed_vec3, 4> a;
+};
+
+struct tint_module_vars_struct {
+  const constant tint_array<Outer_packed_vec3, 4>* a;
+  thread int* counter;
+};
+
+struct Inner {
+  float2x3 m;
+};
+
+struct Outer {
+  tint_array<Inner, 4> a;
+};
+
+int i(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.counter) = as_type<int>((as_type<uint>((*tint_module_vars.counter)) + as_type<uint>(1)));
+  return (*tint_module_vars.counter);
+}
+
+Inner tint_load_struct_packed_vec3(const constant Inner_packed_vec3* const from) {
+  tint_array<tint_packed_vec3_f32_array_element, 2> const v = (*from).m;
+  return Inner{.m=float2x3(float3(v[0u].packed), float3(v[1u].packed))};
+}
+
+tint_array<Inner, 4> tint_load_array_packed_vec3(const constant tint_array<Inner_packed_vec3, 4>* const from) {
+  Inner const v_1 = tint_load_struct_packed_vec3((&(*from)[0u]));
+  Inner const v_2 = tint_load_struct_packed_vec3((&(*from)[1u]));
+  Inner const v_3 = tint_load_struct_packed_vec3((&(*from)[2u]));
+  return tint_array<Inner, 4>{v_1, v_2, v_3, tint_load_struct_packed_vec3((&(*from)[3u]))};
+}
+
+Outer tint_load_struct_packed_vec3_1(const constant Outer_packed_vec3* const from) {
+  return Outer{.a=tint_load_array_packed_vec3((&(*from).a))};
+}
+
+tint_array<Outer, 4> tint_load_array_packed_vec3_1(const constant tint_array<Outer_packed_vec3, 4>* const from) {
+  Outer const v_4 = tint_load_struct_packed_vec3_1((&(*from)[0u]));
+  Outer const v_5 = tint_load_struct_packed_vec3_1((&(*from)[1u]));
+  Outer const v_6 = tint_load_struct_packed_vec3_1((&(*from)[2u]));
+  return tint_array<Outer, 4>{v_4, v_5, v_6, tint_load_struct_packed_vec3_1((&(*from)[3u]))};
+}
+
+kernel void f(const constant tint_array<Outer_packed_vec3, 4>* a [[buffer(0)]]) {
+  thread int counter = 0;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.a=a, .counter=(&counter)};
+  const constant tint_array<Outer_packed_vec3, 4>* const p_a = tint_module_vars.a;
+  const constant Outer_packed_vec3* const p_a_i = (&(*p_a)[min(uint(i(tint_module_vars)), 3u)]);
+  const constant tint_array<Inner_packed_vec3, 4>* const p_a_i_a = (&(*p_a_i).a);
+  const constant Inner_packed_vec3* const p_a_i_a_i = (&(*p_a_i_a)[min(uint(i(tint_module_vars)), 3u)]);
+  const constant tint_array<tint_packed_vec3_f32_array_element, 2>* const p_a_i_a_i_m = (&(*p_a_i_a_i).m);
+  const constant packed_float3* const p_a_i_a_i_m_i = (&(*p_a_i_a_i_m)[min(uint(i(tint_module_vars)), 1u)].packed);
+  tint_array<Outer, 4> const l_a = tint_load_array_packed_vec3_1(p_a);
+  Outer const l_a_i = tint_load_struct_packed_vec3_1(p_a_i);
+  tint_array<Inner, 4> const l_a_i_a = tint_load_array_packed_vec3(p_a_i_a);
+  Inner const l_a_i_a_i = tint_load_struct_packed_vec3(p_a_i_a_i);
+  tint_array<tint_packed_vec3_f32_array_element, 2> const v_7 = (*p_a_i_a_i_m);
+  float2x3 const l_a_i_a_i_m = float2x3(float3(v_7[0u].packed), float3(v_7[1u].packed));
+  float3 const l_a_i_a_i_m_i = float3((*p_a_i_a_i_m_i));
+  float const l_a_i_a_i_m_i_i = (*p_a_i_a_i_m_i)[min(uint(i(tint_module_vars)), 2u)];
+}

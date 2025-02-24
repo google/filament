@@ -1,0 +1,687 @@
+Name
+    
+     EXT_texture_cube_map
+
+Name Strings
+
+     GL_EXT_texture_cube_map
+
+Version
+
+    August 19, 1999
+
+Number
+
+    ??
+
+Dependencies
+
+    None.
+
+    Written based on the wording of the OpenGL 1.2 specification but
+    not dependent on it.
+
+Overview
+
+    This extension provides a new texture generation scheme for cube
+    map textures.  Instead of the current texture providing a 1D, 2D,
+    or 3D lookup into a 1D, 2D, or 3D texture image, the texture is a
+    set of six 2D images representing the faces of a cube.  The (s,t,r)
+    texture coordinates are treated as a direction vector emanating from
+    the center of a cube.  At texture generation time, the interpolated
+    per-fragment (s,t,r) selects one cube face 2D image based on the
+    largest magnitude coordinate (the major axis).  A new 2D (s,t) is
+    calculated by dividing the two other coordinates (the minor axes
+    values) by the major axis value.  Then the new (s,t) is used to
+    lookup into the selected 2D texture image face of the cube map.
+
+    Unlike a standard 1D, 2D, or 3D texture that have just one target,
+    a cube map texture has six targets, one for each of its six 2D texture
+    image cube faces.  All these targets must be consistent, complete,
+    and have a square dimension.
+
+    This extension also provides two new texture coordinate generation modes
+    for use in conjunction with cube map texturing.  The reflection map
+    mode generates texture coordinates (s,t,r) matching the vertex's
+    eye-space reflection vector.  The reflection map mode
+    is useful for environment mapping without the singularity inherent
+    in sphere mapping.  The normal map mode generates texture coordinates
+    (s,t,r) matching the vertex's transformed eye-space
+    normal.  The normal map mode is useful for sophisticated cube
+    map texturing-based diffuse lighting models.
+
+    The intent of the new texgen functionality is that an application using
+    cube map texturing can use the new texgen modes to automatically
+    generate the reflection or normal vectors used to look up into the
+    cube map texture.
+
+    An application note:  When using cube mapping with dynamic cube
+    maps (meaning the cube map texture is re-rendered every frame),
+    by keeping the cube map's orientation pointing at the eye position,
+    the texgen-computed reflection or normal vector texture coordinates
+    can be always properly oriented for the cube map.  However if the
+    cube map is static (meaning that when view changes, the cube map
+    texture is not updated), the texture matrix must be used to rotate
+    the computed texgen-computed reflection or normal vector texture
+    coordinates to match the orientation of the cube map.  The rotation
+    can be computed based on two vectors: 1) the direction vector from
+    the cube map center to the eye position (both in world coordinates),
+    and 2) the cube map orientation in world coordinates.  The axis of
+    rotation is the cross product of these two vectors; the angle of
+    rotation is the arcsin of the dot product of these two vectors. 
+
+Issues
+
+    Should we place the normal/reflection vector in the (s,t,r) texture
+    coordinates or (s,t,q) coordinates?
+
+      RESOLUTION:  (s,t,r).  Even if the proposed hardware uses "q" for
+      the third component, the API should claim to support generation of
+      (s,t,r) and let the texture matrix (through a concatenation with
+      the user-supplied texture matrix) move "r" into "q".
+
+    Should the texture coordinate generation functionality for cube
+    mapping be specified as a distinct extension from the actual cube
+    map texturing functionality.
+
+      RESOLUTION:  NO.  Real applications and real implementations of
+      cube mapping will tie the texgen and texture generation functionality
+      together.  One isn't very useful without the other.
+
+      While applications will almost always want to use the texgen
+      functionality for automatically generating the reflection or normal
+      vector as texture coordinates (s,t,r), this extension does permit
+      an application to manually supply the reflection or normal vector
+      through glTexCoord3f explicitly.
+
+    Should you be able to have some texture coordinates computing
+    REFLECTION_MAP_EXT and others not?  Same question with NORMAL_MAP_EXT.
+
+      RESOLUTION:  YES. This is the way that SPHERE_MAP works.  It is
+      not clear that this would ever be useful though.
+
+    Should something special be said about the handling of the q
+    texture coordinate for this spec?
+
+      RESOLUTION:  NO.  But the following paragraph is useful for
+      implementors concerned about the handling of q.
+
+      The REFLECTION_MAP_EXT and NORMAL_MAP_EXT modes are intended to supply
+      reflection and normal vectors for cube map texturing hardware.
+      When these modes are used for cube map texturing, the generated
+      texture coordinates can be thought of as an reflection vector.
+      The value of the q texture coordinate then simply scales the
+      vector but does not change its direction.  Because only the vector
+      direction (not the vector magnitude) matters for cube map texturing,
+      implementations are free to leave q undefined when any of the s,
+      t, or r texture coordinates are generated using REFLECTION_MAP_EXT
+      or NORMAL_MAP_EXT.
+
+      For the proposed hardware, there is not an r texture coordinate
+      datapath (since 3D texturing is not supported) so the cube map
+      texturing block uses the q datapath for passing r in cube map
+      texturing mode.  This means that when cube map texturing (the
+      texturing functionality, not the texgen functionality) is enabled,
+      the OpenGL implementation must use the texture matrix to switch the
+      outputted r and q.
+
+    How should the cube faces be labeled?
+
+      RESOLUTION:  Match the render man specification's names of "px"
+      (positive X), "nx" (negative x), "py", "ny", "pz", and "nz".
+      There does not actually need to be an "ordering for the faces"
+      (Direct3D 7.0 does number their cube map faces.)  For this
+      extension, the symbolic target names (TEXTURE_CUBE_MAP_POSITIVE_X,
+      etc) is sufficient without requiring any specific ordering.
+
+    What coordinate system convention should be used?  LHS or RHS?
+
+      RESOLUTION:  The coordinate system is left-handed if you think
+      of yourself within the cube.  The coordinate system is
+      right-handed if you think of yourself outside the cube.
+
+      This matches the convention of the RenderMan interface.  If
+      you look at Figure 12.8 (page 265) in "The RenderMan Companion",
+      think of the cube being folded up with the observer inside
+      the cube.  Then the coordinate system convention is
+      left-handed.
+
+    We plan on interpolating the reflection vectors computed per-vertex
+    across polygons in the proposed hardware.  Is there a problem
+    interpolating reflection vectors in this way?
+
+      Probably.  The better approach would be to interpolate the eye
+      vector and normal vector over the polygon and perform the reflection
+      vector computation on a per-fragment basis.  Not doing so is likely
+      to lead to artifacts because angular changes in the normal vector
+      result in twice as large a change in the reflection vector as normal
+      vector changes.  The effect is likely to be reflections that become
+      glancing reflections too fast over the surface of the polygon.
+
+      Note that this is an issue for REFLECTION_MAP_EXT, but not
+      NORMAL_MAP_EXT.
+   
+    What happens if an (s,t,q) is passed to cube map generation that
+    is close to (0,0,0), ie. a degenerate direction vector?
+
+      RESOLUTION:  Leave undefined what happens in this case (but
+      may not lead to GL interruption or termination).
+
+      Note that a vector close to (0,0,0) may be generated as a
+      result of the per-fragment interpolation of (s,t,r) between
+      vertices.
+
+    Do we need a distinct proxy texture mechanism for cube map
+    textures?
+
+      RESOLUTION:  YES.  Cube map textures take up six times the
+      memory as a conventional 2D image texture so proxy 2D texture
+      determinations won't be of value for a cube map texture.
+      Cube maps need their own proxy target.
+
+    Should we require the 2D texture image width and height to
+    be identical (ie, square only)?
+
+      RESOLUTION:  YES.  The proposed hardware has this limitation
+      and it is quite a reasonable limitation anyway!
+
+      This restriction is enforced by generating an INVALID_VALUE
+      when calling TexImage2D or CopyTexImage2D with a non-equal
+      width and height.
+
+      Some consideration was given to enforcing the "squarness"
+      constraint as a texture consistency constraint.  This is
+      confusing however since the squareness is known up-front
+      at texture image specification time so it seems confusing
+      to silently report the usage error as a texture consistency
+      issue.
+
+      Texture consistency still says that all the level 0 textures
+      of all six faces must have the same square size.
+
+    If some combination of 1D, 2D, 3D, and cube map texturing is
+    enabled, which really operates?
+
+      RESOLUTION:  Cube map texturing.  In OpenGL 1.2, 3D takes
+      priority over 2D takes priority over 1D.  Cube mapping should
+      take priority over all conventional n-dimensional texturing
+      schemes.
+
+    Does anything need to be said about combining cube mapping with
+    multitexture?
+
+      RESOLUTION:  NO.  Cube mapping should be available on either
+      texture unit in the proposed hardware.  The proposed hardware is
+      fully orthogonal in its handling of cube map textures.
+
+    Does it make sense to support borders for cube map textures.
+
+      Actually, it does, but that still doesn't mean that the proposed
+      hardware is going to support texture borders -- let alone texture
+      borders for cube map textures.  It would be nice if the texture
+      border pixels match the appropriate texels from the edges of the
+      other cube map faces that they junction with.  For this reason,
+      we'll leave the texture border capability implicitly supported.
+
+    How does mipmap level-of-detail selection work for cube map
+    textures?
+
+      The spec should document the "ideal" level-of-detail selection even
+      if the proposed hardware cuts corners in this area.  The existing
+      spec's language about LOD selection is fine.
+
+      For the proposed hardware, it approximates the LOD across the cube
+      map seam, but everywhere else it is as accurate as regular texture
+      maps.
+
+    Should the implementation dependent value for the maximum
+    texture size for a cube map be the same as MAX_TEXTURE_SIZE?
+
+      RESOLUTION: NO.  OpenGL 1.2 has a different MAX_3D_TEXTURE_SIZE
+      for 3D textures, and cube maps should take six times more space
+      than a 2D texture map of the same width & height.  The implementation
+      dependent MAX_CUBE_MAP_TEXTURE_SIZE_EXT constant should be used for
+      cube maps then.
+
+      Note that the proxy cube map texture provides a better way to
+      find out the maximum cube map texture size supported since the
+      proxy mechanism can take into account the internal format, etc.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <param> parameters of TexGend, TexGenf, and TexGeni
+    when <pname> parameter is TEXTURE_GEN_MODE:
+
+        NORMAL_MAP_EXT                      0x8511
+        REFLECTION_MAP_EXT                  0x8512
+
+    When the <pname> parameter of TexGendv, TexGenfv, and TexGeniv is
+    TEXTURE_GEN_MODE, then the array <params> may also contain
+    NORMAL_MAP_EXT or REFLECTION_MAP_EXT.
+
+    Accepted by the <cap> parameter of Enable, Disable, IsEnabled, and
+    by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev, and by the <target> parameter of BindTexture,
+    GetTexParameterfv, GetTexParameteriv, TexParameterf, TexParameteri,
+    TexParameterfv, and TexParameteriv:
+
+        TEXTURE_CUBE_MAP_EXT                0x8513
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        TEXTURE_BINDING_CUBE_MAP_EXT        0x8514
+
+    Accepted by the <target> parameter of GetTexImage,
+    GetTexLevelParameteriv, GetTexLevelParameterfv, TexImage2D,
+    CopyTexImage2D, TexSubImage2D, and CopySubTexImage2D:
+
+        TEXTURE_CUBE_MAP_POSITIVE_X_EXT     0x8515
+        TEXTURE_CUBE_MAP_NEGATIVE_X_EXT     0x8516
+        TEXTURE_CUBE_MAP_POSITIVE_Y_EXT     0x8517
+        TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT     0x8518
+        TEXTURE_CUBE_MAP_POSITIVE_Z_EXT     0x8519
+        TEXTURE_CUBE_MAP_NEGATIVE_Z_EXT     0x851a
+
+    Accepted by the <target> parameter of GetTexLevelParameteriv,
+    GetTexLevelParameterfv, GetTexParameteriv, and TexImage2D:
+
+        PROXY_TEXTURE_CUBE_MAP_EXT          0x851b 
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetIntegerv, and GetFloatv:
+
+        MAX_CUBE_MAP_TEXTURE_SIZE_EXT       0x851c
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+ --  Section 2.10.4 "Generating Texture Coordinates"
+
+      Change the last sentence in the 1st paragraph to:
+
+      "If <pname> is TEXTURE_GEN_MODE, then either <params> points to or <param> is
+      an integer that is one of the symbolic constants OBJECT_LINEAR,
+      EYE_LINEAR, SPHERE_MAP, REFLECTION_MAP_EXT, or NORMAL_MAP_EXT."
+
+      Add these paragraphs after the 4th paragraph:
+
+      "If TEXTURE_GEN_MODE indicates REFLECTION_MAP_EXT, compute the reflection
+      vector r as described for the SPHERE_MAP mode.  Then the value assigned
+      to an s coordinate (the first TexGen argument value is S) is s = rx; the
+      value assigned to a t coordinate is t = ry; and the value assigned to a r
+      coordinate is r = rz.  Calling TexGen with a <coord> of Q when <pname>
+      indicates REFLECTION_MAP_EXT generates the error INVALID_ENUM.
+
+      If TEXTURE_GEN_MODE indicates NORMAL_MAP_EXT, compute the normal
+      vector n' as described in section 2.10.3.  Then the value assigned to an
+      s coordinate (the first TexGen argument value is S) is s = nx'; the value
+      assigned to a t coordinate is t = ny'; and the value assigned to a r coordinate
+      is r = nz'.  Calling TexGen with a <coord> of Q when <pname> indicates
+      REFLECTION_MAP_EXT generates the error INVALID_ENUM.
+
+      The last paragraph's first sentence should be changed to:
+
+      "The state required for texture coordinate generation comprises a
+      five-valued integer for each coordinate indicating coordinate
+      generation mode, ..."
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+ --  Section 3.6.5 "Pixel Transfer Operations" under "Convolution"
+
+     Change this paragraph to say:
+
+     ... "If CONVOLUTION_2D is enabled, the two-dimensional convolution
+     filter is applied only to the two-dimensional images passed to
+     DrawPixels, CopyPixels, ReadPixels, TexImage2D, TexSubImage2D,
+     CopyTexImage2D, CopyTexSubImage2D, and CopyTexSubImage3D, and
+     returned by GetTexImage with one of the targets TEXTURE_2D,
+     TEXTURE_CUBE_MAP_POSITIVE_X_EXT, TEXTURE_CUBE_MAP_NEGATIVE_X_EXT,
+     TEXTURE_CUBE_MAP_POSITIVE_Y_EXT, TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT,
+     TEXTURE_CUBE_MAP_POSITIVE_Z_EXT, or TEXTURE_CUBE_MAP_NEGATIVE_Z_EXT."
+
+ --  Section 3.8.1 "Texture Image Specification"
+
+     Change the first full sentence on page 117 to:
+
+     "<target> must be one of TEXTURE_2D for a 2D texture, or one of
+     TEXTURE_CUBE_MAP_POSITIVE_X_EXT, TEXTURE_CUBE_MAP_NEGATIVE_X_EXT,
+     TEXTURE_CUBE_MAP_POSITIVE_Y_EXT, TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT,
+     TEXTURE_CUBE_MAP_POSITIVE_Z_EXT, or TEXTURE_CUBE_MAP_NEGATIVE_Z_EXT
+     for a cube map texture.  Additionally, <target> can be either
+     PROXY_TEXTURE_2D for a 2D proxy texture or PROXY_TEXTURE_CUBE_MAP_EXT
+     for a cube map proxy texture as discussed in section 3.8.7."
+
+     Add the following paragraphs after the first paragraph on page 117:
+
+     "A 2D texture consists of a single 2D texture image.  A cube
+     map texture is a set of six 2D texture images.  The six cube map
+     texture targets form a single cube map texture though each target
+     names a distinct face of the cube map.  The TEXTURE_CUBE_MAP_*_EXT
+     targets listed above update their appropriate cube map face 2D
+     texture image.  Note that the six cube map 2D image tokens such as
+     TEXTURE_CUBE_MAP_POSITIVE_X_EXT are used when specifying, updating,
+     or querying, one of a cube map's six 2D image, but when enabling
+     cube map texturing or binding to a cube map texture object (that is
+     when the cube map is accessed as a whole as opposed to a particular
+     2D image), the TEXTURE_CUBE_MAP_EXT token is specified.
+
+     When the target parameter to TexImage2D is one of the six cube map
+     2D image targets, the error INVALID_VALUE is generated if the width
+     and height parameters are not equal.
+
+     If cube map texturing is enabled at the time a primitive is
+     rasterized and if the set of six targets are not "cube complete",
+     then it is as if texture mapping were disabled.  The targets of
+     a cube map texture are "cube complete" if the array 0 of all six
+     targets have identical and square dimensions, the array 0 of all
+     six targets were specified with the same symbolic constant, and
+     the array 0 of all six targets have the same border width."
+
+     After the 14th paragraph add:
+
+     "In a similiar fashion, the maximum allowable width and height
+     (they must be the same) of a cube map texture must be at least
+     2^(k-lod)+2bt for image arrays level 0 through k, where k is the
+     log base 2 of MAX_CUBE_MAP_TEXTURE_EXT."
+
+ --  Section 3.8.2 "Alternate Texture Image Specification Commands"
+
+     Update the second paragraph (page 120) to say:
+
+     ... "Currently, <target> must be
+     TEXTURE_2D, TEXTURE_CUBE_MAP_POSITIVE_X_EXT,
+     TEXTURE_CUBE_MAP_NEGATIVE_X_EXT, TEXTURE_CUBE_MAP_POSITIVE_Y_EXT,
+     TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT, TEXTURE_CUBE_MAP_POSITIVE_Z_EXT,
+     or TEXTURE_CUBE_MAP_NEGATIVE_Z_EXT." ...
+
+     Add after the second paragraph (page 120), the following:
+
+     "When the target parameter to CopyTexImage2D is one of the six cube
+     map 2D image targets, the error INVALID_VALUE is generated if the
+     width and height parameters are not equal."
+
+     Update the fourth paragraph (page 121) to say:
+
+     ... "Currently the target arguments of TexSubImage1D and
+     CopyTexSubImage1D must be TEXTURE_1D, the <target> arguments of
+     TexSubImage2D and CopyTexSubImage2D must be one of TEXTURE_2D,
+     TEXTURE_CUBE_MAP_POSITIVE_X_EXT, TEXTURE_CUBE_MAP_NEGATIVE_X_EXT,
+     TEXTURE_CUBE_MAP_POSITIVE_Y_EXT, TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT,
+     TEXTURE_CUBE_MAP_POSITIVE_Z_EXT, or TEXTURE_CUBE_MAP_NEGATIVE_Z_EXT,
+     and the <target> arguments of TexSubImage3D and CopyTexSubImage3D
+     must be TEXTURE_3D." ...
+
+ --  Section 3.8.3 "Texture Parameters"
+
+     Change paragraph one (page 124) to say:
+
+     ... "<target> is the target, either TEXTURE_1D,
+     TEXTURE_2D, TEXTURE_3D, or TEXTURE_CUBE_MAP_EXT." ...
+
+     Add a final paragraph saying:
+
+     "Texture parameters for a cube map texture apply to cube map
+     as a whole; the six distinct 2D texture images use the
+     texture parameters of the cube map itself.
+
+ --  Section 3.8.5 "Texture Minification" under "Mipmapping"
+
+     Change the first full paragraph on page 130 to:
+
+     ... "If texturing is enabled for one-, two-, or three-dimensional
+     texturing but not cube map texturing (and TEXTURE_MIN_FILTER
+     is one that requires a mipmap) at the time a primitive is
+     rasterized and if the set of arrays TEXTURE_BASE_LEVEL through q =
+     min{p,TEXTURE_MAX_LEVEL} is incomplete, based on the dimensions of
+     array 0, then it is as if texture mapping were disabled."
+
+     Follow the first full paragraph on page 130 with:
+
+     "If cube map texturing is enabled and TEXTURE_MIN_FILTER is one that
+     requires mipmap levels at the time a primitive is rasterized and
+     if the set of six targets are not "mipmap cube complete", then it
+     is as if texture mapping were disabled.  The targets of a cube map
+     texture are "mipmap cube complete" if the six cube map targets are
+     "cube complete" and the set of arrays TEXTURE_BASE_LEVEL through
+     q are not incomplete (as described above)."
+
+ --  Section 3.8.7 "Texture State and Proxy State"
+
+     Change the first sentence of the first paragraph (page 131) to say:
+
+     "The state necessary for texture can be divided into two categories.
+     First, there are the nine sets of mipmap arrays (three for the one-,
+     two-, and three-dimensional texture targets and six for the cube
+     map texture targets) and their number." ...
+
+     Change the second paragraph (page 132) to say:
+
+     "In addition to the one-, two-, three-dimensional, and the six cube
+     map sets of image arrays, the partially instantiated one-, two-,
+     and three-dimensional and one cube map sets of proxy image arrays
+     are maintained." ...
+
+     After the third paragraph (page 132) add:
+
+     "The cube map proxy arrays are operated on in the same manner
+     when TexImage2D is executed with the <target> field specified as
+     PROXY_TEXTURE_CUBE_MAP_EXT with the addition that determining that a
+     given cube map texture is supported with PROXY_TEXTURE_CUBE_MAP_EXT
+     indicates that all six of the cube map 2D images are supported.
+     Likewise, if the specified PROXY_TEXTURE_CUBE_MAP_EXT is not
+     supported, none of the six cube map 2D images are supported."
+
+     Change the second sentence of the fourth paragraph (page 132) to:
+
+     "Therefore PROXY_TEXTURE_1D, PROXY_TEXTURE_2D, PROXY_TEXTURE_3D,
+     and PROXY_TEXTURE_CUBE_MAP_EXT cannot be used as textures, and their
+     images must never be queried using GetTexImage." ...
+ 
+ --  Section 3.8.8 "Texture Objects"
+
+     Change the first sentence of paragraph one (page 133) to say:
+
+     "In addition to the default textures TEXTURE_1D, TEXTURE_2D,
+     TEXTURE_3D, and TEXTURE_CUBE_MAP_EXT, named one-, two-,
+     and three-dimensional texture objects and cube map texture objects
+     can be created and operated on." ...
+
+     Change the second paragraph (page 133) to say:
+
+     "A texture object is created by binding an unused name to
+     TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, or TEXTURE_CUBE_MAP_EXT." ...
+     "If the new texture object is bound to TEXTURE_1D, TEXTURE_2D,
+     TEXTURE_3D, or TEXTURE_CUBE_MAP_EXT, it remains a one-, two-,
+     three-dimensional, or cube map texture until it is deleted."
+
+     Change the third paragraph (page 133) to say:
+
+     "BindTexture may also be used to bind an existing texture object to
+     either TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, or TEXTURE_CUBE_MAP_EXT."
+
+     Change paragraph five (page 133) to say:
+
+     "In the initial state, TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+     and TEXTURE_CUBE_MAP have one-dimensional, two-dimensional,
+     three-dimensional, and cube map state vectors associated
+     with them respectively."  ...  "The initial, one-dimensional,
+     two-dimensional, three-dimensional, and cube map texture is therefore
+     operated upon, queried, and applied as TEXTURE_1D, TEXTUER_2D,
+     TEXTURE_3D, and TEXTURE_CUBE_MAP_EXT respectively while 0 is bound
+     to the corresponding targets."
+
+     Change paragraph six (page 134) to say:
+
+     ... "If a texture that is currently bound to one of the targets
+     TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, or TEXTURE_CUBE_MAP_EXT is
+     deleted, it is as though BindTexture has been executed with the
+     same <target> and <texture> zero." ...
+
+ --  Section 3.8.10 "Texture Application"
+
+     Replace the beginning sentences of the first paragraph (page 136)
+     with:
+
+     "Texturing is enabled or disabled using the generic Enable
+     and Disable commands, respectively, with the symbolic constants
+     TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, or TEXTURE_CUBE_MAP_EXT to enable
+     the one-dimensional, two-dimensional, three-dimensional, or cube
+     map texturing respectively.  If both two- and one-dimensional
+     textures are enabled, the two-dimensional texture is used.  If the
+     three-dimensional and either of the two- or one-dimensional textures
+     is enabled, the three-dimensional texture is used.  If the cube map
+     texture and any of the three-, two-, or one-dimensional textures is
+     enabled, then cube map texturing is used.  If texturing is disabled,
+     a rasterized fragment is passed on unaltered to the next stage of the
+     GL (although its texture coordinates may be discarded).  Otherwise,
+     a texture value is found according to the parameter values of the
+     currently bound texture image of the appropriate dimensionality.
+
+     However, when cube map texturing is enabled, the rules are
+     more complicated.  For cube map texturing, the (s,t,r) texture
+     coordinates are treated as a direction vector (rx,ry,rz) emanating
+     from the center of a cube.  (The q coordinate can be ignored since
+     it merely scales the vector without affecting the direction.) At
+     texture application time, the interpolated per-fragment (s,t,r)
+     selects one of the cube map face's 2D image based on the largest
+     magnitude coordinate direction (the major axis direction).
+     The target column in the table below explains how the major axis
+     direction maps to the 2D image of a particular cube map target.
+
+      major axis
+      direction     target                             sc     tc    ma
+      ----------    -------------------------------    ---    ---   ---
+       +rx          TEXTURE_CUBE_MAP_POSITIVE_X_EXT    -rz    -ry   rx
+       -rx          TEXTURE_CUBE_MAP_NEGATIVE_X_EXT    +rz    -ry   rx
+       +ry          TEXTURE_CUBE_MAP_POSITIVE_Y_EXT    +rx    +rz   ry
+       -ry          TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT    +rx    -rz   ry
+       +rz          TEXTURE_CUBE_MAP_POSITIVE_Z_EXT    +rx    -ry   rz
+       -rz          TEXTURE_CUBE_MAP_NEGATIVE_Z_EXT    -rx    -ry   rz
+
+     Using the sc, tc, and ma determined by the major axis direction as
+     specified in the table above, an updated (s,t) is calculated as
+     follows
+
+        s   =   ( sc/|ma| + 1 ) / 2
+        t   =   ( tc/|ma| + 1 ) / 2
+
+     If |ma| is zero or very nearly zero, the results of the above two
+     equations need not be defined (though the result may not lead to
+     GL interruption or termination).
+
+     This new (s,t) is used to find a texture value in the determined
+     face's 2D texture image using the rules given in sections 3.8.5
+     and 3.8.6." ...
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+     None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+ --  Section 5.4 "Display Lists"
+
+     In the second to the last paragraph (page 179), add
+     PROXY_TEXTURE_CUBE_MAP_EXT to the list of PROXY_* tokens.
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+ --  Section 6.1.3 "Enumerated Queries"
+
+     Change the fourth paragraph (page 183) to say:
+
+     "The GetTexParameter and GetTexLevelParameter parameter
+     <target> may be one of TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+     or TEXTURE_CUBE_MAP_EXT, indicating the currently bound
+     one-dimensional, two-dimensional, three-dimensional, or cube map
+     texture object.  For GetTexLevelParameter, <target> may be one of
+     TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP_POSITIVE_X_EXT,
+     TEXTURE_CUBE_MAP_NEGATIVE_X_EXT, TEXTURE_CUBE_MAP_POSITIVE_Y_EXT,
+     TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT, TEXTURE_CUBE_MAP_POSITIVE_Z_EXT,
+     TEXTURE_CUBE_MAP_NEGATIVE_Z_EXT, PROXY_TEXTURE_1D, PROXY_TEXTURE_2D,
+     PROXY_TEXTURE_3D, or PROXY_TEXTURE_CUBE_MAP, indicating the
+     one-dimensional, two-dimensional, three-dimensional texture
+     object, or distinct cube map texture 2D image, or one-dimensional,
+     two-dimensional, three-dimensional, or cube map proxy state vector.
+     Note that TEXTURE_CUBE_MAP_EXT is not a valid <target> parameter for
+     GetTexLevelParameter because it does not specify a particular cube
+     map face."
+
+ --  Section 6.1.4 "Texture Queries"
+
+     Change the first paragraph to read:
+
+     ... "It is somewhat different from the other get commands; <tex>
+     is a symbolic value indicating which texture (or texture face in the
+     case of a cube map texture target name) is to be obtained.
+     TEXTURE_1D indicates a one-dimensional texture, TEXTURE_2D
+     indicates a two-dimensional texture, TEXTURE_3D indicates a
+     three-dimensional texture, and TEXTURE_CUBE_MAP_POSITIVE_X_EXT,
+     TEXTURE_CUBE_MAP_NEGATIVE_X_EXT, TEXTURE_CUBE_MAP_POSITIVE_Y_EXT,
+     TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT, TEXTURE_CUBE_MAP_POSITIVE_Z_EXT,
+     and TEXTURE_CUBE_MAP_NEGATIVE_Z_EXT indicate the respective face of
+     a cube map texture.
+
+Additions to the GLX Specification
+
+     None
+
+Errors
+
+     INVALID_ENUM is generated when TexGen is called with a <coord> of Q
+     when <pname> indicates REFLECTION_MAP_EXT or NORMAL_MAP_EXT.
+
+New State
+
+(table 6.12, p202) add the following entries:
+
+Get Value                        Type    Get Command   Initial Value   Description           Sec    Attribute
+---------                        ----    -----------   -------------   -----------           ------ --------------
+TEXTURE_CUBE_MAP_EXT             B       IsEnabled     False           True if cube map      3.8.10 texture/enable
+                                                                       texturing is enabled
+TEXTURE_BINDING_CUBE_MAP_EXT     Z+      GetIntegerv   0               Texture object        3.8.8  texture
+                                                                       for TEXTURE_CUBE_MAP
+TEXTURE_CUBE_MAP_POSITIVE_X_EXT  nxI     GetTexImage   see 3.8         positive x face       3.8    -
+                                                                       cube map texture
+                                                                       image at lod i
+TEXTURE_CUBE_MAP_NEGATIVE_X_EXT  nxI     GetTexImage   see 3.8         negative x face       3.8    -
+                                                                       cube map texture
+                                                                       image at lod i
+TEXTURE_CUBE_MAP_POSITIVE_Y_EXT  nxI     GetTexImage   see 3.8         positive y face       3.8    -
+                                                                       cube map texture
+                                                                       image at lod i
+TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT  nxI     GetTexImage   see 3.8         negative y face       3.8    -
+                                                                       cube map texture
+                                                                       image at lod i
+TEXTURE_CUBE_MAP_POSITIVE_Z_EXT  nxI     GetTexImage   see 3.8         positive z face       3.8    -
+                                                                       cube map texture
+                                                                       image at lod i
+TEXTURE_CUBE_MAP_NEGATIVE_Z_EXT  nxI     GetTexImage   see 3.8         negative z face       3.8    -
+                                                                       cube map texture
+                                                                       image at lod i
+
+(table 6.14, p204) change the entry for TEXTURE_GEN_MODE to:
+
+Get Value            Type    Get Command     Initial Value   Description        Sec    Attribute
+---------            ----    -----------     -------------   -----------        ------ ---------
+TEXTURE_GEN_MODE     4xZ5    GetTexGeniv     EYE_LINEAR      Function used for  2.10.4 texture
+                                                             texgen (for s,t,r,
+                                                             and q)
+
+(the type changes from 4xZ3 to 4xZ5)
+
+New Implementation Dependent State
+
+(table 6.24, p214) add the following entry:
+
+Get Value                       Type    Get Command   Minimum Value   Description           Sec    Attribute
+---------                       ----    -----------   -------------   -----------           ------ --------------
+MAX_CUBE_MAP_TEXTURE_SIZE_EXT   Z+      GetIntegerv   16              Maximum cube map      3.8.1  -
+                                                                      texture image
+                                                                      dimension

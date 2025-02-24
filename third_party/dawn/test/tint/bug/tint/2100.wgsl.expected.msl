@@ -1,0 +1,44 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_packed_vec3_f32_array_element {
+  /* 0x0000 */ packed_float3 packed;
+  /* 0x000c */ tint_array<int8_t, 4> tint_pad;
+};
+
+struct S_packed_vec3 {
+  /* 0x0000 */ float4x4 matrix_view;
+  /* 0x0040 */ tint_array<tint_packed_vec3_f32_array_element, 3> matrix_normal;
+};
+
+struct tint_module_vars_struct {
+  const constant S_packed_vec3* tint_member;
+};
+
+struct main_outputs {
+  float4 tint_symbol [[position]];
+};
+
+float4 main_inner(tint_module_vars_struct tint_module_vars) {
+  float const x = (*tint_module_vars.tint_member).matrix_view[0u].z;
+  return float4(x, 0.0f, 0.0f, 1.0f);
+}
+
+vertex main_outputs v(const constant S_packed_vec3* v_1 [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.tint_member=v_1};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main_inner(tint_module_vars);
+  return tint_wrapper_result;
+}

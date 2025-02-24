@@ -1,0 +1,34 @@
+                       OpCapability Shader
+                 %17 = OpExtInstImport "GLSL.std.450"
+                       OpMemoryModel Logical GLSL450
+                       OpEntryPoint GLCompute %f "f"
+                       OpExecutionMode %f LocalSize 1 1 1
+                       OpName %f "f"
+                       OpName %v "v"
+                       OpName %n "n"
+                       OpName %offset "offset"
+                       OpName %count "count"
+               %void = OpTypeVoid
+                  %1 = OpTypeFunction %void
+                %int = OpTypeInt 32 1
+              %v3int = OpTypeVector %int 3
+%_ptr_Function_v3int = OpTypePointer Function %v3int
+                  %9 = OpConstantNull %v3int
+               %uint = OpTypeInt 32 0
+ %_ptr_Function_uint = OpTypePointer Function %uint
+                 %14 = OpConstantNull %uint
+            %uint_31 = OpConstant %uint 31
+            %uint_32 = OpConstant %uint 32
+                  %f = OpFunction %void None %1
+                  %4 = OpLabel
+                  %v = OpVariable %_ptr_Function_v3int Function %9
+                  %n = OpVariable %_ptr_Function_v3int Function %9
+             %offset = OpVariable %_ptr_Function_uint Function %14
+              %count = OpVariable %_ptr_Function_uint Function %14
+                 %18 = OpLoad %v3int %v
+                 %19 = OpLoad %v3int %n
+                 %20 = OpLoad %uint %offset
+                 %21 = OpLoad %uint %count
+                 %16 = OpBitFieldInsert %v3int %18 %19 %20 %21
+                       OpReturn
+                       OpFunctionEnd

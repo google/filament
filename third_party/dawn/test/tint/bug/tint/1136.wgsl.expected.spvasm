@@ -1,0 +1,44 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 19
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpMemberName %Buffer 0 "data"
+               OpName %Buffer "Buffer"
+               OpMemberName %buffer_block 0 "inner"
+               OpName %buffer_block "buffer_block"
+               OpName %main "main"
+               OpName %unused_entry_point "unused_entry_point"
+               OpMemberDecorate %Buffer 0 Offset 0
+               OpMemberDecorate %buffer_block 0 Offset 0
+               OpDecorate %buffer_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+     %Buffer = OpTypeStruct %uint
+%buffer_block = OpTypeStruct %Buffer
+%_ptr_StorageBuffer_buffer_block = OpTypePointer StorageBuffer %buffer_block
+          %1 = OpVariable %_ptr_StorageBuffer_buffer_block StorageBuffer
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+       %main = OpFunction %void None %8
+          %9 = OpLabel
+         %10 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %uint_0
+         %13 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %uint_0
+         %14 = OpLoad %uint %13 None
+         %15 = OpIAdd %uint %14 %uint_1
+               OpStore %10 %15 None
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %8
+         %18 = OpLabel
+               OpReturn
+               OpFunctionEnd

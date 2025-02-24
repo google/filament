@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void main_1() {
+  float const x_24 = 5.0f;
+}
+
+kernel void v() {
+  main_1();
+}

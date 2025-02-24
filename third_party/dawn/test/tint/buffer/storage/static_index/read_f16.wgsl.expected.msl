@@ -1,0 +1,180 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_packed_vec3_f32_array_element {
+  /* 0x0000 */ packed_float3 packed;
+  /* 0x000c */ tint_array<int8_t, 4> tint_pad;
+};
+
+struct tint_packed_vec3_f16_array_element {
+  /* 0x0000 */ packed_half3 packed_1;
+  /* 0x0006 */ tint_array<int8_t, 2> tint_pad_9;
+};
+
+struct Inner {
+  /* 0x0000 */ int scalar_i32;
+  /* 0x0004 */ float scalar_f32;
+  /* 0x0008 */ half scalar_f16;
+  /* 0x000a */ tint_array<int8_t, 2> tint_pad_12;
+};
+
+struct S_packed_vec3 {
+  /* 0x0000 */ float scalar_f32;
+  /* 0x0004 */ int scalar_i32;
+  /* 0x0008 */ uint scalar_u32;
+  /* 0x000c */ half scalar_f16;
+  /* 0x000e */ tint_array<int8_t, 2> tint_pad_1;
+  /* 0x0010 */ float2 vec2_f32;
+  /* 0x0018 */ int2 vec2_i32;
+  /* 0x0020 */ uint2 vec2_u32;
+  /* 0x0028 */ half2 vec2_f16;
+  /* 0x002c */ tint_array<int8_t, 4> tint_pad_2;
+  /* 0x0030 */ packed_float3 vec3_f32;
+  /* 0x003c */ tint_array<int8_t, 4> tint_pad_3;
+  /* 0x0040 */ packed_int3 vec3_i32;
+  /* 0x004c */ tint_array<int8_t, 4> tint_pad_4;
+  /* 0x0050 */ packed_uint3 vec3_u32;
+  /* 0x005c */ tint_array<int8_t, 4> tint_pad_5;
+  /* 0x0060 */ packed_half3 vec3_f16;
+  /* 0x0066 */ tint_array<int8_t, 10> tint_pad_6;
+  /* 0x0070 */ float4 vec4_f32;
+  /* 0x0080 */ int4 vec4_i32;
+  /* 0x0090 */ uint4 vec4_u32;
+  /* 0x00a0 */ half4 vec4_f16;
+  /* 0x00a8 */ float2x2 mat2x2_f32;
+  /* 0x00b8 */ tint_array<int8_t, 8> tint_pad_7;
+  /* 0x00c0 */ tint_array<tint_packed_vec3_f32_array_element, 2> mat2x3_f32;
+  /* 0x00e0 */ float2x4 mat2x4_f32;
+  /* 0x0100 */ float3x2 mat3x2_f32;
+  /* 0x0118 */ tint_array<int8_t, 8> tint_pad_8;
+  /* 0x0120 */ tint_array<tint_packed_vec3_f32_array_element, 3> mat3x3_f32;
+  /* 0x0150 */ float3x4 mat3x4_f32;
+  /* 0x0180 */ float4x2 mat4x2_f32;
+  /* 0x01a0 */ tint_array<tint_packed_vec3_f32_array_element, 4> mat4x3_f32;
+  /* 0x01e0 */ float4x4 mat4x4_f32;
+  /* 0x0220 */ half2x2 mat2x2_f16;
+  /* 0x0228 */ tint_array<tint_packed_vec3_f16_array_element, 2> mat2x3_f16;
+  /* 0x0238 */ half2x4 mat2x4_f16;
+  /* 0x0248 */ half3x2 mat3x2_f16;
+  /* 0x0254 */ tint_array<int8_t, 4> tint_pad_10;
+  /* 0x0258 */ tint_array<tint_packed_vec3_f16_array_element, 3> mat3x3_f16;
+  /* 0x0270 */ half3x4 mat3x4_f16;
+  /* 0x0288 */ half4x2 mat4x2_f16;
+  /* 0x0298 */ tint_array<tint_packed_vec3_f16_array_element, 4> mat4x3_f16;
+  /* 0x02b8 */ half4x4 mat4x4_f16;
+  /* 0x02d8 */ tint_array<int8_t, 8> tint_pad_11;
+  /* 0x02e0 */ tint_array<tint_packed_vec3_f32_array_element, 2> arr2_vec3_f32;
+  /* 0x0300 */ tint_array<half4x2, 2> arr2_mat4x2_f16;
+  /* 0x0320 */ Inner struct_inner;
+  /* 0x032c */ tint_array<Inner, 4> array_struct_inner;
+  /* 0x035c */ tint_array<int8_t, 4> tint_pad_13;
+};
+
+struct tint_module_vars_struct {
+  const device S_packed_vec3* sb;
+  device int* s;
+};
+
+int tint_f16_to_i32(half value) {
+  return select(2147483647, select((-2147483647 - 1), int(value), (value >= -65504.0h)), (value <= 65504.0h));
+}
+
+int tint_f32_to_i32(float value) {
+  return select(2147483647, select((-2147483647 - 1), int(value), (value >= -2147483648.0f)), (value <= 2147483520.0f));
+}
+
+tint_array<float3, 2> tint_load_array_packed_vec3(const device tint_array<tint_packed_vec3_f32_array_element, 2>* const from) {
+  return tint_array<float3, 2>{float3((*from)[0u].packed), float3((*from)[1u].packed)};
+}
+
+kernel void v(const device S_packed_vec3* sb [[buffer(1)]], device int* s [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb=sb, .s=s};
+  float const scalar_f32 = (*tint_module_vars.sb).scalar_f32;
+  int const scalar_i32 = (*tint_module_vars.sb).scalar_i32;
+  uint const scalar_u32 = (*tint_module_vars.sb).scalar_u32;
+  half const scalar_f16 = (*tint_module_vars.sb).scalar_f16;
+  float2 const vec2_f32 = (*tint_module_vars.sb).vec2_f32;
+  int2 const vec2_i32 = (*tint_module_vars.sb).vec2_i32;
+  uint2 const vec2_u32 = (*tint_module_vars.sb).vec2_u32;
+  half2 const vec2_f16 = (*tint_module_vars.sb).vec2_f16;
+  float3 const vec3_f32 = float3((*tint_module_vars.sb).vec3_f32);
+  int3 const vec3_i32 = int3((*tint_module_vars.sb).vec3_i32);
+  uint3 const vec3_u32 = uint3((*tint_module_vars.sb).vec3_u32);
+  half3 const vec3_f16 = half3((*tint_module_vars.sb).vec3_f16);
+  float4 const vec4_f32 = (*tint_module_vars.sb).vec4_f32;
+  int4 const vec4_i32 = (*tint_module_vars.sb).vec4_i32;
+  uint4 const vec4_u32 = (*tint_module_vars.sb).vec4_u32;
+  half4 const vec4_f16 = (*tint_module_vars.sb).vec4_f16;
+  float2x2 const mat2x2_f32 = (*tint_module_vars.sb).mat2x2_f32;
+  tint_array<tint_packed_vec3_f32_array_element, 2> const v_1 = (*tint_module_vars.sb).mat2x3_f32;
+  float2x3 const mat2x3_f32 = float2x3(float3(v_1[0u].packed), float3(v_1[1u].packed));
+  float2x4 const mat2x4_f32 = (*tint_module_vars.sb).mat2x4_f32;
+  float3x2 const mat3x2_f32 = (*tint_module_vars.sb).mat3x2_f32;
+  tint_array<tint_packed_vec3_f32_array_element, 3> const v_2 = (*tint_module_vars.sb).mat3x3_f32;
+  float3x3 const mat3x3_f32 = float3x3(float3(v_2[0u].packed), float3(v_2[1u].packed), float3(v_2[2u].packed));
+  float3x4 const mat3x4_f32 = (*tint_module_vars.sb).mat3x4_f32;
+  float4x2 const mat4x2_f32 = (*tint_module_vars.sb).mat4x2_f32;
+  tint_array<tint_packed_vec3_f32_array_element, 4> const v_3 = (*tint_module_vars.sb).mat4x3_f32;
+  float4x3 const mat4x3_f32 = float4x3(float3(v_3[0u].packed), float3(v_3[1u].packed), float3(v_3[2u].packed), float3(v_3[3u].packed));
+  float4x4 const mat4x4_f32 = (*tint_module_vars.sb).mat4x4_f32;
+  half2x2 const mat2x2_f16 = (*tint_module_vars.sb).mat2x2_f16;
+  tint_array<tint_packed_vec3_f16_array_element, 2> const v_4 = (*tint_module_vars.sb).mat2x3_f16;
+  half2x3 const mat2x3_f16 = half2x3(half3(v_4[0u].packed_1), half3(v_4[1u].packed_1));
+  half2x4 const mat2x4_f16 = (*tint_module_vars.sb).mat2x4_f16;
+  half3x2 const mat3x2_f16 = (*tint_module_vars.sb).mat3x2_f16;
+  tint_array<tint_packed_vec3_f16_array_element, 3> const v_5 = (*tint_module_vars.sb).mat3x3_f16;
+  half3x3 const mat3x3_f16 = half3x3(half3(v_5[0u].packed_1), half3(v_5[1u].packed_1), half3(v_5[2u].packed_1));
+  half3x4 const mat3x4_f16 = (*tint_module_vars.sb).mat3x4_f16;
+  half4x2 const mat4x2_f16 = (*tint_module_vars.sb).mat4x2_f16;
+  tint_array<tint_packed_vec3_f16_array_element, 4> const v_6 = (*tint_module_vars.sb).mat4x3_f16;
+  half4x3 const mat4x3_f16 = half4x3(half3(v_6[0u].packed_1), half3(v_6[1u].packed_1), half3(v_6[2u].packed_1), half3(v_6[3u].packed_1));
+  half4x4 const mat4x4_f16 = (*tint_module_vars.sb).mat4x4_f16;
+  tint_array<float3, 2> const arr2_vec3_f32 = tint_load_array_packed_vec3((&(*tint_module_vars.sb).arr2_vec3_f32));
+  tint_array<half4x2, 2> const arr2_mat4x2_f16 = (*tint_module_vars.sb).arr2_mat4x2_f16;
+  Inner const struct_inner = (*tint_module_vars.sb).struct_inner;
+  tint_array<Inner, 4> const array_struct_inner = (*tint_module_vars.sb).array_struct_inner;
+  int const v_7 = as_type<int>((as_type<uint>(tint_f32_to_i32(scalar_f32)) + as_type<uint>(scalar_i32)));
+  int const v_8 = as_type<int>((as_type<uint>(v_7) + as_type<uint>(int(scalar_u32))));
+  int const v_9 = as_type<int>((as_type<uint>(v_8) + as_type<uint>(tint_f16_to_i32(scalar_f16))));
+  int const v_10 = as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(v_9) + as_type<uint>(tint_f32_to_i32(vec2_f32.x))))) + as_type<uint>(vec2_i32.x)));
+  int const v_11 = as_type<int>((as_type<uint>(v_10) + as_type<uint>(int(vec2_u32.x))));
+  int const v_12 = as_type<int>((as_type<uint>(v_11) + as_type<uint>(tint_f16_to_i32(vec2_f16.x))));
+  int const v_13 = as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(v_12) + as_type<uint>(tint_f32_to_i32(vec3_f32.y))))) + as_type<uint>(vec3_i32.y)));
+  int const v_14 = as_type<int>((as_type<uint>(v_13) + as_type<uint>(int(vec3_u32.y))));
+  int const v_15 = as_type<int>((as_type<uint>(v_14) + as_type<uint>(tint_f16_to_i32(vec3_f16.y))));
+  int const v_16 = as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(v_15) + as_type<uint>(tint_f32_to_i32(vec4_f32.z))))) + as_type<uint>(vec4_i32.z)));
+  int const v_17 = as_type<int>((as_type<uint>(v_16) + as_type<uint>(int(vec4_u32.z))));
+  int const v_18 = as_type<int>((as_type<uint>(v_17) + as_type<uint>(tint_f16_to_i32(vec4_f16.z))));
+  int const v_19 = as_type<int>((as_type<uint>(v_18) + as_type<uint>(tint_f32_to_i32(mat2x2_f32[0u].x))));
+  int const v_20 = as_type<int>((as_type<uint>(v_19) + as_type<uint>(tint_f32_to_i32(mat2x3_f32[0u].x))));
+  int const v_21 = as_type<int>((as_type<uint>(v_20) + as_type<uint>(tint_f32_to_i32(mat2x4_f32[0u].x))));
+  int const v_22 = as_type<int>((as_type<uint>(v_21) + as_type<uint>(tint_f32_to_i32(mat3x2_f32[0u].x))));
+  int const v_23 = as_type<int>((as_type<uint>(v_22) + as_type<uint>(tint_f32_to_i32(mat3x3_f32[0u].x))));
+  int const v_24 = as_type<int>((as_type<uint>(v_23) + as_type<uint>(tint_f32_to_i32(mat3x4_f32[0u].x))));
+  int const v_25 = as_type<int>((as_type<uint>(v_24) + as_type<uint>(tint_f32_to_i32(mat4x2_f32[0u].x))));
+  int const v_26 = as_type<int>((as_type<uint>(v_25) + as_type<uint>(tint_f32_to_i32(mat4x3_f32[0u].x))));
+  int const v_27 = as_type<int>((as_type<uint>(v_26) + as_type<uint>(tint_f32_to_i32(mat4x4_f32[0u].x))));
+  int const v_28 = as_type<int>((as_type<uint>(v_27) + as_type<uint>(tint_f16_to_i32(mat2x2_f16[0u].x))));
+  int const v_29 = as_type<int>((as_type<uint>(v_28) + as_type<uint>(tint_f16_to_i32(mat2x3_f16[0u].x))));
+  int const v_30 = as_type<int>((as_type<uint>(v_29) + as_type<uint>(tint_f16_to_i32(mat2x4_f16[0u].x))));
+  int const v_31 = as_type<int>((as_type<uint>(v_30) + as_type<uint>(tint_f16_to_i32(mat3x2_f16[0u].x))));
+  int const v_32 = as_type<int>((as_type<uint>(v_31) + as_type<uint>(tint_f16_to_i32(mat3x3_f16[0u].x))));
+  int const v_33 = as_type<int>((as_type<uint>(v_32) + as_type<uint>(tint_f16_to_i32(mat3x4_f16[0u].x))));
+  int const v_34 = as_type<int>((as_type<uint>(v_33) + as_type<uint>(tint_f16_to_i32(mat4x2_f16[0u].x))));
+  int const v_35 = as_type<int>((as_type<uint>(v_34) + as_type<uint>(tint_f16_to_i32(mat4x3_f16[0u].x))));
+  int const v_36 = as_type<int>((as_type<uint>(v_35) + as_type<uint>(tint_f16_to_i32(mat4x4_f16[0u].x))));
+  int const v_37 = as_type<int>((as_type<uint>(v_36) + as_type<uint>(tint_f32_to_i32(arr2_vec3_f32[0u].x))));
+  (*tint_module_vars.s) = as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(v_37) + as_type<uint>(tint_f16_to_i32(arr2_mat4x2_f16[0u][0u].x))))) + as_type<uint>(struct_inner.scalar_i32)))) + as_type<uint>(array_struct_inner[0u].scalar_i32)));
+}

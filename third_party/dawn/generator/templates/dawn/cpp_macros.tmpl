@@ -1,0 +1,92 @@
+//* Copyright 2024 The Dawn & Tint Authors
+//*
+//* Redistribution and use in source and binary forms, with or without
+//* modification, are permitted provided that the following conditions are met:
+//*
+//* 1. Redistributions of source code must retain the above copyright notice, this
+//*    list of conditions and the following disclaimer.
+//*
+//* 2. Redistributions in binary form must reproduce the above copyright notice,
+//*    this list of conditions and the following disclaimer in the documentation
+//*    and/or other materials provided with the distribution.
+//*
+//* 3. Neither the name of the copyright holder nor the names of its
+//*    contributors may be used to endorse or promote products derived from
+//*    this software without specific prior written permission.
+//*
+//* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+//* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+//* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+//* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+//* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+//* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+//* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+//* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+{% macro wgpu_string_members(CppType) %}
+    inline constexpr {{CppType}}() noexcept = default;
+
+    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
+    inline constexpr {{CppType}}(const std::string_view& sv) noexcept {
+        this->data = sv.data();
+        this->length = sv.length();
+    }
+
+    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
+    inline constexpr {{CppType}}(const char* s) {
+        this->data = s;
+        this->length = WGPU_STRLEN;  // use strlen
+    }
+
+    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
+    inline constexpr {{CppType}}(WGPUStringView s) {
+        this->data = s.data;
+        this->length = s.length;
+    }
+
+    inline constexpr {{CppType}}(const char* data, size_t length) {
+        this->data = data;
+        this->length = length;
+    }
+
+    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
+    inline constexpr {{CppType}}(std::nullptr_t) {
+        this->data = nullptr;
+        this->length = WGPU_STRLEN;
+    }
+
+    // NOLINTNEXTLINE(runtime/explicit) allow implicit construction
+    inline constexpr {{CppType}}(std::nullopt_t) {
+        this->data = nullptr;
+        this->length = WGPU_STRLEN;
+    }
+
+    bool IsUndefined() const {
+        return this->data == nullptr && this->length == wgpu::kStrlen;
+    }
+
+    // NOLINTNEXTLINE(runtime/explicit) allow implicit conversion
+    operator std::string_view() const {
+        if (this->length == wgpu::kStrlen) {
+            if (IsUndefined()) {
+                return {};
+            }
+            return {this->data};
+        }
+        return {this->data, this->length};
+    }
+
+    template <typename View,
+              typename = std::enable_if_t<std::is_constructible_v<View, const char*, size_t>>>
+    explicit operator View() const {
+        if (this->length == wgpu::kStrlen) {
+            if (IsUndefined()) {
+                return {};
+            }
+            return {this->data};
+        }
+        return {this->data, this->length};
+    }
+{% endmacro %}

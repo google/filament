@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglBindTexImage">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglBindTexImage</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglBindTexImage</refname>
+        <refpurpose>
+            Defines a two-dimensional texture image
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglBindTexImage</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLSurface <parameter>surface</parameter></paramdef>
+                <paramdef>EGLint <parameter>buffer</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>Specifies the EGL display connection.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>surface</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL surface.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>buffer</parameter></term>
+                <listitem><para>Specifies the texture image data.</para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            The texture image consists of the image data in <parameter>buffer</parameter> for the specified surface, and need not be copied.
+        </para>
+        <para>
+            The texture target, the texture format and the size of the texture components are derived from
+            attributes of the specified surface, which must be a pbuffer supporting one of the
+            <constant>EGL_BIND_TO_TEXTURE_RGB</constant> or <constant>EGL_BIND_TO_TEXTURE_RGBA</constant> attributes.
+        </para>
+        <para>
+            The pbuffer attribute <constant>EGL_TEXTURE_FORMAT</constant> determines the base internal format
+            of the texture.
+        </para>
+        <para>
+            The texture target is derived from the <constant>EGL_TEXTURE_TARGET</constant> attribute of surface.
+            If the attribute value is <constant>EGL_TEXTURE_2D</constant>, then <parameter>buffer</parameter> defines a texture for
+            the two-dimensional texture object which is bound to the current context (hereafter
+            referred to as the current texture object).
+        </para>
+        <para>
+            If <parameter>display</parameter> and <parameter>surface</parameter> are the display and surface for the calling thread's current
+            context, <function>eglBindTexImage</function> performs an implicit <citerefentry><refentrytitle>glFlush</refentrytitle></citerefentry>.
+            For other surfaces, <function>eglBindTexImage</function> waits for all effects from previously issued OpenGL ES commands
+            drawing to the surface to complete before defining the texture image, as
+            though <citerefentry><refentrytitle>glFinish</refentrytitle></citerefentry>  were called on the last context to which that surface were bound.
+        </para>
+        <para>
+            After <function>eglBindTexImage</function> is called, the specified surface is no longer available
+            for reading or writing. Any read operation, such as <citerefentry><refentrytitle>glReadPixels</refentrytitle></citerefentry> or
+            <citerefentry><refentrytitle>eglCopyBuffers</refentrytitle></citerefentry>, which reads values from any of the surface's color buffers or ancillary
+            buffers will produce indeterminate results. In addition, draw operations that are
+            done to the surface before its color buffer is released from the texture produce indeterminate
+            results. Specifically, if the surface is current to a context and thread
+            then rendering commands will be processed and the context state will be updated,
+            but the surface may or may not be written.
+        </para>
+        <para>
+            Texture mipmap levels are automatically generated when all of the following
+            conditions are met while calling <function>eglBindTexImage</function>:
+        </para>
+        <itemizedlist>
+        <listitem>
+        <para>
+            The <constant>EGL_MIPMAP_TEXTURE</constant> attribute of the pbuffer being bound is
+            <constant>EGL_TRUE</constant>.
+        </para>
+        </listitem>
+        <listitem>
+        <para>
+            The OpenGL ES texture parameter <constant>GL_GENERATE_MIPMAP</constant> is <constant>GL_TRUE</constant> for
+            the currently bound texture.
+        </para>
+        </listitem>
+        <listitem>
+        <para>
+            The value of the <constant>EGL_MIPMAP_LEVEL</constant> attribute of the pbuffer being bound is
+            equal to the value of the texture parameter <constant>GL_TEXTURE_BASE_LEVEL</constant>.
+            In this case, additional mipmap levels are generated as described in section 3.8
+            of the OpenGL ES 1.1 Specification.
+        </para>
+        </listitem>
+        </itemizedlist>
+        <para>
+            In this case, additional mipmap levels are generated as described in section 3.8
+            of the OpenGL ES 1.1 Specification.
+        </para>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            <citerefentry><refentrytitle>eglSwapBuffers</refentrytitle></citerefentry> has no effect if it is
+            called on a bound surface.
+        </para>
+        <para>
+            Any existing images associated with the different mipmap levels of the texture object
+            are freed (it is as if <citerefentry><refentrytitle>glTexImage</refentrytitle></citerefentry>
+            was called with an image of zero width).
+        </para>
+        <para>
+            The color buffer is bound to a texture object. If the texture object is
+            shared between contexts, then the color buffer is also shared. If a texture object is
+            deleted before <citerefentry><refentrytitle>eglReleaseTexImage</refentrytitle></citerefentry> is called, then the color buffer is released and
+            the surface is made available for reading and writing.
+        </para>
+        <para>
+            It is not an error to call <citerefentry><refentrytitle>glTexImage2D</refentrytitle></citerefentry> or
+            <citerefentry><refentrytitle>glCopyTexImage2D</refentrytitle></citerefentry> to replace an
+            image of a texture object that has a color buffer bound to it. However, these calls
+            will cause the color buffer to be released back to the surface and new memory will
+            be allocated for the texture. Note that the color buffer is released even if the image
+            that is being defined is a mipmap level that was not defined by the color buffer.
+        </para>
+        <para>
+            <function>eglBindTexImage</function> is ignored if there is no current rendering context.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_BAD_ACCESS</constant> is generated if
+            <parameter>buffer</parameter> is already bound to a texture.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if the
+            surface attribute <constant>EGL_TEXTURE_FORMAT</constant> is
+            set to <constant>EGL_NO_TEXTURE</constant>.
+        </para>
+        <para>
+            <constant>EGL_BAD_MATCH</constant> is generated if
+            <parameter>buffer</parameter> is not a valid buffer
+            (currently only <constant>EGL_BACK_BUFFER</constant> may be
+            specified).
+        </para>
+        <para>
+            <constant>EGL_BAD_SURFACE</constant> is generated if
+            <parameter>surface</parameter> is not an EGL surface, or is
+            not a pbuffer surface supporting texture binding.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglReleaseTexImage</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

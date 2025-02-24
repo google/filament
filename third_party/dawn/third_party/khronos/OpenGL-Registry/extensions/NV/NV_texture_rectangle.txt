@@ -1,0 +1,731 @@
+Name
+
+    NV_texture_rectangle
+
+Name Strings
+
+    GL_NV_texture_rectangle
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2000, 2001, 2002, 2003, 2004.
+
+Status
+
+    Implemented in NVIDIA's Release 10 drivers.
+
+Version
+
+    NVIDIA Date: March 5, 2004
+
+Number
+
+    229
+
+Dependencies
+
+    Written based on the OpenGL 1.2.1 specification including
+    ARB_texture_cube_map wording.
+
+    IBM_mirrored_repeat affects the definition of this extension.
+
+    ARB_texture_border_clamp affects the definition of this extension.
+
+    EXT_paletted_texture affects the definition of this extension.
+
+    This extension affects the definition of the NV_texture_shader
+    extension.
+
+Overview
+
+    OpenGL texturing is limited to images with power-of-two dimensions
+    and an optional 1-texel border.  NV_texture_rectangle extension
+    adds a new texture target that supports 2D textures without requiring
+    power-of-two dimensions.
+
+    Non-power-of-two dimensioned textures are useful for storing
+    video images that do not have power-of-two dimensions.  Re-sampling
+    artifacts are avoided and less texture memory may be required by using
+    non-power-of-two dimensioned textures.  Non-power-of-two dimensioned
+    textures are also useful for shadow maps and window-space texturing.
+
+    However, non-power-of-two dimensioned (NPOTD) textures have
+    limitations that do not apply to power-of-two dimensioned (POT)
+    textures.  NPOTD textures may not use mipmap filtering; POTD
+    textures support both mipmapped and non-mipmapped filtering.
+    NPOTD textures support only the GL_CLAMP, GL_CLAMP_TO_EDGE,
+    and GL_CLAMP_TO_BORDER_ARB wrap modes; POTD textures support
+    GL_CLAMP_TO_EDGE, GL_REPEAT, GL_CLAMP, GL_MIRRORED_REPEAT_IBM,
+    and GL_CLAMP_TO_BORDER.  NPOTD textures do not support an optional
+    1-texel border; POTD textures do support an optional 1-texel border.
+
+    NPOTD textures are accessed by non-normalized texture coordinates.
+    So instead of thinking of the texture image lying in a [0..1]x[0..1]
+    range, the NPOTD texture image lies in a [0..w]x[0..h] range.
+
+    This extension adds a new texture target and related state (proxy,
+    binding, max texture size).
+
+Issues
+
+    Should rectangular textures simply be an extension to the 2D texture
+    target that allows non-power-of-two widths and heights?
+
+      RESOLUTION:  No.  The rectangular texture is an entirely new texture
+      target type called GL_TEXTURE_RECTANGLE_NV.  This is because while
+      the texture rectangle target relaxes the power-of-two dimensions
+      requirements of the texture 2D target, it also has limitations
+      such as the absence of both mipmapping and the GL_REPEAT and
+      GL_MIRRORED_REPEAT_IBM wrap modes.  Additionally, rectangular
+      textures do not use [0..1] normalized texture coordinates.
+
+    How is the image of a rectangular texture specified?
+
+      RESOLUTION:  Using the standard OpenGL API for specifying a 2D
+      texture image: glTexImage2D, glSubTexImage2D, glCopyTexImage2D,
+      and glCopySubTexImage2D.  The target for these commands is
+      GL_TEXTURE_RECTANGLE_NV though.
+
+      This is similar to how the ARB_texture_cube_map extension uses
+      the 2D texture image specification API though with its own texture
+      target.
+
+    Should 3D textures be allowed to be NPOTD?
+    
+      RESOLUTION:  No.  That should be left to another extension.
+
+    Should cube map textures be allowed to be NPOTD?
+
+      RESOLUTION:  No.  Probably not particularly interesting for
+      cube maps.  If it becomes important, another extension should
+      provide NPOTD cube maps.
+
+    Should 1D textures be allowed to be NPOTD?
+
+      RESOLUTION:  No.  Rectangular textures are always considered 2D
+      by this extension.  You can always simulate a 1D NPOTD textures
+      by using a 2D Wx1 or 1xH dimensioned rectangular texture.
+
+    Should anything be said about performance?
+
+      RESOLUTION:  No, but developers should not be surprised if
+      conventional POTD textures will render slightly faster than NPOTD
+      textures.  This is particularly likely to be true when NPOTD
+      textures are minified leading to texture cache thrashing.
+
+    How are rectangular textures enabled?
+
+      RESOLUTION:  Since rectangular textures add a new texture target,
+      you enable rectangular textures by enabling this target.  Example:
+
+        glEnable(GL_TEXTURE_RECTANGLE_NV);
+
+    What is the priority of the rectangular texture target enable relative to
+    existing texture enables?
+
+      RESOLUTION:  The texture rectangle target is like a 2D texture in
+      many ways so its enable priority is just above GL_TEXTURE_2D.  From
+      lowest priority to highest priority: GL_TEXTURE_1D, GL_TEXTURE_2D,
+      GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP_ARB.
+
+    What is the default wrap state for a texture rectangle?
+
+      RESOLUTION:  GL_CLAMP_TO_EDGE.  The normal default wrap state is
+      GL_REPEAT, but that mode is not allowed for rectangular textures?
+
+    What is the default minification filter for a texture rectangle?
+
+      RESOLUTION:  GL_LINEAR.  The normal default minification filter
+      state is GL_NEAREST_MIPMAP_LINEAR, but that mode is not allowed
+      for rectangular textures because mipmapping is not supported.
+
+    Do paletted textures work with rectangular textures?
+
+      RESOLUTION:  No.  Similar (but not identical) functionality can
+      be accomplished using dependent texture shader operations (see
+      NV_texture_shader).
+
+      The difference between paletted texture accesses and dependent
+      texture accesses is that paletted texture lookups are
+      "pre-filtering" while dependent texture shader operations are
+      "post-filtering".
+
+    Can compressed texture images be specified for a rectangular texture?
+
+      RESOLUTION:  The generic texture compression internal formats
+      introduced by ARB_texture_compression are supported for rectangular
+      textures because the image is not presented as compressed data and
+      the ARB_texture_compression extension always permits generic texture
+      compression internal formats to be stored in uncompressed form.
+      Implementations are free to support generic compression internal
+      formats for rectangular textures if supported but such support is
+      not required.
+
+      This extensions makes a blanket statement that specific compressed
+      internal formats for use with CompressedTexImage<n>DARB are NOT
+      supported for rectangular textures.  This is because several
+      existing hardware implementations of texture compression formats
+      such as S3TC are not designed for compressing rectangular textures.
+      This does not preclude future texture compression extensions from
+      supporting compressed internal formats that do work with rectangular
+      extensions (by relaxing the current blanket error condition).
+
+    Does this extension work with SGIX_shadow-style shadow mapping?
+
+      RESOLUTION:  Yes.  The one non-obvious allowance to support
+      SGIX_shadow-style shadow mapping is that the R texture coordinate
+      wrap mode remains UNCHANGED for rectangular textures.  Clamping of
+      the R texture coordinate for rectangular textures uses the standard
+      [0,1] interval rather than the [0,ws] or [0,hs] intervals as in
+      the case of S and T.  This is because R represents a depth value
+      in the [0,1] range whether using a 2D or rectangular texture.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, IsEnabled, and
+    by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev, and by the <target> parameter of BindTexture,
+    GetTexParameterfv, GetTexParameteriv, TexParameterf, TexParameteri,
+    TexParameterfv, and TexParameteriv:
+
+        TEXTURE_RECTANGLE_NV               0x84F5
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        TEXTURE_BINDING_RECTANGLE_NV       0x84F6
+
+    Accepted by the <target> parameter of GetTexImage,
+    GetTexLevelParameteriv, GetTexLevelParameterfv, TexImage2D,
+    CopyTexImage2D, TexSubImage2D, and CopySubTexImage2D:
+
+        TEXTURE_RECTANGLE_NV
+
+    Accepted by the <target> parameter of GetTexLevelParameteriv,
+    GetTexLevelParameterfv, GetTexParameteriv, and TexImage2D:
+
+        PROXY_TEXTURE_RECTANGLE_NV          0x84F7 
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetIntegerv, and GetFloatv:
+
+        MAX_RECTANGLE_TEXTURE_SIZE_NV       0x84F8
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+ --  Section 3.6.3 "Pixel Transfer Modes" under "Color Table
+     Specification" or the ColorTableEXT description in the
+     EXT_paletted_texture specification (rev 1.2)
+
+     Add the following statement after introducing ColorTableEXT:
+
+     "The error INVALID_ENUM is generated if the target to ColorTable (or
+     ColorTableEXT or the various ColorTable and ColorTableEXT alternative
+     commands) is TEXTURE_RECTANGLE_NV or PROXY_TEXTURE_RECTANGLE_NV."
+
+ --  Section 3.8.1 "Texture Image Specification"
+
+     Change the second sentence through the rest of the paragraph
+     describing TexImage2D on page 116 to:
+
+     "<target> must be one of TEXTURE_2D for a 2D texture, or one
+     of TEXTURE_RECTANGLE_NV for a rectangle texture, or one of
+     TEXTURE_CUBE_MAP_POSITIVE_X_ARB, TEXTURE_CUBE_MAP_NEGATIVE_X_ARB,
+     TEXTURE_CUBE_MAP_POSITIVE_Y_ARB, TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB,
+     TEXTURE_CUBE_MAP_POSITIVE_Z_ARB, or TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB
+     for a cube map texture.  Additionally, <target> can be either
+     PROXY_TEXTURE_2D for a 2D proxy texture or PROXY_TEXTURE_RECTANGLE_NV
+     for a rectangle proxy texture or PROXY_TEXTURE_CUBE_MAP_ARB for a
+     cube map proxy texture as discussed in section 3.8.7.
+     The other parameters match the corresponding parameters of TexImage3D."
+
+     Add a following paragraph reading:
+
+     "Rectangular textures do not support paletted formats.  The error
+     INVALID_ENUM is generated if the target is TEXTURE_RECTANGLE_NV
+     or PROXY_TEXTURE_RECTANGLE_NV and the format is COLOR_INDEX or
+     the internalformat is COLOR_INDEX or one of the COLOR_INDEX<n>_EXT
+     internal formats."
+
+     Change the 14th paragraph (page 116) to read:
+
+     "In a similar fashion, the maximum allowable width of a rectangular
+     texture image, and the maximum allowable height of a rectangular
+     texture image, must be at least the implementation-dependent value
+     of MAX_RECTANGLE_TEXTURE_SIZE_NV."
+
+     Add the following paragraph after the paragraph introducing
+     TexImage2D (page 116):
+
+     "When the target is TEXTURE_RECTANGLE_NV, the INVALID_VALUE error is
+     generated if border is any value other than zero or the level is any
+     value other than zero.  Also when the target is TEXTURE_RECTANGLE_NV,
+     the texture dimension restrictions specified by equations 3.11,
+     3.12, and 3.13 are ignored; however, if the width is less than zero or
+     the height is less than zero, the error INVALID_VALUE is generated.
+     In the case of a rectangular texture, ws and hs equal the specified
+     width and height respectively of the rectangular texture image
+     while ds is 1."
+
+     Amend the following paragraph that was added by the
+     ARB_texture_cube_map specification after the first paragraph on
+     page 117:
+
+     "A 2D texture consists of a single 2D texture image.  A rectangle
+     texture consists of a single 2D texture image.  A cube map texture
+     is a set of six 2D texture images.  The six cube map texture
+     targets form a single cube map texture though each target names
+     a distinct face of the cube map.  The TEXTURE_CUBE_MAP_*_ARB
+     targets listed above update their appropriate cube map face 2D
+     texture image.  Note that the six cube map 2D image tokens such as
+     TEXTURE_CUBE_MAP_POSITIVE_X_ARB are used when specifying, updating,
+     or querying one of a cube map's six 2D image, but when enabling cube
+     map texturing or binding to a cube map texture object (that is when
+     the cube map is accessed as a whole as opposed to a particular 2D
+     image), the TEXTURE_CUBE_MAP_ARB target is specified."
+
+     Append to the end of the third to the last paragraph in the section
+     (page 118):
+
+     "A rectangular texture array has depth dt=1, with height ht and width
+     wt defined by the specified image height and width parameters."
+
+ --  Section 3.8.2 "Alternate Texture Image Specification Commands"
+
+     Add TEXTURE_RECTANGLE_NV to the second paragraph (page 120) to say:
+
+     ... "Currently, <target> must be TEXTURE_2D,
+     TEXTURE_RECTANGLE_NV, TEXTURE_CUBE_MAP_POSITIVE_X_ARB,
+     TEXTURE_CUBE_MAP_NEGATIVE_X_ARB, TEXTURE_CUBE_MAP_POSITIVE_Y_ARB,
+     TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB, TEXTURE_CUBE_MAP_POSITIVE_Z_ARB,
+     or TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB." ...
+
+     Add TEXTURE_RECTANGLE_NV to the fourth paragraph (page 121) to say:
+
+     ... "Currently the target arguments of TexSubImage1D and
+     CopyTexSubImage1D must be TEXTURE_1D, the <target> arguments of
+     TexSubImage2D and CopyTexSubImage2D must be one of TEXTURE_2D,
+     TEXTURE_RECTANGLE_NV, TEXTURE_CUBE_MAP_POSITIVE_X_ARB,
+     TEXTURE_CUBE_MAP_NEGATIVE_X_ARB, TEXTURE_CUBE_MAP_POSITIVE_Y_ARB,
+     TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB, TEXTURE_CUBE_MAP_POSITIVE_Z_ARB,
+     or TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB, and the <target> arguments of
+     TexSubImage3D and CopyTexSubImage3D must be TEXTURE_3D." ...
+
+     Also add to the end of the fourth paragraph (121):
+
+     "If target is TEXTURE_RECTANGLE_NV and level is not zero, the error
+     INVALID_VALUE is generated."
+
+ --  Section "Compressed Texture Images" in the ARB_texture_compression
+     specification
+
+     Add the following paragraph after introducing the
+     CompressedTexImage<n>DARB commands:
+
+     "The error INVALID_ENUM is generated if the target parameter to one
+     of the CompressedTexImage<n>DARB commands is TEXTURE_RECTANGLE_NV."
+
+     Add the following paragraph after introducing the
+     CompressedTexSubImage<n>DARB commands:
+
+     "The error INVALID_ENUM is generated if the target parameter
+     to one of the CompressedTexSubImage<n>DARB commands is
+     TEXTURE_RECTANGLE_NV."
+
+ --  Section 3.8.3 "Texture Parameters"
+
+     Add TEXTURE_RECTANGLE_NV to paragraph one (page 124) to say:
+
+     ... "<target> is the target, either TEXTURE_1D, TEXTURE_2D,
+     TEXTURE_RECTANGLE_NV, TEXTURE_3D, or TEXTURE_CUBE_MAP_ARB." ...
+
+     Add the following paragraph to the end of the section (page 134):
+
+     "Certain texture parameter values may not be specified for textures
+     with a target of TEXTURE_RECTANGLE_NV.  The error INVALID_ENUM
+     is generated if the target is TEXTURE_RECTANGLE_NV and the
+     TEXTURE_WRAP_S, TEXTURE_WRAP_T, or TEXTURE_WRAP_R parameter is set to
+     REPEAT or MIRRORED_REPEAT_IBM.  The error INVALID_ENUM is generated
+     if the target is TEXTURE_RECTANGLE_NV and the TEXTURE_MIN_FILTER is
+     set to a value other than NEAREST or LINEAR (no mipmap filtering
+     is permitted).  The error INVALID_ENUM is generated if the target
+     is TEXTURE_RECTANGLE_NV and TEXTURE_BASE_LEVEL is set to any value
+     other than zero."
+
+ --  Section 3.8.4 "Texture Wrap Modes"
+
+     Add this final additional paragraph:
+
+     "Texture coordinates are clamped differently for rectangular
+     textures.  The r texture coordinate is wrapped as described above (as
+     required for shadow mapping to operate correctly).  When the texture
+     target is TEXTURE_RECTANGLE_NV, the s and t coordinates are wrapped
+     as follows: CLAMP causes the s coordinate to be clamped to the range
+     [0,ws].  CLAMP causes the t coordinate to be clamped to the range
+     [0,hs].  CLAMP_TO_EDGE causes the s coordinate to be clamped to
+     the range [0.5,ws-0.5].  CLAMP_TO_EDGE causes the t coordinate
+     to be clamped to the range [0.5,hs-0.5].  CLAMP_TO_BORDER_ARB
+     causes the s coordinate to be clamped to the range [-0.5,ws+0.5].
+     CLAMP_TO_BORDER_ARB causes the t coordinate to be clamped to the
+     range [-0.5,hs+0.5]."
+
+ --  Section 3.8.5 "Texture Minification" under "Mipmapping"
+
+     Change the second full paragraph on page 126 to read:
+
+     "For non-rectangular textures, let u(x,y) = 2^n*s(x,y), v(x,y) =
+     2^m*t(x,y), and w(x,y) = 2^l*r(x,y), where n, m, and l are defined
+     by equations 3.11, 3.12, and 3.13 with ws, hs, and ds equal to
+     the width, height, and depth of the image array whose level is
+     TEXTURE_BASE_LEVEL.  However, for rectangular textures let u(x,y)
+     = s(x,y), v(x,y) = t(x,y), and w(x,y) = r(x,y)."
+
+     Update the last sentence in the first full paragraph on page 127
+     to read:
+
+     "Depending on whether the texture's target is rectangular or
+     non-rectangular, this means the texel at location (i,j,k) becomes
+     the texture value, with i given by
+
+              /  floor(u),    s < 1
+             /
+        i = {    2^n-1,       s == 1, non-rectangular texture    (3.17)
+             \
+              \  ws-1,        s == 1, rectangular texture
+
+     (Recall that if TEXTURE_WRAP_S is REPEAT, then 0 <= s < 1.)  Similarly,
+     j is found as
+
+              /  floor(v),    t < 1
+             /
+        j = {    2^m-1,       t == 1, non-rectangular texture    (3.18)
+             \
+              \  hs-1,        t == 1, rectangular texture
+
+     and k is found as
+
+              /  floor(w),    r < 1
+             /
+        k = {    2^l-1,       r == 1, non-rectangular texture     (3.19)
+             \  
+              \  0,           r == 1, rectangular texture"
+
+     Change the last sentence in the partial paragraph after equation
+     3.19 to read:
+
+     "For a two-dimensional or rectangular texture, k is irrelevant;
+     the texel at location (i,j) becomes the texture value."
+
+     Change the sentence preceding equation 3.20 (page 128) specifying
+     how to compute the value tau for a two-dimensional texture to:
+
+     "For a two-dimensional or rectangular texture,"
+
+     Follow the first full paragraph on page 130 with:
+
+     "Rectangular textures do not support mipmapping (it is an error to
+     specify a minification filter that requires mipmapping)."
+
+ --  Section 3.8.7 "Texture State and Proxy State"
+
+     Change the first sentence of the first paragraph (page 131) to say:
+
+     "The state necessary for texture can be divided into two categories.
+     First, there are the ten sets of mipmap arrays (one each for the
+     one-, two-, and three-dimensional texture targets, one for the
+     rectangular texture target (though the rectangular texture target
+     has only one mipmap level), and six for the cube map texture targets)
+     and their number." ...
+
+     Change the fourth and third to last sentences of the first paragraph
+     to say:
+
+     "In the initial state, the value assigned to TEXTURE_MIN_FILTER
+     is NEAREST_MIPMAP_LINEAR, except for rectangular textures where
+     the initial value is LINEAR, and the value for TEXTURE_MAG_FILTER
+     is LINEAR.  s, t, and r warp modes are all set to REPEAT, except
+     for rectangular textures where the initial value is CLAMP_TO_EDGE."
+
+     Change the second paragraph (page 132) to say:
+
+     "In addition to the one-, two-, three-dimensional, rectangular, and
+     the six cube map sets of image arrays, the partially instantiated
+     one-, two-, and three-dimensional, rectangular, and one cube map
+     sets of proxy image arrays are maintained." ...
+
+     Change the third paragraph (page 132) to:
+
+     "One- and two-dimensional and rectangular proxy arrays are operated
+     on in the same way when TexImage1D is executed with target specified
+     as PROXY_TEXTURE_1D, or TexImage2D is executed with target specified
+     as PROXY_TEXTURE_2D or PROXY_TEXTURE_RECTANGLE_NV."
+
+     Change the second sentence of the fourth paragraph (page 132) to:
+
+     "Therefore PROXY_TEXTURE_1D, PROXY_TEXTURE_2D,
+     PROXY_TEXTURE_RECTANGLE_NV, PROXY_TEXTURE_3D, and
+     PROXY_TEXTURE_CUBE_MAP_ARB cannot be used as textures, and their
+     images must never be queried using GetTexImage." ...
+
+ --  Section 3.8.8 "Texture Objects"
+
+     Change the first sentence of the first paragraph (page 132) to say:
+
+     "In addition to the default textures TEXTURE_1D, TEXTURE_2D,
+     TEXTURE_RECTANGLE_NV, TEXTURE_3D, and TEXTURE_CUBE_MAP_ARB, named
+     one-dimensional, two-dimensional, rectangular, and three-dimensional
+     texture objects and cube map texture objects can be created and
+     operated on." ...
+
+     Change the second paragraph (page 132) to say:
+
+     "A texture object is created by binding an unused name to
+     TEXTURE_1D, TEXTURE_2D, TEXTURE_RECTANGLE_NV, TEXTURE_3D, or
+     TEXTURE_CUBE_MAP_ARB." ...  "If the new texture object is bound
+     to TEXTURE_1D, TEXTURE_2D, TEXTURE_RECTANGLE_NV, TEXTURE_3D, or
+     TEXTURE_CUBE_MAP_ARB, it remains a one-dimensional, two-dimensional,
+     rectangular, three-dimensional, or cube map texture until it is
+     deleted."
+
+     Change the third paragraph (page 133) to say:
+
+     "BindTexture may also be used to bind an existing texture object
+     to either TEXTURE_1D, TEXTURE_2D, TEXTURE_RECTANGLE_NV, TEXTURE_3D,
+     or TEXTURE_CUBE_MAP_ARB."
+
+     Change paragraph five (page 133) to say:
+
+     "In the initial state, TEXTURE_1D, TEXTURE_2D, TEXTURE_RECTANGLE_NV,
+     TEXTURE_3D, and TEXTURE_CUBE_MAP have one-dimensional,
+     two-dimensional, rectangular, three-dimensional, and cube map state
+     vectors associated with them respectively."  ...  "The initial,
+     one-dimensional, two-dimensional, rectangular, three-dimensional, and
+     cube map texture is therefore operated upon, queried, and applied
+     as TEXTURE_1D, TEXTURE_2D, TEXTURE_RECTANGLE_NV, TEXTURE_3D,
+     and TEXTURE_CUBE_MAP_ARB respectively while 0 is bound to the
+     corresponding targets."
+
+     Change paragraph six (page 133) to say:
+
+     ... "If a texture that is currently bound to one of the targets
+     TEXTURE_1D, TEXTURE_2D, TEXTURE_RECTANGLE_NV, TEXTURE_3D, or
+     TEXTURE_CUBE_MAP_ARB is deleted, it is as though BindTexture has
+     been executed with the same <target> and <texture> zero." ...
+
+ --  Section 3.8.10 "Texture Application"
+
+     Replace the beginning sentences of the first paragraph (page 138)
+     with:
+
+     "Texturing is enabled or disabled using the generic Enable and
+     Disable commands, respectively, with the symbolic constants
+     TEXTURE_1D, TEXTURE_2D, TEXTURE_RECTANGLE_NV, TEXTURE_3D,
+     or TEXTURE_CUBE_MAP_ARB to enable the one-dimensional,
+     two-dimensional, rectangular, three-dimensional, or cube map
+     texturing respectively.  If both two- and one-dimensional textures
+     are enabled, the two-dimensional texture is used.  If the rectangular
+     and either of the two- or one-dimensional textures is enabled, the
+     rectangular texture is used.  If the three-dimensional and any of the
+     rectangular, two-dimensional, or one-dimensional textures is enabled,
+     the three-dimensional texture is used.  If the cube map texture
+     and any of the three-dimensional, rectangular, two-dimensional,
+     or one-dimensional textures is enabled, then cube map texturing is
+     used. 
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+ --  Section 5.4 "Display Lists"
+
+     In the first paragraph (page 179), add PROXY_TEXTURE_RECTANGLE_NV
+     to the list of PROXY_* tokens.
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+ --  Section 6.1.3 "Enumerated Queries"
+
+     Change the fourth paragraph (page 183) to say:
+
+     "The GetTexParameter parameter <target> may be one of
+     TEXTURE_1D, TEXTURE_2D, TEXTURE_RECTANGLE_NV, TEXTURE_3D, or
+     TEXTURE_CUBE_MAP_ARB, indicating the currently bound one-dimensional,
+     two-dimensional, rectangular, three-dimensional, or cube map
+     texture object.  For GetTexLevelParameter, <target> may be one
+     of TEXTURE_1D, TEXTURE_2D, TEXTURE_RECTANGLE_NV, TEXTURE_3D,
+     TEXTURE_CUBE_MAP_POSITIVE_X_ARB, TEXTURE_CUBE_MAP_NEGATIVE_X_ARB,
+     TEXTURE_CUBE_MAP_POSITIVE_Y_ARB, TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB,
+     TEXTURE_CUBE_MAP_POSITIVE_Z_ARB, TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB,
+     PROXY_TEXTURE_1D, PROXY_TEXTURE_2D, PROXY_TEXTURE_RECTANGLE_NV,
+     PROXY_TEXTURE_3D, or PROXY_TEXTURE_CUBE_MAP_ARB, indicating the
+     one-dimensional texture object, two-dimensional texture object,
+     rectangular texture object, three-dimensional texture object, or one
+     of the six distinct 2D images making up the cube map texture object
+     or one-dimensional, two-dimensional, rectangular, three-dimensional,
+     or cube map proxy state vector.  Note that TEXTURE_CUBE_MAP_ARB is
+     not a valid <target> parameter for GetTexLevelParameter because it
+     does not specify a particular cube map face."
+
+ --  Section 6.1.4 "Texture Queries"
+
+     Change the first paragraph (page 184) to read:
+
+     ... "It is somewhat different from the other get commands; <tex> is a
+     symbolic value indicating which texture (or texture face in the case
+     of a cube map texture target name) is to be obtained.  TEXTURE_1D
+     indicates a one-dimensional texture, TEXTURE_2D indicates a
+     two-dimensional texture, TEXTURE_RECTANGLE_NV indicates a rectangular
+     texture, TEXTURE_3D indicates a three-dimensional texture, and
+     TEXTURE_CUBE_MAP_POSITIVE_X_ARB, TEXTURE_CUBE_MAP_NEGATIVE_X_ARB,
+     TEXTURE_CUBE_MAP_POSITIVE_Y_ARB, TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB,
+     TEXTURE_CUBE_MAP_POSITIVE_Z_ARB, and TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB
+     indicate the respective face of a cube map texture."
+
+     Add a final sentence to the fourth paragraph:
+
+     "Calling GetTexImage with a lod not zero when the tex is
+     TEXTURE_RECTANGLE_NV causes the error INVALID_VALUE."
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Dependencies on ARB_texture_border_clamp
+
+    If ARB_texture_border_clamp is not supported, references to the
+    CLAMP_TO_BORDER_ARB wrap mode in this document should be ignored.
+
+Dependencies on IBM_mirrored_repeat
+
+    If IBM_mirrored_repeat is not supported, references to the
+    MIRRORED_REPEAT_IBM wrap mode in this document should be ignored.
+
+Dependencies on EXT_paletted_texture
+
+    If EXT_paletted_texture is not supported, references to the
+    COLOR_INDEX, COLOR_INDEX<n>_EXT, ColorTable, and ColorTableEXT should
+    be ignored.
+
+Dependencies on EXT_texture_compression_s3tc
+
+    If EXT_texture_compression_s3tc is not supported, references
+    to CompressedTexImage2DARB and CompressedTexSubImageARB and the
+    COMPRESSED_*_S3TC_DXT*_EXT enumerants should be ignored.
+
+Errors
+
+    INVALID_ENUM is generated when ColorTable (or ColorTableEXT or the
+    various ColorTable and ColorTableEXT alternative commands) is called
+    and the target is TEXTURE_RECTANGLE_NV or PROXY_TEXTURE_RECTANGLE_NV.
+
+    INVALID_ENUM is generated when TexImage2D is called and the target
+    is TEXTURE_RECTANGLE_NV or PROXY_TEXTURE_RECTANGLE_NV and the format
+    is COLOR_INDEX or the internalformat is COLOR_INDEX or one of the
+    COLOR_INDEX<n>_EXT internal formats.
+
+    INVALID_VALUE is generated when TexImage2D is called when the target
+    is TEXTURE_RECTANGLE_NV if border is any value other than zero or
+    the level is any value other than zero.
+
+    INVALID_VALUE is generated when TexImage2D is called when the target
+    is TEXTURE_RECTANGLE_NV if the width is less than zero or the height
+    is less than zero.
+
+    INVALID_VALUE is generated when TexSubImage2D or CopyTexSubImage2D
+    is called when the target is TEXTURE_RECTANGLE_NV if the level is
+    any value other than zero.
+
+    INVALID_ENUM is generated when one of the CompressedTexImage<n>DARB
+    commands is called when the target parameter is TEXTURE_RECTANGLE_NV.
+
+    INVALID_ENUM is generated when one of the CompressedTexSubImage<n>DARB
+    commands is called when the target parameter is TEXTURE_RECTANGLE_NV.
+
+    INVALID_ENUM is generated when TexParameter is called with a
+    target of TEXTURE_RECTANGLE_NV and the TEXTURE_WRAP_S, TEXTURE_WRAP_T,
+    or TEXTURE_WRAP_R parameter is set to REPEAT or MIRRORED_REPEAT_IBM.
+
+    INVALID_ENUM is generated when TexParameter is called with a
+    target of TEXTURE_RECTANGLE_NV and the TEXTURE_MIN_FILTER is set to
+    a value other than NEAREST or LINEAR.
+
+    INVALID_VALUE is generated when TexParameter is called with a
+    target of TEXTURE_RECTANGLE_NV and the TEXTURE_BASE_LEVEL is set to
+    any value other than zero.
+
+    INVALID_VALUE is generated when GetTexImage is called with a lod
+    not zero when the tex is TEXTURE_RECTANGLE_NV.
+
+New State
+
+(table 6.12, p202) amend/add the following entries:
+
+Get Value                     Type  Get Command  Initial Value  Description            Sec     Attribute
+----------------------------  ----  -----------  -------------  ---------------------  ------  --------------
+TEXTURE_RECTANGULAR_NV        B     IsEnabled    False          True if rectangular    3.8.10  texture/enable
+                                                                texturing is enabled
+TEXTURE_BINDING_RECTANGLE_NV  Z+    GetIntegerv  0              Texture object         3.8.8   texture
+                                                                for texture rectangle
+TEXTURE_RECTANGLE_NV          I     GetTexImage  see 3.8        rectangular texture    3.8     -
+                                                                image for lod 0
+
+
+(table 6.13, p203) amend/add the following entries:
+
+Get Value           Type   Get Command      Initial Value          Description           Sec    Attribute
+------------------  -----  ---------------  ---------------------  --------------------  -----  ---------
+TEXTURE_MIN_FILTER  2+xZ6  GetTexparameter  NEAREST_MIPMAP_LINEAR  Texture minification  3.8.5  texture
+                                            except for             function
+                                            rectangular which is
+                                            LINEAR
+TEXTURE_WRAP_S      5+xZ5  GetTexParameter  REPEAT except          Texture wrap mode S   3.8    texture
+                                            for rectangular
+                                            which is
+                                            CLAMP_TO_EDGE
+TEXTURE_WRAP_T      5+xZ5  GetTexParameter  REPEAT except          Texture wrap mode T   3.8    texture
+                                            for rectangular
+                                            which is
+                                            CLAMP_TO_EDGE
+TEXTURE_WRAP_R      5+xZ5  GetTexParameter  REPEAT except          Texture wrap mode R   3.8    texture
+                                            for rectangular
+                                            which is
+                                            CLAMP_TO_EDGE
+
+New Implementation Dependent State
+
+(table 6.24, p214) add the following entry:
+
+Get Value                      Type  Get Command  Minimum Value  Description          Sec    Attribute
+-----------------------------  ----  -----------  -------------  -------------------  -----  ---------
+MAX_RECTANGLE_TEXTURE_SIZE_NV  Z+    GetIntegerv  64             Maximum rectangular  3.8.1  -
+                                                                 texture image
+                                                                 dimension
+
+Revision History
+
+    Jan 2, 2003 - Fix typo in 4th paragraph of Overview to read: "NPOTD
+    textures are accessed by non-normalized texture coordinates."
+
+    March 5, 2004 - Delete update to the convolution section because
+    it was bogus language in the OpenGL 1.2.1 specification saying
+    convolution affects glGetTexImage (it does not); this language was
+    deleted in OpenGL 1.3.  Fix minor typo in 6.12 table.

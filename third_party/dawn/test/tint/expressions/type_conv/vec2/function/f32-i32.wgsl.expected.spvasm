@@ -1,0 +1,68 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 43
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %t "t"
+               OpName %m "m"
+               OpName %f "f"
+               OpName %v "v"
+               OpName %tint_v2f32_to_v2i32 "tint_v2f32_to_v2i32"
+               OpName %value "value"
+               OpName %unused_entry_point "unused_entry_point"
+      %float = OpTypeFloat 32
+%_ptr_Private_float = OpTypePointer Private %float
+          %4 = OpConstantNull %float
+          %t = OpVariable %_ptr_Private_float Private %4
+    %v2float = OpTypeVector %float 2
+          %7 = OpTypeFunction %v2float
+    %float_1 = OpConstant %float 1
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+%_ptr_Function_v2int = OpTypePointer Function %v2int
+         %24 = OpTypeFunction %v2int %v2float
+%float_n2_14748365e_09 = OpConstant %float -2.14748365e+09
+         %28 = OpConstantComposite %v2float %float_n2_14748365e_09 %float_n2_14748365e_09
+       %bool = OpTypeBool
+     %v2bool = OpTypeVector %bool 2
+%int_n2147483648 = OpConstant %int -2147483648
+         %33 = OpConstantComposite %v2int %int_n2147483648 %int_n2147483648
+%float_2_14748352e_09 = OpConstant %float 2.14748352e+09
+         %36 = OpConstantComposite %v2float %float_2_14748352e_09 %float_2_14748352e_09
+%int_2147483647 = OpConstant %int 2147483647
+         %39 = OpConstantComposite %v2int %int_2147483647 %int_2147483647
+          %m = OpFunction %v2float None %7
+          %8 = OpLabel
+               OpStore %t %float_1 None
+         %10 = OpLoad %float %t None
+         %11 = OpCompositeConstruct %v2float %10 %10
+               OpReturnValue %11
+               OpFunctionEnd
+          %f = OpFunction %void None %14
+         %15 = OpLabel
+          %v = OpVariable %_ptr_Function_v2int Function
+         %16 = OpFunctionCall %v2float %m
+         %17 = OpFunctionCall %v2int %tint_v2f32_to_v2i32 %16
+               OpStore %v %17
+               OpReturn
+               OpFunctionEnd
+%tint_v2f32_to_v2i32 = OpFunction %v2int None %24
+      %value = OpFunctionParameter %v2float
+         %25 = OpLabel
+         %26 = OpConvertFToS %v2int %value
+         %27 = OpFOrdGreaterThanEqual %v2bool %value %28
+         %32 = OpSelect %v2int %27 %26 %33
+         %35 = OpFOrdLessThanEqual %v2bool %value %36
+         %38 = OpSelect %v2int %35 %32 %39
+               OpReturnValue %38
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %14
+         %42 = OpLabel
+               OpReturn
+               OpFunctionEnd

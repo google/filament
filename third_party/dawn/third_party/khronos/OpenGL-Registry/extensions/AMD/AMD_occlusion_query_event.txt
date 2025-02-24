@@ -1,0 +1,296 @@
+Name
+
+    AMD_occlusion_query_event
+
+Name Strings
+
+    GL_AMD_occlusion_query_event
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Graham Sellers, AMD
+    Daniel Rakos, AMD
+
+Status
+
+    SHIPPING
+
+Version
+
+    Last Modified Date:         11/20/2013
+    Author Revision:            3
+
+Number
+
+    OpenGL Extension #442
+
+Dependencies
+
+    OpenGL 1.5 is required.
+
+    This extension is written against the OpenGL 4.4 (core) specification.
+
+    This extension depends on the definition of OpenGL 3.3 and
+    GL_ARB_occlusion_query2.
+
+    This extension depends on the definition of OpenGL 4.3 and
+    GL_ARB_ES3_compatibility.
+
+    This extension depends on the definition of GL_EXT_depth_bounds_test.
+
+Overview
+
+    Occlusion queries provide a means to count the number of fragments that
+    pass the depth and stencil tests and that may contribute to a rendered
+    image. In unextended OpenGL, an occlusion query increments its
+    samples-passed count whenever a sample passes both the stencil test and
+    the depth test (if enabled). However, there is no way to count fragments
+    that fail the stencil test, or pass the stencil test and then subsequently
+    fail the depth test.
+
+    This extension introduces the concept of occlusion query events and changes
+    the concept of an occlusion query from counting passed fragments to counting
+    fragments that generate any of a user-selectable set of events. Provided
+    events include passing the depth test, and passing or failing the stencil
+    test. For a given occlusion query object, counting of these events may be
+    enabled or disabled, allowing any combination to be counted.
+
+New Procedures and Functions
+
+        void QueryObjectParameteruiAMD(enum target,
+                                       uint id,
+                                       enum pname,
+                                       uint param);
+
+New Tokens
+
+    Accepted by the <pname> argument to QueryObejctParameteruiAMD,
+    GetQueryObjectiv, GetQueryObjectuiv, GetQueryObjecti64v, and
+    GetQueryObjectui64v:
+
+        OCCLUSION_QUERY_EVENT_MASK_AMD                      0x874F
+
+    Accepted by the <param> argument to QueryObjectParameteruiAMD:
+
+        QUERY_DEPTH_PASS_EVENT_BIT_AMD                      0x00000001
+        QUERY_DEPTH_FAIL_EVENT_BIT_AMD                      0x00000002
+        QUERY_STENCIL_FAIL_EVENT_BIT_AMD                    0x00000004
+        QUERY_DEPTH_BOUNDS_FAIL_EVENT_BIT_AMD               0x00000008
+        QUERY_ALL_EVENT_BITS_AMD                            0xFFFFFFFF
+
+Additions to Chapter 4 of the OpenGL 4.4 (core) Specification (Event Model)
+
+    Insert Section 4.2.1, "Query Object Parameters", p.42. Renumber subsequent
+    sections.
+
+    Query object parameters control the behavior of the query object. Changing
+    the value of a query object parameter is done by calling
+
+        void QueryObjectParameteruiAMD(enum target,
+                                       uint id,
+                                       enum pname,
+                                       uint param);
+
+    with <target> set to a valid query target, <id> set to a value returned
+    from a previous call to GenQueries. <pname> specifies the parameter to
+    modify and <param> contains its new value. If <id> is an unused query object
+    name then the name is marked as used and associated with a new query object
+    of the type specified by <target>. Otherwise, <id> must be the name of an
+    existing query object of that type.
+
+Additions to Chapter 17 of the OpenGL 4.3 (core) Specification (Writing Fragments
+and Samples to the Framebuffer)
+
+    Modify the first paragraph of Subection 17.3.7, "Occlusion Queries" as
+    follows:
+
+    Occlusion queries use query objects to track fragments as they pass through
+    the depth bounds test, stencil test and depth test, in that order. Each
+    stage may generate an event. An event is generated if a fragment fails
+    the depth bounds test. If a fragment passes the depth bounds test, it then
+    undergoes the stencil test and generates an event should it fail that.
+    Should it pass the stencil test, it undergoes the depth test, upon which
+    it will generate an event indicating whether it passed or failed the depth
+    test. An occlusion query can be started and finished by calling BeginQuery
+    and EndQuery, respectively, with a <target> of SAMPLES_PASSED,
+    ANY_SAMPLES_PASSED, or ANY_SAMPLES_PASSED_CONSERVATIVE.
+
+    In the remainder of the Subsection, replace any occurrence of "passes the
+    depth test" with "generates an enabled event". Add the following to the end
+    of the subsection:
+
+    Counting of occlusion query events are enabled and disabled for a query
+    object by calling QueryObjectParameteruiAMD with <target> set to
+    SAMPLES_PASSED, ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE, with
+    <id> set to the name of an existing query object of the appropriate type, or
+    to a name returned from a call to GenQueries but not yet associated with a
+    query object, with <pname> set to OCCLUSION_QUERY_EVENT_MASK_AMD and with
+    <param> set to the bitwise or of the set of the following flags:
+
+      +---------------------------------------+---------------------------------------------------------+
+      | QUERY_DEPTH_PASS_EVENT_BIT_AMD        | Indicates that the fragment passed all tests.           |
+      | QUERY_DEPTH_FAIL_EVENT_BIT_AMD        | Indicates that the fragment passed the depth bounds and |
+      |                                       | stencil tests, but failed the depth test.               |
+      | QUERY_STENCIL_FAIL_EVENT_BIT_AMD      | Indicates that the fragment passed the depth bounds     |
+      |                                       | test but failed the stencil test.                       |
+      | QUERY_DEPTH_BOUNDS_FAIL_EVENT_BIT_AMD | Indicates that the fragment failed the depth bounds     |
+      |                                       | test.                                                   |
+      | QUERY_ALL_EVENT_BITS_AMD              | Indicates that any event generated by the fragment      |
+      |                                       | should be counted.                                      |
+      +---------------------------------------+---------------------------------------------------------+
+
+    By default, the value of OCCLUSION_QUERY_EVENT_MASK_AMD for a newly created
+    occlusion query object is QUERY_DEPTH_PASS_EVENT_BIT_AMD.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    INVALID_OPERATION is generated by GetQueryObjectiv, GetQueryObjectuiv,
+    GetQueryObjecti64v, and GetQueryObjectui64v if <pname> is
+    OCCLUSION_QUERY_EVENT_MASK_AMD and the target of the query object
+    specified by <id> is not SAMPLES_PASSED, ANY_SAMPLES_PASSED, or
+    ANY_SAMPLES_PASSED_CONSERVATIVE.
+
+    INVALID_ENUM is generated by QueryObjectParameteruiAMD if <target> is not
+    an accepted query target.
+
+    INVALID_ENUM is generated by QueryObjectParameteruiAMD if <pname> is not
+    OCCLUSION_QUERY_EVENT_MASK_AMD.
+
+    INVALID_VALUE is generated by QueryObjectParameteruiAMD if <id> is not a
+    name returned from a previous call to GenQueries, or if such a name has
+    since been deleted with DeleteQueries.
+
+    INVALID_OPERATION is generated by QueryObjectParameteruiAMD if <id> is the
+    name of an existing query object whose target does not match <target>, or
+    an active query object name for <target>.
+
+    INVALID_OPERATION is generated by QueryObjectParameteruiAMD if <pname> is
+    OCCLUSION_QUERY_EVENT_MASK_AMD and <target> is not SAMPLES_PASSED,
+    ANY_SAMPLES_PASSED, or ANY_SAMPLES_PASSED_CONSERVATIVE.
+
+    INVALID_VALUE is generated by QueryObjectParameteruiAMD if <pname> is
+    OCCLUSION_QUERY_EVENT_MASK_AMD and <param> contains any unsupported bits,
+    except in the case when <param> is equal to the special value,
+    QUERY_ALL_EVENT_BITS_AMD.
+
+New State
+
+    Append to Table 23.44, "Query Object State"
+
+    +-----------------------------------+-------+--------------------+--------------------------------+------------------------------------+--------+
+    | Get Value                         | Type  | Get Command        | Initial Value                  | Description                        | Sec.   |
+    +-----------------------------------+-------+--------------------+--------------------------------+------------------------------------+--------+
+    | OCCLUSION_QUERY_EVENT_MASK_AMD    | Z+    | GetQueryObjectuiv  | QUERY_DEPTH_PASS_EVENT_BIT_AMD | Bitmask of events to count in an   | 17.3.7 |
+    |                                   |       |                    |                                | occlusion query                    |        |
+    +-----------------------------------+-------+--------------------+--------------------------------+------------------------------------+--------+
+
+New Implementation Dependent State
+
+    None.
+
+Usage Examples
+
+    TBD
+
+Dependencies on GL_EXT_depth_bounds_test
+
+    If GL_EXT_depth_bounds_test is not supported, remove any reference to
+    the depth bounds test and the QUERY_DEPTH_BOUNDS_FAIL_EVENT_BIT_AMD token.
+    The value of the QUERY_DEPTH_BOUNDS_FAIL_EVENT_BIT_AMD remains reserved, however.
+    This extension shall behave as if all fragments pass the depth bounds
+    test.
+
+Dependencies on OpenGL 3.3 and GL_ARB_occlusion_query2
+
+    If GL_ARB_occlusion_query2 is not present, and the GL version is less than
+    3.3, then remove any reference to the ANY_SAMPLES_PASSED target.
+
+Dependencies on OpenGL 4.3 and GL_ARB_ES3_compatibility
+
+    If GL_ARB_ES3_compatility is not present, and the GL version is less than
+    4.3, then remove any reference to the ANY_SAMPLES_PASSED_CONSERVATIVE
+    target.
+
+Issues
+
+    1) Why is there no QUERY_STENCIL_PASS_BIT_AMD or
+       QUERY_DEPTH_BOUNDS_PASS_BIT_AMD?
+
+       Fragments that pass the depth bounds test proceed to the stencil test
+       and subsequently to the depth test. The sum of depth pass, depth fail
+       and stencil fail is, by definition, the number of fragments that pass
+       the depth bounds test. Likewise, the sum of depth pass and depth fail
+       is the number of fragments that pass the stencil test. Thus, setting
+       the event mask to (QUERY_DEPTH_PASS_EVENT_BIT_AMD |
+       QUERY_DEPTH_FAIL_EVENT_BIT_AMD | QUERY_STENCIL_FAIL_EVENT_BIT_AMD)
+       allows counting of fragments that pass the depth bounds test. Similarly,
+       setting the event mask to (QUERY_DEPTH_PASS_EVENT_BIT_AMD |
+       QUERY_DEPTH_FAIL_EVENT_BIT_AMD) provides the count of fragments that pass
+       the stencil test.
+
+    2) Will fragments that fail the stencil test generate a depth pass or fail
+       event as if they were depth tested? Will fragments that fail the depth
+       bounds test generate stencil fail events?
+
+       RESOLVED: No. Once a fragment fails testing at a particular stage, it
+       is discarded and cannot generate any more events.
+
+    3) What happens if the implementation doesn't support EXT_depth_bounds.
+
+       RESOLVED: It is as if all fragments pass the depth bounds test. No
+       depth bounds failed events are generated.
+
+    4) What is the purpose of QUERY_ALL_EVENT_BITS_AMD?
+
+       RESOLVED: It allows the counting of all fragments that are subjected to
+       any test regardless of the outcome of those tests.
+
+    5) What should the new query state setter function be called?
+
+       DISCUSSION: Unfortunately, the query object API doesn't really follow
+       the naming conventions of object state getters already, as
+       GetQueryObject should have been rather called GetQueryParameter.
+       We considered the following options:
+
+        (a) QueryObjectuiAMD
+        (b) QueryParameteruiAMD
+        (c) QueryObjectParameteruiAMD
+
+       Option (a) follows the existing naming convention of the query object
+       API, but is too general.
+       Option (b) follows the naming convention of other object types, but
+       because the getter of existing query states is called GetQueryObject,
+       while there is also a GetQuery getter that returns context state,
+       not per-query object state.
+       Option (c) doesn't follow either the naming convention of the query
+       object API or any other object type's, but rather a mixture of the two,
+       however, it makes explicit both the fact that the setter operates
+       on a query object and that it modifies its parameter.
+
+       RESOLVED: QueryObjectParameteruiAMD, because the function modifies
+       a state/parameter of a query object.
+
+    6) Should there be also a GetQueryObjectParameteruiAMD?
+
+       RESOLVED: No. GetQueryObject is already defined to query the state of
+       a query object (see also issue #5).
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  ---------------------------------------------
+      3   11/20/2013  gsellers  Make ready for posting
+      2   08/20/2013  drakos    Internal revision
+      1   10/08/2012  gsellers  Initial revision

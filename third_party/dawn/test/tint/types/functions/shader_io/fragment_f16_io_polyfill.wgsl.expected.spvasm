@@ -1,0 +1,71 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 37
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %frag_main "frag_main" %frag_main_loc1_Input %frag_main_loc2_Input %frag_main_loc1_Output %frag_main_loc2_Output
+               OpExecutionMode %frag_main OriginUpperLeft
+               OpName %frag_main_loc1_Input "frag_main_loc1_Input"
+               OpName %frag_main_loc2_Input "frag_main_loc2_Input"
+               OpName %frag_main_loc1_Output "frag_main_loc1_Output"
+               OpName %frag_main_loc2_Output "frag_main_loc2_Output"
+               OpName %frag_main_inner "frag_main_inner"
+               OpMemberName %Outputs 0 "a"
+               OpMemberName %Outputs 1 "b"
+               OpName %Outputs "Outputs"
+               OpName %loc1 "loc1"
+               OpName %loc2 "loc2"
+               OpName %frag_main "frag_main"
+               OpDecorate %frag_main_loc1_Input Location 1
+               OpDecorate %frag_main_loc2_Input Location 2
+               OpDecorate %frag_main_loc1_Output Location 1
+               OpDecorate %frag_main_loc2_Output Location 2
+               OpMemberDecorate %Outputs 0 Offset 0
+               OpMemberDecorate %Outputs 1 Offset 8
+      %float = OpTypeFloat 32
+%_ptr_Input_float = OpTypePointer Input %float
+%frag_main_loc1_Input = OpVariable %_ptr_Input_float Input
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%frag_main_loc2_Input = OpVariable %_ptr_Input_v4float Input
+%_ptr_Output_float = OpTypePointer Output %float
+%frag_main_loc1_Output = OpVariable %_ptr_Output_float Output
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%frag_main_loc2_Output = OpVariable %_ptr_Output_v4float Output
+       %half = OpTypeFloat 16
+     %v4half = OpTypeVector %half 4
+    %Outputs = OpTypeStruct %half %v4half
+         %17 = OpTypeFunction %Outputs %half %v4half
+%half_0x1p_1 = OpConstant %half 0x1p+1
+%half_0x1_8p_1 = OpConstant %half 0x1.8p+1
+       %void = OpTypeVoid
+         %26 = OpTypeFunction %void
+%frag_main_inner = OpFunction %Outputs None %17
+       %loc1 = OpFunctionParameter %half
+       %loc2 = OpFunctionParameter %v4half
+         %18 = OpLabel
+         %19 = OpFMul %half %loc1 %half_0x1p_1
+         %21 = OpVectorTimesScalar %v4half %loc2 %half_0x1_8p_1
+         %23 = OpCompositeConstruct %Outputs %19 %21
+               OpReturnValue %23
+               OpFunctionEnd
+  %frag_main = OpFunction %void None %26
+         %27 = OpLabel
+         %28 = OpLoad %float %frag_main_loc1_Input None
+         %29 = OpFConvert %half %28
+         %30 = OpLoad %v4float %frag_main_loc2_Input None
+         %31 = OpFConvert %v4half %30
+         %32 = OpFunctionCall %Outputs %frag_main_inner %29 %31
+         %33 = OpCompositeExtract %half %32 0
+         %34 = OpFConvert %float %33
+               OpStore %frag_main_loc1_Output %34 None
+         %35 = OpCompositeExtract %v4half %32 1
+         %36 = OpFConvert %v4float %35
+               OpStore %frag_main_loc2_Output %36 None
+               OpReturn
+               OpFunctionEnd

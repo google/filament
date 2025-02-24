@@ -1,0 +1,121 @@
+*.pyc
+
+# Directories added by gclient sync and the GN build
+/.cipd
+/.gclient
+/.gclient_entries
+/.gclient_previous_custom_vars
+/.gclient_previous_sync_commits
+/.gcs_entries
+/.reproxy_cache
+/bazel-*
+/build
+/buildtools
+/testing
+/tools/bin
+/tools/clang
+/tools/cmake*
+/tools/golang
+/tools/memory
+/tools/rust
+/out
+
+# Tint test validation cache file
+/test/tint/validation.cache
+
+# Modified from https://www.gitignore.io/api/vim,macos,linux,emacs,windows,sublimetext,visualstudio,visualstudiocode,intellij
+
+### Emacs ###
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+### Linux ###
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+### macOS ###
+*.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+### SublimeText ###
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+sftp-config.json
+GitHub.sublime-settings
+
+### Vim ###
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-v][a-z]
+[._]sw[a-p]
+Session.vim
+.netrwhist
+tags
+
+### VisualStudio ###
+.vs/*
+
+### VisualStudioCode ###
+.vscode/*
+!.vscode/tasks.json
+
+### Windows ###
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+### Intellij ###
+.idea
+
+### Cached node transpiled tools
+/.node_transpile_work_dir
+
+# Misc inherited from Tint
+/test.wgsl
+coverage.summary
+default.profraw
+lcov.info
+/cmake-build-*/
+/build-*/
+/testing
+
+### Clang-Tidy files
+all_findings.json
+
+tint.dot
+
+### pyenv files
+/.python-version
+
+### Clangd cached index files
+/.cache
+
+### The 'compile_commands' file can be generated at root
+compile_commands.json

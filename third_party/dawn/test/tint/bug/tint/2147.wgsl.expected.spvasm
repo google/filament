@@ -1,0 +1,90 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 48
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %main_loc0_Output
+               OpExecutionMode %main OriginUpperLeft
+               OpMemberName %S_block 0 "inner"
+               OpName %S_block "S_block"
+               OpName %continue_execution "continue_execution"
+               OpName %main_loc0_Output "main_loc0_Output"
+               OpName %main_inner "main_inner"
+               OpMemberName %__atomic_compare_exchange_result_i32 0 "old_value"
+               OpMemberName %__atomic_compare_exchange_result_i32 1 "exchanged"
+               OpName %__atomic_compare_exchange_result_i32 "__atomic_compare_exchange_result_i32"
+               OpName %old_value "old_value"
+               OpName %main "main"
+               OpMemberDecorate %S_block 0 Offset 0
+               OpDecorate %S_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %main_loc0_Output Location 0
+               OpMemberDecorate %__atomic_compare_exchange_result_i32 0 Offset 0
+               OpMemberDecorate %__atomic_compare_exchange_result_i32 1 Offset 4
+        %int = OpTypeInt 32 1
+    %S_block = OpTypeStruct %int
+%_ptr_StorageBuffer_S_block = OpTypePointer StorageBuffer %S_block
+          %1 = OpVariable %_ptr_StorageBuffer_S_block StorageBuffer
+       %bool = OpTypeBool
+%_ptr_Private_bool = OpTypePointer Private %bool
+       %true = OpConstantTrue %bool
+%continue_execution = OpVariable %_ptr_Private_bool Private %true
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%main_loc0_Output = OpVariable %_ptr_Output_v4float Output
+         %14 = OpTypeFunction %v4float
+      %false = OpConstantFalse %bool
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+      %int_1 = OpConstant %int 1
+      %int_0 = OpConstant %int 0
+%__atomic_compare_exchange_result_i32 = OpTypeStruct %int %bool
+         %35 = OpUndef %__atomic_compare_exchange_result_i32
+       %void = OpTypeVoid
+         %45 = OpTypeFunction %void
+ %main_inner = OpFunction %v4float None %14
+         %15 = OpLabel
+               OpSelectionMerge %16 None
+               OpBranchConditional %false %17 %16
+         %17 = OpLabel
+               OpStore %continue_execution %false None
+               OpBranch %16
+         %16 = OpLabel
+         %19 = OpAccessChain %_ptr_StorageBuffer_int %1 %uint_0
+         %23 = OpLoad %bool %continue_execution None
+               OpSelectionMerge %24 None
+               OpBranchConditional %23 %25 %26
+         %25 = OpLabel
+         %27 = OpAtomicCompareExchange %int %19 %uint_1 %uint_0 %uint_0 %int_1 %int_0
+         %31 = OpIEqual %bool %27 %int_0
+         %33 = OpCompositeConstruct %__atomic_compare_exchange_result_i32 %27 %31
+               OpBranch %24
+         %26 = OpLabel
+               OpBranch %24
+         %24 = OpLabel
+         %34 = OpPhi %__atomic_compare_exchange_result_i32 %33 %25 %35 %26
+  %old_value = OpCompositeExtract %int %34 0
+         %37 = OpConvertSToF %float %old_value
+         %38 = OpCompositeConstruct %v4float %37 %37 %37 %37
+         %39 = OpLoad %bool %continue_execution None
+         %40 = OpLogicalNot %bool %39
+               OpSelectionMerge %41 None
+               OpBranchConditional %40 %42 %41
+         %42 = OpLabel
+               OpKill
+         %41 = OpLabel
+               OpReturnValue %38
+               OpFunctionEnd
+       %main = OpFunction %void None %45
+         %46 = OpLabel
+         %47 = OpFunctionCall %v4float %main_inner
+               OpStore %main_loc0_Output %47 None
+               OpReturn
+               OpFunctionEnd

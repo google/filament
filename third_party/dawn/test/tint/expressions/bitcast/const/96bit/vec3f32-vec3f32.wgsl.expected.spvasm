@@ -1,0 +1,23 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 11
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpName %f "f"
+               OpName %b "b"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%float_2_00366211 = OpConstant %float 2.00366211
+%float_n513_03125 = OpConstant %float -513.03125
+%float_n1024_25 = OpConstant %float -1024.25
+          %b = OpConstantComposite %v3float %float_2_00366211 %float_n513_03125 %float_n1024_25
+          %f = OpFunction %void None %3
+          %4 = OpLabel
+               OpReturn
+               OpFunctionEnd

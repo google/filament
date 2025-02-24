@@ -1,0 +1,45 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread uint* local_invocation_index_1;
+  threadgroup atomic_int* arg_0;
+};
+
+struct tint_symbol_1 {
+  atomic_int tint_symbol;
+};
+
+void atomicAdd_794055(tint_module_vars_struct tint_module_vars) {
+  int arg_1 = 0;
+  int res = 0;
+  arg_1 = 1;
+  int const x_15 = atomic_fetch_add_explicit(tint_module_vars.arg_0, 1, memory_order_relaxed);
+  res = x_15;
+}
+
+void compute_main_inner(uint local_invocation_index_2, tint_module_vars_struct tint_module_vars) {
+  atomic_store_explicit(tint_module_vars.arg_0, 0, memory_order_relaxed);
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  atomicAdd_794055(tint_module_vars);
+}
+
+void compute_main_1(tint_module_vars_struct tint_module_vars) {
+  uint const x_33 = (*tint_module_vars.local_invocation_index_1);
+  compute_main_inner(x_33, tint_module_vars);
+}
+
+void compute_main_inner_1(uint local_invocation_index_1_param, tint_module_vars_struct tint_module_vars) {
+  if ((local_invocation_index_1_param < 1u)) {
+    atomic_store_explicit(tint_module_vars.arg_0, 0, memory_order_relaxed);
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  (*tint_module_vars.local_invocation_index_1) = local_invocation_index_1_param;
+  compute_main_1(tint_module_vars);
+}
+
+kernel void compute_main(uint local_invocation_index_1_param [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v [[threadgroup(0)]]) {
+  thread uint local_invocation_index_1 = 0u;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.local_invocation_index_1=(&local_invocation_index_1), .arg_0=(&(*v).tint_symbol)};
+  compute_main_inner_1(local_invocation_index_1_param, tint_module_vars);
+}

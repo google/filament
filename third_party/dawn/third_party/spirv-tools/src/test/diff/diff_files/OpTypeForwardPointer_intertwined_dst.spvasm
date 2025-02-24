@@ -1,0 +1,13 @@
+               OpCapability Kernel
+               OpCapability Addresses
+               OpCapability Linkage
+               OpMemoryModel Logical OpenCL
+               OpName %Aptr "Aptr"
+               OpName %Bptr "Bptr"
+               OpTypeForwardPointer %Bptr UniformConstant
+               OpTypeForwardPointer %Aptr UniformConstant
+       %uint = OpTypeInt 32 0
+          %B = OpTypeStruct %uint %Aptr %Bptr %uint
+          %A = OpTypeStruct %Aptr %uint %Bptr
+  %Aptr = OpTypePointer UniformConstant %A
+  %Bptr = OpTypePointer UniformConstant %B

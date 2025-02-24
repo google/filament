@@ -1,0 +1,55 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 27
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %main_global_invocation_id_Input
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %Input 0 "position"
+               OpName %Input "Input"
+               OpMemberName %input_block 0 "inner"
+               OpName %input_block "input_block"
+               OpName %main_global_invocation_id_Input "main_global_invocation_id_Input"
+               OpName %main_inner "main_inner"
+               OpName %id "id"
+               OpName %pos "pos"
+               OpName %main "main"
+               OpMemberDecorate %Input 0 Offset 0
+               OpMemberDecorate %input_block 0 Offset 0
+               OpDecorate %input_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpDecorate %main_global_invocation_id_Input BuiltIn GlobalInvocationId
+        %int = OpTypeInt 32 1
+      %v3int = OpTypeVector %int 3
+      %Input = OpTypeStruct %v3int
+%input_block = OpTypeStruct %Input
+%_ptr_StorageBuffer_input_block = OpTypePointer StorageBuffer %input_block
+          %1 = OpVariable %_ptr_StorageBuffer_input_block StorageBuffer
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%main_global_invocation_id_Input = OpVariable %_ptr_Input_v3uint Input
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void %v3uint
+%_ptr_StorageBuffer_v3int = OpTypePointer StorageBuffer %v3int
+     %uint_0 = OpConstant %uint 0
+         %21 = OpConstantNull %v3int
+         %23 = OpTypeFunction %void
+ %main_inner = OpFunction %void None %14
+         %id = OpFunctionParameter %v3uint
+         %15 = OpLabel
+         %16 = OpAccessChain %_ptr_StorageBuffer_v3int %1 %uint_0 %uint_0
+         %19 = OpLoad %v3int %16 None
+        %pos = OpISub %v3int %19 %21
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %23
+         %24 = OpLabel
+         %25 = OpLoad %v3uint %main_global_invocation_id_Input None
+         %26 = OpFunctionCall %void %main_inner %25
+               OpReturn
+               OpFunctionEnd

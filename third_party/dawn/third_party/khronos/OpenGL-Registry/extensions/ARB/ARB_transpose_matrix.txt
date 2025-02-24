@@ -1,0 +1,239 @@
+Name
+
+    ARB_transpose_matrix
+
+Name Strings
+
+    GL_ARB_transpose_matrix
+
+Contact
+
+    David Blythe (blythe 'at' sgi.com)
+
+Notice
+
+    Copyright (c) 1999-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on 12/8/1999
+
+Version
+
+    Last Modified Date: January 3, 2000
+    Author Revision: 1.3
+
+Number
+
+    ARB Extension #3
+
+Dependencies
+
+    This extensions is written against the OpenGL 1.2 Specification.
+    May be implemented in any version of OpenGL.
+
+Overview
+
+    New functions and tokens are added allowing application matrices
+    stored in row major order rather than column major order to be
+    transferred to the OpenGL implementation.  This allows an application
+    to use standard C-language 2-dimensional arrays (m[row][col]) and
+    have the array indices match the expected matrix row and column indexes.
+    These arrays are referred to as transpose matrices since they are
+    the transpose of the standard matrices passed to OpenGL.
+
+    This extension adds an interface for transfering data to and from the
+    OpenGL pipeline, it does not change any OpenGL processing or imply any
+    changes in state representation.
+
+IP Status
+
+    No IP is believed to be involved.
+
+Issues
+
+    * Why do this?
+
+        It's very useful for layered libraries that desire to use two
+        dimensional C arrays as matrices.  It avoids having the layered
+        library perform the transpose itself before calling OpenGL since
+        most OpenGL implementations can efficiently perform the transpose
+        while reading the matrix from client memory.
+
+    * Why not add a mode?
+
+        It's substantially more confusing and complicated to add a mode.
+        Simply adding two new entry points saves considerable confusion
+        and avoids having layered libraries need to query the current mode
+        in order to send a matrix with the correct memory layout.
+
+    * Why not a utility routine in GLU
+
+        It costs some performance.  It is believed that most OpenGL
+        implementations can perform the transpose in place with negligble
+        performance penalty.
+
+    * Why use the name transpose?
+
+        It's sure a lot less confusing than trying to ascribe unambiguous
+        meaning to terms like row and column.  It could be matrix_transpose
+        rather than transpose_matrix though.
+
+    * Short Transpose to Trans?
+
+
+New Procedures and Functions
+
+    void LoadTransposeMatrix{fd}ARB(T m[16]);
+    void MultTransposeMatrix{fd}ARB(T m[16]);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev
+
+        TRANSPOSE_MODELVIEW_MATRIX_ARB    0x84E3
+        TRANSPOSE_PROJECTION_MATRIX_ARB   0x84E4
+        TRANSPOSE_TEXTURE_MATRIX_ARB      0x84E5
+        TRANSPOSE_COLOR_MATRIX_ARB        0x84E6
+
+
+Additions to Chapter 2 of the 1.2 OpenGL Specification (OpenGL Operation)
+
+    Add to Section 2.10.2 Matrices  <before LoadIdentity>
+
+    LoadTransposeMatrixARB takes a 4x4 matrix stored in row-major order as
+
+    Let transpose(m,n) be defined as
+
+        n[0] = m[0];
+        n[1] = m[4];
+        n[2] = m[8];
+        n[3] = m[12];
+        n[4] = m[1];
+        n[5] = m[5];
+        n[6] = m[9];
+        n[7] = m[13];
+        n[8] = m[2];
+        n[9] = m[6];
+        n[10] = m[10];
+        n[11] = m[14];
+        n[12] = m[3];
+        n[13] = m[7];
+        n[14] = m[11];
+        n[15] = m[15];
+
+    The effect of LoadTransposeMatrixARB(m) is then the same as the effect of
+    the command sequence
+
+        float n[16];
+        transpose(m,n)
+        LoadMatrix(n);
+
+    The effect of MultTransposeMatrixARB(m) is then the same as the effect of
+    the command sequence
+
+        float n[16];
+        transpose(m,n);
+        MultMatrix(n);
+
+
+Additions to Chapter 3 of the 1.2 OpenGL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 OpenGL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 OpenGL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 OpenGL Specification (State and State Requests)
+
+    Matrices are queried and returned in their transposed form by calling
+    GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev with <pname> set to
+    TRANSPOSE_MODELVIEW_MATRIX_ARB, TRANSPOSE_PROJECTION_MATRIX_ARB,
+    TRANSPOSE_TEXTURE_MATRIX_ARB, or TRANSPOSE_COLOR_MATRIX_ARB.
+    The effect of GetFloatv(TRANSPOSE_MODELVIEW_MATRIX_ARB,m) is then the same
+    as the effect of the command sequence
+
+        float n[16];
+        GetFloatv(MODELVIEW_MATRIX_ARB,n);
+        transpose(n,m);
+
+    Similar results occur for TRANSPOSE_PROJECTION_MATRIX_ARB,
+    TRANSPOSE_TEXTURE_MATRIX_ARB, and TRANSPOSE_COLOR_MATRIX_ARB.
+
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    LoadTransposeMatrix and MultTransposeMatrix are layered
+    on top of LoadMatrix and MultMatrix protocol
+    performing client-side translation.  The Get commands
+    are passed over the wire as part of the generic Get
+    protocol with no translation required.
+
+Errors
+
+    No new errors, but error behavoir is inherited by the commands
+    that the transpose commands are implemented on top of
+    (LoadMatrix, MultMatrix, and Get*).
+
+New State
+
+    None
+
+    TRANSPOSE_*_MATRIX_ARB refer to the same state as their non-transposed
+    counterparts.
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    * Revision 1.1 - initial draft (18 Mar 1999)
+    * Revision 1.2 - changed to use layered specification and ARB affix
+                     (23 Nov 1999)
+    * Revision 1.3 - Minor tweaks to GLX protocol and Errors. (7 Dec 1999)
+
+Conformance Testing
+
+    Load and Multiply the modelview matrix (initialized to identity
+    each time) using LoadTransposeMatrixfARB and MultTransposeMatrixfARB
+    with the matrix:
+
+        ( 1  2  3  4 )
+        ( 5  6  7  8 )
+        ( 9 10 11 12 )
+        (13 14 15 16 )
+
+    and get the modelview matrix using TRANSPOSE_MODELVIEW_MATRIX_ARB and
+    validate that the matrix is correct.  Get the matrix using
+    MODELVIEW_MATRIX and verify that it is the transpose of the above
+    matrix.  Load and Multiply the modelview matrix using LoadMatrixf
+    and MultMatrixf with the above matrix and verify that the correct
+    matrix is on the modelview stack using gets of MODELVIEW_MATRIX
+    and TRANSPOSE_MODELVIEW_MATRIX_ARB.

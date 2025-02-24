@@ -1,0 +1,93 @@
+//
+// main1
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread int* a;
+};
+
+void uses_a(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.a) = as_type<int>((as_type<uint>((*tint_module_vars.a)) + as_type<uint>(1)));
+}
+
+kernel void main1() {
+  thread int a = 0;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.a=(&a)};
+  (*tint_module_vars.a) = 42;
+  uses_a(tint_module_vars);
+}
+//
+// main2
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread int* b;
+};
+
+void uses_b(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.b) = as_type<int>((as_type<uint>((*tint_module_vars.b)) * as_type<uint>(2)));
+}
+
+kernel void main2() {
+  thread int b = 0;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.b=(&b)};
+  (*tint_module_vars.b) = 7;
+  uses_b(tint_module_vars);
+}
+//
+// main3
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread int* a;
+  thread int* b;
+};
+
+void uses_a(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.a) = as_type<int>((as_type<uint>((*tint_module_vars.a)) + as_type<uint>(1)));
+}
+
+void uses_b(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.b) = as_type<int>((as_type<uint>((*tint_module_vars.b)) * as_type<uint>(2)));
+}
+
+void uses_a_and_b(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.b) = (*tint_module_vars.a);
+}
+
+void no_uses() {
+}
+
+void outer(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.a) = 0;
+  uses_a(tint_module_vars);
+  uses_a_and_b(tint_module_vars);
+  uses_b(tint_module_vars);
+  no_uses();
+}
+
+kernel void main3() {
+  thread int a = 0;
+  thread int b = 0;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.a=(&a), .b=(&b)};
+  outer(tint_module_vars);
+  no_uses();
+}
+//
+// main4
+//
+#include <metal_stdlib>
+using namespace metal;
+
+void no_uses() {
+}
+
+kernel void main4() {
+  no_uses();
+}

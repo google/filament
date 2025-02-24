@@ -1,0 +1,15 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread bool* t;
+};
+
+bool4 m(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.t) = true;
+  return bool4((*tint_module_vars.t));
+}
+
+void f(tint_module_vars_struct tint_module_vars) {
+  half4 v = half4(m(tint_module_vars));
+}

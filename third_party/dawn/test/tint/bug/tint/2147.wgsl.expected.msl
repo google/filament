@@ -1,0 +1,46 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct atomic_compare_exchange_result_i32 {
+  int old_value;
+  bool exchanged;
+};
+
+struct tint_module_vars_struct {
+  device atomic_int* S;
+  thread bool* continue_execution;
+};
+
+struct main_outputs {
+  float4 tint_symbol [[color(0)]];
+};
+
+atomic_compare_exchange_result_i32 v(device atomic_int* const atomic_ptr, int cmp, int val) {
+  int old_value = cmp;
+  bool const v_1 = atomic_compare_exchange_weak_explicit(atomic_ptr, (&old_value), val, memory_order_relaxed, memory_order_relaxed);
+  return atomic_compare_exchange_result_i32{.old_value=old_value, .exchanged=v_1};
+}
+
+float4 main_inner(tint_module_vars_struct tint_module_vars) {
+  if (false) {
+    (*tint_module_vars.continue_execution) = false;
+  }
+  atomic_compare_exchange_result_i32 v_2 = {};
+  if ((*tint_module_vars.continue_execution)) {
+    v_2 = v(tint_module_vars.S, 0, 1);
+  }
+  int const old_value = v_2.old_value;
+  float4 const v_3 = float4(float(old_value));
+  if (!((*tint_module_vars.continue_execution))) {
+    discard_fragment();
+  }
+  return v_3;
+}
+
+fragment main_outputs v_4(device atomic_int* S [[buffer(0)]]) {
+  thread bool continue_execution = true;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.S=S, .continue_execution=(&continue_execution)};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main_inner(tint_module_vars);
+  return tint_wrapper_result;
+}

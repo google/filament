@@ -1,0 +1,126 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 25
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %SB_RW_atomic 0 "arg_0"
+               OpName %SB_RW_atomic "SB_RW_atomic"
+               OpMemberName %sb_rw_block 0 "inner"
+               OpName %sb_rw_block "sb_rw_block"
+               OpName %atomicOr_5e95d4 "atomicOr_5e95d4"
+               OpName %arg_1 "arg_1"
+               OpName %res "res"
+               OpName %x_18 "x_18"
+               OpName %x_13 "x_13"
+               OpName %fragment_main_1 "fragment_main_1"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %SB_RW_atomic 0 Offset 0
+               OpMemberDecorate %sb_rw_block 0 Offset 0
+               OpDecorate %sb_rw_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+%SB_RW_atomic = OpTypeStruct %uint
+%sb_rw_block = OpTypeStruct %SB_RW_atomic
+%_ptr_StorageBuffer_sb_rw_block = OpTypePointer StorageBuffer %sb_rw_block
+          %1 = OpVariable %_ptr_StorageBuffer_sb_rw_block StorageBuffer
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+%atomicOr_5e95d4 = OpFunction %void None %8
+          %9 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_uint Function
+        %res = OpVariable %_ptr_Function_uint Function
+               OpStore %arg_1 %uint_0
+               OpStore %res %uint_0
+               OpStore %arg_1 %uint_1 None
+       %x_18 = OpLoad %uint %arg_1 None
+         %16 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %uint_0
+       %x_13 = OpAtomicOr %uint %16 %uint_1 %uint_0 %x_18
+               OpStore %res %x_13 None
+               OpReturn
+               OpFunctionEnd
+%fragment_main_1 = OpFunction %void None %8
+         %20 = OpLabel
+         %21 = OpFunctionCall %void %atomicOr_5e95d4
+               OpReturn
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %8
+         %23 = OpLabel
+         %24 = OpFunctionCall %void %fragment_main_1
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 25
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %SB_RW_atomic 0 "arg_0"
+               OpName %SB_RW_atomic "SB_RW_atomic"
+               OpMemberName %sb_rw_block 0 "inner"
+               OpName %sb_rw_block "sb_rw_block"
+               OpName %atomicOr_5e95d4 "atomicOr_5e95d4"
+               OpName %arg_1 "arg_1"
+               OpName %res "res"
+               OpName %x_18 "x_18"
+               OpName %x_13 "x_13"
+               OpName %compute_main_1 "compute_main_1"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %SB_RW_atomic 0 Offset 0
+               OpMemberDecorate %sb_rw_block 0 Offset 0
+               OpDecorate %sb_rw_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+%SB_RW_atomic = OpTypeStruct %uint
+%sb_rw_block = OpTypeStruct %SB_RW_atomic
+%_ptr_StorageBuffer_sb_rw_block = OpTypePointer StorageBuffer %sb_rw_block
+          %1 = OpVariable %_ptr_StorageBuffer_sb_rw_block StorageBuffer
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+%atomicOr_5e95d4 = OpFunction %void None %8
+          %9 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_uint Function
+        %res = OpVariable %_ptr_Function_uint Function
+               OpStore %arg_1 %uint_0
+               OpStore %res %uint_0
+               OpStore %arg_1 %uint_1 None
+       %x_18 = OpLoad %uint %arg_1 None
+         %16 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %uint_0
+       %x_13 = OpAtomicOr %uint %16 %uint_1 %uint_0 %x_18
+               OpStore %res %x_13 None
+               OpReturn
+               OpFunctionEnd
+%compute_main_1 = OpFunction %void None %8
+         %20 = OpLabel
+         %21 = OpFunctionCall %void %atomicOr_5e95d4
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %8
+         %23 = OpLabel
+         %24 = OpFunctionCall %void %compute_main_1
+               OpReturn
+               OpFunctionEnd

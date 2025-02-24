@@ -1,0 +1,89 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int4* prevent_dce;
+  texture2d_array<int, access::sample> arg_1;
+  sampler arg_2;
+};
+
+int4 textureGather_8b754c(tint_module_vars_struct tint_module_vars) {
+  float2 arg_3 = float2(1.0f);
+  int arg_4 = 1;
+  int4 res = tint_module_vars.arg_1.gather(tint_module_vars.arg_2, arg_3, max(arg_4, 0), int2(0), component::y);
+  return res;
+}
+
+fragment void fragment_main(device int4* prevent_dce [[buffer(0)]], texture2d_array<int, access::sample> arg_1 [[texture(0)]], sampler arg_2 [[sampler(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .arg_1=arg_1, .arg_2=arg_2};
+  (*tint_module_vars.prevent_dce) = textureGather_8b754c(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int4* prevent_dce;
+  texture2d_array<int, access::sample> arg_1;
+  sampler arg_2;
+};
+
+int4 textureGather_8b754c(tint_module_vars_struct tint_module_vars) {
+  float2 arg_3 = float2(1.0f);
+  int arg_4 = 1;
+  int4 res = tint_module_vars.arg_1.gather(tint_module_vars.arg_2, arg_3, max(arg_4, 0), int2(0), component::y);
+  return res;
+}
+
+kernel void compute_main(device int4* prevent_dce [[buffer(0)]], texture2d_array<int, access::sample> arg_1 [[texture(0)]], sampler arg_2 [[sampler(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .arg_1=arg_1, .arg_2=arg_2};
+  (*tint_module_vars.prevent_dce) = textureGather_8b754c(tint_module_vars);
+}
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d_array<int, access::sample> arg_1;
+  sampler arg_2;
+};
+
+struct VertexOutput {
+  float4 pos;
+  int4 prevent_dce;
+};
+
+struct vertex_main_outputs {
+  float4 VertexOutput_pos [[position]];
+  int4 VertexOutput_prevent_dce [[user(locn0)]] [[flat]];
+};
+
+int4 textureGather_8b754c(tint_module_vars_struct tint_module_vars) {
+  float2 arg_3 = float2(1.0f);
+  int arg_4 = 1;
+  int4 res = tint_module_vars.arg_1.gather(tint_module_vars.arg_2, arg_3, max(arg_4, 0), int2(0), component::y);
+  return res;
+}
+
+VertexOutput vertex_main_inner(tint_module_vars_struct tint_module_vars) {
+  VertexOutput out = {};
+  out.pos = float4(0.0f);
+  out.prevent_dce = textureGather_8b754c(tint_module_vars);
+  return out;
+}
+
+vertex vertex_main_outputs vertex_main(texture2d_array<int, access::sample> arg_1 [[texture(0)]], sampler arg_2 [[sampler(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.arg_1=arg_1, .arg_2=arg_2};
+  VertexOutput const v = vertex_main_inner(tint_module_vars);
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = v.pos;
+  tint_wrapper_result.VertexOutput_prevent_dce = v.prevent_dce;
+  return tint_wrapper_result;
+}

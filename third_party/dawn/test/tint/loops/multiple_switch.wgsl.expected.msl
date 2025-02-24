@@ -1,0 +1,55 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void v() {
+  int i = 0;
+  {
+    int i_1 = 0;
+    while(true) {
+      if ((i_1 < 2)) {
+      } else {
+        break;
+      }
+      bool tint_continue = false;
+      switch(i_1) {
+        case 0:
+        {
+          tint_continue = true;
+          break;
+        }
+        default:
+        {
+          break;
+        }
+      }
+      if (tint_continue) {
+        {
+          i_1 = as_type<int>((as_type<uint>(i_1) + as_type<uint>(1)));
+        }
+        continue;
+      }
+      bool tint_continue_1 = false;
+      switch(i_1) {
+        case 0:
+        {
+          tint_continue_1 = true;
+          break;
+        }
+        default:
+        {
+          break;
+        }
+      }
+      if (tint_continue_1) {
+        {
+          i_1 = as_type<int>((as_type<uint>(i_1) + as_type<uint>(1)));
+        }
+        continue;
+      }
+      {
+        i_1 = as_type<int>((as_type<uint>(i_1) + as_type<uint>(1)));
+      }
+      continue;
+    }
+  }
+}

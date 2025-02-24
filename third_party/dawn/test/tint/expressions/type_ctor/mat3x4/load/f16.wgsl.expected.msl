@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device half3x4* out;
+};
+
+kernel void f(device half3x4* out [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.out=out};
+  half3x4 m = half3x4(half4(0.0h), half4(0.0h), half4(0.0h));
+  (*tint_module_vars.out) = half3x4(m);
+}

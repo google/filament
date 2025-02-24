@@ -1,0 +1,44 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %GLF_live6mand_ "GLF_live6mand("
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+          %9 = OpTypeFunction %v3float
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+ %uint_38730 = OpConstant %uint 38730
+ %uint_63193 = OpConstant %uint 63193
+ %uint_63173 = OpConstant %uint 63173
+         %15 = OpConstantComposite %v3uint %uint_38730 %uint_63193 %uint_63173
+  %float_463 = OpConstant %float 463
+    %float_4 = OpConstant %float 4
+    %float_0 = OpConstant %float 0
+         %19 = OpConstantComposite %v3float %float_463 %float_4 %float_0
+    %float_2 = OpConstant %float 2
+         %21 = OpConstantComposite %v3float %float_2 %float_2 %float_2
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_1 = OpConstant %float 1
+         %25 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+       %main = OpFunction %void None %6
+         %26 = OpLabel
+         %27 = OpFunctionCall %v3float %GLF_live6mand_
+               OpStore %_GLF_color %25
+               OpReturn
+               OpFunctionEnd
+%GLF_live6mand_ = OpFunction %v3float None %9
+         %28 = OpLabel
+         %29 = OpBitcast %v3float %15
+         %30 = OpExtInst %v3float %1 FMix %29 %19 %21
+               OpReturnValue %30
+               OpFunctionEnd

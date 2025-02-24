@@ -1,0 +1,67 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 34
+; Schema: 0
+               OpCapability Shader
+               OpCapability VulkanMemoryModel
+               OpCapability VulkanMemoryModelDeviceScope
+               OpCapability CooperativeMatrixKHR
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %SB_RW 0 "arg_0"
+               OpName %SB_RW "SB_RW"
+               OpName %sb_rw "sb_rw"
+               OpName %subgroupMatrixStore_bb2478 "subgroupMatrixStore_bb2478"
+               OpName %arg_1 "arg_1"
+               OpName %arg_2 "arg_2"
+               OpName %arg_4 "arg_4"
+               OpName %compute_main "compute_main"
+               OpDecorate %_runtimearr_float ArrayStride 4
+               OpMemberDecorate %SB_RW 0 Offset 0
+               OpDecorate %SB_RW Block
+               OpDecorate %sb_rw DescriptorSet 0
+               OpDecorate %sb_rw Binding 0
+      %float = OpTypeFloat 32
+%_runtimearr_float = OpTypeRuntimeArray %float
+      %SB_RW = OpTypeStruct %_runtimearr_float
+%_ptr_StorageBuffer_SB_RW = OpTypePointer StorageBuffer %SB_RW
+      %sb_rw = OpVariable %_ptr_StorageBuffer_SB_RW StorageBuffer
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+     %uint_2 = OpConstant %uint 2
+         %15 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_8 %uint_8 %uint_2
+         %14 = OpConstantNull %15
+%_ptr_Function_15 = OpTypePointer Function %15
+%_ptr_StorageBuffer__runtimearr_float = OpTypePointer StorageBuffer %_runtimearr_float
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+%subgroupMatrixStore_bb2478 = OpFunction %void None %8
+          %9 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_uint Function
+      %arg_2 = OpVariable %_ptr_Function_15 Function
+      %arg_4 = OpVariable %_ptr_Function_uint Function
+               OpStore %arg_1 %uint_1
+               OpStore %arg_2 %14
+               OpStore %arg_4 %uint_1
+         %22 = OpAccessChain %_ptr_StorageBuffer__runtimearr_float %sb_rw %uint_0
+         %25 = OpLoad %uint %arg_1 None
+         %26 = OpLoad %15 %arg_2 None
+         %27 = OpLoad %uint %arg_4 None
+         %28 = OpAccessChain %_ptr_StorageBuffer_float %22 %25
+               OpCooperativeMatrixStoreKHR %28 %26 %uint_1 %27 NonPrivatePointer
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %8
+         %32 = OpLabel
+         %33 = OpFunctionCall %void %subgroupMatrixStore_bb2478
+               OpReturn
+               OpFunctionEnd

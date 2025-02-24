@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct SSBO {
+  /* 0x0000 */ float2x2 m;
+};
+
+struct tint_module_vars_struct {
+  device SSBO* ssbo;
+};
+
+kernel void f(device SSBO* ssbo [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.ssbo=ssbo};
+  float2x2 const v = (*tint_module_vars.ssbo).m;
+  (*tint_module_vars.ssbo).m = v;
+}

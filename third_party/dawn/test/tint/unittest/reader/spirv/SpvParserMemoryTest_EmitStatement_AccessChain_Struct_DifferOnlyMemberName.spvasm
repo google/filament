@@ -1,0 +1,37 @@
+; Test: SpvParserMemoryTest_EmitStatement_AccessChain_Struct_DifferOnlyMemberName.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+OpName %myvar "myvar"
+OpName %myvar2 "myvar2"
+OpMemberName %_struct_3 1 "age"
+OpMemberName %_struct_4 1 "ancientness"
+%void = OpTypeVoid
+%6 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%float_42 = OpConstant %float 42
+%float_420 = OpConstant %float 420
+%_struct_3 = OpTypeStruct %float %float
+%_struct_4 = OpTypeStruct %float %float
+%_ptr_Private_float = OpTypePointer Private %float
+%_ptr_Private__struct_3 = OpTypePointer Private %_struct_3
+%_ptr_Private__struct_4 = OpTypePointer Private %_struct_4
+%uint = OpTypeInt 32 0
+%uint_1 = OpConstant %uint 1
+%myvar = OpVariable %_ptr_Private__struct_3 Private
+%myvar2 = OpVariable %_ptr_Private__struct_4 Private
+%100 = OpFunction %void None %6
+%16 = OpLabel
+%2 = OpAccessChain %_ptr_Private_float %myvar %uint_1
+OpStore %2 %float_42
+%20 = OpAccessChain %_ptr_Private_float %myvar2 %uint_1
+OpStore %20 %float_420
+OpReturn
+OpFunctionEnd
+

@@ -1,0 +1,42 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct Output {
+  float4 Position;
+  float4 color;
+};
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct main_outputs {
+  float4 Output_Position [[position]];
+  float4 Output_color [[user(locn0)]];
+};
+
+Output main_inner(uint VertexIndex, uint InstanceIndex) {
+  tint_array<float2, 4> const zv = tint_array<float2, 4>{float2(0.20000000298023223877f), float2(0.30000001192092895508f), float2(-0.10000000149011611938f), float2(1.10000002384185791016f)};
+  float const z = zv[min(InstanceIndex, 3u)].x;
+  Output output = {};
+  output.Position = float4(0.5f, 0.5f, z, 1.0f);
+  tint_array<float4, 4> const colors = tint_array<float4, 4>{float4(1.0f, 0.0f, 0.0f, 1.0f), float4(0.0f, 1.0f, 0.0f, 1.0f), float4(0.0f, 0.0f, 1.0f, 1.0f), float4(1.0f)};
+  output.color = colors[min(InstanceIndex, 3u)];
+  return output;
+}
+
+vertex main_outputs v(uint VertexIndex [[vertex_id]], uint InstanceIndex [[instance_id]]) {
+  Output const v_1 = main_inner(VertexIndex, InstanceIndex);
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.Output_Position = v_1.Position;
+  tint_wrapper_result.Output_color = v_1.color;
+  return tint_wrapper_result;
+}

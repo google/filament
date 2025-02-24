@@ -1,0 +1,381 @@
+Name
+
+    ARB_cull_distance
+
+Name Strings
+
+    GL_ARB_cull_distance
+
+Contact
+
+    Brian Paul, VMware Inc.  (brianp 'at' vmware.com)
+
+Contributors
+
+    Brian Paul, VMware
+    Daniel Rakos, AMD
+    Pat Brown, NVIDIA
+    Piers Daniell, NVIDIA
+
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. 
+    Approved by the ARB on June 26, 2014.
+    Ratified by the Khronos Board of Promoters on August 7, 2014.
+
+Version
+
+    Date: June 17, 2014
+    Revision: 9
+
+Number
+
+    ARB Extension #162
+
+Dependencies
+
+    OpenGL 3.0 is required.
+
+    The extension is written against the OpenGL 4.4 Specification, Core
+    Profile, March 19, 2014.
+
+    The extension is written against the OpenGL Shading Language 4.40
+    Specification, January 22, 2014.
+
+Overview
+
+    This extension adds a new GLSL gl_CullDistance shader output, similar
+    to gl_ClipDistance, but used for whole primitive culling.
+
+    This new stage in the pipeline is added as part of the primitive clipping
+    stage.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Types
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooeleanv, GetDoublev, GetFloatv
+    GetIntegerv, and GetInteger64v:
+
+        MAX_CULL_DISTANCES                              0x82F9
+        MAX_COMBINED_CLIP_AND_CULL_DISTANCES            0x82FA
+
+Additions to Chapter 7 of the OpenGL 4.4 (Core Profile) Specification (Programs and Shaders)
+
+    Modify Section 7.4.1, Shader Interface Matching
+
+    (modify last sentence of third paragraph on p. 112)
+
+    If either shader redeclares the built-in array gl_CullDistance[] or
+    gl_ClipDistance[], the array must have the same size in both shaders.
+
+Additions to Chapter 11 of the OpenGL 4.4 (Core Profile) Specification (Programmable Vertex Processing)
+
+    Modify Section 11.1.3.10, Shader Outputs
+
+    (replace the first sentence of the third paragraph on p. 358)
+
+    The built-in output variables gl_ClipDistance and glCullDistance hold the
+    clip distance(s) and cull distance(s), respectively, used in the culling
+    stage, as described in section 13.5.
+
+    Modify Section 11.2.1.2.2, Tessellation Control Shader Inputs
+
+    (modify last sentence of first paragraph on p. 365)
+
+    The members of each element of the gl_in array are gl_Position,
+    gl_PointSize, gl_ClipDistance, gl_CullDistance, and gl_ClipVertex.
+
+    Modify Section 11.2.1.2.3, Tessellation Control Shader Outputs
+
+    (modify last sentence of first paragraph on p. 366)
+
+    The members of each element of the gl_out array are gl_Position,
+    gl_PointSize, gl_ClipDistance, and gl_CullDistance, and behave identically
+    to equivalently named vertex shader outputs (section 11.1.3).
+
+    Modify Section 11.2.3.3, Tessellation Evaluation Shader Inputs
+
+    (modify last sentence of first paragraph on p. 380)
+
+    The members of each element of the gl_in array are gl_Position,
+    gl_PointSize, gl_ClipDistance, and gl_CullDistance.
+
+    Modify Section 11.2.3.4, Tessellation Evaluation Shader Ouputs
+
+    (modify last sentence of first paragraph on p. 381)
+
+    These variables are gl_Position, gl_PointSize, gl_ClipDistance, and
+    gl_CullDistance, and all behave identically to equivalently named vertex
+    shader outputs (see section 11.1.3).
+
+    Modify Section 11.3.4.4, Geometry Shader Inputs
+
+    (add after first bullet in first paragraph on p. 387)
+
+      * Structure member gl_CullDistance[] holds the per-vertex array of cull
+        distances, as written by the vertex shader to its built-in output
+        variable gl_CullDistance[].
+
+    Modify Section 11.3.4.5, Geometry Shader Outputs
+
+    (replace second paragraph on p. 389)
+
+    The built-in outputs gl_ClipDistance and gl_CullDistance hold the clip
+    distance(s) and cull distance(s), respectively, used in the clipping
+    stage, as described in section 13.5.
+
+Additions to Chapter 13 of the OpenGL 4.4 (Core Profile) Specification (Fixed-Function Vertex Post-Processing)
+
+    Modify Section 13.5, Primitive Clipping
+
+    (replace first sentence of first paragraph on p. 404)
+
+    Primitives are culled against the cull volume and then clipped against the
+    clip volume.
+
+    (replace the second, third, and fourth paragraph on p. 404)
+
+    This view volume may be further restricted by as many as <n> client-
+    defined half-spaces. <n> is an implementation-dependent maximum that must
+    be at least 8, and maybe determined by calling GetIntegerv with the
+    symbolic constant MAX_COMBINED_CLIP_AND_CULL_DISTANCES.
+
+    The cull volume is the intersection of up to MAX_CULL_DISTANCES client-
+    defined half-spaces (if no client-defined cull half-spaces are enabled,
+    culling against the cull volume is skipped). The number of enabled cull
+    half-spaces is determined by the explicit or implicit size of the built-in
+    array gl_CullDistance in the last shader stage before rasterization that
+    has an active program.
+
+    A shader may write a single cull distance for each enabled cull half-space
+    to elements of the gl_CullDistance[] array. If the cull distance for any
+    enabled cull half-space is negative for all of the vertices of the
+    primitive under consideration, the primitive is discarded. Otherwise the
+    primitive is clipped against the clip volume as defined below.
+
+    The clip volume is the intersection of up to MAX_CLIP_DISTANCES client-
+    defined half-spaces with the view volume (if no client-defined clip half-
+    spaces are enabled, the clip volume is the view volume). Client-defined
+    clip half-spaces are enabled or disabled by calling Enable or Disable with
+    <target> CLIP_DISTANCE<i>, where <i> is an integer between 0 and <n> - 1;
+    specifying a value of <i> enables or disables the client-defined clip
+    half-space with index <i>. The constants obey CLIP_DISTANCE<i> =
+    CLIP_DISTANCE0 + <i>.
+
+    A shader may write a single clip distance for each enabled clip half-space
+    to elements of the gl_ClipDistance[] array. Clip half-space <i> is then
+    given by the set of points satisfying the inequality
+
+            c[i](P) >= 0,
+
+    where c[i](P) is the value of clip distance <i> at point P. For point
+    primitives, c[i](P) is simply the clip distance for the vertex in
+    question. For line and triangle primitives, per-vertex clip distances are
+    interpolated using a weighted mean, with weights derived according to the
+    algorithms described in sections 14.5 and 14.6.
+
+    Depth clamping ...
+
+Additions to the OpenGL Shading Language
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+        #extension GL_ARB_cull_distance : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #define is added to the OpenGL Shading Language:
+
+        #define GL_ARB_cull_distance 1
+
+Additions to Chapter 7 of the OpenGL Shading Language 4.40 Specification (Built-in Variables)
+
+    Modify Section 7.1, Built-In Language Variables
+
+    (add a new field to the end of the declaration of "gl_PerVertex" for
+    all language input and output blocks on p. 120-122)
+
+        float gl_CullDistance[];
+
+    (add new declaration to the built-in variables available in the fragment
+    language on p. 122)
+
+        in float gl_CullDistance[];
+
+    (add after second paragraph on p. 124)
+
+    The variable gl_CullDistance provides a mechanism for controlling user
+    culling. The element gl_CullDistance[i] specifies a cull distance for
+    plane <i>. A distance of 0 means the vertex is on the plane, a positive
+    distance means the vertex is inside the cull volume, and a negative
+    distance means the point is outside the cull volume. Primitives whose
+    vertices all have a negative clip distance for plane <i> will be
+    discarded.
+
+    The gl_CullDistance array is predeclared as unsized and must be sized by
+    the shader either redeclaring it with a size or indexing it only with
+    integral constant expressions. The size determines the number and set of
+    enabled cull distances and can be at most gl_MaxCullDistances. The number
+    of varying components (see gl_MaxVaryingComponents) consumed by
+    gl_CullDistance will match the size of the array. Shaders writing
+    gl_CullDistance must write all enabled distances, or culling results are
+    undefined.
+
+    As an output variable, gl_CullDistance provides the place for the shader
+    to write these distances. As an input in all but the fragment language,
+    it reads the values written in the previous shader stage. In the
+    fragment language, gl_CullDistance array contains linearly interpolated
+    values for the vertex values written by a shader to the gl_CullDistance
+    vertex output variable.
+
+    It is a compile-time or link-time error for the set of shaders forming
+    a program to have the sum of the sizes of the gl_ClipDistance and
+    gl_CullDistance arrays to be larger than 
+    gl_MaxCombinedClipAndCullDistances.
+
+    Modify Section 7.1.1, Compatibility Profile Built-In Language Variables
+
+    (modify last sentence on p. 128)
+
+    It is a compile-time or link-time error for the set of shaders forming
+    a program to statically read or write both gl_ClipVertex and
+    either gl_ClipDistance or gl_CullDistance.
+
+    Modify Section 7.3, Built-In Constants
+
+    (add to the list of implementation-dependent constants after
+    gl_MaxClipDistances on p. 132)
+
+    const int  gl_MaxCullDistances = 8;
+    const int  gl_MaxCombinedClipAndCullDistances = 8;
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    (add to table 23.53, Implementation Dependent Values)
+
+    Get Value                             Type  Get Command  Minimum value  Description                        Sec.
+    ------------------------------------  ----  -----------  -------------  ---------------------------------  ----
+    MAX_CULL_DISTANCES                     Z+   GetIntegerv        8        Max no. of user culling planes     13.5
+    MAX_COMBINED_CLIP_AND_CULL_DISTANCES   Z+   GetIntegerv        8        Max combined no. of user clipping  13.5
+                                                                            and culling planes
+
+Issues
+
+    (1) Why is this extension necessary?
+
+      RESOLVED: This feature is supported by a competing graphics API. One
+      could implement some of this functionality with a geometry shader but
+      that doesn't work well in all circumstances, or is very difficult.
+
+    (2) Should there be enable flags for cull distances as there are for
+        clip distances?
+
+      RESOLVED: The clip plane enables still exist for OpenGL 4.4 core
+      profile, but they are mostly there because of backwards compatibility
+      reasons. The proposal is to not have separate enables for cull
+      distances, instead usage in the shader should determine this.
+
+    (3) How many cull distances are supported?
+
+      RESOLVED: Eight. But as resources used by cull distances and clip
+      distances may be aliased on some implementations we also introduce a
+      combined resource limit of eight.
+
+    (4) How do we determine the number of enabled cull distances?
+
+      RESOLVED: Redeclaring the gl_CullDistance array with a size of <n>
+      automatically enables the first <n> cull distances.
+
+    (5) Which shader stage determines the number of enabled cull distances in
+        case multiple shader stages redeclare gl_CullDistance?
+
+      RESOLVED: The implicit or explicit size of gl_CullDistance in the
+      very last shader stage before rasterization determines the number
+      of enabled cull distances.
+
+    (6) How should we validate that we don't go over resource limits?
+
+      RESOLVED: There is an implicit or explicit size for both
+      gl_ClipDistance and gl_CullDistance in the shader. If the sum of the
+      sizes of the two arrays is over MAX_COMBINED_CLIP_AND_CULL_DISTANCES
+      it results in a compile-time or link-time error.
+
+    (7) Should there be a built-in gl_CullDistance in the fragment language?
+
+      RESOLVED: Yes, just like gl_ClipDistance is available in the fragment
+      language.
+
+Revision History
+
+    Revision 9, 2014/06/17 (Daniel Rakos)
+      - Added missing tokens.
+
+    Revision 8, 2014/06/06 (Daniel Rakos)
+      - Resolved issues (5) and (7).
+      - Clarified language describing the number of enabled cull distances.
+
+    Revision 7, 2014/05/30 (Daniel Rakos)
+      - Resolved issues (2), (3), (4), and (6).
+
+    Revision 6, 2014/05/22 (Daniel Rakos)
+      - Minor language cleanup.
+
+    Revision 5, 2014/05/19 (Daniel Rakos)
+      - Added language to explicitly disallow the use of gl_ClipVertex and
+        gl_CullDistance at the same time.
+
+    Revision 4, 2014/05/16 (Daniel Rakos)
+      - Added missing language about #extension and #define for the feature.
+
+    Revision 3, 2014/04/25 (Daniel Rakos)
+      - Renamed to ARB_cull_distance.
+      - Added implementation-dependent states MAX_CULL_DISTANCES and
+        MAX_COMBINED_CLIP_AND_CULL_DISTANCES.
+      - Rewrote language based on discussion.
+      - Added issues (3) to (7).
+
+    Revision 2, 2014/04/10 (Brian Paul)
+      - Fleshed out edits to chapter 13 of the spec.
+      - Added issue (2).
+
+    Revision 1, 2014/02/03 (Brian Paul)
+      - Initial revision.

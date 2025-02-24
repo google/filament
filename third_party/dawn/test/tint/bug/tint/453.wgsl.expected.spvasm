@@ -1,0 +1,68 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 43
+; Schema: 0
+               OpCapability Shader
+               OpCapability ImageQuery
+         %24 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %Src "Src"
+               OpName %Dst "Dst"
+               OpName %main "main"
+               OpName %srcValue "srcValue"
+               OpName %x_22 "x_22"
+               OpName %x_24 "x_24"
+               OpName %x_25 "x_25"
+               OpName %x_27 "x_27"
+               OpDecorate %Src DescriptorSet 0
+               OpDecorate %Src Binding 0
+               OpDecorate %Dst DescriptorSet 0
+               OpDecorate %Dst Binding 1
+               OpDecorate %Dst NonReadable
+       %uint = OpTypeInt 32 0
+          %3 = OpTypeImage %uint 2D 0 0 0 1 Unknown
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+        %Src = OpVariable %_ptr_UniformConstant_3 UniformConstant
+          %7 = OpTypeImage %uint 2D 0 0 0 2 R32ui
+%_ptr_UniformConstant_7 = OpTypePointer UniformConstant %7
+        %Dst = OpVariable %_ptr_UniformConstant_7 UniformConstant
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void
+     %v4uint = OpTypeVector %uint 4
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+         %15 = OpConstantNull %v4uint
+     %uint_1 = OpConstant %uint 1
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+     %v2uint = OpTypeVector %uint 2
+         %28 = OpConstantComposite %v2uint %uint_1 %uint_1
+      %v2int = OpTypeVector %int 2
+         %30 = OpConstantNull %v2int
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %uint_0 = OpConstant %uint 0
+       %main = OpFunction %void None %10
+         %11 = OpLabel
+   %srcValue = OpVariable %_ptr_Function_v4uint Function %15
+         %16 = OpLoad %3 %Src None
+         %17 = OpImageQueryLevels %uint %16
+         %18 = OpISub %uint %17 %uint_1
+         %20 = OpBitcast %uint %int_0
+         %23 = OpExtInst %uint %24 UMin %20 %18
+         %25 = OpImageQuerySizeLod %v2uint %16 %23
+         %27 = OpISub %v2uint %25 %28
+         %29 = OpBitcast %v2uint %30
+         %32 = OpExtInst %v2uint %24 UMin %29 %27
+       %x_22 = OpImageFetch %v4uint %16 %32 Lod %23
+               OpStore %srcValue %x_22 None
+         %34 = OpAccessChain %_ptr_Function_uint %srcValue %uint_0
+       %x_24 = OpLoad %uint %34 None
+       %x_25 = OpIAdd %uint %x_24 %uint_1
+       %x_27 = OpLoad %v4uint %srcValue None
+         %40 = OpLoad %7 %Dst None
+         %41 = OpVectorShuffle %v4uint %x_27 %x_27 0 0 0 0
+               OpImageWrite %40 %30 %41 None
+               OpReturn
+               OpFunctionEnd

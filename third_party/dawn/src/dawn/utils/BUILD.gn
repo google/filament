@@ -1,0 +1,128 @@
+# Copyright 2020 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("../../../scripts/dawn_overrides_with_defaults.gni")
+import("../../../scripts/tint_overrides_with_defaults.gni")
+
+import("${dawn_root}/scripts/dawn_features.gni")
+
+###############################################################################
+# Utils for tests and samples
+###############################################################################
+
+static_library("utils") {
+  configs += [
+    "${dawn_root}/src/dawn/common:internal_config",
+    "${dawn_root}/src/tint:tint_public_config",
+  ]
+
+  sources = [
+    "BinarySemaphore.cpp",
+    "BinarySemaphore.h",
+    "ComboRenderBundleEncoderDescriptor.cpp",
+    "ComboRenderBundleEncoderDescriptor.h",
+    "ComboRenderPipelineDescriptor.cpp",
+    "ComboRenderPipelineDescriptor.h",
+    "CommandLineParser.cpp",
+    "CommandLineParser.h",
+    "PlatformDebugLogger.h",
+    "SystemUtils.cpp",
+    "SystemUtils.h",
+    "TerribleCommandBuffer.cpp",
+    "TerribleCommandBuffer.h",
+    "TestUtils.cpp",
+    "TestUtils.h",
+    "TextureUtils.cpp",
+    "TextureUtils.h",
+    "Timer.h",
+    "WGPUHelpers.cpp",
+    "WGPUHelpers.h",
+    "WireHelper.cpp",
+    "WireHelper.h",
+  ]
+  deps = [
+    "${dawn_root}/src/dawn:proc",
+    "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/native:headers",
+    "${dawn_root}/src/dawn/wire",
+  ]
+
+  libs = []
+  frameworks = []
+
+  if (tint_build_spv_reader) {
+    deps += [ "${dawn_spirv_tools_dir}:spvtools_opt" ]
+  }
+
+  if (is_win && !dawn_is_winuwp) {
+    sources += [ "WindowsDebugLogger.cpp" ]
+  } else {
+    sources += [ "EmptyDebugLogger.cpp" ]
+  }
+
+  if (is_win) {
+    sources += [ "WindowsTimer.cpp" ]
+  } else if (is_mac) {
+    sources += [
+      "OSXTimer.cpp",
+      "ObjCUtils.h",
+      "ObjCUtils.mm",
+    ]
+    frameworks += [ "QuartzCore.framework" ]
+
+    # If a "build with ARC" config is present, remove it.
+    if (filter_include(configs, [ "//build/config/compiler:enable_arc" ]) !=
+        []) {
+      configs -= [ "//build/config/compiler:enable_arc" ]
+    }
+  } else {
+    sources += [ "PosixTimer.cpp" ]
+  }
+
+  public_deps = [
+    ":abseil",
+    "${dawn_root}/include/dawn:cpp_headers",
+    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
+  ]
+}
+
+group("abseil") {
+  # When building within Chromium or ANGLE we need to include "//third_party/abseil-cpp:absl" while
+  # it's beneficial to be more specific with standalone Dawn, especially when it comes to
+  # including it as a dependency in other projects (such as Skia).
+  if (build_with_chromium || build_with_angle) {
+    public_deps = [ "$dawn_abseil_dir:absl" ]
+  } else {
+    public_deps = [
+      "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_map",
+      "${dawn_root}/third_party/gn/abseil-cpp:span",
+      "${dawn_root}/third_party/gn/abseil-cpp:str_format",
+      "${dawn_root}/third_party/gn/abseil-cpp:string_view",
+      "${dawn_root}/third_party/gn/abseil-cpp:strings",
+    ]
+  }
+}

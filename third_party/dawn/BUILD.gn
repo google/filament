@@ -1,0 +1,129 @@
+# Copyright 2018 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("build/config/rust.gni")
+import("scripts/dawn_overrides_with_defaults.gni")
+import("scripts/tint_overrides_with_defaults.gni")
+
+if (!is_clang && is_win) {
+  # libc++ cannot currently build with MSVC. See https://anglebug.com/376074941
+  assert(!use_custom_libcxx, "MSVC build requires use_custom_libcxx=false")
+}
+
+group("benchmarks") {
+  testonly = true
+  deps = [ "src/tint:benchmarks" ]
+}
+
+group("fuzzers") {
+  testonly = true
+  deps = [
+    "src/dawn/fuzzers",
+    "src/tint:fuzzers",
+  ]
+}
+
+group("libs") {
+  deps = [
+    "src/dawn/native:webgpu_dawn",
+    "src/tint:libs",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "src/dawn/tests",
+    "src/tint:tests",
+  ]
+}
+
+group("cmds") {
+  deps = [
+    "src/dawn/samples",
+    "src/tint:cmds",
+  ]
+  if ((target_cpu == "x64" && (is_win || is_linux || is_mac)) ||
+      (target_cpu == "arm64" && is_win)) {
+    deps += [ "third_party/gn/dxc:dxc" ]
+  }
+}
+
+group("android") {
+  deps = [ "tools/android" ]
+}
+
+group("emdawnwebgpu") {
+  # Without a copy of Emscripten, we can only generate a few files.
+  deps = [
+    "src/emdawnwebgpu:emdawnwebgpu_headers_gen",
+    "src/emdawnwebgpu:emdawnwebgpu_js_gen",
+  ]
+  if (dawn_emscripten_dir != "") {
+    deps += [ "src/emdawnwebgpu:emdawnwebgpu" ]
+  }
+}
+
+group("all") {
+  testonly = true
+  deps = [
+    ":android",
+    ":benchmarks",
+    ":cmds",
+    ":emdawnwebgpu",
+    ":fuzzers",
+    ":libs",
+    ":tests",
+  ]
+}
+
+if (enable_rust) {
+  group("rust_build_tests") {
+    testonly = true
+    deps = [ "//build/rust/tests" ]
+  }
+}
+
+# This target is built when no specific target is specified on the command line.
+group("default") {
+  testonly = true
+  deps = [ ":all" ]
+}
+
+# GN evaluates each .gn file once per toolchain, so restricting to default
+# toolchain will ensure write_file() is called only once.
+if (current_toolchain == default_toolchain) {
+  import("//build/gn_logs.gni")
+
+  # Write debug logs to gn_logs.txt.
+  _lines = [
+             "Generated during 'gn gen' by //BUILD.gn.",
+             "",
+           ] + build_gn_logs
+
+  write_file("$root_build_dir/gn_logs.txt", _lines)
+}

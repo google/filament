@@ -1,0 +1,90 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct atomic_compare_exchange_result_i32 {
+  int old_value;
+  bool exchanged;
+};
+
+struct SB_RW_atomic {
+  /* 0x0000 */ atomic_int arg_0;
+};
+
+struct tint_module_vars_struct {
+  device SB_RW_atomic* sb_rw;
+};
+
+struct x__atomic_compare_exchange_resulti32 {
+  int old_value;
+  bool exchanged;
+};
+
+atomic_compare_exchange_result_i32 v(device atomic_int* const atomic_ptr, int cmp, int val) {
+  int old_value = cmp;
+  bool const v_1 = atomic_compare_exchange_weak_explicit(atomic_ptr, (&old_value), val, memory_order_relaxed, memory_order_relaxed);
+  return atomic_compare_exchange_result_i32{.old_value=old_value, .exchanged=v_1};
+}
+
+void atomicCompareExchangeWeak_1bd40a(tint_module_vars_struct tint_module_vars) {
+  x__atomic_compare_exchange_resulti32 res = x__atomic_compare_exchange_resulti32{};
+  int const old_value_1 = v((&(*tint_module_vars.sb_rw).arg_0), 1, 1).old_value;
+  int const x_19 = old_value_1;
+  res = x__atomic_compare_exchange_resulti32{.old_value=x_19, .exchanged=(x_19 == 1)};
+}
+
+void fragment_main_1(tint_module_vars_struct tint_module_vars) {
+  atomicCompareExchangeWeak_1bd40a(tint_module_vars);
+}
+
+fragment void fragment_main(device SB_RW_atomic* sb_rw [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb_rw=sb_rw};
+  fragment_main_1(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct atomic_compare_exchange_result_i32 {
+  int old_value;
+  bool exchanged;
+};
+
+struct SB_RW_atomic {
+  /* 0x0000 */ atomic_int arg_0;
+};
+
+struct tint_module_vars_struct {
+  device SB_RW_atomic* sb_rw;
+};
+
+struct x__atomic_compare_exchange_resulti32 {
+  int old_value;
+  bool exchanged;
+};
+
+atomic_compare_exchange_result_i32 v(device atomic_int* const atomic_ptr, int cmp, int val) {
+  int old_value = cmp;
+  bool const v_1 = atomic_compare_exchange_weak_explicit(atomic_ptr, (&old_value), val, memory_order_relaxed, memory_order_relaxed);
+  return atomic_compare_exchange_result_i32{.old_value=old_value, .exchanged=v_1};
+}
+
+void atomicCompareExchangeWeak_1bd40a(tint_module_vars_struct tint_module_vars) {
+  x__atomic_compare_exchange_resulti32 res = x__atomic_compare_exchange_resulti32{};
+  int const old_value_1 = v((&(*tint_module_vars.sb_rw).arg_0), 1, 1).old_value;
+  int const x_19 = old_value_1;
+  res = x__atomic_compare_exchange_resulti32{.old_value=x_19, .exchanged=(x_19 == 1)};
+}
+
+void compute_main_1(tint_module_vars_struct tint_module_vars) {
+  atomicCompareExchangeWeak_1bd40a(tint_module_vars);
+}
+
+kernel void compute_main(device SB_RW_atomic* sb_rw [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb_rw=sb_rw};
+  compute_main_1(tint_module_vars);
+}

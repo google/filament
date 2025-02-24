@@ -1,0 +1,26 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device float* out;
+};
+
+void bar(thread float* const p) {
+  float const a = 1.0f;
+  float const b = 2.0f;
+  bool v = false;
+  if ((a >= 0.0f)) {
+    v = (b >= 0.0f);
+  } else {
+    v = false;
+  }
+  bool const cond = v;
+  (*p) = select(a, b, cond);
+}
+
+kernel void foo(device float* out [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.out=out};
+  float param = 0.0f;
+  bar((&param));
+  (*tint_module_vars.out) = param;
+}

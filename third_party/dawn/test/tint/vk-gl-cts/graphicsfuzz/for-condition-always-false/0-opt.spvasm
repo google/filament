@@ -1,0 +1,62 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %drawShape_vf2_ "drawShape(vf2;"
+               OpName %pos "pos"
+               OpName %c3 "c3"
+               OpName %param "param"
+               OpName %color "color"
+               OpDecorate %color Location 0
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+    %v3float = OpTypeVector %float 3
+         %14 = OpTypeFunction %v3float %_ptr_Function_v2float
+       %bool = OpTypeBool
+%_ptr_Function_bool = OpTypePointer Function %bool
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+%_ptr_Function_float = OpTypePointer Function %float
+    %float_1 = OpConstant %float 1
+         %21 = OpConstantComposite %v3float %float_1 %float_1 %float_1
+         %22 = OpConstantComposite %v2float %float_1 %float_1
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+      %color = OpVariable %_ptr_Output_v4float Output
+    %float_0 = OpConstant %float 0
+         %26 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+         %27 = OpUndef %bool
+       %main = OpFunction %void None %9
+         %28 = OpLabel
+      %param = OpVariable %_ptr_Function_v2float Function
+               OpStore %param %22
+         %29 = OpFunctionCall %v3float %drawShape_vf2_ %param
+               OpStore %color %26
+               OpReturn
+               OpFunctionEnd
+%drawShape_vf2_ = OpFunction %v3float None %14
+        %pos = OpFunctionParameter %_ptr_Function_v2float
+         %30 = OpLabel
+         %c3 = OpVariable %_ptr_Function_bool Function
+         %31 = OpAccessChain %_ptr_Function_float %pos %uint_1
+         %32 = OpLoad %float %31
+         %33 = OpFOrdLessThan %bool %32 %float_1
+               OpStore %c3 %33
+               OpBranch %34
+         %34 = OpLabel
+         %35 = OpPhi %bool %33 %30 %27 %36
+               OpLoopMerge %37 %36 None
+               OpBranchConditional %35 %38 %37
+         %38 = OpLabel
+               OpReturnValue %21
+         %36 = OpLabel
+               OpBranch %34
+         %37 = OpLabel
+               OpReturnValue %21
+               OpFunctionEnd

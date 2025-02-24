@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void main_inner(uint3 local_invocation_id, uint local_invocation_index, uint3 global_invocation_id, uint3 workgroup_id, uint3 num_workgroups) {
+  uint const foo = ((((local_invocation_id.x + local_invocation_index) + global_invocation_id.x) + workgroup_id.x) + num_workgroups.x);
+}
+
+kernel void v(uint3 local_invocation_id [[thread_position_in_threadgroup]], uint local_invocation_index [[thread_index_in_threadgroup]], uint3 global_invocation_id [[thread_position_in_grid]], uint3 workgroup_id [[threadgroup_position_in_grid]], uint3 num_workgroups [[threadgroups_per_grid]]) {
+  main_inner(local_invocation_id, local_invocation_index, global_invocation_id, workgroup_id, num_workgroups);
+}

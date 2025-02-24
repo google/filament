@@ -1,0 +1,393 @@
+Name
+
+    EXT_yuv_surface
+
+Name Strings
+
+    EGL_EXT_yuv_surface
+
+Contributors
+
+    Matt Trusten
+    Jeff Vigil
+    Arshad Bebal
+    Mohan Maiya
+    Amit Bansal
+    Tom Longo
+    Eric Engestrom
+
+Contacts
+
+    Jeff Vigil, Qualcomm (jvigil 'at' qualcomm.com)
+
+Notice
+
+    Copyright (c) 2014 Qualcomm Technologies, Inc. All Rights Reserved.
+    Qualcomm Technologies Proprietary and Confidential
+
+Status
+
+    Complete
+
+Version
+
+    Version 9, May 4th, 2017
+
+Number
+
+    EGL Extension #86
+
+Dependencies
+
+    EGL 1.4 is required.
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+Overview
+
+    This extension defines a set of new EGL configuration attributes and values
+    which allows EGL to create and use YUV surfaces.
+
+    YUV formats can be described using a few simple parameters, and every format
+    can be given with these six parameters. These parameters include the color
+    order, the number of planes, subsample, plane depth, color conversion and
+    depth range.
+
+    This extension describes how EGL will handle YUV surfaces, but requires that
+    the client API describe how to fill such a surface. An example of such an
+    extension would be GL_EXT_yuv_target.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    A new set of EGLConfig attributes are available:
+        EGL_YUV_ORDER_EXT                               0x3301
+        EGL_YUV_NUMBER_OF_PLANES_EXT                    0x3311
+        EGL_YUV_SUBSAMPLE_EXT                           0x3312
+        EGL_YUV_DEPTH_RANGE_EXT                         0x3317
+        EGL_YUV_CSC_STANDARD_EXT                        0x330A
+        EGL_YUV_PLANE_BPP_EXT                           0x331A
+
+    Accepted as a new value for the EGL_COLOR_BUFFER_TYPE attribute:
+        EGL_YUV_BUFFER_EXT                              0x3300
+
+    Accepted values for the EGL_YUV_ORDER_EXT attribute:
+        EGL_YUV_ORDER_YUV_EXT                           0x3302
+        EGL_YUV_ORDER_YVU_EXT                           0x3303
+        EGL_YUV_ORDER_YUYV_EXT                          0x3304
+        EGL_YUV_ORDER_UYVY_EXT                          0x3305
+        EGL_YUV_ORDER_YVYU_EXT                          0x3306
+        EGL_YUV_ORDER_VYUY_EXT                          0x3307
+        EGL_YUV_ORDER_AYUV_EXT                          0x3308
+
+    Accepted values for the EGL_YUV_SUBSAMPLE_EXT attribute:
+        EGL_YUV_SUBSAMPLE_4_2_0_EXT                     0x3313
+        EGL_YUV_SUBSAMPLE_4_2_2_EXT                     0x3314
+        EGL_YUV_SUBSAMPLE_4_4_4_EXT                     0x3315
+
+    Accepted values for the EGL_YUV_DEPTH_RANGE_EXT attribute:
+        EGL_YUV_DEPTH_RANGE_LIMITED_EXT                 0x3318
+        EGL_YUV_DEPTH_RANGE_FULL_EXT                    0x3319
+
+    Accepted values for the EGL_YUV_CSC_STANDARD_EXT attribute:
+        EGL_YUV_CSC_STANDARD_601_EXT                    0x330B
+        EGL_YUV_CSC_STANDARD_709_EXT                    0x330C
+        EGL_YUV_CSC_STANDARD_2020_EXT                   0x330D
+
+    Accepted values for the EGL_YUV_PLANE_BPP_EXT attribute:
+        EGL_YUV_PLANE_BPP_0_EXT                         0x331B
+        EGL_YUV_PLANE_BPP_8_EXT                         0x331C
+        EGL_YUV_PLANE_BPP_10_EXT                        0x331D
+
+Additions to Chapter 2 of the EGL 1.4 Specification (EGL Operation)
+
+Change the options of paragraph 6 from section 2.2: Rendering Contexts and
+Drawing Surfaces
+
+    A context can be used with any EGLSurface that it is compatible with
+    (subject to the restrictions discussed in the section on address space). A
+    surface and context are compatible if
+        * They support the same type of color buffer (RGB or luminance)
+
+To the following:
+
+    A context can be used with any EGLSurface that it is compatible with
+    (subject to the restrictions discussed in the section on address space). A
+    surface and context are compatible if
+        * They support the same type of color buffer (RGB, YUV, or luminance)
+
+Additions to Chapter 3 of the EGL 1.4 Specification (EGL Functions and Errors)
+
+Change the section marked from Buffer Descriptions and Attributes in Section 3.4
+to:
+
+    The Color Buffer
+
+        The color buffer contains pixel color values, and is shared by all
+    client APIs rendering to a surface.
+        EGL_COLOR_BUFFER_TYPE indicates the color buffer type, and must be
+    either EGL_RGB_BUFFER for an RGB color buffer, EGL_LUMINANCE_BUFFER for a
+    luminance color buffer, or EGL_YUV_BUFFER_EXT for a YUV color buffer.  For
+    an RGB buffer, EGL_RED_SIZE, EGL_GREEN_SIZE, EGL_BLUE_SIZE must be non-zero,
+    and EGL_LUMINANCE_SIZE must be zero.  For a luminance buffer, EGL_RED_SIZE,
+    EGL_GREEN_SIZE, EGL_BLUE_SIZE must be zero, and EGL_LUMINANCE_SIZE must be
+    non-zero. For both RGB and luminance color buffers, EGL_ALPHA_SIZE may be
+    zero or non-zero (the latter indicates the existence of a destination alpha
+    buffer).  For a YUV buffer, all of EGL_RED_SIZE, EGL_GREEN_SIZE, EGL_BLUE_-
+    SIZE, EGL_LUMINANCE_SIZE, and EGL_ALPHA_SIZE must be zero. Instead, the
+    depth in bits per pixel for YUV is described using EGL_YUV_PLANE_BPP_EXT,
+    which describes the size of a single pixel in the Y plane, and the other
+    plane depths are derived from this.
+        EGL_YUV_ORDER_EXT is used to describe the plane order.
+        EGL_YUV_NUMBER_OF_PLANES_EXT describes the number of planes that will
+    be used for this surface. The allowed values for EGL_YUV_NUMBER_OF_PLANES_-
+    EXT must be greater than zero and not more than three.
+        EGL_YUV_SUBSAMPLE_EXT allows the user to decide how the surface will be
+    subsampled.
+
+    Valid combinations are:
+
+        EGL_YUV_SUBSAMPLE_EXT         EGL_YUV_NUMBER_OF_PLANES_EXT   EGL_YUV_ORDER_EXT          EGL_YUV_PLANE_BPP_EXT
+        -------------------------     -----------------------------  ------------------         ------------------------
+        EGL_YUV_SUBSAMPLE_4_2_0_EXT                2 or 3            EGL_YUV_ORDER_YUV_EXT or   EGL_YUV_PLANE_BPP_8_EXT or
+                                                                     EGL_YUV_ORDER_YVU_EXT      EGL_YUV_PLANE_BPP_10_EXT
+
+        EGL_YUV_SUBSAMPLE_4_2_2_EXT                  1               EGL_YUV_ORDER_YUYV_EXT or  EGL_YUV_PLANE_BPP_8_EXT or
+                                                                     EGL_YUV_ORDER_YVYU_EXT or  EGL_YUV_PLANE_BPP_10_EXT
+                                                                     EGL_YUV_ORDER_UYVY_EXT or
+                                                                     EGL_YUV_ORDER_VYUY_EXT
+
+        EGL_YUV_SUBSAMPLE_4_2_2_EXT               2 or 3             EGL_YUV_ORDER_YUV_EXT or   EGL_YUV_PLANE_BPP_8_EXT or
+                                                                     EGL_YUV_ORDER_YVU_EXT      EGL_YUV_PLANE_BPP_10_EXT
+
+        EGL_YUV_SUBSAMPLE_4_4_4_EXT                  1               EGL_YUV_ORDER_AYUV_EXT     EGL_YUV_PLANE_BPP_8_EXT or
+                                                                                                EGL_YUV_PLANE_BPP_10_EXT
+
+    Usage examples:
+
+        Format                      Combination
+        ------------------          --------------------------------------------------------------
+        NV12                        EGL_YUV_SUBSAMPLE_EXT          = EGL_YUV_SUBSAMPLE_4_2_0_EXT
+         - YUV420                   EGL_YUV_NUMBER_OF_PLANES_EXT   = 2
+         - 2 Planes : Y + UV        EGL_YUV_ORDER_EXT              = EGL_YUV_ORDER_YUV_EXT
+         - 8 bit depth              EGL_YUV_PLANE_BPP_EXT          = EGL_YUV_PLANE_BPP_8_EXT
+
+        NV21                        EGL_YUV_SUBSAMPLE_EXT          = EGL_YUV_SUBSAMPLE_4_2_0_EXT
+         - YUV420                   EGL_YUV_NUMBER_OF_PLANES_EXT   = 2
+         - 2 Planes : Y + VU        EGL_YUV_ORDER_EXT              = EGL_YUV_ORDER_YVU_EXT
+         - 8 bit depth              EGL_YUV_PLANE_BPP_EXT          = EGL_YUV_PLANE_BPP_8_EXT
+
+        YV12                        EGL_YUV_SUBSAMPLE_EXT          = EGL_YUV_SUBSAMPLE_4_2_0_EXT
+         - YUV420                   EGL_YUV_NUMBER_OF_PLANES_EXT   = 3
+         - 3 Planes : Y + V + U     EGL_YUV_ORDER_EXT              = EGL_YUV_ORDER_YVU_EXT
+         - 8 bit depth              EGL_YUV_PLANE_BPP_EXT          = EGL_YUV_PLANE_BPP_8_EXT
+
+        YUY2                        EGL_YUV_SUBSAMPLE_EXT          = EGL_YUV_SUBSAMPLE_4_2_2_EXT
+         - YUV422                   EGL_YUV_NUMBER_OF_PLANES_EXT   = 1
+         - 1 Plane : Y + U + Y + V  EGL_YUV_ORDER_EXT              = EGL_YUV_ORDER_YUYV_EXT
+         - 8 bit depth              EGL_YUV_PLANE_BPP_EXT          = EGL_YUV_PLANE_BPP_8_EXT
+
+        AYUV                        EGL_YUV_SUBSAMPLE_EXT          = EGL_YUV_SUBSAMPLE_4_4_4_EXT
+         - YUV444                   EGL_YUV_NUMBER_OF_PLANES_EXT   = 1
+         - 1 Plane : A + Y + U + V  EGL_YUV_ORDER_EXT              = EGL_YUV_ORDER_AYUV_EXT
+         - 8 bit depth              EGL_YUV_PLANE_BPP_EXT          = EGL_YUV_PLANE_BPP_8_EXT
+
+        YUV420 Semi-Planar 10 Bit   EGL_YUV_SUBSAMPLE_EXT          = EGL_YUV_SUBSAMPLE_4_2_0_EXT
+         - YUV420                   EGL_YUV_NUMBER_OF_PLANES_EXT   = 2
+         - 2 Planes : Y + UV        EGL_YUV_ORDER_EXT              = EGL_YUV_ORDER_YUV_EXT
+         - 10 bit depth             EGL_YUV_PLANE_BPP_EXT          = EGL_YUV_PLANE_BPP_10_EXT
+
+        YUV422 Interleaved 10 Bit   EGL_YUV_SUBSAMPLE_EXT          = EGL_YUV_SUBSAMPLE_4_2_2_EXT
+         - YUV422                   EGL_YUV_NUMBER_OF_PLANES_EXT   = 1
+         - 1 Plane : Y + U + Y + V  EGL_YUV_ORDER_EXT              = EGL_YUV_ORDER_YUYV_EXT
+         - 8 bit depth              EGL_YUV_PLANE_BPP_EXT          = EGL_YUV_PLANE_BPP_10_EXT
+
+        EGL_YUV_PLANE_BPP_EXT describes the bit depth for the different
+    planes of a YUV surface. The available options are EGL_YUV_PLANE_BPP_0_-
+    EXT, EGL_YUV_PLANE_BPP_8_EXT and EGL_YUV_PLANE_BPP_10_EXT. If EGL_YUV_-
+    PLANE_BPP_0_EXT is specified, no color buffer will be created for the
+    surface.
+        EGL_YUV_DEPTH_RANGE_EXT describes the range of the pixel value and is
+    dependent on the EGL_YUV_PLANE_BPP_EXT setting:
+
+        EGL_YUV_PLANE_BPP_EXT        EGL_YUV_DEPTH_RANGE_LIMITED_EXT   EGL_YUV_DEPTH_RANGE_FULL_EXT
+                                     (Inclusive)                       (Inclusive)
+        -------------------------    --------------------------------  -----------------------------
+        EGL_YUV_PLANE_BPP_8_EXT or   Y: 16 to 235, UV: 16 to 240       Y: 0 to 255,  UV: 0 to 255
+        EGL_YUV_PLANE_BPP_10_EXT     Y: 64 to 940, UV: 64 to 960       Y: 0 to 1023, UV: 0 to 1023
+
+        If OpenGL or OpenGL ES rendering is supported for a luminance color
+    buffer (as described by the value of the EGL_RENDERABLE_TYPE attribute,
+    described below), it is treated as RGB rendering with the value of
+    GL_RED_BITS equal to EGL_LUMINANCE_SIZE and the values of GL_GREEN_BITS and
+    GL_BLUE_BITS equal to zero. The red component of fragments is written to the
+    luminance channel of the color buffer, the green and blue components are
+    discarded, and the alpha component is written to the alpha channel of the
+    color buffer (if present).
+        When rendering to the YUV surface, if EGL_YUV_ORDER_EXT is not EGL_-
+    YUV_ORDER_AYUV_EXT, the alpha channel will always be fully opaque.
+    Otherwise it is defined by the value provided to the alpha sample.
+        EGL_BUFFER_SIZE gives the total of the color component bits of the color
+    buffer for EGL_RGB_BUFFER or for EGL_LUMINANCE_BUFFER. For an RGB color
+    buffer, the total is the sum of EGL_RED_SIZE, EGL_GREEN_SIZE, EGL_BLUE_SIZE,
+    and EGL_ALPHA_SIZE. For a luminance color buffer, the total is the sum of
+    EGL_LUMINANCE_SIZE and EGL_ALPHA_SIZE. When EGL_COLOR_BUFFER_TYPE is of type
+    EGL_YUV_BUFFER_EXT, this will reflect the enumeration provided
+    as an integer) for EGL_YUV_PLANE_BPP_EXT, giving a value of 0, 8 or 10.
+
+   Other EGLConfig Attribute Descriptions
+
+        EGL_YUV_CSC_STANDARD_EXT can be set to either EGL_YUV_CSC_STANDARD_-
+    601_EXT, EGL_YUV_CSC_STANDARD_709_EXT, or EGL_YUV_CSC_2020_EXT. If the
+    standard chosen is EGL_YUV_CSC_STANDARD_709_EXT, then the color conversion
+    follows the ITU-R BT.709 standard. If EGL_YUV_CSC_STANDARD_EXT is set to
+    EGL_YUV_CSC_2020_EXT, then the color conversion will be processed based on
+    ITU-R BT.2020.
+
+
+Change option 2 in the section marked as 3.4.1.2 Sorting of EGLConfigs to:
+
+    2. Special: by EGL_COLOR_BUFFER_TYPE where the precendence is EGL_RGB_-
+    BUFFER, EGL_LUMINANCE_BUFFER, EGL_YUV_BUFFER_EXT.
+
+Change option 3 in the section marked as 3.4.1.2 Sorting of EGLConfigs to:
+
+    3. Special: by larger total number of color bits (for an RGB color buffer,
+    this is the sum of EGL_RED_SIZE, EGL_GREEN_SIZE, EGL_BLUE_SIZE, and
+    EGL_ALPHA_SIZE; for a luminance color buffer, the sum of EGL_LUMINANCE_SIZE
+    and EGL_ALPHA_SIZE; for YUV color buffers, this returns the integer value
+    with respect to the enumeration provided for EGL_YUV_PLANE_BPP_EXT) If the
+    requrested number of bits in attrib_list for a particular color component
+    is 0 or EGL_DONT_CARE, then the number of bits for the component is not
+    considered. Due to this, YUV color buffers are always last based on this
+    rule.
+
+The following options should be added between options 9 and 10 in section
+3.4.1.2 (EGL_ALPHA_MASK_SIZE and EGL_NATIVE_VISUAL_TYPE):
+
+    10. Special: EGL_YUV_ORDER_EXT will be sorted in the following order:
+    EGL_NONE, EGL_YUV_ORDER_YUV_EXT, EGL_YUV_ORDER_YVU_EXT, EGL_YUV_ORDER_-
+    YUYV_EXT, EGL_YUV_ORDER_YVYU_EXT, EGL_YUV_ORDER_UYVY_EXT, EGL_YUV_ORDER_-
+    VYUY_EXT, and EGL_YUV_ORDER_AYUV_EXT.
+
+Change option 10 in section 3.4.1.2 (EGL_NATIVE_VISUAL_TYPE) to:
+
+    11. Special: by EGL_NATIVE_VISUAL_TYPE (the actual sort order is
+    implementation-deﬁned, depending on the meaning of native visual types).
+
+New State
+
+    Add to table 3.1 (EGLConfig Attributes):
+
+    Attribute                       Type      Notes
+    -----------------------------   ----      --------------------------------------------
+    EGL_YUV_ORDER_EXT               enum      The order in which the samples will be found
+                                              inside the surface
+    EGL_YUV_NUMBER_OF_PLANES_EXT    integer   Number of planes for the surface, in the range of [1,3]
+    EGL_YUV_SUBSAMPLE_EXT           enum      Describes the sampling rate of the different planes.
+    EGL_YUV_DEPTH_RANGE_EXT         enum      Luma plane range. limited is [16,240] and
+                                              full range is [0,255]
+    EGL_YUV_CSC_STANDARD_EXT        enum      The standard used for color conversion.
+    EGL_YUV_PLANE_BPP_EXT           enum      How many bits are used for each plane of
+                                              the YUV surface
+
+    Add to table 3.4 (Default values and match criteria for EGLConfig
+    attributes):
+
+    Attribute                       Default                           Selection  Sort     Sort
+                                                                      Criteria   Order    Priority
+    -------------------------       --------------------------------  ---------  -------  --------
+    EGL_YUV_ORDER_EXT               EGL_DONT_CARE                     Exact      Special  10
+    EGL_YUV_NUMBER_OF_PLANES_EXT    0                                 At least   None
+    EGL_YUV_SUBSAMPLE_EXT           EGL_DONT_CARE                     Exact      None
+    EGL_YUV_DEPTH_RANGE_EXT         EGL_DONT_CARE                     Exact      None
+    EGL_YUV_CSC_STANDARD_EXT        EGL_DONT_CARE                     Exact      None
+    EGL_YUV_PLANE_BPP_EXT           EGL_DONT_CARE                     Exact      None
+
+Issues
+    1.  How will a EGL surface created with a YUV config properly detect that
+        valid values were used when filling pixel data?
+
+        This problem occurs in situations when a specification which defines
+        rendering to the YUV surface cannot guarantee values that conform to the
+        configuration attributes. One possible situation for this is when a
+        the GL client is using GL_EXT_yuv_target and the EGL YUV surface is the
+        draw buffer. The shader can transform the values inside the shader, and
+        there is no guarantee that the values will fall into the EGL_YUV_DEPTH_-
+        RANGE_EXT value chosen. Other client specifications could have similar
+        issues and it may not be performant for some hardware to detect this
+        discrepancy. This includes interactions with extensions such as EGL_-
+        lock_surface, or any others that provide a mechanism to change the
+        contents of the YUV surface.
+
+        One of the problems that can occur in situations like this will be
+        compound mathematical error should operations need to take place on the
+        buffer data.
+
+        Proposal: Due to the performance problems or inability in some hardware
+        to deal with this issue, the pixel contents will be undefined and any
+        further operations to the pixel contents will also be undefined.
+        Therefore it is up to the application to guarantee the correct values
+        are stored within the surface. The EGL implementation need not attempt
+        any form of verification on the pixel data of the YUV surface, nor does
+        it have to guarantee the pixel data, even with communicating the surface
+        to other modules through a post or any other operation EGL performs.
+
+    2.  Should an EGL_COLOR_BUFFER_TYPE = EGL_DONT_CARE request enumerate all
+        YUV configs?
+
+        Resolved: Revision #9 changes the default values and selection criteria
+        to allow for full enumeration of all YUV configs. The default value of
+        EGL_COLOR_BUFFER_TYPE remains EGL_RGB_BUFFER, so this change only
+        affects explicit EGL_DONT_CARE requests.
+
+Example Configuration for NV12:
+
+    const EGLint config_attribs[] =
+    {
+        EGL_SURFACE_TYPE,              EGL_WINDOW_BIT,
+        EGL_RENDERABLE_TYPE,           EGL_OPENGL_ES2_BIT,
+        EGL_COLOR_BUFFER_TYPE,         EGL_YUV_BUFFER_EXT,
+        EGL_YUV_ORDER_EXT,             EGL_ORDER_YUV_EXT,
+        EGL_YUV_NUMBER_OF_PLANES_EXT,  2,
+        EGL_YUV_SUBSAMPLE_EXT,         EGL_YUV_SUBSAMPLE_4_2_0_EXT,
+        EGL_YUV_DEPTH_RANGE_EXT,       EGL_YUV_DEPTH_RANGE_LIMITED_EXT,
+        EGL_YUV_CSC_STANDARD_EXT,      EGL_YUV_CSC_STANDARD_601_EXT,
+        EGL_YUV_PLANE_BPP_EXT,         EGL_YUV_PLANE_BPP_8_EXT,
+        EGL_NONE
+    };
+
+Revision History
+#1  March    12th, 2014    Initial Draft.
+
+#2  March    25th, 2014    Reformated and added more detail.
+
+#3  March    26th, 2014    Added usage examples.
+                           Added memory layout definitions.
+
+#4  March    26th, 2014    Fixed some typos and formatting.
+
+#5  May      21st, 2014    Fixed some inconsistencies.
+                           Added EGL_YUV_PLANE_DEPTH_0_QCOM.
+
+#6  May      27th, 2014    Relaxed some requirements.
+                           Changed EGL_YUV_PLANE_DEPTH_<0,8,10>_QCOM to
+                           EGL_YUV_PLANE_BPP_<0,8,10>_QCOM.
+                           Added more detail.
+
+#7  October   7th, 2014    Issue (1) added.
+                           Minor updates made (EXT_yuv_target)
+
+#8  October  24th, 2014    Updated for EXT and token values.
+
+#9  April    26th, 2017    Changed attributes default values and selection
+                           criteria (see issue #2).
+                           Changed status from Draft to Complete.

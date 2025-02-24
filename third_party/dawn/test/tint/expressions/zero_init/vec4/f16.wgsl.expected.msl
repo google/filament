@@ -1,0 +1,6 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  half4 v = half4(0.0h);
+}

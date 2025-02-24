@@ -1,0 +1,20 @@
+; Test: SpvModuleScopeVarParserTest_ScalarSpecConstant_DeclareConst_Id_MaxValid.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 7
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+OpDecorate %1 SpecId 65535
+%bool = OpTypeBool
+%1 = OpSpecConstantTrue %bool
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%2 = OpFunction %void None %5
+%6 = OpLabel
+OpReturn
+OpFunctionEnd
+

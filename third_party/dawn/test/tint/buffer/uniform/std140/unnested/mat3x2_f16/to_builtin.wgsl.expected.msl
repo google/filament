@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  const constant half3x2* u;
+};
+
+kernel void f(const constant half3x2* u [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.u=u};
+  half2x3 const t = transpose((*tint_module_vars.u));
+  half const l = length((*tint_module_vars.u)[1u]);
+  half const a = abs((*tint_module_vars.u)[0u].yx.x);
+}

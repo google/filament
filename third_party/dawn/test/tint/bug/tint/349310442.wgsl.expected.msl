@@ -1,0 +1,117 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_GammaTransferParams {
+  /* 0x0000 */ float G;
+  /* 0x0004 */ float A;
+  /* 0x0008 */ float B;
+  /* 0x000c */ float C;
+  /* 0x0010 */ float D;
+  /* 0x0014 */ float E;
+  /* 0x0018 */ float F;
+  /* 0x001c */ uint padding;
+};
+
+struct tint_ExternalTextureParams {
+  uint numPlanes;
+  uint doYuvToRgbConversionOnly;
+  float3x4 yuvToRgbConversionMatrix;
+  tint_GammaTransferParams gammaDecodeParams;
+  tint_GammaTransferParams gammaEncodeParams;
+  float3x3 gamutConversionMatrix;
+  float3x2 sampleTransform;
+  float3x2 loadTransform;
+  float2 samplePlane0RectMin;
+  float2 samplePlane0RectMax;
+  float2 samplePlane1RectMin;
+  float2 samplePlane1RectMax;
+  uint2 apparentSize;
+  float2 plane1CoordFactor;
+};
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_packed_vec3_f32_array_element {
+  /* 0x0000 */ packed_float3 packed;
+  /* 0x000c */ tint_array<int8_t, 4> tint_pad_1;
+};
+
+struct tint_ExternalTextureParams_packed_vec3 {
+  /* 0x0000 */ uint numPlanes;
+  /* 0x0004 */ uint doYuvToRgbConversionOnly;
+  /* 0x0008 */ tint_array<int8_t, 8> tint_pad;
+  /* 0x0010 */ float3x4 yuvToRgbConversionMatrix;
+  /* 0x0040 */ tint_GammaTransferParams gammaDecodeParams;
+  /* 0x0060 */ tint_GammaTransferParams gammaEncodeParams;
+  /* 0x0080 */ tint_array<tint_packed_vec3_f32_array_element, 3> gamutConversionMatrix;
+  /* 0x00b0 */ float3x2 sampleTransform;
+  /* 0x00c8 */ float3x2 loadTransform;
+  /* 0x00e0 */ float2 samplePlane0RectMin;
+  /* 0x00e8 */ float2 samplePlane0RectMax;
+  /* 0x00f0 */ float2 samplePlane1RectMin;
+  /* 0x00f8 */ float2 samplePlane1RectMax;
+  /* 0x0100 */ uint2 apparentSize;
+  /* 0x0108 */ float2 plane1CoordFactor;
+};
+
+struct tint_module_vars_struct {
+  texture2d<float, access::sample> t_plane0;
+  texture2d<float, access::sample> t_plane1;
+  const constant tint_ExternalTextureParams_packed_vec3* t_params;
+};
+
+float3 tint_GammaCorrection(float3 v, tint_GammaTransferParams params) {
+  float3 const v_1 = float3(params.G);
+  return select((sign(v) * (powr(((params.A * abs(v)) + params.B), v_1) + params.E)), (sign(v) * ((params.C * abs(v)) + params.F)), (abs(v) < float3(params.D)));
+}
+
+float4 tint_TextureLoadExternal(texture2d<float, access::sample> plane_0, texture2d<float, access::sample> plane_1, tint_ExternalTextureParams params, uint2 coords) {
+  float2 const v_2 = rint((params.loadTransform * float3(float2(min(coords, params.apparentSize)), 1.0f)));
+  uint2 const v_3 = uint2(v_2);
+  float3 v_4 = 0.0f;
+  float v_5 = 0.0f;
+  if ((params.numPlanes == 1u)) {
+    float4 const v_6 = plane_0.read(v_3, 0u);
+    v_4 = v_6.xyz;
+    v_5 = v_6.w;
+  } else {
+    float const v_7 = plane_0.read(v_3, 0u).x;
+    v_4 = (float4(v_7, plane_1.read(uint2((v_2 * params.plane1CoordFactor)), 0u).xy, 1.0f) * params.yuvToRgbConversionMatrix);
+    v_5 = 1.0f;
+  }
+  float3 const v_8 = v_4;
+  float3 v_9 = 0.0f;
+  if ((params.doYuvToRgbConversionOnly == 0u)) {
+    v_9 = tint_GammaCorrection((params.gamutConversionMatrix * tint_GammaCorrection(v_8, params.gammaDecodeParams)), params.gammaEncodeParams);
+  } else {
+    v_9 = v_8;
+  }
+  return float4(v_9, v_5);
+}
+
+tint_ExternalTextureParams tint_load_struct_packed_vec3(const constant tint_ExternalTextureParams_packed_vec3* const from) {
+  uint const v_10 = (*from).numPlanes;
+  uint const v_11 = (*from).doYuvToRgbConversionOnly;
+  float3x4 const v_12 = (*from).yuvToRgbConversionMatrix;
+  tint_GammaTransferParams const v_13 = (*from).gammaDecodeParams;
+  tint_GammaTransferParams const v_14 = (*from).gammaEncodeParams;
+  tint_array<tint_packed_vec3_f32_array_element, 3> const v_15 = (*from).gamutConversionMatrix;
+  float3x3 const v_16 = float3x3(float3(v_15[0u].packed), float3(v_15[1u].packed), float3(v_15[2u].packed));
+  return tint_ExternalTextureParams{.numPlanes=v_10, .doYuvToRgbConversionOnly=v_11, .yuvToRgbConversionMatrix=v_12, .gammaDecodeParams=v_13, .gammaEncodeParams=v_14, .gamutConversionMatrix=v_16, .sampleTransform=(*from).sampleTransform, .loadTransform=(*from).loadTransform, .samplePlane0RectMin=(*from).samplePlane0RectMin, .samplePlane0RectMax=(*from).samplePlane0RectMax, .samplePlane1RectMin=(*from).samplePlane1RectMin, .samplePlane1RectMax=(*from).samplePlane1RectMax, .apparentSize=(*from).apparentSize, .plane1CoordFactor=(*from).plane1CoordFactor};
+}
+
+kernel void i(texture2d<float, access::sample> t_plane0 [[texture(0)]], texture2d<float, access::sample> t_plane1 [[texture(1)]], const constant tint_ExternalTextureParams_packed_vec3* t_params [[buffer(2)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.t_plane0=t_plane0, .t_plane1=t_plane1, .t_params=t_params};
+  tint_ExternalTextureParams const v_17 = tint_load_struct_packed_vec3(tint_module_vars.t_params);
+  float4 r = tint_TextureLoadExternal(tint_module_vars.t_plane0, tint_module_vars.t_plane1, v_17, min(uint2(int2(0)), ((v_17.apparentSize + uint2(1u)) - uint2(1u))));
+}

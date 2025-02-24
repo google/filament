@@ -1,0 +1,84 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 45
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %s_block 0 "inner"
+               OpName %s_block "s_block"
+               OpName %foo "foo"
+               OpName %src "src"
+               OpName %dst "dst"
+               OpMemberName %S 0 "arr"
+               OpName %S "S"
+               OpName %dst_struct "dst_struct"
+               OpName %dst_array "dst_array"
+               OpName %dst "dst_ptr"
+               OpName %dst_struct "dst_struct_ptr"
+               OpName %dst_array "dst_array_ptr"
+               OpName %main "main"
+               OpMemberDecorate %s_block 0 Offset 0
+               OpDecorate %s_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %_arr_int_uint_4 ArrayStride 4
+               OpMemberDecorate %S 0 Offset 0
+               OpDecorate %_arr__arr_int_uint_4_uint_2 ArrayStride 16
+        %int = OpTypeInt 32 1
+    %s_block = OpTypeStruct %int
+%_ptr_StorageBuffer_s_block = OpTypePointer StorageBuffer %s_block
+          %1 = OpVariable %_ptr_StorageBuffer_s_block StorageBuffer
+          %6 = OpTypeFunction %int
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_int_uint_4 = OpTypeArray %int %uint_4
+        %src = OpConstantNull %_arr_int_uint_4
+%_ptr_Function__arr_int_uint_4 = OpTypePointer Function %_arr_int_uint_4
+          %S = OpTypeStruct %_arr_int_uint_4
+%_ptr_Function_S = OpTypePointer Function %S
+         %17 = OpConstantNull %S
+     %uint_2 = OpConstant %uint 2
+%_arr__arr_int_uint_4_uint_2 = OpTypeArray %_arr_int_uint_4 %uint_2
+%_ptr_Function__arr__arr_int_uint_4_uint_2 = OpTypePointer Function %_arr__arr_int_uint_4_uint_2
+         %22 = OpConstantNull %_arr__arr_int_uint_4_uint_2
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+%_ptr_Function_int = OpTypePointer Function %int
+       %void = OpTypeVoid
+         %40 = OpTypeFunction %void
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+        %foo = OpFunction %int None %6
+          %7 = OpLabel
+        %dst = OpVariable %_ptr_Function__arr_int_uint_4 Function %src
+ %dst_struct = OpVariable %_ptr_Function_S Function %17
+  %dst_array = OpVariable %_ptr_Function__arr__arr_int_uint_4_uint_2 Function %22
+         %23 = OpAccessChain %_ptr_Function__arr_int_uint_4 %dst_struct %uint_0
+               OpStore %23 %src None
+         %25 = OpAccessChain %_ptr_Function__arr_int_uint_4 %dst_array %uint_1
+               OpStore %25 %src None
+               OpStore %dst %src None
+         %27 = OpAccessChain %_ptr_Function__arr_int_uint_4 %dst_struct %uint_0
+               OpStore %27 %src None
+         %28 = OpAccessChain %_ptr_Function__arr_int_uint_4 %dst_array %uint_0
+               OpStore %28 %src None
+         %29 = OpAccessChain %_ptr_Function_int %dst %uint_0
+         %31 = OpLoad %int %29 None
+         %32 = OpAccessChain %_ptr_Function_int %dst_struct %uint_0 %uint_0
+         %33 = OpLoad %int %32 None
+         %34 = OpIAdd %int %31 %33
+         %35 = OpAccessChain %_ptr_Function_int %dst_array %uint_0 %uint_0
+         %36 = OpLoad %int %35 None
+         %37 = OpIAdd %int %34 %36
+               OpReturnValue %37
+               OpFunctionEnd
+       %main = OpFunction %void None %40
+         %41 = OpLabel
+         %42 = OpFunctionCall %int %foo
+         %43 = OpAccessChain %_ptr_StorageBuffer_int %1 %uint_0
+               OpStore %43 %42 None
+               OpReturn
+               OpFunctionEnd

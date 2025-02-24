@@ -1,0 +1,32 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct Out {
+  float4 x;
+  float4 y;
+  float4 z;
+};
+
+struct f_outputs {
+  float4 Out_x [[color(0)]];
+  float4 Out_y [[color(2)]];
+  float4 Out_z [[color(4)]];
+};
+
+struct f_inputs {
+  float4 fbf_1 [[color(1)]];
+  float4 fbf_3 [[color(3)]];
+};
+
+Out f_inner(float4 fbf_1, float4 fbf_3) {
+  return Out{.x=fbf_1, .y=float4(20.0f), .z=fbf_3};
+}
+
+fragment f_outputs f(f_inputs inputs [[stage_in]]) {
+  Out const v = f_inner(inputs.fbf_1, inputs.fbf_3);
+  f_outputs tint_wrapper_result = {};
+  tint_wrapper_result.Out_x = v.x;
+  tint_wrapper_result.Out_y = v.y;
+  tint_wrapper_result.Out_z = v.z;
+  return tint_wrapper_result;
+}

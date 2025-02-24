@@ -1,0 +1,121 @@
+; Test: ImageSampleDrefImplicitLod_SpvParserHandleTest_SampledImageAccessTest_Variable_1.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 80
+; Schema: 0
+OpCapability Shader
+OpCapability Sampled1D
+OpCapability Image1D
+OpCapability StorageImageExtendedFormats
+OpCapability ImageQuery
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+OpName %f1 "f1"
+OpName %vf12 "vf12"
+OpName %vf21 "vf21"
+OpName %vf123 "vf123"
+OpName %vf1234 "vf1234"
+OpName %u1 "u1"
+OpName %vu12 "vu12"
+OpName %vu123 "vu123"
+OpName %vu1234 "vu1234"
+OpName %i1 "i1"
+OpName %vi12 "vi12"
+OpName %vi123 "vi123"
+OpName %vi1234 "vi1234"
+OpName %coords1 "coords1"
+OpName %coords12 "coords12"
+OpName %coords123 "coords123"
+OpName %coords1234 "coords1234"
+OpName %offsets2d "offsets2d"
+OpName %u_offsets2d "u_offsets2d"
+OpDecorate %10 DescriptorSet 0
+OpDecorate %10 Binding 0
+OpDecorate %20 DescriptorSet 2
+OpDecorate %20 Binding 1
+OpDecorate %30 DescriptorSet 0
+OpDecorate %30 Binding 1
+%void = OpTypeVoid
+%24 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%int_1 = OpConstant %int 1
+%int_2 = OpConstant %int 2
+%int_3 = OpConstant %int 3
+%int_4 = OpConstant %int 4
+%uint_0 = OpConstant %uint 0
+%uint_1 = OpConstant %uint 1
+%uint_2 = OpConstant %uint 2
+%uint_3 = OpConstant %uint 3
+%uint_4 = OpConstant %uint 4
+%uint_100 = OpConstant %uint 100
+%v2int = OpTypeVector %int 2
+%v3int = OpTypeVector %int 3
+%v4int = OpTypeVector %int 4
+%v2uint = OpTypeVector %uint 2
+%v3uint = OpTypeVector %uint 3
+%v4uint = OpTypeVector %uint 4
+%v2float = OpTypeVector %float 2
+%v3float = OpTypeVector %float 3
+%v4float = OpTypeVector %float 4
+%49 = OpConstantNull %float
+%float_0 = OpConstant %float 0
+%float_1 = OpConstant %float 1
+%float_2 = OpConstant %float 2
+%float_3 = OpConstant %float 3
+%float_4 = OpConstant %float 4
+%float_7 = OpConstant %float 7
+%56 = OpConstantNull %v2float
+%57 = OpConstantNull %v3float
+%58 = OpConstantNull %v4float
+%59 = OpConstantComposite %v2int %int_1 %int_2
+%60 = OpConstantComposite %v3int %int_1 %int_2 %int_3
+%61 = OpConstantComposite %v4int %int_1 %int_2 %int_3 %int_4
+%62 = OpConstantComposite %v2uint %uint_1 %uint_2
+%63 = OpConstantComposite %v3uint %uint_1 %uint_2 %uint_3
+%64 = OpConstantComposite %v4uint %uint_1 %uint_2 %uint_3 %uint_4
+%65 = OpConstantComposite %v2float %float_1 %float_2
+%66 = OpConstantComposite %v2float %float_2 %float_1
+%67 = OpConstantComposite %v3float %float_1 %float_2 %float_3
+%68 = OpConstantComposite %v4float %float_1 %float_2 %float_3 %float_4
+%float_0_200000003 = OpConstant %float 0.200000003
+%70 = OpTypeSampler
+%_ptr_UniformConstant_70 = OpTypePointer UniformConstant %70
+%72 = OpTypeImage %float 2D 0 1 0 1 Unknown
+%_ptr_UniformConstant_72 = OpTypePointer UniformConstant %72
+%74 = OpTypeSampledImage %72
+%10 = OpVariable %_ptr_UniformConstant_70 UniformConstant
+%20 = OpVariable %_ptr_UniformConstant_72 UniformConstant
+%30 = OpVariable %_ptr_UniformConstant_70 UniformConstant
+%offsets2d = OpConstantComposite %v2int %int_3 %int_4
+%u_offsets2d = OpConstantComposite %v2uint %uint_3 %uint_4
+%1 = OpFunction %void None %24
+%75 = OpLabel
+%f1 = OpCopyObject %float %float_1
+%vf12 = OpCopyObject %v2float %65
+%vf21 = OpCopyObject %v2float %66
+%vf123 = OpCopyObject %v3float %67
+%vf1234 = OpCopyObject %v4float %68
+%i1 = OpCopyObject %int %int_1
+%vi12 = OpCopyObject %v2int %59
+%vi123 = OpCopyObject %v3int %60
+%vi1234 = OpCopyObject %v4int %61
+%u1 = OpCopyObject %uint %uint_1
+%vu12 = OpCopyObject %v2uint %62
+%vu123 = OpCopyObject %v3uint %63
+%vu1234 = OpCopyObject %v4uint %64
+%coords1 = OpCopyObject %float %float_1
+%coords12 = OpCopyObject %v2float %vf12
+%coords123 = OpCopyObject %v3float %vf123
+%coords1234 = OpCopyObject %v4float %vf1234
+%76 = OpLoad %70 %10
+%77 = OpLoad %72 %20
+%78 = OpSampledImage %74 %77 %76
+%79 = OpImageSampleDrefImplicitLod %float %78 %coords123 %float_0_200000003
+OpReturn
+OpFunctionEnd
+

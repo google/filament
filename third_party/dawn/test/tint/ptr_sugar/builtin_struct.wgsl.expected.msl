@@ -1,0 +1,47 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct modf_result_f32 {
+  float fract;
+  float whole;
+};
+
+struct frexp_result_f32 {
+  float fract;
+  int exp;
+};
+
+void deref_modf() {
+  modf_result_f32 a = modf_result_f32{.fract=0.5f, .whole=1.0f};
+  thread modf_result_f32* const p = (&a);
+  float fract = (*p).fract;
+  float whole = (*p).whole;
+}
+
+void no_deref_modf() {
+  modf_result_f32 a = modf_result_f32{.fract=0.5f, .whole=1.0f};
+  thread modf_result_f32* const p = (&a);
+  float fract = (*p).fract;
+  float whole = (*p).whole;
+}
+
+void deref_frexp() {
+  frexp_result_f32 a = frexp_result_f32{.fract=0.75f, .exp=1};
+  thread frexp_result_f32* const p = (&a);
+  float fract = (*p).fract;
+  int exp = (*p).exp;
+}
+
+void no_deref_frexp() {
+  frexp_result_f32 a = frexp_result_f32{.fract=0.75f, .exp=1};
+  thread frexp_result_f32* const p = (&a);
+  float fract = (*p).fract;
+  int exp = (*p).exp;
+}
+
+kernel void v() {
+  deref_modf();
+  no_deref_modf();
+  deref_frexp();
+  no_deref_frexp();
+}

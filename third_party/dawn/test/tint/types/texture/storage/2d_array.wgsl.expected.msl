@@ -1,0 +1,41 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d_array<float, access::write> t_rgba8unorm;
+  texture2d_array<float, access::write> t_rgba8snorm;
+  texture2d_array<uint, access::write> t_rgba8uint;
+  texture2d_array<int, access::write> t_rgba8sint;
+  texture2d_array<uint, access::write> t_rgba16uint;
+  texture2d_array<int, access::write> t_rgba16sint;
+  texture2d_array<float, access::write> t_rgba16float;
+  texture2d_array<uint, access::write> t_r32uint;
+  texture2d_array<int, access::write> t_r32sint;
+  texture2d_array<float, access::write> t_r32float;
+  texture2d_array<uint, access::write> t_rg32uint;
+  texture2d_array<int, access::write> t_rg32sint;
+  texture2d_array<float, access::write> t_rg32float;
+  texture2d_array<uint, access::write> t_rgba32uint;
+  texture2d_array<int, access::write> t_rgba32sint;
+  texture2d_array<float, access::write> t_rgba32float;
+};
+
+kernel void v(texture2d_array<float, access::write> t_rgba8unorm [[texture(0)]], texture2d_array<float, access::write> t_rgba8snorm [[texture(1)]], texture2d_array<uint, access::write> t_rgba8uint [[texture(2)]], texture2d_array<int, access::write> t_rgba8sint [[texture(3)]], texture2d_array<uint, access::write> t_rgba16uint [[texture(4)]], texture2d_array<int, access::write> t_rgba16sint [[texture(5)]], texture2d_array<float, access::write> t_rgba16float [[texture(6)]], texture2d_array<uint, access::write> t_r32uint [[texture(7)]], texture2d_array<int, access::write> t_r32sint [[texture(8)]], texture2d_array<float, access::write> t_r32float [[texture(9)]], texture2d_array<uint, access::write> t_rg32uint [[texture(10)]], texture2d_array<int, access::write> t_rg32sint [[texture(11)]], texture2d_array<float, access::write> t_rg32float [[texture(12)]], texture2d_array<uint, access::write> t_rgba32uint [[texture(13)]], texture2d_array<int, access::write> t_rgba32sint [[texture(14)]], texture2d_array<float, access::write> t_rgba32float [[texture(15)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.t_rgba8unorm=t_rgba8unorm, .t_rgba8snorm=t_rgba8snorm, .t_rgba8uint=t_rgba8uint, .t_rgba8sint=t_rgba8sint, .t_rgba16uint=t_rgba16uint, .t_rgba16sint=t_rgba16sint, .t_rgba16float=t_rgba16float, .t_r32uint=t_r32uint, .t_r32sint=t_r32sint, .t_r32float=t_r32float, .t_rg32uint=t_rg32uint, .t_rg32sint=t_rg32sint, .t_rg32float=t_rg32float, .t_rgba32uint=t_rgba32uint, .t_rgba32sint=t_rgba32sint, .t_rgba32float=t_rgba32float};
+  uint2 dim1 = uint2(tint_module_vars.t_rgba8unorm.get_width(0u), tint_module_vars.t_rgba8unorm.get_height(0u));
+  uint2 dim2 = uint2(tint_module_vars.t_rgba8snorm.get_width(0u), tint_module_vars.t_rgba8snorm.get_height(0u));
+  uint2 dim3 = uint2(tint_module_vars.t_rgba8uint.get_width(0u), tint_module_vars.t_rgba8uint.get_height(0u));
+  uint2 dim4 = uint2(tint_module_vars.t_rgba8sint.get_width(0u), tint_module_vars.t_rgba8sint.get_height(0u));
+  uint2 dim5 = uint2(tint_module_vars.t_rgba16uint.get_width(0u), tint_module_vars.t_rgba16uint.get_height(0u));
+  uint2 dim6 = uint2(tint_module_vars.t_rgba16sint.get_width(0u), tint_module_vars.t_rgba16sint.get_height(0u));
+  uint2 dim7 = uint2(tint_module_vars.t_rgba16float.get_width(0u), tint_module_vars.t_rgba16float.get_height(0u));
+  uint2 dim8 = uint2(tint_module_vars.t_r32uint.get_width(0u), tint_module_vars.t_r32uint.get_height(0u));
+  uint2 dim9 = uint2(tint_module_vars.t_r32sint.get_width(0u), tint_module_vars.t_r32sint.get_height(0u));
+  uint2 dim10 = uint2(tint_module_vars.t_r32float.get_width(0u), tint_module_vars.t_r32float.get_height(0u));
+  uint2 dim11 = uint2(tint_module_vars.t_rg32uint.get_width(0u), tint_module_vars.t_rg32uint.get_height(0u));
+  uint2 dim12 = uint2(tint_module_vars.t_rg32sint.get_width(0u), tint_module_vars.t_rg32sint.get_height(0u));
+  uint2 dim13 = uint2(tint_module_vars.t_rg32float.get_width(0u), tint_module_vars.t_rg32float.get_height(0u));
+  uint2 dim14 = uint2(tint_module_vars.t_rgba32uint.get_width(0u), tint_module_vars.t_rgba32uint.get_height(0u));
+  uint2 dim15 = uint2(tint_module_vars.t_rgba32sint.get_width(0u), tint_module_vars.t_rgba32sint.get_height(0u));
+  uint2 dim16 = uint2(tint_module_vars.t_rgba32float.get_width(0u), tint_module_vars.t_rgba32float.get_height(0u));
+}

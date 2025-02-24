@@ -1,0 +1,67 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<float, access::sample> t;
+  sampler s;
+  device atomic_int* a;
+  thread bool* continue_execution;
+};
+
+struct foo_outputs {
+  int tint_symbol [[color(0)]];
+};
+
+struct foo_inputs {
+  float in [[user(locn0)]];
+  float2 coord [[user(locn1)]];
+};
+
+int tint_f32_to_i32(float value) {
+  return select(2147483647, select((-2147483647 - 1), int(value), (value >= -2147483648.0f)), (value <= 2147483520.0f));
+}
+
+int foo_inner(float in, float2 coord, tint_module_vars_struct tint_module_vars) {
+  if ((in == 0.0f)) {
+    (*tint_module_vars.continue_execution) = false;
+  }
+  int result = tint_f32_to_i32(tint_module_vars.t.sample(tint_module_vars.s, coord).x);
+  {
+    uint2 tint_loop_idx = 0u;
+    int i = 0;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      if ((i < 10)) {
+      } else {
+        break;
+      }
+      result = as_type<int>((as_type<uint>(result) + as_type<uint>(i)));
+      {
+        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        tint_loop_idx.x = tint_low_inc;
+        uint const tint_carry = uint((tint_low_inc == 0u));
+        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        int v = 0;
+        if ((*tint_module_vars.continue_execution)) {
+          v = atomic_fetch_add_explicit(tint_module_vars.a, 1, memory_order_relaxed);
+        }
+        i = v;
+      }
+      continue;
+    }
+  }
+  if (!((*tint_module_vars.continue_execution))) {
+    discard_fragment();
+  }
+  return result;
+}
+
+fragment foo_outputs foo(foo_inputs inputs [[stage_in]], texture2d<float, access::sample> t [[texture(0)]], sampler s [[sampler(0)]], device atomic_int* a [[buffer(0)]]) {
+  thread bool continue_execution = true;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.t=t, .s=s, .a=a, .continue_execution=(&continue_execution)};
+  foo_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = foo_inner(inputs.in, inputs.coord, tint_module_vars);
+  return tint_wrapper_result;
+}

@@ -1,0 +1,471 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate the wgsl files in the
+./literal/...  and ./var/... subdirectories
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/wgsl/wgsl.def" -}}
+
+{{- /* For each permutation of each overload of each function... */ -}}
+{{- range $I.Sem.Builtins -}}
+{{    if not (HasPrefix .Name "_") }}
+{{-     range .Overloads  -}}
+{{-       range $I.Permute . -}}
+{{- /*      Generate a ./literal/<function>/<permuataion-hash>.wgsl file using
+            the Permutation macro defined below                             */ -}}
+{{-         $file := printf "./literal/%v/%v.wgsl" .Intrinsic.Name .Hash -}}
+{{-         $content := Eval "Permutation" "Overload" . "Mode" "literal" -}}
+{{-         WriteFile $file $content -}}
+{{- /*      Generate a ./var/<function>/<permuataion-hash>.wgsl file using
+            the Permutation macro defined below                             */ -}}
+{{-         $file := printf "./var/%v/%v.wgsl" .Intrinsic.Name .Hash -}}
+{{-         $content := Eval "Permutation" "Overload" . "Mode" "var" -}}
+{{-         WriteFile $file $content -}}
+{{-       end  }}
+{{-     end  }}
+{{-   end  }}
+{{- end  }}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                          define "Permutation"                            -}}
+{{- /* Emits the body of the intrinsic permuation .wgsl file              */ -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   $overload    := .Overload -}}
+{{-   $mode        := .Mode -}}
+{{-   $builtin     := $overload.Intrinsic.Name -}}
+{{-   $permutation := printf "%v_%v" $builtin $overload.Hash -}}
+{{-   $args        := Map -}}
+
+{{- /* Generate the optional flag on HLSL shader model */ -}}
+{{- template "HLSLShaderModel" $overload -}}
+{{- /* Generate the optional flag for GLSL desktop */ -}}
+{{- template "GLSLShaderModel" $overload -}}
+
+{{- /* Generate enable directives */ -}}
+{{- template "EnableDirectives" $overload -}}
+
+{{- /* Keep track of binding numbers to satisfy limitations of the MSL backend with the Tint executable interface: https://crbug.com/42250109 */ -}}
+{{- $b := 0 -}}
+{{- if and (or $overload.CanBeUsedInStage.Fragment $overload.CanBeUsedInStage.Compute) (and $overload.ReturnType (IsDeclarable $overload.ReturnType))}}
+{{-   if (HasPrefix $overload.ReturnType.Target.Name "subgroup_matrix") -}}
+@group(0) @binding({{$b}}) var<storage, read_write> prevent_dce : array<{{ElementType $overload.ReturnType}}, 1024>;
+{{-   else if and (IsHostShareable $overload.ReturnType) (not (HasPrefix $overload.ReturnType.Target.Name "mat"))}}
+@group(0) @binding({{$b}}) var<storage, read_write> prevent_dce : {{template "Type" $overload.ReturnType -}};
+{{-   else}}
+@group(0) @binding({{$b}}) var<storage, read_write> prevent_dce : i32;
+{{    end}}
+{{    $b = 1}}
+{{  end}}
+
+{{- /* Generate RW storage buffer parameters */ -}}
+{{-   $sb_rw_fields := Eval "EmitBufferFields" "overload"          $overload
+                                               "var_name"          "sb_rw"
+                                               "address_space"     "storage"
+                                               "access"            "read_write"
+                                               "args"              $args -}}
+{{-   if $sb_rw_fields -}}
+struct SB_RW {
+{{- $sb_rw_fields -}}
+};
+@group(0) @binding({{$b}}) var<storage, read_write> sb_rw : SB_RW;
+{{    end -}}
+
+{{- /* Generate RO storage buffer parameters */ -}}
+{{-   $sb_ro_fields := Eval "EmitBufferFields" "overload"          $overload
+                                               "var_name"          "sb_ro"
+                                               "address_space"     "storage"
+                                               "access"            "read"
+                                               "args"              $args -}}
+{{-   if $sb_ro_fields -}}
+struct SB_RO {
+{{- $sb_ro_fields -}}
+};
+@group(0) @binding({{$b}}) var<storage, read> sb_ro : SB_RO;
+{{    end -}}
+
+{{- /* Generate uniform buffer parameters */ -}}
+{{-   $ub_fields := Eval "EmitBufferFields" "overload"          $overload
+                                            "var_name"          "ub"
+                                            "address_space"     "uniform"
+                                            "access"            "read"
+                                            "args"              $args -}}
+{{-   if $ub_fields -}}
+struct UB {
+{{- $ub_fields -}}
+};
+@group(0) @binding({{$b}}) var<uniform> ub : UB;
+{{    end -}}
+
+{{- /* Generate module-scoped handle variables */ -}}
+{{-   range $i, $p := $overload.Parameters  }}
+{{-     $class := Eval "AddressSpace" $p.Type -}}
+{{-     if eq "ptr" $p.Type.Target.Name -}}
+{{-       $el_type := Eval "Type" (index $p.Type.TemplateArguments 1)}}
+{{-       if eq "handle" $class -}}
+{{-         if HasPrefix $el_type "input_attachment" -}}
+              @input_attachment_index(3)
+{{          end -}}
+            @group(1) @binding({{$i}}) var arg_{{$i}}: {{$el_type}};
+{{          $args.Put $i (printf "&arg_%v" $i) -}}
+{{-       else if eq "workgroup" $class -}}
+            var<workgroup> arg_{{$i}}: {{$el_type}};
+{{          $args.Put $i (printf "&arg_%v" $i) -}}
+{{-       else if eq "private" $class -}}
+            var<private> arg_{{$i}}: {{$el_type}};
+{{          $args.Put $i (printf "&arg_%v" $i) -}}
+{{-       end -}}
+{{-     else -}}
+{{-       $type := Eval "Type" $p.Type}}
+{{-       if eq "handle" $class -}}
+{{-         if HasPrefix $type "input_attachment" -}}
+              @input_attachment_index(3)
+{{          end -}}
+            @group(1) @binding({{$i}}) var arg_{{$i}}: {{$type}};
+{{          $args.Put $i (printf "arg_%v" $i) -}}
+{{-       else if eq "workgroup" $class -}}
+            var<workgroup> arg_{{$i}}: {{$type}};
+{{          $args.Put $i (printf "arg_%v" $i) -}}
+{{-       else if eq "private" $class -}}
+            var<private> arg_{{$i}}: {{$type}};
+{{          $args.Put $i (printf "arg_%v" $i) -}}
+{{-       end -}}
+{{-     end -}}
+{{-   end -}}
+
+{{- /* Generate the function that calls the intrinsic */ -}}
+{{- /*newline*/}}
+// {{$.Overload}}
+fn {{$permutation}}() {{/* preserve space after () */ -}}
+{{-   if and $overload.ReturnType (IsDeclarable $overload.ReturnType) -}}
+{{- /* Matrices can't be assigned to shader outputs, so wrap them in a check and select */ -}}
+{{-     if and (IsHostShareable $overload.ReturnType) (not (HasPrefix $overload.ReturnType.Target.Name "mat")) -}}
+-> {{template "Type" $overload.ReturnType}}
+{{-     else -}}
+-> i32
+{{-     end -}}
+{{-   end -}}{
+{{/* Build the parameters either as 'var' or inline values */ -}}
+{{-   range $i, $p := $overload.Parameters -}}
+{{-     $class       := Eval "AddressSpace" $p.Type -}}
+{{-     $is_abstract := DeepestElementType $p.Type | IsAbstract -}}
+{{-     if eq "function" $class -}}
+{{-       if eq "ptr" $p.Type.Target.Name -}}
+{{template "Type" index $p.Type.TemplateArguments 1}};
+{{- /*indent*/}}  var arg_{{$i}}: {{template "Type" index $p.Type.TemplateArguments 1}};
+{{          $args.Put $i (printf "&arg_%v" $i) -}}
+{{-       else if eq "var" $mode -}}
+{{-         if or $is_abstract $p.IsConst }}  const arg_{{$i}} = {{Eval "ArgumentValue" $p}};
+{{          else                          }}  var arg_{{$i}} = {{Eval "ArgumentValue" $p}};
+{{          end                           }}
+{{-         $args.Put $i (printf "arg_%v" $i) -}}
+{{-       else -}}
+{{-         $args.Put $i (Eval "ArgumentValue" $p) -}}
+{{-       end -}}
+{{-     end -}}
+{{-   end -}}
+
+{{- /* Make the call to the intrinsic */ -}}
+{{- /*indent*/}}  {{/*indent*/ -}}
+{{-   if $overload.ReturnType -}}
+  var res{{if IsDeclarable $overload.ReturnType}}: {{template "Type" $overload.ReturnType}}{{end}} = {{/* preserve space after = */ -}}
+{{-   end -}}
+  {{$builtin}}{{Eval "TemplateArguments" $overload.ExplicitTemplateArgs}}(
+{{-   range $i, $p := $overload.Parameters -}}
+{{-     if $i -}}, {{end}}{{$args.Get $i -}}
+{{-   end -}}
+  );
+{{- /* Return the result to be stored somewhere that ensures it isn't dead-code eliminated */ -}}
+{{-   if and $overload.ReturnType (IsDeclarable $overload.ReturnType)}}
+{{-     if HasPrefix $overload.ReturnType.Target.Name "mat"}}
+  return select(0, 1, res[0][0] == 0);
+{{-     else if IsHostShareable $overload.ReturnType}}
+  return res;
+{{-     else}}
+  return select(0, 1, all(res == {{template "Type" $overload.ReturnType}}()));
+{{-     end}}
+{{-   end}}
+}
+
+{{- if $overload.CanBeUsedInStage.Fragment }}
+@fragment
+fn fragment_main() {
+  {{   if and $overload.ReturnType (IsDeclarable $overload.ReturnType) -}}
+  prevent_dce = {{/* preserve space after = */ -}}
+  {{-   end -}}
+  {{$permutation}}();
+}
+{{ end -}}
+
+{{- if $overload.CanBeUsedInStage.Compute }}
+@compute @workgroup_size(1)
+fn compute_main() {
+  {{   if and (HasPrefix $overload.Intrinsic.Name "subgroupMatrix") $overload.ReturnType (IsDeclarable $overload.ReturnType) -}}
+  subgroupMatrixStore(&prevent_dce, 0, {{$permutation}}(), false, 64);
+  {{-   else -}}
+    {{   if and $overload.ReturnType (IsDeclarable $overload.ReturnType) -}}
+  prevent_dce = {{/* preserve space after = */ -}}
+    {{-   end -}}
+  {{$permutation}}();
+  {{-   end }}
+}
+{{ end -}}
+
+{{- /* Vertex shader must be moved to the end due to crbug.com/42250109 */ -}}
+{{- if $overload.CanBeUsedInStage.Vertex }}
+struct VertexOutput {
+    @builtin(position) pos: vec4<f32>,
+{{-   if and $overload.ReturnType (IsDeclarable $overload.ReturnType)}}
+{{-     if and (IsHostShareable $overload.ReturnType) (not (HasPrefix $overload.ReturnType.Target.Name "mat"))}}
+    @location(0) @interpolate(flat) prevent_dce : {{template "Type" $overload.ReturnType}}
+{{-     else}}
+    @location(0) @interpolate(flat) prevent_dce : i32
+{{-     end}}
+{{-  end}}
+};
+
+@vertex
+fn vertex_main() -> VertexOutput {
+  var out : VertexOutput;
+  out.pos = vec4<f32>();
+  {{   if and $overload.ReturnType (IsDeclarable $overload.ReturnType) -}}
+  out.prevent_dce = {{/* preserve space after = */ -}}
+  {{-   end -}}
+  {{$permutation}}();
+  return out;
+}
+{{ end -}}
+
+{{- end -}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                        define "GLSLShaderModel"                          -}}
+{{- /* Emits the optional GLSL shader model for a given overload          */ -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   $permutation  := . -}}
+{{-   $overload := $permutation.Overload -}}
+{{-   $builtin_name := $permutation.Intrinsic.Name -}}
+
+{{-   if OverloadNeedsDesktopGLSL $overload }}
+// flags: --glsl-desktop
+{{    end -}}
+
+{{- end -}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                        define "HLSLShaderModel"                          -}}
+{{- /* Emits the optional HLSL shader model for a given overload          */ -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   $permutation  := . -}}
+{{-   $overload := $permutation.Overload -}}
+{{-   $builtin_name := $permutation.Intrinsic.Name -}}
+
+{{/* Check and emit dot4I8Packed and dot4U8Packed */}}
+{{-   if or (eq "pack4xI8" $builtin_name) (eq "pack4xU8" $builtin_name) (eq "pack4xI8Clamp" $builtin_name) (eq "unpack4xI8" $builtin_name) (eq "unpack4xU8" $builtin_name)}}
+// [hlsl-dxc] flags: --hlsl-shader-model 66
+
+{{-   else if or (eq "dot4I8Packed" $builtin_name) (eq "dot4U8Packed" $builtin_name)}}
+// [hlsl-dxc] flags: --hlsl-shader-model 64
+
+{{/* Check and emit f16 */}}
+{{-   else if OverloadUsesType $overload "f16"}}
+// flags: --hlsl-shader-model 62
+
+{{/* HLSL Wave operations require Shader Model 6.0 (DXC) */}}
+{{-   else if or (HasPrefix $builtin_name "subgroup") (HasPrefix $builtin_name "quad")}}
+// [hlsl-dxc] flags: --hlsl-shader-model 60
+
+{{    end -}}
+
+{{- end -}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                        define "EnableDirectives"                         -}}
+{{- /* Emits the required enable directives for a given overload          */ -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   $permutation  := . -}}
+{{-   $overload := $permutation.Overload -}}
+{{-   $builtin_name := $permutation.Intrinsic.Name -}}
+
+{{- /* Emit 'enable chromium_experimental_subgroup_matrix' if required */ -}}
+{{-   if (HasPrefix $builtin_name "subgroupMatrix")}}
+enable chromium_experimental_subgroup_matrix;
+{{/* Emit 'enable subgroups' and 'enable subgroups_f16' if required */ -}}
+{{-   else if or (HasPrefix $builtin_name "subgroup") (HasPrefix $builtin_name "quad")}}
+enable subgroups;
+{{    end -}}
+
+
+{{- /* Emit 'enable chromium_internal_input_attachments' if required */ -}}
+{{-   if eq "inputAttachmentLoad" $builtin_name}}
+enable chromium_internal_input_attachments;
+{{    end -}}
+
+{{- /* Emit 'enable f16' if required */ -}}
+{{-   if OverloadUsesType $overload "f16"}}
+enable f16;
+{{    end -}}
+
+{{- /* Emit 'enable chromium_internal_graphite' if required */ -}}
+{{-   if OverloadUsesType $overload "r8unorm"}}
+enable chromium_internal_graphite;
+{{    end -}}
+
+{{- end -}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                       define "EmitBufferFields"                          -}}
+{{- /* Emits a struct with the fields that match the given address space  */ -}}
+{{- /* and access.                                                        */ -}}
+{{- /* Argument is a map with the following expected keys:                */ -}}
+{{- /*  'overload'       - the current overload                           */ -}}
+{{- /*  'var_name'       - name of the variable of the structure type     */ -}}
+{{- /*  'address_space'  - filtered address space                         */ -}}
+{{- /*  'access'         - filtered access                                */ -}}
+{{- /*  'args'           - argument map that's populated with the fields  */ -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- $overload             := .Get "overload" -}}
+{{- $var_name             := .Get "var_name" -}}
+{{- $filter_address_space := .Get "address_space"  -}}
+{{- $filter_access        := .Get "access"   -}}
+{{- $args                 := .Get "args"     -}}
+{{-   range $i, $p := $overload.Parameters  }}
+{{-     $address_space := Eval "AddressSpace" $p.Type -}}
+{{-     $access  := Eval "Access"       $p.Type -}}
+{{-     if and (eq $filter_address_space $address_space) (eq $filter_access $access) }}
+{{-       if eq "ptr" $p.Type.Target.Name  }}
+  arg_{{$i}}: {{template "Type" (index $p.Type.TemplateArguments 1)}},
+{{          $args.Put $i (printf "&%v.arg_%v" $var_name $i) -}}
+{{-       else  }}
+  arg_{{$i}}: {{template "Type" $p.Type}},
+{{          $args.Put $i (printf "%v.arg_%v" $var_name $i) -}}
+{{-       end -}}
+{{-     end -}}
+{{-   end -}}
+{{ end -}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                           define "AddressSpace"                          -}}
+{{- /* Returns the address space for the given Fully Qualified Name       */ -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   $name := .Target.Name -}}
+{{-   if             eq $name "array"   -}}storage
+{{-   else if        eq $name "runtime_array"   -}}storage
+{{-   else if HasPrefix $name "texture" -}}handle
+{{-   else if HasPrefix $name "sampler" -}}handle
+{{-   else if HasPrefix $name "input_attachment" -}}handle
+{{-   else if        eq $name "ptr"     -}}{{(index .TemplateArguments 0).Target.Name}}
+{{-   else                              -}}function
+{{-   end -}}
+{{- end -}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                           define "Access"                                -}}
+{{- /* Returns the access for the given Fully Qualified Name              */ -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   $name := .Target.Name -}}
+{{-   if eq $name "ptr"     -}}{{(index .TemplateArguments 2).Target.Name}}
+{{-   else -}}
+{{- /*  Emit the default for the address space */ -}}
+{{- /*  https://gpuweb.github.io/gpuweb/wgsl/#address-space */ -}}
+{{-     $address_space := Eval "AddressSpace" . -}}
+{{-          if eq $address_space "function"  -}}read_write
+{{-     else if eq $address_space "private"   -}}read_write
+{{-     else if eq $address_space "workgroup" -}}read_write
+{{-     else if eq $address_space "uniform"   -}}read
+{{-     else if eq $address_space "storage"   -}}read
+{{-     else if eq $address_space "handle"    -}}read
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                          define "ArgumentValue"                          -}}
+{{- /* Returns a value that can be used for the parameter argument        */ -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   $ty := .Type -}}
+{{-   $value := printf "%v" .TestValue }}
+{{- /* $float_value is $value with a '.' suffix (if it wasn't a float already) */ -}}
+{{-   $float_value := $value }}
+{{-   if not (Contains $value ".") }}{{$float_value = printf "%v." $value}}{{end}}
+{{- /* emit the value with any necessary suffixes */ -}}
+{{-        if eq        $ty.Target.Name "i32"  -}}{{$value}}i
+{{-   else if eq        $ty.Target.Name "u32"  -}}{{$value}}u
+{{-   else if eq        $ty.Target.Name "f32"  -}}{{$float_value}}f
+{{-   else if eq        $ty.Target.Name "f16"  -}}{{$float_value}}h
+{{-   else if eq        $ty.Target.Name "fa"   -}}{{$float_value}}
+{{-   else if eq        $ty.Target.Name "ia"   -}}{{$value}}
+{{-   else if eq        $ty.Target.Name "bool" -}}true
+{{-   else if HasPrefix $ty.Target.Name "vec"  -}}
+{{-     $el := Eval "ArgumentValue" "Type" (ElementType .Type) "TestValue" .TestValue }}
+{{-     template "Type" $ty}}({{$el}})
+{{-   else if HasPrefix $ty.Target.Name "mat"  -}}{{template "Type" $ty}}(
+{{-     $el := Eval "ArgumentValue" "Type" (ElementType .Type) "TestValue" .TestValue }}
+{{-     range $col := Iterate (index $ty.TemplateArguments 0)     }}
+{{-       range $row := Iterate (index $ty.TemplateArguments 1)   }}
+{{-         if or $col $row -}}, {{end}}{{$el}}
+{{-       end -}}
+{{-     end -}})
+{{-   else -}}{{template "Type" $ty}}()
+{{-   end  -}}
+{{- end -}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                                define "Type"                             -}}
+{{- /* Emits the WGSL for the Fully Qualified Name argument               */ -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   if IsType .Target -}}
+{{-     if DeepestElementType . | IsAbstract -}}
+{{-              if eq        .Target.Name "vec"  -}}vec{{index .TemplateArguments 0}}
+{{-         else if eq        .Target.Name "vec2" -}}vec2
+{{-         else if eq        .Target.Name "vec3" -}}vec3
+{{-         else if eq        .Target.Name "vec4" -}}vec4
+{{-         else if eq        .Target.Name "mat"  -}}mat{{index .TemplateArguments 0}}x{{index .TemplateArguments 1}}
+{{-         else if HasPrefix .Target.Name "mat"  -}}mat{{.Target.Name}}
+{{-         else                                  -}}
+{{-         end                                   -}}
+{{- /* note: intrinsics.def has different type definitions for 'vec<N: num, T>',
+       'vec2<T>', 'vec3<T>'. Because of this we need to check whether the type
+       name is exactly 'vec' and 'mat' and if not, then look for the prefix. */ -}}
+{{-     else if eq .Target.Name "vec"        -}}vec{{index .TemplateArguments 0}}<{{template "Type" (ElementType .)}}>
+{{-     else if eq .Target.Name "mat"        -}}mat{{index .TemplateArguments 0}}x{{index .TemplateArguments 1}}<{{template "Type" (ElementType .)}}>
+{{-     else if eq .Target.Name "runtime_array" -}}array<{{template "Type" (ElementType .)}}>
+{{-     else if eq .Target.Name "subgroup_matrix" -}}subgroup_matrix_{{index .TemplateArguments 0}}<{{template "Type" (ElementType .)}}, {{index .TemplateArguments 2}}, {{index .TemplateArguments 3}}>
+{{-     else if HasPrefix .Target.Name "vec" -}}{{.Target.Name}}<{{template "Type" (ElementType .)}}>
+{{-     else if HasPrefix .Target.Name "mat" -}}{{.Target.Name}}<{{template "Type" (ElementType .)}}>
+{{-     else                                 -}}{{.Target.Name}}{{template "TemplateArguments" .TemplateArguments}}
+{{-     end                                  -}}
+{{-   else if IsEnumEntry   .Target -}}{{.Target.Name}}
+{{-   else if IsEnumMatcher .Target -}}{{(index .Target.Options 0).Name}}
+{{-   else                          -}}<unhandled-fully-qualified-name-target={{- printf "%T" .Target -}}>
+{{-   end                           -}}
+{{- end -}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                          define "TemplateArguments"                      -}}
+{{- /* Emits the WGSL for the template argument list                      */ -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   if . -}}
+<
+{{-    range $i, $a := . -}}
+{{-      if $i -}}, {{  end -}}
+{{-      if IsInt $a -}}{{- . -}}
+{{-      else        -}}{{- template "Type" $a -}}
+{{-      end -}}
+{{-    end -}}
+>
+{{-   end -}}
+{{- end -}}

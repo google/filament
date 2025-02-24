@@ -1,0 +1,164 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 94
+; Schema: 0
+               OpCapability Shader
+         %63 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %main_global_invocation_id_Input
+               OpExecutionMode %main LocalSize 2 2 1
+               OpMemberName %Matrix 0 "numbers"
+               OpName %Matrix "Matrix"
+               OpName %firstMatrix "firstMatrix"
+               OpName %secondMatrix "secondMatrix"
+               OpName %resultMatrix "resultMatrix"
+               OpMemberName %Uniforms 0 "aShape"
+               OpMemberName %Uniforms 1 "bShape"
+               OpMemberName %Uniforms 2 "outShape"
+               OpName %Uniforms "Uniforms"
+               OpMemberName %uniforms_block 0 "inner"
+               OpName %uniforms_block "uniforms_block"
+               OpName %main_global_invocation_id_Input "main_global_invocation_id_Input"
+               OpName %main_inner "main_inner"
+               OpName %global_id "global_id"
+               OpName %resultCell "resultCell"
+               OpName %dimInner "dimInner"
+               OpName %dimOutter "dimOutter"
+               OpName %result "result"
+               OpName %i "i"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %index "index"
+               OpName %main "main"
+               OpDecorate %_runtimearr_uint ArrayStride 4
+               OpMemberDecorate %Matrix 0 Offset 0
+               OpDecorate %Matrix Block
+               OpDecorate %firstMatrix DescriptorSet 0
+               OpDecorate %firstMatrix Binding 0
+               OpDecorate %firstMatrix NonWritable
+               OpDecorate %secondMatrix DescriptorSet 0
+               OpDecorate %secondMatrix Binding 1
+               OpDecorate %secondMatrix NonWritable
+               OpDecorate %resultMatrix DescriptorSet 0
+               OpDecorate %resultMatrix Binding 2
+               OpDecorate %resultMatrix Coherent
+               OpMemberDecorate %Uniforms 0 Offset 0
+               OpMemberDecorate %Uniforms 1 Offset 8
+               OpMemberDecorate %Uniforms 2 Offset 16
+               OpMemberDecorate %uniforms_block 0 Offset 0
+               OpDecorate %uniforms_block Block
+               OpDecorate %9 DescriptorSet 0
+               OpDecorate %9 Binding 3
+               OpDecorate %9 NonWritable
+               OpDecorate %main_global_invocation_id_Input BuiltIn GlobalInvocationId
+       %uint = OpTypeInt 32 0
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+     %Matrix = OpTypeStruct %_runtimearr_uint
+%_ptr_StorageBuffer_Matrix = OpTypePointer StorageBuffer %Matrix
+%firstMatrix = OpVariable %_ptr_StorageBuffer_Matrix StorageBuffer
+%secondMatrix = OpVariable %_ptr_StorageBuffer_Matrix StorageBuffer
+%_ptr_StorageBuffer_Matrix_0 = OpTypePointer StorageBuffer %Matrix
+%resultMatrix = OpVariable %_ptr_StorageBuffer_Matrix_0 StorageBuffer
+     %v2uint = OpTypeVector %uint 2
+   %Uniforms = OpTypeStruct %v2uint %v2uint %v2uint
+%uniforms_block = OpTypeStruct %Uniforms
+%_ptr_Uniform_uniforms_block = OpTypePointer Uniform %uniforms_block
+          %9 = OpVariable %_ptr_Uniform_uniforms_block Uniform
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%main_global_invocation_id_Input = OpVariable %_ptr_Input_v3uint Input
+       %void = OpTypeVoid
+         %20 = OpTypeFunction %void %v3uint
+%_ptr_Uniform_v2uint = OpTypePointer Uniform %v2uint
+     %uint_0 = OpConstant %uint 0
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+%_ptr_Function_uint = OpTypePointer Function %uint
+       %bool = OpTypeBool
+%_ptr_StorageBuffer__runtimearr_uint = OpTypePointer StorageBuffer %_runtimearr_uint
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+%_ptr_StorageBuffer__runtimearr_uint_0 = OpTypePointer StorageBuffer %_runtimearr_uint
+%_ptr_StorageBuffer_uint_0 = OpTypePointer StorageBuffer %uint
+         %90 = OpTypeFunction %void
+ %main_inner = OpFunction %void None %20
+  %global_id = OpFunctionParameter %v3uint
+         %21 = OpLabel
+     %result = OpVariable %_ptr_Function_uint Function
+          %i = OpVariable %_ptr_Function_uint Function
+         %22 = OpCompositeExtract %uint %global_id 1
+         %23 = OpCompositeExtract %uint %global_id 0
+ %resultCell = OpCompositeConstruct %v2uint %22 %23
+         %25 = OpAccessChain %_ptr_Uniform_v2uint %9 %uint_0 %uint_0
+         %28 = OpAccessChain %_ptr_Uniform_uint %25 %uint_1
+   %dimInner = OpLoad %uint %28 None
+         %32 = OpAccessChain %_ptr_Uniform_v2uint %9 %uint_0 %uint_2
+         %34 = OpAccessChain %_ptr_Uniform_uint %32 %uint_1
+  %dimOutter = OpLoad %uint %34 None
+               OpStore %result %uint_0
+               OpBranch %38
+         %38 = OpLabel
+               OpStore %i %uint_0
+               OpBranch %41
+         %41 = OpLabel
+               OpLoopMerge %42 %40 None
+               OpBranch %39
+         %39 = OpLabel
+         %44 = OpLoad %uint %i None
+         %45 = OpULessThan %bool %44 %dimInner
+               OpSelectionMerge %47 None
+               OpBranchConditional %45 %47 %48
+         %48 = OpLabel
+               OpBranch %42
+         %47 = OpLabel
+         %49 = OpLoad %uint %i None
+         %50 = OpCompositeExtract %uint %resultCell 0
+         %51 = OpIMul %uint %50 %dimInner
+          %a = OpIAdd %uint %49 %51
+         %53 = OpCompositeExtract %uint %resultCell 1
+         %54 = OpLoad %uint %i None
+         %55 = OpIMul %uint %54 %dimOutter
+          %b = OpIAdd %uint %53 %55
+         %57 = OpLoad %uint %result None
+         %58 = OpAccessChain %_ptr_StorageBuffer__runtimearr_uint %firstMatrix %uint_0
+         %60 = OpArrayLength %uint %firstMatrix 0
+         %61 = OpISub %uint %60 %uint_1
+         %62 = OpExtInst %uint %63 UMin %a %61
+         %64 = OpAccessChain %_ptr_StorageBuffer_uint %firstMatrix %uint_0 %62
+         %66 = OpLoad %uint %64 None
+         %67 = OpAccessChain %_ptr_StorageBuffer__runtimearr_uint %secondMatrix %uint_0
+         %68 = OpArrayLength %uint %secondMatrix 0
+         %69 = OpISub %uint %68 %uint_1
+         %70 = OpExtInst %uint %63 UMin %b %69
+         %71 = OpAccessChain %_ptr_StorageBuffer_uint %secondMatrix %uint_0 %70
+         %72 = OpLoad %uint %71 None
+         %73 = OpIMul %uint %66 %72
+         %74 = OpIAdd %uint %57 %73
+               OpStore %result %74 None
+               OpBranch %40
+         %40 = OpLabel
+         %75 = OpLoad %uint %i None
+         %76 = OpIAdd %uint %75 %uint_1
+               OpStore %i %76 None
+               OpBranch %41
+         %42 = OpLabel
+         %77 = OpCompositeExtract %uint %resultCell 1
+         %78 = OpCompositeExtract %uint %resultCell 0
+         %79 = OpIMul %uint %78 %dimOutter
+      %index = OpIAdd %uint %77 %79
+         %81 = OpAccessChain %_ptr_StorageBuffer__runtimearr_uint_0 %resultMatrix %uint_0
+         %83 = OpArrayLength %uint %resultMatrix 0
+         %84 = OpISub %uint %83 %uint_1
+         %85 = OpExtInst %uint %63 UMin %index %84
+         %86 = OpAccessChain %_ptr_StorageBuffer_uint_0 %resultMatrix %uint_0 %85
+         %88 = OpLoad %uint %result None
+               OpStore %86 %88 None
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %90
+         %91 = OpLabel
+         %92 = OpLoad %v3uint %main_global_invocation_id_Input None
+         %93 = OpFunctionCall %void %main_inner %92
+               OpReturn
+               OpFunctionEnd

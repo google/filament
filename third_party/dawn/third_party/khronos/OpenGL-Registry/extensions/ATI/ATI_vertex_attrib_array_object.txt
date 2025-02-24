@@ -1,0 +1,167 @@
+Name
+
+    ATI_vertex_attrib_array_object
+
+Name Strings
+
+    GL_ATI_vertex_attrib_array_object
+
+Contact
+
+    Chuck Smith, AMD (chuck.smith 'at' amd.com)
+
+Status
+
+    Complete.
+
+Version
+  
+    Last Modified Date: November 4, 2006
+    Revision: 1.1
+
+Number
+
+    290
+
+Dependencies
+
+    This extension is written against the OpenGL 1.2.1 Specification.
+    This extension relies on the presence of both ARB_vertex_program
+    and ATI_vertex_array_object.
+
+
+Overview
+
+    This extension defines an interface that allows multiple sets of
+    generic vertex attribute data to be cached in persistent server-side
+    memory.  It is intended to allow client data to be stored in memory
+    that can be directly accessed by graphics hardware.
+
+
+Issues
+
+    None
+
+
+New Procedures and Functions
+
+    void VertexAttribArrayObjectATI(uint index, int size, enum type,
+                                    boolean normalized, sizei stride,
+                                    uint buffer, uint offset)
+
+    void GetVertexAttribArrayObjectfvATI(uint index, enum pname,
+                                         float *params)
+
+    void GetVertexAttribArrayObjectivATI(uint index, enum pname,
+                                         int *params)
+
+
+New Tokens
+
+    None
+
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (Operation)
+
+    In section 2.6.3, GL Commands within Begin/End, add
+    VertexAttribArrayObjectATI to the list of commands that are not
+    allowed within any Begin/End pair, but may or may not generate an
+    error.
+
+
+    At the end of the section titled Vertex Array Objects, between
+    section 2.8, Vertex Arrays, and section 2.9, Rectangles, add the
+    following:
+
+    A client can define an array of generic vertex attribute data using
+    the command:
+
+        void VertexAttribArrayObjectATI(uint index, int size, enum type,
+                                        boolean normalized, sizei stride,
+                                         uint buffer, uint offset)
+
+    The <index>, <size>, <type>, <normalized>. and <stride> parameters
+    have the same meaning as the corresponding parameters of
+    VertexAttribPointerARB.  The <buffer> and <offset> parameters
+    have the same meaning as the corresponding parameters of
+    ArrayObjectATI.
+
+    Vertex attribute arrays defined by VertexAttribArrayObjectATI are
+    enabled and disabled in the same way as vertex attribute arrays
+    defined by VertexAttribPointerARB, by using
+    EnableVertexAttribArrayARB and DisableVertexAttribArrayARB.
+
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization):
+
+    None
+
+
+Additions to Chapter 4 of the 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+
+Additions to Chapter 5 of the 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2.1 Specification (State and State
+Requests)
+
+    Added to the list of queries in section 6.1.3, Enumerated Queries:
+
+        void GetVertexAttribArrayObject{if}vATI(uint index, enum value,
+                                                T data);
+
+    Appended to the description of the queries in section 6.1.3,
+    Enumerated Queries:
+
+    GetVertexAttribArrayObjectATI is used to retrieve information on a
+    generic vertex attribute array located in an object buffer. The
+    <index> parameter identifies the generic vertex attribute that is to
+    be queried.  The <value> and <data> parameters have the same meaning
+    as the corresponding parameters of GetArrayObjectATI.
+
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+
+Dependencies on ARB_vertex_program
+
+    ARB_vertex_program must be present.
+
+
+Dependencies on ATI_vertex_array_object
+
+    ATI_vertex_array_object must be present.
+
+
+Errors
+
+    See the specifications for ARB_vertex_program and
+    ATI_vertex_array_object.
+
+
+New State
+
+    None
+
+
+New Implementation Dependent State
+
+    None
+
+
+Revision History
+
+    11/04/2006  1.1
+        - updated contact info after ATI/AMD merger.
+
+    09/10/2002  1.0
+        - initial version
+
+

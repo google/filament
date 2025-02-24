@@ -1,0 +1,82 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int* prevent_dce;
+};
+
+int select_e3e028() {
+  bool4 arg_0 = bool4(true);
+  bool4 arg_1 = bool4(true);
+  bool4 arg_2 = bool4(true);
+  bool4 res = select(arg_0, arg_1, arg_2);
+  return select(0, 1, all((res == bool4(false))));
+}
+
+fragment void fragment_main(device int* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = select_e3e028();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int* prevent_dce;
+};
+
+int select_e3e028() {
+  bool4 arg_0 = bool4(true);
+  bool4 arg_1 = bool4(true);
+  bool4 arg_2 = bool4(true);
+  bool4 res = select(arg_0, arg_1, arg_2);
+  return select(0, 1, all((res == bool4(false))));
+}
+
+kernel void compute_main(device int* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = select_e3e028();
+}
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexOutput {
+  float4 pos;
+  int prevent_dce;
+};
+
+struct vertex_main_outputs {
+  float4 VertexOutput_pos [[position]];
+  int VertexOutput_prevent_dce [[user(locn0)]] [[flat]];
+};
+
+int select_e3e028() {
+  bool4 arg_0 = bool4(true);
+  bool4 arg_1 = bool4(true);
+  bool4 arg_2 = bool4(true);
+  bool4 res = select(arg_0, arg_1, arg_2);
+  return select(0, 1, all((res == bool4(false))));
+}
+
+VertexOutput vertex_main_inner() {
+  VertexOutput out = {};
+  out.pos = float4(0.0f);
+  out.prevent_dce = select_e3e028();
+  return out;
+}
+
+vertex vertex_main_outputs vertex_main() {
+  VertexOutput const v = vertex_main_inner();
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = v.pos;
+  tint_wrapper_result.VertexOutput_prevent_dce = v.prevent_dce;
+  return tint_wrapper_result;
+}

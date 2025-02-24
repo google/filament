@@ -1,0 +1,56 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 27
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %computeMain "computeMain" %computeMain_global_invocation_id_Input
+               OpExecutionMode %computeMain LocalSize 1 1 1
+               OpMemberName %DrawIndirectArgs 0 "vertexCount"
+               OpName %DrawIndirectArgs "DrawIndirectArgs"
+               OpMemberName %drawOut_block 0 "inner"
+               OpName %drawOut_block "drawOut_block"
+               OpName %cubeVerts "cubeVerts"
+               OpName %computeMain_global_invocation_id_Input "computeMain_global_invocation_id_Input"
+               OpName %computeMain_inner "computeMain_inner"
+               OpName %global_id "global_id"
+               OpName %firstVertex "firstVertex"
+               OpName %computeMain "computeMain"
+               OpMemberDecorate %DrawIndirectArgs 0 Offset 0
+               OpMemberDecorate %drawOut_block 0 Offset 0
+               OpDecorate %drawOut_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 5
+               OpDecorate %1 Coherent
+               OpDecorate %computeMain_global_invocation_id_Input BuiltIn GlobalInvocationId
+       %uint = OpTypeInt 32 0
+%DrawIndirectArgs = OpTypeStruct %uint
+%drawOut_block = OpTypeStruct %DrawIndirectArgs
+%_ptr_StorageBuffer_drawOut_block = OpTypePointer StorageBuffer %drawOut_block
+          %1 = OpVariable %_ptr_StorageBuffer_drawOut_block StorageBuffer
+%_ptr_Private_uint = OpTypePointer Private %uint
+     %uint_0 = OpConstant %uint 0
+  %cubeVerts = OpVariable %_ptr_Private_uint Private %uint_0
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%computeMain_global_invocation_id_Input = OpVariable %_ptr_Input_v3uint Input
+       %void = OpTypeVoid
+         %15 = OpTypeFunction %void %v3uint
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+     %uint_1 = OpConstant %uint 1
+         %23 = OpTypeFunction %void
+%computeMain_inner = OpFunction %void None %15
+  %global_id = OpFunctionParameter %v3uint
+         %16 = OpLabel
+         %17 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %uint_0
+         %19 = OpLoad %uint %cubeVerts None
+%firstVertex = OpAtomicIAdd %uint %17 %uint_1 %uint_0 %19
+               OpReturn
+               OpFunctionEnd
+%computeMain = OpFunction %void None %23
+         %24 = OpLabel
+         %25 = OpLoad %v3uint %computeMain_global_invocation_id_Input None
+         %26 = OpFunctionCall %void %computeMain_inner %25
+               OpReturn
+               OpFunctionEnd

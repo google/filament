@@ -1,0 +1,61 @@
+; Test: SpvModuleScopeVarParserTest_EntryPointWrapping_Interpolation_Floating_Fragment_In.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 35
+; Schema: 0
+OpCapability Shader
+OpCapability SampleRateShading
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %7 "main" %1 %2 %3 %4 %5 %6
+OpExecutionMode %7 OriginUpperLeft
+OpDecorate %1 Location 1
+OpDecorate %2 Location 2
+OpDecorate %3 Location 3
+OpDecorate %4 Location 4
+OpDecorate %5 Location 5
+OpDecorate %6 Location 6
+OpDecorate %2 Centroid
+OpDecorate %3 Sample
+OpDecorate %4 NoPerspective
+OpDecorate %5 NoPerspective
+OpDecorate %5 Centroid
+OpDecorate %6 NoPerspective
+OpDecorate %6 Sample
+%void = OpTypeVoid
+%9 = OpTypeFunction %void
+%bool = OpTypeBool
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%_ptr_Private_bool = OpTypePointer Private %bool
+%_ptr_Private_float = OpTypePointer Private %float
+%_ptr_Private_uint = OpTypePointer Private %uint
+%_ptr_Private_int = OpTypePointer Private %int
+%true = OpConstantTrue %bool
+%false = OpConstantFalse %bool
+%float_0 = OpConstant %float 0
+%float_1_5 = OpConstant %float 1.5
+%uint_1 = OpConstant %uint 1
+%int_n1 = OpConstant %int -1
+%int_14 = OpConstant %int 14
+%uint_2 = OpConstant %uint 2
+%v2bool = OpTypeVector %bool 2
+%v2uint = OpTypeVector %uint 2
+%v2int = OpTypeVector %int 2
+%v2float = OpTypeVector %float 2
+%v4float = OpTypeVector %float 4
+%mat3v2float = OpTypeMatrix %v2float 3
+%_arr_uint_uint_2 = OpTypeArray %uint %uint_2
+%_ptr_Input_float = OpTypePointer Input %float
+%1 = OpVariable %_ptr_Input_float Input
+%2 = OpVariable %_ptr_Input_float Input
+%3 = OpVariable %_ptr_Input_float Input
+%4 = OpVariable %_ptr_Input_float Input
+%5 = OpVariable %_ptr_Input_float Input
+%6 = OpVariable %_ptr_Input_float Input
+%7 = OpFunction %void None %9
+%34 = OpLabel
+OpReturn
+OpFunctionEnd
+

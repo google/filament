@@ -1,0 +1,62 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct SB_RW_atomic {
+  /* 0x0000 */ atomic_uint arg_0;
+};
+
+struct tint_module_vars_struct {
+  device SB_RW_atomic* sb_rw;
+};
+
+void atomicAdd_8a199a(tint_module_vars_struct tint_module_vars) {
+  uint arg_1 = 0u;
+  uint res = 0u;
+  arg_1 = 1u;
+  uint const x_18 = arg_1;
+  uint const x_13 = atomic_fetch_add_explicit((&(*tint_module_vars.sb_rw).arg_0), x_18, memory_order_relaxed);
+  res = x_13;
+}
+
+void fragment_main_1(tint_module_vars_struct tint_module_vars) {
+  atomicAdd_8a199a(tint_module_vars);
+}
+
+fragment void fragment_main(device SB_RW_atomic* sb_rw [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb_rw=sb_rw};
+  fragment_main_1(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct SB_RW_atomic {
+  /* 0x0000 */ atomic_uint arg_0;
+};
+
+struct tint_module_vars_struct {
+  device SB_RW_atomic* sb_rw;
+};
+
+void atomicAdd_8a199a(tint_module_vars_struct tint_module_vars) {
+  uint arg_1 = 0u;
+  uint res = 0u;
+  arg_1 = 1u;
+  uint const x_18 = arg_1;
+  uint const x_13 = atomic_fetch_add_explicit((&(*tint_module_vars.sb_rw).arg_0), x_18, memory_order_relaxed);
+  res = x_13;
+}
+
+void compute_main_1(tint_module_vars_struct tint_module_vars) {
+  atomicAdd_8a199a(tint_module_vars);
+}
+
+kernel void compute_main(device SB_RW_atomic* sb_rw [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb_rw=sb_rw};
+  compute_main_1(tint_module_vars);
+}

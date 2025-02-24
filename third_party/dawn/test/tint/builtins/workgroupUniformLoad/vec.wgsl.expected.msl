@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  threadgroup float4* v;
+};
+
+float4 foo(tint_module_vars_struct tint_module_vars) {
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  float4 const v_1 = (*tint_module_vars.v);
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  return v_1;
+}

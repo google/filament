@@ -1,0 +1,197 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_packed_vec3_f32_array_element {
+  /* 0x0000 */ packed_float3 packed;
+  /* 0x000c */ tint_array<int8_t, 4> tint_pad_2;
+};
+
+struct UniformBuffer_packed_vec3 {
+  /* 0x0000 */ tint_array<int8_t, 16> tint_pad;
+  /* 0x0010 */ float unknownInput_S1_c0;
+  /* 0x0014 */ tint_array<int8_t, 12> tint_pad_1;
+  /* 0x0020 */ float4 ucolorRed_S1_c0;
+  /* 0x0030 */ float4 ucolorGreen_S1_c0;
+  /* 0x0040 */ tint_array<tint_packed_vec3_f32_array_element, 3> umatrix_S1;
+};
+
+struct tint_module_vars_struct {
+  const constant UniformBuffer_packed_vec3* x_4;
+  thread float4* sk_FragColor;
+  thread bool* sk_Clockwise;
+  thread float4* vcolor_S0;
+};
+
+struct main_out {
+  float4 sk_FragColor_1;
+};
+
+struct main_outputs {
+  float4 main_out_sk_FragColor_1 [[color(0)]];
+};
+
+struct main_inputs {
+  float4 vcolor_S0_param [[user(locn0)]];
+};
+
+int4 tint_div_v4i32(int4 lhs, int4 rhs) {
+  uint4 const v = uint4((lhs == int4((-2147483647 - 1))));
+  bool4 const v_1 = bool4((v & uint4((rhs == int4(-1)))));
+  uint4 const v_2 = uint4((rhs == int4(0)));
+  return (lhs / select(rhs, int4(1), bool4((v_2 | uint4(v_1)))));
+}
+
+int tint_f32_to_i32(float value) {
+  return select(2147483647, select((-2147483647 - 1), int(value), (value >= -2147483648.0f)), (value <= 2147483520.0f));
+}
+
+bool test_int_S1_c0_b(tint_module_vars_struct tint_module_vars) {
+  int unknown = 0;
+  bool ok = false;
+  int4 val = 0;
+  bool x_40 = false;
+  bool x_41 = false;
+  bool x_54 = false;
+  bool x_55 = false;
+  bool x_65 = false;
+  bool x_66 = false;
+  int const x_27 = tint_f32_to_i32((*tint_module_vars.x_4).unknownInput_S1_c0);
+  unknown = x_27;
+  ok = true;
+  x_41 = false;
+  if (true) {
+    x_40 = all((tint_div_v4i32(int4(0), int4(x_27)) == int4(0)));
+    x_41 = x_40;
+  }
+  ok = x_41;
+  int4 const x_44 = int4(x_27);
+  val = x_44;
+  int4 const x_47 = as_type<int4>((as_type<uint4>(x_44) + as_type<uint4>(int4(1))));
+  val = x_47;
+  int4 const x_48 = as_type<int4>((as_type<uint4>(x_47) - as_type<uint4>(int4(1))));
+  val = x_48;
+  int4 const x_49 = as_type<int4>((as_type<uint4>(x_48) + as_type<uint4>(int4(1))));
+  val = x_49;
+  int4 const x_50 = as_type<int4>((as_type<uint4>(x_49) - as_type<uint4>(int4(1))));
+  val = x_50;
+  x_55 = false;
+  if (x_41) {
+    x_54 = all((x_50 == x_44));
+    x_55 = x_54;
+  }
+  ok = x_55;
+  int4 const x_58 = as_type<int4>((as_type<uint4>(x_50) * as_type<uint4>(int4(2))));
+  val = x_58;
+  int4 const x_59 = tint_div_v4i32(x_58, int4(2));
+  val = x_59;
+  int4 const x_60 = as_type<int4>((as_type<uint4>(x_59) * as_type<uint4>(int4(2))));
+  val = x_60;
+  int4 const x_61 = tint_div_v4i32(x_60, int4(2));
+  val = x_61;
+  x_66 = false;
+  if (x_55) {
+    x_65 = all((x_61 == x_44));
+    x_66 = x_65;
+  }
+  ok = x_66;
+  return x_66;
+}
+
+void main_1(tint_module_vars_struct tint_module_vars) {
+  float4 outputColor_S0 = 0.0f;
+  float4 output_S1 = 0.0f;
+  float x_8_unknown = 0.0f;
+  bool x_9_ok = false;
+  float4 x_10_val = 0.0f;
+  float4 x_116 = 0.0f;
+  bool x_86 = false;
+  bool x_87 = false;
+  bool x_99 = false;
+  bool x_100 = false;
+  bool x_110 = false;
+  bool x_111 = false;
+  bool x_114 = false;
+  bool x_115 = false;
+  outputColor_S0 = (*tint_module_vars.vcolor_S0);
+  float const x_77 = (*tint_module_vars.x_4).unknownInput_S1_c0;
+  x_8_unknown = x_77;
+  x_9_ok = true;
+  x_87 = false;
+  if (true) {
+    x_86 = all(((float4(0.0f) / float4(x_77)) == float4(0.0f)));
+    x_87 = x_86;
+  }
+  x_9_ok = x_87;
+  float4 const x_89 = float4(x_77);
+  x_10_val = x_89;
+  float4 const x_92 = (x_89 + float4(1.0f));
+  x_10_val = x_92;
+  float4 const x_93 = (x_92 - float4(1.0f));
+  x_10_val = x_93;
+  float4 const x_94 = (x_93 + float4(1.0f));
+  x_10_val = x_94;
+  float4 const x_95 = (x_94 - float4(1.0f));
+  x_10_val = x_95;
+  x_100 = false;
+  if (x_87) {
+    x_99 = all((x_95 == x_89));
+    x_100 = x_99;
+  }
+  x_9_ok = x_100;
+  float4 const x_103 = (x_95 * float4(2.0f));
+  x_10_val = x_103;
+  float4 const x_104 = (x_103 / float4(2.0f));
+  x_10_val = x_104;
+  float4 const x_105 = (x_104 * float4(2.0f));
+  x_10_val = x_105;
+  float4 const x_106 = (x_105 / float4(2.0f));
+  x_10_val = x_106;
+  x_111 = false;
+  if (x_100) {
+    x_110 = all((x_106 == x_89));
+    x_111 = x_110;
+  }
+  x_9_ok = x_111;
+  x_115 = false;
+  if (x_111) {
+    x_114 = test_int_S1_c0_b(tint_module_vars);
+    x_115 = x_114;
+  }
+  if (x_115) {
+    x_116 = (*tint_module_vars.x_4).ucolorGreen_S1_c0;
+  } else {
+    x_116 = (*tint_module_vars.x_4).ucolorRed_S1_c0;
+  }
+  float4 const x_125 = x_116;
+  output_S1 = x_116;
+  (*tint_module_vars.sk_FragColor) = x_125;
+}
+
+main_out main_inner(bool sk_Clockwise_param, float4 vcolor_S0_param, tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.sk_Clockwise) = sk_Clockwise_param;
+  (*tint_module_vars.vcolor_S0) = vcolor_S0_param;
+  main_1(tint_module_vars);
+  return main_out{.sk_FragColor_1=(*tint_module_vars.sk_FragColor)};
+}
+
+fragment main_outputs v_3(bool sk_Clockwise_param [[front_facing]], main_inputs inputs [[stage_in]], const constant UniformBuffer_packed_vec3* x_4 [[buffer(0)]]) {
+  thread float4 sk_FragColor = 0.0f;
+  thread bool sk_Clockwise = false;
+  thread float4 vcolor_S0 = 0.0f;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.x_4=x_4, .sk_FragColor=(&sk_FragColor), .sk_Clockwise=(&sk_Clockwise), .vcolor_S0=(&vcolor_S0)};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.main_out_sk_FragColor_1 = main_inner(sk_Clockwise_param, inputs.vcolor_S0_param, tint_module_vars).sk_FragColor_1;
+  return tint_wrapper_result;
+}

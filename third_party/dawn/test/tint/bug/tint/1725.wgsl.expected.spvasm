@@ -1,0 +1,50 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 31
+; Schema: 0
+               OpCapability Shader
+         %22 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %26 "tint_entry_point" %gl_LocalInvocationIndex
+               OpExecutionMode %26 LocalSize 1 1 1
+               OpDecorate %_runtimearr_uint ArrayStride 4
+               OpMemberDecorate %_struct_3 0 Offset 0
+               OpDecorate %_struct_3 Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpDecorate %gl_LocalInvocationIndex BuiltIn LocalInvocationIndex
+       %uint = OpTypeInt 32 0
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+  %_struct_3 = OpTypeStruct %_runtimearr_uint
+%_ptr_StorageBuffer__struct_3 = OpTypePointer StorageBuffer %_struct_3
+          %1 = OpVariable %_ptr_StorageBuffer__struct_3 StorageBuffer
+%_ptr_Input_uint = OpTypePointer Input %uint
+%gl_LocalInvocationIndex = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void %uint
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_StorageBuffer__runtimearr_uint = OpTypePointer StorageBuffer %_runtimearr_uint
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+         %27 = OpTypeFunction %void
+          %8 = OpFunction %void None %11
+         %10 = OpFunctionParameter %uint
+         %12 = OpLabel
+         %15 = OpAccessChain %_ptr_StorageBuffer__runtimearr_uint %1 %uint_0
+         %18 = OpArrayLength %uint %1 0
+         %19 = OpISub %uint %18 %uint_1
+         %21 = OpExtInst %uint %22 UMin %10 %19
+         %23 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %21
+         %25 = OpLoad %uint %23 None
+               OpReturn
+               OpFunctionEnd
+         %26 = OpFunction %void None %27
+         %28 = OpLabel
+         %29 = OpLoad %uint %gl_LocalInvocationIndex None
+         %30 = OpFunctionCall %void %8 %29
+               OpReturn
+               OpFunctionEnd

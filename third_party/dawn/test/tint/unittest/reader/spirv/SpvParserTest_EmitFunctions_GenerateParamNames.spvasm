@@ -1,0 +1,29 @@
+; Test: SpvParserTest_EmitFunctions_GenerateParamNames.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 17
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %1 "x_100"
+OpExecutionMode %1 OriginUpperLeft
+OpName %mixed_params "mixed_params"
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%8 = OpTypeFunction %void %uint %float %int
+%mixed_params = OpFunction %void None %8
+%14 = OpFunctionParameter %uint
+%15 = OpFunctionParameter %float
+%16 = OpFunctionParameter %int
+%9 = OpLabel
+OpReturn
+OpFunctionEnd
+%1 = OpFunction %void None %4
+%10 = OpLabel
+OpReturn
+OpFunctionEnd
+

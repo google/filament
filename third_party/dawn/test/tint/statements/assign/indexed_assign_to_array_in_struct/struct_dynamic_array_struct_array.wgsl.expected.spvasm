@@ -1,0 +1,81 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 40
+; Schema: 0
+               OpCapability Shader
+         %34 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %Uniforms 0 "i"
+               OpMemberName %Uniforms 1 "j"
+               OpName %Uniforms "Uniforms"
+               OpMemberName %uniforms_block 0 "inner"
+               OpName %uniforms_block "uniforms_block"
+               OpMemberName %InnerS 0 "v"
+               OpName %InnerS "InnerS"
+               OpMemberName %S1 0 "a2"
+               OpName %S1 "S1"
+               OpMemberName %OuterS 0 "a1"
+               OpName %OuterS "OuterS"
+               OpName %s "s"
+               OpName %main "main"
+               OpName %v "v"
+               OpMemberDecorate %Uniforms 0 Offset 0
+               OpMemberDecorate %Uniforms 1 Offset 4
+               OpMemberDecorate %uniforms_block 0 Offset 0
+               OpDecorate %uniforms_block Block
+               OpDecorate %1 DescriptorSet 1
+               OpDecorate %1 Binding 4
+               OpDecorate %1 NonWritable
+               OpMemberDecorate %InnerS 0 Offset 0
+               OpDecorate %_arr_InnerS_uint_8 ArrayStride 4
+               OpMemberDecorate %S1 0 Offset 0
+               OpDecorate %_runtimearr_S1 ArrayStride 32
+               OpMemberDecorate %OuterS 0 Offset 0
+               OpDecorate %OuterS Block
+               OpDecorate %s DescriptorSet 0
+               OpDecorate %s Binding 0
+               OpDecorate %s Coherent
+       %uint = OpTypeInt 32 0
+   %Uniforms = OpTypeStruct %uint %uint
+%uniforms_block = OpTypeStruct %Uniforms
+%_ptr_Uniform_uniforms_block = OpTypePointer Uniform %uniforms_block
+          %1 = OpVariable %_ptr_Uniform_uniforms_block Uniform
+        %int = OpTypeInt 32 1
+     %InnerS = OpTypeStruct %int
+     %uint_8 = OpConstant %uint 8
+%_arr_InnerS_uint_8 = OpTypeArray %InnerS %uint_8
+         %S1 = OpTypeStruct %_arr_InnerS_uint_8
+%_runtimearr_S1 = OpTypeRuntimeArray %S1
+     %OuterS = OpTypeStruct %_runtimearr_S1
+%_ptr_StorageBuffer_OuterS = OpTypePointer StorageBuffer %OuterS
+          %s = OpVariable %_ptr_StorageBuffer_OuterS StorageBuffer
+       %void = OpTypeVoid
+         %17 = OpTypeFunction %void
+%_ptr_Function_InnerS = OpTypePointer Function %InnerS
+         %21 = OpConstantNull %InnerS
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+%_ptr_StorageBuffer__runtimearr_S1 = OpTypePointer StorageBuffer %_runtimearr_S1
+     %uint_7 = OpConstant %uint 7
+%_ptr_StorageBuffer_InnerS = OpTypePointer StorageBuffer %InnerS
+       %main = OpFunction %void None %17
+         %18 = OpLabel
+          %v = OpVariable %_ptr_Function_InnerS Function %21
+         %22 = OpAccessChain %_ptr_Uniform_uint %1 %uint_0 %uint_0
+         %25 = OpLoad %uint %22 None
+         %26 = OpAccessChain %_ptr_Uniform_uint %1 %uint_0 %uint_1
+         %28 = OpLoad %uint %26 None
+         %29 = OpAccessChain %_ptr_StorageBuffer__runtimearr_S1 %s %uint_0
+         %31 = OpArrayLength %uint %s 0
+         %32 = OpISub %uint %31 %uint_1
+         %33 = OpExtInst %uint %34 UMin %25 %32
+         %35 = OpExtInst %uint %34 UMin %28 %uint_7
+         %37 = OpAccessChain %_ptr_StorageBuffer_InnerS %s %uint_0 %33 %uint_0 %35
+         %39 = OpLoad %InnerS %v None
+               OpStore %37 %39 None
+               OpReturn
+               OpFunctionEnd

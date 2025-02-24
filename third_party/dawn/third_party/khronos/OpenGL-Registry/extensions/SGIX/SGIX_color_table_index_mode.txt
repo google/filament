@@ -1,0 +1,109 @@
+Name
+
+    SGIX_color_table_index_mode
+
+Name Strings
+
+    GL_SGIX_color_table_index_mode
+
+Version
+
+    $Date: 1997/04/07 20:05:51 $ $Revision: 1.1 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    SGI_color_table affects the definition of this extension
+
+Overview
+
+    Currently the mapping from a color value to an index is defined mathematically as
+    clamp your (float) value to [0,1], multiply by the table size-1 and round.
+
+    This is less interesting for an s10e5 format pixel where we would like to use
+    "all" the bits as an index, not just the bits that are good in [0,1].
+
+    The answer is to specify that the float color value is converted to the framebuffer
+    format and then the high order bits are taken as necessary to index the power of
+    two lookup table. In the silly case where the table is larger than the number of
+    bits we have, the lsb's of the index are 0 filled.
+
+Issues
+
+    the down and dirty nature of this extension may offend the puritanical sensibilities of
+    certain clean minded types.
+
+New Procedures and Functions
+
+   None.
+
+New Tokens
+
+    Accepted by the <pname> parameter of ColorTableParameterivSGI,
+    ColorTableParameterfvSGI, GetColorTableParameterivSGI, and
+    GetColorTableParameterfvSGI:
+
+	COLOR_TABLE_INDEX_MODE				0xXXXX
+
+    Accepted by the <params> parameter of ColorTableParameterivSGI,
+    ColorTableParameterfvSGI
+
+	COLOR_TABLE_BITS				0xXXXX
+	COLOR_TABLE_ARITH				0xXXXX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    if the value of COLOR_TABLE_INDEX_MODE is COLOR_TABLE_BITS then
+    XXX Specify that the index is computed by converting the float color value to
+    the framebuffer format and taking the required most significan bits as an
+    index into the color table.
+
+    if the value of COLOR_TABLE_INDEX_MODE is COLOR_TABLE_ARITH then
+    do it like it already says.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+   
+    None
+
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+
+Additions to the GLX Specification
+
+    None
+
+
+GLX Protocol
+
+    XXX
+
+Dependencies on SGI_color_table
+
+    If SGI_color_table must be supported to support SGI_color_table_index_mode.
+
+Errors
+
+    XXX incomplete
+
+New State
+
+    Get Value				Get Command			Type	Initial Value		Attribute
+    ---------				-----------			----	-------------		---------
+    COLOR_TABLE_INDEX_MODE		GetColorTableParameterfvSGI	Z2	COLOR_TABLE_ARITH	pixel
+
+New Implementation Dependent State
+

@@ -1,0 +1,41 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 21
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %str 0 "arr"
+               OpName %str "str"
+               OpName %P "P"
+               OpName %func "func"
+               OpName %main "main"
+               OpName %r "r"
+               OpDecorate %_arr_int_uint_4 ArrayStride 4
+               OpMemberDecorate %str 0 Offset 0
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_int_uint_4 = OpTypeArray %int %uint_4
+        %str = OpTypeStruct %_arr_int_uint_4
+%_ptr_Private_str = OpTypePointer Private %str
+          %8 = OpConstantNull %str
+          %P = OpVariable %_ptr_Private_str Private %8
+         %10 = OpTypeFunction %_arr_int_uint_4
+%_ptr_Private__arr_int_uint_4 = OpTypePointer Private %_arr_int_uint_4
+     %uint_0 = OpConstant %uint 0
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void
+       %func = OpFunction %_arr_int_uint_4 None %10
+         %11 = OpLabel
+         %12 = OpAccessChain %_ptr_Private__arr_int_uint_4 %P %uint_0
+         %15 = OpLoad %_arr_int_uint_4 %12 None
+               OpReturnValue %15
+               OpFunctionEnd
+       %main = OpFunction %void None %18
+         %19 = OpLabel
+          %r = OpFunctionCall %_arr_int_uint_4 %func
+               OpReturn
+               OpFunctionEnd

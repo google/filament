@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S {
+  int i;
+  uint u;
+  float f;
+  bool b;
+};
+
+void f() {
+  S v = S{};
+}

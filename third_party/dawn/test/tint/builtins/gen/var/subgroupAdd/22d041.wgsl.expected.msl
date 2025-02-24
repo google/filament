@@ -1,0 +1,40 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device packed_int3* prevent_dce;
+};
+
+int3 subgroupAdd_22d041() {
+  int3 arg_0 = int3(1);
+  int3 res = simd_sum(arg_0);
+  return res;
+}
+
+fragment void fragment_main(device packed_int3* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = packed_int3(subgroupAdd_22d041());
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device packed_int3* prevent_dce;
+};
+
+int3 subgroupAdd_22d041() {
+  int3 arg_0 = int3(1);
+  int3 res = simd_sum(arg_0);
+  return res;
+}
+
+kernel void compute_main(device packed_int3* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = packed_int3(subgroupAdd_22d041());
+}

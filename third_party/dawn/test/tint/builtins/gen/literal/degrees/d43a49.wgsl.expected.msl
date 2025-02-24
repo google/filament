@@ -1,0 +1,56 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+void degrees_d43a49() {
+  float4 res = float4(57.295780181884765625f);
+}
+
+fragment void fragment_main() {
+  degrees_d43a49();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+void degrees_d43a49() {
+  float4 res = float4(57.295780181884765625f);
+}
+
+kernel void compute_main() {
+  degrees_d43a49();
+}
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexOutput {
+  float4 pos;
+};
+
+struct vertex_main_outputs {
+  float4 VertexOutput_pos [[position]];
+};
+
+void degrees_d43a49() {
+  float4 res = float4(57.295780181884765625f);
+}
+
+VertexOutput vertex_main_inner() {
+  VertexOutput out = {};
+  out.pos = float4(0.0f);
+  degrees_d43a49();
+  return out;
+}
+
+vertex vertex_main_outputs vertex_main() {
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = vertex_main_inner().pos;
+  return tint_wrapper_result;
+}

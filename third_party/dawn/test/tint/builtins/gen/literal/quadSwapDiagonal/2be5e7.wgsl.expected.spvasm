@@ -1,0 +1,110 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 24
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpCapability GroupNonUniformQuad
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %quadSwapDiagonal_2be5e7 "quadSwapDiagonal_2be5e7"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %half = OpTypeFloat 16
+%prevent_dce_block = OpTypeStruct %half
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %6 = OpTypeFunction %half
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+%half_0x1p_0 = OpConstant %half 0x1p+0
+     %uint_2 = OpConstant %uint 2
+%_ptr_Function_half = OpTypePointer Function %half
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void
+%_ptr_StorageBuffer_half = OpTypePointer StorageBuffer %half
+     %uint_0 = OpConstant %uint 0
+%quadSwapDiagonal_2be5e7 = OpFunction %half None %6
+          %7 = OpLabel
+        %res = OpVariable %_ptr_Function_half Function
+          %8 = OpGroupNonUniformQuadSwap %half %uint_3 %half_0x1p_0 %uint_2
+               OpStore %res %8
+         %15 = OpLoad %half %res None
+               OpReturnValue %15
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %18
+         %19 = OpLabel
+         %20 = OpFunctionCall %half %quadSwapDiagonal_2be5e7
+         %21 = OpAccessChain %_ptr_StorageBuffer_half %1 %uint_0
+               OpStore %21 %20 None
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 24
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpCapability GroupNonUniformQuad
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %quadSwapDiagonal_2be5e7 "quadSwapDiagonal_2be5e7"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %half = OpTypeFloat 16
+%prevent_dce_block = OpTypeStruct %half
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %6 = OpTypeFunction %half
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+%half_0x1p_0 = OpConstant %half 0x1p+0
+     %uint_2 = OpConstant %uint 2
+%_ptr_Function_half = OpTypePointer Function %half
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void
+%_ptr_StorageBuffer_half = OpTypePointer StorageBuffer %half
+     %uint_0 = OpConstant %uint 0
+%quadSwapDiagonal_2be5e7 = OpFunction %half None %6
+          %7 = OpLabel
+        %res = OpVariable %_ptr_Function_half Function
+          %8 = OpGroupNonUniformQuadSwap %half %uint_3 %half_0x1p_0 %uint_2
+               OpStore %res %8
+         %15 = OpLoad %half %res None
+               OpReturnValue %15
+               OpFunctionEnd
+%compute_main = OpFunction %void None %18
+         %19 = OpLabel
+         %20 = OpFunctionCall %half %quadSwapDiagonal_2be5e7
+         %21 = OpAccessChain %_ptr_StorageBuffer_half %1 %uint_0
+               OpStore %21 %20 None
+               OpReturn
+               OpFunctionEnd

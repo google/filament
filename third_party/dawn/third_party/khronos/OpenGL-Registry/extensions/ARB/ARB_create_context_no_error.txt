@@ -1,0 +1,141 @@
+Name
+
+    ARB_create_context_no_error
+
+Name Strings
+
+    WGL_ARB_create_context_no_error
+    GLX_ARB_create_context_no_error
+
+Contact
+
+    Piers Daniell (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Piers Daniell, NVIDIA
+    Daniel Koch, NVIDIA
+
+Notice
+
+    Copyright (c) 2017 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the OpenGL working group on March 31, 2017.
+    Approved by the Khronos Board of Promoters on May 26, 2017.
+
+Version
+
+    Last Modified Date:         2017-03-10
+    Author Revision:            2
+
+Number
+
+    ARB Extension #191
+
+Dependencies
+
+    WGL_ARB_create_context_no_error is written against the
+    WGL_ARB_create_context specification, which is required.
+
+    GLX_ARB_create_context_no_error is written against the GLX 1.4 and
+    GLX_ARB_create_context specifications. Both are required.
+
+Overview
+
+    This extension allows the creation of an OpenGL or OpenGL ES context that
+    doesn't generate errors if the context supports a no error mode.  The
+    implications of this feature are discussed in the GL_KHR_no_error
+    extension.
+
+New Procedures and Functions
+
+    None
+
+New Tokens (WGL)
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    wglCreateContextAttribsARB:
+
+        WGL_CONTEXT_OPENGL_NO_ERROR_ARB                     0x31B3
+
+New Tokens (GLX)
+
+    Accepted as an attribute name in the <*attrib_list> argument to
+    glXCreateContextAttribsARB:
+
+        GLX_CONTEXT_OPENGL_NO_ERROR_ARB                     0x31B3
+
+Additions to WGL_ARB_create_context and wglMakeCurrent
+
+    Add a new paragraph to the description of wglCreateContextAttribsARB, as
+    defined by WGL_ARB_create_context:
+
+    "The attribute name WGL_CONTEXT_OPENGL_NO_ERROR_ARB indicates whether a
+    faster and lower power mode should be enabled for the OpenGL or OpenGL ES
+    context.  In this mode instead of GL errors occurring as defined in the
+    OpenGL spec those errors will result in undefined behavior.  The default
+    value of WGL_CONTEXT_OPENGL_NO_ERROR_ARB is FALSE."
+
+Additions to the GLX 1.4 Specification and GLX_ARB_create_context
+
+    Add a new paragraph to the description of glXCreateContextAttribsARB,
+    as defined by GLX_ARB_create_context:
+
+    "The attribute name GLX_CONTEXT_OPENGL_NO_ERROR_ARB indicates whether a
+    faster and lower power mode should be enabled for the OpenGL or OpenGL ES
+    context.  In this mode instead of GL errors occurring as defined in the
+    OpenGL spec those errors will result in undefined behavior.  The default
+    value of WGL_CONTEXT_OPENGL_NO_ERROR_ARB is FALSE."
+
+GLX Protocol
+
+    TBD.
+
+Errors for WGL
+    
+    ERROR_INCOMPATIBLE_DEVICE_CONTEXTS_ARB is generated if the value of
+    WGL_CONTEXT_OPENGL_NO_ERROR_ARB used to create <share_context> does not
+    match the value of WGL_CONTEXT_OPENGL_NO_ERROR_ARB for the context being
+    created.
+
+    ERROR_INCOMPATIBLE_DEVICE_CONTEXTS_ARB is generated if the
+    WGL_CONTEXT_OPENGL_NO_ERROR_ARB is TRUE at the same time as a debug or
+    robustness context is specified.
+    
+Errors for GLX
+
+    BadMatch is generated if the value of GLX_CONTEXT_OPENGL_NO_ERROR_ARB
+    used to create <share_context> does not match the value of
+    GLX_CONTEXT_OPENGL_NO_ERROR_ARB for the context being created.
+
+    BadMatch is generated if the GLX_CONTEXT_OPENGL_NO_ERROR_ARB is TRUE at
+    the same time as a debug or robustness context is specified.
+
+New State
+
+    None.
+
+Issues
+
+    None
+
+Revision History
+
+ Rev.   Date      Author    Changes
+ ---- ----------  --------  ---------------------------------------------
+   1  2017-03-02  pdaniell  Initial draft
+   2  2017-03-10  pdaniell  Added errors
+   3  2017-03-27  pdaniell  Removed example section and added enum values

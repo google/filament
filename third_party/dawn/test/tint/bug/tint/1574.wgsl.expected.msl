@@ -1,0 +1,77 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct atomic_compare_exchange_result_i32 {
+  int old_value;
+  bool exchanged;
+};
+
+struct atomic_compare_exchange_result_u32 {
+  uint old_value;
+  bool exchanged;
+};
+
+struct tint_module_vars_struct {
+  device atomic_uint* a_u32;
+  device atomic_int* a_i32;
+  threadgroup atomic_uint* b_u32;
+  threadgroup atomic_int* b_i32;
+};
+
+struct tint_symbol_2 {
+  atomic_uint tint_symbol;
+  atomic_int tint_symbol_1;
+};
+
+atomic_compare_exchange_result_i32 v(threadgroup atomic_int* const atomic_ptr, int cmp, int val) {
+  int old_value = cmp;
+  bool const v_1 = atomic_compare_exchange_weak_explicit(atomic_ptr, (&old_value), val, memory_order_relaxed, memory_order_relaxed);
+  return atomic_compare_exchange_result_i32{.old_value=old_value, .exchanged=v_1};
+}
+
+atomic_compare_exchange_result_u32 v_2(threadgroup atomic_uint* const atomic_ptr, uint cmp, uint val) {
+  uint old_value = cmp;
+  bool const v_3 = atomic_compare_exchange_weak_explicit(atomic_ptr, (&old_value), val, memory_order_relaxed, memory_order_relaxed);
+  return atomic_compare_exchange_result_u32{.old_value=old_value, .exchanged=v_3};
+}
+
+atomic_compare_exchange_result_i32 v_4(device atomic_int* const atomic_ptr, int cmp, int val) {
+  int old_value = cmp;
+  bool const v_5 = atomic_compare_exchange_weak_explicit(atomic_ptr, (&old_value), val, memory_order_relaxed, memory_order_relaxed);
+  return atomic_compare_exchange_result_i32{.old_value=old_value, .exchanged=v_5};
+}
+
+atomic_compare_exchange_result_u32 v_6(device atomic_uint* const atomic_ptr, uint cmp, uint val) {
+  uint old_value = cmp;
+  bool const v_7 = atomic_compare_exchange_weak_explicit(atomic_ptr, (&old_value), val, memory_order_relaxed, memory_order_relaxed);
+  return atomic_compare_exchange_result_u32{.old_value=old_value, .exchanged=v_7};
+}
+
+void main_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  if ((tint_local_index < 1u)) {
+    atomic_store_explicit(tint_module_vars.b_u32, 0u, memory_order_relaxed);
+    atomic_store_explicit(tint_module_vars.b_i32, 0, memory_order_relaxed);
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  uint value = 42u;
+  atomic_compare_exchange_result_u32 const r1 = v_6(tint_module_vars.a_u32, 0u, value);
+  atomic_compare_exchange_result_u32 const r2 = v_6(tint_module_vars.a_u32, 0u, value);
+  atomic_compare_exchange_result_u32 const r3 = v_6(tint_module_vars.a_u32, 0u, value);
+  int value_1 = 42;
+  atomic_compare_exchange_result_i32 const r1_1 = v_4(tint_module_vars.a_i32, 0, value_1);
+  atomic_compare_exchange_result_i32 const r2_1 = v_4(tint_module_vars.a_i32, 0, value_1);
+  atomic_compare_exchange_result_i32 const r3_1 = v_4(tint_module_vars.a_i32, 0, value_1);
+  uint value_2 = 42u;
+  atomic_compare_exchange_result_u32 const r1_2 = v_2(tint_module_vars.b_u32, 0u, value_2);
+  atomic_compare_exchange_result_u32 const r2_2 = v_2(tint_module_vars.b_u32, 0u, value_2);
+  atomic_compare_exchange_result_u32 const r3_2 = v_2(tint_module_vars.b_u32, 0u, value_2);
+  int value_3 = 42;
+  atomic_compare_exchange_result_i32 const r1_3 = v(tint_module_vars.b_i32, 0, value_3);
+  atomic_compare_exchange_result_i32 const r2_3 = v(tint_module_vars.b_i32, 0, value_3);
+  atomic_compare_exchange_result_i32 const r3_3 = v(tint_module_vars.b_i32, 0, value_3);
+}
+
+kernel void v_8(uint tint_local_index [[thread_index_in_threadgroup]], device atomic_uint* a_u32 [[buffer(0)]], device atomic_int* a_i32 [[buffer(1)]], threadgroup tint_symbol_2* v_9 [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.a_u32=a_u32, .a_i32=a_i32, .b_u32=(&(*v_9).tint_symbol), .b_i32=(&(*v_9).tint_symbol_1)};
+  main_inner(tint_local_index, tint_module_vars);
+}

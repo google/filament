@@ -1,0 +1,57 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void deref_const() {
+  int3 a = 0;
+  thread int3* const p = (&a);
+  int b = (*p).x;
+  (*p).x = 42;
+}
+
+void no_deref_const() {
+  int3 a = 0;
+  thread int3* const p = (&a);
+  int b = (*p).x;
+  (*p).x = 42;
+}
+
+void deref_let() {
+  int3 a = 0;
+  thread int3* const p = (&a);
+  int const i = 0;
+  int b = (*p)[min(uint(i), 2u)];
+  (*p).x = 42;
+}
+
+void no_deref_let() {
+  int3 a = 0;
+  thread int3* const p = (&a);
+  int const i = 0;
+  int b = (*p)[min(uint(i), 2u)];
+  (*p).x = 42;
+}
+
+void deref_var() {
+  int3 a = 0;
+  thread int3* const p = (&a);
+  int i = 0;
+  int b = (*p)[min(uint(i), 2u)];
+  (*p).x = 42;
+}
+
+void no_deref_var() {
+  int3 a = 0;
+  thread int3* const p = (&a);
+  int const i = 0;
+  int b = (*p)[min(uint(i), 2u)];
+  (*p).x = 42;
+}
+
+kernel void v() {
+  deref_const();
+  no_deref_const();
+  deref_let();
+  no_deref_let();
+  deref_var();
+  no_deref_var();
+}

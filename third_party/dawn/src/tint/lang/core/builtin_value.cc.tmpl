@@ -1,0 +1,23 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate builtin_value.cc
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/core/core.def" -}}
+{{- Import "src/tint/utils/templates/enums.tmpl.inc" -}}
+{{- $enum := ($I.Sem.Enum "builtin_value") -}}
+
+#include "src/tint/lang/core/builtin_value.h"
+
+namespace tint::core {
+
+{{ Eval "ParseEnum" $enum}}
+
+{{ Eval "EnumOStream" $enum}}
+
+}  // namespace tint::core

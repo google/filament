@@ -1,0 +1,18 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct frexp_result_vec2_f32 {
+  float2 fract;
+  int2 exp;
+};
+
+kernel void v() {
+  float2 const runtime_in = float2(1.25f, 3.75f);
+  frexp_result_vec2_f32 res = frexp_result_vec2_f32{.fract=float2(0.625f, 0.9375f), .exp=int2(1, 2)};
+  frexp_result_vec2_f32 v_1 = {};
+  v_1.fract = frexp(runtime_in, v_1.exp);
+  res = v_1;
+  res = frexp_result_vec2_f32{.fract=float2(0.625f, 0.9375f), .exp=int2(1, 2)};
+  float2 const fract = res.fract;
+  int2 const exp = res.exp;
+}

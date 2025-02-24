@@ -1,0 +1,379 @@
+Name
+
+    HP_image_transform
+
+Name Strings
+
+    GL_HP_image_transform
+
+Version
+
+    $Date: 1996/04/22 23:23:13 $ $Revision: 1.1 $
+
+Number
+
+    66
+
+Dependencies
+
+    EXT_texture is required
+    EXT_convolution affects the definition of this extension
+    SGI_color_table is required
+
+Overview
+
+    This extension provides support for scaling, rotation, and translation
+    of two-dimensional pixel rectangles at a fixed location in the pixel
+    transfer process.  The 2D image transformation attributes are specified
+    as individual values so that that implementations may easily detect
+    scaling and rotation values that lend themselves to optimization.  2D
+    image transformation occurs immediately after the post-convolution color
+    table stage of the pixel pipeline.  This extension also defines a color
+    table that is applied immediately after the image transformation operation.
+
+New Procedures and Functions
+
+    void ImageTransformParameteriHP(enum target,
+				    enum pname,
+				    const int param)
+
+    void ImageTransformParameterfHP(enum target,
+				    enum pname,
+				    const float param)
+
+    void ImageTransformParameterivHP(enum target,
+				     enum pname,
+				     const int* params)
+
+    void ImageTransformParameterfvHP(enum target,
+				     enum pname,
+				     const float* params)
+
+    These routines are used to set image transformation attributes.
+    The only allowable value for <target> at this time is
+    IMAGE_TRANSFORM_2D_HP.  Allowable values for <pname> include:
+    IMAGE_SCALE_X_HP, IMAGE_SCALE_Y_HP, IMAGE_ROTATE_ANGLE_HP,
+    IMAGE_ROTATE_ORIGIN_X_HP, IMAGE_ROTATE_ORIGIN_Y_HP,
+    IMAGE_TRANSLATE_X_HP, IMAGE_TRANSLATE_Y_HP, IMAGE_MAG_FILTER_HP,
+    IMAGE_MIN_FILTER_HP, and IMAGE_CUBIC_WEIGHT_HP.
+
+    void GetImageTransformParameterivHP(enum target,
+				        enum pname,
+				        const int* params)
+
+    void GetImageTransformParameterfvHP(enum target,
+				        enum pname,
+				        const float* params)
+
+    These routines are used to query image transformation attributes.
+    The only allowable value for <target> at this time is
+    IMAGE_TRANSFORM_2D_HP.  Allowable values for <pname> include:
+    IMAGE_SCALE_X_HP, IMAGE_SCALE_Y_HP, IMAGE_ROTATE_ANGLE_HP,
+    IMAGE_ROTATE_ORIGIN_X_HP, IMAGE_ROTATE_ORIGIN_Y_HP,
+    IMAGE_TRANSLATE_X_HP, IMAGE_TRANSLATE_Y_HP, IMAGE_MAG_FILTER_HP,
+    IMAGE_MIN_FILTER_HP, and IMAGE_CUBIC_WEIGHT_HP.
+
+New Tokens
+
+    Accepted by the <pname> parameter of ImageTransformParameteri,
+    ImageTransformParameterf, ImageTransformParameteriv,
+    ImageTransformParameterfv, GetImageTransformParameteriv and
+    GetImageTransformParameterfv:
+
+	IMAGE_SCALE_X_HP
+	IMAGE_SCALE_Y_HP
+	IMAGE_TRANSLATE_X_HP
+	IMAGE_TRANSLATE_Y_HP
+	IMAGE_ROTATE_ANGLE_HP
+	IMAGE_ROTATE_ORIGIN_X_HP
+	IMAGE_ROTATE_ORIGIN_Y_HP
+	IMAGE_MAG_FILTER_HP
+	IMAGE_MIN_FILTER_HP
+    	IMAGE_CUBIC_WEIGHT_HP
+
+    Accepted by the <params> parameter of ImageTransformParameteriHP,
+    ImageTransformParameterfHP, ImageTransformParameterivHP, and
+    ImageTransformParameterfvHP when <pname> is IMAGE_MAG_FILTER_HP
+    or IMAGE_MIN_FILTER_HP:
+
+	CUBIC_HP
+
+    Accepted by the <params> parameter of ImageTransformParameteriHP,
+    ImageTransformParameterfHP, ImageTransformParameterivHP, and
+    ImageTransformParameterfvHP when <pname> is IMAGE_MIN_FILTER_HP:
+
+	AVERAGE_HP
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <target> parameter of ImageTransformParameterivHP,
+    ImageTransformParameterfvHP, GetImageTransformParameterivHP,
+    and GetImageTransformParameterfvHP:
+
+	IMAGE_TRANSFORM_2D_HP
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and
+    by the <target> parameter of ColorTableSGI, ColorTableParameterivSGI,
+    ColorTableParameterfvSGI, GetColorTableSGI, GetColorTableParameterivSGI,
+    and GetColorTableParameterfvSGI:
+
+	POST_IMAGE_TRANSFORM_COLOR_TABLE_HP
+
+    Accepted by the <target> parameter of ColorTableSGI,
+    GetColorTableParameterivSGI, and GetColorTableParameterfvSGI:
+
+	PROXY_POST_IMAGE_TRANSFORM_COLOR_TABLE_HP
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The specification of two-dimensional image transformation operators
+    is added to the GL specification in Section 3.6.2, "Pixel Transfer
+    Modes."  2D image transformation operators are defined by calling
+    ImageTransformParameteriHP, ImageTransformParameterfHP,
+    ImageTransformParameterivHP, or ImageTransformParameterfvHP with
+    <target> set to IMAGE_TRANSFORM_2D_HP.  Parameter values
+    IMAGE_SCALE_X_HP and IMAGE_SCALE_Y_HP establish the scaling factors.
+    IMAGE_TRANSLATE_X_HP and IMAGE_TRANSLATE_Y_HP set the translation
+    factors.  IMAGE_ROTATE_ANGLE_HP sets the rotation angle to be
+    used, and IMAGE_ROTATE_ORIGIN_X_HP and IMAGE_ROTATE_ORIGIN_Y_HP specify
+    the point about which the image is to be scaled and rotated.  If the
+    specified angle is positive, the rotation will be counterclockwise
+    about the specified rotation origin.  If the specified angle is
+    negative, the rotation will be clockwise about the origin.  All
+    of these parameters (scale, rotation, translation, rotation origin)
+    are specified in terms of the input image's coordinates.
+    IMAGE_MAG_FILTER_HP establishes the resampling technique that is to be
+    used after the other image transformation operators have been applied
+    if the image is deemed to have been magnified.  IMAGE_MIN_FILTER_HP
+    defines the resampling technique that is to be applied if the image
+    is minified by the scaling factors.  IMAGE_CUBIC_WEIGHT_HP defines
+    the cubic weighting coefficient that is to be used whenever the
+    resampling technique is set to CUBIC_HP.
+
+    The operations defined by the image transformation operation are
+    added to the GL specification in Section 3.6.3, "Rasterization of
+    Pixel Rectangles," immediately following the operations described in
+    the EXT_convolution extension and the post convolution color table
+    operation that is described in the SGI_color_table extension.  Image
+    transformation is defined only for pixel rectangles that contain RGBA
+    components or depth components at this stage of the pixel processing
+    pipeline (color index values may have been converted to RGBA by a
+    previous stage).  Image transformation is not applied to color index
+    or stencil index pixel data.
+
+    When enabled, the image transformation operation uses the current set
+    of image transformation parameters to compute a new window coordinate
+    for each incoming pixel.  Although image transformation parameters
+    are specified separately, the scaling, rotation, and translation
+    operations are all applied simultaneously (as if the transformation
+    was encoded in a matrix and the resulting matrix was applied to each
+    incoming pixel coordinate).  In the case of 2D image transformation,
+    if (Rx,Ry) specifies the rotation origin, the effect of applying the
+    2D image transformation operators can be defined as follows.  First,
+    the image is translated by -Rx in the x direction and -Ry in the y
+    direction so that its rotation origin is at the origin of the 2D
+    coordinate system.  Second, the x and y scaling factors are
+    applied, causing the image to be scaled as specified in x and y.
+    Third, the rotation angle is applied, causing the image to be rotated
+    about the origin by the specified angle.  Next, the image is translated
+    by Rx in the x direction and Ry in the y direction.  Finally, the
+    scaled and rotated image is translated by the specified translation
+    factors.  Resampling occurs after the scaling/rotation/translation
+    operations have been applied.
+
+    The RGBA or depth value for each location is left unmodified by the image
+    transformation.  Since multiple input pixels can be mapped into a single
+    output pixel (minification of input image), or since output pixels might
+    not have any input pixels mapped to them (magnification of input image),
+    some method of resampling is required.  The resampling method to be
+    used when the image is magnified is specified by calling
+    ImageTransformParameteri, ImageTransformParameterf,
+    ImageTransformParameteriv, or ImageTransformParameterfv with <pname>
+    set to IMAGE_MAG_FILTER_HP and <params> set to NEAREST, LINEAR, or CUBIC_HP.
+    The resampling method to be used when the image is minified is specified
+    by calling ImageTransformParameteri, ImageTransformParameterf,
+    ImageTransformParameteriv, or ImageTransformParameterfv with <pname>
+    set to IMAGE_MIN_FILTER_HP and <params> set to NEAREST, LINEAR, CUBIC_HP,
+    or AVERAGE_HP.  If the resampling method is NEAREST, each output pixel will
+    have the value of the input pixel whose transformed coordinate value is
+    nearest (in Manhattan distance).  If the resampling method is LINEAR, each
+    output pixel will have a value that is the weighted average of the four input
+    pixels whose transformed coordinate values are nearest.
+    
+    If the resampling method is CUBIC_HP, each output pixel will have a value
+    that is affected by the 16 input pixels whose transformed coordinate
+    values are nearest.  The 16 input pixels will be used to perform a cubic
+    spline interpolation to determine the value of the output pixel.  The
+    cubic weight factor is a floating point value that is applied to the
+    cubic interpolation in the manner described in "Digital Image Warping"
+    by George Wolberg (IEEE Computer Society Press, ISBN 0-8186-8944-7).
+    Visually pleasing cubic weighting values are typically in the
+    range [-1,0].  The values -1.0 and -0.5 are most commonly used.
+    For the purpose of performing bicubic interpolation along the outer
+    edge of the image, the outermost one pixel edge of the image is
+    duplicated prior to performing the interpolation along the edges.
+
+    If the resampling method is AVERAGE_HP, the values of all of the input
+    pixels that contribute to the final output pixel will be averaged to
+    determine the final output pixel value.
+
+    The operation of the POST_IMAGE_TRANSFORM_COLOR_TABLE is added to the GL
+    Specification in section 3.6.3, "Rasterization of Pixel Rectangles".
+    This color table behaves in the manner described in the SGI_color_table
+    extension, and it is located immediately after the image transformation
+    operation.  This color table can be enabled or disabled separately from
+    the image transformation operation by calling Enable or Disable with
+    POST_IMAGE_TRANSFORM_COLOR_TABLE.  It can be modified using the procedures
+    defined in the SGI_color_table extension.  The proxy version of this table
+    can be set or queried by using a target value of
+    PROXY_POST_IMAGE_TRANSFORM_COLOR_TABLE.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    The operation of image transformation during pixel copy and query
+    operations is identical to the operation during pixel drawing and
+    texture image definition.  The image transformation operation occurs
+    immediately after the operations described by EXT_convolution and
+    the post-convolution color table described by SGI_color_table, which
+    follow section 4.3.2 (Reading Pixels) of the GL Specification.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    GetImageTransformParameterivHP, and GetImageTransformParameterfvHP
+    are not included in display lists, but are instead executed immediately.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    Integer and floating point query functions GetImageTransformParameterivHP
+    and GetImageTransformParameterfvHP are provided.  <target> must be
+    IMAGE_TRANSFORM_2D_HP.  <pname> is one of IMAGE_SCALE_X_HP,
+    IMAGE_SCALE_Y_HP, IMAGE_TRANSLATE_X_HP, IMAGE_TRANSLATE_Y_HP,
+    IMAGE_ROTATE_ANGLE_HP, IMAGE_ROTATE_ORIGIN_X_HP,
+    IMAGE_ROTATE_ORIGIN_Y_HP, IMAGE_MAG_FILTER_HP, IMAGE_MIN_FILTER_HP,
+    or IMAGE_CUBIC_WEIGHT_HP.  The value of the specified parameter is
+    returned in <params>.
+
+Additions to the GLX Specification
+    
+    None
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.  This extension builds on the notion of
+    internal image format, which is defined by EXT_texture.
+
+Dependencies on EXT_convolution
+
+    None, except that image transformation follows the convolution
+    operation (and its scale and bias).  If the post-convolution color
+    table is supported, the image transformation operation will occur
+    immediately after the post-convolution color table operation.  If
+    convolution is not supported, the location with respect to all other
+    pixel operations remains the same.
+
+Dependencies on SGI_color_table
+
+    SGI_color_table is required.  This extension builds on the notion of
+    color lookup tables at various locations in the pixel processing pipeline.
+    This extension adds another table to the list specified by SGI_color_table.
+    This new table can be manipulated using the procedures defined by
+    SGI_color_table.
+
+Errors
+
+    INVALID_ENUM is generated if ImageTransformParameteriHP,
+    ImageTransformParameterfHP, ImageTransformParameterivHP,
+    ImageTransformParameterfvHP, GetImageTransformParameterivHP,
+    or GetImageTransformParameterfvHP is called with <target> set to
+    a value other than IMAGE_TRANSFORM_2D_HP.
+
+    INVALID_ENUM is generated if GetImageTransformParameterivHP or
+    GetImageTransformParameterfvHP is called with <pname> set to
+    IMAGE_MAG_FILTER_HP and <params> is not one of NEAREST, LINEAR,
+    or CUBIC_HP.
+
+    INVALID_ENUM is generated if GetImageTransformParameterivHP or
+    GetImageTransformParameterfvHP is called with <pname> set to
+    IMAGE_MIN_FILTER_HP and <params> is not one of NEAREST, LINEAR,
+    CUBIC_HP, or AVERAGE_HP.
+
+    INVALID_VALUE is generated if ImageTransformParameteriHP,
+    ImageTransformParameterfHP, ImageTransformParameterivHP, or
+    ImageTransformParameterfvHP is called with <pname> set to
+    IMAGE_CUBIC_WEIGHT_HP and <params> is a value outside of
+    the range [0,1].
+
+    INVALID_OPERATION is generated if ImageTransformParameteriHP,
+    ImageTransformParameterfHP, ImageTransformParameterivHP,
+    ImageTransformParameterfvHP, GetImageTransformParameterivHP,
+    or GetImageTransformParameterfvHP is called between execution of
+    Begin and the corresponding execution of End.
+
+New State
+										Initial
+    Get Value					Get Command		Type	Value 	  Attrib
+    ---------					-----------		----	-------   ------
+    IMAGE_TRANSFORM_2D_HP		IsEnabled			 B	   False  pixel/enable
+    IMAGE_SCALE_X_HP			GetImageTransformParameterf	 R	   1 	  pixel
+    IMAGE_SCALE_Y_HP			GetImageTransformParameterf	 R	   1 	  pixel
+    IMAGE_TRANSLATE_X_HP		GetImageTransformParameterf	 R	   0 	  pixel
+    IMAGE_TRANSLATE_Y_HP		GetImageTransformParameterf	 R	   0 	  pixel
+    IMAGE_ROTATE_ANGLE_HP		GetImageTransformParameterf	 R	   0 	  pixel
+    IMAGE_ROTATE_ORIGIN_X_HP		GetImageTransformParameterf	 R	   0 	  pixel
+    IMAGE_ROTATE_ORIGIN_Y_HP		GetImageTransformParameterf	 R	   0 	  pixel
+    IMAGE_MAG_FILTER_HP			GetImageTransformParameteri	 Z3	NEAREST   pixel
+    IMAGE_MIN_FILTER_HP			GetImageTransformParameteri	 Z4	NEAREST   pixel
+    IMAGE_CUBIC_WEIGHT_HP		GetImageTransformParameterf	 R	   -1 	  pixel
+    POST_IMAGE_TRANSFORM_COLOR_TABLE_HP	IsEnabled		  	 B	 False	  pixel/enable
+    POST_IMAGE_TRANSFORM_COLOR_TABLE_HP	GetColorTableHP		       3 x I	 empty	    -
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    What is the behavior of ReadPixels when the image transformation
+    is enabled?  One suggestion is to assume that the specified width
+    and height of the region being read are used to define the size
+    of the 2D array in host memory in which the pixel values are to
+    be written.  Any pixels that would be written outside of this region
+    would be clipped.  Why would anyone want to rotate/scale during
+    a readback operation anyway?  Another suggestion is that image
+    transformation is ignored during readback, but this makes it
+    different than the other pixel transfer operations.
+
+Notes
+
+    I originally wrote this extension to utilize an image transformation
+    matrix that worked the same way the other OpenGL matrices worked.
+    However, we found that we could not easily extract the rotation and
+    scaling information and use it to select optimized software routines
+    for special cases like integer zoom and 90 degree rotations.
+    Consequently, I've reverted back to specifying the image transformation
+    parameters individually and the image transformation operation
+    in a more rigid way.
+
+    I would rather have separate state setting calls for each of the
+    2D image transformation parameters.  However, SGI's convolution,
+    color table, and histogram extension all use FooParameter{i,f}v calls
+    to set the state.  I've mimicked their API for three reasons:
+	1. For consistency with those extensions
+	2. To maximize the likelihood of industry acceptance
+	   of this extension
+	3. To allow for the possibility of 1D and 3D image
+	   transforms at a future time.
+
+    I have not excluded the ability to scale, rotate, and translate
+    depth component values.  I thought that image transformation might
+    be useful when the <format> was DEPTH_COMPONENT (i.e., reading or writing
+    depth buffer values).  In this case, the "image" will have x and y values
+    that define the pixel locations, and depth (z) values instead of color
+    values.  The depth values will end up being treated as a single channel
+    image.  This capability might be necessary if you have a depth buffer
+    associated with an image that you want to remain registered as it is
+    stored in the frame buffer.

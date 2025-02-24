@@ -1,0 +1,33 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct frexp_result_f32 {
+  float f;
+};
+
+struct frexp_result_f32_1 {
+  float fract;
+  int exp;
+};
+
+struct tint_module_vars_struct {
+  thread frexp_result_f32* a;
+  thread frexp_result_f32_1* b;
+};
+
+struct main_outputs {
+  float4 tint_symbol [[color(0)]];
+};
+
+float4 main_inner(tint_module_vars_struct tint_module_vars) {
+  return float4((*tint_module_vars.a).f, (*tint_module_vars.b).fract, 0.0f, 0.0f);
+}
+
+fragment main_outputs v() {
+  thread frexp_result_f32 a = {};
+  thread frexp_result_f32_1 b = frexp_result_f32_1{.fract=0.5f, .exp=1};
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.a=(&a), .b=(&b)};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main_inner(tint_module_vars);
+  return tint_wrapper_result;
+}

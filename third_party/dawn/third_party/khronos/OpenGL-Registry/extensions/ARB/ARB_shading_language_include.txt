@@ -1,0 +1,885 @@
+Name
+
+    ARB_shading_language_include
+
+Name Strings
+
+    GL_ARB_shading_language_include
+
+Contact
+
+    Jon Leech (jon 'at' alumni.caltech.edu)
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Version 17, June 24, 2013
+
+Number
+
+    ARB Extension #76
+
+Dependencies
+
+    A version of OpenGL supporting OpenGL Shading Language 1.10 or later
+    is required.
+
+    This extension is written against the OpenGL 3.2 (Core Profile) and
+    OpenGL Shading Language 1.50 Specifications.
+
+Overview
+
+    This extension introduces a #include GLSL directive to allow reusing
+    the same shader text in multiple shaders and defines the semantics
+    and syntax of the names allowed in #include directives. It also
+    defines API mechanisms to define the named string backing a
+    #include.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void NamedStringARB(enum type, int namelen, const char *name,
+                        int stringlen, const char *string)
+    void DeleteNamedStringARB(int namelen, const char *name)
+
+    void CompileShaderIncludeARB(uint shader, sizei count,
+                                 const char *const *path,
+                                 const int *length)
+
+    boolean IsNamedStringARB(int namelen, const char *name)
+    void GetNamedStringARB(int namelen, const char *name,
+                           sizei bufSize, int *stringlen,
+                           char *string)
+    void GetNamedStringivARB(int namelen, const char *name,
+                             enum pname, int *params)
+
+New Tokens
+
+    Accepted by the <type> parameter of NamedStringARB:
+
+        SHADER_INCLUDE_ARB                              0x8DAE
+
+    Accepted by the <pname> parameter of GetNamedStringivARB:
+
+        NAMED_STRING_LENGTH_ARB                         0x8DE9
+        NAMED_STRING_TYPE_ARB                           0x8DEA
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification (OpenGL Operation)
+
+    Add new section 2.11.1 preceding the current section 2.11.1 and
+    renumber following sections:
+
+   "2.11.1 Named Strings
+
+    Arbitrary strings may be defined and given names. These strings can
+    be included by name in shaders during compilation, allowing reuse of
+    the same code segments. A string and its name are specified
+    with the command
+
+        void NamedStringARB(enum type, int namelen, const char *name,
+                            int stringlen, const char *string)
+
+    <type> must be SHADER_INCLUDE_ARB. <namelen> is the number of
+    <char>s in <name>. <name> defines the name associated with the
+    string. <stringlen> is the number of <char>s in <string>. <string>
+    is an arbitrary string of characters. If <namelen> or <stringlen>
+    are negative, then <name> or <string> respectively are considered to
+    be null-terminated strings.
+
+    <name> must be a <valid pathname> as defined in Appendix A of the
+    OpenGL Shading Language Specification. Additionally, <name> must
+    begin with the character '/'. Before creating a named string, <name>
+    is converted to a <tree location> as described in Appendix A of
+    the OpenGL Shading Language Specification.
+
+    After calling NamedStringARB, the contents of <string> are
+    associated with the tree location corresponding to <name>[fn1]. If a
+    string is already associated with that tree location, it will be
+    replaced with the new <string>.
+       [fn1 - Many possible <name>s may correspond to the same tree
+        location.]
+
+    An INVALID_VALUE error will be generated under any of the following
+    conditions:
+
+      - Either <name> or <string> is NULL.
+      - <name> is not a valid pathname beginning with '/'.
+
+    To delete a named string, use the command
+
+        void DeleteNamedStringARB(int namelen, const char *name)
+
+    <namelen>, and <name> have the same meanings as the corresponding
+    parameters of NamedStringARB. After calling DeleteNamedStringARB, no
+    string is associated with the tree location corresponding to <name>.
+
+    An INVALID_VALUE error will be generated under any of the following
+    conditions:
+
+      - <name> is NULL.
+      - <name> is not a valid pathname beginning with '/'.
+
+    An INVALID_OPERATION error will be generated if the tree location
+    corresponding to <name> has no string associated with it."
+
+
+    Replace the description of CompileShader in new section 2.11.2
+    (formerly section 2.11.1) with:
+
+   "Once the source code for a shader has been loaded, a shader object
+    can be compiled with the command
+
+        void CompileShaderIncludeARB(uint shader, sizei count,
+                                     const char * const *path,
+                                     const int *length)
+
+    <path> is an ordered array of <count> pointers to optionally
+    null-terminated character strings defining <search paths>. <length>
+    is an array of <count> values with the number of chars in each
+    string (the string length). If an element in <length> is negative,
+    its accompanying string is null-terminated. If <length> is NULL, all
+    strings in the <path> argument are considered null-terminated.
+
+    Each string in <path> must be a valid <pathname> as defined in
+    Appendix A of the OpenGL Shading Language Specification, and must
+    begin with the character '/'. The ordered list of <path>s is used
+    during compilation, together with the arguments of #include
+    directives in the shader source, to search for named strings
+    corresponding to the #include directives as described in section
+    3.3 of the OpenGL Shading Language Specification. If a #include
+    directive does not correspond to a valid named string, compilation
+    will fail.
+
+    Each shader object has a boolean status that is modified as a result
+    of compilation, and can be queried by calling GetShaderiv (see
+    section 6.1.10) with <pname> COMPILE_STATUS. The status will be set
+    to TRUE if <shader> was compiled without errors and is ready for
+    use, and FALSE otherwise. Compilation can fail for a variety of
+    reasons as listed in the OpenGL Shading Language Specification. If
+    compilation failed, any information about a previous compile is
+    lost. Thus a failed compile does not restore the old state of
+    shader.
+
+    Changing the source code of a shader object with ShaderSource, or
+    the contents of any named strings corresponding to #include
+    directives in the source code, does not change its compile status or
+    the compiled shader code.
+
+    Each shader object has an information log, which is a text string
+    that is overwritten as a result of compilation. This information log
+    can be queried with GetShaderInfoLog to obtain more information
+    about the compilation attempt (see section 6.1.10).
+
+    An INVALID_OPERATION error is generated if <shader> is not the name
+    of a valid shader object generated by CreateShader.
+
+    An INVALID_VALUE error will be generated under any of the following
+    conditions:
+      - <count> is greater than zero and <path> is NULL, or any
+        of the pointers path[0] .. path[<count>-1] is NULL.
+      - Any of the strings in <path> are not valid pathnames beginning
+        with '/'.
+
+*** (compatibility profile only)
+    An INVALID_OPERATION error is generated if CompileShaderIncludeARB
+    is executed between Begin and the corresponding End.
+
+    The command
+
+        CompileShader(uint shader)
+
+    is equivalent to
+
+        CompileShaderIncludeARB(shader,0,NULL,NULL).
+
+    Shader objects can be deleted with the command ..."
+
+
+Additions to Chapter 5 (Special Functions)
+
+    Add CompileShaderIncludeARB to the list of "Commands Not Usable In
+    Display Lists" in section 5.4.1 of the compatibility profile.
+
+Additions to Chapter 6 (State and State Requests)
+
+    Add new section 6.1.10 preceding the current section 6.1.10 and
+    renumber following sections:
+
+   "6.1.10 Named String Queries
+
+    The command
+
+        boolean IsNamedStringARB(int namelen, const char *name)
+
+    returns TRUE if the tree location corresponding to <name> has a
+    string associated with it, and FALSE if the tree location has no
+    string associated with it. <name> and <namelen> have the same
+    meanings as the corresponding parameters of NamedStringARB (see
+    section 2.11.1).
+
+    If <name> or <namelen> do not describe a valid name, or if <name> is
+    NULL, IsNamedStringARB succeeds and returns FALSE.
+
+    The command
+
+        void GetNamedStringivARB(int namelen, const char *name,
+                                 enum pname, int *params)
+
+    returns properties of the named string whose tree location
+    corresponds to <name>. <name> and <namelen> have the same meanings
+    as the corresponding parameters of NamedStringARB (see section
+    2.11.1). The parameter value to return is specified by <pname>.
+
+    If <pname> is NAMED_STRING_LENGTH_ARB, the length of the named
+    string, including a null terminator, is returned. If <pname> is
+    NAMED_STRING_TYPE_ARB, the <type> argument passed to NamedStringARB
+    is returned.
+
+    An INVALID_VALUE error will be generated under any of the following
+    conditions:
+
+      - <name> is NULL.
+      - <name> is not a valid pathname beginning with '/'.
+
+    An INVALID_OPERATION error will be generated if the tree location
+    corresponding to <name> has no string associated with it.
+
+    The command
+
+        void GetNamedStringARB(int namelen, const char *name,
+                               sizei bufSize, int *stringlen,
+                               char *string)
+
+    returns in <string> the string corresponding to the specified
+    <name>. <name> and <namelen> have the same meanings as the
+    corresponding parameters of NamedStringARB.
+
+    The returned string will be null-terminated. The actual number of
+    characters written into <string>, excluding the null terminator, is
+    returned in <stringlen>. If <stringlen> is NULL, no length is
+    returned. The maximum number of characters that may be written into
+    <string>, including the null terminator, is specified by <bufSize>.
+
+    An INVALID_VALUE error will be generated under any of the following
+    conditions:
+
+      - <name> is NULL.
+      - <name> is not a valid pathname beginning with '/'.
+
+    An INVALID_OPERATION error will be generated if the tree location
+    corresponding to <name> has no string associated with it."
+
+
+Additions to Appendix D of the OpenGL 3.2 Specification (Shared Objects and
+Multiple Contexts)
+
+    Add "named strings" to the list of shared object types in the second
+    paragraph of Appendix D, prior to "program and shader objects".
+
+
+    Replace the second paragraph of section D.1.2 with:
+
+   "When a named string, shader object, or program object is deleted, it
+    is flagged for deletion, but its name remains valid until the
+    underlying object can be deleted because it is no longer in use. A
+    named string is in use for the duration of any
+    CompileShaderIncludeARB command [fn3]. A shader object is in use
+    while it is attached to any program object. A program object is in
+    use while it is the current program in any context.
+       [fn3 - this effectively places a lock around the named string
+        dictionary during compilation. Given the lack of ordering
+        inherent in multicontext access to the named string database it
+        would probably be equally acceptable to state that the effect of
+        deleting or changing a named string from one context during
+        compilation in another context is undefined.]
+
+    Named strings are treated as invariant while they are in use during
+    compilation of a shader. That is, named strings will not be added
+    to, changed, or removed from the point of view of
+    CompileShaderIncludeARB, even if such changes are made in other
+    contexts [fn4].
+       [fn4 - implementations may use locking, caching, or other
+        techniques to realize such invariance. Again this effectively
+        places a lock around the dictionary in order to provide
+        predictable multicontext behavior across all implementations.]"
+
+    Add to the list of <data> in the first paragraph of section D.3:
+
+     "- Named strings (only string contents, not string names)."
+
+    Add a new paragraph to the first bullet point, describing the term
+    <directly attached>, in section D.3.2:
+
+     "Additionally, a named string object T will be considered to have
+      been <directly attached> to the current context whenever a
+      CompileShaderIncludeARB command is issued, and to have been
+      detached when that CompileShaderIncludeARB completes."
+
+    (This language may need some iteration. The intent is that whenever
+    CompileShaderIncludeARB is called, the effect is to pick up all
+    changes to the named string dictionary completed in other contexts
+    prior to that compilation by leveraging the existing "directly
+    attached" language of Appendix D instead of introducing a new type
+    of relationship between object and context, even though named
+    strings are not "bound".)
+
+
+Additions to Chapter 3 of the OpenGL Shading Language 1.50 Specification
+
+    Including the following line in a shader will enable #include and
+    related extended language features described in this extension:
+
+        #extension GL_ARB_shading_language_include : <behavior>
+
+    where <behavior> is as specified in section 3.3 for the #extension
+    directive.
+
+
+    Add a new class of characters following the first paragraph
+    of section 3.1 "Character Set":
+
+   "The double quote ( " ) for use only with #include and #line."
+
+    Replace the next-to-last paragraph of section 3.1 with:
+
+   "There are no character or string data types, with the exception of
+    the quoted string used to name an include string for the
+    preprocessor."
+
+
+    Add following the first paragraph of section 3.2:
+
+   "A shader can also include another string, using #include, as
+    described later. The included string is a single string, not an
+    array of strings, but this string may itself include other strings."
+
+    Replace the last paragraph of section 3.2 with:
+
+   "Diagnostic messages returned from compiling a shader must identify
+    both the line number within a string and which source string the
+    message applies to.  For included strings (using #include), the
+    string is identified by the path provided in the shader to the
+    #include statement.  For an array of shader source strings, strings
+    are counted sequentially with the first string being string 0.  Line
+    numbers are one more than the number of new-lines that have been
+    processed.  These are all consistent with use of the __LINE__,
+    __FILE__, and __FILE_SPACE__ macros as described below."
+
+    Add to the list of preprocessor directives in the second paragraph
+    of section 3.3:
+
+   "#include"
+
+    Add following the paragraph in section 3.3 starting "The number
+    sign...":
+
+   "Functionality for #include is dependent on the GL to supply a tree
+    of strings to search, plus an ordered list of initial search points
+    within that tree. The presence of these is assumed below.
+
+    The #include directive is followed by a quoted <path>; a string
+    quoted with double quotes or angled brackets ( < > ):
+
+    #include "path"
+    #include <path>
+
+    This will lookup <path> in the supplied tree, as described in Appendix
+    A, and select its associated string. The associated string is
+    substituted and processed as is standard for C++ preprocessors, with
+    full preprocessing applied after the substitution. It is a
+    compile-time error if <path> is not valid as described in Appendix
+    A.
+
+    If <path> starts with a forward slash, whether it is quoted with
+    double quotes or with angled brackets, the list of search points is
+    ignored and <path> is looked up in the tree as described in Appendix
+    A. It is a compile-time error if a path starting with a forward
+    slash either
+
+      * exists in the tree, but does not have a string associated with
+        it, or
+      * does not exist in the tree.
+
+    If <path> does not start with a forward slash, it is a path relative
+    to one of the ordered list of initial search points. If this path is
+    quoted with angled brackets, the tree is searched relative to the
+    first search point in the ordered list, and then relative to each
+    subsequent search point, in order, until a matching path is found in
+    the tree. This is also the behavior if it is quoted with double
+    quotes in an initial (non-included) shader string. If it is quoted
+    with double quotes in a previously included string, then the first
+    search point will be the tree location where the previously included
+    string had been found. If not found there, the search continues at
+    the beginning of the list of search points, as just described. It is
+    a compile error if
+
+      * the first time the path is found in the tree relative to a
+        search point, there is no string assigned to that path
+      * the path is not found relative to any of the search points."
+
+    Replace the paragraph of section 3.3 starting with '__FILE__
+    will...' with:
+
+   "__FILE__ will substitute either a decimal integer constant that says
+    which source string number is currently being processed, or the path
+    of the string if the string was an included string. This path will
+    be the same as the path supplied to the #include directive."
+
+    Replace the last paragraph of section 3.3 with:
+
+   "#line must have, after macro substitution, one of the following
+    forms:
+
+       #line <line>
+       #line <line> <source-string-number>
+       #line <line> "<path>"
+
+    where <line> and <source-string-number> are constant integer
+    expressions and <path> is a valid string for a path supplied in the
+    #include directive. After processing this directive (including its
+    new-line), the implementation will behave as if it is compiling at
+    line number <line> and source string number <source-string-number>
+    or <path> path. Subsequent source strings will be numbered
+    sequentially, until another #line directive overrides that
+    numbering."
+
+Additions to Appendix A (Looking up Paths in Trees) of the OpenGL
+Shading Language 1.50 Specification
+
+    Add a new appendix A:
+
+   "Appendix A: Looking up Paths in Trees
+
+    Introduction
+
+    The GLSL #include mechanism looks up paths in a tree built through
+    the OpenGL API. This appendix describes the syntax and semantic
+    model of the tree and paths into the tree. How the tree is used is
+    up to users of the tree, like the OpenGL API or GLSL.
+
+    The Tree
+
+    The tree is a singly rooted hierarchy of tree locations. The root
+    may have one or more child locations, and any location may in turn
+    have its own children. Except for the root, each location has
+    exactly one parent; the root has no parent.
+
+    Paths into the Tree
+
+    The locations in the tree are created or looked up by path strings.
+    The path string "/" locates the root of the tree. The path "/foo"
+    locates the child "foo" of the root. Formally, a valid path is a
+    sequence of tokens delimited by the beginning of the string, by the
+    path-separator forward slash ( / ), and by the end of the string.
+    The string "foo/bar" has two tokens; "foo" and "bar". The string
+    "/foo/./bar" has 3 tokens; "foo", ".", and "bar". The string
+    "/foo/.." has two tokens; "foo" and "..". The string "/foo/.bar" has
+    two tokens; "foo" and ".bar". A path is invalid if
+
+      * <path> contains any characters not listed in Section 3.1
+        "Character Set", or the double quote character, or angled
+        brackets, or any white space characters other than the space
+        character,
+      * <path> has consecutive forward slashes ( // ); "/foo//bar" is
+        not valid (zero length tokens are not allowed),
+      * <path> ends with a forward slash ( / ), or
+      * <path> contains no characters.
+
+    There are no path escape characters, so there is no way to get the
+    forward slash delimiter within a single token.
+
+    When using a path to lookup a tree location, the path tokens are
+    used to walk the tree. The initial location to start the walk is
+    specified by the user of the tree and is updated as follows by the
+    tokens in the path. (Paths starting with "/" will start at the
+    root.) Taken left to right:
+
+    The token ".." walks to the parent. Or, if already at the root, then
+    the location remains at the root.
+
+    The token "." leaves the location unchanged.
+
+    Any other token is considered the name of a child of the current
+    location, and walks to that child. (If there is no child of that
+    name, this may result in a failed lookup or in the child being
+    created, as specified by the user of the tree for the operation
+    being performed.)
+
+    Associated Strings
+
+    Each location in the tree can have an additional string associated
+    with it (that a user like the #include mechanism can use as an
+    included string). This is true even for locations that have
+    children: "/foo/bar" can exist in the tree at the same time that
+    "/foo" has an additional string associated with it. Typically, when
+    a path is used to find a location in the tree, it is for the purpose
+    of returning this associated string.
+
+    Hence, the tree can be built from a collection of (path,string)
+    pairs, where path is a string establishing the existence of a
+    location in the tree and string is the string associated with the
+    node. Details of how to do this are specified by the user of the
+    tree."
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    To be determined.
+
+Errors
+
+    <fill in from spec language above>
+
+New State
+
+    Add new state table 6.46 and renumber existing
+    tables starting at 6.47:
+
+   "Table 6.46: Named String State
+
+    Get Value               Initial Value Get Command         Type    Description           Sec.   Attribute
+    ---------               ------------- ----------------    ------  --------------------- ------ ---------
+    NAMED_STRING_LENGTH_ARB --            GetNamedStringivARB n x Z+  Named string length   6.1.10 --
+    NAMED_STRING_TYPE_ARB   --            GetNamedStringivARB n x Z_1 Named string type     6.1.10 --
+    --                      --            GetNamedStringARB   n x S   Named string contents 6.1.10 --"
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------- ------------------------------------------
+    17    13/06/24  Jon Leech
+      - Add additional 'const' attribute to CompileShaderIncludeARB
+        <path> (Bug 9006).
+    16    10/02/10  Jon Leech
+      - Remove 'const' attribute from GetNamedStringARB <stringlen>.
+    15    10/01/27  Jon Leech
+      - Update issues. Minor corrections from John Kessenich.
+    14    10/01/26  pbrown
+      - Assigned enumerant values.
+    13    10/01/26  Jon Leech
+      - Restore ARB suffixes.
+    12    10/01/25  Jon Leech
+      - Merge major edits from GLSL 1.60 (now GLSL 3.30).
+    11    10/01/14  Jon Leech
+      - Sync up with minor edits to the GL 3.3 API spec language. Major
+        edits to the GLSL 1.60 spec language are still to be pulled back
+        into the extension.
+    10    09/11/12  Jon Leech
+      - Remove redundant <namelen> == zero errors, since an empty name
+        is not a valid pathname.
+      - Change "match" to "have the same meanings as" when describing
+        parameters common to multiple commands.
+      - Make errors for CompileShaderInclude consistent and more
+        robust against NULL pointers.
+      - Confirm that IsNamedString does not generate errors due to
+        otherwise invalid names.
+      - Added Bruce's comments on sharing to issue 4.
+     9    09/10/30  Jon Leech
+      - Replace "canonical pathname" with "tree location".
+      - Add NAMED_STRING_TYPE query.
+      - Add new state table with named string parameters and contents.
+      - Add issue 20 on why there are no examples.
+     8    09/10/29  Jon Leech
+      - Add GetNamedStringiv query for named string length.
+      - Add requirement to pathname rule 3 that #include strings and
+        string names may not end in '/', but search paths may end in
+        '/'.
+      - Change type of 'namelen' and 'stringlen' parameters from sizei
+        to int to allow specifying null-termianted strings.
+      - Finish removing references to namespaces from GLSL language.
+     7    09/10/28  Jon Leech
+      Many changes from group discussion:
+      - Rename extension to ARB_shading_language_include by
+        symmetry with ARB_shading_language_100.
+      - Remove namespace objects and go back to a single shared named
+        string dictionary.
+      - Remove __FILE_NAMESPACE__ macro from shader language.
+      - Pass multiple path strings to CompileShaderInclude, instead of
+        multiple namespace objects.
+      - Require all string names and paths specified through the API to
+        start with '/'.
+      - Support both #include <name> and #include "name" and try to make
+        usage correspond to expectations of C/C++ programmers.
+      - Allow "." and ".." in pathnames and otherwise refine
+        rules on allowed paths.
+      - Introduce concept of canonical pathnames as the key in
+        the named string dictionary.
+      - Added GetNamedString query for completeness.
+      - Still need to expand bullet list of #include behavior into GLSL
+        spec language.
+      - Updated sharing model.
+     6    09/10/15  Jon Leech
+      - Change type of CompileShaderInclude <length> parameter to sizei.
+      - Add GLSL spec edits from John Kessenich, related issues 16-18,
+        and describe the required #extension line.
+      - Use #include <name> instead of #include "name" (see issue 15).
+      - Fix type of CompileShaderInclude <length> parameter.
+      - Make namespace contents invariant for the duration of
+        CompileShaderInclude (from the point of view of the code being
+        compiled).
+      - Update sharing and object model issues 4 and 8 and corresponding
+        Appendix D and error language in the spec.
+      - Fix typos.
+     5    09/10/14  Jon Leech
+      - Rewritten to add namespaces as proposed by Daniel Koch.
+      - Use the shader and program object model for namespace objects.
+      - Change the appendix D language for how multicontext changes to
+        namespaces and names are handled
+      - Update all the issues.
+     4    09/10/04  Jon Leech Add more issues from email discussion
+     3    09/09/24  Jon Leech Define named strings as shared resources
+     2    09/09/24  Jon Leech Fix name of DeleteNamedString
+     1    09/09/24  Jon Leech Initial revision for the Phoenix F2F mtg
+
+Issues
+
+    1) Should names be global, per-program, or per-shader?
+
+        RESOLVED: names are global across the context share list. This
+        is desirable since the point of #include is to reuse as much
+        content as possible.
+
+    2) Should named strings be specified in the API with a single
+       string, or with an array of strings like ShaderSource?
+
+        RESOLVED: a single string.
+
+    3) Are there any constraints on the contents of string names and
+       strings?
+
+        RESOLVED: There are constraints on string names when a named
+        string is defined, deleted, or queried. Names must be valid GLSL
+        pathnames and must also begin with '/'. Additionally string
+        names are converted to tree locations prior to defining a
+        string.
+
+        There are no definition-time constraints on string contents,
+        though of course #include directives must expand to legal source
+        in the shader being compiled, or compilation will fail.
+
+    4) How full-featured are named string objects?
+
+        PROPOSED: named strings are full-fledged objects, although they
+        are objects whose names are "tree locations" corresponding to
+        strings specified in the API, instead of GLuint handles.
+
+        Named strings are intended to be very simple objects which will
+        be infrequently created, updated, or deleted, so naming them by
+        passing string names should be fast enough for this use. There
+        is an IsNamedString query, but there is no way to iterate over
+        all the strings (just as there is no way to iterate over all the
+        names of any other class of object in OpenGL).
+
+        UNRESOLVED: we still need to make sure the proposed sharing
+        rules will make sense and address all the special cases.
+        Bruce offered the following comments on spec language:
+
+       "When a named string, shader object, or program object is
+        deleted, it is flagged for deletion, but its name remains valid
+        until the underlying object can be deleted because it is no
+        longer in use."
+
+        Bruce: I think there are potentially some problems with this.
+        Consider an app routine that does something like this:
+
+        1. Walks some directory tree on the FS
+        2. Suck in all the contents, make named strings out of them.
+        3. CompileShaderIncludes
+        4. Deletes the named strings it created.
+
+        Now suppose this routine is used twice, and at the same time
+        another thread/context calls CompileShaderIncludes (even
+        implicitly via CompilerShader, with no #includes in the source)
+        - according to the language below, this still causes the entire
+        database to become attached. If this other CompileShaderIncludes
+        starts just before step 4 the first time round, and end just
+        before step 3 the second time around, then all the deletions
+        suddenly kick in right before we were about to call the
+        compiler. So even though these compilations used completely
+        disjoint sets of objects, they still managed to cause spooky
+        action at a distance.
+
+       "[fn4 - implementations may use locking, caching, or other
+        techniques to realize such invariance. Again this effectively
+        places a lock around the dictionary in order to provide
+        predictable multicontext behavior across all implementations.]"
+
+        Bruce: I don't see how changing names in the middle of
+        compilation is any different from calling ShaderSource in one
+        context at the same time as CompileShader in the other context.
+        Making such guarantees aren't going to make apps that don't
+        synchronise their threads properly magically start working, and
+        they could add a lot of extra complexity to what is supposed to
+        be a very simple system.
+
+    5) Do we need named string queries?
+
+        RESOLVED: Since they are objects (albeit simple ones), we
+        support queries.
+
+    6)  The GLSL language is underspecified
+
+        UNRESOLVED: John Kessenich has written up a detailed bullet list
+        defining the behavior of #include and how API string names and
+        #include string arguments are converted to "tree locations". The
+        bullet points has not yet been refined into final spec language.
+
+    7) What is the <type> parameter for?
+
+        RESOLVED: Future expansion.
+
+    8) Are named strings shared?
+
+        RESOLVED: Yes. The update semantics may appear odd because named
+        strings are not explicitly bound to a context; they simply exist
+        in the share list. Appendix D language has been updated to
+        describe treat CompileShaderInclude as a virtual bind point
+        which "directly attaches" all named strings to the context for
+        the duration of any compilation in which they may be used.
+
+        RESOLVED: CompileShaderInclude is defined to use the state of
+        the named string dictionary at the time it is called. Additions
+        or deletions from other contexts will not affect an ongoing
+        compile. This might be implemented with any combination of
+        techniques such as locks, reference counting against deletion,
+        caching context-local copies, etc. This should produce
+        well-defined behavior without overly constraining implementation
+        choices.
+
+    9) What is the binding point at which #include strings are
+       associated with shaders?
+
+        RESOLVED: CompileShaderInclude. Since the string associated with
+        a name can change over time, for predictability we must specify
+        when a shader expands #include directives. CompileShaderInclude
+        is the only logical place to do this.
+
+        If there are any implementations which defer compilation, they
+        will probably have to do extra work in CompileShaderInclude to
+        cache the named string contents at that time.
+
+    10) Who is responsible for creating the named string dictionary?
+
+        RESOLVED: The app. This extension provides mechanism, not
+        policy, and there is no realistic and portable way for a GL
+        implementation to guess what #include directives are supposed to
+        mean. However, it's straightforward to provide utility libraries
+        which read a particular directory tree of files and define them
+        as a corresponding set of named strings in GL.
+
+        In the future, it would be possible for a layered extension to
+        allow directly searching the client filesystem by passing
+        special searchpaths to CompileShaderInclude. For example, the
+        path "//usr/include/GL", which is not a valid search path in
+        this extension, could be defined to search starting in
+        /usr/include/GL on the client filesystem. There are a number of
+        thorny pitfalls in such usage (for example portability and
+        implementability on separate client/server hardware) and we do
+        not feel a need to support such usage initially.
+
+    11) Do we need to provide a "#once" or "#pragma once" directive to
+        protect against re-inclusion of headers, and possible infinite
+        loops of #includes?
+
+        RESOLVED: No (by straw poll of the Nextgen TSG on 2009/10/19).
+        Instead the
+
+            #ifndef FOO_H
+            #define FOO_H
+            ...
+            #endif /* FOO_H */
+
+        approach can be used. See discussion of this feature in C:
+
+            http://en.wikipedia.org/wiki/Pragma_once
+
+    12) What other approaches for named strings exist?
+
+        Alternatives we experimented with were a new shader type along
+        with a #name or glShaderName() directive, or explicit "include
+        space" objects in which named strings exist, instead of what is
+        effectively a single implicit "include space" object as in this
+        proposal.
+
+    13) Should we impose syntax and namespace rules on string names?
+
+        RESOLVED: String names (API) and search paths / #include
+        pathnames (GLSL) are expressed in a syntax supporting many Unix
+        pathnames as well as the "." and ".." directives, and must be in
+        the valid GLSL character set. Exact rules define how #include
+        pathnames are searched for in the named string database.
+
+        RESOLVED: We do not impose any namespace rules on string names
+        or search paths.
+
+        PROPOSED: We suggest that string names starting with "/GL/" be
+        reserved to Khronos, but do not enforce this, and also suggest
+        that applications use consistent conventions on pathnames, such
+        as defining named strings under "/<vendorname>/path" and
+        referring to them by that same name in #include directives.
+
+    14) Is this an extension or a "feature specification"?
+
+        RESOLVED: An extension. We decided not to put #include into
+        OpenGL 3.3 / 4.0 yet.
+
+    15) How are nested (and potentially relative) includes handled?
+
+        RESOLVED: Rules like those of a Unix C preprocessor are used to
+        combine #include arguments with the specified compiler search
+        path.
+
+    16) Do we really need to override the source string name with #line?
+        This seems of questionable benefit.
+
+        RESOLVED: Yes. Of utility to automatic code generators like
+        Yacc.
+
+    17) Should 0 or something like -1 be substituted for __FILE_SPACE__
+        when used in a non-included sting?
+
+        PROPOSED: __FILE_NAMESPACE__ is no longer required, since
+        explicit namespace objects have been removed from the extension.
+        Instead __FILE__ is replaced with something corresponding to the
+        "tree location" of the #include file being processed.
+
+    18) Consistency of API and GLSL string names / pathnames.
+
+        RESOLVED: The API and GLSL validate string names using the same
+        rules, which are defined in the GLSL specification.
+
+    19) Why must string names and search paths in the API start with
+        '/'?
+
+        Because string names and search paths must both be absolute,
+        rather than relative, paths to function as intended.
+
+    20) Should there be examples of names and how multiple names
+        correspond to the same tree location?
+
+        UNRESOLVED.

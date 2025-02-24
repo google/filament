@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+int i(int x) {
+  return as_type<int>((~(as_type<uint>(x)) + 1u));
+}
+
+int4 vi(int4 x) {
+  return as_type<int4>((~(as_type<uint4>(x)) + uint4(1u)));
+}

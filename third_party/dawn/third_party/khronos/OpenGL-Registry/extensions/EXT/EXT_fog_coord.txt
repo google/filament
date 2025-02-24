@@ -1,0 +1,380 @@
+Name
+
+    EXT_fog_coord
+
+Name Strings
+
+    GL_EXT_fog_coord
+
+Contact
+
+    Jon Leech, Silicon Graphics (ljp 'at' sgi.com)
+
+Status
+
+    Shipping (version 1.6)
+
+Version
+
+    $Date: 1999/06/21 19:57:19 $ $Revision: 1.11 $
+
+Number
+
+    149
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    The extension is written against the OpenGL 1.2 Specification.
+
+Overview
+
+    This extension allows specifying an explicit per-vertex fog
+    coordinate to be used in fog computations, rather than using a
+    fragment depth-based fog equation.
+
+Issues
+
+  * Should the specified value be used directly as the fog weighting
+    factor, or in place of the z input to the fog equations?
+
+        As the z input; more flexible and meets ISV requests.
+
+  * Do we want vertex array entry points? Interleaved array formats?
+
+        Yes for entry points, no for interleaved formats, following the
+        argument for secondary_color.
+
+  * Which scalar types should FogCoord accept? The full range, or just
+    the unsigned and float versions? At the moment it follows Index(),
+    which takes unsigned byte, signed short, signed int, float, and
+    double.
+
+        Since we're now specifying a number which behaves like an
+        eye-space distance, rather than a [0,1] quantity, integer types
+        are less useful. However, restricting the commands to floating
+        point forms only introduces some nonorthogonality.
+
+        Restrict to only float and double, for now.
+
+  * Interpolation of the fog coordinate may be perspective-correct or
+    not. Should this be affected by PERSPECTIVE_CORRECTION_HINT,
+    FOG_HINT, or another to-be-defined hint?
+
+        PERSPECTIVE_CORRECTION_HINT; this is already defined to affect
+        all interpolated parameters. Admittedly this is a loss of
+        orthogonality.
+
+  * Should the current fog coordinate be queryable?
+
+        Yes, but it's not returned by feedback.
+
+  * Control the fog coordinate source via an Enable instead of a fog
+    parameter?
+
+        No. We might want to add more sources later.
+
+  * Should the fog coordinate be restricted to non-negative values?
+
+        Perhaps. Eye-coordinate distance of fragments will be
+        non-negative due to clipping. Specifying explicit negative
+        coordinates may result in very large computed f values, although
+        they are defined to be clipped after computation.
+
+  * Use existing DEPTH enum instead of FRAGMENT_DEPTH? Change name of
+    FRAGMENT_DEPTH_EXT to FOG_FRAGMENT_DEPTH_EXT?
+
+        Use FRAGMENT_DEPTH_EXT; FOG_FRAGMENT_DEPTH_EXT is somewhat
+        misleading, since fragment depth itself has no dependence on
+        fog.
+
+New Procedures and Functions
+
+    void FogCoord[fd]EXT(T coord)
+    void FogCoord[fd]vEXT(T coord)
+    void FogCoordPointerEXT(enum type, sizei stride, void *pointer)
+
+New Tokens
+
+    Accepted by the <pname> parameter of Fogi and Fogf:
+
+        FOG_COORDINATE_SOURCE_EXT           0x8450
+
+    Accepted by the <param> parameter of Fogi and Fogf:
+
+        FOG_COORDINATE_EXT                  0x8451
+        FRAGMENT_DEPTH_EXT                  0x8452
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        CURRENT_FOG_COORDINATE_EXT          0x8453
+        FOG_COORDINATE_ARRAY_TYPE_EXT       0x8454
+        FOG_COORDINATE_ARRAY_STRIDE_EXT     0x8455
+
+    Accepted by the <pname> parameter of GetPointerv:
+
+        FOG_COORDINATE_ARRAY_POINTER_EXT    0x8456
+
+    Accepted by the <array> parameter of EnableClientState and
+    DisableClientState:
+
+        FOG_COORDINATE_ARRAY_EXT            0x8457
+
+Additions to Chapter 2 of the OpenGL 1.2 Specification (OpenGL Operation)
+
+  These changes describe a new current state type, the fog coordinate,
+  and the commands to specify it:
+
+  - (2.6, p. 12) Second paragraph changed to:
+
+        "Each vertex is specified with two, three, or four coordinates.
+        In addition, a current normal, current texture coordinates,
+        current color, and current fog coordinate may be used in
+        processing each vertex."
+
+  - 2.6.3, p. 19) First paragraph changed to
+
+        "The only GL commands that are allowed within any Begin/End
+        pairs are the commands for specifying vertex coordinates, vertex
+        colors, normal coordinates, texture coordinates, and fog
+        coordinates (Vertex, Color, Index, Normal, TexCoord,
+        FogCoord)..."
+
+  - (2.7, p. 20) Insert the following paragraph following the third
+        paragraph describing current normals:
+
+        "   The current fog coodinate is set using
+                void FogCoord[fd]EXT(T coord)
+                void FogCoord[fd]vEXT(T coord)."
+
+    The last paragraph is changed to read:
+
+        "The state required to support vertex specification consists of
+        four floating-point numbers to store the current texture
+        coordinates s, t, r, and q, one floating-point value to store
+        the current fog coordinate, four floating-point values to store
+        the current RGBA color, and one floating-point value to store
+        the current color index. There is no notion of a current vertex,
+        so no state is devoted to vertex coordinates. The initial values
+        of s, t, and r of the current texture coordinates are zero; the
+        initial value of q is one. The initial fog coordinate is zero.
+        The initial current normal has coordinates (0,0,1). The initial
+        RGBA color is (R,G,B,A) = (1,1,1,1). The initial color index is
+        1."
+
+  - (2.8, p. 21) Added fog coordinate command for vertex arrays:
+
+    Change first paragraph to read:
+
+        "The vertex specification commands described in section 2.7
+        accept data in almost any format, but their use requires many
+        command executions to specify even simple geometry. Vertex data
+        may also be placed into arrays that are stored in the client's
+        address space. Blocks of data in these arrays may then be used
+        to specify multiple geometric primitives through the execution
+        of a single GL command. The client may specify up to seven
+        arrays: one each to store edge flags, texture coordinates, fog
+        coordinates, colors, color indices, normals, and vertices. The
+        commands"
+
+    Add to functions listed following first paragraph:
+
+        void FogCoordPointerEXT(enum type, sizei stride, void *pointer)
+
+    Add to table 2.4 (p. 22):
+
+        Command                     Sizes   Types
+        -------                     -----   -----
+        FogCoordPointerEXT          1       float,double
+
+    Starting with the second paragraph on p. 23, change to add
+    FOG_COORDINATE_ARRAY_EXT:
+
+        "An individual array is enabled or disabled by calling one of
+
+            void EnableClientState(enum array)
+            void DisableClientState(enum array)
+
+        with array set to EDGE_FLAG_ARRAY, TEXTURE_COORD_ARRAY,
+        FOG_COORDINATE_ARRAY_EXT, COLOR_ARRAY, INDEX_ARRAY,
+        NORMAL_ARRAY, or VERTEX_ARRAY, for the edge flag, texture
+        coordinate, fog coordinate, color, color index, normal, or
+        vertex array, respectively.
+
+        The ith element of every enabled array is transferred to the GL
+        by calling
+
+            void ArrayElement(int i)
+
+        For each enabled array, it is as though the corresponding
+        command from section 2.7 or section 2.6.2 were called with a
+        pointer to element i. For the vertex array, the corresponding
+        command is Vertex<size><type>v, where <size> is one of [2,3,4],
+        and <type> is one of [s,i,f,d], corresponding to array types
+        short, int, float, and double respectively. The corresponding
+        commands for the edge flag, texture coordinate, fog coordinate,
+        color, color, color index, and normal arrays are EdgeFlagv,
+        TexCoord<size><type>v, FogCoord<type>v, Color<size><type>v,
+        Index<type>v, and Normal<type>v, respectively..."
+
+    Change pseudocode on p. 27 to disable fog coordinate array for
+    canned interleaved array formats. After the lines
+
+            DisableClientState(EDGE_FLAG_ARRAY);
+            DisableClientState(INDEX_ARRAY);
+
+        insert the line
+
+            DisableClientState(FOG_COORDINATE_ARRAY_EXT);
+
+    Substitute "seven" for every occurence of "six" in the final
+    paragraph on p. 27.
+
+  - (2.12, p. 41) Add fog coordinate to the current rasterpos state.
+
+    Change the first sentence of the first paragraph to read
+
+        "The state required for the current raster position consists of
+        three window coordinates x_w, y_w, and z_w, a clip coordinate
+        w_c value, an eye coordinate distance, a fog coordinate, a valid
+        bit, and associated data consisting of a color and texture
+        coordinates."
+
+    Change the last paragraph to read
+
+        "The current raster position requires six single-precision
+        floating-point values for its x_w, y_w, and z_w window
+        coordinates, its w_c clip coordinate, its eye coordinate
+        distance, and its fog coordinate, a single valid bit, a color
+        (RGBA color and color index), and texture coordinates for
+        associated data. In the initial state, the coordinates and
+        texture coordinates are both (0,0,0,1), the fog coordinate is 0,
+        the eye coordinate distance is 0, the valid bit is set, the
+        associated RGBA color is (1,1,1,1), and the associated color
+        index color is 1. In RGBA mode, the associated color index
+        always has its initial value; in color index mode, the RGBA
+        color always maintains its initial value."
+
+  - (3.10, p. 139) Change the second and third paragraphs to read
+
+        "This factor f may be computed according to one of three
+        equations:"
+
+            f = exp(-d*c)       (3.24)
+            f = exp(-(d*c)^2)   (3.25)
+            f = (e-c)/(e-s)     (3.26)
+
+        If the fog source (as defined below) is FRAGMENT_DEPTH_EXT, then
+        c is the eye-coordinate distance from the eye, (0 0 0 1) in eye
+        coordinates, to the fragment center. If the fog source is
+        FOG_COORDINATE_EXT, then c is the interpolated value of the fog
+        coordinate for this fragment. The equation and the fog source,
+        along with either d or e and s, is specified with
+
+            void Fog{if}(enum pname, T param);
+            void Fog{if}v(enum pname, T params);
+
+        If <pname> is FOG_MODE, then <param> must be, or <param> must
+        point to an integer that is one of the symbolic constants EXP,
+        EXP2, or LINEAR, in which case equation 3.24, 3.25, or 3.26,,
+        respectively, is selected for the fog calculation (if, when 3.26
+        is selected, e = s, results are undefined). If <pname> is
+        FOG_COORDINATE_SOURCE_EXT, then <param> is or <params> points to
+        an integer that is one of the symbolic constants
+        FRAGMENT_DEPTH_EXT or FOG_COORDINATE_EXT. If <pname> is
+        FOG_DENSITY, FOG_START, or FOG_END, then <param> is or <params>
+        points to a value that is d, s, or e, respectively. If d is
+        specified less than zero, the error INVALID_VALUE results."
+
+  - (3.10, p. 140) Change the last paragraph preceding section 3.11
+    to read
+
+        "The state required for fog consists of a three valued integer
+        to select the fog equation, three floating-point values d, e,
+        and s, an RGBA fog color and a fog color index, a two-valued
+        integer to select the fog coordinate source, and a single bit to
+        indicate whether or not fog is enabled. In the initial state,
+        fog is disabled, FOG_COORDINATE_SOURCE_EXT is
+        FRAGMENT_DEPTH_EXT, FOG_MODE is EXP, d = 1.0, e = 1.0, and s =
+        0.0; C_f = (0,0,0,0) and i_f=0."
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2 Specification (State and State
+Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+Additions to the GLX / WGL / AGL Specifications
+
+    None
+
+GLX Protocol
+
+    Two new GL rendering commands are added. The following commands are
+    sent to the server as part of a glXRender request:
+
+        FogCoordfvEXT
+            2           8               rendering command length
+            2           4124            rendering command opcode
+            4           FLOAT32         v[0]
+
+        FogCoorddvEXT
+            2           12              rendering command length
+            2           4125            rendering command opcode
+            8           FLOAT64         v[0]
+
+Errors
+
+    INVALID_ENUM is generated if FogCoordPointerEXT parameter <type> is
+    not FLOAT or DOUBLE.
+
+    INVALID_VALUE is generated if FogCoordPointerEXT parameter <stride>
+    is negative.
+
+New State
+
+(table 6.5, p. 195)
+    Get Value                   Type    Get Command     Initial Value   Description     Sec Attribute
+    ---------                   ----    -----------     -------------   -----------     --- ---------
+    CURRENT_FOG_COORDINATE_EXT  R       GetIntegerv,    0               Current         2.7 current
+                                        GetFloatv                       fog coordinate
+
+(table 6.6, p. 197)
+    Get Value                           Type    Get Command     Initial Value   Description                     Sec Attribute
+    ---------                           ----    -----------     -------------   -----------                     --- ---------
+    FOG_COORDINATE_ARRAY_EXT            B       IsEnabled       False           Fog coord array enable          2.8 vertex-array
+    FOG_COORDINATE_ARRAY_TYPE_EXT       Z8      GetIntegerv     FLOAT           Type of fog coordinate          2.8 vertex-array
+    FOG_COORDINATE_ARRAY_STRIDE_EXT     Z+      GetIntegerv     0               Stride between fog coords       2.8 vertex-array
+    FOG_COORDINATE_ARRAY_POINTER_EXT    Y       GetPointerv     0               Pointer to the fog coord array  2.8 vertex-array
+
+
+(table 6.8, p. 198)
+    Get Value                   Type    Get Command     Initial Value       Description     Sec     Attribute
+    ---------                   ----    -----------     -------------       -----------     ---     ---------
+    FOG_COORDINATE_SOURCE_EXT   Z2      GetIntegerv,    FRAGMENT_DEPTH_EXT  Source of fog   3.10    fog
+                                        GetFloatv                           coordinate for
+                                                                            fog calculation
+
+Revision History
+
+  * Revision 1.6 - Functionality complete
+
+  * Revision 1.7-1.9 - Fix typos and add fields to bring up to date with
+    the new extension template. No functionality changes.

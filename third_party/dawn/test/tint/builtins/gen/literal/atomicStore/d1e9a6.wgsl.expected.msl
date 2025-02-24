@@ -1,0 +1,44 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct SB_RW {
+  /* 0x0000 */ atomic_int arg_0;
+};
+
+struct tint_module_vars_struct {
+  device SB_RW* sb_rw;
+};
+
+void atomicStore_d1e9a6(tint_module_vars_struct tint_module_vars) {
+  atomic_store_explicit((&(*tint_module_vars.sb_rw).arg_0), 1, memory_order_relaxed);
+}
+
+fragment void fragment_main(device SB_RW* sb_rw [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb_rw=sb_rw};
+  atomicStore_d1e9a6(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct SB_RW {
+  /* 0x0000 */ atomic_int arg_0;
+};
+
+struct tint_module_vars_struct {
+  device SB_RW* sb_rw;
+};
+
+void atomicStore_d1e9a6(tint_module_vars_struct tint_module_vars) {
+  atomic_store_explicit((&(*tint_module_vars.sb_rw).arg_0), 1, memory_order_relaxed);
+}
+
+kernel void compute_main(device SB_RW* sb_rw [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb_rw=sb_rw};
+  atomicStore_d1e9a6(tint_module_vars);
+}

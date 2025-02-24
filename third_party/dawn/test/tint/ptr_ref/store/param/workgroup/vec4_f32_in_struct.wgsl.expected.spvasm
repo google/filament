@@ -1,0 +1,64 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 35
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %main_local_invocation_index_Input
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %str 0 "i"
+               OpName %str "str"
+               OpName %S "S"
+               OpName %main_local_invocation_index_Input "main_local_invocation_index_Input"
+               OpName %func "func"
+               OpName %main_inner "main_inner"
+               OpName %tint_local_index "tint_local_index"
+               OpName %main "main"
+               OpMemberDecorate %str 0 Offset 0
+               OpDecorate %main_local_invocation_index_Input BuiltIn LocalInvocationIndex
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+        %str = OpTypeStruct %v4float
+%_ptr_Workgroup_str = OpTypePointer Workgroup %str
+          %S = OpVariable %_ptr_Workgroup_str Workgroup
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%main_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void
+%_ptr_Workgroup_v4float = OpTypePointer Workgroup %v4float
+     %uint_0 = OpConstant %uint 0
+         %16 = OpConstantNull %v4float
+         %19 = OpTypeFunction %void %uint
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+         %26 = OpConstantNull %str
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+       %func = OpFunction %void None %11
+         %12 = OpLabel
+         %13 = OpAccessChain %_ptr_Workgroup_v4float %S %uint_0
+               OpStore %13 %16 None
+               OpReturn
+               OpFunctionEnd
+ %main_inner = OpFunction %void None %19
+%tint_local_index = OpFunctionParameter %uint
+         %20 = OpLabel
+         %21 = OpULessThan %bool %tint_local_index %uint_1
+               OpSelectionMerge %24 None
+               OpBranchConditional %21 %25 %24
+         %25 = OpLabel
+               OpStore %S %26 None
+               OpBranch %24
+         %24 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %30 = OpFunctionCall %void %func
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %11
+         %32 = OpLabel
+         %33 = OpLoad %uint %main_local_invocation_index_Input None
+         %34 = OpFunctionCall %void %main_inner %33
+               OpReturn
+               OpFunctionEnd

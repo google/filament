@@ -1,0 +1,83 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 45
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %global "global"
+               OpName %foo "foo"
+               OpName %x "x"
+               OpName %baz "baz"
+               OpName %x_0 "x"
+               OpName %bar "bar"
+               OpName %x_1 "x"
+               OpName %main "main"
+               OpName %tint_f32_to_i32 "tint_f32_to_i32"
+               OpName %value "value"
+               OpName %unused_entry_point "unused_entry_point"
+        %int = OpTypeInt 32 1
+%_ptr_Private_int = OpTypePointer Private %int
+          %4 = OpConstantNull %int
+     %global = OpVariable %_ptr_Private_int Private %4
+       %void = OpTypeVoid
+      %float = OpTypeFloat 32
+          %9 = OpTypeFunction %void %float
+         %17 = OpTypeFunction %int %int
+     %int_42 = OpConstant %int 42
+         %28 = OpTypeFunction %void
+         %31 = OpTypeFunction %int %float
+%float_n2_14748365e_09 = OpConstant %float -2.14748365e+09
+       %bool = OpTypeBool
+%int_n2147483648 = OpConstant %int -2147483648
+%float_2_14748352e_09 = OpConstant %float 2.14748352e+09
+%int_2147483647 = OpConstant %int 2147483647
+        %foo = OpFunction %void None %9
+          %x = OpFunctionParameter %float
+         %10 = OpLabel
+         %11 = OpFunctionCall %int %tint_f32_to_i32 %x
+               OpSelectionMerge %14 None
+               OpSwitch %11 %13
+         %13 = OpLabel
+               OpBranch %14
+         %14 = OpLabel
+               OpReturn
+               OpFunctionEnd
+        %baz = OpFunction %int None %17
+        %x_0 = OpFunctionParameter %int
+         %18 = OpLabel
+               OpStore %global %int_42 None
+               OpReturnValue %x_0
+               OpFunctionEnd
+        %bar = OpFunction %void None %9
+        %x_1 = OpFunctionParameter %float
+         %22 = OpLabel
+         %23 = OpFunctionCall %int %tint_f32_to_i32 %x_1
+         %24 = OpFunctionCall %int %baz %23
+               OpSelectionMerge %26 None
+               OpSwitch %24 %25
+         %25 = OpLabel
+               OpBranch %26
+         %26 = OpLabel
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %28
+         %29 = OpLabel
+               OpReturn
+               OpFunctionEnd
+%tint_f32_to_i32 = OpFunction %int None %31
+      %value = OpFunctionParameter %float
+         %32 = OpLabel
+         %33 = OpConvertFToS %int %value
+         %34 = OpFOrdGreaterThanEqual %bool %value %float_n2_14748365e_09
+         %37 = OpSelect %int %34 %33 %int_n2147483648
+         %39 = OpFOrdLessThanEqual %bool %value %float_2_14748352e_09
+         %41 = OpSelect %int %39 %37 %int_2147483647
+               OpReturnValue %41
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %28
+         %44 = OpLabel
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,22 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 430
+               OpName %main "main"
+               OpName %color "color"
+               OpDecorate %color Location 0
+       %void = OpTypeVoid
+          %5 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+      %color = OpVariable %_ptr_Output_v4float Output
+    %float_1 = OpConstant %float 1
+         %10 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+       %main = OpFunction %void None %5
+         %11 = OpLabel
+               OpStore %color %10
+               OpReturn
+               OpFunctionEnd

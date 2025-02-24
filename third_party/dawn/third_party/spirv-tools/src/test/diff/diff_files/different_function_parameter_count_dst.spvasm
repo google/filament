@@ -1,0 +1,52 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 28
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main" %20
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+               OpName %4 "main"
+               OpName %12 "f(vf2;vf2;"
+               OpName %10 "v"
+               OpName %11 "v2"
+               OpName %20 "o"
+               OpName %25 "param"
+               OpName %26 "param"
+               OpDecorate %20 RelaxedPrecision
+               OpDecorate %20 Location 0
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeFloat 32
+          %7 = OpTypeVector %6 2
+          %8 = OpTypePointer Function %7
+          %9 = OpTypeFunction %7 %8 %8
+         %19 = OpTypePointer Output %7
+         %20 = OpVariable %19 Output
+         %21 = OpConstant %6 0
+         %22 = OpConstantComposite %7 %21 %21
+         %23 = OpConstant %6 0.5
+         %24 = OpConstantComposite %7 %23 %23
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+         %25 = OpVariable %8 Function
+         %26 = OpVariable %8 Function
+               OpStore %25 %22
+               OpStore %26 %24
+         %27 = OpFunctionCall %7 %12 %25 %26
+               OpStore %20 %27
+               OpReturn
+               OpFunctionEnd
+         %12 = OpFunction %7 None %9
+         %10 = OpFunctionParameter %8
+         %11 = OpFunctionParameter %8
+         %13 = OpLabel
+         %14 = OpLoad %7 %10
+         %15 = OpLoad %7 %11
+         %16 = OpFAdd %7 %14 %15
+               OpReturnValue %16
+               OpFunctionEnd
+

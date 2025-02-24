@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void a() {
+}
+
+void a__() {
+}
+
+void b() {
+  a();
+}
+
+void b__() {
+  a__();
+}
+
+kernel void v() {
+  b();
+  b__();
+}

@@ -1,0 +1,54 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 34
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %u "u"
+               OpName %f "f"
+               OpName %v "v"
+               OpName %tint_v3f32_to_v3u32 "tint_v3f32_to_v3u32"
+               OpName %value "value"
+               OpName %unused_entry_point "unused_entry_point"
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%_ptr_Private_v3float = OpTypePointer Private %v3float
+    %float_1 = OpConstant %float 1
+          %5 = OpConstantComposite %v3float %float_1 %float_1 %float_1
+          %u = OpVariable %_ptr_Private_v3float Private %5
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+         %17 = OpTypeFunction %v3uint %v3float
+         %21 = OpConstantNull %v3float
+       %bool = OpTypeBool
+     %v3bool = OpTypeVector %bool 3
+         %25 = OpConstantNull %v3uint
+%float_4_29496704e_09 = OpConstant %float 4.29496704e+09
+         %27 = OpConstantComposite %v3float %float_4_29496704e_09 %float_4_29496704e_09 %float_4_29496704e_09
+%uint_4294967295 = OpConstant %uint 4294967295
+         %30 = OpConstantComposite %v3uint %uint_4294967295 %uint_4294967295 %uint_4294967295
+          %f = OpFunction %void None %9
+         %10 = OpLabel
+         %11 = OpLoad %v3float %u None
+          %v = OpFunctionCall %v3uint %tint_v3f32_to_v3u32 %11
+               OpReturn
+               OpFunctionEnd
+%tint_v3f32_to_v3u32 = OpFunction %v3uint None %17
+      %value = OpFunctionParameter %v3float
+         %18 = OpLabel
+         %19 = OpConvertFToU %v3uint %value
+         %20 = OpFOrdGreaterThanEqual %v3bool %value %21
+         %24 = OpSelect %v3uint %20 %19 %25
+         %26 = OpFOrdLessThanEqual %v3bool %value %27
+         %29 = OpSelect %v3uint %26 %24 %30
+               OpReturnValue %29
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %9
+         %33 = OpLabel
+               OpReturn
+               OpFunctionEnd

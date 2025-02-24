@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  const constant packed_half3* u;
+  device packed_half3* s;
+};
+
+kernel void v(const constant packed_half3* u [[buffer(0)]], device packed_half3* s [[buffer(1)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.u=u, .s=s};
+  half3 const x = half3((*tint_module_vars.u));
+  (*tint_module_vars.s) = packed_half3(x);
+}

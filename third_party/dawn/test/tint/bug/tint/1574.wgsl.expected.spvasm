@@ -1,0 +1,169 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 103
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %main_local_invocation_index_Input
+               OpExecutionMode %main LocalSize 16 1 1
+               OpMemberName %a_u32_block 0 "inner"
+               OpName %a_u32_block "a_u32_block"
+               OpMemberName %a_i32_block 0 "inner"
+               OpName %a_i32_block "a_i32_block"
+               OpName %b_u32 "b_u32"
+               OpName %b_i32 "b_i32"
+               OpName %main_local_invocation_index_Input "main_local_invocation_index_Input"
+               OpName %main_inner "main_inner"
+               OpName %tint_local_index "tint_local_index"
+               OpName %value "value"
+               OpMemberName %__atomic_compare_exchange_result_u32 0 "old_value"
+               OpMemberName %__atomic_compare_exchange_result_u32 1 "exchanged"
+               OpName %__atomic_compare_exchange_result_u32 "__atomic_compare_exchange_result_u32"
+               OpName %r1 "r1"
+               OpName %r2 "r2"
+               OpName %r3 "r3"
+               OpName %value_0 "value"
+               OpMemberName %__atomic_compare_exchange_result_i32 0 "old_value"
+               OpMemberName %__atomic_compare_exchange_result_i32 1 "exchanged"
+               OpName %__atomic_compare_exchange_result_i32 "__atomic_compare_exchange_result_i32"
+               OpName %r1_0 "r1"
+               OpName %r2_0 "r2"
+               OpName %r3_0 "r3"
+               OpName %value_1 "value"
+               OpName %r1_1 "r1"
+               OpName %r2_1 "r2"
+               OpName %r3_1 "r3"
+               OpName %value_2 "value"
+               OpName %r1_2 "r1"
+               OpName %r2_2 "r2"
+               OpName %r3_2 "r3"
+               OpName %main "main"
+               OpMemberDecorate %a_u32_block 0 Offset 0
+               OpDecorate %a_u32_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpMemberDecorate %a_i32_block 0 Offset 0
+               OpDecorate %a_i32_block Block
+               OpDecorate %5 DescriptorSet 0
+               OpDecorate %5 Binding 1
+               OpDecorate %5 Coherent
+               OpDecorate %main_local_invocation_index_Input BuiltIn LocalInvocationIndex
+               OpMemberDecorate %__atomic_compare_exchange_result_u32 0 Offset 0
+               OpMemberDecorate %__atomic_compare_exchange_result_u32 1 Offset 4
+               OpMemberDecorate %__atomic_compare_exchange_result_i32 0 Offset 0
+               OpMemberDecorate %__atomic_compare_exchange_result_i32 1 Offset 4
+       %uint = OpTypeInt 32 0
+%a_u32_block = OpTypeStruct %uint
+%_ptr_StorageBuffer_a_u32_block = OpTypePointer StorageBuffer %a_u32_block
+          %1 = OpVariable %_ptr_StorageBuffer_a_u32_block StorageBuffer
+        %int = OpTypeInt 32 1
+%a_i32_block = OpTypeStruct %int
+%_ptr_StorageBuffer_a_i32_block = OpTypePointer StorageBuffer %a_i32_block
+          %5 = OpVariable %_ptr_StorageBuffer_a_i32_block StorageBuffer
+%_ptr_Workgroup_uint = OpTypePointer Workgroup %uint
+      %b_u32 = OpVariable %_ptr_Workgroup_uint Workgroup
+%_ptr_Workgroup_int = OpTypePointer Workgroup %int
+      %b_i32 = OpVariable %_ptr_Workgroup_int Workgroup
+%_ptr_Input_uint = OpTypePointer Input %uint
+%main_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void %uint
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+     %uint_2 = OpConstant %uint 2
+     %uint_0 = OpConstant %uint 0
+      %int_0 = OpConstant %int 0
+   %uint_264 = OpConstant %uint 264
+%_ptr_Function_uint = OpTypePointer Function %uint
+    %uint_42 = OpConstant %uint 42
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+%__atomic_compare_exchange_result_u32 = OpTypeStruct %uint %bool
+%_ptr_Function_int = OpTypePointer Function %int
+     %int_42 = OpConstant %int 42
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+%__atomic_compare_exchange_result_i32 = OpTypeStruct %int %bool
+         %99 = OpTypeFunction %void
+ %main_inner = OpFunction %void None %18
+%tint_local_index = OpFunctionParameter %uint
+         %19 = OpLabel
+      %value = OpVariable %_ptr_Function_uint Function
+    %value_0 = OpVariable %_ptr_Function_int Function
+    %value_1 = OpVariable %_ptr_Function_uint Function
+    %value_2 = OpVariable %_ptr_Function_int Function
+         %20 = OpULessThan %bool %tint_local_index %uint_1
+               OpSelectionMerge %23 None
+               OpBranchConditional %20 %24 %23
+         %24 = OpLabel
+               OpAtomicStore %b_u32 %uint_2 %uint_0 %uint_0
+               OpAtomicStore %b_i32 %uint_2 %uint_0 %int_0
+               OpBranch %23
+         %23 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+               OpStore %value %uint_42
+         %35 = OpLoad %uint %value None
+         %36 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0
+         %38 = OpAtomicCompareExchange %uint %36 %uint_1 %uint_0 %uint_0 %35 %uint_0
+         %39 = OpIEqual %bool %38 %uint_0
+         %r1 = OpCompositeConstruct %__atomic_compare_exchange_result_u32 %38 %39
+         %42 = OpLoad %uint %value None
+         %43 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0
+         %44 = OpAtomicCompareExchange %uint %43 %uint_1 %uint_0 %uint_0 %42 %uint_0
+         %45 = OpIEqual %bool %44 %uint_0
+         %r2 = OpCompositeConstruct %__atomic_compare_exchange_result_u32 %44 %45
+         %47 = OpLoad %uint %value None
+         %48 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0
+         %49 = OpAtomicCompareExchange %uint %48 %uint_1 %uint_0 %uint_0 %47 %uint_0
+         %50 = OpIEqual %bool %49 %uint_0
+         %r3 = OpCompositeConstruct %__atomic_compare_exchange_result_u32 %49 %50
+               OpStore %value_0 %int_42
+         %55 = OpLoad %int %value_0 None
+         %56 = OpAccessChain %_ptr_StorageBuffer_int %5 %uint_0
+         %58 = OpAtomicCompareExchange %int %56 %uint_1 %uint_0 %uint_0 %55 %int_0
+         %59 = OpIEqual %bool %58 %int_0
+       %r1_0 = OpCompositeConstruct %__atomic_compare_exchange_result_i32 %58 %59
+         %62 = OpLoad %int %value_0 None
+         %63 = OpAccessChain %_ptr_StorageBuffer_int %5 %uint_0
+         %64 = OpAtomicCompareExchange %int %63 %uint_1 %uint_0 %uint_0 %62 %int_0
+         %65 = OpIEqual %bool %64 %int_0
+       %r2_0 = OpCompositeConstruct %__atomic_compare_exchange_result_i32 %64 %65
+         %67 = OpLoad %int %value_0 None
+         %68 = OpAccessChain %_ptr_StorageBuffer_int %5 %uint_0
+         %69 = OpAtomicCompareExchange %int %68 %uint_1 %uint_0 %uint_0 %67 %int_0
+         %70 = OpIEqual %bool %69 %int_0
+       %r3_0 = OpCompositeConstruct %__atomic_compare_exchange_result_i32 %69 %70
+               OpStore %value_1 %uint_42
+         %73 = OpLoad %uint %value_1 None
+         %74 = OpAtomicCompareExchange %uint %b_u32 %uint_2 %uint_0 %uint_0 %73 %uint_0
+         %75 = OpIEqual %bool %74 %uint_0
+       %r1_1 = OpCompositeConstruct %__atomic_compare_exchange_result_u32 %74 %75
+         %77 = OpLoad %uint %value_1 None
+         %78 = OpAtomicCompareExchange %uint %b_u32 %uint_2 %uint_0 %uint_0 %77 %uint_0
+         %79 = OpIEqual %bool %78 %uint_0
+       %r2_1 = OpCompositeConstruct %__atomic_compare_exchange_result_u32 %78 %79
+         %81 = OpLoad %uint %value_1 None
+         %82 = OpAtomicCompareExchange %uint %b_u32 %uint_2 %uint_0 %uint_0 %81 %uint_0
+         %83 = OpIEqual %bool %82 %uint_0
+       %r3_1 = OpCompositeConstruct %__atomic_compare_exchange_result_u32 %82 %83
+               OpStore %value_2 %int_42
+         %86 = OpLoad %int %value_2 None
+         %87 = OpAtomicCompareExchange %int %b_i32 %uint_2 %uint_0 %uint_0 %86 %int_0
+         %88 = OpIEqual %bool %87 %int_0
+       %r1_2 = OpCompositeConstruct %__atomic_compare_exchange_result_i32 %87 %88
+         %90 = OpLoad %int %value_2 None
+         %91 = OpAtomicCompareExchange %int %b_i32 %uint_2 %uint_0 %uint_0 %90 %int_0
+         %92 = OpIEqual %bool %91 %int_0
+       %r2_2 = OpCompositeConstruct %__atomic_compare_exchange_result_i32 %91 %92
+         %94 = OpLoad %int %value_2 None
+         %95 = OpAtomicCompareExchange %int %b_i32 %uint_2 %uint_0 %uint_0 %94 %int_0
+         %96 = OpIEqual %bool %95 %int_0
+       %r3_2 = OpCompositeConstruct %__atomic_compare_exchange_result_i32 %95 %96
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %99
+        %100 = OpLabel
+        %101 = OpLoad %uint %main_local_invocation_index_Input None
+        %102 = OpFunctionCall %void %main_inner %101
+               OpReturn
+               OpFunctionEnd

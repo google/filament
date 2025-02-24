@@ -1,0 +1,20 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexOutputs {
+  float4 position;
+};
+
+struct main_outputs {
+  float4 VertexOutputs_position [[position]];
+};
+
+VertexOutputs main_inner() {
+  return VertexOutputs{.position=float4(1.0f, 2.0f, 3.0f, 4.0f)};
+}
+
+vertex main_outputs v() {
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutputs_position = main_inner().position;
+  return tint_wrapper_result;
+}

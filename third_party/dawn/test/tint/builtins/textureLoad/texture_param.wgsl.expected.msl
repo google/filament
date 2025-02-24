@@ -1,0 +1,83 @@
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<int, access::sample> arg_0;
+};
+
+struct vertex_main_outputs {
+  float4 tint_symbol [[position]];
+};
+
+int4 textureLoad2d(texture2d<int, access::sample> v, int2 coords, int level) {
+  uint const v_1 = min(uint(level), (v.get_num_mip_levels() - 1u));
+  uint2 const v_2 = (uint2(v.get_width(v_1), v.get_height(v_1)) - uint2(1u));
+  return v.read(min(uint2(coords), v_2), v_1);
+}
+
+void doTextureLoad(tint_module_vars_struct tint_module_vars) {
+  int4 res = textureLoad2d(tint_module_vars.arg_0, int2(0), 0);
+}
+
+float4 vertex_main_inner(tint_module_vars_struct tint_module_vars) {
+  doTextureLoad(tint_module_vars);
+  return float4(0.0f);
+}
+
+vertex vertex_main_outputs vertex_main(texture2d<int, access::sample> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.arg_0=arg_0};
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = vertex_main_inner(tint_module_vars);
+  return tint_wrapper_result;
+}
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<int, access::sample> arg_0;
+};
+
+int4 textureLoad2d(texture2d<int, access::sample> v, int2 coords, int level) {
+  uint const v_1 = min(uint(level), (v.get_num_mip_levels() - 1u));
+  uint2 const v_2 = (uint2(v.get_width(v_1), v.get_height(v_1)) - uint2(1u));
+  return v.read(min(uint2(coords), v_2), v_1);
+}
+
+void doTextureLoad(tint_module_vars_struct tint_module_vars) {
+  int4 res = textureLoad2d(tint_module_vars.arg_0, int2(0), 0);
+}
+
+fragment void fragment_main(texture2d<int, access::sample> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.arg_0=arg_0};
+  doTextureLoad(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<int, access::sample> arg_0;
+};
+
+int4 textureLoad2d(texture2d<int, access::sample> v, int2 coords, int level) {
+  uint const v_1 = min(uint(level), (v.get_num_mip_levels() - 1u));
+  uint2 const v_2 = (uint2(v.get_width(v_1), v.get_height(v_1)) - uint2(1u));
+  return v.read(min(uint2(coords), v_2), v_1);
+}
+
+void doTextureLoad(tint_module_vars_struct tint_module_vars) {
+  int4 res = textureLoad2d(tint_module_vars.arg_0, int2(0), 0);
+}
+
+kernel void compute_main(texture2d<int, access::sample> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.arg_0=arg_0};
+  doTextureLoad(tint_module_vars);
+}

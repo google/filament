@@ -1,0 +1,27 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void main_1() {
+  float2x2 m2i = float2x2(0.0f);
+  float2x2 m2 = float2x2(0.0f);
+  float3x3 m3i = float3x3(0.0f);
+  float3x3 m3 = float3x3(0.0f);
+  float4x4 m4i = float4x4(0.0f);
+  float4x4 m4 = float4x4(0.0f);
+  float const s = (1.0f / determinant(m2));
+  float2 const v = float2((s * m2[1u].y), (-(s) * m2[0u].y));
+  m2i = float2x2(v, float2((-(s) * m2[1u].x), (s * m2[0u].x)));
+  float const v_1 = (1.0f / determinant(m3));
+  float3 const v_2 = float3(((m3[1u].y * m3[2u].z) - (m3[1u].z * m3[2u].y)), ((m3[0u].z * m3[2u].y) - (m3[0u].y * m3[2u].z)), ((m3[0u].y * m3[1u].z) - (m3[0u].z * m3[1u].y)));
+  float3 const v_3 = float3(((m3[1u].z * m3[2u].x) - (m3[1u].x * m3[2u].z)), ((m3[0u].x * m3[2u].z) - (m3[0u].z * m3[2u].x)), ((m3[0u].z * m3[1u].x) - (m3[0u].x * m3[1u].z)));
+  m3i = (v_1 * float3x3(v_2, v_3, float3(((m3[1u].x * m3[2u].y) - (m3[1u].y * m3[2u].x)), ((m3[0u].y * m3[2u].x) - (m3[0u].x * m3[2u].y)), ((m3[0u].x * m3[1u].y) - (m3[0u].y * m3[1u].x)))));
+  float const v_4 = (1.0f / determinant(m4));
+  float4 const v_5 = float4((((m4[1u].y * ((m4[2u].z * m4[3u].w) - (m4[2u].w * m4[3u].z))) - (m4[1u].z * ((m4[2u].y * m4[3u].w) - (m4[2u].w * m4[3u].y)))) + (m4[1u].w * ((m4[2u].y * m4[3u].z) - (m4[2u].z * m4[3u].y)))), (((-(m4[0u].y) * ((m4[2u].z * m4[3u].w) - (m4[2u].w * m4[3u].z))) + (m4[0u].z * ((m4[2u].y * m4[3u].w) - (m4[2u].w * m4[3u].y)))) - (m4[0u].w * ((m4[2u].y * m4[3u].z) - (m4[2u].z * m4[3u].y)))), (((m4[0u].y * ((m4[1u].z * m4[3u].w) - (m4[1u].w * m4[3u].z))) - (m4[0u].z * ((m4[1u].y * m4[3u].w) - (m4[1u].w * m4[3u].y)))) + (m4[0u].w * ((m4[1u].y * m4[3u].z) - (m4[1u].z * m4[3u].y)))), (((-(m4[0u].y) * ((m4[1u].z * m4[2u].w) - (m4[1u].w * m4[2u].z))) + (m4[0u].z * ((m4[1u].y * m4[2u].w) - (m4[1u].w * m4[2u].y)))) - (m4[0u].w * ((m4[1u].y * m4[2u].z) - (m4[1u].z * m4[2u].y)))));
+  float4 const v_6 = float4((((-(m4[1u].x) * ((m4[2u].z * m4[3u].w) - (m4[2u].w * m4[3u].z))) + (m4[1u].z * ((m4[2u].x * m4[3u].w) - (m4[2u].w * m4[3u].x)))) - (m4[1u].w * ((m4[2u].x * m4[3u].z) - (m4[2u].z * m4[3u].x)))), (((m4[0u].x * ((m4[2u].z * m4[3u].w) - (m4[2u].w * m4[3u].z))) - (m4[0u].z * ((m4[2u].x * m4[3u].w) - (m4[2u].w * m4[3u].x)))) + (m4[0u].w * ((m4[2u].x * m4[3u].z) - (m4[2u].z * m4[3u].x)))), (((-(m4[0u].x) * ((m4[1u].z * m4[3u].w) - (m4[1u].w * m4[3u].z))) + (m4[0u].z * ((m4[1u].x * m4[3u].w) - (m4[1u].w * m4[3u].x)))) - (m4[0u].w * ((m4[1u].x * m4[3u].z) - (m4[1u].z * m4[3u].x)))), (((m4[0u].x * ((m4[1u].z * m4[2u].w) - (m4[1u].w * m4[2u].z))) - (m4[0u].z * ((m4[1u].x * m4[2u].w) - (m4[1u].w * m4[2u].x)))) + (m4[0u].w * ((m4[1u].x * m4[2u].z) - (m4[1u].z * m4[2u].x)))));
+  float4 const v_7 = float4((((m4[1u].x * ((m4[2u].y * m4[3u].w) - (m4[2u].w * m4[3u].y))) - (m4[1u].y * ((m4[2u].x * m4[3u].w) - (m4[2u].w * m4[3u].x)))) + (m4[1u].w * ((m4[2u].x * m4[3u].y) - (m4[2u].y * m4[3u].x)))), (((-(m4[0u].x) * ((m4[2u].y * m4[3u].w) - (m4[2u].w * m4[3u].y))) + (m4[0u].y * ((m4[2u].x * m4[3u].w) - (m4[2u].w * m4[3u].x)))) - (m4[0u].w * ((m4[2u].x * m4[3u].y) - (m4[2u].y * m4[3u].x)))), (((m4[0u].x * ((m4[1u].y * m4[3u].w) - (m4[1u].w * m4[3u].y))) - (m4[0u].y * ((m4[1u].x * m4[3u].w) - (m4[1u].w * m4[3u].x)))) + (m4[0u].w * ((m4[1u].x * m4[3u].y) - (m4[1u].y * m4[3u].x)))), (((-(m4[0u].x) * ((m4[1u].y * m4[2u].w) - (m4[1u].w * m4[2u].y))) + (m4[0u].y * ((m4[1u].x * m4[2u].w) - (m4[1u].w * m4[2u].x)))) - (m4[0u].w * ((m4[1u].x * m4[2u].y) - (m4[1u].y * m4[2u].x)))));
+  m4i = (v_4 * float4x4(v_5, v_6, v_7, float4((((-(m4[1u].x) * ((m4[2u].y * m4[3u].z) - (m4[2u].z * m4[3u].y))) + (m4[1u].y * ((m4[2u].x * m4[3u].z) - (m4[2u].z * m4[3u].x)))) - (m4[1u].z * ((m4[2u].x * m4[3u].y) - (m4[2u].y * m4[3u].x)))), (((m4[0u].x * ((m4[2u].y * m4[3u].z) - (m4[2u].z * m4[3u].y))) - (m4[0u].y * ((m4[2u].x * m4[3u].z) - (m4[2u].z * m4[3u].x)))) + (m4[0u].z * ((m4[2u].x * m4[3u].y) - (m4[2u].y * m4[3u].x)))), (((-(m4[0u].x) * ((m4[1u].y * m4[3u].z) - (m4[1u].z * m4[3u].y))) + (m4[0u].y * ((m4[1u].x * m4[3u].z) - (m4[1u].z * m4[3u].x)))) - (m4[0u].z * ((m4[1u].x * m4[3u].y) - (m4[1u].y * m4[3u].x)))), (((m4[0u].x * ((m4[1u].y * m4[2u].z) - (m4[1u].z * m4[2u].y))) - (m4[0u].y * ((m4[1u].x * m4[2u].z) - (m4[1u].z * m4[2u].x)))) + (m4[0u].z * ((m4[1u].x * m4[2u].y) - (m4[1u].y * m4[2u].x)))))));
+}
+
+fragment void v_8() {
+  main_1();
+}

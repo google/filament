@@ -1,0 +1,132 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 75
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpMemberName %strided_arr 0 "el"
+               OpName %strided_arr "strided_arr"
+               OpMemberName %SSBO 0 "m"
+               OpName %SSBO "SSBO"
+               OpMemberName %ssbo_block 0 "inner"
+               OpName %ssbo_block "ssbo_block"
+               OpName %mat2x2_stride_16_to_arr "mat2x2_stride_16_to_arr"
+               OpName %m "m"
+               OpName %arr_to_mat2x2_stride_16 "arr_to_mat2x2_stride_16"
+               OpName %arr "arr"
+               OpName %f_1 "f_1"
+               OpName %f "f"
+               OpName %tint_store_and_preserve_padding "tint_store_and_preserve_padding"
+               OpName %value_param "value_param"
+               OpName %tint_store_and_preserve_padding_0 "tint_store_and_preserve_padding"
+               OpName %target_indices "target_indices"
+               OpName %value_param_0 "value_param"
+               OpMemberDecorate %strided_arr 0 Offset 0
+               OpDecorate %_arr_strided_arr_uint_2 ArrayStride 16
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %ssbo_block 0 Offset 0
+               OpDecorate %ssbo_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %_arr_uint_uint_1 ArrayStride 4
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%strided_arr = OpTypeStruct %v2float
+       %uint = OpTypeInt 32 0
+     %uint_2 = OpConstant %uint 2
+%_arr_strided_arr_uint_2 = OpTypeArray %strided_arr %uint_2
+       %SSBO = OpTypeStruct %_arr_strided_arr_uint_2
+ %ssbo_block = OpTypeStruct %SSBO
+%_ptr_StorageBuffer_ssbo_block = OpTypePointer StorageBuffer %ssbo_block
+          %1 = OpVariable %_ptr_StorageBuffer_ssbo_block StorageBuffer
+%mat2v2float = OpTypeMatrix %v2float 2
+         %14 = OpTypeFunction %_arr_strided_arr_uint_2 %mat2v2float
+         %23 = OpTypeFunction %mat2v2float %_arr_strided_arr_uint_2
+       %void = OpTypeVoid
+         %30 = OpTypeFunction %void
+%_ptr_StorageBuffer__arr_strided_arr_uint_2 = OpTypePointer StorageBuffer %_arr_strided_arr_uint_2
+     %uint_0 = OpConstant %uint 0
+         %44 = OpTypeFunction %void %_arr_strided_arr_uint_2
+%_ptr_Function__arr_strided_arr_uint_2 = OpTypePointer Function %_arr_strided_arr_uint_2
+       %bool = OpTypeBool
+%_ptr_Function_strided_arr = OpTypePointer Function %strided_arr
+     %uint_1 = OpConstant %uint 1
+%_arr_uint_uint_1 = OpTypeArray %uint %uint_1
+         %69 = OpTypeFunction %void %_arr_uint_uint_1 %strided_arr
+%_ptr_StorageBuffer_v2float = OpTypePointer StorageBuffer %v2float
+%mat2x2_stride_16_to_arr = OpFunction %_arr_strided_arr_uint_2 None %14
+          %m = OpFunctionParameter %mat2v2float
+         %15 = OpLabel
+         %16 = OpCompositeExtract %v2float %m 0
+         %17 = OpCompositeConstruct %strided_arr %16
+         %18 = OpCompositeExtract %v2float %m 1
+         %19 = OpCompositeConstruct %strided_arr %18
+         %20 = OpCompositeConstruct %_arr_strided_arr_uint_2 %17 %19
+               OpReturnValue %20
+               OpFunctionEnd
+%arr_to_mat2x2_stride_16 = OpFunction %mat2v2float None %23
+        %arr = OpFunctionParameter %_arr_strided_arr_uint_2
+         %24 = OpLabel
+         %25 = OpCompositeExtract %v2float %arr 0 0
+         %26 = OpCompositeExtract %v2float %arr 1 0
+         %27 = OpCompositeConstruct %mat2v2float %25 %26
+               OpReturnValue %27
+               OpFunctionEnd
+        %f_1 = OpFunction %void None %30
+         %31 = OpLabel
+         %32 = OpAccessChain %_ptr_StorageBuffer__arr_strided_arr_uint_2 %1 %uint_0 %uint_0
+         %35 = OpLoad %_arr_strided_arr_uint_2 %32 None
+         %36 = OpFunctionCall %mat2v2float %arr_to_mat2x2_stride_16 %35
+         %37 = OpFunctionCall %_arr_strided_arr_uint_2 %mat2x2_stride_16_to_arr %36
+         %38 = OpFunctionCall %void %tint_store_and_preserve_padding %37
+               OpReturn
+               OpFunctionEnd
+          %f = OpFunction %void None %30
+         %41 = OpLabel
+         %42 = OpFunctionCall %void %f_1
+               OpReturn
+               OpFunctionEnd
+%tint_store_and_preserve_padding = OpFunction %void None %44
+%value_param = OpFunctionParameter %_arr_strided_arr_uint_2
+         %45 = OpLabel
+         %46 = OpVariable %_ptr_Function__arr_strided_arr_uint_2 Function
+               OpStore %46 %value_param
+               OpBranch %48
+         %48 = OpLabel
+               OpBranch %51
+         %51 = OpLabel
+         %53 = OpPhi %uint %uint_0 %48 %54 %50
+               OpLoopMerge %52 %50 None
+               OpBranch %49
+         %49 = OpLabel
+         %55 = OpUGreaterThanEqual %bool %53 %uint_2
+               OpSelectionMerge %57 None
+               OpBranchConditional %55 %58 %57
+         %58 = OpLabel
+               OpBranch %52
+         %57 = OpLabel
+         %59 = OpAccessChain %_ptr_Function_strided_arr %46 %53
+         %61 = OpLoad %strided_arr %59 None
+         %64 = OpCompositeConstruct %_arr_uint_uint_1 %53
+         %65 = OpFunctionCall %void %tint_store_and_preserve_padding_0 %64 %61
+               OpBranch %50
+         %50 = OpLabel
+         %54 = OpIAdd %uint %53 %uint_1
+               OpBranch %51
+         %52 = OpLabel
+               OpReturn
+               OpFunctionEnd
+%tint_store_and_preserve_padding_0 = OpFunction %void None %69
+%target_indices = OpFunctionParameter %_arr_uint_uint_1
+%value_param_0 = OpFunctionParameter %strided_arr
+         %70 = OpLabel
+         %71 = OpCompositeExtract %uint %target_indices 0
+         %72 = OpAccessChain %_ptr_StorageBuffer_v2float %1 %uint_0 %uint_0 %71 %uint_0
+         %74 = OpCompositeExtract %v2float %value_param_0 0
+               OpStore %72 %74 None
+               OpReturn
+               OpFunctionEnd

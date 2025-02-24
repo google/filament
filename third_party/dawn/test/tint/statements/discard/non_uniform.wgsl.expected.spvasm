@@ -1,0 +1,75 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 38
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpMemberName %non_uniform_global_block 0 "inner"
+               OpName %non_uniform_global_block "non_uniform_global_block"
+               OpMemberName %output_block 0 "inner"
+               OpName %output_block "output_block"
+               OpName %continue_execution "continue_execution"
+               OpName %main "main"
+               OpMemberDecorate %non_uniform_global_block 0 Offset 0
+               OpDecorate %non_uniform_global_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpMemberDecorate %output_block 0 Offset 0
+               OpDecorate %output_block Block
+               OpDecorate %5 DescriptorSet 0
+               OpDecorate %5 Binding 1
+               OpDecorate %5 Coherent
+        %int = OpTypeInt 32 1
+%non_uniform_global_block = OpTypeStruct %int
+%_ptr_StorageBuffer_non_uniform_global_block = OpTypePointer StorageBuffer %non_uniform_global_block
+          %1 = OpVariable %_ptr_StorageBuffer_non_uniform_global_block StorageBuffer
+      %float = OpTypeFloat 32
+%output_block = OpTypeStruct %float
+%_ptr_StorageBuffer_output_block = OpTypePointer StorageBuffer %output_block
+          %5 = OpVariable %_ptr_StorageBuffer_output_block StorageBuffer
+       %bool = OpTypeBool
+%_ptr_Private_bool = OpTypePointer Private %bool
+       %true = OpConstantTrue %bool
+%continue_execution = OpVariable %_ptr_Private_bool Private %true
+       %void = OpTypeVoid
+         %15 = OpTypeFunction %void
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+      %int_0 = OpConstant %int 0
+      %false = OpConstantFalse %bool
+    %float_1 = OpConstant %float 1
+%_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+       %main = OpFunction %void None %15
+         %16 = OpLabel
+         %17 = OpAccessChain %_ptr_StorageBuffer_int %1 %uint_0
+         %21 = OpLoad %int %17 None
+         %22 = OpSLessThan %bool %21 %int_0
+               OpSelectionMerge %24 None
+               OpBranchConditional %22 %25 %24
+         %25 = OpLabel
+               OpStore %continue_execution %false None
+               OpBranch %24
+         %24 = OpLabel
+         %27 = OpDPdx %float %float_1
+         %29 = OpAccessChain %_ptr_StorageBuffer_float %5 %uint_0
+         %31 = OpLoad %bool %continue_execution None
+               OpSelectionMerge %32 None
+               OpBranchConditional %31 %33 %32
+         %33 = OpLabel
+               OpStore %29 %27 None
+               OpBranch %32
+         %32 = OpLabel
+         %34 = OpLoad %bool %continue_execution None
+         %35 = OpLogicalNot %bool %34
+               OpSelectionMerge %36 None
+               OpBranchConditional %35 %37 %36
+         %37 = OpLabel
+               OpKill
+         %36 = OpLabel
+               OpReturn
+               OpFunctionEnd

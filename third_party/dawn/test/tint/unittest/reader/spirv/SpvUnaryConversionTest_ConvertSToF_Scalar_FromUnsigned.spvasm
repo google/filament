@@ -1,0 +1,45 @@
+; Test: SpvUnaryConversionTest_ConvertSToF_Scalar_FromUnsigned.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%bool = OpTypeBool
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%float = OpTypeFloat 32
+%true = OpConstantTrue %bool
+%false = OpConstantFalse %bool
+%v2bool = OpTypeVector %bool 2
+%11 = OpConstantComposite %v2bool %true %false
+%uint_10 = OpConstant %uint 10
+%uint_20 = OpConstant %uint 20
+%int_30 = OpConstant %int 30
+%int_40 = OpConstant %int 40
+%float_50 = OpConstant %float 50
+%float_60 = OpConstant %float 60
+%_ptr_Function_uint = OpTypePointer Function %uint
+%_ptr_Function_int = OpTypePointer Function %int
+%_ptr_Function_float = OpTypePointer Function %float
+%v2uint = OpTypeVector %uint 2
+%v2int = OpTypeVector %int 2
+%v2float = OpTypeVector %float 2
+%24 = OpConstantComposite %v2uint %uint_10 %uint_20
+%25 = OpConstantComposite %v2uint %uint_20 %uint_10
+%26 = OpConstantComposite %v2int %int_30 %int_40
+%27 = OpConstantComposite %v2int %int_40 %int_30
+%28 = OpConstantComposite %v2float %float_50 %float_60
+%29 = OpConstantComposite %v2float %float_60 %float_50
+%100 = OpFunction %void None %3
+%31 = OpLabel
+%30 = OpCopyObject %uint %uint_10
+%1 = OpConvertSToF %float %30
+OpReturn
+OpFunctionEnd
+

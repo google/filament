@@ -1,0 +1,53 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main" %gl_GlobalInvocationID
+               OpExecutionMode %2 LocalSize 1 1 1
+               OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+               OpDecorate %_runtimearr_int ArrayStride 4
+               OpDecorate %_struct_5 BufferBlock
+               OpMemberDecorate %_struct_5 0 Offset 0
+               OpDecorate %6 DescriptorSet 0
+               OpDecorate %6 Binding 0
+               OpDecorate %7 DescriptorSet 0
+               OpDecorate %7 Binding 1
+               OpDecorate %8 DescriptorSet 0
+               OpDecorate %8 Binding 2
+               OpDecorate %9 DescriptorSet 0
+               OpDecorate %9 Binding 3
+       %uint = OpTypeInt 32 0
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+%_ptr_Input_uint = OpTypePointer Input %uint
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+       %void = OpTypeVoid
+         %16 = OpTypeFunction %void
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+        %int = OpTypeInt 32 1
+%_runtimearr_int = OpTypeRuntimeArray %int
+      %v4int = OpTypeVector %int 4
+%_ptr_Input_int = OpTypePointer Input %int
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+  %_struct_5 = OpTypeStruct %_runtimearr_int
+%_ptr_Uniform__struct_5 = OpTypePointer Uniform %_struct_5
+%gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+          %6 = OpVariable %_ptr_Uniform__struct_5 Uniform
+          %7 = OpVariable %_ptr_Uniform__struct_5 Uniform
+          %8 = OpVariable %_ptr_Uniform__struct_5 Uniform
+          %9 = OpVariable %_ptr_Uniform__struct_5 Uniform
+          %2 = OpFunction %void None %16
+         %24 = OpLabel
+         %25 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_0
+         %26 = OpLoad %uint %25
+         %27 = OpAccessChain %_ptr_Uniform_int %6 %uint_0 %26
+         %28 = OpLoad %int %27
+         %29 = OpAccessChain %_ptr_Uniform_int %7 %uint_0 %26
+         %30 = OpLoad %int %29
+         %31 = OpAccessChain %_ptr_Uniform_int %8 %uint_0 %26
+         %32 = OpLoad %int %31
+         %33 = OpExtInst %int %1 UClamp %28 %30 %32
+         %34 = OpAccessChain %_ptr_Uniform_int %9 %uint_0 %26
+               OpStore %34 %33
+               OpReturn
+               OpFunctionEnd

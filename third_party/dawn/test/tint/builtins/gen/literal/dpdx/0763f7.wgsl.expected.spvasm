@@ -1,0 +1,48 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 24
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %dpdx_0763f7 "dpdx_0763f7"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%prevent_dce_block = OpTypeStruct %v3float
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %7 = OpTypeFunction %v3float
+    %float_1 = OpConstant %float 1
+         %10 = OpConstantComposite %v3float %float_1 %float_1 %float_1
+%_ptr_Function_v3float = OpTypePointer Function %v3float
+       %void = OpTypeVoid
+         %17 = OpTypeFunction %void
+%_ptr_StorageBuffer_v3float = OpTypePointer StorageBuffer %v3float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%dpdx_0763f7 = OpFunction %v3float None %7
+          %8 = OpLabel
+        %res = OpVariable %_ptr_Function_v3float Function
+          %9 = OpDPdx %v3float %10
+               OpStore %res %9
+         %14 = OpLoad %v3float %res None
+               OpReturnValue %14
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %17
+         %18 = OpLabel
+         %19 = OpFunctionCall %v3float %dpdx_0763f7
+         %20 = OpAccessChain %_ptr_StorageBuffer_v3float %1 %uint_0
+               OpStore %20 %19 None
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,248 @@
+Name
+
+    OES_single_precision
+
+Name Strings
+
+    GL_OES_single_precision
+
+Contact
+
+    David Blythe (blythe 'at' bluevoid.com)
+
+Notice
+
+    Copyright (c) 2003-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL ES Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Ratified by the Khronos BOP, July 23, 2003.
+    Ratified by the Khronos BOP, Aug 5, 2004.
+
+Version
+
+    Version 1, September 18, 2014
+
+Number
+
+    OpenGL ES Extension #18 (formerly OpenGL Extension #293)
+
+Dependencies
+
+    None
+    The extension is written against the OpenGL 1.3 Specification.
+
+Overview
+
+    This extension adds commands with single-precision floating-point
+    parameters corresponding to the commands that only variants that
+    accept double-precision floating-point input.  This allows an
+    application to avoid using double-precision floating-point
+    data types.  New commands are added with an 'f' prefix.
+
+
+IP Status
+
+    None
+
+Issues
+
+*   An alternative is to suggest platforms define GLfloat and
+    GLdouble to be the same type, since it is unlikely that both
+    single- and double-precision are required at the same time.
+
+    Resolved: This might create additional confusion, so it is
+    better to define new commands.
+
+New Procedures and Functions
+
+    void DepthRangefOES(clampf n, clampf f);
+    void FrustumfOES(float l, float r, float b, float t, float n, float f);
+    void OrthofOES(float l, float r, float b, float t, float n, float f);
+
+    void ClipPlanefOES(enum plane, const float* equation);
+    void GetClipPlanefOES(enum plane, float* equation);
+
+    void glClearDepthfOES(clampf depth);
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL Operation)
+
+    Section 2.10 Coordinate Transformations
+
+      Revise to include 'f' suffix.
+      Add alternate suffixed versions of DepthRange (2.10.1).
+      Add alternate suffixed versions of Ortho and Frustum (2.10.2).
+
+    Section 2.11 Clipping
+
+      Add alternate suffixed version of ClipPlane.
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    None
+        
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Section 4.2.3 Clearing the Buffers
+
+      Add alternate suffixed version of ClearDepth.
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and
+State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.3 Specification (Invariance)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Additions to the WGL Specification
+
+    None
+
+Additions to the AGL Specification
+
+    None
+
+Additions to Chapter 2 of the GLX 1.3 Specification (GLX Operation)
+
+    The data representation is client-side only.  The GLX layer
+    performs translation between float and double representations.
+
+Additions to Chapter 3 of the GLX 1.3 Specification (Functions and Errors)
+
+Additions to Chapter 4 of the GLX 1.3 Specification (Encoding on the X
+Byte Stream)
+
+Additions to Chapter 5 of the GLX 1.3 Specification (Extending OpenGL)
+
+Additions to Chapter 6 of the GLX 1.3 Specification (GLX Versions)
+
+GLX Protocol
+
+    Five new GL rendering commands are added. The following commands
+    are sent to the server as part of a glXRender request:
+
+        ClearDepthfOES
+            2           8               rendering command length
+            2           4308            rendering command opcode
+            4           FLOAT32         z
+
+        DepthRangefOES
+            2           12              rendering command length
+            2           4309            rendering command opcode
+            4           FLOAT32         n
+            4           FLOAT32         f
+
+        FrustumfOES
+            2           28              rendering command length
+            2           4310            rendering command opcode
+            4           FLOAT32         l
+            4           FLOAT32         r
+            4           FLOAT32         b
+            4           FLOAT32         t
+            4           FLOAT32         n
+            4           FLOAT32         f
+
+        OrthofOES
+            2           28              rendering command length
+            2           4311            rendering command opcode
+            4           FLOAT32         l
+            4           FLOAT32         r
+            4           FLOAT32         b
+            4           FLOAT32         t
+            4           FLOAT32         n
+            4           FLOAT32         f
+
+        ClipPlanefOES
+            2           24              rendering command length
+            2           4312            rendering command opcode
+            4           ENUM            plane
+            4           FLOAT32         v[0]
+            4           FLOAT32         v[1]
+            4           FLOAT32         v[2]
+            4           FLOAT32         v[3]
+
+
+    The remaining commands are non-rendering commands.  These commands are
+    sent separately (i.e., not as part of a glXRender or glXRenderLarge
+    request), using the glXVendorPrivateWithReply request:
+
+        GetClipPlanefOES
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           4               request length
+            4           1421            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            plane
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           0               reply length
+            4           FLOAT32         v[0]
+            4           FLOAT32         v[1]
+            4           FLOAT32         v[2]
+            4           FLOAT32         v[3]
+            8                           unused
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    03/27/2003    0.1
+        - First draft created.
+
+    07/08/2003    0.2
+        - Delete unused Dependencies on section
+        - Added extension number
+
+    07/09/2003    0.3
+        - Added missing ClearDepthfOES
+        - Removed '_'s from names.
+
+    07/22/2003    0.4
+        - Added GLX protocol (Thomas Roell)
+
+    06/28/2004    0.5
+        - Added ClipPlanef function (Aaftab Munshi)
+
+    04/22/2007    0.6
+        - Fixed 'void void' typo (Jon Leech)
+
+    09/18/2014    1
+        - Fixed 'clampd' type to 'clampf' in ClearDepthfOES (Bug 12656).

@@ -1,0 +1,87 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglCreateWindowSurface">
+    <info>
+         <copyright>
+             <year>2003-2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglCreateWindowSurface</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglCreateWindowSurface</refname>
+        <refpurpose>
+            create a new <acronym>EGL</acronym> window surface
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLSurface <function>eglCreateWindowSurface</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLConfig <parameter>config</parameter></paramdef>
+                <paramdef>NativeWindowType <parameter>native_window</parameter></paramdef>
+                <paramdef>EGLint const * <parameter>attrib_list</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>Specifies the EGL display connection.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>config</parameter></term>
+                <listitem>
+                    <para>Specifies the EGL frame buffer configuration that defines the
+                    frame buffer resource available to the surface.</para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>native_window</parameter></term>
+                <listitem><para>Specifies the native window.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attrib_list</parameter></term>
+                <listitem><para>
+                    Specifies window surface attributes.
+                    May be <constant>NULL</constant> or empty
+                    (first attribute is <constant>EGL_NONE</constant>).
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglCreateWindowSurface</function> creates an on-screen
+            EGL window surface and returns a handle to it. The behavior of
+            <function>eglCreateWindowSurface</function> is identical to that
+            of
+            <citerefentry><refentrytitle>eglCreatePlatformWindowSurface</refentrytitle></citerefentry>
+            except that the set of platforms to which
+            <parameter>display</parameter> is permitted to belong, as well
+            as the actual type of <parameter>native_window</parameter>, are
+            implementation specific.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            See errors for
+            <citerefentry><refentrytitle>eglCreatePlatformWindowSurface</refentrytitle></citerefentry>.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreatePlatformWindowSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglDestroySurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetConfigs</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglQuerySurface</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

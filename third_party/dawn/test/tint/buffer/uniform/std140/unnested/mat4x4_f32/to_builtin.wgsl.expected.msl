@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  const constant float4x4* u;
+};
+
+kernel void f(const constant float4x4* u [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.u=u};
+  float4x4 const t = transpose((*tint_module_vars.u));
+  float const l = length((*tint_module_vars.u)[1u]);
+  float const a = abs((*tint_module_vars.u)[0u].ywxz.x);
+}

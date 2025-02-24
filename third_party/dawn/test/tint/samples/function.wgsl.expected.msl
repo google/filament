@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+float v() {
+  return 0.40000000596046447754f;
+}
+
+kernel void ep() {
+  float const a = v();
+}

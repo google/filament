@@ -1,0 +1,70 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 0
+; Bound: 34
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %SB_RW "SB_RW"
+               OpMemberName %SB_RW 0 "arg_0"
+               OpName %sb_rw "sb_rw"
+               OpName %atomicCompareExchangeWeak_63d8e6 "atomicCompareExchangeWeak_63d8e6"
+               OpName %arg_1 "arg_1"
+               OpName %arg_2 "arg_2"
+               OpName %__atomic_compare_exchange_resultu32 "__atomic_compare_exchange_resultu32"
+               OpMemberName %__atomic_compare_exchange_resultu32 0 "old_value"
+               OpMemberName %__atomic_compare_exchange_resultu32 1 "exchanged"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpName %compute_main "compute_main"
+               OpDecorate %SB_RW Block
+               OpMemberDecorate %SB_RW 0 Offset 0
+               OpDecorate %sb_rw DescriptorSet 0
+               OpDecorate %sb_rw Binding 0
+               OpMemberDecorate %__atomic_compare_exchange_resultu32 0 Offset 0
+               OpMemberDecorate %__atomic_compare_exchange_resultu32 1 Offset 4
+       %uint = OpTypeInt 32 0
+      %SB_RW = OpTypeStruct %uint
+%_ptr_StorageBuffer_SB_RW = OpTypePointer StorageBuffer %SB_RW
+      %sb_rw = OpVariable %_ptr_StorageBuffer_SB_RW StorageBuffer
+       %void = OpTypeVoid
+          %5 = OpTypeFunction %void
+     %uint_1 = OpConstant %uint 1
+%_ptr_Function_uint = OpTypePointer Function %uint
+         %12 = OpConstantNull %uint
+       %bool = OpTypeBool
+%__atomic_compare_exchange_resultu32 = OpTypeStruct %uint %bool
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+%_ptr_Function___atomic_compare_exchange_resultu32 = OpTypePointer Function %__atomic_compare_exchange_resultu32
+         %27 = OpConstantNull %__atomic_compare_exchange_resultu32
+%atomicCompareExchangeWeak_63d8e6 = OpFunction %void None %5
+          %8 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_uint Function %12
+      %arg_2 = OpVariable %_ptr_Function_uint Function %12
+        %res = OpVariable %_ptr_Function___atomic_compare_exchange_resultu32 Function %27
+               OpStore %arg_1 %uint_1
+               OpStore %arg_2 %uint_1
+         %20 = OpAccessChain %_ptr_StorageBuffer_uint %sb_rw %uint_0
+         %21 = OpLoad %uint %arg_2
+         %22 = OpLoad %uint %arg_1
+         %23 = OpAtomicCompareExchange %uint %20 %uint_1 %uint_0 %uint_0 %21 %22
+         %24 = OpIEqual %bool %23 %21
+         %14 = OpCompositeConstruct %__atomic_compare_exchange_resultu32 %23 %24
+               OpStore %res %14
+               OpReturn
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %5
+         %29 = OpLabel
+         %30 = OpFunctionCall %void %atomicCompareExchangeWeak_63d8e6
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %5
+         %32 = OpLabel
+         %33 = OpFunctionCall %void %atomicCompareExchangeWeak_63d8e6
+               OpReturn
+               OpFunctionEnd
