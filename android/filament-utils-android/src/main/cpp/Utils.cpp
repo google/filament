@@ -43,37 +43,25 @@ static jlong nCreateKTXTexture(JNIEnv* env, jclass,
     }, bundle);
 }
 
-static jlong nCreateIndirectLight(JNIEnv* env, jclass,
-        jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
+static jlong nCreateIndirectLight(JNIEnv* env, jclass, jlong nativeEngine, jlong ktxTexture,
+        jfloatArray sphericalHarmonics) {
     Engine* engine = (Engine*) nativeEngine;
-    AutoBuffer buffer(env, javaBuffer, remaining);
-    Ktx1Bundle* bundle = new Ktx1Bundle((const uint8_t*) buffer.getData(), buffer.getSize());
-    Texture* cubemap = Ktx1Reader::createTexture(engine, *bundle, srgb,  [](void* userdata) {
-        Ktx1Bundle* bundle = (Ktx1Bundle*) userdata;
-        delete bundle;
-    }, bundle);
-
-    float3 harmonics[9];
-    bundle->getSphericalHarmonics(harmonics);
-
-    IndirectLight* indirectLight = IndirectLight::Builder()
-        .reflections(cubemap)
-        .irradiance(3, harmonics)
-        .intensity(30000)
-        .build(*engine);
+    Texture* cubemap = (Texture*) ktxTexture;
+    jfloat* harmonics = env->GetFloatArrayElements(sphericalHarmonics, nullptr);
+    IndirectLight* indirectLight =
+            IndirectLight::Builder()
+                    .reflections(cubemap)
+                    .irradiance(3, reinterpret_cast<filament::math::float3*>(harmonics))
+                    .intensity(30000)
+                    .build(*engine);
+    env->ReleaseFloatArrayElements(sphericalHarmonics, harmonics, JNI_ABORT);
 
     return (jlong) indirectLight;
 }
 
-static jlong nCreateSkybox(JNIEnv* env, jclass,
-        jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
+static jlong nCreateSkybox(JNIEnv* env, jclass, jlong nativeEngine, jlong ktxTexture) {
     Engine* engine = (Engine*) nativeEngine;
-    AutoBuffer buffer(env, javaBuffer, remaining);
-    Ktx1Bundle* bundle = new Ktx1Bundle((const uint8_t*) buffer.getData(), buffer.getSize());
-    Texture* cubemap = Ktx1Reader::createTexture(engine, *bundle, srgb,  [](void* userdata) {
-        Ktx1Bundle* bundle = (Ktx1Bundle*) userdata;
-        delete bundle;
-    }, bundle);
+    Texture* cubemap = (Texture*) ktxTexture;
     return (jlong) Skybox::Builder().environment(cubemap).showSun(true).build(*engine);
 }
 
@@ -86,7 +74,7 @@ static jboolean nGetSphericalHarmonics(JNIEnv* env, jclass, jobject javaBuffer, 
     const auto success = bundle.getSphericalHarmonics(
         reinterpret_cast<filament::math::float3*>(outSphericalHarmonics)
     );
-    env->ReleaseFloatArrayElements(outSphericalHarmonics_, outSphericalHarmonics, JNI_ABORT);
+    env->ReleaseFloatArrayElements(outSphericalHarmonics_, outSphericalHarmonics, 0);
 
     return success ? JNI_TRUE : JNI_FALSE;
 }
@@ -104,8 +92,8 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
     if (ktxloaderClass == nullptr) return JNI_ERR;
     static const JNINativeMethod ktxMethods[] = {
         {(char*)"nCreateKTXTexture", (char*)"(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateKTXTexture)},
-        {(char*)"nCreateIndirectLight", (char*)"(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateIndirectLight)},
-        {(char*)"nCreateSkybox", (char*)"(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateSkybox)},
+        {(char*)"nCreateIndirectLight", (char*)"(JJ[F)J", reinterpret_cast<void*>(nCreateIndirectLight)},
+        {(char*)"nCreateSkybox", (char*)"(JJ)J", reinterpret_cast<void*>(nCreateSkybox)},
         {(char*)"nGetSphericalHarmonics", (char*)"(Ljava/nio/Buffer;I[F)Z", reinterpret_cast<void*>(nGetSphericalHarmonics)},
     };
     rc = env->RegisterNatives(ktxloaderClass, ktxMethods, sizeof(ktxMethods) / sizeof(JNINativeMethod));
