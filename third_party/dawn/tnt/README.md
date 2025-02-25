@@ -5,15 +5,20 @@ It is not automated at this point. Following are the rough steps on how to do it
 
 ```
 cd third_party
-clone dawn from https://github.com/google/dawn or https://dawn.googlesource.com/dawn to dawn_copy.
-cd dawn_copy
+mkdir dawn_copy && cd dawn_copy
+git init &&
+git fetch --depth=1 https://dawn.googlesource.com/dawn <sha1> (51694fd33cdaaec5bdd7ab3dc4f488f5818fd870)
+git reset --hard FETCH_HEAD
 python3 tools/fetch_dawn_dependencies.py
 find . -name .git -type d -print0 | xargs -0 rm -r
-cp -r dawn/tnt/ dawn_copy/tnt/
+<update .gitignore to remove third_party/entries from there>
+cp -r ../dawn/tnt .
 rm -rf dawn
 mv dawn_copy dawn
 patch -p2 < dawn/tnt/001-dawn-static-lib.patch.
 git add dawn
+<may need to add following separately>
+git add add dawn/third_party/dxc/ dawn/third_party/vulkan-loader/src/ dawn/third_party/spirv-tools/src/ dawn/third_party/glslang/
 ```
 
 Please be sure to test Filament before uploading your CL.
