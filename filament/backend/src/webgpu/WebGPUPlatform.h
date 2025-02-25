@@ -20,6 +20,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 
+#include "webgpu/webgpu_cpp.h"
+
 namespace filament::backend {
 
 class WebGPUPlatform

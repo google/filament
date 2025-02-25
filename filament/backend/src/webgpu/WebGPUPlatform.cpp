@@ -15,21 +15,20 @@
  */
 
 #include "webgpu/WebGPUPlatform.h"
-
 #include "webgpu/WebGPUDriver.h"
-#include "webgpu/webgpu_cpp.h"
 
 #include "vulkan/VulkanConstants.h"
 
 namespace filament::backend {
 
 Driver* WebGPUPlatform::createDriver(void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
-    //TODO: clean it
-    FVK_LOGI << "IDRIS: " <<__FILE__<<":"<<__LINE__<< " " <<__func__ << "\n";
     wgpu::InstanceDescriptor instance_descriptor;
     wgpu::Instance instance = wgpu::CreateInstance(&instance_descriptor);
     if (instance) {
-        FVK_LOGI << "IDRIS: " << __func__ << " instance created\n";
+        FVK_LOGI << __func__ << " WebGPU instance created\n";
+    } else {
+        FVK_LOGE << __func__ << " WebGPU instance failed to create\n";
+        return nullptr;
     }
     return WebGPUDriver::create();
 }
