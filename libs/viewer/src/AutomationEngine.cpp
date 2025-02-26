@@ -16,6 +16,8 @@
 
 #include <viewer/AutomationEngine.h>
 
+#include "TIFFExport.h"
+
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
@@ -44,7 +46,9 @@ struct ScreenshotState {
     AutomationEngine* engine;
 };
 
-static void convertRGBAtoRGB(void* buffer, uint32_t width, uint32_t height) {
+namespace {
+
+void convertRGBAtoRGB(void* buffer, uint32_t width, uint32_t height) {
     uint8_t* writePtr = static_cast<uint8_t*>(buffer);
     uint8_t const* readPtr = static_cast<uint8_t const*>(buffer);
     for (uint32_t i = 0, n = width * height; i < n; ++i) {
@@ -55,6 +59,25 @@ static void convertRGBAtoRGB(void* buffer, uint32_t width, uint32_t height) {
         readPtr += 4;
     }
 }
+
+void exportPPM(void* buffer, uint32_t width, uint32_t height, std::ofstream& outstream) {
+    // ReadPixels on Metal only supports RGBA, but the PPM format only supports RGB.
+    // So, manually perform a quick transformation here.
+    convertRGBAtoRGB(buffer, width, height);
+
+    outstream << "P6 " << width << " " << height << " " << 255 << std::endl;
+    outstream.write(static_cast<char*>(buffer), width * height * 3);
+}
+
+using ExportFormat = AutomationEngine::Options::ExportFormat;
+constexpr char const* getExportFormatExtension(ExportFormat format) {
+    switch (format) {
+        case ExportFormat::PPM: return ".ppm";
+        case ExportFormat::TIFF: return ".tif";
+    }
+}
+
+} // anonymous namespace
 
 void AutomationEngine::exportScreenshot(View* view, Renderer* renderer, std::string filename,
         bool autoclose, AutomationEngine* automationEngine) {
@@ -75,14 +98,21 @@ void AutomationEngine::exportScreenshot(View* view, Renderer* renderer, std::str
             }
             const Viewport& vp = state->view->getViewport();
 
-            // ReadPixels on Metal only supports RGBA, but the PPM format only supports RGB.
-            // So, manually perform a quick transformation here.
-            convertRGBAtoRGB(buffer, vp.width, vp.height);
-
             Path out(state->filename);
-            std::ofstream ppmStream(out);
-            ppmStream << "P6 " << vp.width << " " << vp.height << " " << 255 << std::endl;
-            ppmStream.write(static_cast<char*>(buffer), vp.width * vp.height * 3);
+            std::ofstream outstream(out);
+
+            auto extension = out.getExtension();
+            if (extension == "ppm") {
+                exportPPM(buffer, vp.width, vp.height, outstream);
+            } else if (extension == "tif" || extension == "tiff") {
+                exportTIFF(buffer, vp.width, vp.height, outstream);
+            } else {
+                utils::slog.e << out.c_str() << " does not specify a supported file extension."
+                              << utils::io::endl;
+            }
+
+            outstream.close();
+
             delete[] static_cast<uint8_t*>(buffer);
             if (state->autoclose) {
                 state->engine->requestClose();
@@ -244,8 +274,8 @@ void AutomationEngine::tick(Engine* engine, const ViewerContent& content, float 
     }
 
     if (mOptions.exportScreenshots) {
-        AutomationEngine::exportScreenshot(
-                content.view, content.renderer, prefix + ".ppm", isLastTest, this);
+        AutomationEngine::exportScreenshot(content.view, content.renderer,
+                prefix + getExportFormatExtension(mOptions.exportFormat), isLastTest, this);
     }
 
     if (isLastTest) {
