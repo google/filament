@@ -65,7 +65,7 @@ float vmax(const vec3 v) {
 }
 
 float vmax(const vec4 v) {
-    return max(max(v.x, v.y), max(v.y, v.z));
+    return max(max(v.x, v.y), max(v.z, v.w));
 }
 
 /**
