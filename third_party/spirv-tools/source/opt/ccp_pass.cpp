@@ -24,7 +24,6 @@
 
 #include "source/opt/fold.h"
 #include "source/opt/function.h"
-#include "source/opt/module.h"
 #include "source/opt/propagator.h"
 
 namespace spvtools {

@@ -14,7 +14,6 @@
 
 #include "source/opt/scalar_analysis.h"
 
-#include <algorithm>
 #include <functional>
 #include <string>
 #include <utility>

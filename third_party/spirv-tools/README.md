@@ -1,4 +1,7 @@
 # SPIR-V Tools
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/KhronosGroup/SPIRV-Tools/badge)](https://securityscorecards.dev/viewer/?uri=github.com/KhronosGroup/SPIRV-Tools)
+
+NEWS 2023-01-11: Development occurs on the `main` branch.
 
 ## Overview
 
@@ -21,9 +24,16 @@ headers, and XML registry.
 
 ## Downloads
 
+The official releases for SPIRV-Tools can be found on LunarG's
+[SDK download page](https://vulkan.lunarg.com/sdk/home).
+
+For convenience, here are also links to the latest builds (HEAD).
+Those are untested automated builds. Those are not official releases, nor
+are guaranteed to work. Official releases builds are in the Vulkan SDK.
+
 <img alt="Linux" src="kokoro/img/linux.png" width="20px" height="20px" hspace="2px"/>[![Linux Build Status](https://storage.googleapis.com/spirv-tools/badges/build_status_linux_clang_release.svg)](https://storage.googleapis.com/spirv-tools/badges/build_link_linux_clang_release.html)
 <img alt="MacOS" src="kokoro/img/macos.png" width="20px" height="20px" hspace="2px"/>[![MacOS Build Status](https://storage.googleapis.com/spirv-tools/badges/build_status_macos_clang_release.svg)](https://storage.googleapis.com/spirv-tools/badges/build_link_macos_clang_release.html)
-<img alt="Windows" src="kokoro/img/windows.png" width="20px" height="20px" hspace="2px"/>[![Windows Build Status](https://storage.googleapis.com/spirv-tools/badges/build_status_windows_release.svg)](https://storage.googleapis.com/spirv-tools/badges/build_link_windows_vs2017_release.html)
+<img alt="Windows" src="kokoro/img/windows.png" width="20px" height="20px" hspace="2px"/>[![Windows Build Status](https://storage.googleapis.com/spirv-tools/badges/build_status_windows_vs2022_release.svg)](https://storage.googleapis.com/spirv-tools/badges/build_link_windows_vs2022_release.html)
 
 [More downloads](docs/downloads.md)
 
@@ -46,17 +56,14 @@ version.  An API call reports the software version as a C-style string.
 
 ## Releases
 
-Some versions of SPIRV-Tools are tagged as stable releases (see
-[tags](https://github.com/KhronosGroup/SPIRV-Tools/tags) on github).
-These versions undergo extra testing.
-Releases are not directly related to releases (or versions) of
-[SPIRV-Headers][spirv-headers].
-Releases of SPIRV-Tools are tested against the version of SPIRV-Headers listed
-in the [DEPS](DEPS) file.
-The release generally uses the most recent compatible version of SPIRV-Headers
-available at the time of release.
-No version of SPIRV-Headers other than the one listed in the DEPS file is
-guaranteed to work with the SPIRV-Tools release.
+The official releases for SPIRV-Tools can be found on LunarG's
+[SDK download page](https://vulkan.lunarg.com/sdk/home).
+
+You can find either the prebuilt, and QA tested binaries, or download the
+SDK Config, which lists the commits to use to build the release from scratch.
+
+GitHub releases are deprecated, and we will not publish new releases until
+further notice.
 
 ## Supported features
 
@@ -73,6 +80,8 @@ guaranteed to work with the SPIRV-Tools release.
 * Assembler only does basic syntax checking.  No cross validation of
   IDs or types is performed, except to check literal arguments to
   `OpConstant`, `OpSpecConstant`, and `OpSwitch`.
+* Where tools expect binary input, a hex stream may be provided instead.  See
+  `spirv-dis --help`.
 
 See [`docs/syntax.md`](docs/syntax.md) for the assembly language syntax.
 
@@ -271,7 +280,7 @@ Contributions via merge request are welcome. Changes should:
   `clang-format version 5.0.0` for SPIRV-Tools. Settings are defined by
   the included [.clang-format](.clang-format) file.
 
-We intend to maintain a linear history on the GitHub `master` branch.
+We intend to maintain a linear history on the GitHub `main` branch.
 
 ### Getting the source
 
@@ -290,16 +299,18 @@ For some kinds of development, you may need the latest sources from the third-pa
     git clone https://github.com/google/googletest.git          spirv-tools/external/googletest
     git clone https://github.com/google/effcee.git              spirv-tools/external/effcee
     git clone https://github.com/google/re2.git                 spirv-tools/external/re2
+    git clone https://github.com/abseil/abseil-cpp.git          spirv-tools/external/abseil_cpp
 
 #### Dependency on Effcee
 
 Some tests depend on the [Effcee][effcee] library for stateful matching.
-Effcee itself depends on [RE2][re2].
+Effcee itself depends on [RE2][re2], and RE2 depends on [Abseil][abseil-cpp].
 
 * If SPIRV-Tools is configured as part of a larger project that already uses
   Effcee, then that project should include Effcee before SPIRV-Tools.
-* Otherwise, SPIRV-Tools expects Effcee sources to appear in `external/effcee`
-  and RE2 sources to appear in `external/re2`.
+* Otherwise, SPIRV-Tools expects Effcee sources to appear in `external/effcee`,
+  RE2 sources to appear in `external/re2`, and Abseil sources to appear in 
+  `external/abseil_cpp`.
 
 ### Source code organization
 
@@ -311,6 +322,9 @@ Effcee itself depends on [RE2][re2].
 * `external/re2`: Location of [RE2][re2] sources, if the `re2` library is not already
   configured by an enclosing project.
   (The Effcee project already requires RE2.)
+* `external/abseil_cpp`: Location of [Abseil][abseil-cpp] sources, if Abseil is
+   not already configured by an enclosing project.
+  (The RE2 project already requires Abseil.)
 * `include/`: API clients should add this directory to the include search path
 * `external/spirv-headers`: Intended location for
   [SPIR-V headers][spirv-headers], not provided
@@ -378,10 +392,11 @@ fuzzer tests.
 
 ### Build using Bazel
 You can also use [Bazel](https://bazel.build/) to build the project.
+
 ```sh
-cd <spirv-dir>
 bazel build :all
 ```
+
 ### Build a node.js package using Emscripten
 
 The SPIRV-Tools core library can be built to a WebAssembly [node.js](https://nodejs.org)
@@ -417,7 +432,7 @@ targets, you need to install CMake Version 2.8.12 or later.
 - [Python 3](http://www.python.org/): for utility scripts and running the test
 suite.
 - [Bazel](https://bazel.build/) (optional): if building the source with Bazel,
-you need to install Bazel Version 5.0.0 on your machine. Other versions may
+you need to install Bazel Version 7.0.2 on your machine. Other versions may
 also work, but are not verified.
 - [Emscripten SDK](https://emscripten.org) (optional): if building the
   WebAssembly module.
@@ -425,17 +440,17 @@ also work, but are not verified.
 SPIRV-Tools is regularly tested with the following compilers:
 
 On Linux
-- GCC version 9.3
+- GCC version 9.4
 - Clang version 10.0
 
 On MacOS
-- AppleClang 11.0
+- AppleClang 15.0
 
 On Windows
-- Visual Studio 2015
-- Visual Studio 2017
+- Visual Studio 2019
+- Visual Studio 2022
 
-Other compilers or later versions may work, but they are not tested.
+Note: Other compilers or later versions may work, but they are not tested.
 
 ### CMake options
 
@@ -467,12 +482,12 @@ iterator debugging.
 ### Android ndk-build
 
 SPIR-V Tools supports building static libraries `libSPIRV-Tools.a` and
-`libSPIRV-Tools-opt.a` for Android:
+`libSPIRV-Tools-opt.a` for Android.  Using the Android NDK r25c or later:
 
 ```
 cd <spirv-dir>
 
-export ANDROID_NDK=/path/to/your/ndk
+export ANDROID_NDK=/path/to/your/ndk   # NDK r25c or later
 
 mkdir build && cd build
 mkdir libs
@@ -496,7 +511,7 @@ The script requires Chromium's
 
 ### Usage
 
-The internals of the library use C++11 features, and are exposed via both a C
+The internals of the library use C++17 features, and are exposed via both a C
 and C++ API.
 
 In order to use the library from an application, the include path should point
@@ -718,10 +733,16 @@ Use `bazel test :all` to run all tests. This will run tests in parallel by defau
 To run a single test target, specify `:my_test_target` instead of `:all`. Test target
 names get printed when you run `bazel test :all`. For example, you can run
 `opt_def_use_test` with:
+
+on linux:
 ```shell
-bazel test :opt_def_use_test
+bazel test --cxxopt=-std=c++17 :opt_def_use_test
 ```
 
+on windows:
+```shell
+bazel test --cxxopt=/std:c++17 :opt_def_use_test
+```
 
 ## Future Work
 <a name="future"></a>
@@ -779,6 +800,7 @@ limitations under the License.
 [googletest-issue-610]: https://github.com/google/googletest/issues/610
 [effcee]: https://github.com/google/effcee
 [re2]: https://github.com/google/re2
+[abseil-cpp]: https://github.com/abseil/abseil-cpp
 [CMake]: https://cmake.org/
 [cpp-style-guide]: https://google.github.io/styleguide/cppguide.html
 [clang-sanitizers]: http://clang.llvm.org/docs/UsersManual.html#controlling-code-generation

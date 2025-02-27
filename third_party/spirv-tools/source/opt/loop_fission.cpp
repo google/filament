@@ -499,6 +499,7 @@ Pass::Status LoopFissionPass::Process() {
       // next iteration.
       if (split_multiple_times_) {
         inner_most_loops = std::move(new_loops_to_split);
+        new_loops_to_split = {};
       } else {
         break;
       }

@@ -296,12 +296,12 @@ class Loop {
   // as a nested child loop.
   inline void SetParent(Loop* parent) { parent_ = parent; }
 
-  // Returns true is the instruction is invariant and safe to move wrt loop
-  bool ShouldHoistInstruction(IRContext* context, Instruction* inst);
+  // Returns true is the instruction is invariant and safe to move wrt loop.
+  bool ShouldHoistInstruction(const Instruction& inst) const;
 
   // Returns true if all operands of inst are in basic blocks not contained in
-  // loop
-  bool AreAllOperandsOutsideLoop(IRContext* context, Instruction* inst);
+  // loop.
+  bool AreAllOperandsOutsideLoop(const Instruction& inst) const;
 
   // Extract the initial value from the |induction| variable and store it in
   // |value|. If the function couldn't find the initial value of |induction|

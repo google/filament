@@ -7,31 +7,31 @@ void main()
 {
     int i;
     int j;
-    int _30;
-    int _31;
+    int _33;
+    int _34;
     if (vIndex != 0 && vIndex != 1 && vIndex != 11 && vIndex != 2 && vIndex != 3 && vIndex != 4 && vIndex != 5)
     {
-        _30 = 2;
+        _33 = 2;
     }
     if (vIndex == 1 || vIndex == 11)
     {
-        _31 = 1;
+        _34 = 1;
     }
     switch (vIndex)
     {
         case 0:
         {
-            _30 = 3;
+            _33 = 3;
         }
         default:
         {
-            j = _30;
-            _31 = 0;
+            j = _33;
+            _34 = 0;
         }
         case 1:
         case 11:
         {
-            j = _31;
+            j = _34;
         }
         case 2:
         {

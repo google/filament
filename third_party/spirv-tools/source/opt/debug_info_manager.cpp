@@ -768,15 +768,29 @@ void DebugInfoManager::ConvertDebugGlobalToLocalVariable(
          local_var->opcode() == spv::Op::OpFunctionParameter);
 
   // Convert |dbg_global_var| to DebugLocalVariable
+  // All of the operands up to the scope operand are the same for the type
+  // instructions. The flag operand needs to move from operand
+  // kDebugGlobalVariableOperandFlagsIndex to
+  // kDebugLocalVariableOperandFlagsIndex. No other operands are needed to
+  // define the DebugLocalVariable.
+
+  // Modify the opcode.
   dbg_global_var->SetInOperand(kExtInstInstructionInIdx,
                                {CommonDebugInfoDebugLocalVariable});
+
+  // Move the flags operand.
   auto flags = dbg_global_var->GetSingleWordOperand(
       kDebugGlobalVariableOperandFlagsIndex);
-  for (uint32_t i = dbg_global_var->NumInOperands() - 1;
-       i >= kDebugLocalVariableOperandFlagsIndex; --i) {
+  dbg_global_var->SetOperand(kDebugLocalVariableOperandFlagsIndex, {flags});
+
+  // Remove the  extra operands. Starting at the end to avoid copying too much
+  // data.
+  for (uint32_t i = dbg_global_var->NumOperands() - 1;
+       i > kDebugLocalVariableOperandFlagsIndex; --i) {
     dbg_global_var->RemoveOperand(i);
   }
-  dbg_global_var->SetOperand(kDebugLocalVariableOperandFlagsIndex, {flags});
+
+  // Update the def-use manager.
   context()->ForgetUses(dbg_global_var);
   context()->AnalyzeUses(dbg_global_var);
 

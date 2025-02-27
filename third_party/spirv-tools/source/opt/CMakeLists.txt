@@ -64,14 +64,12 @@ set(SPIRV_TOOLS_OPT_SOURCES
   inline_exhaustive_pass.h
   inline_opaque_pass.h
   inline_pass.h
-  inst_bindless_check_pass.h
-  inst_buff_addr_check_pass.h
-  inst_debug_printf_pass.h
   instruction.h
   instruction_list.h
-  instrument_pass.h
   interface_var_sroa.h
+  invocation_interlock_placement_pass.h
   interp_fixup_pass.h
+  opextinst_forward_ref_fixup_pass.h
   ir_builder.h
   ir_context.h
   ir_loader.h
@@ -93,6 +91,7 @@ set(SPIRV_TOOLS_OPT_SOURCES
   loop_unswitch_pass.h
   mem_pass.h
   merge_return_pass.h
+  modify_maximal_reconvergence.h
   module.h
   null_pass.h
   passes.h
@@ -121,7 +120,9 @@ set(SPIRV_TOOLS_OPT_SOURCES
   strip_debug_info_pass.h
   strip_nonsemantic_info_pass.h
   struct_cfg_analysis.h
+  switch_descriptorset_pass.h
   tree_iterator.h
+  trim_capabilities_pass.h
   type_manager.h
   types.h
   unify_const_pass.h
@@ -182,14 +183,12 @@ set(SPIRV_TOOLS_OPT_SOURCES
   inline_exhaustive_pass.cpp
   inline_opaque_pass.cpp
   inline_pass.cpp
-  inst_bindless_check_pass.cpp
-  inst_buff_addr_check_pass.cpp
-  inst_debug_printf_pass.cpp
   instruction.cpp
   instruction_list.cpp
-  instrument_pass.cpp
   interface_var_sroa.cpp
+  invocation_interlock_placement_pass.cpp
   interp_fixup_pass.cpp
+  opextinst_forward_ref_fixup_pass.cpp
   ir_context.cpp
   ir_loader.cpp
   licm_pass.cpp
@@ -210,6 +209,7 @@ set(SPIRV_TOOLS_OPT_SOURCES
   loop_unswitch_pass.cpp
   mem_pass.cpp
   merge_return_pass.cpp
+  modify_maximal_reconvergence.cpp
   module.cpp
   optimizer.cpp
   pass.cpp
@@ -236,6 +236,9 @@ set(SPIRV_TOOLS_OPT_SOURCES
   strip_debug_info_pass.cpp
   strip_nonsemantic_info_pass.cpp
   struct_cfg_analysis.cpp
+  struct_packing_pass.cpp
+  switch_descriptorset_pass.cpp
+  trim_capabilities_pass.cpp
   type_manager.cpp
   types.cpp
   unify_const_pass.cpp
@@ -271,10 +274,7 @@ set_property(TARGET SPIRV-Tools-opt PROPERTY FOLDER "SPIRV-Tools libraries")
 spvtools_check_symbol_exports(SPIRV-Tools-opt)
 
 if(ENABLE_SPIRV_TOOLS_INSTALL)
-  install(TARGETS SPIRV-Tools-opt EXPORT SPIRV-Tools-optTargets
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(TARGETS SPIRV-Tools-opt EXPORT SPIRV-Tools-optTargets)
   export(EXPORT SPIRV-Tools-optTargets FILE SPIRV-Tools-optTargets.cmake)
 
   spvtools_config_package_dir(SPIRV-Tools-opt PACKAGE_DIR)

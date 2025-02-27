@@ -15,11 +15,8 @@
 #include "source/opt/debug_info_manager.h"
 
 #include <memory>
-#include <string>
 #include <vector>
 
-#include "effcee/effcee.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "source/opt/build_module.h"
 #include "source/opt/instruction.h"
@@ -800,6 +797,84 @@ void main(float in_var_color : COLOR) {
   EXPECT_EQ(dbg_value->dbg_line_inst()->GetSingleWordInOperand(
                 kOpLineInOperandColumnIndex),
             7);
+}
+
+TEST(DebugInfoManager, ConvertGlobalToLocal) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "PSMain" %3
+               OpExecutionMode %2 OriginUpperLeft
+          %4 = OpString "C:\\local\\Temp\\2528091a-6811-4e62-9ed5-02f1547c2016.hlsl"
+          %5 = OpString "float"
+          %6 = OpString "Pi"
+      %float = OpTypeFloat 32
+%float_3_1415 = OpConstant %float 3.1415
+       %uint = OpTypeInt 32 0
+    %uint_32 = OpConstant %uint 32
+%_ptr_Private_float = OpTypePointer Private %float
+%_ptr_Function_float = OpTypePointer Function %float
+       %void = OpTypeVoid
+     %uint_3 = OpConstant %uint 3
+     %uint_0 = OpConstant %uint 0
+     %uint_4 = OpConstant %uint 4
+     %uint_1 = OpConstant %uint 1
+     %uint_5 = OpConstant %uint 5
+     %uint_8 = OpConstant %uint 8
+     %uint_6 = OpConstant %uint 6
+    %uint_20 = OpConstant %uint 20
+         %25 = OpTypeFunction %void
+    %uint_11 = OpConstant %uint 11
+          %3 = OpVariable %_ptr_Private_float Private
+          %8 = OpExtInst %void %1 DebugTypeBasic %5 %uint_32 %uint_3 %uint_0
+         %12 = OpExtInst %void %1 DebugSource %4
+         %13 = OpExtInst %void %1 DebugCompilationUnit %uint_1 %uint_4 %12 %uint_5
+         %17 = OpExtInst %void %1 DebugGlobalVariable %6 %8 %12 %uint_6 %uint_20 %13 %6 %3 %uint_8
+          %2 = OpFunction %void None %25
+         %27 = OpLabel
+         %29 = OpVariable %_ptr_Function_float Function
+               OpStore %3 %float_3_1415
+         %28 = OpExtInst %void %1 DebugLine %12 %uint_11 %uint_11 %uint_1 %uint_1
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  auto* def_use_mgr = context->get_def_use_mgr();
+  auto* dbg_var = def_use_mgr->GetDef(17);
+  EXPECT_EQ(dbg_var->GetCommonDebugOpcode(),
+            OpenCLDebugInfo100DebugGlobalVariable);
+  EXPECT_EQ(dbg_var->NumInOperands(), 11);
+
+  std::vector<Operand> originalOperands;
+  for (uint32_t i = 0; i < dbg_var->NumInOperands(); ++i) {
+    originalOperands.emplace_back(dbg_var->GetInOperand((i)));
+  }
+
+  auto* local_var = def_use_mgr->GetDef(29);
+  auto* dbg_info_mgr = context->get_debug_info_mgr();
+  dbg_info_mgr->ConvertDebugGlobalToLocalVariable(dbg_var, local_var);
+
+  EXPECT_EQ(dbg_var->NumInOperands(), 9);
+
+  // This checks that the first two inoperands are correct.
+  EXPECT_EQ(dbg_var->GetCommonDebugOpcode(),
+            OpenCLDebugInfo100DebugLocalVariable);
+
+  // Then next 6 operands should be the same as the original instruction.
+  EXPECT_EQ(dbg_var->GetInOperand(2), originalOperands[2]);
+  EXPECT_EQ(dbg_var->GetInOperand(3), originalOperands[3]);
+  EXPECT_EQ(dbg_var->GetInOperand(4), originalOperands[4]);
+  EXPECT_EQ(dbg_var->GetInOperand(5), originalOperands[5]);
+  EXPECT_EQ(dbg_var->GetInOperand(6), originalOperands[6]);
+  EXPECT_EQ(dbg_var->GetInOperand(7), originalOperands[7]);
+
+  // The flags operand should have shifted because operand 8 and 9 in the global
+  // instruction are not relevant.
+  EXPECT_EQ(dbg_var->GetInOperand(8), originalOperands[10]);
 }
 
 }  // namespace

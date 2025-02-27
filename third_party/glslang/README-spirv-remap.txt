@@ -28,10 +28,9 @@ workload.
 
 
 FEEDBACK
---------------------------------------------------------------------------------
-Report defects, enhancements requests, code improvements, etc to:
-   spvremapper@lunarg.com
-
+---------------------------------------------------------------------------------
+Report defects, enhancement requests, code improvements, etc by creating
+issues in the glslang repository at https://github.com/KhronosGroup/glslang
 
 COMMAND LINE USAGE:
 --------------------------------------------------------------------------------

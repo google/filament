@@ -92,20 +92,21 @@ class DecorationManager {
 
   // Returns whether a decoration instruction for |id| with decoration
   // |decoration| exists or not.
-  bool HasDecoration(uint32_t id, uint32_t decoration);
+  bool HasDecoration(uint32_t id, uint32_t decoration) const;
+  bool HasDecoration(uint32_t id, spv::Decoration decoration) const;
 
   // |f| is run on each decoration instruction for |id| with decoration
   // |decoration|. Processed are all decorations which target |id| either
   // directly or indirectly by Decoration Groups.
   void ForEachDecoration(uint32_t id, uint32_t decoration,
-                         std::function<void(const Instruction&)> f);
+                         std::function<void(const Instruction&)> f) const;
 
   // |f| is run on each decoration instruction for |id| with decoration
   // |decoration|. Processes all decoration which target |id| either directly or
   // indirectly through decoration groups. If |f| returns false, iteration is
   // terminated and this function returns false.
   bool WhileEachDecoration(uint32_t id, uint32_t decoration,
-                           std::function<bool(const Instruction&)> f);
+                           std::function<bool(const Instruction&)> f) const;
 
   // |f| is run on each decoration instruction for |id| with decoration
   // |decoration|. Processes all decoration which target |id| either directly or
@@ -141,7 +142,7 @@ class DecorationManager {
                         uint32_t decoration_value);
 
   // Add |decoration, decoration_value| of |inst_id, member| to module.
-  void AddMemberDecoration(uint32_t member, uint32_t inst_id,
+  void AddMemberDecoration(uint32_t inst_id, uint32_t member,
                            uint32_t decoration, uint32_t decoration_value);
 
   friend bool operator==(const DecorationManager&, const DecorationManager&);

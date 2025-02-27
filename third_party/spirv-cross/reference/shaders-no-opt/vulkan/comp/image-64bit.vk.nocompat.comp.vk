@@ -1,0 +1,22 @@
+#version 450
+#if defined(GL_ARB_gpu_shader_int64)
+#extension GL_ARB_gpu_shader_int64 : require
+#else
+#error No extension available for 64-bit integers.
+#endif
+#extension GL_EXT_shader_image_int64 : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, r64ui) uniform u64image2D uimg;
+layout(set = 0, binding = 1, r64i) uniform i64image2D iimg;
+
+void main()
+{
+    uint64_t uv = imageLoad(uimg, ivec2(gl_GlobalInvocationID.xy + uvec2(50u))).x;
+    int64_t iv = imageLoad(iimg, ivec2(gl_GlobalInvocationID.xy + uvec2(50u))).x;
+    uint64_t _52 = imageAtomicMax(uimg, ivec2(gl_GlobalInvocationID.xy), uv);
+    uv = _52;
+    int64_t _59 = imageAtomicMax(iimg, ivec2(gl_GlobalInvocationID.xy), iv);
+    iv = _59;
+}
+

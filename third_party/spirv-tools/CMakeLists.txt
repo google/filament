@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 The Khronos Group Inc.
+# Copyright (c) 2015-2023 The Khronos Group Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,74 +12,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.19)
-if (POLICY CMP0048)
-  cmake_policy(SET CMP0048 NEW)
-endif()
-if (POLICY CMP0054)
-  # Avoid dereferencing variables or interpret keywords that have been
-  # quoted or bracketed.
-  # https://cmake.org/cmake/help/v3.1/policy/CMP0054.html
-  cmake_policy(SET CMP0054 NEW)
-endif()
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-set(SPIRV-Headers_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../spirv-headers)
-
-if (APPLE)
-  set(CMAKE_MACOSX_RPATH ON)
-endif (APPLE)
-set(SPIRV_SKIP_EXECUTABLES_OPTION ON)
-set(SPIRV_SKIP_TESTS_OPTION ON)
-set(SKIP_SPIRV_TOOLS_INSTALL ON)
+cmake_minimum_required(VERSION 3.22.1)
 
 project(spirv-tools)
+
+# Avoid a bug in CMake 3.22.1. By default it will set -std=c++11 for
+# targets in test/*, when those tests need -std=c++17.
+# https://github.com/KhronosGroup/SPIRV-Tools/issues/5340
+# The bug is fixed in CMake 3.22.2
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.22.1")
+  if (${CMAKE_VERSION} VERSION_LESS "3.22.2")
+    cmake_policy(SET CMP0128 NEW)
+  endif()
+endif()
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+enable_testing()
 set(SPIRV_TOOLS "SPIRV-Tools")
 
 include(GNUInstallDirs)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Require at least C++11
+# Require at least C++17
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_STANDARD 17)
 endif()
-if(${CMAKE_CXX_STANDARD} LESS 11)
-  message(FATAL_ERROR "SPIRV-Tools requires C++11 or later, but is configured for C++${CMAKE_CXX_STANDARD})")
+if(${CMAKE_CXX_STANDARD} LESS 17)
+  message(FATAL_ERROR "SPIRV-Tools requires C++17 or later, but is configured for C++${CMAKE_CXX_STANDARD})")
 endif()
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 
 option(ENABLE_RTTI "Enables RTTI" OFF)
 option(SPIRV_ALLOW_TIMERS "Allow timers via clock_gettime on supported platforms" ON)
 
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-  add_definitions(-DSPIRV_LINUX)
   set(SPIRV_TIMER_ENABLED ${SPIRV_ALLOW_TIMERS})
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten")
-    add_definitions(-DSPIRV_EMSCRIPTEN)
 elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
   add_definitions(-DSPIRV_WINDOWS)
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "CYGWIN")
   add_definitions(-DSPIRV_WINDOWS)
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
-  add_definitions(-DSPIRV_MAC)
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
-  add_definitions(-DSPIRV_IOS)
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "tvOS")
-  add_definitions(-DSPIRV_TVOS)
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
-  add_definitions(-DSPIRV_ANDROID)
   set(SPIRV_TIMER_ENABLED ${SPIRV_ALLOW_TIMERS})
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
-  add_definitions(-DSPIRV_FREEBSD)
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD")
-  add_definitions(-DSPIRV_OPENBSD)
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
-  add_definitions(-DSPIRV_FUCHSIA)
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "GNU")
-  add_definitions(-DSPIRV_GNU)
-else()
-  message(FATAL_ERROR "Your platform '${CMAKE_SYSTEM_NAME}' is not supported!")
 endif()
 
 if (${SPIRV_TIMER_ENABLED})
@@ -91,6 +67,7 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
+option(SKIP_SPIRV_TOOLS_INSTALL "Skip installation" ${SKIP_SPIRV_TOOLS_INSTALL})
 if(NOT ${SKIP_SPIRV_TOOLS_INSTALL})
   set(ENABLE_SPIRV_TOOLS_INSTALL ON)
 endif()
@@ -107,8 +84,7 @@ set(SPIRV_LIB_FUZZING_ENGINE_LINK_OPTIONS "" CACHE STRING "Used by OSS-Fuzz to c
 
 option(SPIRV_BUILD_LIBFUZZER_TARGETS "Build libFuzzer targets" OFF)
 
-set(SPIRV_WERROR OFF)
-
+option(SPIRV_WERROR "Enable error on warning" ON)
 if(("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang") AND (NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")))
   set(COMPILER_IS_LIKE_GNU TRUE)
 endif()
@@ -204,10 +180,9 @@ function(spvtools_default_compile_options TARGET)
   target_compile_options(${TARGET} PRIVATE ${SPIRV_WARNINGS})
 
   if (${COMPILER_IS_LIKE_GNU})
-    target_compile_options(${TARGET} PRIVATE -std=c++11 -fno-exceptions)
     target_compile_options(${TARGET} PRIVATE
       -Wall -Wextra -Wno-long-long -Wshadow -Wundef -Wconversion
-      -Wno-sign-conversion)
+      -Wno-sign-conversion -fno-exceptions)
 
     if(NOT ENABLE_RTTI)
         add_compile_options(-fno-rtti)
@@ -244,7 +219,7 @@ function(spvtools_default_compile_options TARGET)
   # For MinGW cross compile, statically link to the C++ runtime.
   # But it still depends on MSVCRT.dll.
   if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    if (${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
+    if (NOT MSVC)
       set_target_properties(${TARGET} PROPERTIES
         LINK_FLAGS -static -static-libgcc -static-libstdc++)
     endif()
@@ -263,12 +238,7 @@ if(NOT COMMAND find_host_program)
 endif()
 
 # Tests require Python3
-if(CMAKE_VERSION VERSION_LESS "3.12" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-  find_host_package(PythonInterp 3 REQUIRED)
-else()
-  find_package(Python3 COMPONENTS Interpreter)
-  set(PYTHON_EXECUTABLE "${Python3_EXECUTABLE}")
-endif()
+find_host_package(Python3 REQUIRED)
 
 # Check for symbol exports on Linux.
 # At the moment, this check will fail on the OSX build machines for the Android NDK.
@@ -277,7 +247,7 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   macro(spvtools_check_symbol_exports TARGET)
     if (NOT "${SPIRV_SKIP_TESTS}")
       add_test(NAME spirv-tools-symbol-exports-${TARGET}
-               COMMAND ${PYTHON_EXECUTABLE}
+               COMMAND Python3::Interpreter
                ${spirv-tools_SOURCE_DIR}/utils/check_symbol_exports.py "$<TARGET_FILE:${TARGET}>")
     endif()
   endmacro()
@@ -290,7 +260,7 @@ else()
 endif()
 
 if(ENABLE_SPIRV_TOOLS_INSTALL)
-  if(WIN32)
+  if(WIN32 AND NOT MINGW)
     macro(spvtools_config_package_dir TARGET PATH)
       set(${PATH} ${TARGET}/cmake)
     endmacro()
@@ -310,15 +280,23 @@ if(ENABLE_SPIRV_TOOLS_INSTALL)
   endmacro()
 endif()
 
-# Defaults to OFF if the user didn't set it.
-option(SPIRV_SKIP_EXECUTABLES
-  "Skip building the executable and tests along with the library"
- ${SPIRV_SKIP_EXECUTABLES_OPTION})
-option(SPIRV_SKIP_TESTS
- "Skip building tests along with the library" ${SPIRV_SKIP_TESTS_OPTION})
-if ("${SPIRV_SKIP_EXECUTABLES}")
+# Currently iOS and Android are very similar.
+# They both have their own packaging (APP/APK).
+# Which makes regular executables/testing problematic.
+#
+# Currently the only deliverables for these platforms are
+# libraries (either STATIC or SHARED).
+#
+# Furthermore testing is equally problematic.
+if (IOS OR ANDROID)
+  set(SPIRV_SKIP_EXECUTABLES ON)
+endif()
+
+option(SPIRV_SKIP_EXECUTABLES "Skip building the executable and tests along with the library")
+if (SPIRV_SKIP_EXECUTABLES)
   set(SPIRV_SKIP_TESTS ON)
 endif()
+option(SPIRV_SKIP_TESTS "Skip building tests along with the library")
 
 # Defaults to ON.  The checks can be time consuming.
 # Turn off if they take too long.
@@ -359,6 +337,9 @@ endif()
 add_subdirectory(source)
 add_subdirectory(tools)
 
+add_subdirectory(test)
+add_subdirectory(examples)
+
 if(ENABLE_SPIRV_TOOLS_INSTALL)
   install(
     FILES
@@ -366,16 +347,55 @@ if(ENABLE_SPIRV_TOOLS_INSTALL)
       ${CMAKE_CURRENT_SOURCE_DIR}/include/spirv-tools/libspirv.hpp
       ${CMAKE_CURRENT_SOURCE_DIR}/include/spirv-tools/optimizer.hpp
       ${CMAKE_CURRENT_SOURCE_DIR}/include/spirv-tools/linker.hpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/include/spirv-tools/instrument.hpp
     DESTINATION
       ${CMAKE_INSTALL_INCLUDEDIR}/spirv-tools/)
 endif(ENABLE_SPIRV_TOOLS_INSTALL)
 
 if (NOT "${SPIRV_SKIP_TESTS}")
   add_test(NAME spirv-tools-copyrights
-           COMMAND ${PYTHON_EXECUTABLE} utils/check_copyright.py
+           COMMAND Python3::Interpreter utils/check_copyright.py
            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
 set(SPIRV_LIBRARIES "-lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link")
 set(SPIRV_SHARED_LIBRARIES "-lSPIRV-Tools-shared")
+
+# Build pkg-config file
+# Use a first-class target so it's regenerated when relevant files are updated.
+add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools.pc
+        COMMAND ${CMAKE_COMMAND}
+                      -DCHANGES_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGES
+                      -DTEMPLATE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools.pc.in
+                      -DOUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools.pc
+                      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+                      -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
+                      -DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}
+                      -DSPIRV_LIBRARIES=${SPIRV_LIBRARIES}
+                      -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake
+        DEPENDS "CHANGES" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools.pc.in" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake")
+add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools-shared.pc
+        COMMAND ${CMAKE_COMMAND}
+                      -DCHANGES_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGES
+                      -DTEMPLATE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools-shared.pc.in
+                      -DOUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools-shared.pc
+                      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+                      -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
+                      -DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}
+                      -DSPIRV_SHARED_LIBRARIES=${SPIRV_SHARED_LIBRARIES}
+                      -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake
+        DEPENDS "CHANGES" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools-shared.pc.in" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake")
+add_custom_target(spirv-tools-pkg-config 
+        ALL 
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools-shared.pc ${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools.pc)
+
+# Install pkg-config file
+if (ENABLE_SPIRV_TOOLS_INSTALL)
+  install(
+    FILES
+      ${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools.pc
+      ${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools-shared.pc
+    DESTINATION
+      ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+endif()

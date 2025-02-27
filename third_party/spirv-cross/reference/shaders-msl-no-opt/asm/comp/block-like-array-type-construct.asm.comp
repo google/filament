@@ -44,7 +44,7 @@ struct spvUnsafeArray
     }
 };
 
-struct _10
+struct _12
 {
     float _m0[4];
     float _m1[4];
@@ -58,19 +58,19 @@ struct SSBO
     int b;
 };
 
-constant spvUnsafeArray<float, 4> _31 = spvUnsafeArray<float, 4>({ 1.0, 2.0, 3.0, 4.0 });
+constant spvUnsafeArray<float, 4> _36 = spvUnsafeArray<float, 4>({ 1.0, 2.0, 3.0, 4.0 });
 
 kernel void main0()
 {
-    spvUnsafeArray<_10, 2> _34 = spvUnsafeArray<_10, 2>({ _10{ { 1.0, 2.0, 3.0, 4.0 }, { 1.0, 2.0, 3.0, 4.0 } }, _10{ { 1.0, 2.0, 3.0, 4.0 }, { 1.0, 2.0, 3.0, 4.0 } } });
+    spvUnsafeArray<_12, 2> _39 = spvUnsafeArray<_12, 2>({ _12{ { 1.0, 2.0, 3.0, 4.0 }, { 1.0, 2.0, 3.0, 4.0 } }, _12{ { 1.0, 2.0, 3.0, 4.0 }, { 1.0, 2.0, 3.0, 4.0 } } });
     
     spvUnsafeArray<float, 4> foo;
     foo[0] = 1.0;
-    foo = _31;
+    foo = _36;
     foo[1] = 2.0;
     foo[2] = 3.0;
     foo[3] = 4.0;
     spvUnsafeArray<float, 4> foo2 = foo;
-    _10 _37 = _10{ { foo[0], foo[1], foo[2], foo[3] }, { foo2[0], foo2[1], foo2[2], foo2[3] } };
+    _12 _41 = _12{ { foo[0], foo[1], foo[2], foo[3] }, { foo2[0], foo2[1], foo2[2], foo2[3] } };
 }
 

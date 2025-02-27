@@ -9,6 +9,7 @@ The extension supports:
 * Symbol renaming
 * Operand hover information
 * Formatting
+* Completion suggestions for all Opcodes and Ids
 
 ## Dependencies
 
@@ -18,8 +19,8 @@ In order to build and install the Visual Studio Code language server extension, 
 
 ## Installing (macOS / Linux)
 
-Run `install.sh`
+Run `install_vscode.sh`
 
 ## Installing (Windows)
 
-Run `install.bat`
+Run `install_vscode.bat`

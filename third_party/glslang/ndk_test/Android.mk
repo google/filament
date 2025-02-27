@@ -39,7 +39,7 @@ LOCAL_SRC_FILES:=test.cpp
 LOCAL_MODULE:=glslang_ndk_test
 LOCAL_LDLIBS:=-landroid
 LOCAL_CXXFLAGS:=-std=c++17 -fno-exceptions -fno-rtti -Werror
-LOCAL_STATIC_LIBRARIES:=glslang SPIRV HLSL
+LOCAL_STATIC_LIBRARIES:=glslang
 include $(BUILD_SHARED_LIBRARY)
 
 include $(LOCAL_PATH)/../Android.mk

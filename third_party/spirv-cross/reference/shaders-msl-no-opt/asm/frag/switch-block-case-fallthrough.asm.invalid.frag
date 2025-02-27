@@ -18,31 +18,31 @@ fragment main0_out main0(main0_in in [[stage_in]])
     int i = 0;
     main0_out out = {};
     int j;
-    int _30;
-    int _31;
+    int _33;
+    int _34;
     if (in.vIndex != 0 && in.vIndex != 1 && in.vIndex != 11 && in.vIndex != 2 && in.vIndex != 3 && in.vIndex != 4 && in.vIndex != 5)
     {
-        _30 = 2;
+        _33 = 2;
     }
     if (in.vIndex == 1 || in.vIndex == 11)
     {
-        _31 = 1;
+        _34 = 1;
     }
     switch (in.vIndex)
     {
         case 0:
         {
-            _30 = 3;
+            _33 = 3;
         }
         default:
         {
-            j = _30;
-            _31 = 0;
+            j = _33;
+            _34 = 0;
         }
         case 1:
         case 11:
         {
-            j = _31;
+            j = _34;
         }
         case 2:
         {

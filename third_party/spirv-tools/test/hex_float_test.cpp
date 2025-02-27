@@ -1348,9 +1348,11 @@ std::ostream& operator<<(std::ostream& os, const StreamParseCase<T>& fspc) {
   return os;
 }
 
-using FloatStreamParseTest = ::testing::TestWithParam<StreamParseCase<float>>;
+using Float32StreamParseTest = ::testing::TestWithParam<StreamParseCase<float>>;
+using Float16StreamParseTest =
+    ::testing::TestWithParam<StreamParseCase<Float16>>;
 
-TEST_P(FloatStreamParseTest, Samples) {
+TEST_P(Float32StreamParseTest, Samples) {
   std::stringstream input(GetParam().literal);
   HexFloat<FloatProxy<float>> parsed_value(0.0f);
   // Hex floats must be read with the stream input operator.
@@ -1367,8 +1369,87 @@ TEST_P(FloatStreamParseTest, Samples) {
   }
 }
 
+// Returns a Float16 constructed from its sign bit, unbiased exponent, and
+// mantissa.
+Float16 makeF16(int sign_bit, int unbiased_exp, int mantissa) {
+  EXPECT_LE(0, sign_bit);
+  EXPECT_LE(sign_bit, 1);
+  // Exponent is 5 bits, with bias of 15.
+  EXPECT_LE(-15, unbiased_exp);  // -15 means zero or subnormal
+  EXPECT_LE(unbiased_exp, 16);   // 16 means infinity or NaN
+  EXPECT_LE(0, mantissa);
+  EXPECT_LE(mantissa, 0x3ff);
+  const unsigned biased_exp = 15 + unbiased_exp;
+  const uint32_t as_bits = sign_bit << 15 | (biased_exp << 10) | mantissa;
+  EXPECT_LE(as_bits, 0xffffu);
+  return Float16(static_cast<uint16_t>(as_bits));
+}
+
+TEST_P(Float16StreamParseTest, Samples) {
+  std::stringstream input(GetParam().literal);
+  HexFloat<FloatProxy<Float16>> parsed_value(makeF16(0, 0, 0));
+  // Hex floats must be read with the stream input operator.
+  input >> parsed_value;
+  if (GetParam().expect_success) {
+    EXPECT_FALSE(input.fail());
+    std::string suffix;
+    input >> suffix;
+    const auto got = parsed_value.value();
+    const auto expected = GetParam().expected_value.value();
+    EXPECT_EQ(got.data(), expected.data())
+        << "got: " << got << " expected: " << expected;
+  } else {
+    EXPECT_TRUE(input.fail());
+  }
+}
+
 INSTANTIATE_TEST_SUITE_P(
-    HexFloatExponentMissingDigits, FloatStreamParseTest,
+    HexFloat32FillSignificantDigits, Float32StreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<float>>{
+        {"0x123456p0", true, "", ldexpf(0x123456, 0)},
+        // Patterns that fill all mantissa bits
+        {"0x1.fffffep+23", true, "", ldexpf(0x1fffffe, -1)},
+        {"0x1f.ffffep+19", true, "", ldexpf(0x1fffffe, -1)},
+        {"0x1ff.fffep+15", true, "", ldexpf(0x1fffffe, -1)},
+        {"0x1fff.ffep+11", true, "", ldexpf(0x1fffffe, -1)},
+        {"0x1ffff.fep+7", true, "", ldexpf(0x1fffffe, -1)},
+        {"0x1fffff.ep+3", true, "", ldexpf(0x1fffffe, -1)},
+        {"0x1fffffe.p-1", true, "", ldexpf(0x1fffffe, -1)},
+        {"0xffffff.p+0", true, "", ldexpf(0x1fffffe, -1)},
+        {"0xffffff.p+0", true, "", ldexpf(0xffffff, 0)},
+        // Now drop some bits in the middle
+        {"0xa5a5a5.p+0", true, "", ldexpf(0xa5a5a5, 0)},
+        {"0x5a5a5a.p+0", true, "", ldexpf(0x5a5a5a, 0)}}));
+
+INSTANTIATE_TEST_SUITE_P(
+    HexFloat32ExcessSignificantDigits, Float32StreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<float>>{
+        // Base cases
+        {"0x1.fffffep0", true, "", ldexpf(0xffffff, -23)},
+        {"0xa5a5a5p0", true, "", ldexpf(0xa5a5a5, 0)},
+        {"0xa.5a5a5p+9", true, "", ldexpf(0xa5a5a5, -11)},
+        {"0x5a5a5ap0", true, "", ldexpf(0x5a5a5a, 0)},
+        {"0x5.a5a5ap+9", true, "", ldexpf(0x5a5a5a, -11)},
+        // Truncate extra bits: zeroes
+        {"0x1.fffffe0p0", true, "", ldexpf(0xffffff, -23)},
+        {"0xa5a5a5000p0", true, "", ldexpf(0xa5a5a5, 12)},
+        {"0xa.5a5a5000p+9", true, "", ldexpf(0xa5a5a5, -11)},
+        {"0x5a5a5a000p0", true, "", ldexpf(0x5a5a5a, 12)},
+        {"0x5.a5a5a000p+9", true, "", ldexpf(0x5a5a5a, -11)},
+        // Truncate extra bits: ones
+        {"0x1.ffffffp0",  // Extra bits in the last nibble
+         true, "", ldexpf(0xffffff, -23)},
+        {"0x1.fffffffp0", true, "", ldexpf(0xffffff, -23)},
+        {"0xa5a5a5fffp0", true, "", ldexpf(0xa5a5a5, 12)},
+        {"0xa.5a5a5fffp+9", true, "", ldexpf(0xa5a5a5, -11)},
+        {"0x5a5a5afffp0",
+         // The 5 nibble (0101), leads with 0, so the result can fit a leading
+         // 1 bit , yielding 8 (1000).
+         true, "", ldexpf(0x5a5a5a8, 8)},
+        {"0x5.a5a5afffp+9", true, "", ldexpf(0x5a5a5a8, 8 - 32 + 9)}}));
+
+INSTANTIATE_TEST_SUITE_P(
+    HexFloat32ExponentMissingDigits, Float32StreamParseTest,
     ::testing::ValuesIn(std::vector<StreamParseCase<float>>{
         {"0x1.0p1", true, "", 2.0f},
         {"0x1.0p1a", true, "a", 2.0f},
@@ -1388,7 +1469,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"0x1.0p--", false, "", 0.0f}}));
 
 INSTANTIATE_TEST_SUITE_P(
-    HexFloatExponentTrailingSign, FloatStreamParseTest,
+    HexFloat32ExponentTrailingSign, Float32StreamParseTest,
     ::testing::ValuesIn(std::vector<StreamParseCase<float>>{
         // Don't consume a sign after the binary exponent digits.
         {"0x1.0p1", true, "", 2.0f},
@@ -1396,7 +1477,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"0x1.0p1-", true, "-", 2.0f}}));
 
 INSTANTIATE_TEST_SUITE_P(
-    HexFloatPositiveExponentOverflow, FloatStreamParseTest,
+    HexFloat32PositiveExponentOverflow, Float32StreamParseTest,
     ::testing::ValuesIn(std::vector<StreamParseCase<float>>{
         // Positive exponents
         {"0x1.0p1", true, "", 2.0f},       // fine, a normal number
@@ -1412,7 +1493,7 @@ INSTANTIATE_TEST_SUITE_P(
     }));
 
 INSTANTIATE_TEST_SUITE_P(
-    HexFloatNegativeExponentOverflow, FloatStreamParseTest,
+    HexFloat32NegativeExponentOverflow, Float32StreamParseTest,
     ::testing::ValuesIn(std::vector<StreamParseCase<float>>{
         // Positive results, digits before '.'
         {"0x1.0p-126", true, "",
@@ -1436,7 +1517,109 @@ INSTANTIATE_TEST_SUITE_P(
         {"0x0.0p-5000000000", true, "", 0.0f},  // zero mantissa, zero result
     }));
 
-// TODO(awoloszyn): Add fp16 tests and HexFloatTraits.
+INSTANTIATE_TEST_SUITE_P(
+    HexFloat16ExcessSignificantDigits, Float16StreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<Float16>>{
+        // Zero
+        {"0x1.c00p0", true, "", makeF16(0, 0, 0x300)},
+        {"0x0p0", true, "", makeF16(0, -15, 0x0)},
+        {"0x000.0000p0", true, "", makeF16(0, -15, 0x0)},
+        // All leading 1s
+        {"0x1p0", true, "", makeF16(0, 0, 0x0)},
+        {"0x1.8p0", true, "", makeF16(0, 0, 0x200)},
+        {"0x1.cp0", true, "", makeF16(0, 0, 0x300)},
+        {"0x1.ep0", true, "", makeF16(0, 0, 0x380)},
+        {"0x1.fp0", true, "", makeF16(0, 0, 0x3c0)},
+        {"0x1.f8p0", true, "", makeF16(0, 0, 0x3e0)},
+        {"0x1.fcp0", true, "", makeF16(0, 0, 0x3f0)},
+        {"0x1.fep0", true, "", makeF16(0, 0, 0x3f8)},
+        {"0x1.ffp0", true, "", makeF16(0, 0, 0x3fc)},
+        // Fill trailing zeros to all significant places
+        // that might be used for significant digits.
+        {"0x1.ff8p0", true, "", makeF16(0, 0, 0x3fe)},
+        {"0x1.ffcp0", true, "", makeF16(0, 0, 0x3ff)},
+        {"0x1.800p0", true, "", makeF16(0, 0, 0x200)},
+        {"0x1.c00p0", true, "", makeF16(0, 0, 0x300)},
+        {"0x1.e00p0", true, "", makeF16(0, 0, 0x380)},
+        {"0x1.f00p0", true, "", makeF16(0, 0, 0x3c0)},
+        {"0x1.f80p0", true, "", makeF16(0, 0, 0x3e0)},
+        {"0x1.fc0p0", true, "", makeF16(0, 0, 0x3f0)},
+        {"0x1.fe0p0", true, "", makeF16(0, 0, 0x3f8)},
+        {"0x1.ff0p0", true, "", makeF16(0, 0, 0x3fc)},
+        {"0x1.ff8p0", true, "", makeF16(0, 0, 0x3fe)},
+        {"0x1.ffcp0", true, "", makeF16(0, 0, 0x3ff)},
+        // Add several trailing zeros
+        {"0x1.c00000p0", true, "", makeF16(0, 0, 0x300)},
+        {"0x1.e00000p0", true, "", makeF16(0, 0, 0x380)},
+        {"0x1.f00000p0", true, "", makeF16(0, 0, 0x3c0)},
+        {"0x1.f80000p0", true, "", makeF16(0, 0, 0x3e0)},
+        {"0x1.fc0000p0", true, "", makeF16(0, 0, 0x3f0)},
+        {"0x1.fe0000p0", true, "", makeF16(0, 0, 0x3f8)},
+        {"0x1.ff0000p0", true, "", makeF16(0, 0, 0x3fc)},
+        {"0x1.ff8000p0", true, "", makeF16(0, 0, 0x3fe)},
+        {"0x1.ffcp0000", true, "", makeF16(0, 0, 0x3ff)},
+        // Samples that drop out bits in the middle.
+        //   5 = 0101    4 = 0100
+        //   a = 1010    8 = 1000
+        {"0x1.5a4p0", true, "", makeF16(0, 0, 0x169)},
+        {"0x1.a58p0", true, "", makeF16(0, 0, 0x296)},
+        // Samples that drop out bits *and* truncate significant bits
+        // that can't be represented.
+        {"0x1.5a40000p0", true, "", makeF16(0, 0, 0x169)},
+        {"0x1.5a7ffffp0", true, "", makeF16(0, 0, 0x169)},
+        {"0x1.a580000p0", true, "", makeF16(0, 0, 0x296)},
+        {"0x1.a5bffffp0", true, "", makeF16(0, 0, 0x296)},
+        // Try some negations.
+        {"-0x0p0", true, "", makeF16(1, -15, 0x0)},
+        {"-0x000.0000p0", true, "", makeF16(1, -15, 0x0)},
+        {"-0x1.5a40000p0", true, "", makeF16(1, 0, 0x169)},
+        {"-0x1.5a7ffffp0", true, "", makeF16(1, 0, 0x169)},
+        {"-0x1.a580000p0", true, "", makeF16(1, 0, 0x296)},
+        {"-0x1.a5bffffp0", true, "", makeF16(1, 0, 0x296)}}));
+
+INSTANTIATE_TEST_SUITE_P(
+    HexFloat16IncreasingExponentsAndMantissa, Float16StreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<Float16>>{
+        // Zero
+        {"0x0p0", true, "", makeF16(0, -15, 0x0)},
+        {"0x0p5000000000000", true, "", makeF16(0, -15, 0x0)},
+        {"-0x0p5000000000000", true, "", makeF16(1, -15, 0x0)},
+        // Leading 1
+        {"0x1p0", true, "", makeF16(0, 0, 0x0)},
+        {"0x1p1", true, "", makeF16(0, 1, 0x0)},
+        {"0x1p16", true, "", makeF16(0, 16, 0x0)},
+        {"0x1p-1", true, "", makeF16(0, -1, 0x0)},
+        {"0x1p-14", true, "", makeF16(0, -14, 0x0)},
+        // Leading 2
+        {"0x2p0", true, "", makeF16(0, 1, 0x0)},
+        {"0x2p1", true, "", makeF16(0, 2, 0x0)},
+        {"0x2p15", true, "", makeF16(0, 16, 0x0)},
+        {"0x2p-1", true, "", makeF16(0, 0, 0x0)},
+        {"0x2p-15", true, "", makeF16(0, -14, 0x0)},
+        // Leading 8
+        {"0x8p0", true, "", makeF16(0, 3, 0x0)},
+        {"0x8p1", true, "", makeF16(0, 4, 0x0)},
+        {"0x8p13", true, "", makeF16(0, 16, 0x0)},
+        {"0x8p-3", true, "", makeF16(0, 0, 0x0)},
+        {"0x8p-17", true, "", makeF16(0, -14, 0x0)},
+        // Leading 10
+        {"0x10.0p0", true, "", makeF16(0, 4, 0x0)},
+        {"0x10.0p1", true, "", makeF16(0, 5, 0x0)},
+        {"0x10.0p12", true, "", makeF16(0, 16, 0x0)},
+        {"0x10.0p-5", true, "", makeF16(0, -1, 0x0)},
+        {"0x10.0p-18", true, "", makeF16(0, -14, 0x0)},
+        // Samples that drop out bits *and* truncate significant bits
+        // that can't be represented.
+        // Progressively increase the leading digit.
+        {"0x1.5a40000p0", true, "", makeF16(0, 0, 0x169)},
+        {"0x1.5a7ffffp0", true, "", makeF16(0, 0, 0x169)},
+        {"0x2.5a40000p0", true, "", makeF16(0, 1, 0x0b4)},
+        {"0x2.5a7ffffp0", true, "", makeF16(0, 1, 0x0b4)},
+        {"0x4.5a40000p0", true, "", makeF16(0, 2, 0x05a)},
+        {"0x4.5a7ffffp0", true, "", makeF16(0, 2, 0x05a)},
+        {"0x8.5a40000p0", true, "", makeF16(0, 3, 0x02d)},
+        {"0x8.5a7ffffp0", true, "", makeF16(0, 3, 0x02d)}}));
+
 }  // namespace
 }  // namespace utils
 }  // namespace spvtools

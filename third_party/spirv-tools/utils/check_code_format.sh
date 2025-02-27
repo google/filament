@@ -18,7 +18,7 @@
 #
 # This script assumes to be invoked at the project root directory.
 
-BASE_BRANCH=${1:-master}
+BASE_BRANCH=${1:-main}
 
 FILES_TO_CHECK=$(git diff --name-only ${BASE_BRANCH} | grep -E ".*\.(cpp|cc|c\+\+|cxx|c|h|hpp)$")
 

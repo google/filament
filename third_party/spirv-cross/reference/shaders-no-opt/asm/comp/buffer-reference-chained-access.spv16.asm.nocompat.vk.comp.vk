@@ -1,0 +1,20 @@
+#version 450
+#extension GL_EXT_buffer_reference2 : require
+layout(local_size_x = 4, local_size_y = 1, local_size_z = 1) in;
+
+layout(buffer_reference) buffer S;
+layout(buffer_reference, buffer_reference_align = 4, std430) buffer S
+{
+    vec4 data[];
+};
+
+layout(push_constant, std430) uniform Registers
+{
+    S s;
+} registers;
+
+void main()
+{
+    registers.s.data[gl_GlobalInvocationID.x][gl_LocalInvocationIndex] = 40.0;
+}
+

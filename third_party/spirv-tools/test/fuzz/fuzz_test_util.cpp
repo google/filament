@@ -145,7 +145,7 @@ void DumpTransformationsJson(
     const protobufs::TransformationSequence& transformations,
     const char* filename) {
   std::string json_string;
-  auto json_options = google::protobuf::util::JsonOptions();
+  auto json_options = google::protobuf::util::JsonPrintOptions();
   json_options.add_whitespace = true;
   auto json_generation_status = google::protobuf::util::MessageToJsonString(
       transformations, &json_string, json_options);

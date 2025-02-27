@@ -1,19 +1,19 @@
-// Copyright (c) 2014-2020 The Khronos Group Inc.
-// 
+// Copyright (c) 2014-2024 The Khronos Group Inc.
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and/or associated documentation files (the "Materials"),
 // to deal in the Materials without restriction, including without limitation
 // the rights to use, copy, modify, merge, publish, distribute, sublicense,
 // and/or sell copies of the Materials, and to permit persons to whom the
 // Materials are furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Materials.
-// 
+//
 // MODIFICATIONS TO THIS FILE MAY MEAN IT NO LONGER ACCURATELY REFLECTS KHRONOS
 // STANDARDS. THE UNMODIFIED, NORMATIVE VERSIONS OF KHRONOS SPECIFICATIONS AND
-// HEADER INFORMATION ARE LOCATED AT https://www.khronos.org/registry/ 
-// 
+// HEADER INFORMATION ARE LOCATED AT https://www.khronos.org/registry/
+//
 // THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 // OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -96,6 +96,22 @@ enum OperandClass {
     OperandQuantizationModes,
     OperandOverflowModes,
     OperandPackedVectorFormat,
+    OperandCooperativeMatrixOperands,
+    OperandCooperativeMatrixLayout,
+    OperandCooperativeMatrixUse,
+    OperandCooperativeMatrixReduce,
+    OperandTensorClampMode,
+    OperandTensorAddressingOperands,
+    OperandInitializationModeQualifier,
+    OperandHostAccessQualifier,
+    OperandLoadCacheControl,
+    OperandStoreCacheControl,
+    OperandNamedMaximumNumberOfRegisters,
+    OperandMatrixMultiplyAccumulateOperands,
+    OperandRawAccessChainOperands,
+    OperandFPEncoding,
+    OperandCooperativeVectorMatrixLayout,
+    OperandComponentType,
 
     OperandOpcode,
 
@@ -114,6 +130,9 @@ typedef std::vector<std::string> EnumCaps;
 
 // A set of extensions.
 typedef std::vector<std::string> Extensions;
+
+// A set of aliases.
+typedef std::vector<std::string> Aliases;
 
 // Parameterize a set of operands with their OperandClass(es) and descriptions.
 class OperandParameters {
@@ -184,6 +203,7 @@ public:
 
     iterator begin() { return values.begin(); }
     iterator end() { return values.end(); }
+    EValue& back() { return values.back(); }
 
 private:
     ContainerType values;
@@ -194,18 +214,21 @@ private:
 class EnumValue {
 public:
     EnumValue() : value(0), desc(nullptr) {}
-    EnumValue(unsigned int the_value, const std::string& the_name, EnumCaps&& the_caps,
+    EnumValue(unsigned int the_value, const std::string& the_name, Aliases&& the_aliases, EnumCaps&& the_caps,
         const std::string& the_firstVersion, const std::string& the_lastVersion,
         Extensions&& the_extensions, OperandParameters&& the_operands) :
-      value(the_value), name(the_name), capabilities(std::move(the_caps)),
+      value(the_value), name(the_name), aliases(std::move(the_aliases)), capabilities(std::move(the_caps)),
       firstVersion(std::move(the_firstVersion)), lastVersion(std::move(the_lastVersion)),
       extensions(std::move(the_extensions)), operands(std::move(the_operands)), desc(nullptr) { }
+
+    bool hasAliases() const { return !aliases.empty(); }
 
     // For ValueEnum, the value from the JSON file.
     // For BitEnum, the index of the bit position represented by this mask.
     // (That is, what you shift 1 by to get the mask.)
     unsigned value;
     std::string name;
+    Aliases aliases;
     EnumCaps capabilities;
     std::string firstVersion;
     std::string lastVersion;
@@ -216,6 +239,10 @@ public:
     Extensions extensions;
     OperandParameters operands;
     const char* desc;
+
+    // Returns true if this enum is valid, in isolation.
+    // Otherwise emits a diagnostic to std::cerr and returns false.
+    bool IsValid(OperandClass oc, const std::string& context) const;
 };
 
 using EnumValues = EnumValuesContainer<EnumValue>;
@@ -261,21 +288,16 @@ public:
     InstructionValue(EnumValue&& e, const std::string& printClass, bool has_type, bool has_result)
      : EnumValue(std::move(e)),
        printingClass(printClass),
-       opDesc("TBD"),
+       opDesc("TBD."),
        typePresent(has_type),
-       resultPresent(has_result),
-       alias(this) { }
+       resultPresent(has_result) { }
     InstructionValue(const InstructionValue& v)
     {
         *this = v;
-        alias = this;
     }
 
     bool hasResult() const { return resultPresent != 0; }
     bool hasType()   const { return typePresent != 0; }
-    void setAlias(const InstructionValue& a) { alias = &a; }
-    const InstructionValue& getAlias() const { return *alias; }
-    bool isAlias() const { return alias != this; }
 
     std::string printingClass;
     const char* opDesc;
@@ -283,7 +305,6 @@ public:
 protected:
     int typePresent   : 1;
     int resultPresent : 1;
-    const InstructionValue* alias;    // correct only after discovering the aliases; otherwise points to this
 };
 
 using InstructionValues = EnumValuesContainer<InstructionValue>;

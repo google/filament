@@ -73,5 +73,21 @@ TEST_F(BinaryVersion, Mismatch) {
                         "through 1) vs 1.5 (input module 2)."));
 }
 
+TEST_F(BinaryVersion, UseHighest) {
+  // clang-format off
+  spvtest::Binaries binaries = {
+      CreateBinary(SPV_SPIRV_VERSION_WORD(1, 3)),
+      CreateBinary(SPV_SPIRV_VERSION_WORD(1, 5)),
+  };
+  // clang-format on
+  LinkerOptions options;
+  options.SetUseHighestVersion(true);
+  spvtest::Binary linked_binary;
+  ASSERT_EQ(SPV_SUCCESS, Link(binaries, &linked_binary, options))
+      << GetErrorMessage();
+  EXPECT_THAT(GetErrorMessage(), std::string());
+  EXPECT_EQ(SPV_SPIRV_VERSION_WORD(1, 5), linked_binary[1]);
+}
+
 }  // namespace
 }  // namespace spvtools

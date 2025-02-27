@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "source/ext_inst.h"
+#include "source/opcode.h"
 #include "source/table.h"
 #include "spirv-tools/libspirv.h"
 
@@ -87,13 +88,13 @@ class Instruction {
   }
 
   bool IsNonSemantic() const {
-    return opcode() == spv::Op::OpExtInst &&
+    return spvIsExtendedInstruction(opcode()) &&
            spvExtInstIsNonSemantic(inst_.ext_inst_type);
   }
 
   /// True if this is an OpExtInst for debug info extension.
   bool IsDebugInfo() const {
-    return opcode() == spv::Op::OpExtInst &&
+    return spvIsExtendedInstruction(opcode()) &&
            spvExtInstIsDebugInfo(inst_.ext_inst_type);
   }
 

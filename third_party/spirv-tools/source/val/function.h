@@ -20,6 +20,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -278,7 +279,7 @@ class Function {
   Construct& FindConstructForEntryBlock(const BasicBlock* entry_block,
                                         ConstructType t);
 
-  /// The result id of the OpLabel that defined this block
+  /// The result id of OpFunction
   uint32_t id_;
 
   /// The type of the function

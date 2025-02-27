@@ -23,10 +23,10 @@ uvec4 subgroupBallot(bool v) { return uvec4(unpackUint2x32(ballotARB(v)), 0u, 0u
 
 void main()
 {
-    uvec4 _21 = subgroupBallot(INDEX < 100u);
-    SV_Target.x = _21.x;
-    SV_Target.y = _21.y;
-    SV_Target.z = _21.z;
-    SV_Target.w = _21.w;
+    uvec4 _15 = subgroupBallot(INDEX < 100u);
+    SV_Target.x = _15.x;
+    SV_Target.y = _15.y;
+    SV_Target.z = _15.z;
+    SV_Target.w = _15.w;
 }
 

@@ -122,7 +122,6 @@ endif()
 # requires us to explicitly list the dependencies below, as CMake doesn't have a way to recursively
 # query dependencies.
 set(FILAMAT_DEPS
-        OGLCompiler
         OSDependent
         SPIRV
         SPIRV-Tools

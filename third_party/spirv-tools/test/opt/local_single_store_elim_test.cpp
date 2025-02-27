@@ -24,6 +24,56 @@ namespace {
 
 using LocalSingleStoreElimTest = PassTest<::testing::Test>;
 
+TEST_F(LocalSingleStoreElimTest, DoSomethingWithExtensions) {
+  const std::string capabilities_and_extensions =
+      R"(OpCapability Shader
+OpExtension "SPV_EXT_fragment_shader_interlock"
+OpExtension "SPV_NV_compute_shader_derivatives"
+OpExtension "SPV_KHR_ray_query"
+OpExtension "SPV_NV_shader_subgroup_partitioned"
+OpExtension "SPV_KHR_ray_tracing"
+OpExtension "SPV_EXT_descriptor_indexing"
+)";
+
+  const std::string before = capabilities_and_extensions +
+                             R"(%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+OpSource GLSL 140
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%_ptr_Function_float = OpTypePointer Function %float
+%float_0 = OpConstant %float 0
+%2 = OpFunction %void None %4
+%8 = OpLabel
+%9 = OpVariable %_ptr_Function_float Function
+OpStore %9 %float_0
+%10 = OpLoad %float %9
+OpReturn
+OpFunctionEnd
+)";
+  const std::string after = capabilities_and_extensions +
+                            R"(%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+OpSource GLSL 140
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%_ptr_Function_float = OpTypePointer Function %float
+%float_0 = OpConstant %float 0
+%2 = OpFunction %void None %4
+%8 = OpLabel
+%9 = OpVariable %_ptr_Function_float Function
+OpStore %9 %float_0
+OpReturn
+OpFunctionEnd
+)";
+  SinglePassRunAndCheck<LocalSingleStoreElimPass>(before, after, true, true);
+}
 TEST_F(LocalSingleStoreElimTest, PositiveAndNegative) {
   // Single store to v is optimized. Multiple store to
   // f is not optimized.
@@ -1747,6 +1797,58 @@ TEST_F(LocalSingleStoreElimTest, DebugValuesForAllLocalsAndParams) {
   )";
 
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndMatch<LocalSingleStoreElimPass>(text, false);
+}
+
+TEST_F(LocalSingleStoreElimTest, VkMemoryModelTest) {
+  const std::string text =
+      R"(
+; CHECK: OpCapability Shader
+; CHECK: OpCapability VulkanMemoryModel
+; CHECK: OpExtension "SPV_KHR_vulkan_memory_model"
+               OpCapability Shader
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_vulkan_memory_model"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+       %bool = OpTypeBool
+      %false = OpConstantFalse %bool
+; CHECK: OpFunction
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[a:%\w+]] = OpVariable
+; CHECK-NEXT: [[b:%\w+]] = OpVariable
+; CHECK: OpStore [[a]] [[v:%\w+]]
+; CHECK: OpStore [[b]]
+; Make sure the load was removed.
+; CHECK: OpLabel
+; CHECK-NOT: OpLoad %int [[a]]
+; CHECK: OpStore [[b]] [[v]]
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %a = OpVariable %_ptr_Function_int Function
+          %b = OpVariable %_ptr_Function_int Function
+               OpStore %a %int_0
+               OpStore %b %int_1
+               OpSelectionMerge %15 None
+               OpBranchConditional %false %14 %15
+         %14 = OpLabel
+         %16 = OpLoad %int %a
+               OpStore %b %16
+               OpBranch %15
+         %15 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+
   SinglePassRunAndMatch<LocalSingleStoreElimPass>(text, false);
 }
 

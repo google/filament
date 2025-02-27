@@ -240,6 +240,39 @@ class ValidationState_t {
     entry_point_to_execution_modes_[entry_point].insert(execution_mode);
   }
 
+  /// Registers that the entry point declares its local size
+  void RegisterEntryPointLocalSize(uint32_t entry_point,
+                                   const Instruction* inst) {
+    entry_point_to_local_size_or_id_[entry_point] = inst;
+  }
+
+  /// Registers that the entry point maximum number of primitives
+  /// mesh shader will ever emit
+  void RegisterEntryPointOutputPrimitivesEXT(uint32_t entry_point,
+                                             const Instruction* inst) {
+    entry_point_to_output_primitives_[entry_point] = inst;
+  }
+
+  /// Returns the maximum number of primitives mesh shader can emit
+  uint32_t GetOutputPrimitivesEXT(uint32_t entry_point) {
+    auto entry = entry_point_to_output_primitives_.find(entry_point);
+    if (entry != entry_point_to_output_primitives_.end()) {
+      auto inst = entry->second;
+      return inst->GetOperandAs<uint32_t>(2);
+    }
+    return 0;
+  }
+
+  /// Returns whether the entry point declares its local size
+  bool EntryPointHasLocalSizeOrId(uint32_t entry_point) const {
+    return entry_point_to_local_size_or_id_.find(entry_point) !=
+           entry_point_to_local_size_or_id_.end();
+  }
+  /// Returns the id of the local size
+  const Instruction* EntryPointLocalSizeOrId(uint32_t entry_point) const {
+    return entry_point_to_local_size_or_id_.find(entry_point)->second;
+  }
+
   /// Returns the interface descriptions of a given entry point.
   const std::vector<EntryPointDescription>& entry_point_descriptions(
       uint32_t entry_point) {
@@ -317,7 +350,7 @@ class ValidationState_t {
 
   /// Returns true if the capability is enabled in the module.
   bool HasCapability(spv::Capability cap) const {
-    return module_capabilities_.Contains(cap);
+    return module_capabilities_.contains(cap);
   }
 
   /// Returns a reference to the set of capabilities in the module.
@@ -328,7 +361,7 @@ class ValidationState_t {
 
   /// Returns true if the extension is enabled in the module.
   bool HasExtension(Extension ext) const {
-    return module_extensions_.Contains(ext);
+    return module_extensions_.contains(ext);
   }
 
   /// Returns true if any of the capabilities is enabled, or if |capabilities|
@@ -485,6 +518,13 @@ class ValidationState_t {
   void RegisterSampledImageConsumer(uint32_t sampled_image_id,
                                     Instruction* consumer);
 
+  // Record a cons_id as a consumer of texture_id
+  // if texture 'texture_id' has a QCOM image processing decoration
+  // and consumer is a load or a sampled image instruction
+  void RegisterQCOMImageProcessingTextureConsumer(uint32_t texture_id,
+                                                  const Instruction* consumer0,
+                                                  const Instruction* consumer1);
+
   // Record a function's storage class consumer instruction
   void RegisterStorageClassConsumer(spv::StorageClass storage_class,
                                     Instruction* consumer);
@@ -594,14 +634,18 @@ class ValidationState_t {
   // Only works for types not for objects.
   bool IsVoidType(uint32_t id) const;
   bool IsFloatScalarType(uint32_t id) const;
+  bool IsFloatArrayType(uint32_t id) const;
   bool IsFloatVectorType(uint32_t id) const;
+  bool IsFloat16Vector2Or4Type(uint32_t id) const;
   bool IsFloatScalarOrVectorType(uint32_t id) const;
   bool IsFloatMatrixType(uint32_t id) const;
   bool IsIntScalarType(uint32_t id) const;
+  bool IsIntArrayType(uint32_t id) const;
   bool IsIntVectorType(uint32_t id) const;
   bool IsIntScalarOrVectorType(uint32_t id) const;
   bool IsUnsignedIntScalarType(uint32_t id) const;
   bool IsUnsignedIntVectorType(uint32_t id) const;
+  bool IsUnsignedIntScalarOrVectorType(uint32_t id) const;
   bool IsSignedIntScalarType(uint32_t id) const;
   bool IsSignedIntVectorType(uint32_t id) const;
   bool IsBoolScalarType(uint32_t id) const;
@@ -610,10 +654,19 @@ class ValidationState_t {
   bool IsPointerType(uint32_t id) const;
   bool IsAccelerationStructureType(uint32_t id) const;
   bool IsCooperativeMatrixType(uint32_t id) const;
+  bool IsCooperativeMatrixNVType(uint32_t id) const;
+  bool IsCooperativeMatrixKHRType(uint32_t id) const;
+  bool IsCooperativeMatrixAType(uint32_t id) const;
+  bool IsCooperativeMatrixBType(uint32_t id) const;
+  bool IsCooperativeMatrixAccType(uint32_t id) const;
   bool IsFloatCooperativeMatrixType(uint32_t id) const;
   bool IsIntCooperativeMatrixType(uint32_t id) const;
   bool IsUnsignedIntCooperativeMatrixType(uint32_t id) const;
   bool IsUnsigned64BitHandle(uint32_t id) const;
+  bool IsCooperativeVectorNVType(uint32_t id) const;
+  bool IsFloatCooperativeVectorNVType(uint32_t id) const;
+  bool IsIntCooperativeVectorNVType(uint32_t id) const;
+  bool IsUnsignedIntCooperativeVectorNVType(uint32_t id) const;
 
   // Returns true if |id| is a type id that contains |type| (or integer or
   // floating point type) of |width| bits.
@@ -634,9 +687,8 @@ class ValidationState_t {
                     const std::function<bool(const Instruction*)>& f,
                     bool traverse_all_types = true) const;
 
-  // Gets value from OpConstant and OpSpecConstant as uint64.
-  // Returns false on failure (no instruction, wrong instruction, not int).
-  bool GetConstantValUint64(uint32_t id, uint64_t* val) const;
+  // Returns true if |id| is type id that contains an untyped pointer.
+  bool ContainsUntypedPointer(uint32_t id) const;
 
   // Returns type_id if id has type or zero otherwise.
   uint32_t GetTypeId(uint32_t id) const;
@@ -712,6 +764,14 @@ class ValidationState_t {
     pointer_to_storage_image_.insert(type_id);
   }
 
+  // Tries to evaluate a any scalar integer OpConstant as uint64.
+  // OpConstantNull is defined as zero for scalar int (will return true)
+  // OpSpecConstant* return false since their values cannot be relied upon
+  // during validation.
+  bool EvalConstantValUint64(uint32_t id, uint64_t* val) const;
+  // Same as EvalConstantValUint64 but returns a signed int
+  bool EvalConstantValInt64(uint32_t id, int64_t* val) const;
+
   // Tries to evaluate a 32-bit signed or unsigned scalar integer constant.
   // Returns tuple <is_int32, is_const_int32, value>.
   // OpSpecConstant* return |is_const_int32| as false since their values cannot
@@ -737,11 +797,17 @@ class ValidationState_t {
     return SpvDecorationString(uint32_t(decoration));
   }
 
-  // Returns whether type m1 and type m2 are cooperative matrices with
-  // the same "shape" (matching scope, rows, cols). If any are specialization
-  // constants, we assume they can match because we can't prove they don't.
+  // Returns whether type result_type_id and type m2 are cooperative matrices
+  // with the same "shape" (matching scope, rows, cols). If any are
+  // specialization constants, we assume they can match because we can't prove
+  // they don't.
   spv_result_t CooperativeMatrixShapesMatch(const Instruction* inst,
-                                            uint32_t m1, uint32_t m2);
+                                            uint32_t result_type_id,
+                                            uint32_t m2, bool is_conversion,
+                                            bool swap_row_col = false);
+
+  spv_result_t CooperativeVectorDimensionsMatch(const Instruction* inst,
+                                                uint32_t v1, uint32_t v2);
 
   // Returns true if |lhs| and |rhs| logically match and, if the decorations of
   // |rhs| are a subset of |lhs|.
@@ -786,6 +852,13 @@ class ValidationState_t {
     current_layout_section_ = section;
   }
 
+  // Check if instruction 'id' is a consumer of a texture decorated
+  // with a QCOM image processing decoration
+  bool IsQCOMImageProcessingTextureConsumer(uint32_t id) {
+    return qcom_image_processing_consumers_.find(id) !=
+           qcom_image_processing_consumers_.end();
+  }
+
  private:
   ValidationState_t(const ValidationState_t&);
 
@@ -819,6 +892,10 @@ class ValidationState_t {
   /// OpSampledImage instruction.
   std::unordered_map<uint32_t, std::vector<Instruction*>>
       sampled_image_consumers_;
+
+  /// Stores load instructions that load textures used
+  //  in QCOM image processing functions
+  std::unordered_set<uint32_t> qcom_image_processing_consumers_;
 
   /// A map of operand IDs and their names defined by the OpName instruction
   std::unordered_map<uint32_t, std::string> operand_names_;
@@ -915,6 +992,14 @@ class ValidationState_t {
   /// Mapping entry point -> execution modes.
   std::unordered_map<uint32_t, std::set<spv::ExecutionMode>>
       entry_point_to_execution_modes_;
+
+  // Mapping entry point -> local size execution mode instruction
+  std::unordered_map<uint32_t, const Instruction*>
+      entry_point_to_local_size_or_id_;
+
+  // Mapping entry point -> OutputPrimitivesEXT execution mode instruction
+  std::unordered_map<uint32_t, const Instruction*>
+      entry_point_to_output_primitives_;
 
   /// Mapping function -> array of entry points inside this
   /// module which can (indirectly) call the function.

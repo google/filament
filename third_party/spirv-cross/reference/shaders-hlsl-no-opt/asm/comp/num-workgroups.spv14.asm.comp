@@ -1,9 +1,9 @@
 static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
 
-RWByteAddressBuffer _3 : register(u1);
+RWByteAddressBuffer _4 : register(u1);
 cbuffer UBO : register(b0)
 {
-    uint3 _5_w : packoffset(c0);
+    uint3 _7_w : packoffset(c0);
 };
 
 cbuffer SPIRV_Cross_NumWorkgroups
@@ -14,7 +14,7 @@ cbuffer SPIRV_Cross_NumWorkgroups
 
 void comp_main()
 {
-    _3.Store3(0, SPIRV_Cross_NumWorkgroups_1_count + _5_w);
+    _4.Store3(0, SPIRV_Cross_NumWorkgroups_1_count + _7_w);
 }
 
 [numthreads(1, 1, 1)]

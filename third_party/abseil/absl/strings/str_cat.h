@@ -101,7 +101,6 @@
 #include <vector>
 
 #include "absl/base/attributes.h"
-#include "absl/base/config.h"
 #include "absl/base/nullability.h"
 #include "absl/base/port.h"
 #include "absl/meta/type_traits.h"
@@ -110,10 +109,6 @@
 #include "absl/strings/internal/stringify_sink.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/string_view.h"
-
-#if defined(ABSL_HAVE_STD_STRING_VIEW) && !defined(ABSL_USES_STD_STRING_VIEW)
-#include <string_view>
-#endif
 
 namespace absl {
 ABSL_NAMESPACE_BEGIN
@@ -365,12 +360,6 @@ class AlphaNum {
   AlphaNum(absl::string_view pc  // NOLINT(runtime/explicit)
                ABSL_ATTRIBUTE_LIFETIME_BOUND)
       : piece_(pc) {}
-
-#if defined(ABSL_HAVE_STD_STRING_VIEW) && !defined(ABSL_USES_STD_STRING_VIEW)
-  AlphaNum(std::string_view pc  // NOLINT(runtime/explicit)
-               ABSL_ATTRIBUTE_LIFETIME_BOUND)
-      : piece_(pc.data(), pc.size()) {}
-#endif  // !ABSL_USES_STD_STRING_VIEW
 
   template <typename T, typename = typename std::enable_if<
                             HasAbslStringify<T>::value>::type>

@@ -57,7 +57,7 @@ struct main0_patchOut
 };
 
 static inline __attribute__((always_inline))
-void write_in_func(threadgroup float4 (&v0)[4], thread uint& gl_InvocationID, device spvUnsafeArray<float4, 2>& v1, device float4& v3, device main0_out* thread & gl_out)
+void write_in_func(threadgroup spvUnsafeArray<float4, 4>& v0, thread uint& gl_InvocationID, device spvUnsafeArray<float4, 2>& v1, device float4& v3, device main0_out* thread & gl_out)
 {
     v0[gl_InvocationID] = float4(1.0);
     v0[gl_InvocationID].z = 3.0;
@@ -76,7 +76,7 @@ void write_in_func(threadgroup float4 (&v0)[4], thread uint& gl_InvocationID, de
 
 kernel void main0(uint gl_InvocationID [[thread_index_in_threadgroup]], uint gl_PrimitiveID [[threadgroup_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device main0_patchOut* spvPatchOut [[buffer(27)]], device MTLQuadTessellationFactorsHalf* spvTessLevel [[buffer(26)]])
 {
-    threadgroup float4 v0[4];
+    threadgroup spvUnsafeArray<float4, 4> v0;
     device main0_out* gl_out = &spvOut[gl_PrimitiveID * 4];
     device main0_patchOut& patchOut = spvPatchOut[gl_PrimitiveID];
     write_in_func(v0, gl_InvocationID, patchOut.v1, patchOut.v3, gl_out);

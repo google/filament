@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "source/opt/loop_dependence.h"
-
 #include <ostream>
 #include <set>
 #include <string>
@@ -23,7 +21,7 @@
 
 #include "source/opt/basic_block.h"
 #include "source/opt/instruction.h"
-#include "source/opt/scalar_analysis.h"
+#include "source/opt/loop_dependence.h"
 #include "source/opt/scalar_analysis_nodes.h"
 
 namespace spvtools {
