@@ -24,6 +24,7 @@ namespace spvtools {
 void EmitNumericLiteral(std::ostream* out, const spv_parsed_instruction_t& inst,
                         const spv_parsed_operand_t& operand) {
   if (operand.type != SPV_OPERAND_TYPE_LITERAL_INTEGER &&
+      operand.type != SPV_OPERAND_TYPE_LITERAL_FLOAT &&
       operand.type != SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER &&
       operand.type != SPV_OPERAND_TYPE_OPTIONAL_LITERAL_INTEGER &&
       operand.type != SPV_OPERAND_TYPE_OPTIONAL_TYPED_LITERAL_INTEGER)

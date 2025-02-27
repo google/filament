@@ -1,4 +1,4 @@
--- Copyright (c) 2014-2020 The Khronos Group Inc.
+-- Copyright (c) 2014-2024 The Khronos Group Inc.
 -- 
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and/or associated documentation files (the "Materials"),
@@ -12,7 +12,7 @@
 -- 
 -- MODIFICATIONS TO THIS FILE MAY MEAN IT NO LONGER ACCURATELY REFLECTS KHRONOS
 -- STANDARDS. THE UNMODIFIED, NORMATIVE VERSIONS OF KHRONOS SPECIFICATIONS AND
--- HEADER INFORMATION ARE LOCATED AT https://www.khronos.org/registry/ 
+-- HEADER INFORMATION ARE LOCATED AT https://www.khronos.org/registry/
 -- 
 -- THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 -- OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -60,6 +60,13 @@ spv = {
         HLSL = 5,
         CPP_for_OpenCL = 6,
         SYCL = 7,
+        HERO_C = 8,
+        NZSL = 9,
+        WGSL = 10,
+        Slang = 11,
+        Zig = 12,
+        Rust = 13,
+        Max = 0x7fffffff,
     },
 
     ExecutionModel = {
@@ -86,6 +93,7 @@ spv = {
         CallableNV = 5318,
         TaskEXT = 5364,
         MeshEXT = 5365,
+        Max = 0x7fffffff,
     },
 
     AddressingModel = {
@@ -94,6 +102,7 @@ spv = {
         Physical64 = 2,
         PhysicalStorageBuffer64 = 5348,
         PhysicalStorageBuffer64EXT = 5348,
+        Max = 0x7fffffff,
     },
 
     MemoryModel = {
@@ -102,6 +111,7 @@ spv = {
         OpenCL = 2,
         Vulkan = 3,
         VulkanKHR = 3,
+        Max = 0x7fffffff,
     },
 
     ExecutionMode = {
@@ -143,6 +153,9 @@ spv = {
         SubgroupsPerWorkgroupId = 37,
         LocalSizeId = 38,
         LocalSizeHintId = 39,
+        NonCoherentColorAttachmentReadEXT = 4169,
+        NonCoherentDepthAttachmentReadEXT = 4170,
+        NonCoherentStencilAttachmentReadEXT = 4171,
         SubgroupUniformControlFlowKHR = 4421,
         PostDepthCoverage = 4446,
         DenormPreserve = 4459,
@@ -152,17 +165,28 @@ spv = {
         RoundingModeRTZ = 4463,
         EarlyAndLateFragmentTestsAMD = 5017,
         StencilRefReplacingEXT = 5027,
+        CoalescingAMDX = 5069,
+        IsApiEntryAMDX = 5070,
+        MaxNodeRecursionAMDX = 5071,
+        StaticNumWorkgroupsAMDX = 5072,
+        ShaderIndexAMDX = 5073,
+        MaxNumWorkgroupsAMDX = 5077,
         StencilRefUnchangedFrontAMD = 5079,
         StencilRefGreaterFrontAMD = 5080,
         StencilRefLessFrontAMD = 5081,
         StencilRefUnchangedBackAMD = 5082,
         StencilRefGreaterBackAMD = 5083,
         StencilRefLessBackAMD = 5084,
+        QuadDerivativesKHR = 5088,
+        RequireFullQuadsKHR = 5089,
+        SharesInputWithAMDX = 5102,
         OutputLinesEXT = 5269,
         OutputLinesNV = 5269,
         OutputPrimitivesEXT = 5270,
         OutputPrimitivesNV = 5270,
+        DerivativeGroupQuadsKHR = 5289,
         DerivativeGroupQuadsNV = 5289,
+        DerivativeGroupLinearKHR = 5290,
         DerivativeGroupLinearNV = 5290,
         OutputTrianglesEXT = 5298,
         OutputTrianglesNV = 5298,
@@ -182,8 +206,15 @@ spv = {
         NoGlobalOffsetINTEL = 5895,
         NumSIMDWorkitemsINTEL = 5896,
         SchedulerTargetFmaxMhzINTEL = 5903,
+        MaximallyReconvergesKHR = 6023,
+        FPFastMathDefault = 6028,
         StreamingInterfaceINTEL = 6154,
+        RegisterMapInterfaceINTEL = 6160,
         NamedBarrierCountINTEL = 6417,
+        MaximumRegistersINTEL = 6461,
+        MaximumRegistersIdINTEL = 6462,
+        NamedMaximumRegistersINTEL = 6463,
+        Max = 0x7fffffff,
     },
 
     StorageClass = {
@@ -200,6 +231,8 @@ spv = {
         AtomicCounter = 10,
         Image = 11,
         StorageBuffer = 12,
+        TileImageEXT = 4172,
+        NodePayloadAMDX = 5068,
         CallableDataKHR = 5328,
         CallableDataNV = 5328,
         IncomingCallableDataKHR = 5329,
@@ -219,6 +252,7 @@ spv = {
         CodeSectionINTEL = 5605,
         DeviceOnlyINTEL = 5936,
         HostOnlyINTEL = 5937,
+        Max = 0x7fffffff,
     },
 
     Dim = {
@@ -229,6 +263,8 @@ spv = {
         Rect = 4,
         Buffer = 5,
         SubpassData = 6,
+        TileImageDataEXT = 4173,
+        Max = 0x7fffffff,
     },
 
     SamplerAddressingMode = {
@@ -237,11 +273,13 @@ spv = {
         Clamp = 2,
         Repeat = 3,
         RepeatMirrored = 4,
+        Max = 0x7fffffff,
     },
 
     SamplerFilterMode = {
         Nearest = 0,
         Linear = 1,
+        Max = 0x7fffffff,
     },
 
     ImageFormat = {
@@ -287,6 +325,7 @@ spv = {
         R8ui = 39,
         R64ui = 40,
         R64i = 41,
+        Max = 0x7fffffff,
     },
 
     ImageChannelOrder = {
@@ -310,6 +349,7 @@ spv = {
         sRGBA = 17,
         sBGRA = 18,
         ABGR = 19,
+        Max = 0x7fffffff,
     },
 
     ImageChannelDataType = {
@@ -330,6 +370,10 @@ spv = {
         Float = 14,
         UnormInt24 = 15,
         UnormInt101010_2 = 16,
+        UnsignedIntRaw10EXT = 19,
+        UnsignedIntRaw12EXT = 20,
+        UnormInt2_101010EXT = 21,
+        Max = 0x7fffffff,
     },
 
     ImageOperandsShift = {
@@ -353,6 +397,7 @@ spv = {
         ZeroExtend = 13,
         Nontemporal = 14,
         Offsets = 16,
+        Max = 0x7fffffff,
     },
 
     ImageOperandsMask = {
@@ -385,8 +430,12 @@ spv = {
         NSZ = 2,
         AllowRecip = 3,
         Fast = 4,
+        AllowContract = 16,
         AllowContractFastINTEL = 16,
+        AllowReassoc = 17,
         AllowReassocINTEL = 17,
+        AllowTransform = 18,
+        Max = 0x7fffffff,
     },
 
     FPFastMathModeMask = {
@@ -396,8 +445,11 @@ spv = {
         NSZ = 0x00000004,
         AllowRecip = 0x00000008,
         Fast = 0x00000010,
+        AllowContract = 0x00010000,
         AllowContractFastINTEL = 0x00010000,
+        AllowReassoc = 0x00020000,
         AllowReassocINTEL = 0x00020000,
+        AllowTransform = 0x00040000,
     },
 
     FPRoundingMode = {
@@ -405,18 +457,21 @@ spv = {
         RTZ = 1,
         RTP = 2,
         RTN = 3,
+        Max = 0x7fffffff,
     },
 
     LinkageType = {
         Export = 0,
         Import = 1,
         LinkOnceODR = 2,
+        Max = 0x7fffffff,
     },
 
     AccessQualifier = {
         ReadOnly = 0,
         WriteOnly = 1,
         ReadWrite = 2,
+        Max = 0x7fffffff,
     },
 
     FunctionParameterAttribute = {
@@ -429,6 +484,7 @@ spv = {
         NoWrite = 6,
         NoReadWrite = 7,
         RuntimeAlignedINTEL = 5940,
+        Max = 0x7fffffff,
     },
 
     Decoration = {
@@ -481,7 +537,18 @@ spv = {
         MaxByteOffsetId = 47,
         NoSignedWrap = 4469,
         NoUnsignedWrap = 4470,
+        WeightTextureQCOM = 4487,
+        BlockMatchTextureQCOM = 4488,
+        BlockMatchSamplerQCOM = 4499,
         ExplicitInterpAMD = 4999,
+        NodeSharesPayloadLimitsWithAMDX = 5019,
+        NodeMaxPayloadsAMDX = 5020,
+        TrackFinishWritingAMDX = 5078,
+        PayloadNodeNameAMDX = 5091,
+        PayloadNodeBaseIndexAMDX = 5098,
+        PayloadNodeSparseArrayAMDX = 5099,
+        PayloadNodeArraySizeAMDX = 5100,
+        PayloadDispatchIndirectAMDX = 5105,
         OverrideCoverageNV = 5248,
         PassthroughNV = 5250,
         ViewportRelativeNV = 5252,
@@ -531,6 +598,9 @@ spv = {
         MergeINTEL = 5834,
         BankBitsINTEL = 5835,
         ForcePow2DepthINTEL = 5836,
+        StridesizeINTEL = 5883,
+        WordsizeINTEL = 5884,
+        TrueDualPortINTEL = 5885,
         BurstCoalesceINTEL = 5899,
         CacheSizeINTEL = 5900,
         DontStaticallyCoalesceINTEL = 5901,
@@ -549,6 +619,25 @@ spv = {
         SingleElementVectorINTEL = 6085,
         VectorComputeCallableFunctionINTEL = 6087,
         MediaBlockIOINTEL = 6140,
+        StallFreeINTEL = 6151,
+        FPMaxErrorDecorationINTEL = 6170,
+        LatencyControlLabelINTEL = 6172,
+        LatencyControlConstraintINTEL = 6173,
+        ConduitKernelArgumentINTEL = 6175,
+        RegisterMapKernelArgumentINTEL = 6176,
+        MMHostInterfaceAddressWidthINTEL = 6177,
+        MMHostInterfaceDataWidthINTEL = 6178,
+        MMHostInterfaceLatencyINTEL = 6179,
+        MMHostInterfaceReadWriteModeINTEL = 6180,
+        MMHostInterfaceMaxBurstINTEL = 6181,
+        MMHostInterfaceWaitRequestINTEL = 6182,
+        StableKernelArgumentINTEL = 6183,
+        HostAccessINTEL = 6188,
+        InitModeINTEL = 6190,
+        ImplementInRegisterMapINTEL = 6191,
+        CacheControlLoadINTEL = 6442,
+        CacheControlStoreINTEL = 6443,
+        Max = 0x7fffffff,
     },
 
     BuiltIn = {
@@ -623,6 +712,8 @@ spv = {
         BaryCoordSmoothSampleAMD = 4997,
         BaryCoordPullModelAMD = 4998,
         FragStencilRefEXT = 5014,
+        RemainingRecursionLevelsAMDX = 5021,
+        ShaderIndexAMDX = 5073,
         ViewportMaskNV = 5253,
         SecondaryPositionNV = 5257,
         SecondaryViewportMaskNV = 5258,
@@ -675,19 +766,33 @@ spv = {
         HitKindKHR = 5333,
         HitKindNV = 5333,
         CurrentRayTimeNV = 5334,
+        HitTriangleVertexPositionsKHR = 5335,
+        HitMicroTriangleVertexPositionsNV = 5337,
+        HitMicroTriangleVertexBarycentricsNV = 5344,
         IncomingRayFlagsKHR = 5351,
         IncomingRayFlagsNV = 5351,
         RayGeometryIndexKHR = 5352,
+        HitIsSphereNV = 5359,
+        HitIsLSSNV = 5360,
+        HitSpherePositionNV = 5361,
         WarpsPerSMNV = 5374,
         SMCountNV = 5375,
         WarpIDNV = 5376,
         SMIDNV = 5377,
+        HitLSSPositionsNV = 5396,
+        HitKindFrontFacingMicroTriangleNV = 5405,
+        HitKindBackFacingMicroTriangleNV = 5406,
+        HitSphereRadiusNV = 5420,
+        HitLSSRadiiNV = 5421,
+        ClusterIDNV = 5436,
         CullMaskKHR = 6021,
+        Max = 0x7fffffff,
     },
 
     SelectionControlShift = {
         Flatten = 0,
         DontFlatten = 1,
+        Max = 0x7fffffff,
     },
 
     SelectionControlMask = {
@@ -716,6 +821,7 @@ spv = {
         NoFusionINTEL = 23,
         LoopCountINTEL = 24,
         MaxReinvocationDelayINTEL = 25,
+        Max = 0x7fffffff,
     },
 
     LoopControlMask = {
@@ -746,7 +852,9 @@ spv = {
         DontInline = 1,
         Pure = 2,
         Const = 3,
+        OptNoneEXT = 16,
         OptNoneINTEL = 16,
+        Max = 0x7fffffff,
     },
 
     FunctionControlMask = {
@@ -755,6 +863,7 @@ spv = {
         DontInline = 0x00000002,
         Pure = 0x00000004,
         Const = 0x00000008,
+        OptNoneEXT = 0x00010000,
         OptNoneINTEL = 0x00010000,
     },
 
@@ -776,6 +885,7 @@ spv = {
         MakeVisible = 14,
         MakeVisibleKHR = 14,
         Volatile = 15,
+        Max = 0x7fffffff,
     },
 
     MemorySemanticsMask = {
@@ -811,6 +921,7 @@ spv = {
         NonPrivatePointerKHR = 5,
         AliasScopeINTELMask = 16,
         NoAliasINTELMask = 17,
+        Max = 0x7fffffff,
     },
 
     MemoryAccessMask = {
@@ -837,6 +948,7 @@ spv = {
         QueueFamily = 5,
         QueueFamilyKHR = 5,
         ShaderCallKHR = 6,
+        Max = 0x7fffffff,
     },
 
     GroupOperation = {
@@ -847,16 +959,19 @@ spv = {
         PartitionedReduceNV = 6,
         PartitionedInclusiveScanNV = 7,
         PartitionedExclusiveScanNV = 8,
+        Max = 0x7fffffff,
     },
 
     KernelEnqueueFlags = {
         NoWait = 0,
         WaitKernel = 1,
         WaitWorkGroup = 2,
+        Max = 0x7fffffff,
     },
 
     KernelProfilingInfoShift = {
         CmdExecTime = 0,
+        Max = 0x7fffffff,
     },
 
     KernelProfilingInfoMask = {
@@ -936,6 +1051,10 @@ spv = {
         ShaderViewportIndex = 70,
         UniformDecoration = 71,
         CoreBuiltinsARM = 4165,
+        TileImageColorReadAccessEXT = 4166,
+        TileImageDepthReadAccessEXT = 4167,
+        TileImageStencilReadAccessEXT = 4168,
+        CooperativeMatrixLayoutsARM = 4201,
         FragmentShadingRateKHR = 4422,
         SubgroupBallotKHR = 4423,
         DrawParameters = 4427,
@@ -965,8 +1084,13 @@ spv = {
         RoundingModeRTZ = 4468,
         RayQueryProvisionalKHR = 4471,
         RayQueryKHR = 4472,
+        UntypedPointersKHR = 4473,
         RayTraversalPrimitiveCullingKHR = 4478,
         RayTracingKHR = 4479,
+        TextureSampleWeightedQCOM = 4484,
+        TextureBoxFilterQCOM = 4485,
+        TextureBlockMatchQCOM = 4486,
+        TextureBlockMatch2QCOM = 4498,
         Float16ImageAMD = 5008,
         ImageGatherBiasLodAMD = 5009,
         FragmentMaskAMD = 5010,
@@ -974,6 +1098,8 @@ spv = {
         ImageReadWriteLodAMD = 5015,
         Int64ImageEXT = 5016,
         ShaderClockKHR = 5055,
+        ShaderEnqueueAMDX = 5067,
+        QuadControlKHR = 5087,
         SampleMaskOverrideCoverageNV = 5249,
         GeometryShaderPassthroughNV = 5251,
         ShaderViewportIndexLayerEXT = 5254,
@@ -987,6 +1113,7 @@ spv = {
         MeshShadingEXT = 5283,
         FragmentBarycentricKHR = 5284,
         FragmentBarycentricNV = 5284,
+        ComputeDerivativeGroupQuadsKHR = 5288,
         ComputeDerivativeGroupQuadsNV = 5288,
         FragmentDensityEXT = 5291,
         ShadingRateNV = 5291,
@@ -1015,6 +1142,7 @@ spv = {
         UniformTexelBufferArrayNonUniformIndexingEXT = 5311,
         StorageTexelBufferArrayNonUniformIndexing = 5312,
         StorageTexelBufferArrayNonUniformIndexingEXT = 5312,
+        RayTracingPositionFetchKHR = 5336,
         RayTracingNV = 5340,
         RayTracingMotionBlurNV = 5341,
         VulkanMemoryModel = 5345,
@@ -1023,6 +1151,7 @@ spv = {
         VulkanMemoryModelDeviceScopeKHR = 5346,
         PhysicalStorageBufferAddresses = 5347,
         PhysicalStorageBufferAddressesEXT = 5347,
+        ComputeDerivativeGroupLinearKHR = 5350,
         ComputeDerivativeGroupLinearNV = 5350,
         RayTracingProvisionalKHR = 5353,
         CooperativeMatrixNV = 5357,
@@ -1032,9 +1161,25 @@ spv = {
         FragmentShaderPixelInterlockEXT = 5378,
         DemoteToHelperInvocation = 5379,
         DemoteToHelperInvocationEXT = 5379,
+        DisplacementMicromapNV = 5380,
         RayTracingOpacityMicromapEXT = 5381,
         ShaderInvocationReorderNV = 5383,
         BindlessTextureNV = 5390,
+        RayQueryPositionFetchKHR = 5391,
+        CooperativeVectorNV = 5394,
+        AtomicFloat16VectorNV = 5404,
+        RayTracingDisplacementMicromapNV = 5409,
+        RawAccessChainsNV = 5414,
+        RayTracingSpheresGeometryNV = 5418,
+        RayTracingLinearSweptSpheresGeometryNV = 5419,
+        CooperativeMatrixReductionsNV = 5430,
+        CooperativeMatrixConversionsNV = 5431,
+        CooperativeMatrixPerElementOperationsNV = 5432,
+        CooperativeMatrixTensorAddressingNV = 5433,
+        CooperativeMatrixBlockLoadsNV = 5434,
+        CooperativeVectorTrainingNV = 5435,
+        RayTracingClusterAccelerationStructureNV = 5437,
+        TensorAddressingNV = 5439,
         SubgroupShuffleINTEL = 5568,
         SubgroupBufferBlockIOINTEL = 5569,
         SubgroupImageBlockIOINTEL = 5570,
@@ -1086,16 +1231,38 @@ spv = {
         DotProduct = 6019,
         DotProductKHR = 6019,
         RayCullMaskKHR = 6020,
+        CooperativeMatrixKHR = 6022,
+        ReplicatedCompositesEXT = 6024,
         BitInstructions = 6025,
         GroupNonUniformRotateKHR = 6026,
+        FloatControls2 = 6029,
         AtomicFloat32AddEXT = 6033,
         AtomicFloat64AddEXT = 6034,
-        LongConstantCompositeINTEL = 6089,
+        LongCompositesINTEL = 6089,
+        OptNoneEXT = 6094,
         OptNoneINTEL = 6094,
         AtomicFloat16AddEXT = 6095,
         DebugInfoModuleINTEL = 6114,
+        BFloat16ConversionINTEL = 6115,
         SplitBarrierINTEL = 6141,
+        ArithmeticFenceEXT = 6144,
+        FPGAClusterAttributesV2INTEL = 6150,
+        FPGAKernelAttributesv2INTEL = 6161,
+        FPMaxErrorINTEL = 6169,
+        FPGALatencyControlINTEL = 6171,
+        FPGAArgumentInterfacesINTEL = 6174,
+        GlobalVariableHostAccessINTEL = 6187,
+        GlobalVariableFPGADecorationsINTEL = 6189,
+        SubgroupBufferPrefetchINTEL = 6220,
+        Subgroup2DBlockIOINTEL = 6228,
+        Subgroup2DBlockTransformINTEL = 6229,
+        Subgroup2DBlockTransposeINTEL = 6230,
+        SubgroupMatrixMultiplyAccumulateINTEL = 6236,
         GroupUniformArithmeticKHR = 6400,
+        MaskedGatherScatterINTEL = 6427,
+        CacheControlsINTEL = 6441,
+        RegisterLimitsINTEL = 6460,
+        Max = 0x7fffffff,
     },
 
     RayFlagsShift = {
@@ -1107,9 +1274,11 @@ spv = {
         CullFrontFacingTrianglesKHR = 5,
         CullOpaqueKHR = 6,
         CullNoOpaqueKHR = 7,
+        SkipBuiltinPrimitivesNV = 8,
         SkipTrianglesKHR = 8,
         SkipAABBsKHR = 9,
         ForceOpacityMicromap2StateEXT = 10,
+        Max = 0x7fffffff,
     },
 
     RayFlagsMask = {
@@ -1122,6 +1291,7 @@ spv = {
         CullFrontFacingTrianglesKHR = 0x00000020,
         CullOpaqueKHR = 0x00000040,
         CullNoOpaqueKHR = 0x00000080,
+        SkipBuiltinPrimitivesNV = 0x00000100,
         SkipTrianglesKHR = 0x00000100,
         SkipAABBsKHR = 0x00000200,
         ForceOpacityMicromap2StateEXT = 0x00000400,
@@ -1130,17 +1300,20 @@ spv = {
     RayQueryIntersection = {
         RayQueryCandidateIntersectionKHR = 0,
         RayQueryCommittedIntersectionKHR = 1,
+        Max = 0x7fffffff,
     },
 
     RayQueryCommittedIntersectionType = {
         RayQueryCommittedIntersectionNoneKHR = 0,
         RayQueryCommittedIntersectionTriangleKHR = 1,
         RayQueryCommittedIntersectionGeneratedKHR = 2,
+        Max = 0x7fffffff,
     },
 
     RayQueryCandidateIntersectionType = {
         RayQueryCandidateIntersectionTriangleKHR = 0,
         RayQueryCandidateIntersectionAABBKHR = 1,
+        Max = 0x7fffffff,
     },
 
     FragmentShadingRateShift = {
@@ -1148,6 +1321,7 @@ spv = {
         Vertical4Pixels = 1,
         Horizontal2Pixels = 2,
         Horizontal4Pixels = 3,
+        Max = 0x7fffffff,
     },
 
     FragmentShadingRateMask = {
@@ -1161,11 +1335,13 @@ spv = {
     FPDenormMode = {
         Preserve = 0,
         FlushToZero = 1,
+        Max = 0x7fffffff,
     },
 
     FPOperationMode = {
         IEEE = 0,
         ALT = 1,
+        Max = 0x7fffffff,
     },
 
     QuantizationModes = {
@@ -1177,6 +1353,7 @@ spv = {
         RND_MIN_INF = 5,
         RND_CONV = 6,
         RND_CONV_ODD = 7,
+        Max = 0x7fffffff,
     },
 
     OverflowModes = {
@@ -1184,11 +1361,196 @@ spv = {
         SAT = 1,
         SAT_ZERO = 2,
         SAT_SYM = 3,
+        Max = 0x7fffffff,
     },
 
     PackedVectorFormat = {
         PackedVectorFormat4x8Bit = 0,
         PackedVectorFormat4x8BitKHR = 0,
+        Max = 0x7fffffff,
+    },
+
+    CooperativeMatrixOperandsShift = {
+        MatrixASignedComponentsKHR = 0,
+        MatrixBSignedComponentsKHR = 1,
+        MatrixCSignedComponentsKHR = 2,
+        MatrixResultSignedComponentsKHR = 3,
+        SaturatingAccumulationKHR = 4,
+        Max = 0x7fffffff,
+    },
+
+    CooperativeMatrixOperandsMask = {
+        MaskNone = 0,
+        MatrixASignedComponentsKHR = 0x00000001,
+        MatrixBSignedComponentsKHR = 0x00000002,
+        MatrixCSignedComponentsKHR = 0x00000004,
+        MatrixResultSignedComponentsKHR = 0x00000008,
+        SaturatingAccumulationKHR = 0x00000010,
+    },
+
+    CooperativeMatrixLayout = {
+        RowMajorKHR = 0,
+        ColumnMajorKHR = 1,
+        RowBlockedInterleavedARM = 4202,
+        ColumnBlockedInterleavedARM = 4203,
+        Max = 0x7fffffff,
+    },
+
+    CooperativeMatrixUse = {
+        MatrixAKHR = 0,
+        MatrixBKHR = 1,
+        MatrixAccumulatorKHR = 2,
+        Max = 0x7fffffff,
+    },
+
+    CooperativeMatrixReduceShift = {
+        Row = 0,
+        Column = 1,
+        CooperativeMatrixReduce2x2 = 2,
+        Max = 0x7fffffff,
+    },
+
+    CooperativeMatrixReduceMask = {
+        MaskNone = 0,
+        Row = 0x00000001,
+        Column = 0x00000002,
+        CooperativeMatrixReduce2x2 = 0x00000004,
+    },
+
+    TensorClampMode = {
+        Undefined = 0,
+        Constant = 1,
+        ClampToEdge = 2,
+        Repeat = 3,
+        RepeatMirrored = 4,
+        Max = 0x7fffffff,
+    },
+
+    TensorAddressingOperandsShift = {
+        TensorView = 0,
+        DecodeFunc = 1,
+        Max = 0x7fffffff,
+    },
+
+    TensorAddressingOperandsMask = {
+        MaskNone = 0,
+        TensorView = 0x00000001,
+        DecodeFunc = 0x00000002,
+    },
+
+    InitializationModeQualifier = {
+        InitOnDeviceReprogramINTEL = 0,
+        InitOnDeviceResetINTEL = 1,
+        Max = 0x7fffffff,
+    },
+
+    HostAccessQualifier = {
+        NoneINTEL = 0,
+        ReadINTEL = 1,
+        WriteINTEL = 2,
+        ReadWriteINTEL = 3,
+        Max = 0x7fffffff,
+    },
+
+    LoadCacheControl = {
+        UncachedINTEL = 0,
+        CachedINTEL = 1,
+        StreamingINTEL = 2,
+        InvalidateAfterReadINTEL = 3,
+        ConstCachedINTEL = 4,
+        Max = 0x7fffffff,
+    },
+
+    StoreCacheControl = {
+        UncachedINTEL = 0,
+        WriteThroughINTEL = 1,
+        WriteBackINTEL = 2,
+        StreamingINTEL = 3,
+        Max = 0x7fffffff,
+    },
+
+    NamedMaximumNumberOfRegisters = {
+        AutoINTEL = 0,
+        Max = 0x7fffffff,
+    },
+
+    MatrixMultiplyAccumulateOperandsShift = {
+        MatrixASignedComponentsINTEL = 0,
+        MatrixBSignedComponentsINTEL = 1,
+        MatrixCBFloat16INTEL = 2,
+        MatrixResultBFloat16INTEL = 3,
+        MatrixAPackedInt8INTEL = 4,
+        MatrixBPackedInt8INTEL = 5,
+        MatrixAPackedInt4INTEL = 6,
+        MatrixBPackedInt4INTEL = 7,
+        MatrixATF32INTEL = 8,
+        MatrixBTF32INTEL = 9,
+        MatrixAPackedFloat16INTEL = 10,
+        MatrixBPackedFloat16INTEL = 11,
+        MatrixAPackedBFloat16INTEL = 12,
+        MatrixBPackedBFloat16INTEL = 13,
+        Max = 0x7fffffff,
+    },
+
+    MatrixMultiplyAccumulateOperandsMask = {
+        MaskNone = 0,
+        MatrixASignedComponentsINTEL = 0x00000001,
+        MatrixBSignedComponentsINTEL = 0x00000002,
+        MatrixCBFloat16INTEL = 0x00000004,
+        MatrixResultBFloat16INTEL = 0x00000008,
+        MatrixAPackedInt8INTEL = 0x00000010,
+        MatrixBPackedInt8INTEL = 0x00000020,
+        MatrixAPackedInt4INTEL = 0x00000040,
+        MatrixBPackedInt4INTEL = 0x00000080,
+        MatrixATF32INTEL = 0x00000100,
+        MatrixBTF32INTEL = 0x00000200,
+        MatrixAPackedFloat16INTEL = 0x00000400,
+        MatrixBPackedFloat16INTEL = 0x00000800,
+        MatrixAPackedBFloat16INTEL = 0x00001000,
+        MatrixBPackedBFloat16INTEL = 0x00002000,
+    },
+
+    RawAccessChainOperandsShift = {
+        RobustnessPerComponentNV = 0,
+        RobustnessPerElementNV = 1,
+        Max = 0x7fffffff,
+    },
+
+    RawAccessChainOperandsMask = {
+        MaskNone = 0,
+        RobustnessPerComponentNV = 0x00000001,
+        RobustnessPerElementNV = 0x00000002,
+    },
+
+    FPEncoding = {
+        Max = 0x7fffffff,
+    },
+
+    CooperativeVectorMatrixLayout = {
+        RowMajorNV = 0,
+        ColumnMajorNV = 1,
+        InferencingOptimalNV = 2,
+        TrainingOptimalNV = 3,
+        Max = 0x7fffffff,
+    },
+
+    ComponentType = {
+        Float16NV = 0,
+        Float32NV = 1,
+        Float64NV = 2,
+        SignedInt8NV = 3,
+        SignedInt16NV = 4,
+        SignedInt32NV = 5,
+        SignedInt64NV = 6,
+        UnsignedInt8NV = 7,
+        UnsignedInt16NV = 8,
+        UnsignedInt32NV = 9,
+        UnsignedInt64NV = 10,
+        SignedInt8PackedNV = 1000491000,
+        UnsignedInt8PackedNV = 1000491001,
+        FloatE4M3NV = 1000491002,
+        FloatE5M2NV = 1000491003,
+        Max = 0x7fffffff,
     },
 
     Op = {
@@ -1536,14 +1898,26 @@ spv = {
         OpPtrEqual = 401,
         OpPtrNotEqual = 402,
         OpPtrDiff = 403,
+        OpColorAttachmentReadEXT = 4160,
+        OpDepthAttachmentReadEXT = 4161,
+        OpStencilAttachmentReadEXT = 4162,
         OpTerminateInvocation = 4416,
+        OpTypeUntypedPointerKHR = 4417,
+        OpUntypedVariableKHR = 4418,
+        OpUntypedAccessChainKHR = 4419,
+        OpUntypedInBoundsAccessChainKHR = 4420,
         OpSubgroupBallotKHR = 4421,
         OpSubgroupFirstInvocationKHR = 4422,
+        OpUntypedPtrAccessChainKHR = 4423,
+        OpUntypedInBoundsPtrAccessChainKHR = 4424,
+        OpUntypedArrayLengthKHR = 4425,
+        OpUntypedPrefetchKHR = 4426,
         OpSubgroupAllKHR = 4428,
         OpSubgroupAnyKHR = 4429,
         OpSubgroupAllEqualKHR = 4430,
         OpGroupNonUniformRotateKHR = 4431,
         OpSubgroupReadInvocationKHR = 4432,
+        OpExtInstWithForwardRefsKHR = 4433,
         OpTraceRayKHR = 4445,
         OpExecuteCallableKHR = 4446,
         OpConvertUToAccelerationStructureKHR = 4447,
@@ -1561,6 +1935,14 @@ spv = {
         OpUDotAccSatKHR = 4454,
         OpSUDotAccSat = 4455,
         OpSUDotAccSatKHR = 4455,
+        OpTypeCooperativeMatrixKHR = 4456,
+        OpCooperativeMatrixLoadKHR = 4457,
+        OpCooperativeMatrixStoreKHR = 4458,
+        OpCooperativeMatrixMulAddKHR = 4459,
+        OpCooperativeMatrixLengthKHR = 4460,
+        OpConstantCompositeReplicateEXT = 4461,
+        OpSpecConstantCompositeReplicateEXT = 4462,
+        OpCompositeConstructReplicateEXT = 4463,
         OpTypeRayQueryKHR = 4472,
         OpRayQueryInitializeKHR = 4473,
         OpRayQueryTerminateKHR = 4474,
@@ -1568,6 +1950,14 @@ spv = {
         OpRayQueryConfirmIntersectionKHR = 4476,
         OpRayQueryProceedKHR = 4477,
         OpRayQueryGetIntersectionTypeKHR = 4479,
+        OpImageSampleWeightedQCOM = 4480,
+        OpImageBoxFilterQCOM = 4481,
+        OpImageBlockMatchSSDQCOM = 4482,
+        OpImageBlockMatchSADQCOM = 4483,
+        OpImageBlockMatchWindowSSDQCOM = 4500,
+        OpImageBlockMatchWindowSADQCOM = 4501,
+        OpImageBlockMatchGatherSSDQCOM = 4502,
+        OpImageBlockMatchGatherSADQCOM = 4503,
         OpGroupIAddNonUniformAMD = 5000,
         OpGroupFAddNonUniformAMD = 5001,
         OpGroupFMinNonUniformAMD = 5002,
@@ -1579,6 +1969,16 @@ spv = {
         OpFragmentMaskFetchAMD = 5011,
         OpFragmentFetchAMD = 5012,
         OpReadClockKHR = 5056,
+        OpAllocateNodePayloadsAMDX = 5074,
+        OpEnqueueNodePayloadsAMDX = 5075,
+        OpTypeNodePayloadArrayAMDX = 5076,
+        OpFinishWritingNodePayloadAMDX = 5078,
+        OpNodePayloadArrayLengthAMDX = 5090,
+        OpIsNodePayloadValidAMDX = 5101,
+        OpConstantStringAMDX = 5103,
+        OpSpecConstantStringAMDX = 5104,
+        OpGroupNonUniformQuadAllKHR = 5110,
+        OpGroupNonUniformQuadAnyKHR = 5111,
         OpHitObjectRecordHitMotionNV = 5249,
         OpHitObjectRecordHitWithIndexMotionNV = 5250,
         OpHitObjectRecordMissMotionNV = 5251,
@@ -1613,10 +2013,20 @@ spv = {
         OpReorderThreadWithHintNV = 5280,
         OpTypeHitObjectNV = 5281,
         OpImageSampleFootprintNV = 5283,
+        OpTypeCooperativeVectorNV = 5288,
+        OpCooperativeVectorMatrixMulNV = 5289,
+        OpCooperativeVectorOuterProductAccumulateNV = 5290,
+        OpCooperativeVectorReduceSumAccumulateNV = 5291,
+        OpCooperativeVectorMatrixMulAddNV = 5292,
+        OpCooperativeMatrixConvertNV = 5293,
         OpEmitMeshTasksEXT = 5294,
         OpSetMeshOutputsEXT = 5295,
         OpGroupNonUniformPartitionNV = 5296,
         OpWritePackedPrimitiveIndices4x8NV = 5299,
+        OpFetchMicroTriangleVertexPositionNV = 5300,
+        OpFetchMicroTriangleVertexBarycentricNV = 5301,
+        OpCooperativeVectorLoadNV = 5302,
+        OpCooperativeVectorStoreNV = 5303,
         OpReportIntersectionKHR = 5334,
         OpReportIntersectionNV = 5334,
         OpIgnoreIntersectionNV = 5335,
@@ -1624,9 +2034,12 @@ spv = {
         OpTraceNV = 5337,
         OpTraceMotionNV = 5338,
         OpTraceRayMotionNV = 5339,
+        OpRayQueryGetIntersectionTriangleVertexPositionsKHR = 5340,
         OpTypeAccelerationStructureKHR = 5341,
         OpTypeAccelerationStructureNV = 5341,
         OpExecuteCallableNV = 5344,
+        OpRayQueryGetClusterIdNV = 5345,
+        OpHitObjectGetClusterIdNV = 5346,
         OpTypeCooperativeMatrixNV = 5358,
         OpCooperativeMatrixLoadNV = 5359,
         OpCooperativeMatrixStoreNV = 5360,
@@ -1634,9 +2047,26 @@ spv = {
         OpCooperativeMatrixLengthNV = 5362,
         OpBeginInvocationInterlockEXT = 5364,
         OpEndInvocationInterlockEXT = 5365,
+        OpCooperativeMatrixReduceNV = 5366,
+        OpCooperativeMatrixLoadTensorNV = 5367,
+        OpCooperativeMatrixStoreTensorNV = 5368,
+        OpCooperativeMatrixPerElementOpNV = 5369,
+        OpTypeTensorLayoutNV = 5370,
+        OpTypeTensorViewNV = 5371,
+        OpCreateTensorLayoutNV = 5372,
+        OpTensorLayoutSetDimensionNV = 5373,
+        OpTensorLayoutSetStrideNV = 5374,
+        OpTensorLayoutSliceNV = 5375,
+        OpTensorLayoutSetClampValueNV = 5376,
+        OpCreateTensorViewNV = 5377,
+        OpTensorViewSetDimensionNV = 5378,
+        OpTensorViewSetStrideNV = 5379,
         OpDemoteToHelperInvocation = 5380,
         OpDemoteToHelperInvocationEXT = 5380,
         OpIsHelperInvocationEXT = 5381,
+        OpTensorViewSetClipNV = 5382,
+        OpTensorLayoutSetBlockSizeNV = 5384,
+        OpCooperativeMatrixTransposeNV = 5390,
         OpConvertUToImageNV = 5391,
         OpConvertUToSamplerNV = 5392,
         OpConvertImageToUNV = 5393,
@@ -1644,6 +2074,20 @@ spv = {
         OpConvertUToSampledImageNV = 5395,
         OpConvertSampledImageToUNV = 5396,
         OpSamplerImageAddressingModeNV = 5397,
+        OpRawAccessChainNV = 5398,
+        OpRayQueryGetIntersectionSpherePositionNV = 5427,
+        OpRayQueryGetIntersectionSphereRadiusNV = 5428,
+        OpRayQueryGetIntersectionLSSPositionsNV = 5429,
+        OpRayQueryGetIntersectionLSSRadiiNV = 5430,
+        OpRayQueryGetIntersectionLSSHitValueNV = 5431,
+        OpHitObjectGetSpherePositionNV = 5432,
+        OpHitObjectGetSphereRadiusNV = 5433,
+        OpHitObjectGetLSSPositionsNV = 5434,
+        OpHitObjectGetLSSRadiiNV = 5435,
+        OpHitObjectIsSphereHitNV = 5436,
+        OpHitObjectIsLSSHitNV = 5437,
+        OpRayQueryIsSphereHitNV = 5438,
+        OpRayQueryIsLSSHitNV = 5439,
         OpSubgroupShuffleINTEL = 5571,
         OpSubgroupShuffleDownINTEL = 5572,
         OpSubgroupShuffleUpINTEL = 5573,
@@ -1885,8 +2329,19 @@ spv = {
         OpTypeStructContinuedINTEL = 6090,
         OpConstantCompositeContinuedINTEL = 6091,
         OpSpecConstantCompositeContinuedINTEL = 6092,
+        OpCompositeConstructContinuedINTEL = 6096,
+        OpConvertFToBF16INTEL = 6116,
+        OpConvertBF16ToFINTEL = 6117,
         OpControlBarrierArriveINTEL = 6142,
         OpControlBarrierWaitINTEL = 6143,
+        OpArithmeticFenceEXT = 6145,
+        OpSubgroupBlockPrefetchINTEL = 6221,
+        OpSubgroup2DBlockLoadINTEL = 6231,
+        OpSubgroup2DBlockLoadTransformINTEL = 6232,
+        OpSubgroup2DBlockLoadTransposeINTEL = 6233,
+        OpSubgroup2DBlockPrefetchINTEL = 6234,
+        OpSubgroup2DBlockStoreINTEL = 6235,
+        OpSubgroupMatrixMultiplyAccumulateINTEL = 6237,
         OpGroupIMulKHR = 6401,
         OpGroupFMulKHR = 6402,
         OpGroupBitwiseAndKHR = 6403,
@@ -1895,6 +2350,9 @@ spv = {
         OpGroupLogicalAndKHR = 6406,
         OpGroupLogicalOrKHR = 6407,
         OpGroupLogicalXorKHR = 6408,
+        OpMaskedGatherINTEL = 6428,
+        OpMaskedScatterINTEL = 6429,
+        Max = 0x7fffffff,
     },
 
 }

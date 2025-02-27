@@ -214,7 +214,7 @@ bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& 
     case filament::backend::VulkanLayout::VALUE: {                                                 \
         out << #VALUE;                                                                             \
         out << " ["                                                                                \
-            << filament::backend::imgutil::getVkLayout(                                            \
+            << filament::backend::fvkutils::getVkLayout(                                           \
                        filament::backend::VulkanLayout::VALUE)                                     \
             << "]";                                                                                \
         break;                                                                                     \

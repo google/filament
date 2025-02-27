@@ -26,15 +26,17 @@ using AmdExtToKhrTest = PassTest<::testing::Test>;
 
 using ::testing::HasSubstr;
 
-std::string GetTest(std::string op_code, std::string new_op_code) {
+std::string GetTest(std::string op_code, std::string new_op_code,
+                    bool is_float = false) {
   const std::string text = R"(
 ; CHECK: OpCapability Shader
 ; CHECK-NOT: OpExtension "SPV_AMD_shader_ballot"
 ; CHECK: OpFunction
 ; CHECK-NEXT: OpLabel
-; CHECK-NEXT: [[undef:%\w+]] = OpUndef %uint
+; CHECK-NEXT: [[undef:%\w+]] = OpUndef %
 ; CHECK-NEXT: )" + new_op_code +
-                           R"( %uint %uint_3 Reduce [[undef]]
+                           " %" + (is_float ? "float" : "uint") +
+                           R"( %uint_3 Reduce [[undef]]
                OpCapability Shader
                OpCapability Groups
                OpExtension "SPV_AMD_shader_ballot"
@@ -44,12 +46,15 @@ std::string GetTest(std::string op_code, std::string new_op_code) {
        %void = OpTypeVoid
           %3 = OpTypeFunction %void
        %uint = OpTypeInt 32 0
+      %float = OpTypeFloat 32
      %uint_3 = OpConstant %uint 3
           %1 = OpFunction %void None %3
           %6 = OpLabel
-          %7 = OpUndef %uint
+          %7 = OpUndef %)" +
+                           (is_float ? "float" : "uint") + R"(
           %8 = )" + op_code +
-                           R"( %uint %uint_3 Reduce %7
+                           " %" + (is_float ? "float" : "uint") +
+                           R"( %uint_3 Reduce %7
                OpReturn
                OpFunctionEnd
 
@@ -64,7 +69,7 @@ TEST_F(AmdExtToKhrTest, ReplaceGroupIAddNonUniformAMD) {
 }
 TEST_F(AmdExtToKhrTest, ReplaceGroupFAddNonUniformAMD) {
   std::string text =
-      GetTest("OpGroupFAddNonUniformAMD", "OpGroupNonUniformFAdd");
+      GetTest("OpGroupFAddNonUniformAMD", "OpGroupNonUniformFAdd", true);
   SinglePassRunAndMatch<AmdExtensionToKhrPass>(text, true);
 }
 TEST_F(AmdExtToKhrTest, ReplaceGroupUMinNonUniformAMD) {
@@ -79,7 +84,7 @@ TEST_F(AmdExtToKhrTest, ReplaceGroupSMinNonUniformAMD) {
 }
 TEST_F(AmdExtToKhrTest, ReplaceGroupFMinNonUniformAMD) {
   std::string text =
-      GetTest("OpGroupFMinNonUniformAMD", "OpGroupNonUniformFMin");
+      GetTest("OpGroupFMinNonUniformAMD", "OpGroupNonUniformFMin", true);
   SinglePassRunAndMatch<AmdExtensionToKhrPass>(text, true);
 }
 TEST_F(AmdExtToKhrTest, ReplaceGroupUMaxNonUniformAMD) {
@@ -94,7 +99,7 @@ TEST_F(AmdExtToKhrTest, ReplaceGroupSMaxNonUniformAMD) {
 }
 TEST_F(AmdExtToKhrTest, ReplaceGroupFMaxNonUniformAMD) {
   std::string text =
-      GetTest("OpGroupFMaxNonUniformAMD", "OpGroupNonUniformFMax");
+      GetTest("OpGroupFMaxNonUniformAMD", "OpGroupNonUniformFMax", true);
   SinglePassRunAndMatch<AmdExtensionToKhrPass>(text, true);
 }
 

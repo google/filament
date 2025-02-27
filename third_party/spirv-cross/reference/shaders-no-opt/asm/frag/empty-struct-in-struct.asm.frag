@@ -22,10 +22,10 @@ float GetValue_1(EmptyStruct2Test self)
 
 void main()
 {
-    EmptyStructTest _25 = EmptyStructTest(0);
+    EmptyStructTest _27 = EmptyStructTest(0);
     EmptyStruct2Test emptyStruct;
     float value = GetValue(emptyStruct);
-    value = GetValue_1(EmptyStruct2Test(_25));
+    value = GetValue_1(EmptyStruct2Test(_27));
     value = GetValue_1(EmptyStruct2Test(EmptyStructTest(0)));
 }
 

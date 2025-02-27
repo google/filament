@@ -391,6 +391,7 @@ bool HlslGrammar::acceptDeclaration(TIntermNode*& nodeList)
     case EvqOut:
     case EvqInOut:
         parseContext.error(token.loc, "in/out qualifiers are only valid on parameters", token.string->c_str(), "");
+        break;
     default:
         break;
     }

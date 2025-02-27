@@ -16,7 +16,6 @@
 
 #include <gtest/gtest-param-test.h>
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "source/opt/types.h"
 

@@ -28,8 +28,6 @@ namespace {
 using ::testing::HasSubstr;
 using ::testing::Values;
 using ValidateStorage = spvtest::ValidateBase<std::string>;
-using ValidateStorageClass =
-    spvtest::ValidateBase<std::tuple<std::string, bool, bool, std::string>>;
 using ValidateStorageExecutionModel = spvtest::ValidateBase<std::string>;
 
 TEST_F(ValidateStorage, FunctionStorageInsideFunction) {
@@ -167,7 +165,7 @@ TEST_F(ValidateStorage, GenericVariableOutsideFunction) {
   CompileSuccessfully(str);
   ASSERT_EQ(SPV_ERROR_INVALID_BINARY, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("OpVariable storage class cannot be Generic"));
+              HasSubstr("Variable storage class cannot be Generic"));
 }
 
 TEST_F(ValidateStorage, GenericVariableInsideFunction) {
@@ -189,7 +187,7 @@ TEST_F(ValidateStorage, GenericVariableInsideFunction) {
   CompileSuccessfully(str);
   EXPECT_EQ(SPV_ERROR_INVALID_BINARY, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("OpVariable storage class cannot be Generic"));
+              HasSubstr("Variable storage class cannot be Generic"));
 }
 
 TEST_F(ValidateStorage, RelaxedLogicalPointerFunctionParam) {

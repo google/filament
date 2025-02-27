@@ -4,15 +4,15 @@ layout(location = 0) out vec4 FragColor;
 
 void main()
 {
-    float _19;
-    _19 = 0.0;
-    float _20;
-    int _23;
-    for (int _22 = 0; _22 < 16; _19 = _20, _22 = _23)
+    float _50;
+    _50 = 0.0;
+    float _25;
+    int _28;
+    for (int _47 = 0; _47 < 16; _50 = _25, _47 = _28)
     {
-        _20 = _19 + 1.0;
-        _23 = _22 + 1;
+        _25 = _50 + 1.0;
+        _28 = _47 + 1;
     }
-    FragColor = vec4(_19);
+    FragColor = vec4(_50);
 }
 

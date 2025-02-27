@@ -23,6 +23,8 @@ set(SRCS
         src/Settings.cpp
         src/Settings_generated.cpp
         src/Settings_generated.h
+        src/TIFFExport.cpp
+        src/TIFFExport.h
         src/ViewerGui.cpp
 )
 

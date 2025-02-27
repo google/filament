@@ -639,6 +639,15 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
+        for (auto i = 0; i < 4; i++) {
+            engine->destroy(app.renderables[i]);
+        }
+        for (auto i = 0; i < app.boCount; i++) {
+            engine->destroy(app.bos[i]);
+        }
+        for (auto i = 0; i < app.vbCount; i++) {
+            engine->destroy(app.vbs[i]);
+        }
         engine->destroy(app.skybox);
         engine->destroy(app.mat);
         engine->destroy(app.ib);
@@ -648,15 +657,6 @@ int main(int argc, char** argv) {
         engine->destroy(app.mt);
         engine->destroyCameraComponent(app.camera);
         EntityManager::get().destroy(app.camera);
-        for (auto i = 0; i < app.vbCount; i++) {
-            engine->destroy(app.vbs[i]);
-        }
-        for ( auto i = 0; i < app.boCount; i++) {
-            engine->destroy(app.bos[i]);
-        }
-        for ( auto i = 0; i < 4; i++) {
-            engine->destroy(app.renderables[i]);
-        }
     };
 
     FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {

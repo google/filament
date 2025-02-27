@@ -654,6 +654,19 @@ public class Texture {
     }
 
     /**
+     * Checks whether a given texture format is supported for mipmapping in this {@link Engine}.
+     * This depends on the selected backend.
+     *
+     * @param engine {@link Engine} to test the {@link InternalFormat InternalFormat} against
+     * @param format format to check
+     * @return <code>true</code> if this format is supported for texturing.
+     */
+    public static boolean isTextureFormatMipmappable(@NonNull Engine engine,
+            @NonNull InternalFormat format) {
+        return nIsTextureFormatMipmappable(engine.getNativeObject(), format.ordinal());
+    }
+
+    /**
      * Checks whether texture swizzling is supported in this {@link Engine}.
      * This depends on the selected backend.
      *
@@ -662,6 +675,20 @@ public class Texture {
      */
     public static boolean isTextureSwizzleSupported(@NonNull Engine engine) {
         return nIsTextureSwizzleSupported(engine.getNativeObject());
+    }
+
+    /**
+     * Checks whether a given combination of texture format, pixel data and type is valid.
+     *
+     * @param internalFormat texture format
+     * @param pixelDataFormat pixel data format
+     * @param pixelDataType pixel data type
+     * @return <code>true</code> if the combination is valid
+     */
+    public static boolean validatePixelFormatAndType(@NonNull InternalFormat internalFormat,
+            @NonNull Format pixelDataFormat, @NonNull Type pixelDataType) {
+        return nValidatePixelFormatAndType(internalFormat.ordinal(), pixelDataFormat.ordinal(),
+                pixelDataType.ordinal());
     }
 
     /**
@@ -1260,7 +1287,11 @@ public class Texture {
     }
 
     private static native boolean nIsTextureFormatSupported(long nativeEngine, int internalFormat);
+    private static native boolean nIsTextureFormatMipmappable(long nativeEngine, int internalFormat);
     private static native boolean nIsTextureSwizzleSupported(long nativeEngine);
+
+    private static native boolean nValidatePixelFormatAndType(int internalFormat, int pixelDataFormat,
+            int pixelDataType);
 
     private static native long nCreateBuilder();
     private static native void nDestroyBuilder(long nativeBuilder);

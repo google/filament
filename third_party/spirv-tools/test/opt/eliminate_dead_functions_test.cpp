@@ -517,6 +517,39 @@ OpFunctionEnd
   SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, true);
 }
 
+TEST_F(EliminateDeadFunctionsBasicTest, DependentNonSemanticChain) {
+  const std::string text = R"(
+; CHECK: OpEntryPoint GLCompute [[main:%\w+]]
+; CHECK: [[main]] = OpFunction
+; CHECK-NOT: = OpFunction
+; CHECK: [[ext1:%\w+]] = OpExtInst %void {{%\w+}} 1 [[main]]
+; CHECK: [[ext2:%\w+]] = OpExtInst %void {{%\w+}} 2 [[ext1]]
+; CHECK: [[ext3:%\w+]] = OpExtInst %void {{%\w+}} 3 [[ext1]] [[ext2]]
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%1 = OpExtInstImport "NonSemantic.Test"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%main_entry = OpLabel
+OpReturn
+OpFunctionEnd
+%dead = OpFunction %void None %void_fn
+%dead_entry = OpLabel
+OpReturn
+OpFunctionEnd
+%2 = OpExtInst %void %1 1 %main
+%3 = OpExtInst %void %1 2 %2
+%4 = OpExtInst %void %1 3 %2 %3
+)";
+
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
+  SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

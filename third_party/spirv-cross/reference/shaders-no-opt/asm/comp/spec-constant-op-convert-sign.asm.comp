@@ -20,20 +20,20 @@ const int64_t ConstantInt64_1 = int64_t(ConstantInt);
 const int64_t ConstantInt64_2 = int64_t(int(ConstantUint));
 const uint64_t ConstantUint64_1 = uint64_t(ConstantInt);
 const uint64_t ConstantUint64_2 = uint64_t(int(ConstantUint));
-const int64_t _20 = (ConstantInt64_1 + ConstantInt64_2);
-const uint64_t _21 = (ConstantUint64_1 + ConstantUint64_2);
-const int _22 = int(_20);
-const uint _23 = uint(_21);
+const int64_t _21 = (ConstantInt64_1 + ConstantInt64_2);
+const uint64_t _23 = (ConstantUint64_1 + ConstantUint64_2);
+const int _24 = int(_21);
+const uint _25 = uint(_23);
 
 layout(binding = 0, std430) buffer SSBO
 {
     int s64;
     uint u64;
-} _4;
+} _6;
 
 void main()
 {
-    _4.s64 = _22;
-    _4.u64 = _23;
+    _6.s64 = _24;
+    _6.u64 = _25;
 }
 

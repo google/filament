@@ -1,4 +1,6 @@
 // Copyright (c) 2017 Google Inc.
+// Modifications Copyright (C) 2024 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +21,6 @@
 
 #include "gmock/gmock.h"
 #include "source/val/decoration.h"
-#include "test/test_fixture.h"
 #include "test/unit_spirv.h"
 #include "test/val/val_code_generator.h"
 #include "test/val/val_fixtures.h"
@@ -2075,6 +2076,68 @@ TEST_F(ValidateDecorations, BlockCantAppearWithinABufferblockBad) {
                         "another Block or BufferBlock."));
 }
 
+TEST_F(ValidateDecorations, BlockCannotAppearWithinBlockArray) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %main "main"
+OpMemberDecorate %outer 0 Offset 0
+OpMemberDecorate %outer 1 Offset 4
+OpMemberDecorate %outer 2 Offset 20
+OpDecorate %outer Block
+OpMemberDecorate %inner 0 Offset 0
+OpDecorate %inner Block
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%int_4 = OpConstant %int 4
+%inner = OpTypeStruct %int
+%array = OpTypeArray %inner %int_4
+%outer = OpTypeStruct %int %array %int
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("rules: A Block or BufferBlock cannot be nested within "
+                        "another Block or BufferBlock."));
+}
+
+TEST_F(ValidateDecorations, BlockCannotAppearWithinBlockMultiArray) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %main "main"
+OpMemberDecorate %outer 0 Offset 0
+OpMemberDecorate %outer 1 Offset 4
+OpDecorate %outer Block
+OpMemberDecorate %inner 0 Offset 0
+OpDecorate %inner Block
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%int_4 = OpConstant %int 4
+%inner = OpTypeStruct %int
+%array1 = OpTypeArray %inner %int_4
+%array2 = OpTypeArray %array1 %int_4
+%outer = OpTypeStruct %int %array2
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("rules: A Block or BufferBlock cannot be nested within "
+                        "another Block or BufferBlock."));
+}
+
 TEST_F(ValidateDecorations, BlockLayoutForbidsTightScalarVec3PackingBad) {
   // See https://github.com/KhronosGroup/SPIRV-Tools/issues/1666
   std::string spirv = R"(
@@ -3208,6 +3271,48 @@ TEST_F(ValidateDecorations,
           "From Vulkan spec:\n"
           "There must be no more than one push constant block "
           "statically used per shader entry point."));
+}
+
+TEST_F(ValidateDecorations,
+       VulkanMultiplePushConstantsSingleEntryPointInterfaceBad) {
+  std::string spirv = R"(
+            OpCapability Shader
+            OpMemoryModel Logical GLSL450
+            OpEntryPoint Vertex %func1 "func1" %pc1 %pc2
+            OpDecorate %struct Block
+            OpMemberDecorate %struct 0 Offset 0
+    %void = OpTypeVoid
+  %voidfn = OpTypeFunction %void
+   %float = OpTypeFloat 32
+     %int = OpTypeInt 32 0
+   %int_0 = OpConstant %int 0
+  %struct = OpTypeStruct %float
+     %ptr = OpTypePointer PushConstant %struct
+%ptr_float = OpTypePointer PushConstant %float
+     %pc1 = OpVariable %ptr PushConstant
+     %pc2 = OpVariable %ptr PushConstant
+   %func1 = OpFunction %void None %voidfn
+  %label1 = OpLabel
+ %access1 = OpAccessChain %ptr_float %pc1 %int_0
+   %load1 = OpLoad %float %access1
+            OpReturn
+            OpFunctionEnd
+   %func2 = OpFunction %void None %voidfn
+  %label2 = OpLabel
+ %access2 = OpAccessChain %ptr_float %pc2 %int_0
+   %load2 = OpLoad %float %access2
+            OpReturn
+            OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateAndRetrieveValidationState(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpVariable-06673"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Entry-point has more than one variable with the "
+                        "PushConstant storage class in the interface"));
 }
 
 TEST_F(ValidateDecorations, VulkanUniformMissingDescriptorSetBad) {
@@ -5281,6 +5386,37 @@ OpFunctionEnd
           "rules: member 1 at offset 1 is not aligned to 4"));
 }
 
+TEST_F(ValidateDecorations, VulkanStructWithoutDecorationWithRuntimeArray) {
+  std::string str = R"(
+              OpCapability Shader
+              OpMemoryModel Logical GLSL450
+              OpEntryPoint Fragment %func "func"
+              OpExecutionMode %func OriginUpperLeft
+              OpDecorate %array_t ArrayStride 4
+              OpMemberDecorate %struct_t 0 Offset 0
+              OpMemberDecorate %struct_t 1 Offset 4
+     %uint_t = OpTypeInt 32 0
+   %array_t = OpTypeRuntimeArray %uint_t
+  %struct_t = OpTypeStruct %uint_t %array_t
+%struct_ptr = OpTypePointer StorageBuffer %struct_t
+         %2 = OpVariable %struct_ptr StorageBuffer
+      %void = OpTypeVoid
+    %func_t = OpTypeFunction %void
+      %func = OpFunction %void None %func_t
+         %1 = OpLabel
+              OpReturn
+              OpFunctionEnd
+)";
+
+  CompileSuccessfully(str.c_str(), SPV_ENV_VULKAN_1_1);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpTypeRuntimeArray-04680"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Vulkan, OpTypeStruct containing an OpTypeRuntimeArray "
+                        "must be decorated with Block or BufferBlock."));
+}
+
 TEST_F(ValidateDecorations, EmptyStructAtNonZeroOffsetGood) {
   const std::string spirv = R"(
 OpCapability Shader
@@ -6107,34 +6243,6 @@ OpFunctionEnd
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
-TEST_F(ValidateDecorations, PSBAliasedRestrictPointerMissing) {
-  const std::string body = R"(
-OpCapability PhysicalStorageBufferAddresses
-OpCapability Int64
-OpCapability Shader
-OpExtension "SPV_EXT_physical_storage_buffer"
-OpMemoryModel PhysicalStorageBuffer64 GLSL450
-OpEntryPoint Fragment %main "main"
-OpExecutionMode %main OriginUpperLeft
-%uint64 = OpTypeInt 64 0
-%ptr = OpTypePointer PhysicalStorageBuffer %uint64
-%pptr_f = OpTypePointer Function %ptr
-%void = OpTypeVoid
-%voidfn = OpTypeFunction %void
-%main = OpFunction %void None %voidfn
-%entry = OpLabel
-%val1 = OpVariable %pptr_f Function
-OpReturn
-OpFunctionEnd
-)";
-
-  CompileSuccessfully(body.c_str());
-  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("expected AliasedPointer or RestrictPointer for "
-                        "PhysicalStorageBuffer pointer"));
-}
-
 TEST_F(ValidateDecorations, PSBAliasedRestrictPointerBoth) {
   const std::string body = R"(
 OpCapability PhysicalStorageBufferAddresses
@@ -6161,8 +6269,8 @@ OpFunctionEnd
   CompileSuccessfully(body.c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("can't specify both AliasedPointer and RestrictPointer "
-                        "for PhysicalStorageBuffer pointer"));
+              HasSubstr("decorated with both AliasedPointer and "
+                        "RestrictPointer is not allowed"));
 }
 
 TEST_F(ValidateDecorations, PSBAliasedRestrictFunctionParamSuccess) {
@@ -6195,38 +6303,6 @@ OpFunctionEnd
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
-TEST_F(ValidateDecorations, PSBAliasedRestrictFunctionParamMissing) {
-  const std::string body = R"(
-OpCapability PhysicalStorageBufferAddresses
-OpCapability Int64
-OpCapability Shader
-OpExtension "SPV_EXT_physical_storage_buffer"
-OpMemoryModel PhysicalStorageBuffer64 GLSL450
-OpEntryPoint Fragment %main "main"
-OpExecutionMode %main OriginUpperLeft
-%uint64 = OpTypeInt 64 0
-%ptr = OpTypePointer PhysicalStorageBuffer %uint64
-%void = OpTypeVoid
-%voidfn = OpTypeFunction %void
-%fnptr = OpTypeFunction %void %ptr
-%main = OpFunction %void None %voidfn
-%entry = OpLabel
-OpReturn
-OpFunctionEnd
-%fn = OpFunction %void None %fnptr
-%fparam = OpFunctionParameter %ptr
-%lab = OpLabel
-OpReturn
-OpFunctionEnd
-)";
-
-  CompileSuccessfully(body.c_str());
-  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("expected Aliased or Restrict for "
-                        "PhysicalStorageBuffer pointer"));
-}
-
 TEST_F(ValidateDecorations, PSBAliasedRestrictFunctionParamBoth) {
   const std::string body = R"(
 OpCapability PhysicalStorageBufferAddresses
@@ -6256,9 +6332,9 @@ OpFunctionEnd
 
   CompileSuccessfully(body.c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("can't specify both Aliased and Restrict for "
-                        "PhysicalStorageBuffer pointer"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("decorated with both Aliased and Restrict is not allowed"));
 }
 
 TEST_F(ValidateDecorations, PSBFPRoundingModeSuccess) {
@@ -7973,6 +8049,7 @@ TEST_F(ValidateDecorations, WorkgroupBlockVariableWith16BitType) {
                OpCapability Shader
                OpCapability Float16
                OpCapability Int16
+               OpCapability WorkgroupMemoryExplicitLayoutKHR
                OpCapability WorkgroupMemoryExplicitLayout16BitAccessKHR
                OpExtension "SPV_KHR_workgroup_memory_explicit_layout"
                OpMemoryModel Logical GLSL450
@@ -8233,6 +8310,37 @@ TEST_F(ValidateDecorations, WorkgroupSingleBlockVariableBadLayout) {
       HasSubstr("Block for variable in Workgroup storage class must follow "
                 "relaxed storage buffer layout rules: "
                 "member 0 at offset 1 is not aligned to 4"));
+}
+
+TEST_F(ValidateDecorations, WorkgroupBlockNoCapability) {
+  std::string spirv = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %_
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberDecorate %struct 0 Offset 0
+               OpMemberDecorate %struct 1 Offset 4
+               OpDecorate %struct Block
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+     %struct = OpTypeStruct %int %int
+%ptr_workgroup = OpTypePointer Workgroup %struct
+          %_ = OpVariable %ptr_workgroup Workgroup
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
+            ValidateAndRetrieveValidationState(SPV_ENV_VULKAN_1_1_SPIRV_1_4));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Workgroup Storage Class variables can't be decorated with Block "
+          "unless declaring the WorkgroupMemoryExplicitLayoutKHR capability"));
 }
 
 TEST_F(ValidateDecorations, BadMatrixStrideUniform) {
@@ -9214,6 +9322,1373 @@ OpMemberDecorate %block 1 RowMajor
 %var = OpVariable %ptr_block PushConstant
 %main = OpFunction %void None %void_fn
 %entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+}
+
+TEST_F(ValidateDecorations, PhysicalStorageBufferWithOffset) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Int64
+OpCapability PhysicalStorageBufferAddresses
+OpMemoryModel PhysicalStorageBuffer64 GLSL450
+OpEntryPoint GLCompute %main "main" %pc
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %pc_block Block
+OpMemberDecorate %pc_block 0 Offset 0
+OpMemberDecorate %pssbo_struct 0 Offset 0
+%void = OpTypeVoid
+%long = OpTypeInt 64 0
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%pc_block = OpTypeStruct %long
+%pc_block_ptr = OpTypePointer PushConstant %pc_block
+%pc_long_ptr = OpTypePointer PushConstant %long
+%pc = OpVariable %pc_block_ptr PushConstant
+%pssbo_struct = OpTypeStruct %float
+%pssbo_ptr = OpTypePointer PhysicalStorageBuffer %pssbo_struct
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%pc_gep = OpAccessChain %pc_long_ptr %pc %int_0
+%addr = OpLoad %long %pc_gep
+%ptr = OpConvertUToPtr %pssbo_ptr %addr
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
+TEST_F(ValidateDecorations, UntypedVariableDuplicateInterface) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability UntypedPointersKHR
+OpCapability WorkgroupMemoryExplicitLayoutKHR
+OpExtension "SPV_KHR_workgroup_memory_explicit_layout"
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main" %var %var
+OpName %var "var"
+OpDecorate %struct Block
+OpMemberDecorate %struct 0 Offset 0
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%struct = OpTypeStruct %int
+%ptr = OpTypeUntypedPointerKHR Workgroup
+%var = OpUntypedVariableKHR %ptr Workgroup %struct
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Non-unique OpEntryPoint interface '2[%var]' is disallowed"));
+}
+
+TEST_F(ValidateDecorations, PhysicalStorageBufferMissingOffset) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Int64
+OpCapability PhysicalStorageBufferAddresses
+OpMemoryModel PhysicalStorageBuffer64 GLSL450
+OpEntryPoint GLCompute %main "main" %pc
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %pc_block Block
+OpMemberDecorate %pc_block 0 Offset 0
+%void = OpTypeVoid
+%long = OpTypeInt 64 0
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%pc_block = OpTypeStruct %long
+%pc_block_ptr = OpTypePointer PushConstant %pc_block
+%pc_long_ptr = OpTypePointer PushConstant %long
+%pc = OpVariable %pc_block_ptr PushConstant
+%pssbo_struct = OpTypeStruct %float
+%pssbo_ptr = OpTypePointer PhysicalStorageBuffer %pssbo_struct
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%pc_gep = OpAccessChain %pc_long_ptr %pc %int_0
+%addr = OpLoad %long %pc_gep
+%ptr = OpConvertUToPtr %pssbo_ptr %addr
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("decorated as Block for variable in PhysicalStorageBuffer "
+                "storage class must follow relaxed storage buffer layout "
+                "rules: member 0 is missing an Offset decoration"));
+}
+
+TEST_F(ValidateDecorations, PhysicalStorageBufferMissingArrayStride) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Int64
+OpCapability PhysicalStorageBufferAddresses
+OpMemoryModel PhysicalStorageBuffer64 GLSL450
+OpEntryPoint GLCompute %main "main" %pc
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %pc_block Block
+OpMemberDecorate %pc_block 0 Offset 0
+%void = OpTypeVoid
+%long = OpTypeInt 64 0
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%int_4 = OpConstant %int 4
+%pc_block = OpTypeStruct %long
+%pc_block_ptr = OpTypePointer PushConstant %pc_block
+%pc_long_ptr = OpTypePointer PushConstant %long
+%pc = OpVariable %pc_block_ptr PushConstant
+%pssbo_array = OpTypeArray %float %int_4
+%pssbo_ptr = OpTypePointer PhysicalStorageBuffer %pssbo_array
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%pc_gep = OpAccessChain %pc_long_ptr %pc %int_0
+%addr = OpLoad %long %pc_gep
+%ptr = OpConvertUToPtr %pssbo_ptr %addr
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "decorated as Block for variable in PhysicalStorageBuffer storage "
+          "class must follow relaxed storage buffer layout rules: member 0 "
+          "contains an array with stride 0, but with an element size of 4"));
+}
+
+TEST_F(ValidateDecorations, MatrixArrayMissingMajorness) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %var DescriptorSet 0
+OpDecorate %var Binding 0
+OpDecorate %block Block
+OpMemberDecorate %block 0 Offset 0
+OpMemberDecorate %block 0 MatrixStride 16
+OpDecorate %array ArrayStride 32
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 0
+%int_2 = OpConstant %int 2
+%vec = OpTypeVector %float 2
+%mat = OpTypeMatrix %vec 2
+%array = OpTypeArray %mat %int_2
+%block = OpTypeStruct %array
+%ptr = OpTypePointer Uniform %block
+%var = OpVariable %ptr Uniform
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_1);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "must be explicitly laid out with RowMajor or ColMajor decorations"));
+}
+
+TEST_F(ValidateDecorations, MatrixArrayMissingStride) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %var DescriptorSet 0
+OpDecorate %var Binding 0
+OpDecorate %block Block
+OpMemberDecorate %block 0 Offset 0
+OpMemberDecorate %block 0 ColMajor
+OpDecorate %array ArrayStride 32
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 0
+%int_2 = OpConstant %int 2
+%vec = OpTypeVector %float 2
+%mat = OpTypeMatrix %vec 2
+%array = OpTypeArray %mat %int_2
+%block = OpTypeStruct %array
+%ptr = OpTypePointer Uniform %block
+%var = OpVariable %ptr Uniform
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_1);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("must be explicitly laid out with MatrixStride decorations"));
+}
+
+TEST_F(ValidateDecorations, MatrixArrayBadStride) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %var DescriptorSet 0
+OpDecorate %var Binding 0
+OpDecorate %block Block
+OpMemberDecorate %block 0 Offset 0
+OpMemberDecorate %block 0 ColMajor
+OpMemberDecorate %block 0 MatrixStride 8
+OpDecorate %array ArrayStride 32
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 0
+%int_2 = OpConstant %int 2
+%vec = OpTypeVector %float 2
+%mat = OpTypeMatrix %vec 2
+%array = OpTypeArray %mat %int_2
+%block = OpTypeStruct %array
+%ptr = OpTypePointer Uniform %block
+%var = OpVariable %ptr Uniform
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_1);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("is a matrix with stride 8 not satisfying alignment to 16"));
+}
+
+TEST_F(ValidateDecorations, MatrixArrayArrayMissingMajorness) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %var DescriptorSet 0
+OpDecorate %var Binding 0
+OpDecorate %block Block
+OpMemberDecorate %block 0 Offset 0
+OpMemberDecorate %block 0 MatrixStride 16
+OpDecorate %array ArrayStride 32
+OpDecorate %rta ArrayStride 64
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 0
+%int_2 = OpConstant %int 2
+%vec = OpTypeVector %float 2
+%mat = OpTypeMatrix %vec 2
+%array = OpTypeArray %mat %int_2
+%rta = OpTypeRuntimeArray %array
+%block = OpTypeStruct %rta
+%ptr = OpTypePointer StorageBuffer %block
+%var = OpVariable %ptr StorageBuffer
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_1);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "must be explicitly laid out with RowMajor or ColMajor decorations"));
+}
+
+TEST_F(ValidateDecorations, MatrixArrayArrayMissingStride) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %var DescriptorSet 0
+OpDecorate %var Binding 0
+OpDecorate %block Block
+OpMemberDecorate %block 0 Offset 0
+OpMemberDecorate %block 0 ColMajor
+OpDecorate %array ArrayStride 32
+OpDecorate %rta ArrayStride 64
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 0
+%int_2 = OpConstant %int 2
+%vec = OpTypeVector %float 2
+%mat = OpTypeMatrix %vec 2
+%array = OpTypeArray %mat %int_2
+%rta = OpTypeRuntimeArray %array
+%block = OpTypeStruct %rta
+%ptr = OpTypePointer StorageBuffer %block
+%var = OpVariable %ptr StorageBuffer
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_1);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("must be explicitly laid out with MatrixStride decorations"));
+}
+
+TEST_F(ValidateDecorations, MatrixArrayArrayBadStride) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %var DescriptorSet 0
+OpDecorate %var Binding 0
+OpDecorate %block Block
+OpMemberDecorate %block 0 Offset 0
+OpMemberDecorate %block 0 ColMajor
+OpMemberDecorate %block 0 MatrixStride 8
+OpDecorate %array ArrayStride 32
+OpDecorate %a ArrayStride 64
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 0
+%int_2 = OpConstant %int 2
+%vec = OpTypeVector %float 2
+%mat = OpTypeMatrix %vec 2
+%array = OpTypeArray %mat %int_2
+%a = OpTypeArray %array %int_2
+%block = OpTypeStruct %a
+%ptr = OpTypePointer Uniform %block
+%var = OpVariable %ptr Uniform
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_1);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("is a matrix with stride 8 not satisfying alignment to 16"));
+}
+
+TEST_F(ValidateDecorations, MultipleBuiltinsInputVertex) {
+  const std::string body = R"(
+               OpCapability Shader
+               OpCapability DrawParameters
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %_ %gl_BaseInstance1 %gl_BaseInstance2
+               OpMemberDecorate %gl_PerVertex 0 BuiltIn Position
+               OpMemberDecorate %gl_PerVertex 1 BuiltIn PointSize
+               OpMemberDecorate %gl_PerVertex 2 BuiltIn ClipDistance
+               OpMemberDecorate %gl_PerVertex 3 BuiltIn CullDistance
+               OpDecorate %gl_PerVertex Block
+               OpDecorate %gl_BaseInstance1 BuiltIn BaseInstance
+               OpDecorate %gl_BaseInstance2 BuiltIn BaseInstance
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+%_arr_float_uint_1 = OpTypeArray %float %uint_1
+%gl_PerVertex = OpTypeStruct %v4float %float %_arr_float_uint_1 %_arr_float_uint_1
+%_ptr_Output_gl_PerVertex = OpTypePointer Output %gl_PerVertex
+          %_ = OpVariable %_ptr_Output_gl_PerVertex Output
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+    %float_0 = OpConstant %float 0
+         %17 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+%_ptr_Input_int = OpTypePointer Input %int
+%gl_BaseInstance1 = OpVariable %_ptr_Input_int Input
+%gl_BaseInstance2 = OpVariable %_ptr_Input_int Input
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %20 = OpLoad %int %gl_BaseInstance1
+         %21 = OpConvertSToF %float %20
+         %22 = OpVectorTimesScalar %v4float %17 %21
+         %24 = OpAccessChain %_ptr_Output_v4float %_ %int_0
+               OpStore %24 %22
+               OpReturn
+               OpFunctionEnd
+    )";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpEntryPoint contains duplicate input variables with "
+                        "BaseInstance builtin"));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-09658"));
+}
+
+TEST_F(ValidateDecorations, MultipleBuiltinsInputMesh) {
+  const std::string body = R"(
+               OpCapability DrawParameters
+               OpCapability MeshShadingEXT
+               OpExtension "SPV_EXT_mesh_shader"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint MeshEXT %main "main" %gl_DrawID_1 %gl_DrawID_2
+               OpExecutionMode %main LocalSize 1 1 1
+               OpExecutionMode %main OutputVertices 32
+               OpExecutionMode %main OutputPrimitivesEXT 32
+               OpExecutionMode %main OutputTrianglesEXT
+               OpDecorate %gl_DrawID_1 BuiltIn DrawIndex
+               OpDecorate %gl_DrawID_2 BuiltIn DrawIndex
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Input_int = OpTypePointer Input %int
+  %gl_DrawID_1 = OpVariable %_ptr_Input_int Input
+  %gl_DrawID_2 = OpVariable %_ptr_Input_int Input
+       %uint = OpTypeInt 32 0
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %9 = OpLoad %int %gl_DrawID_1
+         %11 = OpBitcast %uint %9
+         %12 = OpLoad %int %gl_DrawID_2
+         %13 = OpBitcast %uint %12
+               OpSetMeshOutputsEXT %11 %13
+               OpReturn
+               OpFunctionEnd
+    )";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpEntryPoint contains duplicate input variables with "
+                        "DrawIndex builtin"));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-09658"));
+}
+
+TEST_F(ValidateDecorations, MultipleBuiltinsInputCompute) {
+  const std::string body = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %_ %gl_WorkGroupID_1 %gl_WorkGroupID_2
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberDecorate %Buffers 0 Offset 0
+               OpDecorate %Buffers Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %gl_WorkGroupID_1 BuiltIn WorkgroupId
+               OpDecorate %gl_WorkGroupID_2 BuiltIn WorkgroupId
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+    %Buffers = OpTypeStruct %v3uint
+%_ptr_StorageBuffer_Buffers = OpTypePointer StorageBuffer %Buffers
+          %_ = OpVariable %_ptr_StorageBuffer_Buffers StorageBuffer
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_WorkGroupID_1 = OpVariable %_ptr_Input_v3uint Input
+%gl_WorkGroupID_2 = OpVariable %_ptr_Input_v3uint Input
+%_ptr_StorageBuffer_v3uint = OpTypePointer StorageBuffer %v3uint
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %15 = OpLoad %v3uint %gl_WorkGroupID_1
+         %16 = OpLoad %v3uint %gl_WorkGroupID_2
+         %17 = OpIAdd %v3uint %15 %16
+         %19 = OpAccessChain %_ptr_StorageBuffer_v3uint %_ %int_0
+               OpStore %19 %17
+               OpReturn
+               OpFunctionEnd
+    )";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpEntryPoint contains duplicate input variables with "
+                        "WorkgroupId builtin"));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-09658"));
+}
+
+TEST_F(ValidateDecorations, MultipleBuiltinsOutputFragment) {
+  const std::string body = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_FragDepth_1 %gl_FragDepth_2
+               OpExecutionMode %main OriginUpperLeft
+               OpExecutionMode %main DepthReplacing
+               OpDecorate %gl_FragDepth_1 BuiltIn FragDepth
+               OpDecorate %gl_FragDepth_2 BuiltIn FragDepth
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+%_ptr_Output_float = OpTypePointer Output %float
+%gl_FragDepth_1 = OpVariable %_ptr_Output_float Output
+%gl_FragDepth_2 = OpVariable %_ptr_Output_float Output
+    %float_1 = OpConstant %float 1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpStore %gl_FragDepth_1 %float_1
+         %10 = OpLoad %float %gl_FragDepth_1
+         %11 = OpFAdd %float %10 %float_1
+               OpStore %gl_FragDepth_2 %11
+               OpReturn
+               OpFunctionEnd
+    )";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpEntryPoint contains duplicate output variables with "
+                        "FragDepth builtin"));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-09659"));
+}
+
+TEST_F(ValidateDecorations, MultipleBuiltinsRayTmaxKHR) {
+  const std::string body = R"(
+               OpCapability RayTracingKHR
+               OpExtension "SPV_KHR_ray_tracing"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint AnyHitKHR %main "main" %gl_RayTmaxEXT %gl_HitTEXT %incomingPayload
+               OpDecorate %gl_RayTmaxEXT BuiltIn RayTmaxKHR
+               OpDecorate %gl_HitTEXT BuiltIn RayTmaxKHR
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+%_ptr_Function_float = OpTypePointer Function %float
+%_ptr_Input_float = OpTypePointer Input %float
+%gl_RayTmaxEXT = OpVariable %_ptr_Input_float Input
+ %gl_HitTEXT = OpVariable %_ptr_Input_float Input
+    %v4float = OpTypeVector %float 4
+%_ptr_IncomingRayPayloadKHR_v4float = OpTypePointer IncomingRayPayloadKHR %v4float
+%incomingPayload = OpVariable %_ptr_IncomingRayPayloadKHR_v4float IncomingRayPayloadKHR
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %a = OpVariable %_ptr_Function_float Function
+          %b = OpVariable %_ptr_Function_float Function
+         %11 = OpLoad %float %gl_RayTmaxEXT
+               OpStore %a %11
+         %14 = OpLoad %float %gl_HitTEXT
+               OpStore %b %14
+         %18 = OpLoad %float %a
+         %19 = OpLoad %float %b
+         %22 = OpCompositeConstruct %v4float %18 %18 %19 %19
+               OpStore %incomingPayload %22
+               OpTerminateRayKHR
+               OpFunctionEnd
+    )";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "OpEntryPoint contains duplicate input variables with RayTmax"));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-09658"));
+}
+
+TEST_F(ValidateDecorations, MultipleBuiltinsBlock) {
+  const std::string body = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %var
+               OpMemberDecorate %gl_PerVertex 0 BuiltIn Position
+               OpMemberDecorate %gl_PerVertex 1 BuiltIn Position
+               OpDecorate %gl_PerVertex Block
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%gl_PerVertex = OpTypeStruct %v4float %v4float
+%_ptr_gl_PerVertex = OpTypePointer Output %gl_PerVertex
+        %var = OpVariable %_ptr_gl_PerVertex Output
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+    %float_0 = OpConstant %float 0
+         %17 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+   %ptr_vec4 = OpTypePointer Output %v4float
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %19 = OpAccessChain %ptr_vec4 %var %int_0
+               OpStore %19 %17
+         %22 = OpAccessChain %ptr_vec4 %var %int_1
+               OpStore %22 %17
+               OpReturn
+               OpFunctionEnd
+    )";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_0);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "OpEntryPoint contains duplicate output variables with Position"));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-09659"));
+}
+
+TEST_F(ValidateDecorations, MultipleBuiltinsBlockMixed) {
+  const std::string body = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %var %position
+               OpMemberDecorate %gl_PerVertex 0 BuiltIn Position
+               OpDecorate %gl_PerVertex Block
+               OpDecorate %position BuiltIn Position
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%gl_PerVertex = OpTypeStruct %v4float
+%_ptr_gl_PerVertex = OpTypePointer Output %gl_PerVertex
+        %var = OpVariable %_ptr_gl_PerVertex Output
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+    %float_0 = OpConstant %float 0
+         %17 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+   %ptr_vec4 = OpTypePointer Output %v4float
+   %position = OpVariable %ptr_vec4 Output
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %19 = OpAccessChain %ptr_vec4 %var %int_0
+               OpStore %19 %17
+               OpStore %position %17
+               OpReturn
+               OpFunctionEnd
+    )";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_0);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "OpEntryPoint contains duplicate output variables with Position"));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-09659"));
+}
+
+TEST_F(ValidateDecorations, UntypedVariableWorkgroupRequiresStruct) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability UntypedPointersKHR
+OpCapability WorkgroupMemoryExplicitLayoutKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpExtension "SPV_KHR_workgroup_memory_explicit_layout"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main" %var
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%ptr = OpTypeUntypedPointerKHR Workgroup
+%var = OpUntypedVariableKHR %ptr Workgroup %int
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Untyped workgroup variables in shaders must be block "
+                        "decorated structs"));
+}
+
+TEST_F(ValidateDecorations, UntypedVariableWorkgroupRequiresBlockStruct) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability UntypedPointersKHR
+OpCapability WorkgroupMemoryExplicitLayoutKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpExtension "SPV_KHR_workgroup_memory_explicit_layout"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main" %var
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%struct = OpTypeStruct %int
+%ptr = OpTypeUntypedPointerKHR Workgroup
+%var = OpUntypedVariableKHR %ptr Workgroup %struct
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Untyped workgroup variables in shaders must be block "
+                        "decorated"));
+}
+
+TEST_F(ValidateDecorations, UntypedVariableStorageBufferMissingBlock) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpName %struct "struct"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%struct = OpTypeStruct %int
+%ptr = OpTypeUntypedPointerKHR StorageBuffer
+%var = OpUntypedVariableKHR %ptr StorageBuffer %struct
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("StorageBuffer id '2' is missing Block decoration"));
+}
+
+TEST_F(ValidateDecorations, UntypedVariableUniformMissingBlock) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpName %struct "struct"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%struct = OpTypeStruct %int
+%ptr = OpTypeUntypedPointerKHR Uniform
+%var = OpUntypedVariableKHR %ptr Uniform %struct
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Uniform id '2' is missing Block or BufferBlock decoration"));
+}
+
+TEST_F(ValidateDecorations, UntypedVariablePushConstantMissingBlock) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpName %struct "struct"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%struct = OpTypeStruct %int
+%ptr = OpTypeUntypedPointerKHR PushConstant
+%var = OpUntypedVariableKHR %ptr PushConstant %struct
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("PushConstant id '2' is missing Block decoration"));
+}
+
+using UntypedVariableSetAndBinding = spvtest::ValidateBase<std::string>;
+
+TEST_P(UntypedVariableSetAndBinding, MissingSet) {
+  const auto sc = GetParam();
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpName %var "var"
+OpDecorate %struct Block
+OpMemberDecorate %struct 0 Offset 0
+OpDecorate %var Binding 0
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%struct = OpTypeStruct %int
+%ptr = OpTypeUntypedPointerKHR )" +
+                            sc + R"(
+%var = OpUntypedVariableKHR %ptr )" + sc + R"( %struct
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%load = OpLoad %struct %var
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr(sc + " id '2' is missing DescriptorSet decoration"));
+}
+
+TEST_P(UntypedVariableSetAndBinding, MissingBinding) {
+  const auto sc = GetParam();
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpName %var "var"
+OpDecorate %struct Block
+OpMemberDecorate %struct 0 Offset 0
+OpDecorate %var DescriptorSet 0
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%struct = OpTypeStruct %int
+%ptr = OpTypeUntypedPointerKHR )" +
+                            sc + R"(
+%var = OpUntypedVariableKHR %ptr )" + sc + R"( %struct
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%load = OpLoad %struct %var
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr(sc + " id '2' is missing Binding decoration"));
+}
+
+INSTANTIATE_TEST_SUITE_P(ValidateUntypedVariableSetAndBinding,
+                         UntypedVariableSetAndBinding,
+                         Values("StorageBuffer", "Uniform"));
+
+using UntypedPointerLayout =
+    spvtest::ValidateBase<std::tuple<std::string, std::string>>;
+
+TEST_P(UntypedPointerLayout, BadOffset) {
+  const auto sc = std::get<0>(GetParam());
+  const auto op = std::get<1>(GetParam());
+  const std::string set = (sc == "StorageBuffer" || sc == "Uniform"
+                               ? R"(OpDecorate %var DescriptorSet 0
+OpDecorate %var Binding 0
+)"
+                               : R"()");
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability VariablePointers
+OpCapability UntypedPointersKHR
+OpCapability WorkgroupMemoryExplicitLayoutKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpExtension "SPV_KHR_variable_pointers"
+OpExtension "SPV_KHR_workgroup_memory_explicit_layout"
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main" %var
+OpExecutionMode %main LocalSize 1 1 1
+OpName %var "var"
+OpDecorate %struct Block
+OpMemberDecorate %struct 0 Offset 0
+OpMemberDecorate %struct 1 Offset 4
+)" + set + R"(OpMemberDecorate %test_type 0 Offset 0
+OpMemberDecorate %test_type 1 Offset 1
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%struct = OpTypeStruct %int %int
+%test_type = OpTypeStruct %int %int
+%test_val = OpConstantNull %test_type
+%ptr = OpTypeUntypedPointerKHR )" +
+                            sc + R"(
+%var = OpUntypedVariableKHR %ptr )" + sc + R"( %struct
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+)" + op + R"(
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  const bool read_only = sc == "Uniform" || sc == "PushConstant";
+  if (!read_only || op.find("OpStore") == std::string::npos) {
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("member 1 at offset 1 is not aligned to"));
+  }
+}
+
+TEST_P(UntypedPointerLayout, BadStride) {
+  const auto sc = std::get<0>(GetParam());
+  const auto op = std::get<1>(GetParam());
+  const std::string set = (sc == "StorageBuffer" || sc == "Uniform"
+                               ? R"(OpDecorate %var DescriptorSet 0
+OpDecorate %var Binding 0
+)"
+                               : R"()");
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability VariablePointers
+OpCapability UntypedPointersKHR
+OpCapability WorkgroupMemoryExplicitLayoutKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpExtension "SPV_KHR_variable_pointers"
+OpExtension "SPV_KHR_workgroup_memory_explicit_layout"
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main" %var
+OpExecutionMode %main LocalSize 1 1 1
+OpName %var "var"
+OpDecorate %struct Block
+OpMemberDecorate %struct 0 Offset 0
+OpMemberDecorate %struct 1 Offset 4
+)" + set + R"(OpDecorate %test_type ArrayStride 4
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%int_4 = OpConstant %int 4
+%int4 = OpTypeVector %int 4
+%test_type = OpTypeArray %int4 %int_4
+%test_val = OpConstantNull %test_type
+%struct = OpTypeStruct %int %int
+%ptr = OpTypeUntypedPointerKHR )" +
+                            sc + R"(
+%var = OpUntypedVariableKHR %ptr )" + sc + R"( %struct
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+)" + op + R"(
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  const bool read_only = sc == "Uniform" || sc == "PushConstant";
+  if (!read_only || op.find("OpStore") == std::string::npos) {
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr("array with stride 4 not satisfying alignment to 16"));
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ValidateUntypedPointerLayout, UntypedPointerLayout,
+    Combine(Values("StorageBuffer", "Uniform", "PushConstant", "Workgroup"),
+            Values("%gep = OpUntypedAccessChainKHR %ptr %test_type %var %int_0",
+                   "%gep = OpUntypedInBoundsAccessChainKHR %ptr %test_type "
+                   "%var %int_0",
+                   "%gep = OpUntypedPtrAccessChainKHR %ptr %test_type %var "
+                   "%int_0 %int_0",
+                   "%ld = OpLoad %test_type %var", "OpStore %var %test_val")));
+
+TEST_F(ValidateDecorations, UntypedArrayLengthMissingOffset) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %struct Block
+OpDecorate %block Block
+OpMemberDecorate %block 0 Offset 0
+OpDecorate %array ArrayStride 4
+OpDecorate %var DescriptorSet 0
+OpDecorate %var Binding 0
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%array = OpTypeRuntimeArray %int
+%struct = OpTypeStruct %array
+%block = OpTypeStruct %array
+%ptr = OpTypeUntypedPointerKHR StorageBuffer
+%var = OpUntypedVariableKHR %ptr StorageBuffer %block
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%len = OpUntypedArrayLengthKHR %int %struct %var 0
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("member 0 is missing an Offset decoration"));
+}
+
+TEST_F(ValidateDecorations, ComponentMultipleArrays) {
+  const std::string spirv = R"(
+               OpCapability Tessellation
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint TessellationEvaluation %main "main" %_ %FOO %FOO0
+               OpExecutionMode %main Triangles
+               OpExecutionMode %main SpacingEqual
+               OpExecutionMode %main VertexOrderCcw
+               OpSource GLSL 460
+               OpSourceExtension "GL_EXT_nonuniform_qualifier"
+               OpName %main "main"
+               OpName %gl_PerVertex "gl_PerVertex"
+               OpMemberName %gl_PerVertex 0 "gl_Position"
+               OpMemberName %gl_PerVertex 1 "gl_PointSize"
+               OpMemberName %gl_PerVertex 2 "gl_ClipDistance"
+               OpMemberName %gl_PerVertex 3 "gl_CullDistance"
+               OpName %_ ""
+               OpName %FOO "FOO"
+               OpMemberDecorate %gl_PerVertex 0 BuiltIn Position
+               OpMemberDecorate %gl_PerVertex 1 BuiltIn PointSize
+               OpMemberDecorate %gl_PerVertex 2 BuiltIn ClipDistance
+               OpMemberDecorate %gl_PerVertex 3 BuiltIn CullDistance
+               OpDecorate %gl_PerVertex Block
+               OpDecorate %FOO Component 2
+               OpDecorate %FOO Location 1
+               OpDecorate %FOO0 Location 1
+               OpDecorate %FOO0 Component 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+%_arr_float_uint_1 = OpTypeArray %float %uint_1
+%gl_PerVertex = OpTypeStruct %v4float %float %_arr_float_uint_1 %_arr_float_uint_1
+%_ptr_Output_gl_PerVertex = OpTypePointer Output %gl_PerVertex
+          %_ = OpVariable %_ptr_Output_gl_PerVertex Output
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+    %v2float = OpTypeVector %float 2
+     %uint_2 = OpConstant %uint 2
+%_arr_v2float_uint_2 = OpTypeArray %v2float %uint_2
+    %uint_32 = OpConstant %uint 32
+%_arr__arr_v2float_uint_2_uint_32 = OpTypeArray %_arr_v2float_uint_2 %uint_32
+%_ptr_Input__arr__arr_v2float_uint_2_uint_32 = OpTypePointer Input %_arr__arr_v2float_uint_2_uint_32
+        %FOO = OpVariable %_ptr_Input__arr__arr_v2float_uint_2_uint_32 Input
+        %FOO0 = OpVariable %_ptr_Input__arr__arr_v2float_uint_2_uint_32 Input
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+      %int_1 = OpConstant %int 1
+     %uint_0 = OpConstant %uint 0
+%_ptr_Output_float = OpTypePointer Output %float
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %24 = OpAccessChain %_ptr_Input_v2float %FOO %int_0 %int_0
+         %25 = OpLoad %v2float %24
+         %27 = OpAccessChain %_ptr_Input_v2float %FOO0 %int_1 %int_1
+         %28 = OpLoad %v2float %27
+         %29 = OpFAdd %v2float %25 %28
+         %32 = OpAccessChain %_ptr_Output_float %_ %int_0 %uint_0
+         %33 = OpCompositeExtract %float %29 0
+               OpStore %32 %33
+         %34 = OpAccessChain %_ptr_Output_float %_ %int_0 %uint_1
+         %35 = OpCompositeExtract %float %29 1
+               OpStore %34 %35
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+}
+
+const std::string kNodeShaderPrelude = R"(
+OpCapability Shader
+OpCapability ShaderEnqueueAMDX
+OpExtension "SPV_AMDX_shader_enqueue"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpEntryPoint GLCompute %other "other"
+)";
+
+const std::string kNodeShaderPostlude = R"(
+%uint = OpTypeInt 32 0
+%uint_0 = OpConstant %uint 0
+%uint_1 = OpConstant %uint 1
+%node0 = OpConstantStringAMDX "node0"
+%node1 = OpConstantStringAMDX "node1"
+%node2 = OpConstantStringAMDX "node2"
+%S = OpTypeStruct
+%_payloadarr_S = OpTypeNodePayloadArrayAMDX %S
+%_payloadarr_S_0 = OpTypeNodePayloadArrayAMDX %S
+%bool = OpTypeBool
+%true = OpConstantTrue %bool
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%other = OpFunction %void None %void_fn
+%entry0 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+TEST_F(ValidateDecorations, NodeShader) {
+  const std::string spirv = kNodeShaderPrelude + R"(
+OpExecutionModeId %main ShaderIndexAMDX %uint_0
+OpExecutionModeId %main IsApiEntryAMDX %true
+OpExecutionModeId %main MaxNodeRecursionAMDX %uint_1
+OpExecutionModeId %main MaxNumWorkgroupsAMDX %uint_1 %uint_1 %uint_1
+OpExecutionModeId %main SharesInputWithAMDX %node0 %uint_0
+OpExecutionModeId %other ShaderIndexAMDX %uint_0
+OpExecutionModeId %other StaticNumWorkgroupsAMDX %uint_1 %uint_1 %uint_1
+OpDecorateId %_payloadarr_S PayloadNodeNameAMDX %node1
+OpDecorateId %_payloadarr_S_0 PayloadNodeNameAMDX %node2
+OpDecorateId %_payloadarr_S PayloadNodeBaseIndexAMDX %uint_0
+OpDecorateId %_payloadarr_S PayloadNodeArraySizeAMDX %uint_1
+OpDecorateId %_payloadarr_S NodeSharesPayloadLimitsWithAMDX %_payloadarr_S_0
+)" + kNodeShaderPostlude;
+
+  spv_target_env env = SPV_ENV_UNIVERSAL_1_3;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_SUCCESS, ValidateInstructions(env));
+}
+
+TEST_F(ValidateDecorations, NodeShaderDecoratePayloadNodeName) {
+  const std::string spirv = kNodeShaderPrelude + R"(
+OpExecutionModeId %main ShaderIndexAMDX %uint_0
+OpExecutionModeId %main IsApiEntryAMDX %true
+OpExecutionModeId %main MaxNodeRecursionAMDX %uint_1
+OpExecutionModeId %main MaxNumWorkgroupsAMDX %uint_1 %uint_1 %uint_1
+OpExecutionModeId %main SharesInputWithAMDX %node0 %uint_0
+OpExecutionModeId %other ShaderIndexAMDX %uint_0
+OpExecutionModeId %other StaticNumWorkgroupsAMDX %uint_1 %uint_1 %uint_1
+OpDecorate %_payloadarr_S PayloadNodeNameAMDX %node1
+OpDecorate %_payloadarr_S_0 PayloadNodeNameAMDX %node2
+OpDecorateId %_payloadarr_S PayloadNodeBaseIndexAMDX %uint_0
+OpDecorateId %_payloadarr_S PayloadNodeArraySizeAMDX %uint_1
+OpDecorateId %_payloadarr_S NodeSharesPayloadLimitsWithAMDX %_payloadarr_S_0
+)" + kNodeShaderPostlude;
+
+  spv_target_env env = SPV_ENV_UNIVERSAL_1_3;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_ID, ValidateInstructions(env));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Decorations taking ID parameters may not be used with OpDecorate"));
+}
+
+TEST_F(ValidateDecorations, NodeShaderDecoratePayloadNodeBaseIndex) {
+  const std::string spirv = kNodeShaderPrelude + R"(
+OpExecutionModeId %main ShaderIndexAMDX %uint_0
+OpExecutionModeId %main IsApiEntryAMDX %true
+OpExecutionModeId %main MaxNodeRecursionAMDX %uint_1
+OpExecutionModeId %main MaxNumWorkgroupsAMDX %uint_1 %uint_1 %uint_1
+OpExecutionModeId %main SharesInputWithAMDX %node0 %uint_0
+OpExecutionModeId %other ShaderIndexAMDX %uint_0
+OpExecutionModeId %other StaticNumWorkgroupsAMDX %uint_1 %uint_1 %uint_1
+OpDecorateId %_payloadarr_S PayloadNodeNameAMDX %node1
+OpDecorateId %_payloadarr_S_0 PayloadNodeNameAMDX %node2
+OpDecorate %_payloadarr_S PayloadNodeBaseIndexAMDX %uint_0
+OpDecorateId %_payloadarr_S PayloadNodeArraySizeAMDX %uint_1
+OpDecorateId %_payloadarr_S NodeSharesPayloadLimitsWithAMDX %_payloadarr_S_0
+)" + kNodeShaderPostlude;
+
+  spv_target_env env = SPV_ENV_UNIVERSAL_1_3;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_ID, ValidateInstructions(env));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Decorations taking ID parameters may not be used with OpDecorate"));
+}
+
+TEST_F(ValidateDecorations, NodeShaderDecoratePayloadNodeArraySize) {
+  const std::string spirv = kNodeShaderPrelude + R"(
+OpExecutionModeId %main ShaderIndexAMDX %uint_0
+OpExecutionModeId %main IsApiEntryAMDX %true
+OpExecutionModeId %main MaxNodeRecursionAMDX %uint_1
+OpExecutionModeId %main MaxNumWorkgroupsAMDX %uint_1 %uint_1 %uint_1
+OpExecutionModeId %main SharesInputWithAMDX %node0 %uint_0
+OpExecutionModeId %other ShaderIndexAMDX %uint_0
+OpExecutionModeId %other StaticNumWorkgroupsAMDX %uint_1 %uint_1 %uint_1
+OpDecorateId %_payloadarr_S PayloadNodeNameAMDX %node1
+OpDecorateId %_payloadarr_S_0 PayloadNodeNameAMDX %node2
+OpDecorateId %_payloadarr_S PayloadNodeBaseIndexAMDX %uint_0
+OpDecorate %_payloadarr_S PayloadNodeArraySizeAMDX %uint_1
+OpDecorateId %_payloadarr_S NodeSharesPayloadLimitsWithAMDX %_payloadarr_S_0
+)" + kNodeShaderPostlude;
+
+  spv_target_env env = SPV_ENV_UNIVERSAL_1_3;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_ID, ValidateInstructions(env));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Decorations taking ID parameters may not be used with OpDecorate"));
+}
+
+TEST_F(ValidateDecorations, NodeShaderDecorateNodeSharesPayloadLimitsWith) {
+  const std::string spirv = kNodeShaderPrelude + R"(
+OpExecutionModeId %main ShaderIndexAMDX %uint_0
+OpExecutionModeId %main IsApiEntryAMDX %true
+OpExecutionModeId %main MaxNodeRecursionAMDX %uint_1
+OpExecutionModeId %main MaxNumWorkgroupsAMDX %uint_1 %uint_1 %uint_1
+OpExecutionModeId %main SharesInputWithAMDX %node0 %uint_0
+OpExecutionModeId %other ShaderIndexAMDX %uint_0
+OpExecutionModeId %other StaticNumWorkgroupsAMDX %uint_1 %uint_1 %uint_1
+OpDecorateId %_payloadarr_S PayloadNodeNameAMDX %node1
+OpDecorateId %_payloadarr_S_0 PayloadNodeNameAMDX %node2
+OpDecorateId %_payloadarr_S PayloadNodeBaseIndexAMDX %uint_0
+OpDecorateId %_payloadarr_S PayloadNodeArraySizeAMDX %uint_1
+OpDecorate %_payloadarr_S NodeSharesPayloadLimitsWithAMDX %_payloadarr_S_0
+)" + kNodeShaderPostlude;
+
+  spv_target_env env = SPV_ENV_UNIVERSAL_1_3;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_ID, ValidateInstructions(env));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Decorations taking ID parameters may not be used with OpDecorate"));
+}
+
+TEST_F(ValidateDecorations, BlockArrayWithStride) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %struct Block
+OpMemberDecorate %struct 0 Offset 0
+OpDecorate %array ArrayStride 4
+%int = OpTypeInt 32 0
+%int_4 = OpConstant %int 4
+%struct = OpTypeStruct %int
+%array = OpTypeArray %struct %int_4
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Array containing a Block or BufferBlock must not be "
+                        "decorated with ArrayStride"));
+}
+
+TEST_F(ValidateDecorations, BufferBlockRuntimeArrayWithStride) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %struct BufferBlock
+OpMemberDecorate %struct 0 Offset 0
+OpDecorate %array ArrayStride 4
+%int = OpTypeInt 32 0
+%struct = OpTypeStruct %int
+%array = OpTypeRuntimeArray %struct
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Array containing a Block or BufferBlock must not be "
+                        "decorated with ArrayStride"));
+}
+
+TEST_F(ValidateDecorations, BlockArrayWithoutStride) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %struct Block
+OpMemberDecorate %struct 0 Offset 0
+OpDecorate %var DescriptorSet 0
+OpDecorate %var Binding 0
+%int = OpTypeInt 32 0
+%int_4 = OpConstant %int 4
+%struct = OpTypeStruct %int
+%array = OpTypeArray %struct %int_4
+%ptr = OpTypePointer StorageBuffer %array
+%var = OpVariable %ptr StorageBuffer
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+}
+
+TEST_F(ValidateDecorations, BlockArrayWithoutStrideUntypedAccessChain) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %struct Block
+OpMemberDecorate %struct 0 Offset 0
+OpDecorate %var DescriptorSet 0
+OpDecorate %var Binding 0
+%int = OpTypeInt 32 0
+%int_4 = OpConstant %int 4
+%struct = OpTypeStruct %int
+%array = OpTypeArray %struct %int_4
+%void = OpTypeVoid
+%ptr = OpTypeUntypedPointerKHR StorageBuffer
+%var = OpUntypedVariableKHR %ptr StorageBuffer %array
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%gep = OpUntypedAccessChainKHR %ptr %array %var
 OpReturn
 OpFunctionEnd
 )";

@@ -47,6 +47,11 @@ public:
     // Return true if we're on an OpenGL platform (as opposed to OpenGL ES). false by default.
     virtual bool isOpenGL() const noexcept;
 
+    /**
+     * Creates an ExternalImage from a EGLImageKHR
+     */
+    ExternalImageHandle createExternalImage(EGLImageKHR eglImage) noexcept;
+
 protected:
     // --------------------------------------------------------------------------------------------
     // Helper for EGL configs and attributes parameters
@@ -75,8 +80,7 @@ protected:
      * Initializes EGL, creates the OpenGL context and returns a concrete Driver implementation
      * that supports OpenGL/OpenGL ES.
      */
-    Driver* createDriver(void* sharedContext,
-            const Platform::DriverConfig& driverConfig) noexcept override;
+    Driver* createDriver(void* sharedContext, const DriverConfig& driverConfig) noexcept override;
 
     /**
      * This returns zero. This method can be overridden to return something more useful.
@@ -118,9 +122,10 @@ protected:
     void destroyFence(Fence* fence) noexcept override;
     FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept override;
 
-    OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
-    void destroyExternalImage(ExternalTexture* texture) noexcept override;
+    ExternalTexture* createExternalImageTexture() noexcept override;
+    void destroyExternalImageTexture(ExternalTexture* texture) noexcept override;
     bool setExternalImage(void* externalImage, ExternalTexture* texture) noexcept override;
+    bool setExternalImage(ExternalImageHandleRef externalImage, ExternalTexture* texture) noexcept override;
 
     /**
      * Logs glGetError() to slog.e
@@ -187,6 +192,12 @@ protected:
     };
 
     void initializeGlExtensions() noexcept;
+
+    struct ExternalImageEGL : public ExternalImage {
+        EGLImageKHR eglImage = EGL_NO_IMAGE;
+    protected:
+        ~ExternalImageEGL() override;
+    };
 
 protected:
     EGLConfig findSwapChainConfig(uint64_t flags, bool window, bool pbuffer) const;

@@ -1,0 +1,34 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 460
+               OpName %main "main"
+               OpName %FHitGroupRootConstants "FHitGroupRootConstants"
+               OpMemberName %FHitGroupRootConstants 0 "BaseInstanceIndex"
+               OpMemberName %FHitGroupRootConstants 1 "UserData"
+               OpName %type_StructuredBuffer_FHitGroupRootConstants "type_StructuredBuffer_FHitGroupRootConstants"
+               OpMemberName %type_StructuredBuffer_FHitGroupRootConstants 0 "_m0"
+               OpName %HitGroupData "HitGroupData"
+               OpMemberDecorate %FHitGroupRootConstants 0 Offset 0
+               OpMemberDecorate %FHitGroupRootConstants 1 Offset 4
+               OpDecorate %_runtimearr_FHitGroupRootConstants ArrayStride 8
+               OpMemberDecorate %type_StructuredBuffer_FHitGroupRootConstants 0 NonWritable
+               OpMemberDecorate %type_StructuredBuffer_FHitGroupRootConstants 0 Offset 0
+               OpDecorate %type_StructuredBuffer_FHitGroupRootConstants BufferBlock
+               OpDecorate %HitGroupData DescriptorSet 0
+               OpDecorate %HitGroupData Binding 20
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%FHitGroupRootConstants = OpTypeStruct %uint %uint
+%_runtimearr_FHitGroupRootConstants = OpTypeRuntimeArray %FHitGroupRootConstants
+%type_StructuredBuffer_FHitGroupRootConstants = OpTypeStruct %_runtimearr_FHitGroupRootConstants
+%_ptr_StorageBuffer_type_StructuredBuffer_FHitGroupRootConstants = OpTypePointer StorageBuffer %type_StructuredBuffer_FHitGroupRootConstants
+%HitGroupData = OpVariable %_ptr_StorageBuffer_type_StructuredBuffer_FHitGroupRootConstants StorageBuffer
+%728 = OpUndef %_ptr_StorageBuffer_type_StructuredBuffer_FHitGroupRootConstants
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd

@@ -33,12 +33,12 @@ void main()
     FragColor0 = V4_value0 + vec4(3.0);
     FragColor1 = _48;
     FragColor2 = mp_copy_48 * vec4(3.0);
-    float _21 = V1_value0 + 3.0;
+    float _23 = V1_value0 + 3.0;
     float float_0_weird = 3.0 - mp_copy_ubo_hp0;
     highp float hp_copy_float_0_weird = float_0_weird;
     highp float _49 = hp_copy_V1_value0 - hp_copy_float_0_weird;
     float mp_copy_49 = _49;
-    FragColor3 = vec4(_21, _49, mp_copy_49 * mp_copy_ubo_hp0, 3.0);
+    FragColor3 = vec4(_23, _49, mp_copy_49 * mp_copy_ubo_hp0, 3.0);
     highp float _51 = hp_copy_V1_value2 - hp_copy_ubo_mp0;
     float mp_copy_51 = _51;
     FragColor3 = vec4(V4_value0.z + ubo_mp0, _51, mp_copy_51 * mp_copy_ubo_hp0, 3.0);
@@ -46,7 +46,7 @@ void main()
     FragColor1 = sin(V4_value0);
     float phi_mp;
     highp float phi_hp;
-    phi_mp = _21;
+    phi_mp = _23;
     phi_hp = _49;
     hp_copy_phi_mp = phi_mp;
     mp_copy_phi_hp = phi_hp;

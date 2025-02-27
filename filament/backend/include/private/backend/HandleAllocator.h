@@ -29,6 +29,7 @@
 
 #include <tsl/robin_map.h>
 
+#include <atomic>
 #include <cstddef>
 #include <exception>
 #include <mutex>
@@ -249,8 +250,8 @@ public:
         if (UTILS_LIKELY(isPoolHandle(id))) {
             // Truncate the age to get the debug tag
             key &= ~(HANDLE_DEBUG_TAG_MASK ^ HANDLE_AGE_MASK);
+            writeHandleTag(key, std::move(tag));
         }
-        writeHandleTag(key, std::move(tag));
     }
 
 private:
@@ -426,7 +427,7 @@ private:
     // Below is only used when running out of space in the HandleArena
     mutable utils::Mutex mLock;
     tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
-    HandleBase::HandleId mId = 0;
+    std::atomic<HandleBase::HandleId> mId = 0;
     bool mUseAfterFreeCheckDisabled = false;
 };
 

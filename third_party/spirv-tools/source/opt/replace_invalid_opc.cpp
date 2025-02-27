@@ -86,7 +86,8 @@ bool ReplaceInvalidOpcodePass::RewriteFunction(Function* function,
         }
 
         if (model != spv::ExecutionModel::TessellationControl &&
-            model != spv::ExecutionModel::GLCompute) {
+            model != spv::ExecutionModel::GLCompute &&
+            !context()->IsTargetEnvAtLeast(SPV_ENV_UNIVERSAL_1_3)) {
           if (inst->opcode() == spv::Op::OpControlBarrier) {
             assert(model != spv::ExecutionModel::Kernel &&
                    "Expecting to be working on a shader module.");

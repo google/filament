@@ -1,5 +1,5 @@
-RasterizerOrderedByteAddressBuffer _7 : register(u1, space0);
-RWByteAddressBuffer _9 : register(u0, space0);
+RasterizerOrderedByteAddressBuffer _11 : register(u1, space0);
+RWByteAddressBuffer _13 : register(u0, space0);
 
 static float4 gl_FragCoord;
 struct SPIRV_Cross_Input
@@ -9,14 +9,14 @@ struct SPIRV_Cross_Input
 
 void callee2()
 {
-    int _31 = int(gl_FragCoord.x);
-    _7.Store(_31 * 4 + 0, _7.Load(_31 * 4 + 0) + 1u);
+    int _25 = int(gl_FragCoord.x);
+    _11.Store(_25 * 4 + 0, _11.Load(_25 * 4 + 0) + 1u);
 }
 
 void callee()
 {
-    int _39 = int(gl_FragCoord.x);
-    _9.Store(_39 * 4 + 0, _9.Load(_39 * 4 + 0) + 1u);
+    int _38 = int(gl_FragCoord.x);
+    _13.Store(_38 * 4 + 0, _13.Load(_38 * 4 + 0) + 1u);
     callee2();
 }
 

@@ -14,10 +14,10 @@ struct SSBO
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
 
-kernel void main0(device SSBO& _5 [[buffer(0)]])
+kernel void main0(device SSBO& _7 [[buffer(0)]])
 {
-    uint _20 = atomic_load_explicit((device atomic_uint*)&_5.b, memory_order_relaxed);
-    uint c = _20;
-    atomic_store_explicit((device atomic_uint*)&_5.a, c, memory_order_relaxed);
+    uint _16 = atomic_load_explicit((device atomic_uint*)&_7.b, memory_order_relaxed);
+    uint c = _16;
+    atomic_store_explicit((device atomic_uint*)&_7.a, c, memory_order_relaxed);
 }
 

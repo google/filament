@@ -55,7 +55,6 @@ inline uint8_t collapsedCount(Bitmask const& mask) {
 
 } // anonymous namespace
 
-class VulkanTimestamps;
 struct VulkanBufferObject;
 
 struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Resource {
@@ -217,12 +216,6 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
             backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
         mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
     }
-
-#if FVK_ENABLED_DEBUG_SAMPLER_NAME
-    inline utils::FixedCapacityVector<std::string> const& getBindingToName() const {
-        return mInfo->bindingToName;
-    }
-#endif
 
     // TODO: handle compute shaders.
     // The expected order of shaders - from frontend to backend - is vertex, fragment, compute.

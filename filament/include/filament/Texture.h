@@ -23,6 +23,7 @@
 
 #include <backend/DriverEnums.h>
 #include <backend/PixelBufferDescriptor.h>
+#include <backend/Platform.h>
 
 #include <utils/compiler.h>
 
@@ -70,7 +71,7 @@ class UTILS_PUBLIC Texture : public FilamentAPI {
     struct BuilderDetails;
 
 public:
-    static constexpr const size_t BASE_LEVEL = 0;
+    static constexpr size_t BASE_LEVEL = 0;
 
     //! Face offsets for all faces of a cubemap
     struct FaceOffsets;
@@ -84,19 +85,26 @@ public:
     using CompressedType = backend::CompressedPixelDataType;         //!< Compressed pixel data format
     using Usage = backend::TextureUsage;                             //!< Usage affects texel layout
     using Swizzle = backend::TextureSwizzle;                         //!< Texture swizzle
+    using ExternalImageHandle = backend::Platform::ExternalImageHandle;
+    using ExternalImageHandleRef = backend::Platform::ExternalImageHandleRef;
 
-    /** @return whether a backend supports a particular format. */
+    /** @return Whether a backend supports a particular format. */
     static bool isTextureFormatSupported(Engine& engine, InternalFormat format) noexcept;
 
-    /** @return whether this backend supports protected textures. */
+    /** @return Whether a backend supports mipmapping of a particular format. */
+    static bool isTextureFormatMipmappable(Engine& engine, InternalFormat format) noexcept;
+
+    /** @return Whether this backend supports protected textures. */
     static bool isProtectedTexturesSupported(Engine& engine) noexcept;
 
-    /** @return whether a backend supports texture swizzling. */
+    /** @return Whether a backend supports texture swizzling. */
     static bool isTextureSwizzleSupported(Engine& engine) noexcept;
 
     static size_t computeTextureDataSize(Format format, Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
 
+    /** @return Whether a combination of texture format, pixel format and type is valid. */
+    static bool validatePixelFormatAndType(InternalFormat internalFormat, Format format, Type type) noexcept;
 
     /**
      * Options for environment prefiltering into reflection map
@@ -218,6 +226,18 @@ public:
          Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
+         * Creates an external texture. The content must be set using setExternalImage().
+         * The sampler can be SAMPLER_EXTERNAL or SAMPLER_2D depending on the format. Generally
+         * YUV formats must use SAMPLER_EXTERNAL. This depends on the backend features and is not
+         * validated.
+         *
+         * If the Sampler is set to SAMPLER_EXTERNAL, external() is implied.
+         *
+         * @return
+         */
+        Builder& external() noexcept;
+
+        /**
          * Creates the Texture object and returns a pointer to it.
          *
          * @param engine Reference to the filament::Engine to associate this Texture with.
@@ -260,18 +280,6 @@ public:
          * @return This Builder, for chaining calls.
          */
         Builder& import(intptr_t id) noexcept;
-
-        /**
-         * Creates an external texture. The content must be set using setExternalImage().
-         * The sampler can be SAMPLER_EXTERNAL or SAMPLER_2D depending on the format. Generally
-         * YUV formats must use SAMPLER_EXTERNAL. This depends on the backend features and is not
-         * validated.
-         *
-         * If the Sampler is set to SAMPLER_EXTERNAL, external() is implied.
-         *
-         * @return
-         */
-        Builder& external() noexcept;
 
     private:
         friend class FTexture;
@@ -359,7 +367,7 @@ public:
      *              uint32_t width, uint32_t height, uint32_t depth,
      *              PixelBufferDescriptor&& buffer)
      */
-    inline void setImage(Engine& engine, size_t level, PixelBufferDescriptor&& buffer) const {
+    void setImage(Engine& engine, size_t level, PixelBufferDescriptor&& buffer) const {
         setImage(engine, level, 0, 0, 0,
             uint32_t(getWidth(level)), uint32_t(getHeight(level)), 1, std::move(buffer));
     }
@@ -372,7 +380,7 @@ public:
      *              uint32_t width, uint32_t height, uint32_t depth,
      *              PixelBufferDescriptor&& buffer)
      */
-    inline void setImage(Engine& engine, size_t level,
+    void setImage(Engine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             PixelBufferDescriptor&& buffer) const {
         setImage(engine, level, xoffset, yoffset, 0, width, height, 1, std::move(buffer));
@@ -416,6 +424,26 @@ public:
      *   - only the CLAMP_TO_EDGE wrap mode is supported
      *
      * @param engine        Engine this texture is associated to.
+     * @param image         An opaque handle to a platform specific image. It must be created using Platform
+     *                      specific APIs. For example PlatformEGL::createExternalImage(EGLImageKHR eglImage)
+     *
+     * @see PlatformEGL::createExternalImage
+     * @see PlatformEGLAndroid::createExternalImage
+     * @see PlatformCocoaGL::createExternalImage
+     * @see PlatformCocoaTouchGL::createExternalImage
+     */
+    void setExternalImage(Engine& engine, ExternalImageHandleRef image) noexcept;
+
+    /**
+     * Specify the external image to associate with this Texture. Typically, the external
+     * image is OS specific, and can be a video or camera frame.
+     * There are many restrictions when using an external image as a texture, such as:
+     *   - only the level of detail (lod) 0 can be specified
+     *   - only nearest or linear filtering is supported
+     *   - the size and format of the texture is defined by the external image
+     *   - only the CLAMP_TO_EDGE wrap mode is supported
+     *
+     * @param engine        Engine this texture is associated to.
      * @param image         An opaque handle to a platform specific image. Supported types are
      *                      eglImageOES on Android and CVPixelBufferRef on iOS.
      *
@@ -428,7 +456,9 @@ public:
      *
      * @see Builder::sampler()
      *
+     * @deprecated Instead, use setExternalImage(Engine& engine, ExternalImageHandleRef image)
      */
+    UTILS_DEPRECATED
     void setExternalImage(Engine& engine, void* UTILS_NONNULL image) noexcept;
 
     /**
@@ -463,7 +493,7 @@ public:
     void setExternalImage(Engine& engine, void* UTILS_NONNULL image, size_t plane) noexcept;
 
     /**
-     * Specify the external stream to associate with this Texture. Typically the external
+     * Specify the external stream to associate with this Texture. Typically, the external
      * stream is OS specific, and can be a video or camera stream.
      * There are many restrictions when using an external stream as a texture, such as:
      *   - only the level of detail (lod) 0 can be specified
@@ -474,7 +504,7 @@ public:
      * @param stream        A Stream object
      *
      * @attention \p engine must be the instance passed to Builder::build()
-     * @attention This Texture instance must use Sampler::SAMPLER_EXTERNAL or it has no effect
+     * @attention This Texture instance must use Sampler::SAMPLER_EXTERNAL, or it has no effect
      *
      * @see Builder::sampler(), Stream
      *
@@ -522,9 +552,9 @@ public:
      * @param buffer        Client-side buffer containing the images to set.
      * @param faceOffsets   Offsets in bytes into \p buffer for all six images. The offsets
      *                      are specified in the following order: +x, -x, +y, -y, +z, -z
-     * @param options       Optional parameter to controlling user-specified quality and options.
+     * @param options       Optional parameter controlling user-specified quality and options.
      *
-     * @exception utils::PreConditionPanic if the source data constraints are not respected.
+     * @exception utils::PreConditionPanic If the source data constraints are not respected.
      *
      */
     void generatePrefilterMipmap(Engine& engine,

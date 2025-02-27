@@ -66,6 +66,7 @@ public:
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
             PrefilterOptions const* options);
 
+    void setExternalImage(FEngine& engine, ExternalImageHandleRef image) noexcept;
     void setExternalImage(FEngine& engine, void* image) noexcept;
     void setExternalImage(FEngine& engine, void* image, size_t plane) noexcept;
     void setExternalStream(FEngine& engine, FStream* stream) noexcept;
@@ -87,6 +88,9 @@ public:
 
     // Synchronous call to the backend. Returns whether a backend supports a particular format.
     static bool isTextureFormatSupported(FEngine& engine, InternalFormat format) noexcept;
+
+    // Synchronous call to the backend. Returns whether a backend supports mipmapping of a particular format.
+    static bool isTextureFormatMipmappable(FEngine& engine, InternalFormat format) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports protected textures.
     static bool isProtectedTexturesSupported(FEngine& engine) noexcept;

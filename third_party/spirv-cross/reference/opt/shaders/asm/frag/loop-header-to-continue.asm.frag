@@ -13,7 +13,7 @@ struct Params
 layout(binding = 1, std140) uniform CB1
 {
     Params CB1;
-} _8;
+} _12;
 
 uniform sampler2D SPIRV_Cross_CombinedmapTexturemapSampler;
 
@@ -22,25 +22,25 @@ layout(location = 0) out vec4 _entryPointOutput;
 
 void main()
 {
-    vec2 _45 = vec2(0.0, _8.CB1.TextureSize.w);
-    vec4 _49 = texture(SPIRV_Cross_CombinedmapTexturemapSampler, IN_uv);
-    float _50 = _49.y;
-    float _53 = clamp(_50 * 0.06399999558925628662109375, 7.999999797903001308441162109375e-05, 0.008000000379979610443115234375);
-    float _55;
-    float _58;
-    _55 = 0.0;
-    _58 = 0.0;
-    for (int _60 = -3; _60 <= 3; )
+    vec2 _180 = vec2(0.0, _12.CB1.TextureSize.w);
+    vec4 _206 = texture(SPIRV_Cross_CombinedmapTexturemapSampler, IN_uv);
+    float _207 = _206.y;
+    float _211 = clamp(_207 * 0.06399999558925628662109375, 7.999999797903001308441162109375e-05, 0.008000000379979610443115234375);
+    float _276;
+    float _277;
+    _276 = 0.0;
+    _277 = 0.0;
+    for (int _278 = -3; _278 <= 3; )
     {
-        float _64 = float(_60);
-        float _68 = exp(((-_64) * _64) * 0.2222220003604888916015625);
-        vec4 _72 = texture(SPIRV_Cross_CombinedmapTexturemapSampler, IN_uv + (_45 * _64));
-        float _77 = float(abs(_72.y - _50) < _53);
-        _55 = fma(_72.x, _68 * _77, _55);
-        _58 = fma(_68, _77, _58);
-        _60++;
+        float _220 = float(_278);
+        float _227 = exp(((-_220) * _220) * 0.2222220003604888916015625);
+        vec4 _236 = texture(SPIRV_Cross_CombinedmapTexturemapSampler, IN_uv + (_180 * _220));
+        float _245 = float(abs(_236.y - _207) < _211);
+        _276 = fma(_236.x, _227 * _245, _276);
+        _277 = fma(_227, _245, _277);
+        _278++;
         continue;
     }
-    _entryPointOutput = vec4(_55 / _58, _50, 0.0, 1.0);
+    _entryPointOutput = vec4(_276 / _277, _207, 0.0, 1.0);
 }
 

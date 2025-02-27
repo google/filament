@@ -37,12 +37,12 @@ VK_DEFINE_HANDLE(VmaPool)
 
 namespace filament::backend {
 
+struct VulkanCommandBuffer;
 struct VulkanRenderTarget;
 struct VulkanSwapChain;
 struct VulkanTexture;
 class VulkanStagePool;
 struct VulkanTimerQuery;
-struct VulkanCommandBuffer;
 
 struct VulkanAttachment {
     fvkmemory::resource_ptr<VulkanTexture> texture;
@@ -58,33 +58,6 @@ struct VulkanAttachment {
     VkImageView getImageView();
     // TODO: maybe embed aspect into the attachment or texture itself.
     VkImageSubresourceRange getSubresourceRange() const;
-};
-
-class VulkanTimestamps {
-public:
-    using QueryResult = std::array<uint64_t, 4>;
-
-    VulkanTimestamps(VkDevice device);
-    ~VulkanTimestamps();
-
-    // Not copy-able.
-    VulkanTimestamps(VulkanTimestamps const&) = delete;
-    VulkanTimestamps& operator=(VulkanTimestamps const&) = delete;
-
-    std::tuple<uint32_t, uint32_t> getNextQuery();
-    void clearQuery(uint32_t queryIndex);
-
-    void beginQuery(VulkanCommandBuffer const* commands,
-            fvkmemory::resource_ptr<VulkanTimerQuery> query);
-    void endQuery(VulkanCommandBuffer const* commands,
-            fvkmemory::resource_ptr<VulkanTimerQuery> query);
-    QueryResult getResult(fvkmemory::resource_ptr<VulkanTimerQuery> query);
-
-private:
-    VkDevice mDevice;
-    VkQueryPool mPool;
-    utils::bitset32 mUsed;
-    utils::Mutex mMutex;
 };
 
 struct VulkanRenderPass {
@@ -163,13 +136,24 @@ public:
         return mProtectedMemorySupported;
     }
 
+    inline bool isImageView2DOn3DImageSupported() const noexcept {
+        return mPortabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
     };
     VkPhysicalDeviceFeatures2 mPhysicalDeviceFeatures = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+    };
+    VkPhysicalDevicePortabilitySubsetFeaturesKHR mPortabilitySubsetFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
+        // By default, on platforms where we don't have portability subset, then this feature must
+        // exists.  We only fill this struct only when portability subset is needed (i.e.
+        // non-conformant vulkan implementation).
+        .imageView2DOn3DImage = VK_TRUE,
     };
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;

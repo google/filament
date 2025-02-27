@@ -9,7 +9,7 @@ layout(set = 0, binding = 0, std430) buffer SSBO
 
 void main()
 {
-    uint _24 = gl_GlobalInvocationID.z;
-    uint _25 = atomicAdd(ssbos[nonuniformEXT(_24)].v, 1u);
+    uint _18 = gl_GlobalInvocationID.z;
+    uint _25 = atomicAdd(ssbos[nonuniformEXT(_18)].v, 1u);
 }
 

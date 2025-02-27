@@ -807,7 +807,13 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
                     cmd.key &= ~Z_BUCKET_MASK;
                     cmd.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
                 }
+
+                *curr = cmd;
+                // cancel command if both front and back faces are culled
+                curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
+
             } else if constexpr (isDepthPass) {
+                const CullingMode cullingMode = hasShadowing ? mi->getShadowCullingMode() : mi->getCullingMode();
                 const RasterState rs = ma->getRasterState();
                 const TransparencyMode mode = mi->getTransparencyMode();
                 const BlendingMode blendingMode = ma->getBlendingMode();
@@ -816,7 +822,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
                 const bool isPickingVariant = Variant::isPickingVariant(variant);
 
                 cmd.key |= mi->getSortingKey(); // already all set-up for direct or'ing
-                cmd.info.rasterState.culling = mi->getCullingMode();
+                cmd.info.rasterState.culling = cullingMode;
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
                 cmd.info.rasterState.depthWrite = (1 // only keep bit 0
@@ -825,11 +831,12 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
                                                    & !(filterTranslucentObjects & translucent)
                                                    & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
                                                   | writeDepthForShadowCasters;
+
+                *curr = cmd;
+                // cancel command if both front and back faces are culled
+                curr->key |= select(cullingMode == CullingMode::FRONT_AND_BACK);
             }
 
-            *curr = cmd;
-            // cancel command if both front and back faces are culled
-            curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
             ++curr;
         }
     }

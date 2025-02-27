@@ -13,9 +13,9 @@ fragment main0_out main0()
     main0_out out = {};
     bool gl_HelperInvocation = {};
     gl_HelperInvocation = simd_is_helper_thread();
-    bool _15 = gl_HelperInvocation;
+    bool _9 = gl_HelperInvocation;
     gl_HelperInvocation = true, discard_fragment();
-    if (!_15)
+    if (!_9)
     {
         out.FragColor = float4(1.0, 0.0, 0.0, 1.0);
     }

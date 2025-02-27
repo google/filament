@@ -896,6 +896,47 @@ ParseNormalFloat<FloatProxy<Float16>, HexFloatTraits<FloatProxy<Float16>>>(
   return is;
 }
 
+namespace detail {
+
+// Returns a new value formed from 'value' by setting 'bit' that is the
+// 'n'th most significant bit (where 0 is the most significant bit).
+// If 'bit' is zero or 'n' is more than the number of bits in the integer
+// type, then return the original value.
+template <typename UINT_TYPE>
+UINT_TYPE set_nth_most_significant_bit(UINT_TYPE value, UINT_TYPE bit,
+                                       UINT_TYPE n) {
+  constexpr UINT_TYPE max_position = std::numeric_limits<UINT_TYPE>::digits - 1;
+  if ((bit != 0) && (n <= max_position)) {
+    return static_cast<UINT_TYPE>(value | (bit << (max_position - n)));
+  }
+  return value;
+}
+
+// Attempts to increment the argument.
+// If it does not overflow, then increments the argument and returns true.
+// If it would overflow, returns false.
+template <typename INT_TYPE>
+bool saturated_inc(INT_TYPE& value) {
+  if (value == std::numeric_limits<INT_TYPE>::max()) {
+    return false;
+  }
+  value++;
+  return true;
+}
+
+// Attempts to decrement the argument.
+// If it does not underflow, then decrements the argument and returns true.
+// If it would overflow, returns false.
+template <typename INT_TYPE>
+bool saturated_dec(INT_TYPE& value) {
+  if (value == std::numeric_limits<INT_TYPE>::min()) {
+    return false;
+  }
+  value--;
+  return true;
+}
+}  // namespace detail
+
 // Reads a HexFloat from the given stream.
 // If the float is not encoded as a hex-float then it will be parsed
 // as a regular float.
@@ -997,13 +1038,16 @@ std::istream& operator>>(std::istream& is, HexFloat<T, Traits>& value) {
         if (bits_written) {
           // If we are here the bits represented belong in the fractional
           // part of the float, and we have to adjust the exponent accordingly.
-          fraction = static_cast<uint_type>(
-              fraction |
-              static_cast<uint_type>(
-                  write_bit << (HF::top_bit_left_shift - fraction_index++)));
-          // TODO(dneto): Avoid overflow. Testing would require
-          // parameterization.
-          exponent = static_cast<int_type>(exponent + 1);
+          fraction = detail::set_nth_most_significant_bit(fraction, write_bit,
+                                                          fraction_index);
+          // Increment the fraction index. If the input has bizarrely many
+          // significant digits, then silently drop them.
+          detail::saturated_inc(fraction_index);
+          if (!detail::saturated_inc(exponent)) {
+            // Overflow failure
+            is.setstate(std::ios::failbit);
+            return is;
+          }
         }
         // Since this updated after setting fraction bits, this effectively
         // drops the leading 1 bit.
@@ -1034,14 +1078,17 @@ std::istream& operator>>(std::istream& is, HexFloat<T, Traits>& value) {
           // Handle modifying the exponent here this way we can handle
           // an arbitrary number of hex values without overflowing our
           // integer.
-          // TODO(dneto): Handle underflow. Testing would require extra
-          // parameterization.
-          exponent = static_cast<int_type>(exponent - 1);
+          if (!detail::saturated_dec(exponent)) {
+            // Overflow failure
+            is.setstate(std::ios::failbit);
+            return is;
+          }
         } else {
-          fraction = static_cast<uint_type>(
-              fraction |
-              static_cast<uint_type>(
-                  write_bit << (HF::top_bit_left_shift - fraction_index++)));
+          fraction = detail::set_nth_most_significant_bit(fraction, write_bit,
+                                                          fraction_index);
+          // Increment the fraction index. If the input has bizarrely many
+          // significant digits, then silently drop them.
+          detail::saturated_inc(fraction_index);
         }
       }
     } else {

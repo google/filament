@@ -1,0 +1,104 @@
+; SPIR-V
+; Version: 1.4
+; Generator: Unknown(30017); 21022
+; Bound: 62
+; Schema: 0
+               OpCapability Shader
+               OpCapability ClipDistance
+               OpCapability MeshShadingEXT
+               OpExtension "SPV_EXT_mesh_shader"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint MeshEXT %main "main" %SV_Position %B %gl_ClipDistance %indices %gl_LocalInvocationIndex
+               OpExecutionMode %main OutputVertices 32
+               OpExecutionMode %main OutputPrimitivesNV 30
+               OpExecutionMode %main OutputTrianglesNV
+               OpExecutionMode %main LocalSize 32 1 1
+               OpName %main "main"
+               OpName %SV_Position "SV_Position"
+               OpName %B "B"
+               OpName %indices "indices"
+               OpDecorate %SV_Position BuiltIn Position
+               OpDecorate %B Location 2
+               OpDecorate %gl_ClipDistance BuiltIn ClipDistance
+               OpDecorate %indices BuiltIn PrimitiveTriangleIndicesEXT
+               OpDecorate %gl_LocalInvocationIndex BuiltIn LocalInvocationIndex
+       %void = OpTypeVoid
+          %2 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+       %uint = OpTypeInt 32 0
+    %uint_32 = OpConstant %uint 32
+%_arr_v4float_uint_32 = OpTypeArray %v4float %uint_32
+%_ptr_Output__arr_v4float_uint_32 = OpTypePointer Output %_arr_v4float_uint_32
+%SV_Position = OpVariable %_ptr_Output__arr_v4float_uint_32 Output
+          %B = OpVariable %_ptr_Output__arr_v4float_uint_32 Output
+     %uint_4 = OpConstant %uint 4
+%_arr_float_uint_4 = OpTypeArray %float %uint_4
+%_arr__arr_float_uint_4_uint_32 = OpTypeArray %_arr_float_uint_4 %uint_32
+%_ptr_Output__arr__arr_float_uint_4_uint_32 = OpTypePointer Output %_arr__arr_float_uint_4_uint_32
+%gl_ClipDistance = OpVariable %_ptr_Output__arr__arr_float_uint_4_uint_32 Output
+    %uint_30 = OpConstant %uint 30
+     %v3uint = OpTypeVector %uint 3
+%_arr_v3uint_uint_30 = OpTypeArray %v3uint %uint_30
+%_ptr_Output__arr_v3uint_uint_30 = OpTypePointer Output %_arr_v3uint_uint_30
+    %indices = OpVariable %_ptr_Output__arr_v3uint_uint_30 Output
+%_ptr_Input_uint = OpTypePointer Input %uint
+%gl_LocalInvocationIndex = OpVariable %_ptr_Input_uint Input
+%_ptr_Output_float = OpTypePointer Output %float
+     %uint_0 = OpConstant %uint 0
+    %float_1 = OpConstant %float 1
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+%uint_4294967295 = OpConstant %uint 4294967295
+  %float_0_5 = OpConstant %float 0.5
+    %float_2 = OpConstant %float 2
+       %bool = OpTypeBool
+%_ptr_Output_v3uint = OpTypePointer Output %v3uint
+       %main = OpFunction %void None %2
+          %4 = OpLabel
+               OpBranch %58
+         %58 = OpLabel
+         %25 = OpLoad %uint %gl_LocalInvocationIndex
+               OpSetMeshOutputsEXT %uint_32 %uint_30
+         %27 = OpAccessChain %_ptr_Output_float %SV_Position %25 %uint_0
+               OpStore %27 %float_1
+         %30 = OpAccessChain %_ptr_Output_float %SV_Position %25 %uint_1
+               OpStore %30 %float_1
+         %32 = OpAccessChain %_ptr_Output_float %SV_Position %25 %uint_2
+               OpStore %32 %float_1
+         %34 = OpAccessChain %_ptr_Output_float %SV_Position %25 %uint_3
+               OpStore %34 %float_1
+         %36 = OpShiftLeftLogical %uint %25 %uint_1
+         %37 = OpIAdd %uint %36 %uint_4294967295
+         %39 = OpConvertSToF %float %37
+         %40 = OpFMul %float %39 %float_0_5
+         %42 = OpAccessChain %_ptr_Output_float %gl_ClipDistance %25 %uint_0
+               OpStore %42 %40
+         %43 = OpAccessChain %_ptr_Output_float %gl_ClipDistance %25 %uint_1
+               OpStore %43 %40
+         %44 = OpAccessChain %_ptr_Output_float %gl_ClipDistance %25 %uint_2
+               OpStore %44 %40
+         %45 = OpAccessChain %_ptr_Output_float %gl_ClipDistance %25 %uint_3
+               OpStore %45 %40
+         %46 = OpAccessChain %_ptr_Output_float %B %25 %uint_0
+               OpStore %46 %float_2
+         %48 = OpAccessChain %_ptr_Output_float %B %25 %uint_1
+               OpStore %48 %float_2
+         %49 = OpAccessChain %_ptr_Output_float %B %25 %uint_2
+               OpStore %49 %float_2
+         %50 = OpAccessChain %_ptr_Output_float %B %25 %uint_3
+               OpStore %50 %float_2
+         %52 = OpULessThan %bool %25 %uint_30
+               OpSelectionMerge %60 None
+               OpBranchConditional %52 %59 %60
+         %59 = OpLabel
+         %53 = OpIAdd %uint %25 %uint_1
+         %54 = OpIAdd %uint %25 %uint_2
+         %55 = OpCompositeConstruct %v3uint %25 %53 %54
+         %57 = OpAccessChain %_ptr_Output_v3uint %indices %25
+               OpStore %57 %55
+               OpBranch %60
+         %60 = OpLabel
+               OpReturn
+               OpFunctionEnd

@@ -149,7 +149,7 @@ TEST_P(HlslNonSemanticShaderDebugInfoTest, FromFile)
 {
     loadFileCompileAndCheck(GlobalTestSettings.testRoot, GetParam().fileName,
                             Source::HLSL, Semantics::Vulkan, glslang::EShTargetVulkan_1_0,  glslang::EShTargetSpv_1_0,
-                            Target::Spv, true, GetParam().entryPoint, "/baseResults/", false, false, true);
+                            Target::Spv, true, GetParam().entryPoint, "/baseResults/", false, true, true);
 }
 
 // clang-format off
@@ -170,10 +170,12 @@ INSTANTIATE_TEST_SUITE_P(
         {"hlsl.basic.geom", "main"},
         {"hlsl.boolConv.vert", "main"},
         {"hlsl.buffer.frag", "PixelShaderFunction"},
+        {"hlsl.buffer-offsets.comp", "main"},
         {"hlsl.calculatelod.dx10.frag", "main"},
         {"hlsl.calculatelodunclamped.dx10.frag", "main"},
         {"hlsl.cast.frag", "PixelShaderFunction"},
         {"hlsl.cbuffer-identifier.vert", "main"},
+        {"hlsl.cbuffer-offsets.comp", "main"},
         {"hlsl.charLit.vert", "main"},
         {"hlsl.clip.frag", "main"},
         {"hlsl.clipdistance-1.frag", "main"},
@@ -216,6 +218,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"hlsl.emptystructreturn.tesc", "main"},
         {"hlsl.emptystruct.init.vert", "main"},
         {"hlsl.entry-in.frag", "PixelShaderFunction"},
+        {"hlsl.entry-inout.vert", "main"},
         {"hlsl.entry-out.frag", "PixelShaderFunction"},
         {"hlsl.fraggeom.frag", "main"},
         {"hlsl.float1.frag", "PixelShaderFunction"},
@@ -318,6 +321,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"hlsl.mul-truncate.frag", "main"},
         {"hlsl.multiEntry.vert", "RealEntrypoint"},
         {"hlsl.multiReturn.frag", "main"},
+        {"hlsl.multiView.frag", "main"},
         {"hlsl.matrixindex.frag", "main"},
         {"hlsl.nonstaticMemberFunction.frag", "main"},
         {"hlsl.numericsuffixes.frag", "main"},
@@ -417,6 +421,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"hlsl.structIoFourWay.frag", "main"},
         {"hlsl.structStructName.frag", "main"},
         {"hlsl.subpass.frag", "main"},
+        {"hlsl.swizzle.vec1.comp", "main"},
         {"hlsl.synthesizeInput.frag", "main"},
         {"hlsl.texturebuffer.frag", "main"},
         {"hlsl.texture.struct.frag", "main"},

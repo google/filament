@@ -28,17 +28,17 @@ struct SPIRV_Cross_Output
 void frag_main()
 {
     int i = vIndex;
-    int _59 = i + 10;
-    int _64 = i + 40;
-    FragColor = uSamplers[NonUniformResourceIndex(_59)].Sample(uSamps[NonUniformResourceIndex(_64)], vUV);
-    int _71 = i + 10;
-    FragColor = uCombinedSamplers[NonUniformResourceIndex(_71)].Sample(_uCombinedSamplers_sampler[NonUniformResourceIndex(_71)], vUV);
-    int _77 = i + 20;
-    int _80 = i + 40;
-    FragColor += ubos[NonUniformResourceIndex(_77)].v[_80];
-    int _87 = i + 50;
-    int _90 = i + 60;
-    FragColor += asfloat(ssbos[NonUniformResourceIndex(_87)].Load4(_90 * 16 + 0));
+    int _23 = i + 10;
+    int _34 = i + 40;
+    FragColor = uSamplers[NonUniformResourceIndex(_23)].Sample(uSamps[NonUniformResourceIndex(_34)], vUV);
+    int _50 = i + 10;
+    FragColor = uCombinedSamplers[NonUniformResourceIndex(_50)].Sample(_uCombinedSamplers_sampler[NonUniformResourceIndex(_50)], vUV);
+    int _66 = i + 20;
+    int _70 = i + 40;
+    FragColor += ubos[NonUniformResourceIndex(_66)].v[_70];
+    int _84 = i + 50;
+    int _88 = i + 60;
+    FragColor += asfloat(ssbos[NonUniformResourceIndex(_84)].Load4(_88 * 16 + 0));
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

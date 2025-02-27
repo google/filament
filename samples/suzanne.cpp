@@ -199,8 +199,8 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.materialInstance);
         engine->destroy(app.mesh.renderable);
+        engine->destroy(app.materialInstance);
         engine->destroy(app.material);
         engine->destroy(app.albedo);
         engine->destroy(app.normal);

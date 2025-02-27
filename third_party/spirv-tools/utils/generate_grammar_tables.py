@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2016 Google Inc.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,7 @@ SPV_AMD_gpu_shader_half_float
 SPV_AMD_gpu_shader_int16
 SPV_AMD_shader_trinary_minmax
 SPV_KHR_non_semantic_info
+SPV_EXT_relaxed_printf_string_address_space
 """
 
 OUTPUT_LANGUAGE = 'c'
@@ -69,6 +70,39 @@ def convert_max_required_version(version):
         return '0xffffffffu'
     return 'SPV_SPIRV_VERSION_WORD({})'.format(version.replace('.', ','))
 
+def get_alias_array_name(aliases):
+    """Returns the name of the array containing all the given aliases.
+
+    Arguments:
+      - aliases: a sequence of alias names
+    """
+    if not aliases:
+        return 'nullptr';
+    return '{}_aliases_{}'.format(PYGEN_VARIABLE_PREFIX, ''.join(aliases))
+
+def compose_alias_list(aliases):
+    """Returns a string containing a braced list of aliases.
+
+    Arguments:
+      - aliases: a sequence of alias names
+
+    Returns:
+      a string containing the braced list of char* named by aliases.
+    """
+    return '{' + ', '.join([('"{}"').format(a) for a in aliases]) + '}'
+
+def generate_aliases_arrays(aliases):
+    """Returns the arrays of aliases
+
+    Arguments:
+      - aliases: a sequence of sequence of alias names
+    """
+    aliases = sorted(set([tuple(a) for a in aliases if a]))
+    arrays = [
+        'static const char* {}[] = {};'.format(
+            get_alias_array_name(a), compose_alias_list(a))
+        for a in aliases]
+    return '\n'.join(arrays)
 
 def compose_capability_list(caps):
     """Returns a string containing a braced list of capabilities as enums.
@@ -223,11 +257,12 @@ class InstInitializer(object):
     """Instances holds a SPIR-V instruction suitable for printing as the
     initializer for spv_opcode_desc_t."""
 
-    def __init__(self, opname, caps, exts, operands, version, lastVersion):
+    def __init__(self, opname, aliases, caps, exts, operands, version, lastVersion):
         """Initialization.
 
         Arguments:
           - opname: opcode name (with the 'Op' prefix)
+          - aliases: a sequence of aliases for the name of this opcode
           - caps: a sequence of capability names required by this opcode
           - exts: a sequence of names of extensions enabling this enumerant
           - operands: a sequence of (operand-kind, operand-quantifier) tuples
@@ -237,6 +272,8 @@ class InstInitializer(object):
 
         assert opname.startswith('Op')
         self.opname = opname[2:]  # Remove the "Op" prefix.
+        self.num_aliases = len(aliases);
+        self.aliases_mask = get_alias_array_name(aliases)
         self.num_caps = len(caps)
         self.caps_mask = get_capability_array_name(caps)
         self.num_exts = len(exts)
@@ -271,6 +308,7 @@ class InstInitializer(object):
             base_str = 'spv::Op::Op'
 
         template = ['{{"{opname}"', base_str + '{opname}',
+                    '{num_aliases}', '{aliases_mask}',
                     '{num_caps}', '{caps_mask}',
                     '{num_operands}', '{{{operands}}}',
                     '{def_result_id}', '{ref_type_id}',
@@ -278,6 +316,8 @@ class InstInitializer(object):
                     '{min_version}', '{max_version}}}']
         return ', '.join(template).format(
             opname=self.opname,
+            num_aliases=self.num_aliases,
+            aliases_mask=self.aliases_mask,
             num_caps=self.num_caps,
             caps_mask=self.caps_mask,
             num_operands=len(self.operands),
@@ -335,6 +375,7 @@ def generate_instruction(inst, is_ext_inst):
     """
     opname = inst.get('opname')
     opcode = inst.get('opcode')
+    aliases = inst.get('aliases', [])
     caps = inst.get('capabilities', [])
     exts = inst.get('extensions', [])
     operands = inst.get('operands', {})
@@ -347,7 +388,7 @@ def generate_instruction(inst, is_ext_inst):
     if is_ext_inst:
         return str(ExtInstInitializer(opname, opcode, caps, operands))
     else:
-        return str(InstInitializer(opname, caps, exts, operands, min_version, max_version))
+        return str(InstInitializer(opname, aliases, caps, exts, operands, min_version, max_version))
 
 
 def generate_instruction_table(inst_table):
@@ -363,6 +404,8 @@ def generate_instruction_table(inst_table):
     """
     inst_table = sorted(inst_table, key=lambda k: (k['opcode'], k['opname']))
 
+    aliases_arrays = generate_aliases_arrays(
+        [inst.get('aliases', []) for inst in inst_table])
     caps_arrays = generate_capability_arrays(
         [inst.get('capabilities', []) for inst in inst_table])
     exts_arrays = generate_extension_arrays(
@@ -372,7 +415,7 @@ def generate_instruction_table(inst_table):
     insts = ['static const spv_opcode_desc_t kOpcodeTableEntries[] = {{\n'
              '  {}\n}};'.format(',\n  '.join(insts))]
 
-    return '{}\n\n{}\n\n{}'.format(caps_arrays, exts_arrays, '\n'.join(insts))
+    return '{}\n\n{}\n\n{}\n\n{}'.format(aliases_arrays, caps_arrays, exts_arrays, '\n'.join(insts))
 
 
 def generate_extended_instruction_table(json_grammar, set_name, operand_kind_prefix=""):
@@ -404,12 +447,13 @@ def generate_extended_instruction_table(json_grammar, set_name, operand_kind_pre
 class EnumerantInitializer(object):
     """Prints an enumerant as the initializer for spv_operand_desc_t."""
 
-    def __init__(self, enumerant, value, caps, exts, parameters, version, lastVersion):
+    def __init__(self, enumerant, value, aliases, caps, exts, parameters, version, lastVersion):
         """Initialization.
 
         Arguments:
           - enumerant: enumerant name
           - value: enumerant value
+          - aliases: a sequence of aliased capability names
           - caps: a sequence of capability names required by this enumerant
           - exts: a sequence of names of extensions enabling this enumerant
           - parameters: a sequence of (operand-kind, operand-quantifier) tuples
@@ -418,6 +462,8 @@ class EnumerantInitializer(object):
         """
         self.enumerant = enumerant
         self.value = value
+        self.num_aliases = len(aliases)
+        self.aliases = get_alias_array_name(aliases)
         self.num_caps = len(caps)
         self.caps = get_capability_array_name(caps)
         self.num_exts = len(exts)
@@ -427,13 +473,17 @@ class EnumerantInitializer(object):
         self.lastVersion = convert_max_required_version(lastVersion)
 
     def __str__(self):
-        template = ['{{"{enumerant}"', '{value}', '{num_caps}',
-                    '{caps}', '{num_exts}', '{exts}',
+        template = ['{{"{enumerant}"', '{value}',
+                    '{num_aliases}', '{aliases}',
+                    '{num_caps}', '{caps}',
+                    '{num_exts}', '{exts}',
                     '{{{parameters}}}', '{min_version}',
                     '{max_version}}}']
         return ', '.join(template).format(
             enumerant=self.enumerant,
             value=self.value,
+            num_aliases=self.num_aliases,
+            aliases=self.aliases,
             num_caps=self.num_caps,
             caps=self.caps,
             num_exts=self.num_exts,
@@ -455,6 +505,7 @@ def generate_enum_operand_kind_entry(entry, extension_map):
     """
     enumerant = entry.get('enumerant')
     value = entry.get('value')
+    aliases = entry.get('aliases', [])
     caps = entry.get('capabilities', [])
     if value in extension_map:
         exts = extension_map[value]
@@ -470,7 +521,7 @@ def generate_enum_operand_kind_entry(entry, extension_map):
     assert value is not None
 
     return str(EnumerantInitializer(
-        enumerant, value, caps, exts, params, version, max_version))
+        enumerant, value, aliases, caps, exts, params, version, max_version))
 
 
 def generate_enum_operand_kind(enum, synthetic_exts_list):
@@ -512,6 +563,10 @@ def generate_enum_operand_kind(enum, synthetic_exts_list):
     name = '{}_{}Entries'.format(PYGEN_VARIABLE_PREFIX, kind)
     entries = ['  {}'.format(generate_enum_operand_kind_entry(e, extension_map))
                for e in entries]
+    if len(entries) == 0:
+        # Insert a dummy entry. Otherwise the array is empty and compilation
+        # will fail in MSVC.
+        entries = ['  {"place holder", 0, 0, nullptr, 0, nullptr, 0, nullptr, {}, SPV_SPIRV_VERSION_WORD(999,0), 0}']
 
     template = ['static const spv_operand_desc_t {name}[] = {{',
                 '{entries}', '}};']
@@ -527,6 +582,11 @@ def generate_operand_kind_table(enums):
     # We only need to output info tables for those operand kinds that are enums.
     enums = [e for e in enums if e.get('category') in ['ValueEnum', 'BitEnum']]
 
+    aliases = [entry.get('aliases', [])
+               for enum in enums
+               for entry in enum.get('enumerants', [])]
+    aliases_arrays = generate_aliases_arrays(aliases)
+
     caps = [entry.get('capabilities', [])
             for enum in enums
             for entry in enum.get('enumerants', [])]
@@ -540,7 +600,7 @@ def generate_operand_kind_table(enums):
 
     # We have a few operand kinds that require their optional counterpart to
     # exist in the operand info table.
-    optional_enums = ['ImageOperands', 'AccessQualifier', 'MemoryAccess', 'PackedVectorFormat']
+    optional_enums = ['ImageOperands', 'AccessQualifier', 'MemoryAccess', 'PackedVectorFormat', 'CooperativeMatrixOperands', 'MatrixMultiplyAccumulateOperands', 'RawAccessChainOperands', 'FPEncoding']
     optional_enums = [e for e in enums if e[0] in optional_enums]
     enums.extend(optional_enums)
 
@@ -561,7 +621,7 @@ def generate_operand_kind_table(enums):
     table = '\n'.join(template).format(
         p=PYGEN_VARIABLE_PREFIX, enums=',\n'.join(table_entries))
 
-    return '\n\n'.join((caps_arrays,) + (exts_arrays,) + enum_entries + (table,))
+    return '\n\n'.join((aliases_arrays,) + (caps_arrays,) + (exts_arrays,) + enum_entries + (table,))
 
 
 def get_extension_list(instructions, operand_kinds):

@@ -14,11 +14,9 @@
 
 #include "code_sink.h"
 
-#include <set>
 #include <vector>
 
 #include "source/opt/instruction.h"
-#include "source/opt/ir_builder.h"
 #include "source/opt/ir_context.h"
 #include "source/util/bit_vector.h"
 

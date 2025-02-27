@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "source/opt/instruction.h"
+
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
-#include "source/opt/instruction.h"
 #include "source/opt/ir_context.h"
 #include "spirv-tools/libspirv.h"
 #include "test/opt/pass_fixture.h"

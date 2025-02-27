@@ -23,6 +23,17 @@ namespace spvtools {
 namespace val {
 namespace {
 
+uint32_t GetArrayLength(ValidationState_t& _, const Instruction* array_type) {
+  assert(array_type->opcode() == spv::Op::OpTypeArray);
+  uint32_t const_int_id = array_type->GetOperandAs<uint32_t>(2U);
+  Instruction* array_length_inst = _.FindDef(const_int_id);
+  uint32_t array_length = 0;
+  if (array_length_inst->opcode() == spv::Op::OpConstant) {
+    array_length = array_length_inst->GetOperandAs<uint32_t>(2);
+  }
+  return array_length;
+}
+
 spv_result_t ValidateRayQueryPointer(ValidationState_t& _,
                                      const Instruction* inst,
                                      uint32_t ray_query_index) {
@@ -263,6 +274,89 @@ spv_result_t RayQueryPass(ValidationState_t& _, const Instruction* inst) {
       break;
     }
 
+    case spv::Op::OpRayQueryGetClusterIdNV: {
+      if (auto error = ValidateRayQueryPointer(_, inst, 2)) return error;
+      if (auto error = ValidateIntersectionId(_, inst, 3)) return error;
+
+      if (!_.IsIntScalarType(result_type) || _.GetBitWidth(result_type) != 32) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "expected Result Type to be 32-bit int scalar type";
+      }
+      break;
+    }
+
+    case spv::Op::OpRayQueryGetIntersectionSpherePositionNV: {
+      if (auto error = ValidateRayQueryPointer(_, inst, 2)) return error;
+      if (auto error = ValidateIntersectionId(_, inst, 3)) return error;
+
+      if (!_.IsFloatVectorType(result_type) ||
+          _.GetDimension(result_type) != 3 ||
+          _.GetBitWidth(result_type) != 32) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "expected Result Type to be 32-bit float 3-component "
+                  "vector type";
+      }
+      break;
+    }
+
+    case spv::Op::OpRayQueryGetIntersectionLSSPositionsNV: {
+      if (auto error = ValidateRayQueryPointer(_, inst, 2)) return error;
+      if (auto error = ValidateIntersectionId(_, inst, 3)) return error;
+
+      auto result_id = _.FindDef(result_type);
+      if ((result_id->opcode() != spv::Op::OpTypeArray) ||
+          (GetArrayLength(_, result_id) != 2) ||
+          !_.IsFloatVectorType(_.GetComponentType(result_type)) ||
+          _.GetDimension(_.GetComponentType(result_type)) != 3) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected 2 element array of 32-bit 3 component float point "
+                  "vector as Result Type: "
+               << spvOpcodeString(opcode);
+      }
+      break;
+    }
+
+    case spv::Op::OpRayQueryGetIntersectionLSSRadiiNV: {
+      if (auto error = ValidateRayQueryPointer(_, inst, 2)) return error;
+      if (auto error = ValidateIntersectionId(_, inst, 3)) return error;
+
+      if (!_.IsFloatArrayType(result_type) ||
+          (GetArrayLength(_, _.FindDef(result_type)) != 2) ||
+          !_.IsFloatScalarType(_.GetComponentType(result_type))) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected 32-bit floating point scalar as Result Type: "
+               << spvOpcodeString(opcode);
+      }
+      break;
+    }
+
+    case spv::Op::OpRayQueryGetIntersectionSphereRadiusNV:
+    case spv::Op::OpRayQueryGetIntersectionLSSHitValueNV: {
+      if (auto error = ValidateRayQueryPointer(_, inst, 2)) return error;
+      if (auto error = ValidateIntersectionId(_, inst, 3)) return error;
+
+      if (!_.IsFloatScalarType(result_type) ||
+          _.GetBitWidth(result_type) != 32) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "expected Result Type to be 32-bit floating point "
+                  "scalar type";
+      }
+      break;
+    }
+
+    case spv::Op::OpRayQueryIsSphereHitNV:
+    case spv::Op::OpRayQueryIsLSSHitNV: {
+      if (auto error = ValidateRayQueryPointer(_, inst, 2)) return error;
+      if (auto error = ValidateIntersectionId(_, inst, 3)) return error;
+
+      if (!_.IsBoolScalarType(result_type)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "expected Result Type to be Boolean "
+                  "scalar type";
+      }
+
+      break;
+    }
     default:
       break;
   }

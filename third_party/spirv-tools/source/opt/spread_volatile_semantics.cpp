@@ -15,7 +15,6 @@
 #include "source/opt/spread_volatile_semantics.h"
 
 #include "source/opt/decoration_manager.h"
-#include "source/opt/ir_builder.h"
 #include "source/spirv_constant.h"
 
 namespace spvtools {

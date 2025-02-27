@@ -2,25 +2,25 @@
 precision mediump float;
 precision highp int;
 
-vec2 _19;
+vec2 _52;
 
 layout(location = 0) out highp vec4 _GLF_color;
 
 void main()
 {
-    highp vec2 _30;
+    highp vec2 _53;
     do
     {
         if (gl_FragCoord.x != gl_FragCoord.x)
         {
-            _30 = _19;
+            _53 = _52;
             break;
         }
-        highp vec2 _29;
-        _29.y = _19.y;
-        _30 = _29;
+        highp vec2 _51;
+        _51.y = _52.y;
+        _53 = _51;
         break;
     } while(false);
-    _GLF_color = vec4(_30, 1.0, 1.0);
+    _GLF_color = vec4(_53, 1.0, 1.0);
 }
 

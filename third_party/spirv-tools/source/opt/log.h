@@ -23,7 +23,7 @@
 #include "spirv-tools/libspirv.hpp"
 
 // Asserts the given condition is true. Otherwise, sends a message to the
-// consumer and exits the problem with failure code. Accepts the following
+// consumer and exits the program with failure code. Accepts the following
 // formats:
 //
 // SPIRV_ASSERT(<message-consumer>, <condition-expression>);
@@ -36,7 +36,9 @@
 #if !defined(NDEBUG)
 #define SPIRV_ASSERT(consumer, ...) SPIRV_ASSERT_IMPL(consumer, __VA_ARGS__)
 #else
-#define SPIRV_ASSERT(consumer, ...)
+// Adding a use to avoid errors in the release build related to unused
+// consumers.
+#define SPIRV_ASSERT(consumer, ...) (void)(consumer)
 #endif
 
 // Logs a debug message to the consumer. Accepts the following formats:
@@ -49,25 +51,10 @@
 #if !defined(NDEBUG) && defined(SPIRV_LOG_DEBUG)
 #define SPIRV_DEBUG(consumer, ...) SPIRV_DEBUG_IMPL(consumer, __VA_ARGS__)
 #else
-#define SPIRV_DEBUG(consumer, ...)
+// Adding a use to avoid errors in the release build related to unused
+// consumers.
+#define SPIRV_DEBUG(consumer, ...) (void)(consumer)
 #endif
-
-// Logs an error message to the consumer saying the given feature is
-// unimplemented.
-#define SPIRV_UNIMPLEMENTED(consumer, feature)                \
-  do {                                                        \
-    spvtools::Log(consumer, SPV_MSG_INTERNAL_ERROR, __FILE__, \
-                  {static_cast<size_t>(__LINE__), 0, 0},      \
-                  "unimplemented: " feature);                 \
-  } while (0)
-
-// Logs an error message to the consumer saying the code location
-// should be unreachable.
-#define SPIRV_UNREACHABLE(consumer)                                      \
-  do {                                                                   \
-    spvtools::Log(consumer, SPV_MSG_INTERNAL_ERROR, __FILE__,            \
-                  {static_cast<size_t>(__LINE__), 0, 0}, "unreachable"); \
-  } while (0)
 
 // Helper macros for concatenating arguments.
 #define SPIRV_CONCATENATE(a, b) SPIRV_CONCATENATE_(a, b)
