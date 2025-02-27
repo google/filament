@@ -388,7 +388,7 @@ else()
             -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
             -Wgnu-conditional-omitted-operand
             -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
-            -Wover-aligned
+            -Wover-aligned -Wreorder-init-list
             -Werror
     )
     if (CMAKE_CXX_STANDARD EQUAL 20)
@@ -460,7 +460,8 @@ if (APPLE OR LINUX)
         spirv-cross-glsl)
 endif()
 
-if (APPLE)
+# TODO: Disabling IOS test due to breakage wrt glslang update
+if (APPLE AND NOT IOS)
     # TODO: we should expand this test to Linux and other platforms.
     list(APPEND BACKEND_TEST_SRC
          test/test_RenderExternalImage.cpp)
