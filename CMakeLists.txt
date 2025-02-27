@@ -798,7 +798,7 @@ if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
     endif()
 endif()
 
-if (FILAMENT_ENABLE_FGVIEWER OR IS_HOST_PLATFORM)
+if (FILAMENT_ENABLE_FGVIEWER)
     add_subdirectory(${LIBRARIES}/fgviewer)
 endif()
 
