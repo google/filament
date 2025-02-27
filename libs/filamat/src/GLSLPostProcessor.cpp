@@ -661,7 +661,9 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
             }
             break;
         case MaterialBuilder::Optimization::PREPROCESSOR:
-            preprocessOptimization(tShader, config, internalConfig);
+            if (!preprocessOptimization(tShader, config, internalConfig)) {
+                return false;
+            }
             break;
         case MaterialBuilder::Optimization::SIZE:
         case MaterialBuilder::Optimization::PERFORMANCE:
@@ -691,7 +693,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     return true;
 }
 
-void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
+bool GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
         GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const {
     using TargetApi = MaterialBuilder::TargetApi;
     assert_invariant(bool(internalConfig.spirvOutput) == (config.targetApi != TargetApi::OPENGL));
@@ -707,6 +709,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 
     if (!ok) {
         slog.e << tShader.getInfoLog() << io::endl;
+        return false;
     }
 
     if (internalConfig.spirvOutput) {
@@ -728,6 +731,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
         bool const linkOk = program.link(msg);
         if (!ok || !linkOk) {
             slog.e << spirvShader.getInfoLog() << io::endl;
+            return false;
         } else {
             SpvOptions options;
             options.generateDebugInfo = mGenerateDebugInfo;
@@ -749,7 +753,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     }
     if (internalConfig.wgslOutput) {
         if (!spirvToWgsl(internalConfig.spirvOutput, internalConfig.wgslOutput)) {
-            return;
+            return false;
         }
     }
 
@@ -757,6 +761,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     if (internalConfig.glslOutput) {
         *internalConfig.glslOutput = glsl;
     }
+    return true;
 }
 
 bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
