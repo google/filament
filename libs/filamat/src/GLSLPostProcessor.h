@@ -107,7 +107,7 @@ private:
     bool fullOptimization(const glslang::TShader& tShader,
             GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const;
 
-    void preprocessOptimization(glslang::TShader& tShader,
+    bool preprocessOptimization(glslang::TShader& tShader,
             GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const;
 
     /**
