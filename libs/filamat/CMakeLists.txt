@@ -85,6 +85,10 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET} backend_headers shaders filabridge utils smol-v)
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    target_link_libraries(${TARGET} libtint)
+endif ()
+
 # We are being naughty and accessing private headers here
 # For spirv-tools, we're just following glslang's example
 target_include_directories(${TARGET} PRIVATE ${spirv-tools_SOURCE_DIR}/include)

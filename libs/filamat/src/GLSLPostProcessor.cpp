@@ -44,6 +44,10 @@
 #include <unordered_map>
 #include <vector>
 
+#ifdef FILAMENT_SUPPORTS_WEBGPU
+#include <tint/tint.h>
+#endif
+
 using namespace glslang;
 using namespace spirv_cross;
 using namespace spvtools;
@@ -514,8 +518,43 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
     }
 }
 
+bool GLSLPostProcessor::spirvToWgsl(const SpirvBlob *spirv, std::string *outWsl) {
+#ifdef FILAMENT_SUPPORTS_WEBGPU
+    //Currently no options we want to use
+    const tint::spirv::reader::Options readerOpts{};
+    tint::wgsl::writer::Options writerOpts{};
+
+    tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
+
+    if (tintRead.Diagnostics().ContainsErrors()) {
+        slog.w << "This tint reader error is currently ignored during WebGPU bringup:" << tintRead.Diagnostics().Str() << io::endl;
+
+        //TODO: We should actually return false here, but for initial debugging
+        // let it slide until combined image sampler is resolved
+        // return false;
+    }
+
+    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead,writerOpts);
+    /// An instance of SuccessType that can be used to check a tint Result.
+    tint::SuccessType tintSuccess;
+
+    if (wgslOut != tintSuccess) {
+        slog.w << "This tint writer error is currently ignored during WebGPU bringup:" << wgslOut.Failure().reason.Str() << io::endl;
+        //TODO: We should actually return false here, but for initial debugging
+        // let it slide until combined image sampler is resolved
+        // return false;
+    }
+    *outWsl = wgslOut->wgsl;
+    return true;
+#else
+    slog.i << "Trying to emit WGSL without including WebGPU dependencies, please set CMake arg FILAMENT_SUPPORTS_WEBGPU" << io::endl;
+    return false;
+#endif
+
+}
+
 bool GLSLPostProcessor::process(const std::string& inputShader, Config const& config,
-        std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl) {
+                                std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl, std::string* outputWgsl) {
     using TargetLanguage = MaterialBuilder::TargetLanguage;
 
     if (config.targetLanguage == TargetLanguage::GLSL) {
@@ -530,6 +569,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
             .glslOutput = outputGlsl,
             .spirvOutput = outputSpirv,
             .mslOutput = outputMsl,
+            .wgslOutput = outputWgsl,
     };
 
     switch (config.shaderType) {
@@ -609,6 +649,11 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                     spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput,
                             config.shaderType, config.shaderModel, config.hasFramebufferFetch, descriptors,
                             mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
+                }
+                if (internalConfig.wgslOutput) {
+                    if (!spirvToWgsl(internalConfig.spirvOutput, internalConfig.wgslOutput)) {
+                        return false;
+                    }
                 }
             } else {
                 slog.e << "GLSL post-processor invoked with optimization level NONE"
@@ -702,6 +747,12 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
                 config.shaderModel, config.hasFramebufferFetch, descriptors,
                 mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
+    if (internalConfig.wgslOutput) {
+        if (!spirvToWgsl(internalConfig.spirvOutput, internalConfig.wgslOutput)) {
+            return;
+        }
+    }
+
 
     if (internalConfig.glslOutput) {
         *internalConfig.glslOutput = glsl;
@@ -745,6 +796,11 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
         spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderType, config.shaderModel,
                 config.hasFramebufferFetch, descriptors,
                 mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
+    }
+    if (internalConfig.wgslOutput) {
+        if (!spirvToWgsl(&spirv, internalConfig.wgslOutput)) {
+            return false;
+        }
     }
 
     // Transpile back to GLSL
