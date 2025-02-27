@@ -210,7 +210,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
               mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
               mPlatform->getProtectedGraphicsQueueFamilyIndex(), &mContext),
       mPipelineLayoutCache(mPlatform->getDevice()),
-      mPipelineCache(mPlatform->getDevice(), mAllocator),
+      mPipelineCache(mPlatform->getDevice()),
       mStagePool(mAllocator, &mCommands),
       mFramebufferCache(mPlatform->getDevice()),
       mSamplerCache(mPlatform->getDevice()),
@@ -1718,7 +1718,7 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
 
     // unfortunately in Vulkan the topology is per pipeline
     VkPrimitiveTopology const topology =
-            VulkanPipelineCache::getPrimitiveTopology(pipelineState.primitiveType);
+            fvkutils::getPrimitiveTopology(pipelineState.primitiveType);
 
     // Declare fixed-size arrays that get passed to the pipeCache and to vkCmdBindVertexBuffers.
     VkVertexInputAttributeDescription const* attribDesc = vbi->getAttribDescriptions();
