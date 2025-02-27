@@ -98,6 +98,9 @@ class ModelViewer(
     val renderer: Renderer
     @Entity val light: Int
 
+    var indirectLightCubemap: Texture? = null
+    var skyboxCubemap: Texture? = null
+
     private lateinit var displayHelper: DisplayHelper
     private lateinit var cameraManipulator: Manipulator
     private lateinit var gestureDetector: GestureDetector
@@ -331,6 +334,16 @@ class ModelViewer(
                 materialProvider.destroyMaterials()
                 materialProvider.destroy()
                 resourceLoader.destroy()
+
+                if (indirectLightCubemap != null) {
+                    engine.destroyTexture(indirectLightCubemap!!)
+                    indirectLightCubemap = null
+                }
+
+                if (skyboxCubemap != null) {
+                    engine.destroyTexture(skyboxCubemap!!)
+                    skyboxCubemap = null
+                }
 
                 engine.destroyEntity(light)
                 engine.destroyRenderer(renderer)
