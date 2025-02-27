@@ -61,6 +61,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
         : mMaterial(material),
           mDescriptorSet(material->getDescriptorSetLayout()),
           mCulling(CullingMode::BACK),
+          mShadowCulling(CullingMode::BACK),
           mDepthFunc(RasterState::DepthFunc::LE),
           mColorWrite(false),
           mDepthWrite(false),
@@ -92,6 +93,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
     // We inherit the resolved culling mode rather than the builder-set culling mode.
     // This preserves the property whereby double-sidedness automatically disables culling.
     mCulling = rasterState.culling;
+    mShadowCulling = rasterState.culling;
     mColorWrite = rasterState.colorWrite;
     mDepthWrite = rasterState.depthWrite;
     mDepthFunc = rasterState.depthFunc;
@@ -126,6 +128,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
           mSpecularAntiAliasingVariance(other->mSpecularAntiAliasingVariance),
           mSpecularAntiAliasingThreshold(other->mSpecularAntiAliasingThreshold),
           mCulling(other->mCulling),
+          mShadowCulling(other->mShadowCulling),
           mDepthFunc(other->mDepthFunc),
           mColorWrite(other->mColorWrite),
           mDepthWrite(other->mDepthWrite),
