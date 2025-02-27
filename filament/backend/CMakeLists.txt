@@ -194,7 +194,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/utils/Spirv.h
             src/vulkan/utils/Spirv.cpp
             src/vulkan/utils/StaticVector.h
-            src/vulkan/VulkanAsyncHandles.cpp
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
@@ -216,6 +215,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanMemory.cpp
             src/vulkan/VulkanPipelineCache.cpp
             src/vulkan/VulkanPipelineCache.h
+            src/vulkan/VulkanQueryManager.cpp
+            src/vulkan/VulkanQueryManager.h
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp
@@ -388,7 +389,7 @@ else()
             -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
             -Wgnu-conditional-omitted-operand
             -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
-            -Wover-aligned
+            -Wover-aligned -Wreorder-init-list
             -Werror
     )
     if (CMAKE_CXX_STANDARD EQUAL 20)
@@ -460,7 +461,8 @@ if (APPLE OR LINUX)
         spirv-cross-glsl)
 endif()
 
-if (APPLE)
+# TODO: Disabling IOS test due to breakage wrt glslang update
+if (APPLE AND NOT IOS)
     # TODO: we should expand this test to Linux and other platforms.
     list(APPEND BACKEND_TEST_SRC
          test/test_RenderExternalImage.cpp)
