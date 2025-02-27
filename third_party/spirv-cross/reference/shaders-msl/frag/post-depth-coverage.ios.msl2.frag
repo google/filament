@@ -11,7 +11,7 @@ struct main0_out
 [[ early_fragment_tests ]] fragment main0_out main0(uint gl_SampleMaskIn [[sample_mask, post_depth_coverage]])
 {
     main0_out out = {};
-    out.FragColor = float4(float(gl_SampleMaskIn));
+    out.FragColor = float4(float(int(gl_SampleMaskIn)));
     return out;
 }
 

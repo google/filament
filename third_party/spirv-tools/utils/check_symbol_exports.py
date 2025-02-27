@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2017 Google Inc.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,7 +67,7 @@ def check_library(library):
     # by the protobuf compiler:
     #   - AddDescriptors_spvtoolsfuzz_2eproto()
     #   - InitDefaults_spvtoolsfuzz_2eproto()
-    symbol_allowlist_pattern = re.compile(r'_Z[0-9]+(InitDefaults|AddDescriptors)_spvtoolsfuzz_2eprotov')
+    symbol_allowlist_pattern = re.compile(r'_Z[0-9]+.*spvtoolsfuzz_2eproto.*')
 
     symbol_is_new_or_delete = re.compile(r'^(_Zna|_Znw|_Zdl|_Zda)')
     # Compilaion for Arm has various thunks for constructors, destructors, vtables.

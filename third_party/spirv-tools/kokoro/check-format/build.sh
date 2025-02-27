@@ -23,6 +23,11 @@ set -x
 BUILD_ROOT=$PWD
 SRC=$PWD/github/SPIRV-Tools
 
+# This is required to run any git command in the docker since owner will
+# have changed between the clone environment, and the docker container.
+# Marking the root of the repo as safe for ownership changes.
+git config --global --add safe.directory $SRC
+
 # Get clang-format-5.0.0.
 # Once kokoro upgrades the Ubuntu VMs, we can use 'apt-get install clang-format'
 curl -L http://releases.llvm.org/5.0.0/clang+llvm-5.0.0-linux-x86_64-ubuntu14.04.tar.xz -o clang-llvm.tar.xz

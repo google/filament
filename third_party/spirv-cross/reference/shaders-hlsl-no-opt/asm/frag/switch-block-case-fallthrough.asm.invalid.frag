@@ -15,31 +15,31 @@ void frag_main()
 {
     int i = 0;
     int j;
-    int _30;
-    int _31;
+    int _33;
+    int _34;
     switch (vIndex)
     {
         case 0:
         {
-            _30 = 3;
-            j = _30;
-            _31 = 0;
-            j = _31;
+            _33 = 3;
+            j = _33;
+            _34 = 0;
+            j = _34;
             break;
         }
         default:
         {
-            _30 = 2;
-            j = _30;
-            _31 = 0;
-            j = _31;
+            _33 = 2;
+            j = _33;
+            _34 = 0;
+            j = _34;
             break;
         }
         case 1:
         case 11:
         {
-            _31 = 1;
-            j = _31;
+            _34 = 1;
+            j = _34;
             break;
         }
         case 2:

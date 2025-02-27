@@ -43,8 +43,6 @@
 #include "../MachineIndependent/Scan.h"
 #include "../MachineIndependent/preprocessor/PpContext.h"
 
-#include "../OSDependent/osinclude.h"
-
 #include <algorithm>
 #include <functional>
 #include <cctype>
@@ -402,7 +400,7 @@ TIntermTyped* HlslParseContext::handleLvalue(const TSourceLoc& loc, const char* 
         case EOpLeftShiftAssign:
         case EOpRightShiftAssign:
             isModifyOp = true;
-            // fall through...
+            [[fallthrough]];
         case EOpAssign:
             {
                 // Since this is an lvalue, we'll convert an image load to a sequence like this
@@ -962,14 +960,11 @@ TIntermTyped* HlslParseContext::handleDotDereference(const TSourceLoc& loc, TInt
                 return addConstructor(loc, base, type);
             }
         }
-        if (base->getVectorSize() == 1) {
+        // Use EOpIndexDirect (below) with vec1.x so that it remains l-value (Test/hlsl.swizzle.vec1.comp)
+        if (base->getVectorSize() == 1 && selectors.size() > 1) {
             TType scalarType(base->getBasicType(), EvqTemporary, 1);
-            if (selectors.size() == 1)
-                return addConstructor(loc, base, scalarType);
-            else {
-                TType vectorType(base->getBasicType(), EvqTemporary, selectors.size());
-                return addConstructor(loc, addConstructor(loc, base, scalarType), vectorType);
-            }
+            TType vectorType(base->getBasicType(), EvqTemporary, selectors.size());
+            return addConstructor(loc, addConstructor(loc, base, scalarType), vectorType);
         }
 
         if (base->getType().getQualifier().isFrontEndConstant())
@@ -1401,7 +1396,7 @@ TIntermTyped* HlslParseContext::flattenAccess(long long uniqueId, int member, TS
 
         // If this is not the final flattening, accumulate the position and return
         // an object of the partially dereferenced type.
-        subsetSymbol = new TIntermSymbol(uniqueId, "flattenShadow", dereferencedType);
+        subsetSymbol = new TIntermSymbol(uniqueId, "flattenShadow", getLanguage(), dereferencedType);
         subsetSymbol->setFlattenSubset(newSubset);
     }
 
@@ -1444,7 +1439,7 @@ int HlslParseContext::findSubtreeOffset(const TType& type, int subset, const TVe
         return offsets[subset];
     TType derefType(type, 0);
     return findSubtreeOffset(derefType, offsets[subset], offsets);
-};
+}
 
 // Find and return the split IO TVariable for id, or nullptr if none.
 TVariable* HlslParseContext::getSplitNonIoVar(long long id) const
@@ -4507,13 +4502,13 @@ void HlslParseContext::decomposeSampleMethods(const TSourceLoc& loc, TIntermType
             int cmpValues = 0;  // 1 if there is a compare value (handier than a bool below)
 
             switch (op) {
-            case EOpMethodGatherCmpRed:   cmpValues = 1;  // fall through
+            case EOpMethodGatherCmpRed:   cmpValues = 1;  [[fallthrough]];
             case EOpMethodGatherRed:      channel = 0; break;
-            case EOpMethodGatherCmpGreen: cmpValues = 1;  // fall through
+            case EOpMethodGatherCmpGreen: cmpValues = 1;  [[fallthrough]];
             case EOpMethodGatherGreen:    channel = 1; break;
-            case EOpMethodGatherCmpBlue:  cmpValues = 1;  // fall through
+            case EOpMethodGatherCmpBlue:  cmpValues = 1;  [[fallthrough]];
             case EOpMethodGatherBlue:     channel = 2; break;
-            case EOpMethodGatherCmpAlpha: cmpValues = 1;  // fall through
+            case EOpMethodGatherCmpAlpha: cmpValues = 1;  [[fallthrough]];
             case EOpMethodGatherAlpha:    channel = 3; break;
             default:                      assert(0);   break;
             }
@@ -5811,6 +5806,7 @@ void HlslParseContext::addInputArgumentConversions(const TFunction& function, TI
                     internalAggregate->getWritableType().getQualifier().makeTemporary();
                     TIntermSymbol* internalSymbolNode = new TIntermSymbol(internalAggregate->getUniqueId(),
                                                                           internalAggregate->getName(),
+                                                                          getLanguage(),
                                                                           internalAggregate->getType());
                     internalSymbolNode->setLoc(arg->getLoc());
                     // This makes the deepest level, the member-wise copy
@@ -6062,7 +6058,7 @@ void HlslParseContext::builtInOpCheck(const TSourceLoc& loc, const TFunction& fn
         unaryArg = callNode.getAsUnaryNode()->getOperand();
         arg0 = unaryArg;
     }
-    const TIntermSequence& aggArgs = *argp;  // only valid when unaryArg is nullptr
+    const TIntermSequence& aggArgs = argp ? *argp : TIntermSequence();  // only valid when unaryArg is nullptr
 
     switch (callNode.getOp()) {
     case EOpTextureGather:
@@ -9551,6 +9547,8 @@ bool HlslParseContext::isInputBuiltIn(const TQualifier& qualifier) const
         return language == EShLangTessEvaluation;
     case EbvTessCoord:
         return language == EShLangTessEvaluation;
+    case EbvViewIndex:
+        return language != EShLangCompute;
     default:
         return false;
     }
@@ -9655,6 +9653,10 @@ void HlslParseContext::correctOutput(TQualifier& qualifier)
         qualifier.clearXfbLayout();
     if (language != EShLangTessControl)
         qualifier.patch = false;
+
+    // Fixes Test/hlsl.entry-inout.vert (SV_Position will not become a varying).
+    if (qualifier.builtIn == EbvNone)
+        qualifier.builtIn = qualifier.declaredBuiltIn;
 
     switch (qualifier.builtIn) {
     case EbvFragDepth:

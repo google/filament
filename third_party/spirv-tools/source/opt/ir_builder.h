@@ -440,6 +440,22 @@ class InstructionBuilder {
     return GetContext()->get_constant_mgr()->GetDefiningInstruction(constant);
   }
 
+  Instruction* GetBoolConstant(bool value) {
+    analysis::Bool type;
+    uint32_t type_id = GetContext()->get_type_mgr()->GetTypeInstruction(&type);
+    analysis::Type* rebuilt_type =
+        GetContext()->get_type_mgr()->GetType(type_id);
+    uint32_t word = value;
+    const analysis::Constant* constant =
+        GetContext()->get_constant_mgr()->GetConstant(rebuilt_type, {word});
+    return GetContext()->get_constant_mgr()->GetDefiningInstruction(constant);
+  }
+
+  uint32_t GetBoolConstantId(bool value) {
+    Instruction* inst = GetBoolConstant(value);
+    return (inst != nullptr ? inst->result_id() : 0);
+  }
+
   Instruction* AddCompositeExtract(uint32_t type, uint32_t id_of_composite,
                                    const std::vector<uint32_t>& index_list) {
     std::vector<Operand> operands;
@@ -480,9 +496,16 @@ class InstructionBuilder {
     return AddInstruction(std::move(new_inst));
   }
 
-  Instruction* AddLoad(uint32_t type_id, uint32_t base_ptr_id) {
+  Instruction* AddLoad(uint32_t type_id, uint32_t base_ptr_id,
+                       uint32_t alignment = 0) {
     std::vector<Operand> operands;
     operands.push_back({SPV_OPERAND_TYPE_ID, {base_ptr_id}});
+    if (alignment != 0) {
+      operands.push_back(
+          {SPV_OPERAND_TYPE_MEMORY_ACCESS,
+           {static_cast<uint32_t>(spv::MemoryAccessMask::Aligned)}});
+      operands.push_back({SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER, {alignment}});
+    }
 
     // TODO(1841): Handle id overflow.
     std::unique_ptr<Instruction> new_inst(

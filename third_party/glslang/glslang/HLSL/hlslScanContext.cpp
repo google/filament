@@ -78,414 +78,396 @@ struct str_hash
 };
 
 // A single global usable by all threads, by all versions, by all languages.
-// After a single process-level initialization, this is read only and thread safe
-std::unordered_map<const char*, glslang::EHlslTokenClass, str_hash, str_eq>* KeywordMap = nullptr;
-std::unordered_set<const char*, str_hash, str_eq>* ReservedSet = nullptr;
-std::unordered_map<const char*, glslang::TBuiltInVariable, str_hash, str_eq>* SemanticMap = nullptr;
+const std::unordered_map<const char*, glslang::EHlslTokenClass, str_hash, str_eq> KeywordMap {
+    {"static",glslang::EHTokStatic},
+    {"const",glslang::EHTokConst},
+    {"unorm",glslang::EHTokUnorm},
+    {"snorm",glslang::EHTokSNorm},
+    {"extern",glslang::EHTokExtern},
+    {"uniform",glslang::EHTokUniform},
+    {"volatile",glslang::EHTokVolatile},
+    {"precise",glslang::EHTokPrecise},
+    {"shared",glslang::EHTokShared},
+    {"groupshared",glslang::EHTokGroupShared},
+    {"linear",glslang::EHTokLinear},
+    {"centroid",glslang::EHTokCentroid},
+    {"nointerpolation",glslang::EHTokNointerpolation},
+    {"noperspective",glslang::EHTokNoperspective},
+    {"sample",glslang::EHTokSample},
+    {"row_major",glslang::EHTokRowMajor},
+    {"column_major",glslang::EHTokColumnMajor},
+    {"packoffset",glslang::EHTokPackOffset},
+    {"in",glslang::EHTokIn},
+    {"out",glslang::EHTokOut},
+    {"inout",glslang::EHTokInOut},
+    {"layout",glslang::EHTokLayout},
+    {"globallycoherent",glslang::EHTokGloballyCoherent},
+    {"inline",glslang::EHTokInline},
 
+    {"point",glslang::EHTokPoint},
+    {"line",glslang::EHTokLine},
+    {"triangle",glslang::EHTokTriangle},
+    {"lineadj",glslang::EHTokLineAdj},
+    {"triangleadj",glslang::EHTokTriangleAdj},
+
+    {"PointStream",glslang::EHTokPointStream},
+    {"LineStream",glslang::EHTokLineStream},
+    {"TriangleStream",glslang::EHTokTriangleStream},
+
+    {"InputPatch",glslang::EHTokInputPatch},
+    {"OutputPatch",glslang::EHTokOutputPatch},
+
+    {"Buffer",glslang::EHTokBuffer},
+    {"vector",glslang::EHTokVector},
+    {"matrix",glslang::EHTokMatrix},
+
+    {"void",glslang::EHTokVoid},
+    {"string",glslang::EHTokString},
+    {"bool",glslang::EHTokBool},
+    {"int",glslang::EHTokInt},
+    {"uint",glslang::EHTokUint},
+    {"uint64_t",glslang::EHTokUint64},
+    {"dword",glslang::EHTokDword},
+    {"half",glslang::EHTokHalf},
+    {"float",glslang::EHTokFloat},
+    {"double",glslang::EHTokDouble},
+    {"min16float",glslang::EHTokMin16float},
+    {"min10float",glslang::EHTokMin10float},
+    {"min16int",glslang::EHTokMin16int},
+    {"min12int",glslang::EHTokMin12int},
+    {"min16uint",glslang::EHTokMin16uint},
+
+    {"bool1",glslang::EHTokBool1},
+    {"bool2",glslang::EHTokBool2},
+    {"bool3",glslang::EHTokBool3},
+    {"bool4",glslang::EHTokBool4},
+    {"float1",glslang::EHTokFloat1},
+    {"float2",glslang::EHTokFloat2},
+    {"float3",glslang::EHTokFloat3},
+    {"float4",glslang::EHTokFloat4},
+    {"int1",glslang::EHTokInt1},
+    {"int2",glslang::EHTokInt2},
+    {"int3",glslang::EHTokInt3},
+    {"int4",glslang::EHTokInt4},
+    {"double1",glslang::EHTokDouble1},
+    {"double2",glslang::EHTokDouble2},
+    {"double3",glslang::EHTokDouble3},
+    {"double4",glslang::EHTokDouble4},
+    {"uint1",glslang::EHTokUint1},
+    {"uint2",glslang::EHTokUint2},
+    {"uint3",glslang::EHTokUint3},
+    {"uint4",glslang::EHTokUint4},
+
+    {"half1",glslang::EHTokHalf1},
+    {"half2",glslang::EHTokHalf2},
+    {"half3",glslang::EHTokHalf3},
+    {"half4",glslang::EHTokHalf4},
+    {"min16float1",glslang::EHTokMin16float1},
+    {"min16float2",glslang::EHTokMin16float2},
+    {"min16float3",glslang::EHTokMin16float3},
+    {"min16float4",glslang::EHTokMin16float4},
+    {"min10float1",glslang::EHTokMin10float1},
+    {"min10float2",glslang::EHTokMin10float2},
+    {"min10float3",glslang::EHTokMin10float3},
+    {"min10float4",glslang::EHTokMin10float4},
+    {"min16int1",glslang::EHTokMin16int1},
+    {"min16int2",glslang::EHTokMin16int2},
+    {"min16int3",glslang::EHTokMin16int3},
+    {"min16int4",glslang::EHTokMin16int4},
+    {"min12int1",glslang::EHTokMin12int1},
+    {"min12int2",glslang::EHTokMin12int2},
+    {"min12int3",glslang::EHTokMin12int3},
+    {"min12int4",glslang::EHTokMin12int4},
+    {"min16uint1",glslang::EHTokMin16uint1},
+    {"min16uint2",glslang::EHTokMin16uint2},
+    {"min16uint3",glslang::EHTokMin16uint3},
+    {"min16uint4",glslang::EHTokMin16uint4},
+
+    {"bool1x1",glslang::EHTokBool1x1},
+    {"bool1x2",glslang::EHTokBool1x2},
+    {"bool1x3",glslang::EHTokBool1x3},
+    {"bool1x4",glslang::EHTokBool1x4},
+    {"bool2x1",glslang::EHTokBool2x1},
+    {"bool2x2",glslang::EHTokBool2x2},
+    {"bool2x3",glslang::EHTokBool2x3},
+    {"bool2x4",glslang::EHTokBool2x4},
+    {"bool3x1",glslang::EHTokBool3x1},
+    {"bool3x2",glslang::EHTokBool3x2},
+    {"bool3x3",glslang::EHTokBool3x3},
+    {"bool3x4",glslang::EHTokBool3x4},
+    {"bool4x1",glslang::EHTokBool4x1},
+    {"bool4x2",glslang::EHTokBool4x2},
+    {"bool4x3",glslang::EHTokBool4x3},
+    {"bool4x4",glslang::EHTokBool4x4},
+    {"int1x1",glslang::EHTokInt1x1},
+    {"int1x2",glslang::EHTokInt1x2},
+    {"int1x3",glslang::EHTokInt1x3},
+    {"int1x4",glslang::EHTokInt1x4},
+    {"int2x1",glslang::EHTokInt2x1},
+    {"int2x2",glslang::EHTokInt2x2},
+    {"int2x3",glslang::EHTokInt2x3},
+    {"int2x4",glslang::EHTokInt2x4},
+    {"int3x1",glslang::EHTokInt3x1},
+    {"int3x2",glslang::EHTokInt3x2},
+    {"int3x3",glslang::EHTokInt3x3},
+    {"int3x4",glslang::EHTokInt3x4},
+    {"int4x1",glslang::EHTokInt4x1},
+    {"int4x2",glslang::EHTokInt4x2},
+    {"int4x3",glslang::EHTokInt4x3},
+    {"int4x4",glslang::EHTokInt4x4},
+    {"uint1x1",glslang::EHTokUint1x1},
+    {"uint1x2",glslang::EHTokUint1x2},
+    {"uint1x3",glslang::EHTokUint1x3},
+    {"uint1x4",glslang::EHTokUint1x4},
+    {"uint2x1",glslang::EHTokUint2x1},
+    {"uint2x2",glslang::EHTokUint2x2},
+    {"uint2x3",glslang::EHTokUint2x3},
+    {"uint2x4",glslang::EHTokUint2x4},
+    {"uint3x1",glslang::EHTokUint3x1},
+    {"uint3x2",glslang::EHTokUint3x2},
+    {"uint3x3",glslang::EHTokUint3x3},
+    {"uint3x4",glslang::EHTokUint3x4},
+    {"uint4x1",glslang::EHTokUint4x1},
+    {"uint4x2",glslang::EHTokUint4x2},
+    {"uint4x3",glslang::EHTokUint4x3},
+    {"uint4x4",glslang::EHTokUint4x4},
+    {"bool1x1",glslang::EHTokBool1x1},
+    {"bool1x2",glslang::EHTokBool1x2},
+    {"bool1x3",glslang::EHTokBool1x3},
+    {"bool1x4",glslang::EHTokBool1x4},
+    {"bool2x1",glslang::EHTokBool2x1},
+    {"bool2x2",glslang::EHTokBool2x2},
+    {"bool2x3",glslang::EHTokBool2x3},
+    {"bool2x4",glslang::EHTokBool2x4},
+    {"bool3x1",glslang::EHTokBool3x1},
+    {"bool3x2",glslang::EHTokBool3x2},
+    {"bool3x3",glslang::EHTokBool3x3},
+    {"bool3x4",glslang::EHTokBool3x4},
+    {"bool4x1",glslang::EHTokBool4x1},
+    {"bool4x2",glslang::EHTokBool4x2},
+    {"bool4x3",glslang::EHTokBool4x3},
+    {"bool4x4",glslang::EHTokBool4x4},
+    {"float1x1",glslang::EHTokFloat1x1},
+    {"float1x2",glslang::EHTokFloat1x2},
+    {"float1x3",glslang::EHTokFloat1x3},
+    {"float1x4",glslang::EHTokFloat1x4},
+    {"float2x1",glslang::EHTokFloat2x1},
+    {"float2x2",glslang::EHTokFloat2x2},
+    {"float2x3",glslang::EHTokFloat2x3},
+    {"float2x4",glslang::EHTokFloat2x4},
+    {"float3x1",glslang::EHTokFloat3x1},
+    {"float3x2",glslang::EHTokFloat3x2},
+    {"float3x3",glslang::EHTokFloat3x3},
+    {"float3x4",glslang::EHTokFloat3x4},
+    {"float4x1",glslang::EHTokFloat4x1},
+    {"float4x2",glslang::EHTokFloat4x2},
+    {"float4x3",glslang::EHTokFloat4x3},
+    {"float4x4",glslang::EHTokFloat4x4},
+    {"half1x1",glslang::EHTokHalf1x1},
+    {"half1x2",glslang::EHTokHalf1x2},
+    {"half1x3",glslang::EHTokHalf1x3},
+    {"half1x4",glslang::EHTokHalf1x4},
+    {"half2x1",glslang::EHTokHalf2x1},
+    {"half2x2",glslang::EHTokHalf2x2},
+    {"half2x3",glslang::EHTokHalf2x3},
+    {"half2x4",glslang::EHTokHalf2x4},
+    {"half3x1",glslang::EHTokHalf3x1},
+    {"half3x2",glslang::EHTokHalf3x2},
+    {"half3x3",glslang::EHTokHalf3x3},
+    {"half3x4",glslang::EHTokHalf3x4},
+    {"half4x1",glslang::EHTokHalf4x1},
+    {"half4x2",glslang::EHTokHalf4x2},
+    {"half4x3",glslang::EHTokHalf4x3},
+    {"half4x4",glslang::EHTokHalf4x4},
+    {"double1x1",glslang::EHTokDouble1x1},
+    {"double1x2",glslang::EHTokDouble1x2},
+    {"double1x3",glslang::EHTokDouble1x3},
+    {"double1x4",glslang::EHTokDouble1x4},
+    {"double2x1",glslang::EHTokDouble2x1},
+    {"double2x2",glslang::EHTokDouble2x2},
+    {"double2x3",glslang::EHTokDouble2x3},
+    {"double2x4",glslang::EHTokDouble2x4},
+    {"double3x1",glslang::EHTokDouble3x1},
+    {"double3x2",glslang::EHTokDouble3x2},
+    {"double3x3",glslang::EHTokDouble3x3},
+    {"double3x4",glslang::EHTokDouble3x4},
+    {"double4x1",glslang::EHTokDouble4x1},
+    {"double4x2",glslang::EHTokDouble4x2},
+    {"double4x3",glslang::EHTokDouble4x3},
+    {"double4x4",glslang::EHTokDouble4x4},
+    {"min16float1x1",glslang::EHTokMin16float1x1},
+    {"min16float1x2",glslang::EHTokMin16float1x2},
+    {"min16float1x3",glslang::EHTokMin16float1x3},
+    {"min16float1x4",glslang::EHTokMin16float1x4},
+    {"min16float2x1",glslang::EHTokMin16float2x1},
+    {"min16float2x2",glslang::EHTokMin16float2x2},
+    {"min16float2x3",glslang::EHTokMin16float2x3},
+    {"min16float2x4",glslang::EHTokMin16float2x4},
+    {"min16float3x1",glslang::EHTokMin16float3x1},
+    {"min16float3x2",glslang::EHTokMin16float3x2},
+    {"min16float3x3",glslang::EHTokMin16float3x3},
+    {"min16float3x4",glslang::EHTokMin16float3x4},
+    {"min16float4x1",glslang::EHTokMin16float4x1},
+    {"min16float4x2",glslang::EHTokMin16float4x2},
+    {"min16float4x3",glslang::EHTokMin16float4x3},
+    {"min16float4x4",glslang::EHTokMin16float4x4},
+    {"min10float1x1",glslang::EHTokMin10float1x1},
+    {"min10float1x2",glslang::EHTokMin10float1x2},
+    {"min10float1x3",glslang::EHTokMin10float1x3},
+    {"min10float1x4",glslang::EHTokMin10float1x4},
+    {"min10float2x1",glslang::EHTokMin10float2x1},
+    {"min10float2x2",glslang::EHTokMin10float2x2},
+    {"min10float2x3",glslang::EHTokMin10float2x3},
+    {"min10float2x4",glslang::EHTokMin10float2x4},
+    {"min10float3x1",glslang::EHTokMin10float3x1},
+    {"min10float3x2",glslang::EHTokMin10float3x2},
+    {"min10float3x3",glslang::EHTokMin10float3x3},
+    {"min10float3x4",glslang::EHTokMin10float3x4},
+    {"min10float4x1",glslang::EHTokMin10float4x1},
+    {"min10float4x2",glslang::EHTokMin10float4x2},
+    {"min10float4x3",glslang::EHTokMin10float4x3},
+    {"min10float4x4",glslang::EHTokMin10float4x4},
+    {"min16int1x1",glslang::EHTokMin16int1x1},
+    {"min16int1x2",glslang::EHTokMin16int1x2},
+    {"min16int1x3",glslang::EHTokMin16int1x3},
+    {"min16int1x4",glslang::EHTokMin16int1x4},
+    {"min16int2x1",glslang::EHTokMin16int2x1},
+    {"min16int2x2",glslang::EHTokMin16int2x2},
+    {"min16int2x3",glslang::EHTokMin16int2x3},
+    {"min16int2x4",glslang::EHTokMin16int2x4},
+    {"min16int3x1",glslang::EHTokMin16int3x1},
+    {"min16int3x2",glslang::EHTokMin16int3x2},
+    {"min16int3x3",glslang::EHTokMin16int3x3},
+    {"min16int3x4",glslang::EHTokMin16int3x4},
+    {"min16int4x1",glslang::EHTokMin16int4x1},
+    {"min16int4x2",glslang::EHTokMin16int4x2},
+    {"min16int4x3",glslang::EHTokMin16int4x3},
+    {"min16int4x4",glslang::EHTokMin16int4x4},
+    {"min12int1x1",glslang::EHTokMin12int1x1},
+    {"min12int1x2",glslang::EHTokMin12int1x2},
+    {"min12int1x3",glslang::EHTokMin12int1x3},
+    {"min12int1x4",glslang::EHTokMin12int1x4},
+    {"min12int2x1",glslang::EHTokMin12int2x1},
+    {"min12int2x2",glslang::EHTokMin12int2x2},
+    {"min12int2x3",glslang::EHTokMin12int2x3},
+    {"min12int2x4",glslang::EHTokMin12int2x4},
+    {"min12int3x1",glslang::EHTokMin12int3x1},
+    {"min12int3x2",glslang::EHTokMin12int3x2},
+    {"min12int3x3",glslang::EHTokMin12int3x3},
+    {"min12int3x4",glslang::EHTokMin12int3x4},
+    {"min12int4x1",glslang::EHTokMin12int4x1},
+    {"min12int4x2",glslang::EHTokMin12int4x2},
+    {"min12int4x3",glslang::EHTokMin12int4x3},
+    {"min12int4x4",glslang::EHTokMin12int4x4},
+    {"min16uint1x1",glslang::EHTokMin16uint1x1},
+    {"min16uint1x2",glslang::EHTokMin16uint1x2},
+    {"min16uint1x3",glslang::EHTokMin16uint1x3},
+    {"min16uint1x4",glslang::EHTokMin16uint1x4},
+    {"min16uint2x1",glslang::EHTokMin16uint2x1},
+    {"min16uint2x2",glslang::EHTokMin16uint2x2},
+    {"min16uint2x3",glslang::EHTokMin16uint2x3},
+    {"min16uint2x4",glslang::EHTokMin16uint2x4},
+    {"min16uint3x1",glslang::EHTokMin16uint3x1},
+    {"min16uint3x2",glslang::EHTokMin16uint3x2},
+    {"min16uint3x3",glslang::EHTokMin16uint3x3},
+    {"min16uint3x4",glslang::EHTokMin16uint3x4},
+    {"min16uint4x1",glslang::EHTokMin16uint4x1},
+    {"min16uint4x2",glslang::EHTokMin16uint4x2},
+    {"min16uint4x3",glslang::EHTokMin16uint4x3},
+    {"min16uint4x4",glslang::EHTokMin16uint4x4},
+
+    {"sampler",glslang::EHTokSampler},
+    {"sampler1D",glslang::EHTokSampler1d},
+    {"sampler2D",glslang::EHTokSampler2d},
+    {"sampler3D",glslang::EHTokSampler3d},
+    {"samplerCUBE",glslang::EHTokSamplerCube},
+    {"sampler_state",glslang::EHTokSamplerState},
+    {"SamplerState",glslang::EHTokSamplerState},
+    {"SamplerComparisonState",glslang::EHTokSamplerComparisonState},
+    {"texture",glslang::EHTokTexture},
+    {"Texture1D",glslang::EHTokTexture1d},
+    {"Texture1DArray",glslang::EHTokTexture1darray},
+    {"Texture2D",glslang::EHTokTexture2d},
+    {"Texture2DArray",glslang::EHTokTexture2darray},
+    {"Texture3D",glslang::EHTokTexture3d},
+    {"TextureCube",glslang::EHTokTextureCube},
+    {"TextureCubeArray",glslang::EHTokTextureCubearray},
+    {"Texture2DMS",glslang::EHTokTexture2DMS},
+    {"Texture2DMSArray",glslang::EHTokTexture2DMSarray},
+    {"RWTexture1D",glslang::EHTokRWTexture1d},
+    {"RWTexture1DArray",glslang::EHTokRWTexture1darray},
+    {"RWTexture2D",glslang::EHTokRWTexture2d},
+    {"RWTexture2DArray",glslang::EHTokRWTexture2darray},
+    {"RWTexture3D",glslang::EHTokRWTexture3d},
+    {"RWBuffer",glslang::EHTokRWBuffer},
+    {"SubpassInput",glslang::EHTokSubpassInput},
+    {"SubpassInputMS",glslang::EHTokSubpassInputMS},
+
+    {"AppendStructuredBuffer",glslang::EHTokAppendStructuredBuffer},
+    {"ByteAddressBuffer",glslang::EHTokByteAddressBuffer},
+    {"ConsumeStructuredBuffer",glslang::EHTokConsumeStructuredBuffer},
+    {"RWByteAddressBuffer",glslang::EHTokRWByteAddressBuffer},
+    {"RWStructuredBuffer",glslang::EHTokRWStructuredBuffer},
+    {"StructuredBuffer",glslang::EHTokStructuredBuffer},
+    {"TextureBuffer",glslang::EHTokTextureBuffer},
+
+    {"class",glslang::EHTokClass},
+    {"struct",glslang::EHTokStruct},
+    {"cbuffer",glslang::EHTokCBuffer},
+    {"ConstantBuffer",glslang::EHTokConstantBuffer},
+    {"tbuffer",glslang::EHTokTBuffer},
+    {"typedef",glslang::EHTokTypedef},
+    {"this",glslang::EHTokThis},
+    {"namespace",glslang::EHTokNamespace},
+
+    {"true",glslang::EHTokBoolConstant},
+    {"false",glslang::EHTokBoolConstant},
+
+    {"for",glslang::EHTokFor},
+    {"do",glslang::EHTokDo},
+    {"while",glslang::EHTokWhile},
+    {"break",glslang::EHTokBreak},
+    {"continue",glslang::EHTokContinue},
+    {"if",glslang::EHTokIf},
+    {"else",glslang::EHTokElse},
+    {"discard",glslang::EHTokDiscard},
+    {"return",glslang::EHTokReturn},
+    {"switch",glslang::EHTokSwitch},
+    {"case",glslang::EHTokCase},
+    {"default",glslang::EHTokDefault},
 };
 
-namespace glslang {
-
-void HlslScanContext::fillInKeywordMap()
-{
-    if (KeywordMap != nullptr) {
-        // this is really an error, as this should called only once per process
-        // but, the only risk is if two threads called simultaneously
-        return;
-    }
-    KeywordMap = new std::unordered_map<const char*, EHlslTokenClass, str_hash, str_eq>;
-
-    (*KeywordMap)["static"] =                  EHTokStatic;
-    (*KeywordMap)["const"] =                   EHTokConst;
-    (*KeywordMap)["unorm"] =                   EHTokUnorm;
-    (*KeywordMap)["snorm"] =                   EHTokSNorm;
-    (*KeywordMap)["extern"] =                  EHTokExtern;
-    (*KeywordMap)["uniform"] =                 EHTokUniform;
-    (*KeywordMap)["volatile"] =                EHTokVolatile;
-    (*KeywordMap)["precise"] =                 EHTokPrecise;
-    (*KeywordMap)["shared"] =                  EHTokShared;
-    (*KeywordMap)["groupshared"] =             EHTokGroupShared;
-    (*KeywordMap)["linear"] =                  EHTokLinear;
-    (*KeywordMap)["centroid"] =                EHTokCentroid;
-    (*KeywordMap)["nointerpolation"] =         EHTokNointerpolation;
-    (*KeywordMap)["noperspective"] =           EHTokNoperspective;
-    (*KeywordMap)["sample"] =                  EHTokSample;
-    (*KeywordMap)["row_major"] =               EHTokRowMajor;
-    (*KeywordMap)["column_major"] =            EHTokColumnMajor;
-    (*KeywordMap)["packoffset"] =              EHTokPackOffset;
-    (*KeywordMap)["in"] =                      EHTokIn;
-    (*KeywordMap)["out"] =                     EHTokOut;
-    (*KeywordMap)["inout"] =                   EHTokInOut;
-    (*KeywordMap)["layout"] =                  EHTokLayout;
-    (*KeywordMap)["globallycoherent"] =        EHTokGloballyCoherent;
-    (*KeywordMap)["inline"] =                  EHTokInline;
-
-    (*KeywordMap)["point"] =                   EHTokPoint;
-    (*KeywordMap)["line"] =                    EHTokLine;
-    (*KeywordMap)["triangle"] =                EHTokTriangle;
-    (*KeywordMap)["lineadj"] =                 EHTokLineAdj;
-    (*KeywordMap)["triangleadj"] =             EHTokTriangleAdj;
-
-    (*KeywordMap)["PointStream"] =             EHTokPointStream;
-    (*KeywordMap)["LineStream"] =              EHTokLineStream;
-    (*KeywordMap)["TriangleStream"] =          EHTokTriangleStream;
-
-    (*KeywordMap)["InputPatch"] =              EHTokInputPatch;
-    (*KeywordMap)["OutputPatch"] =             EHTokOutputPatch;
-
-    (*KeywordMap)["Buffer"] =                  EHTokBuffer;
-    (*KeywordMap)["vector"] =                  EHTokVector;
-    (*KeywordMap)["matrix"] =                  EHTokMatrix;
-
-    (*KeywordMap)["void"] =                    EHTokVoid;
-    (*KeywordMap)["string"] =                  EHTokString;
-    (*KeywordMap)["bool"] =                    EHTokBool;
-    (*KeywordMap)["int"] =                     EHTokInt;
-    (*KeywordMap)["uint"] =                    EHTokUint;
-    (*KeywordMap)["uint64_t"] =                EHTokUint64;
-    (*KeywordMap)["dword"] =                   EHTokDword;
-    (*KeywordMap)["half"] =                    EHTokHalf;
-    (*KeywordMap)["float"] =                   EHTokFloat;
-    (*KeywordMap)["double"] =                  EHTokDouble;
-    (*KeywordMap)["min16float"] =              EHTokMin16float;
-    (*KeywordMap)["min10float"] =              EHTokMin10float;
-    (*KeywordMap)["min16int"] =                EHTokMin16int;
-    (*KeywordMap)["min12int"] =                EHTokMin12int;
-    (*KeywordMap)["min16uint"] =               EHTokMin16uint;
-
-    (*KeywordMap)["bool1"] =                   EHTokBool1;
-    (*KeywordMap)["bool2"] =                   EHTokBool2;
-    (*KeywordMap)["bool3"] =                   EHTokBool3;
-    (*KeywordMap)["bool4"] =                   EHTokBool4;
-    (*KeywordMap)["float1"] =                  EHTokFloat1;
-    (*KeywordMap)["float2"] =                  EHTokFloat2;
-    (*KeywordMap)["float3"] =                  EHTokFloat3;
-    (*KeywordMap)["float4"] =                  EHTokFloat4;
-    (*KeywordMap)["int1"] =                    EHTokInt1;
-    (*KeywordMap)["int2"] =                    EHTokInt2;
-    (*KeywordMap)["int3"] =                    EHTokInt3;
-    (*KeywordMap)["int4"] =                    EHTokInt4;
-    (*KeywordMap)["double1"] =                 EHTokDouble1;
-    (*KeywordMap)["double2"] =                 EHTokDouble2;
-    (*KeywordMap)["double3"] =                 EHTokDouble3;
-    (*KeywordMap)["double4"] =                 EHTokDouble4;
-    (*KeywordMap)["uint1"] =                   EHTokUint1;
-    (*KeywordMap)["uint2"] =                   EHTokUint2;
-    (*KeywordMap)["uint3"] =                   EHTokUint3;
-    (*KeywordMap)["uint4"] =                   EHTokUint4;
-
-    (*KeywordMap)["half1"] =                   EHTokHalf1;
-    (*KeywordMap)["half2"] =                   EHTokHalf2;
-    (*KeywordMap)["half3"] =                   EHTokHalf3;
-    (*KeywordMap)["half4"] =                   EHTokHalf4;
-    (*KeywordMap)["min16float1"] =             EHTokMin16float1;
-    (*KeywordMap)["min16float2"] =             EHTokMin16float2;
-    (*KeywordMap)["min16float3"] =             EHTokMin16float3;
-    (*KeywordMap)["min16float4"] =             EHTokMin16float4;
-    (*KeywordMap)["min10float1"] =             EHTokMin10float1;
-    (*KeywordMap)["min10float2"] =             EHTokMin10float2;
-    (*KeywordMap)["min10float3"] =             EHTokMin10float3;
-    (*KeywordMap)["min10float4"] =             EHTokMin10float4;
-    (*KeywordMap)["min16int1"] =               EHTokMin16int1;
-    (*KeywordMap)["min16int2"] =               EHTokMin16int2;
-    (*KeywordMap)["min16int3"] =               EHTokMin16int3;
-    (*KeywordMap)["min16int4"] =               EHTokMin16int4;
-    (*KeywordMap)["min12int1"] =               EHTokMin12int1;
-    (*KeywordMap)["min12int2"] =               EHTokMin12int2;
-    (*KeywordMap)["min12int3"] =               EHTokMin12int3;
-    (*KeywordMap)["min12int4"] =               EHTokMin12int4;
-    (*KeywordMap)["min16uint1"] =              EHTokMin16uint1;
-    (*KeywordMap)["min16uint2"] =              EHTokMin16uint2;
-    (*KeywordMap)["min16uint3"] =              EHTokMin16uint3;
-    (*KeywordMap)["min16uint4"] =              EHTokMin16uint4;
-
-    (*KeywordMap)["bool1x1"] =                 EHTokBool1x1;
-    (*KeywordMap)["bool1x2"] =                 EHTokBool1x2;
-    (*KeywordMap)["bool1x3"] =                 EHTokBool1x3;
-    (*KeywordMap)["bool1x4"] =                 EHTokBool1x4;
-    (*KeywordMap)["bool2x1"] =                 EHTokBool2x1;
-    (*KeywordMap)["bool2x2"] =                 EHTokBool2x2;
-    (*KeywordMap)["bool2x3"] =                 EHTokBool2x3;
-    (*KeywordMap)["bool2x4"] =                 EHTokBool2x4;
-    (*KeywordMap)["bool3x1"] =                 EHTokBool3x1;
-    (*KeywordMap)["bool3x2"] =                 EHTokBool3x2;
-    (*KeywordMap)["bool3x3"] =                 EHTokBool3x3;
-    (*KeywordMap)["bool3x4"] =                 EHTokBool3x4;
-    (*KeywordMap)["bool4x1"] =                 EHTokBool4x1;
-    (*KeywordMap)["bool4x2"] =                 EHTokBool4x2;
-    (*KeywordMap)["bool4x3"] =                 EHTokBool4x3;
-    (*KeywordMap)["bool4x4"] =                 EHTokBool4x4;
-    (*KeywordMap)["int1x1"] =                  EHTokInt1x1;
-    (*KeywordMap)["int1x2"] =                  EHTokInt1x2;
-    (*KeywordMap)["int1x3"] =                  EHTokInt1x3;
-    (*KeywordMap)["int1x4"] =                  EHTokInt1x4;
-    (*KeywordMap)["int2x1"] =                  EHTokInt2x1;
-    (*KeywordMap)["int2x2"] =                  EHTokInt2x2;
-    (*KeywordMap)["int2x3"] =                  EHTokInt2x3;
-    (*KeywordMap)["int2x4"] =                  EHTokInt2x4;
-    (*KeywordMap)["int3x1"] =                  EHTokInt3x1;
-    (*KeywordMap)["int3x2"] =                  EHTokInt3x2;
-    (*KeywordMap)["int3x3"] =                  EHTokInt3x3;
-    (*KeywordMap)["int3x4"] =                  EHTokInt3x4;
-    (*KeywordMap)["int4x1"] =                  EHTokInt4x1;
-    (*KeywordMap)["int4x2"] =                  EHTokInt4x2;
-    (*KeywordMap)["int4x3"] =                  EHTokInt4x3;
-    (*KeywordMap)["int4x4"] =                  EHTokInt4x4;
-    (*KeywordMap)["uint1x1"] =                 EHTokUint1x1;
-    (*KeywordMap)["uint1x2"] =                 EHTokUint1x2;
-    (*KeywordMap)["uint1x3"] =                 EHTokUint1x3;
-    (*KeywordMap)["uint1x4"] =                 EHTokUint1x4;
-    (*KeywordMap)["uint2x1"] =                 EHTokUint2x1;
-    (*KeywordMap)["uint2x2"] =                 EHTokUint2x2;
-    (*KeywordMap)["uint2x3"] =                 EHTokUint2x3;
-    (*KeywordMap)["uint2x4"] =                 EHTokUint2x4;
-    (*KeywordMap)["uint3x1"] =                 EHTokUint3x1;
-    (*KeywordMap)["uint3x2"] =                 EHTokUint3x2;
-    (*KeywordMap)["uint3x3"] =                 EHTokUint3x3;
-    (*KeywordMap)["uint3x4"] =                 EHTokUint3x4;
-    (*KeywordMap)["uint4x1"] =                 EHTokUint4x1;
-    (*KeywordMap)["uint4x2"] =                 EHTokUint4x2;
-    (*KeywordMap)["uint4x3"] =                 EHTokUint4x3;
-    (*KeywordMap)["uint4x4"] =                 EHTokUint4x4;
-    (*KeywordMap)["bool1x1"] =                 EHTokBool1x1;
-    (*KeywordMap)["bool1x2"] =                 EHTokBool1x2;
-    (*KeywordMap)["bool1x3"] =                 EHTokBool1x3;
-    (*KeywordMap)["bool1x4"] =                 EHTokBool1x4;
-    (*KeywordMap)["bool2x1"] =                 EHTokBool2x1;
-    (*KeywordMap)["bool2x2"] =                 EHTokBool2x2;
-    (*KeywordMap)["bool2x3"] =                 EHTokBool2x3;
-    (*KeywordMap)["bool2x4"] =                 EHTokBool2x4;
-    (*KeywordMap)["bool3x1"] =                 EHTokBool3x1;
-    (*KeywordMap)["bool3x2"] =                 EHTokBool3x2;
-    (*KeywordMap)["bool3x3"] =                 EHTokBool3x3;
-    (*KeywordMap)["bool3x4"] =                 EHTokBool3x4;
-    (*KeywordMap)["bool4x1"] =                 EHTokBool4x1;
-    (*KeywordMap)["bool4x2"] =                 EHTokBool4x2;
-    (*KeywordMap)["bool4x3"] =                 EHTokBool4x3;
-    (*KeywordMap)["bool4x4"] =                 EHTokBool4x4;
-    (*KeywordMap)["float1x1"] =                EHTokFloat1x1;
-    (*KeywordMap)["float1x2"] =                EHTokFloat1x2;
-    (*KeywordMap)["float1x3"] =                EHTokFloat1x3;
-    (*KeywordMap)["float1x4"] =                EHTokFloat1x4;
-    (*KeywordMap)["float2x1"] =                EHTokFloat2x1;
-    (*KeywordMap)["float2x2"] =                EHTokFloat2x2;
-    (*KeywordMap)["float2x3"] =                EHTokFloat2x3;
-    (*KeywordMap)["float2x4"] =                EHTokFloat2x4;
-    (*KeywordMap)["float3x1"] =                EHTokFloat3x1;
-    (*KeywordMap)["float3x2"] =                EHTokFloat3x2;
-    (*KeywordMap)["float3x3"] =                EHTokFloat3x3;
-    (*KeywordMap)["float3x4"] =                EHTokFloat3x4;
-    (*KeywordMap)["float4x1"] =                EHTokFloat4x1;
-    (*KeywordMap)["float4x2"] =                EHTokFloat4x2;
-    (*KeywordMap)["float4x3"] =                EHTokFloat4x3;
-    (*KeywordMap)["float4x4"] =                EHTokFloat4x4;
-    (*KeywordMap)["half1x1"] =                 EHTokHalf1x1;
-    (*KeywordMap)["half1x2"] =                 EHTokHalf1x2;
-    (*KeywordMap)["half1x3"] =                 EHTokHalf1x3;
-    (*KeywordMap)["half1x4"] =                 EHTokHalf1x4;
-    (*KeywordMap)["half2x1"] =                 EHTokHalf2x1;
-    (*KeywordMap)["half2x2"] =                 EHTokHalf2x2;
-    (*KeywordMap)["half2x3"] =                 EHTokHalf2x3;
-    (*KeywordMap)["half2x4"] =                 EHTokHalf2x4;
-    (*KeywordMap)["half3x1"] =                 EHTokHalf3x1;
-    (*KeywordMap)["half3x2"] =                 EHTokHalf3x2;
-    (*KeywordMap)["half3x3"] =                 EHTokHalf3x3;
-    (*KeywordMap)["half3x4"] =                 EHTokHalf3x4;
-    (*KeywordMap)["half4x1"] =                 EHTokHalf4x1;
-    (*KeywordMap)["half4x2"] =                 EHTokHalf4x2;
-    (*KeywordMap)["half4x3"] =                 EHTokHalf4x3;
-    (*KeywordMap)["half4x4"] =                 EHTokHalf4x4;
-    (*KeywordMap)["double1x1"] =               EHTokDouble1x1;
-    (*KeywordMap)["double1x2"] =               EHTokDouble1x2;
-    (*KeywordMap)["double1x3"] =               EHTokDouble1x3;
-    (*KeywordMap)["double1x4"] =               EHTokDouble1x4;
-    (*KeywordMap)["double2x1"] =               EHTokDouble2x1;
-    (*KeywordMap)["double2x2"] =               EHTokDouble2x2;
-    (*KeywordMap)["double2x3"] =               EHTokDouble2x3;
-    (*KeywordMap)["double2x4"] =               EHTokDouble2x4;
-    (*KeywordMap)["double3x1"] =               EHTokDouble3x1;
-    (*KeywordMap)["double3x2"] =               EHTokDouble3x2;
-    (*KeywordMap)["double3x3"] =               EHTokDouble3x3;
-    (*KeywordMap)["double3x4"] =               EHTokDouble3x4;
-    (*KeywordMap)["double4x1"] =               EHTokDouble4x1;
-    (*KeywordMap)["double4x2"] =               EHTokDouble4x2;
-    (*KeywordMap)["double4x3"] =               EHTokDouble4x3;
-    (*KeywordMap)["double4x4"] =               EHTokDouble4x4;
-    (*KeywordMap)["min16float1x1"] =           EHTokMin16float1x1;
-    (*KeywordMap)["min16float1x2"] =           EHTokMin16float1x2;
-    (*KeywordMap)["min16float1x3"] =           EHTokMin16float1x3;
-    (*KeywordMap)["min16float1x4"] =           EHTokMin16float1x4;
-    (*KeywordMap)["min16float2x1"] =           EHTokMin16float2x1;
-    (*KeywordMap)["min16float2x2"] =           EHTokMin16float2x2;
-    (*KeywordMap)["min16float2x3"] =           EHTokMin16float2x3;
-    (*KeywordMap)["min16float2x4"] =           EHTokMin16float2x4;
-    (*KeywordMap)["min16float3x1"] =           EHTokMin16float3x1;
-    (*KeywordMap)["min16float3x2"] =           EHTokMin16float3x2;
-    (*KeywordMap)["min16float3x3"] =           EHTokMin16float3x3;
-    (*KeywordMap)["min16float3x4"] =           EHTokMin16float3x4;
-    (*KeywordMap)["min16float4x1"] =           EHTokMin16float4x1;
-    (*KeywordMap)["min16float4x2"] =           EHTokMin16float4x2;
-    (*KeywordMap)["min16float4x3"] =           EHTokMin16float4x3;
-    (*KeywordMap)["min16float4x4"] =           EHTokMin16float4x4;
-    (*KeywordMap)["min10float1x1"] =           EHTokMin10float1x1;
-    (*KeywordMap)["min10float1x2"] =           EHTokMin10float1x2;
-    (*KeywordMap)["min10float1x3"] =           EHTokMin10float1x3;
-    (*KeywordMap)["min10float1x4"] =           EHTokMin10float1x4;
-    (*KeywordMap)["min10float2x1"] =           EHTokMin10float2x1;
-    (*KeywordMap)["min10float2x2"] =           EHTokMin10float2x2;
-    (*KeywordMap)["min10float2x3"] =           EHTokMin10float2x3;
-    (*KeywordMap)["min10float2x4"] =           EHTokMin10float2x4;
-    (*KeywordMap)["min10float3x1"] =           EHTokMin10float3x1;
-    (*KeywordMap)["min10float3x2"] =           EHTokMin10float3x2;
-    (*KeywordMap)["min10float3x3"] =           EHTokMin10float3x3;
-    (*KeywordMap)["min10float3x4"] =           EHTokMin10float3x4;
-    (*KeywordMap)["min10float4x1"] =           EHTokMin10float4x1;
-    (*KeywordMap)["min10float4x2"] =           EHTokMin10float4x2;
-    (*KeywordMap)["min10float4x3"] =           EHTokMin10float4x3;
-    (*KeywordMap)["min10float4x4"] =           EHTokMin10float4x4;
-    (*KeywordMap)["min16int1x1"] =             EHTokMin16int1x1;
-    (*KeywordMap)["min16int1x2"] =             EHTokMin16int1x2;
-    (*KeywordMap)["min16int1x3"] =             EHTokMin16int1x3;
-    (*KeywordMap)["min16int1x4"] =             EHTokMin16int1x4;
-    (*KeywordMap)["min16int2x1"] =             EHTokMin16int2x1;
-    (*KeywordMap)["min16int2x2"] =             EHTokMin16int2x2;
-    (*KeywordMap)["min16int2x3"] =             EHTokMin16int2x3;
-    (*KeywordMap)["min16int2x4"] =             EHTokMin16int2x4;
-    (*KeywordMap)["min16int3x1"] =             EHTokMin16int3x1;
-    (*KeywordMap)["min16int3x2"] =             EHTokMin16int3x2;
-    (*KeywordMap)["min16int3x3"] =             EHTokMin16int3x3;
-    (*KeywordMap)["min16int3x4"] =             EHTokMin16int3x4;
-    (*KeywordMap)["min16int4x1"] =             EHTokMin16int4x1;
-    (*KeywordMap)["min16int4x2"] =             EHTokMin16int4x2;
-    (*KeywordMap)["min16int4x3"] =             EHTokMin16int4x3;
-    (*KeywordMap)["min16int4x4"] =             EHTokMin16int4x4;
-    (*KeywordMap)["min12int1x1"] =             EHTokMin12int1x1;
-    (*KeywordMap)["min12int1x2"] =             EHTokMin12int1x2;
-    (*KeywordMap)["min12int1x3"] =             EHTokMin12int1x3;
-    (*KeywordMap)["min12int1x4"] =             EHTokMin12int1x4;
-    (*KeywordMap)["min12int2x1"] =             EHTokMin12int2x1;
-    (*KeywordMap)["min12int2x2"] =             EHTokMin12int2x2;
-    (*KeywordMap)["min12int2x3"] =             EHTokMin12int2x3;
-    (*KeywordMap)["min12int2x4"] =             EHTokMin12int2x4;
-    (*KeywordMap)["min12int3x1"] =             EHTokMin12int3x1;
-    (*KeywordMap)["min12int3x2"] =             EHTokMin12int3x2;
-    (*KeywordMap)["min12int3x3"] =             EHTokMin12int3x3;
-    (*KeywordMap)["min12int3x4"] =             EHTokMin12int3x4;
-    (*KeywordMap)["min12int4x1"] =             EHTokMin12int4x1;
-    (*KeywordMap)["min12int4x2"] =             EHTokMin12int4x2;
-    (*KeywordMap)["min12int4x3"] =             EHTokMin12int4x3;
-    (*KeywordMap)["min12int4x4"] =             EHTokMin12int4x4;
-    (*KeywordMap)["min16uint1x1"] =            EHTokMin16uint1x1;
-    (*KeywordMap)["min16uint1x2"] =            EHTokMin16uint1x2;
-    (*KeywordMap)["min16uint1x3"] =            EHTokMin16uint1x3;
-    (*KeywordMap)["min16uint1x4"] =            EHTokMin16uint1x4;
-    (*KeywordMap)["min16uint2x1"] =            EHTokMin16uint2x1;
-    (*KeywordMap)["min16uint2x2"] =            EHTokMin16uint2x2;
-    (*KeywordMap)["min16uint2x3"] =            EHTokMin16uint2x3;
-    (*KeywordMap)["min16uint2x4"] =            EHTokMin16uint2x4;
-    (*KeywordMap)["min16uint3x1"] =            EHTokMin16uint3x1;
-    (*KeywordMap)["min16uint3x2"] =            EHTokMin16uint3x2;
-    (*KeywordMap)["min16uint3x3"] =            EHTokMin16uint3x3;
-    (*KeywordMap)["min16uint3x4"] =            EHTokMin16uint3x4;
-    (*KeywordMap)["min16uint4x1"] =            EHTokMin16uint4x1;
-    (*KeywordMap)["min16uint4x2"] =            EHTokMin16uint4x2;
-    (*KeywordMap)["min16uint4x3"] =            EHTokMin16uint4x3;
-    (*KeywordMap)["min16uint4x4"] =            EHTokMin16uint4x4;
-
-    (*KeywordMap)["sampler"] =                 EHTokSampler;
-    (*KeywordMap)["sampler1D"] =               EHTokSampler1d;
-    (*KeywordMap)["sampler2D"] =               EHTokSampler2d;
-    (*KeywordMap)["sampler3D"] =               EHTokSampler3d;
-    (*KeywordMap)["samplerCUBE"] =             EHTokSamplerCube;
-    (*KeywordMap)["sampler_state"] =           EHTokSamplerState;
-    (*KeywordMap)["SamplerState"] =            EHTokSamplerState;
-    (*KeywordMap)["SamplerComparisonState"] =  EHTokSamplerComparisonState;
-    (*KeywordMap)["texture"] =                 EHTokTexture;
-    (*KeywordMap)["Texture1D"] =               EHTokTexture1d;
-    (*KeywordMap)["Texture1DArray"] =          EHTokTexture1darray;
-    (*KeywordMap)["Texture2D"] =               EHTokTexture2d;
-    (*KeywordMap)["Texture2DArray"] =          EHTokTexture2darray;
-    (*KeywordMap)["Texture3D"] =               EHTokTexture3d;
-    (*KeywordMap)["TextureCube"] =             EHTokTextureCube;
-    (*KeywordMap)["TextureCubeArray"] =        EHTokTextureCubearray;
-    (*KeywordMap)["Texture2DMS"] =             EHTokTexture2DMS;
-    (*KeywordMap)["Texture2DMSArray"] =        EHTokTexture2DMSarray;
-    (*KeywordMap)["RWTexture1D"] =             EHTokRWTexture1d;
-    (*KeywordMap)["RWTexture1DArray"] =        EHTokRWTexture1darray;
-    (*KeywordMap)["RWTexture2D"] =             EHTokRWTexture2d;
-    (*KeywordMap)["RWTexture2DArray"] =        EHTokRWTexture2darray;
-    (*KeywordMap)["RWTexture3D"] =             EHTokRWTexture3d;
-    (*KeywordMap)["RWBuffer"] =                EHTokRWBuffer;
-    (*KeywordMap)["SubpassInput"] =            EHTokSubpassInput;
-    (*KeywordMap)["SubpassInputMS"] =          EHTokSubpassInputMS;
-
-    (*KeywordMap)["AppendStructuredBuffer"] =  EHTokAppendStructuredBuffer;
-    (*KeywordMap)["ByteAddressBuffer"] =       EHTokByteAddressBuffer;
-    (*KeywordMap)["ConsumeStructuredBuffer"] = EHTokConsumeStructuredBuffer;
-    (*KeywordMap)["RWByteAddressBuffer"] =     EHTokRWByteAddressBuffer;
-    (*KeywordMap)["RWStructuredBuffer"] =      EHTokRWStructuredBuffer;
-    (*KeywordMap)["StructuredBuffer"] =        EHTokStructuredBuffer;
-    (*KeywordMap)["TextureBuffer"] =           EHTokTextureBuffer;
-
-    (*KeywordMap)["class"] =                   EHTokClass;
-    (*KeywordMap)["struct"] =                  EHTokStruct;
-    (*KeywordMap)["cbuffer"] =                 EHTokCBuffer;
-    (*KeywordMap)["ConstantBuffer"] =          EHTokConstantBuffer;
-    (*KeywordMap)["tbuffer"] =                 EHTokTBuffer;
-    (*KeywordMap)["typedef"] =                 EHTokTypedef;
-    (*KeywordMap)["this"] =                    EHTokThis;
-    (*KeywordMap)["namespace"] =               EHTokNamespace;
-
-    (*KeywordMap)["true"] =                    EHTokBoolConstant;
-    (*KeywordMap)["false"] =                   EHTokBoolConstant;
-
-    (*KeywordMap)["for"] =                     EHTokFor;
-    (*KeywordMap)["do"] =                      EHTokDo;
-    (*KeywordMap)["while"] =                   EHTokWhile;
-    (*KeywordMap)["break"] =                   EHTokBreak;
-    (*KeywordMap)["continue"] =                EHTokContinue;
-    (*KeywordMap)["if"] =                      EHTokIf;
-    (*KeywordMap)["else"] =                    EHTokElse;
-    (*KeywordMap)["discard"] =                 EHTokDiscard;
-    (*KeywordMap)["return"] =                  EHTokReturn;
-    (*KeywordMap)["switch"] =                  EHTokSwitch;
-    (*KeywordMap)["case"] =                    EHTokCase;
-    (*KeywordMap)["default"] =                 EHTokDefault;
-
-    // TODO: get correct set here
-    ReservedSet = new std::unordered_set<const char*, str_hash, str_eq>;
-
-    ReservedSet->insert("auto");
-    ReservedSet->insert("catch");
-    ReservedSet->insert("char");
-    ReservedSet->insert("const_cast");
-    ReservedSet->insert("enum");
-    ReservedSet->insert("explicit");
-    ReservedSet->insert("friend");
-    ReservedSet->insert("goto");
-    ReservedSet->insert("long");
-    ReservedSet->insert("mutable");
-    ReservedSet->insert("new");
-    ReservedSet->insert("operator");
-    ReservedSet->insert("private");
-    ReservedSet->insert("protected");
-    ReservedSet->insert("public");
-    ReservedSet->insert("reinterpret_cast");
-    ReservedSet->insert("short");
-    ReservedSet->insert("signed");
-    ReservedSet->insert("sizeof");
-    ReservedSet->insert("static_cast");
-    ReservedSet->insert("template");
-    ReservedSet->insert("throw");
-    ReservedSet->insert("try");
-    ReservedSet->insert("typename");
-    ReservedSet->insert("union");
-    ReservedSet->insert("unsigned");
-    ReservedSet->insert("using");
-    ReservedSet->insert("virtual");
-
-    SemanticMap = new std::unordered_map<const char*, glslang::TBuiltInVariable, str_hash, str_eq>;
+const std::unordered_set<const char*, str_hash, str_eq> ReservedSet {
+    "auto",
+    "catch",
+    "char",
+    "const_cast",
+    "enum",
+    "explicit",
+    "friend",
+    "goto",
+    "long",
+    "mutable",
+    "new",
+    "operator",
+    "private",
+    "protected",
+    "public",
+    "reinterpret_cast",
+    "short",
+    "signed",
+    "sizeof",
+    "static_cast",
+    "template",
+    "throw",
+    "try",
+    "typename",
+    "union",
+    "unsigned",
+    "using",
+    "virtual",
+};
+std::unordered_map<const char*, glslang::TBuiltInVariable, str_hash, str_eq> SemanticMap { 
 
     // in DX9, all outputs had to have a semantic associated with them, that was either consumed
     // by the system or was a specific register assignment
@@ -494,48 +476,41 @@ void HlslScanContext::fillInKeywordMap()
     // Also, in DX10 if a SV value is present as the input of a stage, but isn't appropriate for that
     // stage, it would just be ignored as it is likely there as part of an output struct from one stage
     // to the next
-    bool bParseDX9 = false;
-    if (bParseDX9) {
-        (*SemanticMap)["PSIZE"] = EbvPointSize;
-        (*SemanticMap)["FOG"] =   EbvFogFragCoord;
-        (*SemanticMap)["DEPTH"] = EbvFragDepth;
-        (*SemanticMap)["VFACE"] = EbvFace;
-        (*SemanticMap)["VPOS"] =  EbvFragCoord;
-    }
+#if 0
+    (*SemanticMap)["PSIZE"] = EbvPointSize;
+    (*SemanticMap)["FOG"] =   EbvFogFragCoord;
+    (*SemanticMap)["DEPTH"] = EbvFragDepth;
+    (*SemanticMap)["VFACE"] = EbvFace;
+    (*SemanticMap)["VPOS"] =  EbvFragCoord;
+#endif
 
-    (*SemanticMap)["SV_POSITION"] =               EbvPosition;
-    (*SemanticMap)["SV_VERTEXID"] =               EbvVertexIndex;
-    (*SemanticMap)["SV_VIEWPORTARRAYINDEX"] =     EbvViewportIndex;
-    (*SemanticMap)["SV_TESSFACTOR"] =             EbvTessLevelOuter;
-    (*SemanticMap)["SV_SAMPLEINDEX"] =            EbvSampleId;
-    (*SemanticMap)["SV_RENDERTARGETARRAYINDEX"] = EbvLayer;
-    (*SemanticMap)["SV_PRIMITIVEID"] =            EbvPrimitiveId;
-    (*SemanticMap)["SV_OUTPUTCONTROLPOINTID"] =   EbvInvocationId;
-    (*SemanticMap)["SV_ISFRONTFACE"] =            EbvFace;
-    (*SemanticMap)["SV_INSTANCEID"] =             EbvInstanceIndex;
-    (*SemanticMap)["SV_INSIDETESSFACTOR"] =       EbvTessLevelInner;
-    (*SemanticMap)["SV_GSINSTANCEID"] =           EbvInvocationId;
-    (*SemanticMap)["SV_DISPATCHTHREADID"] =       EbvGlobalInvocationId;
-    (*SemanticMap)["SV_GROUPTHREADID"] =          EbvLocalInvocationId;
-    (*SemanticMap)["SV_GROUPINDEX"] =             EbvLocalInvocationIndex;
-    (*SemanticMap)["SV_GROUPID"] =                EbvWorkGroupId;
-    (*SemanticMap)["SV_DOMAINLOCATION"] =         EbvTessCoord;
-    (*SemanticMap)["SV_DEPTH"] =                  EbvFragDepth;
-    (*SemanticMap)["SV_COVERAGE"] =               EbvSampleMask;
-    (*SemanticMap)["SV_DEPTHGREATEREQUAL"] =      EbvFragDepthGreater;
-    (*SemanticMap)["SV_DEPTHLESSEQUAL"] =         EbvFragDepthLesser;
-    (*SemanticMap)["SV_STENCILREF"] =             EbvFragStencilRef;
+    {"SV_POSITION",glslang::EbvPosition},
+    {"SV_VERTEXID",glslang::EbvVertexIndex},
+    {"SV_VIEWPORTARRAYINDEX",glslang::EbvViewportIndex},
+    {"SV_TESSFACTOR",glslang::EbvTessLevelOuter},
+    {"SV_SAMPLEINDEX",glslang::EbvSampleId},
+    {"SV_RENDERTARGETARRAYINDEX",glslang::EbvLayer},
+    {"SV_PRIMITIVEID",glslang::EbvPrimitiveId},
+    {"SV_OUTPUTCONTROLPOINTID",glslang::EbvInvocationId},
+    {"SV_ISFRONTFACE",glslang::EbvFace},
+    {"SV_VIEWID",glslang::EbvViewIndex},
+    {"SV_INSTANCEID",glslang::EbvInstanceIndex},
+    {"SV_INSIDETESSFACTOR",glslang::EbvTessLevelInner},
+    {"SV_GSINSTANCEID",glslang::EbvInvocationId},
+    {"SV_DISPATCHTHREADID",glslang::EbvGlobalInvocationId},
+    {"SV_GROUPTHREADID",glslang::EbvLocalInvocationId},
+    {"SV_GROUPINDEX",glslang::EbvLocalInvocationIndex},
+    {"SV_GROUPID",glslang::EbvWorkGroupId},
+    {"SV_DOMAINLOCATION",glslang::EbvTessCoord},
+    {"SV_DEPTH",glslang::EbvFragDepth},
+    {"SV_COVERAGE",glslang::EbvSampleMask},
+    {"SV_DEPTHGREATEREQUAL",glslang::EbvFragDepthGreater},
+    {"SV_DEPTHLESSEQUAL",glslang::EbvFragDepthLesser},
+    {"SV_STENCILREF", glslang::EbvFragStencilRef},
+};
 }
 
-void HlslScanContext::deleteKeywordMap()
-{
-    delete KeywordMap;
-    KeywordMap = nullptr;
-    delete ReservedSet;
-    ReservedSet = nullptr;
-    delete SemanticMap;
-    SemanticMap = nullptr;
-}
+namespace glslang {
 
 // Wrapper for tokenizeClass() to get everything inside the token.
 void HlslScanContext::tokenize(HlslToken& token)
@@ -546,8 +521,8 @@ void HlslScanContext::tokenize(HlslToken& token)
 
 glslang::TBuiltInVariable HlslScanContext::mapSemantic(const char* upperCase)
 {
-    auto it = SemanticMap->find(upperCase);
-    if (it != SemanticMap->end())
+    auto it = SemanticMap.find(upperCase);
+    if (it != SemanticMap.end())
         return it->second;
     else
         return glslang::EbvNone;
@@ -663,11 +638,11 @@ EHlslTokenClass HlslScanContext::tokenizeClass(HlslToken& token)
 
 EHlslTokenClass HlslScanContext::tokenizeIdentifier()
 {
-    if (ReservedSet->find(tokenText) != ReservedSet->end())
+    if (ReservedSet.find(tokenText) != ReservedSet.end())
         return reservedWord();
 
-    auto it = KeywordMap->find(tokenText);
-    if (it == KeywordMap->end()) {
+    auto it = KeywordMap.find(tokenText);
+    if (it == KeywordMap.end()) {
         // Should have an identifier of some sort
         return identifierOrType();
     }

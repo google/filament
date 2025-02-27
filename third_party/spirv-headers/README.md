@@ -198,7 +198,7 @@ python3 bin/makeExtinstHeaders.py
 ## License
 <a name="license"></a>
 ```
-Copyright (c) 2015-2018 The Khronos Group Inc.
+Copyright (c) 2015-2024 The Khronos Group Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and/or associated documentation files (the

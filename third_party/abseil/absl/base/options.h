@@ -174,7 +174,7 @@
 // absl::variant is a typedef of std::variant, use the feature macro
 // ABSL_USES_STD_VARIANT.
 
-#define ABSL_OPTION_USE_STD_VARIANT 2
+#define ABSL_OPTION_USE_STD_VARIANT 0
 
 // ABSL_OPTION_USE_STD_ORDERING
 //
@@ -235,10 +235,7 @@
 //
 // A value of 0 means that "hardened" mode is not enabled.
 //
-// A value of 1 means that "hardened" mode is enabled with all checks.
-//
-// A value of 2 means that "hardened" mode is partially enabled, with
-// only a subset of checks chosen to minimize performance impact.
+// A value of 1 means that "hardened" mode is enabled.
 //
 // Hardened builds have additional security checks enabled when `NDEBUG` is
 // defined. Defining `NDEBUG` is normally used to turn `assert()` macro into a
@@ -256,6 +253,6 @@
 // checks enabled by this option may abort the program in a different way and
 // log additional information when `NDEBUG` is not defined.
 
-#define ABSL_OPTION_HARDENED 0
+#define ABSL_OPTION_HARDENED 1
 
 #endif  // ABSL_BASE_OPTIONS_H_

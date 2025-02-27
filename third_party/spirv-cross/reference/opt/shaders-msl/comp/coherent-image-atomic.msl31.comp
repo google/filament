@@ -1,0 +1,15 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(256u, 1u, 1u);
+
+kernel void main0(texture2d<uint, access::read_write> rw_spd_global_atomic [[texture(0)]])
+{
+    uint _43 = rw_spd_global_atomic.atomic_fetch_add(uint2(int2(0)), 1u).x;
+}
+

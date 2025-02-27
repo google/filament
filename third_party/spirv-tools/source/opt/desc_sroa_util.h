@@ -27,6 +27,10 @@ namespace descsroautil {
 // descriptor array.
 bool IsDescriptorArray(IRContext* context, Instruction* var);
 
+// Returns true if |var| is an OpVariable instruction that represents a
+// struct containing descriptors.
+bool IsDescriptorStruct(IRContext* context, Instruction* var);
+
 // Returns true if |type| is a type that could be used for a structured buffer
 // as opposed to a type that would be used for a structure of resource
 // descriptors.

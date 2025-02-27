@@ -14,7 +14,6 @@
 
 #include "source/opt/strip_nonsemantic_info_pass.h"
 
-#include <cstring>
 #include <vector>
 
 #include "source/opt/instruction.h"
@@ -97,7 +96,7 @@ Pass::Status StripNonSemanticInfoPass::Process() {
   if (!non_semantic_sets.empty()) {
     context()->module()->ForEachInst(
         [&non_semantic_sets, &to_remove](Instruction* inst) {
-          if (inst->opcode() == spv::Op::OpExtInst) {
+          if (spvIsExtendedInstruction(inst->opcode())) {
             if (non_semantic_sets.find(inst->GetSingleWordInOperand(0)) !=
                 non_semantic_sets.end()) {
               to_remove.push_back(inst);

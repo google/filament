@@ -41,13 +41,13 @@ class LivenessManager {
   // Return true if builtin |bi| is being analyzed.
   bool IsAnalyzedBuiltin(uint32_t bi);
 
-  // Determine starting loc |offset| and the type |cur_type| of
-  // access chain |ac|. Set |no_loc| to true if no loc found.
-  // |is_patch| indicates if patch variable. |input| is true
-  // if input variable, otherwise output variable.
-  void AnalyzeAccessChainLoc(const Instruction* ac,
-                             const analysis::Type** curr_type, uint32_t* offset,
-                             bool* no_loc, bool is_patch, bool input = true);
+  // Return the result type of |ac| when applied to |cur_type_id|. Set
+  // |no_loc| to true if no loc found. Set |is_patch| indicates if the variable
+  // is a patch variable. Set |input| if the variable is an input variable.
+  // Otherwise it is assumed that the variable is an output variable.
+  uint32_t AnalyzeAccessChainLoc(const Instruction* ac, uint32_t curr_type_id,
+                                 uint32_t* offset, bool* no_loc, bool is_patch,
+                                 bool input = true);
 
   // Return size of |type_id| in units of locations
   uint32_t GetLocSize(const analysis::Type* type) const;
@@ -68,13 +68,12 @@ class LivenessManager {
   // Mark |count| locations starting at location |start|.
   void MarkLocsLive(uint32_t start, uint32_t count);
 
-  // Return type of component of aggregate type |agg_type| at |index|
-  const analysis::Type* GetComponentType(uint32_t index,
-                                         const analysis::Type* agg_type) const;
+  // Return type of the member |index| in the aggregate type |agg_type_id|.
+  uint32_t GetComponentType(uint32_t index, uint32_t agg_type_id) const;
 
-  // Return offset of |index| into aggregate type |agg_type| in units of
-  // input locations
-  uint32_t GetLocOffset(uint32_t index, const analysis::Type* agg_type) const;
+  // Return offset of member |index| in the aggregate type |agg_type_id| in
+  // units of input locations.
+  uint32_t GetLocOffset(uint32_t index, uint32_t agg_type_id) const;
 
   // Populate live_locs_ and live_builtins_
   void ComputeLiveness();

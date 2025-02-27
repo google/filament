@@ -128,7 +128,7 @@ TEST(DiffTest, DifferentFunctionParameterCount) {
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 25
-+; Bound: 33
++; Bound: 31
  ; Schema: 0
  OpCapability Shader
  %1 = OpExtInstImport "GLSL.std.450"
@@ -143,7 +143,7 @@ TEST(DiffTest, DifferentFunctionParameterCount) {
 +OpName %26 "v2"
  OpName %20 "o"
  OpName %23 "param"
-+OpName %31 "param"
++OpName %29 "param"
  OpDecorate %20 RelaxedPrecision
  OpDecorate %20 Location 0
  %2 = OpTypeVoid
@@ -162,13 +162,13 @@ TEST(DiffTest, DifferentFunctionParameterCount) {
  %4 = OpFunction %2 None %3
  %5 = OpLabel
  %23 = OpVariable %8 Function
-+%31 = OpVariable %8 Function
++%29 = OpVariable %8 Function
  OpStore %23 %22
 -%24 = OpFunctionCall %7 %11 %23
-+OpStore %31 %15
-+%32 = OpFunctionCall %7 %11 %23 %31
++OpStore %29 %15
++%30 = OpFunctionCall %7 %11 %23 %29
 -OpStore %20 %24
-+OpStore %20 %32
++OpStore %20 %30
  OpReturn
  OpFunctionEnd
 -%11 = OpFunction %7 None %9
@@ -280,7 +280,7 @@ TEST(DiffTest, DifferentFunctionParameterCountNoDebug) {
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 25
-+; Bound: 34
++; Bound: 31
  ; Schema: 0
  OpCapability Shader
  %1 = OpExtInstImport "GLSL.std.450"
@@ -306,28 +306,26 @@ TEST(DiffTest, DifferentFunctionParameterCountNoDebug) {
  %4 = OpFunction %2 None %3
  %5 = OpLabel
  %23 = OpVariable %8 Function
-+%32 = OpVariable %8 Function
++%29 = OpVariable %8 Function
  OpStore %23 %22
 -%24 = OpFunctionCall %7 %11 %23
-+OpStore %32 %15
-+%33 = OpFunctionCall %7 %11 %23 %32
++OpStore %29 %15
++%30 = OpFunctionCall %7 %11 %23 %29
 -OpStore %20 %24
-+OpStore %20 %33
++OpStore %20 %30
  OpReturn
  OpFunctionEnd
 -%11 = OpFunction %7 None %9
 +%11 = OpFunction %7 None %25
--%10 = OpFunctionParameter %8
+ %10 = OpFunctionParameter %8
 +%26 = OpFunctionParameter %8
-+%27 = OpFunctionParameter %8
  %12 = OpLabel
--%13 = OpLoad %7 %10
-+%13 = OpLoad %7 %26
+ %13 = OpLoad %7 %10
 -%16 = OpFAdd %7 %13 %15
-+%28 = OpLoad %7 %27
-+%29 = OpFAdd %7 %13 %28
++%27 = OpLoad %7 %26
++%28 = OpFAdd %7 %13 %27
 -OpReturnValue %16
-+OpReturnValue %29
++OpReturnValue %28
  OpFunctionEnd
 )";
   Options options;

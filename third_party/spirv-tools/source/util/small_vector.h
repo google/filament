@@ -15,7 +15,9 @@
 #ifndef SOURCE_UTIL_SMALL_VECTOR_H_
 #define SOURCE_UTIL_SMALL_VECTOR_H_
 
+#include <array>
 #include <cassert>
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <utility>
@@ -461,14 +463,18 @@ class SmallVector {
   // The number of elements in |small_data_| that have been constructed.
   size_t size_;
 
-  // The pointed used to access the array of elements when the number of
-  // elements is small.
-  T* small_data_;
+  // A type with the same alignment and size as T, but will is POD.
+  struct alignas(T) PodType {
+    std::array<int8_t, sizeof(T)> data;
+  };
 
   // The actual data used to store the array elements.  It must never be used
   // directly, but must only be accessed through |small_data_|.
-  typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type
-      buffer[small_size];
+  PodType buffer[small_size];
+
+  // The pointed used to access the array of elements when the number of
+  // elements is small.
+  T* small_data_;
 
   // A pointer to a vector that is used to store the elements of the vector when
   // this size exceeds |small_size|.  If |large_data_| is nullptr, then the data

@@ -256,7 +256,7 @@ fragment main0_out main0(constant type_View& View [[buffer(0)]], constant type_G
         float4 _260 = SSProfilesTexture.read(uint2(int3(1, int(uint((select(float4(0.0), SceneTexturesStruct_GBufferDTexture.sample(SceneTexturesStruct_GBufferDTextureSampler, _114, level(0.0)), bool4(!(((_240 & 4294967280u) & 16u) != 0u))).x * 255.0) + 0.5)), 0).xy), 0);
         float _263 = _260.y * 0.5;
         float3 _266 = _148 - (_236 * float3(_263));
-        float _274 = pow(fast::clamp(dot(-(_152 * float3(rsqrt(dot(_152, _152)))), _236), 0.0, 1.0), 1.0);
+        float _274 = powr(fast::clamp(dot(-(_152 * float3(rsqrt(dot(_152, _152)))), _236), 0.0, 1.0), 1.0);
         float _445;
         if (_160)
         {

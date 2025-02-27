@@ -16,13 +16,11 @@
 
 // Validates correctness of atomic SPIR-V instructions.
 
-#include "source/val/validate.h"
-
-#include "source/diagnostic.h"
 #include "source/opcode.h"
 #include "source/spirv_target_env.h"
 #include "source/util/bitutils.h"
 #include "source/val/instruction.h"
+#include "source/val/validate.h"
 #include "source/val/validate_memory_semantics.h"
 #include "source/val/validate_scopes.h"
 #include "source/val/validation_state.h"
@@ -146,12 +144,13 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
     case spv::Op::OpAtomicFlagClear: {
       const uint32_t result_type = inst->type_id();
 
-      // All current atomics only are scalar result
       // Validate return type first so can just check if pointer type is same
       // (if applicable)
       if (HasReturnType(opcode)) {
         if (HasOnlyFloatReturnType(opcode) &&
-            !_.IsFloatScalarType(result_type)) {
+            (!(_.HasCapability(spv::Capability::AtomicFloat16VectorNV) &&
+               _.IsFloat16Vector2Or4Type(result_type)) &&
+             !_.IsFloatScalarType(result_type))) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << spvOpcodeString(opcode)
                  << ": expected Result Type to be float scalar type";
@@ -162,6 +161,9 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
                  << ": expected Result Type to be integer scalar type";
         } else if (HasIntOrFloatReturnType(opcode) &&
                    !_.IsFloatScalarType(result_type) &&
+                   !(opcode == spv::Op::OpAtomicExchange &&
+                     _.HasCapability(spv::Capability::AtomicFloat16VectorNV) &&
+                     _.IsFloat16Vector2Or4Type(result_type)) &&
                    !_.IsIntScalarType(result_type)) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << spvOpcodeString(opcode)
@@ -181,7 +183,44 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
       if (!_.GetPointerTypeInfo(pointer_type, &data_type, &storage_class)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)
-               << ": expected Pointer to be of type OpTypePointer";
+               << ": expected Pointer to be a pointer type";
+      }
+
+      // If the pointer is an untyped pointer, get the data type elsewhere.
+      if (data_type == 0) {
+        switch (opcode) {
+          case spv::Op::OpAtomicLoad:
+          case spv::Op::OpAtomicExchange:
+          case spv::Op::OpAtomicFAddEXT:
+          case spv::Op::OpAtomicCompareExchange:
+          case spv::Op::OpAtomicCompareExchangeWeak:
+          case spv::Op::OpAtomicIIncrement:
+          case spv::Op::OpAtomicIDecrement:
+          case spv::Op::OpAtomicIAdd:
+          case spv::Op::OpAtomicISub:
+          case spv::Op::OpAtomicSMin:
+          case spv::Op::OpAtomicUMin:
+          case spv::Op::OpAtomicFMinEXT:
+          case spv::Op::OpAtomicSMax:
+          case spv::Op::OpAtomicUMax:
+          case spv::Op::OpAtomicFMaxEXT:
+          case spv::Op::OpAtomicAnd:
+          case spv::Op::OpAtomicOr:
+          case spv::Op::OpAtomicXor:
+            data_type = inst->type_id();
+            break;
+          case spv::Op::OpAtomicFlagTestAndSet:
+          case spv::Op::OpAtomicFlagClear:
+            return _.diag(SPV_ERROR_INVALID_ID, inst)
+                   << "Untyped pointers are not supported by atomic flag "
+                      "instructions";
+            break;
+          case spv::Op::OpAtomicStore:
+            data_type = _.FindDef(inst->GetOperandAs<uint32_t>(3))->type_id();
+            break;
+          default:
+            break;
+        }
       }
 
       // Can't use result_type because OpAtomicStore doesn't have a result
@@ -224,12 +263,21 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
 
         if (opcode == spv::Op::OpAtomicFAddEXT) {
           // result type being float checked already
-          if ((_.GetBitWidth(result_type) == 16) &&
-              (!_.HasCapability(spv::Capability::AtomicFloat16AddEXT))) {
-            return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                   << spvOpcodeString(opcode)
-                   << ": float add atomics require the AtomicFloat32AddEXT "
-                      "capability";
+          if (_.GetBitWidth(result_type) == 16) {
+            if (_.IsFloat16Vector2Or4Type(result_type)) {
+              if (!_.HasCapability(spv::Capability::AtomicFloat16VectorNV))
+                return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                       << spvOpcodeString(opcode)
+                       << ": float vector atomics require the "
+                          "AtomicFloat16VectorNV capability";
+            } else {
+              if (!_.HasCapability(spv::Capability::AtomicFloat16AddEXT)) {
+                return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                       << spvOpcodeString(opcode)
+                       << ": float add atomics require the AtomicFloat32AddEXT "
+                          "capability";
+              }
+            }
           }
           if ((_.GetBitWidth(result_type) == 32) &&
               (!_.HasCapability(spv::Capability::AtomicFloat32AddEXT))) {
@@ -247,12 +295,21 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
           }
         } else if (opcode == spv::Op::OpAtomicFMinEXT ||
                    opcode == spv::Op::OpAtomicFMaxEXT) {
-          if ((_.GetBitWidth(result_type) == 16) &&
-              (!_.HasCapability(spv::Capability::AtomicFloat16MinMaxEXT))) {
-            return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                   << spvOpcodeString(opcode)
-                   << ": float min/max atomics require the "
-                      "AtomicFloat16MinMaxEXT capability";
+          if (_.GetBitWidth(result_type) == 16) {
+            if (_.IsFloat16Vector2Or4Type(result_type)) {
+              if (!_.HasCapability(spv::Capability::AtomicFloat16VectorNV))
+                return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                       << spvOpcodeString(opcode)
+                       << ": float vector atomics require the "
+                          "AtomicFloat16VectorNV capability";
+            } else {
+              if (!_.HasCapability(spv::Capability::AtomicFloat16MinMaxEXT)) {
+                return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                       << spvOpcodeString(opcode)
+                       << ": float min/max atomics require the "
+                          "AtomicFloat16MinMaxEXT capability";
+              }
+            }
           }
           if ((_.GetBitWidth(result_type) == 32) &&
               (!_.HasCapability(spv::Capability::AtomicFloat32MinMaxEXT))) {

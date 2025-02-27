@@ -4376,6 +4376,9 @@ export default {
         "ShaderClockKHR": {
           "value": 5055
         },
+        "QuadControlKHR": {
+          "value": 5087
+        },
         "FragmentFullyCoveredEXT": {
           "value": 5265
         },

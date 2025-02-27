@@ -36,6 +36,11 @@ bool TransformationAddRelaxedDecoration::IsApplicable(
   if (!instr) {
     return false;
   }
+  // |instr| must not be decorated with RelaxedPrecision.
+  if (ir_context->get_decoration_mgr()->HasDecoration(
+          message_.result_id(), spv::Decoration::RelaxedPrecision)) {
+    return false;
+  }
   opt::BasicBlock* cur_block = ir_context->get_instr_block(instr);
   // The instruction must have a block.
   if (cur_block == nullptr) {
@@ -46,6 +51,7 @@ bool TransformationAddRelaxedDecoration::IsApplicable(
           cur_block->id()))) {
     return false;
   }
+
   // The instruction must be numeric.
   return IsNumeric(instr->opcode());
 }

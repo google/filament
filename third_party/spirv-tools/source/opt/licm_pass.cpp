@@ -15,7 +15,6 @@
 #include "source/opt/licm_pass.h"
 
 #include <queue>
-#include <utility>
 
 #include "source/opt/module.h"
 #include "source/opt/pass.h"
@@ -85,7 +84,7 @@ Pass::Status LICMPass::AnalyseAndHoistFromBB(
   bool modified = false;
   std::function<bool(Instruction*)> hoist_inst =
       [this, &loop, &modified](Instruction* inst) {
-        if (loop->ShouldHoistInstruction(this->context(), inst)) {
+        if (loop->ShouldHoistInstruction(*inst)) {
           if (!HoistInstruction(loop, inst)) {
             return false;
           }

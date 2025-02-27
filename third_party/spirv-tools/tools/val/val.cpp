@@ -66,6 +66,8 @@ Options:
                                    members.
   --allow-localsizeid              Allow use of the LocalSizeId decoration where it would otherwise not
                                    be allowed by the target environment.
+  --allow-offset-texture-operand   Allow use of the Offset texture operands where it would otherwise not
+                                   be allowed by the target environment.
   --before-hlsl-legalization       Allows code patterns that are intended to be
                                    fixed by spirv-opt's legalization passes.
   --version                        Display validator version information.
@@ -111,7 +113,7 @@ int main(int argc, char** argv) {
         printf("%s\n", spvSoftwareVersionDetailsString());
         printf(
             "Targets:\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  "
-            "%s\n %s\n %s\n %s\n",
+            "%s\n  %s\n  %s\n  %s %s\n",
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_0),
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_1),
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_2),
@@ -124,7 +126,8 @@ int main(int argc, char** argv) {
             spvTargetEnvDescription(SPV_ENV_VULKAN_1_1),
             spvTargetEnvDescription(SPV_ENV_VULKAN_1_1_SPIRV_1_4),
             spvTargetEnvDescription(SPV_ENV_VULKAN_1_2),
-            spvTargetEnvDescription(SPV_ENV_VULKAN_1_3));
+            spvTargetEnvDescription(SPV_ENV_VULKAN_1_3),
+            spvTargetEnvDescription(SPV_ENV_VULKAN_1_4));
         continue_processing = false;
         return_code = 0;
       } else if (0 == strcmp(cur_arg, "--help") || 0 == strcmp(cur_arg, "-h")) {
@@ -160,6 +163,8 @@ int main(int argc, char** argv) {
         options.SetSkipBlockLayout(true);
       } else if (0 == strcmp(cur_arg, "--allow-localsizeid")) {
         options.SetAllowLocalSizeId(true);
+      } else if (0 == strcmp(cur_arg, "--allow-offset-texture-operand")) {
+        options.SetAllowOffsetTextureOperand(true);
       } else if (0 == strcmp(cur_arg, "--relax-struct-store")) {
         options.SetRelaxStructStore(true);
       } else if (0 == cur_arg[1]) {
@@ -193,7 +198,7 @@ int main(int argc, char** argv) {
   }
 
   std::vector<uint32_t> contents;
-  if (!ReadBinaryFile<uint32_t>(inFile, &contents)) return 1;
+  if (!ReadBinaryFile(inFile, &contents)) return 1;
 
   spvtools::SpirvTools tools(target_env);
   tools.SetMessageConsumer(spvtools::utils::CLIMessageConsumer);

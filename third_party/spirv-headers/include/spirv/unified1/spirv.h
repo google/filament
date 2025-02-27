@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2014-2020 The Khronos Group Inc.
+** Copyright (c) 2014-2024 The Khronos Group Inc.
 ** 
 ** Permission is hereby granted, free of charge, to any person obtaining a copy
 ** of this software and/or associated documentation files (the "Materials"),
@@ -13,7 +13,7 @@
 ** 
 ** MODIFICATIONS TO THIS FILE MAY MEAN IT NO LONGER ACCURATELY REFLECTS KHRONOS
 ** STANDARDS. THE UNMODIFIED, NORMATIVE VERSIONS OF KHRONOS SPECIFICATIONS AND
-** HEADER INFORMATION ARE LOCATED AT https://www.khronos.org/registry/ 
+** HEADER INFORMATION ARE LOCATED AT https://www.khronos.org/registry/
 ** 
 ** THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 ** OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -73,6 +73,12 @@ typedef enum SpvSourceLanguage_ {
     SpvSourceLanguageHLSL = 5,
     SpvSourceLanguageCPP_for_OpenCL = 6,
     SpvSourceLanguageSYCL = 7,
+    SpvSourceLanguageHERO_C = 8,
+    SpvSourceLanguageNZSL = 9,
+    SpvSourceLanguageWGSL = 10,
+    SpvSourceLanguageSlang = 11,
+    SpvSourceLanguageZig = 12,
+    SpvSourceLanguageRust = 13,
     SpvSourceLanguageMax = 0x7fffffff,
 } SpvSourceLanguage;
 
@@ -160,6 +166,9 @@ typedef enum SpvExecutionMode_ {
     SpvExecutionModeSubgroupsPerWorkgroupId = 37,
     SpvExecutionModeLocalSizeId = 38,
     SpvExecutionModeLocalSizeHintId = 39,
+    SpvExecutionModeNonCoherentColorAttachmentReadEXT = 4169,
+    SpvExecutionModeNonCoherentDepthAttachmentReadEXT = 4170,
+    SpvExecutionModeNonCoherentStencilAttachmentReadEXT = 4171,
     SpvExecutionModeSubgroupUniformControlFlowKHR = 4421,
     SpvExecutionModePostDepthCoverage = 4446,
     SpvExecutionModeDenormPreserve = 4459,
@@ -169,17 +178,28 @@ typedef enum SpvExecutionMode_ {
     SpvExecutionModeRoundingModeRTZ = 4463,
     SpvExecutionModeEarlyAndLateFragmentTestsAMD = 5017,
     SpvExecutionModeStencilRefReplacingEXT = 5027,
+    SpvExecutionModeCoalescingAMDX = 5069,
+    SpvExecutionModeIsApiEntryAMDX = 5070,
+    SpvExecutionModeMaxNodeRecursionAMDX = 5071,
+    SpvExecutionModeStaticNumWorkgroupsAMDX = 5072,
+    SpvExecutionModeShaderIndexAMDX = 5073,
+    SpvExecutionModeMaxNumWorkgroupsAMDX = 5077,
     SpvExecutionModeStencilRefUnchangedFrontAMD = 5079,
     SpvExecutionModeStencilRefGreaterFrontAMD = 5080,
     SpvExecutionModeStencilRefLessFrontAMD = 5081,
     SpvExecutionModeStencilRefUnchangedBackAMD = 5082,
     SpvExecutionModeStencilRefGreaterBackAMD = 5083,
     SpvExecutionModeStencilRefLessBackAMD = 5084,
+    SpvExecutionModeQuadDerivativesKHR = 5088,
+    SpvExecutionModeRequireFullQuadsKHR = 5089,
+    SpvExecutionModeSharesInputWithAMDX = 5102,
     SpvExecutionModeOutputLinesEXT = 5269,
     SpvExecutionModeOutputLinesNV = 5269,
     SpvExecutionModeOutputPrimitivesEXT = 5270,
     SpvExecutionModeOutputPrimitivesNV = 5270,
+    SpvExecutionModeDerivativeGroupQuadsKHR = 5289,
     SpvExecutionModeDerivativeGroupQuadsNV = 5289,
+    SpvExecutionModeDerivativeGroupLinearKHR = 5290,
     SpvExecutionModeDerivativeGroupLinearNV = 5290,
     SpvExecutionModeOutputTrianglesEXT = 5298,
     SpvExecutionModeOutputTrianglesNV = 5298,
@@ -199,8 +219,14 @@ typedef enum SpvExecutionMode_ {
     SpvExecutionModeNoGlobalOffsetINTEL = 5895,
     SpvExecutionModeNumSIMDWorkitemsINTEL = 5896,
     SpvExecutionModeSchedulerTargetFmaxMhzINTEL = 5903,
+    SpvExecutionModeMaximallyReconvergesKHR = 6023,
+    SpvExecutionModeFPFastMathDefault = 6028,
     SpvExecutionModeStreamingInterfaceINTEL = 6154,
+    SpvExecutionModeRegisterMapInterfaceINTEL = 6160,
     SpvExecutionModeNamedBarrierCountINTEL = 6417,
+    SpvExecutionModeMaximumRegistersINTEL = 6461,
+    SpvExecutionModeMaximumRegistersIdINTEL = 6462,
+    SpvExecutionModeNamedMaximumRegistersINTEL = 6463,
     SpvExecutionModeMax = 0x7fffffff,
 } SpvExecutionMode;
 
@@ -218,6 +244,8 @@ typedef enum SpvStorageClass_ {
     SpvStorageClassAtomicCounter = 10,
     SpvStorageClassImage = 11,
     SpvStorageClassStorageBuffer = 12,
+    SpvStorageClassTileImageEXT = 4172,
+    SpvStorageClassNodePayloadAMDX = 5068,
     SpvStorageClassCallableDataKHR = 5328,
     SpvStorageClassCallableDataNV = 5328,
     SpvStorageClassIncomingCallableDataKHR = 5329,
@@ -248,6 +276,7 @@ typedef enum SpvDim_ {
     SpvDimRect = 4,
     SpvDimBuffer = 5,
     SpvDimSubpassData = 6,
+    SpvDimTileImageDataEXT = 4173,
     SpvDimMax = 0x7fffffff,
 } SpvDim;
 
@@ -354,6 +383,9 @@ typedef enum SpvImageChannelDataType_ {
     SpvImageChannelDataTypeFloat = 14,
     SpvImageChannelDataTypeUnormInt24 = 15,
     SpvImageChannelDataTypeUnormInt101010_2 = 16,
+    SpvImageChannelDataTypeUnsignedIntRaw10EXT = 19,
+    SpvImageChannelDataTypeUnsignedIntRaw12EXT = 20,
+    SpvImageChannelDataTypeUnormInt2_101010EXT = 21,
     SpvImageChannelDataTypeMax = 0x7fffffff,
 } SpvImageChannelDataType;
 
@@ -411,8 +443,11 @@ typedef enum SpvFPFastMathModeShift_ {
     SpvFPFastMathModeNSZShift = 2,
     SpvFPFastMathModeAllowRecipShift = 3,
     SpvFPFastMathModeFastShift = 4,
+    SpvFPFastMathModeAllowContractShift = 16,
     SpvFPFastMathModeAllowContractFastINTELShift = 16,
+    SpvFPFastMathModeAllowReassocShift = 17,
     SpvFPFastMathModeAllowReassocINTELShift = 17,
+    SpvFPFastMathModeAllowTransformShift = 18,
     SpvFPFastMathModeMax = 0x7fffffff,
 } SpvFPFastMathModeShift;
 
@@ -423,8 +458,11 @@ typedef enum SpvFPFastMathModeMask_ {
     SpvFPFastMathModeNSZMask = 0x00000004,
     SpvFPFastMathModeAllowRecipMask = 0x00000008,
     SpvFPFastMathModeFastMask = 0x00000010,
+    SpvFPFastMathModeAllowContractMask = 0x00010000,
     SpvFPFastMathModeAllowContractFastINTELMask = 0x00010000,
+    SpvFPFastMathModeAllowReassocMask = 0x00020000,
     SpvFPFastMathModeAllowReassocINTELMask = 0x00020000,
+    SpvFPFastMathModeAllowTransformMask = 0x00040000,
 } SpvFPFastMathModeMask;
 
 typedef enum SpvFPRoundingMode_ {
@@ -512,7 +550,18 @@ typedef enum SpvDecoration_ {
     SpvDecorationMaxByteOffsetId = 47,
     SpvDecorationNoSignedWrap = 4469,
     SpvDecorationNoUnsignedWrap = 4470,
+    SpvDecorationWeightTextureQCOM = 4487,
+    SpvDecorationBlockMatchTextureQCOM = 4488,
+    SpvDecorationBlockMatchSamplerQCOM = 4499,
     SpvDecorationExplicitInterpAMD = 4999,
+    SpvDecorationNodeSharesPayloadLimitsWithAMDX = 5019,
+    SpvDecorationNodeMaxPayloadsAMDX = 5020,
+    SpvDecorationTrackFinishWritingAMDX = 5078,
+    SpvDecorationPayloadNodeNameAMDX = 5091,
+    SpvDecorationPayloadNodeBaseIndexAMDX = 5098,
+    SpvDecorationPayloadNodeSparseArrayAMDX = 5099,
+    SpvDecorationPayloadNodeArraySizeAMDX = 5100,
+    SpvDecorationPayloadDispatchIndirectAMDX = 5105,
     SpvDecorationOverrideCoverageNV = 5248,
     SpvDecorationPassthroughNV = 5250,
     SpvDecorationViewportRelativeNV = 5252,
@@ -562,6 +611,9 @@ typedef enum SpvDecoration_ {
     SpvDecorationMergeINTEL = 5834,
     SpvDecorationBankBitsINTEL = 5835,
     SpvDecorationForcePow2DepthINTEL = 5836,
+    SpvDecorationStridesizeINTEL = 5883,
+    SpvDecorationWordsizeINTEL = 5884,
+    SpvDecorationTrueDualPortINTEL = 5885,
     SpvDecorationBurstCoalesceINTEL = 5899,
     SpvDecorationCacheSizeINTEL = 5900,
     SpvDecorationDontStaticallyCoalesceINTEL = 5901,
@@ -580,6 +632,24 @@ typedef enum SpvDecoration_ {
     SpvDecorationSingleElementVectorINTEL = 6085,
     SpvDecorationVectorComputeCallableFunctionINTEL = 6087,
     SpvDecorationMediaBlockIOINTEL = 6140,
+    SpvDecorationStallFreeINTEL = 6151,
+    SpvDecorationFPMaxErrorDecorationINTEL = 6170,
+    SpvDecorationLatencyControlLabelINTEL = 6172,
+    SpvDecorationLatencyControlConstraintINTEL = 6173,
+    SpvDecorationConduitKernelArgumentINTEL = 6175,
+    SpvDecorationRegisterMapKernelArgumentINTEL = 6176,
+    SpvDecorationMMHostInterfaceAddressWidthINTEL = 6177,
+    SpvDecorationMMHostInterfaceDataWidthINTEL = 6178,
+    SpvDecorationMMHostInterfaceLatencyINTEL = 6179,
+    SpvDecorationMMHostInterfaceReadWriteModeINTEL = 6180,
+    SpvDecorationMMHostInterfaceMaxBurstINTEL = 6181,
+    SpvDecorationMMHostInterfaceWaitRequestINTEL = 6182,
+    SpvDecorationStableKernelArgumentINTEL = 6183,
+    SpvDecorationHostAccessINTEL = 6188,
+    SpvDecorationInitModeINTEL = 6190,
+    SpvDecorationImplementInRegisterMapINTEL = 6191,
+    SpvDecorationCacheControlLoadINTEL = 6442,
+    SpvDecorationCacheControlStoreINTEL = 6443,
     SpvDecorationMax = 0x7fffffff,
 } SpvDecoration;
 
@@ -655,6 +725,8 @@ typedef enum SpvBuiltIn_ {
     SpvBuiltInBaryCoordSmoothSampleAMD = 4997,
     SpvBuiltInBaryCoordPullModelAMD = 4998,
     SpvBuiltInFragStencilRefEXT = 5014,
+    SpvBuiltInRemainingRecursionLevelsAMDX = 5021,
+    SpvBuiltInShaderIndexAMDX = 5073,
     SpvBuiltInViewportMaskNV = 5253,
     SpvBuiltInSecondaryPositionNV = 5257,
     SpvBuiltInSecondaryViewportMaskNV = 5258,
@@ -707,13 +779,25 @@ typedef enum SpvBuiltIn_ {
     SpvBuiltInHitKindKHR = 5333,
     SpvBuiltInHitKindNV = 5333,
     SpvBuiltInCurrentRayTimeNV = 5334,
+    SpvBuiltInHitTriangleVertexPositionsKHR = 5335,
+    SpvBuiltInHitMicroTriangleVertexPositionsNV = 5337,
+    SpvBuiltInHitMicroTriangleVertexBarycentricsNV = 5344,
     SpvBuiltInIncomingRayFlagsKHR = 5351,
     SpvBuiltInIncomingRayFlagsNV = 5351,
     SpvBuiltInRayGeometryIndexKHR = 5352,
+    SpvBuiltInHitIsSphereNV = 5359,
+    SpvBuiltInHitIsLSSNV = 5360,
+    SpvBuiltInHitSpherePositionNV = 5361,
     SpvBuiltInWarpsPerSMNV = 5374,
     SpvBuiltInSMCountNV = 5375,
     SpvBuiltInWarpIDNV = 5376,
     SpvBuiltInSMIDNV = 5377,
+    SpvBuiltInHitLSSPositionsNV = 5396,
+    SpvBuiltInHitKindFrontFacingMicroTriangleNV = 5405,
+    SpvBuiltInHitKindBackFacingMicroTriangleNV = 5406,
+    SpvBuiltInHitSphereRadiusNV = 5420,
+    SpvBuiltInHitLSSRadiiNV = 5421,
+    SpvBuiltInClusterIDNV = 5436,
     SpvBuiltInCullMaskKHR = 6021,
     SpvBuiltInMax = 0x7fffffff,
 } SpvBuiltIn;
@@ -781,6 +865,7 @@ typedef enum SpvFunctionControlShift_ {
     SpvFunctionControlDontInlineShift = 1,
     SpvFunctionControlPureShift = 2,
     SpvFunctionControlConstShift = 3,
+    SpvFunctionControlOptNoneEXTShift = 16,
     SpvFunctionControlOptNoneINTELShift = 16,
     SpvFunctionControlMax = 0x7fffffff,
 } SpvFunctionControlShift;
@@ -791,6 +876,7 @@ typedef enum SpvFunctionControlMask_ {
     SpvFunctionControlDontInlineMask = 0x00000002,
     SpvFunctionControlPureMask = 0x00000004,
     SpvFunctionControlConstMask = 0x00000008,
+    SpvFunctionControlOptNoneEXTMask = 0x00010000,
     SpvFunctionControlOptNoneINTELMask = 0x00010000,
 } SpvFunctionControlMask;
 
@@ -978,6 +1064,10 @@ typedef enum SpvCapability_ {
     SpvCapabilityShaderViewportIndex = 70,
     SpvCapabilityUniformDecoration = 71,
     SpvCapabilityCoreBuiltinsARM = 4165,
+    SpvCapabilityTileImageColorReadAccessEXT = 4166,
+    SpvCapabilityTileImageDepthReadAccessEXT = 4167,
+    SpvCapabilityTileImageStencilReadAccessEXT = 4168,
+    SpvCapabilityCooperativeMatrixLayoutsARM = 4201,
     SpvCapabilityFragmentShadingRateKHR = 4422,
     SpvCapabilitySubgroupBallotKHR = 4423,
     SpvCapabilityDrawParameters = 4427,
@@ -1007,8 +1097,13 @@ typedef enum SpvCapability_ {
     SpvCapabilityRoundingModeRTZ = 4468,
     SpvCapabilityRayQueryProvisionalKHR = 4471,
     SpvCapabilityRayQueryKHR = 4472,
+    SpvCapabilityUntypedPointersKHR = 4473,
     SpvCapabilityRayTraversalPrimitiveCullingKHR = 4478,
     SpvCapabilityRayTracingKHR = 4479,
+    SpvCapabilityTextureSampleWeightedQCOM = 4484,
+    SpvCapabilityTextureBoxFilterQCOM = 4485,
+    SpvCapabilityTextureBlockMatchQCOM = 4486,
+    SpvCapabilityTextureBlockMatch2QCOM = 4498,
     SpvCapabilityFloat16ImageAMD = 5008,
     SpvCapabilityImageGatherBiasLodAMD = 5009,
     SpvCapabilityFragmentMaskAMD = 5010,
@@ -1016,6 +1111,8 @@ typedef enum SpvCapability_ {
     SpvCapabilityImageReadWriteLodAMD = 5015,
     SpvCapabilityInt64ImageEXT = 5016,
     SpvCapabilityShaderClockKHR = 5055,
+    SpvCapabilityShaderEnqueueAMDX = 5067,
+    SpvCapabilityQuadControlKHR = 5087,
     SpvCapabilitySampleMaskOverrideCoverageNV = 5249,
     SpvCapabilityGeometryShaderPassthroughNV = 5251,
     SpvCapabilityShaderViewportIndexLayerEXT = 5254,
@@ -1029,6 +1126,7 @@ typedef enum SpvCapability_ {
     SpvCapabilityMeshShadingEXT = 5283,
     SpvCapabilityFragmentBarycentricKHR = 5284,
     SpvCapabilityFragmentBarycentricNV = 5284,
+    SpvCapabilityComputeDerivativeGroupQuadsKHR = 5288,
     SpvCapabilityComputeDerivativeGroupQuadsNV = 5288,
     SpvCapabilityFragmentDensityEXT = 5291,
     SpvCapabilityShadingRateNV = 5291,
@@ -1057,6 +1155,7 @@ typedef enum SpvCapability_ {
     SpvCapabilityUniformTexelBufferArrayNonUniformIndexingEXT = 5311,
     SpvCapabilityStorageTexelBufferArrayNonUniformIndexing = 5312,
     SpvCapabilityStorageTexelBufferArrayNonUniformIndexingEXT = 5312,
+    SpvCapabilityRayTracingPositionFetchKHR = 5336,
     SpvCapabilityRayTracingNV = 5340,
     SpvCapabilityRayTracingMotionBlurNV = 5341,
     SpvCapabilityVulkanMemoryModel = 5345,
@@ -1065,6 +1164,7 @@ typedef enum SpvCapability_ {
     SpvCapabilityVulkanMemoryModelDeviceScopeKHR = 5346,
     SpvCapabilityPhysicalStorageBufferAddresses = 5347,
     SpvCapabilityPhysicalStorageBufferAddressesEXT = 5347,
+    SpvCapabilityComputeDerivativeGroupLinearKHR = 5350,
     SpvCapabilityComputeDerivativeGroupLinearNV = 5350,
     SpvCapabilityRayTracingProvisionalKHR = 5353,
     SpvCapabilityCooperativeMatrixNV = 5357,
@@ -1074,9 +1174,25 @@ typedef enum SpvCapability_ {
     SpvCapabilityFragmentShaderPixelInterlockEXT = 5378,
     SpvCapabilityDemoteToHelperInvocation = 5379,
     SpvCapabilityDemoteToHelperInvocationEXT = 5379,
+    SpvCapabilityDisplacementMicromapNV = 5380,
     SpvCapabilityRayTracingOpacityMicromapEXT = 5381,
     SpvCapabilityShaderInvocationReorderNV = 5383,
     SpvCapabilityBindlessTextureNV = 5390,
+    SpvCapabilityRayQueryPositionFetchKHR = 5391,
+    SpvCapabilityCooperativeVectorNV = 5394,
+    SpvCapabilityAtomicFloat16VectorNV = 5404,
+    SpvCapabilityRayTracingDisplacementMicromapNV = 5409,
+    SpvCapabilityRawAccessChainsNV = 5414,
+    SpvCapabilityRayTracingSpheresGeometryNV = 5418,
+    SpvCapabilityRayTracingLinearSweptSpheresGeometryNV = 5419,
+    SpvCapabilityCooperativeMatrixReductionsNV = 5430,
+    SpvCapabilityCooperativeMatrixConversionsNV = 5431,
+    SpvCapabilityCooperativeMatrixPerElementOperationsNV = 5432,
+    SpvCapabilityCooperativeMatrixTensorAddressingNV = 5433,
+    SpvCapabilityCooperativeMatrixBlockLoadsNV = 5434,
+    SpvCapabilityCooperativeVectorTrainingNV = 5435,
+    SpvCapabilityRayTracingClusterAccelerationStructureNV = 5437,
+    SpvCapabilityTensorAddressingNV = 5439,
     SpvCapabilitySubgroupShuffleINTEL = 5568,
     SpvCapabilitySubgroupBufferBlockIOINTEL = 5569,
     SpvCapabilitySubgroupImageBlockIOINTEL = 5570,
@@ -1128,16 +1244,37 @@ typedef enum SpvCapability_ {
     SpvCapabilityDotProduct = 6019,
     SpvCapabilityDotProductKHR = 6019,
     SpvCapabilityRayCullMaskKHR = 6020,
+    SpvCapabilityCooperativeMatrixKHR = 6022,
+    SpvCapabilityReplicatedCompositesEXT = 6024,
     SpvCapabilityBitInstructions = 6025,
     SpvCapabilityGroupNonUniformRotateKHR = 6026,
+    SpvCapabilityFloatControls2 = 6029,
     SpvCapabilityAtomicFloat32AddEXT = 6033,
     SpvCapabilityAtomicFloat64AddEXT = 6034,
-    SpvCapabilityLongConstantCompositeINTEL = 6089,
+    SpvCapabilityLongCompositesINTEL = 6089,
+    SpvCapabilityOptNoneEXT = 6094,
     SpvCapabilityOptNoneINTEL = 6094,
     SpvCapabilityAtomicFloat16AddEXT = 6095,
     SpvCapabilityDebugInfoModuleINTEL = 6114,
+    SpvCapabilityBFloat16ConversionINTEL = 6115,
     SpvCapabilitySplitBarrierINTEL = 6141,
+    SpvCapabilityArithmeticFenceEXT = 6144,
+    SpvCapabilityFPGAClusterAttributesV2INTEL = 6150,
+    SpvCapabilityFPGAKernelAttributesv2INTEL = 6161,
+    SpvCapabilityFPMaxErrorINTEL = 6169,
+    SpvCapabilityFPGALatencyControlINTEL = 6171,
+    SpvCapabilityFPGAArgumentInterfacesINTEL = 6174,
+    SpvCapabilityGlobalVariableHostAccessINTEL = 6187,
+    SpvCapabilityGlobalVariableFPGADecorationsINTEL = 6189,
+    SpvCapabilitySubgroupBufferPrefetchINTEL = 6220,
+    SpvCapabilitySubgroup2DBlockIOINTEL = 6228,
+    SpvCapabilitySubgroup2DBlockTransformINTEL = 6229,
+    SpvCapabilitySubgroup2DBlockTransposeINTEL = 6230,
+    SpvCapabilitySubgroupMatrixMultiplyAccumulateINTEL = 6236,
     SpvCapabilityGroupUniformArithmeticKHR = 6400,
+    SpvCapabilityMaskedGatherScatterINTEL = 6427,
+    SpvCapabilityCacheControlsINTEL = 6441,
+    SpvCapabilityRegisterLimitsINTEL = 6460,
     SpvCapabilityMax = 0x7fffffff,
 } SpvCapability;
 
@@ -1150,6 +1287,7 @@ typedef enum SpvRayFlagsShift_ {
     SpvRayFlagsCullFrontFacingTrianglesKHRShift = 5,
     SpvRayFlagsCullOpaqueKHRShift = 6,
     SpvRayFlagsCullNoOpaqueKHRShift = 7,
+    SpvRayFlagsSkipBuiltinPrimitivesNVShift = 8,
     SpvRayFlagsSkipTrianglesKHRShift = 8,
     SpvRayFlagsSkipAABBsKHRShift = 9,
     SpvRayFlagsForceOpacityMicromap2StateEXTShift = 10,
@@ -1166,6 +1304,7 @@ typedef enum SpvRayFlagsMask_ {
     SpvRayFlagsCullFrontFacingTrianglesKHRMask = 0x00000020,
     SpvRayFlagsCullOpaqueKHRMask = 0x00000040,
     SpvRayFlagsCullNoOpaqueKHRMask = 0x00000080,
+    SpvRayFlagsSkipBuiltinPrimitivesNVMask = 0x00000100,
     SpvRayFlagsSkipTrianglesKHRMask = 0x00000100,
     SpvRayFlagsSkipAABBsKHRMask = 0x00000200,
     SpvRayFlagsForceOpacityMicromap2StateEXTMask = 0x00000400,
@@ -1243,6 +1382,189 @@ typedef enum SpvPackedVectorFormat_ {
     SpvPackedVectorFormatPackedVectorFormat4x8BitKHR = 0,
     SpvPackedVectorFormatMax = 0x7fffffff,
 } SpvPackedVectorFormat;
+
+typedef enum SpvCooperativeMatrixOperandsShift_ {
+    SpvCooperativeMatrixOperandsMatrixASignedComponentsKHRShift = 0,
+    SpvCooperativeMatrixOperandsMatrixBSignedComponentsKHRShift = 1,
+    SpvCooperativeMatrixOperandsMatrixCSignedComponentsKHRShift = 2,
+    SpvCooperativeMatrixOperandsMatrixResultSignedComponentsKHRShift = 3,
+    SpvCooperativeMatrixOperandsSaturatingAccumulationKHRShift = 4,
+    SpvCooperativeMatrixOperandsMax = 0x7fffffff,
+} SpvCooperativeMatrixOperandsShift;
+
+typedef enum SpvCooperativeMatrixOperandsMask_ {
+    SpvCooperativeMatrixOperandsMaskNone = 0,
+    SpvCooperativeMatrixOperandsMatrixASignedComponentsKHRMask = 0x00000001,
+    SpvCooperativeMatrixOperandsMatrixBSignedComponentsKHRMask = 0x00000002,
+    SpvCooperativeMatrixOperandsMatrixCSignedComponentsKHRMask = 0x00000004,
+    SpvCooperativeMatrixOperandsMatrixResultSignedComponentsKHRMask = 0x00000008,
+    SpvCooperativeMatrixOperandsSaturatingAccumulationKHRMask = 0x00000010,
+} SpvCooperativeMatrixOperandsMask;
+
+typedef enum SpvCooperativeMatrixLayout_ {
+    SpvCooperativeMatrixLayoutRowMajorKHR = 0,
+    SpvCooperativeMatrixLayoutColumnMajorKHR = 1,
+    SpvCooperativeMatrixLayoutRowBlockedInterleavedARM = 4202,
+    SpvCooperativeMatrixLayoutColumnBlockedInterleavedARM = 4203,
+    SpvCooperativeMatrixLayoutMax = 0x7fffffff,
+} SpvCooperativeMatrixLayout;
+
+typedef enum SpvCooperativeMatrixUse_ {
+    SpvCooperativeMatrixUseMatrixAKHR = 0,
+    SpvCooperativeMatrixUseMatrixBKHR = 1,
+    SpvCooperativeMatrixUseMatrixAccumulatorKHR = 2,
+    SpvCooperativeMatrixUseMax = 0x7fffffff,
+} SpvCooperativeMatrixUse;
+
+typedef enum SpvCooperativeMatrixReduceShift_ {
+    SpvCooperativeMatrixReduceRowShift = 0,
+    SpvCooperativeMatrixReduceColumnShift = 1,
+    SpvCooperativeMatrixReduce2x2Shift = 2,
+    SpvCooperativeMatrixReduceMax = 0x7fffffff,
+} SpvCooperativeMatrixReduceShift;
+
+typedef enum SpvCooperativeMatrixReduceMask_ {
+    SpvCooperativeMatrixReduceMaskNone = 0,
+    SpvCooperativeMatrixReduceRowMask = 0x00000001,
+    SpvCooperativeMatrixReduceColumnMask = 0x00000002,
+    SpvCooperativeMatrixReduce2x2Mask = 0x00000004,
+} SpvCooperativeMatrixReduceMask;
+
+typedef enum SpvTensorClampMode_ {
+    SpvTensorClampModeUndefined = 0,
+    SpvTensorClampModeConstant = 1,
+    SpvTensorClampModeClampToEdge = 2,
+    SpvTensorClampModeRepeat = 3,
+    SpvTensorClampModeRepeatMirrored = 4,
+    SpvTensorClampModeMax = 0x7fffffff,
+} SpvTensorClampMode;
+
+typedef enum SpvTensorAddressingOperandsShift_ {
+    SpvTensorAddressingOperandsTensorViewShift = 0,
+    SpvTensorAddressingOperandsDecodeFuncShift = 1,
+    SpvTensorAddressingOperandsMax = 0x7fffffff,
+} SpvTensorAddressingOperandsShift;
+
+typedef enum SpvTensorAddressingOperandsMask_ {
+    SpvTensorAddressingOperandsMaskNone = 0,
+    SpvTensorAddressingOperandsTensorViewMask = 0x00000001,
+    SpvTensorAddressingOperandsDecodeFuncMask = 0x00000002,
+} SpvTensorAddressingOperandsMask;
+
+typedef enum SpvInitializationModeQualifier_ {
+    SpvInitializationModeQualifierInitOnDeviceReprogramINTEL = 0,
+    SpvInitializationModeQualifierInitOnDeviceResetINTEL = 1,
+    SpvInitializationModeQualifierMax = 0x7fffffff,
+} SpvInitializationModeQualifier;
+
+typedef enum SpvHostAccessQualifier_ {
+    SpvHostAccessQualifierNoneINTEL = 0,
+    SpvHostAccessQualifierReadINTEL = 1,
+    SpvHostAccessQualifierWriteINTEL = 2,
+    SpvHostAccessQualifierReadWriteINTEL = 3,
+    SpvHostAccessQualifierMax = 0x7fffffff,
+} SpvHostAccessQualifier;
+
+typedef enum SpvLoadCacheControl_ {
+    SpvLoadCacheControlUncachedINTEL = 0,
+    SpvLoadCacheControlCachedINTEL = 1,
+    SpvLoadCacheControlStreamingINTEL = 2,
+    SpvLoadCacheControlInvalidateAfterReadINTEL = 3,
+    SpvLoadCacheControlConstCachedINTEL = 4,
+    SpvLoadCacheControlMax = 0x7fffffff,
+} SpvLoadCacheControl;
+
+typedef enum SpvStoreCacheControl_ {
+    SpvStoreCacheControlUncachedINTEL = 0,
+    SpvStoreCacheControlWriteThroughINTEL = 1,
+    SpvStoreCacheControlWriteBackINTEL = 2,
+    SpvStoreCacheControlStreamingINTEL = 3,
+    SpvStoreCacheControlMax = 0x7fffffff,
+} SpvStoreCacheControl;
+
+typedef enum SpvNamedMaximumNumberOfRegisters_ {
+    SpvNamedMaximumNumberOfRegistersAutoINTEL = 0,
+    SpvNamedMaximumNumberOfRegistersMax = 0x7fffffff,
+} SpvNamedMaximumNumberOfRegisters;
+
+typedef enum SpvMatrixMultiplyAccumulateOperandsShift_ {
+    SpvMatrixMultiplyAccumulateOperandsMatrixASignedComponentsINTELShift = 0,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBSignedComponentsINTELShift = 1,
+    SpvMatrixMultiplyAccumulateOperandsMatrixCBFloat16INTELShift = 2,
+    SpvMatrixMultiplyAccumulateOperandsMatrixResultBFloat16INTELShift = 3,
+    SpvMatrixMultiplyAccumulateOperandsMatrixAPackedInt8INTELShift = 4,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBPackedInt8INTELShift = 5,
+    SpvMatrixMultiplyAccumulateOperandsMatrixAPackedInt4INTELShift = 6,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBPackedInt4INTELShift = 7,
+    SpvMatrixMultiplyAccumulateOperandsMatrixATF32INTELShift = 8,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBTF32INTELShift = 9,
+    SpvMatrixMultiplyAccumulateOperandsMatrixAPackedFloat16INTELShift = 10,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBPackedFloat16INTELShift = 11,
+    SpvMatrixMultiplyAccumulateOperandsMatrixAPackedBFloat16INTELShift = 12,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBPackedBFloat16INTELShift = 13,
+    SpvMatrixMultiplyAccumulateOperandsMax = 0x7fffffff,
+} SpvMatrixMultiplyAccumulateOperandsShift;
+
+typedef enum SpvMatrixMultiplyAccumulateOperandsMask_ {
+    SpvMatrixMultiplyAccumulateOperandsMaskNone = 0,
+    SpvMatrixMultiplyAccumulateOperandsMatrixASignedComponentsINTELMask = 0x00000001,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBSignedComponentsINTELMask = 0x00000002,
+    SpvMatrixMultiplyAccumulateOperandsMatrixCBFloat16INTELMask = 0x00000004,
+    SpvMatrixMultiplyAccumulateOperandsMatrixResultBFloat16INTELMask = 0x00000008,
+    SpvMatrixMultiplyAccumulateOperandsMatrixAPackedInt8INTELMask = 0x00000010,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBPackedInt8INTELMask = 0x00000020,
+    SpvMatrixMultiplyAccumulateOperandsMatrixAPackedInt4INTELMask = 0x00000040,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBPackedInt4INTELMask = 0x00000080,
+    SpvMatrixMultiplyAccumulateOperandsMatrixATF32INTELMask = 0x00000100,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBTF32INTELMask = 0x00000200,
+    SpvMatrixMultiplyAccumulateOperandsMatrixAPackedFloat16INTELMask = 0x00000400,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBPackedFloat16INTELMask = 0x00000800,
+    SpvMatrixMultiplyAccumulateOperandsMatrixAPackedBFloat16INTELMask = 0x00001000,
+    SpvMatrixMultiplyAccumulateOperandsMatrixBPackedBFloat16INTELMask = 0x00002000,
+} SpvMatrixMultiplyAccumulateOperandsMask;
+
+typedef enum SpvRawAccessChainOperandsShift_ {
+    SpvRawAccessChainOperandsRobustnessPerComponentNVShift = 0,
+    SpvRawAccessChainOperandsRobustnessPerElementNVShift = 1,
+    SpvRawAccessChainOperandsMax = 0x7fffffff,
+} SpvRawAccessChainOperandsShift;
+
+typedef enum SpvRawAccessChainOperandsMask_ {
+    SpvRawAccessChainOperandsMaskNone = 0,
+    SpvRawAccessChainOperandsRobustnessPerComponentNVMask = 0x00000001,
+    SpvRawAccessChainOperandsRobustnessPerElementNVMask = 0x00000002,
+} SpvRawAccessChainOperandsMask;
+
+typedef enum SpvFPEncoding_ {
+    SpvFPEncodingMax = 0x7fffffff,
+} SpvFPEncoding;
+
+typedef enum SpvCooperativeVectorMatrixLayout_ {
+    SpvCooperativeVectorMatrixLayoutRowMajorNV = 0,
+    SpvCooperativeVectorMatrixLayoutColumnMajorNV = 1,
+    SpvCooperativeVectorMatrixLayoutInferencingOptimalNV = 2,
+    SpvCooperativeVectorMatrixLayoutTrainingOptimalNV = 3,
+    SpvCooperativeVectorMatrixLayoutMax = 0x7fffffff,
+} SpvCooperativeVectorMatrixLayout;
+
+typedef enum SpvComponentType_ {
+    SpvComponentTypeFloat16NV = 0,
+    SpvComponentTypeFloat32NV = 1,
+    SpvComponentTypeFloat64NV = 2,
+    SpvComponentTypeSignedInt8NV = 3,
+    SpvComponentTypeSignedInt16NV = 4,
+    SpvComponentTypeSignedInt32NV = 5,
+    SpvComponentTypeSignedInt64NV = 6,
+    SpvComponentTypeUnsignedInt8NV = 7,
+    SpvComponentTypeUnsignedInt16NV = 8,
+    SpvComponentTypeUnsignedInt32NV = 9,
+    SpvComponentTypeUnsignedInt64NV = 10,
+    SpvComponentTypeSignedInt8PackedNV = 1000491000,
+    SpvComponentTypeUnsignedInt8PackedNV = 1000491001,
+    SpvComponentTypeFloatE4M3NV = 1000491002,
+    SpvComponentTypeFloatE5M2NV = 1000491003,
+    SpvComponentTypeMax = 0x7fffffff,
+} SpvComponentType;
 
 typedef enum SpvOp_ {
     SpvOpNop = 0,
@@ -1589,14 +1911,26 @@ typedef enum SpvOp_ {
     SpvOpPtrEqual = 401,
     SpvOpPtrNotEqual = 402,
     SpvOpPtrDiff = 403,
+    SpvOpColorAttachmentReadEXT = 4160,
+    SpvOpDepthAttachmentReadEXT = 4161,
+    SpvOpStencilAttachmentReadEXT = 4162,
     SpvOpTerminateInvocation = 4416,
+    SpvOpTypeUntypedPointerKHR = 4417,
+    SpvOpUntypedVariableKHR = 4418,
+    SpvOpUntypedAccessChainKHR = 4419,
+    SpvOpUntypedInBoundsAccessChainKHR = 4420,
     SpvOpSubgroupBallotKHR = 4421,
     SpvOpSubgroupFirstInvocationKHR = 4422,
+    SpvOpUntypedPtrAccessChainKHR = 4423,
+    SpvOpUntypedInBoundsPtrAccessChainKHR = 4424,
+    SpvOpUntypedArrayLengthKHR = 4425,
+    SpvOpUntypedPrefetchKHR = 4426,
     SpvOpSubgroupAllKHR = 4428,
     SpvOpSubgroupAnyKHR = 4429,
     SpvOpSubgroupAllEqualKHR = 4430,
     SpvOpGroupNonUniformRotateKHR = 4431,
     SpvOpSubgroupReadInvocationKHR = 4432,
+    SpvOpExtInstWithForwardRefsKHR = 4433,
     SpvOpTraceRayKHR = 4445,
     SpvOpExecuteCallableKHR = 4446,
     SpvOpConvertUToAccelerationStructureKHR = 4447,
@@ -1614,6 +1948,14 @@ typedef enum SpvOp_ {
     SpvOpUDotAccSatKHR = 4454,
     SpvOpSUDotAccSat = 4455,
     SpvOpSUDotAccSatKHR = 4455,
+    SpvOpTypeCooperativeMatrixKHR = 4456,
+    SpvOpCooperativeMatrixLoadKHR = 4457,
+    SpvOpCooperativeMatrixStoreKHR = 4458,
+    SpvOpCooperativeMatrixMulAddKHR = 4459,
+    SpvOpCooperativeMatrixLengthKHR = 4460,
+    SpvOpConstantCompositeReplicateEXT = 4461,
+    SpvOpSpecConstantCompositeReplicateEXT = 4462,
+    SpvOpCompositeConstructReplicateEXT = 4463,
     SpvOpTypeRayQueryKHR = 4472,
     SpvOpRayQueryInitializeKHR = 4473,
     SpvOpRayQueryTerminateKHR = 4474,
@@ -1621,6 +1963,14 @@ typedef enum SpvOp_ {
     SpvOpRayQueryConfirmIntersectionKHR = 4476,
     SpvOpRayQueryProceedKHR = 4477,
     SpvOpRayQueryGetIntersectionTypeKHR = 4479,
+    SpvOpImageSampleWeightedQCOM = 4480,
+    SpvOpImageBoxFilterQCOM = 4481,
+    SpvOpImageBlockMatchSSDQCOM = 4482,
+    SpvOpImageBlockMatchSADQCOM = 4483,
+    SpvOpImageBlockMatchWindowSSDQCOM = 4500,
+    SpvOpImageBlockMatchWindowSADQCOM = 4501,
+    SpvOpImageBlockMatchGatherSSDQCOM = 4502,
+    SpvOpImageBlockMatchGatherSADQCOM = 4503,
     SpvOpGroupIAddNonUniformAMD = 5000,
     SpvOpGroupFAddNonUniformAMD = 5001,
     SpvOpGroupFMinNonUniformAMD = 5002,
@@ -1632,6 +1982,16 @@ typedef enum SpvOp_ {
     SpvOpFragmentMaskFetchAMD = 5011,
     SpvOpFragmentFetchAMD = 5012,
     SpvOpReadClockKHR = 5056,
+    SpvOpAllocateNodePayloadsAMDX = 5074,
+    SpvOpEnqueueNodePayloadsAMDX = 5075,
+    SpvOpTypeNodePayloadArrayAMDX = 5076,
+    SpvOpFinishWritingNodePayloadAMDX = 5078,
+    SpvOpNodePayloadArrayLengthAMDX = 5090,
+    SpvOpIsNodePayloadValidAMDX = 5101,
+    SpvOpConstantStringAMDX = 5103,
+    SpvOpSpecConstantStringAMDX = 5104,
+    SpvOpGroupNonUniformQuadAllKHR = 5110,
+    SpvOpGroupNonUniformQuadAnyKHR = 5111,
     SpvOpHitObjectRecordHitMotionNV = 5249,
     SpvOpHitObjectRecordHitWithIndexMotionNV = 5250,
     SpvOpHitObjectRecordMissMotionNV = 5251,
@@ -1666,10 +2026,20 @@ typedef enum SpvOp_ {
     SpvOpReorderThreadWithHintNV = 5280,
     SpvOpTypeHitObjectNV = 5281,
     SpvOpImageSampleFootprintNV = 5283,
+    SpvOpTypeCooperativeVectorNV = 5288,
+    SpvOpCooperativeVectorMatrixMulNV = 5289,
+    SpvOpCooperativeVectorOuterProductAccumulateNV = 5290,
+    SpvOpCooperativeVectorReduceSumAccumulateNV = 5291,
+    SpvOpCooperativeVectorMatrixMulAddNV = 5292,
+    SpvOpCooperativeMatrixConvertNV = 5293,
     SpvOpEmitMeshTasksEXT = 5294,
     SpvOpSetMeshOutputsEXT = 5295,
     SpvOpGroupNonUniformPartitionNV = 5296,
     SpvOpWritePackedPrimitiveIndices4x8NV = 5299,
+    SpvOpFetchMicroTriangleVertexPositionNV = 5300,
+    SpvOpFetchMicroTriangleVertexBarycentricNV = 5301,
+    SpvOpCooperativeVectorLoadNV = 5302,
+    SpvOpCooperativeVectorStoreNV = 5303,
     SpvOpReportIntersectionKHR = 5334,
     SpvOpReportIntersectionNV = 5334,
     SpvOpIgnoreIntersectionNV = 5335,
@@ -1677,9 +2047,12 @@ typedef enum SpvOp_ {
     SpvOpTraceNV = 5337,
     SpvOpTraceMotionNV = 5338,
     SpvOpTraceRayMotionNV = 5339,
+    SpvOpRayQueryGetIntersectionTriangleVertexPositionsKHR = 5340,
     SpvOpTypeAccelerationStructureKHR = 5341,
     SpvOpTypeAccelerationStructureNV = 5341,
     SpvOpExecuteCallableNV = 5344,
+    SpvOpRayQueryGetClusterIdNV = 5345,
+    SpvOpHitObjectGetClusterIdNV = 5346,
     SpvOpTypeCooperativeMatrixNV = 5358,
     SpvOpCooperativeMatrixLoadNV = 5359,
     SpvOpCooperativeMatrixStoreNV = 5360,
@@ -1687,9 +2060,26 @@ typedef enum SpvOp_ {
     SpvOpCooperativeMatrixLengthNV = 5362,
     SpvOpBeginInvocationInterlockEXT = 5364,
     SpvOpEndInvocationInterlockEXT = 5365,
+    SpvOpCooperativeMatrixReduceNV = 5366,
+    SpvOpCooperativeMatrixLoadTensorNV = 5367,
+    SpvOpCooperativeMatrixStoreTensorNV = 5368,
+    SpvOpCooperativeMatrixPerElementOpNV = 5369,
+    SpvOpTypeTensorLayoutNV = 5370,
+    SpvOpTypeTensorViewNV = 5371,
+    SpvOpCreateTensorLayoutNV = 5372,
+    SpvOpTensorLayoutSetDimensionNV = 5373,
+    SpvOpTensorLayoutSetStrideNV = 5374,
+    SpvOpTensorLayoutSliceNV = 5375,
+    SpvOpTensorLayoutSetClampValueNV = 5376,
+    SpvOpCreateTensorViewNV = 5377,
+    SpvOpTensorViewSetDimensionNV = 5378,
+    SpvOpTensorViewSetStrideNV = 5379,
     SpvOpDemoteToHelperInvocation = 5380,
     SpvOpDemoteToHelperInvocationEXT = 5380,
     SpvOpIsHelperInvocationEXT = 5381,
+    SpvOpTensorViewSetClipNV = 5382,
+    SpvOpTensorLayoutSetBlockSizeNV = 5384,
+    SpvOpCooperativeMatrixTransposeNV = 5390,
     SpvOpConvertUToImageNV = 5391,
     SpvOpConvertUToSamplerNV = 5392,
     SpvOpConvertImageToUNV = 5393,
@@ -1697,6 +2087,20 @@ typedef enum SpvOp_ {
     SpvOpConvertUToSampledImageNV = 5395,
     SpvOpConvertSampledImageToUNV = 5396,
     SpvOpSamplerImageAddressingModeNV = 5397,
+    SpvOpRawAccessChainNV = 5398,
+    SpvOpRayQueryGetIntersectionSpherePositionNV = 5427,
+    SpvOpRayQueryGetIntersectionSphereRadiusNV = 5428,
+    SpvOpRayQueryGetIntersectionLSSPositionsNV = 5429,
+    SpvOpRayQueryGetIntersectionLSSRadiiNV = 5430,
+    SpvOpRayQueryGetIntersectionLSSHitValueNV = 5431,
+    SpvOpHitObjectGetSpherePositionNV = 5432,
+    SpvOpHitObjectGetSphereRadiusNV = 5433,
+    SpvOpHitObjectGetLSSPositionsNV = 5434,
+    SpvOpHitObjectGetLSSRadiiNV = 5435,
+    SpvOpHitObjectIsSphereHitNV = 5436,
+    SpvOpHitObjectIsLSSHitNV = 5437,
+    SpvOpRayQueryIsSphereHitNV = 5438,
+    SpvOpRayQueryIsLSSHitNV = 5439,
     SpvOpSubgroupShuffleINTEL = 5571,
     SpvOpSubgroupShuffleDownINTEL = 5572,
     SpvOpSubgroupShuffleUpINTEL = 5573,
@@ -1938,8 +2342,19 @@ typedef enum SpvOp_ {
     SpvOpTypeStructContinuedINTEL = 6090,
     SpvOpConstantCompositeContinuedINTEL = 6091,
     SpvOpSpecConstantCompositeContinuedINTEL = 6092,
+    SpvOpCompositeConstructContinuedINTEL = 6096,
+    SpvOpConvertFToBF16INTEL = 6116,
+    SpvOpConvertBF16ToFINTEL = 6117,
     SpvOpControlBarrierArriveINTEL = 6142,
     SpvOpControlBarrierWaitINTEL = 6143,
+    SpvOpArithmeticFenceEXT = 6145,
+    SpvOpSubgroupBlockPrefetchINTEL = 6221,
+    SpvOpSubgroup2DBlockLoadINTEL = 6231,
+    SpvOpSubgroup2DBlockLoadTransformINTEL = 6232,
+    SpvOpSubgroup2DBlockLoadTransposeINTEL = 6233,
+    SpvOpSubgroup2DBlockPrefetchINTEL = 6234,
+    SpvOpSubgroup2DBlockStoreINTEL = 6235,
+    SpvOpSubgroupMatrixMultiplyAccumulateINTEL = 6237,
     SpvOpGroupIMulKHR = 6401,
     SpvOpGroupFMulKHR = 6402,
     SpvOpGroupBitwiseAndKHR = 6403,
@@ -1948,6 +2363,8 @@ typedef enum SpvOp_ {
     SpvOpGroupLogicalAndKHR = 6406,
     SpvOpGroupLogicalOrKHR = 6407,
     SpvOpGroupLogicalXorKHR = 6408,
+    SpvOpMaskedGatherINTEL = 6428,
+    SpvOpMaskedScatterINTEL = 6429,
     SpvOpMax = 0x7fffffff,
 } SpvOp;
 
@@ -2303,14 +2720,26 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpPtrEqual: *hasResult = true; *hasResultType = true; break;
     case SpvOpPtrNotEqual: *hasResult = true; *hasResultType = true; break;
     case SpvOpPtrDiff: *hasResult = true; *hasResultType = true; break;
+    case SpvOpColorAttachmentReadEXT: *hasResult = true; *hasResultType = true; break;
+    case SpvOpDepthAttachmentReadEXT: *hasResult = true; *hasResultType = true; break;
+    case SpvOpStencilAttachmentReadEXT: *hasResult = true; *hasResultType = true; break;
     case SpvOpTerminateInvocation: *hasResult = false; *hasResultType = false; break;
+    case SpvOpTypeUntypedPointerKHR: *hasResult = true; *hasResultType = false; break;
+    case SpvOpUntypedVariableKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpUntypedAccessChainKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpUntypedInBoundsAccessChainKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpSubgroupBallotKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpSubgroupFirstInvocationKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpUntypedPtrAccessChainKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpUntypedInBoundsPtrAccessChainKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpUntypedArrayLengthKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpUntypedPrefetchKHR: *hasResult = false; *hasResultType = false; break;
     case SpvOpSubgroupAllKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpSubgroupAnyKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpSubgroupAllEqualKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpGroupNonUniformRotateKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpSubgroupReadInvocationKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpExtInstWithForwardRefsKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpTraceRayKHR: *hasResult = false; *hasResultType = false; break;
     case SpvOpExecuteCallableKHR: *hasResult = false; *hasResultType = false; break;
     case SpvOpConvertUToAccelerationStructureKHR: *hasResult = true; *hasResultType = true; break;
@@ -2322,6 +2751,14 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpSDotAccSat: *hasResult = true; *hasResultType = true; break;
     case SpvOpUDotAccSat: *hasResult = true; *hasResultType = true; break;
     case SpvOpSUDotAccSat: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTypeCooperativeMatrixKHR: *hasResult = true; *hasResultType = false; break;
+    case SpvOpCooperativeMatrixLoadKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpCooperativeMatrixStoreKHR: *hasResult = false; *hasResultType = false; break;
+    case SpvOpCooperativeMatrixMulAddKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpCooperativeMatrixLengthKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpConstantCompositeReplicateEXT: *hasResult = true; *hasResultType = true; break;
+    case SpvOpSpecConstantCompositeReplicateEXT: *hasResult = true; *hasResultType = true; break;
+    case SpvOpCompositeConstructReplicateEXT: *hasResult = true; *hasResultType = true; break;
     case SpvOpTypeRayQueryKHR: *hasResult = true; *hasResultType = false; break;
     case SpvOpRayQueryInitializeKHR: *hasResult = false; *hasResultType = false; break;
     case SpvOpRayQueryTerminateKHR: *hasResult = false; *hasResultType = false; break;
@@ -2329,6 +2766,14 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpRayQueryConfirmIntersectionKHR: *hasResult = false; *hasResultType = false; break;
     case SpvOpRayQueryProceedKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpRayQueryGetIntersectionTypeKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpImageSampleWeightedQCOM: *hasResult = true; *hasResultType = true; break;
+    case SpvOpImageBoxFilterQCOM: *hasResult = true; *hasResultType = true; break;
+    case SpvOpImageBlockMatchSSDQCOM: *hasResult = true; *hasResultType = true; break;
+    case SpvOpImageBlockMatchSADQCOM: *hasResult = true; *hasResultType = true; break;
+    case SpvOpImageBlockMatchWindowSSDQCOM: *hasResult = true; *hasResultType = true; break;
+    case SpvOpImageBlockMatchWindowSADQCOM: *hasResult = true; *hasResultType = true; break;
+    case SpvOpImageBlockMatchGatherSSDQCOM: *hasResult = true; *hasResultType = true; break;
+    case SpvOpImageBlockMatchGatherSADQCOM: *hasResult = true; *hasResultType = true; break;
     case SpvOpGroupIAddNonUniformAMD: *hasResult = true; *hasResultType = true; break;
     case SpvOpGroupFAddNonUniformAMD: *hasResult = true; *hasResultType = true; break;
     case SpvOpGroupFMinNonUniformAMD: *hasResult = true; *hasResultType = true; break;
@@ -2340,6 +2785,16 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpFragmentMaskFetchAMD: *hasResult = true; *hasResultType = true; break;
     case SpvOpFragmentFetchAMD: *hasResult = true; *hasResultType = true; break;
     case SpvOpReadClockKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpAllocateNodePayloadsAMDX: *hasResult = true; *hasResultType = true; break;
+    case SpvOpEnqueueNodePayloadsAMDX: *hasResult = false; *hasResultType = false; break;
+    case SpvOpTypeNodePayloadArrayAMDX: *hasResult = true; *hasResultType = false; break;
+    case SpvOpFinishWritingNodePayloadAMDX: *hasResult = true; *hasResultType = true; break;
+    case SpvOpNodePayloadArrayLengthAMDX: *hasResult = true; *hasResultType = true; break;
+    case SpvOpIsNodePayloadValidAMDX: *hasResult = true; *hasResultType = true; break;
+    case SpvOpConstantStringAMDX: *hasResult = true; *hasResultType = false; break;
+    case SpvOpSpecConstantStringAMDX: *hasResult = true; *hasResultType = false; break;
+    case SpvOpGroupNonUniformQuadAllKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpGroupNonUniformQuadAnyKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpHitObjectRecordHitMotionNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpHitObjectRecordHitWithIndexMotionNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpHitObjectRecordMissMotionNV: *hasResult = false; *hasResultType = false; break;
@@ -2374,18 +2829,31 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpReorderThreadWithHintNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpTypeHitObjectNV: *hasResult = true; *hasResultType = false; break;
     case SpvOpImageSampleFootprintNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTypeCooperativeVectorNV: *hasResult = true; *hasResultType = false; break;
+    case SpvOpCooperativeVectorMatrixMulNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpCooperativeVectorOuterProductAccumulateNV: *hasResult = false; *hasResultType = false; break;
+    case SpvOpCooperativeVectorReduceSumAccumulateNV: *hasResult = false; *hasResultType = false; break;
+    case SpvOpCooperativeVectorMatrixMulAddNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpCooperativeMatrixConvertNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpEmitMeshTasksEXT: *hasResult = false; *hasResultType = false; break;
     case SpvOpSetMeshOutputsEXT: *hasResult = false; *hasResultType = false; break;
     case SpvOpGroupNonUniformPartitionNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpWritePackedPrimitiveIndices4x8NV: *hasResult = false; *hasResultType = false; break;
-    case SpvOpReportIntersectionNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpFetchMicroTriangleVertexPositionNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpFetchMicroTriangleVertexBarycentricNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpCooperativeVectorLoadNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpCooperativeVectorStoreNV: *hasResult = false; *hasResultType = false; break;
+    case SpvOpReportIntersectionKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpIgnoreIntersectionNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpTerminateRayNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpTraceNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpTraceMotionNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpTraceRayMotionNV: *hasResult = false; *hasResultType = false; break;
-    case SpvOpTypeAccelerationStructureNV: *hasResult = true; *hasResultType = false; break;
+    case SpvOpRayQueryGetIntersectionTriangleVertexPositionsKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTypeAccelerationStructureKHR: *hasResult = true; *hasResultType = false; break;
     case SpvOpExecuteCallableNV: *hasResult = false; *hasResultType = false; break;
+    case SpvOpRayQueryGetClusterIdNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpHitObjectGetClusterIdNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpTypeCooperativeMatrixNV: *hasResult = true; *hasResultType = false; break;
     case SpvOpCooperativeMatrixLoadNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpCooperativeMatrixStoreNV: *hasResult = false; *hasResultType = false; break;
@@ -2393,8 +2861,25 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpCooperativeMatrixLengthNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpBeginInvocationInterlockEXT: *hasResult = false; *hasResultType = false; break;
     case SpvOpEndInvocationInterlockEXT: *hasResult = false; *hasResultType = false; break;
+    case SpvOpCooperativeMatrixReduceNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpCooperativeMatrixLoadTensorNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpCooperativeMatrixStoreTensorNV: *hasResult = false; *hasResultType = false; break;
+    case SpvOpCooperativeMatrixPerElementOpNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTypeTensorLayoutNV: *hasResult = true; *hasResultType = false; break;
+    case SpvOpTypeTensorViewNV: *hasResult = true; *hasResultType = false; break;
+    case SpvOpCreateTensorLayoutNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTensorLayoutSetDimensionNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTensorLayoutSetStrideNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTensorLayoutSliceNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTensorLayoutSetClampValueNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpCreateTensorViewNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTensorViewSetDimensionNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTensorViewSetStrideNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpDemoteToHelperInvocation: *hasResult = false; *hasResultType = false; break;
     case SpvOpIsHelperInvocationEXT: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTensorViewSetClipNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpTensorLayoutSetBlockSizeNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpCooperativeMatrixTransposeNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpConvertUToImageNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpConvertUToSamplerNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpConvertImageToUNV: *hasResult = true; *hasResultType = true; break;
@@ -2402,6 +2887,20 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpConvertUToSampledImageNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpConvertSampledImageToUNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpSamplerImageAddressingModeNV: *hasResult = false; *hasResultType = false; break;
+    case SpvOpRawAccessChainNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpRayQueryGetIntersectionSpherePositionNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpRayQueryGetIntersectionSphereRadiusNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpRayQueryGetIntersectionLSSPositionsNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpRayQueryGetIntersectionLSSRadiiNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpRayQueryGetIntersectionLSSHitValueNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpHitObjectGetSpherePositionNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpHitObjectGetSphereRadiusNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpHitObjectGetLSSPositionsNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpHitObjectGetLSSRadiiNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpHitObjectIsSphereHitNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpHitObjectIsLSSHitNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpRayQueryIsSphereHitNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpRayQueryIsLSSHitNV: *hasResult = true; *hasResultType = true; break;
     case SpvOpSubgroupShuffleINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpSubgroupShuffleDownINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpSubgroupShuffleUpINTEL: *hasResult = true; *hasResultType = true; break;
@@ -2428,7 +2927,7 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpUMul32x16INTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpConstantFunctionPointerINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpFunctionPointerCallINTEL: *hasResult = true; *hasResultType = true; break;
-    case SpvOpAsmTargetINTEL: *hasResult = true; *hasResultType = true; break;
+    case SpvOpAsmTargetINTEL: *hasResult = true; *hasResultType = false; break;
     case SpvOpAsmINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpAsmCallINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpAtomicFMinEXT: *hasResult = true; *hasResultType = true; break;
@@ -2641,8 +3140,19 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpTypeStructContinuedINTEL: *hasResult = false; *hasResultType = false; break;
     case SpvOpConstantCompositeContinuedINTEL: *hasResult = false; *hasResultType = false; break;
     case SpvOpSpecConstantCompositeContinuedINTEL: *hasResult = false; *hasResultType = false; break;
+    case SpvOpCompositeConstructContinuedINTEL: *hasResult = true; *hasResultType = true; break;
+    case SpvOpConvertFToBF16INTEL: *hasResult = true; *hasResultType = true; break;
+    case SpvOpConvertBF16ToFINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpControlBarrierArriveINTEL: *hasResult = false; *hasResultType = false; break;
     case SpvOpControlBarrierWaitINTEL: *hasResult = false; *hasResultType = false; break;
+    case SpvOpArithmeticFenceEXT: *hasResult = true; *hasResultType = true; break;
+    case SpvOpSubgroupBlockPrefetchINTEL: *hasResult = false; *hasResultType = false; break;
+    case SpvOpSubgroup2DBlockLoadINTEL: *hasResult = false; *hasResultType = false; break;
+    case SpvOpSubgroup2DBlockLoadTransformINTEL: *hasResult = false; *hasResultType = false; break;
+    case SpvOpSubgroup2DBlockLoadTransposeINTEL: *hasResult = false; *hasResultType = false; break;
+    case SpvOpSubgroup2DBlockPrefetchINTEL: *hasResult = false; *hasResultType = false; break;
+    case SpvOpSubgroup2DBlockStoreINTEL: *hasResult = false; *hasResultType = false; break;
+    case SpvOpSubgroupMatrixMultiplyAccumulateINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpGroupIMulKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpGroupFMulKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpGroupBitwiseAndKHR: *hasResult = true; *hasResultType = true; break;
@@ -2651,8 +3161,1932 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpGroupLogicalAndKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpGroupLogicalOrKHR: *hasResult = true; *hasResultType = true; break;
     case SpvOpGroupLogicalXorKHR: *hasResult = true; *hasResultType = true; break;
+    case SpvOpMaskedGatherINTEL: *hasResult = true; *hasResultType = true; break;
+    case SpvOpMaskedScatterINTEL: *hasResult = false; *hasResultType = false; break;
     }
 }
+inline const char* SpvSourceLanguageToString(SpvSourceLanguage value) {
+    switch (value) {
+    case SpvSourceLanguageUnknown: return "Unknown";
+    case SpvSourceLanguageESSL: return "ESSL";
+    case SpvSourceLanguageGLSL: return "GLSL";
+    case SpvSourceLanguageOpenCL_C: return "OpenCL_C";
+    case SpvSourceLanguageOpenCL_CPP: return "OpenCL_CPP";
+    case SpvSourceLanguageHLSL: return "HLSL";
+    case SpvSourceLanguageCPP_for_OpenCL: return "CPP_for_OpenCL";
+    case SpvSourceLanguageSYCL: return "SYCL";
+    case SpvSourceLanguageHERO_C: return "HERO_C";
+    case SpvSourceLanguageNZSL: return "NZSL";
+    case SpvSourceLanguageWGSL: return "WGSL";
+    case SpvSourceLanguageSlang: return "Slang";
+    case SpvSourceLanguageZig: return "Zig";
+    case SpvSourceLanguageRust: return "Rust";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvExecutionModelToString(SpvExecutionModel value) {
+    switch (value) {
+    case SpvExecutionModelVertex: return "Vertex";
+    case SpvExecutionModelTessellationControl: return "TessellationControl";
+    case SpvExecutionModelTessellationEvaluation: return "TessellationEvaluation";
+    case SpvExecutionModelGeometry: return "Geometry";
+    case SpvExecutionModelFragment: return "Fragment";
+    case SpvExecutionModelGLCompute: return "GLCompute";
+    case SpvExecutionModelKernel: return "Kernel";
+    case SpvExecutionModelTaskNV: return "TaskNV";
+    case SpvExecutionModelMeshNV: return "MeshNV";
+    case SpvExecutionModelRayGenerationKHR: return "RayGenerationKHR";
+    case SpvExecutionModelIntersectionKHR: return "IntersectionKHR";
+    case SpvExecutionModelAnyHitKHR: return "AnyHitKHR";
+    case SpvExecutionModelClosestHitKHR: return "ClosestHitKHR";
+    case SpvExecutionModelMissKHR: return "MissKHR";
+    case SpvExecutionModelCallableKHR: return "CallableKHR";
+    case SpvExecutionModelTaskEXT: return "TaskEXT";
+    case SpvExecutionModelMeshEXT: return "MeshEXT";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvAddressingModelToString(SpvAddressingModel value) {
+    switch (value) {
+    case SpvAddressingModelLogical: return "Logical";
+    case SpvAddressingModelPhysical32: return "Physical32";
+    case SpvAddressingModelPhysical64: return "Physical64";
+    case SpvAddressingModelPhysicalStorageBuffer64: return "PhysicalStorageBuffer64";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvMemoryModelToString(SpvMemoryModel value) {
+    switch (value) {
+    case SpvMemoryModelSimple: return "Simple";
+    case SpvMemoryModelGLSL450: return "GLSL450";
+    case SpvMemoryModelOpenCL: return "OpenCL";
+    case SpvMemoryModelVulkan: return "Vulkan";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvExecutionModeToString(SpvExecutionMode value) {
+    switch (value) {
+    case SpvExecutionModeInvocations: return "Invocations";
+    case SpvExecutionModeSpacingEqual: return "SpacingEqual";
+    case SpvExecutionModeSpacingFractionalEven: return "SpacingFractionalEven";
+    case SpvExecutionModeSpacingFractionalOdd: return "SpacingFractionalOdd";
+    case SpvExecutionModeVertexOrderCw: return "VertexOrderCw";
+    case SpvExecutionModeVertexOrderCcw: return "VertexOrderCcw";
+    case SpvExecutionModePixelCenterInteger: return "PixelCenterInteger";
+    case SpvExecutionModeOriginUpperLeft: return "OriginUpperLeft";
+    case SpvExecutionModeOriginLowerLeft: return "OriginLowerLeft";
+    case SpvExecutionModeEarlyFragmentTests: return "EarlyFragmentTests";
+    case SpvExecutionModePointMode: return "PointMode";
+    case SpvExecutionModeXfb: return "Xfb";
+    case SpvExecutionModeDepthReplacing: return "DepthReplacing";
+    case SpvExecutionModeDepthGreater: return "DepthGreater";
+    case SpvExecutionModeDepthLess: return "DepthLess";
+    case SpvExecutionModeDepthUnchanged: return "DepthUnchanged";
+    case SpvExecutionModeLocalSize: return "LocalSize";
+    case SpvExecutionModeLocalSizeHint: return "LocalSizeHint";
+    case SpvExecutionModeInputPoints: return "InputPoints";
+    case SpvExecutionModeInputLines: return "InputLines";
+    case SpvExecutionModeInputLinesAdjacency: return "InputLinesAdjacency";
+    case SpvExecutionModeTriangles: return "Triangles";
+    case SpvExecutionModeInputTrianglesAdjacency: return "InputTrianglesAdjacency";
+    case SpvExecutionModeQuads: return "Quads";
+    case SpvExecutionModeIsolines: return "Isolines";
+    case SpvExecutionModeOutputVertices: return "OutputVertices";
+    case SpvExecutionModeOutputPoints: return "OutputPoints";
+    case SpvExecutionModeOutputLineStrip: return "OutputLineStrip";
+    case SpvExecutionModeOutputTriangleStrip: return "OutputTriangleStrip";
+    case SpvExecutionModeVecTypeHint: return "VecTypeHint";
+    case SpvExecutionModeContractionOff: return "ContractionOff";
+    case SpvExecutionModeInitializer: return "Initializer";
+    case SpvExecutionModeFinalizer: return "Finalizer";
+    case SpvExecutionModeSubgroupSize: return "SubgroupSize";
+    case SpvExecutionModeSubgroupsPerWorkgroup: return "SubgroupsPerWorkgroup";
+    case SpvExecutionModeSubgroupsPerWorkgroupId: return "SubgroupsPerWorkgroupId";
+    case SpvExecutionModeLocalSizeId: return "LocalSizeId";
+    case SpvExecutionModeLocalSizeHintId: return "LocalSizeHintId";
+    case SpvExecutionModeNonCoherentColorAttachmentReadEXT: return "NonCoherentColorAttachmentReadEXT";
+    case SpvExecutionModeNonCoherentDepthAttachmentReadEXT: return "NonCoherentDepthAttachmentReadEXT";
+    case SpvExecutionModeNonCoherentStencilAttachmentReadEXT: return "NonCoherentStencilAttachmentReadEXT";
+    case SpvExecutionModeSubgroupUniformControlFlowKHR: return "SubgroupUniformControlFlowKHR";
+    case SpvExecutionModePostDepthCoverage: return "PostDepthCoverage";
+    case SpvExecutionModeDenormPreserve: return "DenormPreserve";
+    case SpvExecutionModeDenormFlushToZero: return "DenormFlushToZero";
+    case SpvExecutionModeSignedZeroInfNanPreserve: return "SignedZeroInfNanPreserve";
+    case SpvExecutionModeRoundingModeRTE: return "RoundingModeRTE";
+    case SpvExecutionModeRoundingModeRTZ: return "RoundingModeRTZ";
+    case SpvExecutionModeEarlyAndLateFragmentTestsAMD: return "EarlyAndLateFragmentTestsAMD";
+    case SpvExecutionModeStencilRefReplacingEXT: return "StencilRefReplacingEXT";
+    case SpvExecutionModeCoalescingAMDX: return "CoalescingAMDX";
+    case SpvExecutionModeIsApiEntryAMDX: return "IsApiEntryAMDX";
+    case SpvExecutionModeMaxNodeRecursionAMDX: return "MaxNodeRecursionAMDX";
+    case SpvExecutionModeStaticNumWorkgroupsAMDX: return "StaticNumWorkgroupsAMDX";
+    case SpvExecutionModeShaderIndexAMDX: return "ShaderIndexAMDX";
+    case SpvExecutionModeMaxNumWorkgroupsAMDX: return "MaxNumWorkgroupsAMDX";
+    case SpvExecutionModeStencilRefUnchangedFrontAMD: return "StencilRefUnchangedFrontAMD";
+    case SpvExecutionModeStencilRefGreaterFrontAMD: return "StencilRefGreaterFrontAMD";
+    case SpvExecutionModeStencilRefLessFrontAMD: return "StencilRefLessFrontAMD";
+    case SpvExecutionModeStencilRefUnchangedBackAMD: return "StencilRefUnchangedBackAMD";
+    case SpvExecutionModeStencilRefGreaterBackAMD: return "StencilRefGreaterBackAMD";
+    case SpvExecutionModeStencilRefLessBackAMD: return "StencilRefLessBackAMD";
+    case SpvExecutionModeQuadDerivativesKHR: return "QuadDerivativesKHR";
+    case SpvExecutionModeRequireFullQuadsKHR: return "RequireFullQuadsKHR";
+    case SpvExecutionModeSharesInputWithAMDX: return "SharesInputWithAMDX";
+    case SpvExecutionModeOutputLinesEXT: return "OutputLinesEXT";
+    case SpvExecutionModeOutputPrimitivesEXT: return "OutputPrimitivesEXT";
+    case SpvExecutionModeDerivativeGroupQuadsKHR: return "DerivativeGroupQuadsKHR";
+    case SpvExecutionModeDerivativeGroupLinearKHR: return "DerivativeGroupLinearKHR";
+    case SpvExecutionModeOutputTrianglesEXT: return "OutputTrianglesEXT";
+    case SpvExecutionModePixelInterlockOrderedEXT: return "PixelInterlockOrderedEXT";
+    case SpvExecutionModePixelInterlockUnorderedEXT: return "PixelInterlockUnorderedEXT";
+    case SpvExecutionModeSampleInterlockOrderedEXT: return "SampleInterlockOrderedEXT";
+    case SpvExecutionModeSampleInterlockUnorderedEXT: return "SampleInterlockUnorderedEXT";
+    case SpvExecutionModeShadingRateInterlockOrderedEXT: return "ShadingRateInterlockOrderedEXT";
+    case SpvExecutionModeShadingRateInterlockUnorderedEXT: return "ShadingRateInterlockUnorderedEXT";
+    case SpvExecutionModeSharedLocalMemorySizeINTEL: return "SharedLocalMemorySizeINTEL";
+    case SpvExecutionModeRoundingModeRTPINTEL: return "RoundingModeRTPINTEL";
+    case SpvExecutionModeRoundingModeRTNINTEL: return "RoundingModeRTNINTEL";
+    case SpvExecutionModeFloatingPointModeALTINTEL: return "FloatingPointModeALTINTEL";
+    case SpvExecutionModeFloatingPointModeIEEEINTEL: return "FloatingPointModeIEEEINTEL";
+    case SpvExecutionModeMaxWorkgroupSizeINTEL: return "MaxWorkgroupSizeINTEL";
+    case SpvExecutionModeMaxWorkDimINTEL: return "MaxWorkDimINTEL";
+    case SpvExecutionModeNoGlobalOffsetINTEL: return "NoGlobalOffsetINTEL";
+    case SpvExecutionModeNumSIMDWorkitemsINTEL: return "NumSIMDWorkitemsINTEL";
+    case SpvExecutionModeSchedulerTargetFmaxMhzINTEL: return "SchedulerTargetFmaxMhzINTEL";
+    case SpvExecutionModeMaximallyReconvergesKHR: return "MaximallyReconvergesKHR";
+    case SpvExecutionModeFPFastMathDefault: return "FPFastMathDefault";
+    case SpvExecutionModeStreamingInterfaceINTEL: return "StreamingInterfaceINTEL";
+    case SpvExecutionModeRegisterMapInterfaceINTEL: return "RegisterMapInterfaceINTEL";
+    case SpvExecutionModeNamedBarrierCountINTEL: return "NamedBarrierCountINTEL";
+    case SpvExecutionModeMaximumRegistersINTEL: return "MaximumRegistersINTEL";
+    case SpvExecutionModeMaximumRegistersIdINTEL: return "MaximumRegistersIdINTEL";
+    case SpvExecutionModeNamedMaximumRegistersINTEL: return "NamedMaximumRegistersINTEL";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvStorageClassToString(SpvStorageClass value) {
+    switch (value) {
+    case SpvStorageClassUniformConstant: return "UniformConstant";
+    case SpvStorageClassInput: return "Input";
+    case SpvStorageClassUniform: return "Uniform";
+    case SpvStorageClassOutput: return "Output";
+    case SpvStorageClassWorkgroup: return "Workgroup";
+    case SpvStorageClassCrossWorkgroup: return "CrossWorkgroup";
+    case SpvStorageClassPrivate: return "Private";
+    case SpvStorageClassFunction: return "Function";
+    case SpvStorageClassGeneric: return "Generic";
+    case SpvStorageClassPushConstant: return "PushConstant";
+    case SpvStorageClassAtomicCounter: return "AtomicCounter";
+    case SpvStorageClassImage: return "Image";
+    case SpvStorageClassStorageBuffer: return "StorageBuffer";
+    case SpvStorageClassTileImageEXT: return "TileImageEXT";
+    case SpvStorageClassNodePayloadAMDX: return "NodePayloadAMDX";
+    case SpvStorageClassCallableDataKHR: return "CallableDataKHR";
+    case SpvStorageClassIncomingCallableDataKHR: return "IncomingCallableDataKHR";
+    case SpvStorageClassRayPayloadKHR: return "RayPayloadKHR";
+    case SpvStorageClassHitAttributeKHR: return "HitAttributeKHR";
+    case SpvStorageClassIncomingRayPayloadKHR: return "IncomingRayPayloadKHR";
+    case SpvStorageClassShaderRecordBufferKHR: return "ShaderRecordBufferKHR";
+    case SpvStorageClassPhysicalStorageBuffer: return "PhysicalStorageBuffer";
+    case SpvStorageClassHitObjectAttributeNV: return "HitObjectAttributeNV";
+    case SpvStorageClassTaskPayloadWorkgroupEXT: return "TaskPayloadWorkgroupEXT";
+    case SpvStorageClassCodeSectionINTEL: return "CodeSectionINTEL";
+    case SpvStorageClassDeviceOnlyINTEL: return "DeviceOnlyINTEL";
+    case SpvStorageClassHostOnlyINTEL: return "HostOnlyINTEL";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvDimToString(SpvDim value) {
+    switch (value) {
+    case SpvDim1D: return "1D";
+    case SpvDim2D: return "2D";
+    case SpvDim3D: return "3D";
+    case SpvDimCube: return "Cube";
+    case SpvDimRect: return "Rect";
+    case SpvDimBuffer: return "Buffer";
+    case SpvDimSubpassData: return "SubpassData";
+    case SpvDimTileImageDataEXT: return "TileImageDataEXT";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvSamplerAddressingModeToString(SpvSamplerAddressingMode value) {
+    switch (value) {
+    case SpvSamplerAddressingModeNone: return "None";
+    case SpvSamplerAddressingModeClampToEdge: return "ClampToEdge";
+    case SpvSamplerAddressingModeClamp: return "Clamp";
+    case SpvSamplerAddressingModeRepeat: return "Repeat";
+    case SpvSamplerAddressingModeRepeatMirrored: return "RepeatMirrored";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvSamplerFilterModeToString(SpvSamplerFilterMode value) {
+    switch (value) {
+    case SpvSamplerFilterModeNearest: return "Nearest";
+    case SpvSamplerFilterModeLinear: return "Linear";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvImageFormatToString(SpvImageFormat value) {
+    switch (value) {
+    case SpvImageFormatUnknown: return "Unknown";
+    case SpvImageFormatRgba32f: return "Rgba32f";
+    case SpvImageFormatRgba16f: return "Rgba16f";
+    case SpvImageFormatR32f: return "R32f";
+    case SpvImageFormatRgba8: return "Rgba8";
+    case SpvImageFormatRgba8Snorm: return "Rgba8Snorm";
+    case SpvImageFormatRg32f: return "Rg32f";
+    case SpvImageFormatRg16f: return "Rg16f";
+    case SpvImageFormatR11fG11fB10f: return "R11fG11fB10f";
+    case SpvImageFormatR16f: return "R16f";
+    case SpvImageFormatRgba16: return "Rgba16";
+    case SpvImageFormatRgb10A2: return "Rgb10A2";
+    case SpvImageFormatRg16: return "Rg16";
+    case SpvImageFormatRg8: return "Rg8";
+    case SpvImageFormatR16: return "R16";
+    case SpvImageFormatR8: return "R8";
+    case SpvImageFormatRgba16Snorm: return "Rgba16Snorm";
+    case SpvImageFormatRg16Snorm: return "Rg16Snorm";
+    case SpvImageFormatRg8Snorm: return "Rg8Snorm";
+    case SpvImageFormatR16Snorm: return "R16Snorm";
+    case SpvImageFormatR8Snorm: return "R8Snorm";
+    case SpvImageFormatRgba32i: return "Rgba32i";
+    case SpvImageFormatRgba16i: return "Rgba16i";
+    case SpvImageFormatRgba8i: return "Rgba8i";
+    case SpvImageFormatR32i: return "R32i";
+    case SpvImageFormatRg32i: return "Rg32i";
+    case SpvImageFormatRg16i: return "Rg16i";
+    case SpvImageFormatRg8i: return "Rg8i";
+    case SpvImageFormatR16i: return "R16i";
+    case SpvImageFormatR8i: return "R8i";
+    case SpvImageFormatRgba32ui: return "Rgba32ui";
+    case SpvImageFormatRgba16ui: return "Rgba16ui";
+    case SpvImageFormatRgba8ui: return "Rgba8ui";
+    case SpvImageFormatR32ui: return "R32ui";
+    case SpvImageFormatRgb10a2ui: return "Rgb10a2ui";
+    case SpvImageFormatRg32ui: return "Rg32ui";
+    case SpvImageFormatRg16ui: return "Rg16ui";
+    case SpvImageFormatRg8ui: return "Rg8ui";
+    case SpvImageFormatR16ui: return "R16ui";
+    case SpvImageFormatR8ui: return "R8ui";
+    case SpvImageFormatR64ui: return "R64ui";
+    case SpvImageFormatR64i: return "R64i";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvImageChannelOrderToString(SpvImageChannelOrder value) {
+    switch (value) {
+    case SpvImageChannelOrderR: return "R";
+    case SpvImageChannelOrderA: return "A";
+    case SpvImageChannelOrderRG: return "RG";
+    case SpvImageChannelOrderRA: return "RA";
+    case SpvImageChannelOrderRGB: return "RGB";
+    case SpvImageChannelOrderRGBA: return "RGBA";
+    case SpvImageChannelOrderBGRA: return "BGRA";
+    case SpvImageChannelOrderARGB: return "ARGB";
+    case SpvImageChannelOrderIntensity: return "Intensity";
+    case SpvImageChannelOrderLuminance: return "Luminance";
+    case SpvImageChannelOrderRx: return "Rx";
+    case SpvImageChannelOrderRGx: return "RGx";
+    case SpvImageChannelOrderRGBx: return "RGBx";
+    case SpvImageChannelOrderDepth: return "Depth";
+    case SpvImageChannelOrderDepthStencil: return "DepthStencil";
+    case SpvImageChannelOrdersRGB: return "sRGB";
+    case SpvImageChannelOrdersRGBx: return "sRGBx";
+    case SpvImageChannelOrdersRGBA: return "sRGBA";
+    case SpvImageChannelOrdersBGRA: return "sBGRA";
+    case SpvImageChannelOrderABGR: return "ABGR";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvImageChannelDataTypeToString(SpvImageChannelDataType value) {
+    switch (value) {
+    case SpvImageChannelDataTypeSnormInt8: return "SnormInt8";
+    case SpvImageChannelDataTypeSnormInt16: return "SnormInt16";
+    case SpvImageChannelDataTypeUnormInt8: return "UnormInt8";
+    case SpvImageChannelDataTypeUnormInt16: return "UnormInt16";
+    case SpvImageChannelDataTypeUnormShort565: return "UnormShort565";
+    case SpvImageChannelDataTypeUnormShort555: return "UnormShort555";
+    case SpvImageChannelDataTypeUnormInt101010: return "UnormInt101010";
+    case SpvImageChannelDataTypeSignedInt8: return "SignedInt8";
+    case SpvImageChannelDataTypeSignedInt16: return "SignedInt16";
+    case SpvImageChannelDataTypeSignedInt32: return "SignedInt32";
+    case SpvImageChannelDataTypeUnsignedInt8: return "UnsignedInt8";
+    case SpvImageChannelDataTypeUnsignedInt16: return "UnsignedInt16";
+    case SpvImageChannelDataTypeUnsignedInt32: return "UnsignedInt32";
+    case SpvImageChannelDataTypeHalfFloat: return "HalfFloat";
+    case SpvImageChannelDataTypeFloat: return "Float";
+    case SpvImageChannelDataTypeUnormInt24: return "UnormInt24";
+    case SpvImageChannelDataTypeUnormInt101010_2: return "UnormInt101010_2";
+    case SpvImageChannelDataTypeUnsignedIntRaw10EXT: return "UnsignedIntRaw10EXT";
+    case SpvImageChannelDataTypeUnsignedIntRaw12EXT: return "UnsignedIntRaw12EXT";
+    case SpvImageChannelDataTypeUnormInt2_101010EXT: return "UnormInt2_101010EXT";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvFPRoundingModeToString(SpvFPRoundingMode value) {
+    switch (value) {
+    case SpvFPRoundingModeRTE: return "RTE";
+    case SpvFPRoundingModeRTZ: return "RTZ";
+    case SpvFPRoundingModeRTP: return "RTP";
+    case SpvFPRoundingModeRTN: return "RTN";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvLinkageTypeToString(SpvLinkageType value) {
+    switch (value) {
+    case SpvLinkageTypeExport: return "Export";
+    case SpvLinkageTypeImport: return "Import";
+    case SpvLinkageTypeLinkOnceODR: return "LinkOnceODR";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvAccessQualifierToString(SpvAccessQualifier value) {
+    switch (value) {
+    case SpvAccessQualifierReadOnly: return "ReadOnly";
+    case SpvAccessQualifierWriteOnly: return "WriteOnly";
+    case SpvAccessQualifierReadWrite: return "ReadWrite";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvFunctionParameterAttributeToString(SpvFunctionParameterAttribute value) {
+    switch (value) {
+    case SpvFunctionParameterAttributeZext: return "Zext";
+    case SpvFunctionParameterAttributeSext: return "Sext";
+    case SpvFunctionParameterAttributeByVal: return "ByVal";
+    case SpvFunctionParameterAttributeSret: return "Sret";
+    case SpvFunctionParameterAttributeNoAlias: return "NoAlias";
+    case SpvFunctionParameterAttributeNoCapture: return "NoCapture";
+    case SpvFunctionParameterAttributeNoWrite: return "NoWrite";
+    case SpvFunctionParameterAttributeNoReadWrite: return "NoReadWrite";
+    case SpvFunctionParameterAttributeRuntimeAlignedINTEL: return "RuntimeAlignedINTEL";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvDecorationToString(SpvDecoration value) {
+    switch (value) {
+    case SpvDecorationRelaxedPrecision: return "RelaxedPrecision";
+    case SpvDecorationSpecId: return "SpecId";
+    case SpvDecorationBlock: return "Block";
+    case SpvDecorationBufferBlock: return "BufferBlock";
+    case SpvDecorationRowMajor: return "RowMajor";
+    case SpvDecorationColMajor: return "ColMajor";
+    case SpvDecorationArrayStride: return "ArrayStride";
+    case SpvDecorationMatrixStride: return "MatrixStride";
+    case SpvDecorationGLSLShared: return "GLSLShared";
+    case SpvDecorationGLSLPacked: return "GLSLPacked";
+    case SpvDecorationCPacked: return "CPacked";
+    case SpvDecorationBuiltIn: return "BuiltIn";
+    case SpvDecorationNoPerspective: return "NoPerspective";
+    case SpvDecorationFlat: return "Flat";
+    case SpvDecorationPatch: return "Patch";
+    case SpvDecorationCentroid: return "Centroid";
+    case SpvDecorationSample: return "Sample";
+    case SpvDecorationInvariant: return "Invariant";
+    case SpvDecorationRestrict: return "Restrict";
+    case SpvDecorationAliased: return "Aliased";
+    case SpvDecorationVolatile: return "Volatile";
+    case SpvDecorationConstant: return "Constant";
+    case SpvDecorationCoherent: return "Coherent";
+    case SpvDecorationNonWritable: return "NonWritable";
+    case SpvDecorationNonReadable: return "NonReadable";
+    case SpvDecorationUniform: return "Uniform";
+    case SpvDecorationUniformId: return "UniformId";
+    case SpvDecorationSaturatedConversion: return "SaturatedConversion";
+    case SpvDecorationStream: return "Stream";
+    case SpvDecorationLocation: return "Location";
+    case SpvDecorationComponent: return "Component";
+    case SpvDecorationIndex: return "Index";
+    case SpvDecorationBinding: return "Binding";
+    case SpvDecorationDescriptorSet: return "DescriptorSet";
+    case SpvDecorationOffset: return "Offset";
+    case SpvDecorationXfbBuffer: return "XfbBuffer";
+    case SpvDecorationXfbStride: return "XfbStride";
+    case SpvDecorationFuncParamAttr: return "FuncParamAttr";
+    case SpvDecorationFPRoundingMode: return "FPRoundingMode";
+    case SpvDecorationFPFastMathMode: return "FPFastMathMode";
+    case SpvDecorationLinkageAttributes: return "LinkageAttributes";
+    case SpvDecorationNoContraction: return "NoContraction";
+    case SpvDecorationInputAttachmentIndex: return "InputAttachmentIndex";
+    case SpvDecorationAlignment: return "Alignment";
+    case SpvDecorationMaxByteOffset: return "MaxByteOffset";
+    case SpvDecorationAlignmentId: return "AlignmentId";
+    case SpvDecorationMaxByteOffsetId: return "MaxByteOffsetId";
+    case SpvDecorationNoSignedWrap: return "NoSignedWrap";
+    case SpvDecorationNoUnsignedWrap: return "NoUnsignedWrap";
+    case SpvDecorationWeightTextureQCOM: return "WeightTextureQCOM";
+    case SpvDecorationBlockMatchTextureQCOM: return "BlockMatchTextureQCOM";
+    case SpvDecorationBlockMatchSamplerQCOM: return "BlockMatchSamplerQCOM";
+    case SpvDecorationExplicitInterpAMD: return "ExplicitInterpAMD";
+    case SpvDecorationNodeSharesPayloadLimitsWithAMDX: return "NodeSharesPayloadLimitsWithAMDX";
+    case SpvDecorationNodeMaxPayloadsAMDX: return "NodeMaxPayloadsAMDX";
+    case SpvDecorationTrackFinishWritingAMDX: return "TrackFinishWritingAMDX";
+    case SpvDecorationPayloadNodeNameAMDX: return "PayloadNodeNameAMDX";
+    case SpvDecorationPayloadNodeBaseIndexAMDX: return "PayloadNodeBaseIndexAMDX";
+    case SpvDecorationPayloadNodeSparseArrayAMDX: return "PayloadNodeSparseArrayAMDX";
+    case SpvDecorationPayloadNodeArraySizeAMDX: return "PayloadNodeArraySizeAMDX";
+    case SpvDecorationPayloadDispatchIndirectAMDX: return "PayloadDispatchIndirectAMDX";
+    case SpvDecorationOverrideCoverageNV: return "OverrideCoverageNV";
+    case SpvDecorationPassthroughNV: return "PassthroughNV";
+    case SpvDecorationViewportRelativeNV: return "ViewportRelativeNV";
+    case SpvDecorationSecondaryViewportRelativeNV: return "SecondaryViewportRelativeNV";
+    case SpvDecorationPerPrimitiveEXT: return "PerPrimitiveEXT";
+    case SpvDecorationPerViewNV: return "PerViewNV";
+    case SpvDecorationPerTaskNV: return "PerTaskNV";
+    case SpvDecorationPerVertexKHR: return "PerVertexKHR";
+    case SpvDecorationNonUniform: return "NonUniform";
+    case SpvDecorationRestrictPointer: return "RestrictPointer";
+    case SpvDecorationAliasedPointer: return "AliasedPointer";
+    case SpvDecorationHitObjectShaderRecordBufferNV: return "HitObjectShaderRecordBufferNV";
+    case SpvDecorationBindlessSamplerNV: return "BindlessSamplerNV";
+    case SpvDecorationBindlessImageNV: return "BindlessImageNV";
+    case SpvDecorationBoundSamplerNV: return "BoundSamplerNV";
+    case SpvDecorationBoundImageNV: return "BoundImageNV";
+    case SpvDecorationSIMTCallINTEL: return "SIMTCallINTEL";
+    case SpvDecorationReferencedIndirectlyINTEL: return "ReferencedIndirectlyINTEL";
+    case SpvDecorationClobberINTEL: return "ClobberINTEL";
+    case SpvDecorationSideEffectsINTEL: return "SideEffectsINTEL";
+    case SpvDecorationVectorComputeVariableINTEL: return "VectorComputeVariableINTEL";
+    case SpvDecorationFuncParamIOKindINTEL: return "FuncParamIOKindINTEL";
+    case SpvDecorationVectorComputeFunctionINTEL: return "VectorComputeFunctionINTEL";
+    case SpvDecorationStackCallINTEL: return "StackCallINTEL";
+    case SpvDecorationGlobalVariableOffsetINTEL: return "GlobalVariableOffsetINTEL";
+    case SpvDecorationCounterBuffer: return "CounterBuffer";
+    case SpvDecorationHlslSemanticGOOGLE: return "HlslSemanticGOOGLE";
+    case SpvDecorationUserTypeGOOGLE: return "UserTypeGOOGLE";
+    case SpvDecorationFunctionRoundingModeINTEL: return "FunctionRoundingModeINTEL";
+    case SpvDecorationFunctionDenormModeINTEL: return "FunctionDenormModeINTEL";
+    case SpvDecorationRegisterINTEL: return "RegisterINTEL";
+    case SpvDecorationMemoryINTEL: return "MemoryINTEL";
+    case SpvDecorationNumbanksINTEL: return "NumbanksINTEL";
+    case SpvDecorationBankwidthINTEL: return "BankwidthINTEL";
+    case SpvDecorationMaxPrivateCopiesINTEL: return "MaxPrivateCopiesINTEL";
+    case SpvDecorationSinglepumpINTEL: return "SinglepumpINTEL";
+    case SpvDecorationDoublepumpINTEL: return "DoublepumpINTEL";
+    case SpvDecorationMaxReplicatesINTEL: return "MaxReplicatesINTEL";
+    case SpvDecorationSimpleDualPortINTEL: return "SimpleDualPortINTEL";
+    case SpvDecorationMergeINTEL: return "MergeINTEL";
+    case SpvDecorationBankBitsINTEL: return "BankBitsINTEL";
+    case SpvDecorationForcePow2DepthINTEL: return "ForcePow2DepthINTEL";
+    case SpvDecorationStridesizeINTEL: return "StridesizeINTEL";
+    case SpvDecorationWordsizeINTEL: return "WordsizeINTEL";
+    case SpvDecorationTrueDualPortINTEL: return "TrueDualPortINTEL";
+    case SpvDecorationBurstCoalesceINTEL: return "BurstCoalesceINTEL";
+    case SpvDecorationCacheSizeINTEL: return "CacheSizeINTEL";
+    case SpvDecorationDontStaticallyCoalesceINTEL: return "DontStaticallyCoalesceINTEL";
+    case SpvDecorationPrefetchINTEL: return "PrefetchINTEL";
+    case SpvDecorationStallEnableINTEL: return "StallEnableINTEL";
+    case SpvDecorationFuseLoopsInFunctionINTEL: return "FuseLoopsInFunctionINTEL";
+    case SpvDecorationMathOpDSPModeINTEL: return "MathOpDSPModeINTEL";
+    case SpvDecorationAliasScopeINTEL: return "AliasScopeINTEL";
+    case SpvDecorationNoAliasINTEL: return "NoAliasINTEL";
+    case SpvDecorationInitiationIntervalINTEL: return "InitiationIntervalINTEL";
+    case SpvDecorationMaxConcurrencyINTEL: return "MaxConcurrencyINTEL";
+    case SpvDecorationPipelineEnableINTEL: return "PipelineEnableINTEL";
+    case SpvDecorationBufferLocationINTEL: return "BufferLocationINTEL";
+    case SpvDecorationIOPipeStorageINTEL: return "IOPipeStorageINTEL";
+    case SpvDecorationFunctionFloatingPointModeINTEL: return "FunctionFloatingPointModeINTEL";
+    case SpvDecorationSingleElementVectorINTEL: return "SingleElementVectorINTEL";
+    case SpvDecorationVectorComputeCallableFunctionINTEL: return "VectorComputeCallableFunctionINTEL";
+    case SpvDecorationMediaBlockIOINTEL: return "MediaBlockIOINTEL";
+    case SpvDecorationStallFreeINTEL: return "StallFreeINTEL";
+    case SpvDecorationFPMaxErrorDecorationINTEL: return "FPMaxErrorDecorationINTEL";
+    case SpvDecorationLatencyControlLabelINTEL: return "LatencyControlLabelINTEL";
+    case SpvDecorationLatencyControlConstraintINTEL: return "LatencyControlConstraintINTEL";
+    case SpvDecorationConduitKernelArgumentINTEL: return "ConduitKernelArgumentINTEL";
+    case SpvDecorationRegisterMapKernelArgumentINTEL: return "RegisterMapKernelArgumentINTEL";
+    case SpvDecorationMMHostInterfaceAddressWidthINTEL: return "MMHostInterfaceAddressWidthINTEL";
+    case SpvDecorationMMHostInterfaceDataWidthINTEL: return "MMHostInterfaceDataWidthINTEL";
+    case SpvDecorationMMHostInterfaceLatencyINTEL: return "MMHostInterfaceLatencyINTEL";
+    case SpvDecorationMMHostInterfaceReadWriteModeINTEL: return "MMHostInterfaceReadWriteModeINTEL";
+    case SpvDecorationMMHostInterfaceMaxBurstINTEL: return "MMHostInterfaceMaxBurstINTEL";
+    case SpvDecorationMMHostInterfaceWaitRequestINTEL: return "MMHostInterfaceWaitRequestINTEL";
+    case SpvDecorationStableKernelArgumentINTEL: return "StableKernelArgumentINTEL";
+    case SpvDecorationHostAccessINTEL: return "HostAccessINTEL";
+    case SpvDecorationInitModeINTEL: return "InitModeINTEL";
+    case SpvDecorationImplementInRegisterMapINTEL: return "ImplementInRegisterMapINTEL";
+    case SpvDecorationCacheControlLoadINTEL: return "CacheControlLoadINTEL";
+    case SpvDecorationCacheControlStoreINTEL: return "CacheControlStoreINTEL";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvBuiltInToString(SpvBuiltIn value) {
+    switch (value) {
+    case SpvBuiltInPosition: return "Position";
+    case SpvBuiltInPointSize: return "PointSize";
+    case SpvBuiltInClipDistance: return "ClipDistance";
+    case SpvBuiltInCullDistance: return "CullDistance";
+    case SpvBuiltInVertexId: return "VertexId";
+    case SpvBuiltInInstanceId: return "InstanceId";
+    case SpvBuiltInPrimitiveId: return "PrimitiveId";
+    case SpvBuiltInInvocationId: return "InvocationId";
+    case SpvBuiltInLayer: return "Layer";
+    case SpvBuiltInViewportIndex: return "ViewportIndex";
+    case SpvBuiltInTessLevelOuter: return "TessLevelOuter";
+    case SpvBuiltInTessLevelInner: return "TessLevelInner";
+    case SpvBuiltInTessCoord: return "TessCoord";
+    case SpvBuiltInPatchVertices: return "PatchVertices";
+    case SpvBuiltInFragCoord: return "FragCoord";
+    case SpvBuiltInPointCoord: return "PointCoord";
+    case SpvBuiltInFrontFacing: return "FrontFacing";
+    case SpvBuiltInSampleId: return "SampleId";
+    case SpvBuiltInSamplePosition: return "SamplePosition";
+    case SpvBuiltInSampleMask: return "SampleMask";
+    case SpvBuiltInFragDepth: return "FragDepth";
+    case SpvBuiltInHelperInvocation: return "HelperInvocation";
+    case SpvBuiltInNumWorkgroups: return "NumWorkgroups";
+    case SpvBuiltInWorkgroupSize: return "WorkgroupSize";
+    case SpvBuiltInWorkgroupId: return "WorkgroupId";
+    case SpvBuiltInLocalInvocationId: return "LocalInvocationId";
+    case SpvBuiltInGlobalInvocationId: return "GlobalInvocationId";
+    case SpvBuiltInLocalInvocationIndex: return "LocalInvocationIndex";
+    case SpvBuiltInWorkDim: return "WorkDim";
+    case SpvBuiltInGlobalSize: return "GlobalSize";
+    case SpvBuiltInEnqueuedWorkgroupSize: return "EnqueuedWorkgroupSize";
+    case SpvBuiltInGlobalOffset: return "GlobalOffset";
+    case SpvBuiltInGlobalLinearId: return "GlobalLinearId";
+    case SpvBuiltInSubgroupSize: return "SubgroupSize";
+    case SpvBuiltInSubgroupMaxSize: return "SubgroupMaxSize";
+    case SpvBuiltInNumSubgroups: return "NumSubgroups";
+    case SpvBuiltInNumEnqueuedSubgroups: return "NumEnqueuedSubgroups";
+    case SpvBuiltInSubgroupId: return "SubgroupId";
+    case SpvBuiltInSubgroupLocalInvocationId: return "SubgroupLocalInvocationId";
+    case SpvBuiltInVertexIndex: return "VertexIndex";
+    case SpvBuiltInInstanceIndex: return "InstanceIndex";
+    case SpvBuiltInCoreIDARM: return "CoreIDARM";
+    case SpvBuiltInCoreCountARM: return "CoreCountARM";
+    case SpvBuiltInCoreMaxIDARM: return "CoreMaxIDARM";
+    case SpvBuiltInWarpIDARM: return "WarpIDARM";
+    case SpvBuiltInWarpMaxIDARM: return "WarpMaxIDARM";
+    case SpvBuiltInSubgroupEqMask: return "SubgroupEqMask";
+    case SpvBuiltInSubgroupGeMask: return "SubgroupGeMask";
+    case SpvBuiltInSubgroupGtMask: return "SubgroupGtMask";
+    case SpvBuiltInSubgroupLeMask: return "SubgroupLeMask";
+    case SpvBuiltInSubgroupLtMask: return "SubgroupLtMask";
+    case SpvBuiltInBaseVertex: return "BaseVertex";
+    case SpvBuiltInBaseInstance: return "BaseInstance";
+    case SpvBuiltInDrawIndex: return "DrawIndex";
+    case SpvBuiltInPrimitiveShadingRateKHR: return "PrimitiveShadingRateKHR";
+    case SpvBuiltInDeviceIndex: return "DeviceIndex";
+    case SpvBuiltInViewIndex: return "ViewIndex";
+    case SpvBuiltInShadingRateKHR: return "ShadingRateKHR";
+    case SpvBuiltInBaryCoordNoPerspAMD: return "BaryCoordNoPerspAMD";
+    case SpvBuiltInBaryCoordNoPerspCentroidAMD: return "BaryCoordNoPerspCentroidAMD";
+    case SpvBuiltInBaryCoordNoPerspSampleAMD: return "BaryCoordNoPerspSampleAMD";
+    case SpvBuiltInBaryCoordSmoothAMD: return "BaryCoordSmoothAMD";
+    case SpvBuiltInBaryCoordSmoothCentroidAMD: return "BaryCoordSmoothCentroidAMD";
+    case SpvBuiltInBaryCoordSmoothSampleAMD: return "BaryCoordSmoothSampleAMD";
+    case SpvBuiltInBaryCoordPullModelAMD: return "BaryCoordPullModelAMD";
+    case SpvBuiltInFragStencilRefEXT: return "FragStencilRefEXT";
+    case SpvBuiltInRemainingRecursionLevelsAMDX: return "RemainingRecursionLevelsAMDX";
+    case SpvBuiltInShaderIndexAMDX: return "ShaderIndexAMDX";
+    case SpvBuiltInViewportMaskNV: return "ViewportMaskNV";
+    case SpvBuiltInSecondaryPositionNV: return "SecondaryPositionNV";
+    case SpvBuiltInSecondaryViewportMaskNV: return "SecondaryViewportMaskNV";
+    case SpvBuiltInPositionPerViewNV: return "PositionPerViewNV";
+    case SpvBuiltInViewportMaskPerViewNV: return "ViewportMaskPerViewNV";
+    case SpvBuiltInFullyCoveredEXT: return "FullyCoveredEXT";
+    case SpvBuiltInTaskCountNV: return "TaskCountNV";
+    case SpvBuiltInPrimitiveCountNV: return "PrimitiveCountNV";
+    case SpvBuiltInPrimitiveIndicesNV: return "PrimitiveIndicesNV";
+    case SpvBuiltInClipDistancePerViewNV: return "ClipDistancePerViewNV";
+    case SpvBuiltInCullDistancePerViewNV: return "CullDistancePerViewNV";
+    case SpvBuiltInLayerPerViewNV: return "LayerPerViewNV";
+    case SpvBuiltInMeshViewCountNV: return "MeshViewCountNV";
+    case SpvBuiltInMeshViewIndicesNV: return "MeshViewIndicesNV";
+    case SpvBuiltInBaryCoordKHR: return "BaryCoordKHR";
+    case SpvBuiltInBaryCoordNoPerspKHR: return "BaryCoordNoPerspKHR";
+    case SpvBuiltInFragSizeEXT: return "FragSizeEXT";
+    case SpvBuiltInFragInvocationCountEXT: return "FragInvocationCountEXT";
+    case SpvBuiltInPrimitivePointIndicesEXT: return "PrimitivePointIndicesEXT";
+    case SpvBuiltInPrimitiveLineIndicesEXT: return "PrimitiveLineIndicesEXT";
+    case SpvBuiltInPrimitiveTriangleIndicesEXT: return "PrimitiveTriangleIndicesEXT";
+    case SpvBuiltInCullPrimitiveEXT: return "CullPrimitiveEXT";
+    case SpvBuiltInLaunchIdKHR: return "LaunchIdKHR";
+    case SpvBuiltInLaunchSizeKHR: return "LaunchSizeKHR";
+    case SpvBuiltInWorldRayOriginKHR: return "WorldRayOriginKHR";
+    case SpvBuiltInWorldRayDirectionKHR: return "WorldRayDirectionKHR";
+    case SpvBuiltInObjectRayOriginKHR: return "ObjectRayOriginKHR";
+    case SpvBuiltInObjectRayDirectionKHR: return "ObjectRayDirectionKHR";
+    case SpvBuiltInRayTminKHR: return "RayTminKHR";
+    case SpvBuiltInRayTmaxKHR: return "RayTmaxKHR";
+    case SpvBuiltInInstanceCustomIndexKHR: return "InstanceCustomIndexKHR";
+    case SpvBuiltInObjectToWorldKHR: return "ObjectToWorldKHR";
+    case SpvBuiltInWorldToObjectKHR: return "WorldToObjectKHR";
+    case SpvBuiltInHitTNV: return "HitTNV";
+    case SpvBuiltInHitKindKHR: return "HitKindKHR";
+    case SpvBuiltInCurrentRayTimeNV: return "CurrentRayTimeNV";
+    case SpvBuiltInHitTriangleVertexPositionsKHR: return "HitTriangleVertexPositionsKHR";
+    case SpvBuiltInHitMicroTriangleVertexPositionsNV: return "HitMicroTriangleVertexPositionsNV";
+    case SpvBuiltInHitMicroTriangleVertexBarycentricsNV: return "HitMicroTriangleVertexBarycentricsNV";
+    case SpvBuiltInIncomingRayFlagsKHR: return "IncomingRayFlagsKHR";
+    case SpvBuiltInRayGeometryIndexKHR: return "RayGeometryIndexKHR";
+    case SpvBuiltInHitIsSphereNV: return "HitIsSphereNV";
+    case SpvBuiltInHitIsLSSNV: return "HitIsLSSNV";
+    case SpvBuiltInHitSpherePositionNV: return "HitSpherePositionNV";
+    case SpvBuiltInWarpsPerSMNV: return "WarpsPerSMNV";
+    case SpvBuiltInSMCountNV: return "SMCountNV";
+    case SpvBuiltInWarpIDNV: return "WarpIDNV";
+    case SpvBuiltInSMIDNV: return "SMIDNV";
+    case SpvBuiltInHitLSSPositionsNV: return "HitLSSPositionsNV";
+    case SpvBuiltInHitKindFrontFacingMicroTriangleNV: return "HitKindFrontFacingMicroTriangleNV";
+    case SpvBuiltInHitKindBackFacingMicroTriangleNV: return "HitKindBackFacingMicroTriangleNV";
+    case SpvBuiltInHitSphereRadiusNV: return "HitSphereRadiusNV";
+    case SpvBuiltInHitLSSRadiiNV: return "HitLSSRadiiNV";
+    case SpvBuiltInClusterIDNV: return "ClusterIDNV";
+    case SpvBuiltInCullMaskKHR: return "CullMaskKHR";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvScopeToString(SpvScope value) {
+    switch (value) {
+    case SpvScopeCrossDevice: return "CrossDevice";
+    case SpvScopeDevice: return "Device";
+    case SpvScopeWorkgroup: return "Workgroup";
+    case SpvScopeSubgroup: return "Subgroup";
+    case SpvScopeInvocation: return "Invocation";
+    case SpvScopeQueueFamily: return "QueueFamily";
+    case SpvScopeShaderCallKHR: return "ShaderCallKHR";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvGroupOperationToString(SpvGroupOperation value) {
+    switch (value) {
+    case SpvGroupOperationReduce: return "Reduce";
+    case SpvGroupOperationInclusiveScan: return "InclusiveScan";
+    case SpvGroupOperationExclusiveScan: return "ExclusiveScan";
+    case SpvGroupOperationClusteredReduce: return "ClusteredReduce";
+    case SpvGroupOperationPartitionedReduceNV: return "PartitionedReduceNV";
+    case SpvGroupOperationPartitionedInclusiveScanNV: return "PartitionedInclusiveScanNV";
+    case SpvGroupOperationPartitionedExclusiveScanNV: return "PartitionedExclusiveScanNV";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvKernelEnqueueFlagsToString(SpvKernelEnqueueFlags value) {
+    switch (value) {
+    case SpvKernelEnqueueFlagsNoWait: return "NoWait";
+    case SpvKernelEnqueueFlagsWaitKernel: return "WaitKernel";
+    case SpvKernelEnqueueFlagsWaitWorkGroup: return "WaitWorkGroup";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvCapabilityToString(SpvCapability value) {
+    switch (value) {
+    case SpvCapabilityMatrix: return "Matrix";
+    case SpvCapabilityShader: return "Shader";
+    case SpvCapabilityGeometry: return "Geometry";
+    case SpvCapabilityTessellation: return "Tessellation";
+    case SpvCapabilityAddresses: return "Addresses";
+    case SpvCapabilityLinkage: return "Linkage";
+    case SpvCapabilityKernel: return "Kernel";
+    case SpvCapabilityVector16: return "Vector16";
+    case SpvCapabilityFloat16Buffer: return "Float16Buffer";
+    case SpvCapabilityFloat16: return "Float16";
+    case SpvCapabilityFloat64: return "Float64";
+    case SpvCapabilityInt64: return "Int64";
+    case SpvCapabilityInt64Atomics: return "Int64Atomics";
+    case SpvCapabilityImageBasic: return "ImageBasic";
+    case SpvCapabilityImageReadWrite: return "ImageReadWrite";
+    case SpvCapabilityImageMipmap: return "ImageMipmap";
+    case SpvCapabilityPipes: return "Pipes";
+    case SpvCapabilityGroups: return "Groups";
+    case SpvCapabilityDeviceEnqueue: return "DeviceEnqueue";
+    case SpvCapabilityLiteralSampler: return "LiteralSampler";
+    case SpvCapabilityAtomicStorage: return "AtomicStorage";
+    case SpvCapabilityInt16: return "Int16";
+    case SpvCapabilityTessellationPointSize: return "TessellationPointSize";
+    case SpvCapabilityGeometryPointSize: return "GeometryPointSize";
+    case SpvCapabilityImageGatherExtended: return "ImageGatherExtended";
+    case SpvCapabilityStorageImageMultisample: return "StorageImageMultisample";
+    case SpvCapabilityUniformBufferArrayDynamicIndexing: return "UniformBufferArrayDynamicIndexing";
+    case SpvCapabilitySampledImageArrayDynamicIndexing: return "SampledImageArrayDynamicIndexing";
+    case SpvCapabilityStorageBufferArrayDynamicIndexing: return "StorageBufferArrayDynamicIndexing";
+    case SpvCapabilityStorageImageArrayDynamicIndexing: return "StorageImageArrayDynamicIndexing";
+    case SpvCapabilityClipDistance: return "ClipDistance";
+    case SpvCapabilityCullDistance: return "CullDistance";
+    case SpvCapabilityImageCubeArray: return "ImageCubeArray";
+    case SpvCapabilitySampleRateShading: return "SampleRateShading";
+    case SpvCapabilityImageRect: return "ImageRect";
+    case SpvCapabilitySampledRect: return "SampledRect";
+    case SpvCapabilityGenericPointer: return "GenericPointer";
+    case SpvCapabilityInt8: return "Int8";
+    case SpvCapabilityInputAttachment: return "InputAttachment";
+    case SpvCapabilitySparseResidency: return "SparseResidency";
+    case SpvCapabilityMinLod: return "MinLod";
+    case SpvCapabilitySampled1D: return "Sampled1D";
+    case SpvCapabilityImage1D: return "Image1D";
+    case SpvCapabilitySampledCubeArray: return "SampledCubeArray";
+    case SpvCapabilitySampledBuffer: return "SampledBuffer";
+    case SpvCapabilityImageBuffer: return "ImageBuffer";
+    case SpvCapabilityImageMSArray: return "ImageMSArray";
+    case SpvCapabilityStorageImageExtendedFormats: return "StorageImageExtendedFormats";
+    case SpvCapabilityImageQuery: return "ImageQuery";
+    case SpvCapabilityDerivativeControl: return "DerivativeControl";
+    case SpvCapabilityInterpolationFunction: return "InterpolationFunction";
+    case SpvCapabilityTransformFeedback: return "TransformFeedback";
+    case SpvCapabilityGeometryStreams: return "GeometryStreams";
+    case SpvCapabilityStorageImageReadWithoutFormat: return "StorageImageReadWithoutFormat";
+    case SpvCapabilityStorageImageWriteWithoutFormat: return "StorageImageWriteWithoutFormat";
+    case SpvCapabilityMultiViewport: return "MultiViewport";
+    case SpvCapabilitySubgroupDispatch: return "SubgroupDispatch";
+    case SpvCapabilityNamedBarrier: return "NamedBarrier";
+    case SpvCapabilityPipeStorage: return "PipeStorage";
+    case SpvCapabilityGroupNonUniform: return "GroupNonUniform";
+    case SpvCapabilityGroupNonUniformVote: return "GroupNonUniformVote";
+    case SpvCapabilityGroupNonUniformArithmetic: return "GroupNonUniformArithmetic";
+    case SpvCapabilityGroupNonUniformBallot: return "GroupNonUniformBallot";
+    case SpvCapabilityGroupNonUniformShuffle: return "GroupNonUniformShuffle";
+    case SpvCapabilityGroupNonUniformShuffleRelative: return "GroupNonUniformShuffleRelative";
+    case SpvCapabilityGroupNonUniformClustered: return "GroupNonUniformClustered";
+    case SpvCapabilityGroupNonUniformQuad: return "GroupNonUniformQuad";
+    case SpvCapabilityShaderLayer: return "ShaderLayer";
+    case SpvCapabilityShaderViewportIndex: return "ShaderViewportIndex";
+    case SpvCapabilityUniformDecoration: return "UniformDecoration";
+    case SpvCapabilityCoreBuiltinsARM: return "CoreBuiltinsARM";
+    case SpvCapabilityTileImageColorReadAccessEXT: return "TileImageColorReadAccessEXT";
+    case SpvCapabilityTileImageDepthReadAccessEXT: return "TileImageDepthReadAccessEXT";
+    case SpvCapabilityTileImageStencilReadAccessEXT: return "TileImageStencilReadAccessEXT";
+    case SpvCapabilityCooperativeMatrixLayoutsARM: return "CooperativeMatrixLayoutsARM";
+    case SpvCapabilityFragmentShadingRateKHR: return "FragmentShadingRateKHR";
+    case SpvCapabilitySubgroupBallotKHR: return "SubgroupBallotKHR";
+    case SpvCapabilityDrawParameters: return "DrawParameters";
+    case SpvCapabilityWorkgroupMemoryExplicitLayoutKHR: return "WorkgroupMemoryExplicitLayoutKHR";
+    case SpvCapabilityWorkgroupMemoryExplicitLayout8BitAccessKHR: return "WorkgroupMemoryExplicitLayout8BitAccessKHR";
+    case SpvCapabilityWorkgroupMemoryExplicitLayout16BitAccessKHR: return "WorkgroupMemoryExplicitLayout16BitAccessKHR";
+    case SpvCapabilitySubgroupVoteKHR: return "SubgroupVoteKHR";
+    case SpvCapabilityStorageBuffer16BitAccess: return "StorageBuffer16BitAccess";
+    case SpvCapabilityStorageUniform16: return "StorageUniform16";
+    case SpvCapabilityStoragePushConstant16: return "StoragePushConstant16";
+    case SpvCapabilityStorageInputOutput16: return "StorageInputOutput16";
+    case SpvCapabilityDeviceGroup: return "DeviceGroup";
+    case SpvCapabilityMultiView: return "MultiView";
+    case SpvCapabilityVariablePointersStorageBuffer: return "VariablePointersStorageBuffer";
+    case SpvCapabilityVariablePointers: return "VariablePointers";
+    case SpvCapabilityAtomicStorageOps: return "AtomicStorageOps";
+    case SpvCapabilitySampleMaskPostDepthCoverage: return "SampleMaskPostDepthCoverage";
+    case SpvCapabilityStorageBuffer8BitAccess: return "StorageBuffer8BitAccess";
+    case SpvCapabilityUniformAndStorageBuffer8BitAccess: return "UniformAndStorageBuffer8BitAccess";
+    case SpvCapabilityStoragePushConstant8: return "StoragePushConstant8";
+    case SpvCapabilityDenormPreserve: return "DenormPreserve";
+    case SpvCapabilityDenormFlushToZero: return "DenormFlushToZero";
+    case SpvCapabilitySignedZeroInfNanPreserve: return "SignedZeroInfNanPreserve";
+    case SpvCapabilityRoundingModeRTE: return "RoundingModeRTE";
+    case SpvCapabilityRoundingModeRTZ: return "RoundingModeRTZ";
+    case SpvCapabilityRayQueryProvisionalKHR: return "RayQueryProvisionalKHR";
+    case SpvCapabilityRayQueryKHR: return "RayQueryKHR";
+    case SpvCapabilityUntypedPointersKHR: return "UntypedPointersKHR";
+    case SpvCapabilityRayTraversalPrimitiveCullingKHR: return "RayTraversalPrimitiveCullingKHR";
+    case SpvCapabilityRayTracingKHR: return "RayTracingKHR";
+    case SpvCapabilityTextureSampleWeightedQCOM: return "TextureSampleWeightedQCOM";
+    case SpvCapabilityTextureBoxFilterQCOM: return "TextureBoxFilterQCOM";
+    case SpvCapabilityTextureBlockMatchQCOM: return "TextureBlockMatchQCOM";
+    case SpvCapabilityTextureBlockMatch2QCOM: return "TextureBlockMatch2QCOM";
+    case SpvCapabilityFloat16ImageAMD: return "Float16ImageAMD";
+    case SpvCapabilityImageGatherBiasLodAMD: return "ImageGatherBiasLodAMD";
+    case SpvCapabilityFragmentMaskAMD: return "FragmentMaskAMD";
+    case SpvCapabilityStencilExportEXT: return "StencilExportEXT";
+    case SpvCapabilityImageReadWriteLodAMD: return "ImageReadWriteLodAMD";
+    case SpvCapabilityInt64ImageEXT: return "Int64ImageEXT";
+    case SpvCapabilityShaderClockKHR: return "ShaderClockKHR";
+    case SpvCapabilityShaderEnqueueAMDX: return "ShaderEnqueueAMDX";
+    case SpvCapabilityQuadControlKHR: return "QuadControlKHR";
+    case SpvCapabilitySampleMaskOverrideCoverageNV: return "SampleMaskOverrideCoverageNV";
+    case SpvCapabilityGeometryShaderPassthroughNV: return "GeometryShaderPassthroughNV";
+    case SpvCapabilityShaderViewportIndexLayerEXT: return "ShaderViewportIndexLayerEXT";
+    case SpvCapabilityShaderViewportMaskNV: return "ShaderViewportMaskNV";
+    case SpvCapabilityShaderStereoViewNV: return "ShaderStereoViewNV";
+    case SpvCapabilityPerViewAttributesNV: return "PerViewAttributesNV";
+    case SpvCapabilityFragmentFullyCoveredEXT: return "FragmentFullyCoveredEXT";
+    case SpvCapabilityMeshShadingNV: return "MeshShadingNV";
+    case SpvCapabilityImageFootprintNV: return "ImageFootprintNV";
+    case SpvCapabilityMeshShadingEXT: return "MeshShadingEXT";
+    case SpvCapabilityFragmentBarycentricKHR: return "FragmentBarycentricKHR";
+    case SpvCapabilityComputeDerivativeGroupQuadsKHR: return "ComputeDerivativeGroupQuadsKHR";
+    case SpvCapabilityFragmentDensityEXT: return "FragmentDensityEXT";
+    case SpvCapabilityGroupNonUniformPartitionedNV: return "GroupNonUniformPartitionedNV";
+    case SpvCapabilityShaderNonUniform: return "ShaderNonUniform";
+    case SpvCapabilityRuntimeDescriptorArray: return "RuntimeDescriptorArray";
+    case SpvCapabilityInputAttachmentArrayDynamicIndexing: return "InputAttachmentArrayDynamicIndexing";
+    case SpvCapabilityUniformTexelBufferArrayDynamicIndexing: return "UniformTexelBufferArrayDynamicIndexing";
+    case SpvCapabilityStorageTexelBufferArrayDynamicIndexing: return "StorageTexelBufferArrayDynamicIndexing";
+    case SpvCapabilityUniformBufferArrayNonUniformIndexing: return "UniformBufferArrayNonUniformIndexing";
+    case SpvCapabilitySampledImageArrayNonUniformIndexing: return "SampledImageArrayNonUniformIndexing";
+    case SpvCapabilityStorageBufferArrayNonUniformIndexing: return "StorageBufferArrayNonUniformIndexing";
+    case SpvCapabilityStorageImageArrayNonUniformIndexing: return "StorageImageArrayNonUniformIndexing";
+    case SpvCapabilityInputAttachmentArrayNonUniformIndexing: return "InputAttachmentArrayNonUniformIndexing";
+    case SpvCapabilityUniformTexelBufferArrayNonUniformIndexing: return "UniformTexelBufferArrayNonUniformIndexing";
+    case SpvCapabilityStorageTexelBufferArrayNonUniformIndexing: return "StorageTexelBufferArrayNonUniformIndexing";
+    case SpvCapabilityRayTracingPositionFetchKHR: return "RayTracingPositionFetchKHR";
+    case SpvCapabilityRayTracingNV: return "RayTracingNV";
+    case SpvCapabilityRayTracingMotionBlurNV: return "RayTracingMotionBlurNV";
+    case SpvCapabilityVulkanMemoryModel: return "VulkanMemoryModel";
+    case SpvCapabilityVulkanMemoryModelDeviceScope: return "VulkanMemoryModelDeviceScope";
+    case SpvCapabilityPhysicalStorageBufferAddresses: return "PhysicalStorageBufferAddresses";
+    case SpvCapabilityComputeDerivativeGroupLinearKHR: return "ComputeDerivativeGroupLinearKHR";
+    case SpvCapabilityRayTracingProvisionalKHR: return "RayTracingProvisionalKHR";
+    case SpvCapabilityCooperativeMatrixNV: return "CooperativeMatrixNV";
+    case SpvCapabilityFragmentShaderSampleInterlockEXT: return "FragmentShaderSampleInterlockEXT";
+    case SpvCapabilityFragmentShaderShadingRateInterlockEXT: return "FragmentShaderShadingRateInterlockEXT";
+    case SpvCapabilityShaderSMBuiltinsNV: return "ShaderSMBuiltinsNV";
+    case SpvCapabilityFragmentShaderPixelInterlockEXT: return "FragmentShaderPixelInterlockEXT";
+    case SpvCapabilityDemoteToHelperInvocation: return "DemoteToHelperInvocation";
+    case SpvCapabilityDisplacementMicromapNV: return "DisplacementMicromapNV";
+    case SpvCapabilityRayTracingOpacityMicromapEXT: return "RayTracingOpacityMicromapEXT";
+    case SpvCapabilityShaderInvocationReorderNV: return "ShaderInvocationReorderNV";
+    case SpvCapabilityBindlessTextureNV: return "BindlessTextureNV";
+    case SpvCapabilityRayQueryPositionFetchKHR: return "RayQueryPositionFetchKHR";
+    case SpvCapabilityCooperativeVectorNV: return "CooperativeVectorNV";
+    case SpvCapabilityAtomicFloat16VectorNV: return "AtomicFloat16VectorNV";
+    case SpvCapabilityRayTracingDisplacementMicromapNV: return "RayTracingDisplacementMicromapNV";
+    case SpvCapabilityRawAccessChainsNV: return "RawAccessChainsNV";
+    case SpvCapabilityRayTracingSpheresGeometryNV: return "RayTracingSpheresGeometryNV";
+    case SpvCapabilityRayTracingLinearSweptSpheresGeometryNV: return "RayTracingLinearSweptSpheresGeometryNV";
+    case SpvCapabilityCooperativeMatrixReductionsNV: return "CooperativeMatrixReductionsNV";
+    case SpvCapabilityCooperativeMatrixConversionsNV: return "CooperativeMatrixConversionsNV";
+    case SpvCapabilityCooperativeMatrixPerElementOperationsNV: return "CooperativeMatrixPerElementOperationsNV";
+    case SpvCapabilityCooperativeMatrixTensorAddressingNV: return "CooperativeMatrixTensorAddressingNV";
+    case SpvCapabilityCooperativeMatrixBlockLoadsNV: return "CooperativeMatrixBlockLoadsNV";
+    case SpvCapabilityCooperativeVectorTrainingNV: return "CooperativeVectorTrainingNV";
+    case SpvCapabilityRayTracingClusterAccelerationStructureNV: return "RayTracingClusterAccelerationStructureNV";
+    case SpvCapabilityTensorAddressingNV: return "TensorAddressingNV";
+    case SpvCapabilitySubgroupShuffleINTEL: return "SubgroupShuffleINTEL";
+    case SpvCapabilitySubgroupBufferBlockIOINTEL: return "SubgroupBufferBlockIOINTEL";
+    case SpvCapabilitySubgroupImageBlockIOINTEL: return "SubgroupImageBlockIOINTEL";
+    case SpvCapabilitySubgroupImageMediaBlockIOINTEL: return "SubgroupImageMediaBlockIOINTEL";
+    case SpvCapabilityRoundToInfinityINTEL: return "RoundToInfinityINTEL";
+    case SpvCapabilityFloatingPointModeINTEL: return "FloatingPointModeINTEL";
+    case SpvCapabilityIntegerFunctions2INTEL: return "IntegerFunctions2INTEL";
+    case SpvCapabilityFunctionPointersINTEL: return "FunctionPointersINTEL";
+    case SpvCapabilityIndirectReferencesINTEL: return "IndirectReferencesINTEL";
+    case SpvCapabilityAsmINTEL: return "AsmINTEL";
+    case SpvCapabilityAtomicFloat32MinMaxEXT: return "AtomicFloat32MinMaxEXT";
+    case SpvCapabilityAtomicFloat64MinMaxEXT: return "AtomicFloat64MinMaxEXT";
+    case SpvCapabilityAtomicFloat16MinMaxEXT: return "AtomicFloat16MinMaxEXT";
+    case SpvCapabilityVectorComputeINTEL: return "VectorComputeINTEL";
+    case SpvCapabilityVectorAnyINTEL: return "VectorAnyINTEL";
+    case SpvCapabilityExpectAssumeKHR: return "ExpectAssumeKHR";
+    case SpvCapabilitySubgroupAvcMotionEstimationINTEL: return "SubgroupAvcMotionEstimationINTEL";
+    case SpvCapabilitySubgroupAvcMotionEstimationIntraINTEL: return "SubgroupAvcMotionEstimationIntraINTEL";
+    case SpvCapabilitySubgroupAvcMotionEstimationChromaINTEL: return "SubgroupAvcMotionEstimationChromaINTEL";
+    case SpvCapabilityVariableLengthArrayINTEL: return "VariableLengthArrayINTEL";
+    case SpvCapabilityFunctionFloatControlINTEL: return "FunctionFloatControlINTEL";
+    case SpvCapabilityFPGAMemoryAttributesINTEL: return "FPGAMemoryAttributesINTEL";
+    case SpvCapabilityFPFastMathModeINTEL: return "FPFastMathModeINTEL";
+    case SpvCapabilityArbitraryPrecisionIntegersINTEL: return "ArbitraryPrecisionIntegersINTEL";
+    case SpvCapabilityArbitraryPrecisionFloatingPointINTEL: return "ArbitraryPrecisionFloatingPointINTEL";
+    case SpvCapabilityUnstructuredLoopControlsINTEL: return "UnstructuredLoopControlsINTEL";
+    case SpvCapabilityFPGALoopControlsINTEL: return "FPGALoopControlsINTEL";
+    case SpvCapabilityKernelAttributesINTEL: return "KernelAttributesINTEL";
+    case SpvCapabilityFPGAKernelAttributesINTEL: return "FPGAKernelAttributesINTEL";
+    case SpvCapabilityFPGAMemoryAccessesINTEL: return "FPGAMemoryAccessesINTEL";
+    case SpvCapabilityFPGAClusterAttributesINTEL: return "FPGAClusterAttributesINTEL";
+    case SpvCapabilityLoopFuseINTEL: return "LoopFuseINTEL";
+    case SpvCapabilityFPGADSPControlINTEL: return "FPGADSPControlINTEL";
+    case SpvCapabilityMemoryAccessAliasingINTEL: return "MemoryAccessAliasingINTEL";
+    case SpvCapabilityFPGAInvocationPipeliningAttributesINTEL: return "FPGAInvocationPipeliningAttributesINTEL";
+    case SpvCapabilityFPGABufferLocationINTEL: return "FPGABufferLocationINTEL";
+    case SpvCapabilityArbitraryPrecisionFixedPointINTEL: return "ArbitraryPrecisionFixedPointINTEL";
+    case SpvCapabilityUSMStorageClassesINTEL: return "USMStorageClassesINTEL";
+    case SpvCapabilityRuntimeAlignedAttributeINTEL: return "RuntimeAlignedAttributeINTEL";
+    case SpvCapabilityIOPipesINTEL: return "IOPipesINTEL";
+    case SpvCapabilityBlockingPipesINTEL: return "BlockingPipesINTEL";
+    case SpvCapabilityFPGARegINTEL: return "FPGARegINTEL";
+    case SpvCapabilityDotProductInputAll: return "DotProductInputAll";
+    case SpvCapabilityDotProductInput4x8Bit: return "DotProductInput4x8Bit";
+    case SpvCapabilityDotProductInput4x8BitPacked: return "DotProductInput4x8BitPacked";
+    case SpvCapabilityDotProduct: return "DotProduct";
+    case SpvCapabilityRayCullMaskKHR: return "RayCullMaskKHR";
+    case SpvCapabilityCooperativeMatrixKHR: return "CooperativeMatrixKHR";
+    case SpvCapabilityReplicatedCompositesEXT: return "ReplicatedCompositesEXT";
+    case SpvCapabilityBitInstructions: return "BitInstructions";
+    case SpvCapabilityGroupNonUniformRotateKHR: return "GroupNonUniformRotateKHR";
+    case SpvCapabilityFloatControls2: return "FloatControls2";
+    case SpvCapabilityAtomicFloat32AddEXT: return "AtomicFloat32AddEXT";
+    case SpvCapabilityAtomicFloat64AddEXT: return "AtomicFloat64AddEXT";
+    case SpvCapabilityLongCompositesINTEL: return "LongCompositesINTEL";
+    case SpvCapabilityOptNoneEXT: return "OptNoneEXT";
+    case SpvCapabilityAtomicFloat16AddEXT: return "AtomicFloat16AddEXT";
+    case SpvCapabilityDebugInfoModuleINTEL: return "DebugInfoModuleINTEL";
+    case SpvCapabilityBFloat16ConversionINTEL: return "BFloat16ConversionINTEL";
+    case SpvCapabilitySplitBarrierINTEL: return "SplitBarrierINTEL";
+    case SpvCapabilityArithmeticFenceEXT: return "ArithmeticFenceEXT";
+    case SpvCapabilityFPGAClusterAttributesV2INTEL: return "FPGAClusterAttributesV2INTEL";
+    case SpvCapabilityFPGAKernelAttributesv2INTEL: return "FPGAKernelAttributesv2INTEL";
+    case SpvCapabilityFPMaxErrorINTEL: return "FPMaxErrorINTEL";
+    case SpvCapabilityFPGALatencyControlINTEL: return "FPGALatencyControlINTEL";
+    case SpvCapabilityFPGAArgumentInterfacesINTEL: return "FPGAArgumentInterfacesINTEL";
+    case SpvCapabilityGlobalVariableHostAccessINTEL: return "GlobalVariableHostAccessINTEL";
+    case SpvCapabilityGlobalVariableFPGADecorationsINTEL: return "GlobalVariableFPGADecorationsINTEL";
+    case SpvCapabilitySubgroupBufferPrefetchINTEL: return "SubgroupBufferPrefetchINTEL";
+    case SpvCapabilitySubgroup2DBlockIOINTEL: return "Subgroup2DBlockIOINTEL";
+    case SpvCapabilitySubgroup2DBlockTransformINTEL: return "Subgroup2DBlockTransformINTEL";
+    case SpvCapabilitySubgroup2DBlockTransposeINTEL: return "Subgroup2DBlockTransposeINTEL";
+    case SpvCapabilitySubgroupMatrixMultiplyAccumulateINTEL: return "SubgroupMatrixMultiplyAccumulateINTEL";
+    case SpvCapabilityGroupUniformArithmeticKHR: return "GroupUniformArithmeticKHR";
+    case SpvCapabilityMaskedGatherScatterINTEL: return "MaskedGatherScatterINTEL";
+    case SpvCapabilityCacheControlsINTEL: return "CacheControlsINTEL";
+    case SpvCapabilityRegisterLimitsINTEL: return "RegisterLimitsINTEL";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvRayQueryIntersectionToString(SpvRayQueryIntersection value) {
+    switch (value) {
+    case SpvRayQueryIntersectionRayQueryCandidateIntersectionKHR: return "RayQueryCandidateIntersectionKHR";
+    case SpvRayQueryIntersectionRayQueryCommittedIntersectionKHR: return "RayQueryCommittedIntersectionKHR";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvRayQueryCommittedIntersectionTypeToString(SpvRayQueryCommittedIntersectionType value) {
+    switch (value) {
+    case SpvRayQueryCommittedIntersectionTypeRayQueryCommittedIntersectionNoneKHR: return "RayQueryCommittedIntersectionNoneKHR";
+    case SpvRayQueryCommittedIntersectionTypeRayQueryCommittedIntersectionTriangleKHR: return "RayQueryCommittedIntersectionTriangleKHR";
+    case SpvRayQueryCommittedIntersectionTypeRayQueryCommittedIntersectionGeneratedKHR: return "RayQueryCommittedIntersectionGeneratedKHR";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvRayQueryCandidateIntersectionTypeToString(SpvRayQueryCandidateIntersectionType value) {
+    switch (value) {
+    case SpvRayQueryCandidateIntersectionTypeRayQueryCandidateIntersectionTriangleKHR: return "RayQueryCandidateIntersectionTriangleKHR";
+    case SpvRayQueryCandidateIntersectionTypeRayQueryCandidateIntersectionAABBKHR: return "RayQueryCandidateIntersectionAABBKHR";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvFPDenormModeToString(SpvFPDenormMode value) {
+    switch (value) {
+    case SpvFPDenormModePreserve: return "Preserve";
+    case SpvFPDenormModeFlushToZero: return "FlushToZero";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvFPOperationModeToString(SpvFPOperationMode value) {
+    switch (value) {
+    case SpvFPOperationModeIEEE: return "IEEE";
+    case SpvFPOperationModeALT: return "ALT";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvQuantizationModesToString(SpvQuantizationModes value) {
+    switch (value) {
+    case SpvQuantizationModesTRN: return "TRN";
+    case SpvQuantizationModesTRN_ZERO: return "TRN_ZERO";
+    case SpvQuantizationModesRND: return "RND";
+    case SpvQuantizationModesRND_ZERO: return "RND_ZERO";
+    case SpvQuantizationModesRND_INF: return "RND_INF";
+    case SpvQuantizationModesRND_MIN_INF: return "RND_MIN_INF";
+    case SpvQuantizationModesRND_CONV: return "RND_CONV";
+    case SpvQuantizationModesRND_CONV_ODD: return "RND_CONV_ODD";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvOverflowModesToString(SpvOverflowModes value) {
+    switch (value) {
+    case SpvOverflowModesWRAP: return "WRAP";
+    case SpvOverflowModesSAT: return "SAT";
+    case SpvOverflowModesSAT_ZERO: return "SAT_ZERO";
+    case SpvOverflowModesSAT_SYM: return "SAT_SYM";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvPackedVectorFormatToString(SpvPackedVectorFormat value) {
+    switch (value) {
+    case SpvPackedVectorFormatPackedVectorFormat4x8Bit: return "PackedVectorFormat4x8Bit";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvCooperativeMatrixLayoutToString(SpvCooperativeMatrixLayout value) {
+    switch (value) {
+    case SpvCooperativeMatrixLayoutRowMajorKHR: return "RowMajorKHR";
+    case SpvCooperativeMatrixLayoutColumnMajorKHR: return "ColumnMajorKHR";
+    case SpvCooperativeMatrixLayoutRowBlockedInterleavedARM: return "RowBlockedInterleavedARM";
+    case SpvCooperativeMatrixLayoutColumnBlockedInterleavedARM: return "ColumnBlockedInterleavedARM";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvCooperativeMatrixUseToString(SpvCooperativeMatrixUse value) {
+    switch (value) {
+    case SpvCooperativeMatrixUseMatrixAKHR: return "MatrixAKHR";
+    case SpvCooperativeMatrixUseMatrixBKHR: return "MatrixBKHR";
+    case SpvCooperativeMatrixUseMatrixAccumulatorKHR: return "MatrixAccumulatorKHR";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvTensorClampModeToString(SpvTensorClampMode value) {
+    switch (value) {
+    case SpvTensorClampModeUndefined: return "Undefined";
+    case SpvTensorClampModeConstant: return "Constant";
+    case SpvTensorClampModeClampToEdge: return "ClampToEdge";
+    case SpvTensorClampModeRepeat: return "Repeat";
+    case SpvTensorClampModeRepeatMirrored: return "RepeatMirrored";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvInitializationModeQualifierToString(SpvInitializationModeQualifier value) {
+    switch (value) {
+    case SpvInitializationModeQualifierInitOnDeviceReprogramINTEL: return "InitOnDeviceReprogramINTEL";
+    case SpvInitializationModeQualifierInitOnDeviceResetINTEL: return "InitOnDeviceResetINTEL";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvHostAccessQualifierToString(SpvHostAccessQualifier value) {
+    switch (value) {
+    case SpvHostAccessQualifierNoneINTEL: return "NoneINTEL";
+    case SpvHostAccessQualifierReadINTEL: return "ReadINTEL";
+    case SpvHostAccessQualifierWriteINTEL: return "WriteINTEL";
+    case SpvHostAccessQualifierReadWriteINTEL: return "ReadWriteINTEL";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvLoadCacheControlToString(SpvLoadCacheControl value) {
+    switch (value) {
+    case SpvLoadCacheControlUncachedINTEL: return "UncachedINTEL";
+    case SpvLoadCacheControlCachedINTEL: return "CachedINTEL";
+    case SpvLoadCacheControlStreamingINTEL: return "StreamingINTEL";
+    case SpvLoadCacheControlInvalidateAfterReadINTEL: return "InvalidateAfterReadINTEL";
+    case SpvLoadCacheControlConstCachedINTEL: return "ConstCachedINTEL";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvStoreCacheControlToString(SpvStoreCacheControl value) {
+    switch (value) {
+    case SpvStoreCacheControlUncachedINTEL: return "UncachedINTEL";
+    case SpvStoreCacheControlWriteThroughINTEL: return "WriteThroughINTEL";
+    case SpvStoreCacheControlWriteBackINTEL: return "WriteBackINTEL";
+    case SpvStoreCacheControlStreamingINTEL: return "StreamingINTEL";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvNamedMaximumNumberOfRegistersToString(SpvNamedMaximumNumberOfRegisters value) {
+    switch (value) {
+    case SpvNamedMaximumNumberOfRegistersAutoINTEL: return "AutoINTEL";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvFPEncodingToString(SpvFPEncoding value) {
+    switch (value) {
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvCooperativeVectorMatrixLayoutToString(SpvCooperativeVectorMatrixLayout value) {
+    switch (value) {
+    case SpvCooperativeVectorMatrixLayoutRowMajorNV: return "RowMajorNV";
+    case SpvCooperativeVectorMatrixLayoutColumnMajorNV: return "ColumnMajorNV";
+    case SpvCooperativeVectorMatrixLayoutInferencingOptimalNV: return "InferencingOptimalNV";
+    case SpvCooperativeVectorMatrixLayoutTrainingOptimalNV: return "TrainingOptimalNV";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvComponentTypeToString(SpvComponentType value) {
+    switch (value) {
+    case SpvComponentTypeFloat16NV: return "Float16NV";
+    case SpvComponentTypeFloat32NV: return "Float32NV";
+    case SpvComponentTypeFloat64NV: return "Float64NV";
+    case SpvComponentTypeSignedInt8NV: return "SignedInt8NV";
+    case SpvComponentTypeSignedInt16NV: return "SignedInt16NV";
+    case SpvComponentTypeSignedInt32NV: return "SignedInt32NV";
+    case SpvComponentTypeSignedInt64NV: return "SignedInt64NV";
+    case SpvComponentTypeUnsignedInt8NV: return "UnsignedInt8NV";
+    case SpvComponentTypeUnsignedInt16NV: return "UnsignedInt16NV";
+    case SpvComponentTypeUnsignedInt32NV: return "UnsignedInt32NV";
+    case SpvComponentTypeUnsignedInt64NV: return "UnsignedInt64NV";
+    case SpvComponentTypeSignedInt8PackedNV: return "SignedInt8PackedNV";
+    case SpvComponentTypeUnsignedInt8PackedNV: return "UnsignedInt8PackedNV";
+    case SpvComponentTypeFloatE4M3NV: return "FloatE4M3NV";
+    case SpvComponentTypeFloatE5M2NV: return "FloatE5M2NV";
+    default: return "Unknown";
+    }
+}
+
+inline const char* SpvOpToString(SpvOp value) {
+    switch (value) {
+    case SpvOpNop: return "OpNop";
+    case SpvOpUndef: return "OpUndef";
+    case SpvOpSourceContinued: return "OpSourceContinued";
+    case SpvOpSource: return "OpSource";
+    case SpvOpSourceExtension: return "OpSourceExtension";
+    case SpvOpName: return "OpName";
+    case SpvOpMemberName: return "OpMemberName";
+    case SpvOpString: return "OpString";
+    case SpvOpLine: return "OpLine";
+    case SpvOpExtension: return "OpExtension";
+    case SpvOpExtInstImport: return "OpExtInstImport";
+    case SpvOpExtInst: return "OpExtInst";
+    case SpvOpMemoryModel: return "OpMemoryModel";
+    case SpvOpEntryPoint: return "OpEntryPoint";
+    case SpvOpExecutionMode: return "OpExecutionMode";
+    case SpvOpCapability: return "OpCapability";
+    case SpvOpTypeVoid: return "OpTypeVoid";
+    case SpvOpTypeBool: return "OpTypeBool";
+    case SpvOpTypeInt: return "OpTypeInt";
+    case SpvOpTypeFloat: return "OpTypeFloat";
+    case SpvOpTypeVector: return "OpTypeVector";
+    case SpvOpTypeMatrix: return "OpTypeMatrix";
+    case SpvOpTypeImage: return "OpTypeImage";
+    case SpvOpTypeSampler: return "OpTypeSampler";
+    case SpvOpTypeSampledImage: return "OpTypeSampledImage";
+    case SpvOpTypeArray: return "OpTypeArray";
+    case SpvOpTypeRuntimeArray: return "OpTypeRuntimeArray";
+    case SpvOpTypeStruct: return "OpTypeStruct";
+    case SpvOpTypeOpaque: return "OpTypeOpaque";
+    case SpvOpTypePointer: return "OpTypePointer";
+    case SpvOpTypeFunction: return "OpTypeFunction";
+    case SpvOpTypeEvent: return "OpTypeEvent";
+    case SpvOpTypeDeviceEvent: return "OpTypeDeviceEvent";
+    case SpvOpTypeReserveId: return "OpTypeReserveId";
+    case SpvOpTypeQueue: return "OpTypeQueue";
+    case SpvOpTypePipe: return "OpTypePipe";
+    case SpvOpTypeForwardPointer: return "OpTypeForwardPointer";
+    case SpvOpConstantTrue: return "OpConstantTrue";
+    case SpvOpConstantFalse: return "OpConstantFalse";
+    case SpvOpConstant: return "OpConstant";
+    case SpvOpConstantComposite: return "OpConstantComposite";
+    case SpvOpConstantSampler: return "OpConstantSampler";
+    case SpvOpConstantNull: return "OpConstantNull";
+    case SpvOpSpecConstantTrue: return "OpSpecConstantTrue";
+    case SpvOpSpecConstantFalse: return "OpSpecConstantFalse";
+    case SpvOpSpecConstant: return "OpSpecConstant";
+    case SpvOpSpecConstantComposite: return "OpSpecConstantComposite";
+    case SpvOpSpecConstantOp: return "OpSpecConstantOp";
+    case SpvOpFunction: return "OpFunction";
+    case SpvOpFunctionParameter: return "OpFunctionParameter";
+    case SpvOpFunctionEnd: return "OpFunctionEnd";
+    case SpvOpFunctionCall: return "OpFunctionCall";
+    case SpvOpVariable: return "OpVariable";
+    case SpvOpImageTexelPointer: return "OpImageTexelPointer";
+    case SpvOpLoad: return "OpLoad";
+    case SpvOpStore: return "OpStore";
+    case SpvOpCopyMemory: return "OpCopyMemory";
+    case SpvOpCopyMemorySized: return "OpCopyMemorySized";
+    case SpvOpAccessChain: return "OpAccessChain";
+    case SpvOpInBoundsAccessChain: return "OpInBoundsAccessChain";
+    case SpvOpPtrAccessChain: return "OpPtrAccessChain";
+    case SpvOpArrayLength: return "OpArrayLength";
+    case SpvOpGenericPtrMemSemantics: return "OpGenericPtrMemSemantics";
+    case SpvOpInBoundsPtrAccessChain: return "OpInBoundsPtrAccessChain";
+    case SpvOpDecorate: return "OpDecorate";
+    case SpvOpMemberDecorate: return "OpMemberDecorate";
+    case SpvOpDecorationGroup: return "OpDecorationGroup";
+    case SpvOpGroupDecorate: return "OpGroupDecorate";
+    case SpvOpGroupMemberDecorate: return "OpGroupMemberDecorate";
+    case SpvOpVectorExtractDynamic: return "OpVectorExtractDynamic";
+    case SpvOpVectorInsertDynamic: return "OpVectorInsertDynamic";
+    case SpvOpVectorShuffle: return "OpVectorShuffle";
+    case SpvOpCompositeConstruct: return "OpCompositeConstruct";
+    case SpvOpCompositeExtract: return "OpCompositeExtract";
+    case SpvOpCompositeInsert: return "OpCompositeInsert";
+    case SpvOpCopyObject: return "OpCopyObject";
+    case SpvOpTranspose: return "OpTranspose";
+    case SpvOpSampledImage: return "OpSampledImage";
+    case SpvOpImageSampleImplicitLod: return "OpImageSampleImplicitLod";
+    case SpvOpImageSampleExplicitLod: return "OpImageSampleExplicitLod";
+    case SpvOpImageSampleDrefImplicitLod: return "OpImageSampleDrefImplicitLod";
+    case SpvOpImageSampleDrefExplicitLod: return "OpImageSampleDrefExplicitLod";
+    case SpvOpImageSampleProjImplicitLod: return "OpImageSampleProjImplicitLod";
+    case SpvOpImageSampleProjExplicitLod: return "OpImageSampleProjExplicitLod";
+    case SpvOpImageSampleProjDrefImplicitLod: return "OpImageSampleProjDrefImplicitLod";
+    case SpvOpImageSampleProjDrefExplicitLod: return "OpImageSampleProjDrefExplicitLod";
+    case SpvOpImageFetch: return "OpImageFetch";
+    case SpvOpImageGather: return "OpImageGather";
+    case SpvOpImageDrefGather: return "OpImageDrefGather";
+    case SpvOpImageRead: return "OpImageRead";
+    case SpvOpImageWrite: return "OpImageWrite";
+    case SpvOpImage: return "OpImage";
+    case SpvOpImageQueryFormat: return "OpImageQueryFormat";
+    case SpvOpImageQueryOrder: return "OpImageQueryOrder";
+    case SpvOpImageQuerySizeLod: return "OpImageQuerySizeLod";
+    case SpvOpImageQuerySize: return "OpImageQuerySize";
+    case SpvOpImageQueryLod: return "OpImageQueryLod";
+    case SpvOpImageQueryLevels: return "OpImageQueryLevels";
+    case SpvOpImageQuerySamples: return "OpImageQuerySamples";
+    case SpvOpConvertFToU: return "OpConvertFToU";
+    case SpvOpConvertFToS: return "OpConvertFToS";
+    case SpvOpConvertSToF: return "OpConvertSToF";
+    case SpvOpConvertUToF: return "OpConvertUToF";
+    case SpvOpUConvert: return "OpUConvert";
+    case SpvOpSConvert: return "OpSConvert";
+    case SpvOpFConvert: return "OpFConvert";
+    case SpvOpQuantizeToF16: return "OpQuantizeToF16";
+    case SpvOpConvertPtrToU: return "OpConvertPtrToU";
+    case SpvOpSatConvertSToU: return "OpSatConvertSToU";
+    case SpvOpSatConvertUToS: return "OpSatConvertUToS";
+    case SpvOpConvertUToPtr: return "OpConvertUToPtr";
+    case SpvOpPtrCastToGeneric: return "OpPtrCastToGeneric";
+    case SpvOpGenericCastToPtr: return "OpGenericCastToPtr";
+    case SpvOpGenericCastToPtrExplicit: return "OpGenericCastToPtrExplicit";
+    case SpvOpBitcast: return "OpBitcast";
+    case SpvOpSNegate: return "OpSNegate";
+    case SpvOpFNegate: return "OpFNegate";
+    case SpvOpIAdd: return "OpIAdd";
+    case SpvOpFAdd: return "OpFAdd";
+    case SpvOpISub: return "OpISub";
+    case SpvOpFSub: return "OpFSub";
+    case SpvOpIMul: return "OpIMul";
+    case SpvOpFMul: return "OpFMul";
+    case SpvOpUDiv: return "OpUDiv";
+    case SpvOpSDiv: return "OpSDiv";
+    case SpvOpFDiv: return "OpFDiv";
+    case SpvOpUMod: return "OpUMod";
+    case SpvOpSRem: return "OpSRem";
+    case SpvOpSMod: return "OpSMod";
+    case SpvOpFRem: return "OpFRem";
+    case SpvOpFMod: return "OpFMod";
+    case SpvOpVectorTimesScalar: return "OpVectorTimesScalar";
+    case SpvOpMatrixTimesScalar: return "OpMatrixTimesScalar";
+    case SpvOpVectorTimesMatrix: return "OpVectorTimesMatrix";
+    case SpvOpMatrixTimesVector: return "OpMatrixTimesVector";
+    case SpvOpMatrixTimesMatrix: return "OpMatrixTimesMatrix";
+    case SpvOpOuterProduct: return "OpOuterProduct";
+    case SpvOpDot: return "OpDot";
+    case SpvOpIAddCarry: return "OpIAddCarry";
+    case SpvOpISubBorrow: return "OpISubBorrow";
+    case SpvOpUMulExtended: return "OpUMulExtended";
+    case SpvOpSMulExtended: return "OpSMulExtended";
+    case SpvOpAny: return "OpAny";
+    case SpvOpAll: return "OpAll";
+    case SpvOpIsNan: return "OpIsNan";
+    case SpvOpIsInf: return "OpIsInf";
+    case SpvOpIsFinite: return "OpIsFinite";
+    case SpvOpIsNormal: return "OpIsNormal";
+    case SpvOpSignBitSet: return "OpSignBitSet";
+    case SpvOpLessOrGreater: return "OpLessOrGreater";
+    case SpvOpOrdered: return "OpOrdered";
+    case SpvOpUnordered: return "OpUnordered";
+    case SpvOpLogicalEqual: return "OpLogicalEqual";
+    case SpvOpLogicalNotEqual: return "OpLogicalNotEqual";
+    case SpvOpLogicalOr: return "OpLogicalOr";
+    case SpvOpLogicalAnd: return "OpLogicalAnd";
+    case SpvOpLogicalNot: return "OpLogicalNot";
+    case SpvOpSelect: return "OpSelect";
+    case SpvOpIEqual: return "OpIEqual";
+    case SpvOpINotEqual: return "OpINotEqual";
+    case SpvOpUGreaterThan: return "OpUGreaterThan";
+    case SpvOpSGreaterThan: return "OpSGreaterThan";
+    case SpvOpUGreaterThanEqual: return "OpUGreaterThanEqual";
+    case SpvOpSGreaterThanEqual: return "OpSGreaterThanEqual";
+    case SpvOpULessThan: return "OpULessThan";
+    case SpvOpSLessThan: return "OpSLessThan";
+    case SpvOpULessThanEqual: return "OpULessThanEqual";
+    case SpvOpSLessThanEqual: return "OpSLessThanEqual";
+    case SpvOpFOrdEqual: return "OpFOrdEqual";
+    case SpvOpFUnordEqual: return "OpFUnordEqual";
+    case SpvOpFOrdNotEqual: return "OpFOrdNotEqual";
+    case SpvOpFUnordNotEqual: return "OpFUnordNotEqual";
+    case SpvOpFOrdLessThan: return "OpFOrdLessThan";
+    case SpvOpFUnordLessThan: return "OpFUnordLessThan";
+    case SpvOpFOrdGreaterThan: return "OpFOrdGreaterThan";
+    case SpvOpFUnordGreaterThan: return "OpFUnordGreaterThan";
+    case SpvOpFOrdLessThanEqual: return "OpFOrdLessThanEqual";
+    case SpvOpFUnordLessThanEqual: return "OpFUnordLessThanEqual";
+    case SpvOpFOrdGreaterThanEqual: return "OpFOrdGreaterThanEqual";
+    case SpvOpFUnordGreaterThanEqual: return "OpFUnordGreaterThanEqual";
+    case SpvOpShiftRightLogical: return "OpShiftRightLogical";
+    case SpvOpShiftRightArithmetic: return "OpShiftRightArithmetic";
+    case SpvOpShiftLeftLogical: return "OpShiftLeftLogical";
+    case SpvOpBitwiseOr: return "OpBitwiseOr";
+    case SpvOpBitwiseXor: return "OpBitwiseXor";
+    case SpvOpBitwiseAnd: return "OpBitwiseAnd";
+    case SpvOpNot: return "OpNot";
+    case SpvOpBitFieldInsert: return "OpBitFieldInsert";
+    case SpvOpBitFieldSExtract: return "OpBitFieldSExtract";
+    case SpvOpBitFieldUExtract: return "OpBitFieldUExtract";
+    case SpvOpBitReverse: return "OpBitReverse";
+    case SpvOpBitCount: return "OpBitCount";
+    case SpvOpDPdx: return "OpDPdx";
+    case SpvOpDPdy: return "OpDPdy";
+    case SpvOpFwidth: return "OpFwidth";
+    case SpvOpDPdxFine: return "OpDPdxFine";
+    case SpvOpDPdyFine: return "OpDPdyFine";
+    case SpvOpFwidthFine: return "OpFwidthFine";
+    case SpvOpDPdxCoarse: return "OpDPdxCoarse";
+    case SpvOpDPdyCoarse: return "OpDPdyCoarse";
+    case SpvOpFwidthCoarse: return "OpFwidthCoarse";
+    case SpvOpEmitVertex: return "OpEmitVertex";
+    case SpvOpEndPrimitive: return "OpEndPrimitive";
+    case SpvOpEmitStreamVertex: return "OpEmitStreamVertex";
+    case SpvOpEndStreamPrimitive: return "OpEndStreamPrimitive";
+    case SpvOpControlBarrier: return "OpControlBarrier";
+    case SpvOpMemoryBarrier: return "OpMemoryBarrier";
+    case SpvOpAtomicLoad: return "OpAtomicLoad";
+    case SpvOpAtomicStore: return "OpAtomicStore";
+    case SpvOpAtomicExchange: return "OpAtomicExchange";
+    case SpvOpAtomicCompareExchange: return "OpAtomicCompareExchange";
+    case SpvOpAtomicCompareExchangeWeak: return "OpAtomicCompareExchangeWeak";
+    case SpvOpAtomicIIncrement: return "OpAtomicIIncrement";
+    case SpvOpAtomicIDecrement: return "OpAtomicIDecrement";
+    case SpvOpAtomicIAdd: return "OpAtomicIAdd";
+    case SpvOpAtomicISub: return "OpAtomicISub";
+    case SpvOpAtomicSMin: return "OpAtomicSMin";
+    case SpvOpAtomicUMin: return "OpAtomicUMin";
+    case SpvOpAtomicSMax: return "OpAtomicSMax";
+    case SpvOpAtomicUMax: return "OpAtomicUMax";
+    case SpvOpAtomicAnd: return "OpAtomicAnd";
+    case SpvOpAtomicOr: return "OpAtomicOr";
+    case SpvOpAtomicXor: return "OpAtomicXor";
+    case SpvOpPhi: return "OpPhi";
+    case SpvOpLoopMerge: return "OpLoopMerge";
+    case SpvOpSelectionMerge: return "OpSelectionMerge";
+    case SpvOpLabel: return "OpLabel";
+    case SpvOpBranch: return "OpBranch";
+    case SpvOpBranchConditional: return "OpBranchConditional";
+    case SpvOpSwitch: return "OpSwitch";
+    case SpvOpKill: return "OpKill";
+    case SpvOpReturn: return "OpReturn";
+    case SpvOpReturnValue: return "OpReturnValue";
+    case SpvOpUnreachable: return "OpUnreachable";
+    case SpvOpLifetimeStart: return "OpLifetimeStart";
+    case SpvOpLifetimeStop: return "OpLifetimeStop";
+    case SpvOpGroupAsyncCopy: return "OpGroupAsyncCopy";
+    case SpvOpGroupWaitEvents: return "OpGroupWaitEvents";
+    case SpvOpGroupAll: return "OpGroupAll";
+    case SpvOpGroupAny: return "OpGroupAny";
+    case SpvOpGroupBroadcast: return "OpGroupBroadcast";
+    case SpvOpGroupIAdd: return "OpGroupIAdd";
+    case SpvOpGroupFAdd: return "OpGroupFAdd";
+    case SpvOpGroupFMin: return "OpGroupFMin";
+    case SpvOpGroupUMin: return "OpGroupUMin";
+    case SpvOpGroupSMin: return "OpGroupSMin";
+    case SpvOpGroupFMax: return "OpGroupFMax";
+    case SpvOpGroupUMax: return "OpGroupUMax";
+    case SpvOpGroupSMax: return "OpGroupSMax";
+    case SpvOpReadPipe: return "OpReadPipe";
+    case SpvOpWritePipe: return "OpWritePipe";
+    case SpvOpReservedReadPipe: return "OpReservedReadPipe";
+    case SpvOpReservedWritePipe: return "OpReservedWritePipe";
+    case SpvOpReserveReadPipePackets: return "OpReserveReadPipePackets";
+    case SpvOpReserveWritePipePackets: return "OpReserveWritePipePackets";
+    case SpvOpCommitReadPipe: return "OpCommitReadPipe";
+    case SpvOpCommitWritePipe: return "OpCommitWritePipe";
+    case SpvOpIsValidReserveId: return "OpIsValidReserveId";
+    case SpvOpGetNumPipePackets: return "OpGetNumPipePackets";
+    case SpvOpGetMaxPipePackets: return "OpGetMaxPipePackets";
+    case SpvOpGroupReserveReadPipePackets: return "OpGroupReserveReadPipePackets";
+    case SpvOpGroupReserveWritePipePackets: return "OpGroupReserveWritePipePackets";
+    case SpvOpGroupCommitReadPipe: return "OpGroupCommitReadPipe";
+    case SpvOpGroupCommitWritePipe: return "OpGroupCommitWritePipe";
+    case SpvOpEnqueueMarker: return "OpEnqueueMarker";
+    case SpvOpEnqueueKernel: return "OpEnqueueKernel";
+    case SpvOpGetKernelNDrangeSubGroupCount: return "OpGetKernelNDrangeSubGroupCount";
+    case SpvOpGetKernelNDrangeMaxSubGroupSize: return "OpGetKernelNDrangeMaxSubGroupSize";
+    case SpvOpGetKernelWorkGroupSize: return "OpGetKernelWorkGroupSize";
+    case SpvOpGetKernelPreferredWorkGroupSizeMultiple: return "OpGetKernelPreferredWorkGroupSizeMultiple";
+    case SpvOpRetainEvent: return "OpRetainEvent";
+    case SpvOpReleaseEvent: return "OpReleaseEvent";
+    case SpvOpCreateUserEvent: return "OpCreateUserEvent";
+    case SpvOpIsValidEvent: return "OpIsValidEvent";
+    case SpvOpSetUserEventStatus: return "OpSetUserEventStatus";
+    case SpvOpCaptureEventProfilingInfo: return "OpCaptureEventProfilingInfo";
+    case SpvOpGetDefaultQueue: return "OpGetDefaultQueue";
+    case SpvOpBuildNDRange: return "OpBuildNDRange";
+    case SpvOpImageSparseSampleImplicitLod: return "OpImageSparseSampleImplicitLod";
+    case SpvOpImageSparseSampleExplicitLod: return "OpImageSparseSampleExplicitLod";
+    case SpvOpImageSparseSampleDrefImplicitLod: return "OpImageSparseSampleDrefImplicitLod";
+    case SpvOpImageSparseSampleDrefExplicitLod: return "OpImageSparseSampleDrefExplicitLod";
+    case SpvOpImageSparseSampleProjImplicitLod: return "OpImageSparseSampleProjImplicitLod";
+    case SpvOpImageSparseSampleProjExplicitLod: return "OpImageSparseSampleProjExplicitLod";
+    case SpvOpImageSparseSampleProjDrefImplicitLod: return "OpImageSparseSampleProjDrefImplicitLod";
+    case SpvOpImageSparseSampleProjDrefExplicitLod: return "OpImageSparseSampleProjDrefExplicitLod";
+    case SpvOpImageSparseFetch: return "OpImageSparseFetch";
+    case SpvOpImageSparseGather: return "OpImageSparseGather";
+    case SpvOpImageSparseDrefGather: return "OpImageSparseDrefGather";
+    case SpvOpImageSparseTexelsResident: return "OpImageSparseTexelsResident";
+    case SpvOpNoLine: return "OpNoLine";
+    case SpvOpAtomicFlagTestAndSet: return "OpAtomicFlagTestAndSet";
+    case SpvOpAtomicFlagClear: return "OpAtomicFlagClear";
+    case SpvOpImageSparseRead: return "OpImageSparseRead";
+    case SpvOpSizeOf: return "OpSizeOf";
+    case SpvOpTypePipeStorage: return "OpTypePipeStorage";
+    case SpvOpConstantPipeStorage: return "OpConstantPipeStorage";
+    case SpvOpCreatePipeFromPipeStorage: return "OpCreatePipeFromPipeStorage";
+    case SpvOpGetKernelLocalSizeForSubgroupCount: return "OpGetKernelLocalSizeForSubgroupCount";
+    case SpvOpGetKernelMaxNumSubgroups: return "OpGetKernelMaxNumSubgroups";
+    case SpvOpTypeNamedBarrier: return "OpTypeNamedBarrier";
+    case SpvOpNamedBarrierInitialize: return "OpNamedBarrierInitialize";
+    case SpvOpMemoryNamedBarrier: return "OpMemoryNamedBarrier";
+    case SpvOpModuleProcessed: return "OpModuleProcessed";
+    case SpvOpExecutionModeId: return "OpExecutionModeId";
+    case SpvOpDecorateId: return "OpDecorateId";
+    case SpvOpGroupNonUniformElect: return "OpGroupNonUniformElect";
+    case SpvOpGroupNonUniformAll: return "OpGroupNonUniformAll";
+    case SpvOpGroupNonUniformAny: return "OpGroupNonUniformAny";
+    case SpvOpGroupNonUniformAllEqual: return "OpGroupNonUniformAllEqual";
+    case SpvOpGroupNonUniformBroadcast: return "OpGroupNonUniformBroadcast";
+    case SpvOpGroupNonUniformBroadcastFirst: return "OpGroupNonUniformBroadcastFirst";
+    case SpvOpGroupNonUniformBallot: return "OpGroupNonUniformBallot";
+    case SpvOpGroupNonUniformInverseBallot: return "OpGroupNonUniformInverseBallot";
+    case SpvOpGroupNonUniformBallotBitExtract: return "OpGroupNonUniformBallotBitExtract";
+    case SpvOpGroupNonUniformBallotBitCount: return "OpGroupNonUniformBallotBitCount";
+    case SpvOpGroupNonUniformBallotFindLSB: return "OpGroupNonUniformBallotFindLSB";
+    case SpvOpGroupNonUniformBallotFindMSB: return "OpGroupNonUniformBallotFindMSB";
+    case SpvOpGroupNonUniformShuffle: return "OpGroupNonUniformShuffle";
+    case SpvOpGroupNonUniformShuffleXor: return "OpGroupNonUniformShuffleXor";
+    case SpvOpGroupNonUniformShuffleUp: return "OpGroupNonUniformShuffleUp";
+    case SpvOpGroupNonUniformShuffleDown: return "OpGroupNonUniformShuffleDown";
+    case SpvOpGroupNonUniformIAdd: return "OpGroupNonUniformIAdd";
+    case SpvOpGroupNonUniformFAdd: return "OpGroupNonUniformFAdd";
+    case SpvOpGroupNonUniformIMul: return "OpGroupNonUniformIMul";
+    case SpvOpGroupNonUniformFMul: return "OpGroupNonUniformFMul";
+    case SpvOpGroupNonUniformSMin: return "OpGroupNonUniformSMin";
+    case SpvOpGroupNonUniformUMin: return "OpGroupNonUniformUMin";
+    case SpvOpGroupNonUniformFMin: return "OpGroupNonUniformFMin";
+    case SpvOpGroupNonUniformSMax: return "OpGroupNonUniformSMax";
+    case SpvOpGroupNonUniformUMax: return "OpGroupNonUniformUMax";
+    case SpvOpGroupNonUniformFMax: return "OpGroupNonUniformFMax";
+    case SpvOpGroupNonUniformBitwiseAnd: return "OpGroupNonUniformBitwiseAnd";
+    case SpvOpGroupNonUniformBitwiseOr: return "OpGroupNonUniformBitwiseOr";
+    case SpvOpGroupNonUniformBitwiseXor: return "OpGroupNonUniformBitwiseXor";
+    case SpvOpGroupNonUniformLogicalAnd: return "OpGroupNonUniformLogicalAnd";
+    case SpvOpGroupNonUniformLogicalOr: return "OpGroupNonUniformLogicalOr";
+    case SpvOpGroupNonUniformLogicalXor: return "OpGroupNonUniformLogicalXor";
+    case SpvOpGroupNonUniformQuadBroadcast: return "OpGroupNonUniformQuadBroadcast";
+    case SpvOpGroupNonUniformQuadSwap: return "OpGroupNonUniformQuadSwap";
+    case SpvOpCopyLogical: return "OpCopyLogical";
+    case SpvOpPtrEqual: return "OpPtrEqual";
+    case SpvOpPtrNotEqual: return "OpPtrNotEqual";
+    case SpvOpPtrDiff: return "OpPtrDiff";
+    case SpvOpColorAttachmentReadEXT: return "OpColorAttachmentReadEXT";
+    case SpvOpDepthAttachmentReadEXT: return "OpDepthAttachmentReadEXT";
+    case SpvOpStencilAttachmentReadEXT: return "OpStencilAttachmentReadEXT";
+    case SpvOpTerminateInvocation: return "OpTerminateInvocation";
+    case SpvOpTypeUntypedPointerKHR: return "OpTypeUntypedPointerKHR";
+    case SpvOpUntypedVariableKHR: return "OpUntypedVariableKHR";
+    case SpvOpUntypedAccessChainKHR: return "OpUntypedAccessChainKHR";
+    case SpvOpUntypedInBoundsAccessChainKHR: return "OpUntypedInBoundsAccessChainKHR";
+    case SpvOpSubgroupBallotKHR: return "OpSubgroupBallotKHR";
+    case SpvOpSubgroupFirstInvocationKHR: return "OpSubgroupFirstInvocationKHR";
+    case SpvOpUntypedPtrAccessChainKHR: return "OpUntypedPtrAccessChainKHR";
+    case SpvOpUntypedInBoundsPtrAccessChainKHR: return "OpUntypedInBoundsPtrAccessChainKHR";
+    case SpvOpUntypedArrayLengthKHR: return "OpUntypedArrayLengthKHR";
+    case SpvOpUntypedPrefetchKHR: return "OpUntypedPrefetchKHR";
+    case SpvOpSubgroupAllKHR: return "OpSubgroupAllKHR";
+    case SpvOpSubgroupAnyKHR: return "OpSubgroupAnyKHR";
+    case SpvOpSubgroupAllEqualKHR: return "OpSubgroupAllEqualKHR";
+    case SpvOpGroupNonUniformRotateKHR: return "OpGroupNonUniformRotateKHR";
+    case SpvOpSubgroupReadInvocationKHR: return "OpSubgroupReadInvocationKHR";
+    case SpvOpExtInstWithForwardRefsKHR: return "OpExtInstWithForwardRefsKHR";
+    case SpvOpTraceRayKHR: return "OpTraceRayKHR";
+    case SpvOpExecuteCallableKHR: return "OpExecuteCallableKHR";
+    case SpvOpConvertUToAccelerationStructureKHR: return "OpConvertUToAccelerationStructureKHR";
+    case SpvOpIgnoreIntersectionKHR: return "OpIgnoreIntersectionKHR";
+    case SpvOpTerminateRayKHR: return "OpTerminateRayKHR";
+    case SpvOpSDot: return "OpSDot";
+    case SpvOpUDot: return "OpUDot";
+    case SpvOpSUDot: return "OpSUDot";
+    case SpvOpSDotAccSat: return "OpSDotAccSat";
+    case SpvOpUDotAccSat: return "OpUDotAccSat";
+    case SpvOpSUDotAccSat: return "OpSUDotAccSat";
+    case SpvOpTypeCooperativeMatrixKHR: return "OpTypeCooperativeMatrixKHR";
+    case SpvOpCooperativeMatrixLoadKHR: return "OpCooperativeMatrixLoadKHR";
+    case SpvOpCooperativeMatrixStoreKHR: return "OpCooperativeMatrixStoreKHR";
+    case SpvOpCooperativeMatrixMulAddKHR: return "OpCooperativeMatrixMulAddKHR";
+    case SpvOpCooperativeMatrixLengthKHR: return "OpCooperativeMatrixLengthKHR";
+    case SpvOpConstantCompositeReplicateEXT: return "OpConstantCompositeReplicateEXT";
+    case SpvOpSpecConstantCompositeReplicateEXT: return "OpSpecConstantCompositeReplicateEXT";
+    case SpvOpCompositeConstructReplicateEXT: return "OpCompositeConstructReplicateEXT";
+    case SpvOpTypeRayQueryKHR: return "OpTypeRayQueryKHR";
+    case SpvOpRayQueryInitializeKHR: return "OpRayQueryInitializeKHR";
+    case SpvOpRayQueryTerminateKHR: return "OpRayQueryTerminateKHR";
+    case SpvOpRayQueryGenerateIntersectionKHR: return "OpRayQueryGenerateIntersectionKHR";
+    case SpvOpRayQueryConfirmIntersectionKHR: return "OpRayQueryConfirmIntersectionKHR";
+    case SpvOpRayQueryProceedKHR: return "OpRayQueryProceedKHR";
+    case SpvOpRayQueryGetIntersectionTypeKHR: return "OpRayQueryGetIntersectionTypeKHR";
+    case SpvOpImageSampleWeightedQCOM: return "OpImageSampleWeightedQCOM";
+    case SpvOpImageBoxFilterQCOM: return "OpImageBoxFilterQCOM";
+    case SpvOpImageBlockMatchSSDQCOM: return "OpImageBlockMatchSSDQCOM";
+    case SpvOpImageBlockMatchSADQCOM: return "OpImageBlockMatchSADQCOM";
+    case SpvOpImageBlockMatchWindowSSDQCOM: return "OpImageBlockMatchWindowSSDQCOM";
+    case SpvOpImageBlockMatchWindowSADQCOM: return "OpImageBlockMatchWindowSADQCOM";
+    case SpvOpImageBlockMatchGatherSSDQCOM: return "OpImageBlockMatchGatherSSDQCOM";
+    case SpvOpImageBlockMatchGatherSADQCOM: return "OpImageBlockMatchGatherSADQCOM";
+    case SpvOpGroupIAddNonUniformAMD: return "OpGroupIAddNonUniformAMD";
+    case SpvOpGroupFAddNonUniformAMD: return "OpGroupFAddNonUniformAMD";
+    case SpvOpGroupFMinNonUniformAMD: return "OpGroupFMinNonUniformAMD";
+    case SpvOpGroupUMinNonUniformAMD: return "OpGroupUMinNonUniformAMD";
+    case SpvOpGroupSMinNonUniformAMD: return "OpGroupSMinNonUniformAMD";
+    case SpvOpGroupFMaxNonUniformAMD: return "OpGroupFMaxNonUniformAMD";
+    case SpvOpGroupUMaxNonUniformAMD: return "OpGroupUMaxNonUniformAMD";
+    case SpvOpGroupSMaxNonUniformAMD: return "OpGroupSMaxNonUniformAMD";
+    case SpvOpFragmentMaskFetchAMD: return "OpFragmentMaskFetchAMD";
+    case SpvOpFragmentFetchAMD: return "OpFragmentFetchAMD";
+    case SpvOpReadClockKHR: return "OpReadClockKHR";
+    case SpvOpAllocateNodePayloadsAMDX: return "OpAllocateNodePayloadsAMDX";
+    case SpvOpEnqueueNodePayloadsAMDX: return "OpEnqueueNodePayloadsAMDX";
+    case SpvOpTypeNodePayloadArrayAMDX: return "OpTypeNodePayloadArrayAMDX";
+    case SpvOpFinishWritingNodePayloadAMDX: return "OpFinishWritingNodePayloadAMDX";
+    case SpvOpNodePayloadArrayLengthAMDX: return "OpNodePayloadArrayLengthAMDX";
+    case SpvOpIsNodePayloadValidAMDX: return "OpIsNodePayloadValidAMDX";
+    case SpvOpConstantStringAMDX: return "OpConstantStringAMDX";
+    case SpvOpSpecConstantStringAMDX: return "OpSpecConstantStringAMDX";
+    case SpvOpGroupNonUniformQuadAllKHR: return "OpGroupNonUniformQuadAllKHR";
+    case SpvOpGroupNonUniformQuadAnyKHR: return "OpGroupNonUniformQuadAnyKHR";
+    case SpvOpHitObjectRecordHitMotionNV: return "OpHitObjectRecordHitMotionNV";
+    case SpvOpHitObjectRecordHitWithIndexMotionNV: return "OpHitObjectRecordHitWithIndexMotionNV";
+    case SpvOpHitObjectRecordMissMotionNV: return "OpHitObjectRecordMissMotionNV";
+    case SpvOpHitObjectGetWorldToObjectNV: return "OpHitObjectGetWorldToObjectNV";
+    case SpvOpHitObjectGetObjectToWorldNV: return "OpHitObjectGetObjectToWorldNV";
+    case SpvOpHitObjectGetObjectRayDirectionNV: return "OpHitObjectGetObjectRayDirectionNV";
+    case SpvOpHitObjectGetObjectRayOriginNV: return "OpHitObjectGetObjectRayOriginNV";
+    case SpvOpHitObjectTraceRayMotionNV: return "OpHitObjectTraceRayMotionNV";
+    case SpvOpHitObjectGetShaderRecordBufferHandleNV: return "OpHitObjectGetShaderRecordBufferHandleNV";
+    case SpvOpHitObjectGetShaderBindingTableRecordIndexNV: return "OpHitObjectGetShaderBindingTableRecordIndexNV";
+    case SpvOpHitObjectRecordEmptyNV: return "OpHitObjectRecordEmptyNV";
+    case SpvOpHitObjectTraceRayNV: return "OpHitObjectTraceRayNV";
+    case SpvOpHitObjectRecordHitNV: return "OpHitObjectRecordHitNV";
+    case SpvOpHitObjectRecordHitWithIndexNV: return "OpHitObjectRecordHitWithIndexNV";
+    case SpvOpHitObjectRecordMissNV: return "OpHitObjectRecordMissNV";
+    case SpvOpHitObjectExecuteShaderNV: return "OpHitObjectExecuteShaderNV";
+    case SpvOpHitObjectGetCurrentTimeNV: return "OpHitObjectGetCurrentTimeNV";
+    case SpvOpHitObjectGetAttributesNV: return "OpHitObjectGetAttributesNV";
+    case SpvOpHitObjectGetHitKindNV: return "OpHitObjectGetHitKindNV";
+    case SpvOpHitObjectGetPrimitiveIndexNV: return "OpHitObjectGetPrimitiveIndexNV";
+    case SpvOpHitObjectGetGeometryIndexNV: return "OpHitObjectGetGeometryIndexNV";
+    case SpvOpHitObjectGetInstanceIdNV: return "OpHitObjectGetInstanceIdNV";
+    case SpvOpHitObjectGetInstanceCustomIndexNV: return "OpHitObjectGetInstanceCustomIndexNV";
+    case SpvOpHitObjectGetWorldRayDirectionNV: return "OpHitObjectGetWorldRayDirectionNV";
+    case SpvOpHitObjectGetWorldRayOriginNV: return "OpHitObjectGetWorldRayOriginNV";
+    case SpvOpHitObjectGetRayTMaxNV: return "OpHitObjectGetRayTMaxNV";
+    case SpvOpHitObjectGetRayTMinNV: return "OpHitObjectGetRayTMinNV";
+    case SpvOpHitObjectIsEmptyNV: return "OpHitObjectIsEmptyNV";
+    case SpvOpHitObjectIsHitNV: return "OpHitObjectIsHitNV";
+    case SpvOpHitObjectIsMissNV: return "OpHitObjectIsMissNV";
+    case SpvOpReorderThreadWithHitObjectNV: return "OpReorderThreadWithHitObjectNV";
+    case SpvOpReorderThreadWithHintNV: return "OpReorderThreadWithHintNV";
+    case SpvOpTypeHitObjectNV: return "OpTypeHitObjectNV";
+    case SpvOpImageSampleFootprintNV: return "OpImageSampleFootprintNV";
+    case SpvOpTypeCooperativeVectorNV: return "OpTypeCooperativeVectorNV";
+    case SpvOpCooperativeVectorMatrixMulNV: return "OpCooperativeVectorMatrixMulNV";
+    case SpvOpCooperativeVectorOuterProductAccumulateNV: return "OpCooperativeVectorOuterProductAccumulateNV";
+    case SpvOpCooperativeVectorReduceSumAccumulateNV: return "OpCooperativeVectorReduceSumAccumulateNV";
+    case SpvOpCooperativeVectorMatrixMulAddNV: return "OpCooperativeVectorMatrixMulAddNV";
+    case SpvOpCooperativeMatrixConvertNV: return "OpCooperativeMatrixConvertNV";
+    case SpvOpEmitMeshTasksEXT: return "OpEmitMeshTasksEXT";
+    case SpvOpSetMeshOutputsEXT: return "OpSetMeshOutputsEXT";
+    case SpvOpGroupNonUniformPartitionNV: return "OpGroupNonUniformPartitionNV";
+    case SpvOpWritePackedPrimitiveIndices4x8NV: return "OpWritePackedPrimitiveIndices4x8NV";
+    case SpvOpFetchMicroTriangleVertexPositionNV: return "OpFetchMicroTriangleVertexPositionNV";
+    case SpvOpFetchMicroTriangleVertexBarycentricNV: return "OpFetchMicroTriangleVertexBarycentricNV";
+    case SpvOpCooperativeVectorLoadNV: return "OpCooperativeVectorLoadNV";
+    case SpvOpCooperativeVectorStoreNV: return "OpCooperativeVectorStoreNV";
+    case SpvOpReportIntersectionKHR: return "OpReportIntersectionKHR";
+    case SpvOpIgnoreIntersectionNV: return "OpIgnoreIntersectionNV";
+    case SpvOpTerminateRayNV: return "OpTerminateRayNV";
+    case SpvOpTraceNV: return "OpTraceNV";
+    case SpvOpTraceMotionNV: return "OpTraceMotionNV";
+    case SpvOpTraceRayMotionNV: return "OpTraceRayMotionNV";
+    case SpvOpRayQueryGetIntersectionTriangleVertexPositionsKHR: return "OpRayQueryGetIntersectionTriangleVertexPositionsKHR";
+    case SpvOpTypeAccelerationStructureKHR: return "OpTypeAccelerationStructureKHR";
+    case SpvOpExecuteCallableNV: return "OpExecuteCallableNV";
+    case SpvOpRayQueryGetClusterIdNV: return "OpRayQueryGetClusterIdNV";
+    case SpvOpHitObjectGetClusterIdNV: return "OpHitObjectGetClusterIdNV";
+    case SpvOpTypeCooperativeMatrixNV: return "OpTypeCooperativeMatrixNV";
+    case SpvOpCooperativeMatrixLoadNV: return "OpCooperativeMatrixLoadNV";
+    case SpvOpCooperativeMatrixStoreNV: return "OpCooperativeMatrixStoreNV";
+    case SpvOpCooperativeMatrixMulAddNV: return "OpCooperativeMatrixMulAddNV";
+    case SpvOpCooperativeMatrixLengthNV: return "OpCooperativeMatrixLengthNV";
+    case SpvOpBeginInvocationInterlockEXT: return "OpBeginInvocationInterlockEXT";
+    case SpvOpEndInvocationInterlockEXT: return "OpEndInvocationInterlockEXT";
+    case SpvOpCooperativeMatrixReduceNV: return "OpCooperativeMatrixReduceNV";
+    case SpvOpCooperativeMatrixLoadTensorNV: return "OpCooperativeMatrixLoadTensorNV";
+    case SpvOpCooperativeMatrixStoreTensorNV: return "OpCooperativeMatrixStoreTensorNV";
+    case SpvOpCooperativeMatrixPerElementOpNV: return "OpCooperativeMatrixPerElementOpNV";
+    case SpvOpTypeTensorLayoutNV: return "OpTypeTensorLayoutNV";
+    case SpvOpTypeTensorViewNV: return "OpTypeTensorViewNV";
+    case SpvOpCreateTensorLayoutNV: return "OpCreateTensorLayoutNV";
+    case SpvOpTensorLayoutSetDimensionNV: return "OpTensorLayoutSetDimensionNV";
+    case SpvOpTensorLayoutSetStrideNV: return "OpTensorLayoutSetStrideNV";
+    case SpvOpTensorLayoutSliceNV: return "OpTensorLayoutSliceNV";
+    case SpvOpTensorLayoutSetClampValueNV: return "OpTensorLayoutSetClampValueNV";
+    case SpvOpCreateTensorViewNV: return "OpCreateTensorViewNV";
+    case SpvOpTensorViewSetDimensionNV: return "OpTensorViewSetDimensionNV";
+    case SpvOpTensorViewSetStrideNV: return "OpTensorViewSetStrideNV";
+    case SpvOpDemoteToHelperInvocation: return "OpDemoteToHelperInvocation";
+    case SpvOpIsHelperInvocationEXT: return "OpIsHelperInvocationEXT";
+    case SpvOpTensorViewSetClipNV: return "OpTensorViewSetClipNV";
+    case SpvOpTensorLayoutSetBlockSizeNV: return "OpTensorLayoutSetBlockSizeNV";
+    case SpvOpCooperativeMatrixTransposeNV: return "OpCooperativeMatrixTransposeNV";
+    case SpvOpConvertUToImageNV: return "OpConvertUToImageNV";
+    case SpvOpConvertUToSamplerNV: return "OpConvertUToSamplerNV";
+    case SpvOpConvertImageToUNV: return "OpConvertImageToUNV";
+    case SpvOpConvertSamplerToUNV: return "OpConvertSamplerToUNV";
+    case SpvOpConvertUToSampledImageNV: return "OpConvertUToSampledImageNV";
+    case SpvOpConvertSampledImageToUNV: return "OpConvertSampledImageToUNV";
+    case SpvOpSamplerImageAddressingModeNV: return "OpSamplerImageAddressingModeNV";
+    case SpvOpRawAccessChainNV: return "OpRawAccessChainNV";
+    case SpvOpRayQueryGetIntersectionSpherePositionNV: return "OpRayQueryGetIntersectionSpherePositionNV";
+    case SpvOpRayQueryGetIntersectionSphereRadiusNV: return "OpRayQueryGetIntersectionSphereRadiusNV";
+    case SpvOpRayQueryGetIntersectionLSSPositionsNV: return "OpRayQueryGetIntersectionLSSPositionsNV";
+    case SpvOpRayQueryGetIntersectionLSSRadiiNV: return "OpRayQueryGetIntersectionLSSRadiiNV";
+    case SpvOpRayQueryGetIntersectionLSSHitValueNV: return "OpRayQueryGetIntersectionLSSHitValueNV";
+    case SpvOpHitObjectGetSpherePositionNV: return "OpHitObjectGetSpherePositionNV";
+    case SpvOpHitObjectGetSphereRadiusNV: return "OpHitObjectGetSphereRadiusNV";
+    case SpvOpHitObjectGetLSSPositionsNV: return "OpHitObjectGetLSSPositionsNV";
+    case SpvOpHitObjectGetLSSRadiiNV: return "OpHitObjectGetLSSRadiiNV";
+    case SpvOpHitObjectIsSphereHitNV: return "OpHitObjectIsSphereHitNV";
+    case SpvOpHitObjectIsLSSHitNV: return "OpHitObjectIsLSSHitNV";
+    case SpvOpRayQueryIsSphereHitNV: return "OpRayQueryIsSphereHitNV";
+    case SpvOpRayQueryIsLSSHitNV: return "OpRayQueryIsLSSHitNV";
+    case SpvOpSubgroupShuffleINTEL: return "OpSubgroupShuffleINTEL";
+    case SpvOpSubgroupShuffleDownINTEL: return "OpSubgroupShuffleDownINTEL";
+    case SpvOpSubgroupShuffleUpINTEL: return "OpSubgroupShuffleUpINTEL";
+    case SpvOpSubgroupShuffleXorINTEL: return "OpSubgroupShuffleXorINTEL";
+    case SpvOpSubgroupBlockReadINTEL: return "OpSubgroupBlockReadINTEL";
+    case SpvOpSubgroupBlockWriteINTEL: return "OpSubgroupBlockWriteINTEL";
+    case SpvOpSubgroupImageBlockReadINTEL: return "OpSubgroupImageBlockReadINTEL";
+    case SpvOpSubgroupImageBlockWriteINTEL: return "OpSubgroupImageBlockWriteINTEL";
+    case SpvOpSubgroupImageMediaBlockReadINTEL: return "OpSubgroupImageMediaBlockReadINTEL";
+    case SpvOpSubgroupImageMediaBlockWriteINTEL: return "OpSubgroupImageMediaBlockWriteINTEL";
+    case SpvOpUCountLeadingZerosINTEL: return "OpUCountLeadingZerosINTEL";
+    case SpvOpUCountTrailingZerosINTEL: return "OpUCountTrailingZerosINTEL";
+    case SpvOpAbsISubINTEL: return "OpAbsISubINTEL";
+    case SpvOpAbsUSubINTEL: return "OpAbsUSubINTEL";
+    case SpvOpIAddSatINTEL: return "OpIAddSatINTEL";
+    case SpvOpUAddSatINTEL: return "OpUAddSatINTEL";
+    case SpvOpIAverageINTEL: return "OpIAverageINTEL";
+    case SpvOpUAverageINTEL: return "OpUAverageINTEL";
+    case SpvOpIAverageRoundedINTEL: return "OpIAverageRoundedINTEL";
+    case SpvOpUAverageRoundedINTEL: return "OpUAverageRoundedINTEL";
+    case SpvOpISubSatINTEL: return "OpISubSatINTEL";
+    case SpvOpUSubSatINTEL: return "OpUSubSatINTEL";
+    case SpvOpIMul32x16INTEL: return "OpIMul32x16INTEL";
+    case SpvOpUMul32x16INTEL: return "OpUMul32x16INTEL";
+    case SpvOpConstantFunctionPointerINTEL: return "OpConstantFunctionPointerINTEL";
+    case SpvOpFunctionPointerCallINTEL: return "OpFunctionPointerCallINTEL";
+    case SpvOpAsmTargetINTEL: return "OpAsmTargetINTEL";
+    case SpvOpAsmINTEL: return "OpAsmINTEL";
+    case SpvOpAsmCallINTEL: return "OpAsmCallINTEL";
+    case SpvOpAtomicFMinEXT: return "OpAtomicFMinEXT";
+    case SpvOpAtomicFMaxEXT: return "OpAtomicFMaxEXT";
+    case SpvOpAssumeTrueKHR: return "OpAssumeTrueKHR";
+    case SpvOpExpectKHR: return "OpExpectKHR";
+    case SpvOpDecorateString: return "OpDecorateString";
+    case SpvOpMemberDecorateString: return "OpMemberDecorateString";
+    case SpvOpVmeImageINTEL: return "OpVmeImageINTEL";
+    case SpvOpTypeVmeImageINTEL: return "OpTypeVmeImageINTEL";
+    case SpvOpTypeAvcImePayloadINTEL: return "OpTypeAvcImePayloadINTEL";
+    case SpvOpTypeAvcRefPayloadINTEL: return "OpTypeAvcRefPayloadINTEL";
+    case SpvOpTypeAvcSicPayloadINTEL: return "OpTypeAvcSicPayloadINTEL";
+    case SpvOpTypeAvcMcePayloadINTEL: return "OpTypeAvcMcePayloadINTEL";
+    case SpvOpTypeAvcMceResultINTEL: return "OpTypeAvcMceResultINTEL";
+    case SpvOpTypeAvcImeResultINTEL: return "OpTypeAvcImeResultINTEL";
+    case SpvOpTypeAvcImeResultSingleReferenceStreamoutINTEL: return "OpTypeAvcImeResultSingleReferenceStreamoutINTEL";
+    case SpvOpTypeAvcImeResultDualReferenceStreamoutINTEL: return "OpTypeAvcImeResultDualReferenceStreamoutINTEL";
+    case SpvOpTypeAvcImeSingleReferenceStreaminINTEL: return "OpTypeAvcImeSingleReferenceStreaminINTEL";
+    case SpvOpTypeAvcImeDualReferenceStreaminINTEL: return "OpTypeAvcImeDualReferenceStreaminINTEL";
+    case SpvOpTypeAvcRefResultINTEL: return "OpTypeAvcRefResultINTEL";
+    case SpvOpTypeAvcSicResultINTEL: return "OpTypeAvcSicResultINTEL";
+    case SpvOpSubgroupAvcMceGetDefaultInterBaseMultiReferencePenaltyINTEL: return "OpSubgroupAvcMceGetDefaultInterBaseMultiReferencePenaltyINTEL";
+    case SpvOpSubgroupAvcMceSetInterBaseMultiReferencePenaltyINTEL: return "OpSubgroupAvcMceSetInterBaseMultiReferencePenaltyINTEL";
+    case SpvOpSubgroupAvcMceGetDefaultInterShapePenaltyINTEL: return "OpSubgroupAvcMceGetDefaultInterShapePenaltyINTEL";
+    case SpvOpSubgroupAvcMceSetInterShapePenaltyINTEL: return "OpSubgroupAvcMceSetInterShapePenaltyINTEL";
+    case SpvOpSubgroupAvcMceGetDefaultInterDirectionPenaltyINTEL: return "OpSubgroupAvcMceGetDefaultInterDirectionPenaltyINTEL";
+    case SpvOpSubgroupAvcMceSetInterDirectionPenaltyINTEL: return "OpSubgroupAvcMceSetInterDirectionPenaltyINTEL";
+    case SpvOpSubgroupAvcMceGetDefaultIntraLumaShapePenaltyINTEL: return "OpSubgroupAvcMceGetDefaultIntraLumaShapePenaltyINTEL";
+    case SpvOpSubgroupAvcMceGetDefaultInterMotionVectorCostTableINTEL: return "OpSubgroupAvcMceGetDefaultInterMotionVectorCostTableINTEL";
+    case SpvOpSubgroupAvcMceGetDefaultHighPenaltyCostTableINTEL: return "OpSubgroupAvcMceGetDefaultHighPenaltyCostTableINTEL";
+    case SpvOpSubgroupAvcMceGetDefaultMediumPenaltyCostTableINTEL: return "OpSubgroupAvcMceGetDefaultMediumPenaltyCostTableINTEL";
+    case SpvOpSubgroupAvcMceGetDefaultLowPenaltyCostTableINTEL: return "OpSubgroupAvcMceGetDefaultLowPenaltyCostTableINTEL";
+    case SpvOpSubgroupAvcMceSetMotionVectorCostFunctionINTEL: return "OpSubgroupAvcMceSetMotionVectorCostFunctionINTEL";
+    case SpvOpSubgroupAvcMceGetDefaultIntraLumaModePenaltyINTEL: return "OpSubgroupAvcMceGetDefaultIntraLumaModePenaltyINTEL";
+    case SpvOpSubgroupAvcMceGetDefaultNonDcLumaIntraPenaltyINTEL: return "OpSubgroupAvcMceGetDefaultNonDcLumaIntraPenaltyINTEL";
+    case SpvOpSubgroupAvcMceGetDefaultIntraChromaModeBasePenaltyINTEL: return "OpSubgroupAvcMceGetDefaultIntraChromaModeBasePenaltyINTEL";
+    case SpvOpSubgroupAvcMceSetAcOnlyHaarINTEL: return "OpSubgroupAvcMceSetAcOnlyHaarINTEL";
+    case SpvOpSubgroupAvcMceSetSourceInterlacedFieldPolarityINTEL: return "OpSubgroupAvcMceSetSourceInterlacedFieldPolarityINTEL";
+    case SpvOpSubgroupAvcMceSetSingleReferenceInterlacedFieldPolarityINTEL: return "OpSubgroupAvcMceSetSingleReferenceInterlacedFieldPolarityINTEL";
+    case SpvOpSubgroupAvcMceSetDualReferenceInterlacedFieldPolaritiesINTEL: return "OpSubgroupAvcMceSetDualReferenceInterlacedFieldPolaritiesINTEL";
+    case SpvOpSubgroupAvcMceConvertToImePayloadINTEL: return "OpSubgroupAvcMceConvertToImePayloadINTEL";
+    case SpvOpSubgroupAvcMceConvertToImeResultINTEL: return "OpSubgroupAvcMceConvertToImeResultINTEL";
+    case SpvOpSubgroupAvcMceConvertToRefPayloadINTEL: return "OpSubgroupAvcMceConvertToRefPayloadINTEL";
+    case SpvOpSubgroupAvcMceConvertToRefResultINTEL: return "OpSubgroupAvcMceConvertToRefResultINTEL";
+    case SpvOpSubgroupAvcMceConvertToSicPayloadINTEL: return "OpSubgroupAvcMceConvertToSicPayloadINTEL";
+    case SpvOpSubgroupAvcMceConvertToSicResultINTEL: return "OpSubgroupAvcMceConvertToSicResultINTEL";
+    case SpvOpSubgroupAvcMceGetMotionVectorsINTEL: return "OpSubgroupAvcMceGetMotionVectorsINTEL";
+    case SpvOpSubgroupAvcMceGetInterDistortionsINTEL: return "OpSubgroupAvcMceGetInterDistortionsINTEL";
+    case SpvOpSubgroupAvcMceGetBestInterDistortionsINTEL: return "OpSubgroupAvcMceGetBestInterDistortionsINTEL";
+    case SpvOpSubgroupAvcMceGetInterMajorShapeINTEL: return "OpSubgroupAvcMceGetInterMajorShapeINTEL";
+    case SpvOpSubgroupAvcMceGetInterMinorShapeINTEL: return "OpSubgroupAvcMceGetInterMinorShapeINTEL";
+    case SpvOpSubgroupAvcMceGetInterDirectionsINTEL: return "OpSubgroupAvcMceGetInterDirectionsINTEL";
+    case SpvOpSubgroupAvcMceGetInterMotionVectorCountINTEL: return "OpSubgroupAvcMceGetInterMotionVectorCountINTEL";
+    case SpvOpSubgroupAvcMceGetInterReferenceIdsINTEL: return "OpSubgroupAvcMceGetInterReferenceIdsINTEL";
+    case SpvOpSubgroupAvcMceGetInterReferenceInterlacedFieldPolaritiesINTEL: return "OpSubgroupAvcMceGetInterReferenceInterlacedFieldPolaritiesINTEL";
+    case SpvOpSubgroupAvcImeInitializeINTEL: return "OpSubgroupAvcImeInitializeINTEL";
+    case SpvOpSubgroupAvcImeSetSingleReferenceINTEL: return "OpSubgroupAvcImeSetSingleReferenceINTEL";
+    case SpvOpSubgroupAvcImeSetDualReferenceINTEL: return "OpSubgroupAvcImeSetDualReferenceINTEL";
+    case SpvOpSubgroupAvcImeRefWindowSizeINTEL: return "OpSubgroupAvcImeRefWindowSizeINTEL";
+    case SpvOpSubgroupAvcImeAdjustRefOffsetINTEL: return "OpSubgroupAvcImeAdjustRefOffsetINTEL";
+    case SpvOpSubgroupAvcImeConvertToMcePayloadINTEL: return "OpSubgroupAvcImeConvertToMcePayloadINTEL";
+    case SpvOpSubgroupAvcImeSetMaxMotionVectorCountINTEL: return "OpSubgroupAvcImeSetMaxMotionVectorCountINTEL";
+    case SpvOpSubgroupAvcImeSetUnidirectionalMixDisableINTEL: return "OpSubgroupAvcImeSetUnidirectionalMixDisableINTEL";
+    case SpvOpSubgroupAvcImeSetEarlySearchTerminationThresholdINTEL: return "OpSubgroupAvcImeSetEarlySearchTerminationThresholdINTEL";
+    case SpvOpSubgroupAvcImeSetWeightedSadINTEL: return "OpSubgroupAvcImeSetWeightedSadINTEL";
+    case SpvOpSubgroupAvcImeEvaluateWithSingleReferenceINTEL: return "OpSubgroupAvcImeEvaluateWithSingleReferenceINTEL";
+    case SpvOpSubgroupAvcImeEvaluateWithDualReferenceINTEL: return "OpSubgroupAvcImeEvaluateWithDualReferenceINTEL";
+    case SpvOpSubgroupAvcImeEvaluateWithSingleReferenceStreaminINTEL: return "OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminINTEL";
+    case SpvOpSubgroupAvcImeEvaluateWithDualReferenceStreaminINTEL: return "OpSubgroupAvcImeEvaluateWithDualReferenceStreaminINTEL";
+    case SpvOpSubgroupAvcImeEvaluateWithSingleReferenceStreamoutINTEL: return "OpSubgroupAvcImeEvaluateWithSingleReferenceStreamoutINTEL";
+    case SpvOpSubgroupAvcImeEvaluateWithDualReferenceStreamoutINTEL: return "OpSubgroupAvcImeEvaluateWithDualReferenceStreamoutINTEL";
+    case SpvOpSubgroupAvcImeEvaluateWithSingleReferenceStreaminoutINTEL: return "OpSubgroupAvcImeEvaluateWithSingleReferenceStreaminoutINTEL";
+    case SpvOpSubgroupAvcImeEvaluateWithDualReferenceStreaminoutINTEL: return "OpSubgroupAvcImeEvaluateWithDualReferenceStreaminoutINTEL";
+    case SpvOpSubgroupAvcImeConvertToMceResultINTEL: return "OpSubgroupAvcImeConvertToMceResultINTEL";
+    case SpvOpSubgroupAvcImeGetSingleReferenceStreaminINTEL: return "OpSubgroupAvcImeGetSingleReferenceStreaminINTEL";
+    case SpvOpSubgroupAvcImeGetDualReferenceStreaminINTEL: return "OpSubgroupAvcImeGetDualReferenceStreaminINTEL";
+    case SpvOpSubgroupAvcImeStripSingleReferenceStreamoutINTEL: return "OpSubgroupAvcImeStripSingleReferenceStreamoutINTEL";
+    case SpvOpSubgroupAvcImeStripDualReferenceStreamoutINTEL: return "OpSubgroupAvcImeStripDualReferenceStreamoutINTEL";
+    case SpvOpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeMotionVectorsINTEL: return "OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeMotionVectorsINTEL";
+    case SpvOpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeDistortionsINTEL: return "OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeDistortionsINTEL";
+    case SpvOpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeReferenceIdsINTEL: return "OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeReferenceIdsINTEL";
+    case SpvOpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeMotionVectorsINTEL: return "OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeMotionVectorsINTEL";
+    case SpvOpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeDistortionsINTEL: return "OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeDistortionsINTEL";
+    case SpvOpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeReferenceIdsINTEL: return "OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeReferenceIdsINTEL";
+    case SpvOpSubgroupAvcImeGetBorderReachedINTEL: return "OpSubgroupAvcImeGetBorderReachedINTEL";
+    case SpvOpSubgroupAvcImeGetTruncatedSearchIndicationINTEL: return "OpSubgroupAvcImeGetTruncatedSearchIndicationINTEL";
+    case SpvOpSubgroupAvcImeGetUnidirectionalEarlySearchTerminationINTEL: return "OpSubgroupAvcImeGetUnidirectionalEarlySearchTerminationINTEL";
+    case SpvOpSubgroupAvcImeGetWeightingPatternMinimumMotionVectorINTEL: return "OpSubgroupAvcImeGetWeightingPatternMinimumMotionVectorINTEL";
+    case SpvOpSubgroupAvcImeGetWeightingPatternMinimumDistortionINTEL: return "OpSubgroupAvcImeGetWeightingPatternMinimumDistortionINTEL";
+    case SpvOpSubgroupAvcFmeInitializeINTEL: return "OpSubgroupAvcFmeInitializeINTEL";
+    case SpvOpSubgroupAvcBmeInitializeINTEL: return "OpSubgroupAvcBmeInitializeINTEL";
+    case SpvOpSubgroupAvcRefConvertToMcePayloadINTEL: return "OpSubgroupAvcRefConvertToMcePayloadINTEL";
+    case SpvOpSubgroupAvcRefSetBidirectionalMixDisableINTEL: return "OpSubgroupAvcRefSetBidirectionalMixDisableINTEL";
+    case SpvOpSubgroupAvcRefSetBilinearFilterEnableINTEL: return "OpSubgroupAvcRefSetBilinearFilterEnableINTEL";
+    case SpvOpSubgroupAvcRefEvaluateWithSingleReferenceINTEL: return "OpSubgroupAvcRefEvaluateWithSingleReferenceINTEL";
+    case SpvOpSubgroupAvcRefEvaluateWithDualReferenceINTEL: return "OpSubgroupAvcRefEvaluateWithDualReferenceINTEL";
+    case SpvOpSubgroupAvcRefEvaluateWithMultiReferenceINTEL: return "OpSubgroupAvcRefEvaluateWithMultiReferenceINTEL";
+    case SpvOpSubgroupAvcRefEvaluateWithMultiReferenceInterlacedINTEL: return "OpSubgroupAvcRefEvaluateWithMultiReferenceInterlacedINTEL";
+    case SpvOpSubgroupAvcRefConvertToMceResultINTEL: return "OpSubgroupAvcRefConvertToMceResultINTEL";
+    case SpvOpSubgroupAvcSicInitializeINTEL: return "OpSubgroupAvcSicInitializeINTEL";
+    case SpvOpSubgroupAvcSicConfigureSkcINTEL: return "OpSubgroupAvcSicConfigureSkcINTEL";
+    case SpvOpSubgroupAvcSicConfigureIpeLumaINTEL: return "OpSubgroupAvcSicConfigureIpeLumaINTEL";
+    case SpvOpSubgroupAvcSicConfigureIpeLumaChromaINTEL: return "OpSubgroupAvcSicConfigureIpeLumaChromaINTEL";
+    case SpvOpSubgroupAvcSicGetMotionVectorMaskINTEL: return "OpSubgroupAvcSicGetMotionVectorMaskINTEL";
+    case SpvOpSubgroupAvcSicConvertToMcePayloadINTEL: return "OpSubgroupAvcSicConvertToMcePayloadINTEL";
+    case SpvOpSubgroupAvcSicSetIntraLumaShapePenaltyINTEL: return "OpSubgroupAvcSicSetIntraLumaShapePenaltyINTEL";
+    case SpvOpSubgroupAvcSicSetIntraLumaModeCostFunctionINTEL: return "OpSubgroupAvcSicSetIntraLumaModeCostFunctionINTEL";
+    case SpvOpSubgroupAvcSicSetIntraChromaModeCostFunctionINTEL: return "OpSubgroupAvcSicSetIntraChromaModeCostFunctionINTEL";
+    case SpvOpSubgroupAvcSicSetBilinearFilterEnableINTEL: return "OpSubgroupAvcSicSetBilinearFilterEnableINTEL";
+    case SpvOpSubgroupAvcSicSetSkcForwardTransformEnableINTEL: return "OpSubgroupAvcSicSetSkcForwardTransformEnableINTEL";
+    case SpvOpSubgroupAvcSicSetBlockBasedRawSkipSadINTEL: return "OpSubgroupAvcSicSetBlockBasedRawSkipSadINTEL";
+    case SpvOpSubgroupAvcSicEvaluateIpeINTEL: return "OpSubgroupAvcSicEvaluateIpeINTEL";
+    case SpvOpSubgroupAvcSicEvaluateWithSingleReferenceINTEL: return "OpSubgroupAvcSicEvaluateWithSingleReferenceINTEL";
+    case SpvOpSubgroupAvcSicEvaluateWithDualReferenceINTEL: return "OpSubgroupAvcSicEvaluateWithDualReferenceINTEL";
+    case SpvOpSubgroupAvcSicEvaluateWithMultiReferenceINTEL: return "OpSubgroupAvcSicEvaluateWithMultiReferenceINTEL";
+    case SpvOpSubgroupAvcSicEvaluateWithMultiReferenceInterlacedINTEL: return "OpSubgroupAvcSicEvaluateWithMultiReferenceInterlacedINTEL";
+    case SpvOpSubgroupAvcSicConvertToMceResultINTEL: return "OpSubgroupAvcSicConvertToMceResultINTEL";
+    case SpvOpSubgroupAvcSicGetIpeLumaShapeINTEL: return "OpSubgroupAvcSicGetIpeLumaShapeINTEL";
+    case SpvOpSubgroupAvcSicGetBestIpeLumaDistortionINTEL: return "OpSubgroupAvcSicGetBestIpeLumaDistortionINTEL";
+    case SpvOpSubgroupAvcSicGetBestIpeChromaDistortionINTEL: return "OpSubgroupAvcSicGetBestIpeChromaDistortionINTEL";
+    case SpvOpSubgroupAvcSicGetPackedIpeLumaModesINTEL: return "OpSubgroupAvcSicGetPackedIpeLumaModesINTEL";
+    case SpvOpSubgroupAvcSicGetIpeChromaModeINTEL: return "OpSubgroupAvcSicGetIpeChromaModeINTEL";
+    case SpvOpSubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL: return "OpSubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL";
+    case SpvOpSubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL: return "OpSubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL";
+    case SpvOpSubgroupAvcSicGetInterRawSadsINTEL: return "OpSubgroupAvcSicGetInterRawSadsINTEL";
+    case SpvOpVariableLengthArrayINTEL: return "OpVariableLengthArrayINTEL";
+    case SpvOpSaveMemoryINTEL: return "OpSaveMemoryINTEL";
+    case SpvOpRestoreMemoryINTEL: return "OpRestoreMemoryINTEL";
+    case SpvOpArbitraryFloatSinCosPiINTEL: return "OpArbitraryFloatSinCosPiINTEL";
+    case SpvOpArbitraryFloatCastINTEL: return "OpArbitraryFloatCastINTEL";
+    case SpvOpArbitraryFloatCastFromIntINTEL: return "OpArbitraryFloatCastFromIntINTEL";
+    case SpvOpArbitraryFloatCastToIntINTEL: return "OpArbitraryFloatCastToIntINTEL";
+    case SpvOpArbitraryFloatAddINTEL: return "OpArbitraryFloatAddINTEL";
+    case SpvOpArbitraryFloatSubINTEL: return "OpArbitraryFloatSubINTEL";
+    case SpvOpArbitraryFloatMulINTEL: return "OpArbitraryFloatMulINTEL";
+    case SpvOpArbitraryFloatDivINTEL: return "OpArbitraryFloatDivINTEL";
+    case SpvOpArbitraryFloatGTINTEL: return "OpArbitraryFloatGTINTEL";
+    case SpvOpArbitraryFloatGEINTEL: return "OpArbitraryFloatGEINTEL";
+    case SpvOpArbitraryFloatLTINTEL: return "OpArbitraryFloatLTINTEL";
+    case SpvOpArbitraryFloatLEINTEL: return "OpArbitraryFloatLEINTEL";
+    case SpvOpArbitraryFloatEQINTEL: return "OpArbitraryFloatEQINTEL";
+    case SpvOpArbitraryFloatRecipINTEL: return "OpArbitraryFloatRecipINTEL";
+    case SpvOpArbitraryFloatRSqrtINTEL: return "OpArbitraryFloatRSqrtINTEL";
+    case SpvOpArbitraryFloatCbrtINTEL: return "OpArbitraryFloatCbrtINTEL";
+    case SpvOpArbitraryFloatHypotINTEL: return "OpArbitraryFloatHypotINTEL";
+    case SpvOpArbitraryFloatSqrtINTEL: return "OpArbitraryFloatSqrtINTEL";
+    case SpvOpArbitraryFloatLogINTEL: return "OpArbitraryFloatLogINTEL";
+    case SpvOpArbitraryFloatLog2INTEL: return "OpArbitraryFloatLog2INTEL";
+    case SpvOpArbitraryFloatLog10INTEL: return "OpArbitraryFloatLog10INTEL";
+    case SpvOpArbitraryFloatLog1pINTEL: return "OpArbitraryFloatLog1pINTEL";
+    case SpvOpArbitraryFloatExpINTEL: return "OpArbitraryFloatExpINTEL";
+    case SpvOpArbitraryFloatExp2INTEL: return "OpArbitraryFloatExp2INTEL";
+    case SpvOpArbitraryFloatExp10INTEL: return "OpArbitraryFloatExp10INTEL";
+    case SpvOpArbitraryFloatExpm1INTEL: return "OpArbitraryFloatExpm1INTEL";
+    case SpvOpArbitraryFloatSinINTEL: return "OpArbitraryFloatSinINTEL";
+    case SpvOpArbitraryFloatCosINTEL: return "OpArbitraryFloatCosINTEL";
+    case SpvOpArbitraryFloatSinCosINTEL: return "OpArbitraryFloatSinCosINTEL";
+    case SpvOpArbitraryFloatSinPiINTEL: return "OpArbitraryFloatSinPiINTEL";
+    case SpvOpArbitraryFloatCosPiINTEL: return "OpArbitraryFloatCosPiINTEL";
+    case SpvOpArbitraryFloatASinINTEL: return "OpArbitraryFloatASinINTEL";
+    case SpvOpArbitraryFloatASinPiINTEL: return "OpArbitraryFloatASinPiINTEL";
+    case SpvOpArbitraryFloatACosINTEL: return "OpArbitraryFloatACosINTEL";
+    case SpvOpArbitraryFloatACosPiINTEL: return "OpArbitraryFloatACosPiINTEL";
+    case SpvOpArbitraryFloatATanINTEL: return "OpArbitraryFloatATanINTEL";
+    case SpvOpArbitraryFloatATanPiINTEL: return "OpArbitraryFloatATanPiINTEL";
+    case SpvOpArbitraryFloatATan2INTEL: return "OpArbitraryFloatATan2INTEL";
+    case SpvOpArbitraryFloatPowINTEL: return "OpArbitraryFloatPowINTEL";
+    case SpvOpArbitraryFloatPowRINTEL: return "OpArbitraryFloatPowRINTEL";
+    case SpvOpArbitraryFloatPowNINTEL: return "OpArbitraryFloatPowNINTEL";
+    case SpvOpLoopControlINTEL: return "OpLoopControlINTEL";
+    case SpvOpAliasDomainDeclINTEL: return "OpAliasDomainDeclINTEL";
+    case SpvOpAliasScopeDeclINTEL: return "OpAliasScopeDeclINTEL";
+    case SpvOpAliasScopeListDeclINTEL: return "OpAliasScopeListDeclINTEL";
+    case SpvOpFixedSqrtINTEL: return "OpFixedSqrtINTEL";
+    case SpvOpFixedRecipINTEL: return "OpFixedRecipINTEL";
+    case SpvOpFixedRsqrtINTEL: return "OpFixedRsqrtINTEL";
+    case SpvOpFixedSinINTEL: return "OpFixedSinINTEL";
+    case SpvOpFixedCosINTEL: return "OpFixedCosINTEL";
+    case SpvOpFixedSinCosINTEL: return "OpFixedSinCosINTEL";
+    case SpvOpFixedSinPiINTEL: return "OpFixedSinPiINTEL";
+    case SpvOpFixedCosPiINTEL: return "OpFixedCosPiINTEL";
+    case SpvOpFixedSinCosPiINTEL: return "OpFixedSinCosPiINTEL";
+    case SpvOpFixedLogINTEL: return "OpFixedLogINTEL";
+    case SpvOpFixedExpINTEL: return "OpFixedExpINTEL";
+    case SpvOpPtrCastToCrossWorkgroupINTEL: return "OpPtrCastToCrossWorkgroupINTEL";
+    case SpvOpCrossWorkgroupCastToPtrINTEL: return "OpCrossWorkgroupCastToPtrINTEL";
+    case SpvOpReadPipeBlockingINTEL: return "OpReadPipeBlockingINTEL";
+    case SpvOpWritePipeBlockingINTEL: return "OpWritePipeBlockingINTEL";
+    case SpvOpFPGARegINTEL: return "OpFPGARegINTEL";
+    case SpvOpRayQueryGetRayTMinKHR: return "OpRayQueryGetRayTMinKHR";
+    case SpvOpRayQueryGetRayFlagsKHR: return "OpRayQueryGetRayFlagsKHR";
+    case SpvOpRayQueryGetIntersectionTKHR: return "OpRayQueryGetIntersectionTKHR";
+    case SpvOpRayQueryGetIntersectionInstanceCustomIndexKHR: return "OpRayQueryGetIntersectionInstanceCustomIndexKHR";
+    case SpvOpRayQueryGetIntersectionInstanceIdKHR: return "OpRayQueryGetIntersectionInstanceIdKHR";
+    case SpvOpRayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetKHR: return "OpRayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetKHR";
+    case SpvOpRayQueryGetIntersectionGeometryIndexKHR: return "OpRayQueryGetIntersectionGeometryIndexKHR";
+    case SpvOpRayQueryGetIntersectionPrimitiveIndexKHR: return "OpRayQueryGetIntersectionPrimitiveIndexKHR";
+    case SpvOpRayQueryGetIntersectionBarycentricsKHR: return "OpRayQueryGetIntersectionBarycentricsKHR";
+    case SpvOpRayQueryGetIntersectionFrontFaceKHR: return "OpRayQueryGetIntersectionFrontFaceKHR";
+    case SpvOpRayQueryGetIntersectionCandidateAABBOpaqueKHR: return "OpRayQueryGetIntersectionCandidateAABBOpaqueKHR";
+    case SpvOpRayQueryGetIntersectionObjectRayDirectionKHR: return "OpRayQueryGetIntersectionObjectRayDirectionKHR";
+    case SpvOpRayQueryGetIntersectionObjectRayOriginKHR: return "OpRayQueryGetIntersectionObjectRayOriginKHR";
+    case SpvOpRayQueryGetWorldRayDirectionKHR: return "OpRayQueryGetWorldRayDirectionKHR";
+    case SpvOpRayQueryGetWorldRayOriginKHR: return "OpRayQueryGetWorldRayOriginKHR";
+    case SpvOpRayQueryGetIntersectionObjectToWorldKHR: return "OpRayQueryGetIntersectionObjectToWorldKHR";
+    case SpvOpRayQueryGetIntersectionWorldToObjectKHR: return "OpRayQueryGetIntersectionWorldToObjectKHR";
+    case SpvOpAtomicFAddEXT: return "OpAtomicFAddEXT";
+    case SpvOpTypeBufferSurfaceINTEL: return "OpTypeBufferSurfaceINTEL";
+    case SpvOpTypeStructContinuedINTEL: return "OpTypeStructContinuedINTEL";
+    case SpvOpConstantCompositeContinuedINTEL: return "OpConstantCompositeContinuedINTEL";
+    case SpvOpSpecConstantCompositeContinuedINTEL: return "OpSpecConstantCompositeContinuedINTEL";
+    case SpvOpCompositeConstructContinuedINTEL: return "OpCompositeConstructContinuedINTEL";
+    case SpvOpConvertFToBF16INTEL: return "OpConvertFToBF16INTEL";
+    case SpvOpConvertBF16ToFINTEL: return "OpConvertBF16ToFINTEL";
+    case SpvOpControlBarrierArriveINTEL: return "OpControlBarrierArriveINTEL";
+    case SpvOpControlBarrierWaitINTEL: return "OpControlBarrierWaitINTEL";
+    case SpvOpArithmeticFenceEXT: return "OpArithmeticFenceEXT";
+    case SpvOpSubgroupBlockPrefetchINTEL: return "OpSubgroupBlockPrefetchINTEL";
+    case SpvOpSubgroup2DBlockLoadINTEL: return "OpSubgroup2DBlockLoadINTEL";
+    case SpvOpSubgroup2DBlockLoadTransformINTEL: return "OpSubgroup2DBlockLoadTransformINTEL";
+    case SpvOpSubgroup2DBlockLoadTransposeINTEL: return "OpSubgroup2DBlockLoadTransposeINTEL";
+    case SpvOpSubgroup2DBlockPrefetchINTEL: return "OpSubgroup2DBlockPrefetchINTEL";
+    case SpvOpSubgroup2DBlockStoreINTEL: return "OpSubgroup2DBlockStoreINTEL";
+    case SpvOpSubgroupMatrixMultiplyAccumulateINTEL: return "OpSubgroupMatrixMultiplyAccumulateINTEL";
+    case SpvOpGroupIMulKHR: return "OpGroupIMulKHR";
+    case SpvOpGroupFMulKHR: return "OpGroupFMulKHR";
+    case SpvOpGroupBitwiseAndKHR: return "OpGroupBitwiseAndKHR";
+    case SpvOpGroupBitwiseOrKHR: return "OpGroupBitwiseOrKHR";
+    case SpvOpGroupBitwiseXorKHR: return "OpGroupBitwiseXorKHR";
+    case SpvOpGroupLogicalAndKHR: return "OpGroupLogicalAndKHR";
+    case SpvOpGroupLogicalOrKHR: return "OpGroupLogicalOrKHR";
+    case SpvOpGroupLogicalXorKHR: return "OpGroupLogicalXorKHR";
+    case SpvOpMaskedGatherINTEL: return "OpMaskedGatherINTEL";
+    case SpvOpMaskedScatterINTEL: return "OpMaskedScatterINTEL";
+    default: return "Unknown";
+    }
+}
+
 #endif /* SPV_ENABLE_UTILITY_CODE */
 
 #endif

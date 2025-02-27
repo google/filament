@@ -1,0 +1,28 @@
+#version 450
+#extension GL_EXT_buffer_reference2 : require
+#extension GL_EXT_buffer_reference_uvec2 : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(buffer_reference) buffer vec20_stride_8Pointer;
+layout(buffer_reference) buffer vec20_stride_16Pointer;
+layout(std430, buffer_reference, buffer_reference_align = 4) buffer vec20_stride_8Pointer
+{
+    vec2 value[];
+};
+
+layout(std140, buffer_reference, buffer_reference_align = 16) buffer vec20_stride_16Pointer
+{
+    vec2 value[];
+};
+
+layout(push_constant, std430) uniform Registers
+{
+    uvec2 s;
+} registers;
+
+void main()
+{
+    vec20_stride_8Pointer(registers.s).value[0u].x = 40.0;
+    vec20_stride_16Pointer(registers.s).value[0u].x = 40.0;
+}
+

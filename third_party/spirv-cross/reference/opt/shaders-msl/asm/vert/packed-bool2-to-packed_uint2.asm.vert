@@ -25,11 +25,11 @@ struct main0_in
     float4 a_position [[attribute(0)]];
 };
 
-vertex main0_out main0(main0_in in [[stage_in]], constant defaultUniformsVS& _9 [[buffer(0)]], uint gl_VertexIndex [[vertex_id]])
+vertex main0_out main0(main0_in in [[stage_in]], constant defaultUniformsVS& _11 [[buffer(0)]], uint gl_VertexIndex [[vertex_id]])
 {
     main0_out out = {};
-    out.gl_Position = _9.umatrix * float4(_9.uquad[int(gl_VertexIndex)].x, _9.uquad[int(gl_VertexIndex)].y, in.a_position.z, in.a_position.w);
-    if (_9.flags.flags[0].x != 0u)
+    out.gl_Position = _11.umatrix * float4(_11.uquad[int(gl_VertexIndex)].x, _11.uquad[int(gl_VertexIndex)].y, in.a_position.z, in.a_position.w);
+    if (_11.flags.flags[0].x != 0u)
     {
         out.gl_Position.z = 0.0;
     }

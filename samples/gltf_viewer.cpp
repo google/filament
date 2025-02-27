@@ -141,6 +141,7 @@ struct App {
     AutomationEngine* automationEngine = nullptr;
     bool screenshot = false;
     uint8_t screenshotSeq = 0;
+    bool screenshotAsPPM = false;
 };
 
 static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
@@ -202,6 +203,9 @@ static void printUsage(char* name) {
         "       Vulkan backend allows user to choose their GPU.\n"
         "       You can provide the index of the GPU or\n"
         "       a substring to match against the device name\n\n"
+        "   --screenshot-as-ppm, -d\n"
+        "       export PPM as oppose to TIFF screenshots\n\n"
+
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -216,22 +220,23 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:evg:";
+    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:evg:d";
     static const struct option OPTIONS[] = {
-        { "help",            no_argument,          nullptr, 'h' },
-        { "api",             required_argument,    nullptr, 'a' },
-        { "feature-level",   required_argument,    nullptr, 'f' },
-        { "batch",           required_argument,    nullptr, 'b' },
-        { "headless",        no_argument,          nullptr, 'e' },
-        { "ibl",             required_argument,    nullptr, 'i' },
-        { "ubershader",      no_argument,          nullptr, 'u' },
-        { "actual-size",     no_argument,          nullptr, 's' },
-        { "camera",          required_argument,    nullptr, 'c' },
-        { "eyes",            required_argument,    nullptr, 'y' },
-        { "recompute-aabb",  no_argument,          nullptr, 'r' },
-        { "settings",        required_argument,    nullptr, 't' },
-        { "split-view",      no_argument,          nullptr, 'v' },
-        { "vulkan-gpu-hint", required_argument,    nullptr, 'g' },
+        { "help",              no_argument,          nullptr, 'h' },
+        { "api",               required_argument,    nullptr, 'a' },
+        { "feature-level",     required_argument,    nullptr, 'f' },
+        { "batch",             required_argument,    nullptr, 'b' },
+        { "headless",          no_argument,          nullptr, 'e' },
+        { "ibl",               required_argument,    nullptr, 'i' },
+        { "ubershader",        no_argument,          nullptr, 'u' },
+        { "actual-size",       no_argument,          nullptr, 's' },
+        { "camera",            required_argument,    nullptr, 'c' },
+        { "eyes",              required_argument,    nullptr, 'y' },
+        { "recompute-aabb",    no_argument,          nullptr, 'r' },
+        { "settings",          required_argument,    nullptr, 't' },
+        { "split-view",        no_argument,          nullptr, 'v' },
+        { "vulkan-gpu-hint",   required_argument,    nullptr, 'g' },
+        { "screenshot-as-ppm", no_argument,          nullptr, 'd' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -315,6 +320,10 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
             }
             case 'g': {
                 app->config.vulkanGPUHint = arg;
+                break;
+            }
+            case 'd': {
+                app->screenshotAsPPM = true;
                 break;
             }
         }
@@ -767,6 +776,9 @@ int main(int argc, char** argv) {
             options.sleepDuration = 0.0;
             options.exportScreenshots = true;
             options.exportSettings = true;
+            options.exportFormat = app.screenshotAsPPM
+                                           ? AutomationEngine::Options::ExportFormat::PPM
+                                           : AutomationEngine::Options::ExportFormat::TIFF;
             app.automationEngine->setOptions(options);
             app.viewer->stopAnimation();
         }
@@ -1157,8 +1169,9 @@ int main(int argc, char** argv) {
         if (app.screenshot) {
             std::ostringstream stringStream;
             stringStream << "screenshot" << std::setfill('0') << std::setw(2) << +app.screenshotSeq;
+            std::string const ext = app.screenshotAsPPM ? ".ppm" : ".tif";
             AutomationEngine::exportScreenshot(
-                    view, renderer, stringStream.str() + ".ppm", false, app.automationEngine);
+                    view, renderer, stringStream.str() + ext, false, app.automationEngine);
             ++app.screenshotSeq;
             app.screenshot = false;
         }

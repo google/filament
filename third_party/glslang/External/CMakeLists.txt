@@ -34,7 +34,7 @@
 # Suppress all warnings from external projects.
 set_property(DIRECTORY APPEND PROPERTY COMPILE_OPTIONS -w)
 
-if(BUILD_TESTING)
+if(GLSLANG_TESTS)
     if(TARGET gmock)
         message(STATUS "Google Mock already configured - use it")
     elseif(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/googletest)
@@ -71,7 +71,7 @@ endif()
 if(ENABLE_OPT AND NOT TARGET SPIRV-Tools-opt)
     if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/spirv-tools)
         set(SPIRV_SKIP_TESTS ON CACHE BOOL "Skip building SPIRV-Tools tests")
-        add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/spirv-tools spirv-tools)
+        add_subdirectory(spirv-tools)
     endif()
 endif()
 

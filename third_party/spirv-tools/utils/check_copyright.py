@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding=utf-8
 # Copyright (c) 2016 Google Inc.
 #
@@ -41,8 +41,11 @@ AUTHORS = ['The Khronos Group Inc.',
            'Alastair F. Donaldson',
            'Mostafa Ashraf',
            'Shiyu Liu',
-           'ZHOU He']
-CURRENT_YEAR = 2022
+           'ZHOU He',
+           'Nintendo',
+           'Epic Games, Inc.',
+           'NVIDIA Corporation']
+CURRENT_YEAR = 2023
 
 FIRST_YEAR = 2014
 FINAL_YEAR = CURRENT_YEAR + 5

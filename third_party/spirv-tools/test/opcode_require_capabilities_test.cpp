@@ -61,8 +61,33 @@ INSTANTIATE_TEST_SUITE_P(
         ExpectedOpCodeCapabilities{
             spv::Op::OpImageSparseSampleImplicitLod,
             CapabilitySet{spv::Capability::SparseResidency}},
-        ExpectedOpCodeCapabilities{spv::Op::OpCopyMemorySized,
-                                   CapabilitySet{spv::Capability::Addresses}},
+        ExpectedOpCodeCapabilities{
+            spv::Op::OpCopyMemorySized,
+            CapabilitySet{spv::Capability::Addresses,
+                          spv::Capability::UntypedPointersKHR}},
+        ExpectedOpCodeCapabilities{spv::Op::OpArrayLength,
+                                   CapabilitySet{spv::Capability::Shader}},
+        ExpectedOpCodeCapabilities{spv::Op::OpFunction, CapabilitySet()},
+        ExpectedOpCodeCapabilities{spv::Op::OpConvertFToS, CapabilitySet()},
+        ExpectedOpCodeCapabilities{
+            spv::Op::OpEmitStreamVertex,
+            CapabilitySet{spv::Capability::GeometryStreams}},
+        ExpectedOpCodeCapabilities{
+            spv::Op::OpTypeNamedBarrier,
+            CapabilitySet{spv::Capability::NamedBarrier}},
+        ExpectedOpCodeCapabilities{
+            spv::Op::OpGetKernelMaxNumSubgroups,
+            CapabilitySet{spv::Capability::SubgroupDispatch}},
+        ExpectedOpCodeCapabilities{spv::Op::OpImageQuerySamples,
+                                   CapabilitySet{spv::Capability::Kernel,
+                                                 spv::Capability::ImageQuery}},
+        ExpectedOpCodeCapabilities{
+            spv::Op::OpImageSparseSampleImplicitLod,
+            CapabilitySet{spv::Capability::SparseResidency}},
+        ExpectedOpCodeCapabilities{
+            spv::Op::OpCopyMemorySized,
+            CapabilitySet{spv::Capability::Addresses,
+                          spv::Capability::UntypedPointersKHR}},
         ExpectedOpCodeCapabilities{spv::Op::OpArrayLength,
                                    CapabilitySet{spv::Capability::Shader}},
         ExpectedOpCodeCapabilities{spv::Op::OpFunction, CapabilitySet()},

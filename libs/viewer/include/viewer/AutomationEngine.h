@@ -56,6 +56,22 @@ public:
      * Allows users to toggle screenshots, change the sleep duration between tests, etc.
      */
     struct Options {
+
+        /**
+         * Formats that could be used for exporting the screenshots.
+         */
+        enum class ExportFormat : uint8_t {
+            /**
+             * Tagged Image File Format (TIFF)
+             */
+            TIFF = 0,
+
+            /**
+             * Netpbm color image format (Portable Pixel Map)
+             */
+            PPM = 1,
+        };
+
         /**
          * Minimum time that automation waits between applying a settings object and advancing
          * to the next test case. Specified in seconds.
@@ -82,6 +98,11 @@ public:
          * If true, the tick function writes out a settings JSON file before advancing.
          */
         bool exportSettings = false;
+
+        /**
+         * Which image format will be used for exporting screenshots.
+         */
+        ExportFormat exportFormat = ExportFormat::TIFF;
     };
 
     /**

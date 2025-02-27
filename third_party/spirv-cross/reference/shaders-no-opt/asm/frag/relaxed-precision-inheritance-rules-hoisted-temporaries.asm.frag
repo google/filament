@@ -10,11 +10,11 @@ void main()
     float a = vColor.x;
     highp float b = vColor.y;
     int i = 0;
-    float _14;
-    highp float hp_copy_14;
-    float _15;
-    highp float hp_copy_15;
-    for (; i < 4; i++, _14 = a, hp_copy_14 = _14, _15 = a * _14, hp_copy_15 = _15, b += (hp_copy_15 * hp_copy_14))
+    float _44;
+    highp float hp_copy_44;
+    float _45;
+    highp float hp_copy_45;
+    for (; i < 4; i++, _44 = a, hp_copy_44 = _44, _45 = a * _44, hp_copy_45 = _45, b += (hp_copy_45 * hp_copy_44))
     {
         FragColor += vec4(1.0);
     }
