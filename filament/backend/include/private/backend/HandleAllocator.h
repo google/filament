@@ -249,8 +249,8 @@ public:
         if (UTILS_LIKELY(isPoolHandle(id))) {
             // Truncate the age to get the debug tag
             key &= ~(HANDLE_DEBUG_TAG_MASK ^ HANDLE_AGE_MASK);
+            writeHandleTag(key, std::move(tag));
         }
-        writeHandleTag(key, std::move(tag));
     }
 
 private:
