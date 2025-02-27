@@ -449,9 +449,6 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         // that we need to generate the contents of a GPU buffer by processing one or more CPU
         // buffer(s).
         pImpl->computeTangents(asset);
-
-        std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mBufferSlots.clear();
-        std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mPrimitives.clear();
     } else {
         auto& slots = std::get<FFilamentAsset::ResourceInfoExtended>(asset->mResourceInfo).slots;
         ResourceLoaderExtended::loadResources(slots, pImpl->mEngine, asset->mBufferObjects);
