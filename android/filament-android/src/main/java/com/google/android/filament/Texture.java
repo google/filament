@@ -1290,8 +1290,8 @@ public class Texture {
     private static native boolean nIsTextureFormatMipmappable(long nativeEngine, int internalFormat);
     private static native boolean nIsTextureSwizzleSupported(long nativeEngine);
 
-    private static native boolean nValidatePixelFormatAndType(long internalFormat, long pixelDataFormat,
-            long pixelDataType);
+    private static native boolean nValidatePixelFormatAndType(int internalFormat, int pixelDataFormat,
+            int pixelDataType);
 
     private static native long nCreateBuilder();
     private static native void nDestroyBuilder(long nativeBuilder);
