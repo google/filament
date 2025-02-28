@@ -153,9 +153,6 @@ Texture::Builder& Texture::Builder::name(const char* name, size_t const len) noe
 }
 
 Texture* Texture::Builder::build(Engine& engine) {
-    FILAMENT_CHECK_PRECONDITION(Texture::isTextureFormatSupported(engine, mImpl->mFormat))
-            << "Texture format " << uint16_t(mImpl->mFormat) << " not supported on this platform";
-
     const bool isProtectedTexturesSupported =
             downcast(engine).getDriverApi().isProtectedTexturesSupported();
     const bool useProtectedMemory = bool(mImpl->mUsage & TextureUsage::PROTECTED);
@@ -201,6 +198,9 @@ Texture* Texture::Builder::build(Engine& engine) {
     // SAMPLER_EXTERNAL implies imported.
     if (mImpl->mTarget == SamplerType::SAMPLER_EXTERNAL) {
         mImpl->mExternal = true;
+    } else {
+        FILAMENT_CHECK_PRECONDITION(Texture::isTextureFormatSupported(engine, mImpl->mFormat))
+                << "Texture format " << uint16_t(mImpl->mFormat) << " not supported on this platform";
     }
 
     uint8_t maxLevelCount;
