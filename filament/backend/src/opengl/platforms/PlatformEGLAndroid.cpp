@@ -20,6 +20,7 @@
 #include <backend/platforms/PlatformEGLAndroid.h>
 
 #include <private/backend/VirtualMachineEnv.h>
+#include <private/backend/BackendUtilsAndroid.h>
 
 #include "opengl/GLUtils.h"
 #include "ExternalStreamManagerAndroid.h"
@@ -53,11 +54,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-// We require filament to be built with an API 19 toolchain, before that, OpenGLES 3.0 didn't exist
-// Actually, OpenGL ES 3.0 was added to API 18, but API 19 is the better target and
-// the minimum for Jetpack at the time of this comment.
-#if __ANDROID_API__ < 19
-#   error "__ANDROID_API__ must be at least 19"
+// We require filament to be built with an API 26 toolchain, before that, 
+// AHardwareBuffer support didn't exist.
+#if __ANDROID_API__ < 26
+#   error "__ANDROID_API__ must be at least 26"
 #endif
 
 using namespace utils;
@@ -235,8 +235,16 @@ PlatformEGLAndroid::ExternalImageEGLAndroid::~ExternalImageEGLAndroid() = defaul
 
 Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareBuffer const* buffer, bool sRGB) noexcept {
     auto* const p = new(std::nothrow) ExternalImageEGLAndroid;
-    p->aHardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
+    auto hardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
+    p->aHardwareBuffer = hardwareBuffer;
     p->sRGB = sRGB;
+    AHardwareBuffer_Desc hardwareBufferDescription = {};
+    AHardwareBuffer_describe(hardwareBuffer, &hardwareBufferDescription);
+    p->height = hardwareBufferDescription.height;
+    p->width = hardwareBufferDescription.width;
+    auto textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
+    p->format = textureFormat;
+    p->usage = mapToFilamentUsage(hardwareBufferDescription.usage, textureFormat);
     return ExternalImageHandle{ p };
 }
 
@@ -244,11 +252,72 @@ bool PlatformEGLAndroid::setExternalImage(ExternalImageHandleRef externalImage,
         UTILS_UNUSED_IN_RELEASE ExternalTexture* texture) noexcept {
     auto const* const eglExternalImage = static_cast<ExternalImageEGLAndroid const*>(externalImage.get());
     if (eglExternalImage->aHardwareBuffer) {
-        // TODO: implement PlatformEGLAndroid::setExternalImage w/ AHardwareBuffer
-        return true;
+        return PlatformEGLAndroid::setImage(eglExternalImage, texture);
     }
     // not a AHardwareBuffer, fallback to the inherited version
     return PlatformEGL::setExternalImage(externalImage, texture);
+}
+
+OpenGLPlatform::ExternalTexture* PlatformEGLAndroid::createExternalImageTexture() noexcept {
+    ExternalTexture* outTexture = new(std::nothrow) ExternalTexture{};
+    glGenTextures(1, &outTexture->id);
+    return outTexture;
+}
+
+void PlatformEGLAndroid::destroyExternalImageTexture(ExternalTexture* texture) noexcept {
+    glDeleteTextures(1, &texture->id);
+    delete texture;
+}
+
+bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImage,
+        UTILS_UNUSED_IN_RELEASE ExternalTexture* texture) noexcept {
+    AHardwareBuffer* hardwareBuffer = eglExternalImage->aHardwareBuffer;
+
+    // Get the EGL client buffer from AHardwareBuffer
+    EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID(hardwareBuffer);
+    // Questions around attributes with isSrgbTransfer and protected content
+    EGLint imageAttrs[] = {EGL_IMAGE_PRESERVED_KHR,
+                            EGL_TRUE,
+                            EGL_NONE,
+                            EGL_NONE,
+                            EGL_NONE,
+                            EGL_NONE,
+                            EGL_NONE};
+    int attrIndex = 2;
+    if (eglExternalImage->sRGB) {
+        imageAttrs[attrIndex++] = EGL_GL_COLORSPACE;
+        imageAttrs[attrIndex++] = EGL_GL_COLORSPACE_SRGB;
+    }
+
+    if (static_cast<bool>(eglExternalImage->usage & TextureUsage::PROTECTED)) {
+        imageAttrs[attrIndex++] = EGL_PROTECTED_CONTENT_EXT;
+        imageAttrs[attrIndex++] = EGL_TRUE;
+    }
+    // Create an EGLImage from the client buffer
+    EGLImageKHR eglImage = eglCreateImageKHR(eglGetCurrentDisplay(), EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID, clientBuffer, imageAttrs);
+    if (eglImage == EGL_NO_IMAGE_KHR) {
+        // Handle error
+        slog.e << "Failed to create EGL image" << io::endl;
+        return false;
+    }
+
+    // Create and bind the OpenGL texture
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(texture->target, texture->id);
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        slog.e << "Error after glBindTexture: " << error << io::endl;
+        glDeleteTextures(1, &texture->id);
+        eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
+        return false;
+    }
+    glEGLImageTargetTexture2DOES(texture->target, static_cast<GLeglImageOES>(eglImage));
+    error = glGetError();
+    if (error != GL_NO_ERROR) {
+        slog.e << "Error after glEGLImageTargetTexture2DOES: " << error << io::endl;
+        return false;
+    }
+    return true;
 }
 
 void PlatformEGLAndroid::setPresentationTime(int64_t presentationTimeInNanosecond) noexcept {

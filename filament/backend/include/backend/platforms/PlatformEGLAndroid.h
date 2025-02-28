@@ -23,6 +23,7 @@
 #include <backend/platforms/PlatformEGL.h>
 
 #include <utils/android/PerformanceHintManager.h>
+#include <utils/compiler.h>
 
 #include <chrono>
 
@@ -43,6 +44,22 @@ public:
     PlatformEGLAndroid() noexcept;
     ~PlatformEGLAndroid() noexcept override;
 
+    /**
+     * Creates an ExternalImage from a EGLImageKHR
+     */
+    ExternalImageHandle createExternalImage(AHardwareBuffer const *buffer, bool sRGB) noexcept;
+
+    struct ExternalImageEGLAndroid : public ExternalImageEGL {
+        AHardwareBuffer* aHardwareBuffer = nullptr;
+        bool sRGB = false;
+        unsigned int width;             // Texture width
+        unsigned int height;            // Texture height
+        TextureFormat format;           // Texture format
+        TextureUsage usage;             // Texture usage flags
+    protected:
+        ~ExternalImageEGLAndroid() override;
+    };
+
 protected:
 
     // --------------------------------------------------------------------------------------------
@@ -56,11 +73,6 @@ protected:
 
     Driver* createDriver(void* sharedContext,
             const Platform::DriverConfig& driverConfig) noexcept override;
-
-    /**
-     * Creates an ExternalImage from a EGLImageKHR
-     */
-    ExternalImageHandle createExternalImage(AHardwareBuffer const *buffer, bool sRGB) noexcept;
 
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
@@ -95,14 +107,10 @@ protected:
      */
     AcquiredImage transformAcquiredImage(AcquiredImage source) noexcept override;
 
+    OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
+    void destroyExternalImageTexture(ExternalTexture* texture) noexcept override;
     bool setExternalImage(ExternalImageHandleRef externalImage, ExternalTexture* texture) noexcept override;
-
-    struct ExternalImageEGLAndroid : public ExternalImageEGL {
-        AHardwareBuffer* aHardwareBuffer = nullptr;
-        bool sRGB = false;
-    protected:
-        ~ExternalImageEGLAndroid() override;
-    };
+    bool setImage(ExternalImageEGLAndroid const* eglExternalImage, ExternalTexture* texture) noexcept;
 
 protected:
     bool makeCurrent(ContextType type,
