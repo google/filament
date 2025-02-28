@@ -21,6 +21,7 @@
 #include "FilamentAPI-impl.h"
 
 #include <utils/CString.h>
+#include <utils/StaticString.h>
 
 namespace filament {
 
@@ -49,6 +50,10 @@ BufferObject::Builder& BufferObject::Builder::bindingType(BindingType const bind
 
 BufferObject::Builder& BufferObject::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
+}
+
+BufferObject::Builder& BufferObject::Builder::name(utils::StaticString const& name) noexcept {
+    return BuilderNameMixin::name(name);
 }
 
 BufferObject* BufferObject::Builder::build(Engine& engine) {

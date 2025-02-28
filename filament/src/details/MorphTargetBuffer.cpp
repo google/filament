@@ -26,6 +26,7 @@
 #include <math/norm.h>
 
 #include <utils/CString.h>
+#include <utils/StaticString.h>
 
 namespace filament {
 
@@ -57,6 +58,10 @@ MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::count(size_t const count
 
 MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
+}
+
+MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::name(utils::StaticString const& name) noexcept {
+    return BuilderNameMixin::name(name);
 }
 
 MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) {

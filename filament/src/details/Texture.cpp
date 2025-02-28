@@ -41,6 +41,8 @@
 #include <utils/algorithm.h>
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/StaticString.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
@@ -150,6 +152,10 @@ Texture::Builder& Texture::Builder::swizzle(Swizzle const r, Swizzle const g, Sw
 
 Texture::Builder& Texture::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
+}
+
+Texture::Builder& Texture::Builder::name(StaticString const& name) noexcept {
+    return BuilderNameMixin::name(name);
 }
 
 Texture* Texture::Builder::build(Engine& engine) {
