@@ -12,5 +12,7 @@ set(DAWN_ABSEIL_DIR ${EXTERNAL}/abseil)
 set(DAWN_SPIRV_TOOLS_DIR ${EXTERNAL}/spirv-tools/)
 set(DAWN_SPIRV_HEADERS_DIR ${EXTERNAL}/spirv-headers)
 set(DAWN_GLSLANG_DIR ${EXTERNAL}/glslang/)
-
+if(IS_HOST_PLATFORM)
+    set(TINT_BUILD_SPV_READER ON)
+endif ()
 add_subdirectory(../  ${PROJECT_BINARY_DIR}/third_party/dawn)

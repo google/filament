@@ -519,7 +519,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
 }
 
 bool GLSLPostProcessor::spirvToWgsl(const SpirvBlob *spirv, std::string *outWsl) {
-#ifdef FILAMENT_SUPPORTS_WEBGPU
+#if FILAMENT_SUPPORTS_WEBGPU
     //Currently no options we want to use
     const tint::spirv::reader::Options readerOpts{};
     tint::wgsl::writer::Options writerOpts{};
@@ -547,7 +547,7 @@ bool GLSLPostProcessor::spirvToWgsl(const SpirvBlob *spirv, std::string *outWsl)
     *outWsl = wgslOut->wgsl;
     return true;
 #else
-    slog.i << "Trying to emit WGSL without including WebGPU dependencies, please set CMake arg FILAMENT_SUPPORTS_WEBGPU" << io::endl;
+    slog.i << "Trying to emit WGSL without including WebGPU dependencies, please set CMake arg FILAMENT_SUPPORTS_WEBGPU and FILAMENT_SUPPORTS_WEBGPU" << io::endl;
     return false;
 #endif
 
