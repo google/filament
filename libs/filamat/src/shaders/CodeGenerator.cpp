@@ -297,12 +297,22 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL",
             +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL, 1);
 
-    generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
-            +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
+    if (mTargetApi == TargetApi::WEBGPU) {
+        // Note: This is a revived hack for a hack.
+        //
+        // WGSL doesn't support specialization constants as an array length
+        // CONFIG_MAX_INSTANCES is only needed for WebGL, so we can replace it with a constant.
+        // More information at https://github.com/gpuweb/gpuweb/issues/572#issuecomment-649760005
+        out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
+        out << "const int CONFIG_FROXEL_BUFFER_HEIGHT = 2048;\n";
+    } else {
+        generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
+                +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
 
-    // the default of 1024 (16KiB) is needed for 32% of Android devices
-    generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
-            +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
+        // the default of 1024 (16KiB) is needed for 32% of Android devices
+        generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
+                +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
+    }
 
     // directional shadowmap visualization
     generateSpecializationConstant(out, "CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP",
