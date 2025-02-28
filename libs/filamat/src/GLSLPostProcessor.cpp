@@ -44,7 +44,7 @@
 #include <unordered_map>
 #include <vector>
 
-#ifdef FILAMENT_SUPPORTS_WEBGPU
+#if TINT_BUILD_SPV_READER
 #include <tint/tint.h>
 #endif
 
@@ -519,7 +519,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
 }
 
 bool GLSLPostProcessor::spirvToWgsl(const SpirvBlob *spirv, std::string *outWsl) {
-#ifdef FILAMENT_SUPPORTS_WEBGPU
+#if TINT_BUILD_SPV_READER
     //Currently no options we want to use
     const tint::spirv::reader::Options readerOpts{};
     tint::wgsl::writer::Options writerOpts{};
@@ -547,7 +547,7 @@ bool GLSLPostProcessor::spirvToWgsl(const SpirvBlob *spirv, std::string *outWsl)
     *outWsl = wgslOut->wgsl;
     return true;
 #else
-    slog.i << "Trying to emit WGSL without including WebGPU dependencies, please set CMake arg FILAMENT_SUPPORTS_WEBGPU" << io::endl;
+    slog.i << "Trying to emit WGSL without including WebGPU dependencies, please set CMake arg FILAMENT_SUPPORTS_WEBGPU and TINT_BUILD_SPV_READER" << io::endl;
     return false;
 #endif
 
