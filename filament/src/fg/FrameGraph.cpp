@@ -547,7 +547,7 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
             auto descriptor = static_cast<Resource<FrameGraphTexture> const*>(
                 getResource(resourceHandle))->descriptor;
             emplace_resource_property("width",
-        utils::CString(std::to_string(descriptor.width).data()));
+                utils::CString(std::to_string(descriptor.width).data()));
             emplace_resource_property("height",
                 utils::CString(std::to_string(descriptor.height).data()));
             emplace_resource_property("depth",

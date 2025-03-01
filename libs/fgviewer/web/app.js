@@ -223,12 +223,12 @@ class FrameGraphSidePanel extends LitElement {
             return html`
                 <menu-section title="${title}">
                     ${this.framegraphs.map(({ fgid, name }) => html`
-                <div class="framegraph" 
-                    @click="${() => this._handleFrameGraphClick(fgid)}" 
-                    data-id="${fgid}">
-                    ${fgid === this.selectedFrameGraph ? '● ' : ''}${name}
-                </div>
-            `)}
+                        <div class="framegraph" 
+                            @click="${() => this._handleFrameGraphClick(fgid)}" 
+                            data-id="${fgid}">
+                            ${fgid === this.selectedFrameGraph ? '● ' : ''}${name}
+                        </div>
+                    `)}
                 </menu-section>
             `;
         };
