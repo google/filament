@@ -4,7 +4,7 @@
 #else
 #error No extension available for 64-bit integers.
 #endif
-#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference2 : require
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 layout(buffer_reference) buffer Node;
@@ -23,31 +23,17 @@ layout(set = 0, binding = 0, std430) restrict buffer LinkedList
 
 void main()
 {
-    Node _45;
     Node _114;
     if (gl_WorkGroupID.x < 4u)
     {
-        _45 = _50.head1;
         _114 = _50.head1;
     }
     else
     {
-        _45 = _50.head2;
         _114 = _50.head2;
     }
-    restrict Node n = _114;
-    Node param = _114.next;
-    Node param_1 = _50.head1;
-    Node param_2 = _50.head2;
     _114.next.value = _50.head1.value + _50.head2.value;
-    Node param_4 = _50.head1;
-    Node param_3 = _50.head1;
-    n = _50.head1;
-    int v = _50.head2.value;
     _50.head1.value = 20;
     _50.head1.value = _50.head2.value * 10;
-    uint64_t _98 = uint64_t(_50.head2.next);
-    uint64_t uptr = _98;
-    Node unode = Node(_98);
 }
 

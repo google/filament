@@ -2,7 +2,7 @@
 precision mediump float;
 precision highp int;
 
-vec4 _32;
+vec4 _33;
 
 layout(location = 0) in vec4 vInput;
 layout(location = 0) out vec4 FragColor;
@@ -16,21 +16,21 @@ void main()
     _38.z = 3.0;
     _38.w = 4.0;
     FragColor = _38;
-    vec4 _6 = _37;
-    _6.x = 1.0;
-    _6.y = 2.0;
-    _6.z = 3.0;
-    _6.w = 4.0;
-    FragColor = _6;
+    vec4 _8 = _37;
+    _8.x = 1.0;
+    _8.y = 2.0;
+    _8.z = 3.0;
+    _8.w = 4.0;
+    FragColor = _8;
     highp vec4 _42 = _37;
     _42.x = 1.0;
-    vec4 _10 = _42;
-    _10.y = 2.0;
-    highp vec4 _43 = _10;
+    vec4 _12 = _42;
+    _12.y = 2.0;
+    highp vec4 _43 = _12;
     _43.z = 3.0;
-    vec4 _11 = _43;
-    _11.w = 4.0;
-    FragColor = _11;
+    vec4 _13 = _43;
+    _13.w = 4.0;
+    FragColor = _13;
     highp vec4 _44 = _37;
     _44.x = 1.0;
     highp vec4 _45 = _44;

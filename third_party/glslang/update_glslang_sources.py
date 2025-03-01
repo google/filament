@@ -17,12 +17,9 @@
 """Get source files for Glslang and its dependencies from public repositories.
 """
 
-from __future__ import print_function
-
 import argparse
 import json
-import distutils.dir_util
-import os.path
+import os
 import subprocess
 import sys
 
@@ -106,7 +103,7 @@ class GoodCommit(object):
                                     cwd=self.subdir)
 
     def Clone(self):
-        distutils.dir_util.mkpath(self.subdir)
+        os.makedirs(self.subdir, exist_ok=True)
         command_output(['git', 'clone', self.GetUrl(), '.'], self.subdir)
 
     def Fetch(self):
@@ -139,7 +136,7 @@ def main():
 
     commits = GetGoodCommits(args.site)
 
-    distutils.dir_util.mkpath(args.dir)
+    os.makedirs(args.dir, exist_ok=True)
     print('Change directory to {d}'.format(d=args.dir))
     os.chdir(args.dir)
 

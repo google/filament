@@ -1,15 +1,15 @@
-RWByteAddressBuffer _4 : register(u0);
+RWByteAddressBuffer _6 : register(u0);
 
 void comp_main()
 {
-    uint _21 = _4.Load(_4.Load(0) * 4 + 4);
-    for (uint _23 = 0u; _23 < 64u; )
+    uint _21 = _6.Load(_6.Load(0) * 4 + 4);
+    for (uint _40 = 0u; _40 < 64u; )
     {
-        _4.Store(_23 * 4 + 4, 0u);
-        _23++;
+        _6.Store(_40 * 4 + 4, 0u);
+        _40++;
         continue;
     }
-    _4.Store(_4.Load(0) * 4 + 4, _21);
+    _6.Store(_6.Load(0) * 4 + 4, _21);
 }
 
 [numthreads(1, 1, 1)]

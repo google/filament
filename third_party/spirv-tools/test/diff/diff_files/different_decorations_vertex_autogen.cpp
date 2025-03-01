@@ -777,7 +777,7 @@ OpFunctionEnd
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 58
-+; Bound: 79
++; Bound: 77
  ; Schema: 0
  OpCapability Shader
  OpMemoryModel Logical GLSL450
@@ -817,12 +817,10 @@ OpFunctionEnd
 -OpMemberDecorate %23 3 BuiltIn CullDistance
  OpDecorate %23 Block
  OpDecorate %28 RelaxedPrecision
--OpDecorate %29 RelaxedPrecision
-+OpDecorate %59 RelaxedPrecision
+ OpDecorate %29 RelaxedPrecision
  OpDecorate %31 RelaxedPrecision
  OpDecorate %32 RelaxedPrecision
--OpDecorate %33 RelaxedPrecision
-+OpDecorate %60 RelaxedPrecision
+ OpDecorate %33 RelaxedPrecision
  OpDecorate %35 RelaxedPrecision
  OpDecorate %36 RelaxedPrecision
  OpDecorate %37 RelaxedPrecision
@@ -845,9 +843,9 @@ OpFunctionEnd
 +%23 = OpTypeStruct %2
  %38 = OpTypeVoid
  %45 = OpConstant %12 0
-+%65 = OpTypePointer Private %2
++%63 = OpTypePointer Private %2
  %3 = OpTypePointer Input %2
-+%66 = OpTypePointer Private %2
++%64 = OpTypePointer Private %2
  %7 = OpTypePointer Output %2
  %10 = OpTypePointer Uniform %9
  %18 = OpTypePointer Uniform %17
@@ -865,26 +863,21 @@ OpFunctionEnd
 -%19 = OpVariable %18 Uniform
 +%19 = OpVariable %10 Uniform
  %20 = OpVariable %7 Output
-+%58 = OpVariable %66 Private
++%58 = OpVariable %64 Private
  %25 = OpVariable %24 Output
-+%67 = OpConstant %13 0
-+%68 = OpConstant %1 0.5
++%65 = OpConstant %13 0
++%66 = OpConstant %1 0.5
  %28 = OpFunction %2 None %27
--%29 = OpFunctionParameter %26
-+%59 = OpFunctionParameter %26
+ %29 = OpFunctionParameter %26
  %30 = OpLabel
--%31 = OpLoad %2 %29
-+%31 = OpLoad %2 %59
+ %31 = OpLoad %2 %29
  OpReturnValue %31
  OpFunctionEnd
  %32 = OpFunction %2 None %27
--%33 = OpFunctionParameter %26
-+%60 = OpFunctionParameter %26
+ %33 = OpFunctionParameter %26
  %34 = OpLabel
--%35 = OpLoad %2 %33
-+%35 = OpLoad %2 %60
--%36 = OpLoad %2 %33
-+%36 = OpLoad %2 %60
+ %35 = OpLoad %2 %33
+ %36 = OpLoad %2 %33
  %37 = OpFAdd %2 %35 %36
  OpReturnValue %37
  OpFunctionEnd
@@ -894,41 +887,41 @@ OpFunctionEnd
  %50 = OpVariable %26 Function
  %53 = OpVariable %26 Function
 -%43 = OpLoad %2 %4
-+%61 = OpLoad %2 %5
++%59 = OpLoad %2 %5
 -OpStore %42 %43
-+OpStore %42 %61
++OpStore %42 %59
  %44 = OpFunctionCall %2 %28 %42
 -%47 = OpAccessChain %46 %11 %45
-+%62 = OpAccessChain %46 %19 %45
++%60 = OpAccessChain %46 %19 %45
 -%48 = OpLoad %2 %47
-+%48 = OpLoad %2 %62
++%48 = OpLoad %2 %60
  %49 = OpFAdd %2 %44 %48
 -OpStore %8 %49
 +OpStore %20 %49
 -%51 = OpLoad %2 %5
-+%63 = OpLoad %2 %6
++%61 = OpLoad %2 %6
 -OpStore %50 %51
-+OpStore %50 %63
++OpStore %50 %61
  %52 = OpFunctionCall %2 %32 %50
 -%54 = OpLoad %2 %6
-+%64 = OpLoad %2 %4
++%62 = OpLoad %2 %4
 -OpStore %53 %54
-+OpStore %53 %64
++OpStore %53 %62
  %55 = OpFunctionCall %2 %28 %53
  %56 = OpFAdd %2 %52 %55
  %57 = OpAccessChain %7 %25 %45
  OpStore %57 %56
-+%69 = OpAccessChain %7 %25 %67
-+%70 = OpLoad %2 %69
-+%71 = OpCompositeExtract %1 %70 0
-+%72 = OpCompositeExtract %1 %70 1
-+%73 = OpCompositeExtract %1 %70 2
-+%74 = OpCompositeExtract %1 %70 3
-+%76 = OpFNegate %1 %71
-+%77 = OpFAdd %1 %73 %74
-+%78 = OpFMul %1 %77 %68
-+%75 = OpCompositeConstruct %2 %72 %76 %78 %74
-+OpStore %69 %75
++%67 = OpAccessChain %7 %25 %65
++%68 = OpLoad %2 %67
++%69 = OpCompositeExtract %1 %68 0
++%70 = OpCompositeExtract %1 %68 1
++%71 = OpCompositeExtract %1 %68 2
++%72 = OpCompositeExtract %1 %68 3
++%74 = OpFNegate %1 %69
++%75 = OpFAdd %1 %71 %72
++%76 = OpFMul %1 %75 %66
++%73 = OpCompositeConstruct %2 %70 %74 %76 %72
++OpStore %67 %73
  OpReturn
  OpFunctionEnd
 )";

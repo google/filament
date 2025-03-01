@@ -20,144 +20,39 @@
 #include <cstring>
 #include <vector>
 
-#if defined(SPIRV_WINDOWS)
-#include <fcntl.h>
-#include <io.h>
-
-#define SET_STDIN_TO_BINARY_MODE() _setmode(_fileno(stdin), O_BINARY);
-#define SET_STDIN_TO_TEXT_MODE() _setmode(_fileno(stdin), O_TEXT);
-#define SET_STDOUT_TO_BINARY_MODE() _setmode(_fileno(stdout), O_BINARY);
-#define SET_STDOUT_TO_TEXT_MODE() _setmode(_fileno(stdout), O_TEXT);
-#define SET_STDOUT_MODE(mode) _setmode(_fileno(stdout), mode);
-#else
-#define SET_STDIN_TO_BINARY_MODE()
-#define SET_STDIN_TO_TEXT_MODE()
-#define SET_STDOUT_TO_BINARY_MODE() 0
-#define SET_STDOUT_TO_TEXT_MODE() 0
-#define SET_STDOUT_MODE(mode)
-#endif
-
-// Appends the contents of the |file| to |data|, assuming each element in the
-// file is of type |T|.
-template <typename T>
-void ReadFile(FILE* file, std::vector<T>* data) {
-  if (file == nullptr) return;
-
-  const int buf_size = 1024;
-  T buf[buf_size];
-  while (size_t len = fread(buf, sizeof(T), buf_size, file)) {
-    data->insert(data->end(), buf, buf + len);
-  }
-}
-
-// Returns true if |file| has encountered an error opening the file or reading
-// the file as a series of element of type |T|. If there was an error, writes an
-// error message to standard error.
-template <class T>
-bool WasFileCorrectlyRead(FILE* file, const char* filename) {
-  if (file == nullptr) {
-    fprintf(stderr, "error: file does not exist '%s'\n", filename);
-    return false;
-  }
-
-  if (ftell(file) == -1L) {
-    if (ferror(file)) {
-      fprintf(stderr, "error: error reading file '%s'\n", filename);
-      return false;
-    }
-  } else {
-    if (sizeof(T) != 1 && (ftell(file) % sizeof(T))) {
-      fprintf(
-          stderr,
-          "error: file size should be a multiple of %zd; file '%s' corrupt\n",
-          sizeof(T), filename);
-      return false;
-    }
-  }
-  return true;
-}
-
-// Appends the contents of the file named |filename| to |data|, assuming
-// each element in the file is of type |T|. The file is opened as a binary file
-// If |filename| is nullptr or "-", reads from the standard input, but
+// Sets the contents of the file named |filename| in |data|, assuming each
+// element in the file is of type |uint32_t|. The file is opened as a binary
+// file. If |filename| is nullptr or "-", reads from the standard input, but
 // reopened as a binary file. If any error occurs, writes error messages to
 // standard error and returns false.
-template <typename T>
-bool ReadBinaryFile(const char* filename, std::vector<T>* data) {
-  const bool use_file = filename && strcmp("-", filename);
-  FILE* fp = nullptr;
-  if (use_file) {
-    fp = fopen(filename, "rb");
-  } else {
-    SET_STDIN_TO_BINARY_MODE();
-    fp = stdin;
-  }
+//
+// If the given input is detected to be in ascii hex, it is converted to binary
+// automatically.  In that case, the shape of the input data is determined based
+// on the representation of the magic number:
+//
+//  * "[0]x[0]7230203": Every following "0x..." represents a word.
+//  * "[0]x[0]7[,] [0]x23...": Every following "0x..." represents a byte, stored
+//    in big-endian order
+//  * "[0]x[0]3[,] [0]x[0]2...": Every following "0x..." represents a byte,
+//    stored in little-endian order
+//  * "07[, ]23...": Every following "XY" represents a byte, stored in
+//    big-endian order
+//  * "03[, ]02...": Every following "XY" represents a byte, stored in
+//    little-endian order
+bool ReadBinaryFile(const char* filename, std::vector<uint32_t>* data);
 
-  ReadFile(fp, data);
-  bool succeeded = WasFileCorrectlyRead<T>(fp, filename);
-  if (use_file && fp) fclose(fp);
-  return succeeded;
-}
+// The hex->binary logic of |ReadBinaryFile| applied to a pre-loaded stream of
+// bytes.  Used by tests to avoid having to call |ReadBinaryFile| with temp
+// files.  Returns false in case of parse errors.
+bool ConvertHexToBinary(const std::vector<char>& stream,
+                        std::vector<uint32_t>* data);
 
-// Appends the contents of the file named |filename| to |data|, assuming
-// each element in the file is of type |T|. The file is opened as a text file
-// If |filename| is nullptr or "-", reads from the standard input, but
-// reopened as a text file. If any error occurs, writes error messages to
-// standard error and returns false.
-template <typename T>
-bool ReadTextFile(const char* filename, std::vector<T>* data) {
-  const bool use_file = filename && strcmp("-", filename);
-  FILE* fp = nullptr;
-  if (use_file) {
-    fp = fopen(filename, "r");
-  } else {
-    SET_STDIN_TO_TEXT_MODE();
-    fp = stdin;
-  }
-
-  ReadFile(fp, data);
-  bool succeeded = WasFileCorrectlyRead<T>(fp, filename);
-  if (use_file && fp) fclose(fp);
-  return succeeded;
-}
-
-namespace {
-// A class to create and manage a file for outputting data.
-class OutputFile {
- public:
-  // Opens |filename| in the given mode.  If |filename| is nullptr, the empty
-  // string or "-", stdout will be set to the given mode.
-  OutputFile(const char* filename, const char* mode) {
-    const bool use_stdout =
-        !filename || (filename[0] == '-' && filename[1] == '\0');
-    if (use_stdout) {
-      if (strchr(mode, 'b')) {
-        old_mode_ = SET_STDOUT_TO_BINARY_MODE();
-      } else {
-        old_mode_ = SET_STDOUT_TO_TEXT_MODE();
-      }
-      fp_ = stdout;
-    } else {
-      fp_ = fopen(filename, mode);
-    }
-  }
-
-  ~OutputFile() {
-    if (fp_ == stdout) {
-      SET_STDOUT_MODE(old_mode_);
-    } else if (fp_ != nullptr) {
-      fclose(fp_);
-    }
-  }
-
-  // Returns a file handle to the file.
-  FILE* GetFileHandle() const { return fp_; }
-
- private:
-  FILE* fp_;
-  int old_mode_;
-};
-}  // namespace
+// Sets the contents of the file named |filename| in |data|, assuming each
+// element in the file is of type |char|. The file is opened as a text file.  If
+// |filename| is nullptr or "-", reads from the standard input, but reopened as
+// a text file. If any error occurs, writes error messages to standard error and
+// returns false.
+bool ReadTextFile(const char* filename, std::vector<char>* data);
 
 // Writes the given |data| into the file named as |filename| using the given
 // |mode|, assuming |data| is an array of |count| elements of type |T|. If
@@ -165,21 +60,6 @@ class OutputFile {
 // returns false and outputs error message to standard error.
 template <typename T>
 bool WriteFile(const char* filename, const char* mode, const T* data,
-               size_t count) {
-  OutputFile file(filename, mode);
-  FILE* fp = file.GetFileHandle();
-  if (fp == nullptr) {
-    fprintf(stderr, "error: could not open file '%s'\n", filename);
-    return false;
-  }
-
-  size_t written = fwrite(data, sizeof(T), count, fp);
-  if (count != written) {
-    fprintf(stderr, "error: could not write to file '%s'\n", filename);
-    return false;
-  }
-
-  return true;
-}
+               size_t count);
 
 #endif  // TOOLS_IO_H_

@@ -1,4 +1,6 @@
 // Copyright (c) 2016 Google Inc.
+// Modifications Copyright (C) 2024 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +18,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <climits>
 #include <cstdint>
 #include <sstream>
 #include <string>
@@ -85,13 +86,13 @@ bool Type::HasSameDecorations(const Type* that) const {
   return CompareTwoVectors(decorations_, that->decorations_);
 }
 
-bool Type::IsUniqueType(bool allowVariablePointers) const {
+bool Type::IsUniqueType() const {
   switch (kind_) {
     case kPointer:
-      return !allowVariablePointers;
     case kStruct:
     case kArray:
     case kRuntimeArray:
+    case kNodePayloadArrayAMDX:
       return false;
     default:
       return true;
@@ -130,6 +131,8 @@ std::unique_ptr<Type> Type::Clone() const {
     DeclareKindCase(NamedBarrier);
     DeclareKindCase(AccelerationStructureNV);
     DeclareKindCase(CooperativeMatrixNV);
+    DeclareKindCase(CooperativeMatrixKHR);
+    DeclareKindCase(CooperativeVectorNV);
     DeclareKindCase(RayQueryKHR);
     DeclareKindCase(HitObjectNV);
 #undef DeclareKindCase
@@ -163,6 +166,7 @@ bool Type::operator==(const Type& other) const {
     DeclareKindCase(SampledImage);
     DeclareKindCase(Array);
     DeclareKindCase(RuntimeArray);
+    DeclareKindCase(NodePayloadArrayAMDX);
     DeclareKindCase(Struct);
     DeclareKindCase(Opaque);
     DeclareKindCase(Pointer);
@@ -177,8 +181,12 @@ bool Type::operator==(const Type& other) const {
     DeclareKindCase(NamedBarrier);
     DeclareKindCase(AccelerationStructureNV);
     DeclareKindCase(CooperativeMatrixNV);
+    DeclareKindCase(CooperativeMatrixKHR);
+    DeclareKindCase(CooperativeVectorNV);
     DeclareKindCase(RayQueryKHR);
     DeclareKindCase(HitObjectNV);
+    DeclareKindCase(TensorLayoutNV);
+    DeclareKindCase(TensorViewNV);
 #undef DeclareKindCase
     default:
       assert(false && "Unhandled type");
@@ -218,6 +226,7 @@ size_t Type::ComputeHashValue(size_t hash, SeenTypes* seen) const {
     DeclareKindCase(SampledImage);
     DeclareKindCase(Array);
     DeclareKindCase(RuntimeArray);
+    DeclareKindCase(NodePayloadArrayAMDX);
     DeclareKindCase(Struct);
     DeclareKindCase(Opaque);
     DeclareKindCase(Pointer);
@@ -232,8 +241,12 @@ size_t Type::ComputeHashValue(size_t hash, SeenTypes* seen) const {
     DeclareKindCase(NamedBarrier);
     DeclareKindCase(AccelerationStructureNV);
     DeclareKindCase(CooperativeMatrixNV);
+    DeclareKindCase(CooperativeMatrixKHR);
+    DeclareKindCase(CooperativeVectorNV);
     DeclareKindCase(RayQueryKHR);
     DeclareKindCase(HitObjectNV);
+    DeclareKindCase(TensorLayoutNV);
+    DeclareKindCase(TensorViewNV);
 #undef DeclareKindCase
     default:
       assert(false && "Unhandled type");
@@ -484,6 +497,34 @@ void RuntimeArray::ReplaceElementType(const Type* type) {
   element_type_ = type;
 }
 
+NodePayloadArrayAMDX::NodePayloadArrayAMDX(const Type* type)
+    : Type(kNodePayloadArrayAMDX), element_type_(type) {
+  assert(!type->AsVoid());
+}
+
+bool NodePayloadArrayAMDX::IsSameImpl(const Type* that,
+                                      IsSameCache* seen) const {
+  const NodePayloadArrayAMDX* rat = that->AsNodePayloadArrayAMDX();
+  if (!rat) return false;
+  return element_type_->IsSameImpl(rat->element_type_, seen) &&
+         HasSameDecorations(that);
+}
+
+std::string NodePayloadArrayAMDX::str() const {
+  std::ostringstream oss;
+  oss << "[" << element_type_->str() << "]";
+  return oss.str();
+}
+
+size_t NodePayloadArrayAMDX::ComputeExtraStateHash(size_t hash,
+                                                   SeenTypes* seen) const {
+  return element_type_->ComputeHashValue(hash, seen);
+}
+
+void NodePayloadArrayAMDX::ReplaceElementType(const Type* type) {
+  element_type_ = type;
+}
+
 Struct::Struct(const std::vector<const Type*>& types)
     : Type(kStruct), element_types_(types) {
   for (const auto* t : types) {
@@ -708,6 +749,122 @@ bool CooperativeMatrixNV::IsSameImpl(const Type* that,
   return component_type_->IsSameImpl(mt->component_type_, seen) &&
          scope_id_ == mt->scope_id_ && rows_id_ == mt->rows_id_ &&
          columns_id_ == mt->columns_id_ && HasSameDecorations(that);
+}
+
+CooperativeMatrixKHR::CooperativeMatrixKHR(const Type* type,
+                                           const uint32_t scope,
+                                           const uint32_t rows,
+                                           const uint32_t columns,
+                                           const uint32_t use)
+    : Type(kCooperativeMatrixKHR),
+      component_type_(type),
+      scope_id_(scope),
+      rows_id_(rows),
+      columns_id_(columns),
+      use_id_(use) {
+  assert(type != nullptr);
+  assert(scope != 0);
+  assert(rows != 0);
+  assert(columns != 0);
+}
+
+std::string CooperativeMatrixKHR::str() const {
+  std::ostringstream oss;
+  oss << "<" << component_type_->str() << ", " << scope_id_ << ", " << rows_id_
+      << ", " << columns_id_ << ", " << use_id_ << ">";
+  return oss.str();
+}
+
+size_t CooperativeMatrixKHR::ComputeExtraStateHash(size_t hash,
+                                                   SeenTypes* seen) const {
+  hash = hash_combine(hash, scope_id_, rows_id_, columns_id_, use_id_);
+  return component_type_->ComputeHashValue(hash, seen);
+}
+
+bool CooperativeMatrixKHR::IsSameImpl(const Type* that,
+                                      IsSameCache* seen) const {
+  const CooperativeMatrixKHR* mt = that->AsCooperativeMatrixKHR();
+  if (!mt) return false;
+  return component_type_->IsSameImpl(mt->component_type_, seen) &&
+         scope_id_ == mt->scope_id_ && rows_id_ == mt->rows_id_ &&
+         columns_id_ == mt->columns_id_ && use_id_ == mt->use_id_ &&
+         HasSameDecorations(that);
+}
+
+TensorLayoutNV::TensorLayoutNV(const uint32_t dim, const uint32_t clamp_mode)
+    : Type(kTensorLayoutNV), dim_id_(dim), clamp_mode_id_(clamp_mode) {}
+
+std::string TensorLayoutNV::str() const {
+  std::ostringstream oss;
+  oss << "<" << dim_id_ << ", " << clamp_mode_id_ << ">";
+  return oss.str();
+}
+
+size_t TensorLayoutNV::ComputeExtraStateHash(size_t hash, SeenTypes*) const {
+  return hash_combine(hash, dim_id_, clamp_mode_id_);
+}
+
+bool TensorLayoutNV::IsSameImpl(const Type* that, IsSameCache*) const {
+  const TensorLayoutNV* tl = that->AsTensorLayoutNV();
+  if (!tl) return false;
+  return dim_id_ == tl->dim_id_ && clamp_mode_id_ == tl->clamp_mode_id_;
+}
+
+TensorViewNV::TensorViewNV(const uint32_t dim, const uint32_t clamp_mode,
+                           const std::vector<uint32_t>& perm)
+    : Type(kTensorViewNV),
+      dim_id_(dim),
+      has_dimensions_id_(clamp_mode),
+      perm_(perm) {}
+
+std::string TensorViewNV::str() const {
+  std::ostringstream oss;
+  oss << "<" << dim_id_ << ", " << has_dimensions_id_;
+  for (auto p : perm_) {
+    oss << ", " << p;
+  }
+  oss << ">";
+  return oss.str();
+}
+
+size_t TensorViewNV::ComputeExtraStateHash(size_t hash, SeenTypes*) const {
+  return hash_combine(hash, dim_id_, has_dimensions_id_, perm_);
+}
+
+bool TensorViewNV::IsSameImpl(const Type* that, IsSameCache*) const {
+  const TensorViewNV* tv = that->AsTensorViewNV();
+  if (!tv) return false;
+  return dim_id_ == tv->dim_id_ &&
+         has_dimensions_id_ == tv->has_dimensions_id_ && perm_ == tv->perm_;
+}
+
+CooperativeVectorNV::CooperativeVectorNV(const Type* type,
+                                         const uint32_t components)
+    : Type(kCooperativeVectorNV),
+      component_type_(type),
+      components_(components) {
+  assert(type != nullptr);
+  assert(components != 0);
+}
+
+std::string CooperativeVectorNV::str() const {
+  std::ostringstream oss;
+  oss << "<" << component_type_->str() << ", " << components_ << ">";
+  return oss.str();
+}
+
+size_t CooperativeVectorNV::ComputeExtraStateHash(size_t hash,
+                                                  SeenTypes* seen) const {
+  hash = hash_combine(hash, components_);
+  return component_type_->ComputeHashValue(hash, seen);
+}
+
+bool CooperativeVectorNV::IsSameImpl(const Type* that,
+                                     IsSameCache* seen) const {
+  const CooperativeVectorNV* mt = that->AsCooperativeVectorNV();
+  if (!mt) return false;
+  return component_type_->IsSameImpl(mt->component_type_, seen) &&
+         components_ == mt->components_ && HasSameDecorations(that);
 }
 
 }  // namespace analysis

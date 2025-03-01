@@ -17,39 +17,39 @@ layout(pixel_interlock_ordered) in;
 layout(binding = 1, std430) buffer SSBO1
 {
     uint values1[];
-} _7;
+} _11;
 
 layout(binding = 0, std430) buffer SSBO0
 {
     uint values0[];
-} _9;
+} _13;
 
 void callee2()
 {
-    int _37 = int(gl_FragCoord.x);
-    _7.values1[_37]++;
+    int _25 = int(gl_FragCoord.x);
+    _11.values1[_25]++;
 }
 
 void callee()
 {
-    int _45 = int(gl_FragCoord.x);
-    _9.values0[_45]++;
+    int _38 = int(gl_FragCoord.x);
+    _13.values0[_38]++;
     callee2();
 }
 
-void _29()
+void _46()
 {
 }
 
-void _31()
+void _48()
 {
 }
 
 void spvMainInterlockedBody()
 {
     callee();
-    _29();
-    _31();
+    _46();
+    _48();
 }
 
 void main()

@@ -15,12 +15,31 @@
 // Validates ray query instructions from SPV_KHR_ray_query
 
 #include "source/opcode.h"
+#include "source/spirv_target_env.h"
 #include "source/val/instruction.h"
 #include "source/val/validate.h"
 #include "source/val/validation_state.h"
 
 namespace spvtools {
 namespace val {
+
+bool IsInterfaceVariable(ValidationState_t& _, const Instruction* inst,
+                         spv::ExecutionModel model) {
+  bool foundInterface = false;
+  for (auto entry_point : _.entry_points()) {
+    const auto* models = _.GetExecutionModels(entry_point);
+    if (models->find(model) == models->end()) return false;
+    for (const auto& desc : _.entry_point_descriptions(entry_point)) {
+      for (auto interface : desc.interfaces) {
+        if (inst->id() == interface) {
+          foundInterface = true;
+          break;
+        }
+      }
+    }
+  }
+  return foundInterface;
+}
 
 spv_result_t MeshShadingPass(ValidationState_t& _, const Instruction* inst) {
   const spv::Op opcode = inst->opcode();
@@ -111,7 +130,37 @@ spv_result_t MeshShadingPass(ValidationState_t& _, const Instruction* inst) {
       // No validation rules (for the moment).
       break;
     }
+    case spv::Op::OpVariable: {
+      if (_.HasCapability(spv::Capability::MeshShadingEXT)) {
+        bool meshInterfaceVar =
+            IsInterfaceVariable(_, inst, spv::ExecutionModel::MeshEXT);
+        bool fragInterfaceVar =
+            IsInterfaceVariable(_, inst, spv::ExecutionModel::Fragment);
 
+        const spv::StorageClass storage_class =
+            inst->GetOperandAs<spv::StorageClass>(2);
+        bool storage_output = (storage_class == spv::StorageClass::Output);
+        bool storage_input = (storage_class == spv::StorageClass::Input);
+
+        if (_.HasDecoration(inst->id(), spv::Decoration::PerPrimitiveEXT)) {
+          if (fragInterfaceVar && !storage_input) {
+            return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                   << "PerPrimitiveEXT decoration must be applied only to "
+                      "variables in the Input Storage Class in the Fragment "
+                      "Execution Model.";
+          }
+
+          if (meshInterfaceVar && !storage_output) {
+            return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                   << _.VkErrorID(4336)
+                   << "PerPrimitiveEXT decoration must be applied only to "
+                      "variables in the Output Storage Class in the "
+                      "Storage Class in the MeshEXT Execution Model.";
+          }
+        }
+      }
+      break;
+    }
     default:
       break;
   }

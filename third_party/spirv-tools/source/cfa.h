@@ -15,6 +15,8 @@
 #ifndef SOURCE_CFA_H_
 #define SOURCE_CFA_H_
 
+#include <stddef.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cstdint>

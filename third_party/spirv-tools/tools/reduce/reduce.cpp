@@ -14,6 +14,7 @@
 
 #include <cassert>
 #include <cerrno>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <sstream>
@@ -28,12 +29,6 @@
 #include "tools/util/cli_consumer.h"
 
 namespace {
-
-// Check that the std::system function can actually be used.
-bool CheckExecuteCommand() {
-  int res = std::system(nullptr);
-  return res != 0;
-}
 
 // Execute a command using the shell.
 // Returns true if and only if the command's exit status was 0.
@@ -282,12 +277,6 @@ int main(int argc, const char** argv) {
     return status.code;
   }
 
-  if (!CheckExecuteCommand()) {
-    std::cerr << "could not find shell interpreter for executing a command"
-              << std::endl;
-    return 2;
-  }
-
   spvtools::reduce::Reducer reducer(target_env);
 
   std::stringstream joined;
@@ -318,7 +307,7 @@ int main(int argc, const char** argv) {
   reducer.SetMessageConsumer(spvtools::utils::CLIMessageConsumer);
 
   std::vector<uint32_t> binary_in;
-  if (!ReadBinaryFile<uint32_t>(in_binary_file.c_str(), &binary_in)) {
+  if (!ReadBinaryFile(in_binary_file.c_str(), &binary_in)) {
     return 1;
   }
 

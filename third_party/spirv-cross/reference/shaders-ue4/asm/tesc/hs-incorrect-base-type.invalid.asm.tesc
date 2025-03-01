@@ -263,7 +263,7 @@ struct type_StructuredBuffer_v4float
     float4 _m0[1];
 };
 
-constant float4 _142 = {};
+constant float4 _140 = {};
 
 struct main0_out
 {
@@ -300,7 +300,7 @@ struct main0_in
 
 kernel void main0(main0_in in [[stage_in]], constant type_View& View [[buffer(0)]], const device type_StructuredBuffer_v4float& View_PrimitiveSceneData [[buffer(1)]], uint gl_InvocationID [[thread_index_in_threadgroup]], uint gl_PrimitiveID [[threadgroup_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device main0_patchOut* spvPatchOut [[buffer(27)]], device MTLTriangleTessellationFactorsHalf* spvTessLevel [[buffer(26)]], threadgroup main0_in* gl_in [[threadgroup(0)]])
 {
-    threadgroup FPNTessellationHSToDS temp_var_hullMainRetVal[3];
+    threadgroup spvUnsafeArray<FPNTessellationHSToDS, 3> temp_var_hullMainRetVal;
     device main0_out* gl_out = &spvOut[gl_PrimitiveID * 3];
     device main0_patchOut& patchOut = spvPatchOut[gl_PrimitiveID];
     if (gl_InvocationID < spvIndirectParams[0])
@@ -308,26 +308,26 @@ kernel void main0(main0_in in [[stage_in]], constant type_View& View [[buffer(0)
     threadgroup_barrier(mem_flags::mem_threadgroup);
     if (gl_InvocationID >= 3)
         return;
-    spvUnsafeArray<float4, 12> _144 = spvUnsafeArray<float4, 12>({ gl_in[0].in_var_TEXCOORD10_centroid, gl_in[1].in_var_TEXCOORD10_centroid, gl_in[2].in_var_TEXCOORD10_centroid, gl_in[3].in_var_TEXCOORD10_centroid, gl_in[4].in_var_TEXCOORD10_centroid, gl_in[5].in_var_TEXCOORD10_centroid, gl_in[6].in_var_TEXCOORD10_centroid, gl_in[7].in_var_TEXCOORD10_centroid, gl_in[8].in_var_TEXCOORD10_centroid, gl_in[9].in_var_TEXCOORD10_centroid, gl_in[10].in_var_TEXCOORD10_centroid, gl_in[11].in_var_TEXCOORD10_centroid });
-    spvUnsafeArray<float4, 12> _145 = spvUnsafeArray<float4, 12>({ gl_in[0].in_var_TEXCOORD11_centroid, gl_in[1].in_var_TEXCOORD11_centroid, gl_in[2].in_var_TEXCOORD11_centroid, gl_in[3].in_var_TEXCOORD11_centroid, gl_in[4].in_var_TEXCOORD11_centroid, gl_in[5].in_var_TEXCOORD11_centroid, gl_in[6].in_var_TEXCOORD11_centroid, gl_in[7].in_var_TEXCOORD11_centroid, gl_in[8].in_var_TEXCOORD11_centroid, gl_in[9].in_var_TEXCOORD11_centroid, gl_in[10].in_var_TEXCOORD11_centroid, gl_in[11].in_var_TEXCOORD11_centroid });
-    spvUnsafeArray<float4, 12> _146 = spvUnsafeArray<float4, 12>({ gl_in[0].in_var_COLOR0, gl_in[1].in_var_COLOR0, gl_in[2].in_var_COLOR0, gl_in[3].in_var_COLOR0, gl_in[4].in_var_COLOR0, gl_in[5].in_var_COLOR0, gl_in[6].in_var_COLOR0, gl_in[7].in_var_COLOR0, gl_in[8].in_var_COLOR0, gl_in[9].in_var_COLOR0, gl_in[10].in_var_COLOR0, gl_in[11].in_var_COLOR0 });
-    spvUnsafeArray<spvUnsafeArray<float4, 1>, 12> _147 = spvUnsafeArray<spvUnsafeArray<float4, 1>, 12>({ spvUnsafeArray<float4, 1>({ gl_in[0].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[1].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[2].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[3].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[4].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[5].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[6].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[7].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[8].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[9].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[10].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[11].in_var_TEXCOORD0_0 }) });
-    spvUnsafeArray<float4, 12> _148 = spvUnsafeArray<float4, 12>({ gl_in[0].in_var_TEXCOORD4, gl_in[1].in_var_TEXCOORD4, gl_in[2].in_var_TEXCOORD4, gl_in[3].in_var_TEXCOORD4, gl_in[4].in_var_TEXCOORD4, gl_in[5].in_var_TEXCOORD4, gl_in[6].in_var_TEXCOORD4, gl_in[7].in_var_TEXCOORD4, gl_in[8].in_var_TEXCOORD4, gl_in[9].in_var_TEXCOORD4, gl_in[10].in_var_TEXCOORD4, gl_in[11].in_var_TEXCOORD4 });
-    spvUnsafeArray<uint, 12> _149 = spvUnsafeArray<uint, 12>({ gl_in[0].in_var_PRIMITIVE_ID, gl_in[1].in_var_PRIMITIVE_ID, gl_in[2].in_var_PRIMITIVE_ID, gl_in[3].in_var_PRIMITIVE_ID, gl_in[4].in_var_PRIMITIVE_ID, gl_in[5].in_var_PRIMITIVE_ID, gl_in[6].in_var_PRIMITIVE_ID, gl_in[7].in_var_PRIMITIVE_ID, gl_in[8].in_var_PRIMITIVE_ID, gl_in[9].in_var_PRIMITIVE_ID, gl_in[10].in_var_PRIMITIVE_ID, gl_in[11].in_var_PRIMITIVE_ID });
-    spvUnsafeArray<uint, 12> _150 = spvUnsafeArray<uint, 12>({ gl_in[0].in_var_LIGHTMAP_ID, gl_in[1].in_var_LIGHTMAP_ID, gl_in[2].in_var_LIGHTMAP_ID, gl_in[3].in_var_LIGHTMAP_ID, gl_in[4].in_var_LIGHTMAP_ID, gl_in[5].in_var_LIGHTMAP_ID, gl_in[6].in_var_LIGHTMAP_ID, gl_in[7].in_var_LIGHTMAP_ID, gl_in[8].in_var_LIGHTMAP_ID, gl_in[9].in_var_LIGHTMAP_ID, gl_in[10].in_var_LIGHTMAP_ID, gl_in[11].in_var_LIGHTMAP_ID });
-    spvUnsafeArray<float4, 12> _259 = spvUnsafeArray<float4, 12>({ gl_in[0].in_var_VS_To_DS_Position, gl_in[1].in_var_VS_To_DS_Position, gl_in[2].in_var_VS_To_DS_Position, gl_in[3].in_var_VS_To_DS_Position, gl_in[4].in_var_VS_To_DS_Position, gl_in[5].in_var_VS_To_DS_Position, gl_in[6].in_var_VS_To_DS_Position, gl_in[7].in_var_VS_To_DS_Position, gl_in[8].in_var_VS_To_DS_Position, gl_in[9].in_var_VS_To_DS_Position, gl_in[10].in_var_VS_To_DS_Position, gl_in[11].in_var_VS_To_DS_Position });
-    spvUnsafeArray<FBasePassVSToDS, 12> _284 = spvUnsafeArray<FBasePassVSToDS, 12>({ FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[0], _145[0], _146[0], _147[0], _148[0], _149[0], _150[0] } }, FBasePassInterpolantsVSToDS{ { } }, _259[0] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[1], _145[1], _146[1], _147[1], _148[1], _149[1], _150[1] } }, FBasePassInterpolantsVSToDS{ { } }, _259[1] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[2], _145[2], _146[2], _147[2], _148[2], _149[2], _150[2] } }, FBasePassInterpolantsVSToDS{ { } }, _259[2] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[3], _145[3], _146[3], _147[3], _148[3], _149[3], _150[3] } }, FBasePassInterpolantsVSToDS{ { } }, _259[3] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[4], _145[4], _146[4], _147[4], _148[4], _149[4], _150[4] } }, FBasePassInterpolantsVSToDS{ { } }, _259[4] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[5], _145[5], _146[5], _147[5], _148[5], _149[5], _150[5] } }, FBasePassInterpolantsVSToDS{ { } }, _259[5] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[6], _145[6], _146[6], _147[6], _148[6], _149[6], _150[6] } }, FBasePassInterpolantsVSToDS{ { } }, _259[6] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[7], _145[7], _146[7], _147[7], _148[7], _149[7], _150[7] } }, FBasePassInterpolantsVSToDS{ { } }, _259[7] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[8], _145[8], _146[8], _147[8], _148[8], _149[8], _150[8] } }, FBasePassInterpolantsVSToDS{ { } }, _259[8] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[9], _145[9], _146[9], _147[9], _148[9], _149[9], _150[9] } }, FBasePassInterpolantsVSToDS{ { } }, _259[9] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[10], _145[10], _146[10], _147[10], _148[10], _149[10], _150[10] } }, FBasePassInterpolantsVSToDS{ { } }, _259[10] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _144[11], _145[11], _146[11], _147[11], _148[11], _149[11], _150[11] } }, FBasePassInterpolantsVSToDS{ { } }, _259[11] } });
-    spvUnsafeArray<FBasePassVSToDS, 12> param_var_I = _284;
-    float4 _301 = float4(param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz, 0.0);
-    float3 _310 = View_PrimitiveSceneData._m0[(param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.PrimitiveId * 26u) + 22u].xyz * float3x3(param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld0.xyz, cross(param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz, param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld0.xyz) * float3(param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.w), param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz);
-    uint _313 = (gl_InvocationID < 2u) ? (gl_InvocationID + 1u) : 0u;
-    uint _314 = 2u * gl_InvocationID;
-    uint _315 = 3u + _314;
-    uint _316 = _314 + 4u;
-    float4 _328 = float4(param_var_I[_313].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz, 0.0);
-    float4 _336 = float4(param_var_I[_315].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz, 0.0);
-    float4 _344 = float4(param_var_I[_316].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz, 0.0);
-    spvUnsafeArray<float4, 3> _392 = spvUnsafeArray<float4, 3>({ param_var_I[gl_InvocationID].Position, (((((float4(2.0) * param_var_I[gl_InvocationID].Position) + param_var_I[_313].Position) - (float4(dot(param_var_I[_313].Position - param_var_I[gl_InvocationID].Position, _301)) * _301)) * float4(0.3333333432674407958984375)) + ((((float4(2.0) * param_var_I[_315].Position) + param_var_I[_316].Position) - (float4(dot(param_var_I[_316].Position - param_var_I[_315].Position, _336)) * _336)) * float4(0.3333333432674407958984375))) * float4(0.5), (((((float4(2.0) * param_var_I[_313].Position) + param_var_I[gl_InvocationID].Position) - (float4(dot(param_var_I[gl_InvocationID].Position - param_var_I[_313].Position, _328)) * _328)) * float4(0.3333333432674407958984375)) + ((((float4(2.0) * param_var_I[_316].Position) + param_var_I[_315].Position) - (float4(dot(param_var_I[_315].Position - param_var_I[_316].Position, _344)) * _344)) * float4(0.3333333432674407958984375))) * float4(0.5) });
+    spvUnsafeArray<float4, 12> _142 = spvUnsafeArray<float4, 12>({ gl_in[0].in_var_TEXCOORD10_centroid, gl_in[1].in_var_TEXCOORD10_centroid, gl_in[2].in_var_TEXCOORD10_centroid, gl_in[3].in_var_TEXCOORD10_centroid, gl_in[4].in_var_TEXCOORD10_centroid, gl_in[5].in_var_TEXCOORD10_centroid, gl_in[6].in_var_TEXCOORD10_centroid, gl_in[7].in_var_TEXCOORD10_centroid, gl_in[8].in_var_TEXCOORD10_centroid, gl_in[9].in_var_TEXCOORD10_centroid, gl_in[10].in_var_TEXCOORD10_centroid, gl_in[11].in_var_TEXCOORD10_centroid });
+    spvUnsafeArray<float4, 12> _143 = spvUnsafeArray<float4, 12>({ gl_in[0].in_var_TEXCOORD11_centroid, gl_in[1].in_var_TEXCOORD11_centroid, gl_in[2].in_var_TEXCOORD11_centroid, gl_in[3].in_var_TEXCOORD11_centroid, gl_in[4].in_var_TEXCOORD11_centroid, gl_in[5].in_var_TEXCOORD11_centroid, gl_in[6].in_var_TEXCOORD11_centroid, gl_in[7].in_var_TEXCOORD11_centroid, gl_in[8].in_var_TEXCOORD11_centroid, gl_in[9].in_var_TEXCOORD11_centroid, gl_in[10].in_var_TEXCOORD11_centroid, gl_in[11].in_var_TEXCOORD11_centroid });
+    spvUnsafeArray<float4, 12> _144 = spvUnsafeArray<float4, 12>({ gl_in[0].in_var_COLOR0, gl_in[1].in_var_COLOR0, gl_in[2].in_var_COLOR0, gl_in[3].in_var_COLOR0, gl_in[4].in_var_COLOR0, gl_in[5].in_var_COLOR0, gl_in[6].in_var_COLOR0, gl_in[7].in_var_COLOR0, gl_in[8].in_var_COLOR0, gl_in[9].in_var_COLOR0, gl_in[10].in_var_COLOR0, gl_in[11].in_var_COLOR0 });
+    spvUnsafeArray<spvUnsafeArray<float4, 1>, 12> _145 = spvUnsafeArray<spvUnsafeArray<float4, 1>, 12>({ spvUnsafeArray<float4, 1>({ gl_in[0].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[1].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[2].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[3].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[4].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[5].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[6].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[7].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[8].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[9].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[10].in_var_TEXCOORD0_0 }), spvUnsafeArray<float4, 1>({ gl_in[11].in_var_TEXCOORD0_0 }) });
+    spvUnsafeArray<float4, 12> _146 = spvUnsafeArray<float4, 12>({ gl_in[0].in_var_TEXCOORD4, gl_in[1].in_var_TEXCOORD4, gl_in[2].in_var_TEXCOORD4, gl_in[3].in_var_TEXCOORD4, gl_in[4].in_var_TEXCOORD4, gl_in[5].in_var_TEXCOORD4, gl_in[6].in_var_TEXCOORD4, gl_in[7].in_var_TEXCOORD4, gl_in[8].in_var_TEXCOORD4, gl_in[9].in_var_TEXCOORD4, gl_in[10].in_var_TEXCOORD4, gl_in[11].in_var_TEXCOORD4 });
+    spvUnsafeArray<uint, 12> _147 = spvUnsafeArray<uint, 12>({ gl_in[0].in_var_PRIMITIVE_ID, gl_in[1].in_var_PRIMITIVE_ID, gl_in[2].in_var_PRIMITIVE_ID, gl_in[3].in_var_PRIMITIVE_ID, gl_in[4].in_var_PRIMITIVE_ID, gl_in[5].in_var_PRIMITIVE_ID, gl_in[6].in_var_PRIMITIVE_ID, gl_in[7].in_var_PRIMITIVE_ID, gl_in[8].in_var_PRIMITIVE_ID, gl_in[9].in_var_PRIMITIVE_ID, gl_in[10].in_var_PRIMITIVE_ID, gl_in[11].in_var_PRIMITIVE_ID });
+    spvUnsafeArray<uint, 12> _148 = spvUnsafeArray<uint, 12>({ gl_in[0].in_var_LIGHTMAP_ID, gl_in[1].in_var_LIGHTMAP_ID, gl_in[2].in_var_LIGHTMAP_ID, gl_in[3].in_var_LIGHTMAP_ID, gl_in[4].in_var_LIGHTMAP_ID, gl_in[5].in_var_LIGHTMAP_ID, gl_in[6].in_var_LIGHTMAP_ID, gl_in[7].in_var_LIGHTMAP_ID, gl_in[8].in_var_LIGHTMAP_ID, gl_in[9].in_var_LIGHTMAP_ID, gl_in[10].in_var_LIGHTMAP_ID, gl_in[11].in_var_LIGHTMAP_ID });
+    spvUnsafeArray<float4, 12> _257 = spvUnsafeArray<float4, 12>({ gl_in[0].in_var_VS_To_DS_Position, gl_in[1].in_var_VS_To_DS_Position, gl_in[2].in_var_VS_To_DS_Position, gl_in[3].in_var_VS_To_DS_Position, gl_in[4].in_var_VS_To_DS_Position, gl_in[5].in_var_VS_To_DS_Position, gl_in[6].in_var_VS_To_DS_Position, gl_in[7].in_var_VS_To_DS_Position, gl_in[8].in_var_VS_To_DS_Position, gl_in[9].in_var_VS_To_DS_Position, gl_in[10].in_var_VS_To_DS_Position, gl_in[11].in_var_VS_To_DS_Position });
+    spvUnsafeArray<FBasePassVSToDS, 12> _282 = spvUnsafeArray<FBasePassVSToDS, 12>({ FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[0], _143[0], _144[0], _145[0], _146[0], _147[0], _148[0] } }, FBasePassInterpolantsVSToDS{ { } }, _257[0] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[1], _143[1], _144[1], _145[1], _146[1], _147[1], _148[1] } }, FBasePassInterpolantsVSToDS{ { } }, _257[1] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[2], _143[2], _144[2], _145[2], _146[2], _147[2], _148[2] } }, FBasePassInterpolantsVSToDS{ { } }, _257[2] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[3], _143[3], _144[3], _145[3], _146[3], _147[3], _148[3] } }, FBasePassInterpolantsVSToDS{ { } }, _257[3] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[4], _143[4], _144[4], _145[4], _146[4], _147[4], _148[4] } }, FBasePassInterpolantsVSToDS{ { } }, _257[4] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[5], _143[5], _144[5], _145[5], _146[5], _147[5], _148[5] } }, FBasePassInterpolantsVSToDS{ { } }, _257[5] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[6], _143[6], _144[6], _145[6], _146[6], _147[6], _148[6] } }, FBasePassInterpolantsVSToDS{ { } }, _257[6] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[7], _143[7], _144[7], _145[7], _146[7], _147[7], _148[7] } }, FBasePassInterpolantsVSToDS{ { } }, _257[7] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[8], _143[8], _144[8], _145[8], _146[8], _147[8], _148[8] } }, FBasePassInterpolantsVSToDS{ { } }, _257[8] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[9], _143[9], _144[9], _145[9], _146[9], _147[9], _148[9] } }, FBasePassInterpolantsVSToDS{ { } }, _257[9] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[10], _143[10], _144[10], _145[10], _146[10], _147[10], _148[10] } }, FBasePassInterpolantsVSToDS{ { } }, _257[10] }, FBasePassVSToDS{ FVertexFactoryInterpolantsVSToDS{ FVertexFactoryInterpolantsVSToPS{ _142[11], _143[11], _144[11], _145[11], _146[11], _147[11], _148[11] } }, FBasePassInterpolantsVSToDS{ { } }, _257[11] } });
+    spvUnsafeArray<FBasePassVSToDS, 12> param_var_I = _282;
+    float4 _299 = float4(param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz, 0.0);
+    float3 _308 = View_PrimitiveSceneData._m0[(param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.PrimitiveId * 26u) + 22u].xyz * float3x3(param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld0.xyz, cross(param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz, param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld0.xyz) * float3(param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.w), param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz);
+    uint _311 = (gl_InvocationID < 2u) ? (gl_InvocationID + 1u) : 0u;
+    uint _312 = 2u * gl_InvocationID;
+    uint _313 = 3u + _312;
+    uint _314 = _312 + 4u;
+    float4 _326 = float4(param_var_I[_311].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz, 0.0);
+    float4 _334 = float4(param_var_I[_313].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz, 0.0);
+    float4 _342 = float4(param_var_I[_314].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2.xyz, 0.0);
+    spvUnsafeArray<float4, 3> _390 = spvUnsafeArray<float4, 3>({ param_var_I[gl_InvocationID].Position, (((((float4(2.0) * param_var_I[gl_InvocationID].Position) + param_var_I[_311].Position) - (float4(dot(param_var_I[_311].Position - param_var_I[gl_InvocationID].Position, _299)) * _299)) * float4(0.3333333432674407958984375)) + ((((float4(2.0) * param_var_I[_313].Position) + param_var_I[_314].Position) - (float4(dot(param_var_I[_314].Position - param_var_I[_313].Position, _334)) * _334)) * float4(0.3333333432674407958984375))) * float4(0.5), (((((float4(2.0) * param_var_I[_311].Position) + param_var_I[gl_InvocationID].Position) - (float4(dot(param_var_I[gl_InvocationID].Position - param_var_I[_311].Position, _326)) * _326)) * float4(0.3333333432674407958984375)) + ((((float4(2.0) * param_var_I[_314].Position) + param_var_I[_313].Position) - (float4(dot(param_var_I[_313].Position - param_var_I[_314].Position, _342)) * _342)) * float4(0.3333333432674407958984375))) * float4(0.5) });
     gl_out[gl_InvocationID].out_var_TEXCOORD10_centroid = param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld0;
     gl_out[gl_InvocationID].out_var_TEXCOORD11_centroid = param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.TangentToWorld2;
     gl_out[gl_InvocationID].out_var_COLOR0 = param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.Color;
@@ -336,60 +336,60 @@ kernel void main0(main0_in in [[stage_in]], constant type_View& View [[buffer(0)
     gl_out[gl_InvocationID].out_var_PRIMITIVE_ID = param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.PrimitiveId;
     gl_out[gl_InvocationID].out_var_LIGHTMAP_ID = param_var_I[gl_InvocationID].FactoryInterpolants.InterpolantsVSToPS.LightmapDataIndex;
     gl_out[gl_InvocationID].out_var_VS_To_DS_Position = param_var_I[gl_InvocationID].Position;
-    gl_out[gl_InvocationID].out_var_PN_POSITION = _392;
-    gl_out[gl_InvocationID].out_var_PN_DisplacementScales = _310;
+    gl_out[gl_InvocationID].out_var_PN_POSITION = _390;
+    gl_out[gl_InvocationID].out_var_PN_DisplacementScales = _308;
     gl_out[gl_InvocationID].out_var_PN_TessellationMultiplier = 1.0;
     gl_out[gl_InvocationID].out_var_PN_WorldDisplacementMultiplier = 1.0;
-    temp_var_hullMainRetVal[gl_InvocationID] = FPNTessellationHSToDS{ param_var_I[gl_InvocationID], _392, _310, 1.0, 1.0 };
+    temp_var_hullMainRetVal[gl_InvocationID] = FPNTessellationHSToDS{ param_var_I[gl_InvocationID], _390, _308, 1.0, 1.0 };
     threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup);
     if (gl_InvocationID == 0u)
     {
-        float4 _450 = (((((temp_var_hullMainRetVal[0u].WorldPosition[1] + temp_var_hullMainRetVal[0u].WorldPosition[2]) + temp_var_hullMainRetVal[1u].WorldPosition[1]) + temp_var_hullMainRetVal[1u].WorldPosition[2]) + temp_var_hullMainRetVal[2u].WorldPosition[1]) + temp_var_hullMainRetVal[2u].WorldPosition[2]) * float4(0.16666667163372039794921875);
-        float4 _463;
-        _463.x = 0.5 * (temp_var_hullMainRetVal[1u].TessellationMultiplier + temp_var_hullMainRetVal[2u].TessellationMultiplier);
-        _463.y = 0.5 * (temp_var_hullMainRetVal[2u].TessellationMultiplier + temp_var_hullMainRetVal[0u].TessellationMultiplier);
-        _463.z = 0.5 * (temp_var_hullMainRetVal[0u].TessellationMultiplier + temp_var_hullMainRetVal[1u].TessellationMultiplier);
-        _463.w = 0.333000004291534423828125 * ((temp_var_hullMainRetVal[0u].TessellationMultiplier + temp_var_hullMainRetVal[1u].TessellationMultiplier) + temp_var_hullMainRetVal[2u].TessellationMultiplier);
-        float4 _589;
+        float4 _448 = (((((temp_var_hullMainRetVal[0u].WorldPosition[1] + temp_var_hullMainRetVal[0u].WorldPosition[2]) + temp_var_hullMainRetVal[1u].WorldPosition[1]) + temp_var_hullMainRetVal[1u].WorldPosition[2]) + temp_var_hullMainRetVal[2u].WorldPosition[1]) + temp_var_hullMainRetVal[2u].WorldPosition[2]) * float4(0.16666667163372039794921875);
+        float4 _461;
+        _461.x = 0.5 * (temp_var_hullMainRetVal[1u].TessellationMultiplier + temp_var_hullMainRetVal[2u].TessellationMultiplier);
+        _461.y = 0.5 * (temp_var_hullMainRetVal[2u].TessellationMultiplier + temp_var_hullMainRetVal[0u].TessellationMultiplier);
+        _461.z = 0.5 * (temp_var_hullMainRetVal[0u].TessellationMultiplier + temp_var_hullMainRetVal[1u].TessellationMultiplier);
+        _461.w = 0.333000004291534423828125 * ((temp_var_hullMainRetVal[0u].TessellationMultiplier + temp_var_hullMainRetVal[1u].TessellationMultiplier) + temp_var_hullMainRetVal[2u].TessellationMultiplier);
+        float4 _587;
         for (;;)
         {
-            float4 _489 = View.View_ViewToClip * float4(0.0);
-            float4 _494 = View.View_TranslatedWorldToClip * float4(temp_var_hullMainRetVal[0u].WorldPosition[0].xyz, 1.0);
-            float3 _495 = _494.xyz;
-            float3 _496 = _489.xyz;
-            float _498 = _494.w;
-            float _499 = _489.w;
-            float4 _516 = View.View_TranslatedWorldToClip * float4(temp_var_hullMainRetVal[1u].WorldPosition[0].xyz, 1.0);
-            float3 _517 = _516.xyz;
-            float _519 = _516.w;
-            float4 _537 = View.View_TranslatedWorldToClip * float4(temp_var_hullMainRetVal[2u].WorldPosition[0].xyz, 1.0);
-            float3 _538 = _537.xyz;
-            float _540 = _537.w;
-            if (any((((int3((_495 - _496) < float3(_498 + _499)) + (int3(2) * int3((_495 + _496) > float3((-_498) - _499)))) | (int3((_517 - _496) < float3(_519 + _499)) + (int3(2) * int3((_517 + _496) > float3((-_519) - _499))))) | (int3((_538 - _496) < float3(_540 + _499)) + (int3(2) * int3((_538 + _496) > float3((-_540) - _499))))) != int3(3)))
+            float4 _487 = View.View_ViewToClip * float4(0.0);
+            float4 _492 = View.View_TranslatedWorldToClip * float4(temp_var_hullMainRetVal[0u].WorldPosition[0].xyz, 1.0);
+            float3 _493 = _492.xyz;
+            float3 _494 = _487.xyz;
+            float _496 = _492.w;
+            float _497 = _487.w;
+            float4 _514 = View.View_TranslatedWorldToClip * float4(temp_var_hullMainRetVal[1u].WorldPosition[0].xyz, 1.0);
+            float3 _515 = _514.xyz;
+            float _517 = _514.w;
+            float4 _535 = View.View_TranslatedWorldToClip * float4(temp_var_hullMainRetVal[2u].WorldPosition[0].xyz, 1.0);
+            float3 _536 = _535.xyz;
+            float _538 = _535.w;
+            if (any((((int3((_493 - _494) < float3(_496 + _497)) + (int3(2) * int3((_493 + _494) > float3((-_496) - _497)))) | (int3((_515 - _494) < float3(_517 + _497)) + (int3(2) * int3((_515 + _494) > float3((-_517) - _497))))) | (int3((_536 - _494) < float3(_538 + _497)) + (int3(2) * int3((_536 + _494) > float3((-_538) - _497))))) != int3(3)))
             {
-                _589 = float4(0.0);
+                _587 = float4(0.0);
                 break;
             }
-            float3 _558 = temp_var_hullMainRetVal[0u].WorldPosition[0].xyz - temp_var_hullMainRetVal[1u].WorldPosition[0].xyz;
-            float3 _559 = temp_var_hullMainRetVal[1u].WorldPosition[0].xyz - temp_var_hullMainRetVal[2u].WorldPosition[0].xyz;
-            float3 _560 = temp_var_hullMainRetVal[2u].WorldPosition[0].xyz - temp_var_hullMainRetVal[0u].WorldPosition[0].xyz;
-            float3 _563 = (float3(0.5) * (temp_var_hullMainRetVal[0u].WorldPosition[0].xyz + temp_var_hullMainRetVal[1u].WorldPosition[0].xyz)) - float3(View.View_TranslatedWorldCameraOrigin);
-            float3 _566 = (float3(0.5) * (temp_var_hullMainRetVal[1u].WorldPosition[0].xyz + temp_var_hullMainRetVal[2u].WorldPosition[0].xyz)) - float3(View.View_TranslatedWorldCameraOrigin);
-            float3 _569 = (float3(0.5) * (temp_var_hullMainRetVal[2u].WorldPosition[0].xyz + temp_var_hullMainRetVal[0u].WorldPosition[0].xyz)) - float3(View.View_TranslatedWorldCameraOrigin);
-            float _573 = sqrt(dot(_559, _559) / dot(_566, _566));
-            float _577 = sqrt(dot(_560, _560) / dot(_569, _569));
-            float _581 = sqrt(dot(_558, _558) / dot(_563, _563));
-            float4 _582 = float4(_573, _577, _581, 1.0);
-            _582.w = 0.333000004291534423828125 * ((_573 + _577) + _581);
-            _589 = float4(View.View_AdaptiveTessellationFactor) * _582;
+            float3 _556 = temp_var_hullMainRetVal[0u].WorldPosition[0].xyz - temp_var_hullMainRetVal[1u].WorldPosition[0].xyz;
+            float3 _557 = temp_var_hullMainRetVal[1u].WorldPosition[0].xyz - temp_var_hullMainRetVal[2u].WorldPosition[0].xyz;
+            float3 _558 = temp_var_hullMainRetVal[2u].WorldPosition[0].xyz - temp_var_hullMainRetVal[0u].WorldPosition[0].xyz;
+            float3 _561 = (float3(0.5) * (temp_var_hullMainRetVal[0u].WorldPosition[0].xyz + temp_var_hullMainRetVal[1u].WorldPosition[0].xyz)) - float3(View.View_TranslatedWorldCameraOrigin);
+            float3 _564 = (float3(0.5) * (temp_var_hullMainRetVal[1u].WorldPosition[0].xyz + temp_var_hullMainRetVal[2u].WorldPosition[0].xyz)) - float3(View.View_TranslatedWorldCameraOrigin);
+            float3 _567 = (float3(0.5) * (temp_var_hullMainRetVal[2u].WorldPosition[0].xyz + temp_var_hullMainRetVal[0u].WorldPosition[0].xyz)) - float3(View.View_TranslatedWorldCameraOrigin);
+            float _571 = sqrt(dot(_557, _557) / dot(_564, _564));
+            float _575 = sqrt(dot(_558, _558) / dot(_567, _567));
+            float _579 = sqrt(dot(_556, _556) / dot(_561, _561));
+            float4 _580 = float4(_571, _575, _579, 1.0);
+            _580.w = 0.333000004291534423828125 * ((_571 + _575) + _579);
+            _587 = float4(View.View_AdaptiveTessellationFactor) * _580;
             break;
         }
-        float4 _591 = fast::clamp(_463 * _589, float4(1.0), float4(15.0));
-        spvTessLevel[gl_PrimitiveID].edgeTessellationFactor[0u] = half(_591.x);
-        spvTessLevel[gl_PrimitiveID].edgeTessellationFactor[1u] = half(_591.y);
-        spvTessLevel[gl_PrimitiveID].edgeTessellationFactor[2u] = half(_591.z);
-        spvTessLevel[gl_PrimitiveID].insideTessellationFactor = half(_591.w);
-        patchOut.out_var_PN_POSITION9 = _450 + ((_450 - (((temp_var_hullMainRetVal[2u].WorldPosition[0] + temp_var_hullMainRetVal[1u].WorldPosition[0]) + temp_var_hullMainRetVal[0u].WorldPosition[0]) * float4(0.3333333432674407958984375))) * float4(0.5));
+        float4 _589 = fast::clamp(_461 * _587, float4(1.0), float4(15.0));
+        spvTessLevel[gl_PrimitiveID].edgeTessellationFactor[0u] = half(_589.x);
+        spvTessLevel[gl_PrimitiveID].edgeTessellationFactor[1u] = half(_589.y);
+        spvTessLevel[gl_PrimitiveID].edgeTessellationFactor[2u] = half(_589.z);
+        spvTessLevel[gl_PrimitiveID].insideTessellationFactor = half(_589.w);
+        patchOut.out_var_PN_POSITION9 = _448 + ((_448 - (((temp_var_hullMainRetVal[2u].WorldPosition[0] + temp_var_hullMainRetVal[1u].WorldPosition[0]) + temp_var_hullMainRetVal[0u].WorldPosition[0]) * float4(0.3333333432674407958984375))) * float4(0.5));
     }
 }
 

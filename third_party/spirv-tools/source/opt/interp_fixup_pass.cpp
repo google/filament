@@ -19,7 +19,6 @@
 #include <set>
 #include <string>
 
-#include "ir_builder.h"
 #include "source/opt/ir_context.h"
 #include "type_manager.h"
 

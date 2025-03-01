@@ -17,13 +17,11 @@
 #ifndef ABSL_RANDOM_INTERNAL_DISTRIBUTION_CALLER_H_
 #define ABSL_RANDOM_INTERNAL_DISTRIBUTION_CALLER_H_
 
-#include <tuple>
-#include <type_traits>
 #include <utility>
+#include <type_traits>
 
 #include "absl/base/config.h"
 #include "absl/base/internal/fast_type_id.h"
-#include "absl/meta/type_traits.h"
 #include "absl/utility/utility.h"
 
 namespace absl {

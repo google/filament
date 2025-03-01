@@ -447,12 +447,60 @@ var (
 		"OpPtrEqual": OpPtrEqual,
 		"OpPtrNotEqual": OpPtrNotEqual,
 		"OpPtrDiff": OpPtrDiff,
+		"OpColorAttachmentReadEXT": OpColorAttachmentReadEXT,
+		"OpDepthAttachmentReadEXT": OpDepthAttachmentReadEXT,
+		"OpStencilAttachmentReadEXT": OpStencilAttachmentReadEXT,
+		"OpTerminateInvocation": OpTerminateInvocation,
+		"OpTypeUntypedPointerKHR": OpTypeUntypedPointerKHR,
+		"OpUntypedVariableKHR": OpUntypedVariableKHR,
+		"OpUntypedAccessChainKHR": OpUntypedAccessChainKHR,
+		"OpUntypedInBoundsAccessChainKHR": OpUntypedInBoundsAccessChainKHR,
 		"OpSubgroupBallotKHR": OpSubgroupBallotKHR,
 		"OpSubgroupFirstInvocationKHR": OpSubgroupFirstInvocationKHR,
+		"OpUntypedPtrAccessChainKHR": OpUntypedPtrAccessChainKHR,
+		"OpUntypedInBoundsPtrAccessChainKHR": OpUntypedInBoundsPtrAccessChainKHR,
+		"OpUntypedArrayLengthKHR": OpUntypedArrayLengthKHR,
+		"OpUntypedPrefetchKHR": OpUntypedPrefetchKHR,
 		"OpSubgroupAllKHR": OpSubgroupAllKHR,
 		"OpSubgroupAnyKHR": OpSubgroupAnyKHR,
 		"OpSubgroupAllEqualKHR": OpSubgroupAllEqualKHR,
+		"OpGroupNonUniformRotateKHR": OpGroupNonUniformRotateKHR,
 		"OpSubgroupReadInvocationKHR": OpSubgroupReadInvocationKHR,
+		"OpExtInstWithForwardRefsKHR": OpExtInstWithForwardRefsKHR,
+		"OpTraceRayKHR": OpTraceRayKHR,
+		"OpExecuteCallableKHR": OpExecuteCallableKHR,
+		"OpConvertUToAccelerationStructureKHR": OpConvertUToAccelerationStructureKHR,
+		"OpIgnoreIntersectionKHR": OpIgnoreIntersectionKHR,
+		"OpTerminateRayKHR": OpTerminateRayKHR,
+		"OpSDot": OpSDot,
+		"OpUDot": OpUDot,
+		"OpSUDot": OpSUDot,
+		"OpSDotAccSat": OpSDotAccSat,
+		"OpUDotAccSat": OpUDotAccSat,
+		"OpSUDotAccSat": OpSUDotAccSat,
+		"OpTypeCooperativeMatrixKHR": OpTypeCooperativeMatrixKHR,
+		"OpCooperativeMatrixLoadKHR": OpCooperativeMatrixLoadKHR,
+		"OpCooperativeMatrixStoreKHR": OpCooperativeMatrixStoreKHR,
+		"OpCooperativeMatrixMulAddKHR": OpCooperativeMatrixMulAddKHR,
+		"OpCooperativeMatrixLengthKHR": OpCooperativeMatrixLengthKHR,
+		"OpConstantCompositeReplicateEXT": OpConstantCompositeReplicateEXT,
+		"OpSpecConstantCompositeReplicateEXT": OpSpecConstantCompositeReplicateEXT,
+		"OpCompositeConstructReplicateEXT": OpCompositeConstructReplicateEXT,
+		"OpTypeRayQueryKHR": OpTypeRayQueryKHR,
+		"OpRayQueryInitializeKHR": OpRayQueryInitializeKHR,
+		"OpRayQueryTerminateKHR": OpRayQueryTerminateKHR,
+		"OpRayQueryGenerateIntersectionKHR": OpRayQueryGenerateIntersectionKHR,
+		"OpRayQueryConfirmIntersectionKHR": OpRayQueryConfirmIntersectionKHR,
+		"OpRayQueryProceedKHR": OpRayQueryProceedKHR,
+		"OpRayQueryGetIntersectionTypeKHR": OpRayQueryGetIntersectionTypeKHR,
+		"OpImageSampleWeightedQCOM": OpImageSampleWeightedQCOM,
+		"OpImageBoxFilterQCOM": OpImageBoxFilterQCOM,
+		"OpImageBlockMatchSSDQCOM": OpImageBlockMatchSSDQCOM,
+		"OpImageBlockMatchSADQCOM": OpImageBlockMatchSADQCOM,
+		"OpImageBlockMatchWindowSSDQCOM": OpImageBlockMatchWindowSSDQCOM,
+		"OpImageBlockMatchWindowSADQCOM": OpImageBlockMatchWindowSADQCOM,
+		"OpImageBlockMatchGatherSSDQCOM": OpImageBlockMatchGatherSSDQCOM,
+		"OpImageBlockMatchGatherSADQCOM": OpImageBlockMatchGatherSADQCOM,
 		"OpGroupIAddNonUniformAMD": OpGroupIAddNonUniformAMD,
 		"OpGroupFAddNonUniformAMD": OpGroupFAddNonUniformAMD,
 		"OpGroupFMinNonUniformAMD": OpGroupFMinNonUniformAMD,
@@ -464,45 +512,66 @@ var (
 		"OpFragmentMaskFetchAMD": OpFragmentMaskFetchAMD,
 		"OpFragmentFetchAMD": OpFragmentFetchAMD,
 		"OpReadClockKHR": OpReadClockKHR,
+		"OpAllocateNodePayloadsAMDX": OpAllocateNodePayloadsAMDX,
+		"OpEnqueueNodePayloadsAMDX": OpEnqueueNodePayloadsAMDX,
+		"OpTypeNodePayloadArrayAMDX": OpTypeNodePayloadArrayAMDX,
+		"OpFinishWritingNodePayloadAMDX": OpFinishWritingNodePayloadAMDX,
+		"OpNodePayloadArrayLengthAMDX": OpNodePayloadArrayLengthAMDX,
+		"OpIsNodePayloadValidAMDX": OpIsNodePayloadValidAMDX,
+		"OpConstantStringAMDX": OpConstantStringAMDX,
+		"OpSpecConstantStringAMDX": OpSpecConstantStringAMDX,
+		"OpGroupNonUniformQuadAllKHR": OpGroupNonUniformQuadAllKHR,
+		"OpGroupNonUniformQuadAnyKHR": OpGroupNonUniformQuadAnyKHR,
+		"OpHitObjectRecordHitMotionNV": OpHitObjectRecordHitMotionNV,
+		"OpHitObjectRecordHitWithIndexMotionNV": OpHitObjectRecordHitWithIndexMotionNV,
+		"OpHitObjectRecordMissMotionNV": OpHitObjectRecordMissMotionNV,
+		"OpHitObjectGetWorldToObjectNV": OpHitObjectGetWorldToObjectNV,
+		"OpHitObjectGetObjectToWorldNV": OpHitObjectGetObjectToWorldNV,
+		"OpHitObjectGetObjectRayDirectionNV": OpHitObjectGetObjectRayDirectionNV,
+		"OpHitObjectGetObjectRayOriginNV": OpHitObjectGetObjectRayOriginNV,
+		"OpHitObjectTraceRayMotionNV": OpHitObjectTraceRayMotionNV,
+		"OpHitObjectGetShaderRecordBufferHandleNV": OpHitObjectGetShaderRecordBufferHandleNV,
+		"OpHitObjectGetShaderBindingTableRecordIndexNV": OpHitObjectGetShaderBindingTableRecordIndexNV,
+		"OpHitObjectRecordEmptyNV": OpHitObjectRecordEmptyNV,
+		"OpHitObjectTraceRayNV": OpHitObjectTraceRayNV,
+		"OpHitObjectRecordHitNV": OpHitObjectRecordHitNV,
+		"OpHitObjectRecordHitWithIndexNV": OpHitObjectRecordHitWithIndexNV,
+		"OpHitObjectRecordMissNV": OpHitObjectRecordMissNV,
+		"OpHitObjectExecuteShaderNV": OpHitObjectExecuteShaderNV,
+		"OpHitObjectGetCurrentTimeNV": OpHitObjectGetCurrentTimeNV,
+		"OpHitObjectGetAttributesNV": OpHitObjectGetAttributesNV,
+		"OpHitObjectGetHitKindNV": OpHitObjectGetHitKindNV,
+		"OpHitObjectGetPrimitiveIndexNV": OpHitObjectGetPrimitiveIndexNV,
+		"OpHitObjectGetGeometryIndexNV": OpHitObjectGetGeometryIndexNV,
+		"OpHitObjectGetInstanceIdNV": OpHitObjectGetInstanceIdNV,
+		"OpHitObjectGetInstanceCustomIndexNV": OpHitObjectGetInstanceCustomIndexNV,
+		"OpHitObjectGetWorldRayDirectionNV": OpHitObjectGetWorldRayDirectionNV,
+		"OpHitObjectGetWorldRayOriginNV": OpHitObjectGetWorldRayOriginNV,
+		"OpHitObjectGetRayTMaxNV": OpHitObjectGetRayTMaxNV,
+		"OpHitObjectGetRayTMinNV": OpHitObjectGetRayTMinNV,
+		"OpHitObjectIsEmptyNV": OpHitObjectIsEmptyNV,
+		"OpHitObjectIsHitNV": OpHitObjectIsHitNV,
+		"OpHitObjectIsMissNV": OpHitObjectIsMissNV,
+		"OpReorderThreadWithHitObjectNV": OpReorderThreadWithHitObjectNV,
+		"OpReorderThreadWithHintNV": OpReorderThreadWithHintNV,
+		"OpTypeHitObjectNV": OpTypeHitObjectNV,
 		"OpImageSampleFootprintNV": OpImageSampleFootprintNV,
+		"OpCooperativeMatrixConvertNV": OpCooperativeMatrixConvertNV,
+		"OpEmitMeshTasksEXT": OpEmitMeshTasksEXT,
+		"OpSetMeshOutputsEXT": OpSetMeshOutputsEXT,
 		"OpGroupNonUniformPartitionNV": OpGroupNonUniformPartitionNV,
 		"OpWritePackedPrimitiveIndices4x8NV": OpWritePackedPrimitiveIndices4x8NV,
-		"OpReportIntersectionNV": OpReportIntersectionNV,
+		"OpFetchMicroTriangleVertexPositionNV": OpFetchMicroTriangleVertexPositionNV,
+		"OpFetchMicroTriangleVertexBarycentricNV": OpFetchMicroTriangleVertexBarycentricNV,
 		"OpReportIntersectionKHR": OpReportIntersectionKHR,
 		"OpIgnoreIntersectionNV": OpIgnoreIntersectionNV,
-		"OpIgnoreIntersectionKHR": OpIgnoreIntersectionKHR,
 		"OpTerminateRayNV": OpTerminateRayNV,
-		"OpTerminateRayKHR": OpTerminateRayKHR,
 		"OpTraceNV": OpTraceNV,
-		"OpTraceRayKHR": OpTraceRayKHR,
-		"OpTypeAccelerationStructureNV": OpTypeAccelerationStructureNV,
+		"OpTraceMotionNV": OpTraceMotionNV,
+		"OpTraceRayMotionNV": OpTraceRayMotionNV,
+		"OpRayQueryGetIntersectionTriangleVertexPositionsKHR": OpRayQueryGetIntersectionTriangleVertexPositionsKHR,
 		"OpTypeAccelerationStructureKHR": OpTypeAccelerationStructureKHR,
-		"OpTypeRayQueryProvisionalKHR": OpTypeRayQueryProvisionalKHR,
-		"OpRayQueryInitializeKHR": OpRayQueryInitializeKHR,
-		"OpRayQueryTerminateKHR": OpRayQueryTerminateKHR,
-		"OpRayQueryGenerateIntersectionKHR": OpRayQueryGenerateIntersectionKHR,
-		"OpRayQueryConfirmIntersectionKHR": OpRayQueryConfirmIntersectionKHR,
-		"OpRayQueryProceedKHR": OpRayQueryProceedKHR,
-		"OpRayQueryGetIntersectionTypeKHR": OpRayQueryGetIntersectionTypeKHR,
-		"OpRayQueryGetRayTMinKHR": OpRayQueryGetRayTMinKHR,
-		"OpRayQueryGetRayFlagsKHR": OpRayQueryGetRayFlagsKHR,
-		"OpRayQueryGetIntersectionTKHR": OpRayQueryGetIntersectionTKHR,
-		"OpRayQueryGetIntersectionInstanceCustomIndexKHR": OpRayQueryGetIntersectionInstanceCustomIndexKHR,
-		"OpRayQueryGetIntersectionInstanceIdKHR": OpRayQueryGetIntersectionInstanceIdKHR,
-		"OpRayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetKHR": OpRayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetKHR,
-		"OpRayQueryGetIntersectionGeometryIndexKHR": OpRayQueryGetIntersectionGeometryIndexKHR,
-		"OpRayQueryGetIntersectionPrimitiveIndexKHR": OpRayQueryGetIntersectionPrimitiveIndexKHR,
-		"OpRayQueryGetIntersectionBarycentricsKHR": OpRayQueryGetIntersectionBarycentricsKHR,
-		"OpRayQueryGetIntersectionFrontFaceKHR": OpRayQueryGetIntersectionFrontFaceKHR,
-		"OpRayQueryGetIntersectionCandidateAABBOpaqueKHR": OpRayQueryGetIntersectionCandidateAABBOpaqueKHR,
-		"OpRayQueryGetIntersectionObjectRayDirectionKHR": OpRayQueryGetIntersectionObjectRayDirectionKHR,
-		"OpRayQueryGetIntersectionObjectRayOriginKHR": OpRayQueryGetIntersectionObjectRayOriginKHR,
-		"OpRayQueryGetWorldRayDirectionKHR": OpRayQueryGetWorldRayDirectionKHR,
-		"OpRayQueryGetWorldRayOriginKHR": OpRayQueryGetWorldRayOriginKHR,
-		"OpRayQueryGetIntersectionObjectToWorldKHR": OpRayQueryGetIntersectionObjectToWorldKHR,
-		"OpRayQueryGetIntersectionWorldToObjectKHR": OpRayQueryGetIntersectionWorldToObjectKHR,
 		"OpExecuteCallableNV": OpExecuteCallableNV,
-		"OpExecuteCallableKHR": OpExecuteCallableKHR,
 		"OpTypeCooperativeMatrixNV": OpTypeCooperativeMatrixNV,
 		"OpCooperativeMatrixLoadNV": OpCooperativeMatrixLoadNV,
 		"OpCooperativeMatrixStoreNV": OpCooperativeMatrixStoreNV,
@@ -510,8 +579,33 @@ var (
 		"OpCooperativeMatrixLengthNV": OpCooperativeMatrixLengthNV,
 		"OpBeginInvocationInterlockEXT": OpBeginInvocationInterlockEXT,
 		"OpEndInvocationInterlockEXT": OpEndInvocationInterlockEXT,
-		"OpDemoteToHelperInvocationEXT": OpDemoteToHelperInvocationEXT,
+		"OpCooperativeMatrixReduceNV": OpCooperativeMatrixReduceNV,
+		"OpCooperativeMatrixLoadTensorNV": OpCooperativeMatrixLoadTensorNV,
+		"OpCooperativeMatrixStoreTensorNV": OpCooperativeMatrixStoreTensorNV,
+		"OpCooperativeMatrixPerElementOpNV": OpCooperativeMatrixPerElementOpNV,
+		"OpTypeTensorLayoutNV": OpTypeTensorLayoutNV,
+		"OpTypeTensorViewNV": OpTypeTensorViewNV,
+		"OpCreateTensorLayoutNV": OpCreateTensorLayoutNV,
+		"OpTensorLayoutSetDimensionNV": OpTensorLayoutSetDimensionNV,
+		"OpTensorLayoutSetStrideNV": OpTensorLayoutSetStrideNV,
+		"OpTensorLayoutSliceNV": OpTensorLayoutSliceNV,
+		"OpTensorLayoutSetClampValueNV": OpTensorLayoutSetClampValueNV,
+		"OpCreateTensorViewNV": OpCreateTensorViewNV,
+		"OpTensorViewSetDimensionNV": OpTensorViewSetDimensionNV,
+		"OpTensorViewSetStrideNV": OpTensorViewSetStrideNV,
+		"OpDemoteToHelperInvocation": OpDemoteToHelperInvocation,
 		"OpIsHelperInvocationEXT": OpIsHelperInvocationEXT,
+		"OpTensorViewSetClipNV": OpTensorViewSetClipNV,
+		"OpTensorLayoutSetBlockSizeNV": OpTensorLayoutSetBlockSizeNV,
+		"OpCooperativeMatrixTransposeNV": OpCooperativeMatrixTransposeNV,
+		"OpConvertUToImageNV": OpConvertUToImageNV,
+		"OpConvertUToSamplerNV": OpConvertUToSamplerNV,
+		"OpConvertImageToUNV": OpConvertImageToUNV,
+		"OpConvertSamplerToUNV": OpConvertSamplerToUNV,
+		"OpConvertUToSampledImageNV": OpConvertUToSampledImageNV,
+		"OpConvertSampledImageToUNV": OpConvertSampledImageToUNV,
+		"OpSamplerImageAddressingModeNV": OpSamplerImageAddressingModeNV,
+		"OpRawAccessChainNV": OpRawAccessChainNV,
 		"OpSubgroupShuffleINTEL": OpSubgroupShuffleINTEL,
 		"OpSubgroupShuffleDownINTEL": OpSubgroupShuffleDownINTEL,
 		"OpSubgroupShuffleUpINTEL": OpSubgroupShuffleUpINTEL,
@@ -536,10 +630,17 @@ var (
 		"OpUSubSatINTEL": OpUSubSatINTEL,
 		"OpIMul32x16INTEL": OpIMul32x16INTEL,
 		"OpUMul32x16INTEL": OpUMul32x16INTEL,
+		"OpConstantFunctionPointerINTEL": OpConstantFunctionPointerINTEL,
+		"OpFunctionPointerCallINTEL": OpFunctionPointerCallINTEL,
+		"OpAsmTargetINTEL": OpAsmTargetINTEL,
+		"OpAsmINTEL": OpAsmINTEL,
+		"OpAsmCallINTEL": OpAsmCallINTEL,
+		"OpAtomicFMinEXT": OpAtomicFMinEXT,
+		"OpAtomicFMaxEXT": OpAtomicFMaxEXT,
+		"OpAssumeTrueKHR": OpAssumeTrueKHR,
+		"OpExpectKHR": OpExpectKHR,
 		"OpDecorateString": OpDecorateString,
-		"OpDecorateStringGOOGLE": OpDecorateStringGOOGLE,
 		"OpMemberDecorateString": OpMemberDecorateString,
-		"OpMemberDecorateStringGOOGLE": OpMemberDecorateStringGOOGLE,
 		"OpVmeImageINTEL": OpVmeImageINTEL,
 		"OpTypeVmeImageINTEL": OpTypeVmeImageINTEL,
 		"OpTypeAvcImePayloadINTEL": OpTypeAvcImePayloadINTEL,
@@ -658,6 +759,109 @@ var (
 		"OpSubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL": OpSubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL,
 		"OpSubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL": OpSubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL,
 		"OpSubgroupAvcSicGetInterRawSadsINTEL": OpSubgroupAvcSicGetInterRawSadsINTEL,
+		"OpVariableLengthArrayINTEL": OpVariableLengthArrayINTEL,
+		"OpSaveMemoryINTEL": OpSaveMemoryINTEL,
+		"OpRestoreMemoryINTEL": OpRestoreMemoryINTEL,
+		"OpArbitraryFloatSinCosPiINTEL": OpArbitraryFloatSinCosPiINTEL,
+		"OpArbitraryFloatCastINTEL": OpArbitraryFloatCastINTEL,
+		"OpArbitraryFloatCastFromIntINTEL": OpArbitraryFloatCastFromIntINTEL,
+		"OpArbitraryFloatCastToIntINTEL": OpArbitraryFloatCastToIntINTEL,
+		"OpArbitraryFloatAddINTEL": OpArbitraryFloatAddINTEL,
+		"OpArbitraryFloatSubINTEL": OpArbitraryFloatSubINTEL,
+		"OpArbitraryFloatMulINTEL": OpArbitraryFloatMulINTEL,
+		"OpArbitraryFloatDivINTEL": OpArbitraryFloatDivINTEL,
+		"OpArbitraryFloatGTINTEL": OpArbitraryFloatGTINTEL,
+		"OpArbitraryFloatGEINTEL": OpArbitraryFloatGEINTEL,
+		"OpArbitraryFloatLTINTEL": OpArbitraryFloatLTINTEL,
+		"OpArbitraryFloatLEINTEL": OpArbitraryFloatLEINTEL,
+		"OpArbitraryFloatEQINTEL": OpArbitraryFloatEQINTEL,
+		"OpArbitraryFloatRecipINTEL": OpArbitraryFloatRecipINTEL,
+		"OpArbitraryFloatRSqrtINTEL": OpArbitraryFloatRSqrtINTEL,
+		"OpArbitraryFloatCbrtINTEL": OpArbitraryFloatCbrtINTEL,
+		"OpArbitraryFloatHypotINTEL": OpArbitraryFloatHypotINTEL,
+		"OpArbitraryFloatSqrtINTEL": OpArbitraryFloatSqrtINTEL,
+		"OpArbitraryFloatLogINTEL": OpArbitraryFloatLogINTEL,
+		"OpArbitraryFloatLog2INTEL": OpArbitraryFloatLog2INTEL,
+		"OpArbitraryFloatLog10INTEL": OpArbitraryFloatLog10INTEL,
+		"OpArbitraryFloatLog1pINTEL": OpArbitraryFloatLog1pINTEL,
+		"OpArbitraryFloatExpINTEL": OpArbitraryFloatExpINTEL,
+		"OpArbitraryFloatExp2INTEL": OpArbitraryFloatExp2INTEL,
+		"OpArbitraryFloatExp10INTEL": OpArbitraryFloatExp10INTEL,
+		"OpArbitraryFloatExpm1INTEL": OpArbitraryFloatExpm1INTEL,
+		"OpArbitraryFloatSinINTEL": OpArbitraryFloatSinINTEL,
+		"OpArbitraryFloatCosINTEL": OpArbitraryFloatCosINTEL,
+		"OpArbitraryFloatSinCosINTEL": OpArbitraryFloatSinCosINTEL,
+		"OpArbitraryFloatSinPiINTEL": OpArbitraryFloatSinPiINTEL,
+		"OpArbitraryFloatCosPiINTEL": OpArbitraryFloatCosPiINTEL,
+		"OpArbitraryFloatASinINTEL": OpArbitraryFloatASinINTEL,
+		"OpArbitraryFloatASinPiINTEL": OpArbitraryFloatASinPiINTEL,
+		"OpArbitraryFloatACosINTEL": OpArbitraryFloatACosINTEL,
+		"OpArbitraryFloatACosPiINTEL": OpArbitraryFloatACosPiINTEL,
+		"OpArbitraryFloatATanINTEL": OpArbitraryFloatATanINTEL,
+		"OpArbitraryFloatATanPiINTEL": OpArbitraryFloatATanPiINTEL,
+		"OpArbitraryFloatATan2INTEL": OpArbitraryFloatATan2INTEL,
+		"OpArbitraryFloatPowINTEL": OpArbitraryFloatPowINTEL,
+		"OpArbitraryFloatPowRINTEL": OpArbitraryFloatPowRINTEL,
+		"OpArbitraryFloatPowNINTEL": OpArbitraryFloatPowNINTEL,
+		"OpLoopControlINTEL": OpLoopControlINTEL,
+		"OpAliasDomainDeclINTEL": OpAliasDomainDeclINTEL,
+		"OpAliasScopeDeclINTEL": OpAliasScopeDeclINTEL,
+		"OpAliasScopeListDeclINTEL": OpAliasScopeListDeclINTEL,
+		"OpFixedSqrtINTEL": OpFixedSqrtINTEL,
+		"OpFixedRecipINTEL": OpFixedRecipINTEL,
+		"OpFixedRsqrtINTEL": OpFixedRsqrtINTEL,
+		"OpFixedSinINTEL": OpFixedSinINTEL,
+		"OpFixedCosINTEL": OpFixedCosINTEL,
+		"OpFixedSinCosINTEL": OpFixedSinCosINTEL,
+		"OpFixedSinPiINTEL": OpFixedSinPiINTEL,
+		"OpFixedCosPiINTEL": OpFixedCosPiINTEL,
+		"OpFixedSinCosPiINTEL": OpFixedSinCosPiINTEL,
+		"OpFixedLogINTEL": OpFixedLogINTEL,
+		"OpFixedExpINTEL": OpFixedExpINTEL,
+		"OpPtrCastToCrossWorkgroupINTEL": OpPtrCastToCrossWorkgroupINTEL,
+		"OpCrossWorkgroupCastToPtrINTEL": OpCrossWorkgroupCastToPtrINTEL,
+		"OpReadPipeBlockingINTEL": OpReadPipeBlockingINTEL,
+		"OpWritePipeBlockingINTEL": OpWritePipeBlockingINTEL,
+		"OpFPGARegINTEL": OpFPGARegINTEL,
+		"OpRayQueryGetRayTMinKHR": OpRayQueryGetRayTMinKHR,
+		"OpRayQueryGetRayFlagsKHR": OpRayQueryGetRayFlagsKHR,
+		"OpRayQueryGetIntersectionTKHR": OpRayQueryGetIntersectionTKHR,
+		"OpRayQueryGetIntersectionInstanceCustomIndexKHR": OpRayQueryGetIntersectionInstanceCustomIndexKHR,
+		"OpRayQueryGetIntersectionInstanceIdKHR": OpRayQueryGetIntersectionInstanceIdKHR,
+		"OpRayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetKHR": OpRayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetKHR,
+		"OpRayQueryGetIntersectionGeometryIndexKHR": OpRayQueryGetIntersectionGeometryIndexKHR,
+		"OpRayQueryGetIntersectionPrimitiveIndexKHR": OpRayQueryGetIntersectionPrimitiveIndexKHR,
+		"OpRayQueryGetIntersectionBarycentricsKHR": OpRayQueryGetIntersectionBarycentricsKHR,
+		"OpRayQueryGetIntersectionFrontFaceKHR": OpRayQueryGetIntersectionFrontFaceKHR,
+		"OpRayQueryGetIntersectionCandidateAABBOpaqueKHR": OpRayQueryGetIntersectionCandidateAABBOpaqueKHR,
+		"OpRayQueryGetIntersectionObjectRayDirectionKHR": OpRayQueryGetIntersectionObjectRayDirectionKHR,
+		"OpRayQueryGetIntersectionObjectRayOriginKHR": OpRayQueryGetIntersectionObjectRayOriginKHR,
+		"OpRayQueryGetWorldRayDirectionKHR": OpRayQueryGetWorldRayDirectionKHR,
+		"OpRayQueryGetWorldRayOriginKHR": OpRayQueryGetWorldRayOriginKHR,
+		"OpRayQueryGetIntersectionObjectToWorldKHR": OpRayQueryGetIntersectionObjectToWorldKHR,
+		"OpRayQueryGetIntersectionWorldToObjectKHR": OpRayQueryGetIntersectionWorldToObjectKHR,
+		"OpAtomicFAddEXT": OpAtomicFAddEXT,
+		"OpTypeBufferSurfaceINTEL": OpTypeBufferSurfaceINTEL,
+		"OpTypeStructContinuedINTEL": OpTypeStructContinuedINTEL,
+		"OpConstantCompositeContinuedINTEL": OpConstantCompositeContinuedINTEL,
+		"OpSpecConstantCompositeContinuedINTEL": OpSpecConstantCompositeContinuedINTEL,
+		"OpCompositeConstructContinuedINTEL": OpCompositeConstructContinuedINTEL,
+		"OpConvertFToBF16INTEL": OpConvertFToBF16INTEL,
+		"OpConvertBF16ToFINTEL": OpConvertBF16ToFINTEL,
+		"OpControlBarrierArriveINTEL": OpControlBarrierArriveINTEL,
+		"OpControlBarrierWaitINTEL": OpControlBarrierWaitINTEL,
+		"OpArithmeticFenceEXT": OpArithmeticFenceEXT,
+		"OpSubgroupBlockPrefetchINTEL": OpSubgroupBlockPrefetchINTEL,
+		"OpGroupIMulKHR": OpGroupIMulKHR,
+		"OpGroupFMulKHR": OpGroupFMulKHR,
+		"OpGroupBitwiseAndKHR": OpGroupBitwiseAndKHR,
+		"OpGroupBitwiseOrKHR": OpGroupBitwiseOrKHR,
+		"OpGroupBitwiseXorKHR": OpGroupBitwiseXorKHR,
+		"OpGroupLogicalAndKHR": OpGroupLogicalAndKHR,
+		"OpGroupLogicalOrKHR": OpGroupLogicalOrKHR,
+		"OpGroupLogicalXorKHR": OpGroupLogicalXorKHR,
+		"OpMaskedGatherINTEL": OpMaskedGatherINTEL,
+		"OpMaskedScatterINTEL": OpMaskedScatterINTEL,
 	}
 
 	// ExtOpcodes is a map of extension name to Opcode description list.
@@ -946,6 +1150,7 @@ var (
 			"DebugMacroUndef": OpenCLDebugInfo100_DebugMacroUndef,
 			"DebugImportedEntity": OpenCLDebugInfo100_DebugImportedEntity,
 			"DebugSource": OpenCLDebugInfo100_DebugSource,
+			"DebugModuleINTEL": OpenCLDebugInfo100_DebugModuleINTEL,
 		},
 	}
 
@@ -1296,6 +1501,11 @@ var (
 				Kind:       OperandKindLiteralInteger,
 				Name:       "'Width'",
 				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindFPEncoding,
+				Name:       "'Floating Point Encoding'",
+				Quantifier: "?",
 			}, 
 		},
 	}
@@ -10022,6 +10232,197 @@ var (
 			}, 
 		},
 	}
+	OpColorAttachmentReadEXT = &Opcode {
+		Opname:   "OpColorAttachmentReadEXT",
+		Class:    "Image",
+		Opcode:   4160,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Attachment'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Sample'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpDepthAttachmentReadEXT = &Opcode {
+		Opname:   "OpDepthAttachmentReadEXT",
+		Class:    "Image",
+		Opcode:   4161,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Sample'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpStencilAttachmentReadEXT = &Opcode {
+		Opname:   "OpStencilAttachmentReadEXT",
+		Class:    "Image",
+		Opcode:   4162,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Sample'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpTerminateInvocation = &Opcode {
+		Opname:   "OpTerminateInvocation",
+		Class:    "Control-Flow",
+		Opcode:   4416,
+		Operands: []Operand {
+		},
+	}
+	OpTypeUntypedPointerKHR = &Opcode {
+		Opname:   "OpTypeUntypedPointerKHR",
+		Class:    "Type-Declaration",
+		Opcode:   4417,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindStorageClass,
+				Name:       "",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpUntypedVariableKHR = &Opcode {
+		Opname:   "OpUntypedVariableKHR",
+		Class:    "Memory",
+		Opcode:   4418,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindStorageClass,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Data Type'",
+				Quantifier: "?",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Initializer'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpUntypedAccessChainKHR = &Opcode {
+		Opname:   "OpUntypedAccessChainKHR",
+		Class:    "Memory",
+		Opcode:   4419,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Base Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Base'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Indexes'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpUntypedInBoundsAccessChainKHR = &Opcode {
+		Opname:   "OpUntypedInBoundsAccessChainKHR",
+		Class:    "Memory",
+		Opcode:   4420,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Base Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Base'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Indexes'",
+				Quantifier: "*",
+			}, 
+		},
+	}
 	OpSubgroupBallotKHR = &Opcode {
 		Opname:   "OpSubgroupBallotKHR",
 		Class:    "Group",
@@ -10063,6 +10464,144 @@ var (
 				Kind:       OperandKindIdRef,
 				Name:       "'Value'",
 				Quantifier: "",
+			}, 
+		},
+	}
+	OpUntypedPtrAccessChainKHR = &Opcode {
+		Opname:   "OpUntypedPtrAccessChainKHR",
+		Class:    "Memory",
+		Opcode:   4423,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Base Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Base'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Element'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Indexes'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpUntypedInBoundsPtrAccessChainKHR = &Opcode {
+		Opname:   "OpUntypedInBoundsPtrAccessChainKHR",
+		Class:    "Memory",
+		Opcode:   4424,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Base Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Base'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Element'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Indexes'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpUntypedArrayLengthKHR = &Opcode {
+		Opname:   "OpUntypedArrayLengthKHR",
+		Class:    "Memory",
+		Opcode:   4425,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Structure'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Pointer'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Array member'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpUntypedPrefetchKHR = &Opcode {
+		Opname:   "OpUntypedPrefetchKHR",
+		Class:    "Memory",
+		Opcode:   4426,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Pointer Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Num Bytes'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RW'",
+				Quantifier: "?",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Locality'",
+				Quantifier: "?",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Cache Type'",
+				Quantifier: "?",
 			}, 
 		},
 	}
@@ -10132,6 +10671,43 @@ var (
 			}, 
 		},
 	}
+	OpGroupNonUniformRotateKHR = &Opcode {
+		Opname:   "OpGroupNonUniformRotateKHR",
+		Class:    "Group",
+		Opcode:   4431,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Execution'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Value'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Delta'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'ClusterSize'",
+				Quantifier: "?",
+			}, 
+		},
+	}
 	OpSubgroupReadInvocationKHR = &Opcode {
 		Opname:   "OpSubgroupReadInvocationKHR",
 		Class:    "Group",
@@ -10155,6 +10731,1056 @@ var (
 			Operand {
 				Kind:       OperandKindIdRef,
 				Name:       "'Index'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpExtInstWithForwardRefsKHR = &Opcode {
+		Opname:   "OpExtInstWithForwardRefsKHR",
+		Class:    "Extension",
+		Opcode:   4433,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Set'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralExtInstInteger,
+				Name:       "'Instruction'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Operand 1', + 'Operand 2', + ...",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpTraceRayKHR = &Opcode {
+		Opname:   "OpTraceRayKHR",
+		Class:    "Reserved",
+		Opcode:   4445,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Accel'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Ray Flags'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Cull Mask'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Offset'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Stride'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Miss Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Ray Origin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Ray Tmin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Ray Direction'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Ray Tmax'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpExecuteCallableKHR = &Opcode {
+		Opname:   "OpExecuteCallableKHR",
+		Class:    "Reserved",
+		Opcode:   4446,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Callable Data'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpConvertUToAccelerationStructureKHR = &Opcode {
+		Opname:   "OpConvertUToAccelerationStructureKHR",
+		Class:    "Reserved",
+		Opcode:   4447,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Accel'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpIgnoreIntersectionKHR = &Opcode {
+		Opname:   "OpIgnoreIntersectionKHR",
+		Class:    "Reserved",
+		Opcode:   4448,
+		Operands: []Operand {
+		},
+	}
+	OpTerminateRayKHR = &Opcode {
+		Opname:   "OpTerminateRayKHR",
+		Class:    "Reserved",
+		Opcode:   4449,
+		Operands: []Operand {
+		},
+	}
+	OpSDot = &Opcode {
+		Opname:   "OpSDot",
+		Class:    "Arithmetic",
+		Opcode:   4450,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindPackedVectorFormat,
+				Name:       "'Packed Vector Format'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpUDot = &Opcode {
+		Opname:   "OpUDot",
+		Class:    "Arithmetic",
+		Opcode:   4451,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindPackedVectorFormat,
+				Name:       "'Packed Vector Format'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpSUDot = &Opcode {
+		Opname:   "OpSUDot",
+		Class:    "Arithmetic",
+		Opcode:   4452,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindPackedVectorFormat,
+				Name:       "'Packed Vector Format'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpSDotAccSat = &Opcode {
+		Opname:   "OpSDotAccSat",
+		Class:    "Arithmetic",
+		Opcode:   4453,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Accumulator'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindPackedVectorFormat,
+				Name:       "'Packed Vector Format'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpUDotAccSat = &Opcode {
+		Opname:   "OpUDotAccSat",
+		Class:    "Arithmetic",
+		Opcode:   4454,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Accumulator'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindPackedVectorFormat,
+				Name:       "'Packed Vector Format'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpSUDotAccSat = &Opcode {
+		Opname:   "OpSUDotAccSat",
+		Class:    "Arithmetic",
+		Opcode:   4455,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vector 2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Accumulator'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindPackedVectorFormat,
+				Name:       "'Packed Vector Format'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpTypeCooperativeMatrixKHR = &Opcode {
+		Opname:   "OpTypeCooperativeMatrixKHR",
+		Class:    "Type-Declaration",
+		Opcode:   4456,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Component Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Scope'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Rows'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Columns'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Use'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpCooperativeMatrixLoadKHR = &Opcode {
+		Opname:   "OpCooperativeMatrixLoadKHR",
+		Class:    "Memory",
+		Opcode:   4457,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Pointer'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'MemoryLayout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Stride'",
+				Quantifier: "?",
+			}, 
+			Operand {
+				Kind:       OperandKindMemoryAccess,
+				Name:       "'Memory Operand'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpCooperativeMatrixStoreKHR = &Opcode {
+		Opname:   "OpCooperativeMatrixStoreKHR",
+		Class:    "Memory",
+		Opcode:   4458,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Pointer'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'MemoryLayout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Stride'",
+				Quantifier: "?",
+			}, 
+			Operand {
+				Kind:       OperandKindMemoryAccess,
+				Name:       "'Memory Operand'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpCooperativeMatrixMulAddKHR = &Opcode {
+		Opname:   "OpCooperativeMatrixMulAddKHR",
+		Class:    "Arithmetic",
+		Opcode:   4459,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'C'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindCooperativeMatrixOperands,
+				Name:       "'Cooperative Matrix Operands'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpCooperativeMatrixLengthKHR = &Opcode {
+		Opname:   "OpCooperativeMatrixLengthKHR",
+		Class:    "Miscellaneous",
+		Opcode:   4460,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Type'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpConstantCompositeReplicateEXT = &Opcode {
+		Opname:   "OpConstantCompositeReplicateEXT",
+		Class:    "Constant-Creation",
+		Opcode:   4461,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Value'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpSpecConstantCompositeReplicateEXT = &Opcode {
+		Opname:   "OpSpecConstantCompositeReplicateEXT",
+		Class:    "Constant-Creation",
+		Opcode:   4462,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Value'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpCompositeConstructReplicateEXT = &Opcode {
+		Opname:   "OpCompositeConstructReplicateEXT",
+		Class:    "Composite",
+		Opcode:   4463,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Value'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpTypeRayQueryKHR = &Opcode {
+		Opname:   "OpTypeRayQueryKHR",
+		Class:    "Type-Declaration",
+		Opcode:   4472,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryInitializeKHR = &Opcode {
+		Opname:   "OpRayQueryInitializeKHR",
+		Class:    "Reserved",
+		Opcode:   4473,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Accel'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayFlags'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'CullMask'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayOrigin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayTMin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayDirection'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayTMax'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryTerminateKHR = &Opcode {
+		Opname:   "OpRayQueryTerminateKHR",
+		Class:    "Reserved",
+		Opcode:   4474,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGenerateIntersectionKHR = &Opcode {
+		Opname:   "OpRayQueryGenerateIntersectionKHR",
+		Class:    "Reserved",
+		Opcode:   4475,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'HitT'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryConfirmIntersectionKHR = &Opcode {
+		Opname:   "OpRayQueryConfirmIntersectionKHR",
+		Class:    "Reserved",
+		Opcode:   4476,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryProceedKHR = &Opcode {
+		Opname:   "OpRayQueryProceedKHR",
+		Class:    "Reserved",
+		Opcode:   4477,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionTypeKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionTypeKHR",
+		Class:    "Reserved",
+		Opcode:   4479,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpImageSampleWeightedQCOM = &Opcode {
+		Opname:   "OpImageSampleWeightedQCOM",
+		Class:    "Image",
+		Opcode:   4480,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Texture'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Weights'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpImageBoxFilterQCOM = &Opcode {
+		Opname:   "OpImageBoxFilterQCOM",
+		Class:    "Image",
+		Opcode:   4481,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Texture'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Box Size'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpImageBlockMatchSSDQCOM = &Opcode {
+		Opname:   "OpImageBlockMatchSSDQCOM",
+		Class:    "Image",
+		Opcode:   4482,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Block Size'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpImageBlockMatchSADQCOM = &Opcode {
+		Opname:   "OpImageBlockMatchSADQCOM",
+		Class:    "Image",
+		Opcode:   4483,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Block Size'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpImageBlockMatchWindowSSDQCOM = &Opcode {
+		Opname:   "OpImageBlockMatchWindowSSDQCOM",
+		Class:    "Image",
+		Opcode:   4500,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target Sampled Image'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference Sampled Image'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Block Size'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpImageBlockMatchWindowSADQCOM = &Opcode {
+		Opname:   "OpImageBlockMatchWindowSADQCOM",
+		Class:    "Image",
+		Opcode:   4501,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target Sampled Image'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference Sampled Image'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Block Size'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpImageBlockMatchGatherSSDQCOM = &Opcode {
+		Opname:   "OpImageBlockMatchGatherSSDQCOM",
+		Class:    "Image",
+		Opcode:   4502,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target Sampled Image'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference Sampled Image'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Block Size'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpImageBlockMatchGatherSADQCOM = &Opcode {
+		Opname:   "OpImageBlockMatchGatherSADQCOM",
+		Class:    "Image",
+		Opcode:   4503,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target Sampled Image'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference Sampled Image'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Reference Coordinates'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Block Size'",
 				Quantifier: "",
 			}, 
 		},
@@ -10491,7 +12117,1238 @@ var (
 			}, 
 			Operand {
 				Kind:       OperandKindIdScope,
-				Name:       "'Execution'",
+				Name:       "'Scope'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpAllocateNodePayloadsAMDX = &Opcode {
+		Opname:   "OpAllocateNodePayloadsAMDX",
+		Class:    "Reserved",
+		Opcode:   5074,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Visibility'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload Count'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Node Index'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpEnqueueNodePayloadsAMDX = &Opcode {
+		Opname:   "OpEnqueueNodePayloadsAMDX",
+		Class:    "Reserved",
+		Opcode:   5075,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload Array'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpTypeNodePayloadArrayAMDX = &Opcode {
+		Opname:   "OpTypeNodePayloadArrayAMDX",
+		Class:    "Reserved",
+		Opcode:   5076,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload Type'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFinishWritingNodePayloadAMDX = &Opcode {
+		Opname:   "OpFinishWritingNodePayloadAMDX",
+		Class:    "Reserved",
+		Opcode:   5078,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpNodePayloadArrayLengthAMDX = &Opcode {
+		Opname:   "OpNodePayloadArrayLengthAMDX",
+		Class:    "Reserved",
+		Opcode:   5090,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload Array'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpIsNodePayloadValidAMDX = &Opcode {
+		Opname:   "OpIsNodePayloadValidAMDX",
+		Class:    "Reserved",
+		Opcode:   5101,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Node Index'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpConstantStringAMDX = &Opcode {
+		Opname:   "OpConstantStringAMDX",
+		Class:    "Reserved",
+		Opcode:   5103,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralString,
+				Name:       "'Literal String'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpSpecConstantStringAMDX = &Opcode {
+		Opname:   "OpSpecConstantStringAMDX",
+		Class:    "Reserved",
+		Opcode:   5104,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralString,
+				Name:       "'Literal String'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpGroupNonUniformQuadAllKHR = &Opcode {
+		Opname:   "OpGroupNonUniformQuadAllKHR",
+		Class:    "Non-Uniform",
+		Opcode:   5110,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Predicate'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpGroupNonUniformQuadAnyKHR = &Opcode {
+		Opname:   "OpGroupNonUniformQuadAnyKHR",
+		Class:    "Non-Uniform",
+		Opcode:   5111,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Predicate'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectRecordHitMotionNV = &Opcode {
+		Opname:   "OpHitObjectRecordHitMotionNV",
+		Class:    "Reserved",
+		Opcode:   5249,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Acceleration Structure'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'InstanceId'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'PrimitiveId'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'GeometryIndex'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Kind'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Record Offset'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Record Stride'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Origin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Direction'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMax'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Current Time'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'HitObject Attributes'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectRecordHitWithIndexMotionNV = &Opcode {
+		Opname:   "OpHitObjectRecordHitWithIndexMotionNV",
+		Class:    "Reserved",
+		Opcode:   5250,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Acceleration Structure'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'InstanceId'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'PrimitiveId'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'GeometryIndex'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Kind'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Record Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Origin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Direction'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMax'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Current Time'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'HitObject Attributes'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectRecordMissMotionNV = &Opcode {
+		Opname:   "OpHitObjectRecordMissMotionNV",
+		Class:    "Reserved",
+		Opcode:   5251,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Origin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Direction'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMax'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Current Time'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetWorldToObjectNV = &Opcode {
+		Opname:   "OpHitObjectGetWorldToObjectNV",
+		Class:    "Reserved",
+		Opcode:   5252,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetObjectToWorldNV = &Opcode {
+		Opname:   "OpHitObjectGetObjectToWorldNV",
+		Class:    "Reserved",
+		Opcode:   5253,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetObjectRayDirectionNV = &Opcode {
+		Opname:   "OpHitObjectGetObjectRayDirectionNV",
+		Class:    "Reserved",
+		Opcode:   5254,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetObjectRayOriginNV = &Opcode {
+		Opname:   "OpHitObjectGetObjectRayOriginNV",
+		Class:    "Reserved",
+		Opcode:   5255,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectTraceRayMotionNV = &Opcode {
+		Opname:   "OpHitObjectTraceRayMotionNV",
+		Class:    "Reserved",
+		Opcode:   5256,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Acceleration Structure'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayFlags'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Cullmask'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Record Offset'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Record Stride'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Miss Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Origin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Direction'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMax'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Time'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetShaderRecordBufferHandleNV = &Opcode {
+		Opname:   "OpHitObjectGetShaderRecordBufferHandleNV",
+		Class:    "Reserved",
+		Opcode:   5257,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetShaderBindingTableRecordIndexNV = &Opcode {
+		Opname:   "OpHitObjectGetShaderBindingTableRecordIndexNV",
+		Class:    "Reserved",
+		Opcode:   5258,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectRecordEmptyNV = &Opcode {
+		Opname:   "OpHitObjectRecordEmptyNV",
+		Class:    "Reserved",
+		Opcode:   5259,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectTraceRayNV = &Opcode {
+		Opname:   "OpHitObjectTraceRayNV",
+		Class:    "Reserved",
+		Opcode:   5260,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Acceleration Structure'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayFlags'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Cullmask'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Record Offset'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Record Stride'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Miss Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Origin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Direction'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMax'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectRecordHitNV = &Opcode {
+		Opname:   "OpHitObjectRecordHitNV",
+		Class:    "Reserved",
+		Opcode:   5261,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Acceleration Structure'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'InstanceId'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'PrimitiveId'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'GeometryIndex'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Kind'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Record Offset'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Record Stride'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Origin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Direction'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMax'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'HitObject Attributes'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectRecordHitWithIndexNV = &Opcode {
+		Opname:   "OpHitObjectRecordHitWithIndexNV",
+		Class:    "Reserved",
+		Opcode:   5262,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Acceleration Structure'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'InstanceId'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'PrimitiveId'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'GeometryIndex'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Kind'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Record Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Origin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Direction'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMax'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'HitObject Attributes'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectRecordMissNV = &Opcode {
+		Opname:   "OpHitObjectRecordMissNV",
+		Class:    "Reserved",
+		Opcode:   5263,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'SBT Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Origin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Direction'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TMax'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectExecuteShaderNV = &Opcode {
+		Opname:   "OpHitObjectExecuteShaderNV",
+		Class:    "Reserved",
+		Opcode:   5264,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetCurrentTimeNV = &Opcode {
+		Opname:   "OpHitObjectGetCurrentTimeNV",
+		Class:    "Reserved",
+		Opcode:   5265,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetAttributesNV = &Opcode {
+		Opname:   "OpHitObjectGetAttributesNV",
+		Class:    "Reserved",
+		Opcode:   5266,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object Attribute'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetHitKindNV = &Opcode {
+		Opname:   "OpHitObjectGetHitKindNV",
+		Class:    "Reserved",
+		Opcode:   5267,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetPrimitiveIndexNV = &Opcode {
+		Opname:   "OpHitObjectGetPrimitiveIndexNV",
+		Class:    "Reserved",
+		Opcode:   5268,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetGeometryIndexNV = &Opcode {
+		Opname:   "OpHitObjectGetGeometryIndexNV",
+		Class:    "Reserved",
+		Opcode:   5269,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetInstanceIdNV = &Opcode {
+		Opname:   "OpHitObjectGetInstanceIdNV",
+		Class:    "Reserved",
+		Opcode:   5270,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetInstanceCustomIndexNV = &Opcode {
+		Opname:   "OpHitObjectGetInstanceCustomIndexNV",
+		Class:    "Reserved",
+		Opcode:   5271,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetWorldRayDirectionNV = &Opcode {
+		Opname:   "OpHitObjectGetWorldRayDirectionNV",
+		Class:    "Reserved",
+		Opcode:   5272,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetWorldRayOriginNV = &Opcode {
+		Opname:   "OpHitObjectGetWorldRayOriginNV",
+		Class:    "Reserved",
+		Opcode:   5273,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetRayTMaxNV = &Opcode {
+		Opname:   "OpHitObjectGetRayTMaxNV",
+		Class:    "Reserved",
+		Opcode:   5274,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectGetRayTMinNV = &Opcode {
+		Opname:   "OpHitObjectGetRayTMinNV",
+		Class:    "Reserved",
+		Opcode:   5275,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectIsEmptyNV = &Opcode {
+		Opname:   "OpHitObjectIsEmptyNV",
+		Class:    "Reserved",
+		Opcode:   5276,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectIsHitNV = &Opcode {
+		Opname:   "OpHitObjectIsHitNV",
+		Class:    "Reserved",
+		Opcode:   5277,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpHitObjectIsMissNV = &Opcode {
+		Opname:   "OpHitObjectIsMissNV",
+		Class:    "Reserved",
+		Opcode:   5278,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpReorderThreadWithHitObjectNV = &Opcode {
+		Opname:   "OpReorderThreadWithHitObjectNV",
+		Class:    "Reserved",
+		Opcode:   5279,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hit Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hint'",
+				Quantifier: "?",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Bits'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpReorderThreadWithHintNV = &Opcode {
+		Opname:   "OpReorderThreadWithHintNV",
+		Class:    "Reserved",
+		Opcode:   5280,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Hint'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Bits'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpTypeHitObjectNV = &Opcode {
+		Opname:   "OpTypeHitObjectNV",
+		Class:    "Type-Declaration",
+		Opcode:   5281,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
 				Quantifier: "",
 			}, 
 		},
@@ -10538,6 +13395,72 @@ var (
 			}, 
 		},
 	}
+	OpCooperativeMatrixConvertNV = &Opcode {
+		Opname:   "OpCooperativeMatrixConvertNV",
+		Class:    "Conversion",
+		Opcode:   5293,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Matrix'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpEmitMeshTasksEXT = &Opcode {
+		Opname:   "OpEmitMeshTasksEXT",
+		Class:    "Reserved",
+		Opcode:   5294,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Group Count X'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Group Count Y'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Group Count Z'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpSetMeshOutputsEXT = &Opcode {
+		Opname:   "OpSetMeshOutputsEXT",
+		Class:    "Reserved",
+		Opcode:   5295,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Vertex Count'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Primitive Count'",
+				Quantifier: "",
+			}, 
+		},
+	}
 	OpGroupNonUniformPartitionNV = &Opcode {
 		Opname:   "OpGroupNonUniformPartitionNV",
 		Class:    "Non-Uniform",
@@ -10577,10 +13500,10 @@ var (
 			}, 
 		},
 	}
-	OpReportIntersectionNV = &Opcode {
-		Opname:   "OpReportIntersectionNV",
+	OpFetchMicroTriangleVertexPositionNV = &Opcode {
+		Opname:   "OpFetchMicroTriangleVertexPositionNV",
 		Class:    "Reserved",
-		Opcode:   5334,
+		Opcode:   5300,
 		Operands: []Operand {
 			Operand {
 				Kind:       OperandKindIdResultType,
@@ -10594,12 +13517,69 @@ var (
 			}, 
 			Operand {
 				Kind:       OperandKindIdRef,
-				Name:       "'Hit'",
+				Name:       "'Accel'",
 				Quantifier: "",
 			}, 
 			Operand {
 				Kind:       OperandKindIdRef,
-				Name:       "'HitKind'",
+				Name:       "'Instance Id'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Geometry Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Primitive Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Barycentric'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFetchMicroTriangleVertexBarycentricNV = &Opcode {
+		Opname:   "OpFetchMicroTriangleVertexBarycentricNV",
+		Class:    "Reserved",
+		Opcode:   5301,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Accel'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Instance Id'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Geometry Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Primitive Index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Barycentric'",
 				Quantifier: "",
 			}, 
 		},
@@ -10638,22 +13618,8 @@ var (
 		Operands: []Operand {
 		},
 	}
-	OpIgnoreIntersectionKHR = &Opcode {
-		Opname:   "OpIgnoreIntersectionKHR",
-		Class:    "Reserved",
-		Opcode:   5335,
-		Operands: []Operand {
-		},
-	}
 	OpTerminateRayNV = &Opcode {
 		Opname:   "OpTerminateRayNV",
-		Class:    "Reserved",
-		Opcode:   5336,
-		Operands: []Operand {
-		},
-	}
-	OpTerminateRayKHR = &Opcode {
-		Opname:   "OpTerminateRayKHR",
 		Class:    "Reserved",
 		Opcode:   5336,
 		Operands: []Operand {
@@ -10721,10 +13687,10 @@ var (
 			}, 
 		},
 	}
-	OpTraceRayKHR = &Opcode {
-		Opname:   "OpTraceRayKHR",
+	OpTraceMotionNV = &Opcode {
+		Opname:   "OpTraceMotionNV",
 		Class:    "Reserved",
-		Opcode:   5337,
+		Opcode:   5338,
 		Operands: []Operand {
 			Operand {
 				Kind:       OperandKindIdRef,
@@ -10778,57 +13744,21 @@ var (
 			}, 
 			Operand {
 				Kind:       OperandKindIdRef,
+				Name:       "'Time'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
 				Name:       "'PayloadId'",
 				Quantifier: "",
 			}, 
 		},
 	}
-	OpTypeAccelerationStructureNV = &Opcode {
-		Opname:   "OpTypeAccelerationStructureNV",
+	OpTraceRayMotionNV = &Opcode {
+		Opname:   "OpTraceRayMotionNV",
 		Class:    "Reserved",
-		Opcode:   5341,
+		Opcode:   5339,
 		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpTypeAccelerationStructureKHR = &Opcode {
-		Opname:   "OpTypeAccelerationStructureKHR",
-		Class:    "Reserved",
-		Opcode:   5341,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpTypeRayQueryProvisionalKHR = &Opcode {
-		Opname:   "OpTypeRayQueryProvisionalKHR",
-		Class:    "Reserved",
-		Opcode:   4472,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryInitializeKHR = &Opcode {
-		Opname:   "OpRayQueryInitializeKHR",
-		Class:    "Reserved",
-		Opcode:   4473,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
 			Operand {
 				Kind:       OperandKindIdRef,
 				Name:       "'Accel'",
@@ -10836,103 +13766,65 @@ var (
 			}, 
 			Operand {
 				Kind:       OperandKindIdRef,
-				Name:       "'RayFlags'",
+				Name:       "'Ray Flags'",
 				Quantifier: "",
 			}, 
 			Operand {
 				Kind:       OperandKindIdRef,
-				Name:       "'CullMask'",
+				Name:       "'Cull Mask'",
 				Quantifier: "",
 			}, 
 			Operand {
 				Kind:       OperandKindIdRef,
-				Name:       "'RayOrigin'",
+				Name:       "'SBT Offset'",
 				Quantifier: "",
 			}, 
 			Operand {
 				Kind:       OperandKindIdRef,
-				Name:       "'RayTMin'",
+				Name:       "'SBT Stride'",
 				Quantifier: "",
 			}, 
 			Operand {
 				Kind:       OperandKindIdRef,
-				Name:       "'RayDirection'",
+				Name:       "'Miss Index'",
 				Quantifier: "",
 			}, 
 			Operand {
 				Kind:       OperandKindIdRef,
-				Name:       "'RayTMax'",
+				Name:       "'Ray Origin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Ray Tmin'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Ray Direction'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Ray Tmax'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Time'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Payload'",
 				Quantifier: "",
 			}, 
 		},
 	}
-	OpRayQueryTerminateKHR = &Opcode {
-		Opname:   "OpRayQueryTerminateKHR",
+	OpRayQueryGetIntersectionTriangleVertexPositionsKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionTriangleVertexPositionsKHR",
 		Class:    "Reserved",
-		Opcode:   4474,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGenerateIntersectionKHR = &Opcode {
-		Opname:   "OpRayQueryGenerateIntersectionKHR",
-		Class:    "Reserved",
-		Opcode:   4475,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'HitT'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryConfirmIntersectionKHR = &Opcode {
-		Opname:   "OpRayQueryConfirmIntersectionKHR",
-		Class:    "Reserved",
-		Opcode:   4476,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryProceedKHR = &Opcode {
-		Opname:   "OpRayQueryProceedKHR",
-		Class:    "Reserved",
-		Opcode:   4477,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionTypeKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionTypeKHR",
-		Class:    "Reserved",
-		Opcode:   4479,
+		Opcode:   5340,
 		Operands: []Operand {
 			Operand {
 				Kind:       OperandKindIdResultType,
@@ -10956,436 +13848,14 @@ var (
 			}, 
 		},
 	}
-	OpRayQueryGetRayTMinKHR = &Opcode {
-		Opname:   "OpRayQueryGetRayTMinKHR",
-		Class:    "Reserved",
-		Opcode:   6016,
+	OpTypeAccelerationStructureKHR = &Opcode {
+		Opname:   "OpTypeAccelerationStructureKHR",
+		Class:    "Type-Declaration",
+		Opcode:   5341,
 		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
 			Operand {
 				Kind:       OperandKindIdResult,
 				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetRayFlagsKHR = &Opcode {
-		Opname:   "OpRayQueryGetRayFlagsKHR",
-		Class:    "Reserved",
-		Opcode:   6017,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionTKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionTKHR",
-		Class:    "Reserved",
-		Opcode:   6018,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionInstanceCustomIndexKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionInstanceCustomIndexKHR",
-		Class:    "Reserved",
-		Opcode:   6019,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionInstanceIdKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionInstanceIdKHR",
-		Class:    "Reserved",
-		Opcode:   6020,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetKHR",
-		Class:    "Reserved",
-		Opcode:   6021,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionGeometryIndexKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionGeometryIndexKHR",
-		Class:    "Reserved",
-		Opcode:   6022,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionPrimitiveIndexKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionPrimitiveIndexKHR",
-		Class:    "Reserved",
-		Opcode:   6023,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionBarycentricsKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionBarycentricsKHR",
-		Class:    "Reserved",
-		Opcode:   6024,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionFrontFaceKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionFrontFaceKHR",
-		Class:    "Reserved",
-		Opcode:   6025,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionCandidateAABBOpaqueKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionCandidateAABBOpaqueKHR",
-		Class:    "Reserved",
-		Opcode:   6026,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionObjectRayDirectionKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionObjectRayDirectionKHR",
-		Class:    "Reserved",
-		Opcode:   6027,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionObjectRayOriginKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionObjectRayOriginKHR",
-		Class:    "Reserved",
-		Opcode:   6028,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetWorldRayDirectionKHR = &Opcode {
-		Opname:   "OpRayQueryGetWorldRayDirectionKHR",
-		Class:    "Reserved",
-		Opcode:   6029,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetWorldRayOriginKHR = &Opcode {
-		Opname:   "OpRayQueryGetWorldRayOriginKHR",
-		Class:    "Reserved",
-		Opcode:   6030,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionObjectToWorldKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionObjectToWorldKHR",
-		Class:    "Reserved",
-		Opcode:   6031,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpRayQueryGetIntersectionWorldToObjectKHR = &Opcode {
-		Opname:   "OpRayQueryGetIntersectionWorldToObjectKHR",
-		Class:    "Reserved",
-		Opcode:   6032,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdResultType,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdResult,
-				Name:       "",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'RayQuery'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Intersection'",
 				Quantifier: "",
 			}, 
 		},
@@ -11407,26 +13877,9 @@ var (
 			}, 
 		},
 	}
-	OpExecuteCallableKHR = &Opcode {
-		Opname:   "OpExecuteCallableKHR",
-		Class:    "Reserved",
-		Opcode:   5344,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'SBT Index'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Callable DataId'",
-				Quantifier: "",
-			}, 
-		},
-	}
 	OpTypeCooperativeMatrixNV = &Opcode {
 		Opname:   "OpTypeCooperativeMatrixNV",
-		Class:    "Reserved",
+		Class:    "Type-Declaration",
 		Opcode:   5358,
 		Operands: []Operand {
 			Operand {
@@ -11593,9 +14046,392 @@ var (
 		Operands: []Operand {
 		},
 	}
-	OpDemoteToHelperInvocationEXT = &Opcode {
-		Opname:   "OpDemoteToHelperInvocationEXT",
+	OpCooperativeMatrixReduceNV = &Opcode {
+		Opname:   "OpCooperativeMatrixReduceNV",
+		Class:    "Arithmetic",
+		Opcode:   5366,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Matrix'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindCooperativeMatrixReduce,
+				Name:       "'Reduce'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'CombineFunc'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpCooperativeMatrixLoadTensorNV = &Opcode {
+		Opname:   "OpCooperativeMatrixLoadTensorNV",
+		Class:    "Memory",
+		Opcode:   5367,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Pointer'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TensorLayout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindMemoryAccess,
+				Name:       "'Memory Operand'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindTensorAddressingOperands,
+				Name:       "'Tensor Addressing Operands'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpCooperativeMatrixStoreTensorNV = &Opcode {
+		Opname:   "OpCooperativeMatrixStoreTensorNV",
+		Class:    "Memory",
+		Opcode:   5368,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Pointer'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Object'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TensorLayout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindMemoryAccess,
+				Name:       "'Memory Operand'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindTensorAddressingOperands,
+				Name:       "'Tensor Addressing Operands'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpCooperativeMatrixPerElementOpNV = &Opcode {
+		Opname:   "OpCooperativeMatrixPerElementOpNV",
+		Class:    "Function",
+		Opcode:   5369,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Matrix'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Func'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Operands'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpTypeTensorLayoutNV = &Opcode {
+		Opname:   "OpTypeTensorLayoutNV",
+		Class:    "Type-Declaration",
+		Opcode:   5370,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Dim'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'ClampMode'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpTypeTensorViewNV = &Opcode {
+		Opname:   "OpTypeTensorViewNV",
+		Class:    "Type-Declaration",
+		Opcode:   5371,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Dim'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'HasDimensions'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'p'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpCreateTensorLayoutNV = &Opcode {
+		Opname:   "OpCreateTensorLayoutNV",
 		Class:    "Reserved",
+		Opcode:   5372,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpTensorLayoutSetDimensionNV = &Opcode {
+		Opname:   "OpTensorLayoutSetDimensionNV",
+		Class:    "Reserved",
+		Opcode:   5373,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TensorLayout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Dim'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpTensorLayoutSetStrideNV = &Opcode {
+		Opname:   "OpTensorLayoutSetStrideNV",
+		Class:    "Reserved",
+		Opcode:   5374,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TensorLayout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Stride'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpTensorLayoutSliceNV = &Opcode {
+		Opname:   "OpTensorLayoutSliceNV",
+		Class:    "Reserved",
+		Opcode:   5375,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TensorLayout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Operands'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpTensorLayoutSetClampValueNV = &Opcode {
+		Opname:   "OpTensorLayoutSetClampValueNV",
+		Class:    "Reserved",
+		Opcode:   5376,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TensorLayout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Value'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpCreateTensorViewNV = &Opcode {
+		Opname:   "OpCreateTensorViewNV",
+		Class:    "Reserved",
+		Opcode:   5377,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpTensorViewSetDimensionNV = &Opcode {
+		Opname:   "OpTensorViewSetDimensionNV",
+		Class:    "Reserved",
+		Opcode:   5378,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TensorView'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Dim'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpTensorViewSetStrideNV = &Opcode {
+		Opname:   "OpTensorViewSetStrideNV",
+		Class:    "Reserved",
+		Opcode:   5379,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TensorView'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Stride'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpDemoteToHelperInvocation = &Opcode {
+		Opname:   "OpDemoteToHelperInvocation",
+		Class:    "Control-Flow",
 		Opcode:   5380,
 		Operands: []Operand {
 		},
@@ -11614,6 +14450,283 @@ var (
 				Kind:       OperandKindIdResult,
 				Name:       "",
 				Quantifier: "",
+			}, 
+		},
+	}
+	OpTensorViewSetClipNV = &Opcode {
+		Opname:   "OpTensorViewSetClipNV",
+		Class:    "Reserved",
+		Opcode:   5382,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TensorView'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'ClipRowOffset'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'ClipRowSpan'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'ClipColOffset'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'ClipColSpan'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpTensorLayoutSetBlockSizeNV = &Opcode {
+		Opname:   "OpTensorLayoutSetBlockSizeNV",
+		Class:    "Reserved",
+		Opcode:   5384,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'TensorLayout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'BlockSize'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpCooperativeMatrixTransposeNV = &Opcode {
+		Opname:   "OpCooperativeMatrixTransposeNV",
+		Class:    "Conversion",
+		Opcode:   5390,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Matrix'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpConvertUToImageNV = &Opcode {
+		Opname:   "OpConvertUToImageNV",
+		Class:    "Reserved",
+		Opcode:   5391,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Operand'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpConvertUToSamplerNV = &Opcode {
+		Opname:   "OpConvertUToSamplerNV",
+		Class:    "Reserved",
+		Opcode:   5392,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Operand'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpConvertImageToUNV = &Opcode {
+		Opname:   "OpConvertImageToUNV",
+		Class:    "Reserved",
+		Opcode:   5393,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Operand'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpConvertSamplerToUNV = &Opcode {
+		Opname:   "OpConvertSamplerToUNV",
+		Class:    "Reserved",
+		Opcode:   5394,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Operand'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpConvertUToSampledImageNV = &Opcode {
+		Opname:   "OpConvertUToSampledImageNV",
+		Class:    "Reserved",
+		Opcode:   5395,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Operand'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpConvertSampledImageToUNV = &Opcode {
+		Opname:   "OpConvertSampledImageToUNV",
+		Class:    "Reserved",
+		Opcode:   5396,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Operand'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpSamplerImageAddressingModeNV = &Opcode {
+		Opname:   "OpSamplerImageAddressingModeNV",
+		Class:    "Reserved",
+		Opcode:   5397,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Bit Width'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRawAccessChainNV = &Opcode {
+		Opname:   "OpRawAccessChainNV",
+		Class:    "Memory",
+		Opcode:   5398,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Base'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Byte stride'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Element index'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Byte offset'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindRawAccessChainOperands,
+				Name:       "",
+				Quantifier: "?",
 			}, 
 		},
 	}
@@ -12260,6 +15373,249 @@ var (
 			}, 
 		},
 	}
+	OpConstantFunctionPointerINTEL = &Opcode {
+		Opname:   "OpConstantFunctionPointerINTEL",
+		Class:    "@exclude",
+		Opcode:   5600,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Function'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFunctionPointerCallINTEL = &Opcode {
+		Opname:   "OpFunctionPointerCallINTEL",
+		Class:    "@exclude",
+		Opcode:   5601,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Operand 1'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpAsmTargetINTEL = &Opcode {
+		Opname:   "OpAsmTargetINTEL",
+		Class:    "@exclude",
+		Opcode:   5609,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralString,
+				Name:       "'Asm target'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpAsmINTEL = &Opcode {
+		Opname:   "OpAsmINTEL",
+		Class:    "@exclude",
+		Opcode:   5610,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Asm type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralString,
+				Name:       "'Asm instructions'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralString,
+				Name:       "'Constraints'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpAsmCallINTEL = &Opcode {
+		Opname:   "OpAsmCallINTEL",
+		Class:    "@exclude",
+		Opcode:   5611,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Asm'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Argument 0'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpAtomicFMinEXT = &Opcode {
+		Opname:   "OpAtomicFMinEXT",
+		Class:    "Atomic",
+		Opcode:   5614,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Pointer'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Memory'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdMemorySemantics,
+				Name:       "'Semantics'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Value'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpAtomicFMaxEXT = &Opcode {
+		Opname:   "OpAtomicFMaxEXT",
+		Class:    "Atomic",
+		Opcode:   5615,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Pointer'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Memory'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdMemorySemantics,
+				Name:       "'Semantics'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Value'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpAssumeTrueKHR = &Opcode {
+		Opname:   "OpAssumeTrueKHR",
+		Class:    "Miscellaneous",
+		Opcode:   5630,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Condition'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpExpectKHR = &Opcode {
+		Opname:   "OpExpectKHR",
+		Class:    "Miscellaneous",
+		Opcode:   5631,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Value'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'ExpectedValue'",
+				Quantifier: "",
+			}, 
+		},
+	}
 	OpDecorateString = &Opcode {
 		Opname:   "OpDecorateString",
 		Class:    "Annotation",
@@ -12277,47 +15633,8 @@ var (
 			}, 
 		},
 	}
-	OpDecorateStringGOOGLE = &Opcode {
-		Opname:   "OpDecorateStringGOOGLE",
-		Class:    "Annotation",
-		Opcode:   5632,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Target'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindDecoration,
-				Name:       "",
-				Quantifier: "",
-			}, 
-		},
-	}
 	OpMemberDecorateString = &Opcode {
 		Opname:   "OpMemberDecorateString",
-		Class:    "Annotation",
-		Opcode:   5633,
-		Operands: []Operand {
-			Operand {
-				Kind:       OperandKindIdRef,
-				Name:       "'Struct Type'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindLiteralInteger,
-				Name:       "'Member'",
-				Quantifier: "",
-			}, 
-			Operand {
-				Kind:       OperandKindDecoration,
-				Name:       "",
-				Quantifier: "",
-			}, 
-		},
-	}
-	OpMemberDecorateStringGOOGLE = &Opcode {
-		Opname:   "OpMemberDecorateStringGOOGLE",
 		Class:    "Annotation",
 		Opcode:   5633,
 		Operands: []Operand {
@@ -15435,6 +18752,3782 @@ var (
 			Operand {
 				Kind:       OperandKindIdRef,
 				Name:       "'Payload'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpVariableLengthArrayINTEL = &Opcode {
+		Opname:   "OpVariableLengthArrayINTEL",
+		Class:    "@exclude",
+		Opcode:   5818,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Lenght'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpSaveMemoryINTEL = &Opcode {
+		Opname:   "OpSaveMemoryINTEL",
+		Class:    "@exclude",
+		Opcode:   5819,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRestoreMemoryINTEL = &Opcode {
+		Opname:   "OpRestoreMemoryINTEL",
+		Class:    "@exclude",
+		Opcode:   5820,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Ptr'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatSinCosPiINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatSinCosPiINTEL",
+		Class:    "@exclude",
+		Opcode:   5840,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'FromSign'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatCastINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatCastINTEL",
+		Class:    "@exclude",
+		Opcode:   5841,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatCastFromIntINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatCastFromIntINTEL",
+		Class:    "@exclude",
+		Opcode:   5842,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'FromSign'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatCastToIntINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatCastToIntINTEL",
+		Class:    "@exclude",
+		Opcode:   5843,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatAddINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatAddINTEL",
+		Class:    "@exclude",
+		Opcode:   5846,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatSubINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatSubINTEL",
+		Class:    "@exclude",
+		Opcode:   5847,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatMulINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatMulINTEL",
+		Class:    "@exclude",
+		Opcode:   5848,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatDivINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatDivINTEL",
+		Class:    "@exclude",
+		Opcode:   5849,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatGTINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatGTINTEL",
+		Class:    "@exclude",
+		Opcode:   5850,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatGEINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatGEINTEL",
+		Class:    "@exclude",
+		Opcode:   5851,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatLTINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatLTINTEL",
+		Class:    "@exclude",
+		Opcode:   5852,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatLEINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatLEINTEL",
+		Class:    "@exclude",
+		Opcode:   5853,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatEQINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatEQINTEL",
+		Class:    "@exclude",
+		Opcode:   5854,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatRecipINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatRecipINTEL",
+		Class:    "@exclude",
+		Opcode:   5855,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatRSqrtINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatRSqrtINTEL",
+		Class:    "@exclude",
+		Opcode:   5856,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatCbrtINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatCbrtINTEL",
+		Class:    "@exclude",
+		Opcode:   5857,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatHypotINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatHypotINTEL",
+		Class:    "@exclude",
+		Opcode:   5858,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatSqrtINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatSqrtINTEL",
+		Class:    "@exclude",
+		Opcode:   5859,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatLogINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatLogINTEL",
+		Class:    "@exclude",
+		Opcode:   5860,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatLog2INTEL = &Opcode {
+		Opname:   "OpArbitraryFloatLog2INTEL",
+		Class:    "@exclude",
+		Opcode:   5861,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatLog10INTEL = &Opcode {
+		Opname:   "OpArbitraryFloatLog10INTEL",
+		Class:    "@exclude",
+		Opcode:   5862,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatLog1pINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatLog1pINTEL",
+		Class:    "@exclude",
+		Opcode:   5863,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatExpINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatExpINTEL",
+		Class:    "@exclude",
+		Opcode:   5864,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatExp2INTEL = &Opcode {
+		Opname:   "OpArbitraryFloatExp2INTEL",
+		Class:    "@exclude",
+		Opcode:   5865,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatExp10INTEL = &Opcode {
+		Opname:   "OpArbitraryFloatExp10INTEL",
+		Class:    "@exclude",
+		Opcode:   5866,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatExpm1INTEL = &Opcode {
+		Opname:   "OpArbitraryFloatExpm1INTEL",
+		Class:    "@exclude",
+		Opcode:   5867,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatSinINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatSinINTEL",
+		Class:    "@exclude",
+		Opcode:   5868,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatCosINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatCosINTEL",
+		Class:    "@exclude",
+		Opcode:   5869,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatSinCosINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatSinCosINTEL",
+		Class:    "@exclude",
+		Opcode:   5870,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatSinPiINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatSinPiINTEL",
+		Class:    "@exclude",
+		Opcode:   5871,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatCosPiINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatCosPiINTEL",
+		Class:    "@exclude",
+		Opcode:   5872,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatASinINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatASinINTEL",
+		Class:    "@exclude",
+		Opcode:   5873,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatASinPiINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatASinPiINTEL",
+		Class:    "@exclude",
+		Opcode:   5874,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatACosINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatACosINTEL",
+		Class:    "@exclude",
+		Opcode:   5875,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatACosPiINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatACosPiINTEL",
+		Class:    "@exclude",
+		Opcode:   5876,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatATanINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatATanINTEL",
+		Class:    "@exclude",
+		Opcode:   5877,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatATanPiINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatATanPiINTEL",
+		Class:    "@exclude",
+		Opcode:   5878,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatATan2INTEL = &Opcode {
+		Opname:   "OpArbitraryFloatATan2INTEL",
+		Class:    "@exclude",
+		Opcode:   5879,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatPowINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatPowINTEL",
+		Class:    "@exclude",
+		Opcode:   5880,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatPowRINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatPowRINTEL",
+		Class:    "@exclude",
+		Opcode:   5881,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M2'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArbitraryFloatPowNINTEL = &Opcode {
+		Opname:   "OpArbitraryFloatPowNINTEL",
+		Class:    "@exclude",
+		Opcode:   5882,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'A'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'M1'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'B'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Mout'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'EnableSubnormals'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingMode'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'RoundingAccuracy'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpLoopControlINTEL = &Opcode {
+		Opname:   "OpLoopControlINTEL",
+		Class:    "Reserved",
+		Opcode:   5887,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Loop Control Parameters'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpAliasDomainDeclINTEL = &Opcode {
+		Opname:   "OpAliasDomainDeclINTEL",
+		Class:    "@exclude",
+		Opcode:   5911,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Name'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpAliasScopeDeclINTEL = &Opcode {
+		Opname:   "OpAliasScopeDeclINTEL",
+		Class:    "@exclude",
+		Opcode:   5912,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Alias Domain'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Name'",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpAliasScopeListDeclINTEL = &Opcode {
+		Opname:   "OpAliasScopeListDeclINTEL",
+		Class:    "@exclude",
+		Opcode:   5913,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'AliasScope1, AliasScope2, ...'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpFixedSqrtINTEL = &Opcode {
+		Opname:   "OpFixedSqrtINTEL",
+		Class:    "@exclude",
+		Opcode:   5923,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'S'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'I'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'rI'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Q'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'O'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFixedRecipINTEL = &Opcode {
+		Opname:   "OpFixedRecipINTEL",
+		Class:    "@exclude",
+		Opcode:   5924,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'S'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'I'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'rI'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Q'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'O'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFixedRsqrtINTEL = &Opcode {
+		Opname:   "OpFixedRsqrtINTEL",
+		Class:    "@exclude",
+		Opcode:   5925,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'S'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'I'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'rI'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Q'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'O'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFixedSinINTEL = &Opcode {
+		Opname:   "OpFixedSinINTEL",
+		Class:    "@exclude",
+		Opcode:   5926,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'S'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'I'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'rI'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Q'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'O'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFixedCosINTEL = &Opcode {
+		Opname:   "OpFixedCosINTEL",
+		Class:    "@exclude",
+		Opcode:   5927,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'S'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'I'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'rI'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Q'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'O'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFixedSinCosINTEL = &Opcode {
+		Opname:   "OpFixedSinCosINTEL",
+		Class:    "@exclude",
+		Opcode:   5928,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'S'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'I'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'rI'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Q'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'O'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFixedSinPiINTEL = &Opcode {
+		Opname:   "OpFixedSinPiINTEL",
+		Class:    "@exclude",
+		Opcode:   5929,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'S'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'I'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'rI'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Q'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'O'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFixedCosPiINTEL = &Opcode {
+		Opname:   "OpFixedCosPiINTEL",
+		Class:    "@exclude",
+		Opcode:   5930,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'S'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'I'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'rI'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Q'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'O'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFixedSinCosPiINTEL = &Opcode {
+		Opname:   "OpFixedSinCosPiINTEL",
+		Class:    "@exclude",
+		Opcode:   5931,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'S'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'I'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'rI'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Q'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'O'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFixedLogINTEL = &Opcode {
+		Opname:   "OpFixedLogINTEL",
+		Class:    "@exclude",
+		Opcode:   5932,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'S'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'I'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'rI'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Q'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'O'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFixedExpINTEL = &Opcode {
+		Opname:   "OpFixedExpINTEL",
+		Class:    "@exclude",
+		Opcode:   5933,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input Type'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'S'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'I'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'rI'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Q'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'O'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpPtrCastToCrossWorkgroupINTEL = &Opcode {
+		Opname:   "OpPtrCastToCrossWorkgroupINTEL",
+		Class:    "@exclude",
+		Opcode:   5934,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Pointer'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpCrossWorkgroupCastToPtrINTEL = &Opcode {
+		Opname:   "OpCrossWorkgroupCastToPtrINTEL",
+		Class:    "@exclude",
+		Opcode:   5938,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Pointer'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpReadPipeBlockingINTEL = &Opcode {
+		Opname:   "OpReadPipeBlockingINTEL",
+		Class:    "Pipe",
+		Opcode:   5946,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Packet Size'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Packet Alignment'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpWritePipeBlockingINTEL = &Opcode {
+		Opname:   "OpWritePipeBlockingINTEL",
+		Class:    "Pipe",
+		Opcode:   5947,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Packet Size'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Packet Alignment'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpFPGARegINTEL = &Opcode {
+		Opname:   "OpFPGARegINTEL",
+		Class:    "Reserved",
+		Opcode:   5949,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Result'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Input'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetRayTMinKHR = &Opcode {
+		Opname:   "OpRayQueryGetRayTMinKHR",
+		Class:    "Reserved",
+		Opcode:   6016,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetRayFlagsKHR = &Opcode {
+		Opname:   "OpRayQueryGetRayFlagsKHR",
+		Class:    "Reserved",
+		Opcode:   6017,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionTKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionTKHR",
+		Class:    "Reserved",
+		Opcode:   6018,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionInstanceCustomIndexKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionInstanceCustomIndexKHR",
+		Class:    "Reserved",
+		Opcode:   6019,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionInstanceIdKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionInstanceIdKHR",
+		Class:    "Reserved",
+		Opcode:   6020,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetKHR",
+		Class:    "Reserved",
+		Opcode:   6021,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionGeometryIndexKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionGeometryIndexKHR",
+		Class:    "Reserved",
+		Opcode:   6022,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionPrimitiveIndexKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionPrimitiveIndexKHR",
+		Class:    "Reserved",
+		Opcode:   6023,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionBarycentricsKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionBarycentricsKHR",
+		Class:    "Reserved",
+		Opcode:   6024,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionFrontFaceKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionFrontFaceKHR",
+		Class:    "Reserved",
+		Opcode:   6025,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionCandidateAABBOpaqueKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionCandidateAABBOpaqueKHR",
+		Class:    "Reserved",
+		Opcode:   6026,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionObjectRayDirectionKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionObjectRayDirectionKHR",
+		Class:    "Reserved",
+		Opcode:   6027,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionObjectRayOriginKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionObjectRayOriginKHR",
+		Class:    "Reserved",
+		Opcode:   6028,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetWorldRayDirectionKHR = &Opcode {
+		Opname:   "OpRayQueryGetWorldRayDirectionKHR",
+		Class:    "Reserved",
+		Opcode:   6029,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetWorldRayOriginKHR = &Opcode {
+		Opname:   "OpRayQueryGetWorldRayOriginKHR",
+		Class:    "Reserved",
+		Opcode:   6030,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionObjectToWorldKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionObjectToWorldKHR",
+		Class:    "Reserved",
+		Opcode:   6031,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpRayQueryGetIntersectionWorldToObjectKHR = &Opcode {
+		Opname:   "OpRayQueryGetIntersectionWorldToObjectKHR",
+		Class:    "Reserved",
+		Opcode:   6032,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'RayQuery'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Intersection'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpAtomicFAddEXT = &Opcode {
+		Opname:   "OpAtomicFAddEXT",
+		Class:    "Atomic",
+		Opcode:   6035,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Pointer'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Memory'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdMemorySemantics,
+				Name:       "'Semantics'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Value'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpTypeBufferSurfaceINTEL = &Opcode {
+		Opname:   "OpTypeBufferSurfaceINTEL",
+		Class:    "Type-Declaration",
+		Opcode:   6086,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindAccessQualifier,
+				Name:       "'AccessQualifier'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpTypeStructContinuedINTEL = &Opcode {
+		Opname:   "OpTypeStructContinuedINTEL",
+		Class:    "Type-Declaration",
+		Opcode:   6090,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Member 0 type', + 'member 1 type', + ...",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpConstantCompositeContinuedINTEL = &Opcode {
+		Opname:   "OpConstantCompositeContinuedINTEL",
+		Class:    "Constant-Creation",
+		Opcode:   6091,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Constituents'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpSpecConstantCompositeContinuedINTEL = &Opcode {
+		Opname:   "OpSpecConstantCompositeContinuedINTEL",
+		Class:    "Constant-Creation",
+		Opcode:   6092,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Constituents'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpCompositeConstructContinuedINTEL = &Opcode {
+		Opname:   "OpCompositeConstructContinuedINTEL",
+		Class:    "Composite",
+		Opcode:   6096,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Constituents'",
+				Quantifier: "*",
+			}, 
+		},
+	}
+	OpConvertFToBF16INTEL = &Opcode {
+		Opname:   "OpConvertFToBF16INTEL",
+		Class:    "Conversion",
+		Opcode:   6116,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Float Value'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpConvertBF16ToFINTEL = &Opcode {
+		Opname:   "OpConvertBF16ToFINTEL",
+		Class:    "Conversion",
+		Opcode:   6117,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'BFloat16 Value'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpControlBarrierArriveINTEL = &Opcode {
+		Opname:   "OpControlBarrierArriveINTEL",
+		Class:    "Barrier",
+		Opcode:   6142,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Execution'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Memory'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdMemorySemantics,
+				Name:       "'Semantics'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpControlBarrierWaitINTEL = &Opcode {
+		Opname:   "OpControlBarrierWaitINTEL",
+		Class:    "Barrier",
+		Opcode:   6143,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Execution'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Memory'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdMemorySemantics,
+				Name:       "'Semantics'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpArithmeticFenceEXT = &Opcode {
+		Opname:   "OpArithmeticFenceEXT",
+		Class:    "Miscellaneous",
+		Opcode:   6145,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Target '",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpSubgroupBlockPrefetchINTEL = &Opcode {
+		Opname:   "OpSubgroupBlockPrefetchINTEL",
+		Class:    "Group",
+		Opcode:   6221,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Ptr'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'NumBytes'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindMemoryAccess,
+				Name:       "",
+				Quantifier: "?",
+			}, 
+		},
+	}
+	OpGroupIMulKHR = &Opcode {
+		Opname:   "OpGroupIMulKHR",
+		Class:    "Group",
+		Opcode:   6401,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Execution'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindGroupOperation,
+				Name:       "'Operation'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'X'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpGroupFMulKHR = &Opcode {
+		Opname:   "OpGroupFMulKHR",
+		Class:    "Group",
+		Opcode:   6402,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Execution'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindGroupOperation,
+				Name:       "'Operation'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'X'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpGroupBitwiseAndKHR = &Opcode {
+		Opname:   "OpGroupBitwiseAndKHR",
+		Class:    "Group",
+		Opcode:   6403,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Execution'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindGroupOperation,
+				Name:       "'Operation'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'X'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpGroupBitwiseOrKHR = &Opcode {
+		Opname:   "OpGroupBitwiseOrKHR",
+		Class:    "Group",
+		Opcode:   6404,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Execution'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindGroupOperation,
+				Name:       "'Operation'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'X'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpGroupBitwiseXorKHR = &Opcode {
+		Opname:   "OpGroupBitwiseXorKHR",
+		Class:    "Group",
+		Opcode:   6405,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Execution'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindGroupOperation,
+				Name:       "'Operation'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'X'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpGroupLogicalAndKHR = &Opcode {
+		Opname:   "OpGroupLogicalAndKHR",
+		Class:    "Group",
+		Opcode:   6406,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Execution'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindGroupOperation,
+				Name:       "'Operation'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'X'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpGroupLogicalOrKHR = &Opcode {
+		Opname:   "OpGroupLogicalOrKHR",
+		Class:    "Group",
+		Opcode:   6407,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Execution'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindGroupOperation,
+				Name:       "'Operation'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'X'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpGroupLogicalXorKHR = &Opcode {
+		Opname:   "OpGroupLogicalXorKHR",
+		Class:    "Group",
+		Opcode:   6408,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdScope,
+				Name:       "'Execution'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindGroupOperation,
+				Name:       "'Operation'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'X'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpMaskedGatherINTEL = &Opcode {
+		Opname:   "OpMaskedGatherINTEL",
+		Class:    "Memory",
+		Opcode:   6428,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdResultType,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdResult,
+				Name:       "",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'PtrVector'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Alignment'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Mask'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'FillEmpty'",
+				Quantifier: "",
+			}, 
+		},
+	}
+	OpMaskedScatterINTEL = &Opcode {
+		Opname:   "OpMaskedScatterINTEL",
+		Class:    "Memory",
+		Opcode:   6429,
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'InputVector'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'PtrVector'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Alignment'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Mask'",
 				Quantifier: "",
 			}, 
 		},
@@ -19600,6 +26693,51 @@ var (
 			}, 
 		},
 	}
+	OpenCLDebugInfo100_DebugModuleINTEL = &Opcode {
+		Opname:   "DebugModuleINTEL",
+		Operands: []Operand {
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Name'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Source'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'Parent'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'Line'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'ConfigurationMacros'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'IncludePath'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindIdRef,
+				Name:       "'APINotesFile'",
+				Quantifier: "",
+			}, 
+			Operand {
+				Kind:       OperandKindLiteralInteger,
+				Name:       "'IsDeclaration'",
+				Quantifier: "",
+			}, 
+		},
+	}
 
 
 	OperandKindImageOperands = &OperandKind {
@@ -19618,66 +26756,59 @@ var (
 				Value:        0x0001,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{{OperandKindIdRef, ""},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Lod",
 				Value:        0x0002,
 				Capabilities: []string{},
 				Parameters:   []Parameter{{OperandKindIdRef, ""},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Grad",
 				Value:        0x0004,
 				Capabilities: []string{},
 				Parameters:   []Parameter{{OperandKindIdRef, ""},{OperandKindIdRef, ""},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ConstOffset",
 				Value:        0x0008,
 				Capabilities: []string{},
 				Parameters:   []Parameter{{OperandKindIdRef, ""},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Offset",
 				Value:        0x0010,
 				Capabilities: []string{"ImageGatherExtended",},
 				Parameters:   []Parameter{{OperandKindIdRef, ""},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ConstOffsets",
 				Value:        0x0020,
 				Capabilities: []string{"ImageGatherExtended",},
 				Parameters:   []Parameter{{OperandKindIdRef, ""},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Sample",
 				Value:        0x0040,
 				Capabilities: []string{},
 				Parameters:   []Parameter{{OperandKindIdRef, ""},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "MinLod",
 				Value:        0x0080,
 				Capabilities: []string{"MinLod",},
 				Parameters:   []Parameter{{OperandKindIdRef, ""},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "MakeTexelAvailable",
-				Value:        0x0100,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{{OperandKindIdScope, ""},},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "MakeTexelAvailableKHR",
 				Value:        0x0100,
 				Capabilities: []string{"VulkanMemoryModel",},
 				Parameters:   []Parameter{{OperandKindIdScope, ""},},
@@ -19691,13 +26822,6 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "MakeTexelVisibleKHR",
-				Value:        0x0200,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{{OperandKindIdScope, ""},},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "NonPrivateTexel",
 				Value:        0x0400,
 				Capabilities: []string{"VulkanMemoryModel",},
@@ -19705,21 +26829,7 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "NonPrivateTexelKHR",
-				Value:        0x0400,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "VolatileTexel",
-				Value:        0x0800,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "VolatileTexelKHR",
 				Value:        0x0800,
 				Capabilities: []string{"VulkanMemoryModel",},
 				Parameters:   []Parameter{},
@@ -19739,6 +26849,20 @@ var (
 				Parameters:   []Parameter{},
 				Version:      "1.4",
 			},
+			Enumerant{
+				Enumerant:    "Nontemporal",
+				Value:        0x4000,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.6",
+			},
+			Enumerant{
+				Enumerant:    "Offsets",
+				Value:        0x10000,
+				Capabilities: []string{},
+				Parameters:   []Parameter{{OperandKindIdRef, ""},},
+				Version:      "1.0",
+			},
 		},
 		Bases:      []*OperandKind {},
 	}
@@ -19751,42 +26875,63 @@ var (
 				Value:        0x0000,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NotNaN",
 				Value:        0x0001,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NotInf",
 				Value:        0x0002,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NSZ",
 				Value:        0x0004,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "AllowRecip",
 				Value:        0x0008,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Fast",
 				Value:        0x0010,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "AllowContract",
+				Value:        0x10000,
+				Capabilities: []string{"FloatControls2","FPFastMathModeINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "AllowReassoc",
+				Value:        0x20000,
+				Capabilities: []string{"FloatControls2","FPFastMathModeINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "AllowTransform",
+				Value:        0x40000,
+				Capabilities: []string{"FloatControls2",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -19800,21 +26945,21 @@ var (
 				Value:        0x0000,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Flatten",
 				Value:        0x0001,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DontFlatten",
 				Value:        0x0002,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -19828,21 +26973,21 @@ var (
 				Value:        0x0000,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Unroll",
 				Value:        0x0001,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DontUnroll",
 				Value:        0x0002,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DependencyInfinite",
@@ -19893,6 +27038,76 @@ var (
 				Parameters:   []Parameter{{OperandKindLiteralInteger, ""},},
 				Version:      "1.4",
 			},
+			Enumerant{
+				Enumerant:    "InitiationIntervalINTEL",
+				Value:        0x10000,
+				Capabilities: []string{"FPGALoopControlsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, ""},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaxConcurrencyINTEL",
+				Value:        0x20000,
+				Capabilities: []string{"FPGALoopControlsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, ""},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "DependencyArrayINTEL",
+				Value:        0x40000,
+				Capabilities: []string{"FPGALoopControlsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, ""},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "PipelineEnableINTEL",
+				Value:        0x80000,
+				Capabilities: []string{"FPGALoopControlsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, ""},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "LoopCoalesceINTEL",
+				Value:        0x100000,
+				Capabilities: []string{"FPGALoopControlsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, ""},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaxInterleavingINTEL",
+				Value:        0x200000,
+				Capabilities: []string{"FPGALoopControlsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, ""},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SpeculatedIterationsINTEL",
+				Value:        0x400000,
+				Capabilities: []string{"FPGALoopControlsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, ""},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NoFusionINTEL",
+				Value:        0x800000,
+				Capabilities: []string{"FPGALoopControlsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "LoopCountINTEL",
+				Value:        0x1000000,
+				Capabilities: []string{"FPGALoopControlsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, ""},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaxReinvocationDelayINTEL",
+				Value:        0x2000000,
+				Capabilities: []string{"FPGALoopControlsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, ""},},
+				Version:      "None",
+			},
 		},
 		Bases:      []*OperandKind {},
 	}
@@ -19905,35 +27120,42 @@ var (
 				Value:        0x0000,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Inline",
 				Value:        0x0001,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DontInline",
 				Value:        0x0002,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Pure",
 				Value:        0x0004,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Const",
 				Value:        0x0008,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "OptNoneEXT",
+				Value:        0x10000,
+				Capabilities: []string{"OptNoneEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -19947,94 +27169,80 @@ var (
 				Value:        0x0000,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
-			},
-			Enumerant{
-				Enumerant:    "None",
-				Value:        0x0000,
-				Capabilities: []string{},
-				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Acquire",
 				Value:        0x0002,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Release",
 				Value:        0x0004,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "AcquireRelease",
 				Value:        0x0008,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SequentiallyConsistent",
 				Value:        0x0010,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UniformMemory",
 				Value:        0x0040,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SubgroupMemory",
 				Value:        0x0080,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "WorkgroupMemory",
 				Value:        0x0100,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "CrossWorkgroupMemory",
 				Value:        0x0200,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "AtomicCounterMemory",
 				Value:        0x0400,
 				Capabilities: []string{"AtomicStorage",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ImageMemory",
 				Value:        0x0800,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "OutputMemory",
-				Value:        0x1000,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "OutputMemoryKHR",
 				Value:        0x1000,
 				Capabilities: []string{"VulkanMemoryModel",},
 				Parameters:   []Parameter{},
@@ -20048,21 +27256,7 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "MakeAvailableKHR",
-				Value:        0x2000,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "MakeVisible",
-				Value:        0x4000,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "MakeVisibleKHR",
 				Value:        0x4000,
 				Capabilities: []string{"VulkanMemoryModel",},
 				Parameters:   []Parameter{},
@@ -20087,38 +27281,31 @@ var (
 				Value:        0x0000,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Volatile",
 				Value:        0x0001,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Aligned",
 				Value:        0x0002,
 				Capabilities: []string{},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, ""},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Nontemporal",
 				Value:        0x0004,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "MakePointerAvailable",
-				Value:        0x0008,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{{OperandKindIdScope, ""},},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "MakePointerAvailableKHR",
 				Value:        0x0008,
 				Capabilities: []string{"VulkanMemoryModel",},
 				Parameters:   []Parameter{{OperandKindIdScope, ""},},
@@ -20132,13 +27319,6 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "MakePointerVisibleKHR",
-				Value:        0x0010,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{{OperandKindIdScope, ""},},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "NonPrivatePointer",
 				Value:        0x0020,
 				Capabilities: []string{"VulkanMemoryModel",},
@@ -20146,11 +27326,18 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "NonPrivatePointerKHR",
-				Value:        0x0020,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
+				Enumerant:    "AliasScopeINTELMask",
+				Value:        0x10000,
+				Capabilities: []string{"MemoryAccessAliasingINTEL",},
+				Parameters:   []Parameter{{OperandKindIdRef, ""},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NoAliasINTELMask",
+				Value:        0x20000,
+				Capabilities: []string{"MemoryAccessAliasingINTEL",},
+				Parameters:   []Parameter{{OperandKindIdRef, ""},},
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -20164,14 +27351,14 @@ var (
 				Value:        0x0000,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "CmdExecTime",
 				Value:        0x0001,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -20183,79 +27370,149 @@ var (
 			Enumerant{
 				Enumerant:    "NoneKHR",
 				Value:        0x0000,
-				Capabilities: []string{"RayQueryProvisionalKHR","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR","RayTracingKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "OpaqueKHR",
 				Value:        0x0001,
-				Capabilities: []string{"RayQueryProvisionalKHR","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR","RayTracingKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "NoOpaqueKHR",
 				Value:        0x0002,
-				Capabilities: []string{"RayQueryProvisionalKHR","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR","RayTracingKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "TerminateOnFirstHitKHR",
 				Value:        0x0004,
-				Capabilities: []string{"RayQueryProvisionalKHR","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR","RayTracingKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "SkipClosestHitShaderKHR",
 				Value:        0x0008,
-				Capabilities: []string{"RayQueryProvisionalKHR","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR","RayTracingKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "CullBackFacingTrianglesKHR",
 				Value:        0x0010,
-				Capabilities: []string{"RayQueryProvisionalKHR","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR","RayTracingKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "CullFrontFacingTrianglesKHR",
 				Value:        0x0020,
-				Capabilities: []string{"RayQueryProvisionalKHR","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR","RayTracingKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "CullOpaqueKHR",
 				Value:        0x0040,
-				Capabilities: []string{"RayQueryProvisionalKHR","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR","RayTracingKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "CullNoOpaqueKHR",
 				Value:        0x0080,
-				Capabilities: []string{"RayQueryProvisionalKHR","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR","RayTracingKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "SkipTrianglesKHR",
 				Value:        0x0100,
-				Capabilities: []string{"RayTraversalPrimitiveCullingProvisionalKHR",},
+				Capabilities: []string{"RayTraversalPrimitiveCullingKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "SkipAABBsKHR",
 				Value:        0x0200,
-				Capabilities: []string{"RayTraversalPrimitiveCullingProvisionalKHR",},
+				Capabilities: []string{"RayTraversalPrimitiveCullingKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ForceOpacityMicromap2StateEXT",
+				Value:        0x0400,
+				Capabilities: []string{"RayTracingOpacityMicromapEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindFragmentShadingRate = &OperandKind {
+		Kind:       "FragmentShadingRate",
+		Category:   "BitEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "Vertical2Pixels",
+				Value:        0x0001,
+				Capabilities: []string{"FragmentShadingRateKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "Vertical4Pixels",
+				Value:        0x0002,
+				Capabilities: []string{"FragmentShadingRateKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "Horizontal2Pixels",
+				Value:        0x0004,
+				Capabilities: []string{"FragmentShadingRateKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "Horizontal4Pixels",
+				Value:        0x0008,
+				Capabilities: []string{"FragmentShadingRateKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindRawAccessChainOperands = &OperandKind {
+		Kind:       "RawAccessChainOperands",
+		Category:   "BitEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "None",
+				Value:        0x0000,
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
 				Version:      "",
+			},
+			Enumerant{
+				Enumerant:    "RobustnessPerComponentNV",
+				Value:        0x0001,
+				Capabilities: []string{"RawAccessChainsNV",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RobustnessPerElementNV",
+				Value:        0x0002,
+				Capabilities: []string{"RawAccessChainsNV",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -20269,42 +27526,91 @@ var (
 				Value:        0,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ESSL",
 				Value:        1,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GLSL",
 				Value:        2,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "OpenCL_C",
 				Value:        3,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "OpenCL_CPP",
 				Value:        4,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "HLSL",
 				Value:        5,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "CPP_for_OpenCL",
+				Value:        6,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "SYCL",
+				Value:        7,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "HERO_C",
+				Value:        8,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "NZSL",
+				Value:        9,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "WGSL",
+				Value:        10,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "Slang",
+				Value:        11,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "Zig",
+				Value:        12,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -20318,49 +27624,49 @@ var (
 				Value:        0,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "TessellationControl",
 				Value:        1,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "TessellationEvaluation",
 				Value:        2,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Geometry",
 				Value:        3,
 				Capabilities: []string{"Geometry",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Fragment",
 				Value:        4,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GLCompute",
 				Value:        5,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Kernel",
 				Value:        6,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "TaskNV",
@@ -20377,86 +27683,58 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "RayGenerationNV",
-				Value:        5313,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
 				Enumerant:    "RayGenerationKHR",
 				Value:        5313,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "IntersectionNV",
-				Value:        5314,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "IntersectionKHR",
 				Value:        5314,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "AnyHitNV",
-				Value:        5315,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "AnyHitKHR",
 				Value:        5315,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "ClosestHitNV",
-				Value:        5316,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "ClosestHitKHR",
 				Value:        5316,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "MissNV",
-				Value:        5317,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "MissKHR",
 				Value:        5317,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "CallableNV",
-				Value:        5318,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "CallableKHR",
 				Value:        5318,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TaskEXT",
+				Value:        5364,
+				Capabilities: []string{"MeshShadingEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MeshEXT",
+				Value:        5365,
+				Capabilities: []string{"MeshShadingEXT",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -20472,31 +27750,24 @@ var (
 				Value:        0,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Physical32",
 				Value:        1,
 				Capabilities: []string{"Addresses",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Physical64",
 				Value:        2,
 				Capabilities: []string{"Addresses",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "PhysicalStorageBuffer64",
-				Value:        5348,
-				Capabilities: []string{"PhysicalStorageBufferAddresses",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "PhysicalStorageBuffer64EXT",
 				Value:        5348,
 				Capabilities: []string{"PhysicalStorageBufferAddresses",},
 				Parameters:   []Parameter{},
@@ -20514,31 +27785,24 @@ var (
 				Value:        0,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GLSL450",
 				Value:        1,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "OpenCL",
 				Value:        2,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Vulkan",
-				Value:        3,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "VulkanKHR",
 				Value:        3,
 				Capabilities: []string{"VulkanMemoryModel",},
 				Parameters:   []Parameter{},
@@ -20556,217 +27820,217 @@ var (
 				Value:        0,
 				Capabilities: []string{"Geometry",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Number of <<Invocation,invocations>>'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SpacingEqual",
 				Value:        1,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SpacingFractionalEven",
 				Value:        2,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SpacingFractionalOdd",
 				Value:        3,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "VertexOrderCw",
 				Value:        4,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "VertexOrderCcw",
 				Value:        5,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "PixelCenterInteger",
 				Value:        6,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "OriginUpperLeft",
 				Value:        7,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "OriginLowerLeft",
 				Value:        8,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "EarlyFragmentTests",
 				Value:        9,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "PointMode",
 				Value:        10,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Xfb",
 				Value:        11,
 				Capabilities: []string{"TransformFeedback",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DepthReplacing",
 				Value:        12,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DepthGreater",
 				Value:        14,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DepthLess",
 				Value:        15,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DepthUnchanged",
 				Value:        16,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "LocalSize",
 				Value:        17,
 				Capabilities: []string{},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'x size'"},{OperandKindLiteralInteger, "'y size'"},{OperandKindLiteralInteger, "'z size'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "LocalSizeHint",
 				Value:        18,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'x size'"},{OperandKindLiteralInteger, "'y size'"},{OperandKindLiteralInteger, "'z size'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "InputPoints",
 				Value:        19,
 				Capabilities: []string{"Geometry",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "InputLines",
 				Value:        20,
 				Capabilities: []string{"Geometry",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "InputLinesAdjacency",
 				Value:        21,
 				Capabilities: []string{"Geometry",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Triangles",
 				Value:        22,
 				Capabilities: []string{"Geometry","Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "InputTrianglesAdjacency",
 				Value:        23,
 				Capabilities: []string{"Geometry",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Quads",
 				Value:        24,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Isolines",
 				Value:        25,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "OutputVertices",
 				Value:        26,
-				Capabilities: []string{"Geometry","Tessellation","MeshShadingNV",},
+				Capabilities: []string{"Geometry","Tessellation","MeshShadingNV","MeshShadingEXT",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Vertex count'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "OutputPoints",
 				Value:        27,
-				Capabilities: []string{"Geometry","MeshShadingNV",},
+				Capabilities: []string{"Geometry","MeshShadingNV","MeshShadingEXT",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "OutputLineStrip",
 				Value:        28,
 				Capabilities: []string{"Geometry",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "OutputTriangleStrip",
 				Value:        29,
 				Capabilities: []string{"Geometry",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "VecTypeHint",
 				Value:        30,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Vector type'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ContractionOff",
 				Value:        31,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Initializer",
@@ -20814,8 +28078,36 @@ var (
 				Enumerant:    "LocalSizeHintId",
 				Value:        39,
 				Capabilities: []string{"Kernel",},
-				Parameters:   []Parameter{{OperandKindIdRef, "'Local Size Hint'"},},
+				Parameters:   []Parameter{{OperandKindIdRef, "'x size hint'"},{OperandKindIdRef, "'y size hint'"},{OperandKindIdRef, "'z size hint'"},},
 				Version:      "1.2",
+			},
+			Enumerant{
+				Enumerant:    "NonCoherentColorAttachmentReadEXT",
+				Value:        4169,
+				Capabilities: []string{"TileImageColorReadAccessEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NonCoherentDepthAttachmentReadEXT",
+				Value:        4170,
+				Capabilities: []string{"TileImageDepthReadAccessEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NonCoherentStencilAttachmentReadEXT",
+				Value:        4171,
+				Capabilities: []string{"TileImageStencilReadAccessEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SubgroupUniformControlFlowKHR",
+				Value:        4421,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "PostDepthCoverage",
@@ -20860,6 +28152,13 @@ var (
 				Version:      "1.4",
 			},
 			Enumerant{
+				Enumerant:    "EarlyAndLateFragmentTestsAMD",
+				Value:        5017,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
 				Enumerant:    "StencilRefReplacingEXT",
 				Value:        5027,
 				Capabilities: []string{"StencilExportEXT",},
@@ -20867,37 +28166,142 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "OutputLinesNV",
-				Value:        5269,
-				Capabilities: []string{"MeshShadingNV",},
+				Enumerant:    "CoalescingAMDX",
+				Value:        5069,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "OutputPrimitivesNV",
+				Enumerant:    "IsApiEntryAMDX",
+				Value:        5070,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Is Entry'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaxNodeRecursionAMDX",
+				Value:        5071,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Number of recursions'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StaticNumWorkgroupsAMDX",
+				Value:        5072,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'x size'"},{OperandKindIdRef, "'y size'"},{OperandKindIdRef, "'z size'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ShaderIndexAMDX",
+				Value:        5073,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Shader Index'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaxNumWorkgroupsAMDX",
+				Value:        5077,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'x size'"},{OperandKindIdRef, "'y size'"},{OperandKindIdRef, "'z size'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StencilRefUnchangedFrontAMD",
+				Value:        5079,
+				Capabilities: []string{"StencilExportEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StencilRefGreaterFrontAMD",
+				Value:        5080,
+				Capabilities: []string{"StencilExportEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StencilRefLessFrontAMD",
+				Value:        5081,
+				Capabilities: []string{"StencilExportEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StencilRefUnchangedBackAMD",
+				Value:        5082,
+				Capabilities: []string{"StencilExportEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StencilRefGreaterBackAMD",
+				Value:        5083,
+				Capabilities: []string{"StencilExportEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StencilRefLessBackAMD",
+				Value:        5084,
+				Capabilities: []string{"StencilExportEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "QuadDerivativesKHR",
+				Value:        5088,
+				Capabilities: []string{"QuadControlKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RequireFullQuadsKHR",
+				Value:        5089,
+				Capabilities: []string{"QuadControlKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SharesInputWithAMDX",
+				Value:        5102,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Node Name'"},{OperandKindIdRef, "'Shader Index'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "OutputLinesEXT",
+				Value:        5269,
+				Capabilities: []string{"MeshShadingNV","MeshShadingEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "OutputPrimitivesEXT",
 				Value:        5270,
-				Capabilities: []string{"MeshShadingNV",},
+				Capabilities: []string{"MeshShadingNV","MeshShadingEXT",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Primitive count'"},},
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "DerivativeGroupQuadsNV",
+				Enumerant:    "DerivativeGroupQuadsKHR",
 				Value:        5289,
-				Capabilities: []string{"ComputeDerivativeGroupQuadsNV",},
+				Capabilities: []string{"ComputeDerivativeGroupQuadsNV","ComputeDerivativeGroupQuadsKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "DerivativeGroupLinearNV",
+				Enumerant:    "DerivativeGroupLinearKHR",
 				Value:        5290,
-				Capabilities: []string{"ComputeDerivativeGroupLinearNV",},
+				Capabilities: []string{"ComputeDerivativeGroupLinearNV","ComputeDerivativeGroupLinearKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "OutputTrianglesNV",
+				Enumerant:    "OutputTrianglesEXT",
 				Value:        5298,
-				Capabilities: []string{"MeshShadingNV",},
+				Capabilities: []string{"MeshShadingNV","MeshShadingEXT",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -20943,6 +28347,132 @@ var (
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
+			Enumerant{
+				Enumerant:    "SharedLocalMemorySizeINTEL",
+				Value:        5618,
+				Capabilities: []string{"VectorComputeINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Size'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RoundingModeRTPINTEL",
+				Value:        5620,
+				Capabilities: []string{"RoundToInfinityINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Target Width'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RoundingModeRTNINTEL",
+				Value:        5621,
+				Capabilities: []string{"RoundToInfinityINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Target Width'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FloatingPointModeALTINTEL",
+				Value:        5622,
+				Capabilities: []string{"RoundToInfinityINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Target Width'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FloatingPointModeIEEEINTEL",
+				Value:        5623,
+				Capabilities: []string{"RoundToInfinityINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Target Width'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaxWorkgroupSizeINTEL",
+				Value:        5893,
+				Capabilities: []string{"KernelAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'max_x_size'"},{OperandKindLiteralInteger, "'max_y_size'"},{OperandKindLiteralInteger, "'max_z_size'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaxWorkDimINTEL",
+				Value:        5894,
+				Capabilities: []string{"KernelAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'max_dimensions'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NoGlobalOffsetINTEL",
+				Value:        5895,
+				Capabilities: []string{"KernelAttributesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NumSIMDWorkitemsINTEL",
+				Value:        5896,
+				Capabilities: []string{"FPGAKernelAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'vector_width'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SchedulerTargetFmaxMhzINTEL",
+				Value:        5903,
+				Capabilities: []string{"FPGAKernelAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'target_fmax'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaximallyReconvergesKHR",
+				Value:        6023,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPFastMathDefault",
+				Value:        6028,
+				Capabilities: []string{"FloatControls2",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Target Type'"},{OperandKindIdRef, "'Fast-Math Mode'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StreamingInterfaceINTEL",
+				Value:        6154,
+				Capabilities: []string{"FPGAKernelAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'StallFreeReturn'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RegisterMapInterfaceINTEL",
+				Value:        6160,
+				Capabilities: []string{"FPGAKernelAttributesv2INTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'WaitForDoneWrite'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NamedBarrierCountINTEL",
+				Value:        6417,
+				Capabilities: []string{"VectorComputeINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Barrier Count'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaximumRegistersINTEL",
+				Value:        6461,
+				Capabilities: []string{"RegisterLimitsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Number of Registers'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaximumRegistersIdINTEL",
+				Value:        6462,
+				Capabilities: []string{"RegisterLimitsINTEL",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Number of Registers'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NamedMaximumRegistersINTEL",
+				Value:        6463,
+				Capabilities: []string{"RegisterLimitsINTEL",},
+				Parameters:   []Parameter{{OperandKindNamedMaximumNumberOfRegisters, "'Named Maximum Number of Registers'"},},
+				Version:      "None",
+			},
 		},
 		Bases:      []*OperandKind {},
 	}
@@ -20955,84 +28485,84 @@ var (
 				Value:        0,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Input",
 				Value:        1,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Uniform",
 				Value:        2,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Output",
 				Value:        3,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Workgroup",
 				Value:        4,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "CrossWorkgroup",
 				Value:        5,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Private",
 				Value:        6,
-				Capabilities: []string{"Shader",},
+				Capabilities: []string{"Shader","VectorComputeINTEL",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Function",
 				Value:        7,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Generic",
 				Value:        8,
 				Capabilities: []string{"GenericPointer",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "PushConstant",
 				Value:        9,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "AtomicCounter",
 				Value:        10,
 				Capabilities: []string{"AtomicStorage",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Image",
 				Value:        11,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "StorageBuffer",
@@ -21042,86 +28572,58 @@ var (
 				Version:      "1.3",
 			},
 			Enumerant{
-				Enumerant:    "CallableDataNV",
-				Value:        5328,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Enumerant:    "TileImageEXT",
+				Value:        4172,
+				Capabilities: []string{"TileImageColorReadAccessEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NodePayloadAMDX",
+				Value:        5068,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "CallableDataKHR",
 				Value:        5328,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "IncomingCallableDataNV",
-				Value:        5329,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "IncomingCallableDataKHR",
 				Value:        5329,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "RayPayloadNV",
-				Value:        5338,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "RayPayloadKHR",
 				Value:        5338,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "HitAttributeNV",
-				Value:        5339,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "HitAttributeKHR",
 				Value:        5339,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "IncomingRayPayloadNV",
-				Value:        5342,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "IncomingRayPayloadKHR",
 				Value:        5342,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "ShaderRecordBufferNV",
-				Value:        5343,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "ShaderRecordBufferKHR",
 				Value:        5343,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -21133,11 +28635,39 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "PhysicalStorageBufferEXT",
-				Value:        5349,
-				Capabilities: []string{"PhysicalStorageBufferAddresses",},
+				Enumerant:    "HitObjectAttributeNV",
+				Value:        5385,
+				Capabilities: []string{"ShaderInvocationReorderNV",},
 				Parameters:   []Parameter{},
-				Version:      "1.5",
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TaskPayloadWorkgroupEXT",
+				Value:        5402,
+				Capabilities: []string{"MeshShadingEXT",},
+				Parameters:   []Parameter{},
+				Version:      "1.4",
+			},
+			Enumerant{
+				Enumerant:    "CodeSectionINTEL",
+				Value:        5605,
+				Capabilities: []string{"FunctionPointersINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "DeviceOnlyINTEL",
+				Value:        5936,
+				Capabilities: []string{"USMStorageClassesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "HostOnlyINTEL",
+				Value:        5937,
+				Capabilities: []string{"USMStorageClassesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -21149,51 +28679,58 @@ var (
 			Enumerant{
 				Enumerant:    "1D",
 				Value:        0,
-				Capabilities: []string{"Sampled1D","Image1D",},
+				Capabilities: []string{"Sampled1D",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "2D",
 				Value:        1,
-				Capabilities: []string{"Shader","Kernel","ImageMSArray",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "3D",
 				Value:        2,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Cube",
 				Value:        3,
-				Capabilities: []string{"Shader","ImageCubeArray",},
+				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rect",
 				Value:        4,
-				Capabilities: []string{"SampledRect","ImageRect",},
+				Capabilities: []string{"SampledRect",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Buffer",
 				Value:        5,
-				Capabilities: []string{"SampledBuffer","ImageBuffer",},
+				Capabilities: []string{"SampledBuffer",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SubpassData",
 				Value:        6,
 				Capabilities: []string{"InputAttachment",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "TileImageDataEXT",
+				Value:        4173,
+				Capabilities: []string{"TileImageColorReadAccessEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -21205,37 +28742,37 @@ var (
 			Enumerant{
 				Enumerant:    "None",
 				Value:        0,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ClampToEdge",
 				Value:        1,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Clamp",
 				Value:        2,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Repeat",
 				Value:        3,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "RepeatMirrored",
 				Value:        4,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -21247,16 +28784,16 @@ var (
 			Enumerant{
 				Enumerant:    "Nearest",
 				Value:        0,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Linear",
 				Value:        1,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -21270,280 +28807,294 @@ var (
 				Value:        0,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba32f",
 				Value:        1,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba16f",
 				Value:        2,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R32f",
 				Value:        3,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba8",
 				Value:        4,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba8Snorm",
 				Value:        5,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg32f",
 				Value:        6,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg16f",
 				Value:        7,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R11fG11fB10f",
 				Value:        8,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R16f",
 				Value:        9,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba16",
 				Value:        10,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgb10A2",
 				Value:        11,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg16",
 				Value:        12,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg8",
 				Value:        13,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R16",
 				Value:        14,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R8",
 				Value:        15,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba16Snorm",
 				Value:        16,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg16Snorm",
 				Value:        17,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg8Snorm",
 				Value:        18,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R16Snorm",
 				Value:        19,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R8Snorm",
 				Value:        20,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba32i",
 				Value:        21,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba16i",
 				Value:        22,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba8i",
 				Value:        23,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R32i",
 				Value:        24,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg32i",
 				Value:        25,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg16i",
 				Value:        26,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg8i",
 				Value:        27,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R16i",
 				Value:        28,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R8i",
 				Value:        29,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba32ui",
 				Value:        30,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba16ui",
 				Value:        31,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgba8ui",
 				Value:        32,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R32ui",
 				Value:        33,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rgb10a2ui",
 				Value:        34,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg32ui",
 				Value:        35,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg16ui",
 				Value:        36,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rg8ui",
 				Value:        37,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R16ui",
 				Value:        38,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "R8ui",
 				Value:        39,
 				Capabilities: []string{"StorageImageExtendedFormats",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "R64ui",
+				Value:        40,
+				Capabilities: []string{"Int64ImageEXT",},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "R64i",
+				Value:        41,
+				Capabilities: []string{"Int64ImageEXT",},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -21555,142 +29106,142 @@ var (
 			Enumerant{
 				Enumerant:    "R",
 				Value:        0,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "A",
 				Value:        1,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "RG",
 				Value:        2,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "RA",
 				Value:        3,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "RGB",
 				Value:        4,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "RGBA",
 				Value:        5,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "BGRA",
 				Value:        6,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ARGB",
 				Value:        7,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Intensity",
 				Value:        8,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Luminance",
 				Value:        9,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Rx",
 				Value:        10,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "RGx",
 				Value:        11,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "RGBx",
 				Value:        12,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Depth",
 				Value:        13,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DepthStencil",
 				Value:        14,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "sRGB",
 				Value:        15,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "sRGBx",
 				Value:        16,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "sRGBA",
 				Value:        17,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "sBGRA",
 				Value:        18,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ABGR",
 				Value:        19,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -21702,121 +29253,142 @@ var (
 			Enumerant{
 				Enumerant:    "SnormInt8",
 				Value:        0,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SnormInt16",
 				Value:        1,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UnormInt8",
 				Value:        2,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UnormInt16",
 				Value:        3,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UnormShort565",
 				Value:        4,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UnormShort555",
 				Value:        5,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UnormInt101010",
 				Value:        6,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SignedInt8",
 				Value:        7,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SignedInt16",
 				Value:        8,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SignedInt32",
 				Value:        9,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UnsignedInt8",
 				Value:        10,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UnsignedInt16",
 				Value:        11,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UnsignedInt32",
 				Value:        12,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "HalfFloat",
 				Value:        13,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Float",
 				Value:        14,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UnormInt24",
 				Value:        15,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UnormInt101010_2",
 				Value:        16,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "UnsignedIntRaw10EXT",
+				Value:        19,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "UnsignedIntRaw12EXT",
+				Value:        20,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "UnormInt2_101010EXT",
+				Value:        21,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -21830,28 +29402,168 @@ var (
 				Value:        0,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "RTZ",
 				Value:        1,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "RTP",
 				Value:        2,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "RTN",
 				Value:        3,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindFPDenormMode = &OperandKind {
+		Kind:       "FPDenormMode",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "Preserve",
+				Value:        0,
+				Capabilities: []string{"FunctionFloatControlINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FlushToZero",
+				Value:        1,
+				Capabilities: []string{"FunctionFloatControlINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindQuantizationModes = &OperandKind {
+		Kind:       "QuantizationModes",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "TRN",
+				Value:        0,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TRN_ZERO",
+				Value:        1,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RND",
+				Value:        2,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RND_ZERO",
+				Value:        3,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RND_INF",
+				Value:        4,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RND_MIN_INF",
+				Value:        5,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RND_CONV",
+				Value:        6,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RND_CONV_ODD",
+				Value:        7,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindFPOperationMode = &OperandKind {
+		Kind:       "FPOperationMode",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "IEEE",
+				Value:        0,
+				Capabilities: []string{"FunctionFloatControlINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ALT",
+				Value:        1,
+				Capabilities: []string{"FunctionFloatControlINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindOverflowModes = &OperandKind {
+		Kind:       "OverflowModes",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "WRAP",
+				Value:        0,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SAT",
+				Value:        1,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SAT_ZERO",
+				Value:        2,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SAT_SYM",
+				Value:        3,
+				Capabilities: []string{"ArbitraryPrecisionFixedPointINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -21865,14 +29577,21 @@ var (
 				Value:        0,
 				Capabilities: []string{"Linkage",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Import",
 				Value:        1,
 				Capabilities: []string{"Linkage",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "LinkOnceODR",
+				Value:        2,
+				Capabilities: []string{"Linkage",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -21886,21 +29605,56 @@ var (
 				Value:        0,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "WriteOnly",
 				Value:        1,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ReadWrite",
 				Value:        2,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindHostAccessQualifier = &OperandKind {
+		Kind:       "HostAccessQualifier",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "NoneINTEL",
+				Value:        0,
+				Capabilities: []string{"GlobalVariableHostAccessINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ReadINTEL",
+				Value:        1,
+				Capabilities: []string{"GlobalVariableHostAccessINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "WriteINTEL",
+				Value:        2,
+				Capabilities: []string{"GlobalVariableHostAccessINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ReadWriteINTEL",
+				Value:        3,
+				Capabilities: []string{"GlobalVariableHostAccessINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -21914,56 +29668,63 @@ var (
 				Value:        0,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Sext",
 				Value:        1,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ByVal",
 				Value:        2,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Sret",
 				Value:        3,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NoAlias",
 				Value:        4,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NoCapture",
 				Value:        5,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NoWrite",
 				Value:        6,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NoReadWrite",
 				Value:        7,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "RuntimeAlignedINTEL",
+				Value:        5940,
+				Capabilities: []string{"RuntimeAlignedAttributeINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -21977,187 +29738,187 @@ var (
 				Value:        0,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SpecId",
 				Value:        1,
 				Capabilities: []string{"Shader","Kernel",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Specialization Constant ID'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Block",
 				Value:        2,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "BufferBlock",
 				Value:        3,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "RowMajor",
 				Value:        4,
 				Capabilities: []string{"Matrix",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ColMajor",
 				Value:        5,
 				Capabilities: []string{"Matrix",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ArrayStride",
 				Value:        6,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Array Stride'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "MatrixStride",
 				Value:        7,
 				Capabilities: []string{"Matrix",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Matrix Stride'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GLSLShared",
 				Value:        8,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GLSLPacked",
 				Value:        9,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "CPacked",
 				Value:        10,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "BuiltIn",
 				Value:        11,
 				Capabilities: []string{},
 				Parameters:   []Parameter{{OperandKindBuiltIn, ""},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NoPerspective",
 				Value:        13,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Flat",
 				Value:        14,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Patch",
 				Value:        15,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Centroid",
 				Value:        16,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Sample",
 				Value:        17,
 				Capabilities: []string{"SampleRateShading",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Invariant",
 				Value:        18,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Restrict",
 				Value:        19,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Aliased",
 				Value:        20,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Volatile",
 				Value:        21,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Constant",
 				Value:        22,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Coherent",
 				Value:        23,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NonWritable",
 				Value:        24,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NonReadable",
 				Value:        25,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Uniform",
 				Value:        26,
-				Capabilities: []string{"Shader",},
+				Capabilities: []string{"Shader","UniformDecoration",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UniformId",
 				Value:        27,
-				Capabilities: []string{"Shader",},
+				Capabilities: []string{"Shader","UniformDecoration",},
 				Parameters:   []Parameter{{OperandKindIdScope, "'Execution'"},},
 				Version:      "1.4",
 			},
@@ -22166,119 +29927,119 @@ var (
 				Value:        28,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Stream",
 				Value:        29,
 				Capabilities: []string{"GeometryStreams",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Stream Number'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Location",
 				Value:        30,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Location'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Component",
 				Value:        31,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Component'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Index",
 				Value:        32,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Index'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Binding",
 				Value:        33,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Binding Point'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DescriptorSet",
 				Value:        34,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Descriptor Set'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Offset",
 				Value:        35,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Byte Offset'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "XfbBuffer",
 				Value:        36,
 				Capabilities: []string{"TransformFeedback",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'XFB Buffer Number'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "XfbStride",
 				Value:        37,
 				Capabilities: []string{"TransformFeedback",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'XFB Stride'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "FuncParamAttr",
 				Value:        38,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{{OperandKindFunctionParameterAttribute, "'Function Parameter Attribute'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "FPRoundingMode",
 				Value:        39,
 				Capabilities: []string{},
 				Parameters:   []Parameter{{OperandKindFPRoundingMode, "'Floating-Point Rounding Mode'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "FPFastMathMode",
 				Value:        40,
-				Capabilities: []string{"Kernel",},
+				Capabilities: []string{"Kernel","FloatControls2",},
 				Parameters:   []Parameter{{OperandKindFPFastMathMode, "'Fast-Math Mode'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "LinkageAttributes",
 				Value:        41,
 				Capabilities: []string{"Linkage",},
 				Parameters:   []Parameter{{OperandKindLiteralString, "'Name'"},{OperandKindLinkageType, "'Linkage Type'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NoContraction",
 				Value:        42,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "InputAttachmentIndex",
 				Value:        43,
 				Capabilities: []string{"InputAttachment",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Attachment Index'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Alignment",
 				Value:        44,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Alignment'"},},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "MaxByteOffset",
@@ -22316,9 +30077,86 @@ var (
 				Version:      "1.4",
 			},
 			Enumerant{
+				Enumerant:    "WeightTextureQCOM",
+				Value:        4487,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BlockMatchTextureQCOM",
+				Value:        4488,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BlockMatchSamplerQCOM",
+				Value:        4499,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
 				Enumerant:    "ExplicitInterpAMD",
 				Value:        4999,
 				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NodeSharesPayloadLimitsWithAMDX",
+				Value:        5019,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Payload Type'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NodeMaxPayloadsAMDX",
+				Value:        5020,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Max number of payloads'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TrackFinishWritingAMDX",
+				Value:        5078,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "PayloadNodeNameAMDX",
+				Value:        5091,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Node Name'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "PayloadNodeBaseIndexAMDX",
+				Value:        5098,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Base Index'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "PayloadNodeSparseArrayAMDX",
+				Value:        5099,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "PayloadNodeArraySizeAMDX",
+				Value:        5100,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Array Size'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "PayloadDispatchIndirectAMDX",
+				Value:        5105,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -22351,9 +30189,9 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "PerPrimitiveNV",
+				Enumerant:    "PerPrimitiveEXT",
 				Value:        5271,
-				Capabilities: []string{"MeshShadingNV",},
+				Capabilities: []string{"MeshShadingNV","MeshShadingEXT",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -22367,26 +30205,19 @@ var (
 			Enumerant{
 				Enumerant:    "PerTaskNV",
 				Value:        5273,
-				Capabilities: []string{"MeshShadingNV",},
+				Capabilities: []string{"MeshShadingNV","MeshShadingEXT",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "PerVertexNV",
+				Enumerant:    "PerVertexKHR",
 				Value:        5285,
-				Capabilities: []string{"FragmentBarycentricNV",},
+				Capabilities: []string{"FragmentBarycentricKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "NonUniform",
-				Value:        5300,
-				Capabilities: []string{"ShaderNonUniform",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "NonUniformEXT",
 				Value:        5300,
 				Capabilities: []string{"ShaderNonUniform",},
 				Parameters:   []Parameter{},
@@ -22400,13 +30231,6 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "RestrictPointerEXT",
-				Value:        5355,
-				Capabilities: []string{"PhysicalStorageBufferAddresses",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "AliasedPointer",
 				Value:        5356,
 				Capabilities: []string{"PhysicalStorageBufferAddresses",},
@@ -22414,11 +30238,102 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "AliasedPointerEXT",
-				Value:        5356,
-				Capabilities: []string{"PhysicalStorageBufferAddresses",},
+				Enumerant:    "HitObjectShaderRecordBufferNV",
+				Value:        5386,
+				Capabilities: []string{"ShaderInvocationReorderNV",},
 				Parameters:   []Parameter{},
-				Version:      "1.5",
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BindlessSamplerNV",
+				Value:        5398,
+				Capabilities: []string{"BindlessTextureNV",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BindlessImageNV",
+				Value:        5399,
+				Capabilities: []string{"BindlessTextureNV",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BoundSamplerNV",
+				Value:        5400,
+				Capabilities: []string{"BindlessTextureNV",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BoundImageNV",
+				Value:        5401,
+				Capabilities: []string{"BindlessTextureNV",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SIMTCallINTEL",
+				Value:        5599,
+				Capabilities: []string{"VectorComputeINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'N'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ReferencedIndirectlyINTEL",
+				Value:        5602,
+				Capabilities: []string{"IndirectReferencesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ClobberINTEL",
+				Value:        5607,
+				Capabilities: []string{"AsmINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralString, "'Register'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SideEffectsINTEL",
+				Value:        5608,
+				Capabilities: []string{"AsmINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "VectorComputeVariableINTEL",
+				Value:        5624,
+				Capabilities: []string{"VectorComputeINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FuncParamIOKindINTEL",
+				Value:        5625,
+				Capabilities: []string{"VectorComputeINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Kind'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "VectorComputeFunctionINTEL",
+				Value:        5626,
+				Capabilities: []string{"VectorComputeINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StackCallINTEL",
+				Value:        5627,
+				Capabilities: []string{"VectorComputeINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "GlobalVariableOffsetINTEL",
+				Value:        5628,
+				Capabilities: []string{"VectorComputeINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Offset'"},},
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "CounterBuffer",
@@ -22428,13 +30343,6 @@ var (
 				Version:      "1.4",
 			},
 			Enumerant{
-				Enumerant:    "HlslCounterBufferGOOGLE",
-				Value:        5634,
-				Capabilities: []string{},
-				Parameters:   []Parameter{{OperandKindIdRef, "'Counter Buffer'"},},
-				Version:      "None",
-			},
-			Enumerant{
 				Enumerant:    "UserSemantic",
 				Value:        5635,
 				Capabilities: []string{},
@@ -22442,17 +30350,381 @@ var (
 				Version:      "1.4",
 			},
 			Enumerant{
-				Enumerant:    "HlslSemanticGOOGLE",
-				Value:        5635,
-				Capabilities: []string{},
-				Parameters:   []Parameter{{OperandKindLiteralString, "'Semantic'"},},
-				Version:      "None",
-			},
-			Enumerant{
 				Enumerant:    "UserTypeGOOGLE",
 				Value:        5636,
 				Capabilities: []string{},
 				Parameters:   []Parameter{{OperandKindLiteralString, "'User Type'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FunctionRoundingModeINTEL",
+				Value:        5822,
+				Capabilities: []string{"FunctionFloatControlINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Target Width'"},{OperandKindFPRoundingMode, "'FP Rounding Mode'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FunctionDenormModeINTEL",
+				Value:        5823,
+				Capabilities: []string{"FunctionFloatControlINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Target Width'"},{OperandKindFPDenormMode, "'FP Denorm Mode'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RegisterINTEL",
+				Value:        5825,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MemoryINTEL",
+				Value:        5826,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralString, "'Memory Type'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NumbanksINTEL",
+				Value:        5827,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Banks'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BankwidthINTEL",
+				Value:        5828,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Bank Width'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaxPrivateCopiesINTEL",
+				Value:        5829,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Maximum Copies'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SinglepumpINTEL",
+				Value:        5830,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "DoublepumpINTEL",
+				Value:        5831,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaxReplicatesINTEL",
+				Value:        5832,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Maximum Replicates'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SimpleDualPortINTEL",
+				Value:        5833,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MergeINTEL",
+				Value:        5834,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralString, "'Merge Key'"},{OperandKindLiteralString, "'Merge Type'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BankBitsINTEL",
+				Value:        5835,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Bank Bits'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ForcePow2DepthINTEL",
+				Value:        5836,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Force Key'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StridesizeINTEL",
+				Value:        5883,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Stride Size'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "WordsizeINTEL",
+				Value:        5884,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Word Size'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TrueDualPortINTEL",
+				Value:        5885,
+				Capabilities: []string{"FPGAMemoryAttributesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BurstCoalesceINTEL",
+				Value:        5899,
+				Capabilities: []string{"FPGAMemoryAccessesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CacheSizeINTEL",
+				Value:        5900,
+				Capabilities: []string{"FPGAMemoryAccessesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Cache Size in bytes'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "DontStaticallyCoalesceINTEL",
+				Value:        5901,
+				Capabilities: []string{"FPGAMemoryAccessesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "PrefetchINTEL",
+				Value:        5902,
+				Capabilities: []string{"FPGAMemoryAccessesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Prefetcher Size in bytes'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StallEnableINTEL",
+				Value:        5905,
+				Capabilities: []string{"FPGAClusterAttributesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FuseLoopsInFunctionINTEL",
+				Value:        5907,
+				Capabilities: []string{"LoopFuseINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MathOpDSPModeINTEL",
+				Value:        5909,
+				Capabilities: []string{"FPGADSPControlINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Mode'"},{OperandKindLiteralInteger, "'Propagate'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "AliasScopeINTEL",
+				Value:        5914,
+				Capabilities: []string{"MemoryAccessAliasingINTEL",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Aliasing Scopes List'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "NoAliasINTEL",
+				Value:        5915,
+				Capabilities: []string{"MemoryAccessAliasingINTEL",},
+				Parameters:   []Parameter{{OperandKindIdRef, "'Aliasing Scopes List'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "InitiationIntervalINTEL",
+				Value:        5917,
+				Capabilities: []string{"FPGAInvocationPipeliningAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Cycles'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaxConcurrencyINTEL",
+				Value:        5918,
+				Capabilities: []string{"FPGAInvocationPipeliningAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Invocations'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "PipelineEnableINTEL",
+				Value:        5919,
+				Capabilities: []string{"FPGAInvocationPipeliningAttributesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Enable'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BufferLocationINTEL",
+				Value:        5921,
+				Capabilities: []string{"FPGABufferLocationINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Buffer Location ID'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "IOPipeStorageINTEL",
+				Value:        5944,
+				Capabilities: []string{"IOPipesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'IO Pipe ID'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FunctionFloatingPointModeINTEL",
+				Value:        6080,
+				Capabilities: []string{"FunctionFloatControlINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Target Width'"},{OperandKindFPOperationMode, "'FP Operation Mode'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SingleElementVectorINTEL",
+				Value:        6085,
+				Capabilities: []string{"VectorComputeINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "VectorComputeCallableFunctionINTEL",
+				Value:        6087,
+				Capabilities: []string{"VectorComputeINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MediaBlockIOINTEL",
+				Value:        6140,
+				Capabilities: []string{"VectorComputeINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StallFreeINTEL",
+				Value:        6151,
+				Capabilities: []string{"FPGAClusterAttributesV2INTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPMaxErrorDecorationINTEL",
+				Value:        6170,
+				Capabilities: []string{"FPMaxErrorINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralFloat, "'Max Error'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "LatencyControlLabelINTEL",
+				Value:        6172,
+				Capabilities: []string{"FPGALatencyControlINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Latency Label'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "LatencyControlConstraintINTEL",
+				Value:        6173,
+				Capabilities: []string{"FPGALatencyControlINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Relative To'"},{OperandKindLiteralInteger, "'Control Type'"},{OperandKindLiteralInteger, "'Relative Cycle'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ConduitKernelArgumentINTEL",
+				Value:        6175,
+				Capabilities: []string{"FPGAArgumentInterfacesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RegisterMapKernelArgumentINTEL",
+				Value:        6176,
+				Capabilities: []string{"FPGAArgumentInterfacesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MMHostInterfaceAddressWidthINTEL",
+				Value:        6177,
+				Capabilities: []string{"FPGAArgumentInterfacesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'AddressWidth'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MMHostInterfaceDataWidthINTEL",
+				Value:        6178,
+				Capabilities: []string{"FPGAArgumentInterfacesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'DataWidth'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MMHostInterfaceLatencyINTEL",
+				Value:        6179,
+				Capabilities: []string{"FPGAArgumentInterfacesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Latency'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MMHostInterfaceReadWriteModeINTEL",
+				Value:        6180,
+				Capabilities: []string{"FPGAArgumentInterfacesINTEL",},
+				Parameters:   []Parameter{{OperandKindAccessQualifier, "'ReadWriteMode'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MMHostInterfaceMaxBurstINTEL",
+				Value:        6181,
+				Capabilities: []string{"FPGAArgumentInterfacesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'MaxBurstCount'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MMHostInterfaceWaitRequestINTEL",
+				Value:        6182,
+				Capabilities: []string{"FPGAArgumentInterfacesINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Waitrequest'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StableKernelArgumentINTEL",
+				Value:        6183,
+				Capabilities: []string{"FPGAArgumentInterfacesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "HostAccessINTEL",
+				Value:        6188,
+				Capabilities: []string{"GlobalVariableHostAccessINTEL",},
+				Parameters:   []Parameter{{OperandKindHostAccessQualifier, "'Access'"},{OperandKindLiteralString, "'Name'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "InitModeINTEL",
+				Value:        6190,
+				Capabilities: []string{"GlobalVariableFPGADecorationsINTEL",},
+				Parameters:   []Parameter{{OperandKindInitializationModeQualifier, "'Trigger'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ImplementInRegisterMapINTEL",
+				Value:        6191,
+				Capabilities: []string{"GlobalVariableFPGADecorationsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "Value"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CacheControlLoadINTEL",
+				Value:        6442,
+				Capabilities: []string{"CacheControlsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Cache Level'"},{OperandKindLoadCacheControl, "'Cache Control'"},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CacheControlStoreINTEL",
+				Value:        6443,
+				Capabilities: []string{"CacheControlsINTEL",},
+				Parameters:   []Parameter{{OperandKindLiteralInteger, "'Cache Level'"},{OperandKindStoreCacheControl, "'Cache Control'"},},
 				Version:      "None",
 			},
 		},
@@ -22467,287 +30739,322 @@ var (
 				Value:        0,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "PointSize",
 				Value:        1,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ClipDistance",
 				Value:        3,
 				Capabilities: []string{"ClipDistance",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "CullDistance",
 				Value:        4,
 				Capabilities: []string{"CullDistance",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "VertexId",
 				Value:        5,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "InstanceId",
 				Value:        6,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "PrimitiveId",
 				Value:        7,
-				Capabilities: []string{"Geometry","Tessellation","RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"Geometry","Tessellation","RayTracingNV","RayTracingKHR","MeshShadingNV","MeshShadingEXT",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "InvocationId",
 				Value:        8,
 				Capabilities: []string{"Geometry","Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Layer",
 				Value:        9,
-				Capabilities: []string{"Geometry","ShaderLayer","ShaderViewportIndexLayerEXT",},
+				Capabilities: []string{"Geometry","ShaderLayer","ShaderViewportIndexLayerEXT","MeshShadingNV","MeshShadingEXT",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ViewportIndex",
 				Value:        10,
-				Capabilities: []string{"MultiViewport","ShaderViewportIndex","ShaderViewportIndexLayerEXT",},
+				Capabilities: []string{"MultiViewport","ShaderViewportIndex","ShaderViewportIndexLayerEXT","MeshShadingNV","MeshShadingEXT",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "TessLevelOuter",
 				Value:        11,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "TessLevelInner",
 				Value:        12,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "TessCoord",
 				Value:        13,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "PatchVertices",
 				Value:        14,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "FragCoord",
 				Value:        15,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "PointCoord",
 				Value:        16,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "FrontFacing",
 				Value:        17,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SampleId",
 				Value:        18,
 				Capabilities: []string{"SampleRateShading",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SamplePosition",
 				Value:        19,
 				Capabilities: []string{"SampleRateShading",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SampleMask",
 				Value:        20,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "FragDepth",
 				Value:        22,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "HelperInvocation",
 				Value:        23,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NumWorkgroups",
 				Value:        24,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "WorkgroupSize",
 				Value:        25,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "WorkgroupId",
 				Value:        26,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "LocalInvocationId",
 				Value:        27,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GlobalInvocationId",
 				Value:        28,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "LocalInvocationIndex",
 				Value:        29,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "WorkDim",
 				Value:        30,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GlobalSize",
 				Value:        31,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "EnqueuedWorkgroupSize",
 				Value:        32,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GlobalOffset",
 				Value:        33,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GlobalLinearId",
 				Value:        34,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SubgroupSize",
 				Value:        36,
 				Capabilities: []string{"Kernel","GroupNonUniform","SubgroupBallotKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SubgroupMaxSize",
 				Value:        37,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NumSubgroups",
 				Value:        38,
 				Capabilities: []string{"Kernel","GroupNonUniform",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "NumEnqueuedSubgroups",
 				Value:        39,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SubgroupId",
 				Value:        40,
 				Capabilities: []string{"Kernel","GroupNonUniform",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SubgroupLocalInvocationId",
 				Value:        41,
 				Capabilities: []string{"Kernel","GroupNonUniform","SubgroupBallotKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "VertexIndex",
 				Value:        42,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "InstanceIndex",
 				Value:        43,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "CoreIDARM",
+				Value:        4160,
+				Capabilities: []string{"CoreBuiltinsARM",},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "CoreCountARM",
+				Value:        4161,
+				Capabilities: []string{"CoreBuiltinsARM",},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "CoreMaxIDARM",
+				Value:        4162,
+				Capabilities: []string{"CoreBuiltinsARM",},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "WarpIDARM",
+				Value:        4163,
+				Capabilities: []string{"CoreBuiltinsARM",},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
+			},
+			Enumerant{
+				Enumerant:    "WarpMaxIDARM",
+				Value:        4164,
+				Capabilities: []string{"CoreBuiltinsARM",},
+				Parameters:   []Parameter{},
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SubgroupEqMask",
@@ -22785,41 +31092,6 @@ var (
 				Version:      "1.3",
 			},
 			Enumerant{
-				Enumerant:    "SubgroupEqMaskKHR",
-				Value:        4416,
-				Capabilities: []string{"SubgroupBallotKHR","GroupNonUniformBallot",},
-				Parameters:   []Parameter{},
-				Version:      "1.3",
-			},
-			Enumerant{
-				Enumerant:    "SubgroupGeMaskKHR",
-				Value:        4417,
-				Capabilities: []string{"SubgroupBallotKHR","GroupNonUniformBallot",},
-				Parameters:   []Parameter{},
-				Version:      "1.3",
-			},
-			Enumerant{
-				Enumerant:    "SubgroupGtMaskKHR",
-				Value:        4418,
-				Capabilities: []string{"SubgroupBallotKHR","GroupNonUniformBallot",},
-				Parameters:   []Parameter{},
-				Version:      "1.3",
-			},
-			Enumerant{
-				Enumerant:    "SubgroupLeMaskKHR",
-				Value:        4419,
-				Capabilities: []string{"SubgroupBallotKHR","GroupNonUniformBallot",},
-				Parameters:   []Parameter{},
-				Version:      "1.3",
-			},
-			Enumerant{
-				Enumerant:    "SubgroupLtMaskKHR",
-				Value:        4420,
-				Capabilities: []string{"SubgroupBallotKHR","GroupNonUniformBallot",},
-				Parameters:   []Parameter{},
-				Version:      "1.3",
-			},
-			Enumerant{
 				Enumerant:    "BaseVertex",
 				Value:        4424,
 				Capabilities: []string{"DrawParameters",},
@@ -22836,9 +31108,16 @@ var (
 			Enumerant{
 				Enumerant:    "DrawIndex",
 				Value:        4426,
-				Capabilities: []string{"DrawParameters","MeshShadingNV",},
+				Capabilities: []string{"DrawParameters","MeshShadingNV","MeshShadingEXT",},
 				Parameters:   []Parameter{},
 				Version:      "1.3",
+			},
+			Enumerant{
+				Enumerant:    "PrimitiveShadingRateKHR",
+				Value:        4432,
+				Capabilities: []string{"FragmentShadingRateKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "DeviceIndex",
@@ -22853,6 +31132,13 @@ var (
 				Capabilities: []string{"MultiView",},
 				Parameters:   []Parameter{},
 				Version:      "1.3",
+			},
+			Enumerant{
+				Enumerant:    "ShadingRateKHR",
+				Value:        4444,
+				Capabilities: []string{"FragmentShadingRateKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "BaryCoordNoPerspAMD",
@@ -22907,6 +31193,20 @@ var (
 				Enumerant:    "FragStencilRefEXT",
 				Value:        5014,
 				Capabilities: []string{"StencilExportEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RemainingRecursionLevelsAMDX",
+				Value:        5021,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ShaderIndexAMDX",
+				Value:        5073,
+				Capabilities: []string{"ShaderEnqueueAMDX",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -23009,247 +31309,191 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "BaryCoordNV",
+				Enumerant:    "BaryCoordKHR",
 				Value:        5286,
-				Capabilities: []string{"FragmentBarycentricNV",},
+				Capabilities: []string{"FragmentBarycentricKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "BaryCoordNoPerspNV",
+				Enumerant:    "BaryCoordNoPerspKHR",
 				Value:        5287,
-				Capabilities: []string{"FragmentBarycentricNV",},
+				Capabilities: []string{"FragmentBarycentricKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "FragSizeEXT",
 				Value:        5292,
-				Capabilities: []string{"FragmentDensityEXT","ShadingRateNV",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "FragmentSizeNV",
-				Value:        5292,
-				Capabilities: []string{"ShadingRateNV","FragmentDensityEXT",},
+				Capabilities: []string{"FragmentDensityEXT",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "FragInvocationCountEXT",
 				Value:        5293,
-				Capabilities: []string{"FragmentDensityEXT","ShadingRateNV",},
+				Capabilities: []string{"FragmentDensityEXT",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "InvocationsPerPixelNV",
-				Value:        5293,
-				Capabilities: []string{"ShadingRateNV","FragmentDensityEXT",},
+				Enumerant:    "PrimitivePointIndicesEXT",
+				Value:        5294,
+				Capabilities: []string{"MeshShadingEXT",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "LaunchIdNV",
-				Value:        5319,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Enumerant:    "PrimitiveLineIndicesEXT",
+				Value:        5295,
+				Capabilities: []string{"MeshShadingEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "PrimitiveTriangleIndicesEXT",
+				Value:        5296,
+				Capabilities: []string{"MeshShadingEXT",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CullPrimitiveEXT",
+				Value:        5299,
+				Capabilities: []string{"MeshShadingEXT",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "LaunchIdKHR",
 				Value:        5319,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "LaunchSizeNV",
-				Value:        5320,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "LaunchSizeKHR",
 				Value:        5320,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "WorldRayOriginNV",
-				Value:        5321,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "WorldRayOriginKHR",
 				Value:        5321,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "WorldRayDirectionNV",
-				Value:        5322,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "WorldRayDirectionKHR",
 				Value:        5322,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "ObjectRayOriginNV",
-				Value:        5323,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "ObjectRayOriginKHR",
 				Value:        5323,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "ObjectRayDirectionNV",
-				Value:        5324,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "ObjectRayDirectionKHR",
 				Value:        5324,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "RayTminNV",
-				Value:        5325,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "RayTminKHR",
 				Value:        5325,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "RayTmaxNV",
-				Value:        5326,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "RayTmaxKHR",
 				Value:        5326,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "InstanceCustomIndexNV",
-				Value:        5327,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "InstanceCustomIndexKHR",
 				Value:        5327,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "ObjectToWorldNV",
-				Value:        5330,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "ObjectToWorldKHR",
 				Value:        5330,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "WorldToObjectNV",
-				Value:        5331,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "WorldToObjectKHR",
 				Value:        5331,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "HitTNV",
 				Value:        5332,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "HitTKHR",
-				Value:        5332,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "HitKindNV",
-				Value:        5333,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "HitKindKHR",
 				Value:        5333,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "IncomingRayFlagsNV",
-				Value:        5351,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Enumerant:    "CurrentRayTimeNV",
+				Value:        5334,
+				Capabilities: []string{"RayTracingMotionBlurNV",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "HitTriangleVertexPositionsKHR",
+				Value:        5335,
+				Capabilities: []string{"RayTracingPositionFetchKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "HitMicroTriangleVertexPositionsNV",
+				Value:        5337,
+				Capabilities: []string{"RayTracingDisplacementMicromapNV",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "HitMicroTriangleVertexBarycentricsNV",
+				Value:        5344,
+				Capabilities: []string{"RayTracingDisplacementMicromapNV",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "IncomingRayFlagsKHR",
 				Value:        5351,
-				Capabilities: []string{"RayTracingNV","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingNV","RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "RayGeometryIndexKHR",
 				Value:        5352,
-				Capabilities: []string{"RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingKHR",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -23281,6 +31525,27 @@ var (
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
+			Enumerant{
+				Enumerant:    "HitKindFrontFacingMicroTriangleNV",
+				Value:        5405,
+				Capabilities: []string{"RayTracingDisplacementMicromapNV",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "HitKindBackFacingMicroTriangleNV",
+				Value:        5406,
+				Capabilities: []string{"RayTracingDisplacementMicromapNV",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CullMaskKHR",
+				Value:        6021,
+				Capabilities: []string{"RayCullMaskKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
 		},
 		Bases:      []*OperandKind {},
 	}
@@ -23293,35 +31558,35 @@ var (
 				Value:        0,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Device",
 				Value:        1,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Workgroup",
 				Value:        2,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Subgroup",
 				Value:        3,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Invocation",
 				Value:        4,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "QueueFamily",
@@ -23331,18 +31596,11 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "QueueFamilyKHR",
-				Value:        5,
-				Capabilities: []string{"VulkanMemoryModel",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "ShaderCallKHR",
 				Value:        6,
-				Capabilities: []string{"RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayTracingKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -23356,21 +31614,21 @@ var (
 				Value:        0,
 				Capabilities: []string{"Kernel","GroupNonUniformArithmetic","GroupNonUniformBallot",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "InclusiveScan",
 				Value:        1,
 				Capabilities: []string{"Kernel","GroupNonUniformArithmetic","GroupNonUniformBallot",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ExclusiveScan",
 				Value:        2,
 				Capabilities: []string{"Kernel","GroupNonUniformArithmetic","GroupNonUniformBallot",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ClusteredReduce",
@@ -23412,21 +31670,21 @@ var (
 				Value:        0,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "WaitKernel",
 				Value:        1,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "WaitWorkGroup",
 				Value:        2,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -23440,392 +31698,392 @@ var (
 				Value:        0,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Shader",
 				Value:        1,
 				Capabilities: []string{"Matrix",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Geometry",
 				Value:        2,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Tessellation",
 				Value:        3,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Addresses",
 				Value:        4,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Linkage",
 				Value:        5,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Kernel",
 				Value:        6,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Vector16",
 				Value:        7,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Float16Buffer",
 				Value:        8,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Float16",
 				Value:        9,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Float64",
 				Value:        10,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Int64",
 				Value:        11,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Int64Atomics",
 				Value:        12,
 				Capabilities: []string{"Int64",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ImageBasic",
 				Value:        13,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ImageReadWrite",
 				Value:        14,
 				Capabilities: []string{"ImageBasic",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ImageMipmap",
 				Value:        15,
 				Capabilities: []string{"ImageBasic",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Pipes",
 				Value:        17,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Groups",
 				Value:        18,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DeviceEnqueue",
 				Value:        19,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "LiteralSampler",
 				Value:        20,
 				Capabilities: []string{"Kernel",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "AtomicStorage",
 				Value:        21,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Int16",
 				Value:        22,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "TessellationPointSize",
 				Value:        23,
 				Capabilities: []string{"Tessellation",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GeometryPointSize",
 				Value:        24,
 				Capabilities: []string{"Geometry",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ImageGatherExtended",
 				Value:        25,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "StorageImageMultisample",
 				Value:        27,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "UniformBufferArrayDynamicIndexing",
 				Value:        28,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SampledImageArrayDynamicIndexing",
 				Value:        29,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "StorageBufferArrayDynamicIndexing",
 				Value:        30,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "StorageImageArrayDynamicIndexing",
 				Value:        31,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ClipDistance",
 				Value:        32,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "CullDistance",
 				Value:        33,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ImageCubeArray",
 				Value:        34,
 				Capabilities: []string{"SampledCubeArray",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SampleRateShading",
 				Value:        35,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ImageRect",
 				Value:        36,
 				Capabilities: []string{"SampledRect",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SampledRect",
 				Value:        37,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GenericPointer",
 				Value:        38,
 				Capabilities: []string{"Addresses",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Int8",
 				Value:        39,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "InputAttachment",
 				Value:        40,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SparseResidency",
 				Value:        41,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "MinLod",
 				Value:        42,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Sampled1D",
 				Value:        43,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "Image1D",
 				Value:        44,
 				Capabilities: []string{"Sampled1D",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SampledCubeArray",
 				Value:        45,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SampledBuffer",
 				Value:        46,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ImageBuffer",
 				Value:        47,
 				Capabilities: []string{"SampledBuffer",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ImageMSArray",
 				Value:        48,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "StorageImageExtendedFormats",
 				Value:        49,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "ImageQuery",
 				Value:        50,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "DerivativeControl",
 				Value:        51,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "InterpolationFunction",
 				Value:        52,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "TransformFeedback",
 				Value:        53,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "GeometryStreams",
 				Value:        54,
 				Capabilities: []string{"Geometry",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "StorageImageReadWithoutFormat",
 				Value:        55,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "StorageImageWriteWithoutFormat",
 				Value:        56,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "MultiViewport",
 				Value:        57,
 				Capabilities: []string{"Geometry",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "1.0",
 			},
 			Enumerant{
 				Enumerant:    "SubgroupDispatch",
@@ -23919,6 +32177,55 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
+				Enumerant:    "UniformDecoration",
+				Value:        71,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.6",
+			},
+			Enumerant{
+				Enumerant:    "CoreBuiltinsARM",
+				Value:        4165,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TileImageColorReadAccessEXT",
+				Value:        4166,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TileImageDepthReadAccessEXT",
+				Value:        4167,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TileImageStencilReadAccessEXT",
+				Value:        4168,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CooperativeMatrixLayoutsARM",
+				Value:        4201,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FragmentShadingRateKHR",
+				Value:        4422,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
 				Enumerant:    "SubgroupBallotKHR",
 				Value:        4423,
 				Capabilities: []string{},
@@ -23931,6 +32238,27 @@ var (
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
 				Version:      "1.3",
+			},
+			Enumerant{
+				Enumerant:    "WorkgroupMemoryExplicitLayoutKHR",
+				Value:        4428,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "WorkgroupMemoryExplicitLayout8BitAccessKHR",
+				Value:        4429,
+				Capabilities: []string{"WorkgroupMemoryExplicitLayoutKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "WorkgroupMemoryExplicitLayout16BitAccessKHR",
+				Value:        4430,
+				Capabilities: []string{"WorkgroupMemoryExplicitLayoutKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "SubgroupVoteKHR",
@@ -23947,23 +32275,9 @@ var (
 				Version:      "1.3",
 			},
 			Enumerant{
-				Enumerant:    "StorageUniformBufferBlock16",
-				Value:        4433,
-				Capabilities: []string{},
-				Parameters:   []Parameter{},
-				Version:      "1.3",
-			},
-			Enumerant{
 				Enumerant:    "UniformAndStorageBuffer16BitAccess",
 				Value:        4434,
-				Capabilities: []string{"StorageBuffer16BitAccess","StorageUniformBufferBlock16",},
-				Parameters:   []Parameter{},
-				Version:      "1.3",
-			},
-			Enumerant{
-				Enumerant:    "StorageUniform16",
-				Value:        4434,
-				Capabilities: []string{"StorageBuffer16BitAccess","StorageUniformBufferBlock16",},
+				Capabilities: []string{"StorageBuffer16BitAccess",},
 				Parameters:   []Parameter{},
 				Version:      "1.3",
 			},
@@ -24087,9 +32401,58 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "RayTraversalPrimitiveCullingProvisionalKHR",
+				Enumerant:    "RayQueryKHR",
+				Value:        4472,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "UntypedPointersKHR",
+				Value:        4473,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RayTraversalPrimitiveCullingKHR",
 				Value:        4478,
-				Capabilities: []string{"RayQueryProvisionalKHR","RayTracingProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR","RayTracingKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RayTracingKHR",
+				Value:        4479,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TextureSampleWeightedQCOM",
+				Value:        4484,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TextureBoxFilterQCOM",
+				Value:        4485,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TextureBlockMatchQCOM",
+				Value:        4486,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TextureBlockMatch2QCOM",
+				Value:        4498,
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -24129,9 +32492,30 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
+				Enumerant:    "Int64ImageEXT",
+				Value:        5016,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
 				Enumerant:    "ShaderClockKHR",
 				Value:        5055,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ShaderEnqueueAMDX",
+				Value:        5067,
 				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "QuadControlKHR",
+				Value:        5087,
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -24157,16 +32541,9 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "ShaderViewportIndexLayerNV",
-				Value:        5254,
-				Capabilities: []string{"MultiViewport",},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
 				Enumerant:    "ShaderViewportMaskNV",
 				Value:        5255,
-				Capabilities: []string{"ShaderViewportIndexLayerNV",},
+				Capabilities: []string{"ShaderViewportIndexLayerEXT",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -24206,28 +32583,28 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "FragmentBarycentricNV",
+				Enumerant:    "MeshShadingEXT",
+				Value:        5283,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FragmentBarycentricKHR",
 				Value:        5284,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "ComputeDerivativeGroupQuadsNV",
+				Enumerant:    "ComputeDerivativeGroupQuadsKHR",
 				Value:        5288,
-				Capabilities: []string{},
-				Parameters:   []Parameter{},
-				Version:      "None",
-			},
-			Enumerant{
-				Enumerant:    "FragmentDensityEXT",
-				Value:        5291,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "ShadingRateNV",
+				Enumerant:    "FragmentDensityEXT",
 				Value:        5291,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
@@ -24248,21 +32625,7 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "ShaderNonUniformEXT",
-				Value:        5301,
-				Capabilities: []string{"Shader",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "RuntimeDescriptorArray",
-				Value:        5302,
-				Capabilities: []string{"Shader",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "RuntimeDescriptorArrayEXT",
 				Value:        5302,
 				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
@@ -24276,21 +32639,7 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "InputAttachmentArrayDynamicIndexingEXT",
-				Value:        5303,
-				Capabilities: []string{"InputAttachment",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "UniformTexelBufferArrayDynamicIndexing",
-				Value:        5304,
-				Capabilities: []string{"SampledBuffer",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "UniformTexelBufferArrayDynamicIndexingEXT",
 				Value:        5304,
 				Capabilities: []string{"SampledBuffer",},
 				Parameters:   []Parameter{},
@@ -24304,21 +32653,7 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "StorageTexelBufferArrayDynamicIndexingEXT",
-				Value:        5305,
-				Capabilities: []string{"ImageBuffer",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "UniformBufferArrayNonUniformIndexing",
-				Value:        5306,
-				Capabilities: []string{"ShaderNonUniform",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "UniformBufferArrayNonUniformIndexingEXT",
 				Value:        5306,
 				Capabilities: []string{"ShaderNonUniform",},
 				Parameters:   []Parameter{},
@@ -24332,21 +32667,7 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "SampledImageArrayNonUniformIndexingEXT",
-				Value:        5307,
-				Capabilities: []string{"ShaderNonUniform",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "StorageBufferArrayNonUniformIndexing",
-				Value:        5308,
-				Capabilities: []string{"ShaderNonUniform",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "StorageBufferArrayNonUniformIndexingEXT",
 				Value:        5308,
 				Capabilities: []string{"ShaderNonUniform",},
 				Parameters:   []Parameter{},
@@ -24360,21 +32681,7 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "StorageImageArrayNonUniformIndexingEXT",
-				Value:        5309,
-				Capabilities: []string{"ShaderNonUniform",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "InputAttachmentArrayNonUniformIndexing",
-				Value:        5310,
-				Capabilities: []string{"InputAttachment","ShaderNonUniform",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "InputAttachmentArrayNonUniformIndexingEXT",
 				Value:        5310,
 				Capabilities: []string{"InputAttachment","ShaderNonUniform",},
 				Parameters:   []Parameter{},
@@ -24388,13 +32695,6 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "UniformTexelBufferArrayNonUniformIndexingEXT",
-				Value:        5311,
-				Capabilities: []string{"SampledBuffer","ShaderNonUniform",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "StorageTexelBufferArrayNonUniformIndexing",
 				Value:        5312,
 				Capabilities: []string{"ImageBuffer","ShaderNonUniform",},
@@ -24402,11 +32702,11 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "StorageTexelBufferArrayNonUniformIndexingEXT",
-				Value:        5312,
-				Capabilities: []string{"ImageBuffer","ShaderNonUniform",},
+				Enumerant:    "RayTracingPositionFetchKHR",
+				Value:        5336,
+				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "1.5",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "RayTracingNV",
@@ -24416,14 +32716,14 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "VulkanMemoryModel",
-				Value:        5345,
-				Capabilities: []string{},
+				Enumerant:    "RayTracingMotionBlurNV",
+				Value:        5341,
+				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
-				Version:      "1.5",
+				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "VulkanMemoryModelKHR",
+				Enumerant:    "VulkanMemoryModel",
 				Value:        5345,
 				Capabilities: []string{},
 				Parameters:   []Parameter{},
@@ -24437,13 +32737,6 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "VulkanMemoryModelDeviceScopeKHR",
-				Value:        5346,
-				Capabilities: []string{},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
 				Enumerant:    "PhysicalStorageBufferAddresses",
 				Value:        5347,
 				Capabilities: []string{"Shader",},
@@ -24451,16 +32744,9 @@ var (
 				Version:      "1.5",
 			},
 			Enumerant{
-				Enumerant:    "PhysicalStorageBufferAddressesEXT",
-				Value:        5347,
-				Capabilities: []string{"Shader",},
-				Parameters:   []Parameter{},
-				Version:      "1.5",
-			},
-			Enumerant{
-				Enumerant:    "ComputeDerivativeGroupLinearNV",
+				Enumerant:    "ComputeDerivativeGroupLinearKHR",
 				Value:        5350,
-				Capabilities: []string{},
+				Capabilities: []string{"Shader",},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -24507,9 +32793,107 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
-				Enumerant:    "DemoteToHelperInvocationEXT",
+				Enumerant:    "DemoteToHelperInvocation",
 				Value:        5379,
 				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "1.6",
+			},
+			Enumerant{
+				Enumerant:    "DisplacementMicromapNV",
+				Value:        5380,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RayTracingOpacityMicromapEXT",
+				Value:        5381,
+				Capabilities: []string{"RayQueryKHR","RayTracingKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ShaderInvocationReorderNV",
+				Value:        5383,
+				Capabilities: []string{"RayTracingKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BindlessTextureNV",
+				Value:        5390,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RayQueryPositionFetchKHR",
+				Value:        5391,
+				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "AtomicFloat16VectorNV",
+				Value:        5404,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RayTracingDisplacementMicromapNV",
+				Value:        5409,
+				Capabilities: []string{"RayTracingKHR",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RawAccessChainsNV",
+				Value:        5414,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CooperativeMatrixReductionsNV",
+				Value:        5430,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CooperativeMatrixConversionsNV",
+				Value:        5431,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CooperativeMatrixPerElementOperationsNV",
+				Value:        5432,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CooperativeMatrixTensorAddressingNV",
+				Value:        5433,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CooperativeMatrixBlockLoadsNV",
+				Value:        5434,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TensorAddressingNV",
+				Value:        5439,
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -24542,9 +32926,86 @@ var (
 				Version:      "None",
 			},
 			Enumerant{
+				Enumerant:    "RoundToInfinityINTEL",
+				Value:        5582,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FloatingPointModeINTEL",
+				Value:        5583,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
 				Enumerant:    "IntegerFunctions2INTEL",
 				Value:        5584,
 				Capabilities: []string{"Shader",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FunctionPointersINTEL",
+				Value:        5603,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "IndirectReferencesINTEL",
+				Value:        5604,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "AsmINTEL",
+				Value:        5606,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "AtomicFloat32MinMaxEXT",
+				Value:        5612,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "AtomicFloat64MinMaxEXT",
+				Value:        5613,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "AtomicFloat16MinMaxEXT",
+				Value:        5616,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "VectorComputeINTEL",
+				Value:        5617,
+				Capabilities: []string{"VectorAnyINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "VectorAnyINTEL",
+				Value:        5619,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ExpectAssumeKHR",
+				Value:        5629,
+				Capabilities: []string{},
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
@@ -24569,6 +33030,384 @@ var (
 				Parameters:   []Parameter{},
 				Version:      "None",
 			},
+			Enumerant{
+				Enumerant:    "VariableLengthArrayINTEL",
+				Value:        5817,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FunctionFloatControlINTEL",
+				Value:        5821,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGAMemoryAttributesINTEL",
+				Value:        5824,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPFastMathModeINTEL",
+				Value:        5837,
+				Capabilities: []string{"Kernel",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ArbitraryPrecisionIntegersINTEL",
+				Value:        5844,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ArbitraryPrecisionFloatingPointINTEL",
+				Value:        5845,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "UnstructuredLoopControlsINTEL",
+				Value:        5886,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGALoopControlsINTEL",
+				Value:        5888,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "KernelAttributesINTEL",
+				Value:        5892,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGAKernelAttributesINTEL",
+				Value:        5897,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGAMemoryAccessesINTEL",
+				Value:        5898,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGAClusterAttributesINTEL",
+				Value:        5904,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "LoopFuseINTEL",
+				Value:        5906,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGADSPControlINTEL",
+				Value:        5908,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MemoryAccessAliasingINTEL",
+				Value:        5910,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGAInvocationPipeliningAttributesINTEL",
+				Value:        5916,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGABufferLocationINTEL",
+				Value:        5920,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ArbitraryPrecisionFixedPointINTEL",
+				Value:        5922,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "USMStorageClassesINTEL",
+				Value:        5935,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RuntimeAlignedAttributeINTEL",
+				Value:        5939,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "IOPipesINTEL",
+				Value:        5943,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BlockingPipesINTEL",
+				Value:        5945,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGARegINTEL",
+				Value:        5948,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "DotProductInputAll",
+				Value:        6016,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.6",
+			},
+			Enumerant{
+				Enumerant:    "DotProductInput4x8Bit",
+				Value:        6017,
+				Capabilities: []string{"Int8",},
+				Parameters:   []Parameter{},
+				Version:      "1.6",
+			},
+			Enumerant{
+				Enumerant:    "DotProductInput4x8BitPacked",
+				Value:        6018,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.6",
+			},
+			Enumerant{
+				Enumerant:    "DotProduct",
+				Value:        6019,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.6",
+			},
+			Enumerant{
+				Enumerant:    "RayCullMaskKHR",
+				Value:        6020,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CooperativeMatrixKHR",
+				Value:        6022,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ReplicatedCompositesEXT",
+				Value:        6024,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BitInstructions",
+				Value:        6025,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "GroupNonUniformRotateKHR",
+				Value:        6026,
+				Capabilities: []string{"GroupNonUniform",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FloatControls2",
+				Value:        6029,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "AtomicFloat32AddEXT",
+				Value:        6033,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "AtomicFloat64AddEXT",
+				Value:        6034,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "LongCompositesINTEL",
+				Value:        6089,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "OptNoneEXT",
+				Value:        6094,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "AtomicFloat16AddEXT",
+				Value:        6095,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "DebugInfoModuleINTEL",
+				Value:        6114,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "BFloat16ConversionINTEL",
+				Value:        6115,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SplitBarrierINTEL",
+				Value:        6141,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ArithmeticFenceEXT",
+				Value:        6144,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGAClusterAttributesV2INTEL",
+				Value:        6150,
+				Capabilities: []string{"FPGAClusterAttributesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGAKernelAttributesv2INTEL",
+				Value:        6161,
+				Capabilities: []string{"FPGAKernelAttributesINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPMaxErrorINTEL",
+				Value:        6169,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGALatencyControlINTEL",
+				Value:        6171,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "FPGAArgumentInterfacesINTEL",
+				Value:        6174,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "GlobalVariableHostAccessINTEL",
+				Value:        6187,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "GlobalVariableFPGADecorationsINTEL",
+				Value:        6189,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SubgroupBufferPrefetchINTEL",
+				Value:        6220,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "GroupUniformArithmeticKHR",
+				Value:        6400,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MaskedGatherScatterINTEL",
+				Value:        6427,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CacheControlsINTEL",
+				Value:        6441,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RegisterLimitsINTEL",
+				Value:        6460,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
 		},
 		Bases:      []*OperandKind {},
 	}
@@ -24579,16 +33418,16 @@ var (
 			Enumerant{
 				Enumerant:    "RayQueryCandidateIntersectionKHR",
 				Value:        0,
-				Capabilities: []string{"RayQueryProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "RayQueryCommittedIntersectionKHR",
 				Value:        1,
-				Capabilities: []string{"RayQueryProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -24600,23 +33439,23 @@ var (
 			Enumerant{
 				Enumerant:    "RayQueryCommittedIntersectionNoneKHR",
 				Value:        0,
-				Capabilities: []string{"RayQueryProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "RayQueryCommittedIntersectionTriangleKHR",
 				Value:        1,
-				Capabilities: []string{"RayQueryProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "RayQueryCommittedIntersectionGeneratedKHR",
 				Value:        2,
-				Capabilities: []string{"RayQueryProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 		},
 		Bases:      []*OperandKind {},
@@ -24628,17 +33467,360 @@ var (
 			Enumerant{
 				Enumerant:    "RayQueryCandidateIntersectionTriangleKHR",
 				Value:        0,
-				Capabilities: []string{"RayQueryProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
 			Enumerant{
 				Enumerant:    "RayQueryCandidateIntersectionAABBKHR",
 				Value:        1,
-				Capabilities: []string{"RayQueryProvisionalKHR",},
+				Capabilities: []string{"RayQueryKHR",},
 				Parameters:   []Parameter{},
-				Version:      "",
+				Version:      "None",
 			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindPackedVectorFormat = &OperandKind {
+		Kind:       "PackedVectorFormat",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "PackedVectorFormat4x8Bit",
+				Value:        0,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "1.6",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindCooperativeMatrixOperands = &OperandKind {
+		Kind:       "CooperativeMatrixOperands",
+		Category:   "BitEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "NoneKHR",
+				Value:        0x0000,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MatrixASignedComponentsKHR",
+				Value:        0x0001,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MatrixBSignedComponentsKHR",
+				Value:        0x0002,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MatrixCSignedComponentsKHR",
+				Value:        0x0004,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MatrixResultSignedComponentsKHR",
+				Value:        0x0008,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "SaturatingAccumulationKHR",
+				Value:        0x0010,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindCooperativeMatrixLayout = &OperandKind {
+		Kind:       "CooperativeMatrixLayout",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "RowMajorKHR",
+				Value:        0,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ColumnMajorKHR",
+				Value:        1,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RowBlockedInterleavedARM",
+				Value:        4202,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ColumnBlockedInterleavedARM",
+				Value:        4203,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindCooperativeMatrixUse = &OperandKind {
+		Kind:       "CooperativeMatrixUse",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "MatrixAKHR",
+				Value:        0,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MatrixBKHR",
+				Value:        1,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "MatrixAccumulatorKHR",
+				Value:        2,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindCooperativeMatrixReduce = &OperandKind {
+		Kind:       "CooperativeMatrixReduce",
+		Category:   "BitEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "Row",
+				Value:        0x0001,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "Column",
+				Value:        0x0002,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "2x2",
+				Value:        0x0004,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindTensorClampMode = &OperandKind {
+		Kind:       "TensorClampMode",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "Undefined",
+				Value:        0,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "Constant",
+				Value:        1,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ClampToEdge",
+				Value:        2,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "Repeat",
+				Value:        3,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "RepeatMirrored",
+				Value:        4,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindTensorAddressingOperands = &OperandKind {
+		Kind:       "TensorAddressingOperands",
+		Category:   "BitEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "None",
+				Value:        0x0000,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "TensorView",
+				Value:        0x0001,
+				Capabilities: []string{"CooperativeMatrixTensorAddressingNV",},
+				Parameters:   []Parameter{{OperandKindIdRef, ""},},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "DecodeFunc",
+				Value:        0x0002,
+				Capabilities: []string{"CooperativeMatrixBlockLoadsNV",},
+				Parameters:   []Parameter{{OperandKindIdRef, ""},},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindInitializationModeQualifier = &OperandKind {
+		Kind:       "InitializationModeQualifier",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "InitOnDeviceReprogramINTEL",
+				Value:        0,
+				Capabilities: []string{"GlobalVariableFPGADecorationsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "InitOnDeviceResetINTEL",
+				Value:        1,
+				Capabilities: []string{"GlobalVariableFPGADecorationsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindLoadCacheControl = &OperandKind {
+		Kind:       "LoadCacheControl",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "UncachedINTEL",
+				Value:        0,
+				Capabilities: []string{"CacheControlsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "CachedINTEL",
+				Value:        1,
+				Capabilities: []string{"CacheControlsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StreamingINTEL",
+				Value:        2,
+				Capabilities: []string{"CacheControlsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "InvalidateAfterReadINTEL",
+				Value:        3,
+				Capabilities: []string{"CacheControlsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "ConstCachedINTEL",
+				Value:        4,
+				Capabilities: []string{"CacheControlsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindStoreCacheControl = &OperandKind {
+		Kind:       "StoreCacheControl",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "UncachedINTEL",
+				Value:        0,
+				Capabilities: []string{"CacheControlsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "WriteThroughINTEL",
+				Value:        1,
+				Capabilities: []string{"CacheControlsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "WriteBackINTEL",
+				Value:        2,
+				Capabilities: []string{"CacheControlsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+			Enumerant{
+				Enumerant:    "StreamingINTEL",
+				Value:        3,
+				Capabilities: []string{"CacheControlsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindNamedMaximumNumberOfRegisters = &OperandKind {
+		Kind:       "NamedMaximumNumberOfRegisters",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "AutoINTEL",
+				Value:        0,
+				Capabilities: []string{"RegisterLimitsINTEL",},
+				Parameters:   []Parameter{},
+				Version:      "None",
+			},
+		},
+		Bases:      []*OperandKind {},
+	}
+	OperandKindFPEncoding = &OperandKind {
+		Kind:       "FPEncoding",
+		Category:   "ValueEnum",
+		Enumerants: []Enumerant {
 		},
 		Bases:      []*OperandKind {},
 	}
@@ -24691,6 +33873,13 @@ var (
 		},
 		Bases:      []*OperandKind {},
 	}
+	OperandKindLiteralFloat = &OperandKind {
+		Kind:       "LiteralFloat",
+		Category:   "Literal",
+		Enumerants: []Enumerant {
+		},
+		Bases:      []*OperandKind {},
+	}
 	OperandKindLiteralContextDependentNumber = &OperandKind {
 		Kind:       "LiteralContextDependentNumber",
 		Category:   "Literal",
@@ -24737,6 +33926,13 @@ var (
 		Kind:       "DebugInfoFlags",
 		Category:   "BitEnum",
 		Enumerants: []Enumerant {
+			Enumerant{
+				Enumerant:    "None",
+				Value:        0x0000,
+				Capabilities: []string{},
+				Parameters:   []Parameter{},
+				Version:      "",
+			},
 			Enumerant{
 				Enumerant:    "FlagIsProtected",
 				Value:        0x01,

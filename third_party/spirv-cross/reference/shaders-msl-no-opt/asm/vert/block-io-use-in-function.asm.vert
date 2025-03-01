@@ -92,9 +92,9 @@ struct LightContext
 
 struct main0_out
 {
-    float4 m_3_v_color [[user(locn1)]];
-    float2 m_3_v_texPos [[user(locn2)]];
-    float3 m_3_v_worldPosition [[user(locn3)]];
+    float4 m_4_v_color [[user(locn1)]];
+    float2 m_4_v_texPos [[user(locn2)]];
+    float3 m_4_v_worldPosition [[user(locn3)]];
     float4 gl_Position [[position]];
 };
 
@@ -106,23 +106,23 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-void DrawWorldVS(thread PerVertex& _3, thread float4& a_color, thread float2& a_texcoord, thread float3& a_position, thread float4& gl_Position, constant u_objToWorlds& _12, constant SceneSettings& _17)
+void DrawWorldVS(thread PerVertex& _4, thread float4& a_color, thread float2& a_texcoord, thread float3& a_position, thread float4& gl_Position, constant u_objToWorlds& _15, constant SceneSettings& _22)
 {
-    _3.v_color = a_color;
-    _3.v_texPos = a_texcoord;
-    _3.v_worldPosition = a_position;
-    float4 worldSpacePosition = _12.u_objToWorld * float4(a_position, 1.0);
-    gl_Position = _17.u_cameras[0].u_projectFromWorld * worldSpacePosition;
+    _4.v_color = a_color;
+    _4.v_texPos = a_texcoord;
+    _4.v_worldPosition = a_position;
+    float4 worldSpacePosition = _15.u_objToWorld * float4(a_position, 1.0);
+    gl_Position = _22.u_cameras[0].u_projectFromWorld * worldSpacePosition;
 }
 
-vertex main0_out main0(main0_in in [[stage_in]], constant u_objToWorlds& _12 [[buffer(0)]], constant SceneSettings& _17 [[buffer(1)]])
+vertex main0_out main0(main0_in in [[stage_in]], constant u_objToWorlds& _15 [[buffer(0)]], constant SceneSettings& _22 [[buffer(1)]])
 {
     main0_out out = {};
-    PerVertex _3 = {};
-    DrawWorldVS(_3, in.a_color, in.a_texcoord, in.a_position, out.gl_Position, _12, _17);
-    out.m_3_v_color = _3.v_color;
-    out.m_3_v_texPos = _3.v_texPos;
-    out.m_3_v_worldPosition = _3.v_worldPosition;
+    PerVertex _4 = {};
+    DrawWorldVS(_4, in.a_color, in.a_texcoord, in.a_position, out.gl_Position, _15, _22);
+    out.m_4_v_color = _4.v_color;
+    out.m_4_v_texPos = _4.v_texPos;
+    out.m_4_v_worldPosition = _4.v_worldPosition;
     return out;
 }
 

@@ -25,21 +25,21 @@ struct A
     B1 b1_array[4];
 };
 
-layout(binding = 0, std430) buffer _8_3
+layout(binding = 0, std430) buffer _10_4
 {
     A a_block;
     C c_block;
-} _3;
+} _4;
 
 void main()
 {
-    A _27;
-    _27.a = _3.c_block.c;
-    _27.b1.elem1 = _3.c_block.b2.elem2;
-    _27.b1_array[0].elem1 = _3.c_block.b2_array[0].elem2;
-    _27.b1_array[1].elem1 = _3.c_block.b2_array[1].elem2;
-    _27.b1_array[2].elem1 = _3.c_block.b2_array[2].elem2;
-    _27.b1_array[3].elem1 = _3.c_block.b2_array[3].elem2;
-    _3.a_block = _27;
+    A _24;
+    _24.a = _4.c_block.c;
+    _24.b1.elem1 = _4.c_block.b2.elem2;
+    _24.b1_array[0].elem1 = _4.c_block.b2_array[0].elem2;
+    _24.b1_array[1].elem1 = _4.c_block.b2_array[1].elem2;
+    _24.b1_array[2].elem1 = _4.c_block.b2_array[2].elem2;
+    _24.b1_array[3].elem1 = _4.c_block.b2_array[3].elem2;
+    _4.a_block = _24;
 }
 

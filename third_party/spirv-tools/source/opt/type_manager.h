@@ -144,17 +144,16 @@ class TypeManager {
   // |type| (e.g. should be called in loop of |type|'s decorations).
   void AttachDecoration(const Instruction& inst, Type* type);
 
-  Type* GetUIntType() {
-    Integer int_type(32, false);
-    return GetRegisteredType(&int_type);
-  }
+  Type* GetUIntType() { return GetIntType(32, false); }
 
   uint32_t GetUIntTypeId() { return GetTypeInstruction(GetUIntType()); }
 
-  Type* GetSIntType() {
-    Integer int_type(32, true);
+  Type* GetIntType(int32_t bitWidth, bool isSigned) {
+    Integer int_type(bitWidth, isSigned);
     return GetRegisteredType(&int_type);
   }
+
+  Type* GetSIntType() { return GetIntType(32, true); }
 
   uint32_t GetSIntTypeId() { return GetTypeInstruction(GetSIntType()); }
 
@@ -261,7 +260,9 @@ class TypeManager {
   // Returns an equivalent pointer to |type| built in terms of pointers owned by
   // |type_pool_|. For example, if |type| is a vec3 of bool, it will be rebuilt
   // replacing the bool subtype with one owned by |type_pool_|.
-  Type* RebuildType(const Type& type);
+  //
+  // The re-built type will have ID |type_id|.
+  Type* RebuildType(uint32_t type_id, const Type& type);
 
   // Completes the incomplete type |type|, by replaces all references to
   // ForwardPointer by the defining Pointer.

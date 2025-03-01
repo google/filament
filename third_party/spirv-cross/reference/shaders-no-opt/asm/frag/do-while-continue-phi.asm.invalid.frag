@@ -8,12 +8,12 @@ void main()
 {
     for (;;)
     {
-        bool _32;
+        bool _41;
         for (;;)
         {
             if (gl_FragCoord.x != gl_FragCoord.x)
             {
-                _32 = true;
+                _41 = true;
                 break;
             }
             if (false)
@@ -22,11 +22,11 @@ void main()
             }
             else
             {
-                _32 = false;
+                _41 = false;
                 break;
             }
         }
-        if (_32)
+        if (_41)
         {
             break;
         }

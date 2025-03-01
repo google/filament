@@ -1,4 +1,6 @@
 // Copyright (c) 2018 Google LLC.
+// Modifications Copyright (C) 2024 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +32,11 @@ bool DecorationTakesIdParameters(spv::Decoration type) {
     case spv::Decoration::AlignmentId:
     case spv::Decoration::MaxByteOffsetId:
     case spv::Decoration::HlslCounterBufferGOOGLE:
+    case spv::Decoration::NodeMaxPayloadsAMDX:
+    case spv::Decoration::NodeSharesPayloadLimitsWithAMDX:
+    case spv::Decoration::PayloadNodeArraySizeAMDX:
+    case spv::Decoration::PayloadNodeNameAMDX:
+    case spv::Decoration::PayloadNodeBaseIndexAMDX:
       return true;
     default:
       break;
@@ -123,12 +130,14 @@ spv_result_t ValidateDecorationTarget(ValidationState_t& _, spv::Decoration dec,
     case spv::Decoration::ArrayStride:
       if (target->opcode() != spv::Op::OpTypeArray &&
           target->opcode() != spv::Op::OpTypeRuntimeArray &&
-          target->opcode() != spv::Op::OpTypePointer) {
+          target->opcode() != spv::Op::OpTypePointer &&
+          target->opcode() != spv::Op::OpTypeUntypedPointerKHR) {
         return fail(0) << "must be an array or pointer type";
       }
       break;
     case spv::Decoration::BuiltIn:
       if (target->opcode() != spv::Op::OpVariable &&
+          target->opcode() != spv::Op::OpUntypedVariableKHR &&
           !spvOpcodeIsConstant(target->opcode())) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "BuiltIns can only target variables, structure members or "
@@ -139,7 +148,8 @@ spv_result_t ValidateDecorationTarget(ValidationState_t& _, spv::Decoration dec,
         if (!spvOpcodeIsConstant(target->opcode())) {
           return fail(0) << "must be a constant for WorkgroupSize";
         }
-      } else if (target->opcode() != spv::Op::OpVariable) {
+      } else if (target->opcode() != spv::Op::OpVariable &&
+                 target->opcode() != spv::Op::OpUntypedVariableKHR) {
         return fail(0) << "must be a variable";
       }
       break;
@@ -160,11 +170,14 @@ spv_result_t ValidateDecorationTarget(ValidationState_t& _, spv::Decoration dec,
     case spv::Decoration::Stream:
     case spv::Decoration::RestrictPointer:
     case spv::Decoration::AliasedPointer:
+    case spv::Decoration::PerPrimitiveEXT:
       if (target->opcode() != spv::Op::OpVariable &&
-          target->opcode() != spv::Op::OpFunctionParameter) {
+          target->opcode() != spv::Op::OpUntypedVariableKHR &&
+          target->opcode() != spv::Op::OpFunctionParameter &&
+          target->opcode() != spv::Op::OpRawAccessChainNV) {
         return fail(0) << "must be a memory object declaration";
       }
-      if (_.GetIdOpcode(target->type_id()) != spv::Op::OpTypePointer) {
+      if (!_.IsPointerType(target->type_id())) {
         return fail(0) << "must be a pointer type";
       }
       break;
@@ -175,7 +188,8 @@ spv_result_t ValidateDecorationTarget(ValidationState_t& _, spv::Decoration dec,
     case spv::Decoration::Binding:
     case spv::Decoration::DescriptorSet:
     case spv::Decoration::InputAttachmentIndex:
-      if (target->opcode() != spv::Op::OpVariable) {
+      if (target->opcode() != spv::Op::OpVariable &&
+          target->opcode() != spv::Op::OpUntypedVariableKHR) {
         return fail(0) << "must be a variable";
       }
       break;
@@ -193,7 +207,8 @@ spv_result_t ValidateDecorationTarget(ValidationState_t& _, spv::Decoration dec,
     switch (dec) {
       case spv::Decoration::Location:
       case spv::Decoration::Component:
-        // Location is used for input, output and ray tracing stages.
+        // Location is used for input, output, tile image, and ray tracing
+        // stages.
         if (sc != spv::StorageClass::Input && sc != spv::StorageClass::Output &&
             sc != spv::StorageClass::RayPayloadKHR &&
             sc != spv::StorageClass::IncomingRayPayloadKHR &&
@@ -201,7 +216,8 @@ spv_result_t ValidateDecorationTarget(ValidationState_t& _, spv::Decoration dec,
             sc != spv::StorageClass::CallableDataKHR &&
             sc != spv::StorageClass::IncomingCallableDataKHR &&
             sc != spv::StorageClass::ShaderRecordBufferKHR &&
-            sc != spv::StorageClass::HitObjectAttributeNV) {
+            sc != spv::StorageClass::HitObjectAttributeNV &&
+            sc != spv::StorageClass::TileImageEXT) {
           return _.diag(SPV_ERROR_INVALID_ID, target)
                  << _.VkErrorID(6672) << _.SpvDecorationString(dec)
                  << " decoration must not be applied to this storage class";
@@ -262,6 +278,34 @@ spv_result_t ValidateDecorate(ValidationState_t& _, const Instruction* inst) {
              << _.VkErrorID(4669) << "OpDecorate decoration '"
              << _.SpvDecorationString(decoration)
              << "' is not valid for the Vulkan execution environment.";
+    }
+  }
+
+  if (decoration == spv::Decoration::FPFastMathMode) {
+    if (_.HasDecoration(target_id, spv::Decoration::NoContraction)) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "FPFastMathMode and NoContraction cannot decorate the same "
+                "target";
+    }
+    auto mask = inst->GetOperandAs<spv::FPFastMathModeMask>(2);
+    if ((mask & spv::FPFastMathModeMask::AllowTransform) !=
+            spv::FPFastMathModeMask::MaskNone &&
+        ((mask & (spv::FPFastMathModeMask::AllowContract |
+                  spv::FPFastMathModeMask::AllowReassoc)) !=
+         (spv::FPFastMathModeMask::AllowContract |
+          spv::FPFastMathModeMask::AllowReassoc))) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "AllowReassoc and AllowContract must be specified when "
+                "AllowTransform is specified";
+    }
+  }
+
+  // This is checked from both sides since we register decorations as we go.
+  if (decoration == spv::Decoration::NoContraction) {
+    if (_.HasDecoration(target_id, spv::Decoration::FPFastMathMode)) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "FPFastMathMode and NoContraction cannot decorate the same "
+                "target";
     }
   }
 

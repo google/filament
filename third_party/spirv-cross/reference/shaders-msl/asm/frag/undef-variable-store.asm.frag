@@ -3,8 +3,8 @@
 
 using namespace metal;
 
-constant float4 _38 = {};
-constant float4 _47 = {};
+constant float4 _48 = {};
+constant float4 _31 = {};
 
 struct main0_out
 {
@@ -14,24 +14,24 @@ struct main0_out
 fragment main0_out main0()
 {
     main0_out out = {};
-    float4 _27;
+    float4 _37;
     do
     {
-        float2 _26 = float2(0.0);
-        if (_26.x != 0.0)
+        float2 _35 = float2(0.0);
+        if (_35.x != 0.0)
         {
-            _27 = float4(1.0, 0.0, 0.0, 1.0);
+            _37 = float4(1.0, 0.0, 0.0, 1.0);
             break;
         }
         else
         {
-            _27 = float4(1.0, 1.0, 0.0, 1.0);
+            _37 = float4(1.0, 1.0, 0.0, 1.0);
             break;
         }
-        _27 = _38;
+        _37 = _48;
         break;
     } while (false);
-    out._entryPointOutput = _27;
+    out._entryPointOutput = _37;
     return out;
 }
 

@@ -6,9 +6,12 @@
 #else
 #error No extension available for 64-bit integers.
 #endif
-#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference2 : require
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
+layout(buffer_reference) buffer uintPointer;
+layout(buffer_reference) buffer uint8_tPointer;
+layout(buffer_reference) buffer uint8_t12_stride_1Pointer;
 layout(buffer_reference) buffer uint8_tPointer
 {
     uint8_t value;
@@ -19,7 +22,7 @@ layout(buffer_reference, buffer_reference_align = 4) buffer uintPointer
     uint value;
 };
 
-layout(buffer_reference, buffer_reference_align = 1) buffer uint8_t12_Pointer
+layout(std430, buffer_reference, buffer_reference_align = 1) buffer uint8_t12_stride_1Pointer
 {
     uint8_t value[12];
 };
@@ -27,12 +30,12 @@ layout(buffer_reference, buffer_reference_align = 1) buffer uint8_t12_Pointer
 layout(set = 0, binding = 0, std430) buffer _7_2
 {
     uint8_tPointer _m0;
-    uint8_t12_Pointer _m1;
+    uint8_t12_stride_1Pointer _m1;
 } _2;
 
 uintPointer _23()
 {
-    uint8_t12_Pointer _26 = _2._m1;
+    uint8_t12_stride_1Pointer _26 = _2._m1;
     uintPointer _29 = uintPointer(uint64_t(_26) + 16ul);
     _29.value = 1u;
     return _29;

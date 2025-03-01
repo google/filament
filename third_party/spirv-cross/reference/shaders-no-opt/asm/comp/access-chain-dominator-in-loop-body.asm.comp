@@ -4,18 +4,18 @@ layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 layout(binding = 0, std430) buffer SSBO
 {
     int values[];
-} _4;
+} _6;
 
 void main()
 {
-    int _17 = 0;
+    int _51 = 0;
     for (;;)
     {
-        if (_17 < 100)
+        if (_51 < 100)
         {
-            int _24 = _4.values[_17];
-            _4.values[_24] = _17;
-            _17 = _4.values[_24 + 1];
+            int _41 = _6.values[_51];
+            _6.values[_41] = _51;
+            _51 = _6.values[_41 + 1];
             continue;
         }
         else

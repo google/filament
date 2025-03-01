@@ -13,6 +13,13 @@
       "subrepo" : "spirv/SPIRV-Headers",
       "subdir" : "External/spirv-tools/external/spirv-headers",
       "commit" : "gitlab-prelim-rc4"
+    },
+    {
+      "name": "googletest",
+      "site": "github",
+      "subrepo": "google/googletest",
+      "subdir": "External/googletest",
+      "commit": "v1.14.0"
     }
   ]
 }

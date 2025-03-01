@@ -55,10 +55,10 @@ TEST_P(OpDecorateSimpleTest, AnySimpleDecoration) {
                                  {1, uint32_t(std::get<1>(GetParam()).value())},
                                  std::get<1>(GetParam()).operands())));
   // Also check disassembly.
-  EXPECT_THAT(
-      EncodeAndDecodeSuccessfully(input.str(), SPV_BINARY_TO_TEXT_OPTION_NONE,
-                                  std::get<0>(GetParam())),
-      Eq(input.str()));
+  EXPECT_THAT(EncodeAndDecodeSuccessfully(
+                  input.str(), SPV_BINARY_TO_TEXT_OPTION_NONE,
+                  SPV_TEXT_TO_BINARY_OPTION_NONE, std::get<0>(GetParam())),
+              Eq(input.str()));
 }
 
 // Like above, but parameters to the decoration are IDs.
@@ -78,10 +78,10 @@ TEST_P(OpDecorateSimpleIdTest, AnySimpleDecoration) {
                                  {1, uint32_t(std::get<1>(GetParam()).value())},
                                  std::get<1>(GetParam()).operands())));
   // Also check disassembly.
-  EXPECT_THAT(
-      EncodeAndDecodeSuccessfully(input.str(), SPV_BINARY_TO_TEXT_OPTION_NONE,
-                                  std::get<0>(GetParam())),
-      Eq(input.str()));
+  EXPECT_THAT(EncodeAndDecodeSuccessfully(
+                  input.str(), SPV_BINARY_TO_TEXT_OPTION_NONE,
+                  SPV_TEXT_TO_BINARY_OPTION_NONE, std::get<0>(GetParam())),
+              Eq(input.str()));
 }
 
 #define CASE(NAME) spv::Decoration::NAME, #NAME
@@ -460,10 +460,10 @@ TEST_P(OpMemberDecorateSimpleTest, AnySimpleDecoration) {
                          {1, 42, uint32_t(std::get<1>(GetParam()).value())},
                          std::get<1>(GetParam()).operands())));
   // Also check disassembly.
-  EXPECT_THAT(
-      EncodeAndDecodeSuccessfully(input.str(), SPV_BINARY_TO_TEXT_OPTION_NONE,
-                                  std::get<0>(GetParam())),
-      Eq(input.str()));
+  EXPECT_THAT(EncodeAndDecodeSuccessfully(
+                  input.str(), SPV_BINARY_TO_TEXT_OPTION_NONE,
+                  SPV_TEXT_TO_BINARY_OPTION_NONE, std::get<0>(GetParam())),
+              Eq(input.str()));
 }
 
 #define CASE(NAME) spv::Decoration::NAME, #NAME
