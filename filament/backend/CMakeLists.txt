@@ -239,11 +239,19 @@ endif()
 
 if (FILAMENT_SUPPORTS_WEBGPU)
     list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatform.h
+            src/webgpu/platform/WebGPUPlatform.cpp
+            src/webgpu/WebGPUConstants.h
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
-            src/webgpu/WebGPUPlatform.cpp
-            src/webgpu/WebGPUPlatform.h
     )
+    if (LINUX OR WIN32)
+        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformLinuxWindows.cpp)
+    elseif (APPLE OR IOS)
+        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformApple.mm)
+    elseif (ANDROID)
+        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformAndroid.cpp)
+    endif()
 endif()
 
 if (ANDROID)
