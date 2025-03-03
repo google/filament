@@ -1408,6 +1408,9 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
 
 void MetalDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
     FILAMENT_CHECK_PRECONDITION(isInRenderPass(mContext))
             << "setPushConstant must be called inside a render pass.";
     assert_invariant(static_cast<size_t>(stage) < mContext->currentPushConstants.size());
@@ -1715,6 +1718,9 @@ void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
 }
 
 void MetalDriver::bindPipeline(PipelineState const& ps) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "bindPipeline() without a valid command encoder.";
     DEBUG_LOG("bindPipeline(ps = { program = %d }))\n", ps.program.getId());
@@ -1870,6 +1876,9 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
 }
 
 void MetalDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "bindRenderPrimitive() without a valid command encoder.";
 
