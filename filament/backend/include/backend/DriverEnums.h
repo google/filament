@@ -1069,7 +1069,7 @@ struct ExternalSamplerKey {
         }
     };
     struct EqualTo {
-        friend bool operator==(const ExternalSamplerKey& lhs, const ExternalSamplerKey& rhs) {
+        bool operator()(const ExternalSamplerKey& lhs, const ExternalSamplerKey& rhs) const noexcept {
             return (lhs.mYcbcr == rhs.mYcbcr && lhs.mSpm == rhs.mSpm && lhs.mExtFmt == rhs.mExtFmt);
         }
     };

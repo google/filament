@@ -3558,6 +3558,18 @@ void OpenGLDriver::updateDescriptorSetTexture(
     ds->update(mContext, binding, t, params);
 }
 
+void OpenGLDriver::updateDescriptorSetExternalTexture(
+    backend::DescriptorSetHandle dsh,
+    backend::descriptor_binding_t binding,
+    backend::TextureHandle th,
+    SamplerParams params,
+    SamplerYcbcrConversion conversion,
+    uint32_t format) {
+    GLDescriptorSet* ds = handle_cast<GLDescriptorSet*>(dsh);
+    GLTexture* t = th ? handle_cast<GLTexture*>(th) : nullptr;
+    ds->update(mContext, binding, t, params);
+}
+
 void OpenGLDriver::flush(int) {
     DEBUG_MARKER()
     auto& gl = mContext;

@@ -29,7 +29,8 @@ class VulkanSamplerCache {
 public:
     explicit VulkanSamplerCache(VkDevice device);
     VkSampler getSampler(SamplerParams params) noexcept;
-    VkSampler getSampler(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt) noexcept;
+    VkSampler getExternalSampler(SamplerParams spm, SamplerYcbcrConversion ycbcr, uint32_t extFmt) noexcept;
+    void      storeExternalSampler(SamplerParams spm, SamplerYcbcrConversion ycbcr, uint32_t extFmt, VkSampler sampler) noexcept;
     void terminate() noexcept;
 private:
     VkDevice mDevice;

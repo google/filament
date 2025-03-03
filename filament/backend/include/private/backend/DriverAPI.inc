@@ -287,6 +287,15 @@ DECL_DRIVER_API_N(updateDescriptorSetBuffer,
         uint32_t, size
 )
 
+DECL_DRIVER_API_N(updateDescriptorSetExternalTexture,
+        backend::DescriptorSetHandle, dsh,
+        backend::descriptor_binding_t, binding,
+        backend::TextureHandle, th,
+        SamplerParams, params,
+        SamplerYcbcrConversion, conversion,
+        uint32_t, format
+)
+
 DECL_DRIVER_API_N(updateDescriptorSetTexture,
         backend::DescriptorSetHandle, dsh,
         backend::descriptor_binding_t, binding,

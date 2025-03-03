@@ -383,6 +383,16 @@ void NoopDriver::updateDescriptorSetTexture(
         SamplerParams params) {
 }
 
+void NoopDriver::updateDescriptorSetExternalTexture(
+    backend::DescriptorSetHandle dsh,
+    backend::descriptor_binding_t binding,
+    backend::TextureHandle th,
+    SamplerParams params,
+    SamplerYcbcrConversion conversion,
+    uint32_t format) {
+
+}
+
 void NoopDriver::bindDescriptorSet(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_set_t set,

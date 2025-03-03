@@ -400,6 +400,26 @@ void VulkanDriver::updateDescriptorSetBuffer(
     mDescriptorSetManager.updateBuffer(set, binding, buffer, offset, size);
 }
 
+void VulkanDriver::updateDescriptorSetExternalTexture(
+    backend::DescriptorSetHandle dsh,
+    backend::descriptor_binding_t binding,
+    backend::TextureHandle th,
+    SamplerParams params,
+    SamplerYcbcrConversion conversion,
+    uint32_t format) {
+    FVK_SYSTRACE_SCOPE();
+    auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
+    auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
+    assert_invariant(texture->target == SamplerType::SAMPLER_EXTERNAL);
+
+    VkSampler vksampler = mSamplerCache.getExternalSampler(params, conversion, format);
+    if (vksampler == nullptr) {
+        // ask the platform to create it
+        vksampler = mPlatform->createExternalSampler(conversion, params, format);
+    }
+    mDescriptorSetManager.updateSampler(set, binding, texture, vksampler);
+}
+
 void VulkanDriver::updateDescriptorSetTexture(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_binding_t binding,
