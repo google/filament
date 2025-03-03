@@ -43,14 +43,16 @@ bool initBinder() {
         }
     }
     if (!g_driver.library) {
-        // The library has been linked explicitly during compile.
+        // If Filament was built as a dynamic library.
         g_driver.OSMesaGetProcAddress = (ProcAddressFunc) dlsym(RTLD_LOCAL, "OSMesaGetProcAddress");
     } else {
+        // Linking against a libosmesa.so.
         g_driver.OSMesaGetProcAddress =
                 (ProcAddressFunc) dlsym(g_driver.library, "OSMesaGetProcAddress");
     }
 
     if (!g_driver.OSMesaGetProcAddress) {
+        // If statically linkg OSMesa.
         g_driver.OSMesaGetProcAddress = (ProcAddressFunc) OSMesaGetProcAddress;
     }
 

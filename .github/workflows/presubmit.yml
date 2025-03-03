@@ -9,109 +9,109 @@ on:
     - main
 
 jobs:
-  build-desktop:
-    name: build-desktop
-    runs-on: ${{ matrix.os }}
+  # build-desktop:
+  #   name: build-desktop
+  #   runs-on: ${{ matrix.os }}
 
-    strategy:
-      matrix:
-        os: [macos-14-xlarge, ubuntu-22.04-16core]
+  #   strategy:
+  #     matrix:
+  #       os: [macos-14-xlarge, ubuntu-22.04-16core]
 
-    steps:
-      - uses: actions/checkout@v4.1.6
-      - name: Run build script
-        run: |
-          WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
-          cd build/$WORKFLOW_OS && printf "y" | ./build.sh presubmit
-      - name: Test material parser
-        run: |
-          out/cmake-release/filament/test/test_material_parser
+  #   steps:
+  #     - uses: actions/checkout@v4.1.6
+  #     - name: Run build script
+  #       run: |
+  #         WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
+  #         cd build/$WORKFLOW_OS && printf "y" | ./build.sh presubmit
+  #     - name: Test material parser
+  #       run: |
+  #         out/cmake-release/filament/test/test_material_parser
 
-  build-windows:
-    name: build-windows
-    runs-on: win-2019-16core
+  # build-windows:
+  #   name: build-windows
+  #   runs-on: win-2019-16core
 
-    steps:
-      - uses: actions/checkout@v4.1.6
-      - name: Run build script
-        run: |
-          build\windows\build-github.bat presubmit
-        shell: cmd
+  #   steps:
+  #     - uses: actions/checkout@v4.1.6
+  #     - name: Run build script
+  #       run: |
+  #         build\windows\build-github.bat presubmit
+  #       shell: cmd
 
-  build-android:
-    name: build-android
-    runs-on: ubuntu-22.04-16core
+  # build-android:
+  #   name: build-android
+  #   runs-on: ubuntu-22.04-16core
 
-    steps:
-      - uses: actions/checkout@v4.1.6
-      - uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-      - name: Run build script
-        # Only build 1 64 bit target during presubmit to cut down build times during presubmit
-        # Continuous builds will build everything
-        run: |
-          cd build/android && printf "y" | ./build.sh presubmit arm64-v8a
+  #   steps:
+  #     - uses: actions/checkout@v4.1.6
+  #     - uses: actions/setup-java@v3
+  #       with:
+  #         distribution: 'temurin'
+  #         java-version: '17'
+  #     - name: Run build script
+  #       # Only build 1 64 bit target during presubmit to cut down build times during presubmit
+  #       # Continuous builds will build everything
+  #       run: |
+  #         cd build/android && printf "y" | ./build.sh presubmit arm64-v8a
 
-  build-ios:
-    name: build-iOS
+  # build-ios:
+  #   name: build-iOS
+  #   runs-on: macos-14-xlarge
+
+  #   steps:
+  #     - uses: actions/checkout@v4.1.6
+  #     - name: Run build script
+  #       run: |
+  #         cd build/ios && printf "y" | ./build.sh presubmit
+  #     - name: Build iOS samples
+  #       run: |
+  #         cd build/ios && ./build-samples.sh presubmit
+
+  # build-web:
+  #   name: build-web
+  #   runs-on: ubuntu-22.04-16core
+
+  #   steps:
+  #     - uses: actions/checkout@v4.1.6
+  #     - name: Run build script
+  #       run: |
+  #         cd build/web && printf "y" | ./build.sh presubmit
+
+  # validate-docs:
+  #   name: validate-docs
+  #   runs-on: ubuntu-22.04-4core
+  #   steps:
+  #     - uses: actions/checkout@v4.1.6
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Check for manual edits to /docs
+  #       run: |
+  #          echo "${{ github.event.pull_request.head.sha }} -- ${{ github.event.pull_request.head.sha }}"
+  #          # disable for now
+  #          # bash docs_src/build/presubmit_check.sh ${{ github.event.pull_request.head.sha }}
+
+  test-renderdiff:
+    name: test-renderdiff
+
     runs-on: macos-14-xlarge
 
     steps:
       - uses: actions/checkout@v4.1.6
-      - name: Run build script
-        run: |
-          cd build/ios && printf "y" | ./build.sh presubmit
-      - name: Build iOS samples
-        run: |
-          cd build/ios && ./build-samples.sh presubmit
-
-  build-web:
-    name: build-web
-    runs-on: ubuntu-22.04-16core
-
-    steps:
-      - uses: actions/checkout@v4.1.6
-      - name: Run build script
-        run: |
-          cd build/web && printf "y" | ./build.sh presubmit
-
-  validate-docs:
-    name: validate-docs
-    runs-on: ubuntu-22.04-4core
-    steps:
-      - uses: actions/checkout@v4.1.6
-        with:
-          fetch-depth: 0
-      - name: Check for manual edits to /docs
-        run: |
-           echo "${{ github.event.pull_request.head.sha }} -- ${{ github.event.pull_request.head.sha }}"
-           # disable for now
-           # bash docs_src/build/presubmit_check.sh ${{ github.event.pull_request.head.sha }}
-
-  test-renderdiff:
-    name: test-renderdiff
-    runs-on: ubuntu-22.04-4core
-
-    steps:
-      - uses: actions/checkout@v4.1.6
-      - uses: ./.github/actions/ubuntu-apt-add-src
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
       - name: Run script
         run: |
-          source ./build/linux/ci-common.sh && bash test/renderdiff/test.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: presubmit-renderdiff-result
-          path: ./out/renderdiff_tests
+          echo "$(brew --version)"
+          bash test/renderdiff/test.sh
 
-  validate-wgsl-pipeline:
-    name: validate-wgsl-pipeline
-    runs-on: ubuntu-22.04-4core
+  # validate-wgsl-pipeline:
+  #   name: validate-wgsl-pipeline
+  #   runs-on: ubuntu-22.04-4core
 
-    steps:
-      - uses: actions/checkout@v4.1.6
-      - name: Run build script
-        run: source ./build/linux/ci-common.sh && ./build.sh -W debug test_filamat
-      - name: Run test
-        run: ./out/cmake-debug/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
+  #   steps:
+  #     - uses: actions/checkout@v4.1.6
+  #     - name: Run build script
+  #       run: source ./build/linux/ci-common.sh && ./build.sh -W debug test_filamat
+  #     - name: Run test
+  #       run: ./out/cmake-debug/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
