@@ -409,7 +409,14 @@ void VulkanDriver::updateDescriptorSetTexture(
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
-    VkSampler const vksampler = mSamplerCache.getSampler(params);
+    VkSampler vksampler = nullptr;
+    if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
+        //vksampler = mSamplerCache.getSamplerExternal(params);
+    }
+    else {
+        vksampler = mSamplerCache.getSampler(params);
+    }
+    
     mDescriptorSetManager.updateSampler(set, binding, texture, vksampler);
 }
 
@@ -428,7 +435,7 @@ void VulkanDriver::finish(int dummy) {
 }
 
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
-        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh, 
         PrimitiveType pt) {
     auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);

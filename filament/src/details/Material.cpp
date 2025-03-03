@@ -1153,7 +1153,7 @@ void FMaterial::processDescriptorSets(FEngine& engine, Builder const& builder, M
             const auto& samplerName = 
                 mSamplerInterfaceBlock.getSamplerInfo(binding.binding)->name;
             const auto& sampler = builder->mExternalInfos.find(samplerName);
-            assert_invariant(sampler == builder->mExternalInfos.end());
+            assert_invariant(sampler != builder->mExternalInfos.end());
             binding.chroma = sampler->second.mChroma;
             binding.internalFormat = sampler->second.mInternalFormat;
             binding.sampler = sampler->second.mSampler;

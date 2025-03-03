@@ -98,6 +98,17 @@ constexpr inline VkBool32 getCompareEnable(SamplerCompareMode mode) noexcept {
 VulkanSamplerCache::VulkanSamplerCache(VkDevice device)
     : mDevice(device) {}
 
+VkSampler VulkanSamplerCache::getSampler(SamplerYcbcrConversion ycbcr, 
+        SamplerParams spm, uint32_t extFmt) noexcept {
+    auto iter = mCacheExternalSamplers.find({ ycbcr, spm , extFmt });
+    if (UTILS_LIKELY(iter != mCacheExternalSamplers.end())) {
+        return iter->second;
+    }
+    VkSampler sampler;
+
+    return sampler;
+}
+
 VkSampler VulkanSamplerCache::getSampler(SamplerParams params) noexcept {
     auto iter = mCache.find(params);
     if (UTILS_LIKELY(iter != mCache.end())) {

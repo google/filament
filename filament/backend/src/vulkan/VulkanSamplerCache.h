@@ -29,10 +29,13 @@ class VulkanSamplerCache {
 public:
     explicit VulkanSamplerCache(VkDevice device);
     VkSampler getSampler(SamplerParams params) noexcept;
+    VkSampler getSampler(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt) noexcept;
     void terminate() noexcept;
 private:
     VkDevice mDevice;
     tsl::robin_map<SamplerParams, VkSampler, SamplerParams::Hasher, SamplerParams::EqualTo> mCache;
+    tsl::robin_map<ExternalSamplerKey, VkSampler, ExternalSamplerKey::Hasher, ExternalSamplerKey::EqualTo> 
+        mCacheExternalSamplers;
 };
 
 } // namespace filament::backend

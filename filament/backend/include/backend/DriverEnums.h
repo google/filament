@@ -931,7 +931,7 @@ struct SamplerParams { // NOLINT
     uint8_t padding2                : 8;    //!< reserved. must be 0.
 
     struct Hasher {
-        size_t operator()(SamplerParams p) const noexcept {
+        size_t operator()(const SamplerParams p) const noexcept {
             // we don't use std::hash<> here, so we don't have to include <functional>
             return *reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&p));
         }
@@ -996,7 +996,7 @@ struct SamplerYcbcrConversion { // NOLINT
     uint8_t                     padding3      : 5;
 
     struct Hasher {
-        size_t operator()(SamplerYcbcrConversion p) const noexcept {
+        size_t operator()(const SamplerYcbcrConversion p) const noexcept {
             // we don't use std::hash<> here, so we don't have to include <functional>
             return *reinterpret_cast<uint32_t const*>
                 (reinterpret_cast<char const*>(&p));
@@ -1053,6 +1053,30 @@ static_assert(sizeof(SamplerYcbcrConversion) == 4);
 // see android/.../TextureSampler.cpp
 static_assert(sizeof(SamplerYcbcrConversion) <= sizeof(uint64_t),
     "SamplerYcbcrConversion must be no more than 64 bits");
+
+struct ExternalSamplerKey {
+    ExternalSamplerKey(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt):
+        mYcbcr(ycbcr), mSpm(spm), mExtFmt(extFmt) {
+    }
+    struct Hasher {
+        size_t operator()(const ExternalSamplerKey& k) const {
+            SamplerYcbcrConversion::Hasher ycbcrH;
+            SamplerParams::Hasher spmH;
+
+            auto h1 = ycbcrH(k.mYcbcr);
+            auto h2 = spmH(k.mSpm);
+            return h1 ^ h1 ^ k.mExtFmt;
+        }
+    };
+    struct EqualTo {
+        friend bool operator==(const ExternalSamplerKey& lhs, const ExternalSamplerKey& rhs) {
+            return (lhs.mYcbcr == rhs.mYcbcr && lhs.mSpm == rhs.mSpm && lhs.mExtFmt == rhs.mExtFmt);
+        }
+    };
+    SamplerYcbcrConversion mYcbcr;
+    SamplerParams mSpm;
+    uint32_t mExtFmt;
+};
 
 enum class DescriptorType : uint8_t {
     UNIFORM_BUFFER,
