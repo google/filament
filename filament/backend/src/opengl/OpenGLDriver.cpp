@@ -3565,9 +3565,7 @@ void OpenGLDriver::updateDescriptorSetExternalTexture(
     SamplerParams params,
     SamplerYcbcrConversion conversion,
     uint32_t format) {
-    GLDescriptorSet* ds = handle_cast<GLDescriptorSet*>(dsh);
-    GLTexture* t = th ? handle_cast<GLTexture*>(th) : nullptr;
-    ds->update(mContext, binding, t, params);
+    updateDescriptorSetTexture(dsh, binding, th, params);
 }
 
 void OpenGLDriver::flush(int) {
