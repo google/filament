@@ -47,6 +47,8 @@ option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
 
 option(FILAMENT_SUPPORTS_OSMESA "Enable OSMesa (headless GL context) for Filament" OFF)
 
+option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)
+
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
 )
@@ -534,14 +536,11 @@ else()
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
 endif()
 
-# By default, link in matdbg/fgviewer for Desktop + Debug only since it pulls in filamat and a web server.
+# By default, link in matdbg for Desktop + Debug only since it pulls in filamat and a web server.
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND IS_HOST_PLATFORM)
     option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" ON)
-    # TODO: Uncomment below when fgviewer is ready
-    # option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" ON)
 else()
     option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" OFF)
-    option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)
 endif()
 
 # Only optimize materials in Release mode (so error message lines match the source code)
@@ -798,11 +797,10 @@ if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
     if (FILAMENT_ENABLE_MATDBG OR IS_HOST_PLATFORM)
         add_subdirectory(${LIBRARIES}/matdbg)
     endif()
+endif()
 
-    # TODO: Uncomment below when fgviewer is ready
-    # if (FILAMENT_ENABLE_FGVIEWER OR IS_HOST_PLATFORM)
-    #     add_subdirectory(${LIBRARIES}/fgviewer)
-    # endif()
+if (FILAMENT_ENABLE_FGVIEWER)
+    add_subdirectory(${LIBRARIES}/fgviewer)
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
