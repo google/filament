@@ -1,0 +1,14 @@
+Name: WebGPU Conformance Test Suite
+Short Name: webgpu-cts
+Version: N/A
+Revision: DEPS
+URL: https://gpuweb.github.io/cts/
+SOURCE CODE: git clone https://github.com/gpuweb/cts.git
+Security Critical: no
+Shipped: no
+License: BSD-3-Clause
+
+Description:
+(This README is for ../../webgpu-cts/. This directory is part of dawn.)
+The WebGPU conformance test suite. Not used directly by Dawn, only transitively
+by Chromium. There, it is run under Chromium's GPU testing infrastructure.

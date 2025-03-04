@@ -1,0 +1,29 @@
+From: Brian Paul <brian_paul 'at' avid.com>
+Date: Tue, 14 Sep 1999 16:27:11 -0400
+
+Mesa 3.1 extension support:1
+
+GL_ARB_multitexture
+GL_EXT_abgr
+GL_EXT_blend_color
+GL_EXT_blend_logic_op
+GL_EXT_blend_minmax
+GL_EXT_blend_subtract
+GL_EXT_clip_volume_hint
+GL_EXT_compiled_vertex_array
+GL_EXT_paletted_texture
+GL_EXT_point_parameters
+GL_EXT_polygon_offset
+GL_EXT_rescale_normal
+GL_EXT_shared_texture_palette
+GL_EXT_stencil_wrap
+GL_EXT_texture3D
+GL_EXT_texture_object
+GL_EXT_vertex_array
+GL_EXT_vertex_array_set
+GL_INGR_blend_func_separate
+GL_MESA_resize_buffers
+GL_MESA_window_pos
+GL_NV_texgen_reflection
+GL_PGI_misc_hints
+GL_SGIS_texture_edge_clamp

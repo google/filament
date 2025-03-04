@@ -1,0 +1,190 @@
+Name
+
+    GREMEDY_string_marker
+
+Name Strings
+
+    GL_GREMEDY_string_marker
+
+Contributors
+
+    Dirk Reiners
+    Yaki Tebeka
+
+Contact
+
+    Dirk Reiners, Iowa State University (dreiners 'at' iastate.edu)
+    Yaki Tebeka, Graphic Remedy (yaki 'at' gremedy.com)
+
+Status
+
+    Implemented by gDEBugger (Version 1.2.1 or later)
+
+Version
+
+    Last Modified Date: October 16, 2007
+    Author Revision: 1.4
+
+Number
+
+    311
+
+Dependencies
+
+    OpenGL 1.0 is required.
+    
+    The extension is written against the OpenGL 1.5 Specification.
+
+Overview
+
+    This extension defines a mechanism to insert textual markers into
+    the OpenGL stream. 
+
+    When debugging or profiling an OpenGL application some of the most
+    important tools are stream loggers, which just output a list of the
+    called OpenGL commands, and profilers, which show at which points
+    the pipeline is bottlenecked for a given part of the frame. The
+    problem in using these is that there is a definite loss of
+    information between the application and the used debugger/profiler.
+    The application generally has a pretty good idea what is rendered
+    when (e.g. rendering background, landscape, building, players,
+    particle effects, bullets etc.), but the debugger/profiler only
+    sees the OpenGL stream. To analyze the stream developers have to
+    guess what is done when by following the program code and the log
+    output in parallel, which can get difficult for systems that
+    restructure their internal pipeline or do lazy changes.
+
+    This extension is really only useful for these debuggers and
+    profilers, and not for actual drivers. In fact, it is not expected
+    that any standard driver would ever implement this extension. The
+    main point of having this extension is to allow applications to have a
+    clean way of accessing this functionality only when they are run
+    under the control of a debugger/profiler, without having to
+    recompile or change the application source code.
+
+
+IP Status
+
+    No known IP claims
+
+Issues
+
+   (1) Should the extension use \0-terminated strings to simplify use?
+    
+    RESOLVED: yes.
+
+    This extension follows the latest precedent for strings, which is the ShaderSource().
+    It uses strings that are given as a list of ubytes with explicit length. However, If 
+    lengths is 0, then the string is assumed to be null-terminated.
+
+
+   (2) Should it be legal to call this inside Begin/End?
+    
+    RESOLVED: no.
+    
+    The benefit is questionable, and it would probably add
+    overhead to a very critical path.
+        
+   (3) Should this be supported by GLX?
+    
+    UNRESOLVED
+    
+    Not strictly necessary, as most debugging is done locally. It would
+    be cleaner, but I don't see a case for the effort. 
+    
+    
+New Procedures and Functions
+
+    void StringMarkerGREMEDY(sizei len, const void *string);
+
+New Types
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 1.5 Specification
+(OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.5 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.5 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.5 Specification
+(Special Functions)
+
+    Add section 5.7 on page 212
+    
+    5.7 Markers
+    
+    The command
+    
+        void StringMarkerGREMEDY(sizei len, const void *string);
+    
+    can be used to insert arbitrary marker strings into the command
+    stream that can be recorded by appropriate debugging tools / profiling tools /
+    drivers. They have no influence on the rendered image or the OpenGL state.
+    <string> is a pointer to the array of bytes representing the marker being
+    inserted, which need not be null-terminated.  The length of the array is given
+    by <len>.  If <string> is null-terminated, <len> should not include the terminator.
+    If lengths is 0, then the string is assumed to be null-terminated.
+
+Additions to Chapter 6 of the OpenGL 1.5 Specification (State and State
+Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.5 Specification (Invariance)
+
+    None
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Dependencies on EXT_extension_name
+
+    None
+
+Errors
+
+    The error INVALID_OPERATION is generated if any of the commands
+    defined in this extension is executed between the execution of Begin
+    and the corresponding execution of End.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Sample Code
+
+    None
+
+Revision History
+
+    1.4, 10/16/07 yt:   - Minor text changes.
+    1.3, 06/08/05 yt:   - Enable the use of \0-terminated strings by specifying 
+                          a 0 string length.
+    1.2, 02/01/05 dr:   - Change the extension Status
+                        - Change the name of the extension 
+    1.1, 01/20/05 dr:     (Thanks to Yaki Tebeka for suggestions!)
+                        - Switched to programString style
+                        - renamed to marker_string  
+    1.0, 01/17/05 dr:   - Initial revision

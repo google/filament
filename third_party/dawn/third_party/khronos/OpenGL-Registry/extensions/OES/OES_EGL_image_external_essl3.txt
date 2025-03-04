@@ -1,0 +1,385 @@
+Name
+
+    OES_EGL_image_external_essl3
+
+Name Strings
+
+    GL_OES_EGL_image_external_essl3
+
+Contributors
+
+    Jan-Harald Fredriksen, ARM (jan-harald.fredriksen 'at' arm.com)
+    James Helferty, NVIDIA (jhelferty 'at' nvidia.com)
+    Mark Callow, ArtSpark Holdings Inc (callow.mark 'a' artspark.co.jp)
+
+    Contributors to GL_OES_EGL_image_external.
+
+Contacts
+
+    Jan-Harald Fredriksen, ARM (jan-harald.fredriksen 'at' arm.com)
+
+Notice
+
+    Copyright (c) 2014-2015 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL ES Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the OpenGL ES Working Group.
+    Ratified by the Khronos Board of Promoters on January 23, 2015.
+
+Version
+
+    January 29, 2016 (version 10)
+
+Number
+
+    OpenGL ES Extension #220
+
+Dependencies
+
+    Requires OpenGL ES 3.0 and ESSL 3.0.
+    Requires EGL 1.2
+    Requires either the EGL_KHR_image_base or the EGL_KHR_image extension.
+    Requires OES_EGL_image_external.
+
+    This extension is written based on the wording of the OpenGL ES 3.0.3
+    specification, the OpenGL ES Shading Language version 3.0 rev4, and the
+    OES_EGL_image_external extension.
+
+    This extension interacts with OpenGL ES 3.1.
+
+    This extension interacts with GL_EXT_gpu_shader5 and GL_OES_gpu_shader5.
+
+    This extension borrows concepts and function names from the
+    GL_OES_EGL_image and OES_EGL_image_external extensions. This extension
+    is compatible with GL_OES_EGL_image but does not require it.
+
+Overview
+
+    OES_EGL_image_external provides a mechanism for creating EGLImage texture
+    targets from EGLImages, but only specified language interactions for the
+    OpenGL ES Shading Language version 1.0. This extension adds support for
+    versions 3.x of the OpenGL ES Shading Language.
+
+Glossary
+
+    Please see the EGL_OES_image_base specification for a list of terms
+    used by this specification.
+
+New Types
+
+     * New sampler type allowed by the OpenGL ES Shading Language when
+     *      #extension GL_OES_EGL_image_external_essl3
+     * is used.
+     */
+    samplerExternalOES
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Changes to section 3.8.2 ("Sampler Objects") of the OpenGL ES 3.0.3 specification
+
+    - Add to the description BindSampler:
+
+        "If state is present in a sampler object bound to a texture unit that
+         would have been rejected by a call to TexParameter* for the texture
+         bound to that unit, the behavior of the implementation is as if the
+         texture were incomplete. For example, if TEXTURE_WRAP_S or
+         TEXTURE_WRAP_T is set to anything but CLAMP_TO_EDGE on the sampler
+         object bound to a texture unit and the texture bound to that unit is
+         an external texture, the texture will be considered incomplete.
+
+         Sampler object state which does not affect sampling for the type of
+         texture bound to a texture unit, such as TEXTURE_WRAP_R for an external
+         texture, does not affect completeness."
+
+Changes to section 3.7.14 ("External Textures") of the OES_EGL_image_external
+specification
+
+        "It is an INVALID_OPERATION error to set the TEXTURE_BASE_LEVEL
+         to a value other than zero."
+
+[[Only if OpenGL ES 3.1 is supported]]
+Changes to section 8.22 ("Texture Image Loads and Stores") of the
+OpenGL ES 3.1 specification
+
+    On p. 196 in the errors section for BindImageTexture, replace the
+    last error with the following:
+
+        "An INVALID_OPERATION error is generated if <texture> is neither the
+         name of an immutable texture object, nor the name of an external
+         texture object.
+
+    Add to table 8.26 "Mapping of image load, store..."
+
+        Texture target               face/
+                                   i  j  k  layer
+        -------------------------- -- -- -- -----
+        TEXTURE_EXTERNAL_OES       x  y  -  -
+
+Changes to section 3.7 ("Keywords") of the OpenGL ES Shading Language
+specification
+
+    - Add to the list of keywords:
+
+        "samplerExternalOES"
+
+Changes to section 4.1 ("Basic Types") of the OpenGL ES Shading Language
+specification
+
+    - Add to the list of Floating Point Sampler Types (opaque):
+
+        "samplerExternalOES   a handle for accessing an external 2D texture"
+
+    - Add a paragraph at the end of the section:
+
+        "The samplerExternalOES type is optional and must be enabled by
+
+         #extension GL_OES_EGL_image_external_essl3 : enable"
+
+Changes to section 4.5.4 ("Default Precision Qualifiers") of the OpenGL ES
+Shading Language specification
+
+    - Add the following paragraph:
+
+      "All languages have the following predeclared globally scoped default
+       precision statements:
+
+        precision lowp samplerExternalOES;"
+
+Changes to section 8.8 ("Texture Lookup Functions") of the OpenGL ES Shading
+Language specification
+
+    - Add to the table the following sampler functions:
+
+      "highp ivec2 textureSize(samplerExternalOES sampler, int lod)
+       vec4 texture(samplerExternalOES sampler, vec2 P [, float bias] )
+       vec4 textureProj(samplerExternalOES sampler, vec3 P [, float bias] )
+       vec4 textureProj(samplerExternalOES sampler, vec4 P [, float bias])
+       vec4 texelFetch(samplerExternalOES sampler, ivec2 P, int lod)"
+
+Changes to section 9 ("Shading Language Grammar") of the OpenGL ES Shading
+Language specification
+
+    - Add to token list:
+
+        "SAMPLEREXTERNAL"
+
+    - Add following "type_specifier_no_array:"
+
+        "SAMPLEREXTERNAL"
+
+Changes to section 11 ("Counting of Inputs and Outputs") of the OpenGL ES
+Shading Language specification
+
+    - Add a paragraph at the end
+
+        "Part of the storage may be reserved by an implementation for its own
+         use e.g. for conversion of external textures. This reduces the number
+         of uniforms available to the shader. The size of this reduction is
+         undefined but should be minimized.
+
+Dependencies on OpenGL ES 3.1 and ESSL 3.10
+
+    All texture built-in functions added in ESSL 3.10 are excluded from this
+    extension per Issue 4. This extension is expected to work without
+    modification for ESSL 3.10.
+
+    If OpenGL ES 3.1 is not supported, ignore changes to section 8.22 since
+    image load store is not supported.
+
+Interactions with EXT_gpu_shader5 and OES_gpu_shader5
+
+    If either of these extensions is supported, add the following paragraph
+    to the end of section 4.1.7.1 ("Samplers") of the ESSL 3.10 specification:
+
+        "When aggregated into arrays within a shader, external samplers can
+         only be indexed with a constant integral expression. All other sampler
+         types can only be indexed with a dynamically uniform integral
+         expression, otherwise results are undefined."
+
+Issues
+
+    1.  Why is this functionality not added as an interaction to the
+        OES_EGL_image_external extension as in interaction with ESSL 3.x?
+
+        RESOLVED.
+
+        Since the built-in texture functions in ESSL were modified going from
+        ESSL 1.0 to 3.x, the original extension does not trivially apply to
+        ESSL 3.x.
+
+        There are also many shipping implementations of OES_EGL_image_external
+        extension that have chosen to not extend support to ESSL 3.x. If we
+        were to amend the original extension, there would be no way for
+        applications to determine whether a particular implementation supported
+        the language extension for ESSL 3.x or not.
+
+    2.  Should this extension require OES_EGL_image_external?
+
+        RESOLVED: Yes.
+
+        This extension currently depends on OES_EGL_image_external to define the
+        API extensions. This also implies that an implementation cannot choose
+        to support this extension for ESSL 3.x only.
+
+    3.  What should this extension be called?
+
+        RESOLVED: OES_EGL_image_external_essl3
+
+    4.  Should built-in functions beyond ESSL1 compatibility be supported in
+        ESSL 3.x shaders?
+
+        RESOLVED: Yes.
+
+        It seems useful to add some of these. The ESSL 3.x built-ins that are
+        only useful for mipmapped textures are excluded since external textures
+        cannot be mipmapped. The ESSL 3.x built-ins that require offsets are
+        excluded since it is not clear how these should work with sub-sampled
+        YUV formats.
+
+        Required for ESSL1 feature compatibility:
+        - texture
+        - textureProj (two versions)
+
+        Also included in this extension:
+        - textureSize
+        - texelFetch
+
+        Excluded from this extension:
+        - textureLod
+        - textureLodOffset
+        - textureProjLod
+        - textureProjLodOffset
+        - textureGrad
+        - textureGradOffset
+        - textureProjGrad
+        - textureProjGradOffset
+        - textureOffset
+        - texelFetchOffset
+        - textureProjOffset
+        - textureGather [for ESSL 3.10]
+        - textureGatherOffset [for ESSL 3.10]
+
+    5.  Should external integer textures be supported in ESSL 3.x shaders?
+
+        RESOLVED: No.
+
+        The built-in functions added for ESSL1 always return floating point
+        values, but that's in part because OpenGL ES 2.0 did not support
+        integer textures. For ESSL 3.x, we could allow the same return values
+        for external textures as for regular 2D textures. This would require
+        adding new sampler types, such as samplerExternaliOES and
+        samplerExternaluOES. Since there is no obvious use-case for external
+        integer textures these are not added by this extension.
+
+    6.  What token should be used to enable this extension in ESSL 3.x?
+
+        RESOLVED: GL_OES_EGL_image_external_essl3
+
+        The alternatives are a) reuse the GL_OES_image_external token (this
+        should not cause problems since the original extension did not apply
+        to ESSL 3.x), b) use the name of this extension. Option b) is chosen
+        since there is no clear benefit to reusing the old name.
+
+    7.  What is the interaction with separate sampler objects?
+
+        RESOLVED: The texture is incomplete if the sampler object state is
+                  not compatible with the sampler state.
+
+        The OES_EGL_image_external specifies that the only supported min filter
+        modes for external textures is LINEAR or NEAREST and that the only
+        valid s and t wrap mode is CLAMP_TO_EDGE. TexParameter* will generate
+        errors if these are called while an external texture is bound. In ES3.x
+        it is possible to attach a sampler object that has any wrap mode and
+        min filter. In this case, the external texture will be treated as
+        incomplete if the sampler object state is incompatible with such
+        textures.
+
+        Sampler state that affects completeness of external textures:
+         - TEXTURE_MIN_FILTER
+         - TEXTURE_WRAP_S
+         - TEXTURE_WRAP_T
+
+        Sampler state that has no additional constraints for external textures:
+         - TEXTURE_MAG_FILTER
+
+        Sampler state that does not affect external textures, and thus have
+        no impact on completeness or behavior:
+         - TEXTURE_WRAP_R       (3D or 2Darray for external textures)
+         - TEXTURE_COMPARE_MODE (no shadow sampler for external textures)
+         - TEXTURE_COMPARE_FUNC (no shadow sampler for external textures)
+         - TEXTURE_MIN_LOD      (no mipmapping for external textures)
+         - TEXTURE_MAX_LOD      (no mipmapping for external textures)
+
+    8.  What is the interaction with the texture base level?
+
+        RESOLVED: The base level must be zero for external textures.
+
+        External textures do not support mipmap filtering. It is consistent
+        with the behavior for 2D multisampled textures in ES3.1 to make it an
+        error to specify a base level other than zero for external textures.
+
+        This error is not specified in GL_OES_EGL_image_external so adding an
+        error may break existing applications using that extension (in ESSL 1.x)
+        in combination with OpenGL ES 3.x if they set the base level to any
+        other value.
+
+    9.  What formats are supported?
+
+        This is implementation defined. GL_OES_EGL_image_external does not
+        require any specific formats, and this extension does not change
+        that. On a given implementation, it is expected that the same set
+        of formats is supported in all shader stages.
+
+    10. Should image / load store be supported? And, if so, how?
+
+        RESOLVED: Yes, in a limited form.
+
+        Allowing image / load store on external textures enables compute
+        shaders to write to these textures.
+
+        A limited set of use-cases is enabled by making glBindImageTexture
+        accept external textures. Shaders can access such external textures
+        using the existing <image2D> sampler type.
+
+        Since the image format must be specified by the shader, no additional
+        format conversion is done for external textures accessed via image
+        load/store. This implies that the shader author must know the format of
+        the external texture in order to do useful work. Also, only the image
+        formats already supported by image load store are available (i.e, there
+        is no automatic conversion to, for example, YUV formats.)
+
+Revision History
+
+    #10 - (Jan 29, 2016) Fixed typo in issue 10. 
+    #9 - (Apr 10, 2015) Clarified issue 10. Specified default precision for
+                        samplerExternalOES as lowp for all shader stages.
+    #8 - (Feb 6, 2015) Fixed typo in return value of textureSize (vec2->ivec2)
+    #7 - (Oct 15, 2014) Resolved issue 10. Added interaction with EXT_gpu_shader5.
+    #6 - (Oct 10, 2014) Added issue 10 and its tentative resolution.
+    #5 - (Sep 25, 2014) Updated resolution of issue 7.
+                        Added issues 8 and 9.
+                        Converted to OES.
+    #4 - (Sep 24, 2014) Added issue 7 with proposed resolution.
+    #3 - (Jul 30, 2014) Excluded textureGather from this extension.
+    #2 - (Jul 30, 2014) Updated based feedback. Tentatively resolved issues.
+                        Added issue 6.
+    #1 - (Jul 15, 2014) Original draft.

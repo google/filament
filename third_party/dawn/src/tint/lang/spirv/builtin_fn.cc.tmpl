@@ -1,0 +1,102 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate builtin_fn.cc
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/spirv/spirv.def" -}}
+#include "src/tint/lang/spirv/builtin_fn.h"
+
+namespace tint::spirv {
+
+const char* str(BuiltinFn i) {
+    switch (i) {
+        case BuiltinFn::kNone:
+            return "<none>";
+{{- range $I.Sem.Builtins  }}
+        case BuiltinFn::k{{PascalCase .Name}}:
+            return "{{.Name}}";
+{{- end  }}
+    }
+    return "<unknown>";
+}
+
+tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
+    switch (fn) {
+        case BuiltinFn::kAtomicLoad:
+        case BuiltinFn::kImageDrefGather:
+        case BuiltinFn::kImageFetch:
+        case BuiltinFn::kImageGather:
+        case BuiltinFn::kImageRead:
+        case BuiltinFn::kImageSampleImplicitLod:
+        case BuiltinFn::kImageSampleExplicitLod:
+        case BuiltinFn::kImageSampleDrefImplicitLod:
+        case BuiltinFn::kImageSampleDrefExplicitLod:
+        case BuiltinFn::kSampledImage:
+        case BuiltinFn::kCooperativeMatrixLoad:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad};
+
+        case BuiltinFn::kImageWrite:
+        case BuiltinFn::kModf:
+        case BuiltinFn::kFrexp:
+        case BuiltinFn::kCooperativeMatrixStore:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kStore};
+
+        case BuiltinFn::kAtomicAnd:
+        case BuiltinFn::kAtomicCompareExchange:
+        case BuiltinFn::kAtomicExchange:
+        case BuiltinFn::kAtomicIadd:
+        case BuiltinFn::kAtomicIsub:
+        case BuiltinFn::kAtomicOr:
+        case BuiltinFn::kAtomicSmax:
+        case BuiltinFn::kAtomicSmin:
+        case BuiltinFn::kAtomicStore:
+        case BuiltinFn::kAtomicUmax:
+        case BuiltinFn::kAtomicUmin:
+        case BuiltinFn::kAtomicXor:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad, core::ir::Instruction::Access::kStore};
+
+        case BuiltinFn::kArrayLength:
+        case BuiltinFn::kDot:
+        case BuiltinFn::kImageQuerySize:
+        case BuiltinFn::kImageQuerySizeLod:
+        case BuiltinFn::kMatrixTimesMatrix:
+        case BuiltinFn::kMatrixTimesScalar:
+        case BuiltinFn::kMatrixTimesVector:
+        case BuiltinFn::kSelect:
+        case BuiltinFn::kVectorTimesMatrix:
+        case BuiltinFn::kVectorTimesScalar:
+        case BuiltinFn::kSdot:
+        case BuiltinFn::kUdot:
+        case BuiltinFn::kNone:
+        case BuiltinFn::kNormalize:
+        case BuiltinFn::kInverse:
+        case BuiltinFn::kSign:
+        case BuiltinFn::kAbs:
+        case BuiltinFn::kSmax:
+        case BuiltinFn::kSmin:
+        case BuiltinFn::kSclamp:
+        case BuiltinFn::kUmax:
+        case BuiltinFn::kUmin:
+        case BuiltinFn::kUclamp:
+        case BuiltinFn::kFindILsb:
+        case BuiltinFn::kFindSMsb:
+        case BuiltinFn::kFindUMsb:
+        case BuiltinFn::kRefract:
+        case BuiltinFn::kReflect:
+        case BuiltinFn::kFaceForward:
+        case BuiltinFn::kLdexp:
+        case BuiltinFn::kCooperativeMatrixMulAdd:
+            break;
+    }
+    return core::ir::Instruction::Accesses{};
+}
+
+}  // namespace tint::spirv

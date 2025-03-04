@@ -1,0 +1,166 @@
+
+Name
+
+    SGIX_pixel_texture_bits
+
+Name Strings
+
+    GL_SGIX_pixel_texture_bits
+
+Version
+
+    $Date: 1998/10/01 23:30:18 $ $Revision: 1.11 $
+
+Number
+
+    127
+
+Dependencies
+
+    GL_SGIS_pixel_texture
+    can be implemented in parallel with SGIX_pixel_texture_lod
+
+Overview
+
+    The pixel_texture extension causes the "convert to fragment"
+    stage of the pixel pipeline to derive the fragment's texture
+    coordinates from the pixel group's color components.
+    At this stage in the pixel pipeline, the color components have
+    been converted into the framebuffer format.  These
+    framebuffer format values are used to produce texture coordinates
+    of exactly the same value.  The internal representation of
+    texture coordinates is intentionally left vague in the spec
+    so implementations can choose whatever they like.
+
+    This works well when the frame buffer format for
+    a color component is a fixed point value in the range [0,1].
+    However, if SGIX_color_range is supported, the framebuffer
+    format can be floating point, and the values are not
+    a linear ramp.  This means that the texture must be
+    large and sparsely populated in order to ensure that
+    each texture coordinate value reaches a unique texel.
+
+    This extension allows the application to specify that
+    the color component be treated like an unsigned integer
+    with the same number of bits as are in the framebuffer format,
+    which makes each texel in the texture accessible through
+    the texture lookup equations with a texture whose size
+    is 2^n in each dimension, where n is the number of bits in
+    the framebuffer format.
+
+    The application must know the exact frambuffer format
+    in order to define the texture correctly.
+
+    For example, this approach allows the implementation of
+    a bit-preserving 1D lookup table for the s10e5 bali pixel format.
+    It specifies a mapping of the s10e5 pixel format to a texture
+    coordinate index in a manner that allows one texel to be
+    mapped to each of the 64K bit patterns possible in the
+    s10e5 format.
+
+    The motivation is to allow the shader toolkit to implement
+    functions, e.g., cos(x), with a copy pixels
+    and pixel texture enabled in a way that preserves as
+    much accuracy as possible.
+
+IP Status
+
+    Silicon Graphics has filed for patent protection for some of the
+    techniques described in this extension document.
+
+Issues
+
+    * Could we define a separate scale factor so that we don't
+      necessarily have to specify that we convert to the framebuffer
+      format?
+
+      There isn't much need to mention the framebuffer format
+      here; we just need to specify how we're going to interpret
+      the bits.  However, the application must use a texture
+      that corresponds to the framebuffer format.
+
+    * To get to the exact center of a texel, we need to add
+      0.5 to the calculation after the conversion to unsigned
+      int and before the divide by 2^m-1.
+
+      This is not necessary because the equations for calculating
+      the 2x2 square of texels when TEXTURE_MIN_FILTER is LINEAR
+      do it.  (Section 3.8 in the spec.)
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of PixelTexGenParameteriSGIX and
+    PixelTexGenParameterivSGIX:
+
+        COLOR_TO_TEXTURE_COORD_SGIX
+
+    Accepted by the <param> parameter of PixelTexGenParameteriSGIX and
+    PixelTexGenParameterivSGIX:
+
+        COLOR_BIT_PATTERN_SGIX
+        COLOR_VALUE_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    This extension, similar to the pixel_texture.spec modifies the
+    "Conversion to Fragments" subsection of section 3.6.3 (Rasterization
+    of Pixel Rectangles) of the GL Specification. Immediately following
+    the text added by the pixel_texture.spec, insert the following:
+
+    If the PixelTexGenParameterSGIX param COLOR_TO_TEXTURE_COORD_SGIX
+    is set to COLOR_BIT_PATTERN_SGIX, the mapping from r,g,b,a
+    to s,t,r,q is altered.
+
+    At this stage, final color processing has been performed and the
+    r,g,b,a values are in the form that matches the framebuffer.
+    To map the red color value to the s texture coordinate the
+    m bits of red, interpreted as an integer in the range [0,2^m-1], are
+    divided by 2^m-1 to obtain an s coordinate in the range [0,1].
+    Green and Blue are mapped similarly.  The q texture coordinate
+    is set to one if a divide by q is in effect.  If TEXTURE_4D_SGIS
+    is enabled, Alpha is mapped to q in the same way Red is
+    mapped to s.
+
+    If the PixelTexGenParameterSGIX param COLOR_TO_TEXTURE_COORD_SGIX
+    is set to COLOR_VALUE_SGIX, the r,g,b,a values are used
+    to produce floating point values for s,t,r,q.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    XXX
+
+Errors
+
+New State
+
+    The following is added to Table 6.16. Pixels.
+
+    Get Value                           Get Command                     Type    Initial Value                   Attrib
+    ---------                           -----------                     ----    -------------                   ------
+    COLOR_TO_TEXTURE_COORD_SGIX         GetPixelTexGenParameterivSGIS   Z2      COLOR_VALUE_SGIX                pixel
+
+New Implementation Dependent State
+
+    None

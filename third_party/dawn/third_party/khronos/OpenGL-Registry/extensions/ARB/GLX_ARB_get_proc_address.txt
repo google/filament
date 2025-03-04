@@ -1,0 +1,259 @@
+Name
+
+    ARB_get_proc_address
+
+Name Strings
+
+    GLX_ARB_get_proc_address
+
+Contact
+
+    Brian Paul (brian_paul 'at' mesa3d.org)
+    Jon Leech (ljp 'at' sgi.com)
+
+Notice
+
+    Copyright (c) 1999-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on 12/8/1999
+
+Version
+
+    Last Modified Date: January 3, 2000
+
+Number
+
+    ARB Extension #2
+
+Dependencies
+
+    The extension is written against the GLX 1.3 Specification.
+    May be implemented in any version of GLX and OpenGL.
+
+Overview
+
+    This extension adds a function to return the address of GLX
+    and GL extension functions, given the function name. This is
+    necessary with (for example) heterogenous implementations where
+    hardware drivers may implement extension functions not known to the
+    link library; a similar situation on Windows implementations
+    resulted in the wglGetProcAddress function.
+
+IP Status
+
+    No IP is believed to be involved (dynamic querying of library entry
+    points is supported in all modern operating systems).
+
+Issues
+
+    * Is this extension properly named?
+
+        Yes. If it does not achieve ARB approval, it will be implemented
+        as an EXT.
+
+    * Should a typedef be used for the return type?
+
+        typedef void (*GLfunction)();
+        extern GLfunction glXGetProcAddressARB(const GLubyte *procName);
+
+        Not needed - see the function declaration
+
+        void (*glXGetProcAddressARB(const GLubyte *procName))();
+
+    * Should GetProcAddressARB allow querying of itself?
+
+        Yes, for sake of completeness.
+
+    * There's a recursion problem with this feature. The purpose of
+      GetProcAddressARB is to return pointers to extension functions and
+      GetProcAddressARB is itself such a function! This presents a
+      puzzle to the application developer.
+
+        Implementations must export the glXGetProcAddressARB entry point
+        statically.
+
+    * Should extension functions in GLU and GLX be queryable through
+      this extension?
+
+        GLX: Yes. GLU: No. Because the pointers returned are
+        context-independent, the query was lifted from GL (in which all
+        behavior is necessarily context-dependent) into GLX, where
+        context management occurs. Since GLU is a client library using
+        GL, GLU extensions are unlikely to need to be dynamically
+        queryable. This capability could be added in a future extension.
+
+    * GLU library may not be loaded at runtime, making GLU queries fail
+
+        No longer relevant, since GLU functions cannot be queries now.
+        The previous resolution was:
+
+        True. However, the GL/GLX/GLU specifications say nothing about
+        "libraries" and link/runtime issues in any event, and the same
+        criticism might be applied to GL or GLX queries depending on how
+        the development and runtime tools on a particular platform
+        operate. Requiring a link against a "GLU library" in this case
+        should be in the release notes for a platform.
+
+    * Should corresponding functions exist in the window-system specific
+      layer on non-GLX implementations?
+
+        Yes. wglGetProcAddress already exists for Microsoft Windows, and
+        Apple has stated they will support aglGetProcAddress.
+        Unfortunately, there is an unavoidable inconsistency with
+        wglGetProcAddress, which returns context-dependent pointers.
+        This should be made abundantly clear in the documentation, so
+        that portable applications assume context-dependent behavior.
+
+    * Should the core functions added to GL and GLX since their 1.0
+      versions be queryable?
+
+        Yes. This will allow maximum portability of applications across
+        OpenGL 1.1 and 1.2 library implementations.
+
+    * Should the core functions in GL 1.0 and GLX 1.0 be queryable?
+
+        Yes. Adds consistency at the cost of a much larger lookup
+        mechanism.
+
+    * Are function pointers context-independent?
+
+        Yes. The pointer to an extension function can be used with any
+        context which supports the extension. Concern was expressed that
+        function dispatch for context-independent pointers would incur
+        overheads compared to context-dependent pointers.
+
+        The working group has proposed several implementation strategies
+        which would make this overhead negligible to nonexistent, and
+        the benefits of lifting the context/pointer management burden
+        from applications were considerable. The implementation
+        strategies are moderately complex and reach down all the way to
+        the toplevel dispatch mechanism used by drivers.
+
+    * Should the pointers returned be required to be equal to the
+      addresses of the corresponding static functions (if they exist?)
+
+        No. This may make implementation more difficult and is of little
+        apparent value to applications.
+
+    * Should the query return NULL for entry points not supported
+      by the implementation, or a pointer to a function which
+      generates an error?
+
+        NULL. There is no consistent way to generate errors
+        when either GL or GLX functions may be queried.
+
+New Procedures and Functions
+
+    void (*glXGetProcAddressARB(const GLubyte *procName))(...)
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special
+Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and State
+Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+Additions to the GLX Specification
+
+    Add a new section numbered 3.3.12:
+
+    3.3.12 Obtaining Extension Function Pointers
+
+    The GL and GLX extensions which are available to a client
+    application may vary at runtime. Therefore, the address of extension
+    functions may be queried at runtime. The function
+
+        void (*glXGetProcAddressARB(const ubyte *procName)();
+
+    returns the address of the extension function named by procName. The
+    pointer returned should be cast to a function pointer type matching
+    the extension function's definition in that extension specification.
+    A return value of NULL indicates that the specified function does
+    not exist for the implementation.
+
+    A non-NULL return value for glXGetProcAddressARB does not guarantee
+    that an extension function is actually supported at runtime. The
+    client must must also query glGetString(GL_EXTENSIONS) or
+    glXQueryExtensionsString to determine if an extension is supported
+    by a particular context.
+
+    GL function pointers returned by glXGetProcAddressARB are
+    independent of the currently bound context and may be used by any
+    context which supports the extension.
+
+    glXGetProcAddressARB may be queried for all of the following functions:
+
+      - All GL and GLX extension functions supported by the
+        implementation (whether those extensions are supported by the
+        current context or not).
+
+      - All core (non-extension) functions in GL and GLX from version
+        1.0 up to and including the versions of those specifications
+        supported by the implementation, as determined by
+        glGetString(GL_VERSION) and glXQueryVersion queries.
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+Conformance Testing
+
+    Rather than testing directly, the existing tkProcInit() mechanism in
+    the OpenGL 1.2 conformance tests will be modified to use
+    glXGetProcAddress when it's available, so that other ARB extensions
+    will fail conformance if the query does not work.
+
+    An alternative method which directly tests the query is to perform
+    an extremely simple rendering test (e.g. glClearColor/glClear) using
+    GL core function pointers returned by the query.
+
+Revision History
+
+    * Revision 1.1 (January 3, 2000) - Final ARB-approved version.
+      Specify that GL function pointers are context independent. Specify
+      that all core and extension GL and GLX functions may be queried.

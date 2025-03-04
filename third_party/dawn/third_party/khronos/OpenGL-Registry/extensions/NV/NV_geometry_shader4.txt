@@ -1,0 +1,292 @@
+Name
+
+    NV_geometry_shader4
+
+Name String
+
+    GL_NV_geometry_shader4
+
+Contact
+
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+    Barthold Lichtenbelt, NVIDIA (blichtenbelt 'at' nvidia.com)
+
+Status
+
+    Shipping for GeForce 8 Series (November 2006)
+
+Version
+
+    Last Modified Date:         11/09/2009
+    Author revision:            17
+
+Number
+
+    338
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+    EXT_geometry_shader4 is required.
+
+    This extension is written against the EXT_geometry_shader4 and OpenGL 2.0
+    specifications.
+
+Overview
+
+    This extension builds upon the EXT_geometry_shader4 specification to
+    provide two additional capabilities:
+
+        * Support for QUADS, QUAD_STRIP, and POLYGON primitive types when
+          geometry shaders are enabled.  Such primitives will be tessellated
+          into individual triangles.
+
+        * Setting the value of GEOMETRY_VERTICES_OUT_EXT will take effect
+          immediately.  It is not necessary to link the program object in
+          order for this change to take effect, as is the case in the EXT
+          version of this extension.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Modify Section 2.15.2 Program Objects, p. 73
+
+    Change the language below the LinkProgram command on p. 74 as follows:
+
+    ... Linking can fail for a variety of reasons as specified in the OpenGL
+    Shading Language Specification. Linking will also fail if one or more of
+    the shader objects, attached to <program> are not compiled successfully,
+    or if more active uniform or active sampler variables are used in
+    <program> than allowed (see sections 2.15.3 and 2.16.3). Linking will also
+    fail if the program object contains objects to form a geometry shader (see
+    section 2.16), but no objects to form a vertex shader. If LinkProgram
+    failed, ...
+
+    Modify Section 2.16.1, Geometry shader Input Primitives, of the
+    EXT_geometry_shader4 specification as follows:
+
+    Triangles (TRIANGLES)
+
+    Geometry shaders that operate on triangles are valid for the TRIANGLES,
+    TRIANGLE_STRIP, TRIANGLE_FAN, QUADS, QUAD_STRIP, and POLYGON primitive
+    types.
+
+    When used with a geometry shader that operates on triangles, QUADS,
+    QUAD_STRIP, and POLYGON primitives are decomposed into triangles in an
+    unspecified, implementation-dependent manner. This decomposition satisfies
+    three properties:
+
+       1. the collection of triangles fully covers the area of the original
+          primitive, 
+       2. no two triangles in the decomposition overlap, and
+       3. the orientation of each triangle is consistent with the orientation
+          of the original primitive.
+
+    For such primitives, the shader is executed once for each triangle in the
+    decomposition.
+
+    There are three vertices available for each program invocation. The first,
+    second and third vertices refer to attributes of the first, second and
+    third vertex of the triangle, respectively. ...
+
+    Modify Section 2.16.4, Geometry Shader Execution Environment, of the
+    EXT_geometry_shader4 specification as follows:
+
+    Geometry shader inputs
+
+    (modify the spec language for primitive ID, describing its interaction
+    with QUADS, QUAD_STRIP, and POLYGON topologies) The built-in special
+    variable gl_PrimitiveIDIn is not an array and has no vertex shader
+    equivalent. It is filled with the number of primitives processed since the
+    last time Begin was called (directly or indirectly via vertex array
+    functions).  The first primitive generated after a Begin is numbered zero,
+    and the primitive ID counter is incremented after every individual point,
+    line, or polygon primitive is processed.  For polygons drawn in point or
+    line mode, the primitive ID counter is incremented only once, even though
+    multiple points or lines may be drawn.  For QUADS and QUAD_STRIP
+    primitives that are decomposed into triangles, the primitive ID is
+    incremented after each complete quad is processed.  For POLYGON
+    primitives, the primitive ID counter is undefined.  Restarting a primitive
+    topology using the primitive restart index has no effect on the primitive
+    ID counter.
+
+    Geometry Shader outputs
+
+    (modify the vertex output limit language to allow changes to take effect
+    immediately) A geometry shader is limited in the number of vertices it may
+    emit per invocation. The maximum number of vertices a geometry shader can
+    possibly emit needs to be set as a parameter of the program object that
+    contains the geometry shader.  To do so, call ProgramParameteriEXT with
+    <pname> set to GEOMETRY_VERTICES_OUT_EXT and <value> set to the maximum
+    number of vertices the geometry shader will emit in one invocation.
+    Setting this limit will take effect immediately.  If a geometry shader, in
+    one invocation, emits more vertices than the value
+    GEOMETRY_VERTICES_OUT_EXT, these emits may have no effect.
+
+    (modify the error checking language for values that are too large) There
+    are two implementation-dependent limits on the value of
+    GEOMETRY_VERTICES_OUT_EXT.  First, the error INVALID_VALUE will be
+    generated by ProgramParameteriEXT if the number of vertices specified
+    exceeds the value of MAX_GEOMETRY_OUTPUT_VERTICES_EXT.  Second, the
+    product of the total number of vertices and the sum of all components of
+    all active varying variables may not exceed the value of
+    MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS_EXT.  If <program> has already been
+    successfully linked, the error INVALID_VALUE will be generated by
+    ProgramParameteriEXT if the specified value causes this limit to be
+    exceeded.  Additionally, LinkProgram will fail if it determines that the
+    total component limit would be violated.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and State
+Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Interactions with NV_transform_feedback
+
+    If GL_NV_transform_feedback is not supported, the function
+    GetActiveVaryingNV() needs to be added to this extension. This function
+    can be used to count the number of varying components output by a geometry
+    shader, and from that data the maximum value for GEOMETRY_VERTICES_OUT_EXT
+    computed by the application.
+
+GLX protocol
+
+    None required
+
+Errors
+
+    The error INVALID_OPERATION is generated if Begin, or any command that
+    implicitly calls Begin, is called when a geometry shader is active and:
+
+        * the input primitive type of the current geometry shader is POINTS
+        and <mode> is not POINTS,
+    
+        * the input primitive type of the current geometry shader is LINES and
+        <mode> is not LINES, LINE_STRIP, or LINE_LOOP,
+    
+        * the input primitive type of the current geometry shader is TRIANGLES
+        and <mode> is not TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN, QUADS,
+        QUAD_STRIP, or POLYGON,
+
+        * the input primitive type of the current geometry shader is
+        LINES_ADJACENCY_EXT and <mode> is not LINES_ADJACENCY_EXT or
+        LINE_STRIP_ADJACENCY_EXT, or
+
+        * the input primitive type of the current geometry shader is
+        TRIANGLES_ADJACENCY_EXT and <mode> is not TRIANGLES_ADJACENCY_EXT or
+        TRIANGLE_STRIP_ADJACENCY_EXT.
+
+        * GEOMETRY_VERTICES_OUT_EXT is zero for the currently active program
+        object.
+
+New State
+
+    None
+
+Issues
+
+   1. Why is there a GL_NV_geometry_shader4 and a GL_EXT_geometry_shader4
+      extension?
+
+      RESOLVED:  NVIDIA initially wrote the geometry shader extension, and
+      worked with other vendors on a common extension.  Most of the
+      functionality of the original specification was retained, but a few
+      functional changes were made, resulting in the GL_EXT_geometry_shader4
+      specification.  
+
+      Some of the functionality removed in this process may be useful to
+      developers, so we chose to provide an NVIDIA extension to expose this
+      extra functionality.
+
+   2. Should it be possible to change the limit on the number of vertices
+      emitted by a geometry shader after the program object, containing the
+      shader, is linked?
+
+      RESOLVED:  Yes.  Applications may want to tweak a piece of data that
+      affects the number of vertices emitted, but wouldn't otherwise require
+      re-linking the entire program object.  One simple example might be a
+      "circular point sprite" shader, that reads a single point, and draws a
+      circle centered at that point with <N> vertices, where <N> is provided
+      as a uniform.  An application could change the value <N> at run time,
+      which would require a change in the vertex limit.  Another example might
+      be a geometry shader that does some fancy subdivision, where the
+      relevant parameter might be a limit on how far the primitive is
+      subdivided.  This limit can be changed using the function
+      ProgramParameteriEXT with <pname> set to GEOMETRY_VERTICES_OUT_EXT.
+
+   3. How are QUADS, QUAD_STRIP, and POLYGON primitives decomposed into
+      triangles in the initial implementation?
+
+      RESOLVED: The specification leaves the decomposition undefined, subject
+      to a small number of rules.  Assume that four vertices are specified in
+      the order V0, V1, V2, V3.
+
+      For QUADS primitives, the quad V0->V1->V2->V3 is decomposed into the
+      triangles V0->V1->V2, and V0->V2->V3.  The provoking vertex of the quad
+      (V3) is only found in the second triangle.  If it's necessary to flat
+      shade over an entire quad, take the attributes from V0, which will be
+      the first vertex for both triangles in the decomposition.
+
+      For QUAD_STRIP primitives, the quad V0->V1->V3->V2 is decomposed into
+      the triangles V0->V1->V3 and V2->V0->V3.  This has the property of
+      leaving the provoking vertex for the polygon (V3) as the third vertex
+      for each triangle of the decomposition.
+
+      For POLYGON primitives, the polygon V0->V1->V2->V3 is decomposed into
+      the triangles V1->V2->V0 and V2->V3->V0.  This has the property of
+      leaving the provoking vertex for the polygon (V0) as the third vertex
+      for each triangle of the decomposition.
+
+      The triangulation described here is not guaranteed to be used on all
+      implementations of this extension, and subsequent implementations may
+      use a more natural decomposition for QUAD_STRIP and POLYGON primitives.
+      (For example, the triangulation of 4-vertex polygons might match that
+      used for QUADS.)
+
+   4. Should this extension maintain the link error when GEOMETRY_VERTICES_OUT
+      is zero at link time stipulated by EXT/ARB_geometry_shader?
+
+      RESOLVED: No. While a link error is helpful to indicate the problem
+      earlier and with additional information, the way this extension is meant
+      to be used is more consistent with allowing the vertices out to remain
+      unspecified until render time rather than demanding a potentially bogus
+      value for it just to satisfy the linker.
+
+
+Revision History
+
+
+      Rev.    Date      Author    Changes
+      ----  ----------  --------  -------------------------------------------
+       17   10/09/2009  groth     Added explicit language excluding error for
+                                  linking with zero GEOMETRY_VERTICES_OUT.
+       16   01/10/2007  pbrown    Initial public revision.

@@ -1,0 +1,648 @@
+Name
+
+    KHR_create_context
+
+Name Strings
+
+    EGL_KHR_create_context
+
+Contact
+
+    Jon Leech (jon 'at' alumni.caltech.edu)
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+IP Status
+
+    No known IP claims.
+
+Status
+
+    Approved by the Khronos Board of Promoters on February 3, 2012
+    Updated in version 14 to add ES3 context creation bit - see Issue 8
+
+Version
+
+    Version 16, 2015/01/15
+
+Number
+
+    EGL Extension #39
+
+Dependencies
+
+    EGL 1.4 is required.
+
+    Some of the capabilities of these extensions are only available when
+    OpenGL and OpenGL ES contexts supporting specific versions, specific
+    profiles, or specific extensions can be created. All such restrictions
+    are documented in the body of this extension specification.
+
+Overview
+
+    With the advent of new versions of OpenGL which deprecate features
+    and/or break backward compatibility with older versions, there is a need
+    and desire to indicate at context creation which interface will be used.
+    This extension adds a new context creation routine with attributes
+    specifying the OpenGL version, context properties, and profile requested
+    for the context. It also allows making an OpenGL 3.0 or later context
+    (or other client API context supporting the ability) current without
+    providing a default framebuffer. The new context creation attributes
+    are also defined to work for OpenGL ES context creation when that
+    makes sense, and the extension has been augmented to allow configs to
+    advertise support for creating OpenGL ES 3.0 contexts.
+
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted as an attribute name in the <*attrib_list> argument of
+    eglCreateContext:
+
+        EGL_CONTEXT_MAJOR_VERSION_KHR           0x3098
+            (this token is an alias for EGL_CONTEXT_CLIENT_VERSION)
+        EGL_CONTEXT_MINOR_VERSION_KHR           0x30FB
+        EGL_CONTEXT_FLAGS_KHR                   0x30FC
+        EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR     0x30FD
+        EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY_KHR  0x31BD
+
+    Accepted as a bitfield value in the EGL_RENDERABLE_TYPE config
+    attribute to eglChooseConfig:
+
+        EGL_OPENGL_ES3_BIT_KHR                  0x0040
+
+    Accepted as attribute values for
+    EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY_KHR:
+
+        EGL_NO_RESET_NOTIFICATION_KHR           0x31BE
+        EGL_LOSE_CONTEXT_ON_RESET_KHR           0x31BF
+
+    Accepted as bits in the attribute value for EGL_CONTEXT_FLAGS_KHR in
+    <*attrib_list>:
+
+        EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR               0x00000001
+        EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR  0x00000002
+        EGL_CONTEXT_OPENGL_ROBUST_ACCESS_BIT_KHR       0x00000004
+
+    Accepted as bits in the attribute value for
+    EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR in <*attrib_list>:
+
+        EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR          0x00000001
+        EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR 0x00000002
+
+Additions to the OpenGL / WGL / GLX Specifications
+
+    None. This specification is written for EGL.
+
+Additions to the EGL 1.4 Specification
+
+    Add to table 3.3 "Types of client APIs supported by an EGLConfig"
+
+       "EGL Token Name          Client API and Version Supported
+        ----------------------  --------------------------------
+        EGL_OPENGL_ES3_BIT_KHR  OpenGL ES 3.x"
+
+    Modify the last sentence of section 3.5.2 "Creating Off-Screen
+    Rendering Surfaces"
+
+   "Finally, an EGL_BAD_ATTRIBUTE error is generated if ... <config> does
+    not support OpenGL ES rendering (e.g. the EGL_RENDERABLE_TYPE
+    attribute does not include at least one of EGL_OPENGL_ES_BIT,
+    EGL_OPENGL_ES2_BIT, or EGL_OPENGL_ES3_BIT_KHR."
+
+    Modify section 3.7 "Rendering Contexts" in the paragraph near
+    the top of page 42:
+
+   "Only one OpenGL or OpenGL ES context may be current to a particular
+    thread, even if the implementation supports OpenGL and one or more
+    versions of OpenGL ES in the same runtime [fn12]."
+
+    Replace section 3.7.1 "Creating Rendering Contexts" from the
+    sixth paragraph through the end of the subsection with:
+
+   "<attrib_list> specifies a list of attributes for the context. The
+    list has the same structure as described for eglChooseConfig. If an
+    attribute is not specified in <attrib_list>, then the default value
+    specified below is used instead. Most attributes are only meaningful
+    for specific client APIs, and will generate an error when specified
+    to create for another client API context.
+
+    OpenGL and OpenGL ES Context Versions
+    -------------------------------------
+
+    The values for attributes EGL_CONTEXT_MAJOR_VERSION_KHR and
+    EGL_CONTEXT_MINOR_VERSION_KHR specify the requested client API
+    version. They are only meaningful for OpenGL and OpenGL ES contexts,
+    and specifying them for other types of contexts will generate an
+    error.
+
+    When the current rendering API is EGL_OPENGL_ES_API or
+    EGL_OPENGL_API, the values of EGL_CONTEXT_MAJOR_VERSION_KHR (the
+    <major version> and EGL_CONTEXT_MINOR_VERSION_KHR (the <minor
+    version>) request creation of an OpenGL ES or OpenGL context,
+    respectively, supporting the specified version (<major>.<minor>) of
+    that client API.
+       [fn: the EGL 1.4 token EGL_CONTEXT_CLIENT_VERSION is an alias for
+        EGL_CONTEXT_MAJOR_VERSION_KHR, and the tokens may be used
+        interchangeably.]
+    If successful, the context returned must be <backwards compatible>
+    with the requested version. Backwards compatibility is determined as
+    follows:
+
+    If the current rendering API is EGL_OPENGL_ES_API, then:
+
+      * If version 1.0 is requested, the context returned may implement
+        either OpenGL ES 1.0 or OpenGL ES 1.1.
+
+      * If version 1.1 is requested, the context returned must implement
+        OpenGL ES 1.1.
+
+      * If version 2.0, version 3.0, or a later version (when later
+        versions are defined by Khronos) is requested, the context
+        returned must implement the requested OpenGL ES version, or any
+        later version which is backwards compatible with the requested
+        version.
+
+    If the current rendering API is EGL_OPENGL_API, then:
+
+      * If a version less than or equal to OpenGL 3.0 is requested, the
+        context returned may implement any of the following versions:
+
+          * Any version no less than that requested and no greater than
+            3.0.
+          * Version 3.1, if the GL_ARB_compatibility extension is also
+            implemented.
+          * The compatibility profile of version 3.2 or greater.
+
+      * If OpenGL 3.1 is requested, the context returned may implement
+        any of the following versions:
+
+          * Version 3.1. The GL_ARB_compatibility extension may or may
+            not be implemented, as determined by the implementation.
+          * The core profile of version 3.2 or greater.
+
+      * If OpenGL 3.2 or greater is requested, the context returned may
+        implement any of the following versions:
+
+          * The requested profile (see
+            EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR below) of the requested
+            version.
+          * The requested profile of any later version, so long as no
+            features have been removed from that later version and
+            profile.
+
+    Typically, the implementation will return the most recent version of
+    OpenGL it supports which is backwards compatible with the requested
+    version.
+
+    Querying the GL_VERSION string with glGetString in either OpenGL or
+    OpenGL ES (or the GL_MAJOR_VERSION and GL_MINOR_VERSION values with
+    glGetIntegerv, in an OpenGL 3.0 or later context) will return the
+    actual version supported by a context.
+
+    The default values for EGL_CONTEXT_MAJOR_VERSION_KHR and
+    EGL_CONTEXT_MINOR_VERSION_KHR are 1 and 0 respectively.
+
+    OpenGL Context Profiles
+    -----------------------
+
+    The value for attribute EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR
+    specifies a <profile> of the OpenGL API. This attribute is only
+    meaningful for OpenGL contexts, and specifying it for other types of
+    contexts, including OpenGL ES contexts, will generate an error.
+
+    When the current rendering API is EGL_OPENGL_API, the value of
+    EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR requests an OpenGL context
+    supporting the corresponding profile. If the
+    EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR bit is set in the attribute
+    value, then a context implementing the <core> profile of OpenGL is
+    returned. If the EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR
+    bit is set, then a context implementing the <compatibility> profile
+    is returned. If the requested OpenGL version is less than 3.2,
+    EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR is ignored and the functionality
+    of the context is determined solely by the requested version.
+
+    Querying the value of GL_CONTEXT_PROFILE_MASK with glGetIntegerv
+    will return the profile mask used to create the context. This query
+    is only supported in an OpenGL 3.2 or later context.
+
+    The default value for EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR is
+    EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR. All OpenGL 3.2 and later
+    implementations are required to implement the core profile, but
+    implementation of the compatibility profile is optional.
+
+    If the core profile is requested, then the context returned cannot
+    implement functionality defined only by the compatibility profile.
+
+    OpenGL and OpenGL ES Context Flags
+    ----------------------------------
+
+    The value for attribute EGL_CONTEXT_FLAGS_KHR specifies a set of flag
+    bits affecting the context. Flag bits are only meaningful when creating
+    certain types of contexts, as described for each bit below, and
+    specifying such a flag bit when creating another type of context will
+    generate an error.
+
+    If the EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR flag bit is set in
+    EGL_CONTEXT_FLAGS_KHR, then a <debug context> will be created. Debug
+    contexts are intended for use during application development, to
+    provide additional runtime checking, validation, and logging
+    functionality while possibly incurring performance penalties. The
+    additional functionality provided by debug contexts may vary
+    according to the implementation(fn). In some cases a debug context
+    may be identical to a non-debug context. This bit is supported for
+    OpenGL and OpenGL ES contexts.
+        [fn: Khronos is still defining the expected and required
+             features of debug contexts, so implementations are
+             currently free to implement "debug contexts" with little or
+             no debug functionality. However, OpenGL and OpenGL ES
+             implementations supporting the GL_KHR_debug extension
+             should enable it when this bit is set.]
+        [fn2: See issue 9 below for discussion of backwards
+             compatibility issues with the debug bit and OpenGL ES
+             contexts.]
+
+    If the EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR flag bit is set
+    in EGL_CONTEXT_FLAGS_KHR, then a <forward-compatible> context will
+    be created. Forward-compatible contexts are defined only for OpenGL
+    versions 3.0 and later. They must not support functionality marked
+    as <deprecated> by that version of the API, while a
+    non-forward-compatible context must support all functionality in
+    that version, deprecated or not. This bit is supported for OpenGL
+    contexts, and requesting a forward-compatible context for OpenGL
+    versions less than 3.0 will generate an error.
+
+    If the EGL_CONTEXT_OPENGL_ROBUST_ACCESS_BIT_KHR bit is set in
+    EGL_CONTEXT_FLAGS_KHR, then a context supporting <robust buffer
+    access> will be created. Robust buffer access is defined in the
+    GL_ARB_robustness extension specification, and the resulting context
+    must also support either the GL_ARB_robustness extension, or a
+    version of OpenGL incorporating equivalent functionality. This bit
+    is supported for OpenGL contexts.
+
+    The default value of EGL_CONTEXT_FLAGS_KHR is zero.
+
+    OpenGL Context Reset Notification
+    ---------------------------------
+
+    The attribute name
+    EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY_KHR specifies the
+    <reset notification behavior> of the rendering context. This
+    attribute is only meaningful for OpenGL contexts, and specifying it
+    for other types of contexts, including OpenGL ES contexts, will
+    generate an error.
+
+    Reset notification behavior is defined in the GL_ARB_robustness
+    extension specification, and the resulting context must also support
+    either the GL_ARB_robustness extension, or a version of OpenGL or
+    incorporating equivalent functionality. The attribute value may be
+    either EGL_NO_RESET_NOTIFICATION_KHR or
+    EGL_LOSE_CONTEXT_ON_RESET_KHR, which respectively result in reset
+    notification behavior of GL_NO_RESET_NOTIFICATION_ARB and
+    GL_LOSE_CONTEXT_ON_RESET_ARB, as described by GL_ARB_robustness. The
+    default value for EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY_KHR
+    is EGL_NO_RESET_NOTIFICATION_KHR.
+
+    Errors
+    ------
+
+    On failure eglCreateContext returns EGL_NO_CONTEXT and generates an
+    EGL error with extended error information. Conditions that cause
+    failure include:
+
+      * If an attribute is specified that is not meaningful for the
+        client API type determined by the current rendering API, an
+        EGL_BAD_ATTRIBUTE error is generated.
+
+      * If the current rendering api is EGL_NONE, then an EGL_BAD_MATCH
+        error is generated (this situation can only arise in an
+        implementation which does not support OpenGL ES 1.x, and prior to
+        the first call to eglBindAPI).
+
+      * If share_context is neither EGL_NO_CONTEXT nor a valid context
+        of the same client API type as the newly created context, then
+        an EGL_BAD_CONTEXT error is generated.
+
+      * If <config> is not a valid EGLConfig, or does not support the
+        requested client API, then an EGL_BAD_CONFIG error is generated
+        (this includes requesting creation of an OpenGL ES 1.x, 2.0, or
+        3.0 context when the EGL_RENDERABLE_TYPE attribute of <config>
+        does not contain EGL_OPENGL_ES_BIT, EGL_OPENGL_ES2_BIT, or
+        EGL_OPENGL_ES3_BIT_KHR respectively).
+
+      * If <config> does not support a client API context compatible
+        with the requested API major and minor version, context flags,
+        and context reset notification behavior (for client API types
+        where these attributes are supported), then an EGL_BAD_MATCH
+        error is generated.
+
+      * If an OpenGL context is requested, the requested version is
+        greater than 3.2, and the value for attribute
+        EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR has no bits set; has any
+        bits set other than EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR and
+        EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR; has more than
+        one of these bits set; or if the implementation does not support
+        the requested profile, then an EGL_BAD_MATCH error is generated.
+
+      * If an OpenGL or OpenGL ES context is requested and the server
+        context state for <share_context> exists in an address space
+        that cannot be shared with the newly created context, if
+        <share_context> was created on a different display than the one
+        referenced by <config>, if the reset notification behavior of
+        <share_context> and the newly created context are different, or
+        if the contexts are otherwise incompatible (for example, one
+        context being associated with a hardware device driver and the
+        other with a software renderer), then an EGL_BAD_MATCH error is
+        generated.
+
+      * If the server does not have enough resources to allocate the new
+        context, then an EGL_BAD_ALLOC error is generated.
+
+      * If an OpenGL context is requested and the values for attributes
+        EGL_CONTEXT_MAJOR_VERSION_KHR and EGL_CONTEXT_MINOR_VERSION_KHR,
+        when considered together with the value for attribute
+        EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR, specify an OpenGL
+        version and feature set that are not defined, than an
+        EGL_BAD_MATCH error is generated.
+
+        The defined versions of OpenGL at the time of writing are OpenGL
+        1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 2.0, 2.1, 3.0, 3.1, 3.2, 4.0, 4.1,
+        4.2, and 4.3. Feature deprecation was introduced with OpenGL
+        3.0, so forward-compatible contexts may only be requested for
+        OpenGL 3.0 and above. Thus, examples of invalid combinations of
+        attributes include:
+
+          - Major version < 1 or > 4
+          - Major version == 1 and minor version < 0 or > 5
+          - Major version == 2 and minor version < 0 or > 1
+          - Major version == 3 and minor version < 0 or > 2
+          - Major version == 4 and minor version < 0 or > 3
+          - Forward-compatible flag set and major version < 3
+
+        Because the purpose of forward-compatible contexts is to allow
+        application development on a specific OpenGL version with the
+        knowledge that the app will run on a future version, context
+        creation will fail if
+        EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR is set and the
+        context version returned cannot implement exactly the requested
+        version.
+
+      * If an OpenGL ES context is requested and the values for
+        attributes EGL_CONTEXT_MAJOR_VERSION_KHR and
+        EGL_CONTEXT_MINOR_VERSION_KHR specify an OpenGL ES version that
+        is not defined, than an EGL_BAD_MATCH error is generated.
+
+        The defined versions of OpenGL ES at the time of writing are
+        OpenGL ES 1.0, 1.1, 2.0, and 3.0. Examples of invalid
+        combinations of attributes include:
+
+          - Major version < 1 or > 3
+          - Major version == 1 and minor version < 0 or > 1
+          - Major version == 2 and minor version != 0
+          - Major version == 3 and minor version != 0
+
+      * If an attribute name or attribute value in <attrib_list> is not
+        recognized (including undefined or unsupported bits in bitmask
+        attributes), then an EGL_BAD_ATTRIBUTE error is generated."
+
+    In section 3.7.3, replace the following two error conditions in the
+    list of eglMakeCurrent errors:
+
+   "  * If <ctx> is not a valid context, an EGL_BAD_CONTEXT error is
+        generated.
+      * If either <draw> or <read> are not valid EGL surfaces, an
+        EGL_BAD_SURFACE error is generated."
+
+    with the following error conditions:
+
+   "  * If <ctx> is not a valid context and is not EGL_NO_CONTEXT, an
+        EGL_BAD_CONTEXT error is generated.
+      * If either <draw> or <read> are not valid EGL surfaces and are
+        not EGL_NO_SURFACE, an EGL_BAD_SURFACE error is generated.
+      * If <ctx> is EGL_NO_CONTEXT and either <draw> or <read> are not
+        EGL_NO_SURFACE, an EGL_BAD_MATCH error is generated.
+      * If either of <draw> or <read> is a valid surface and the other
+        is EGL_NO_SURFACE, an EGL_BAD_MATCH error is generated.
+      * If <ctx> does not support being bound without read and draw
+        surfaces, and both <draw> and <read> are EGL_NO_SURFACE, an
+        EGL_BAD_MATCH error is generated."
+
+    Replace the paragraph starting "If <ctx> is EGL_NO_CONTEXT and
+    <draw> and <read> are not EGL_NO_SURFACE..." with
+
+   "If both <draw> and <read> are EGL_NO_SURFACE, and <ctx> is an OpenGL
+    context supporting version 3.0 or later of the OpenGL API, then no
+    error is generated and the context is made current without a
+    <default framebuffer>. The meaning of this is defined in chapter 4
+    of the OpenGL 3.0 Specification."
+
+    Append to the paragraph starting "The first time an OpenGL or OpenGL
+    ES context is made current..." with
+
+   "If the first time <ctx> is made current, it is without a default
+    framebuffer (e.g. both <draw> and <read> are EGL_NO_SURFACE), then
+    the viewport and scissor regions are set as though
+    glViewport(0,0,0,0) and glScissor(0,0,0,0) were called."
+
+
+Errors
+
+    EGL errors for eglCreateContext as described in the body of the
+    specification.
+
+    eglMakeCurrent error behavior is relaxed to allow making an OpenGL
+    3.0 or later context current without a default read or draw
+    framebuffer.
+
+Conformance Tests
+
+    TBD
+
+Sample Code
+
+    TBD
+
+Issues
+
+    Non-window-system dependent issues described in the
+    WGL_ARB_create_context extension specification in the OpenGL
+    Registry apply to EGL_KHR_create_context.
+
+ 1) Do enumerant values need to be shared with the equivalent WGL / GLX
+    extensions?
+
+    Mostly not. The only case where it's fairly important that the
+    values be identical is the EGL_CONTEXT_FLAGS_KHR attribute bitmask
+    values, which are also exposed through an OpenGL query.
+
+ 2) Why are some attribute values named EGL_CONTEXT_OPENGL_*?
+
+    It is possible that context flags and profiles will eventually be
+    defined for client APIs other than OpenGL. To allow for this
+    possibility, the names of the corresponding attribute values are
+    distinguished. For example, EGL_CONTEXT_FLAGS_KHR currently only has
+    flags defined for OpenGL context creation, and those flags are named
+    EGL_CONTEXT_OPENGL_*_BIT_KHR, but in time OpenVG context creation
+    might allow flags as well. Such flags would be named
+    EGL_CONTEXT_OPENVG_*_BIT_KHR.
+
+ 3) Why does EGL_CONTEXT_MAJOR_VERSION_KHR have a distinct numeric token
+    value when it is functionally equivalent to
+    EGL_CONTEXT_CLIENT_VERSION?
+
+    It no longer has a distinct token value; see issue 1.
+
+ 4) How will future versions of OpenGL ES interact with this extension?
+
+    Later context versions which are backwards compatibile with the
+    requested version can be returned, just as with OpenGL contexts.
+
+ 5) What happens when requesting a context requiring OpenGL functionality
+    that cannot be supported by the underlying GL implementation, such as
+    requesting lost context reset notification and/or robust buffer access
+    when the implementation does not support the functionality defined by
+    GL_ARB_robustness?
+
+    Context creation will fail and an EGL_BAD_MATCH error will be
+    generated. This case is included under the general language of the
+    fifth bullet point under "Errors" but this issue is added to for
+    clarity.
+
+ 6) How is robust buffer access and reset notification supported under
+    OpenGL ES?
+
+    RESOLVED: It is an error to request robust buffer access and/or reset
+    notification for OpenGL ES contexts. Exposing robust buffer access and
+    reset notification for OpenGL ES contexts may be defined in a future EGL
+    extension.
+
+ 7) Future support for OpenGL ES context creation.
+
+    If and when features available for OpenGL context creation are defined
+    for OpenGL ES context creation in the future, debug contexts, forward
+    compatible contexts, and robust buffer access contexts may be specified
+    using separate attributes rather than bitmasks. The reset notification
+    behavior attribute may be extended to cover OpenGL ES as well as OpenGL.
+
+ 8) Why was the EGL_OPENGL_ES3_BIT_KHR added in version 13 of the
+    extension? Doesn't this break backwards compatibility with older
+    versions of the extension?
+
+    Applications need the functionality to be confident that context
+    creation of an OpenGL ES 3.0 context will succeed (rather than trying
+    it with different configs until one that succeeds is found).
+
+    If this bit is passed into eglChooseConfig and the implementation
+    supports only an older version of the extension, an EGL_BAD_ATTIBUTE
+    error should be generated. Since no matching configs will be found, a
+    robustly-written application will fail (or fall back to an ES 2.0
+    rendering path) at this point. This is the same application behavior
+    that should result from not finding a matching config on an
+    implementation supporting version 13 of the extension, even though the
+    failure mode is different (EGL error vs. returning no matching
+    configs). The EGL Working Group considers this sufficiently benign
+    behavior, and the functionality important enough, to make the change.
+
+ 9) Why was OpenGL ES support for EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR added
+    in version 15 of the extension? Doesn't this break backwards
+    compatibility with older versions of the extension?
+
+    Now that the GL_KHR_debug extension is ratified and available,
+    OpenGL ES implementers needed a way to enable debug functionality,
+    and wanted to use the same mechanism as OpenGL. There is no
+    discovery mechanism for this capability, so an application creating
+    a OpenGL ES context with the debug bit set and running against an
+    older EGL driver should generate an error. The OpenGL ES Working
+    Group considers this benign behavior.
+
+ 10) Which error should be generated if robust buffer access or reset
+     notifications are requested under OpenGL ES?
+
+    As per Issue 6, this extension does not support creating robust contexts
+    for OpenGL ES. This is only supported via the EGL_EXT_create_context_-
+    robustness extension.
+
+    Attempting to use this extension to create robust OpenGL ES context
+    will generate an EGL_BAD_ATTRIBUTE error. This specific error is generated
+    because this extension does not define the EGL_CONTEXT_OPENGL_ROBUST_-
+    ACCESS_BIT_KHR and EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY_KHR bits
+    for OpenGL ES contexts. Thus, use of these bits fall under condition
+    described by: "If an attribute is specified that is not meaningful for
+    the client API type.." in the above specification.
+
+Revision History
+
+    Version 16, 2015/01/15
+      - Add issue 10.
+
+    Version 15, 2013/03/27
+      - Add OpenGL ES support for debug contexts (Bug 10035).
+
+    Version 14, 2012/09/19
+      - Assign enum value to new bit and published updated extension.
+
+    Version 13, 2012/07/29
+      - Add EGL_OPENGL_ES3_BIT_KHR to table 3.3 and sections 3.5.2, 3.7,
+        and 3.7.1. Add issue 8 explaining the addition.
+
+    Version 12, 2012/07/25
+      - Explicitly describe new OpenGL 4.3 and OpenGL ES 3.0 versions.
+        This is not a behavior change (Khronos Bug 9136).
+      - Make spec consistent so that asking for a forward-compatible GL
+        context for versions less than 3.0 is an error (Bug 9314).
+      - Change nonexistent EGL_BAD_PROFILE_KHR error generated when
+        asking for an unsupported or nonexistent GL profile to an
+        EGL_BAD_MATCH error (Bug 9314).
+      - Fix typos in spec body for several new tokens of form
+        "EGL_CONTEXT_OPENGL_*" which were missing the "OPENGL_" part
+        (Bug 9314).
+
+    Version 11, 2012/07/09 - change nonexistent EGL_BAD_VALUE error
+    to EGL_BAD_ATTRIBUTE (Khronos Bug 9269).
+
+    Version 10, 2011/11/22 - fix typo.
+
+    Version 9, 2011/11/09 - resolve issue 6 and add issue 7, limiting
+    various context creation attributes to apply only to OpenGL and not
+    to OpenGL ES.
+
+    Version 8, 2011/10/20 - change spec body to match BAD_MATCH error
+    returned in issue 5 when specifying context version and attributes
+    that collectively cannot be satisfied.
+
+    Version 7, 2011/10/19 - add issue 5 clarifying context creation
+    failures when requesting functionality that cannot be supported by a
+    GL or ES context, and issue 6 discussing the meaning of "equivalent
+    to GL_ARB_robustness".
+
+    Version 6, 2011/10/19 - minor cleanup & clarification of OpenGL ES
+    version requests.
+
+    Version 5, 2010/09/22 - add context reset notification strategy
+    attributes from GLX/WGL context creation extensions.
+
+    Version 4, 2010/09/22 - fix typo. Assign enumerant values and update
+    issue 1 to match. Add caveat to errors section so that invalid
+    attribute values for EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR only raise
+    errors when requesting an OpenGL context of version 3.2 or greater
+    (bug 6374). Add issue 4 and allow ES 2.0 context creation requests
+    to return later versions that are backwards-compatible (bug 6374).
+
+    Version 3, 2010/07/21 - remove surfaceless bit in favor of separate
+    per-client-API extensions which promise that contexts of a given
+    client API type can be bound without surfaces on that display. Add
+    robust buffer access bit from equivalent WGL/GLX context creation
+    extensions. Rename EGL_CONTEXT_FLAGS_KHR so it's not specific to
+    OpenGL.
+
+    Version 2, 2010/06/29 - add EGL_CONTEXT_OPENGL_SURFACELESS_BIT_KHR
+    context flag bit (bug 6082).
+
+    Version 1, 2010/06/29 - Initial version based on equivalent
+    WGL_ARB_create_context and GLX_ARB_create_context extensions.

@@ -1,0 +1,88 @@
+# Copyright 2018 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("../../../scripts/dawn_overrides_with_defaults.gni")
+
+if (dawn_has_fuzzers) {
+  import("//build_overrides/build.gni")
+  import("//testing/libfuzzer/fuzzer_test.gni")
+  import("${dawn_root}/scripts/dawn_features.gni")
+
+  static_library("dawn_wire_server_fuzzer_common") {
+    sources = [
+      "DawnWireServerFuzzer.cpp",
+      "DawnWireServerFuzzer.h",
+    ]
+    public_deps = [
+      "${dawn_root}/include/dawn:cpp_headers",
+      "${dawn_root}/src/dawn:proc",
+      "${dawn_root}/src/dawn/common",
+      "${dawn_root}/src/dawn/native:static",
+      "${dawn_root}/src/dawn/utils",
+      "${dawn_root}/src/dawn/wire:static",
+    ]
+  }
+
+  fuzzer_test("dawn_wire_server_and_frontend_fuzzer") {
+    sources = [ "DawnWireServerAndFrontendFuzzer.cpp" ]
+
+    deps = [ ":dawn_wire_server_fuzzer_common" ]
+
+    additional_configs = [ "${dawn_root}/src/dawn/common:internal_config" ]
+  }
+
+  if (is_win) {
+    fuzzer_test("dawn_wire_server_and_d3d12_backend_fuzzer") {
+      sources = [ "DawnWireServerAndD3D12BackendFuzzer.cpp" ]
+
+      deps = [ ":dawn_wire_server_fuzzer_common" ]
+
+      additional_configs = [ "${dawn_root}/src/dawn/common:internal_config" ]
+    }
+  }
+
+  fuzzer_test("dawn_wire_server_and_vulkan_backend_fuzzer") {
+    sources = [ "DawnWireServerAndVulkanBackendFuzzer.cpp" ]
+
+    deps = [ ":dawn_wire_server_fuzzer_common" ]
+
+    additional_configs = [ "${dawn_root}/src/dawn/common:internal_config" ]
+  }
+
+  # A group target to build all the fuzzers
+  group("fuzzers") {
+    testonly = true
+    deps = [
+      ":dawn_wire_server_and_frontend_fuzzer",
+      ":dawn_wire_server_and_vulkan_backend_fuzzer",
+    ]
+
+    if (is_win) {
+      deps += [ ":dawn_wire_server_and_d3d12_backend_fuzzer" ]
+    }
+  }
+}

@@ -1,0 +1,185 @@
+Name
+
+    GLX_ARB_robustness_isolation
+
+Name Strings
+
+    GLX_ARB_robustness_application_isolation
+    GLX_ARB_robustness_share_group_isolation
+
+Contributors
+
+    Tim Johansson, Opera (timj 'at' opera.com)
+    Bill Licea-Kane (bill.licea-kane 'at' amd.com)
+    <TBD>
+
+Contact
+
+    Kenneth Russell, Google (kbr 'at' google.com)
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date:  August 13, 2012
+    Version:             6
+
+Number
+
+    ARB Extension #142
+
+Dependencies
+
+    GLX 1.4 is required.
+
+    GLX_ARB_create_context_robustness is required.
+
+Overview
+
+    GL_ARB_robustness and GLX_ARB_create_context_robustness allow
+    creating an OpenGL context supporting graphics reset notification
+    behavior.  GLX_ARB_robustness_application_isolation and
+    GLX_ARB_robustness_share_group_isolation provide stronger
+    guarantees about the possible side-effects of a graphics reset.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None.
+
+New Types
+
+    None.
+
+New Tokens
+
+    Accepted as a bit in the attribute value for GLX_CONTEXT_FLAGS_ARB
+    in the <*attrib_list> argument to glXCreateContextAttribsARB:
+
+        GLX_CONTEXT_RESET_ISOLATION_BIT_ARB             0x00000008    
+
+Additions to the OpenGL / AGL / WGL Specifications
+
+    None. This specification is written for GLX.
+
+Additions to the GLX specification
+
+    Add the following new paragraphs to the description of
+    glXCreateContextAttribsARB, after that added by
+    GLX_ARB_create_context_robustness:
+
+    "If the application creates all of its OpenGL contexts with the
+    GLX_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB attribute set to
+    GLX_LOSE_CONTEXT_ON_RESET_ARB, and the
+    GLX_CONTEXT_RESET_ISOLATION_BIT_ARB bit set, then:
+
+      If the graphics driver advertises the
+      GLX_ARB_robustness_application_isolation extension string, then
+      the driver guarantees that if a particular application causes a
+      graphics reset to occur:
+
+      1. No other application on the system is affected by the
+         graphics reset.
+
+      2. No other application on the system receives any notification
+         that the graphics reset occurred.
+    
+      If the graphics driver advertises the
+      GLX_ARB_robustness_share_group_isolation extension string, then
+      the driver guarantees that if a context in a particular share
+      group causes a graphics reset to occur:
+
+      1. No other share group within the application, nor any other
+         application on the system, is affected by the graphics reset.
+
+      2. No other share group within the application, nor any other
+         application on the system, receives any notification that the
+         graphics reset occurred.
+
+    The GLX_ARB_robustness_application_isolation and
+    GLX_ARB_robustness_share_group_isolation extensions do not provide
+    guarantees for graphics resets caused by applications which did
+    not create their contexts with both the LOSE_CONTEXT_ON_RESET_ARB
+    reset notification strategy and the
+    GLX_CONTEXT_RESET_ISOLATION_BIT_ARB bit."
+
+    Add a new context creation error to glXCreateContextAttribsARB:
+
+   "* If the reset isolation bits of <share_context> and the newly
+    created context are different, BadMatch is generated."
+
+GLX Errors
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    GLXBadFBConfig is generated if GLX_CONTEXT_RESET_ISOLATION_BIT_ARB
+    is set in attribute GLX_CONTEXT_FLAGS_ARB, and no GL context
+    supporting the GL_ARB_robustness_isolation extension with either
+    application or share group isolation can be created.
+
+    BadMatch is generated if the reset isolation bit of
+    <share_context> does not match the reset isolation bit of the
+    context being created.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Conformance Tests
+
+    TBD
+
+Sample Code
+
+    TBD
+
+Issues
+
+    1) Do GPU vendors all agree that the share_group_isolation variant
+       is supportable? If so, we could drop the application_isolation
+       variant, which would simplify the spec.
+
+    2) How will these extension strings be handled and exposed on EGL
+       and Mac OS?
+
+Revision History
+
+    Rev.    Date       Author     Changes
+    ----  ------------ ---------  ----------------------------------------
+      1   18 Apr 2011  kbr        Initial version
+      2   28 Apr 2011  kbr        Renamed context_isolation to share_group_isolation
+      3   08 Jun 2011  kbr        Made guarantees conditional on using LOSE_CONTEXT_ON_RESET_ARB
+      4   17 Aug 2011  kbr        Renamed file to GLX_ARB_robustness_isolation
+      5   24 Apr 2012  kbr        Added GLX_CONTEXT_RESET_ISOLATION_BIT_ARB on feedback from Bill Licea-Kane
+      6   08 Aug 2012  Jon Leech  Renumbered from #145 to #142

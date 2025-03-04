@@ -1,0 +1,4 @@
+ERROR: 0:7: '#include' : Could not process include directive for header name: bar.h
+ERROR: 1 compilation errors.  No code generated.
+
+

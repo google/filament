@@ -1,0 +1,673 @@
+// Copyright 2023 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+syntax = "proto3";
+
+package tint.core.ir.binary.pb;
+
+message Module {
+    repeated Type types = 1;
+    repeated Value values = 2;
+    repeated ConstantValue constant_values = 3;
+    repeated Function functions = 4;
+    repeated Block blocks = 5;
+    uint32 root_block = 6;  // Module.blocks
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Types
+////////////////////////////////////////////////////////////////////////////////
+message Type {
+    oneof kind {
+        TypeBasic basic = 1;
+        TypeVector vector = 2;
+        TypeMatrix matrix = 3;
+        TypeArray array = 4;
+        TypePointer pointer = 5;
+        TypeStruct struct = 6;
+        TypeAtomic atomic = 7;
+        TypeDepthTexture depth_texture = 8;
+        TypeSampledTexture sampled_texture = 9;
+        TypeMultisampledTexture multisampled_texture = 10;
+        TypeDepthMultisampledTexture depth_multisampled_texture = 11;
+        TypeStorageTexture storage_texture = 12;
+        TypeExternalTexture external_texture = 13;
+        TypeSampler sampler = 14;
+        TypeInputAttachment input_attachment = 15;
+        TypeSubgroupMatrix subgroup_matrix_left = 16;
+        TypeSubgroupMatrix subgroup_matrix_right = 17;
+        TypeSubgroupMatrix subgroup_matrix_result = 18;
+    }
+}
+
+// Non-compound types
+enum TypeBasic {
+    void = 0;
+    bool = 1;
+    i32 = 2;
+    u32 = 3;
+    f32 = 4;
+    f16 = 5;
+}
+
+message TypeVector {
+    uint32 width = 1;
+    uint32 element_type = 2;  // Module.types
+}
+
+message TypeMatrix {
+    uint32 num_columns = 1;
+    uint32 num_rows = 2;
+    uint32 element_type = 3;  // Module.types
+}
+
+message TypeArray {
+    uint32 element = 1;  // Module.types
+    uint32 stride = 2;
+    uint32 count = 3;
+}
+
+message TypePointer {
+    AddressSpace address_space = 1;
+    uint32 store_type = 2;  // Module.types
+    AccessControl access = 3;
+}
+
+message TypeStruct {
+    string name = 1;
+    repeated TypeStructMember member = 2;
+}
+
+message TypeStructMember {
+    string name = 1;
+    uint32 type = 2;
+    uint32 size = 3;
+    uint32 align = 4;
+    optional AttributesStructMember attributes = 5;
+}
+
+message TypeAtomic {
+    uint32 type = 1;  // Module.types
+}
+
+message TypeDepthTexture {
+    TextureDimension dimension = 1;
+}
+
+message TypeSampledTexture {
+    TextureDimension dimension = 1;
+    uint32 sub_type = 2;  // Module.types
+}
+
+message TypeMultisampledTexture {
+    TextureDimension dimension = 1;
+    uint32 sub_type = 2;  // Module.types
+}
+
+message TypeDepthMultisampledTexture {
+    TextureDimension dimension = 1;
+}
+
+message TypeStorageTexture {
+    TextureDimension dimension = 1;
+    TexelFormat texel_format = 2;
+    AccessControl access = 3;
+}
+
+message TypeExternalTexture {}
+
+message TypeSampler {
+    SamplerKind kind = 1;
+}
+
+message TypeInputAttachment {
+    uint32 sub_type = 1;  // Module.types
+}
+
+message TypeSubgroupMatrix {
+    uint32 sub_type = 1;  // Module.types
+    uint32 rows = 2;
+    uint32 columns = 3;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Values
+////////////////////////////////////////////////////////////////////////////////
+message Value {
+    oneof kind {
+        uint32 function = 1;  // Module.functions
+        InstructionResult instruction_result = 2;
+        FunctionParameter function_parameter = 3;
+        BlockParameter block_parameter = 4;
+        uint32 constant = 5;  // Module.constant_values
+    }
+}
+
+message InstructionResult {
+    uint32 type = 1;  // Module.types
+    optional string name = 2;
+}
+
+message FunctionParameter {
+    uint32 type = 1;  // Module.types
+    optional string name = 2;
+    optional AttributesFunctionParameter attributes = 3;
+}
+
+message BlockParameter {
+    uint32 type = 1;  // Module.types
+    optional string name = 2;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// ConstantValues
+////////////////////////////////////////////////////////////////////////////////
+message ConstantValue {
+    oneof kind {
+        ConstantValueScalar scalar = 1;
+        ConstantValueComposite composite = 2;
+        ConstantValueSplat splat = 3;
+    }
+}
+
+message ConstantValueScalar {
+    oneof kind {
+        bool bool = 1;
+        int32 i32 = 2;
+        uint32 u32 = 3;
+        float f32 = 4;
+        float f16 = 5;
+    }
+}
+
+message ConstantValueComposite {
+    uint32 type = 1;               // Module.types
+    repeated uint32 elements = 2;  // Module.constant_values
+}
+
+message ConstantValueSplat {
+    uint32 type = 1;      // Module.types
+    uint32 elements = 2;  // Module.constant_values
+    uint32 count = 3;     // splat count
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Functions
+////////////////////////////////////////////////////////////////////////////////
+message Function {
+    uint32 return_type = 1;  // Module.types
+    uint32 block = 2;        // Module.blocks
+    optional string name = 3;
+    optional PipelineStage pipeline_stage = 4;
+    optional WorkgroupSize workgroup_size = 5;
+    repeated uint32 parameters = 6;  // Module.values
+    optional uint32 return_location = 7;
+    optional Interpolation return_interpolation = 8;
+    optional BuiltinValue return_builtin = 9;
+    bool return_invariant = 10;
+}
+
+enum PipelineStage {
+    Compute = 0;
+    Fragment = 1;
+    Vertex = 2;
+}
+
+message WorkgroupSize {
+    uint32 x = 1;
+    uint32 y = 2;
+    uint32 z = 3;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Blocks
+////////////////////////////////////////////////////////////////////////////////
+message Block {
+    repeated uint32 parameters = 1;  // Module.values
+    repeated Instruction instructions = 2;
+    bool is_multi_in = 3;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Instructions
+////////////////////////////////////////////////////////////////////////////////
+message Instruction {
+    repeated uint32 operands = 1;  // Module.values
+    repeated uint32 results = 2;   // Module.values
+    oneof kind {
+        InstructionReturn return = 3;
+        InstructionUnary unary = 4;
+        InstructionBinary binary = 5;
+        InstructionDiscard discard = 6;
+        InstructionLet let = 7;
+        InstructionVar var = 8;
+        InstructionBitcast bitcast = 9;
+        InstructionConstruct construct = 10;
+        InstructionConvert convert = 11;
+        InstructionAccess access = 12;
+        InstructionUserCall user_call = 13;
+        InstructionBuiltinCall builtin_call = 14;
+        InstructionLoad load = 15;
+        InstructionStore store = 16;
+        InstructionLoadVectorElement load_vector_element = 17;
+        InstructionStoreVectorElement store_vector_element = 18;
+        InstructionSwizzle swizzle = 19;
+        InstructionIf if = 20;
+        InstructionSwitch switch = 21;
+        InstructionLoop loop = 22;
+        InstructionExitIf exit_if = 23;
+        InstructionExitSwitch exit_switch = 24;
+        InstructionExitLoop exit_loop = 25;
+        InstructionNextIteration next_iteration = 26;
+        InstructionContinue continue = 27;
+        InstructionBreakIf break_if = 28;
+        InstructionUnreachable unreachable = 29;
+    }
+}
+
+message InstructionReturn {}
+
+message InstructionUnary {
+    UnaryOp op = 1;
+}
+
+message InstructionBinary {
+    BinaryOp op = 1;
+}
+
+message InstructionBitcast {}
+
+message InstructionConstruct {}
+
+message InstructionDiscard {}
+
+message InstructionLet {}
+
+message InstructionVar {
+    optional BindingPoint binding_point = 1;
+    optional uint32 input_attachment_index = 2;
+}
+
+message InstructionConvert {}
+
+message InstructionAccess {}
+
+message InstructionUserCall {}
+
+message InstructionBuiltinCall {
+    BuiltinFn builtin = 1;
+}
+
+message InstructionLoad {}
+
+message InstructionStore {}
+
+message InstructionLoadVectorElement {}
+
+message InstructionStoreVectorElement {}
+
+message InstructionSwizzle {
+    repeated uint32 indices = 1;
+}
+
+message InstructionIf {
+    optional uint32 true = 1;   // Module.blocks
+    optional uint32 false = 2;  // Module.blocks
+}
+
+message InstructionSwitch {
+    repeated SwitchCase cases = 1;  // Module.blocks
+}
+
+message InstructionLoop {
+    optional uint32 initializer = 1;  // Module.blocks
+    optional uint32 body = 2;         // Module.blocks
+    optional uint32 continuing = 3;   // Module.blocks
+}
+
+message InstructionExitIf {}
+
+message InstructionExitSwitch {}
+
+message InstructionExitLoop {}
+
+message SwitchCase {
+    uint32 block = 1;               // Module.blocks
+    repeated uint32 selectors = 2;  // Module.constant_values
+    bool is_default = 3;
+}
+
+message BindingPoint {
+    uint32 group = 1;
+    uint32 binding = 2;
+}
+
+message InstructionNextIteration {}
+
+message InstructionContinue {}
+
+message InstructionBreakIf {
+    uint32 num_next_iter_values = 1;
+}
+
+message InstructionUnreachable {}
+
+////////////////////////////////////////////////////////////////////////////////
+// Attributes
+////////////////////////////////////////////////////////////////////////////////
+message AttributesStructMember {
+    optional uint32 location = 1;
+    optional uint32 blend_src = 2;
+    optional uint32 color = 3;
+    optional BuiltinValue builtin = 4;
+    optional Interpolation interpolation = 5;
+    bool invariant = 6;
+}
+
+message AttributesFunctionParameter {
+    optional BuiltinValue builtin = 1;
+    optional uint32 location = 2;
+    optional uint32 color = 3;
+    optional Interpolation interpolation = 4;
+    optional BindingPoint binding_point = 5;
+    bool invariant = 6;
+}
+
+message Interpolation {
+    InterpolationType type = 1;
+    optional InterpolationSampling sampling = 2;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Enums
+////////////////////////////////////////////////////////////////////////////////
+enum AddressSpace {
+    function = 0;
+    handle = 1;
+    pixel_local = 2;
+    private = 3;
+    push_constant = 4;
+    storage = 5;
+    uniform = 6;
+    workgroup = 7;
+}
+
+enum AccessControl {
+    read = 0;
+    write = 1;
+    read_write = 2;
+}
+
+enum UnaryOp {
+    complement = 0;
+    negation = 1;
+    address_of = 2;
+    indirection = 3;
+    not = 4;
+}
+
+enum BinaryOp {
+    add_ = 0;
+    subtract = 1;
+    multiply = 2;
+    divide = 3;
+    modulo = 4;
+    and = 5;
+    or_ = 6;
+    xor_ = 7;
+    equal = 8;
+    not_equal = 9;
+    less_than = 10;
+    greater_than = 11;
+    less_than_equal = 12;
+    greater_than_equal = 13;
+    shift_left = 14;
+    shift_right = 15;
+    logical_and = 16;
+    logical_or = 17;
+}
+
+enum TextureDimension {
+    _1d = 0;
+    _2d = 1;
+    _2d_array = 2;
+    _3d = 3;
+    cube = 4;
+    cube_array = 5;
+}
+
+enum TexelFormat {
+    bgra8_unorm = 0;
+    r8_unorm = 1;
+    r32_float = 2;
+    r32_sint = 3;
+    r32_uint = 4;
+    rg32_float = 5;
+    rg32_sint = 6;
+    rg32_uint = 7;
+    rgba16_float = 8;
+    rgba16_sint = 9;
+    rgba16_uint = 10;
+    rgba32_float = 11;
+    rgba32_sint = 12;
+    rgba32_uint = 13;
+    rgba8_sint = 14;
+    rgba8_snorm = 15;
+    rgba8_uint = 16;
+    rgba8_unorm = 17;
+}
+
+enum SamplerKind {
+    sampler = 0;
+    comparison = 1;
+}
+
+enum InterpolationType {
+    flat = 0;
+    linear = 1;
+    perspective = 2;
+}
+
+enum InterpolationSampling {
+    center = 0;
+    centroid = 1;
+    sample = 2;
+    first = 3;
+    either = 4;
+}
+
+enum BuiltinValue {
+    point_size = 0;
+    frag_depth = 1;
+    front_facing = 2;
+    global_invocation_id = 3;
+    instance_index = 4;
+    local_invocation_id = 5;
+    local_invocation_index = 6;
+    num_workgroups = 7;
+    position = 8;
+    sample_index = 9;
+    sample_mask = 10;
+    subgroup_invocation_id = 11;
+    subgroup_size = 12;
+    vertex_index = 13;
+    workgroup_id = 14;
+    clip_distances = 15;
+    cull_distance = 16;
+}
+
+enum BuiltinFn {
+    abs = 0;
+    acos = 1;
+    acosh = 2;
+    all = 3;
+    any = 4;
+    array_length = 5;
+    asin = 6;
+    asinh = 7;
+    atan = 8;
+    atan2 = 9;
+    atanh = 10;
+    ceil = 11;
+    clamp = 12;
+    cos = 13;
+    cosh = 14;
+    count_leading_zeros = 15;
+    count_one_bits = 16;
+    count_trailing_zeros = 17;
+    cross = 18;
+    degrees = 19;
+    determinant = 20;
+    distance = 21;
+    dot = 22;
+    dot4i8_packed = 23;
+    dot4u8_packed = 24;
+    dpdx = 25;
+    dpdx_coarse = 26;
+    dpdx_fine = 27;
+    dpdy = 28;
+    dpdy_coarse = 29;
+    dpdy_fine = 30;
+    exp = 31;
+    exp2 = 32;
+    extract_bits = 33;
+    face_forward = 34;
+    first_leading_bit = 35;
+    first_trailing_bit = 36;
+    floor = 37;
+    fma = 38;
+    fract = 39;
+    frexp = 40;
+    fwidth = 41;
+    fwidth_coarse = 42;
+    fwidth_fine = 43;
+    insert_bits = 44;
+    inverse_sqrt = 45;
+    ldexp = 46;
+    length = 47;
+    log = 48;
+    log2 = 49;
+    max = 50;
+    min = 51;
+    mix = 52;
+    modf = 53;
+    normalize = 54;
+    pack2x16_float = 55;
+    pack2x16_snorm = 56;
+    pack2x16_unorm = 57;
+    pack4x8_snorm = 58;
+    pack4x8_unorm = 59;
+    pack4xi8 = 60;
+    pack4xu8 = 61;
+    pack4xi8_clamp = 62;
+    pack4xu8_clamp = 63;
+    pow = 64;
+    quantize_to_f16 = 65;
+    radians = 66;
+    reflect = 67;
+    refract = 68;
+    reverse_bits = 69;
+    round = 70;
+    saturate = 71;
+    select = 72;
+    sign = 73;
+    sin = 74;
+    sinh = 75;
+    smoothstep = 76;
+    sqrt = 77;
+    step = 78;
+    storage_barrier = 79;
+    tan = 80;
+    tanh = 81;
+    transpose = 82;
+    trunc = 83;
+    unpack2x16_float = 84;
+    unpack2x16_snorm = 85;
+    unpack2x16_unorm = 86;
+    unpack4x8_snorm = 87;
+    unpack4x8_unorm = 88;
+    unpack4xi8 = 89;
+    unpack4xu8 = 90;
+    workgroup_barrier = 91;
+    texture_barrier = 92;
+    texture_dimensions = 93;
+    texture_gather = 94;
+    texture_gather_compare = 95;
+    texture_num_layers = 96;
+    texture_num_levels = 97;
+    texture_num_samples = 98;
+    texture_sample = 99;
+    texture_sample_bias = 100;
+    texture_sample_compare = 101;
+    texture_sample_compare_level = 102;
+    texture_sample_grad = 103;
+    texture_sample_level = 104;
+    texture_sample_base_clamp_to_edge = 105;
+    texture_store = 106;
+    texture_load = 107;
+    atomic_load = 108;
+    atomic_store = 109;
+    atomic_add = 110;
+    atomic_sub = 111;
+    atomic_max = 112;
+    atomic_min = 113;
+    atomic_and = 114;
+    atomic_or = 115;
+    atomic_xor = 116;
+    atomic_exchange = 117;
+    atomic_compare_exchange_weak = 118;
+    subgroup_ballot = 119;
+    subgroup_broadcast = 120;
+    input_attachment_load = 121;
+    subgroup_add = 122;
+    subgroup_exclusive_add = 123;
+    subgroup_mul = 124;
+    subgroup_exclusive_mul = 125;
+    subgroup_and = 126;
+    subgroup_or = 127;
+    subgroup_xor = 128;
+    subgroup_min = 129;
+    subgroup_max = 130;
+    subgroup_any = 131;
+    subgroup_all = 132;
+    subgroup_elect = 133;
+    subgroup_broadcast_first = 134;
+    subgroup_shuffle = 135;
+    subgroup_shuffle_xor = 136;
+    subgroup_shuffle_up = 137;
+    subgroup_shuffle_down = 138;
+    quad_broadcast = 139;
+    quad_swap_x = 140;
+    quad_swap_y = 141;
+    quad_swap_diagonal = 142;
+    subgroup_inclusive_add = 143;
+    subgroup_inclusive_mul = 144;
+    subgroup_matrix_load = 145;
+    subgroup_matrix_store = 146;
+    subgroup_matrix_multiply = 147;
+    subgroup_matrix_multiply_accumulate = 148;
+}

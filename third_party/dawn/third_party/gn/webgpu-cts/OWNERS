@@ -1,0 +1,4 @@
+per-file cache_list.txt=*
+per-file resource_files.txt=*
+per-file test_list.txt=*
+per-file ts_sources.txt=*

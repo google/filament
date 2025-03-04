@@ -1,0 +1,625 @@
+Name
+
+    NV_vdpau_interop
+
+Name Strings
+
+    GL_NV_vdpau_interop
+
+Contributors
+
+    Stephen Warren, NVIDIA
+    James Jones, NVIDIA
+
+Contact
+
+    Stephen Warren, NVIDIA (swarren 'at' nvidia.com)
+
+Status
+
+    Complete.
+
+Version
+
+    11 (2 Jan 2014)
+
+Number
+
+    396
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 Specification
+    but can apply to OpenGL 1.1 and up.
+
+    OpenGL 1.1 is required.
+    GL_EXT_framebuffer_object affects the definition of this extension.
+    GL_ARB_texture_rectangle affects the definition of this extension.
+    GL_ARB_texture_non_power_of_two affects the definition of this
+    extension.
+
+Overview
+
+    This extension allows VDPAU video and output surfaces to be used
+    for texturing and rendering.
+
+    This allows the GL to process and display the content of video
+    streams decoded using VDPAU.
+
+    Alternatively, the GL may modify VDPAU surfaces in-place, and VDPAU
+    may then process and/or display those surfaces itself.
+
+    This allows the GL to be used to combine application user-interface
+    elements with decoded video, implement custom video-processing
+    algorithms, etc.
+
+IP Status
+
+    There are no known IP issues. 
+
+New Types
+
+    typedef GLintptr GLvdpauSurfaceNV;
+
+New Procedures and Functions
+
+    void VDPAUInitNV (const void *vdpDevice,
+                      const void *getProcAddress);
+
+    void VDPAUFiniNV (void);
+
+    vdpauSurfaceNV VDPAURegisterVideoSurfaceNV (const void *vdpSurface,
+                                                enum       target,
+                                                sizei      numTextureNames,
+                                                const uint *textureNames);
+
+    vdpauSurfaceNV VDPAURegisterOutputSurfaceNV (const void *vdpSurface,
+                                                 enum       target,
+                                                 sizei      numTextureNames,
+                                                 const uint *textureNames);
+
+    boolean VDPAUIsSurfaceNV (vdpauSurfaceNV surface);
+
+    void VDPAUUnregisterSurfaceNV (vdpauSurfaceNV surface);
+
+    void VDPAUGetSurfaceivNV (vdpauSurfaceNV surface,
+                              enum           pname,
+                              sizei          bufSize,
+                              sizei          *length,
+                              int            *values);
+
+    void VDPAUSurfaceAccessNV (vdpauSurfaceNV surface,
+                               enum           access);
+
+    void VDPAUMapSurfacesNV (sizei                numSurfaces,
+                             const vdpauSurfaceNV *surfaces);
+
+    void VDPAUUnmapSurfacesNV (sizei                numSurface,
+                               const vdpauSurfaceNV *surfaces);
+
+New Tokens
+
+    Accepted as the <pname> parameter of VDPAUGetSurfaceivNV:
+
+        SURFACE_STATE_NV                0x86EB
+
+    Returned in <values> for VDPAUGetSurfaceivNV <pname> 
+    SURFACE_STATE_NV:
+
+        SURFACE_REGISTERED_NV           0x86FD
+        SURFACE_MAPPED_NV               0x8700
+
+    Accepted as the <pname> parameter of VDPAUSurfaceAccessNV:
+
+        WRITE_DISCARD_NV                 0x88BE
+
+Additions to Chapter 2 of the OpenGL 3.2 (unabridged) Specification
+(OpenGL Operation)
+
+    Add to Table 2.2, GL data types:
+
+    GL Type         Minimum    Description
+                    Bit Width
+    -------         ---------  ----------------------------------------------
+    vdpauSurfaceNV  <ptrbits>  VDPAU surface object handle (see section 3.8.3)
+
+Additions to Chapter 3 of the OpenGL 3.2 (unabridged) Specification
+(Rasterization)
+
+    Insert a new section following "Alternate Texture Image
+    Specification Commands" (Section 3.8.2). Renumber existing section
+    3.8.3 "Compressed Texture Images" and all following 3.8.* sections.
+
+    3.8.3, Alternate Texture Image Specification Using VDPAU Surfaces
+    -----------------------------------------------------------------
+
+    Texture images may also be specified using image data taken
+    directly from the framebuffer, in the form of VDPAU surfaces.
+
+    VDPAU surfaces are logically ascribed an interop state. States
+    and transitions are:
+
+              VDPAUUnegisterSurfaceNV/VDPAUFiniNV
+            /----------------------------------------\
+            |                                        |
+            v            VDPAURegister*SurfaceNV     |
+    Unknown/unregistered ----------------------> Registered
+            ^                                       |  ^
+            |                    VDPAUMapSurfacesNV |  | VDPAUUnmapSurfacesNV
+            |                                       v  |
+            \------------------------------------- Mapped
+              VDPAUFiniNV
+
+    In order to use such "interop" functionality, the command
+
+        void VDPAUInitNV (const void *vdpDevice,
+                          const void *getProcAddress);
+
+    must be used to inform the GL which VDPAU device to interact with.
+    <vdpDevice> must be an extant VdpDevice handle previously created
+    using VDPAU. <getProcAddress> must be the VdpGetProcAddress
+    generated during VdpDevice creation.
+
+    When interop functionality is no longer required, the GL may be
+    informed using the command
+
+        void VDPAUFiniNV (void);
+
+    This operation will succeed even if surfaces exist in the mapped
+    or registered states; such surfaces will internally be unmapped and
+    unregistered before interop state is destroyed.
+
+    The command
+
+        vdpauSurfaceNV VDPAURegisterVideoSurfaceNV (const void *vdpSurface,
+                                                    enum       target,
+                                                    sizei      numTextureNames,
+                                                    const uint *textureNames);
+
+    defines a set of two-dimensional textures, where the image data may
+    be taken from the VdpVideoSurface <vdpSurface>. <target> must be
+    one of TEXTURE_2D or TEXTURE_RECTANGLE. <numTextureNames>
+    determines how many textures are defined. <textureNames> contains
+    the names of the textures that are defined. The surface is
+    transitioned into the registered state.
+
+    Legal values for <numTextureNames> are derived from the
+    VdpChromaType of <vdpSurface>, as defined in table 3.8.3.1.
+
+                                                              Internal
+      VdpChromaType        numTextureNames  Index  Size       Format    Content
+      -------------        ---------------  -----  ----       --------  -------------------
+      VDP_CHROMA_TYPE_420  4                0      w   x h/2  R8        Top-field luma
+                                            1      w   x h/2  R8        Bottom-field luma
+                                            2      w/2 x h/4  R8G8      Top-field chroma
+                                            3      w/2 x h/4  R8G8      Bottom-field chroma
+      VDP_CHROMA_TYPE_422  4                0      w   x h/2  R8        Top-field luma
+                                            1      w   x h/2  R8        Bottom-field luma
+                                            2      w/2 x h/2  R8G8      Top-field chroma
+                                            3      w/2 x h/2  R8G8      Bottom-field chroma
+
+      Table 3.8.3.1: Supported VdpChromaType values, and derived values
+      of <numTextureNames>, and texture parameters for each texture.
+
+    VDPAURegisterVideoSurfaceNV's return value is a handle used by
+    various other commands detailed below.
+
+    The command
+
+        vdpauSurfaceNV VDPAURegisterOutputSurfaceNV (const void *vdpSurface,
+                                                     enum       target,
+                                                     sizei      numTextureNames,
+                                                     const uint *textureNames);
+
+    defines a set of two-dimensional textures, where the image data may
+    be taken from the VdpOutputSurface vdpSurface. <target> must be one
+    of TEXTURE_2D or TEXTURE_RECTANGLE. <numTextureNames> determines
+    how many textures are defined. <textureNames> contains the names of
+    the textures that are defined. The surface is transitioned into the
+    registered state.
+
+    Legal values for <numTextureNames> are derived from the
+    VdpRGBAFormat of <vdpSurface>, as defined in table 3.8.3.2.
+
+                                                                  Internal
+      VdpRGBAFormat                numTextureNames  Index  Size   Format    Content
+      -------------                ---------------  -----  ----   --------  --------------
+      VDP_RGBA_FORMAT_B8G8R8A8     1                0      w x h  ARGB8     Entire surface
+      VDP_RGBA_FORMAT_R10G10B10A2  1                0      w x h  A2BGR10   Entire surface
+
+      Table 3.8.3.2: Supported VdpRGBAFormat values, and derived values
+      of <numTextureNames>, and texture parameters for each texture.
+
+    In all cases, textures defined by VDPAU surfaces will be y-
+    inverted; applications are expected to use y-inverted texture co-
+    ordinates when using such textures.
+
+    VDPAURegisterOutputSurfaceNV's return value is a handle to be used
+    as the surface parameter to various other commands detailed below.
+
+    The command
+
+        void VDPAUUnregisterSurfaceNV (GLvdpauSurfaceNV surface);
+
+    may be used to revert the effect of VDPAURegisterVideoSurfaceNV or
+    VDPAURegisterOutputSurfaceNV; namely, any <textureName>s that were
+    passed into the register function will be returned to their default
+    state. The surface will be transitioned into the unregistered state.
+    This operation will succeed even if the surface is in the mapped
+    state; such surfaces will internally be unmapped before being
+    unregistered.
+
+    The command
+
+        void VDPAUSurfaceAccessNV (GLvdpauSurfaceNV surface,
+                                   enum             access);
+
+    informs the GL whether the application expects only to read from the
+    VDPAU surface using the GL (<access> set to READ_ONLY), only to
+    write to the VDPAU surface using the GL (<access> set to
+    WRITE_DISCARD_NV), or both (<access> set to READ_WRITE). In
+    implementations that need to copy image data during
+    VDPAUMapSurfacesNV or VDPAUUnmapSurfacesNV, this flag may allow the
+    GL to skip some of those copy operations to improve performance.
+
+    An <access> value of READ_ONLY ensures that any writes to the
+    surface made by VDPAU prior to VDPAUMapSurfacesNV will be seen by
+    the GL when reading the surface after VDPAUMapSurfacesNV. If the
+    GL writes to the surface, results are undefined, possibly including
+    program termination.
+
+    An <access> value of READ_WRITE ensures that any writes to the
+    surface made by VDPAU prior to VDPAUMapSurfacesNV will be seen by
+    the GL when reading the surface after VDPAUMapSurfacesNV. Equally,
+    any writes to the surface made by the GL prior to
+    VDPAUUnmapSurfacesNV will be seen by VDPAU after
+    VDPAUUnmapSurfacesNV.
+
+    An <access> value of WRITE_DISCARD_NV ensures that any writes to the
+    surface made by the GL prior to VDPAUUnmapSurfacesNV will be seen
+    by VDPAU after VDPAUUnmapSurfacesNV. If the GL reads from the
+    surface prior to writing those particular pixels itself, the
+    graphical results are undefined, but should not include program
+    termination.
+
+    VDPAUSurfaceAccessNV sets the access flag for the VDPAU surface.
+    the GL reads the access flag only during VDPAUMapSurfacesNV.
+    VDPAUUnmapSurfacesNV uses the value of the access flag that was
+    set when the previous VDPAUMapSurfacesNV was called.
+    VDPAUSurfaceAccessNV itself has no effect on the image data of any
+    surface, and in particular does not initiate any copy operations.
+
+    Calling VDPAUSurfaceAccessNV when the surface is in a mapped state
+    is illegal, and will generate an error.
+
+    The command
+
+        void VDPAUMapSurfacesNV (sizei          numSurfaces,
+                                 vdpauSurfaceNV *surfaces);
+
+    moves a set of VDPAU surfaces from the registered state into the
+    mapped state.
+
+    The command
+
+        void VDPAUUnmapSurfacesNV (sizei           numSurface,
+                                   vdpauSurfaceNV* surfaces);
+
+    moves a set of VDPAU surfaces from the mapped state into the
+    registered state.
+
+    Using the GL to texture from, or write to, a surface in any state
+    other than mapped will yield undefined results, potentially
+    including program termination.
+
+    Using any other API to access a VDPAU surface while that surface is
+    in the mapped state in the GL will yield undefined results,
+    potentially including program termination.
+
+    Texture image data for VDPAU surfaces in the mapped state is
+    defined as being identical to the VDPAU surface content.
+
+    While a VDPAU surface is in the mapped or registered states, the
+    textures associated with that surface are immutable. In other
+    words, operations that affect texture state, or attempt to replace
+    the source of the texture image data (e.g. TexImage2D) will return
+    an error. Rendering to the texture is allowed.
+
+Additions to Chapter 4 of the OpenGL 3.2 (unabridged) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 3.2 (unabridged) Specification
+(Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 3.2 (unabridged) Specification
+(State and State Requests)
+
+    Add a new subsection to "Querying GL state" (section
+    6.1) describing VDPAU surface object queries.
+
+   "6.1.X VDPAU Surface Object Queries
+
+    Properties of VDPAU surface objects may be queried using the command
+
+        void VDPAUGetSurfaceivNV (vdpauSurfaceNV surface,
+                                  enum           pname,
+                                  sizei          bufSize,
+                                  sizei          *length,
+                                  int            *values);
+
+    The value or values being queried are returned in the parameters
+    <length> and <values>.
+
+    On success, VDPAUGetSurfaceivNV replaces up to <bufSize> integers
+    in <values> with the corresponding property values of the object
+    being queried. The actual number of integers replaced is returned
+    in *<length>. If <length> is NULL, no length is returned.
+
+    If <pname> is SURFACE_STATE_NV, a single value representing the state
+    of the VDPAU surface object (SURFACE_REGISTERED_NV,
+    SURFACE_MAPPED_NV) is placed in <values>.
+
+    If <surface> is not the name of a VDPAU surface object, an
+    INVALID_VALUE error is generated. If <pname> is not one of the
+    values described above, an INVALID_ENUM error is generated. If an
+    error occurs, nothing will be written to <values> or <length>.
+
+    The command
+
+        boolean VDPAUIsSurfaceNV (vdpauSurfaceNV surface);
+
+    returns TRUE if <surface> is the name of a VDPAU surface object. If
+    <surface> is not the name of a VDPAU surface object, or if an error
+    condition occurs, IsSurface returns FALSE (note that zero is not
+    the name of a VDPAU surface object).
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Additions to the OpenGL Shading Language
+
+    None
+
+GLX Protocol
+
+    VDPAU implementations currently only support direct-rendering.
+    Consequently, no GLX protocol is currently defined for this
+    extension.
+
+Dependencies on GL_ARB_texture_rectangle
+
+    If GL_ARB_texture_rectangle is not supported, TEXTURE_RECTANGLE may
+    not be used as target for VDPAURegisterVideoSurfaceNV.
+
+Dependencies on GL_ARB_texture_non_power_of_two
+
+    If GL_ARB_texture_non_power_of_two is not supported, only VDPAU
+    surfaces with power-of-two size may be used with target TEXTURE_2D.
+
+Errors
+
+    INVALID_VALUE is generated if the <vdpDevice> or
+    <getProcAddressOpaque> parameters to VDPAUInitNV is NULL.
+
+    INVALID_OPERATION is generated if VDPAUInitNV is called on a given
+    GL context, where VDPAUInitNV has been called, and VDPAUFiniNV has
+    not been called since.
+
+    INVALID_OPERATION is generated by VDPAUInitNV,
+    VDPAURegisterVideoSurfaceNV, or VDPAURegisterOutputSurfaceNV if the
+    VDPAU driver refuses the request for some reason.
+
+    INVALID_OPERATION is generated if VDPAUFiniNV,
+    VDPAURegisterVideoSurfaceNV, VDPAURegisterOutputSurfaceNV,
+    VDPAUIsSurfaceNV, VDPAUGetSurfaceivNV, VDPAUSurfaceAccessNV,
+    VDPAUMapSurfacesNV, or VDPAUUnmapSurfacesNV are called on a given
+    GL context, where VDPAUInitNV has not been called, or VDPAUFiniNV
+    has been called since.
+
+    INVALID_ENUM is generated if the <target> parameter of
+    VDPAURegisterVideoSurfaceNV or VDPAURegisterOutputSurfaceNV is not
+    TEXTURE_2D or TEXTURE_RECTANGLE.
+
+    INVALID_VALUE is generated if the <numTextureNames> parameter of
+    VDPAURegisterVideoSurfaceNV or VDPAURegisterOutputSurfaceNV does
+    not match the required value; see tables 3.8.3.1 and 3.8.3.2.
+
+    INVALID_OPERATION is generated if any texture named by an entry
+    within the <textureNames> parameter of VDPAURegisterVideoSurfaceNV
+    or VDPAURegisterOutputSurfaceNV is marked as immutable.
+
+    INVALID_VALUE is generated if the VDPAU surface named by the
+    <vdpSurface> parameter of VDPAURegisterVideoSurfaceNV or
+    VDPAUUnregisterOutputSurfaceNV does not have a supported format;
+    see tables 3.8.3.1 and 3.8.3.2.
+
+    INVALID_VALUE is generated if the <surface> parameter of
+    VDPAUGetSurfaceivNV, VDPAUSurfaceAccessNV, VDPAUMapSurfacesNV,
+    VDPAUUnmapSurfacesNV is not the name of a VDPAU surface object.
+
+    INVALID_VALUE is generated if the <surface> parameter of
+    VDPAUUnregisterSurfaceNV is neither zero nor the name of a VDPAU
+    surface object.
+
+    INVALID_VALUE is generated if the <bufSize> parameter of
+    VDPAUGetSurfaceivNV is too small to return the results via the
+    <values> paramter.
+
+    INVALID_ENUM is generated if the <pname> parameter of
+    VDPAUGetSurfaceivNV is not SURFACE_STATE_NV.
+
+    INVALID_VALUE is generated if the <access> parameter of
+    VDPAUSurfaceAccessNV is none of READ_ONLY, WRITE_ONLY, nor
+    READ_WRITE.
+
+    INVALID_OPERATION is generated if the state of the surface(s) named
+    by the <surface> parameter of VDPAUSurfaceAccessNV, or named by any
+    entry within the <surfaces> parameter of VDPAUMapSurfacesNV is
+    SURFACE_MAPPED_NV.
+
+    INVALID_OPERATION is generated if the state of any of the surfaces 
+    named by entries within the <surfaces> parameter of
+    VDPAUUnmapSurfacesNV is not SURFACE_MAPPED_NV.
+
+New State
+
+Table 6.X.  VDPAU Surface Objects.
+
+Get value           Type  Get command          Initial value                 Description     Section
+------------------  ----  -----------          ----------------------------  --------------- -------
+SURFACE_STATE_NV    Z     VDPAUGetSurfaceivNV  GL_SURFACE_REGISTERED_NV      Surface state   3.8.3
+
+New Implementation State
+
+    None
+
+Issues
+
+    1. Should YUV surfaces be exposed as a frame Y and frame UV
+       texture, or two field Y and two field UV textures?
+
+       RESOLVED: YUV surfaces will be exposed as separate fields
+
+       Exposing the surface as separate fields allows applications to
+       directly implement de-interlacing algorithms other than weave
+       without having to undo the weaving of fields together. Put
+       another way:
+
+       Frames:
+
+         Pros:
+
+         * Simple applications can directly access the entire frame,
+           without having to manually implement weave de-interlacing.
+           This also applies for progressive content.
+
+           However, simple applications probably won't want to interop
+           on a VdpVideoSurface, but will rather rely on VDPAU's
+           VdpVideoMixer for post-processing, and instead interop on a
+           VdpOutputSurface.
+
+         Cons:
+
+         * In order to implement bob de-interlacing, vertical
+           interpolation between lines of a single field is required.
+           The GL's texturing does not allow interpolation to skip
+           lines in a texture. Consequently, the two fields must be
+           manually separated by the application using a shader and
+           some texture co-ordinate calculation prior to bobbing. This
+           forces a copy operation, which would reduce performance.
+
+         * In NVIDIA's implementation, VDPAU surfaces are stored as
+           separate fields. Consequently, VDPAUMapSurfacesNV would have
+           to perform a copy operation, which would reduce performance.
+
+       Fields:
+
+         Pros:
+
+         * Advanced de-interlacing and post-processing algorithms get
+           direct access to individual fields.
+
+         * In NVIDIA's implementation, no copying is required during
+           VDPAUMapSurfacesNV.
+
+         Cons:
+
+         * Simple applications that simply want to weave, or for
+           progressive content, must manually combine the fields.
+           However, this operation is relatively simple to code, and
+           sample code will be provided.
+
+    2. Should Map/Unmap functions be removed, such that the GL
+       implements those operations transparently at appropriate times?
+
+       RESOLVED: No, map/unmap functions will be kept.
+
+       The map/unmap functions provide a convenient place to perform
+       synchronization between VDPAU and the GL command streams, and
+       any format-converting copies that may be required by the GL or
+       VDPAU implementation. Without explicit application-controlled
+       APIs, it would potentially be difficult to trigger those
+       operations at the appropriate time. It would also be less
+       obvious to software developers when such operations were
+       occurring, which may prevent successful investigation of
+       interop performance.
+
+    3. Should SurfaceAccess function be removed, and instead an
+       "access" parameter added to the Map function?
+
+       RESOLVED: No, a separate function will be kept.
+
+       The value of this flag typically will not change on a per-frame
+       basis, so specifying it for each map call was deemed redundant.
+       For an advanced application that needs to change the flag often,
+       the overhead of using a separate function should not be too
+       significant.
+
+Revision History
+
+    1. 23 Dec 2009 - Stephen W
+        Initial version
+
+    2. 5 Jan 2010 - Stephen W
+        -Renamed VDPAUSetSurfaceAccessNV to VDPAUSurfaceAccessNV thus
+         avoiding the word Set.
+        -Fixed/wrote "Dependencies", "Dependencies on ..." sections.
+        -Initial version of "Additions to Chapter 3".
+        -Fill in answers for issues 1-3.
+
+    3. 7 Jan 2010 - Stephen W
+        -Dropped the GL prefix from type names.
+        -Refer to "the GL" not "GL".
+        -Removed XXX re: PROXY_TEXTURE_*; those targets don't seem
+         useful for this extension.
+        -Use <> around function parameter names in text.
+        -Reword description of legal values for <numTextureNames>.
+         Number, title, and reformat related tables.
+         Rename "format" column to "internal format".
+        -Describe VDPAUSurfaceAccessNV before Map/Ummap for more
+         logical ordering.
+        -Significant text rewrite to more explicitly describe states,
+         state transitions, legal access to surfaces by various APIs
+         during specific states, etc.
+        -Explicitly state that registered/mapped textures are
+         immutable.
+        -Re-used VBO's READ/WRITE/READ_WRITE enums instead of inventing
+         new enums.
+        -Added explicit type GLvdpauSurfaceNV instead of using GLvoid*.
+        -Added VDPAUIsSurface, VDPAUGetSurfaceiv, and associated
+         tokens.
+        -Documented state, state queries, and errors.
+
+    4. 13 Jan 2010 - Stephen W
+        - Added token WRITE_DISCARD_NV. Stated semantics of each legal
+          value of VDPAUSurfaceAccessNV's <access> parameter.
+
+    5. 13 Jan 2010 - Stephen W
+        - Removed some XXXs. Marked spec as complete.
+
+    6. 18 Jan 2010 - Stephen W
+        - Added missing NV suffix to VDPAUIsSurfaceNV,
+          VDPAUGetSurfaceivNV
+
+    7. 18 Jan 2010
+        - Made various function parameters const.
+
+    8. 24 Feb 2010
+        - Fixed typo in table 3.8.3.1; the heights of luma surfaces
+          were incorrectly specified.
+
+    9. 29 May 2010
+        - Fix minor typos and formatting issues.
+
+    10. 16 Jun 2010
+        - Added "New Types" section
+
+    11.  2 Jan 2014
+        - Fixed return type of VDPAUIsSurfaceNV and remove it from the
+          list of commands that generate INVALID_VALUE.
+

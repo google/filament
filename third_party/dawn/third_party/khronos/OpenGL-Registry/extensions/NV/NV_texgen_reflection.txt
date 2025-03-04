@@ -1,0 +1,184 @@
+Name
+    
+    NV_texgen_reflection
+
+Name Strings
+
+    GL_NV_texgen_reflection
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 1999.
+
+Status
+
+    Shipping (version 1.0)
+    NVIDIA, Mesa 3.1, and ATI support this.
+
+    This extension's texture coordinate generation functionality is
+    incoporated into the ARB_texture_cube_map extension.  The same
+    enumerant values are used.
+
+    The ARB_texture_cube_map functionality, including this texgen
+    reflection functionality, is part of OpenGL 1.3 and subsequent
+    revisions of the core OpenGL standard.
+
+Version
+
+    June 17, 2003 (version 1.0)
+
+Number
+
+    179
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.2 specification but
+    not dependent on it.
+
+Overview
+
+    This extension provides two new texture coordinate generation modes
+    that are useful texture-based lighting and environment mapping.
+    The reflection map mode generates texture coordinates (s,t,r)
+    matching the vertex's eye-space reflection vector.  The reflection
+    map mode is useful for environment mapping without the singularity
+    inherent in sphere mapping.  The normal map mode generates texture
+    coordinates (s,t,r) matching the vertex's transformed eye-space
+    normal.  The normal map mode is useful for sophisticated cube map
+    texturing-based diffuse lighting models.
+
+Issues
+
+    Should we place the normal/reflection vector in the (s,t,r) texture
+    coordinates or (s,t,q) coordinates?
+
+      RESOLUTION:  (s,t,r).  Even if the proposed hardware uses "q" for
+      the third component, the API should claim to support generation of
+      (s,t,r) and let the texture matrix (through a concatenation with
+      the user-supplied texture matrix) move "r" into "q".
+
+    Should you be able to have some texture coordinates computing
+    REFLECTION_MAP_NV and others not?  Same question with NORMAL_MAP_NV.
+
+      RESOLUTION:  YES. This is the way that SPHERE_MAP works.  It is
+      not clear that this would ever be useful though.
+
+    Should something special be said about the handling of the q
+    texture coordinate for this spec?
+
+      RESOLUTION:  NO.  But the following paragraph is useful for
+      implementors concerned about the handling of q.
+
+      The REFLECTION_MAP_NV and NORMAL_MAP_NV modes are intended to supply
+      reflection and normal vectors for cube map texturing hardware.
+      When these modes are used for cube map texturing, the generated
+      texture coordinates can be thought of as a reflection vector.
+      The value of the q texture coordinate then simply scales the
+      vector but does not change its direction.  Because only the vector
+      direction (not the vector magnitude) matters for cube map texturing,
+      implementations are free to leave q undefined when any of the s,
+      t, or r texture coordinates are generated using REFLECTION_MAP_NV
+      or NORMAL_MAP_NV.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <param> parameters of TexGend, TexGenf, and TexGeni
+    when <pname> parameter is TEXTURE_GEN_MODE:
+
+        NORMAL_MAP_NV                      0x8511
+        REFLECTION_MAP_NV                  0x8512
+
+    When the <pname> parameter of TexGendv, TexGenfv, and TexGeniv is
+    TEXTURE_GEN_MODE, then the array <params> may also contain
+    NORMAL_MAP_NV or REFLECTION_MAP_NV.
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+ --  Section 2.10.4 "Generating Texture Coordinates"
+
+      Change the last sentence in the 1st paragraph to:
+
+      "If <pname> is TEXTURE_GEN_MODE, then either <params> points to
+      or <param> is an integer that is one of the symbolic constants
+      OBJECT_LINEAR, EYE_LINEAR, SPHERE_MAP, REFLECTION_MAP_NV, or
+      NORMAL_MAP_NV."
+
+      Add these paragraphs after the 4th paragraph:
+
+      "If TEXTURE_GEN_MODE indicates REFLECTION_MAP_NV, compute the
+      reflection vector r as described for the SPHERE_MAP mode.  Then the
+      value assigned to an s coordinate (the first TexGen argument value
+      is S) is s = rx; the value assigned to a t coordinate is t = ry;
+      and the value assigned to a r coordinate is r = rz.  Calling TexGen
+      with a <coord> of Q when <pname> indicates REFLECTION_MAP_NV
+      generates the error INVALID_ENUM.
+
+      If TEXTURE_GEN_MODE indicates NORMAL_MAP_NV, compute the normal
+      vector n' as described in section 2.10.3.  Then the value assigned
+      to an s coordinate (the first TexGen argument value is S) is s =
+      nfx; the value assigned to a t coordinate is t = nfy; and the
+      value assigned to a r coordinate is r = nfz.  (The values nfx, nfy,
+      and nfz are the components of nf.)  Calling TexGen with a <coord>
+      of Q when <pname> indicates REFLECTION_MAP_NV generates the error
+      INVALID_ENUM.
+
+      The last paragraph's first sentence should be changed to:
+
+      "The state required for texture coordinate generation comprises a
+      five-valued integer for each coordinate indicating coordinate
+      generation mode, ..."
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+     None
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+     None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+     None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+     None
+
+Additions to the GLX Specification
+
+     None
+
+Errors
+
+     INVALID_ENUM is generated when TexGen is called with a <coord> of Q
+     when <pname> indicates REFLECTION_MAP_NV or NORMAL_MAP_NV.
+
+New State
+
+(table 6.14, p204) change the entry for TEXTURE_GEN_MODE to:
+
+    Get Value            Type    Get Command     Initial Value   Description        Sec    Attribute
+    ---------            ----    -----------     -------------   -----------        ------ ---------
+    TEXTURE_GEN_MODE     4xZ5    GetTexGeniv    EYE_LINEAR      Function used for  2.10.4 texture
+                                                                 texgen (for s,t,r,
+                                                                 and q)
+
+(the type changes from 4xZ3 to 4xZ5)
+
+New Implementation State
+
+    None
+
+Revision History
+
+    None

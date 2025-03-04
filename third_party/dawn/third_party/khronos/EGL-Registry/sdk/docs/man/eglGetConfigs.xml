@@ -1,0 +1,105 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglGetConfigs">
+    <info>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglGetConfigs</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglGetConfigs</refname>
+        <refpurpose>
+            return a list of all <acronym>EGL</acronym> frame buffer configurations
+            for a display
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglGetConfigs</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLConfig * <parameter>configs</parameter></paramdef>
+                <paramdef>EGLint <parameter>config_size</parameter></paramdef>
+                <paramdef>EGLint * <parameter>num_config</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>Specifies the EGL display connection.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>configs</parameter></term>
+                <listitem><para>Returns a list of configs.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>config_size</parameter></term>
+                <listitem><para>Specifies the size of the list of configs.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>num_config</parameter></term>
+                <listitem><para>Returns the number of configs returned.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglGetConfigs</function> returns a list of all
+            EGL frame buffer configurations that are available for the specified
+            display.
+            The items in the list can be used in any EGL function that requires
+            an EGL frame buffer configuration.
+        </para>
+        <para>
+            <parameter>configs</parameter> does not return values, if it is specified
+            as
+            <constant>NULL</constant>. This is useful for querying just the
+            number of all frame buffer configurations.
+        </para>
+        <para>
+            Use
+            <citerefentry><refentrytitle>eglGetConfigAttrib</refentrytitle></citerefentry>
+            to retrieve individual attribute values of a frame buffer configuration.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned on failure,
+            <constant>EGL_TRUE</constant> otherwise.
+            <parameter>configs</parameter> and <parameter>num_config</parameter>
+            are not modified when
+            <constant>EGL_FALSE</constant> is returned.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_PARAMETER</constant> is generated if
+            <parameter>num_config</parameter> is <constant>NULL</constant>.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreateContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePbufferSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreatePixmapSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateWindowSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglChooseConfig</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetConfigAttrib</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

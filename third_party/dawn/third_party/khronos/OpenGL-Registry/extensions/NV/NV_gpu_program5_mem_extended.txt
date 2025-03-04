@@ -1,0 +1,349 @@
+Name
+
+    NV_gpu_program5_mem_extended
+
+Name Strings
+
+    GL_NV_gpu_program5_mem_extended
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         October 30, 2012
+    NVIDIA Revision:            1
+
+Number
+
+    OpenGL Extension #434
+
+Dependencies
+
+    NV_gpu_program5 is required.
+
+    This extension is written against the NV_gpu_program5 extension
+    specification, which itself is written against the NV_gpu_program4 and
+    OpenGL 2.0 Specifications.
+
+    This extension interacts trivially with EXT_shader_image_load_store,
+    NV_shader_storage_buffer_object, and NV_compute_program5.
+
+Overview
+
+    This extension provides a new set of storage modifiers that can be used by
+    NV_gpu_program5 assembly program instructions loading from or storing to
+    various forms of GPU memory.  In particular, we provide support for loads
+    and stores using the storage modifiers:
+
+        .F16X2  .F16X4  .F16    (for 16-bit floating-point scalars/vectors)
+        .S8X2   .S8X4           (for 8-bit signed integer vectors)
+        .S16X2  .S16X4          (for 16-bit signed integer vectors)
+        .U8X2   .U8X4           (for 8-bit unsigned integer vectors)
+        .U16X2  .U16X4          (for 16-bit unsigned integer vectors)
+
+    These modifiers are allowed for the following load/store instructions:
+
+        LDC             Load from constant buffer
+
+        LOAD            Global load
+        STORE           Global store
+
+        LOADIM          Image load (via EXT_shader_image_load_store)
+        STOREIM         Image store (via EXT_shader_image_load_store)
+
+        LDB             Load from storage buffer (via 
+                          NV_shader_storage_buffer_object) 
+        STB             Store to storage buffer (via 
+                          NV_shader_storage_buffer_object) 
+
+        LDS             Load from shared memory (via NV_compute_program5)
+        STS             Store to shared memory (via NV_compute_program5)
+
+    For assembly programs prior to this extension, it was necessary to access
+    memory using packed types and then unpack with additional shader
+    instructions.
+
+    Similar capabilities have already been provided in the OpenGL Shading
+    Language (GLSL) via the NV_gpu_shader5 extension, using the extended data
+    types provided there (e.g., "float16_t", "u8vec4", "s16vec2").
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    (All modifications are relative to Section 2.X, GPU Programs, from the
+     NV_gpu_program4 specification.)
+
+    Modify Section 2.X.2, Program Grammar
+
+    (add after the long list of grammar rules) If a program specifies the
+    NV_gpu_program5_mem_extended program option, the following rules are added
+    to the NV_gpu_program5 base program grammar:
+
+    <opModifier>            ::= "F16X2"
+                              | "F16X4"
+                              | "S8X2"
+                              | "S8X4"
+                              | "S16X2"
+                              | "S16X4"
+                              | "U8X2"
+                              | "U8X4"
+                              | "U16X2"
+                              | "U16X4"
+
+    (Note:  This extension also provides new capabilities for the "F16"
+     modifier.  Since it was already supported in NV_gpu_program5, it isn't
+     being added to the grammar here.)
+
+
+    Modify Section 2.X.4.1, Program Instruction Modifiers
+
+    (add to Table X.14 of the NV_gpu_program4 specification.)
+
+      Modifier  Description
+      --------  ---------------------------------------------------
+      F16       Convert to or from one 16-bit floating-point value, 
+                or access one 16-bit floating-point value
+
+      F16X2     Access two 16-bit floating-point values
+      F16X4     Access four 16-bit floating-point values
+      S8X2      Access two 8-bit signed integer values
+      S8X4      Access four 8-bit signed integer values
+      S16X2     Access two 16-bit signed integer values
+      S16X4     Access four 16-bit signed integer values
+      U8X2      Access two 8-bit unsigned integer values
+      U8X4      Access four 8-bit unsigned integer values
+      U16X2     Access two 16-bit unsigned integer values
+      U16X4     Access four 16-bit unsigned integer values
+
+    (modify discussion of storage modifiers for load and store operations,
+     adding the entries added to the table above)
+
+    For load and store operations, the "F32", "F32X2", "F32X4", "F64",
+    "F64X2", "F64X4", "S8", "S8X2", "S8X4", "S16", "S16X2", "S16X4", "S32",
+    "S32X2", "S32X4", "S64", "S64X2", "S64X4", "U8", "U8X2", "U8X4", "U16",
+    "U16X2", "U16X4", "U32", "U32X2", "U32X4", "U64", "U64X2", "U64X4", "F16",
+    "F16X2", and "F16X4" storage modifiers control how data are loaded from or
+    stored to memory. ...
+
+
+    Modify Section 2.X.4.5, Program Memory Access, from NV_gpu_program5
+
+    (update pseudocode for BufferMemoryLoad)
+
+      result_t_vec BufferMemoryLoad(char *address, OpModifier modifier)
+      {
+        result_t_vec result = { 0, 0, 0, 0 };
+        switch (modifier) {
+        
+        /* Existing cases and code from NV_gpu_program5 unchanged. */
+
+        case F16:
+            result.x = ((float16_t *)address)[0];
+            break;
+        case F16X2:
+            result.x = ((float16_t *)address)[0];
+            result.y = ((float16_t *)address)[1];
+            break;
+        case S8X2:
+            result.x = ((int8_t *)address)[0];
+            result.y = ((int8_t *)address)[1];
+            break;
+        case S8X4:
+            result.x = ((int8_t *)address)[0];
+            result.y = ((int8_t *)address)[1];
+            result.z = ((int8_t *)address)[2];
+            result.w = ((int8_t *)address)[3];
+            break;
+        case S16X2:
+            result.x = ((int16_t *)address)[0];
+            result.y = ((int16_t *)address)[1];
+            break;
+        case S16X4:
+            result.x = ((int16_t *)address)[0];
+            result.y = ((int16_t *)address)[1];
+            result.z = ((int16_t *)address)[2];
+            result.w = ((int16_t *)address)[3];
+            break;
+        case U8X2:
+            result.x = ((uint8_t *)address)[0];
+            result.y = ((uint8_t *)address)[1];
+            break;
+        case U8X4:
+            result.x = ((uint8_t *)address)[0];
+            result.y = ((uint8_t *)address)[1];
+            result.z = ((uint8_t *)address)[2];
+            result.w = ((uint8_t *)address)[3];
+            break;
+        case U16X2:
+            result.x = ((uint16_t *)address)[0];
+            result.y = ((uint16_t *)address)[1];
+            break;
+        case U16X4:
+            result.x = ((uint16_t *)address)[0];
+            result.y = ((uint16_t *)address)[1];
+            result.z = ((uint16_t *)address)[2];
+            result.w = ((uint16_t *)address)[3];
+            break;
+        }
+        return result;
+      }
+
+    (update pseudocode for BufferMemoryStore)
+
+      void BufferMemoryStore(char *address, operand_t_vec operand, 
+                             OpModifier modifier)
+      {
+        switch (modifier) {
+
+        /* Existing cases and code from NV_gpu_program5 unchanged. */
+
+        case F16:
+            ((float16_t *)address)[0] = operand.x;
+            break;
+        case F16X2:
+            ((float16_t *)address)[0] = operand.x;
+            ((float16_t *)address)[1] = operand.y;
+            break;
+        case S8X2:
+            ((int8_t *)address)[0] = operand.x;
+            ((int8_t *)address)[1] = operand.y;
+            break;
+        case S8X4:
+            ((int8_t *)address)[0] = operand.x;
+            ((int8_t *)address)[1] = operand.y;
+            ((int8_t *)address)[2] = operand.z;
+            ((int8_t *)address)[3] = operand.w;
+            break;
+        case S16X2:
+            ((int16_t *)address)[0] = operand.x;
+            ((int16_t *)address)[1] = operand.y;
+            break;
+        case S16X4:
+            ((int16_t *)address)[0] = operand.x;
+            ((int16_t *)address)[1] = operand.y;
+            ((int16_t *)address)[2] = operand.z;
+            ((int16_t *)address)[3] = operand.w;
+            break;
+        case U8X2:
+            ((uint8_t *)address)[0] = operand.x;
+            ((uint8_t *)address)[1] = operand.y;
+            break;
+        case U8X4:
+            ((uint8_t *)address)[0] = operand.x;
+            ((uint8_t *)address)[1] = operand.y;
+            ((uint8_t *)address)[2] = operand.z;
+            ((uint8_t *)address)[3] = operand.w;
+            break;
+        case U16X2:
+            ((uint16_t *)address)[0] = operand.x;
+            ((uint16_t *)address)[1] = operand.y;
+            break;
+        case U16X4:
+            ((uint16_t *)address)[0] = operand.x;
+            ((uint16_t *)address)[1] = operand.y;
+            ((uint16_t *)address)[2] = operand.z;
+            ((uint16_t *)address)[3] = operand.w;
+            break;
+        }
+      }
+
+    (modify paragraph to indicate the alignment requirement for new storage
+    modifiers) The address used for global memory loads or stores or offset
+    used for constant buffer loads must be aligned to the fetch size
+    corresponding to the storage opcode modifier.  For S8 and U8, the offset
+    has no alignment requirements.  For F16, S8X2, S16, U8X2, and U16, the
+    offset must be a multiple of two basic machine units.  For F32, S32, and
+    U32, F16X2, S16X2, U16X2, S8X4, and U8X4, the offset must be a multiple of
+    four.  For F32X2, F64, S32X2, S64, U32X2, U64, S16X4, and U16X4, the
+    offset must be a multiple of eight.  ...  If an offset is not correctly
+    aligned, the values returned by a buffer memory load will be undefined,
+    and the effects of a buffer memory store will also be undefined.
+
+
+    Modify Section 2.X.6, Program Options
+
+    + Extended Memory Format Support (NV_gpu_program5_mem_extended)
+
+    If a program specifies the "NV_gpu_program5_mem_extended" option, it may
+    use the "F16", "F16X2", "F16X4", "S8X2", "S8X4", "S16X2", "S16X4", "U8X2",
+    "U8X4", "U16X2", and "U16X4" storage modifiers on instructions loading
+    values from memory or storing values to memory (LDC, LOAD, STORE, LOADIM,
+    STOREIM, LDB, STB, LDS, STS).
+
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Dependencies on EXT_shader_image_load_store, NV_shader_storage_buffer_object,
+and NV_compute_program5
+
+    If EXT_shader_image_load_store is not supported, references to the LOADIM
+    and STOREIM opcodes should be removed.
+
+    If NV_shader_storage_buffer_object is not supported, references to the LDB
+    and STB opcodes should be removed.
+
+    If NV_compute_program5 is not supported, references to the LDS and STS
+    opcodes should be removed.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) Should this extension have its own extension string entry, or should
+        its existence be inferred from the NV_gpu_program5 extension or some
+        other extension?
+
+      RESOLVED:  Provide a separate extension string entry, since this
+      functionality was added after NV_gpu_program5 was published and may not
+      be available on older drivers supporting NV_gpu_program5.
+
+Revision History
+
+    Revision 1, October 30, 2012 (pbrown):  Initial revision.

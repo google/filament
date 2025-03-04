@@ -1,0 +1,315 @@
+XXX - Not complete.
+
+Name
+
+    SGIX_mpeg2
+
+Name Strings
+
+    GL_SGIX_mpeg2
+
+Version
+
+    $Date: 1997/06/07 01:24:17 $ $Revision: 1.6 $
+
+Number
+
+    ???
+
+Dependencies
+
+    SGIX_mpeg1 and SGIX_image_compression are required.
+
+Overview
+
+    This extension provides support for compression and decompression
+    of MPEG2-compressed images.
+
+    Most of the additions specified by this extension exist to permit
+    the handling of fields of images, which is required by MPEG2 but
+    not by MPEG1.  This extension adds the capability to update or
+    read from only the top or bottom fields of a predictor frame.  The
+    extension also allows the compression and decompression of fields
+    of an image.
+
+    Support of this extension does not imply conformance to the MPEG2
+    standard (ISO 13818), although the following guarantees are made:
+
+        - During decode, the picture_structure field of the picture
+          coding extension is extracted and interpreted correctly.
+          The treatment of the resulting value is discussed below.
+
+        - During encode, the picture_structure field of the picture
+          coding extension and the picture_type field of the picture
+          header are set correctly as determined by
+          PACK_MPEG_PICTURE_TYPE_SGIX. 
+
+Issues
+
+    *    We guarantee that the picture_structure and picture_type
+         fields are interpreted and set correctly.  We do this so that
+         we can make guarantees about which predictors will be used
+         and updated.  Should we make this less restrictive?
+         
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <param> parameter of PixelStoref, PixelStorei,
+    GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+        MPEG2_SGIX					????
+
+        MPEG_IFIELD_TOP_SGIX				????
+        MPEG_IFIELD_BOTTOM_SGIX				????
+        MPEG_PFIELD_TOP_SGIX				????
+        MPEG_PFIELD_BOTTOM_SGIX				????
+        MPEG_BFIELD_TOP_SGIX				????
+        MPEG_BFIELD_BOTTOM_SGIX				????
+
+    Accepted by the <target> parameter of MPEGQuantTableubv and
+    GetMPEGQuantTableubv:
+
+	PACK_MPEG_INTRA_QUANT_CHROMA			????
+	PACK_MPEG_NON_INTRA_QUANT_CHROMA		????
+	UNPACK_MPEG_INTRA_QUANT_CHROMA			????
+	UNPACK_MPEG_NON_INTRA_QUANT_CHROMA		????
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    The pixel storage modes are augmented to support MPEG2 compressed
+    images in memory.  In Table 3.1, MPEG2_SGIX is added to the valid
+    range of UNPACK_COMPRESSION_TYPE_SGIX.
+
+    The values PACK_MPEG_INTRA_QUANT_CHROMA,
+    PACK_MPEG_NON_INTRA_QUANT_CHROMA, UNPACK_MPEG_INTRA_QUANT_CHROMA,
+    and UNPACK_MPEG_NON_INTRA_QUANT_CHROMA are added to the list of
+    legal values for the <target> parameter of MPEGQuantTableubv.
+
+    The following should be added to "Unpacking of Compressed Images"
+    subsection of section 3.6.3 (Rasterization of Pixel
+    Rectangles) following the information added by the MPEG1
+    extension:  MPEG2-compressed images (UNPACK_COMPRESSION_TYPE_SGIX
+    equal to MPEG2_SGIX) are classified as one of six types:  I-frame,
+    P-frame, B-frame, I-field, P-field, and B-field.  Fields are
+    further classified into top and bottom.  The classification is
+    accomplished through extraction and interpretation of the
+    picture_type field of the picture header and the picture_structure
+    field of the picture coding extension.  This extraction and
+    interpretation is performed as specified in the MPEG2 spec (ISO
+    13818). 
+
+    Decompression of MPEG2 images is very similar to the decompression
+    of MPEG1 images described in SGIX_mpeg1, but MPEG2 decompression
+    may make use of two chrominance quantization tables:
+    UNPACK_MPEG_INTRA_QUANT_CHROMA and
+    UNPACK_MPEG_NON_INTRA_QUANT_CHROMA.  These tables are set and read
+    back in the same manner and using the same commands as the
+    quantization tables introduced in SGIX_mpeg1.  The chrominance
+    quantization tables may be used and changed during the
+    decompression step if UNPACK_SAMPLE_SGIX is SAMPLE_422_SGIX.
+    UNPACK_MPEG_INTRA_QUANT_CHROMA is used and updated only during the
+    decompression of I-frames and I-fields;
+    UNPACK_MPEG_NON_INTRA_QUANT_CHROMA, is used and updated only
+    during the decompression of P- and B-frames and P- and B-fields.
+
+    Except for the use and update of UNPACK_MPEG_INTRA_QUANT_CHROMA
+    and UNPACK_MPEG_NON_INTRA_QUANT_CHROMA, MPEG2 frame pictures (I,
+    P, and B) are treated as specified in SGIX_mpeg1.  MPEG2 field
+    pictures are treated as images whose height is half the height of
+    the corresponding frame.  The height value, as computed in
+    image_compression_SGIX, gives the number of scan lines in the
+    field instead of the height of the frame.  Fields are treated
+    identically to MPEG1 frames with two exceptions: MPEG2 fields may
+    use and update the chroma quant tables and the MPEG2 field picture
+    predictor update step is performed differently than the MPEG1
+    predictor update step.  In the predictor update step during MPEG2
+    field decompression, only the top or bottom field of the predictor
+    is replaced.  The field to be replaced is determined by the field
+    type of the current image (top fields replace the top fields of
+    the predictor).  The other field of the predictor is left
+    unchanged.  The predictor height must be twice the height of the
+    current image or the error INVALID_OPERATION is generated and
+    processing terminates without any change to the predictor frame
+    taking place.
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    In Table 4.5, the values MPEG_IFIELD_TOP_SGIX,
+    MPEG_IFIELD_BOTTOM_SGIX, MPEG_PFIELD_TOP_SGIX,
+    MPEG_PFIELD_BOTTOM_SGIX, MPEG_BFIELD_TOP_SGIX, and
+    MPEG_BFIELD_BOTTOM_SGIX are added to the valid range of
+    PACK_MPEG_PICTURE_TYPE_SGIX. 
+
+    The following should be added to the "Packing of Compressed
+    Images" subsection of section 4.3.2 following the information
+    added by the MPEG1 extension: If PACK_COMPRESSION_TYPE_SGIX is
+    equal to MPEG2_SGIX, MPEG2 compression is performed.  Compression
+    of MPEG2 images is similar to compression of MPEG1 images.  During
+    MPEG2 compression, the value of PACK_MPEG_PICTURE_TYPE_SGIX must
+    be equal to MPEG_IFRAME_SGIX, MPEG_PFRAME_SGIX, MPEG_BFRAME_SGIX,
+    MPEG_IFIELD_TOP_SGIX, MPEG_IFIELD_BOTTOM_SGIX,
+    MPEG_PFIELD_TOP_SGIX, MPEG_PFIELD_BOTTOM_SGIX,
+    MPEG_BFIELD_TOP_SGIX, or MPEG_BFIELD_BOTTOM_SGIX.  If the value is
+    not legal, the error INVALID_ENUM is generated and no processing
+    takes place.  If the image is a field, the height (as computed in
+    image_compression_SGIX) is interpreted as the number of scan lines
+    in the field, which is half the height of the corresponding frame.
+    
+    The first step of MPEG2 compression is the conversion to YCrCb.
+    If PACK_TO_RGB_SGIX is TRUE, the RGBA input image is converted to
+    a YCrCb image using an unspecified algorithm.  If PACK_TO_RGB_SGIX
+    is FALSE, the input image is converted to YCrCb by setting the Y
+    equal to R, Cr equal to G, and Cb equal to B.
+
+    The update of predictors during MPEG2 compression is identical to
+    the update of predictors during MPEG2 decompression described
+    above (including generation and possible termination of
+    processing), except that the PACK state is used in place of the
+    UNPACK state.
+
+    During compression, the replacement of the current image by a
+    predictor is determined by the values of
+    PACK_MPEG_PREDICTOR_READ_SGIX and PACK_MPEG_PICTURE_TYPE_SGIX.  If
+    PACK_MPEG_PREDICTOR_READ_SGIX is equal to NONE, the current image
+    is passed on unchanged.  If PACK_MPEG_PREDICTOR_READ_SGIX is
+    PACK_MPEG_PREDICTOR_FWD_SGIX, the predictor bound to
+    PACK_MPEG_PREDICTOR_FWD_SGIX is used as the source.  If
+    PACK_MPEG_PREDICTOR_READ_SGIX is PACK_MPEG_PREDICTOR_BACK_SGIX,
+    the predictor bound to PACK_MPEG_PREDICTOR_BACK_SGIX is used as
+    the source.  If PACK_MPEG_PICTURE_TYPE_SGIX is MPEG_IFRAME_SGIX,
+    MPEG_PFIELD_SGIX, or MPEG_BFIELD_SGIX, the entire frame of the
+    source replaces the current image.  If PACK_MPEG_PICTURE_TYPE_SGIX
+    is MPEG_IFIELD_TOP_SGIX, MPEG_PFIELD_TOP_SGIX, or
+    MPEG_BFIELD_TOP_SGIX, the top field of the predictor replaces the
+    current image.  Every other scan line of the predictor is
+    extracted, beginning with the top scan line of the image.  If
+    PACK_MPEG_PICTURE_TYPE_SGIX is MPEG_IFIELD_BOTTOM_SGIX,
+    MPEG_PFIELD_BOTTOM_SGIX, or MPEG_BFIELD_BOTTOM_SGIX, the bottom
+    field of the predictor replaces the current image.  Every other
+    scan line of the predictor is extracted, beginning with the second
+    scan line from the top.  The image extracted during the replacement
+    step replaces the current image in all subsequent processing.  
+
+    After the replacement step, downsampling of the image occurs in
+    the same manner as during the compression of MPEG1 images.
+
+    The output of the downsampling step is converted based upon the
+    picture type specified by PACK_MPEG_PICTURE_TYPE_SGIX.  In this
+    extension, we specify which quantization tables and predictors are
+    used in the conversion, but do not describe the algorithms used.
+
+    If the picture type is MPEG_IFRAME_SGIX, MPEG_IFIELD_TOP_SGIX, or
+    MPEG_IFIELD_BOTTOM_SGIX, the quantization table
+    PACK_MPEG_INTRA_QUANT_SGIX is used.  The quantization table
+    PACK_MPEG_INTRA_QUANT_CHROMA_SGIX is also used if PACK_SAMPLE_SGIX
+    is SAMPLE_422_SGIX.  No predictors are used.  
+
+    If the picture type is MPEG_PFRAME_SGIX, MPEG_PFIELD_TOP_SGIX, or
+    MPEG_PFIELD_BOTTOM_SGIX, the quantization table
+    PACK_MPEG_NON_INTRA_QUANT_SGIX is used.
+    PACK_MPEG_NON_INTRA_QUANT_CHROMA_SGIX is also used if
+    PACK_SAMPLE_SGIX is SAMPLE_422_SGIX.  The data is converted using
+    the predictor bound to PACK_MPEG_PREDICTOR_BACK_SGIX.  If the
+    image is a frame and its size is not equal to the size of the
+    predictor bound to PACK_MPEG_PREDICTOR_BACK_SGIX, the error
+    INVALID_OPERATION is generated.  If the image is a field, its
+    width must be equal to the width of the predictor and its height
+    must be equal to half the height of the predictor or the error
+    INVALID_OPERATION is generated.  
+
+    If the picture type is MPEG_BFRAME_SGIX, MPEG_PFIELD_TOP_SGIX, or
+    MPEG_PFIELD_BOTTOM_SGIX, the quantization table
+    PACK_MPEG_NON_INTRA_QUANT_SGIX is used.
+    PACK_MPEG_NON_INTRA_QUANT_CHROMA_SGIX is also used if
+    PACK_SAMPLE_SGIX is SAMPLE_422_SGIX.  The image is converted using
+    the predictors bound to PACK_MPEG_PREDICTOR_BACK_SGIX and
+    PACK_MPEG_PREDICTOR_FORWARD_SGIX.  If the image is a frame and its
+    size is not equal to the size of the predictors bound to
+    PACK_MPEG_PREDICTOR_BACK_SGIX and
+    PACK_MPEG_PREDICTOR_FORWARD_SGIX, the error INVALID_OPERATION is
+    generated.  If the image is a field, its width must be equal to
+    the width of the predictors and its height must be equal to the
+    half the height of the predictors or the error INVALID_OPERATION
+    is generated.  Error checking for this step takes place prior to
+    the predictor replacement step, so if an error is detected the
+    contents of the predictors are left unchanged.
+    
+    Further compression is applied to the image using an unspecified
+    algorithm.  The output of MPEG2 decompression is a byte stream
+    containing an MPEG2 picture header followed by picture data.  The
+    picture header specifies the field and frame type determined by
+    the setting of PACK_MPEG_PICTURE_TYPE_SGIX.
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    The values PACK_MPEG_INTRA_QUANT_CHROMA,
+    PACK_MPEG_NON_INTRA_QUANT_CHROMA_SGIX,
+    UNPACK_MPEG_INTRA_QUANT_CHROMA_SGIX, and
+    UNPACK_MPEG_NON_INTRA_QUANT_CHROMA_SGIX are added to the list of
+    valid values for the parameter <target> to the routine
+    GetMPEGQuantTableubv.
+
+Additions to the GLX Specification
+
+    None.
+
+GLX Protocol
+
+    XXX
+
+Errors 
+
+    INVALID_OPERATION is generated if UNPACK_MPEG_PREDICTOR_STORE_SGIX
+    is set to UNPACK_MPEG_PREDICTOR_BACK_SGIX during the download of
+    an MPEG2 field and the height of the predictor bound to
+    UNPACK_MPEG_PREDICTOR_BACK_SGIX is not equal to twice the height
+    of the field.
+
+    INVALID_OPERATION is generated if UNPACK_MPEG_PREDICTOR_STORE_SGIX
+    is set to UNPACK_MPEG_PREDICTOR_FWD_SGIX during the download of an
+    MPEG2 field and the height of the predictor bound to
+    UNPACK_MPEG_PREDICTOR_FWD_SGIX is not equal to twice the height of
+    the field.
+    
+    INVALID_OPERATION is generated if a pixel readback operation is
+    applied, PACK_COMPRESSION_TYPE_SGIX is equal to MPEG2_SGIX, and
+    the value of PACK_MPEG_PICTURE_TYPE is not one of the legal
+    values.
+
+    INVALID_OPERATION is generated if during MPEG2 compression of a
+    frame PACK_MPEG_PREDICTOR_STORE_SGIX is equal to a value other
+    than NONE and the width and height of the current image are not
+    equal to the width and height of the predictor bound to the
+    specified bind point.
+
+    INVALID_OPERATION is generated if during MPEG2 compression of a
+    field PACK_MPEG_PREDICTOR_STORE_SGIX is equal to a value other
+    than NONE and the width and height of the current image are not
+    equal to the width and height of the predictor bound to the
+    specified bind point.
+
+New State
+
+										Initial
+    Get Value					Get Command		Type	Value			Attrib
+    ---------					-----------		----	-------			------
+    PACK_MPEG_INTRA_QUANT_CHROMA		GetMPEGQuantTableubv	64*Z+	XXX			client
+    PACK_MPEG_NON_INTRA_QUANT_CHROMA		GetMPEGQuantTableubv	64*Z+	XXX			client
+    UNPACK_MPEG_INTRA_QUANT_CHROMA		GetMPEGQuantTableubv	64*Z+	XXX			client
+    UNPACK_MPEG_NON_INTRA_QUANT_CHROMA		GetMPEGQuantTableubv	64*Z+	XXX			client
+
+New Implementation Dependent State
+
+	None.

@@ -1,0 +1,122 @@
+# Copyright 2023-2024 The Khronos Group Inc.
+# Copyright 2023-2024 Valve Corporation
+# Copyright 2023-2024 LunarG, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: ci
+
+on:
+  push:
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  build_and_test:
+    # Use chromium as a test build, so don't run this job unless something simple works first
+    needs: chromium
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        config: [Debug, Release]
+        os: [ ubuntu-20.04, ubuntu-22.04, windows-latest, macos-latest ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.8
+        if: matrix.os != 'macos-latest'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'      
+      # MacOS machine can run on arm64 and it doesn't support 3.8
+      - name: Set up Python 3.10.11
+        if: matrix.os == 'macos-latest'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.11'
+      - name: Test CMake Minimum
+        if: matrix.os == 'ubuntu-20.04'
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.17.2
+      - run: cmake -S. -B build -D VUL_WERROR=ON -D BUILD_TESTS=ON -D CMAKE_BUILD_TYPE=${{matrix.config}} -D UPDATE_DEPS=ON
+      - run: cmake --build build --config ${{matrix.config}} --verbose
+      - run: ctest -C ${{matrix.config}} --output-on-failure
+        working-directory: build/
+
+  windows-arm64:
+    # Use chromium as a test build, so don't run this job unless something simple works first
+    needs: chromium
+    runs-on: windows-latest
+    env:
+      CMAKE_GENERATOR: Ninja
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64_arm64
+      - run: cmake -S. -B build -D VUL_WERROR=ON -D CMAKE_BUILD_TYPE=Debug -D UPDATE_DEPS=ON
+      - run: cmake --build build
+      - run: cmake --install build --prefix build/install
+ 
+  android:
+    # Use chromium as a test build, so don't run this job unless something simple works first
+    needs: chromium
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        abi: [ armeabi-v7a, arm64-v8a ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+      - uses: lukka/get-cmake@latest
+      - name: Configure
+        run: |
+          cmake -S . -B build/ --toolchain $ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
+          -D ANDROID_PLATFORM=26 \
+          -D CMAKE_ANDROID_ARCH_ABI=${{matrix.abi}} \
+          -D CMAKE_ANDROID_STL_TYPE=c++_static \
+          -D ANDROID_USE_LEGACY_TOOLCHAIN_FILE=NO \
+          -D VUL_WERROR=ON \
+          -D CMAKE_BUILD_TYPE=Release \
+          -D UPDATE_DEPS=ON \
+          -D BUILD_TESTS=ON \
+          -G "Ninja"
+      - name: Build
+        run: cmake --build build
+
+  reuse:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: REUSE Compliance Check
+      uses: fsfe/reuse-action@v5
+
+  # Test to ensure we don't accidentally break the Chromium build.
+  chromium:
+    needs: generate_source
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install WSI dependencies
+        run: sudo apt-get -qq update && sudo apt-get install -y libwayland-dev xorg-dev
+      - name: Test chromium build
+        run: python scripts/gn/gn.py
+
+  generate_source:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Generate source
+        run: |
+          scripts/update_deps.py --dir external --no-build
+          scripts/generate_source.py external/Vulkan-Headers/registry/
+      - run: git diff --exit-code

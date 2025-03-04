@@ -1,0 +1,375 @@
+Name
+
+    NV_vertex_attrib_integer_64bit
+
+Name Strings
+
+    GL_NV_vertex_attrib_integer_64bit
+
+Contact
+
+    Jeff Bolz, NVIDIA (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown, NVIDIA
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         03/21/2010
+    Revision:                   4
+
+Number
+
+    392
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 specification
+    (Compatibility Profile).
+
+    This extension is written against version 1.50 (revision 09) of the OpenGL
+    Shading Language Specification.
+
+    OpenGL 3.0 and GLSL 1.30 are required.
+
+    NV_gpu_shader5 or equivalent functionality is required.
+
+    This extension requires EXT_vertex_attrib_64bit.
+
+    This extension interacts with NV_vertex_buffer_unified_memory.
+
+    This extension interacts with NV_gpu_program5 and NV_gpu_shader5.
+
+    This extension interacts with EXT_vertex_attrib_64bit.
+
+Overview
+
+    This extension provides support for specifying vertex attributes with
+    64-bit integer components, analagous to the 64-bit floating point support
+    added in EXT_vertex_attrib_64bit.
+
+    Additionally, it provides the VertexAttribLFormatNV entry point to specify
+    bindless vertex attribute arrays with 64-bit integer or floating-point
+    components in conjunction with the NV_vertex_buffer_unified_memory
+    extension.
+
+
+New Procedures and Functions
+
+    void VertexAttribL1i64NV(uint index, int64EXT x);
+    void VertexAttribL2i64NV(uint index, int64EXT x, int64EXT y);
+    void VertexAttribL3i64NV(uint index, int64EXT x, int64EXT y,
+                             int64EXT z);
+    void VertexAttribL4i64NV(uint index, int64EXT x, int64EXT y,
+                             int64EXT z, int64EXT w);
+    void VertexAttribL1i64vNV(uint index, const int64EXT *v);
+    void VertexAttribL2i64vNV(uint index, const int64EXT *v);
+    void VertexAttribL3i64vNV(uint index, const int64EXT *v);
+    void VertexAttribL4i64vNV(uint index, const int64EXT *v);
+
+    void VertexAttribL1ui64NV(uint index, uint64EXT x);
+    void VertexAttribL2ui64NV(uint index, uint64EXT x, uint64EXT y);
+    void VertexAttribL3ui64NV(uint index, uint64EXT x, uint64EXT y,
+                              uint64EXT z);
+    void VertexAttribL4ui64NV(uint index, uint64EXT x, uint64EXT y,
+                              uint64EXT z, uint64EXT w);
+    void VertexAttribL1ui64vNV(uint index, const uint64EXT *v);
+    void VertexAttribL2ui64vNV(uint index, const uint64EXT *v);
+    void VertexAttribL3ui64vNV(uint index, const uint64EXT *v);
+    void VertexAttribL4ui64vNV(uint index, const uint64EXT *v);
+
+    void GetVertexAttribLi64vNV(uint index, enum pname, int64EXT *params);
+    void GetVertexAttribLui64vNV(uint index, enum pname, uint64EXT *params);
+
+    void VertexAttribLFormatNV(uint index, int size, enum type, sizei stride);
+
+    (note:  VertexAttribLFormatNV is provided only if
+    NV_vertex_buffer_unified_memory is supported.)
+
+
+New Tokens
+
+    Accepted by the <type> parameter of VertexAttribLPointerEXT,
+    VertexArrayVertexAttribLOffsetEXT, and VertexAttribLFormatNV:
+
+        INT64_NV                                        0x140E
+        UNSIGNED_INT64_NV                               0x140F
+
+
+Additions to Chapter 2 of the OpenGL 3.2 (Compatibility Profile) Specification
+(OpenGL Operation)
+
+    Modify Section 2.7, Vertex Specification (p. 24)
+
+    (delete third paragraph, p. 33, beginning with "The resulting attribute
+    values are undefined")
+
+    (rework the description of the VertexAttribI* commands, and add support
+    for new VertexAttribL* commands, p. 33)
+
+    To load values into a generic shader attribute declared as a signed or
+    unsigned integer or integer vector, except for 64-bit integer types, use
+    the commands
+
+      void VertexAttribI{1,2,3,4}{i,ui}( uint index, T values );
+      void VertexAttribI{1,2,3,4}{i,ui}v( uint index, T values );
+      void VertexAttribI4{b,s,ub,us}v( uint index, T values );
+
+    These commands specify values that are extended to full signed or unsigned
+    integers, then loaded into the generic attribute at slot index in the same
+    fashion as described above.
+
+    To load values into a generic shader attribute declared as a double,
+    64-bit signed integer, 64-bit unsigned integer, or into vectors or
+    matrices thereof, use the commands
+
+      void VertexAttribL{1,2,3,4}dEXT(uint index, T values);
+      void VertexAttribL{1,2,3,4}dvEXT(uint index, T values);
+      void VertexAttribL{1,2,3,4}{i64,ui64}EXT(uint index, T values);
+      void VertexAttribL{1,2,3,4}{i64,ui64}vEXT(uint index, T values);
+
+    These commands specify one, two, three or four values.  Note that attribute
+    variables declared with "double" types must be loaded with
+    VertexAttribL*d{v}EXT; loading attributes with VertexAttrib*d{v} will
+    produce undefined results. Similarly, attributes declared with 64-bit 
+    integer types must be loaded with VertexAttribL*{i64,ui64}{v}.
+
+    For all VertexAttrib* commands, the error INVALID_VALUE is generated if
+    <index> is greater than or equal to MAX_VERTEX_ATTRIBS.
+
+    The full set of VertexAttrib* commands specify generic attributes with
+    components one of six data types:
+
+      * floating-point values (VertexAttrib*),
+      * signed or unsigned integers (VertexAttribI*),
+      * double-precision floating-point values (VertexAttribL*d*), and
+      * 64-bit signed or unsigned integers (VertexAttribL*{i64,ui64}*).
+
+    The values loaded into a shader attribute variable bound to generic
+    attribute <index> are undefined if the data type of the attribute
+    components specified by the most recent VertexAttrib* command do not match
+    the data type of the variable.
+
+
+    Modify Section 2.8, Vertex Arrays, p. 34
+
+    (insert new paragraph after first paragraph, p. 37)  
+
+    The command
+
+      void VertexAttribLPointerEXT(uint index, int size, enum type,
+                                   sizei stride, const void *pointer);
+
+    specifies state for a generic vertex attribute array associated with a
+    shader attribute variable declared with 64-bit double precision components.
+    <type> must be one of DOUBLE, INT64_NV, or UNSIGNED_INT64_NV, specifying 
+    components of type double, int64EXT, and uint64EXT, respectively. <index>, 
+    <size>, and <stride> behave as defined in all other vertex commands; <size>
+    may be one, two, three or four.
+
+    Each component of an array specified by VertexAttribLPointerEXT will be
+    encoded into one or more generic attribute components as specified for the
+    VertexAttribL* commands in Section 2.7.  The error INVALID_VALUE is
+    generated if <index> is greater than or equal to MAX_VERTEX_ATTRIBS.
+
+
+    Modify "Add to Section 2.9" edits from NV_vertex_buffer_unified_memory
+
+    (add to following to the list of *FormatNV commands)
+
+        void VertexAttribLFormatNV(uint index, int size, enum type,
+                                   sizei stride);
+
+
+    Modify Section 2.14.3, Vertex Attributes, p. 86
+
+    (replace last paragraph, p. 86)
+
+    When an attribute variable declared using one of the scalar or vector data
+    types enumerated in Table X.1 and is bound to a generic attribute index
+    <i>, its value(s) are taken from the components of generic attribute <i>.
+    Scalars are extracted from the x component; two-, three-, and
+    four-component vectors are extracted from the, (x, y), (x, y, z), or (x,
+    y, z, w) components, respectively.
+
+      Data type                         Command
+      -------------------------------   ----------------------------------
+      int    int8_t  int16_t  int32_t   VertexAttribI1i
+      ivec2  i8vec2  i16vec2  i32vec2   VertexAttribI2i
+      ivec3  i8vec3  i16vec3  i32vec3   VertexAttribI3i
+      ivec4  i8vec4  i16vec4  i32vec4   VertexAttribI4i
+
+      uint   uint8_t uint16_t uint32_t  VertexAttribI1ui
+      ivec2  i8vec2  i16vec2  u32vec2   VertexAttribI2ui
+      ivec3  i8vec3  i16vec3  u32vec3   VertexAttribI3ui
+      uvec4  u8vec4  u16vec4  u32vec4   VertexAttribI4ui
+
+      float  int16_t  int32_t           VertexAttrib1{f,b,s,i,ub,us,ui,d}
+      vec2   f16vec2  f32vec2           VertexAttrib2{f,b,s,i,ub,us,ui,d}
+      vec3   f16vec3  f32vec3           VertexAttrib3{f,b,s,i,ub,us,ui,d}
+      vec4   f16vec4  f32vec4           VertexAttrib4{f,b,s,i,ub,us,ui,d}
+
+      double    float64_t               VertexAttribL1dEXT
+      dvec2     f64vec2                 VertexAttribL2dEXT
+      dvec3     f64vec3                 VertexAttribL3dEXT
+      dvec4     f64vec4                 VertexAttribL4dEXT
+
+      int64_t                           VertexAttribL1i64NV
+      i64vec2                           VertexAttribL2i64NV
+      i64vec3                           VertexAttribL3i64NV
+      i64vec4                           VertexAttribL4i64NV
+
+      uint64_t                          VertexAttribL1ui64NV
+      u64vec2                           VertexAttribL2ui64NV
+      u64vec3                           VertexAttribL3ui64NV
+      u64vec4                           VertexAttribL4ui64NV
+
+      Table X.1:  Scalar and vector vertex attribute types and VertexAttrib*
+      commands used to set the values of the corresponding generic attribute.
+
+    For the 64-bit types listed in Table X.1, no default attribute values are 
+    provided if the values of the vertex attribute variable are specified with 
+    fewer components than required for the attribute variable.  For example, 
+    the fourth component of a variable of type dvec4 will be undefined if 
+    specified using VertexAttribL3dvEXT or using a vertex array specified with
+    VertexAttribLPointerEXT and a size of three.
+
+
+Additions to Chapter 3 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 3.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    Modify Section 6.1.15, Shader and Program Queries, p. 384
+
+    (add to the last list of commands, p. 387)
+
+      void GetVertexAttribLi64vNV(uint index, enum pname, int64EXT *params);
+      void GetVertexAttribLui64vNV(uint index, enum pname, uint64EXT *params);
+
+    (modify the third paragraph, p. 388) The query CURRENT_VERTEX_ATTRIB
+    returns the current value for the generic attribute
+    <index>. GetVertexAttribdv and GetVertexAttribfv read and return the
+    current attribute values as four single-precision floating-point values;
+    GetVertexAttribiv reads them as floating-point values and converts them to
+    four integer values; GetVertexAttribIiv reads and returns them as signed
+    integers; GetVertexAttribIuiv reads and returns them as four unsigned
+    integers; GetVertexAttribLdvEXT reads and returns them as four double-
+    precision floating-point values.  GetVertexAttribLi64vNV reads and returns 
+    them as four 64-bit signed integer values.  GetVertexAttribLui64vNV reads 
+    and returns them as four 64-bit unsigned integer values.  The results of 
+    the query are undefined if the current attribute values are read using one 
+    data type but were specified using a different one.  The error 
+    INVALID_OPERATION is generated if index is zero, as there is no current 
+    value for generic attribute zero.
+
+
+Additions to Appendix A of the OpenGL 3.2 (Compatibility Profile)
+Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    TBD
+
+Dependencies on NV_vertex_buffer_unified_memory
+
+    If NV_vertex_buffer_unified_memory is not supported, remove the
+    VertexAttribLFormatNV command.
+
+Dependencies on NV_gpu_program5 and NV_gpu_shader5
+
+    This extension provides the ability to specify the values of vertex
+    attributes with 64-bit components.  To use these vertex attributes,
+    separate extensions are required to read the values.  The NV_gpu_program5
+    extension provides support for 64-bit integer inputs in assembly programs;
+    NV_gpu_shader5 provides similar support for GLSL vertex shaders.  To
+    enable this capability in a GLSL vertex shader on implementations
+    supporting NV_gpu_shader5, it is necessary to include
+
+      #extension GL_NV_gpu_shader5 : enable
+
+    in the vertex shader text.  The NV_vertex_attrib_integer_64bit extension
+    does not provide any separate new GLSL capabilities and can not be used
+    with "#extension".
+
+    64-bit components are not supported by the fixed-function vertex
+    processing pipeline stage.
+
+Dependencies on EXT_vertex_attrib_64bit
+
+    If EXT_vertex_attrib_64bit is supported, vertex shaders are permitted to
+    use 64-bit floating-point components for their inputs.  
+
+    Even if an application only uses 64-bit floating-point values in their
+    vertex shader, this extension may still be useful.  In particular, it
+    provides the VertexAttribLFormatNV function, which allows the "bindless"
+    vertex attribute array support provided by the
+    NV_vertex_buffer_unified_memory extension to be used with 64-bit
+    components, integer or floating-point.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) What GLSL "#extension" should be required to enable 64-bit integer
+        vertex sahder inputs. 
+
+      RESOLVED:  NV_gpu_shader5 provides general-purpose support for 64-bit
+      integer types in shaders, and we have written it to explicitly permit
+      64-bit integer vertex shader inputs.  Since this is the only GLSL
+      capability required for this extension and NV_gpu_shader5 or equivalent
+      functionality is required, there is no separate "#extension" provided
+      for just this extension.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     4    03/21/10  pbrown    Minor wording updates to the spec overview, 
+                              dependencies, issues, and body.
+
+     3    03/08/10  pbrown    Rename to "NV_vertex_attrib_integer_64bit" to
+                              avoid possible confusion with the floating-
+                              point EXT_vertex_attrib_64bit.  The previous
+                              spec name was "NV_vertex_attrib_64bit".
+
+     2       --     jbolz     Rewrite as (u)int64-only extension of EXT.
+
+     1       --     pbrown    Internal revisions.
+
+

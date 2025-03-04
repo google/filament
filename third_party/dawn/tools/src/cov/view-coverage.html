@@ -1,0 +1,595 @@
+<!doctype html>
+<!--
+ Copyright 2022 The Dawn & Tint Authors
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+ 1. Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+
+ 3. Neither the name of the copyright holder nor the names of its
+    contributors may be used to endorse or promote products derived from
+    this software without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<html>
+
+<head>
+    <title>Dawn Code Coverage viewer</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.52.0/codemirror.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.52.0/theme/seti.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.52.0/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.52.0/mode/clike/clike.min.js"></script>
+    <script src=https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.10/pako.min.js></script>
+
+    <style>
+        ::-webkit-scrollbar {
+            background-color: #30353530;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: #80858050;
+        }
+
+        ::-webkit-scrollbar-corner {
+            background-color: #00000000;
+        }
+
+        .frame {
+            display: flex;
+            left: 0px;
+            right: 0px;
+            top: 0px;
+            bottom: 0px;
+            position: absolute;
+            font-family: monospace;
+            background-color: #151515;
+            color: #c0b070;
+        }
+
+        .left-pane {
+            flex: 1;
+        }
+
+        .center-pane {
+            flex: 3;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        .top-pane {
+            flex: 1;
+            overflow: scroll;
+        }
+
+        .v-flex {
+            display: flex;
+            height: 100%;
+            flex-direction: column;
+        }
+
+        .file-tree {
+            font-size: small;
+            overflow: auto;
+            padding: 5px;
+        }
+
+        .test-tree {
+            font-size: small;
+            overflow: auto;
+            padding: 5px;
+        }
+
+        .CodeMirror {
+            flex: 3;
+            height: 100%;
+            border: 1px solid #eee;
+        }
+
+        .file-div {
+            margin: 0px;
+            white-space: nowrap;
+            padding: 2px;
+            margin-top: 1px;
+            margin-bottom: 1px;
+        }
+
+        .file-div:hover {
+            background-color: #303030;
+            cursor: pointer;
+        }
+
+        .file-div.selected {
+            background-color: #505050;
+            color: #f0f0a0;
+            cursor: pointer;
+        }
+
+        .test-name {
+            margin: 0px;
+            white-space: nowrap;
+            padding: 2px;
+            margin-top: 1px;
+            margin-bottom: 1px;
+        }
+
+        .file-coverage {
+            color: black;
+            width: 20pt;
+            padding-right: 3pt;
+            padding-left: 3px;
+            margin-right: 5pt;
+            display: inline-block;
+            text-align: center;
+            border-radius: 5px;
+        }
+
+        .with-coverage {
+            background-color: #20d04080;
+            border-width: 0px 0px 0px 0px;
+        }
+
+        .with-coverage-start {
+            border-left: solid 1px;
+            border-color: #20f02080;
+            margin-left: -1px;
+        }
+
+        .with-coverage-end {
+            border-right: solid 1px;
+            border-color: #20f02080;
+            margin-right: -1px;
+        }
+
+        .without-coverage {
+            background-color: #d0204080;
+            border-width: 0px 0px 0px 0px;
+        }
+
+        .without-coverage-start {
+            border-left: solid 1px;
+            border-color: #f0202080;
+            margin-left: -1px;
+        }
+
+        .without-coverage-end {
+            border-right: solid 1px;
+            border-color: #f0202080;
+            margin-right: -1px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="frame">
+        <div id="file_tree" class="left-pane file-tree"></div>
+        <div class="center-pane">
+            <div id="source" class="v-flex">
+                <div class="top-pane">
+                    <div class="test-tree" id="test_tree"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // "Download" the coverage.dat file if the user presses ctrl-s
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                window.open("coverage.dat");
+            }
+        });
+
+        let current = {
+            file: "",
+            start_line: 0,
+            start_column: 0,
+            end_line: 0,
+            end_column: 0,
+        };
+
+        let pending = { ...current };
+        {
+            let url = new URL(location.href);
+            let query_string = url.search;
+            let search_params = new URLSearchParams(query_string);
+            var f = search_params.get('f');
+            var s = search_params.get('s');
+            var e = search_params.get('e');
+            if (f) {
+                pending.file = f;
+            }
+            if (s) {
+                s = s.split('.');
+                pending.start_line = s.length > 0 ? parseInt(s[0]) : 0;
+                pending.start_column = s.length > 1 ? parseInt(s[1]) : 0;
+            }
+            if (e) {
+                e = e.split('.');
+                pending.end_line = e.length > 0 ? parseInt(e[0]) : 0;
+                pending.end_column = e.length > 1 ? parseInt(e[1]) : 0;
+            }
+        };
+
+        let set_location = (file, start_line, start_column, end_line, end_column) => {
+            current.file = file;
+            current.start_line = start_line;
+            current.start_column = start_column;
+            current.end_line = end_line;
+            current.end_column = end_column;
+
+            let url = new URL(location.href);
+            let query_string = url.search;
+            // Don't use URLSearchParams, as it will unnecessarily escape
+            // characters, such as '/'.
+            url.search = "f=" + file +
+                "&s=" + start_line + "." + end_line +
+                "&e=" + end_line + "." + end_column;
+            window.history.replaceState(null, "", url.toString());
+        };
+
+        let before = (line, col, span) => {
+            if (line < span[0]) { return true; }
+            if (line == span[0]) { return col < span[1]; }
+            return false;
+        };
+
+        let after = (line, col, span) => {
+            if (line > span[2]) { return true; }
+            if (line == span[2]) { return col > span[3]; }
+            return false;
+        };
+
+        let intersects = (span, from, to) => {
+            if (!before(to.line + 1, to.ch + 1, span) &&
+                !after(from.line + 1, from.ch + 1, span)) {
+                return true;
+            }
+            return false;
+        };
+
+        let el_file_tree = document.getElementById("file_tree");
+        let el_test_tree = document.getElementById("test_tree");
+        let el_source = CodeMirror(document.getElementById("source"), {
+            lineNumbers: true,
+            theme: "seti",
+            mode: "text/x-c++src",
+            readOnly: true,
+        });
+
+        addEventListener('beforeunload', () => {
+            fetch("viewer.closed");
+        });
+
+        window.onload = function () {
+            el_source.doc.setValue("// Loading... ");
+            fetch("coverage.dat").then(response =>
+                response.arrayBuffer()
+            ).then(compressed =>
+                pako.inflate(new Uint8Array(compressed))
+            ).then(decompressed =>
+                JSON.parse(new TextDecoder("utf-8").decode(decompressed))
+            ).then(json => {
+                el_source.doc.setValue("// Select file from the left... ");
+
+                let revision = json.r;
+                let names = json.n;
+                let tests = json.t;
+                let spans = json.s;
+                let files = json.f;
+
+                let glob_group = (file, groupID, span_ids) => {
+                    while (true) {
+                        let group = file.g[groupID];
+                        group.s.forEach(span_id => span_ids.add(span_id));
+                        if (!group.e) {
+                            break;
+                        }
+                        groupID = group.e;
+                    };
+                };
+
+                let coverage_spans = (file, data, span_ids) => {
+                    if (data.g != undefined) {
+                        glob_group(file, data.g, span_ids);
+                    }
+                    if (data.s != undefined) {
+                        data.s.forEach(span_id => span_ids.add(span_id));
+                    }
+                };
+
+                let glob_node = (file, nodes, span_ids) => {
+                    nodes.forEach(node => {
+                        let data = node[1];
+                        coverage_spans(file, data, span_ids);
+                        if (data.c) {
+                            glob_node(file, data.c, span_ids);
+                        }
+                    });
+                };
+
+                let markup = file => {
+                    if (file.u) {
+                        for (span of file.u) {
+                            el_source.doc.markText(
+                                { "line": span[0] - 1, "ch": span[1] - 1 },
+                                { "line": span[2] - 1, "ch": span[3] - 1 },
+                                {
+                                    // inclusiveLeft: true,
+                                    className: "without-coverage",
+                                    startStyle: "without-coverage-start",
+                                    endStyle: "without-coverage-end",
+                                });
+                        }
+                    }
+                    let span_ids = new Set();
+                    glob_node(file, file.c, span_ids);
+                    el_source.operation(() => {
+                        span_ids.forEach((span_id) => {
+                            let span = spans[span_id];
+                            el_source.doc.markText(
+                                { "line": span[0] - 1, "ch": span[1] - 1 },
+                                { "line": span[2] - 1, "ch": span[3] - 1 },
+                                {
+                                    // inclusiveLeft: true,
+                                    className: "with-coverage",
+                                    startStyle: "with-coverage-start",
+                                    endStyle: "with-coverage-end",
+                                });
+                        });
+                    });
+                };
+
+                let NONE_OVERLAP = 0;
+                let ALL_OVERLAP = 1;
+                let SOME_OVERLAP = 2;
+
+                let gather_overlaps = (parent, file, coverage_nodes, from, to) => {
+                    if (!coverage_nodes) { return; }
+
+                    // Start by populating all the children nodes from the full
+                    // test lists. This includes nodes that do not have child
+                    // coverage data.
+                    for (var index = 0; index < parent.test.length; index++) {
+                        if (parent.children.has(index)) { continue; }
+
+                        let test_node = parent.test[index];
+                        let test_name_id = test_node[0];
+                        let test_name = names[test_name_id];
+                        let test_children = test_node[1];
+
+                        let node = {
+                            test: test_children,
+                            name: parent.name ? parent.name + test_name : test_name,
+                            overlaps: new Map(parent.overlaps), // map: span_id -> OVERLAP
+                            children: new Map(), // map: index -> struct
+                            is_leaf: test_children.length == 0,
+                        };
+                        parent.children.set(index, node);
+                    }
+
+                    // Now update the children that do have coverage data.
+                    for (const coverage_node of coverage_nodes) {
+                        let index = coverage_node[0];
+                        let coverage = coverage_node[1];
+                        let node = parent.children.get(index);
+
+                        let span_ids = new Set();
+                        coverage_spans(file, coverage, span_ids);
+
+                        // Update the node overlaps based on the coverage spans.
+                        for (const span_id of span_ids) {
+                            if (intersects(spans[span_id], from, to)) {
+                                let overlap = parent.overlaps.get(span_id) || NONE_OVERLAP;
+                                overlap = (overlap == NONE_OVERLAP) ? ALL_OVERLAP : NONE_OVERLAP;
+                                node.overlaps.set(span_id, overlap);
+                            }
+                        }
+
+                        // Generate the child nodes.
+                        gather_overlaps(node, file, coverage.c, from, to);
+
+                        // Gather all the spans used by the children.
+                        let all_spans = new Set();
+                        for (const [_, child] of node.children) {
+                            for (const [span, _] of child.overlaps) {
+                                all_spans.add(span);
+                            }
+                        }
+
+                        // Update the node.overlaps based on the child overlaps.
+                        for (const span of all_spans) {
+                            let overlap = undefined;
+                            for (const [_, child] of node.children) {
+                                let child_overlap = child.overlaps.get(span);
+                                child_overlap = (child_overlap == undefined) ? NONE_OVERLAP : child_overlap;
+                                if (overlap == undefined) {
+                                    overlap = child_overlap;
+                                } else {
+                                    overlap = (child_overlap == overlap) ? overlap : SOME_OVERLAP
+                                }
+                            }
+                            node.overlaps.set(span, overlap);
+                        }
+
+                        // If all the node.overlaps are NONE_OVERLAP or ALL_OVERLAP
+                        // then there's no point holding on to the children -
+                        // we know all transitive children either fully overlap
+                        // or don't at all.
+                        let some_overlap = false;
+                        for (const [_, overlap] of node.overlaps) {
+                            if (overlap == SOME_OVERLAP) {
+                                some_overlap = true;
+                                break;
+                            }
+                        }
+
+                        if (!some_overlap) {
+                            node.children = null;
+                        }
+                    }
+                };
+
+                let gather_tests = (file, coverage_nodes, test_nodes, from, to) => {
+                    let out = [];
+
+                    let traverse = (parent) => {
+                        for (const [idx, node] of parent.children) {
+                            let do_traversal = false;
+                            let do_add = false;
+
+                            for (const [_, overlap] of node.overlaps) {
+                                switch (overlap) {
+                                    case SOME_OVERLAP:
+                                        do_traversal = true;
+                                        break;
+                                    case ALL_OVERLAP:
+                                        do_add = true;
+                                        break;
+                                }
+                            }
+
+                            if (do_add) {
+                                out.push(node.name + (node.is_leaf ? "" : "*"));
+                            } else if (do_traversal) {
+                                traverse(node);
+                            }
+                        }
+                    };
+
+                    let tree = {
+                        test: test_nodes,
+                        overlaps: new Map(), // map: span_id -> OVERLAP
+                        children: new Map(), // map: index -> struct
+                    };
+
+                    gather_overlaps(tree, file, coverage_nodes, from, to);
+
+                    traverse(tree);
+
+                    return out;
+                };
+
+                let update_selection = (from, to) => {
+                    if (from.line > to.line || (from.line == to.line && from.ch > to.ch)) {
+                        let tmp = from;
+                        from = to;
+                        to = tmp;
+                    }
+
+                    let file = files[current.file];
+                    let filtered = gather_tests(file, file.c, tests, from, to);
+                    el_test_tree.innerHTML = "";
+                    filtered.forEach(test_name => {
+                        let element = document.createElement('p');
+                        element.className = "test-name";
+                        element.innerText = test_name;
+                        el_test_tree.appendChild(element);
+                    });
+                };
+
+                let load_source = (path) => {
+                    if (!files[path]) { return; }
+
+                    for (let i = 0; i < el_file_tree.childNodes.length; i++) {
+                        let el = el_file_tree.childNodes[i];
+                        if (el.path == path) {
+                            el.classList.add("selected");
+                        } else {
+                            el.classList.remove("selected");
+                        }
+                    }
+                    el_source.doc.setValue("// Loading... ");
+                    fetch(`${path}`)
+                        .then(response => response.text())
+                        .then(source => {
+                            el_source.doc.setValue(source);
+                            current.file = path;
+                            markup(files[path]);
+                            if (pending.start_line) {
+                                var start = {
+                                    line: pending.start_line - 1,
+                                    ch: pending.start_column ? pending.start_column - 1 : 0
+                                };
+                                var end = {
+                                    line: pending.end_line ? pending.end_line - 1 : pending.start_line - 1,
+                                    ch: pending.end_column ? pending.end_column - 1 : 0
+                                };
+                                el_source.doc.setSelection(start, end);
+                                update_selection(start, end);
+                            }
+                            pending = {};
+                        });
+                };
+
+                el_source.doc.on("beforeSelectionChange", (doc, selection) => {
+                    if (!files[current.file]) { return; }
+
+                    let range = selection.ranges[0];
+                    let from = range.head;
+                    let to = range.anchor;
+
+                    set_location(current.file, from.line + 1, from.ch + 1, to.line + 1, to.ch + 1);
+
+                    update_selection(from, to);
+                });
+
+                for (const path of Object.keys(files)) {
+                    let file = files[path];
+
+                    let div = document.createElement('div');
+                    div.className = "file-div";
+                    div.onclick = () => { pending = {}; load_source(path); }
+                    div.path = path;
+                    el_file_tree.appendChild(div);
+
+                    let coverage = document.createElement('span');
+                    coverage.className = "file-coverage";
+                    if (file.p != undefined) {
+                        let red = 1.0 - file.p;
+                        let green = file.p;
+                        let normalize = 1.0 / (red * red + green * green);
+                        red *= normalize;
+                        green *= normalize;
+                        coverage.innerText = Math.round(file.p * 100);
+                        coverage.style = "background-color: RGB(" + 255 * red + "," + 255 * green + ", 0" + ")";
+                    } else {
+                        coverage.innerText = "--";
+                        coverage.style = "background-color: RGB(180,180,180)";
+                    }
+                    div.appendChild(coverage);
+
+                    let filepath = document.createElement('span');
+                    filepath.className = "file-path";
+                    filepath.innerText = path;
+                    div.appendChild(filepath);
+                }
+
+                if (pending.file) {
+                    load_source(pending.file);
+                }
+            });
+        };
+
+    </script>
+</body>
+
+</html>

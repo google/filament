@@ -1,0 +1,111 @@
+Name
+
+    IBM_rasterpos_clip
+
+Name Strings
+
+    GL_IBM_rasterpos_clip
+
+Version
+
+    $Id: //depot/main/doc/registry/extensions/IBM/rasterpos_clip.spec#1 $
+
+Number
+
+    110
+
+Dependencies
+
+    None
+
+Overview
+
+    IBM_rasterpos_clip extends the semantics of the RasterPos functions.  It
+    provides an enable that allows a raster position that would normally be
+    clipped to be treated as a valid (albeit out-of-viewport) position.
+
+    This extension allows applications to specify geometry-aligned pixel
+    primitives that may be partially off-screen.  These primitives are
+    tested on a pixel-by-pixel basis without being rejected completely
+    because of an invalid raster position.
+
+Issues
+
+    Currently, clipping is disabled only in X and Y.  If disabling Z
+    clipping is required, the behavior needs to be specified.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+        
+    Accepted by the <target> parameter of Enable and Disable and the <value>
+    parameter of IsEnabled, GetBooleanv, GetIntegerv, GetFloatv, GetDoublev:
+
+        RASTER_POSITION_UNCLIPPED_IBM           103010
+
+    The enum is subject to change if this proposal attracts interest from
+    other vendors and becomes an EXT extension.
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    In Section 2.12, the behavior of valid bit of the raster position with
+    respect to vertex clipping is defined.
+
+        The transformed coordinates are passed to clipping as if they
+        represented a point.  If the "point" is not culled, then the
+        projection to window coordinates is computed (section 2.10) and
+        saved as the current raster position, and the valid bit is set.  If
+        the "point" is culled, ... the valid bit is cleared.
+
+    The specification is modified to read:
+
+        The transformed coordinates are passed to clipping as if they
+        represented a point.  If (1) the "point" is not culled, or (2)
+        RASTER_POSITION_UNCLIPPED_IBM is enabled and the "point" is not culled
+        except by the x and y components of the clip volume, then the
+        projection to window coordinates is computed (section 2.10) and saved
+        as the current raster position, and the valid bit is set.  Otherwise,
+        ... the valid bit is cleared.
+
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None (other than the new Enable target).
+
+Errors
+
+    None
+
+New State
+
+    Get Value                     Type Get Command  Value Sec   Attrib
+    ----------------------------- ---- -----------  ----- ----  -------
+    RASTER_POSITION_UNCLIPPED_IBM   B  IsEnabled    False 2.12  transform/
+                                                                enable 
+
+New Implementation Dependent State
+
+    None

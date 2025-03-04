@@ -1,0 +1,141 @@
+Name
+
+    EXT_misc_attribute
+
+Name Strings
+
+    GL_EXT_misc_attribute
+
+Version
+
+    $Date: 1999/04/03 08:40:56 $ $Revision: 1.5 $
+
+Number
+
+    31
+
+Dependencies
+
+    None
+
+Overview
+
+    EXT_misc_attribute extends the list of attribute groups. It provides
+    a miscellaneous group, controlled by the MISC_BIT_EXT bit, that contains
+    the attribute state of extensions that don't logically fit in any other
+    group. 
+
+Reasoning
+
+    In general, an extension's attributes are assigned to a similar
+    attribute group. If an extension is developed that doesn't fit in
+    any of the GL's existing attribute groups, the extension's attributes
+    should be added to the miscellaneous group.
+        
+    The GL sample implementation incorrectly checks the bits in
+    the <mask> argument to PushAttrib and glXCopyContext,
+    generating an error if any unused bits are set. This
+    behavior causes interoperability problems between GLs with
+    different sets of attribute groups. This error checking
+    should be removed from all implementations. The reference
+    to this error checking should also be removed from the GLX
+    specification.
+
+    Because of the bit checking described above, ALL_ATTRIB_BITS
+    can't include MISC_BIT_EXT without risking GL interoperability
+    problems. Not including MISC_BIT_EXT changes the semantics of
+    ALL_ATTRIB_BITS, but is considered the lesser of two evils.
+    These problems should be fixed in the next GL version.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    MISC_BIT_EXT
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    The command
+
+        void PushAttrib(bitfield mask)
+
+    takes a bitwise OR of symbolic constants indicating which groups of
+    state variables to push onto an attribute stack. Each constant refers
+    to a group of state variables. The single symbolic constant
+    GL_ALL_ATTRIB_BITS can be used to copy all of the attribute groups defined
+    by the core GL. Additional extension attribute groups cannot be copied
+    using GL_ALL_ATTRIB_BITS. To copy these groups, check to see that the GL
+    implementation supports the extension, then use a bitwise OR to set
+    the appropriate bit(s) in <mask>.
+
+
+(Table 6.1 (Attribute Groups).)
+
+    Attribute                   Constant                ALL_ATTRIB_BITS
+    ---------                   --------                ---------------
+
+    accum-buffer                ACCUM_BUFFER_BIT        yes
+    color-buffer                COLOR_BUFFER_BIT        yes
+    current                     CURRENT_BIT             yes
+    depth-buffer                DEPTH_BUFFER_BIT        yes
+    enable                      ENABLE_BIT              yes
+    eval                        EVAL_BIT                yes
+    fog                         FOG_BIT                 yes
+    hint                        HINT_BIT                yes
+    lighting                    LIGHTING_BIT            yes
+    line                        LINE_BIT                yes
+    list                        LIST_BIT                yes
+    pixel                       PIXEL_MODE_BIT          yes
+    point                       POINT_BIT               yes
+    polygon                     POLYGON_BIT             yes
+    polygon-stipple             POLYGON_STIPPLE_BIT     yes
+    scissor                     SCISSOR_BIT             yes
+    stencil-buffer              STENCIL_BUFFER_BIT      yes
+    texture                     TEXTURE_BIT             yes
+    transform                   TRANSFORM_BIT           yes
+    viewport                    VIEWPORT_BIT            yes
+    miscellaneous               MISC_BIT_EXT            no
+    -                           ALL_ATTRIB_BITS         -
+
+
+Additions to the GLX Specification
+
+(In the glXCopyContext description)
+
+    The single symbolic constant GL_ALL_ATTRIB_BITS can be used to
+    copy all of the attribute groups defined by the core GL. Additional
+    extension attribute groups can not be copied using GL_ALL_ATTRIB_BITS.
+    To copy these groups, check to see that the GL implementation supports
+    the extension, then use a bitwise OR to set the appropriate bit(s) in
+    <mask>.
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

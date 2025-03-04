@@ -1,0 +1,132 @@
+name: "Check code formatting"
+on: 
+  pull_request_target:
+    types: [opened,synchronize]
+  issue_comment:
+    types: edited
+
+jobs:
+  code_formatter:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+        with:
+          separator: ","
+          fetch_depth: 100 # Fetches only the last 10 commits
+
+      - name: "Listed files"
+        env:
+          LISTED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          echo "Formatting files:"
+          echo "$LISTED_FILES"
+
+      - name: Install clang-format
+        uses: aminya/setup-cpp@v1
+        with:
+          clangformat: 17.0.1
+
+      - name: Setup Python env
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'utils/git/requirements_formatting.txt'
+
+      - name: Install python dependencies
+        run: pip install -r utils/git/requirements_formatting.txt
+
+      - name: Run code formatter
+        id: formatter
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          START_REV: ${{ github.event.pull_request.base.sha }}
+          END_REV: ${{ github.event.pull_request.head.sha }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+           python utils/git/code-format-helper.py \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --issue-number $GITHUB_PR_NUMBER \
+            --start-rev $START_REV \
+            --end-rev $END_REV \
+            --changed-files "$CHANGED_FILES"
+  apply_diff:
+    if: ${{ github.event_name == 'issue_comment' && endsWith(github.event.comment.body, '- [x] Check this box to apply formatting changes to this branch.') }}
+    runs-on: ubuntu-latest
+    env:
+      TMP_DIFF_FILE: /tmp/diff.patch
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - uses: actions/github-script@v3
+        id: get-pr
+        with:
+          script: |
+            const request = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            }
+            core.info(`Getting PR #${request.pull_number} from ${request.owner}/${request.repo}`)
+            try {
+              const result = await github.pulls.get(request)
+              return result.data
+            } catch (err) {
+              core.setFailed(`Request failed with error ${err}`)
+            } 
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          path: build/main_src
+
+      - name: Setup Python env
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'build/main_src/utils/git/requirements_formatting.txt'
+
+      - name: Install python dependencies
+        run: pip install -r build/main_src/utils/git/requirements_formatting.txt
+
+      - name: Apply code diff
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          python build/main_src/utils/git/code-format-save-diff.py \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --issue-number $GITHUB_PR_NUMBER \
+            --tmp-diff-file $TMP_DIFF_FILE \
+            --comment-id $COMMENT_ID
+
+      - name: Fetch LLVM sources for head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
+          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
+
+      - name: apply diff
+        run: |
+          git apply $TMP_DIFF_FILE
+          git add .
+
+      - name: Commit & Push changes
+        uses: actions-js/push@master
+        with:
+          branch: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
+          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}

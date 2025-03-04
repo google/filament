@@ -1,0 +1,496 @@
+Name
+
+     EXT_texenv_op
+
+Name Strings
+
+     GL_EXT_texenv_op
+
+Contact
+
+     Tom Frisinger (tfrisinger 'at' atitech.com)
+     Michael Gold (gold 'at' nvidia.com)
+
+Status
+
+    XXX - Not complete yet!!!
+
+Version
+
+    $Date: 1999/12/28 01:40:34 $ $Revision: 1.4 $
+    ATI Date: 1999/03/02 12:00:00  Revision: 1.1
+
+Number
+
+     XXX
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    ARB_multitexture is required.
+    This specification is written against the OpenGL 1.2 specification.
+
+Overview
+
+     The EXT_texenv_op extension defines a more expressive means for
+     programming the operations performed by the texture environment. It
+     defines new texture environment equations and allows explicit control
+     over the operands to the new equations. This explicit control can be
+     independently applied to the alpha and RGB color fragments.
+
+Issues
+
+   * Should we include f, iv, and fv versions of the TexEnvOperand call.
+
+        No, there seems to be no compelling reason to do so.
+
+   * Should we try to wrap this entire interface into TexEnv or at least
+     the specification of the operation?
+
+        Move operation specification into TexEnv, but keep TexEnvOperandiEXT
+        for operand specification.
+
+   * Should a stage argument be added to TexEnvOperandiEXT to decouple from
+     the current unit selector?
+
+        No. This goes against the ARB_multitexture implementation. We
+        have however allowed TEXTUREn_ARB as a value to the source
+        parameter of TexEnvOperandiEXT. This allows the texture fragment
+        to come from the texture bound to any legal texture unit stage.
+
+   * Should a generic scale and bias term be added?
+
+        Allow scales of 1.0, 2.0, and 4.0 to be applied to the output of
+        each stage. The scales can be independently applied to RGB and
+        Alpha. Generic biasing isn't allowed. However the ADD_SIGNED_EXT
+        operation effectively allows a bias of -0.5.
+
+   * Should alpha and RGB operands be completely orthogonal?
+
+     Yes.
+
+   * This spec becomes much more powerful when ARB_multitexture is
+     available. However, it seemed like having the new texture environment
+     functions and control over operands available to implementations that
+     don't support ARB_multitexture could be useful.
+
+        Make ARB_multitexture required. We define PREVIOUS_EXT to be
+        INCOMING_EXT for the texture unit 0 case so we could loosen up the
+        spec if need be.
+
+   * IDENTITY_EXT and ONE_MINUS_EXT are the legal values to the mapping
+     parameter of TexEnvOperandiEXT. Other names such as COPY, INVERT, or
+     COMPLEMENT_EXT may or may not be more appropriate.
+
+        Keep IDENTITY_EXT and ONE_MINUS_EXT they seem to be as good as any.
+
+   * Should a third operand be introduced such that the blending operations
+     could be generalized to the following equation?
+
+       Cv = CopA*(1- CopC) + CopB* CopC
+
+        Yes, this is the INTERPOLATE_EXT operation. Interpolation in the
+        alpha channel is also permitted.
+
+  *  Should we make the OpenGL 1.1 modes programmable? For example should
+     setting the env. mode to MODULATE have the effect of changing the
+     TEXTURE_ENV_MODE_ALPHA_EXT, TEXTURE_ENV_MODE_RGB_EXT, OPERANDS, and
+     possibly the OPERATIONS to a given state that would correspond with
+     tables 3.18 and 3.19?
+
+        Instead of this approach, we decided to go with the
+        non-programmable approach. For example MODULATE works as it
+        always did according to table 3.18 and 3.19 and does not change
+        TEXTURE_ENV_MODE_ALPHA_EXT, TEXTURE_ENV_MODE_RGB_EXT, OPERAND,
+        or OPERATION state. This adds a small amount of burden to the
+        driver but seems more consistent.
+
+   * ALPHA_SCALE and RGB_SCALE_EXT accept only 1.0, 2.0 and 4.0. This look
+     like we are really doing a shift. Should the value be restricted to an
+     integer and indicate a shift instead of a scale?
+
+        There is no reason to limit the domain of SCALE to an integer,
+        even if we only support integral values today. Lets keep it a
+        floating point value to allow future generalization.
+
+New Procedures and Functions
+
+     void TexEnvOperandiEXT(enum pname, int source, int mapping,
+                            int component);
+
+     void GetTexEnvOperandivEXT(enum pname, enum query, int *param);
+
+New Tokens
+
+     Accepted by <pname> parameter of TexEnvf, TexEnvi, TexEnvfv, TexEnviv,
+     GetTexEnviv, and GetTexEnvfv:
+
+        TEXTURE_ENV_MODE_ALPHA_EXT                    0x8570
+        TEXTURE_ENV_MODE_RGB_EXT                      0x8571
+        RGB_SCALE_EXT                                 0x8572
+        ALPHA_OPERATION_EXT                           0x8590
+        RGB_OPERATION_EXT                             0x8598
+
+     Accepted by the <param> parameter of TexEnvf, TexEnvi, TexEnvfv, and
+     TexEnviv when the <pname> parameter is TEXTURE_ENV_MODE,
+     TEXTURE_ENV_MODE_ALPHA_EXT, or TEXTURE_ENV_MODE_RGB_EXT:
+
+        A_TIMES_B_OP_C_EXT                            0x8573
+        INTERPOLATE_EXT                               0x8574
+
+     Accepted by the <param> parameter of TexEnvf, TexEnvi, TexEnvfv, and
+     TexEnviv when the <pname> parameter is ALPHA_OPERATION_EXT or
+     RGB_OPERATION_EXT:
+
+        ADD_SIGNED_EXT                                0x8575
+        SUTRACT_EXT                                   0x8576
+
+     Accepted by the <pname> parameter of TexEnvOperandiEXT and
+     GetTexEnvOperandivEXT:
+
+        ALPHA_OPERAND_A_EXT                           0x8580
+        ALPHA_OPERAND_B_EXT                           0x8581
+        ALPHA_OPERAND_C_EXT                           0x8582
+        RGB_OPERAND_A_EXT                             0x8588
+        RGB_OPERAND_B_EXT                             0x8589
+        RGB_OPERAND_C_EXT                             0x858A
+
+     Accepted by the source parameter to TexEnvOperandiExt:
+
+        CONSTANT_EXT                                  0x8577
+        INCOMING_EXT                                  0x8578
+        PREVIOUS_EXT                                  0x8579
+
+     Accepted by the mapping parameter to TexEnvOperandiExt:
+
+        IDENTITY_EXT                                  0x857A
+        ONE_MINUS_EXT                                 0x857B
+
+     Accepted by the query parameter to GetTexEnvOperandivEXT:
+
+        SOURCE_EXT                                    0x857C
+        MAPPING_EXT                                   0x857D
+        COMPONENT_EXT                                 0x857E
+
+Additions to Chapter 1 of the GL Specification (Introduction)
+
+     None
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+     None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+     Function             Operation         Equation
+     --------             ---------         --------
+     INTERPOLATE_EXT                        Av = AopA * (1-AopC) + AopB * AopC
+     A_TIMES_B_OP_C_EXT   ADD               Av = AopA * AopB + AopC
+                          ADD_SIGNED_EXT    Av = AopA * AopB + AopC - 0.5
+                          SUBTRACT_EXT      Av = AopA * AopB - AopC
+
+     Table 3.20: Alpha texture environment functions, operations and equations
+
+
+     Function             Operation         Equation
+     --------             ---------         --------
+     INTERPOLATE_EXT                        Cv = CopA * (1-CopC) + CopB * CopC
+     A_TIMES_B_OP_C_EXT   ADD               Cv = CopA * CopB + CopC
+                          ADD_SIGNED_EXT    Cv = CopA * CopB + CopC - 0.5
+                          SUBTRACT_EXT      Cv = CopA * CopB - CopC
+
+     Table 3.21: RGB texture environment functions, operations and equations
+
+
+     Operand                     Source             Mapping          Component
+     -------                     ------             -------          ---------
+     ALPHA_OPERAND_A_EXT         TEXTURE            IDENTITY_EXT     ALPHA
+     ALPHA_OPERAND_B_EXT         TEXTUREn_ARB       ONE_MINUS_EXT
+     ALPHA_OPERAND_C_EXT         CONSTANT_EXT
+                                 INCOMING_EXT
+                                 PREVIOUS_EXT
+                                 ZERO
+     RGB_OPERAND_A_EXT           TEXTURE            IDENTITY_EXT     ALPHA
+     RGB_OPERAND_B_EXT           TEXTUREn_ARB       ONE_MINUS_EXT    RGB
+     RGB_OPERAND_C_EXT           CONSTANT_EXT
+                                 INCOMING_EXT
+                                 PREVIOUS_EXT
+                                 ZERO
+
+     Table 3.22: Inputs to TexEnvOperandiEXT
+
+
+     Texture                          LUMINANCE
+     Format      ALPHA     LUMINANCE    ALPHA     INTENSITY   RGB    RGBA
+     -------     -----     ---------  ----------  ---------   ---    ----
+     RGB          1.0       Lt         Lt          It          Ct     Ct
+     ALPHA        At        1.0        At          It          1.0    At
+
+     Table 3.23: Texture fragment sources
+
+3.8.9 Texture Environments and Texture Functions
+
+     The command
+
+        void TexEnv{if}( enum target, enum pname, T param ) ;
+        void TexEnv{if}v( enum target, enum pname, T params ) ;
+
+     sets parameters of the texture environment that specifies how texture
+     values are interpreted when texturing a fragment. target must
+     currently be the symbolic constant TEXTURE_ENV. pname is a symbolic
+     constant indicating the parameter to be set. In the first form of the
+     command, param is a value to which to set a single-valued parameter;
+     in the second form, params is a pointer to an array of parameters:
+     either a single symbolic constant or a value or group of values to
+     which the parameter should be set. The possible environment parameters
+     are TEXTURE_ENV_MODE, TEXTURE_ENV_MODE_ALPHA_EXT,
+     TEXTURE_ENV_MODE_RGB_EXT, ALPHA_OPERATION_EXT, RGB_OPERATION_EXT,
+     ALPHA_SCALE_EXT, RGB_SCALE_EXT, and TEXTURE_ENV_COLOR.
+     TEXTURE_ENV_MODE, TEXTURE_ENV_MODE_ALPHA_EXT, and
+     TEXTURE_ENV_MODE_RGB_EXT may be set to one of REPLACE, MODULATE,
+     DECAL, BLEND, A_TIMES_B_OP_C_EXT, or INTERPOLATE_EXT;
+     ALPHA_OPERATION_EXT and RGB_OPERATION_EXT may be set to one of ADD,
+     ADD_SIGNED_EXT, SUBTRACT_EXT; ALPHA_SCALE and RGB_SCALE_EXT are
+     single-precision floating point values that may have a value of 1.0,
+     2.0, or 4.0. TEXTURE_ENV_COLOR is set to an RGBA color providing four
+     single-precision floating-point values in the range [0, 1] (values
+     outside this range are clamped to it). If integers are provided for
+     TEXTURE_ENV_COLOR, then they are converted to floating-point as
+     specified in table 2.6 for signed integers.
+
+     The value of TEXTURE_ENV_MODE specifies an implicit texture function
+     if it is REPLACE, MODULATE, DECAL, or BLEND. The result of this
+     function depends on the fragment and the texture array value. The
+     precise form of the function depends on the base internal formats of
+     the texture arrays that were last specified. In the following two
+     tables, Rf, Gf, Bf, and Af are the primary color components of the
+     incoming fragment; Rt, Gt, Bt, At, Lt, and It are the filtered texture
+     values; Rc, Gc, Bc, and Ac are the texture environment color values;
+     and Rv, Gv, Bv, and Av are the primary color components computed by
+     the texture function. All of these color values are in the range [0,
+     1]. The REPLACE and MODULATE texture functions are specified in table
+     3.18, and the DECAL and BLEND texture functions are specified in table
+     3.19.
+
+     The texture function used to generate the Alpha component (Av) and the
+     RGB component (Rv, Gv, Bv) can be independently specified using
+     TEXTURE_ENV_MODE_ALPHA_EXT and TEXTURE_ENV_MODE_RGB_EXT respectively.
+     The alpha component will be computed in accordance to the alpha
+     equation for the given alpha texture function as specified in tables
+     3.18 and 3.19. The RGB components will be computed in accordance to
+     the RGB equations for the given RGB texture function as specified in
+     tables 3.18 and 3.19. Queries to TEXTURE_ENV_MODE are supported for
+     compatibility and are equivalent to querying TEXTURE_ENV_MODE_RGB_EXT.
+
+     The value of TEXTURE_ENV_MODE, TEXTURE_ENV_MODE_ALPHA_EXT, or
+     TEXTURE_ENV_MODE_RGB_EXT specifies an explicit texture function if it
+     is INTERPOLATE_EXT or A_TIMES_B_OP_C_EXT. Specifying TEXTURE_ENV_MODE
+     with a value of INTERPOLATE_EXT or A_TIMES_B_OP_C_EXT will result in
+     the setting of both TEXTURE_ENV_MODE_ALPHA_EXT and
+     TEXTURE_ENV_MODE_RGB_EXT to the given value. The result of this
+     function depends on the currently selected operands and in the case of
+     A_TIMES_B_OP_C_EXT the operation. In tables 3.20, 3.21, 3.22, and 3.23
+     the following variables are used:
+
+     AopA = ALPHA_OPERAND_A_EXT
+     AopB = ALPHA_OPERAND_B_EXT
+     AopC = ALPHA_OPERAND_C_EXT
+     CopA = RGB_OPERAND_A_EXT
+     CopB = RGB_OPERAND_B_EXT
+     CopC = RGB_OPERAND_C_EXT
+
+     All of these color and alpha values are clamped to the range [0,1].
+
+     and:
+
+     Ac, Af, At, Av, Ct, It, and Lt have the same meaning as in tables 3.18
+     and 3.19.
+
+     See tables 3.20 and 3.21 for the specifics of the texture functions.
+
+     ALPHA_OPERATION_EXT specifies the texture environment operation to be
+     applied to the alpha component of the color fragment.
+     RGB_OPERATION_EXT specifies the texture environment operation to be
+     applied to the RGB component of the color fragment. This operation is
+     only applicable when the texture environment mode is A_TIMES_B_OP_C
+     and can have a value of ADD, ADD_SIGNED_EXT, or SUBTRACT_EXT. See
+     tables 3.20 and 3.21 for texture operation equations.
+
+     The values for ALPHA_SCALE and RGB_SCALE_EXT specify the amount of
+     scaling to be applied to the Alpha and RGB output of each texture unit
+     stage. Valid values are 1.0, 2.0, and 4.0. Scaling happens prior to
+     clamping of Rv, Gv, Bv, and Av to the range [0,1].
+
+     The command
+
+        void TexEnvOperandiEXT(enum pname, int source, int mapping, int
+                               component);
+
+     is used to set the operands to the texture function operation. <pname>
+     is a symbolic constant indicating the parameter to be set; the
+     possible constants and corresponding parameters are summarized in
+     table 3.22.
+
+     When <pname> is set to ALPHA_OPERAND_l_EXT, the alpha component of
+     operand l is modified. When <pname> is set to RGB_OPERAND_l_EXT, the RGB
+     component of operand l is modified.
+
+     <source> specifies the source of the operand data. TEXTURE specifies to
+     use the filtered texture fragment from the current texture unit as an
+     operand. TEXTUREn_ARB specifies to use the filtered texture fragment
+     from the nth texture unit. When <source> is set to TEXTURE or
+     TEXTUREn_ARB the value of the texture fragment depends on the base
+     internal formats of the texture arrays that were last specified (see
+     Table 3.23). CONSTANT_EXT specifies to use the constant texture
+     environment color as the fragment. INCOMING_EXT specifies to use the
+     incoming fragment color. PREVIOUS_EXT indicates that the input to the
+     operand comes from the specified output of the previous texture unit.
+     If the current selected texture unit is texture unit 0, then
+     PREVIOUS_EXT has the same meaning as INCOMING_EXT (i.e. the input to
+     operand is the incoming fragment).
+
+     <mapping> specifies what operation will be done to the source fragment
+     prior to its use as an operand. IDENTITY_EXT specifies that no
+     operation will be done on the fragment. ONE_MINUS specifies that 1.0
+     minus the fragment color will be used as an operand.
+
+     <component> specifies which part of the source fragment color to use.
+     <component> must be ALPHA when pname is ALPHA_OPERAND_l_EXT. Valid
+     values for <component> are ALPHA and RGB when <pname> is
+     RGB_OPERAND_l_EXT.
+
+     The state required for the current texture environment consists of two
+     six-valued integers indicating the texture rgb and alpha functions;
+     the four floating-point TEXTURE_ENV_COLOR values; two three-valued
+     integers representing the RGB and ALPHA operations; two floating point
+     RGB_SCALE_EXT and ALPHA_SCALE values; six n-valued integers
+     representing the RGB and ALPHA OPERAND A,B and C values, where n
+     equals five plus the number of texture units; six two-valued integers
+     representing the operand mappings; and three two-valued integers
+     representing the component selection of the RGB_OPERANDs. In the
+     initial state, the texture RGB and ALPHA functions are MODULATE; the
+     TEXTURE_ENV_COLOR is (0,0,0,0); the RGB and ALPHA operations are ADD;
+     the RGB and ALPHA scales are 1.0; the RGB_OPERAND_A_EXT and
+     ALPHA_OPERAND_A_EXT sources are both PREVIOUS_EXT; the
+     RGB_OPERAND_B_EXT and ALPHA_OPERAND_B_EXT sources are both TEXTURE;
+     the RGB_OPERAND_C_EXT and ALPHA_OPERAND_C_EXT sources are both ZERO;
+     all operand mappings are IDENTITY_EXT; all RGB operand components are
+     RGB; and all ALPHA operand mappings are ALPHA.
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment
+Operations and the Framebuffer)
+
+     None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+     None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+     3. Enumerated Queries
+
+        void GetTexEnvOperandivEXT(enum pname, enum query, int *param);
+
+     GetTexEnvOperandivEXT places information about <query> (a symbolic
+     constant) for <pname> (also symbolic constant) in <param>.
+
+Additions to the GLX Specification
+
+     None
+
+GLX Protocol
+
+     TBD
+
+Errors
+
+     INVALID_ENUM is generated when target or pname parameters of TexEnvi
+     or TexEnvf are not one of the accepted defined values, or when params
+     should have a defined constant value (based on the value of pname) and
+     does not.
+
+     INVALID_ENUM is generated when pname, source, mapping, or component
+     parameters of TexEnvOperandiEXT are not one of the accepted defined
+     values.
+
+     INVALID_ENUM is generated when pname parameter of
+     GetTexEnvOperandEXTiv is not one of the accepted defined values.
+
+     INVALID_OPERATION is generated if TexEnvOperandiEXT, or
+     GetTexEnvOperandivEXT are executed between execution of Begin and the
+     corresponding execution of End.
+
+New State
+
+     All new state belongs to Section 3.8.9. All new state has an attribute
+     of 'texture'. These are additions/modifications to table 6.14.
+
+
+  Get Value                   Type   Get Command            Initial Value
+  ---------                   ----   -----------            ------------ 
+  TEXTURE_ENV_MODE_ALPHA_EXT  Z6     GetTexEnviv            MODULATE     
+  TEXTURE_ENV_MODE_RGB_EXT    Z6     GetTexEnviv            MODULATE 
+  ALPHA_SCALE                 R      GetTexEnvfv            1.0      
+  RGB_SCALE_EXT               R      GetTexEnvfv            1.0      
+  ALPHA_OPERATION_EXT         Z3     GetTexEnviv            ADD      
+  RGB_OPERATION_EXT           Z3     GetTexEnviv            ADD      
+  SOURCE_EXT                  6 X    GetTexEnvOperandivEXT  PREVIOUS_EXT for
+                              Z6                            ALPHA_OPERAND_A_EXT
+
+                                                            PREVIOUS_EXT for
+                                                            RGB_OPERAND_A_EXT
+
+                                                            TEXTURE for
+                                                            ALPHA_OPERAND_B_EXT
+
+                                                            TEXTURE for
+                                                            RGB_OPERAND_B_EXT
+
+                                                            ZERO for
+                                                            ALPHA_OPERAND_C_EXT
+
+                                                            ZERO for
+                                                            RGB_OPERAND_C_EXT
+
+  MAPPING_EXT                 6 X    GetTexEnvOperandivEXT  IDENTITY_EXT for
+                              Z2                            ALPHA_OPERAND_A_EXT
+
+                                                            IDENTITY_EXT for
+                                                            RGB_OPERAND_A_EXT
+
+                                                            IDENTITY_EXT for
+                                                            ALPHA_OPERAND_B_EXT
+
+                                                            IDENTITY_EXT for
+                                                            RGB_OPERAND_B_EXT
+
+                                                            IDENTITY_EXT for
+                                                            ALPHA_OPERAND_C_EXT
+
+                                                            IDENTITY_EXT for
+                                                            RGB_OPERAND_C_EXT
+
+  COMPONENT_EXT               6 X    GetTexEnvOperandivEXT  ALPHA for
+                              Z2                            ALPHA_OPERAND_A_EXT
+
+                                                            RGB for
+                                                            RGB_OPERAND_A_EXT
+
+                                                            ALPHA for
+                                                            ALPHA_OPERAND_B_EXT
+
+                                                            RGB for
+                                                            RGB_OPERAND_B_EXT
+
+                                                            ALPHA for
+                                                            ALPHA_OPERAND_C_EXT
+
+                                                            RGB for
+                                                            RGB_OPERAND_C_EXT
+
+     Table 6.14: Texture Environment and Generation
+
+New Implementation Dependent State
+
+     None

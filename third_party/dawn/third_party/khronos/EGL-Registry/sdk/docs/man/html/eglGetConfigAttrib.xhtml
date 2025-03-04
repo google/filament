@@ -1,0 +1,508 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglGetConfigAttrib - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglGetConfigAttrib">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglGetConfigAttrib — 
+            return information about an <abbr class="acronym">EGL</abbr> frame buffer
+            configuration
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglGetConfigAttrib</strong>(</code>
+              </td>
+              <td>EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLConfig <var class="pdparam">config</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint <var class="pdparam">attribute</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLint * <var class="pdparam">value</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>Specifies the EGL display connection.</p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>config</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>Specifies the EGL frame buffer configuration to be
+                    queried.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>attribute</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>Specifies the EGL rendering context attribute to be
+                returned.</p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>value</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the requested value.</p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglGetConfigAttrib</code> returns in
+            <em class="parameter"><code>value</code></em> the value of
+            <em class="parameter"><code>attribute</code></em> for
+            <em class="parameter"><code>config</code></em>
+            (config attributes are described in more detail in the
+            <a class="citerefentry" href="eglChooseConfig.xhtml"><span class="citerefentry"><span class="refentrytitle">eglChooseConfig</span></span></a>
+            reference page).
+            <em class="parameter"><code>attribute</code></em> can be one of the following:
+        </p>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_ALPHA_SIZE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the number of bits of alpha stored in the
+            color buffer.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_ALPHA_MASK_SIZE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the number of bits in the alpha mask buffer.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BIND_TO_TEXTURE_RGB</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns <code class="constant">EGL_TRUE</code> if color buffers can be
+            bound to an RGB texture,
+            <code class="constant">EGL_FALSE</code> otherwise.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BIND_TO_TEXTURE_RGBA</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns <code class="constant">EGL_TRUE</code> if color buffers can be
+            bound to an RGBA texture,
+            <code class="constant">EGL_FALSE</code> otherwise.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BLUE_SIZE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the number of bits of blue stored in the
+            color buffer.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_BUFFER_SIZE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the depth of the color buffer.
+                It is the sum of
+                <code class="constant">EGL_RED_SIZE</code>,
+                <code class="constant">EGL_GREEN_SIZE</code>,
+                <code class="constant">EGL_BLUE_SIZE</code>, and
+                <code class="constant">EGL_ALPHA_SIZE</code>.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_COLOR_BUFFER_TYPE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the color buffer type. Possible types are
+                    <code class="constant">EGL_RGB_BUFFER</code> and
+                    <code class="constant">EGL_LUMINANCE_BUFFER</code>.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONFIG_CAVEAT</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the caveats for the frame buffer configuration.
+                Possible caveat values are
+                <code class="constant">EGL_NONE</code>,
+                <code class="constant">EGL_SLOW_CONFIG</code>, and
+                <code class="constant">EGL_NON_CONFORMANT</code>.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONFIG_ID</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the ID of the frame buffer configuration.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_CONFORMANT</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                Returns a bitmask indicating which client API contexts
+                created with respect to this config are conformant.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_DEPTH_SIZE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the number of bits in the depth buffer.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_GREEN_SIZE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the number of bits of green stored in the
+            color buffer.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_LEVEL</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the frame buffer level.
+                Level zero is the default frame buffer.
+                Positive levels correspond to frame buffers that overlay the default
+                buffer and negative levels correspond to frame buffers that underlay
+                the default buffer.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_LUMINANCE_SIZE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns the number of bits of luminance stored in the luminance buffer.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_MAX_PBUFFER_WIDTH</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the maximum width of a pixel buffer surface in pixels.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_MAX_PBUFFER_HEIGHT</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the maximum height of a pixel buffer surface in pixels.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_MAX_PBUFFER_PIXELS</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the maximum size of a pixel buffer surface in pixels.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_MAX_SWAP_INTERVAL</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the maximum value that can be passed to eglSwapInterval.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_MIN_SWAP_INTERVAL</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the minimum value that can be passed to eglSwapInterval.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_NATIVE_RENDERABLE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns <code class="constant">EGL_TRUE</code> if native rendering
+                APIs can render into the surface,
+                <code class="constant">EGL_FALSE</code> otherwise.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_NATIVE_VISUAL_ID</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the ID of the associated native visual.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_NATIVE_VISUAL_TYPE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the type of the associated native visual.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_RED_SIZE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the number of bits of red stored in the
+            color buffer.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_RENDERABLE_TYPE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                    Returns a bitmask indicating the types of supported
+                    client API contexts.
+                </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_SAMPLE_BUFFERS</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the number of multisample buffers.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_SAMPLES</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the number of samples per pixel.</p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_STENCIL_SIZE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the number of bits in the stencil buffer.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_SURFACE_TYPE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                Returns a bitmask indicating the types of supported EGL
+                surfaces.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_TRANSPARENT_TYPE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the type of supported transparency.
+                Possible transparency values are:
+                <code class="constant">EGL_NONE</code>, and
+                <code class="constant">EGL_TRANSPARENT_RGB</code>.
+            </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_TRANSPARENT_RED_VALUE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the transparent red value.</p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_TRANSPARENT_GREEN_VALUE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the transparent green value.</p>
+            </dd>
+            <dt>
+              <span class="term">
+                <code class="constant">EGL_TRANSPARENT_BLUE_VALUE</code>
+              </span>
+            </dt>
+            <dd>
+              <p>Returns the transparent blue value.</p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            <code class="constant">EGL_CONFORMANT</code> is supported only if the
+            EGL version is 1.3 or greater.
+        </p>
+        <p>
+            <code class="constant">EGL_ALPHA_MASK_SIZE</code>,
+            <code class="constant">EGL_COLOR_BUFFER_TYPE</code>,
+            <code class="constant">EGL_LUMINANCE_SIZE</code>, and
+            <code class="constant">EGL_RENDERABLE_TYPE</code> are supported only
+            if the EGL version is 1.2 or greater.
+        </p>
+        <p>
+            While <code class="constant">EGL_MATCH_NATIVE_PIXMAP</code> can be
+            specified in the attribute list passed to
+            <a class="citerefentry" href="eglChooseConfig.xhtml"><span class="citerefentry"><span class="refentrytitle">eglChooseConfig</span></span></a>,
+            it is not an attribute of the resulting config and cannot be
+            queried using <code class="function">eglGetConfigAttrib</code>.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_FALSE</code> is returned on failure,
+            <code class="constant">EGL_TRUE</code> otherwise.
+            <em class="parameter"><code>value</code></em> is not modified when
+            <code class="constant">EGL_FALSE</code> is returned.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_DISPLAY</code> is generated if
+            <em class="parameter"><code>display</code></em> is not an EGL display connection.
+        </p>
+        <p>
+            <code class="constant">EGL_NOT_INITIALIZED</code> is generated if
+            <em class="parameter"><code>display</code></em> has not been initialized.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_CONFIG</code> is generated if
+            <em class="parameter"><code>config</code></em> is not an EGL frame buffer configuration.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_ATTRIBUTE</code> is generated if
+            <em class="parameter"><code>attribute</code></em> is not a valid frame buffer
+            configuration attribute.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglChooseConfig.xhtml"><span class="citerefentry"><span class="refentrytitle">eglChooseConfig</span></span></a>,
+            <a class="citerefentry" href="eglGetConfigs.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetConfigs</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

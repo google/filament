@@ -1,0 +1,237 @@
+Name
+
+    SGIX_packed_6bytes
+
+Name Strings
+
+    GL_SGIX_packed_6bytes
+
+Version
+
+    $Date: 1999/04/03 08:41:01 $ $Revision: 1.3 $
+
+Number
+
+    162
+
+Dependencies
+
+    EXT_abgr affects the definition of this extension
+    Histogram affects the definition of this extension
+    Convolution affects the definition of this extension
+    Color_table affects the definition of this extension
+    SGIS_texture4D affects the definition of this extension
+
+Overview
+
+    This extension provides support for packing four component pixels 
+    into a 6-byte field, where each component is represented by 12 bits.
+    Since the pixel is represented by 6 unsigned bytes it is inferred
+    that the fields or components of the pixel are not proper machine
+    types.  However, since the pixel as a whole can be resepresented
+    as an integral number of bytes, the pixel storage modes, including 
+    PACK_SKIP_PIXELS, PACK_ROW_LENGTH, PACK_SKIP_ROWS, PACK_IMAGE_HEIGHT_EXT, 
+    PACK_SKIP_IMAGES_EXT, PACK_SWAP_BYTES, PACK_ALIGNMENT, and their unpacking 
+    counterparts all work correctly.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <type> parameter of DrawPixels, ReadPixels, TexImage1D,
+    TexImage2D, GetTexImage, TexImage3D, TexSubImage1D,
+    TexSubImage2D, TexSubImage3D, GetHistogram, GetMinmax,
+    ConvolutionFilter1D, ConvolutionFilter2D, ConvolutionFilter3D,
+    GetConvolutionFilter, SeparableFilter2D, SeparableFilter3D,
+    GetSeparableFilter, ColorTable, GetColorTable, TexImage4DSGIS,
+    and TexSubImage4DSGIS:
+
+	6BYTES_12_12_12_12_SGIX		0x????
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    The token defined by this extension is added to Table 3.5:
+
+	<type> Parameter		Corresponding	Special
+	Token Value				GL Data Type	Interpretation
+	----------------			-------------	--------------
+	UNSIGNED_BYTE				ubyte		No
+        BITMAP					ubyte		Yes
+	BYTE					byte		No
+	UNSIGNED_SHORT				ushort		No
+	SHORT					short		No
+	UNSIGNED_INT				uint		No
+	INT					int		No
+	FLOAT					float		No
+	BITMAP					ubyte		Yes
+	UNSIGNED_BYTE_3_3_2    			ubyte		Yes
+	UNSIGNED_BYTE_3_3_2_REV  		ubyte		Yes
+	UNSIGNED_SHORT_5_6_5    		ushort		Yes
+	UNSIGNED_SHORT_5_6_5_REV		ushort		Yes
+	UNSIGNED_SHORT_4_4_4_4    		ushort		Yes
+	UNSIGNED_SHORT_4_4_4_4_REV		ushort		Yes
+	UNSIGNED_SHORT_5_5_5_1    		ushort		Yes
+	UNSIGNED_SHORT_5_5_5_1_REV		ushort		Yes
+	UNSIGNED_INT_8_8_8_8    		uint		Yes
+	UNSIGNED_INT_8_8_8_8_REV		uint		Yes
+	UNSIGNED_INT_10_10_10_2    		uint		Yes
+	UNSIGNED_INT_10_10_10_2_REV		uint		Yes
+	UNSIGNED_6BYTES_12_12_12_12_SGIX	6*ubyte		Yes
+
+	Table 3.5: DrawPixels and ReadPixels <type> parameter values and the
+	corresponding GL data types.  Refer to table 2.2 for definitions of
+	GL data types.  Special interpretations are described near the end
+	of section 3.6.4.
+
+    [Additions to Section 3.6.4 of the GL Specification (Rasterization of Pixel
+    Rectangles) is made as follows:]
+
+    3.6.4 Rasterization of Pixel Rectangles
+
+    Unpacking
+    ---------
+    [Modify fourth paragraph to read:]
+
+    Calling DrawPixels with a <type> of UNSIGNED_BYTE_3_3_2, UNSIGNED_BYTE_3_3_2_REV,
+    UNSIGNED_SHORT_5_6_5, UNSIGNED_SHORT_5_6_5_REV, UNSIGNED_SHORT_4_4_4_4,
+    UNSIGNED_SHORT_4_4_4_4_REV, UNSIGNED_SHORT_5_5_5_1, UNSIGNED_SHORT_5_5_5_1_REV,
+    UNSIGNED_INT_8_8_8_8, UNSIGNED_INT_8_8_8_8_REV, UNSIGNED_INT_10_10_10_2, or
+    UNSIGNED_INT_10_10_10_2_REV is a special case in which all the components of
+    each group are packed into a single unsigned byte, unsigned short, or unsigned int,
+    depending on the type.  Additionally, calling DrawPixels with a <type> of
+    UNSIGNED_6BYTES_12_12_12_12_SGIX is a special case in which all the components of 
+    each group are is packed into 6 bytes.  The number of components per packed pixel
+    is fixed by the <type>, and must match the number of components per group as
+    indicated by the <format> parameter, as listed in table 3.8.  The error
+    INVALID_OPERATION is generated if a mismatch occurs.  This constraint also holds
+    for all other functions that accept or return pixel data using <type> and <format>
+    parameters to define the type and format of that data.
+
+    A new table is added to demonstrate bitfield locations <type>
+    UNSIGNED_6BYTES_12_12_12_12_SGIX. The bitfield locations for the first, second, 
+    third and fourth component for this pixel type is shown in Table 3.12.
+
+
+ 	  47 46 45 44 43 42 41 40 39 38 37 36 35 34 33 32 31 30 29 28 27 26 25 24
+         +--------------------------------+--------------------------------------+
+         |                                |                                      |
+         +--------------------------------+--------------------------------------+
+                      first                         second                        
+                      element                       element
+
+
+ 	  23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+         +--------------------------------+--------------------------------------+
+         |                                |                                      |
+         +--------------------------------+--------------------------------------+
+
+                      third                         fourth                        
+                      element                       element
+
+	Table 3.12 UNSIGNED_6BYTES_12_12_12_SGIX format
+
+     [Add to the paragraph describing byte swapping:]
+
+     If byte swapping is enabled with UNSIGNED_6BYTES_12_12_12_SGIX as the <type>, 
+     the byte swapping is performed as follows:
+
+	given the 6byte ordering as  
+
+				b5 b4 b3 b2 b1 b0
+
+        where b# represents the byte index or order, then byte swapping yields
+
+				b4 b5 b2 b3 b0 b1
+
+
+
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    [Make the following addition to Table 4.7]
+
+	<type>				GL Data		Component
+	Parameter			Type		Conversion Formula
+	---------			-------		------------------
+	UNSIGNED_INT_10_10_10_2_EXT	uint		c = ((2**N)-1)*f
+
+	Table 4.7: Reversed component conversions - used when component data
+	are being returned to client memory.  Color, normal, and depth
+	components are converted from the internal floating-point
+	representation (f) to a datum of the specified GL data type (c) using
+	the equations in this table.  All arithmetic is done in the internal
+	floating point format.  These conversions apply to component data
+	returned by GL query commands and to components of pixel data returned
+	to client memory.  The equations remain the same even if the
+	implemented ranges of the GL data types are greater than the minimum
+	required ranges.  (Refer to table 2.2.)  Equations with N as the
+	exponent are performed for each bitfield of the packed data type,
+	with N set to the number of bits in the bitfield.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+        None
+
+Dependencies on EXT_abgr
+
+    If EXT_abgr is not implemented, then the references to ABGR_EXT in this
+    file are invalid, and should be ignored.
+
+Dependencies on Histogram
+
+    If EXT_histogram is not implemented, then the references to
+    GetHistogramEXT and GetMinmaxEXT in this file are invalid, and should be
+    ignored.
+
+Dependencies on Convolution
+
+    If EXT_convolution is not implemented, then the references to
+    ConvolutionFilter1DEXT, ConvolutionFilter2DEXT, ConvolutionFilter3DEXT,
+    GetConvolutionFilterEXT, SeparableFilter2DEXT, SeparableFilter3DEXT, and
+    GetSeparableFilterEXT in this file are invalid, and should be ignored.
+
+Dependencies on Color_table
+
+    If Color_table is not implemented, then the references to
+    ColorTableSGI and GetColorTableSGI in this file are invalid, and should
+    be ignored.
+
+Dependencies on SGIS_texture4D
+
+    If SGIS_texture4D is not implemented, then the references to
+    TexImage4DSGIS and TexSubImage4DSGIS in this file are invalid, and should
+    be ignored.
+
+
+Errors
+
+    INVALID_OPERATION is generated by GenericPixelFunction if its <type>
+    parameter is UNSIGNED_6BYTES_12_12_12_SGIX and its
+    <format> parameter does not specify four components.  
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

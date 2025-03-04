@@ -1,0 +1,24 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate builtin_value.cc
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/core/core.def" -}}
+{{- Import "src/tint/utils/templates/enums.tmpl.inc" -}}
+
+#include "src/tint/lang/core/interpolation_sampling.h"
+
+#include <string>
+
+namespace tint::core {
+
+{{ Eval "ParseEnum" ($I.Sem.Enum "interpolation_sampling")}}
+
+{{ Eval "EnumOStream" ($I.Sem.Enum "interpolation_sampling")}}
+
+}  // namespace tint::core

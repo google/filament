@@ -1,0 +1,543 @@
+Name
+
+    ARB_occlusion_query2
+
+Name Strings
+
+    GL_ARB_occlusion_query2
+
+Contributors
+
+    Aske Simon Christensen
+    Bill Licea-Kane
+    Cass Everitt
+    Jeff Bolz
+    Maurice Ribble
+
+Contact
+
+    Bill Licea-Kane (bill 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Date: March 21, 2010
+    Revision: 11
+    $Id$
+
+Number
+
+    ARB Extension #80
+
+Dependencies
+
+    Written based on the wording of OpenGL Specification
+    Version 3.2 (Core Profile) - July 24, 2009
+
+    Version 3.2 (Compatibility Profile) interacts with this extension.
+
+    OpenGL 1.x is required.
+
+    ARB_occlusion_query interacts with this extension.
+
+    Conditional rendering interacts with this extension.
+
+Overview
+
+    This extension trivially adds a boolean occlusion query
+    to ARB_occlusion_query.
+
+    While the counter-based occlusion query provided by
+    ARB_occlusion_query is flexible, there is still value
+    to a simple boolean, which is often sufficient for applications.
+
+IP Status
+
+    There are no known claims.
+
+    HP claimed IP to a related extension, ARB_occlusion_query.
+    HP committed to releasing rights to this IP to the ARB if the
+    functionality is included in OpenGL (April 10, 2003).
+    ARB_occlusion_query was promoted to core OpenGL 1.5 (July 29, 2003).
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <target> parameter of BeginQuery, EndQuery,
+    and GetQueryiv:
+
+        ANY_SAMPLES_PASSED                              0x8C2F
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification
+(OpenGL Operation)
+
+2.14
+Asynchronous Queries
+
+p. 89-90, replace last sentence of first paragraph
+
+   Occlusion queries (see section 4.1.6) count the number of fragments
+   or samples that pass the depth test,
+|  or set a boolean to true when fragments or samples pass the depth
+|  test.
+
+p. 90, modify the last paragraph before "The command void EndQuery..."
+
+   BeginQuery sets the active query object name for the query type given by
+   target to id. If BeginQuery is called with an id of zero, if the active query object
+   name for target is non-zero
+|  (for the targets SAMPLES_PASSED or ANY_SAMPLES PASSED, if the active query object
+|  for either target is non-zero),
+   if id is the name of an existing query object whose
+   type does not match target, if id is the active query object name for any query type,
+   or if id is the active query object for condtional rendering (see section 2.15), the
+   error INVALID_OPERATION is generated.
+
+2.15
+Conditional Rendering
+
+p. 91
+
+Add clause prior to "all rendering commands between"
+
+   "or if the result (ANY_SAMPLES_PASSED) is false,"
+
+Add clause prior to "such commands are not discarded."
+
+   "or if the result is true,"
+
+p. 92
+
+Change last sentence of Section 2.15
+
+   The error
+   INVALID_OPERATION is generated if id is the name of a query object with a target
+   other than
+|  SAMPLES_PASSED
+|  or ANY_SAMPLES_PASSED,
+   or id is the name of a query currently in progress.
+
+Additions to Chapter 4 of the OpenGL 3.2 Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+p. 192, Replace 4.1.6
+Occlusion Queries
+
+   Occlusion queries use query objects to track fragments or samples
+   that pass the depth test. An occlusion query can be started and
+   finished by calling BeginQuery and EndQuery, respectively, with a target
+   of
+|  SAMPLES_PASSED or ANY_SAMPLES_PASSED.
+
+   When an occlusion query is started
+|  with the target SAMPLES_PASSED,
+   the samples-passed count maintained by the GL is set to zero. While that
+   occlusion query is active, the samples-passed count is incremented for
+   each fragment that passes the depth test. If the value of SAMPLE_BUFFERS
+   is 0, then the samples-passed count is incremented by 1 for each fragment.
+   If the value of SAMPLE_BUFFERS is 1, then the samples-passed count is
+   incremented by the number of samples whose coverage bit is set. However,
+   implementations, at their discretion, may instead increase the samples-passed
+   count by the value of SAMPLES if any sample in the fragment is covered.
+   When an occlusion query finishes and all fragments generated by commands
+   issued prior to EndQuery have been generated, the samples-passed count is written
+   to the corresponding query object as the query result value, and the query result for
+   that object is marked as available.
+
+   If the samples-passed count overflows (exceeds the value 2^n - 1, where n is
+   the number of bits in the samples-passed count), its value becomes undefined. It is
+   recommended, but not required, that implementations handle this overflow case by
+   saturating at 2^n - 1 and incrementing no further.
+
+|  When an occlusion query is started with the target ANY_SAMPLES_PASSED,
+|  the samples-boolean state maintained by the GL is set to FALSE.  While
+|  that occlusion query is active, the samples-boolean state is set to
+|  TRUE if any fragment or sample passes the depth test.  When the
+|  occlusion query finishes, the samples-boolean state of FALSE or TRUE
+|  is written to the corresponding query object as the query result value,
+|  and the query result for that object is marked as available.
+
+
+Additions to Chapter 6 of the OpenGL 3.2 Specification
+(State and State Requests)
+
+6.1.6
+Asynchronous Queries
+p. 255
+
+Modify the Sentence beginning with "Information about the query target can be..."
+
+   ...target idendifies the query target, and must be one of
+   | SAMPLES_PASSED or ANY_SAMPLES_PASSED
+   for occlusion queries...
+
+Modify the paragraph beginning with "For occlusion queries (SAMPLES_PASSED)..."
+
+   For occlusion queries
+|  (SAMPLES_PASSED and ANY_SAMPLES_PASSED), the number of bits
+|  depends on the target.  For a target of ANY_SAMPLES_PASSED, if
+|  the number of bits is non-zero,  the minimum number of bits is 1.  For a target
+|  of SAMPLES_PASSED,
+   if the number of bits is non-zero, ...
+
+
+Dependencies
+
+Version 3.2 (Compatibility Profile) interacts with this extension.
+
+   Other than adjusting the page numbers referenced in the edits, there are no
+   further changes required for the Compatibility Profile specification.
+
+ARB_occlusion_query
+
+   If ARB_occlusion_query is not supported, then delete the enum
+   SAMPLES_PASSED and delete sections of text refering to
+   SAMPLES_PASSED, and incorporate all other enums, entry
+   points and state introduced by ARB_occlusion_query into
+   this extension.
+
+Conditional Rendering
+
+   If Conditional Rendering is not supported, delete edits to
+   section on Conditional Rendering.
+
+New State
+
+(table 6.33, p. 298)
+
+    Get Value         Type    Get Command          Initial Value   Description              Sec     Attribute
+    ---------         ----    -----------          -------------   -----------              ------  ---------
+    QUERY_RESULT      Z+      GetQueryObjectuiv    0               samples-passed count     6.1.6   -
+|                                                  FALSE           or any-samples-passed
+|                                                                  boolean value
+
+
+Usage Examples
+
+    Here is some rough sample code that illustrates how this extension
+    can be used.
+
+        GLuint    queries[N];
+        GLint     sampleBoolean;
+        GLint     available;
+
+
+        glGenQueries(N, queries);
+        ...
+        // before this point, render major occluders
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        glDepthMask(GL_FALSE);
+        // also disable texturing and any fancy shaders
+        for (i = 0; i < N; i++) {
+            glBeginQuery(GL_ANY_SAMPLES_PASSED, queries[i]);
+            // render bounding box for object i
+            glEndQuery(GL_ANY_SAMPLES_PASSED);
+        }
+
+        glFlush();
+
+        // Do other work until "most" of the queries are back, to avoid
+        // wasting time spinning
+        i = N*3/4; // instead of N-1, to prevent the GPU from going idle
+        do {
+            DoSomeStuff();
+            glGetQueryObjectiv(queries[i],
+                                  GL_QUERY_RESULT_AVAILABLE,
+                                  &available);
+        } while (!available);
+
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glDepthMask(GL_TRUE);
+        // reenable other state, such as texturing
+        for (i = 0; i < N; i++) {
+            glGetQueryObjectuiv(queries[i], GL_QUERY_RESULT,
+                                   &sampleBoolean);
+            if (sampleBoolean != 0) {
+                // render object i
+            }
+        }
+
+    Here is some rough sample code for a simple multipass rendering
+    application that does not use occlusion queries.
+
+        for (i = 0; i < N; i++) {
+            // First rendering pass
+            glDisable(GL_BLEND);
+            glDepthFunc(GL_LESS);
+            glDepthMask(GL_TRUE);
+            // configure shader 0
+            // render object i
+
+            // Second rendering pass
+            glEnable(GL_BLEND);
+            glBlendFunc(...);
+            glDepthFunc(GL_EQUAL);
+            glDepthMask(GL_FALSE);
+            // configure shader 1
+            // render object i
+        }
+
+    Here is the previous example, enhanced using occlusion queries.
+
+        GLuint queries[N];
+        GLuint sampleBoolean;
+
+        glGenQueries(N, queries);
+        ...
+        // First rendering pass plus almost-free visibility checks
+        glDisable(GL_BLEND);
+        glDepthFunc(GL_LESS);
+        glDepthMask(GL_TRUE);
+        // configure shader 0
+        for (i = 0; i < N; i++) {
+            glBeginQuery(GL_ANY_SAMPLES_PASSED, queries[i]);
+            // render object i
+            glEndQuery(GL_ANY_SAMPLES_PASSED);
+        }
+
+        // Second pass only on objects that were visible
+        glEnable(GL_BLEND);
+        glBlendFunc(...);
+        glDepthFunc(GL_EQUAL);
+        glDepthMask(GL_FALSE);
+        // configure shader 1
+        for (i = 0; i < N; i++) {
+            glGetQueryObjectuiv(queries[i], GL_QUERY_RESULT,
+                                   &sampleBoolean);
+            if (sampleBoolean != 0) {
+                // render object i
+            }
+        }
+
+
+Issues
+
+    1) Can an occlusion query with a target of SAMPLES_PASSED
+       be active at the same time as an occlusion query with a
+       target of ANY_SAMPLES_PASSED?
+
+       Resolved.  No!  Specifically, it is an error to BeginQuery for
+       the targets SAMPLES_PASSED or ANY_SAMPLES_PASSED if the active
+       query is non-zero for EITHER target.
+
+    2) How many query types are there?
+
+       Unresolved.
+
+       The spec says "There are two query types" (p. 89), and
+       list them as Transform Feedback Queries and Occlusion Queries.
+
+       The spec says "Each type of query supported by the GL has an active
+       query object name."  (p. 90)
+
+       Table 6.47 Miscellaneous (p. 312) says there are
+       CURRENT_QUERY 3 x Z+.
+
+       I believe there are three:
+
+       Primitive Queries (target PRIMITIVES_GENERATED)
+       Transform Feedback Queries (target TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN)
+       and
+       Occlusion Queries (target SAMPLES_PASSED or ANY_SAMPLES_PASSED)
+
+       It is probable that the spec should say "There are three query types"
+       and list them as Primitive Queries (section 2.17), Transform Feedback
+       Queries (section 2.16) and Occlusion Queries (section 4.1.6).
+
+       A separate bug will be posted for the core specification to clarify
+       Primitive Queries and Transform Feedback.
+
+       This extension currently assumes that the bug will be resolved and only
+       edits the Occlusion Queries type to expand it to two targets.
+
+    3) Can we limit the number of query objects active?
+
+       Unresolved.  This draft doesn't.
+
+       But, yes, we can limit the number of query objects active.
+       The language to do so would be straightforward, but why?
+
+       There can only be ONE occlusion query active at a time.  The query object
+       created (or re-used) at BeginQuery contains the state to save the
+       boolean.  At EndQuery the boolean for the current query is copied to
+       the query object's state.
+
+       (Clearly, OES can make another choice.  But not sure why right now.)
+
+    4) Currently, if a draw within BeginQuery/EndQuery passes a depth
+       test, and a subsequent draw later covers all the pixels, can an
+       implementation return false (assuming the application queried
+       the result after the subsequent draw)?
+
+       Unresolved.  This draft defers the issue.
+       The language to allow this is non-trivial.
+
+       Please note, the typical application will:
+
+       * set the color/depth masks to true, and blend state
+       * draw the major occluders
+       * draw visible opaque objects (coarsly sorted if possible)
+       * set the color/depth masks to false
+       * draw proxies for geometry which *might* be visible, with occlusion queries
+       * set the color masks to true, and blend state
+       * draw any transparent objects (sorted if possible)
+       * swap
+
+       * set the color/depth masks to true, and blend state
+       * draw the major occluders
+       * test the queries that are available from the prior frame
+       * draw visible and newly visible opaque objects (coarsly sorted if possible)
+       * set the color/depth masks to false
+       * draw proxies for geometry which *might* be visible, with occlusion queries
+       * set the color masks to true, and blend state
+       * draw any transparent objects (sorted if possible)
+       * swap
+
+       This technique has the disadvantage that the newly exposed
+       geometry is one frame late, but this is generally not considered
+       an issue.  The advantage that in general the results are available by
+       the time the query is tested.
+
+       Note that no opaque occluders follow the queries in a frame.
+
+       Another common variation is:
+
+       * set the color/depth masks to true, and blend state
+       * draw the major occluders
+       * draw the visible opaque objects (corsely sorted if possible)
+         with occlusion queries
+       * set the color/depth mask to false
+       * draw proxies for geometry which *might* be visible, with occlusion queries
+       * set the color masks to true, and blend state
+       * draw any transparent objects (sorted if possible)
+       * swap
+
+       * set the color/depth masks to true, and blend state
+       * draw the major occluders
+       * test the queries that are available from the prior frame
+       * draw the still visible and newly visible opaque objects (coarsely sorted if possible)
+         with occlusion queries
+       * set the color/depth mask to false
+       * draw proxies for geometry which *might* be visible, with occlusion queries
+       * set the color masks to true, and blend state
+       * draw any transparent objects (sorted if possible)
+       * swap
+
+       This technique still has the disadvantage that newly exposed
+       geometry is one frame late, but still not considered an issue.
+       The advantage is that in general the results are available by the
+       time the query is tested.
+
+       This technique also culls geometry that was visible as it gets
+       occluded.  (Though there can be some "picket fence" issues
+       and the occlusion query for actual geometry and proxy geometry
+       can cycle between false-true.)
+
+       Note that opaque occluders follow the queries in a frame.
+
+    5) What is this extension called?
+
+       Resolved.
+       Earlier drafts were EXT_occlusion_query2.
+       This draft is ARB_occlusion_query2.
+
+    6) What should the enum be called?
+
+       Resolved.
+       ANY_SAMPLES_PASSED.
+
+    7) Do we need "state required" for occlusion query objects?
+
+       Resolved.  No.
+       That listing of state required had been moved to asynchronous
+       queries Section 2.14.  It has been excised from the occlusion
+       query section.
+
+    8) Can an occlusion query "morph" from SAMPLES_PASSED to
+       ANY_SAMPLES_PASSED?  That is, can the sequence
+       BeginQuery( SAMPLES_PASSED )...EndQuery( ANY_SAMPLES_PASSED )
+       (or vice-versa)?
+
+       Resolved.  No.  Note this falls naturally by leaving the
+       EndQuery error language alone.  ("If the active query object
+       name for target is zero when EndQuery is called, the error
+       INVALID_OPERATION is generated.")
+
+Revision History
+    2010-03-21
+    11, pbrown
+    Minor typo/wording fixes.
+
+    2010-01-26
+    10, pbrown
+    Assign enum value for ANY_SAMPLES_PASSED, using same allocation from
+    OES_occlusion_query.  Enums are functionally equivalent.
+
+    2010-01-21
+    9, wwlk
+    JUST update version, date
+
+    2010-01-20
+    8, wwlk
+    Update issue 1, add issues 7 and 8.
+    Update the spec language to make it clear that you can't
+    start an occlusion query if an occlusion query (of either type) is
+    already active.
+    Update the spec language to trivially clarify conditional rendering.
+
+    2009-12-10
+    7, Jon Leech
+    Remove ARB suffixes for core 3.3 spec inclusion. Fix equation
+    typos.
+
+    2009-11-13
+    6, wwlk
+    Updated name and name strings to match ARB_occlusion_query2
+
+    2009-10-22
+    5, wwlk
+    Renamed to ARB_occlusion_query2 (and changed EXT to ARB)
+    Renamed ENUM (and updated ENUMs throughout) to ANY_SAMPLES_PASSED
+    Misc typos (Synchronos, COmpatibility)
+
+    2009-10-02
+    4, wwlk
+    Updates from comments.
+    Renamed to EXT_occlusion_query_boolean
+    Renamed ENUM(s)
+    Elaborated on issue 4.
+
+    2009-09-29
+    3, wwlk
+    updates from comments.
+    Added issues 4,5,6.
+
+    2009-09-28
+    2, wwlk
+    minor typo, add conditional rendering
+
+    2009-09-28
+    1, wwlk
+    first draft

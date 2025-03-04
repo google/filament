@@ -1,0 +1,304 @@
+Name
+
+    EXT_copy_texture
+
+Name Strings
+
+    GL_EXT_copy_texture
+
+Version
+
+    $Date: 1995/06/17 03:33:42 $ $Revision: 1.21 $
+
+Number
+
+    10
+
+Dependencies
+
+    EXT_texture is required.
+    EXT_texture3D affects the definition of this extension.
+    SGIS_texture_filter4 affects the definition of this extension.
+    EXT_subtexture affects the definition of this extension.
+
+Overview
+
+    This extension defines methods to load texture images directly from the
+    framebuffer.  Methods are defined for both complete and partial
+    replacement of a texture image.  Because it is not possible to define
+    an entire 3D texture using a 2D framebuffer image, 3D textures are
+    supported only for partial replacement.
+
+New Procedures and Functions
+
+    void CopyTexImage1DEXT(enum target,
+                           int level,
+                           enum internalformat,
+                           int x,
+                           int y,
+                           sizei width,
+                           int border);
+
+    void CopyTexImage2DEXT(enum target,
+                           int level,
+                           enum internalformat,
+                           int x,
+                           int y,
+                           sizei width,
+                           sizei height,
+                           int border);
+
+    void CopyTexSubImage1DEXT(enum target,
+                              int level,
+                              int xoffset,
+                              int x,
+                              int y,
+                              sizei width);
+
+    void CopyTexSubImage2DEXT(enum target,
+                              int level,
+                              int xoffset,
+                              int yoffset,
+                              int x,
+                              int y,
+                              sizei width,
+                              sizei height);
+
+    void CopyTexSubImage3DEXT(enum target,
+                              int level,
+                              int xoffset,
+                              int yoffset,
+                              int zoffset,
+                              int x,
+                              int y,
+                              sizei width,
+                              sizei height);
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    CopyTexImage1DEXT and CopyTexImage2DEXT are related to TexImage1D and
+    TexImage2D in exactly the way that CopyPixels is related to DrawPixels.
+    Rather than accepting image data from memory, they copy image data from
+    the color buffer specified by the current ReadBuffer mode.
+    CopyTexImage2DEXT accepts image data from a width+2*border pixel wide by
+    height+2*border pixel high color buffer region whose lower-left pixel
+    has window coordinates <x>,<y>.  If any pixels within this region are
+    outside the window that is associated with the GL context, the values
+    obtained for those pixels are undefined.  These pixel values are
+    processed exactly as if CopyPixels had been called, but the process
+    stops just before final conversion.  Subsequent processing is exactly
+    as though TexImage2D had be called, beginning with the clamping of the
+    pixel group components to [0,1].  Pixel ordering is such that lower X
+    screen coordinates correspond to lower i texture coordinates, and lower
+    Y screen coordinates correspond to lower j texture coordinates (refer to
+    Figure 3.10 - A texture image and the coordinates used to access it, GL
+    Specification).  The semantics and accepted values of the <target>,
+    <level>, and <border> parameters are exactly equivalent to their
+    TexImage2D counterparts, except that <target> does not accept
+    PROXY_TEXTURE_2D_EXT.  The semantics of <internalformat> are identical
+    to those of the <components> parameter of TexImage2D, except that
+    values 1, 2, 3, and 4 are not accepted by CopyTexImage2DEXT.
+
+    CopyTexImage1DEXT accepts image data from a width+2*border pixel wide
+    by 1 pixel high color buffer region whose left-most pixel has window
+    coordinates <x>,<y>.  If any pixels within this region are outside the
+    window that is associated with the GL context, the values obtained for
+    those pixels are undefined.  The pixels are processed just as those of
+    CopyTexImage2DEXT are, and they define a texture such that lower X
+    window coordinates correspond to lower i texture coordinates, as per
+    Figure 3.10 of the GL Specification.  The semantics and accepted values
+    of the <level>, <border>, and <internalformat> parameters are exactly
+    those of CopyTexImage2DEXT.  <target> accepts only TEXTURE_1D.
+    
+    If EXT_subtexture is supported, this extension also defines
+    CopyTexSubImage1DEXT and CopyTexSubImage2DEXT.  These commands are
+    related to TexSubImage1DEXT and TexSubImage2DEXT in exactly the way
+    that CopyPixels is related to DrawPixels.  Rather than accepting image
+    data from memory, they copy image data from the framebuffer.  The
+    semantics and accepted values of the <target>, <level>, <xoffset>, and
+    <yoffset> parameters are exactly equivalent to their TexSubImage1DEXT
+    and TexSubImage2DEXT counterparts.  The semantics and accepted values
+    of the <x>, <y>, <width>, and <height> parameters are exactly equivalent
+    to their CopyTexImage1DEXT and CopyTexImage2DEXT counterparts.
+
+    If EXT_subtexture and EXT_texture3D are both supported, this extension
+    also defines CopyTexSubImage3DEXT.  Because framebuffer memory is two-
+    dimensional, only a portion of a single s,t slice of a 3D texture is
+    replaced by this command.  Thus CopyTexSubImage3DEXT is related to
+    TexSubImage3DEXT in exactly the way that CopyPixels is related to
+    DrawPixels, except that it is as though TexSubImage3DEXT parameter
+    <depth> were 1.  Rather than accepting image data from memory,
+    CopyTexSubImage3DEXT copies image data from the framebuffer.  The
+    semantics and accepted values of the <target>, <level>, <xoffset>,
+    <yoffset>, and <zoffset> parameters are exactly equivalent to their
+    TexSubImage3DEXT counterparts.  The semantics and accepted values of
+    the <x>, <y>, <width>, and <height> parameters are exactly equivalent
+    to their CopyTexImage2DEXT counterparts.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    Five new GL rendering commands are added. The following commands are sent to the
+    server as part of a glXRender request:
+
+        CopyTexImage1DEXT
+            2           32              rendering command length
+            2           4119            rendering command opcode
+            4           ENUM            target
+            4           INT32           level
+            4           ENUM            internalformat
+            4           INT32           x       
+            4           INT32           y       
+            4           INT32           width
+            4           INT32           border
+
+        CopyTexImage2DEXT
+            2           36              rendering command length
+            2           4120            rendering command opcode
+            4           ENUM            target
+            4           INT32           level
+            4           ENUM            internalformat
+            4           INT32           x       
+            4           INT32           y       
+            4           INT32           width
+            4           INT32           height
+            4           INT32           border
+
+        CopyTexSubImage1DEXT
+            2           28              rendering command length
+            2           4121            rendering command opcode
+            4           ENUM            target
+            4           INT32           level
+            4           INT32           xoffset
+            4           INT32           x       
+            4           INT32           y       
+            4           INT32           width
+
+        CopyTexSubImage2DEXT
+            2           36              rendering command length
+            2           4122            rendering command opcode
+            4           ENUM            target
+            4           INT32           level
+            4           INT32           xoffset
+            4           INT32           yoffset
+            4           INT32           x       
+            4           INT32           y       
+            4           INT32           width
+            4           INT32           height
+
+        CopyTexSubImage3DEXT
+            2           40              rendering command length
+            2           4123            rendering command opcode
+            4           ENUM            target
+            4           INT32           level
+            4           INT32           xoffset
+            4           INT32           yoffset
+            4           INT32           zoffset
+            4           INT32           x       
+            4           INT32           y       
+            4           INT32           width
+            4           INT32           height
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.  This extension builds on the notion of
+    internal image format, which is defined by EXT_texture.
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not supported, CopyTexSubImage3DEXT is not defined
+    by this extension.
+
+Dependencies on SGIS_texture_filter4
+
+    If SGIS_texture_filter4 is not supported, 2 is not accepted as a border
+    value.
+
+Dependencies on EXT_subtexture
+
+    If EXT_subtexture is not supported, CopyTexSubImage1DEXT,
+    CopyTexSubImage2DEXT, and CopyTexSubImage3DEXT are not defined by this
+    extension.
+
+Errors
+
+    INVALID_ENUM is generated if CopyTexImage1DEXT or CopyTexSubImage1DEXT
+    parameter <target> is not TEXTURE_1D.  (The commands defined by this
+    extension do not accept PROXY targets.)
+
+    INVALID_ENUM is generated if CopyTexImage2DEXT or CopyTexSubImage2DEXT
+    parameter <target> is not TEXTURE_2D.
+
+    INVALID_ENUM is generated if CopyTexSubImage3DEXT parameter <target>
+    is not TEXTURE_3D_EXT.
+
+    INVALID_VALUE is generated if CopyTexImage1DEXT or CopyTexImage2DEXT
+    parameter <level> is less than zero, or greater than the maximum value
+    supported by the implementation.
+
+    INVALID_ENUM is generated if CopyTexImage1DEXT or CopyTexImage2DEXT
+    parameter <internalformat> is not ALPHA, RGB, RGBA, LUMINANCE,
+    LUMINANCE_ALPHA, or one of the token values defined by EXT_texture.
+
+    INVALID_VALUE is generated when any of the <width> or <height>
+    parameters of CopyTexImage1DEXT or CopyTexImage2DEXT is less than zero,
+    or if it cannot be represented as 2**k + 2*border for some integer k.
+
+    INVALID_VALUE is generated if CopyTexSubImage1DEXT, CopyTexSubImage2DEXT,
+    or CopyTexSubImage3DEXT parameter <xoffset>, CopyTexSubImage2DEXT or
+    CopyTexSubImage3DEXT parameter <yoffset>, or CopyTexSubImage3DEXT
+    parameter <zoffset> is less than -TEXTURE_BORDER, where TEXTURE_BORDER
+    is the border width of the texture array to be modified.
+
+    INVALID_VALUE is generated if CopyTexSubImage1DEXT, CopyTexSubImage2DEXT,
+    or CopyTexSubImage3DEXT (xoffset + width) > (TEXTURE_WIDTH -
+    TEXTURE_BORDER), or if CopyTexSubImage2DEXT or CopyTexSubImage3DEXT
+    (yoffset + height) > (TEXTURE_HEIGHT - TEXTURE_BORDER), or if
+    CopyTexSubImage3DEXT zoffset >= (TEXTURE_DEPTH_EXT - TEXTURE_BORDER).
+    Note that TEXTURE_WIDTH, TEXTURE_HEIGHT, and TEXTURE_DEPTH_EXT include
+    twice the border width.
+
+    TEXTURE_TOO_LARGE_EXT is generated by CopyTexImage1DEXT or
+    CopyTexImage2DEXT if the specified image is too large, for any reason.
+    (See EXT_texture for a discussion of how applications can query the
+    maximum texture size.)
+
+    INVALID_VALUE is generated if CopyTexImage1DEXT or CopyTexImage2DEXT
+    parameter <border> is not 0, 1, or 2.
+
+    INVALID_OPERATION is generated if CopyTexImage1DEXT, CopyTexImage2DEXT,
+    CopyTexSubImage1DEXT, CopyTexSubImage2DEXT, or CopyTexSubImage3DEXT is
+    called between execution of Begin and the corresponding execution of
+    End.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

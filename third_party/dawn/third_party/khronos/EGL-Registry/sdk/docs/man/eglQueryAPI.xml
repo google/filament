@@ -1,0 +1,76 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglQueryAPI">
+    <info>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglQueryAPI</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglQueryAPI</refname>
+        <refpurpose>Query the current rendering API</refpurpose>
+    </refnamediv>
+    <refsynopsisdiv><title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLenum <function>eglQueryAPI</function></funcdef>
+                <void/>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglQueryAPI</function> returns the value of the
+            current rendering API for EGL in the thread it is called
+            from. The current rendering API is set by
+            <citerefentry><refentrytitle>eglBindAPI</refentrytitle></citerefentry>,
+            and affects the behavior of other EGL commands.
+        </para>
+        <para>
+            The value returned will be one of the valid
+            <parameter>api</parameter> parameters to
+            <citerefentry><refentrytitle>eglBindAPI</refentrytitle></citerefentry>, or
+            <constant>EGL_NONE</constant>.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglQueryAPI</function> is supported only if the
+            EGL version is 1.2 or greater.
+        </para>
+        <para>
+            The initial value of the current rendering API is
+            <constant>EGL_OPENGL_ES_API</constant> unless OpenGL ES is
+            not supported by an implementation, in which case the
+            initial value is <constant>EGL_NONE</constant> (however,
+            <constant>EGL_NONE</constant> is not a valid
+            <parameter>api</parameter> parameter to
+            <function>eglQueryAPI</function>).
+        </para>
+        <para>
+            The current rendering API can be changed by calling
+            <citerefentry><refentrytitle>eglBindAPI</refentrytitle></citerefentry>.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            None.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglBindAPI</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentDisplay</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentSurface</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitClient</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitNative</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>
