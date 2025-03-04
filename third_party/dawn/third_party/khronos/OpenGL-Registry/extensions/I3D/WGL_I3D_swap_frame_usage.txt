@@ -1,0 +1,165 @@
+Name
+
+    WGL_I3D_swap_frame_usage
+
+Name Strings
+
+    WGL_I3D_swap_frame_usage
+
+Version
+
+    Date: 5/1/2000   Revision: 1.3
+
+Number
+
+    ???
+
+Dependencies
+
+    WGL_EXT_extensions_string is required.
+    WGL_EXT_swap_control affects the definition of this extension
+
+Overview
+
+    This extension allows an application to obtain the percent of time
+    used to draw a frame.  A floating-point value in the range [0,max]
+    is returned which is calculated as follows:
+
+                              td
+                   percent = ----
+                              tf
+
+    where td is the time measured from the last buffer swap (or call to
+    enable the statistic) to when the application issued a buffer swap,
+    tf is the entire time for a frame which may be multiple screen
+    refreshes depending on the swap interval as set by the
+    WGL_swap_control extension.
+
+    The value, percent, indicates the amount of time spent during the
+    draw.  If the value is in the range [0,1], the buffer swap occurred
+    within the time period required to maintain a constant frame rate.
+    If the value is in the range (1,max], a constant frame rate was not
+    achieved.  The value indicates the number of frames required to
+    draw.
+
+    There is also a mechanism to determine whether a frame swap was
+    missed.
+
+New Procedures and Functions
+
+    BOOL wglGetFrameUsageI3D(float *pUsage)
+
+    BOOL wglBeginFrameTrackingI3D(void)
+
+    BOOL wglEndFrameTrackingI3D(void)
+
+    BOOL wglQueryFrameTrackingI3D(DWORD *pFrameCount,
+                                  DWORD *pMissedFrames,
+                                  float *pLastMissedUsage)
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the 1.2 GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 GL Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 GL Specification (State and State Requests)
+
+    None
+
+Additions to the WGL Specification
+
+    wglGetFrameUsageI3D returns a floating-point value in <pUsage>
+    that represents the percentage of time that the application spent
+    drawing a scene.  The percentage is calculated as the time spent
+    within the time available.
+
+    The time available is the frame refresh time unless a swap interval
+    has been established.  In this case, the time available is an
+    integer multiple of the frame time as established by the swap
+    interval.
+
+    Missed frame swaps can be tracked by calling the following function:
+
+       BOOL wglBeginFrameTrackingI3D(void)
+
+    wglBeginFrameTrackingI3D resets a "missed frame" count and
+    synchronizes with the next frame vertical sync before it returns.
+    If a swap is missed based in the rate control specified by the
+    <interval> set by wglSwapIntervalEXT or the default swap of once
+    per frame, the missed frame count is incremented.
+
+    The current missed frame count and total number of swaps since
+    the last call to wglBeginFrameTrackingI3D can be obtained by
+    callling the following function:
+
+       BOOL wglQueryFrameTrackingI3D(DWORD *pFrameCount,
+                                     DWORD *pMissedFrames,
+                                     float *pLastMissedUsage)
+
+    The location pointed to by <pFrameCount> will be updated with the
+    number of swaps that have occurred.  This value may not match the
+    number of swaps that have been requested since swaps may be
+    queued by the implementation.  This function can be called at any
+    time and does not synchronize to vertical blank.
+
+    The location pointed to by <pMissedFrames> will contain the number
+    swaps that missed the specified frame.  The frame usage for the
+    last missed frame is returned in the location pointed to by
+    <pLastMissedUsage>.
+
+    Frame tracking is disabled by calling the function
+
+       BOOL wglEndFrameTrackingI3D(void)
+
+    This function will not return until all swaps have occurred.  The
+    application can call wglQueryFrameTrackingI3D for a final swap and
+    missed frame count.
+
+    If these functions fail, FALSE is returned.  To get extended
+    error information, call GetLastError.
+
+Dependencies on WGL_EXT_extensions_string
+
+    Because there is no way to extend wgl, these calls are defined in
+    the ICD and can be called by obtaining the address with
+    wglGetProcAddress.  Because this extension is a WGL extension, it
+    is not included in the GL_EXTENSIONS string.  Its existence can be
+    determined with the WGL_EXT_extensions_string extension.
+
+Errors
+
+    If the function succeeds, the return value is TRUE. If the function
+    fails, the return value is FALSE.  To get extended error information,
+    call GetLastError.
+
+       ERROR_DC_NOT_FOUND      An RC was not current to the calling
+                               thread; therefore, no DC could be
+                               obtained.
+
+       ERROR_BUSY              The resource used for obtaining usage
+                               was currently in use by another
+                               application.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

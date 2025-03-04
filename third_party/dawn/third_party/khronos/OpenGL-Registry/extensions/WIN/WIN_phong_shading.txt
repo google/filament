@@ -1,0 +1,180 @@
+Name
+
+    WIN_phong_shading
+
+Name Strings
+
+    GL_WIN_phong_shading
+
+Version
+
+    $Date: 1997/4/3 
+
+Number
+
+    113
+
+Dependencies
+
+    None
+
+Overview
+
+    WIN_phong_shading enables rendering Phong shaded primitives using OpenGL.
+    Phong shading is a well known shading technique documented 
+    in most graphics texts. 
+    
+    As opposed to Gouraud (or smooth) shading, which simply calculates the 
+    normals at the vertices and then interpolates the colors of the pixels, 
+    Phong shading involves interpolating an individual normal for every pixel,
+    and then applying the shading model to each pixel based on its normal 
+    component. 
+
+    While Phong shading requires substantially more computation than does 
+    Gouraud shading, the resulting images are more realistic, especially if the
+    primitives are large. 
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <mode> parameter of ShadeModel:
+
+    PHONG_WIN                  0x80EA
+
+    May be returned by GetBooleanv, GetDoublev, GetIntegerv, and GetFloatv
+    when their <pname> parameter is SHADE_MODEL:
+
+    PHONG_WIN                  0x80EA
+
+    Accepted by the <target> parameter of Hint, and <pname> parameter of
+    GetBooleanv, GetDoublev, GetFloatv and GetIntegerv:
+
+    PHONG_HINT_WIN             0x80EB
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+    First sentence in Section 2.13, "Colors and Coloring", 'Figure 2.8 
+    diagrams..' should be modified as below:
+
+    "Figure 2.8 diagrams the processing of colors before rasterization when 
+    the primitives are not phong-shaded."
+
+    After the last paragraph of Section 2.13, "Colors and Coloring", the
+
+    following paragraph is added:
+
+    "The WIN_phong_shading extension is used to indicate that the primitives
+    should be phong shaded. In which case, the lighting, if enabled, is 
+    applied at the time of rasterization to each pixel to obtain a color for
+    that pixel. The lighting computation used is consistant with the GL 
+    lighting model described in Section 2.13.1. If the primitive is clipped,
+    then normals (and eye coordinates) must be computed for the vertices
+    introduced or modified by clipping."
+    
+    Rename Section 2.13.7 to "Shading Models" and. Keep the first paragraph as
+    it is. Add the following new paragraph after the one ending in 
+    "...Table 2.9 summarizes the possibilities":
+
+    "A primitive may be phong-shaded, meaning that instead of the the color
+    being interpolated, the normal (and the eye coordinate) are interpolated 
+    across the primitive, and the lighting (if enabled) is applied per pixel
+    at the time of rasterization. If the other material properties change 
+    within a primitive, either by ColorMaterial or explicitly changing the 
+    material property using the Material command, they must be also be 
+    interpolated along with the normal (and eye coordinate). However, for 
+    efficiency's sake, an implementation may choose to ignore the effects of
+    the changes in material properties across a primitive. 
+    If the lighting is disabled, or if the primitive is a point, it is 
+    equivalent to regular smooth shading.
+
+    Implementations may also choose to approximate phong-shading by smart
+    interpolation techniques (some of which are described in graphics 
+    literature). Using such algorithms, they may choose to tradeoff visual 
+    fidelity for speed of rendering. For such a case a phong hint state,
+    discussed in section 5.6, can be used."
+
+    Modify the paragraph beginning with "Flatshading is controlled by....." 
+    to the following:
+
+    "Phong-shading and flatshading are controlled by 
+        
+        void ShadeModel( enum mode);
+
+    mode value must be one of the symbolic constant SMOOTH, FLAT or 
+    PHONG_WIN. If mode is SMOOTH (the initial state), vertex colors are 
+    treated individually. If mode is FLAT, flatshading is turned on. If mode
+    is PHONG_WIN phong-shading is turned on. ShadeModel thus requires 2 bits
+    of state."
+
+    Rename Section 2.13.8 to "Color, Texture, Normal and Eye-Coordinate 
+    Clipping". Add the following line after "The method is exactly...":
+
+    "If phong-shading is turned on, the normals and eye coordinates must be
+    computed for the newly generated vertices. The normals and the 
+    eye-coordinates for these vertices are computed in exactly the manner
+    described for color clipping. In addition, unless the implementation
+    chooses to ignore changes in material properties within the primitive, 
+    they should be computed for the new vertices analogously."
+
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    After the sentence "The second ...." in the first paragraph, add the
+    sentence:
+
+    "If phong-shading is enabled, the color for the square is also computed 
+    in this stage."
+
+    Modify the first line of the second paragraph to:
+    "A grid square along with its parameters of assigned color, z (depth),
+    texture coordinates, normal and eye coordinates (for phong shading)"
+
+    In Section 3.4.1 "Basic Line Segment Rasterization", modify the line
+
+    "The value of an associated datum f......." after equation 3.1 to:
+
+    "The value of an associated datum f for the fragment, whether it be R, G,
+    B, or A (in RGBA mode) or a color index (in color index mode), or normal,
+    eye coordinate or material properties (when phong-shaded), or the s, t, or
+    r texture coordinate .......... is found as"
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    In Section 5.6, "Hints", add the following phrase to the line beginning
+    "target may be one of .......":
+
+    "and PHONG_HINT_WIN, indicating the desired quality of phong shading."
+
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Dependencies on other extensions
+
+    None
+
+Errors
+
+    None
+
+New State
+                                                Initial
+    Get Value				Get Command	Type	Value 	    Attrib
+    ---------				-----------	----	-------	    ------
+    PHONG_HINT_WIN          		GetIntegerv 	Z3      DONT_CARE   hint
+
+New Implementation Dependent State
+
+    None

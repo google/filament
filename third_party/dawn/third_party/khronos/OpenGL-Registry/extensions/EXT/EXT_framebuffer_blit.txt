@@ -1,0 +1,659 @@
+Name
+
+    EXT_framebuffer_blit
+
+Name Strings
+
+    GL_EXT_framebuffer_blit
+
+Contributors
+
+    Michael Gold
+    Evan Hart
+    Jeff Juliano
+    Jon Leech
+    Bill Licea-Kane
+    Barthold Lichtenbelt
+    Brian Paul
+    Ian Romanick
+    John Rosasco
+    Jeremy Sandmel
+    Eskil Steenberg
+
+Contact
+
+    Michael Gold, NVIDIA Corporation (gold 'at' nvidia.com)
+
+Status
+
+    Complete.  Approved by the ARB "superbuffers" working group on
+    November 8, 2005.
+
+Version
+
+    Last Modified Date: April 5, 2007
+    Author Revision: 15
+
+Number
+
+    316
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+    EXT_framebuffer_object is required.
+
+    The extension is written against the OpenGL 1.5 specification.
+
+    ARB_color_buffer_float affects the definition of this extension.
+
+Overview
+
+    This extension modifies EXT_framebuffer_object by splitting the
+    framebuffer object binding point into separate DRAW and READ
+    bindings.  This allows copying directly from one framebuffer to
+    another.  In addition, a new high performance blit function is
+    added to facilitate these blits and perform some data conversion
+    where allowed.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void BlitFramebufferEXT(int srcX0, int srcY0, int srcX1, int srcY1,
+                            int dstX0, int dstY0, int dstX1, int dstY1,
+                            bitfield mask, enum filter);
+
+New Tokens
+
+    Accepted by the <target> parameter of BindFramebufferEXT,
+    CheckFramebufferStatusEXT, FramebufferTexture{1D|2D|3D}EXT,
+    FramebufferRenderbufferEXT, and
+    GetFramebufferAttachmentParameterivEXT:
+
+    READ_FRAMEBUFFER_EXT                0x8CA8
+    DRAW_FRAMEBUFFER_EXT                0x8CA9
+
+    Accepted by the <pname> parameters of GetIntegerv, GetFloatv, and GetDoublev:
+
+    DRAW_FRAMEBUFFER_BINDING_EXT        0x8CA6 // alias FRAMEBUFFER_BINDING_EXT
+    READ_FRAMEBUFFER_BINDING_EXT        0x8CAA
+
+
+Additions to Chapter 2 of the OpenGL 1.5 Specification (OpenGL Operation)
+
+    Append the following to section 2.6.1:
+
+    "Calling Begin will result in an INVALID_FRAMEBUFFER_OPERATION_EXT
+    error if the object bound to DRAW_FRAMEBUFFER_BINDING_EXT is not
+    "framebuffer complete" (section 4.4.4.2)."
+
+Additions to Chapter 3 of the OpenGL 1.5 Specification (Rasterization)
+
+    Add to section 3.6.3, at the end of the subsection titled
+    "Alternate Color Table Specification Commands":
+
+    "Calling CopyColorTable or CopyColorSubTable will result in an
+    INVALID_FRAMEBUFFER_OPERATION_EXT error if the object bound to
+    READ_FRAMEBUFFER_BINDING_EXT is not "framebuffer complete"
+    (section 4.4.4.2)."
+
+    Add to section 3.6.3, at the end of the subsection titled
+    "Alternate Convolution Filter Specification Commands":
+
+    "Calling CopyConvolutionFilter1D or CopyConvolutionFilter2D will
+    result in an INVALID_FRAMEBUFFER_OPERATION_EXT error if the object
+    bound to READ_FRAMEBUFFER_BINDING_EXT is not "framebuffer
+    complete" (section 4.4.4.2)."
+
+    In section 3.6.4, modify the final paragraph of the definition of
+    DrawPixels as follows:
+
+    "Calling DrawPixels will result in an
+    INVALID_FRAMEBUFFER_OPERATION_EXT error if the object bound to
+    DRAW_FRAMEBUFFER_BINDING_EXT is not "framebuffer complete"
+    (section 4.4.4.2)."
+
+    Add the following to section 3.7, following the description of
+    Bitmap:
+
+    "Calling Bitmap will result in an
+    INVALID_FRAMEBUFFER_OPERATION_EXT error if the object bound to
+    DRAW_FRAMEBUFFER_BINDING_EXT is not "framebuffer complete"
+    (section 4.4.4.2)."
+
+    Append the following to section 3.8.2:
+
+    "Calling CopyTexSubImage3D, CopyTexImage2D,
+    CopyTexSubImage2D, CopyTexImage1D or CopyTexSubImage1D will result
+    in an INVALID_FRAMEBUFFER_OPERATION_EXT error if the object bound
+    to READ_FRAMEBUFFER_BINDING_EXT is not "framebuffer complete"
+    (section 4.4.4.2)."
+
+Additions to Chapter 4 of the OpenGL 1.5 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Change the first word of Chapter 4 from "The" to "A".
+
+    Append to the introduction of Chapter 4:
+
+    "Conceptually, the GL has two active framebuffers; the draw
+    framebuffer is the destination for rendering operations, and the
+    read framebuffer is the source for readback operations.  The same
+    framebuffer may be used for both drawing and reading.  Section
+    4.4.1 describes the mechanism for controlling framebuffer usage."
+
+    Modify the last paragraph of section 4.1.1 as follows:
+
+    "While an application-created framebuffer object is bound to
+    DRAW_FRAMEBUFFER_EXT, the pixel ownership test always passes."
+
+    Modify the last sentence of the second to last paragraph of
+    section 4.2.4 as follows:
+
+    "If there is no accumulation buffer, or if the DRAW_FRAMEBUFFER_EXT
+    and READ_FRAMEBUFFER_EXT bindings (section 4.4.4.2) do not refer to
+    the same object, or if the GL is in color index mode, Accum
+    generates the error INVALID_OPERATION."
+
+    Add to 4.3.2 (Reading Pixels), right before the subsection titled
+    "Obtaining Pixels from the Framebuffer":
+
+    "Calling ReadPixels generates INVALID_FRAMEBUFFER_OPERATION_EXT if
+    the object bound to READ_FRAMEBUFFER_BINDING_EXT is not "framebuffer
+    complete" (section 4.4.4.2)."
+
+    In section 4.3.2, modify the definition of ReadBuffer as follows:
+
+    "The command
+
+         void ReadBuffer( enum src );
+
+    takes a symbolic constant as argument.  <src> must be one of the
+    values from tables 4.4 or 10.nnn.  Otherwise, INVALID_ENUM is
+    generated.  Further, the acceptable values for <src> depend on
+    whether the GL is using the default window-system-provided
+    framebuffer (i.e., READ_FRAMEBUFFER_BINDING_EXT is zero), or an
+    application-created framebuffer object (i.e.,
+    READ_FRAMEBUFFER_BINDING_EXT is non-zero).  For more information
+    about application-created framebuffer objects, see section 4.4.
+
+    When READ_FRAMEBUFFER_BINDING_EXT is zero, i.e. the default
+    window-system-provided framebuffer, <src> must be one of the
+    values listed in table 4.4. FRONT and LEFT refer to the front left
+    buffer, BACK refers to the back left buffer, and RIGHT refers to
+    the front right buffer.  The other constants correspond directly
+    to the buffers that they name. If the requested buffer is missing,
+    then the error INVALID_OPERATION is generated.  For the default
+    window-system-provided framebuffer, the initial setting for
+    ReadBuffer is FRONT if there is no back buffer and BACK
+    otherwise.
+
+    Modify the first sentence of section 4.3.3 as follows:
+
+    "CopyPixels transfers a rectangle of pixel values from one region
+    of the read framebuffer to another in the draw framebuffer."
+
+    Add the following text to section 4.3.3, page 194, inside the
+    definition of CopyPixels:
+
+    "Finally, the behavior of several GL operations is specified "as if
+    the arguments were passed to CopyPixels."  These operations include:
+    CopyTex{Sub}Image*, CopyColor{Sub}Table, and CopyConvolutionFilter*.
+    INVALID_FRAMEBUFFER_OPERATION_EXT will be generated if an attempt is
+    made to execute one of these operations, or CopyPixels, while the
+    object bound to READ_FRAMEBUFFER_BINDING_EXT is not "framebuffer
+    complete" (as defined in section 4.4.4.2).  Furthermore, an attempt
+    to execute CopyPixels will generate
+    INVALID_FRAMEBUFFER_OPERATION_EXT while the object bound to
+    DRAW_FRAMEBUFFER_BINDING_EXT is not "framebuffer complete"."
+
+    Append to section 4.3.3:
+
+    "BlitFramebufferEXT transfers a rectangle of pixel values from one
+    region of the read framebuffer to another in the draw framebuffer.
+    There are some important distinctions from CopyPixels, as
+    described below.
+
+    BlitFramebufferEXT(int srcX0, int srcY0, int srcX1, int srcY1,
+                       int dstX0, int dstY0, int dstX1, int dstY1,
+                       bitfield mask, enum filter);
+
+    <mask> is the bitwise OR of a number of values indicating which
+    buffers are to be copied. The values are COLOR_BUFFER_BIT,
+    DEPTH_BUFFER_BIT, and STENCIL_BUFFER_BIT, which are described in
+    section 4.2.3.  The pixels corresponding to these buffers are
+    copied from the source rectangle, bound by the locations (srcX0,
+    srcY0) and (srcX1, srcY1), to the destination rectangle, bound by
+    the locations (dstX0, dstY0) and (dstX1, dstY1).  The lower bounds
+    of the rectangle are inclusive, while the upper bounds are
+    exclusive.
+
+    If the source and destination rectangle dimensions do not match,
+    the source image is stretched to fit the destination
+    rectangle. <filter> must be LINEAR or NEAREST and specifies the
+    method of interpolation to be applied if the image is
+    stretched. LINEAR filtering is allowed only for the color buffer;
+    if <mask> includes DEPTH_BUFFER_BIT or STENCIL_BUFFER_BIT, and
+    filter is not NEAREST, no copy is performed and an
+    INVALID_OPERATION error is generated.  If the source and
+    destination dimensions are identical, no filtering is applied.  If
+    either the source or destination rectangle specifies a negative
+    dimension, the image is reversed in the corresponding direction.
+    If both the source and destination rectangles specify a negative
+    dimension for the same direction, no reversal is performed.
+
+    If the source and destination buffers are identical, and the
+    source and destination rectangles overlap, the result of the blit
+    operation is undefined.
+
+    The pixel copy bypasses the fragment pipeline.  The only fragment
+    operations which affect the blit are the pixel ownership test and
+    the scissor test.
+
+    If a buffer is specified in <mask> and does not exist in both the
+    read and draw framebuffers, the corresponding bit is silently
+    ignored.
+
+    If the color formats of the read and draw framebuffers do not
+    match, and <mask> includes COLOR_BUFFER_BIT, the pixel groups are
+    converted to match the destination format as in CopyPixels, except
+    that no pixel transfer operations apply and clamping behaves as if
+    CLAMP_FRAGMENT_COLOR_ARB is set to FIXED_ONLY_ARB.
+    
+    Calling CopyPixels or BlitFramebufferEXT will result in an
+    INVALID_FRAMEBUFFER_OPERATION_EXT error if the objects bound to
+    DRAW_FRAMEBUFFER_BINDING_EXT and READ_FRAMEBUFFER_BINDING_EXT are
+    not "framebuffer complete" (section 4.4.4.2)."
+
+    Calling BlitFramebufferEXT will result in an INVALID_OPERATION
+    error if <mask> includes DEPTH_BUFFER_BIT or STENCIL_BUFFER_BIT
+    and the source and destination depth and stencil buffer formats do
+    not match.
+
+    Modify the beginning of section 4.4.1 as follows:
+
+    "The default framebuffer for rendering and readback operations is
+    provided by the windowing system.  In addition, named framebuffer
+    objects can be created and operated upon.  The namespace for
+    framebuffer objects is the unsigned integers, with zero reserved
+    by the GL for the default framebuffer.
+
+    A framebuffer object is created by binding an unused name to
+    DRAW_FRAMEBUFFER_EXT or READ_FRAMEBUFFER_EXT.  The binding is
+    effected by calling
+
+        void BindFramebufferEXT(enum target, uint framebuffer);
+
+    with <target> set to the desired framebuffer target and
+    <framebuffer> set to the unused name.  The resulting framebuffer
+    object is a new state vector, comprising all the state values
+    listed in table 4.nnn, as well as one set of the state values
+    listed in table 5.nnn for each attachment point of the
+    framebuffer, set to the same initial values.  There are
+    MAX_COLOR_ATTACHMENTS_EXT color attachment points, plus one each
+    for the depth and stencil attachment points.
+
+    BindFramebufferEXT may also be used to bind an existing
+    framebuffer object to DRAW_FRAMEBUFFER_EXT or
+    READ_FRAMEBUFFER_EXT.  If the bind is successful no change is made
+    to the state of the bound framebuffer object, and any previous
+    binding to <target> is broken.
+
+    If a framebuffer object is bound to DRAW_FRAMEBUFFER_EXT or
+    READ_FRAMEBUFFER_EXT, it becomes the target for rendering or
+    readback operations, respectively, until it is deleted or another
+    framebuffer is bound to the corresponding bind point.  Calling
+    BindFramebufferEXT with <target> set to FRAMEBUFFER_EXT binds the
+    framebuffer to both DRAW_FRAMEBUFFER_EXT and READ_FRAMEBUFFER_EXT.
+
+    While a framebuffer object is bound, GL operations on the target
+    to which it is bound affect the images attached to the bound
+    framebuffer object, and queries of the target to which it is bound
+    return state from the bound object.  Queries of the values
+    specified in table 6.31 (Implementation Dependent Pixel Depths)
+    and table 8.nnn (Framebuffer-Dependent State Variables) are
+    derived from the framebuffer object bound to DRAW_FRAMEBUFFER_EXT.
+
+    The initial state of DRAW_FRAMEBUFFER_EXT and READ_FRAMEBUFFER_EXT
+    refers to the default framebuffer provided by the windowing
+    system.  In order that access to the default framebuffer is not
+    lost, it is treated as a framebuffer object with the name of 0.
+    The default framebuffer is therefore rendered to and read from
+    while 0 is bound to the corresponding targets.  On some
+    implementations, the properties of the default framebuffer can
+    change over time (e.g., in response to windowing system events
+    such as attaching the context to a new windowing system drawable.)"
+
+    Change the description of DeleteFramebuffersEXT as follows:
+
+    "<framebuffers> contains <n> names of framebuffer objects to be
+    deleted.  After a framebuffer object is deleted, it has no
+    attachments, and its name is again unused.  If a framebuffer that
+    is currently bound to one or more of the targets
+    DRAW_FRAMEBUFFER_EXT or READ_FRAMEBUFFER_EXT is deleted, it is as
+    though BindFramebufferEXT had been executed with the corresponding
+    <target> and <framebuffer> zero.  Unused names in <framebuffers>
+    are silently ignored, as is the value zero."
+
+
+    In section 4.4.2.2, modify the first two sentences of the
+    description of FramebufferRenderbufferEXT as follows:
+
+    "<target> must be DRAW_FRAMEBUFFER_EXT, READ_FRAMEBUFFER_EXT, or
+    FRAMEBUFFER_EXT.  If <target> is FRAMEBUFFER_EXT, it behaves as
+    though DRAW_FRAMEBUFFER_EXT was specified.  INVALID_OPERATION is
+    generated if the value of the corresponding binding is zero."
+
+    In section 4.4.2.3, modify the first two sentences of the
+    description of FramebufferTexturexDEXT as follows:
+
+    "In all three routines, <target> must be DRAW_FRAMEBUFFER_EXT,
+    READ_FRAMEBUFFER_EXT, or FRAMEBUFFER_EXT.  If <target> is
+    FRAMEBUFFER_EXT, it behaves as though DRAW_FRAMEBUFFER_EXT was
+    specified.  INVALID_OPERATION is generated if the value of the
+    corresponding binding is zero."
+
+    In section 4.4.4.2, modify the first sentence of the description
+    of CheckFramebufferStatusEXT as follows:
+
+    "If <target> is not DRAW_FRAMEBUFFER_EXT, READ_FRAMEBUFFER_EXT or
+    FRAMEBUFFER_EXT, INVALID_ENUM is generated.  If <target> is
+    FRAMEBUFFER_EXT, it behaves as though DRAW_FRAMEBUFFER_EXT was
+    specified."
+
+    Modify section 4.4.4.3 as follows:
+
+    "Attempting to render to or read from a framebuffer which is not
+    framebuffer complete will generate an
+    INVALID_FRAMEBUFFER_OPERATION_EXT error."
+    
+
+
+Additions to Chapter 6 of the OpenGL 1.5 Specification (State and State
+Requests)
+
+    In section 6.1.3, modify the first sentence of the description of
+    GetFramebufferAttachmentParameterivEXT as follows:
+
+    "<target> must be DRAW_FRAMEBUFFER_EXT, READ_FRAMEBUFFER_EXT or
+    FRAMEBUFFER_EXT.  If <target> is FRAMEBUFFER_EXT, it behaves as
+    though DRAW_FRAMEBUFFER_EXT was specified."
+
+
+GLX Protocol
+
+    BlitFramebufferEXT
+        2        44              rendering command length
+        2        4330            rendering command opcode
+        4        CARD32          source X0
+        4        CARD32          source Y0
+        4        CARD32          source X1
+        4        CARD32          source Y1
+        4        CARD32          destination X0
+        4        CARD32          destination Y0
+        4        CARD32          destination X1
+        4        CARD32          destination Y1
+        4        CARD32          mask
+        4        ENUM            filter
+
+Dependencies on ARB_color_buffer_float
+
+    The reference to CLAMP_FRAGMENT_COLOR_ARB in section 4.3.3 applies
+    only if ARB_color_buffer_float is supported.
+
+Errors
+
+    The error INVALID_FRAMEBUFFER_OPERATION_EXT is generated if
+    BlitFramebufferEXT, DrawPixels, or CopyPixels is called while the
+    draw framebuffer is not framebuffer complete.
+
+    The error INVALID_FRAMEBUFFER_OPERATION_EXT is generated if
+    BlitFramebufferEXT, ReadPixels, CopyPixels, CopyTex{Sub}Image*,
+    CopyColor{Sub}Table, or CopyConvolutionFilter* is called while the
+    read framebuffer is not framebuffer complete.
+
+    The error INVALID_VALUE is generated by BlitFramebufferEXT if
+    <mask> has any bits set other than those named by
+    COLOR_BUFFER_BIT, DEPTH_BUFFER_BIT or STENCIL_BUFFER_BIT.
+
+    The error INVALID_OPERATION is generated if BlitFramebufferEXT is
+    called and <mask> includes DEPTH_BUFFER_BIT or STENCIL_BUFFER_BIT
+    and <filter> is not NEAREST.
+
+    The error INVALID_OPERATION is generated if BlitFramebufferEXT is
+    called and <mask> includes DEPTH_BUFFER_BIT or STENCIL_BUFFER_BIT
+    and the source and destination depth or stencil buffer formats do
+    not match.
+
+    The error INVALID_ENUM is generated by BlitFramebufferEXT if
+    <filter> is not LINEAR or NEAREST.
+
+    The error INVALID_OPERATION is generated if BlitFramebufferEXT 
+    is called within a Begin/End pair.
+
+    The error INVALID_ENUM is generated if BindFramebufferEXT,
+    CheckFramebufferStatusEXT, FramebufferTexture{1D|2D|3D}EXT,
+    FramebufferRenderbufferEXT, or
+    GetFramebufferAttachmentParameterivEXT is called and <target> is
+    not DRAW_FRAMEBUFFER_EXT, READ_FRAMEBUFFER_EXT or FRAMEBUFFER_EXT.
+
+New State
+
+    (modify table 3.nnn, "Framebuffer (state per framebuffer target binding point)")
+
+    Get Value                     Type   Get Command   Initial Value    Description               Section       Attribute
+    ----------------------------  ----   -----------   --------------   -------------------       ------------  ---------
+    DRAW_FRAMEBUFFER_BINDING_EXT   Z+    GetIntegerv   0                framebuffer object bound  4.4.1         -
+                                                                        to DRAW_FRAMEBUFFER_EXT
+    READ_FRAMEBUFFER_BINDING_EXT   Z+    GetIntegerv   0                framebuffer object        4.4.1         -
+                                                                        to READ_FRAMEBUFFER_EXT
+
+    Remove reference to FRAMEBUFFER_BINDING_EXT.
+
+
+Sample Code
+
+    /* Render to framebuffer object 2 */
+    BindFramebufferEXT(DRAW_FRAMEBUFFER_EXT, 2);
+    RenderScene();
+
+    /* Blit contents of color buffer, depth buffer and stencil buffer
+     * from framebuffer object 2 to framebuffer object 1.
+     */
+    BindFramebufferEXT(READ_FRAMEBUFFER_EXT, 2);
+    BindFramebufferEXT(DRAW_FRAMEBUFFER_EXT, 1);
+    BlitFramebufferEXT(0, 0, 640, 480,
+                       0, 0, 640, 480,
+                       GL_COLOR_BUFFER_BIT |
+                       GL_DEPTH_BUFFER_BIT |
+                       GL_STENCIL_BUFFER_BIT,
+                       GL_NEAREST);
+
+    /* Blit contents of color buffer from framebuffer object 1 to
+     * framebuffer object 2, inverting the image in the X direction.
+     */
+    BindFramebufferEXT(READ_FRAMEBUFFER_EXT, 1);
+    BindFramebufferEXT(DRAW_FRAMEBUFFER_EXT, 2);
+    BlitFramebufferEXT(0, 0, 640, 480,
+                       640, 0, 0, 480,
+                       GL_COLOR_BUFFER_BIT,
+                       GL_NEAREST);
+
+    /* Blit color buffer from framebuffer object 1 to framebuffer
+     * object 3 with a 2X zoom and linear filtering.
+     */
+    BindFramebufferEXT(READ_FRAMEBUFFER_EXT, 1);
+    BindFramebufferEXT(DRAW_FRAMEBUFFER_EXT, 3);
+    BlitFramebufferEXT(0, 0, 640, 480,
+                       0, 0, 1280, 960,
+                       GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+
+Issues
+
+    1) Should we pass in explicit source/dest rects instead of using
+       the rasterpos/pixelzoom?
+
+        Resolved: use explicit rects, so we don't need to perform
+        multiple state changes.
+
+    2) Should rects be (start,size) or (start,end)?
+
+        Resolved: use (start,end).  This is a break from the past
+        (scissor, viewport) but is more intuitive than allowing a
+        negative size where mirrored zooms are desireable.
+
+    3) What should we call the blit function?
+
+        Resolved: BlitFramebufferEXT
+
+    4) Should filtering apply to depth or stencil values?
+
+        Resolved: No
+
+    5) What happens if LINEAR is specified and DEPTH or STENCIL is in
+       the mask?
+
+        Resolved: Generate ERROR_INVALID_OPERATION
+
+    6) What happens if READ_FRAMEBUFFER is NONE and a read is
+       attempted?
+
+        Resolved: Generate ERROR_INVALID_OPERATION
+
+    7) Should we generalize binding point assignment with a single
+       entry point and a parameter specifying read/write/whatever?
+
+        Resolved: concensus leans toward separate Read/Draw entry
+        points.
+
+    8) Should we define READ_FRAMEBUFFER and DRAW_FRAMEBUFFER targets
+       for BindFramebuffer instead of introducing a new level of
+       indirection?
+
+        Resolved: Yes.  Binding to the legacy target FRAMEBUFFER sets
+        both DRAW_FRAMEBUFFER and READ_FRAMEBUFFER.  Querying
+        FRAMEBUFFER_BINDING return the DRAW_FRAMEBUFFER_BINDING.
+
+    9) What happens when a user queries framebuffer attributes,
+       e.g. Get(RED_BITS)?  Is the result returned from
+       READ_FRAMEBUFFER or DRAW_FRAMEBUFFER?  Do we need a new query?
+       e.g.
+
+       GetFramebufferParameteriv(int target, enum pname, int* value)
+
+        Resolved: always return the value associated with the
+        DRAW_FRAMEBUFFER.  Do not add a new query.
+
+    10) How does Accum behave in the presence of separate READ/DRAW
+        framebuffers?
+
+        Resolved: Accum returns INVALID_OPERATION if the
+        READ_FRAMEBUFFER and DRAW_FRAMEBUFFER bindings are not
+        identical.
+
+    11) Should blits be allowed between buffers of different bit sizes?
+
+        Resolved: Yes, for color buffers only.  Attempting to blit
+        between depth or stencil buffers of different size generates
+        INVALID_OPERATION.
+
+    12) Should we add support for multiple ReadBuffers, so that
+        multiple color buffers may be copied with a single call to
+        BlitFramebuffer?
+
+        Resolved: No, we considered this but the behavior is awkward
+        to define and the functionality is of limited use.
+
+    13) How should BlitFramebuffer color space conversion be
+        specified?  Do we allow context clamp state to affect the
+        blit?
+
+        Resolved: Blitting to a fixed point buffer always clamps,
+        blitting to a floating point buffer never clamps.  The context
+        state is ignored.
+
+    14) Should overlapped blits be allowed?  Should they be guaranteed
+        to work?
+
+        Resolved: Overlapping blits are allowed but are undefined.
+
+
+Revision History
+
+    Revision 15, 2007/4/6
+      - Removed language left over from ReadBuffers.
+      - Removed reference to nonexistent 'CopyTexImage3D'.
+    Revision 14, 2006/09/29
+      - Changed the resolution of issue 12 to reflect the working
+        group decision to abandon ReadBuffers.
+      - Eliminated issues 15, 16 and 17 as they are no longer relevent.
+      - Changed the resolution of issue 14 and the corresponding spec
+        language to indicate that the result of an overlapping blit is
+        undefined.
+      - Changed the spec language to clarify that the lower bound of a
+        blit rectangle is inclusive while the upper bound is
+        exclusive.
+      - Added a sample showing an inverted blit, to clarify the pixel
+        addressing rules.
+      - Clarified spec language and error behavior to indicate that
+        blitting DEPTH and STENCIL buffers with LINEAR filtering is
+        always disallowed, whether or not the blit is scaling.
+    Revision 13, 2006/06/01 (Jeff Juliano)
+      - Clarify errors generated when read and draw framebuffers are
+        incomplete.
+    Revision 12, 2005/12/22 (Jon Leech)
+      - Assigned enumerant values. Add return type to BlitFramebufferEXT.
+        Note INVALID_ENUM error if filter is not LINEAR or NEAREST.
+    Revision 11, 2005/12/14
+      - Added several missing conditions to the Errors section.
+      - Changed status to "Complete".
+    Revision 10, 2005/11/6
+      - Removed all ReadBuffers discussion, as this functionality will
+        be deferred.  Issues 15-17 are hereafter irrelevent.
+    Revision 9, 2005/10/31
+      - Resolved issue 16 and updated language to reflect this decision.
+      - Minor language changes per feedback.
+      - Added issue 17 and resolution, although language does not reflect this.
+    Revision 8, 2005/10/20
+      - Added ReadBuffersEXT language
+      - Removed some redundant language in ReadBuffer
+      - Re-opened issue 15 for further consideration
+      - Added issue 16
+    Revision 7, 2005/10/7
+      - Added issues 13 and 14, and resolution for 11, 13, and 14.
+      - Added dependency on ARB_color_buffer_float.
+      - Removed multisample language, now covered in EXT_framebuffer_multisample.
+      - Added framebuffer incomplete error language to spec proper.
+      - Alias DRAW_FRAMEBUFFER_BINDING_EXT to FRAMEBUFFER_BINDING_EXT.
+      - Updated Overview text to reflect the resolution to issue 8.
+    Revision 6, 2005/9/26
+      - Moved issues to the end, per new conventions.
+      - Added new language referring to DRAW_FRAMEBUFFER and
+        READ_FRAMEBUFFER bind points to sections 4.1.1, 4.4.1,
+        4.4.2.2, 4.4.2.3, 4.4.4.2, 6.1.3 and Errors, and updated the
+        example code, per resolution of issue 8.
+      - Added language in section 4.4.1 specifying Get behavior, per
+        resolution of issue 9.
+      - Added language to section 4.2.4 describing new error behavior
+        for Accum, per resolution of issue 10.
+      - Added language to section 4.3.3 describing color format
+        conversion, per resolution of issue 11.
+    Revision 5, 2005/9/6
+      - Added issues 8 - 11
+      - Minor edits from reviewer feedback
+    Revision 4, 2005/9/5
+      - Added chapter 4 intro section
+      - Added errors and state table information
+      - Added sample code
+      - fixed typos
+    Revision 3, 2005/8/29
+      - Converted to spec template
+    Revision 2, 2005/7/18
+      - Lots of new issues added and resolved
+    Revision 1, 2005/7/5
+      - Initial draft

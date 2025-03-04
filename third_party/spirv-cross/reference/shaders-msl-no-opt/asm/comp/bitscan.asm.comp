@@ -33,21 +33,21 @@ struct SSBO
     int4 i;
 };
 
-kernel void main0(device SSBO& _4 [[buffer(0)]])
+kernel void main0(device SSBO& _6 [[buffer(0)]])
 {
-    uint4 _19 = _4.u;
-    int4 _20 = _4.i;
-    _4.u = spvFindLSB(_19);
-    _4.i = int4(spvFindLSB(_19));
-    _4.u = uint4(spvFindLSB(_20));
-    _4.i = spvFindLSB(_20);
-    _4.u = spvFindUMSB(_19);
-    _4.i = int4(spvFindUMSB(_19));
-    _4.u = spvFindUMSB(uint4(_20));
-    _4.i = int4(spvFindUMSB(uint4(_20)));
-    _4.u = uint4(spvFindSMSB(int4(_19)));
-    _4.i = spvFindSMSB(int4(_19));
-    _4.u = uint4(spvFindSMSB(_20));
-    _4.i = spvFindSMSB(_20);
+    uint4 _19 = _6.u;
+    int4 _20 = _6.i;
+    _6.u = spvFindLSB(_19);
+    _6.i = int4(spvFindLSB(_19));
+    _6.u = uint4(spvFindLSB(_20));
+    _6.i = spvFindLSB(_20);
+    _6.u = spvFindUMSB(_19);
+    _6.i = int4(spvFindUMSB(_19));
+    _6.u = spvFindUMSB(uint4(_20));
+    _6.i = int4(spvFindUMSB(uint4(_20)));
+    _6.u = uint4(spvFindSMSB(int4(_19)));
+    _6.i = spvFindSMSB(int4(_19));
+    _6.u = uint4(spvFindSMSB(_20));
+    _6.i = spvFindSMSB(_20);
 }
 

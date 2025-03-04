@@ -156,12 +156,16 @@ class MainActivity : Activity() {
         val scene = modelViewer.scene
         val ibl = "default_env"
         readCompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
-            scene.indirectLight = KTX1Loader.createIndirectLight(engine, it)
+            val bundle = KTX1Loader.createIndirectLight(engine, it)
+            scene.indirectLight = bundle.indirectLight
+            modelViewer.indirectLightCubemap = bundle.cubemap
             scene.indirectLight!!.intensity = 30_000.0f
             viewerContent.indirectLight = modelViewer.scene.indirectLight
         }
         readCompressedAsset("envs/$ibl/${ibl}_skybox.ktx").let {
-            scene.skybox = KTX1Loader.createSkybox(engine, it)
+            val bundle = KTX1Loader.createSkybox(engine, it)
+            scene.skybox = bundle.skybox
+            modelViewer.skyboxCubemap = bundle.cubemap
         }
     }
 

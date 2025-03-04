@@ -1,0 +1,113 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGI_transparent_pixel
+
+Name Strings
+
+    GLX_SGI_transparent_pixel
+
+Version
+
+    $Date: 1998/04/21 03:53:16 $ $Revision: 1.3 $
+
+Number
+
+    153
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides a means to request a visual with a
+    transparent pixel and to query whether a visual supports a
+    transparent pixel value as well as the value of the transparent
+    pixel.  Note that the notion of level and transparent pixels
+    are orthogonal as bother layer 1 and layer 0 visuals may or
+    may not have a transparent pixel value.
+
+Issues
+
+    Is it okay to return a vector in glXGetConfig ?
+
+    Should the RGB color value use something more X-like, e.g.
+    16-bit component values.
+
+    I think its a good idea to use integer RGBA color components
+    so that one can use some argument about exact integer values
+    being rasterized predictable but we all know the transparent
+    pixel value is going to be (1.0,1.0,1.0) or (0.0,0.0,0.0) so
+    maybe we should provide a simpler hack?
+
+    Is there problem with the value queries returning zero if the
+    visual doesn't contain a transparent pixel?
+
+    Why not admit that zero is the one true transparent
+    pixel value and simply live with GLX_TRANSPARENT_PIXEL
+    as the only new enum?
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    GLX_TRANSPARENT_PIXEL_SGI
+    GLX_TRANSPARENT_COLOR
+    GLX_TRANSPARENT_INDEX
+
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations and
+the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+	
+    [Add to Section 3.2.2 of the 1.0 GLX Specification (Configuration
+     Management)]
+
+    [Add to Table 1: Configuration Attributes]
+
+    GLX_TRANSPARENT_PIXEL_SGI    boolean    True if contains a transparent pixel
+    GLX_TRANSPARENT_INDEX_SGI    integer    if RGB mode or no transparent pixel
+					    0, else transparent index value
+    GLX_TRANSPARENT_COLOR_SGI	 Color*4    if index mode or no transparent
+					    pixel 0, else scaled component
+					    values
+    
+    type Color is essentially the OpenGL signed integer color type which
+    maps to an OpenGL float color in the range (0.0,1.0) as described
+    in table 2.4 of the 1.0 OpenGL specification.
+
+
+Errors
+
+    No new errors for glXGetConfig or glXChooseVisual.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

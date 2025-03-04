@@ -1,0 +1,61 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T>
+struct spvDescriptor
+{
+    T value;
+};
+
+template<typename T>
+struct spvDescriptorArray
+{
+    spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(ptr)
+    {
+    }
+    const device T& operator [] (size_t i) const
+    {
+        return ptr[i].value;
+    }
+    const device spvDescriptor<T>* ptr;
+};
+
+struct SSBO
+{
+    float4 v[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(64u, 1u, 1u);
+
+struct spvDescriptorSetBuffer0
+{
+    device SSBO* m_13 [[id(0)]];
+    texture2d<float> T [[id(1)]];
+    spvDescriptor<texture2d<float>> Ts [[id(2)]][1] /* unsized array hack */;
+};
+
+struct spvDescriptorSetBuffer1
+{
+    sampler S [[id(0)]];
+    spvDescriptor<sampler> Ss [[id(1)]][1] /* unsized array hack */;
+};
+
+static inline __attribute__((always_inline))
+void in_func(device SSBO& _13, thread uint3& gl_GlobalInvocationID, texture2d<float> T, sampler S, const spvDescriptorArray<texture2d<float>> Ts, thread uint3& gl_WorkGroupID, const spvDescriptorArray<sampler> Ss)
+{
+    _13.v[gl_GlobalInvocationID.x] = T.sample(S, float2(0.5), level(0.0));
+    _13.v[gl_GlobalInvocationID.x] = Ts[gl_WorkGroupID.x].sample(Ss[gl_WorkGroupID.x], float2(0.5), level(0.0));
+}
+
+kernel void main0(const device spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], const device spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    spvDescriptorArray<texture2d<float>> Ts {spvDescriptorSet0.Ts};
+    spvDescriptorArray<sampler> Ss {spvDescriptorSet1.Ss};
+
+    in_func((*spvDescriptorSet0.m_13), gl_GlobalInvocationID, spvDescriptorSet0.T, spvDescriptorSet1.S, Ts, gl_WorkGroupID, Ss);
+}
+

@@ -1,0 +1,259 @@
+//===--- LangOptions.def - Language option database -------------*- C++ -*-===//
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+// LangOptions.fixed.def                                                     //
+// Copyright (C) Microsoft Corporation. All rights reserved.                 //
+// This file is distributed under the University of Illinois Open Source     //
+// License. See LICENSE.TXT for details.                                     //
+//                                                                           //
+// This file defines the language options. Users of this file must           //
+// define the LANGOPT macro to make use of this information.                 //
+//                                                                           //
+// Optionally, the user may also define:                                     //
+//                                                                           //
+// BENIGN_LANGOPT: for options that don't affect the construction of the AST in//
+//     any way (that is, the value can be different between an implicit module//
+//     and the user of that module).                                         //
+//                                                                           //
+// COMPATIBLE_LANGOPT: for options that affect the construction of the AST in//
+//     a way that doesn't prevent interoperability (that is, the value can be//
+//     different between an explicit module and the user of that module).    //
+//                                                                           //
+// ENUM_LANGOPT: for options that have enumeration, rather than unsigned, type.//
+//                                                                           //
+// VALUE_LANGOPT: for options that describe a value rather than a flag.      //
+//                                                                           //
+// BENIGN_ENUM_LANGOPT, COMPATIBLE_ENUM_LANGOPT: combinations of the above.  //
+//                                                                           //
+// FIXME: Clients should be able to more easily select whether they want     //
+// different levels of compatibility versus how to handle different kinds    //
+// of option.                                                                //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+#ifndef LANGOPT
+#  error Define the LANGOPT macro to handle language options
+#endif
+
+#ifndef COMPATIBLE_LANGOPT
+#  define COMPATIBLE_LANGOPT(Name, Bits, Default, Description) \
+     LANGOPT(Name, Bits, Default, Description)
+#endif
+
+#ifndef BENIGN_LANGOPT
+#  define BENIGN_LANGOPT(Name, Bits, Default, Description) \
+     COMPATIBLE_LANGOPT(Name, Bits, Default, Description)
+#endif
+
+#ifndef COMPATIBLE_LANGOPT_BOOL
+#  define COMPATIBLE_LANGOPT_BOOL(Name, Default, Description) \
+     LANGOPT_BOOL(Name, Default, Description)
+#endif
+
+#ifndef BENIGN_LANGOPT_BOOL
+#  define BENIGN_LANGOPT_BOOL(Name, Default, Description) \
+     COMPATIBLE_LANGOPT_BOOL(Name, Default, Description)
+#endif
+
+// add default LANGOPT_BOOL.
+#ifndef LANGOPT_BOOL
+  #define LANGOPT_BOOL(Name, Default, Description)
+#endif
+
+#ifndef ENUM_LANGOPT
+#  define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
+     LANGOPT(Name, Bits, Default, Description)
+#endif
+
+#ifndef COMPATIBLE_ENUM_LANGOPT
+#  define COMPATIBLE_ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
+     ENUM_LANGOPT(Name, Type, Bits, Default, Description)
+#endif
+
+#ifndef BENIGN_ENUM_LANGOPT
+#  define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
+     COMPATIBLE_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
+#endif
+
+#ifndef VALUE_LANGOPT
+#  define VALUE_LANGOPT(Name, Bits, Default, Description) \
+     LANGOPT(Name, Bits, Default, Description)
+#endif
+
+// FIXME: A lot of the BENIGN_ options should be COMPATIBLE_ instead.
+LANGOPT(C99               , 1, 0, "C99")
+LANGOPT(C11               , 1, 0, "C11")
+LANGOPT_BOOL(MSVCCompat, 0, "Microsoft Visual C++ full compatibility mode")
+LANGOPT_BOOL(MicrosoftExt, 0, "Microsoft C++ extensions")
+LANGOPT_BOOL(AsmBlocks, 0, "Microsoft inline asm blocks")
+LANGOPT_BOOL(Borland, 0, "Borland extensions")
+LANGOPT_BOOL(CPlusPlus, 1, "C++")
+LANGOPT_BOOL(CPlusPlus11, 0, "C++11")
+LANGOPT(CPlusPlus14       , 1, 0, "C++14")
+LANGOPT(CPlusPlus1z       , 1, 0, "C++1z")
+LANGOPT(ObjC1             , 1, 0, "Objective-C 1")
+LANGOPT(ObjC2             , 1, 0, "Objective-C 2")
+BENIGN_LANGOPT_BOOL(ObjCDefaultSynthProperties, 0,
+               "Objective-C auto-synthesized properties")
+BENIGN_LANGOPT_BOOL(EncodeExtendedBlockSig, 0,
+               "Encoding extended block type signature")
+BENIGN_LANGOPT_BOOL(ObjCInferRelatedResultType, 1,
+               "Objective-C related result type inference")
+LANGOPT_BOOL(AppExt, 0, "Objective-C App Extension")
+LANGOPT_BOOL(Trigraphs, 0,"trigraphs")
+LANGOPT_BOOL(LineComment, 1, "'//' comments")
+LANGOPT_BOOL(Bool, 1, "bool, true, and false keywords")
+LANGOPT_BOOL(Half, 0, "half keyword")
+LANGOPT_BOOL(WChar, CPlusPlus, "wchar_t keyword")
+BENIGN_LANGOPT_BOOL(DollarIdents, 1, "'$' in identifiers")
+BENIGN_LANGOPT_BOOL(AsmPreprocessor, 0, "preprocessor in asm mode")
+BENIGN_LANGOPT_BOOL(GNUMode, 0, "GNU extensions")
+LANGOPT_BOOL(GNUKeywords, 0, "GNU keywords")
+BENIGN_LANGOPT_BOOL(ImplicitInt, !C99 && !CPlusPlus, "C89 implicit 'int'")
+LANGOPT_BOOL(Digraphs, 0, "digraphs")
+BENIGN_LANGOPT_BOOL(HexFloats, C99, "C99 hexadecimal float constants")
+LANGOPT_BOOL(CXXOperatorNames, 0, "C++ operator name keywords")
+LANGOPT_BOOL(AppleKext, 0, "Apple kext support")
+BENIGN_LANGOPT_BOOL(PascalStrings, 0, "Pascal string support")
+LANGOPT_BOOL(WritableStrings, 0, "writable string support")
+LANGOPT_BOOL(ConstStrings, 0, "const-qualified string support")
+LANGOPT_BOOL(LaxVectorConversions, 1, "lax vector conversions")
+LANGOPT_BOOL(AltiVec, 0, "AltiVec-style vector initializers")
+LANGOPT_BOOL(ZVector, 0, "System z vector extensions")
+LANGOPT_BOOL(Exceptions, 0, "exception handling")
+LANGOPT_BOOL(ObjCExceptions, 0, "Objective-C exceptions")
+LANGOPT_BOOL(CXXExceptions, 0, "C++ exceptions")
+LANGOPT_BOOL(SjLjExceptions, 0, "setjmp-longjump exception handling")
+LANGOPT_BOOL(TraditionalCPP, 0, "traditional CPP emulation")
+LANGOPT_BOOL(RTTI, 0, "run-time type information")
+LANGOPT_BOOL(RTTIData, 0, "emit run-time type information data")
+LANGOPT_BOOL(MSBitfields, 0, "Microsoft-compatible structure layout")
+LANGOPT_BOOL(Freestanding, 0, "freestanding implementation")
+LANGOPT_BOOL(NoBuiltin, 0, "disable builtin functions")
+LANGOPT_BOOL(NoMathBuiltin, 0, "disable math builtin functions")
+LANGOPT_BOOL(GNUAsm, 1, "GNU-style inline assembly")
+
+BENIGN_LANGOPT_BOOL(ThreadsafeStatics, 0, "thread-safe static initializers")
+LANGOPT_BOOL(POSIXThreads, 0, "POSIX thread support")
+LANGOPT_BOOL(Blocks, 0, "blocks extension to C")
+BENIGN_LANGOPT_BOOL(EmitAllDecls, 0, "support for emitting all declarations")
+LANGOPT_BOOL(MathErrno, 0, "errno support for math functions")
+BENIGN_LANGOPT_BOOL(HeinousExtensions, 0, "Extensions that we really don't like and may be ripped out at any time")
+LANGOPT_BOOL(Modules, 0, "modules extension to C")
+COMPATIBLE_LANGOPT_BOOL(ModulesDeclUse, 0, "require declaration of module uses")
+LANGOPT_BOOL(ModulesSearchAll, 0, "search even non-imported modules to find unresolved references")
+COMPATIBLE_LANGOPT_BOOL(ModulesStrictDeclUse, 0, "require declaration of module uses and all headers to be in modules")
+BENIGN_LANGOPT_BOOL(ModulesErrorRecovery, 0, "automatically import modules as needed when performing error recovery")
+BENIGN_LANGOPT_BOOL(ImplicitModules, 0, "build modules that are not specified via -fmodule-file")
+COMPATIBLE_LANGOPT_BOOL(ModulesLocalVisibility, 0, "local submodule visibility")
+COMPATIBLE_LANGOPT_BOOL(ModulesHideInternalLinkage, 0, "hiding non-visible internal linkage declarations from redeclaration lookup")
+COMPATIBLE_LANGOPT_BOOL(Optimize, 0, "__OPTIMIZE__ predefined macro")
+COMPATIBLE_LANGOPT_BOOL(OptimizeSize, 0, "__OPTIMIZE_SIZE__ predefined macro")
+LANGOPT_BOOL(Static, 0, "__STATIC__ predefined macro (as opposed to __DYNAMIC__)")
+VALUE_LANGOPT(PackStruct  , 32, 0,
+              "default struct packing maximum alignment")
+VALUE_LANGOPT(MaxTypeAlign  , 32, 0,
+              "default maximum alignment for types")
+VALUE_LANGOPT(PICLevel    , 2, 0, "__PIC__ level")
+VALUE_LANGOPT(PIELevel    , 2, 0, "__PIE__ level")
+LANGOPT_BOOL(GNUInline, 0, "GNU inline semantics")
+COMPATIBLE_LANGOPT_BOOL(NoInlineDefine, 0, "__NO_INLINE__ predefined macro")
+COMPATIBLE_LANGOPT_BOOL(Deprecated, 0, "__DEPRECATED predefined macro")
+LANGOPT_BOOL(FastMath, 0, "__FAST_MATH__ predefined macro")
+LANGOPT_BOOL(FiniteMathOnly, 0, "__FINITE_MATH_ONLY__ predefined macro")
+
+BENIGN_LANGOPT_BOOL(ObjCGCBitmapPrint, 0, "printing of GC's bitmap layout for __weak/__strong ivars")
+
+BENIGN_LANGOPT_BOOL(AccessControl, 1, "C++ access control")
+LANGOPT_BOOL(CharIsSigned, 1, "signed char")
+LANGOPT_BOOL(ShortWChar, 0, "unsigned short wchar_t")
+ENUM_LANGOPT(MSPointerToMemberRepresentationMethod, PragmaMSPointersToMembersKind, 2, PPTMK_BestCase, "member-pointer representation method")
+
+LANGOPT_BOOL(ShortEnums, 0, "short enum types")
+
+LANGOPT_BOOL(HLSL, 1, "Microsoft HLSL") // HLSL Change: LangOption for HLSL
+LANGOPT_BOOL(OpenCL, 0, "OpenCL")
+LANGOPT(OpenCLVersion     , 32, 0, "OpenCL version")
+LANGOPT_BOOL(NativeHalfType, 1, "Native half type support")
+LANGOPT_BOOL(HalfArgsAndReturns, 1, "half args and returns")
+LANGOPT_BOOL(CUDA, 0, "CUDA")
+LANGOPT_BOOL(OpenMP, 0, "OpenMP support")
+LANGOPT_BOOL(OpenMPUseTLS, 0, "Use TLS for threadprivates or runtime calls")
+LANGOPT_BOOL(CUDAIsDevice, 0, "Compiling for CUDA device")
+LANGOPT_BOOL(CUDAAllowHostCallsFromHostDevice, 0, "Allow host device functions to call host functions")
+LANGOPT_BOOL(CUDADisableTargetCallChecks, 0, "Disable checks for call targets (host, device, etc.)")
+
+LANGOPT_BOOL(AssumeSaneOperatorNew, 1, "implicit __attribute__((malloc)) for C++'s new operators")
+LANGOPT_BOOL(SizedDeallocation, 0, "enable sized deallocation functions")
+LANGOPT_BOOL(ConceptsTS, 0, "enable C++ Extensions for Concepts")
+BENIGN_LANGOPT_BOOL(ElideConstructors, 1, "C++ copy constructor elision")
+BENIGN_LANGOPT_BOOL(DumpRecordLayouts, 0, "dumping the layout of IRgen'd records")
+BENIGN_LANGOPT_BOOL(DumpRecordLayoutsSimple, 0, "dumping the layout of IRgen'd records in a simple form")
+BENIGN_LANGOPT_BOOL(DumpVTableLayouts, 0, "dumping the layouts of emitted vtables")
+LANGOPT_BOOL(NoConstantCFStrings, 0, "no constant CoreFoundation strings")
+BENIGN_LANGOPT_BOOL(InlineVisibilityHidden, 0, "hidden default visibility for inline C++ methods")
+BENIGN_LANGOPT_BOOL(ParseUnknownAnytype, 0, "__unknown_anytype")
+BENIGN_LANGOPT_BOOL(DebuggerSupport, 0, "debugger support")
+BENIGN_LANGOPT_BOOL(DebuggerCastResultToId, 0, "for 'po' in the debugger, cast the result to id if it is of unknown type")
+BENIGN_LANGOPT_BOOL(DebuggerObjCLiteral, 0, "debugger Objective-C literals and subscripting support")
+
+BENIGN_LANGOPT_BOOL(SpellChecking, 1, "spell-checking")
+LANGOPT_BOOL(SinglePrecisionConstants, 0, "treating double-precision floating point constants as single precision constants")
+LANGOPT_BOOL(FastRelaxedMath, 0, "OpenCL fast relaxed math")
+LANGOPT_BOOL(DefaultFPContract, 0, "FP_CONTRACT")
+LANGOPT_BOOL(NoBitFieldTypeAlign, 0, "bit-field type alignment")
+LANGOPT(HexagonQdsp6Compat , 1, 0, "hexagon-qdsp6 backward compatibility")
+LANGOPT_BOOL(ObjCAutoRefCount, 0, "Objective-C automated reference counting")
+LANGOPT_BOOL(ObjCARCWeak, 0, "__weak support in the ARC runtime")
+LANGOPT_BOOL(ObjCSubscriptingLegacyRuntime, 0, "Subscripting support in legacy ObjectiveC runtime")
+LANGOPT_BOOL(FakeAddressSpaceMap, 0, "OpenCL fake address space map")
+ENUM_LANGOPT(AddressSpaceMapMangling , AddrSpaceMapMangling, 2, ASMM_Target, "OpenCL address space map mangling mode")
+
+LANGOPT_BOOL(MRTD, 0, "-mrtd calling convention")
+BENIGN_LANGOPT_BOOL(DelayedTemplateParsing, 0, "delayed template parsing")
+LANGOPT_BOOL(BlocksRuntimeOptional, 0, "optional blocks runtime")
+
+ENUM_LANGOPT(GC, GCMode, 2, NonGC, "Objective-C Garbage Collection mode")
+ENUM_LANGOPT(ValueVisibilityMode, Visibility, 3, DefaultVisibility,
+             "value symbol visibility")
+ENUM_LANGOPT(TypeVisibilityMode, Visibility, 3, DefaultVisibility,
+             "type symbol visibility")
+ENUM_LANGOPT(StackProtector, StackProtectorMode, 2, SSPOff,
+             "stack protector mode")
+ENUM_LANGOPT(SignedOverflowBehavior, SignedOverflowBehaviorTy, 2, SOB_Undefined,
+             "signed integer overflow handling")
+
+BENIGN_LANGOPT(ArrowDepth, 32, 256,
+               "maximum number of operator->s to follow")
+BENIGN_LANGOPT(InstantiationDepth, 32, 256,
+               "maximum template instantiation depth")
+BENIGN_LANGOPT(ConstexprCallDepth, 32, 512,
+               "maximum constexpr call depth")
+BENIGN_LANGOPT(ConstexprStepLimit, 32, 1048576,
+               "maximum constexpr evaluation steps")
+BENIGN_LANGOPT(BracketDepth, 32, 256,
+               "maximum bracket nesting depth")
+BENIGN_LANGOPT(NumLargeByValueCopy, 32, 0,
+        "if non-zero, warn about parameter or return Warn if parameter/return value is larger in bytes than this setting. 0 is no check.")
+VALUE_LANGOPT(MSCompatibilityVersion, 32, 0, "Microsoft Visual C/C++ Version")
+VALUE_LANGOPT(VtorDispMode, 2, 1, "How many vtordisps to insert")
+
+LANGOPT_BOOL(ApplePragmaPack, 0, "Apple gcc-compatible #pragma pack handling")
+
+LANGOPT_BOOL(RetainCommentsFromSystemHeaders, 0, "retain documentation comments from system headers in the AST")
+
+LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
+                                           "field padding (0: none, 1:least "
+                                           "aggressive, 2: more aggressive)")
+
+#undef LANGOPT
+#undef COMPATIBLE_LANGOPT
+#undef BENIGN_LANGOPT
+#undef ENUM_LANGOPT
+#undef COMPATIBLE_ENUM_LANGOPT
+#undef BENIGN_ENUM_LANGOPT
+#undef VALUE_LANGOPT
+
+#undef LANGOPT_BOOL
+#undef COMPATIBLE_LANGOPT_BOOL
+#undef BENIGN_LANGOPT_BOOL

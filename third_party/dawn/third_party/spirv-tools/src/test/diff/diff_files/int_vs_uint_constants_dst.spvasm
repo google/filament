@@ -1,0 +1,46 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 28
+; Schema: 0
+OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %4 "main" %13 %17
+OpSource GLSL 450
+OpName %4 "main"
+OpName %11 "gl_PerVertex"
+OpMemberName %11 0 "gl_Position"
+OpMemberName %11 1 "gl_PointSize"
+OpMemberName %11 2 "gl_ClipDistance"
+OpMemberName %11 3 "gl_CullDistance"
+OpName %13 ""
+OpName %17 "_ua_position"
+OpMemberDecorate %11 0 BuiltIn Position
+OpMemberDecorate %11 1 BuiltIn PointSize
+OpMemberDecorate %11 2 BuiltIn ClipDistance
+OpMemberDecorate %11 3 BuiltIn CullDistance
+OpDecorate %11 Block
+OpDecorate %17 Location 0
+%2 = OpTypeVoid
+%3 = OpTypeFunction %2
+%6 = OpTypeFloat 32
+%7 = OpTypeVector %6 4
+%8 = OpTypeInt 32 0
+%9 = OpConstant %8 1
+%10 = OpTypeArray %6 %9
+%11 = OpTypeStruct %7 %6 %10 %10
+%12 = OpTypePointer Output %11
+%13 = OpVariable %12 Output
+%14 = OpTypeInt 32 1
+%15 = OpConstant %14 0
+%16 = OpTypePointer Input %7
+%17 = OpVariable %16 Input
+%19 = OpTypePointer Output %7
+%4 = OpFunction %2 None %3
+%5 = OpLabel
+%18 = OpLoad %7 %17
+%20 = OpAccessChain %19 %13 %15
+OpStore %20 %18
+OpReturn
+OpFunctionEnd

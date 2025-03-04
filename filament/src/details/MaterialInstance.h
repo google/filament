@@ -137,7 +137,10 @@ public:
 
     void setTransparencyMode(TransparencyMode mode) noexcept;
 
-    void setCullingMode(CullingMode const culling) noexcept { mCulling = culling; }
+    void setCullingMode(CullingMode const culling) noexcept {
+        mCulling = culling;
+        mShadowCulling = culling;
+    }
 
     void setCullingMode(CullingMode const color, CullingMode const shadow) noexcept {
         mCulling = color;

@@ -1,0 +1,872 @@
+Name
+
+    EXT_texture_integer
+
+Name Strings
+
+    GL_EXT_texture_integer
+
+Contact
+
+    Michael Gold, NVIDIA Corporation (gold 'at' nvidia.com)
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping for GeForce 8 Series (November 2006)
+
+Version
+
+    Last Modified Date:         05/20/2010
+    NVIDIA Revision:            6
+
+Number
+
+    343
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    NV_gpu_program4 or EXT_gpu_shader4 is required.
+
+    ARB_texture_float affects the definition of this extension.
+
+    ARB_color_buffer_float affects the definition of this extension.
+
+    EXT_framebuffer_object affects the definition of this extension.
+
+    This extension is written against the OpenGL 2.0 specification.
+
+Overview
+
+    Fixed-point textures in unextended OpenGL have integer components,
+    but those values are taken to represent floating-point values in
+    the range [0,1].  These integer components are considered
+    "normalized" integers.  When such a texture is accessed by a
+    shader or by fixed-function fragment processing, floating-point
+    values are returned.
+
+    This extension provides a set of new "unnormalized" integer texture
+    formats.  Formats with both signed and unsigned integers are provided.  In
+    these formats, the components are treated as true integers.  When such
+    textures are accessed by a shader, actual integer values are returned.
+
+    Pixel operations that read from or write to a texture or color
+    buffer with unnormalized integer components follow a path similar
+    to that used for color index pixel operations, except that more
+    than one component may be provided at once.  Integer values flow
+    through the pixel processing pipe, and no pixel transfer
+    operations are performed.  Integer format enumerants used for such
+    operations indicate unnormalized integer data.
+
+    Textures or render buffers with unnormalized integer formats may also be
+    attached to framebuffer objects to receive fragment color values written
+    by a fragment shader.  Per-fragment operations that require floating-point
+    color components, including multisample alpha operations, alpha test,
+    blending, and dithering, have no effect when the corresponding colors are
+    written to an integer color buffer.  The NV_gpu_program4 and
+    EXT_gpu_shader4 extensions add the capability to fragment programs and
+    fragment shaders to write signed and unsigned integer output values.
+
+    This extension does not enforce type consistency for texture accesses or
+    between fragment shaders and the corresponding framebuffer attachments.
+    The results of a texture lookup from an integer texture are undefined:
+
+      * for fixed-function fragment processing, or
+
+      * for shader texture accesses expecting floating-point return values.  
+
+    The color components used for per-fragment operations and written into a
+    color buffer are undefined:
+
+      * for fixed-function fragment processing with an integer color buffer,
+
+      * for fragment shaders that write floating-point color components to an
+        integer color buffer, or
+
+      * for fragment shaders that write integer color components to a color
+        buffer with floating point or normalized integer components.
+
+
+New Procedures and Functions
+
+    void ClearColorIiEXT ( int r, int g, int b, int a );
+    void ClearColorIuiEXT ( uint r, uint g, uint b, uint a );
+    void TexParameterIivEXT( enum target, enum pname, int *params );
+    void TexParameterIuivEXT( enum target, enum pname, uint *params );
+    void GetTexParameterIivEXT ( enum target, enum pname, int *params);
+    void GetTexParameterIuivEXT ( enum target, enum pname, uint *params);
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        RGBA_INTEGER_MODE_EXT                           0x8D9E
+
+    Accepted by the <internalFormat> parameter of TexImage1D,
+    TexImage2D, and TexImage3D:
+
+        RGBA32UI_EXT                                    0x8D70
+        RGB32UI_EXT                                     0x8D71
+        ALPHA32UI_EXT                                   0x8D72
+        INTENSITY32UI_EXT                               0x8D73
+        LUMINANCE32UI_EXT                               0x8D74
+        LUMINANCE_ALPHA32UI_EXT                         0x8D75
+
+        RGBA16UI_EXT                                    0x8D76
+        RGB16UI_EXT                                     0x8D77
+        ALPHA16UI_EXT                                   0x8D78
+        INTENSITY16UI_EXT                               0x8D79
+        LUMINANCE16UI_EXT                               0x8D7A
+        LUMINANCE_ALPHA16UI_EXT                         0x8D7B
+
+        RGBA8UI_EXT                                     0x8D7C
+        RGB8UI_EXT                                      0x8D7D
+        ALPHA8UI_EXT                                    0x8D7E
+        INTENSITY8UI_EXT                                0x8D7F
+        LUMINANCE8UI_EXT                                0x8D80
+        LUMINANCE_ALPHA8UI_EXT                          0x8D81
+
+        RGBA32I_EXT                                     0x8D82
+        RGB32I_EXT                                      0x8D83
+        ALPHA32I_EXT                                    0x8D84
+        INTENSITY32I_EXT                                0x8D85
+        LUMINANCE32I_EXT                                0x8D86
+        LUMINANCE_ALPHA32I_EXT                          0x8D87
+
+        RGBA16I_EXT                                     0x8D88
+        RGB16I_EXT                                      0x8D89
+        ALPHA16I_EXT                                    0x8D8A
+        INTENSITY16I_EXT                                0x8D8B
+        LUMINANCE16I_EXT                                0x8D8C
+        LUMINANCE_ALPHA16I_EXT                          0x8D8D
+
+        RGBA8I_EXT                                      0x8D8E
+        RGB8I_EXT                                       0x8D8F
+        ALPHA8I_EXT                                     0x8D90
+        INTENSITY8I_EXT                                 0x8D91
+        LUMINANCE8I_EXT                                 0x8D92
+        LUMINANCE_ALPHA8I_EXT                           0x8D93
+
+    Accepted by the <format> parameter of TexImage1D, TexImage2D,
+    TexImage3D, TexSubImage1D, TexSubImage2D, TexSubImage3D,
+    DrawPixels and ReadPixels:
+
+        RED_INTEGER_EXT                                 0x8D94
+        GREEN_INTEGER_EXT                               0x8D95
+        BLUE_INTEGER_EXT                                0x8D96
+        ALPHA_INTEGER_EXT                               0x8D97
+        RGB_INTEGER_EXT                                 0x8D98
+        RGBA_INTEGER_EXT                                0x8D99
+        BGR_INTEGER_EXT                                 0x8D9A
+        BGRA_INTEGER_EXT                                0x8D9B
+        LUMINANCE_INTEGER_EXT                           0x8D9C
+        LUMINANCE_ALPHA_INTEGER_EXT                     0x8D9D
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    Modify Section 3.6.4 (Rasterization of Pixel Rectangles), p. 126:
+
+    (modify the last paragraph, p. 126)
+    Pixels are drawn using
+
+        void DrawPixels( sizei width, sizei height, enum format,
+            enum type, void *data );
+
+    <format> is a symbolic constant indicating what the values in
+    memory represent.  <width> and <height> are the width and height,
+    respectively, of the pixel rectangle to be drawn. <data> is a
+    pointer to the data to be drawn. These data are represented with
+    one of seven GL data types, specified by <type>. The
+    correspondence between the twenty type token values and the GL
+    data types they indicate is given in table 3.5. If the GL is in
+    color index mode and <format> is not one of COLOR_INDEX,
+    STENCIL_INDEX, or DEPTH_COMPONENT, then the error
+    INVALID_OPERATION occurs.  If the GL is in RGBA mode and the color
+    buffer is an integer format and no fragment shader is active, the
+    error INVALID_OPERATION occurs.  If <type> is BITMAP and <format>
+    is not COLOR_INDEX or STENCIL_INDEX then the error INVALID_ENUM
+    occurs.  If <format> is one of the integer component formats as
+    defined in table 3.6, and <type> is FLOAT, then the error
+    INVALID_ENUM occurs.  Some additional constraints on the
+    combinations of format and type values that are accepted is
+    discussed below.
+
+    (add the following to table 3.6, p. 129)
+    Format Name                  Element Meaning and Order      Target Buffer
+    ------ ----                  ------- ------- --- -----      ------ ------
+    RED_INTEGER_EXT              iR                             Color
+    GREEN_INTEGER_EXT            iG                             Color
+    BLUE_INTEGER_EXT             iB                             Color
+    ALPHA_INTEGER_EXT            iA                             Color
+    RGB_INTEGER_EXT              iR, iG, iB                     Color
+    RGBA_INTEGER_EXT             iR, iG, iB, iA                 Color
+    BGR_INTEGER_EXT              iB, iG, iR                     Color
+    BGRA_INTEGER_EXT             iB, iG, iR, iA                 Color
+    LUMINANCE_INTEGER_EXT        iLuminance                     Color
+    LUMINANCE_ALPHA_INTEGER_EXT  iLuminance, iA                 Color
+
+    Table 3.6: DrawPixels and ReadPixels formats. The second column
+    gives a description of and the number and order of elements in a
+    group. Unless specified as an index, formats yield components.
+    Components are floating-point unless prefixed with the letter 'i'
+    which indicates they are integer.
+
+    (modify first paragraph, p. 129)
+    Data are taken from host memory as a sequence of signed or
+    unsigned bytes (GL data types byte and ubyte), signed or unsigned
+    short integers (GL data types short and ushort), signed or
+    unsigned integers (GL data types int and uint), or floating point
+    values (GL data type float). These elements are grouped into sets
+    of one, two, three, or four values, depending on the format, to
+    form a group.  Table 3.6 summarizes the format of groups obtained
+    from memory; it also indicates those formats that yield indices
+    and those that yield floating-point or integer components.
+
+    (modify the last paragraph, p. 135)
+
+    Conversion to floating-point
+
+    This step applies only to groups of floating-point components. It
+    is not performed on indices or integer components.
+
+    (modify the third paragraph, p. 136)
+    Final Expansion to RGBA
+
+    This step is performed only for non-depth component groups. Each
+    group is converted to a group of 4 elements as follows: if a group
+    does not contain an A element, then A is added and set to 1 for
+    integer components or 1.0 for floating-point components. If any of
+    R, G, or B is missing from the group, each missing element is
+    added and assigned a value of 0 for integer components or 0.0 for
+    floating-point components.
+
+    (modify the last paragraph, p. 136)
+    Final Conversion
+
+    For a color index, final conversion consists of masking the bits
+    of the index to the left of the binary point by 2^n - 1, where n is
+    the number of bits in an index buffer.  For floating-point RGBA
+    components, each element is clamped to [0, 1]. The resulting
+    values are converted to fixed-point according to the rules given
+    in section 2.14.9 (Final Color Processing).  For integer RGBA
+    components, no conversion is applied.  For a depth component, an
+    element is first clamped to [0, 1] and then converted to
+    fixed-point as if it were a window z value (see section 2.11.1,
+    Controlling the Viewport).  Stencil indices are masked by 2^n - 1,
+    where n is the number of bits in the stencil buffer.
+
+    Modify Section 3.6.5 (Pixel Transfer Operations), p. 137
+
+    (modify last paragraph, p. 137)
+    The GL defines five kinds of pixel groups:
+
+    1. Floating-point RGBA component: Each group comprises four color
+       components in floating point format: red, green, blue, and
+       alpha.
+
+    2. Integer RGBA component: Each group comprises four color
+       components in integer format: red, green, blue, and alpha.
+
+    3. Depth component: Each group comprises a single depth component.
+
+    4. Color index: Each group comprises a single color index.
+
+    5. Stencil index: Each group comprises a single stencil index.
+
+    (modify second paragraph, p. 138)
+    Each operation described in this section is applied sequentially
+    to each pixel group in an image. Many operations are applied only
+    to pixel groups of certain kinds; if an operation is not
+    applicable to a given group, it is skipped.  None of the
+    operations defined in this section affect integer RGBA component
+    pixel groups.
+
+    Modify Section 3.8 (Texturing), p. 149
+
+    (insert between the first and second paragraphs, p. 150)
+    The internal data type of a texture may be fixed-point,
+    floating-point, signed integer or unsigned integer, depending on
+    the internalformat of the texture.  The correspondence between
+    internalformat and the internal data type is given in table 3.16.
+    Fixed-point and floating-point textures return a floating-point
+    value and integer textures return signed or unsigned integer
+    values.  When a fragment shader is active, the shader is
+    responsible for interpreting the result of a texture lookup as the
+    correct data type, otherwise the result is undefined.  Fixed
+    functionality assumes floating-point data, hence the result of
+    using fixed functionality with integer textures is undefined.
+
+    Modify Section 3.8.1 (Texture Image Specification), p. 150
+
+    (modify second paragraph, p. 151) The selected groups are
+    processed exactly as for DrawPixels, stopping just before final
+    conversion.  If the <internalformat> of the texture is integer,
+    the components are clamped to the representable range of the
+    internal format: for signed formats, this is [-2^(n-1), 2^(n-1)-1]
+    where n is the number of bits per component; for unsigned formats,
+    the range is [0, 2^n-1].  For R, G, B, and A, if the
+    <internalformat> of the texture is fixed-point, the components are
+    clamped to [0, 1].  Otherwise, the components are not modified.
+
+    (insert between paragraphs five and six, p. 151)
+    Textures with integer internal formats (table 3.16) require
+    integer data.  The error INVALID_OPERATION is generated if the
+    internal format is integer and <format> is not one of the integer
+    formats listed in table 3.6, or if the internal format is not
+    integer and <format> is an integer format, or if <format> is an
+    integer format and <type> is FLOAT.
+
+    (add the following to table 3.16, p. 154)
+    Sized                   Base              R    G    B    A    L    I
+    Internal Format         Internal Format  bits bits bits bits bits bits
+    ----------------------- ---------------  ---- ---- ---- ---- ---- ----
+    ALPHA8I_EXT             ALPHA                             i8
+    ALPHA8UI_EXT            ALPHA                            ui8
+    ALPHA16I_EXT            ALPHA                            i16
+    ALPHA16UI_EXT           ALPHA                           ui16
+    ALPHA32I_EXT            ALPHA                            i32
+    ALPHA32UI_EXT           ALPHA                           ui32
+    LUMINANCE8I_EXT         LUMINANCE                              i8
+    LUMINANCE8UI_EXT        LUMINANCE                             ui8
+    LUMINANCE16I_EXT        LUMINANCE                             i16
+    LUMINANCE16UI_EXT       LUMINANCE                            ui16
+    LUMINANCE32I_EXT        LUMINANCE                             i32
+    LUMINANCE32UI_EXT       LUMINANCE                            ui32
+    LUMINANCE_ALPHA8I_EXT   LUMINANCE_ALPHA                   i8   i8
+    LUMINANCE_ALPHA8UI_EXT  LUMINANCE_ALPHA                  ui8  ui8
+    LUMINANCE_ALPHA16I_EXT  LUMINANCE_ALPHA                  i16  i16
+    LUMINANCE_ALPHA16UI_EXT LUMINANCE_ALPHA                 ui16 ui16
+    LUMINANCE_ALPHA32I_EXT  LUMINANCE_ALPHA                  i32  i32
+    LUMINANCE_ALPHA32UI_EXT LUMINANCE_ALPHA                 ui32 ui32
+    INTENSITY8I_EXT         INTENSITY                                   i8
+    INTENSITY8UI_EXT        INTENSITY                                  ui8
+    INTENSITY16I_EXT        INTENSITY                                  i16
+    INTENSITY16UI_EXT       INTENSITY                                 ui16
+    INTENSITY32I_EXT        INTENSITY                                  i32
+    INTENSITY32UI_EXT       INTENSITY                                 ui32
+    RGB8I_EXT               RGB                i8   i8   i8
+    RGB8UI_EXT              RGB               ui8  ui8  ui8
+    RGB16I_EXT              RGB               i16  i16  i16
+    RGB16UI_EXT             RGB              ui16 ui16 ui16
+    RGB32I_EXT              RGB               i32  i32  i32
+    RGB32UI_EXT             RGB              ui32 ui32 ui32
+    RGBA8I_EXT              RGBA               i8   i8   i8   i8
+    RGBA8UI_EXT             RGBA              ui8  ui8  ui8  ui8
+    RGBA16I_EXT             RGBA              i16  i16  i16  i16
+    RGBA16UI_EXT            RGBA             ui16 ui16 ui16 ui16
+    RGBA32I_EXT             RGBA              i32  i32  i32  i32
+    RGBA32UI_EXT            RGBA             ui32 ui32 ui32 ui32
+
+    Table 3.16: Correspondence of sized internal formats to base
+    internal formats, internal data type and desired component
+    resolutions for each sized internal format.  The component
+    resolution prefix indicates the internal data type: <f> is
+    floating point, <i> is signed integer, <ui> is unsigned integer,
+    and no prefix is fixed-point.
+
+
+    Modify Section 3.8.2 (Alternate Texture Image Specification
+    Commands), p. 159:
+
+    (modify the second paragraph, p. 159)
+    The error INVALID_OPERATION is generated if depth component data
+    is required and no depth buffer is present, or if integer RGBA
+    data is required and the format of the current color buffer is not
+    integer, or if floating-point or fixed-point RGBA data is required
+    and the format of the current color buffer is integer.
+
+    Modify Section 3.8.4 (Texture Parameters), p. 166:
+
+    Various parameters control how the texture array is treated when
+    specified or changed, and when applied to a fragment. Each
+    parameter is set by calling
+
+        void TexParameter{if}( enum target, enum pname, T param );
+        void TexParameter{if}v( enum target, enum pname, T params );
+        void TexParameterIivEXT( enum target, enum pname, int *params );
+        void TexParameterIuivEXT( enum target, enum pname, uint *params );
+
+    <target> is the target, either TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    or TEXTURE_CUBE_MAP. <pname> is a symbolic constant indicating the
+    parameter to be set; the possible constants and corresponding
+    parameters are summarized in table 3.19. In the first form of the
+    command, <param> is a value to which to set a single-valued
+    parameter; in the second and third forms of the command, <params>
+    is an array of parameters whose type depends on the parameter
+    being set.
+
+    If the value for TEXTURE_PRIORITY is specified as an integer, the
+    conversion for signed integers from table 2.9 is applied to
+    convert the value to floating-point.  The floating point value of
+    TEXTURE_PRIORITY is clamped to lie in [0, 1].
+
+    If the values for TEXTURE_BORDER_COLOR are specified with
+    TexParameterIivEXT or TexParameterIuivEXT, the values are
+    unmodified and stored with an internal data type of integer.  If
+    specified with TexParameteriv, the conversion for signed integers
+    from table 2.9 is applied to convert these values to
+    floating-point.  Otherwise the values are unmodified and stored as
+    floating-point.
+
+
+
+    (modify table 3.19, p. 167)
+    Name                  Type         Legal Values
+    ----                  ----         ------------
+    TEXTURE_BORDER_COLOR  4 floats or  any 4 values
+                          4 ints or
+                          4 uints
+
+    Table 3.19: Texture parameters and their values.
+
+    Modify Section 3.8.8 (Texture Minification), p. 170
+
+    (modify last paragraph, p. 174)
+
+    ... If the texture contains color components, the values of
+    TEXTURE_BORDER_COLOR are interpreted as an RGBA color to match the
+    texture's internal format in a manner consistent with table 3.15.
+    The internal data type of the border values must be consistent
+    with the type returned by the texture as described in section 3.8,
+    or the result is undefined.  The border values for texture
+    components stored as fixed-point values are clamped to [0, 1]
+    before they are used.  If the texture contains depth components,
+    the first component of TEXTURE_BORDER_COLOR is interpreted as a
+    depth value
+
+    Modify Section 3.8.10 (Texture Completeness), p. 177:
+
+    (add to the requirements for one-, two-, or three-dimensional
+    textures)
+    If the internalformat is integer, TEXTURE_MAG_FILTER must be
+    NEAREST and TEXTURE_MIN_FILTER must be NEAREST or
+    NEAREST_MIPMAP_NEAREST.
+    
+    Modify Section 3.11.2 (Shader Execution), p. 194
+
+    (modify Shader Outputs, first paragraph, p. 196)
+    ... These are gl_FragColor, gl_FragData[n], and gl_FragDepth.  If
+    fragment clamping is enabled and the color buffer has a
+    fixed-point or floating-point format, the final fragment color
+    values or the final fragment data values written by a fragment
+    shader are clamped to the range [0, 1].  If fragment clamping is
+    disabled or the color buffer has an integer format, the final
+    fragment color values or the final fragment data values are not
+    modified.  The final fragment depth...
+
+    (insert between the first paragraph and second paragraphs of
+    "Shader Outputs", p. 196)
+    Colors values written by the fragment shader may be floating-
+    point, signed integer or unsigned integer.  If the color buffer
+    has a fixed-point format, the color values are assumed to be
+    floating-point and are converted to fixed-point as described in
+    section 2.14.9; otherwise no type conversion is applied.  If the
+    values written by the fragment shader do not match the format(s)
+    of the corresponding color buffer(s), the result is undefined.
+
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Modify Chapter 4 Introduction, (p. 198)
+
+    (modify third paragraph, p. 198)
+    Color buffers consist of unsigned integer color indices, R, G, B
+    and optionally A floating-point components represented as
+    fixed-point unsigned integer or floating-point values, or R, G, B
+    and optionally A integer components represented as signed or
+    unsigned integer values.  The number of bitplanes...
+
+    Modify Section 4.1.3 (Multisample Fragment Operations), p. 200
+
+    (modify the second paragraph in this section)
+    ... If SAMPLE_ALPHA_TO_COVERAGE is enabled and the color buffer
+    has a fixed-point or floating-point format, a temporary coverage
+    value is generated ...
+
+    Modify Section 4.1.4 (Alpha Test), p. 201
+
+    (modify the first paragraph in this section)    
+    This step applies only in RGBA mode and only if the color buffer
+    has a fixed-point or floating-point format. In color index mode or
+    if the color buffer has an integer format, proceed to the next
+    operation. The alpha test discards ...
+
+    Modify Section 4.1.8 (Blending), p. 205
+
+    (modify the second paragraph, p. 206)
+    ... Blending is dependent on the incoming fragment's alpha value
+    and that of the corresponding currently stored pixel. Blending
+    applies only in RGBA mode and only if the color buffer has a
+    fixed-point or floating-point format; in color index mode or if
+    the color buffer has an integer format, it is bypassed. ...
+
+    Modify Section 4.2.3 (Clearing the Buffers), p. 215
+
+       void ClearColor(float r, float g, float b, float a);
+
+    sets the clear value for fixed-point and floating-point color
+    buffers in RGBA mode.  The specified components are stored as
+    floating-point values.
+
+       void ClearColorIiEXT(int r, int g, int b, int a);
+       void ClearColorIuiEXT(uint r, uint g, uint b, uint a);
+
+    set the clear value for signed integer and unsigned integer color
+    buffers, respectively, in RGBA mode.  The specified components are
+    stored as integer values.
+
+    (add to the end of first partial paragraph, p. 217) ... then a
+    Clear directed at that buffer has no effect.  When fixed-point
+    RGBA color buffers are cleared, the clear color values are assumed
+    to be floating-point and are clamped to [0,1] before being
+    converted to fixed-point according to the rules of section 2.14.9.
+    The result of clearing fixed-point or floating-point color buffers
+    is undefined if the clear color was specified as integer values.
+    The result of when clearing integer color buffers is undefined if
+    the clear color was specified as floating-point values.
+
+    Modify Section 4.3.2 (Reading Pixels), p. 219
+
+    (append to the last paragraph, p. 221)
+    The error INVALID_OPERATION occurs if <format> is an integer
+    format and the color buffer is not an integer format, or if the
+    color buffer is an integer format and <format> is not.  The error
+    INVALID_ENUM occurs if <format> is an integer format and <type> is
+    FLOAT.
+
+    (modify the first paragraph, p. 222)
+    ... For a fixed-point color buffer, each element is taken to be a
+    fixed-point value in [0, 1] with m bits, where m is the number of
+    bits in the corresponding color component of the selected buffer
+    (see section 2.14.9).  For an integer or floating-point color
+    buffer, the elements are unmodified.
+
+    (modify the section labeled "Conversion to L", p. 222)
+    This step applies only to RGBA component groups.  If the format is
+    either LUMINANCE or LUMINANCE_ALPHA, a value L is computed as
+
+        L = R + G + B
+
+    otherwise if the format is either LUMINANCE_INTEGER_EXT or
+    LUMINANCE_ALPHA_INTEGER_EXT, L is computed as
+
+        L = R
+
+    where R, G, and B are the values of the R, G, and B
+    components. The single computed L component replaces the R, G, and
+    B components in the group.
+
+    (modify the section labeled "Final Conversion", p. 222)
+
+    For a floating-point RGBA color, each component is first clamped
+    to [0, 1]. Then the appropriate conversion formula from table 4.7
+    is applied to the component.  For an integer RGBA color, each
+    component is clamped to the representable range of <type>.
+
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Modify Section 6.1.3 (Enumerated Queries), p. 246
+
+    (insert in the list of query functions, p. 246)
+    void GetTexParameterIivEXT( enum target, enum value, int *data );
+    void GetTexParameterIuivEXT( enum target, enum value, uint *data );
+
+    (modify the second paragraph, p. 247)
+    ... For GetTexParameter, value must be either TEXTURE_RESIDENT, or
+    one of the symbolic values in table 3.19.  Querying <value>
+    TEXTURE_BORDER_COLOR with GetTexParameterIivEXT or
+    GetTexParameterIuivEXT returns the border color values as signed
+    integers or unsigned integers, respectively; otherwise the values
+    are returned as described in section 6.1.2.  If the border color
+    is queried with a type that does not match the original type with
+    which it was specified, the result is undefined.  The <lod>
+    argument ...
+
+    (add to end of third paragraph, p. 247) Queries with a <value> of
+    TEXTURE_RED_TYPE_ARB, TEXTURE_GREEN_TYPE_ARB, TEXTURE_BLUE_TYPE_ARB,
+    TEXTURE_ALPHA_TYPE_ARB, TEXTURE_LUMINANCE_TYPE_ARB,
+    TEXTURE_INTENSITY_TYPE_ARB, or TEXTURE_DEPTH_TYPE_ARB, return the data
+    type used to store the component.  Values of NONE,
+    UNSIGNED_NORMALIZED_ARB, FLOAT, INT, or UNSIGNED_INT, indicate missing,
+    unsigned normalized integer, floating-point, signed unnormalized integer,
+    and unsigned unnormalized integer components, respectively.
+
+
+GLX Protocol
+
+    The following rendering commands are sent to the server as part of
+    a glXRender request:
+
+    ClearColorIiEXT
+
+        2      20              rendering command length
+        2      4292            rendering command opcode
+        4      INT32           r
+        4      INT32           g
+        4      INT32           b
+        4      INT32           a
+
+    ClearColorIuiEXT
+
+        2      20              rendering command length
+        2      4293            rendering command opcode
+        4      CARD32          r
+        4      CARD32          g
+        4      CARD32          b
+        4      CARD32          a
+
+    TexParameterIivEXT
+
+        2      12+(4*n)        rendering command length
+        2      346             rendering command opcode
+        4      ENUM            target
+        4      ENUM            pname
+               0x2802 n=1      GL_TEXTURE_WRAP_S
+               0x2803 n=1      GL_TEXTURE_WRAP_T
+               0x8072 n=1      GL_TEXTURE_WRAP_R
+               0x2801 n=1      GL_TEXTURE_MIN_FILTER
+               0x2800 n=1      GL_TEXTURE_MAG_FILTER
+               0x8066 n=1      GL_TEXTURE_PRIORITY
+               0x813A n=1      GL_TEXTURE_MIN_LOD
+               0x813B n=1      GL_TEXTURE_MAX_LOD
+               0x813C n=1      GL_TEXTURE_BASE_LEVEL
+               0x813D n=1      GL_TEXTURE_MAX_LEVEL
+               0x8501 n=1      GL_TEXTURE_LOD_BIAS
+               0x884B n=1      GL_DEPTH_TEXTURE_MODE
+               0x884C n=1      GL_TEXTURE_COMPARE_MODE
+               0x884D n=1      GL_TEXTURE_COMPARE_FUNC
+               0x8191 n=1      GL_GENERATE_MIPMAP
+               0x1004 n=4      GL_TEXTURE_BORDER_COLOR
+        4*n    LISTofINT32     params
+
+    TexParameterIuivEXT
+
+        2      12+(4*n)        rendering command length
+        2      347             rendering command opcode
+        4      ENUM            target
+        4      ENUM            pname
+               0x2802 n=1      GL_TEXTURE_WRAP_S
+               0x2803 n=1      GL_TEXTURE_WRAP_T
+               0x8072 n=1      GL_TEXTURE_WRAP_R
+               0x2801 n=1      GL_TEXTURE_MIN_FILTER
+               0x2800 n=1      GL_TEXTURE_MAG_FILTER
+               0x8066 n=1      GL_TEXTURE_PRIORITY
+               0x813A n=1      GL_TEXTURE_MIN_LOD
+               0x813B n=1      GL_TEXTURE_MAX_LOD
+               0x813C n=1      GL_TEXTURE_BASE_LEVEL
+               0x813D n=1      GL_TEXTURE_MAX_LEVEL
+               0x8501 n=1      GL_TEXTURE_LOD_BIAS
+               0x884B n=1      GL_DEPTH_TEXTURE_MODE
+               0x884C n=1      GL_TEXTURE_COMPARE_MODE
+               0x884D n=1      GL_TEXTURE_COMPARE_FUNC
+               0x8191 n=1      GL_GENERATE_MIPMAP
+               0x1004 n=4      GL_TEXTURE_BORDER_COLOR
+        4*n    LISTofCARD32    params
+
+    The following new non-rendering commands are added:
+
+    GetTexParameterIivEXT
+
+        1      CARD8           opcode(X assigned)
+        1      203             GLX opcode
+        2      4               request length
+        4      GLX_CONTEXT_TAG context tag
+        4      ENUM            target
+        4      ENUM            pname
+    =>
+        1      1               reply
+        1                      unused
+        2      CARD16          sequence number
+        4      m               reply length, m=(n==1?0:n)
+        4                      unused
+        4      CARD32          n
+
+        if (n=1) this follows:
+
+        4      INT32           params
+        12                     unused
+
+        otherwise this follows:
+
+        16                     unused
+        n*4    LISTofINT32     params
+
+    GetTexParameterIuivEXT
+
+        1      CARD8           opcode(X assigned)
+        1      204             GLX opcode
+        2      4               request length
+        4      GLX_CONTEXT_TAG context tag
+        4      ENUM            target
+        4      ENUM            pname
+    =>
+        1      1               reply
+        1                      unused
+        2      CARD16          sequence number
+        4      m               reply length, m=(n==1?0:n)
+        4                      unused
+        4      CARD32          n
+
+        if (n=1) this follows:
+
+        4      CARD32          params
+        12                     unused
+
+        otherwise this follows:
+
+        16                     unused
+        n*4    LISTofCARD32    params
+
+Dependencies on ARB_texture_float
+
+    The following changes should be made if ARB_texture_float is not
+    supported:
+
+    The references to floating-point data types in section 3.8, p. 150
+    should be deleted.
+
+    The language in section 3.8.1 should indicate that final
+    conversion always clamps when the internalformat is not integer.
+
+    The description of table 3.16 should not mention the <f>
+    floating-point formats.
+
+    Section 3.8.4 should indicate that border color values should be
+    clamped to [0,1] before being stored, if not specified with one of
+    the TexParameterI* functions.
+
+    Section 3.8.8 should not mention clamping border color values to
+    [0,1] for fixed-point textures, since this occurs in 3.8.4 at
+    TexParameter specification.
+
+Dependencies on ARB_color_buffer_float
+
+    The following changes should be made if ARB_color_buffer_float is
+    not supported:
+
+    Section 3.11.2, subsection "Shader Outputs: p. 196 should not
+    mention fragment clamping or color buffers with floating-point
+    formats.
+
+    Chapter 4, p. 198 should not mention components represented as
+    floating-point values.
+
+    Section 4.1.3, p. 200, section 4.1.4 p. 205, section 4.1.8 p. 206,
+    section 4.2.3 p. 215 and section 4.3.2 p. 222 should not mention
+    color buffers with a floating-point format.
+
+    Section 4.2.3 p. 217 should not mention clamping the clear color
+    values to [0,1].
+
+Errors
+
+    INVALID_OPERATION is generated by Begin, DrawPixels, Bitmap,
+    CopyPixels, or a command that performs an explicit Begin if the
+    color buffer has an integer RGBA format and no fragment shader is
+    active.
+
+    INVALID_ENUM is generated by DrawPixels, TexImage* and
+    SubTexImage* if <format> is one of the integer component formats
+    described in table 3.6 and <type> is FLOAT.
+
+    INVALID_OPERATION is generated by TexImage* and SubTexImage* if
+    the texture internalformat is an integer format as described in
+    table 3.16 and <format> is not one of the integer component
+    formats described in table 3.6, or if the internalformat is not an
+    integer format and <format> is an integer format.
+
+    INVALID_OPERATION is generated by CopyTexImage* and
+    CopyTexSubImage* if the texture internalformat is an integer
+    format and the read color buffer is not an integer format, or if
+    the internalformat is not an integer format and the read color
+    buffer is an integer format.
+
+    INVALID_ENUM is generated by ReadPixels if <format> is an integer
+    format and <type> is FLOAT.
+
+    INVALID_OPERATON is generated by ReadPixels if <format> is an
+    integer format and the color buffer is not an integer format, or
+    if <format> is not an integer format and the color buffer is an
+    integer format.
+
+New State
+
+    (modify table 6.33, p. 294)
+
+                                                    Minimum
+    Get Value                  Type   Get Command   Value    Description       Sec.   Attribute
+    ------------------------   ----   -----------   -------  ----------------  ----   ----------
+    RGBA_INTEGER_MODE_EXT        B    GetBooleanv   -        True if RGBA      2.7    -
+                                                             components are
+                                                             integers
+
+Issues
+
+    How should the integer pixel path be triggered: by the destination
+    type, new source types, or new source formats?
+
+        RESOLVED: New source formats, based on the precedence of
+        COLOR_INDEX and STENCIL_INDEX formats which invoke distinct
+        pixel path behavior with identical data types and independent
+        of the destination.
+
+    Should pixel transfer operations be defined for the integer pixel
+    path?
+
+        RESOLVED: No.  Fragment shaders can achieve similar results
+        with more flexibility.  There is no need to aggrandize this
+        legacy mechanism.
+
+    What happens if a shader reads a float texel from an integer
+    texture or vice-versa?
+
+        RESOLVED: The result is undefined.  The shader must have
+        knowledge of the texture internal data type.
+
+    How do integer textures behave in fixed function fragment
+    processing?
+
+        RESOLVED: The fixed function texture pipeline assumes textures
+        return floating-point values, hence the return value from an
+        integer texture will not be in a meaningful format.
+
+    How does TEXTURE_BORDER_COLOR work with integer textures?
+
+        RESOLVED: The internal storage of border values effectively
+        becomes a union, and the returned values are interpreted as
+        the same type as the texture.  New versions of TexParameter
+        allow specification of signed and unsigned integer border
+        values.
+
+    How does logic op behave with RGBA mode rendering into integer
+    color buffer?
+
+        RESOLVED: The color logic op operates when enabled when
+        rendering into integer color buffers.
+
+        Logic op operations make sense for integer color buffers so the
+        COLOR_LOGIC_OP enable is respected when rendering into integer
+        color buffers.
+
+        Blending does not apply to RGBA mode rendering when rendering
+        into integer color buffers (as section 4.1.8 is updated to say).
+        The color logic op (described in section 4.1.10) is not a blending
+        operation (though it does take priority over the blending enable).
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+      6   05/20/10  srahman   Add GLX protocol.
+
+      5   07/15/07  pbrown    Fix typo in GetTexParameterIuivEXT function
+                              name in "New Procedures and Functions".
+
+      4      --               Pre-release revisions.
+

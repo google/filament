@@ -9,19 +9,19 @@ layout(location = 1) flat in mediump int vB;
 void main()
 {
     FragColor = vec4(0.0);
-    mediump int _10 = 0;
-    mediump int _15 = 0;
-    for (mediump int _16 = 0, _17 = 0; _16 < vA; _17 = _15, _16 += _10)
+    mediump int _49 = 0;
+    mediump int _58 = 0;
+    for (mediump int _57 = 0, _60 = 0; _57 < vA; _60 = _58, _57 += _49)
     {
-        if ((vA + _16) == 20)
+        if ((vA + _57) == 20)
         {
-            _15 = 50;
+            _58 = 50;
         }
         else
         {
-            _15 = ((vB + _16) == 40) ? 60 : _17;
+            _58 = ((vB + _57) == 40) ? 60 : _60;
         }
-        _10 = _15 + 10;
+        _49 = _58 + 10;
         FragColor += vec4(1.0);
     }
 }

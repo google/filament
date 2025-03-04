@@ -1,0 +1,165 @@
+
+%dx.types.Handle = type { i8* }
+%dx.types.ResRet.f32 = type { float, float, float, float, i32 }
+%dx.types.f32 = type { float }
+%dx.types.Sampler = type opaque
+
+define void @main() {
+entry:
+  %0 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 0, i32 0, i1 false)
+  %1 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 1, i32 1, i1 false)
+  %2 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 2, i32 2, i1 false)
+  %3 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 3, i32 0, i32 0, i1 false)
+  %4 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %5 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %6 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %7 = call %dx.types.ResRet.f32 @dx.op.textureGatherCmp.f32(i32 74, %dx.types.Handle %0, %dx.types.Handle %3, float %4, float %5, float undef, float undef, i32 0, i32 0, i32 0, float %6)
+  %8 = extractvalue %dx.types.ResRet.f32 %7, 0
+  %9 = extractvalue %dx.types.ResRet.f32 %7, 1
+  %10 = extractvalue %dx.types.ResRet.f32 %7, 2
+  %11 = extractvalue %dx.types.ResRet.f32 %7, 3
+  %12 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %13 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %14 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %15 = call %dx.types.ResRet.f32 @dx.op.textureGatherCmp.f32(i32 74, %dx.types.Handle %0, %dx.types.Handle %3, float %12, float %13, float undef, float undef, i32 -5, i32 7, i32 1, float %14)
+  %16 = extractvalue %dx.types.ResRet.f32 %15, 0
+  %17 = extractvalue %dx.types.ResRet.f32 %15, 1
+  %18 = extractvalue %dx.types.ResRet.f32 %15, 2
+  %19 = extractvalue %dx.types.ResRet.f32 %15, 3
+  %20 = fadd fast float %8, %16
+  %21 = fadd fast float %9, %17
+  %22 = fadd fast float %10, %18
+  %23 = fadd fast float %11, %19
+  %24 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %25 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %26 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %27 = call %dx.types.ResRet.f32 @dx.op.textureGatherCmp.f32(i32 74, %dx.types.Handle %0, %dx.types.Handle %3, float %24, float %25, float undef, float undef, i32 -3, i32 2, i32 3, float %26)
+  %28 = extractvalue %dx.types.ResRet.f32 %27, 0
+  %29 = extractvalue %dx.types.ResRet.f32 %27, 1
+  %30 = extractvalue %dx.types.ResRet.f32 %27, 2
+  %31 = extractvalue %dx.types.ResRet.f32 %27, 3
+  %32 = extractvalue %dx.types.ResRet.f32 %27, 4
+  %33 = fadd fast float %20, %28
+  %34 = fadd fast float %21, %29
+  %35 = fadd fast float %22, %30
+  %36 = fadd fast float %23, %31
+  %37 = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 %32)
+  %38 = sext i1 %37 to i32
+  %39 = uitofp i32 %38 to float
+  %40 = fadd fast float %33, %39
+  %41 = fadd fast float %34, %39
+  %42 = fadd fast float %35, %39
+  %43 = fadd fast float %36, %39
+  %44 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %45 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %46 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %47 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %48 = call %dx.types.ResRet.f32 @dx.op.textureGatherCmp.f32(i32 74, %dx.types.Handle %1, %dx.types.Handle %3, float %44, float %45, float %46, float undef, i32 -3, i32 2, i32 2, float %47)
+  %49 = extractvalue %dx.types.ResRet.f32 %48, 0
+  %50 = extractvalue %dx.types.ResRet.f32 %48, 1
+  %51 = extractvalue %dx.types.ResRet.f32 %48, 2
+  %52 = extractvalue %dx.types.ResRet.f32 %48, 3
+  %53 = extractvalue %dx.types.ResRet.f32 %48, 4
+  %54 = fadd fast float %40, %49
+  %55 = fadd fast float %41, %50
+  %56 = fadd fast float %42, %51
+  %57 = fadd fast float %43, %52
+  %58 = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 %53)
+  %59 = sext i1 %58 to i32
+  %60 = uitofp i32 %59 to float
+  %61 = fadd fast float %54, %60
+  %62 = fadd fast float %55, %60
+  %63 = fadd fast float %56, %60
+  %64 = fadd fast float %57, %60
+  %65 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %66 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %67 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %68 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 3, i32 undef)
+  %69 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %70 = call %dx.types.ResRet.f32 @dx.op.textureGatherCmp.f32(i32 74, %dx.types.Handle %2, %dx.types.Handle %3, float %65, float %66, float %67, float %68, i32 undef, i32 undef, i32 2, float %69)
+  %71 = extractvalue %dx.types.ResRet.f32 %70, 0
+  %72 = extractvalue %dx.types.ResRet.f32 %70, 1
+  %73 = extractvalue %dx.types.ResRet.f32 %70, 2
+  %74 = extractvalue %dx.types.ResRet.f32 %70, 3
+  %75 = extractvalue %dx.types.ResRet.f32 %70, 4
+  %76 = fadd fast float %61, %71
+  %77 = fadd fast float %62, %72
+  %78 = fadd fast float %63, %73
+  %79 = fadd fast float %64, %74
+  %80 = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 %75)
+  %81 = sext i1 %80 to i32
+  %82 = uitofp i32 %81 to float
+  %83 = fadd fast float %76, %82
+  %84 = fadd fast float %77, %82
+  %85 = fadd fast float %78, %82
+  %86 = fadd fast float %79, %82
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 0, float %83)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 1, float %84)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 2, float %85)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 3, float %86)
+  ret void
+}
+
+; Function Attrs: nounwind readonly
+declare %dx.types.Handle @dx.op.createHandle(i32, i8, i32, i32, i1) #0
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.loadInput.f32(i32, i32, i32, i8, i32) #1
+
+; Function Attrs: nounwind readonly
+declare %dx.types.ResRet.f32 @dx.op.textureGatherCmp.f32(i32, %dx.types.Handle, %dx.types.Handle, float, float, float, float, i32, i32, i32, float) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.f32(i32, i32, float) #2
+
+; Function Attrs: nounwind readonly
+declare float @dx.op.tempRegLoad.f32(i32, i32) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.i32(i32, i32, i32) #2
+
+; Function Attrs: nounwind readonly
+declare i32 @dx.op.tempRegLoad.i32(i32, i32) #0
+
+; Function Attrs: nounwind readonly
+declare i1 @dx.op.checkAccessFullyMapped.i32(i32, i32) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.storeOutput.f32(i32, i32, i32, i8, float) #2
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.bitcastI32toF32(i32, i32) #1
+
+; Function Attrs: nounwind readnone
+declare i32 @dx.op.bitcastF32toI32(i32, float) #1
+
+attributes #0 = { nounwind readonly }
+attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind }
+
+!dx.version = !{!0}
+!dx.valver = !{!0}
+!dx.shaderModel = !{!1}
+!dx.resources = !{!2}
+!dx.entryPoints = !{!10}
+!llvm.ident = !{!18}
+
+!0 = !{i32 1, i32 0}
+!1 = !{!"ps", i32 6, i32 0}
+!2 = !{!3, null, null, !8}
+!3 = !{!4, !6, !7}
+!4 = !{i32 0, %dx.types.f32 addrspace(1)* undef, !"T0", i32 0, i32 0, i32 1, i32 2, i32 0, !5}
+!5 = !{i32 0, i32 9}
+!6 = !{i32 1, %dx.types.f32 addrspace(1)* undef, !"T1", i32 0, i32 1, i32 1, i32 7, i32 0, !5}
+!7 = !{i32 2, %dx.types.f32 addrspace(1)* undef, !"T2", i32 0, i32 2, i32 1, i32 9, i32 0, !5}
+!8 = !{!9}
+!9 = !{i32 0, %dx.types.Sampler addrspace(1)* undef, !"S0", i32 0, i32 0, i32 1, i32 1, null}
+!10 = !{void ()* @main, !"main", !11, !2, !17}
+!11 = !{!12, !15, null}
+!12 = !{!13}
+!13 = !{i32 0, !"A", i8 9, i8 0, !14, i8 2, i32 1, i8 4, i32 0, i8 0, null}
+!14 = !{i32 0}
+!15 = !{!16}
+!16 = !{i32 0, !"SV_Target", i8 9, i8 16, !14, i8 0, i32 1, i8 4, i32 0, i8 0, null}
+!17 = !{i32 0, i64 256}
+!18 = !{!"dxbc2dxil 1.2"}

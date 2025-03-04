@@ -1,0 +1,42 @@
+// No crash, might not be totally invalid
+RUN: llvm-objdump -private-headers %p/Inputs/macho-invalid-zero-ncmds
+
+RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-incomplete-load-command 2>&1 \
+RUN:      | FileCheck -check-prefix INCOMPLETE-LOADC %s
+INCOMPLETE-LOADC: Invalid data was encountered while parsing the file.
+
+RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-too-small-load-command 2>&1 \
+RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE %s
+RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-too-small-load-command 2>&1 \
+RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE %s
+SMALL-LOADC-SIZE: Mach-O load command with size < 8 bytes
+
+RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-too-small-segment-load-command 2>&1 \
+RUN:      | FileCheck -check-prefix SMALL-SEGLOADC-SIZE %s
+RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-too-small-segment-load-command 2>&1 \
+RUN:      | FileCheck -check-prefix SMALL-SEGLOADC-SIZE %s
+SMALL-SEGLOADC-SIZE: Mach-O segment load command size is too small
+
+RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-no-size-for-sections 2>&1 \
+RUN:      | FileCheck -check-prefix TOO-MANY-SECTS %s
+RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-no-size-for-sections 2>&1 \
+RUN:      | FileCheck -check-prefix TOO-MANY-SECTS %s
+TOO-MANY-SECTS: Mach-O segment load command contains too many sections
+
+RUN: not llvm-objdump -t %p/Inputs/macho-invalid-bad-symbol-index 2>&1 \
+RUN:      | FileCheck -check-prefix BAD-SYMBOL %s
+BAD-SYMBOL: Requested symbol index is out of range
+
+RUN: not llvm-objdump -t %p/Inputs/macho-invalid-symbol-name-past-eof 2>&1 \
+RUN:      | FileCheck -check-prefix NAME-PAST-EOF %s
+NAME-PAST-EOF: Symbol name entry points before beginning or past end of file
+
+RUN: not llvm-nm %p/Inputs/macho-invalid-section-index-getSectionRawName 2>&1 \
+RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC %s
+INVALID-SECTION-IDX-SYMBOL-SEC: getSymbolSection: Invalid section index
+
+RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-header 2>&1 | FileCheck -check-prefix INVALID-HEADER %s
+INVALID-HEADER: Invalid data was encountered while parsing the file
+
+RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-incomplete-segment-load-command 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC %s
+INCOMPLETE-SEGMENT-LOADC: Invalid data was encountered while parsing the file

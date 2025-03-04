@@ -27,14 +27,14 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]])
 {
     main0_out out = {};
-    int _39 = {};
+    int _27 = {};
     if (in.vColor.x > 10.0)
     {
-        _39 = 10;
+        _27 = 10;
     }
     else
     {
-        _39 = 20;
+        _27 = 20;
     }
     out.FragColor = in.vColor;
     return out;

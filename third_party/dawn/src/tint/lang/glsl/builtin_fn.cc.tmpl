@@ -1,0 +1,88 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate builtin_fn.cc
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/glsl/glsl.def" -}}
+#include "src/tint/lang/glsl/builtin_fn.h"
+
+namespace tint::glsl {
+
+const char* str(BuiltinFn i) {
+    switch (i) {
+        case BuiltinFn::kNone:
+            return "<none>";
+{{- range $I.Sem.Builtins  }}
+        case BuiltinFn::k{{PascalCase .Name}}:
+            return "{{.Name}}";
+{{- end  }}
+    }
+    return "<unknown>";
+}
+
+tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
+       switch (fn) {
+        case BuiltinFn::kBarrier:
+        case BuiltinFn::kMemoryBarrierBuffer:
+        case BuiltinFn::kMemoryBarrierImage:
+        case BuiltinFn::kAtomicCompSwap:
+        case BuiltinFn::kAtomicSub:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad, core::ir::Instruction::Access::kStore};
+
+        case BuiltinFn::kTexture:
+        case BuiltinFn::kTextureOffset:
+        case BuiltinFn::kTextureLod:
+        case BuiltinFn::kExtTextureLod:
+        case BuiltinFn::kTextureLodOffset:
+        case BuiltinFn::kExtTextureLodOffset:
+        case BuiltinFn::kTextureGrad:
+        case BuiltinFn::kTextureGradOffset:
+        case BuiltinFn::kTextureGather:
+        case BuiltinFn::kTextureGatherOffset:
+        case BuiltinFn::kTexelFetch:
+        case BuiltinFn::kImageLoad:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad};
+
+        case BuiltinFn::kImageStore:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kStore};
+
+        case BuiltinFn::kLength:
+        case BuiltinFn::kFloatBitsToInt:
+        case BuiltinFn::kFloatBitsToUint:
+        case BuiltinFn::kIntBitsToFloat:
+        case BuiltinFn::kUintBitsToFloat:
+        case BuiltinFn::kBitCount:
+        case BuiltinFn::kBitfieldExtract:
+        case BuiltinFn::kBitfieldInsert:
+        case BuiltinFn::kPackFloat2X16:
+        case BuiltinFn::kUnpackFloat2X16:
+        case BuiltinFn::kAbs:
+        case BuiltinFn::kAny:
+        case BuiltinFn::kAll:
+        case BuiltinFn::kDot:
+        case BuiltinFn::kMix:
+        case BuiltinFn::kModf:
+        case BuiltinFn::kFrexp:
+        case BuiltinFn::kLessThan:
+        case BuiltinFn::kLessThanEqual:
+        case BuiltinFn::kGreaterThan:
+        case BuiltinFn::kGreaterThanEqual:
+        case BuiltinFn::kEqual:
+        case BuiltinFn::kNotEqual:
+        case BuiltinFn::kTextureSize:
+        case BuiltinFn::kImageSize:
+        case BuiltinFn::kNone:
+            break;
+    }
+    return core::ir::Instruction::Accesses{};
+}
+
+}  // namespace tint::glsl

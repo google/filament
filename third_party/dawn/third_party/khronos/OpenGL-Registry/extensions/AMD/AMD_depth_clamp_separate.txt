@@ -1,0 +1,159 @@
+Name
+
+    AMD_depth_clamp_separate
+
+Name Strings
+
+    GL_AMD_depth_clamp_separate
+
+Contact
+
+    Pierre Boudier (pierre.boudier 'at' amd.com)
+
+Contributors
+
+    Pierre Boudier, AMD
+    Graham Sellers, AMD
+
+Status
+
+    In Progress
+
+Version
+
+    Last Modified Date:         09/15/2010
+    Author Revision:            2
+
+Number
+
+    401
+
+Dependencies
+
+    The extension is written against the OpenGL 4.1 (Core) Specification.
+
+Overview
+
+    The extension ARB_depth_clamp introduced the ability to control
+    the clamping of the depth value for both the near and far plane.
+    One limitation is that the control was for both planes at the
+    same time; some applications can benefit from having clamping
+    enabled for only one of the two planes, in order to save
+    fillrate for the other plane by clipping the geometry.
+
+    This extension provides exactly such functionality.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        DEPTH_CLAMP_NEAR_AMD                                 0x901E
+        DEPTH_CLAMP_FAR_AMD                                  0x901F
+
+Additions to Chapter 2 of the OpenGL 4.1 (Core) Specification (OpenGL Operation)
+
+    Section 2.20 "Primitive Clipping"
+
+    Add to the end of the 3rd paragraph:
+
+    "Depth clamping is enabled with the generic Enable command and
+    disabled with the Disable command. The value of the argument to
+    either command may be DEPTH_CLAMP_NEAR_AMD or DEPTH_CLAMP_FAR_AMD to enable
+    or disable depth clamping at the near and far planes, respectively. If near
+    depth clamping is enabled, the "-w_c <= z_c" plane equation is ignored by
+    view volume clipping. Effectively, there is no near plane. Likewise, if far
+    clamping is enabled, the "z_c <= w_c" plane equation is ignored by view
+    volume clipping, effectively removing the near plane."
+
+    "In addition to DEPTH_CLAMP_NEAR_AMD and DEPTH_CLAMP_FAR_AMD, the token
+    DEPTH_CLAMP may be used to simultaneously enable or disable depth clamping
+    at both the near and far planes."
+
+Additions to Chapter 3 of the OpenGL 4.1 (Core) Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.1 (Core) Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+ --  Section 4.1.5 "Depth buffer test"
+
+    Add to the end of the 2nd paragraph:
+
+    "If depth clamping (see section 2.20) is enabled, before the incoming
+    fragment's z_w is compared z_w is clamped to the range [min(n,f),0] if
+    clamping at the near plane is enabled, [0, max(n,f)] if clamping at the
+    far plane is enabled, and [min(n,f), max(n,f)] if clamping is enabled at
+    both the near and far planes, where n and f are the current near and far
+    depth range values (see section 2.12.1)."
+
+Additions to Chapter 5 of the OpenGL 4.1 (Core) Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.1 (Core) Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 4.1 (Core) Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+Add to table 6.9, Transformation State - p.350
+
+    +----------------------+---------+---------------+---------------+-------------------------+-------+
+    | Get Value            | Type    | Get Command   | Initial Value | Description             | Sec   |
+    +----------------------+---------+---------------+---------------+-------------------------+-------+
+    | DEPTH_CLAMP_NEAR_AMD | B       | IsEnabled     | FALSE         | Depth clamping enabled  | 2.20  |
+    |                      |         |               |               | at the near plane       |       |
+    | DEPTH_CLAMP_FAR_AMD  | B       | IsEnabled     | FALSE         | Depth clamping enabled  | 2.20  |
+    |                      |         |               |               | at the far plane        |       |
+    +----------------------+---------+---------------+---------------+-------------------------+-------+
+
+    * Note that DEPTH_CLAMP still exists. However, enabling it enables depth clamping for both
+    the near and the far plane. Querying DEPTH_CLAMP will return TRUE if DEPTH_CLAMP_NEAR_AMD _or_
+    DEPTH_CLAMP_FAR_AMD is enabled.
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    1) What should happen to GL_DEPTH_CLAMP? What happens if depth clamping is
+    enabled at one plane, but not the other - what does glIsEnabled(GL_DEPTH_CLAMP)
+    return?
+
+    DISCUSSION: Right now, glIsEnabled(GL_DEPTH_CLAMP) returns GL_TRUE if clamping
+    is enabled at either plane. Other options are to return GL_TRUE only if clamping
+    is enabled at both planes, or to maintain traditional depth clamping as
+    separate state, and have yet another enable to control separate clamping.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     2    09/15/2010  gsellers  Update to stand against OpenGL 4.1
+                                Add token values.
+                                Minor cleanup.
+                                Some clarifications.
+                                Add issue 1.
+     1    11/19/2009  pboudier  Initial draft based on ARB_depth_clamp

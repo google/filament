@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/// Copyright 2021 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+	<!--=================================================================-->
+	<!-- utils -->
+	<!--=================================================================-->
+
+	<Type Name="tint::Slice&lt;*&gt;">
+		<DisplayString>{{ length={len}, capacity={cap} }}</DisplayString>
+		<Expand>
+			<!--<Item Name="[length]">len</Item>
+			<Item Name="[capacity]">cap</Item>-->
+			<ArrayItems>
+				<Size>len</Size>
+				<ValuePointer>data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="tint::Vector&lt;*,*&gt;">
+		<Intrinsic Name="Length" Expression="(size_t)(impl_.slice.len)" />
+		<Expand>
+			<Item Name="[heap]">impl_.slice.cap > (int)$T2</Item>
+			<!--<ExpandedItem>impl_.slice</ExpandedItem>-->
+			<!--<Item Name="[slice]">impl_.slice</Item>-->
+			<ArrayItems>
+				<Size>Length()</Size>
+				<ValuePointer>impl_.slice.data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="tint::VectorRef&lt;*&gt;">
+		<Expand>
+			<Item Name="[can move]">can_move_</Item>
+			<ExpandedItem>slice_</ExpandedItem>
+			<!--<Item Name="[slice]">slice_</Item>-->
+		</Expand>
+	</Type>
+
+	<Type Name="tint::Symbol">
+		<DisplayString Optional="true">{name_,sb}</DisplayString>
+	</Type>
+
+	<!--=================================================================-->
+	<!-- ast -->
+	<!--=================================================================-->
+
+	<Type Name="tint::ast::AssignmentStatement">
+		<DisplayString>{*lhs} = {*rhs};</DisplayString>
+		<Expand>
+			<Item Name="lhs">*lhs</Item>
+			<Item Name="rhs">*rhs</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="tint::ast::IfStatement">
+		<DisplayString Condition="!else_statement">if ({*condition}) {*body}</DisplayString>
+		<DisplayString Condition="else_statement">if ({*condition}) {*body} else { *else_statement }</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::ElseStatement">
+		<DisplayString Condition="!condition">else {*body}</DisplayString>
+		<DisplayString Condition="!!condition">else if ({*condition}) {*body}</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::BlockStatement">
+		<DisplayString Condition="statements.Length() == 1">{{ {*statements[0]} }} </DisplayString>
+		<DisplayString Condition="statements.Length() == 2">{{ {*statements[0]} {*statements[1]} }} </DisplayString>
+		<DisplayString Condition="statements.Length() == 3">{{ {*statements[0]} {*statements[1]} {*statements[2]} }} </DisplayString>
+		<DisplayString Condition="statements.Length()  > 3">{{ {*statements[0]} {*statements[1]} {*statements[2]} {statements.Length()-3} more... }} </DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::ReturnStatement">
+		<DisplayString Condition="!value">return;</DisplayString>
+		<DisplayString Condition="!!value">return {*value};</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::Function">
+		<DisplayString Condition="params.size() == 0">fn {symbol}() -> {*return_type} {*body}</DisplayString>
+		<DisplayString Condition="params.size() == 1">fn {symbol}({*params[0]}) -> {*return_type} {*body}</DisplayString>
+		<DisplayString Condition="params.size() == 2">fn {symbol}({*params[0]} {*params[1]}) -> {*return_type} {*body}</DisplayString>
+		<DisplayString Condition="params.size() == 3">fn {symbol}({*params[0]} {*params[1]} {*params[2]}) -> {*return_type} {*body}</DisplayString>
+		<DisplayString Condition="params.size()  > 3">fn {symbol}({*params[0]} {*params[1]} {*params[2]} {params.size()-3} more...) -> {*return_type} {*body}</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::Identifier">
+		<DisplayString>{symbol}</DisplayString>
+		<Expand>
+			<Item Name="symbol">symbol</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="tint::ast::IdentifierExpression">
+		<DisplayString>{*identifier}</DisplayString>
+		<Expand>
+			<Item Name="identifier">identifier</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="tint::ast::IndexAccessorExpression">
+		<DisplayString>{*object}[{*index}]</DisplayString>
+		<Expand>
+			<Item Name="object">*object</Item>
+			<Item Name="index">*index</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="tint::ast::MemberAccessorExpression">
+		<DisplayString>{*member}</DisplayString>
+		<Expand>
+			<Item Name="member">*member</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="tint::ast::Let">
+		<DisplayString Condition="!!type">let {symbol} : {*type} = {*initializer}</DisplayString>
+		<DisplayString Condition=" !type">let {symbol} = {*initializer}</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::Variable">
+		<DisplayString Condition="!!type &amp; !!initializer">var {symbol} : {*type} = {*initializer}</DisplayString>
+		<DisplayString Condition="!!type &amp;  !initializer">var {symbol} : {*type}</DisplayString>
+		<DisplayString Condition=" !type &amp; !!initializer">var {symbol} = {*initializer}</DisplayString>
+		<DisplayString Condition=" !type &amp;  !initializer">var {symbol}</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::VariableDeclStatement">
+		<DisplayString>{*variable};</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::IntLiteralExpression">
+		<DisplayString>{value}</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::BoolLiteralExpression">
+		<DisplayString>{value}</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::UnaryOpExpression">
+		<DisplayString Condition="op==tint::core::UnaryOp::kAddressOf">&amp;({*expr})</DisplayString>
+		<DisplayString Condition="op==tint::core::UnaryOp::kComplement">~({*expr})</DisplayString>
+		<DisplayString Condition="op==tint::core::UnaryOp::kIndirection">*({*expr})</DisplayString>
+		<DisplayString Condition="op==tint::core::UnaryOp::kNegation">-({*expr})</DisplayString>
+		<DisplayString Condition="op==tint::core::UnaryOp::kNot">!({*expr})</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::BinaryExpression">
+		<DisplayString Condition="op==tint::core::BinaryOp::kNone">({*lhs} NONE {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kAnd">({*lhs} &amp; {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kOr">({*lhs} | {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kXor">({*lhs} ^ {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kLogicalAnd">({*lhs} &amp;&amp; {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kLogicalOr">({*lhs} || {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kEqual">({*lhs} == {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kNotEqual">({*lhs} != {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kLessThan">({*lhs} &lt; {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kGreaterThan">({*lhs} &gt; {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kLessThanEqual">({*lhs} &lt;= {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kGreaterThanEqual">({*lhs} &gt;= {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kShiftLeft">({*lhs} &lt;&lt; {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kShiftRight">({*lhs} >> {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kAdd">({*lhs} + {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kSubtract">({*lhs} - {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kMultiply">({*lhs} * {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kDivide">({*lhs} / {*rhs})</DisplayString>
+		<DisplayString Condition="op==tint::core::BinaryOp::kModulo">({*lhs} % {*rhs})</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::CallExpression">
+		<DisplayString Condition="args.Length() == 0">{*target}()</DisplayString>
+		<DisplayString Condition="args.Length() == 1">{*target}({*args[0]})</DisplayString>
+		<DisplayString Condition="args.Length() == 2">{*target}({*args[0]}, {*args[1]})</DisplayString>
+		<DisplayString Condition="args.Length() == 3">{*target}({*args[0]}, {*args[1]}, {*args[2]})</DisplayString>
+		<DisplayString Condition="args.Length() == 4">{*target}({*args[0]}, {*args[1]}, {*args[2]}, {*args[3]})</DisplayString>
+		<DisplayString Condition="args.Length()  > 4">{*target}({*args[0]}, {*args[1]}, {*args[2]}, {args.Length()-3} more...)</DisplayString>
+		<!-- TODO: add more overloads -->
+	</Type>
+
+	<Type Name="tint::ast::CallExpression::Target">
+		<DisplayString Condition ="name != nullptr">{*name}</DisplayString>
+		<DisplayString Condition ="name == nullptr">{*type}</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::Array">
+		<DisplayString Condition="count != nullptr">array&lt;{*type},{*count}&gt;</DisplayString>
+		<DisplayString Condition="count == nullptr">array&lt;{*type}&gt;</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::Vector">
+		<DisplayString Condition="width==2 &amp; !type">vec2</DisplayString>
+		<DisplayString Condition="width==3 &amp; !type">vec3</DisplayString>
+		<DisplayString Condition="width==4 &amp; !type">vec4</DisplayString>
+		<DisplayString Condition="width==2 &amp; !!type">vec2&lt;{*type}&gt;</DisplayString>
+		<DisplayString Condition="width==3 &amp; !!type">vec3&lt;{*type}&gt;</DisplayString>
+		<DisplayString Condition="width==4 &amp; !!type">vec4&lt;{*type}&gt;</DisplayString>
+	</Type>
+
+	<Type Name="tint::ast::TypeName">
+		<DisplayString>{name}</DisplayString>
+	</Type>
+
+	<!--=================================================================-->
+	<!-- sem -->
+	<!--=================================================================-->
+
+	<Type Name="tint::core::type::AbstractInt">
+		<DisplayString>AbstractInt</DisplayString>
+	</Type>
+
+	<Type Name="tint::core::type::AbstractFloat">
+		<DisplayString>AbstractFloat</DisplayString>
+	</Type>
+
+	<Type Name="tint::core::type::Bool">
+		<DisplayString>bool</DisplayString>
+	</Type>
+
+	<Type Name="tint::core::type::F32">
+		<DisplayString>f32</DisplayString>
+	</Type>
+
+	<Type Name="tint::core::type::I32">
+		<DisplayString>i32</DisplayString>
+	</Type>
+
+	<Type Name="tint::core::type::U32">
+		<DisplayString>u32</DisplayString>
+	</Type>
+
+	<Type Name="tint::core::type::Vector">
+		<DisplayString>vec{width_}&lt;{*subtype_}&gt;</DisplayString>
+	</Type>
+
+	<Type Name="tint::core::constant::Value">
+		<DisplayString>Type={*Type()} Value={InternalValue()}</DisplayString>
+	</Type>
+
+	<Type Name="tint::sem::ValueExpression">
+		<DisplayString>Decl={*declaration_}</DisplayString>
+	</Type>
+
+</AutoVisualizer>

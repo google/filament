@@ -1,0 +1,39 @@
+gl_samplemask_array_size.frag
+Shader version: 320
+0:? Sequence
+0:4  Function Definition: main( ( global void)
+0:4    Function Parameters: 
+0:6    Sequence
+0:6      Sequence
+0:6        Sequence
+0:6          move second child to first child ( temp mediump int)
+0:6            'i' ( temp mediump int)
+0:6            Constant:
+0:6              0 (const int)
+0:6        Loop with condition tested first
+0:6          Loop Condition
+0:6          Compare Less Than ( temp bool)
+0:6            'i' ( temp mediump int)
+0:6            Constant:
+0:6              2 (const int)
+0:6          Loop Body
+0:7          move second child to first child ( temp highp int)
+0:7            indirect index ( temp highp int SampleMaskIn)
+0:7              'gl_SampleMask' ( out runtime-sized array of highp int SampleMaskIn)
+0:7              'i' ( temp mediump int)
+0:7            Constant:
+0:7              -1431655766 (const int)
+0:6          Loop Terminal Expression
+0:6          Pre-Increment ( temp mediump int)
+0:6            'i' ( temp mediump int)
+0:9      move second child to first child ( temp mediump 4-component vector of float)
+0:9        'fragColor' (layout( location=0) out mediump 4-component vector of float)
+0:9        Constant:
+0:9          0.000000
+0:9          1.000000
+0:9          0.000000
+0:9          1.000000
+0:?   Linker Objects
+0:?     'fragColor' (layout( location=0) out mediump 4-component vector of float)
+0:?     'gl_SampleMask' ( out runtime-sized array of highp int SampleMaskIn)
+

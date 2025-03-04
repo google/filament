@@ -5,9 +5,9 @@ layout(location = 0) out vec4 FragColor;
 
 void main()
 {
-    bool _15 = helperInvocationEXT();
+    bool _9 = helperInvocationEXT();
     demote;
-    if (!_15)
+    if (!_9)
     {
         FragColor = vec4(1.0, 0.0, 0.0, 1.0);
     }

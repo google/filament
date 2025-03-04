@@ -1,0 +1,258 @@
+Name
+
+  EXT_separate_specular_color
+
+Name Strings
+
+  GL_EXT_separate_specular_color
+
+Version
+
+  $Date: 1997/10/05 00:16:23 $ $Revision: 1.3 $
+
+Number
+
+  144
+
+Dependencies
+
+  None
+
+Overview
+
+  This extension adds a second color to rasterization when lighting is 
+  enabled.  Its purpose is to produce textured objects with specular 
+  highlights which are the color of the lights.  It applies only to 
+  rgba lighting.
+
+  The two colors are computed at the vertexes.  They are both clamped, 
+  flat-shaded, clipped, and converted to fixed-point just like the 
+  current rgba color (see Figure 2.8).  Rasterization interpolates 
+  both colors to fragments.  If texture is enabled, the first (or 
+  primary) color is the input to the texture environment; the fragment 
+  color is the sum of the second color and the color resulting from 
+  texture application.  If texture is not enabled, the fragment color 
+  is the sum of the two colors.
+
+  A new control to LightModel*, LIGHT_MODEL_COLOR_CONTROL_EXT, manages 
+  the values of the two colors.  It takes values: SINGLE_COLOR_EXT, a 
+  compatibility mode, and SEPARATE_SPECULAR_COLOR_EXT, the object of 
+  this extension.  In single color mode, the primary color is the 
+  current final color and the secondary color is 0.0.  In separate 
+  specular mode, the primary color is the sum of the ambient, diffuse, 
+  and emissive terms of final color and the secondary color is the 
+  specular term.
+
+  There is much concern that this extension may not be compatible with
+  the future direction of OpenGL with regards to better lighting and
+  shading models.  Until those impacts are resolved, serious
+  consideration should be given before adding to the interface
+  specified herein (for example, allowing the user to specify a
+  second input color).
+
+Issues
+
+  * Where is emissive included? 
+
+    RESOLVED - Emissive is included with the ambient and diffuse 
+    terms.  Grouping emissive with specular (the "proper" thing) could 
+    be implemented with a new value for the color control.
+
+* Should there be two colors when not lighting or with index 
+  lighting?
+
+    RESOLVED - The answer is probably yes--there should be two colors 
+    when lighting is disabled and there could be an incorporation of 
+    two colors with index lighting; but these are beyond the scope of 
+    this extension.  Further, attempts to accomplish these may not be
+    compatible with the future direction of OpenGL with respect to
+    high quality lighting and shading models.
+
+  * What happens when texture is disabled?
+
+    RESOLVED - The extension specifies to add the two colors when 
+    texture is disabled.  This is compatible with the philosophy of 
+    "if texture is disabled, this mode does not apply".
+
+New Procedures and Functions
+
+  None.
+
+New Tokens
+
+  Accepted by the <pname> parameter of LightModel*, and also by the 
+  <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and 
+  GetDoublev:
+
+    LIGHT_MODEL_COLOR_CONTROL_EXT	0x81F8
+
+  Accepted by the <param> parameter of LightModel* when <pname> is 
+  LIGHT_MODEL_COLOR_CONTROL_EXT:
+
+    SINGLE_COLOR_EXT			0x81F9
+    SEPARATE_SPECULAR_COLOR_EXT		0x81FA
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+  - (2.13, p. 40) Rework the second paragraph to acknowledge two
+    colors:
+
+    "Next, lighting, if enabled, produces either a color index or 
+    primary and secondary colors.  If lighting is disabled, the 
+    current color index or color is used in further processing (the 
+    current color is the primary color and the secondary color is 0).  
+    After lighting, colors are clamped..."
+
+  - (Figure 2.8, p. 41) Change RGBA to primary RGBA and secondary RGB:
+
+    Ideally, there might be an RGB2 underneath RGBA (both places).  
+    Alternatively, a note in the caption could clarify that RGBA 
+    referred to the primary RGBA and a secondary RGB.  (Speaking of 
+    the caption, the part about "m is the number of bits an R, G, B, 
+    or A component" could be removed as m doesn't appear in the 
+    diagram.)
+
+  - (2.13.1, p. 42) Rework the opening of this section to not imply a 
+    single color:
+
+    In the first sentence, change "a color" to "colors".  Rephrase the 
+    itemization of the two lighting states to:
+
+    "1. Lighting Off. In this state, the current color is assigned to 
+        the vertex primary color.  The vertex secondary color is 0.
+
+     2. Lighting On.  In this state, the vertex primary and secondary 
+        colors are computed from the current lighting parameters."
+
+  - (Table 2.7, p.44) Add new entry (at the bottom):
+
+    Parameter  Type  Default Value     Description
+    ---------  ----  ----------------  ------------------------------
+    c_es       enum  SINGLE_COLOR_EXT  controls computation of colors
+
+  - (p. 45, top of page) Rephrase the first line and equation:
+
+    "Lighting produces two colors at a vertex: a primary color c_1 and 
+    a secondary color c_2.  The values of c_1 and c_2 depend on the 
+    light model color control, c_es (note: c_es should be in italics 
+    and c_1 and c_2 in bold, so this really won't be as confusing as 
+    it seems).  If c_es = SINGLE_COLOR_EXT, then the equations to 
+    compute c_1 and c_2 are (note: the equation for c_1 is the current 
+    equation for c):
+
+      c_1 = e_cm
+          + a_cm * a_cs
+          + SUM(att_i * spot_i * (a_cm * a_cli
+                               + dot(n, VP_pli) * d_cm * d_cli
+                               + f_i * dot(n, h_i)^s_rm * s_cm * s_cli)
+      c_2 = 0
+
+    If c_es = SEPARATE_SPECULAR_COLOR_EXT, then:
+
+      c_1 = e_cm
+          + a_cm * a_cs
+          + SUM (att_i * spot_i * (a_cm * a_cli
+                                + (n dot VP_pli) * d_cm * d_cli)
+
+      c_2 = SUM(att_i * spot_i * (f_i * (n dot h_i)^s_rm * s_cm * s_cli)
+
+  - (p. 45, second paragraph from bottom) Clarify that A is in the 
+    primary color:
+
+    After the sentence "The value of A produced by lighting is the 
+    alpha value associated with d_cm", add "A is always associated 
+    with the primary color c_1; c_2 has no alpha component."
+
+  - (Table 2.8, p. 48) Add a new entry (at the bottom):
+
+    Parameter  Name                           Number of values
+    ---------  -----------------------------  ---------------- 
+    c_es       LIGHT_MODEL_COLOR_CONTROL_EXT         1
+
+  - (2.13.6, p. 51) Clarify that both primary and secondary colors are 
+    clamped:
+
+    Replace "RGBA" in the first line of the section with "both primary 
+    and secondary".
+
+  - (2.13.7, p. 52) Clarify what happens to primary and secondary 
+    colors when flat shading--reword the first paragraph:
+
+    "A primitive may be flatshaded, meaning that all vertices of the 
+    primitive are assigned the same color index or primary and 
+    secondary colors.  These come from the vertex that spawned the 
+    primitive.  For a point, these are the colors associated with the 
+    point.  For a line segment, they are the colors of the second 
+    (final) vertex of the segment.  For a polygon, they come from a 
+    selected vertex depending on how the polygon was generated.  Table 
+    2.9 summarizes the possibilities."
+
+  - (2.13.8, p. 52) Rework to not imply a single color:
+
+    In the second sentence, change "If the color is" to "Those" and ", 
+    it is" to "are".  In the first sentence of the next paragraph, 
+    change "the color" to "two colors".
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+  - (Figure 3.1, p. 55) Add a box between texturing and fog called 
+    "color sum".
+
+  - (3.8, p. 85) In the first paragraph, second sentence, insert 
+    "primary" before RGBA.  Insert after this sentence "Texturing does 
+    not affect the secondary color."
+
+  - (new section before 3.9) Insert new section titled "Color Sum":
+
+    "At the beginning of this stage in RGBA mode, a fragment has two 
+    colors: a primary RGBA color (which texture, if enabled, may have 
+    modified) and a secondary RGB color.  This stage sums the R, G, 
+    and B components of these two colors to produce a single RGBA 
+    color.  If the resulting RGB values exceed 1.0, they are clamped 
+    to 1.0.
+
+    In color index mode, a fragment only has a single color index and 
+    this stage does nothing."
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+  None.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+  - (5.3, p. 137) Specify that feedback returns the primary color by
+    changing the last sentence of the large paragraph in the middle
+    of the page to:
+
+    "The colors returned are the primary colors.  These colors and the
+    texture coordinates are those resulting from the clipping operations
+    as described in section 2.13.8."
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+  - (Table 6.9, p. 157) Add:
+
+    Get Value - LIGHT_MODEL_COLOR_CONTROL_EXT
+    Type - Z2
+    Get Cmnd - GetIntegerv
+    Initial Value - SINGLE_COLOR_EXT
+    Description - color control
+    Sec. - (whatever it ends up as)
+    Attribute - lighting
+
+Additions to the GLX Specification
+
+  None.
+
+GLX Protocol
+
+  None.
+
+Errors
+
+  None.
+
+New State
+
+  (see changes to table 6.9)

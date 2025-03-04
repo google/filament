@@ -1,0 +1,635 @@
+Name
+
+    ARB_ES3_1_compatibility
+
+Name Strings
+
+    GL_ARB_ES3_1_compatibility
+
+Contact
+
+    Piers Daniell, NVIDIA Corporation (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Daniel Koch, NVIDIA Corporation (dkoch 'at' nvidia.com)
+
+    and contributors to the OpenGL ES 3.1 specification
+
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. 
+    Approved by the ARB on June 26, 2014.
+    Ratified by the Khronos Board of Promoters on August 7, 2014.
+
+Version
+
+    Last Modified Date:         September 19, 2014
+    Revision:                   15
+
+Number
+
+    ARB Extension #159
+
+Dependencies
+
+    OpenGL 4.4, ARB_ES2_compatibility, ARB_ES3_compatibility are required.
+
+    This extension is written against The OpenGL 4.4 (Compatibility Profile)
+    specification.
+
+Overview
+
+    This extension adds support for features of OpenGL ES 3.1 that are
+    missing from OpenGL 4.4. Enabling these features will ease the process
+    of porting applications from OpenGL ES 3.1 to OpenGL.
+
+    In particular this adds the following features:
+
+    - a new MemoryBarrierByRegion API which is potentially more efficient
+    for specific localized memory access patterns.
+
+    - increases the minimum required size of SSBOs to 2^27 (128 MB).
+
+    - support for GLSL ES version 310 (ie #version 310 es).
+
+    - a new GLSL built-in function, imageAtomicExchange, which performs atomic
+    exchanges on r32f floating point images.
+
+    - a new GLSL built-in fragment shader input, gl_HelperInvocation, that
+    identifies whether the current fragment shader input is a helper
+    invocation.  Fragment shader code can use this variable to skip performing
+    operations that are useless or potentially dangerous for helper
+    invocations.
+
+    - a new GLSL built-in constant for the maximum supported samples:
+    gl_MaxSamples.
+
+    - a number of new GLSL built-in constants mirroring the API limits for
+    image uniforms: gl_Max*ImageUniforms, gl_MaxCombinedShaderOutputResources.
+
+    - new GLSL built-in functions which extend mix() to select between int,
+    uint, and bool components.
+
+    - add the "coherent" qualifier to all memory variables taken by the GLSL
+    built-in atomic* and imageAtomic* functions.
+
+New Procedures and Functions
+
+    void MemoryBarrierByRegion(bitfield barriers);
+
+New Tokens
+
+    None
+
+Additions to Chapter 1 of the OpenGL 4.4 (Compatibility Profile)
+Specification (Introduction)
+
+    Modify section 1.3.2 (OpenGL ES) to include mention of OpenGL ES 3.1:
+
+    OpenGL ES is a ... well-defined subsets of OpenGL.  OpenGL ES version
+    1.1 implements a subset of the OpenGL 1.5 fixed-function API, OpenGL
+    ES 2.0 implements a subset of the OpenGL 2.0 shader-based API, OpenGL
+    ES 3.0 implements a subset of OpenGL 3.3, and OpenGL ES 3.1 implements
+    a subset of OpenGL 4.3. OpenGL ES versions also include ...
+
+    OpenGL and OpenGL ES are developed ...
+
+    OpenGL implementations supporting this extension include functionality
+    initially defined in OpenGL ES 3.1, for increased compatibility between
+    OpenGL and OpenGL ES implementations.
+
+
+    Modify section 1.3.3 (OpenGL ES Shading Language) to include mention
+    of version 3.10:
+
+    The Specification should also be read together with companion documents
+    titled "The OpenGL ES Shading Language". Versions 1.00, 3.00 and 3.10
+    should be read. These documents define versions of the OpenGL ES Shading
+    Language designed for implementations of OpenGL ES 2.0, 3.0 and 3.1,
+    respectively, but also supported by OpenGL implementations. References ...
+
+    OpenGL implementations supporting this extensions are guaranteed to
+    support versions 1.00, 3.00 and 3.10 of the OpenGL ES Shading Language.
+
+
+Additions to Chapter 7 of the OpenGL 4.4 (Compatibility Profile)
+Specification (Programs and Shaders)
+
+    Modify Section 7.12.2, "Shader Memory Access Synchronization", (p. 148)
+
+    (Append to the end of the section)
+
+    "The command
+
+        void MemoryBarrierByRegion(bitfield barriers)
+
+    behaves as described above for MemoryBarrier, with two differences:
+
+    First, it narrows the region under consideration so that only reads/writes
+    of prior fragment shaders that are invoked for a smaller region of the
+    framebuffer will be completed/reflected prior to subsequent reads/write of
+    following fragment shaders.  The size of the region is implementation
+    dependent and may be as small as one framebuffer pixel.
+    
+    Second, it only applies to memory transactions that may be read by or
+    written by a fragment shader.  Therefore, only the barrier bits
+      - ATOMIC_COUNTER_BARRIER_BIT
+      - FRAMEBUFFER_BARRIER_BIT
+      - SHADER_IMAGE_ACCESS_BARRIER_BIT
+      - SHADER_STORAGE_BARRIER_BIT
+      - TEXTURE_FETCH_BARRIER_BIT
+      - UNIFORM_BARRIER_BIT
+    are supported.
+
+    When barriers is ALL_BARRIER_BITS, shader memory accesses will be
+    synchronized relative to all these barrier bits, but not to other barrier
+    bits specific to MemoryBarrier. This implies that reads/writes for
+    scatter/gather-like algorithms may or may not be completed/reflected after
+    a MemoryBarrierByRegion command. However, for uses such as deferred
+    shading, where a linked list of visible surfaces with the head at a
+    framebuffer address may be constructed, and the entirety of the list is
+    only dependent on previous executions at that framebuffer address,
+    MemoryBarrierByRegion may be significantly more efficient than
+    MemoryBarrier."
+
+
+Additions to Chapter 9 of the OpenGL 4.4 (Compatibility Profile)
+Specification (Framebuffers and Framebuffer Objects)
+
+    Modify Section 9.2.3 (Framebuffer Object Queries) in the second
+    paragraph describing GetFramebufferAttachmentParameteriv to add BACK as
+    a valid <attachment>:
+
+    "If the default framebuffer is bound to <target>, then <attachment> must
+    be one of FRONT_LEFT, FRONT_RIGHT, BACK, BACK_LEFT, or BACK_RIGHT,
+    identifying a color buffer; ... identifying the stencil buffer. Since
+    this command can only query a single framebuffer attachment, BACK is
+    equivalent to BACK_LEFT."
+
+    Modify the first paragraph of Section 9.4.5 (Effects of
+    Framebuffer State on Framebuffer Dependent Values)
+    
+    "The values of the state variables listed in table 23.85 may change when
+    a change is made to the current framebuffer binding, to the state of the
+    currently bound framebuffer object, or to an image attached to that
+    framebuffer object. Most such state is dependent on the draw framebuffer
+    (DRAW_FRAMEBUFFER_BINDING), but IMPLEMENTATION_COLOR_READ_TYPE and
+    IMPLEMENTATION_COLOR_READ_FORMAT are dependent on the read framebuffer
+    (READ_FRAMEBUFFER_BINDING)."
+
+
+Additions to Chapter 15 of the OpenGL 4.4 (Compatibility Profile)
+Specification (Programmable Fragment Processing)
+
+    Modify Section 15.2.2 (Shader Inputs), (p. 530, 5th paragraph)
+
+    "The built-in variable gl_SampleMaskIn is an integer array...
+    The number of elements in the array is ceil(gl_MaxSamples/32), where
+    gl_MaxSamples is the value of MAX_SAMPLES, the maximum number of
+    color samples supported by the implementation.  Bit <n> ... "
+
+    Modify Section 15.2.3 (Shader Outputs), (p. 532, 2nd paragraph)
+
+    "The built-in integer array gl_SampleMask can be used ...
+    The number of elements in the arrays is ceil(gl_MaxSamples/32), where
+    gl_MaxSamples is the value of MAX_SAMPLES, the maximum number of
+    color samples supported by the implementation. If bit <n> ... "
+
+
+Additions to Chapter 17 of the OpenGL 4.4 (Compatibility Profile)
+Specification (Writing Fragments and Samples to the Framebuffer)
+
+    Modify Section 17.4.1 (Selecting Buffers for Writing), (p. 572,
+    2nd paragraph)
+    
+    "If the GL is bound to the default framebuffer, then each of the
+    constants must be one of the values listed in table 17.6 or the
+    special value BACK. When the value BACK is used then <n> must
+    be 1 and color values are written into the left buffer for
+    single-buffered contexts, or into the back left buffer for double-
+    buffered contexts. An INVALID_OPERATION error is generated if
+    <bufs> contains the value BACK and <n> does not equal 1."
+
+
+Additions to Chapter 18 of the OpenGL 4.4 (Compatibility Profile)
+Specification (Drawing, Reading, and Copying Pixels)
+
+    Modify Section 18.2.1 (Selecting Buffers for Reading), (p. 589)
+    
+    Remove the last paragraph that describes the
+    IMPLEMENTATION_COLOR_READ_FORMAT and IMPLEMENTATION_COLOR_READ_TYPE
+    queries and errors.
+    
+    Modify Section 18.2.2 (ReadPixels), (p. 589)
+    
+    Add the following paragraph at the end of the section:
+    
+    "The preferred parameters for <format> and <type> may be determined by
+    calling GetIntegerv with the symbolic constants
+    IMPLEMENTATION_COLOR_READ_FORMAT and IMPLEMENTATION_COLOR_READ_TYPE,
+    respectively. The implementation chosen format may vary depending on the
+    format of the selected read buffer of the currently bound read
+    framebuffer.
+    
+    An INVALID_OPERATION error is generated by GetIntegerv if pname is
+    IMPLEMENTATION_COLOR_READ_FORMAT or IMPLEMENTATION_COLOR_READ_TYPE and
+    any of:
+     - the read framebuffer is not framebuffer complete
+     - the read framebuffer is a framebuffer object, and the selected read buffer
+       (see section 18.2.1) has no image attached
+     - the selected read buffer is NONE
+    "
+
+Additions to Chapter 22 of the OpenGL 4.4 (Compatibility Profile)
+Specification (Context State Queries)
+
+    Modify Section 22.2 (Pointer and String Queries), (p. 648)
+
+    "If <name> is SHADING_LANGUAGE_VERSION, ...
+    Version strings "100", "300 es" and "310 es" correspond to the OpenGL
+    ES Shading Language versions 100, 300 and 310, respectively."
+
+
+
+Additions to the OpenGL Shading Language
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+        #extension GL_ARB_ES3_1_compatibility : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+        #define GL_ARB_ES3_1_compatibility 1
+
+
+Additions to Chapter 3 of the OpenGL Shading Language 4.40.8 Specification
+(Basics)
+
+    Modify the paragraph at the bottom of page 16 in Section 3.3
+    (Preprocessor) as follows:
+
+    "... Shaders that specify #version 100 will be treated as targeting
+    version 1.00 of the OpenGL ES Shading Language. Shaders that specify
+    #version 300 will be treated as targeting version 3.00 of the OpenGL
+    ES Shading Language. Shaders that specify #version 310 will be treated
+    as targeting version 3.10 of the OpenGL ES Shading Language. ..."
+
+    Modify the 3rd paragraph at the top of p16 as follows:
+
+    A <profile> argument ...
+    If version 300 or 310 is specified, the profile argument is not optional
+    and must be "es", or a compile-time error results. The Language
+    Specification ...
+
+
+Additions to Chapter 4 of the OpenGL Shading Language 4.40.8 Specification
+(Variables and Types)
+
+    Modify Section 4.7.2 (Precision Qualifiers)
+    
+    (Replace the first sentence to reference all opaque types instead of just
+    samplers)
+     
+    "Any floating point, integer, or opaque-type declaration can have the
+    type preceded by one of these precision qualifiers: ..."
+    
+    Modify Section 4.7.3 (Default Precision Qualifiers)
+    
+    (Replace the second sentence to reference all opaque types and not just
+    samples)
+    
+    "The type field can be either int or float, any of the opaque types, and
+    the precision-qualifier can be lowp, mediump, or highp. ..."
+
+
+Additions to Chapter 7 of the OpenGL Shading Language 4.40.8 Specification
+(Built-in Variables)
+
+    Modify Section 7.1, Built-In Language Variables (p. 122)
+
+    (Add to list of fragment language built-in variables on page 122)
+
+        in bool gl_HelperInvocation;
+
+    (Add after the description of gl_SamplePosition on page 127)
+
+    "The value gl_HelperInvocation is true if the fragment shader invocation is
+    considered a "helper invocation" and is false otherwise.  A "helper
+    invocation" is a fragment-shader invocation that is created solely for the
+    purposes of evaluating derivatives for use in non-helper fragment-shader
+    invocations.  Such derivatives are computed implicitly in the built-in
+    function texture() (see section 8.9 "Texture Functions"), and explicitly in
+    the derivative functions in section 8.13.1 "Derivative Functions", for 
+    example dFdx() and dFdy().
+
+    Fragment shader helper invocations execute the same shader code as
+    non-helper invocations, but will not have side effects that modify the
+    framebuffer or other shader-accessible memory.  In particular:
+
+      * Fragments corresponding to helper invocations are discarded when
+        shader execution is complete, without updating the framebuffer.
+
+      * Stores to image and buffer variables performed by helper invocations
+        have no effect on the underlying image or buffer memory.
+
+      * Atomic operations to image, buffer, or atomic counter variables
+        performed by helper invocations have no effect on the underlying image
+        or buffer memory.  The values returned by such atomic operations are
+        undefined.
+
+    Helper invocations may be generated for pixels not covered by a primitive
+    being rendered.  While fragment shader inputs qualified with "centroid"
+    are normally required to be sampled in the intersection of the pixel and
+    the primitive, the requirement is ignored for such pixels since there is
+    no intersection between the pixel and primitive.
+
+    Helper invocations may also be generated for fragments that are covered by
+    a primitive being rendered when the fragment is killed by early fragment
+    tests (using the "early_fragment_tests" qualifier) or where the
+    implementation is able to determine that executing the fragment shader
+    would have no effect other than assisting in computing derivatives for
+    other fragment shader invocations.
+
+    The set of helper invocations generated when processing any set of
+    primitives is implementation-dependent."
+
+    Add to section 7.3 Built-in Constants
+
+        const int gl_MaxSamples = 4;
+
+        const int gl_MaxVertexImageUniforms = 0;
+        const int gl_MaxFragmentImageUniforms = 8;
+        const int gl_MaxComputeImageUniforms = 8;
+        const int gl_MaxCombinedImageUniforms = 48;
+        const int gl_MaxCombinedShaderOutputResources = 16;
+
+Additions to Chapter 8 of the OpenGL Shading Language 4.40.8 Specification
+(Built-in Functions)
+
+    Modify Section 8.3, Common Functions
+
+    (Additions to the table listing common built-in functions)
+
+      Syntax                       Description
+      ---------------------------  --------------------------------------------------
+      genIType mix(genIType x,     Selects which vector each returned component comes
+                   genIType y,     from. For a component of a that is false, the
+                   genBType a)     corresponding component of x is returned. For a
+      genUType mix(genUType x,     component of a that is true, the corresponding
+                   genUType y,     component of y is returned.
+                   genBType a)
+      genBType mix(genBType x,
+                   genBType y,
+                   genBType a)
+
+    Modify Section 8.11, Atomic Memory Functions
+
+    (Modify the table on page 173 by adding "coherent" qualifier to all memory
+     variables.)
+
+      Syntax                                    Description
+      ----------------------------------------  ---------------------------------------------------
+      uint atomicAdd(coherent inout uint mem,   Computes a new value by adding the value of data to
+                     uint data)                 the contents mem.
+      int atomicAdd(coherent inout int mem,
+                    int data)
+
+      uint atomicMin(coherent inout uint mem,   Computes a new value by taking the minimum of the
+                     uint data)                 value of data and the contents of mem.
+      int atomicMin(coherent inout int mem,
+                    int data)
+
+      uint atomicMax(coherent inout uint mem,   Computes a new value by taking the maximum of the
+                    uint data)                  value of data and the contents of mem.
+      int atomicMax(coherent inout int mem,
+                    int data)
+
+      uint atomicAnd(coherent inout uint mem,   Computes a new value by performing a bit-wise
+                     uint data)                 AND of the value of data and the contents of mem.
+      int atomicAnd(coherent inout int mem,
+                    int data)
+
+      uint atomicOr(coherent inout uint mem,    Computes a new value by performing a bit-wise OR
+                    uint data)                  of the value of data and the contents of mem.
+      int atomicOr(coherent inout int mem,
+                   int data)
+
+      uint atomicXor(coherent inout uint mem,   Computes a new value by performing a bit-wise
+                     uint data)                 EXCLUSIVE OR of the value of data and the
+      int atomicXor(coherent inout int mem,     contents of mem.
+                    int data)
+
+      uint atomicExchange(                      Computes a new value by simply copying the value
+          coherent inout uint mem,              of data.
+          uint data)
+      int atomicExchange(
+          coherent inout int mem,
+          int data)
+
+      uint atomicCompSwap(                      Compares the value of compare and the contents of
+          coherent inout uint mem,              mem. If the values are equal, the new value is given
+          uint compare,                         by data; otherwise, it is taken from the original
+          uint data)                            contents of mem.
+      int atomicCompSwap(
+          coherent inout int mem,
+          int compare,
+          int data)
+
+    Modify Section 8.12, Image Functions
+
+    (Modify the table section listing imageAtomic* on page 175 by adding
+     the "coherent" qualifier to the image parameter and adding a new
+     imageAtomicExchange function for float data.)
+
+      Syntax                          Description
+      ------------------------------  ---------------------------------------------------
+      uint imageAtomicAdd(            Computes a new value by adding the value of data
+          coherent IMAGE_PARAMS,      to the contents of the selected texel.
+          uint data)
+      int imageAtomicAdd(
+          coherent IMAGE_PARAMS,
+          int data)
+
+      uint imageAtomicMin(            Computes a new value by taking the minimum of the
+          coherent IMAGE_PARAMS,      value of data and the contents of the selected texel.
+          uint data)
+      int imageAtomicMin(
+          coherent IMAGE_PARAMS,
+          int data)
+
+      uint imageAtomicMax(            Computes a new value by taking the maximum of the
+          coherent IMAGE_PARAMS,      value data and the contents of the selected texel.
+          uint data)
+      int imageAtomicMax(
+          coherent IMAGE_PARAMS,
+          int data)
+
+      uint imageAtomicAnd(            Computes a new value by performing a bit-wise
+          coherent IMAGE_PARAMS,      AND of the value of data and the contents of the
+          uint data)                  selected texel.
+      int imageAtomicAnd(
+          coherent IMAGE_PARAMS,
+          int data)
+
+      uint imageAtomicOr(             Computes a new value by performing a bit-wise OR
+          coherent IMAGE_PARAMS,      of the value of data and the contents of the selected
+          uint data)                  texel.
+      int imageAtomicOr(
+          coherent IMAGE_PARAMS,
+          int data)
+
+      uint imageAtomicXor(            Computes a new value by performing a bit-wise
+          coherent IMAGE_PARAMS,      EXCLUSIVE OR of the value of data and the
+          uint data)                  contents of the selected texel.
+      int imageAtomicXor(
+          coherent IMAGE_PARAMS,
+          int data)
+
+      uint imageAtomicExchange(       Computes a new value by simply copying the value of
+          coherent IMAGE_PARAMS,      <data>. These functions support 32-bit signed and
+          uint data);                 unsigned integer operands, and 32-bit float operands.
+      int imageAtomicExchange(
+          coherent IMAGE_PARAMS,
+          int data);
+      float imageAtomicExchange(
+          coherent IMAGE_PARAMS,
+          float data);
+
+      uint imageAtomicCompSwap(       Compares the value of compare and the contents of
+          coherent IMAGE_PARAMS,      the selected texel. If the values are equal, the new
+          uint compare,               value is given by data; otherwise, it is taken from the
+          uint data)                  original value loaded from the texel.
+      int imageAtomicCompSwap(
+          coherent IMAGE_PARAMS,
+          int compare,
+          int data)
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    An INVALID_VALUE is generated by MemoryBarrier or MemoryBarrierByRegion
+    if barriers is not the special value ALL_BARRIER_BITS and any of the
+    unsupported bits are set.
+
+New State
+
+    (Modify Table 23.64 - Implementation Dependent Values)
+    
+    Remove IMPLEMENTATION_COLOR_READ_FORMAT and IMPLEMENTATION_COLOR_READ_TYPE.
+
+    (Modify Table 23.76 - Implementation Dependent Aggregate Shader Limits)
+
+    Increase the minimum required value of MAX_SHADER_STORAGE_BLOCK_SIZE to 2^27.
+
+    (Modify Table 23.85 - Framebuffer Dependent Values)
+    
+    Add the following entries:
+    
+    Get Value                         Type  Get Command  Minimum Value  Description                     Sec
+    --------------------------------  ----  -----------  -------------  ------------------------------  ----
+    IMPLEMENTATION_COLOR_READ_TYPE    E     GetIntegerv  -              Implementation preferred pixel  18.2
+                                                                        type*
+    IMPLEMENTATION_COLOR_READ_FORMAT  E     GetIntegerv  -              Implementation preferred pixel  18.2
+                                                                        format*
+
+    "* Unlike most framebuffer-dependent state which is queried from the currently bound
+      draw framebuffer, this state is queried from the currently bound read framebuffer."
+
+
+Issues
+
+    1) With this extension, is OpenGL 4.4 a complete superset of OpenGL ES 3.1?
+
+    RESOLVED: No, there are things in OpenGL ES 3.1 that were once in OpenGL
+    but have since been deprecated and removed. There is no plan to bring
+    these back into core OpenGL. Here is a list of those things:
+
+     - Application-generated object names.
+
+     - Client vertex and index arrays.
+
+     - Default vertex array object.
+
+     - ALPHA, LUMINANCE and LUMINANCE_ALPHA pixel formats.
+
+     - RED_BITS, GREEN_BITS, BLUE_BITS, DEPTH_BITS and STENCIL_BITS.
+
+     - GENERATE_MIPMAP_HINT and automatic mipmap generation.
+
+     - ALIASED_POINT_SIZE_RANGE query.
+
+     - Line widths greater than 1.
+
+     - Query of EXTENSIONS with GetString.
+
+    In addition the error FRAMEBUFFER_INCOMPLETE_DIMENSIONS was in ES2 and the
+    token remains in ES3 and above, but ES3 and above cannot generate this
+    error. This has not been added to OpenGL core.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------------
+    15    09/19/14  Jon Leech Remove FRONT as valid <attachment>.    
+
+    14    09/18/14  Jon Leech Add FRONT and BACK as valid <attachment>s for 
+                              GetFramebufferAttachmentParameteriv (Bug
+                              12695).
+
+    13    05/08/14  pdaniell  Allow precision qualifiers to be used with any
+                              opaque type, and not just samplers.
+
+    12    05/01/14  pdaniell  Add #extension support.
+
+    11    04/17/14  pdaniell  Improve support for the
+                              IMPLEMENTATION_COLOR_READ_FORMAT and
+                              IMPLEMENTATION_COLOR_READ_TYPE queries to match
+                              the OpenGL ES 3.1 spec.
+    
+    10    04/16/14  pdaniell  Add ES compatibility for calling DrawBuffers
+                              with BACK.
+    
+    9     03/20/14  pdaniell  Update glMemoryBarrierByRegion language to
+                              match latest OpenGL ES 3.1 spec.
+
+    8     03/15/14  dkoch     Update overview to specifically itemize the
+                              additions.
+
+    7     03/13/14  pdaniell  Remove fixes for ARB_vertex_attrib_binding
+                              which have now gone into an OpenGL 4.4 update.
+
+    6     03/07/14  pdaniell  Update language for glMemoryBarrierByRegion to
+                              the latest ES 3.1 spec.
+
+    5     03/04/14  pdaniell  Add some more built-in constants for shader
+                              image load store.
+
+    4     03/04/14  dkoch     Remove unnecessary edits (Bug 11802).
+
+    3     03/02/14  dkoch     More complete first draft.
+
+    2     02/27/14  pdaniell  Complete the first draft.
+
+    1     12/20/13  pdaniell  Initial draft with overview only.

@@ -1,0 +1,402 @@
+# Copyright 2021 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# GEN_BUILD:DO_NOT_GENERATE - Don't regenerate this file with `./tools run gen`
+
+import("//build_overrides/build.gni")
+
+import("../../scripts/dawn_overrides_with_defaults.gni")
+import("../../scripts/tint_overrides_with_defaults.gni")
+
+if (tint_build_unittests) {
+  import("//testing/test.gni")
+}
+
+import("tint.gni")
+
+###############################################################################
+# Common - Configs, etc. shared across targets
+###############################################################################
+
+# tint_gen_dir is the relative path of tint_root_dir to '//', under root_gen_dir
+tint_gen_dir = "${root_gen_dir}/" + rebase_path("${tint_root_dir}", "//")
+
+config("tint_common_config") {
+  include_dirs = [
+    "${tint_root_dir}",
+    "${tint_gen_dir}",
+  ]
+
+  # Some versions of MSVC ignores the [[noreturn]] on ~InternalCompilerError(),
+  # triggering a warning if it is the last statement on a function that has a
+  # return value.
+  if (!is_clang && is_win) {
+    cflags = [ "/wd4715" ]
+  }
+}
+
+config("tint_public_config") {
+  defines = []
+  if (tint_build_spv_reader) {
+    defines += [ "TINT_BUILD_SPV_READER=1" ]
+  } else {
+    defines += [ "TINT_BUILD_SPV_READER=0" ]
+  }
+
+  if (tint_build_spv_writer) {
+    defines += [ "TINT_BUILD_SPV_WRITER=1" ]
+  } else {
+    defines += [ "TINT_BUILD_SPV_WRITER=0" ]
+  }
+
+  if (tint_build_wgsl_reader) {
+    defines += [ "TINT_BUILD_WGSL_READER=1" ]
+  } else {
+    defines += [ "TINT_BUILD_WGSL_READER=0" ]
+  }
+
+  if (tint_build_wgsl_writer) {
+    defines += [ "TINT_BUILD_WGSL_WRITER=1" ]
+  } else {
+    defines += [ "TINT_BUILD_WGSL_WRITER=0" ]
+  }
+
+  if (tint_build_msl_writer) {
+    defines += [ "TINT_BUILD_MSL_WRITER=1" ]
+  } else {
+    defines += [ "TINT_BUILD_MSL_WRITER=0" ]
+  }
+
+  if (tint_build_hlsl_writer) {
+    defines += [ "TINT_BUILD_HLSL_WRITER=1" ]
+  } else {
+    defines += [ "TINT_BUILD_HLSL_WRITER=0" ]
+  }
+
+  if (tint_build_glsl_writer) {
+    defines += [ "TINT_BUILD_GLSL_WRITER=1" ]
+  } else {
+    defines += [ "TINT_BUILD_GLSL_WRITER=0" ]
+  }
+
+  if (tint_build_glsl_validator) {
+    defines += [ "TINT_BUILD_GLSL_VALIDATOR=1" ]
+  } else {
+    defines += [ "TINT_BUILD_GLSL_VALIDATOR=0" ]
+  }
+
+  if (tint_build_syntax_tree_writer) {
+    defines += [ "TINT_BUILD_SYNTAX_TREE_WRITER=1" ]
+  } else {
+    defines += [ "TINT_BUILD_SYNTAX_TREE_WRITER=0" ]
+  }
+
+  if (tint_build_ir_binary) {
+    defines += [ "TINT_BUILD_IR_BINARY=1" ]
+  } else {
+    defines += [ "TINT_BUILD_IR_BINARY=0" ]
+  }
+
+  if (tint_build_ir_fuzzer) {
+    assert(tint_build_ir_binary,
+           "tint_build_ir_fuzzer requires tint_build_ir_binary")
+    defines += [ "TINT_BUILD_IR_FUZZER=1" ]
+  } else {
+    defines += [ "TINT_BUILD_IR_FUZZER=0" ]
+  }
+
+  if (tint_build_is_win) {
+    defines += [ "TINT_BUILD_IS_WIN=1" ]
+  } else {
+    defines += [ "TINT_BUILD_IS_WIN=0" ]
+  }
+
+  if (tint_build_is_mac) {
+    defines += [ "TINT_BUILD_IS_MAC=1" ]
+  } else {
+    defines += [ "TINT_BUILD_IS_MAC=0" ]
+  }
+
+  if (tint_build_is_linux) {
+    defines += [ "TINT_BUILD_IS_LINUX=1" ]
+  } else {
+    defines += [ "TINT_BUILD_IS_LINUX=0" ]
+  }
+
+  include_dirs = [
+    "${tint_root_dir}/",
+    "${tint_root_dir}/include/",
+  ]
+}
+
+config("tint_config") {
+  include_dirs = []
+  if (tint_build_spv_reader || tint_build_spv_writer) {
+    include_dirs += [ "${tint_spirv_tools_dir}/include/" ]
+  }
+}
+
+source_set("dl") {
+  # GN doesn't appear to need to depend on any dl libraries.
+}
+
+source_set("thread") {
+  # GN doesn't appear to need to depend on any thread libraries.
+}
+
+source_set("metal") {
+  frameworks = [
+    "CoreGraphics.framework",
+    "Foundation.framework",
+    "Metal.framework",
+  ]
+}
+
+config("tint_unittests_config") {
+  include_dirs = [
+    "${tint_googletest_dir}/googlemock/include",
+    "${tint_googletest_dir}/googletest/include",
+  ]
+
+  configs = [
+    ":tint_common_config",
+    ":tint_public_config",
+  ]
+
+  if (is_win && is_debug) {
+    # TODO(crbug.com/tint/1749): both msvc and clang builds stack overflow on debug builds.
+    # Increase the initial stack size to 4 MB (default is 1MB).
+    ldflags = [ "/STACK:4194304" ]
+  }
+}
+
+if (tint_build_unittests) {
+  ###############################################################################
+  # Gtest Gmock - Handle building inside and outside of Chromium.
+  ###############################################################################
+  # When building outside of Chromium we need to define our own targets for GTest
+  # and GMock. However when compiling inside of Chromium we need to reuse the
+  # existing targets, both because Chromium has a special harness for swarming
+  # and because otherwise the "gn check" fails.
+
+  if (build_with_chromium) {
+    # When we are in Chromium we reuse its targets, and also add some deps that
+    # are needed to launch the test in swarming mode.
+    group("gmock_and_gtest") {
+      testonly = true
+      public_deps = [
+        "//base",
+        "//base/test:test_support",
+        "//testing/gmock",
+        "//testing/gtest",
+        "//third_party/googletest:gmock",
+      ]
+    }
+  } else {
+    # When we aren't in Chromium we define out own targets based on the location
+    # of the googletest repo.
+    config("gtest_config") {
+      include_dirs = [
+        "${tint_googletest_dir}/googletest",
+        "${tint_googletest_dir}/googletest/include",
+      ]
+    }
+    static_library("gtest") {
+      testonly = true
+      sources = [ "${tint_googletest_dir}/googletest/src/gtest-all.cc" ]
+      public_configs = [ ":gtest_config" ]
+    }
+
+    config("gmock_config") {
+      include_dirs = [
+        "${tint_googletest_dir}/googlemock",
+        "${tint_googletest_dir}/googlemock/include",
+        "${tint_googletest_dir}/googletest/include",
+      ]
+    }
+
+    static_library("gmock") {
+      testonly = true
+      sources = [ "${tint_googletest_dir}/googlemock/src/gmock-all.cc" ]
+      public_configs = [ ":gmock_config" ]
+    }
+
+    group("gmock_and_gtest") {
+      testonly = true
+      public_deps = [
+        ":gmock",
+        ":gtest",
+      ]
+    }
+  }
+}
+
+if (tint_build_benchmarks) {
+  group("google_benchmark") {
+    testonly = true
+    public_deps = [ "//third_party/google_benchmark" ]
+  }
+  action("generate_benchmark_inputs") {
+    generated_header_relpath = "gen/src/tint/cmd/bench/benchmark_inputs.h"
+    generated_header_abspath = "${root_build_dir}/${generated_header_relpath}"
+    outputs = [ generated_header_abspath ]
+    script = "${tint_src_dir}/cmd/bench/generate_benchmark_inputs.py"
+    depfile = "${generated_header_abspath}.d"
+    args = [
+      "header",
+      rebase_path(root_build_dir, root_build_dir),
+      generated_header_relpath,
+    ]
+  }
+}
+
+group("abseil") {
+  # When building within Chromium or ANGLE we need to include "//third_party/abseil-cpp:absl" while
+  # it's beneficial to be more specific with standalone Dawn, especially when it comes to
+  # including it as a dependency in other projects (such as Skia).
+  if (build_with_chromium || build_with_angle) {
+    public_deps = [ "$dawn_abseil_dir:absl" ]
+  } else {
+    public_deps = [ "${dawn_root}/third_party/gn/abseil-cpp:strings" ]
+  }
+}
+
+source_set("winsock") {
+  libs = [ "ws2_32.lib" ]
+}
+
+config("dxc-include-config") {
+  include_dirs = [ "${dawn_dxc_dir}/include" ]
+}
+source_set("dxc-include") {
+  public_configs = [ ":dxc-include-config" ]
+}
+
+source_set("dxcompiler-for-fuzzer") {
+  if (defined(use_libfuzzer) && use_libfuzzer &&
+      (is_win || is_linux || is_mac) && target_cpu != "x86") {
+    public_deps = [ "${dawn_dxc_dir}/../gn/dxc:dxcompiler" ]
+  }
+}
+
+###############################################################################
+# Fuzzers
+###############################################################################
+if (tint_has_fuzzers) {
+  action("tint_generate_wgsl_corpus") {
+    script = "${tint_src_dir}/cmd/fuzz/wgsl/generate_wgsl_corpus.py"
+    sources = [ "${script}" ]
+    args = [
+      "--stamp=" + rebase_path(fuzzer_corpus_wgsl_stamp, root_build_dir),
+      rebase_path("${tint_root_dir}/test", root_build_dir),
+      rebase_path(fuzzer_corpus_wgsl_dir, root_build_dir),
+    ]
+    outputs = [ fuzzer_corpus_wgsl_stamp ]
+  }
+
+  if (tint_build_ir_fuzzer) {
+    if (tint_build_cmds && tint_build_wgsl_reader) {
+      action("tint_generate_ir_corpus") {
+        script = "${tint_src_dir}/cmd/fuzz/ir/generate_ir_corpus.py"
+        sources = [ "${script}" ]
+        deps = [ "${tint_src_dir}/cmd/fuzz/ir/as" ]
+        args = [
+          "--stamp=" + rebase_path(fuzzer_corpus_ir_stamp, root_build_dir),
+          rebase_path("${root_build_dir}/ir_fuzz_as", root_build_dir),
+          rebase_path("${tint_root_dir}/test", root_build_dir),
+          rebase_path(fuzzer_corpus_ir_dir, root_build_dir),
+        ]
+        outputs = [ fuzzer_corpus_ir_stamp ]
+      }
+    }
+  }
+}
+
+###############################################################################
+# Groups
+###############################################################################
+group("libs") {
+  deps = [ "${tint_src_dir}/api" ]
+}
+
+group("cmds") {
+  deps = []
+  if (tint_build_cmds) {
+    deps += [
+      "${tint_src_dir}/cmd/info",
+      "${tint_src_dir}/cmd/remote_compile",
+      "${tint_src_dir}/cmd/tint",
+    ]
+  }
+  if (tint_build_tintd) {
+    deps += [ "${tint_src_dir}/cmd/tintd" ]
+  }
+  if (tint_build_ir_fuzzer) {
+    if (tint_build_wgsl_reader) {
+      deps += [ "${tint_src_dir}/cmd/fuzz/ir/as" ]
+    }
+    if (tint_build_wgsl_writer && tint_build_spv_writer) {
+      deps += [ "${tint_src_dir}/cmd/fuzz/ir/dis" ]
+    }
+  }
+}
+
+group("fuzzers") {
+  testonly = true
+  deps = []
+  if (tint_has_fuzzers) {
+    deps += [ "${tint_src_dir}/cmd/fuzz/wgsl" ]
+  }
+
+  if (tint_build_ir_fuzzer) {
+    deps += [ "${tint_src_dir}/cmd/fuzz/ir" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = []
+  if (tint_build_unittests) {
+    deps += [ "${tint_src_dir}/cmd/test:test_cmd" ]
+  }
+}
+
+group("benchmarks") {
+  testonly = true
+  deps = []
+  if (tint_build_benchmarks && tint_build_wgsl_reader) {
+    deps += [ "${tint_src_dir}/cmd/bench:bench_cmd" ]
+  }
+}
+
+###############################################################################
+# Aliases
+###############################################################################
+group("tint_unittests") {
+  testonly = true
+  public_deps = [ ":tests" ]
+}

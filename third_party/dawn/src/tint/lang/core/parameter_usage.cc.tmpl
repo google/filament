@@ -1,0 +1,32 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate parameter_usage.cc
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/core/core.def" -}}
+
+#include "src/tint/lang/core/parameter_usage.h"
+
+namespace tint::core {
+
+std::string_view ToString(ParameterUsage usage) {
+    switch (usage) {
+        case ParameterUsage::kNone:
+            return "none";
+{{- range $I.Sem.UniqueParameterNames  }}
+        case ParameterUsage::k{{PascalCase .}}:
+            return "{{.}}";
+{{- end  }}
+    }
+    return "<unknown>";
+}
+
+}  // namespace tint::core

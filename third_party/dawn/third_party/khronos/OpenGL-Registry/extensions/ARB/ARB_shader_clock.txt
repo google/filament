@@ -1,0 +1,148 @@
+Name
+
+    ARB_shader_clock
+
+Name Strings
+
+    GL_ARB_shader_clock
+
+Contact
+
+    Timothy Lottes (timothy.lottes 'at' amd.com)
+
+Contributors
+
+    Timothy Lottes, AMD
+    Graham Sellers, AMD
+    Daniel Rakos, AMD
+    Daniel Koch, NVIDIA
+
+Notice
+
+    Copyright (c) 2015 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 26, 2015.
+    Ratified by the Khronos Board of Promoters on August 7, 2015.
+
+Version
+
+    Last Modified Date: 10/29/2019
+    Revision: 5
+
+Number
+
+    ARB Extension #184
+
+Dependencies
+
+    This extension is written against version 4.50 of the OpenGL Shading
+    Language Specification.
+
+    This interacts with GL_ARB_gpu_shader_int64.
+
+Overview
+
+    This extension exposes a 64-bit monotonically incrementing shader
+    counter which may be used to derive local timing information within
+    a single shader invocation.
+
+    Mapping to SPIR-V
+    -----------------
+
+    For informational purposes (non-specification), the following is an
+    expected way for an implementation to map GLSL constructs to SPIR-V
+    constructs:
+
+        clock2x32ARB -> OpReadClockKHR with a Scope of Subgroup, Result type of uvec2
+        clockARB -> OpReadClockKHR with a Scope of Subgroup, Result type of uitn64_t
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+IP Status
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_shader_clock : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_ARB_shader_clock               1
+
+Additions to Chapter 8 of the OpenGL Shading Language Specification
+(Built-in Functions)
+
+    Add New Section 8.19, "Timing Functions"
+
+    Syntax:
+
+        uvec2 clock2x32ARB(void);
+        uint64_t clockARB(void);
+
+    The clockARB() function returns a 64-bit value representing the current
+    execution clock as seen by the shader processor. clock2x32ARB() returns
+    the same value encoded as a two-component vector of 32-bit unsigned integers
+    with the first component containing the 32 least significant bits and the
+    second component containing the 32 most significant bits. Time monotonically
+    increments as the processor executes instructions. The returned time will
+    wrap after it exceeds the maximum value representable in 64 bits. The
+    units of time are not defined and need not be constant. Time is not
+    guaranteed to be dynamically uniform across either a work group or a
+    invocations of a single draw or dispatch. However time is guaranteed to
+    be dynamically uniform across a single sub-group but only in a given
+    shader stage (where sub-group is implementation dependent and may be just
+    one invocation). The clockARB() and clock2x32ARB() functions serve as a code
+    motion barriers.
+
+Dependencies on GL_ARB_gpu_shader_int64
+
+    If GL_ARB_gpu_shader_int64 is not supported, remove clockARB() and any
+    reference to the uint64 type.
+
+Issues
+
+    1) Why do we have two functions? What's clock2x32ARB for?
+
+    It's to allow implementations that don't have full 64-bit integer support
+    to expose support for this extension.
+
+    2) Do we need to expose a "clock width" query, or is everyone okay with
+       wrapping at 64-bits? Spec language currently mandates 64-bit, which
+       would preclude implementations from exposing a 32-bit timer.
+
+    UNRESOLVED.
+
+Revision History
+
+    Rev  Date        Author    Changes
+    ---  ----------  --------  ---------------------------------------------
+      1  03/09/2015  tlottes   Initial revision based on AMD_gcn_shader
+      2  04/20/2015  tlottes   Now uint64, noted code motion barrier.
+      3  04/22/2015  gsellers  Add clock2x32ARB. Add interaction with gpu_shader_64.
+      4  06/17/2015  gsellers  General tidyment. Add issue 2.
+      5  10/28/2019  dgkoch    Add mapping to SPIR-V section.

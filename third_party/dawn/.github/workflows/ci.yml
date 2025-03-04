@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+concurrency:
+  # Use github.run_id on main branch
+  # Use github.event.pull_request.number on pull requests, so it's unique per pull request
+  # Use github.ref on other branches, so it's unique per branch
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cmake:
+    strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+      fail-fast: false
+
+      # Set up a matrix to run the following 6 configurations:
+      # 1. <Windows, Debug, latest MSVC compiler toolchain on the default runner image, default generator>
+      # 2. <Windows, Release, latest MSVC compiler toolchain on the default runner image, default generator>
+      # 3. <Linux, Debug, latest GCC compiler toolchain in the container, default generator>
+      # 4. <Linux, Release, latest GCC compiler toolchain in the container, default generator>
+      # 5. <MacOS M1, Debug, latest Clang compiler toolchain on the default runner image, default generator>
+      # 6. <MacOS M1, Release, latest Clang compiler toolchain on the default runner image, default generator>
+      # 7. <MacOS x64, Debug, latest Clang compiler toolchain on the default runner image, default generator>
+      # 8. <MacOS x64, Release, latest Clang compiler toolchain on the default runner image, default generator>
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest, macos-13]
+        build_type: [Debug, Release]
+        toolchain: [gcc, clang, msvc]
+        include:
+          - os: macos-latest
+            toolchain: clang
+            c_compiler: clang
+            cpp_compiler: clang++
+            env:
+              MACOSX_DEPLOYMENT_TARGET: "11.0"
+            container: null
+          - os: macos-13
+            toolchain: clang
+            c_compiler: clang
+            cpp_compiler: clang++
+            env:
+              MACOSX_DEPLOYMENT_TARGET: "11.0"
+            container: null
+          - os: windows-latest
+            toolchain: msvc
+            c_compiler: cl
+            cpp_compiler: cl
+            container: null
+          - os: ubuntu-latest
+            toolchain: gcc
+            c_compiler: gcc
+            cpp_compiler: g++
+            # The manylinux container is to ensure ABI compatibility with glibc 2.28.
+            # This way, the continuous delivery process casts a wide net across many linux distros.
+            container: dockcross/manylinux_2_28-x64:latest
+        exclude:
+            - os: macos-latest
+              toolchain: msvc
+            - os: macos-latest
+              toolchain: gcc
+            - os: macos-13
+              toolchain: msvc
+            - os: macos-13
+              toolchain: gcc
+            - os: ubuntu-latest
+              toolchain: msvc
+            - os: ubuntu-latest
+              toolchain: clang
+            - os: windows-latest
+              toolchain: clang
+            - os: windows-latest
+              toolchain: gcc
+
+    name: CMake-${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.toolchain }}
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up dependencies on linux
+      if: matrix.container == 'dockcross/manylinux_2_28-x64:latest'
+      run: >
+        dnf install -y mesa-libGL-devel libxcb libxcb-devel libX11-xcb libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libXext-devel libxkbcommon libxkbcommon-devel libxkbcommon-x11-devel mesa-vulkan-drivers wayland-protocols-devel wayland-devel
+
+    - name: Set up sccache
+      # dawn-ci.cmake documents why sccache is not used in other platforms.
+      if: matrix.os == 'ubuntu-latest'
+      uses: mozilla-actions/sccache-action@v0.0.5
+
+    - name: Configure CMake
+      run: >
+        cmake
+        -S .
+        -B out/${{ matrix.build_type }}
+        -C .github/workflows/dawn-ci.cmake
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+    - name: Build
+      run: cmake --build out/${{ matrix.build_type }} --config ${{ matrix.build_type }}
+
+    - name: Package
+      run: |
+        cmake --install out/${{ matrix.build_type }} --config ${{ matrix.build_type }} --prefix Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
+        cmake -E tar cvzf Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
+        path: Dawn-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz
+
+  golang:
+    name: Go Build and Test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.18'
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test
+      run: go test -v ./...

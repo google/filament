@@ -1,0 +1,203 @@
+# Copyright 2020 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("../../../scripts/dawn_overrides_with_defaults.gni")
+
+import("${dawn_root}/scripts/dawn_features.gni")
+
+# Only expose GLFW targets on platforms where GLFW is supported: otherwise they
+# might get discovered by GN when another target in this file is referenced,
+# and GLFW will be built as part of "all" builds, causing compilation failures.
+
+assert(dawn_supports_glfw_for_windowing)
+glfw_dir = dawn_glfw_dir
+
+config("glfw_public") {
+  include_dirs = [ "${glfw_dir}/include" ]
+}
+
+static_library("glfw") {
+  public_configs = [ ":glfw_public" ]
+
+  if (dawn_has_build) {
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+  }
+
+  if (is_win && !is_clang) {
+    # nonstandard extension, function/data pointer conversion in expression
+    cflags_c = [ "/wd4152" ]
+  } else {
+    cflags_c = [
+      "-Wno-sign-compare",
+      "-Wno-missing-field-initializers",
+      "-Wno-macro-redefined",
+    ]
+  }
+
+  defines = []
+  libs = []
+
+  # Common sources.
+  sources = [
+    "${glfw_dir}/include/GLFW/glfw3.h",
+    "${glfw_dir}/include/GLFW/glfw3native.h",
+    "${glfw_dir}/src/context.c",
+    "${glfw_dir}/src/egl_context.c",
+    "${glfw_dir}/src/init.c",
+    "${glfw_dir}/src/input.c",
+    "${glfw_dir}/src/internal.h",
+    "${glfw_dir}/src/mappings.h",
+    "${glfw_dir}/src/monitor.c",
+    "${glfw_dir}/src/null_init.c",
+    "${glfw_dir}/src/null_joystick.c",
+    "${glfw_dir}/src/null_joystick.h",
+    "${glfw_dir}/src/null_monitor.c",
+    "${glfw_dir}/src/null_platform.h",
+    "${glfw_dir}/src/null_window.c",
+    "${glfw_dir}/src/osmesa_context.c",
+    "${glfw_dir}/src/platform.c",
+    "${glfw_dir}/src/platform.h",
+    "${glfw_dir}/src/vulkan.c",
+    "${glfw_dir}/src/window.c",
+  ]
+
+  # Code shared by all backends on an OS.
+  if (is_linux) {
+    defines += [ "_GLFW_EGL_LIBRARY=\"libEGL.so\"" ]
+    sources += [
+      "${glfw_dir}/src/posix_module.c",
+      "${glfw_dir}/src/posix_thread.c",
+      "${glfw_dir}/src/posix_thread.h",
+      "${glfw_dir}/src/posix_time.c",
+      "${glfw_dir}/src/posix_time.h",
+    ]
+    libs += [
+      "m",
+      "rt",
+      "dl",
+    ]
+  }
+
+  if (is_mac) {
+    sources += [
+      "${glfw_dir}/src/cocoa_time.c",
+      "${glfw_dir}/src/cocoa_time.h",
+      "${glfw_dir}/src/posix_module.c",
+      "${glfw_dir}/src/posix_thread.c",
+      "${glfw_dir}/src/posix_thread.h",
+    ]
+  }
+
+  if (is_win) {
+    sources += [
+      "${glfw_dir}/src/win32_module.c",
+      "${glfw_dir}/src/win32_thread.c",
+      "${glfw_dir}/src/win32_thread.h",
+      "${glfw_dir}/src/win32_time.c",
+      "${glfw_dir}/src/win32_time.h",
+    ]
+  }
+
+  # Per-backend code.
+  if (dawn_use_x11) {
+    defines += [ "_GLFW_X11" ]
+    sources += [
+      "${glfw_dir}/src/glx_context.c",
+      "${glfw_dir}/src/x11_init.c",
+      "${glfw_dir}/src/x11_monitor.c",
+      "${glfw_dir}/src/x11_platform.h",
+      "${glfw_dir}/src/x11_window.c",
+      "${glfw_dir}/src/xkb_unicode.c",
+      "${glfw_dir}/src/xkb_unicode.h",
+    ]
+    libs += [
+      "X11",
+      "Xi",
+      "Xcursor",
+      "Xinerama",
+      "Xrandr",
+    ]
+  }
+
+  # No wayland support for GLFW in GN builds.
+  if (dawn_use_x11) {
+    if (is_linux) {
+      sources += [
+        "${glfw_dir}/src/linux_joystick.c",
+        "${glfw_dir}/src/linux_joystick.h",
+      ]
+    }
+    sources += [
+      "${glfw_dir}/src/posix_poll.c",
+      "${glfw_dir}/src/posix_poll.h",
+    ]
+  }
+
+  if (is_mac) {
+    defines += [ "_GLFW_COCOA" ]
+    sources += [
+      "${glfw_dir}/src/cocoa_init.m",
+      "${glfw_dir}/src/cocoa_joystick.h",
+      "${glfw_dir}/src/cocoa_joystick.m",
+      "${glfw_dir}/src/cocoa_monitor.m",
+      "${glfw_dir}/src/cocoa_platform.h",
+      "${glfw_dir}/src/cocoa_window.m",
+      "${glfw_dir}/src/nsgl_context.m",
+    ]
+
+    # If a "build with ARC" config is present, remove it.
+    if (filter_include(configs, [ "//build/config/compiler:enable_arc" ]) !=
+        []) {
+      configs -= [ "//build/config/compiler:enable_arc" ]
+    }
+
+    frameworks = [
+      "Cocoa.framework",
+      "IOKit.framework",
+      "CoreFoundation.framework",
+    ]
+    cflags_objc = [
+      "-Wno-sign-compare",
+      "-Wno-unguarded-availability",
+      "-Wno-objc-multiple-method-names",
+    ]
+  }
+
+  if (is_win) {
+    defines += [ "_GLFW_WIN32" ]
+    sources += [
+      "${glfw_dir}/src/wgl_context.c",
+      "${glfw_dir}/src/win32_init.c",
+      "${glfw_dir}/src/win32_joystick.c",
+      "${glfw_dir}/src/win32_joystick.h",
+      "${glfw_dir}/src/win32_monitor.c",
+      "${glfw_dir}/src/win32_platform.h",
+      "${glfw_dir}/src/win32_window.c",
+    ]
+  }
+}

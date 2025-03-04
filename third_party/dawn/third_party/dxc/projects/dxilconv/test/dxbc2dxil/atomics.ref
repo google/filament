@@ -1,0 +1,169 @@
+
+%dx.types.Handle = type { i8* }
+%dx.types.u32 = type { i32 }
+
+define void @main() {
+entry:
+  %0 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 0, i32 0, i1 false)
+  %1 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %2 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %3 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %0, i32 0, i32 %1, i32 undef, i32 undef, i32 %2)
+  %4 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 0, i32 0, i1 false)
+  %5 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %6 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %7 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %4, i32 6, i32 %5, i32 undef, i32 undef, i32 %6)
+  %8 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 0, i32 0, i1 false)
+  %9 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %10 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %11 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %8, i32 7, i32 %9, i32 undef, i32 undef, i32 %10)
+  %12 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 0, i32 0, i1 false)
+  %13 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %14 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %15 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %12, i32 1, i32 %13, i32 undef, i32 undef, i32 %14)
+  %16 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 0, i32 0, i1 false)
+  %17 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %18 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %19 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %16, i32 2, i32 %17, i32 undef, i32 undef, i32 %18)
+  %20 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 0, i32 0, i1 false)
+  %21 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %22 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %23 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %20, i32 3, i32 %21, i32 undef, i32 undef, i32 %22)
+  %24 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 0, i32 0, i1 false)
+  %25 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %26 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %27 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %24, i32 0, i32 %25, i32 undef, i32 undef, i32 %26)
+  %28 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %29 = add i32 %27, %28
+  %30 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 3, i32 30, i1 false)
+  %31 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %32 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %33 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %30, i32 0, i32 %31, i32 %32, i32 undef, i32 %29)
+  %34 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 4, i32 31, i1 false)
+  %35 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %36 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 3, i32 undef)
+  %37 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %38 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %34, i32 0, i32 %35, i32 %36, i32 %37, i32 %29)
+  %39 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 5, i32 32, i1 false)
+  %40 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %41 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %42 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %43 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %39, i32 0, i32 %40, i32 %41, i32 %42, i32 %29)
+  %44 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %45 = call i32 @dx.op.quaternary.i32(i32 53, i32 30, i32 2, i32 %44, i32 1)
+  %46 = add i32 %45, 33
+  %47 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 6, i32 %46, i1 false)
+  %48 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %49 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %50 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %51 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %47, i32 0, i32 %48, i32 %49, i32 %50, i32 %29)
+  %52 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 0, i32 0, i1 false)
+  %53 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %54 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 3, i32 undef)
+  %55 = call i32 @dx.op.atomicCompareExchange.i32(i32 79, %dx.types.Handle %52, i32 %53, i32 undef, i32 undef, i32 %54, i32 %29)
+  %56 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 1, i32 1, i1 false)
+  %57 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %58 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %59 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %56, i32 0, i32 %57, i32 undef, i32 undef, i32 %58)
+  %60 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 1, i32 undef)
+  %61 = add i32 %60, 14
+  %62 = add i32 %61, 2
+  %63 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 2, i32 %62, i1 false)
+  %64 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %65 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %66 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %63, i32 0, i32 %64, i32 undef, i32 undef, i32 %65)
+  %67 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 1, i32 1, i1 false)
+  %68 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %69 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %70 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %67, i32 6, i32 %68, i32 undef, i32 undef, i32 %69)
+  %71 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 1, i32 1, i1 false)
+  %72 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %73 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %74 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %71, i32 7, i32 %72, i32 undef, i32 undef, i32 %73)
+  %75 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 1, i32 1, i1 false)
+  %76 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %77 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %78 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %75, i32 1, i32 %76, i32 undef, i32 undef, i32 %77)
+  %79 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 1, i32 1, i1 false)
+  %80 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %81 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %82 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %79, i32 2, i32 %80, i32 undef, i32 undef, i32 %81)
+  %83 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 1, i32 1, i1 false)
+  %84 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %85 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %86 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %83, i32 3, i32 %84, i32 undef, i32 undef, i32 %85)
+  %87 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 1, i32 1, i1 false)
+  %88 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %89 = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %87, i32 8, i32 %88, i32 undef, i32 undef, i32 %86)
+  %90 = add i32 %86, %89
+  %91 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 1, i32 1, i1 false)
+  %92 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 2, i32 undef)
+  %93 = call i32 @dx.op.loadInput.i32(i32 4, i32 0, i32 0, i8 3, i32 undef)
+  %94 = call i32 @dx.op.atomicCompareExchange.i32(i32 79, %dx.types.Handle %91, i32 %92, i32 undef, i32 undef, i32 %93, i32 %90)
+  %95 = add i32 %90, %94
+  %96 = uitofp i32 %95 to float
+  %97 = uitofp i32 %95 to float
+  %98 = uitofp i32 %95 to float
+  %99 = uitofp i32 %95 to float
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 0, float %96)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 1, float %97)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 2, float %98)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 3, float %99)
+  ret void
+}
+
+; Function Attrs: nounwind readonly
+declare %dx.types.Handle @dx.op.createHandle(i32, i8, i32, i32, i1) #0
+
+; Function Attrs: nounwind readnone
+declare i32 @dx.op.loadInput.i32(i32, i32, i32, i8, i32) #1
+
+; Function Attrs: nounwind
+declare i32 @dx.op.atomicBinOp.i32(i32, %dx.types.Handle, i32, i32, i32, i32, i32) #2
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.i32(i32, i32, i32) #2
+
+; Function Attrs: nounwind readonly
+declare i32 @dx.op.tempRegLoad.i32(i32, i32) #0
+
+; Function Attrs: nounwind readnone
+declare i32 @dx.op.quaternary.i32(i32, i32, i32, i32, i32) #1
+
+; Function Attrs: nounwind
+declare i32 @dx.op.atomicCompareExchange.i32(i32, %dx.types.Handle, i32, i32, i32, i32, i32) #2
+
+; Function Attrs: nounwind
+declare void @dx.op.storeOutput.f32(i32, i32, i32, i8, float) #2
+
+attributes #0 = { nounwind readonly }
+attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind }
+
+!dx.version = !{!0}
+!dx.valver = !{!0}
+!dx.shaderModel = !{!1}
+!dx.resources = !{!2}
+!dx.entryPoints = !{!12}
+!llvm.ident = !{!20}
+
+!0 = !{i32 1, i32 0}
+!1 = !{!"ps", i32 6, i32 0}
+!2 = !{null, !3, null, null}
+!3 = !{!4, !6, !7, !8, !9, !10, !11}
+!4 = !{i32 0, %dx.types.u32 addrspace(1)* undef, !"U0", i32 0, i32 0, i32 1, i32 10, i1 false, i1 false, i1 false, !5}
+!5 = !{i32 0, i32 5}
+!6 = !{i32 1, %dx.types.u32 addrspace(1)* undef, !"U1", i32 0, i32 1, i32 1, i32 11, i1 false, i1 false, i1 false, null}
+!7 = !{i32 2, %dx.types.u32 addrspace(1)* undef, !"U2", i32 0, i32 2, i32 28, i32 11, i1 false, i1 false, i1 false, null}
+!8 = !{i32 3, %dx.types.u32 addrspace(1)* undef, !"U3", i32 0, i32 30, i32 1, i32 2, i1 false, i1 false, i1 false, !5}
+!9 = !{i32 4, %dx.types.u32 addrspace(1)* undef, !"U4", i32 0, i32 31, i32 1, i32 4, i1 false, i1 false, i1 false, !5}
+!10 = !{i32 5, %dx.types.u32 addrspace(1)* undef, !"U5", i32 0, i32 32, i32 1, i32 7, i1 false, i1 false, i1 false, !5}
+!11 = !{i32 6, %dx.types.u32 addrspace(1)* undef, !"U6", i32 0, i32 33, i32 32, i32 4, i1 false, i1 false, i1 false, !5}
+!12 = !{void ()* @main, !"main", !13, !2, null}
+!13 = !{!14, !18, null}
+!14 = !{!15, !17}
+!15 = !{i32 0, !"A", i8 5, i8 0, !16, i8 1, i32 1, i8 4, i32 0, i8 0, null}
+!16 = !{i32 0}
+!17 = !{i32 1, !"B", i8 9, i8 0, !16, i8 0, i32 1, i8 4, i32 1, i8 0, null}
+!18 = !{!19}
+!19 = !{i32 0, !"SV_Target", i8 9, i8 16, !16, i8 0, i32 1, i8 4, i32 0, i8 0, null}
+!20 = !{!"dxbc2dxil 1.2"}

@@ -1,0 +1,11 @@
+
+// force_rootsig_ver
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl -force_rootsig_ver rootsig_1_0 | FileCheck %s --check-prefix=IR
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl -force_rootsig_ver rootsig_1_1 | FileCheck %s --check-prefix=IR
+// RUN: not %dxc /T ps_6_0 %S/Inputs/smoke.hlsl -force_rootsig_ver rootsig_2_0 > %t 2>&1
+// RUN: FileCheck --input-file=%t %s
+
+// CHECK:Unsupported value 'rootsig_2_0' for root signature profile
+
+// IR:define void @main()
+// IR:!{!"ps", i32 6, i32 0}

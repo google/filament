@@ -1,0 +1,49 @@
+{
+    "repos": [
+        {
+            "name": "Vulkan-Headers",
+            "api": "vulkan",
+            "url": "https://github.com/KhronosGroup/Vulkan-Headers.git",
+            "sub_dir": "Vulkan-Headers",
+            "build_dir": "Vulkan-Headers/build",
+            "install_dir": "Vulkan-Headers/build/install",
+            "commit": "v1.4.307"
+        },
+        {
+            "name": "googletest",
+            "url": "https://github.com/google/googletest.git",
+            "sub_dir": "googletest",
+            "build_dir": "googletest/build",
+            "install_dir": "googletest/build/install",
+            "cmake_options": [
+                "-DBUILD_GMOCK=OFF",
+                "-Dgtest_force_shared_crt=ON",
+                "-DBUILD_SHARED_LIBS=OFF"
+            ],
+            "commit": "v1.14.0",
+            "optional": [
+                "tests"
+            ]
+        },
+        {
+            "name": "magic_enum",
+            "url": "https://github.com/Neargye/magic_enum",
+            "sub_dir": "magic_enum",
+            "build_dir": "magic_enum/build",
+            "install_dir": "magic_enum/build/install",
+            "commit": "v0.9.5",
+            "cmake_options": [
+                "-DMAGIC_ENUM_OPT_BUILD_EXAMPLES=OFF",
+                "-DMAGIC_ENUM_OPT_BUILD_TESTS=OFF"
+            ],
+            "optional": [
+                "tests"
+            ]
+        }
+    ],
+    "install_names": {
+        "Vulkan-Headers": "VULKAN_HEADERS_INSTALL_DIR",
+        "googletest": "GOOGLETEST_INSTALL_DIR",
+        "magic_enum": "MAGIC_ENUM_INSTALL_DIR"
+    }
+}

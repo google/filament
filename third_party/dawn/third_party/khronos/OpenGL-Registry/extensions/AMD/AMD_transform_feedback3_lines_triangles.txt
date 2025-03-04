@@ -1,0 +1,114 @@
+Name
+
+    AMD_transform_feedback3_lines_triangles
+
+Name Strings
+
+    GL_AMD_transform_feedback3_lines_triangles
+
+Contributors
+
+    Eric Zolnowski, AMD
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Status
+
+    Complete. Shipping in ATI Catalyst 10.6 Drivers.
+
+Version
+
+    Last Modified Date:         03/22/2010
+    Author Revision:            1
+
+Number
+
+    397
+
+Dependencies
+
+    OpenGL 4.0 or ARB_transform_feedback3 is required.
+
+    This extension is written against the OpenGL 4.0 (Core) Specification.
+
+Overview
+
+    OpenGL 4.0 introduced the ability to record primitives into multiple output
+    streams using transform feedback. However, the restriction that all streams
+    must output POINT primitives when more than one output stream is active was
+    also introduced. This extension simply removes that restriction, allowing
+    the same set of primitives to be used with multiple transform feedback
+    streams as with a single stream.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 4.0 (Core) Specification (OpenGL Operation)
+
+    Modify Section 2.13.4 "Geometry Shader Execution Environment"
+
+        Replace the last paragraph of the subsection titled "Geometry Shader
+        Vertex Streams", p.119, with the following:
+
+        Geometry shaders that emit vertices into multiple vertex streams are
+    currently limited to using the same output primitive type on all streams.
+    A program will fail to link if it includes a geometry shader that calls
+    the EmitStreamVertex buit-in function and has two or more output streams
+    with different primitive types.
+
+Additions to Chapter 3 of the OpenGL 4.0 (Core) Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.0 (Core) Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.0 (Core) Specification (Special
+Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.0 (Core) Specification (State and
+State Requests)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    None.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     1    03/22/2010  gsellers  Initial draft

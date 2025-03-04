@@ -1,0 +1,733 @@
+Name
+
+    EXT_bindable_uniform
+
+Name String
+
+    GL_EXT_bindable_uniform
+
+Contact
+
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+    Barthold Lichtenbelt, NVIDIA (blichtenbelt 'at' nvidia.com)
+
+Status
+
+    Shipping for GeForce 8 Series (November 2006)
+
+Version
+
+    Last Modified Date:         04/04/2008
+    Author revision:            15
+
+Number
+
+    342
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+    This extension is written against the OpenGL 2.0 specification and version
+    1.10.59 of the OpenGL Shading Language specification.
+
+    This extension interacts with GL_EXT_geometry_shader4.
+
+Overview
+
+    This extension introduces the concept of bindable uniforms to the OpenGL
+    Shading Language.  A uniform variable can be declared bindable, which
+    means that the storage for the uniform is not allocated by the
+    compiler/linker anymore, but is backed by a buffer object.  This buffer
+    object is bound to the bindable uniform through the new command
+    UniformBufferEXT().  Binding needs to happen after linking a program
+    object.
+
+    Binding different buffer objects to a bindable uniform allows an
+    application to easily use different "uniform data sets", without having to
+    re-specify the data every time.
+
+    A buffer object can be bound to bindable uniforms in different program
+    objects. If those bindable uniforms are all of the same type, accessing a
+    bindable uniform in program object A will result in the same data if the
+    same access is made in program object B.  This provides a mechanism for
+    'environment uniforms', uniform values that can be shared among multiple
+    program objects.
+
+New Procedures and Functions
+
+    void UniformBufferEXT(uint program, int location, uint buffer);
+    int GetUniformBufferSizeEXT(uint program, int location);
+    intptr GetUniformOffsetEXT(uint program, int location);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        MAX_VERTEX_BINDABLE_UNIFORMS_EXT                0x8DE2
+        MAX_FRAGMENT_BINDABLE_UNIFORMS_EXT              0x8DE3
+        MAX_GEOMETRY_BINDABLE_UNIFORMS_EXT              0x8DE4
+        MAX_BINDABLE_UNIFORM_SIZE_EXT                   0x8DED
+        UNIFORM_BUFFER_BINDING_EXT                      0x8DEF
+
+    Accepted by the <target> parameters of BindBuffer, BufferData,
+    BufferSubData, MapBuffer, UnmapBuffer, GetBufferSubData, and
+    GetBufferPointerv:
+
+        UNIFORM_BUFFER_EXT                              0x8DEE
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Modify section 2.15.3 "Shader Variables", page 75.
+
+    Add the following paragraph between the second and third paragraph on page
+    79, "Uniform Variables"
+
+    Uniform variables can be further characterized into bindable
+    uniforms. Storage for bindable uniforms does not come out of the,
+    potentially limited, uniform variable storage discussed in the previous
+    paragraph. Instead, storage for a bindable uniform is provided by a buffer
+    object that is bound to the uniform variable.  Binding different buffer
+    objects to a bindable uniform allows an application to easily use
+    different "uniform data sets", without having to re-specify the data every
+    time. A buffer object can be bound to bindable uniforms in different
+    program objects. If those bindable uniforms are all of the same type,
+    accessing a bindable uniform in program object A will result in the same
+    data if the same access is made in program object B. This provides a
+    mechanism for 'environment', uniform values that can be shared among
+    multiple program objects.
+
+    Change the first sentence of the third paragraph, p. 79, as follows:
+
+    When a program object is successfully linked, all non-bindable active
+    uniforms belonging to the program object are initialized to zero (FALSE
+    for Booleans). All active bindable uniforms have their buffer object
+    bindings reset to an invalid state. A successful link will also generate a
+    location for each active uniform, including active bindable uniforms. The
+    values of active uniforms can be changed using this location and the
+    appropriate Uniform* command (see below). For bindable uniforms, a buffer
+    object has to be first bound to the uniform before changing its
+    value. These locations are invalidated.
+
+    Change the second to last paragraph, p. 79, as follows:
+
+    A valid name for a non-bindable uniform cannot be a structure, an array of
+    structures, or any portion of a single vector or a matrix. A valid name
+    for a bindable uniform cannot be any portion of a single vector or
+    matrix. In order to identify a valid name, ...
+
+    Change the fifth paragraph, p. 81, as follows:
+
+    The given values are loaded into the uniform variable location identified
+    by <location>. The parameter <location> cannot identify a bindable uniform
+    structure or a bindable uniform array of structures. When loading data for
+    a bindable uniform, the data will be stored in the appropriate location of
+    the buffer object bound to the bindable uniform (see UniformBufferEXT
+    below).
+
+    Add the following bullets to the list of errors on p. 82:
+
+      - If <location> refers to a bindable uniform structure or a bindable
+        uniform array of structures.
+
+      - If <location> refers to a bindable uniform that has no buffer object
+        bound to the uniform.
+
+      - If <location> refers to a bindable uniform and the bound buffer object
+        is not of sufficient size. This means that the buffer object is
+        smaller than the size that would be returned by
+        GetUniformBufferSizeEXT for the bindable uniform.
+
+      - If <location> refers to a bindable uniform and the buffer object is
+        bound to multiple bindable uniforms in the currently active program
+        object.
+
+    Add a sub-section called "Bindable Uniforms" above the section "Samplers",
+    p. 82:
+
+    The number of active bindable uniform variables that can be supported by a
+    vertex shader is limited and specified by the implementation dependent
+    constant MAX_VERTEX_BINDABLE_UNIFORMS_EXT.  The minimum supported number
+    of bindable uniforms is eight. A link error will be generated if the
+    program object contains more active bindable uniform variables.
+
+    To query the minimum size needed for a buffer object to back a given
+    bindable uniform, use the command:
+
+      int GetUniformBufferSizeEXT(uint program, int location);
+
+    This command returns the size in basic machine units of the smallest
+    buffer object that can be used for the bindable uniform given by
+    <location>. The size returned is intended to be passed as the <size>
+    parameter to the BufferData() command. The error INVALID_OPERATION will be
+    generated if <location> does not correspond to an active bindable uniform
+    in <program>.  The parameter <location> has to be location corresponding
+    to the name of the bindable uniform itself, otherwise the error
+    INVALID_OPERATION is generated.  If the bindable uniform is a structure,
+    <location> can not refer to a structure member.  If it is an array,
+    <location> can not refer to any array member other than the first one.  If
+    <program> has not been successfully linked, the error INVALID_OPERATION is
+    generated.
+
+    There is an implementation-dependent limit on the size of bindable uniform
+    variables.  LinkProgram will fail if the storage required for the uniform
+    (in basic machine units) exceeds MAX_BINDABLE_UNIFORM_SIZE_EXT.
+
+    To bind a buffer object to a bindable uniform, use the command:
+
+      void UniformBufferEXT(uint program, int location, uint buffer)
+
+    This command binds the buffer object <buffer> to the bindable uniform
+    <location> in the program object <program>. Any previous binding to the
+    bindable uniform <location> is broken. Before calling UniformBufferEXT the
+    buffer object has to be created, but it does not have to be initialized
+    with data nor its size set.  Passing the value zero in <buffer> will
+    unbind the currently bound buffer object. The error INVALID_OPERATION is
+    generated if <location> does not correspond to an active bindable uniform
+    in <program>.  The parameter <location> has to correspond to the name of
+    the uniform variable itself, as described for GetUniformBufferSizeEXT,
+    otherwise the error INVALID_OPERATION is generated. If <program> has not
+    been successfully linked, or if <buffer> is not the name of an existing
+    buffer object, the error INVALID_OPERATION is generated.
+
+    A buffer object cannot be bound to more than one uniform variable in any
+    single program object. However, a buffer object can be bound to bindable
+    uniform variables in multiple program objects.  Furthermore, if those
+    bindable uniforms are all of the same type, accessing a scalar, vector, a
+    member of a structure, or an element of an array in program object A will
+    result in the same data if the same scalar, vector, structure member, or
+    array element is accessed in program object B. Additionally the structures
+    in both program objects have to have the same members, specified in the
+    same order, declared with the same data types and have the same name. If
+    the buffer object bound to the uniform variable is smaller than the
+    minimum size required to store the uniform variable, as reported by
+    GetUniformbufferSizeEXT, the results of reading the variable (or any
+    portion thereof) are undefined.
+
+    If LinkProgram is called on a program object that has already been linked,
+    any buffer objects bound to the bindable uniforms in the program are
+    unbound prior to linking, as though UniformBufferEXT were called for each
+    bindable uniform with a <buffer> value of zero.
+
+    Buffer objects used to store uniform variables may be created and
+    manipulated by buffer object functions (e.g., BufferData, BufferSubData,
+    MapBuffer) by calling BindBuffer with a <target> of UNIFORM_BUFFER_EXT.
+    It is not necessary to bind a buffer object to UNIFORM_BUFFER_EXT in order
+    to use it with an active program object.
+
+    The exact layout of bindable uniform variables in buffer object storage is
+    not defined.  However, the values of signed integer, unsigned integer, or
+    floating-point uniforms, or vectors thereof, may be updated by modifying
+    the underlying buffer object storage using either MapBuffer or
+    BufferSubData.  The command
+
+      intptr GetUniformOffsetEXT(uint program, int location);
+
+    returns the offset (in bytes) of the uniform in <program> whose location
+    as returned by GetUniformLocation is <location>.  The error INVALID_VALUE
+    is generated if the object named by <program> does not exist.  The error
+    INVALID_OPERATION is generated if <program> is not a program object, if
+    <program> was not linked successfully, or if <location> refers to a
+    uniform that was not declared as bindable.  The memory layout of matrix,
+    boolean, or boolean vector uniforms is not defined, and the error
+    INVALID_OPERATION will be generated if <location> refers to a boolean,
+    boolean vector, or matrix uniform.  The value -1 is returned by
+    GetUniformOffsetEXT if an error is generated.
+
+    The values of such uniforms may be changing by writing signed integer,
+    unsigned integer, or floating-point values into the buffer object at the
+    byte offset returned by GetUniformOffsetEXT.  For vectors, two to four
+    integers or floating-point values should be written to consecutive
+    locations in the buffer object storage.  For arrays of scalar or vector
+    variables, the number of bytes between individual array members is
+    guaranteed to be constant, but array members are not guaranteed to be
+    stored in adjacent locations.  For example, some implementations may pad
+    scalars, or two- or three-component vectors out to a four-component
+    vector.  
+
+    Change the first paragraph below the sub-heading 'Samplers', p.  82, as
+    follows:
+
+    Samplers are special uniforms used in the OpenGL Shading Language to
+    identify the texture object used for each texture lookup.  Samplers cannot
+    be declared as bindable in a shader. The value of a sampler indicates the
+    texture image unit being accessed. Setting a sampler's value.
+
+    Add the following bullets to the list of error conditions for Begin on
+    p. 87:
+
+     - There is one, or more, bindable uniform(s) in the currently
+       active program object that does not have a buffer object
+       bound to it.
+
+     - There is one, or more, bindable uniform(s) in the currently active
+       program object that have a buffer object bound to it of insufficient
+       size. This means that the buffer object is smaller than the size that
+       would be returned by GetUniformBufferSizeEXT for the bindable uniform.
+
+     - A buffer object is bound to multiple bindable uniforms in the currently
+       active program object.
+
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    Modify Section 3.11.1 "Shader Variables", p. 193
+
+    Add a paragraph between the first and second paragraph, p. 194
+
+    The number of active bindable uniform variables that can be supported by a
+    fragment shader is limited and specified by the implementation dependent
+    constant MAX_FRAGMENT_BINDABLE_UNIFORMS_EXT. The minimum supported number
+    of bindable uniforms is eight. A link error will be generated if the
+    program object contains more active bindable uniform variables.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    Change section 5.4 Display Lists, p. 237
+
+    Add the command UniformBufferEXT to the list of commands that are not
+    compiled into a display list, but executed immediately, under "Program and
+    Shader Objects", p. 241.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and State
+Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Interactions with GL_EXT_geometry_shader4
+
+    If GL_EXT_geometry_shader4 is supported, a geometry shader will also
+    support bindable uniforms. The following paragraph needs to be added to
+    the section that discusses geometry shaders:
+
+    "The number of active bindable uniform variables that can be supported by
+    a geometry shader is limited and specified by the implementation dependent
+    constant MAX_GEOMETRY_BINDABLE_UNIFORMS_EXT. The minimum supported number
+    of bindable uniforms is eight. A link error will be generated if the
+    program object contains more active bindable uniform variables."
+
+    The implementation dependent value MAX_GEOMETRY_BINDABLE_UNIFORMS_EXT will
+    need to be added to the state tables and assigned an enum value.
+
+Errors
+
+    The error INVALID_VALUE is generated by UniformBufferEXT,
+    GetUniformBufferSize, or GetUniformOffsetEXT if <program> is not the name
+    of a program or shader object.
+
+    The error INVALID_OPERATION is generated by UniformBufferEXT,
+    GetUniformBufferSize, or GetUniformOffsetEXT if <program> is the name of a
+    shader object.
+
+    The error INVALID_OPERATION is generated by the Uniform* commands if
+    <location> refers to a bindable uniform structure or an array of such
+    structures.
+
+    The error INVALID_OPERATION is generated by the Uniform* commands if
+    <location> refers to a bindable uniform that has no buffer object bound.
+
+    The error INVALID_OPERATION is generated by the Uniform* commands if
+    <location> refers to a bindable uniform and the bound buffer object is not
+    of sufficient size to store data into <location>.
+
+    The error INVALID_OPERATION is generated by the GetUniformBufferSizeEXT
+    and UniformBufferEXT commands if <program> has not been successfully
+    linked.
+
+    The error INVALID_OPERATION is generated by the GetUniformBufferSizeEXT
+    and UniformBufferEXT commands if <location> is not the location
+    corresponding to the name of the bindable uniform itself or if <location>
+    does not correspond to an active bindable uniform in <program>.
+
+    The error INVALID_OPERATION is generated by GetUniformOffsetEXT if
+    <program> was not linked successfully, if <location> refers to a uniform
+    that was not declared as bindable, or if <location> refers to a boolean,
+    boolean vector, or matrix uniform.
+
+    The error INVALID_OPERATION is generated by the UniformBufferEXT command if
+    <buffer> is not the name of a buffer object.
+
+    The error INVALID_OPERATION is generated by Begin, Rasterpos or any
+    command that performs an implicit Begin if:
+
+     - A buffer object is bound to multiple bindable uniforms in the currently
+       active program object.
+
+     - There is one, or more, bindable uniform(s) in the currently active
+       program object that does not have a buffer object bound to it.
+
+     - There is one, or more, bindable uniform(s) in the currently active
+       program object that have a buffer object bound to it of insufficient
+       size. This means that the buffer object is smaller than the size that
+       would be returned by GetUniformBufferSizeEXT for the bindable uniform.
+
+New State
+
+                                                 Initial
+    Get Value                  Type  Get Command  Value  Description                Sec    Attribute
+    -------------------------- ----  -----------  -----  -------------------------  -----  ---------
+    UNIFORM_BUFFER_BINDING_EXT  Z+   GetIntegerv    0    Uniform buffer bound to    2.15   -
+                                                         the context for buffer
+                                                         object manipulation.
+
+New Implementation Dependent State
+
+                                            Minimum
+    Get Value              Type Get Command  Value   Description             Section Attrib
+    ---------------------- ---- -----------  -----  ---------------------    ------- ------
+    MAX_BINDABLE_VERTEX_   Z+   GetIntegerv    8    Number of bindable       2.15    -
+      UNIFORMS_EXT                                  uniforms per vertex 
+                                                    shader
+    MAX_BINDABLE_FRAGMENT_ Z+   GetIntegerv    8    Number of bindable       3.11.1  -
+      UNIFORMS_EXT                                  uniforms per fragment
+                                                    shader
+    MAX_BINDABLE_GEOMETRY_ Z+   GetIntegerv    8    Number of bindable       X.X.X   -
+      UNIFORMS_EXT                                  uniforms per geometry
+                                                    shader
+    MAX_BINDABLE_UNIFORM_  Z+   GetIntegerv  16384  Maximum size (in bytes)  2.15    -
+      SIZE_EXT                                      for bindable uniform
+                                                    storage.
+
+Modifications to The OpenGL Shading Language Specification, Version
+1.10.59
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+       #extension GL_EXT_bindable_uniform: <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+       #define GL_EXT_bindable_uniform 1
+
+    Add to section 3.6 "Keywords"
+
+    Add the following keyword:
+
+       bindable
+
+    Change section 4.3 "Type Qualifiers"
+
+    In the qualifier table, add the following sub-qualifiers under the uniform
+    qualifier:
+
+       bindable uniform
+
+    Change section 4.3.5 "Uniform"
+
+    Add the following paragraphs between the last and the second to last
+    paragraphs:
+
+    Uniform variables, except for samplers, can optionally be further
+    qualified with "bindable". If "bindable" is present, the storage for the
+    uniform comes from a buffer object, which is bound to the uniform through
+    the GL API, as described in section 2.15.3 of the OpenGL 2.0
+    specification. In this case, the memory used does not count against the
+    storage limit described in the previous paragraph. When using the
+    "bindable" keyword, it must immediately precede the "uniform" keyword.
+
+    An example bindable uniform declaration is:
+
+       bindable uniform float foo;
+
+    Only a limited number of uniforms can be bindable for each type of
+    shader. If this limit is exceeded, it will cause a compile-time or
+    link-time error. Bindable uniforms that are declared but not used do not
+    count against this limit.
+
+    Add to section 9 "Shading Language Grammar"
+
+       type_qualifer:
+          CONST
+          ATTRIBUTE  // Vertex only
+          uniform-modifieropt UNIFORM
+
+       uniform-modifier:
+          BINDABLE
+
+Issues
+
+   1. Is binding a buffer object to a uniform done before or after linking a
+      program object?
+
+      DISCUSSION: There is no need to re-link when changing the buffer object
+      that backs a uniform. Re-binding can therefore be relatively quickly.
+      Binding is be done using the location of the uniform retrieved by
+      GetUniformLocation, to make it even faster (instead of binding by name
+      of the uniform).
+
+      Reasons to do this before linking: The linker might want to know what
+      buffer object backs the uniform.  Binding of a buffer object to a
+      bindable uniform, in this case, will have to be done using the name of
+      the uniform (no location is available until after linking). Changing the
+      binding of a buffer object to a bindable uniform means the program
+      object will have to be re-linked, which would substantially increase the
+      overhead of using multiple different "constant sets" in a single
+      program.
+
+      RESOLUTION: Binding a buffer object to a bindable uniform needs to be
+      done after the program object is linked. One of the purposes of this
+      extension is to be able to switch among multiple sets of uniform values
+      efficiently.
+
+   2. Is the memory layout of a bindable uniform available to an application?
+
+      DISCUSSION:  Buffer objects are arrays of bytes. The application can map
+      a buffer object and retrieve a pointer to it, and read or write into it
+      directly. Or, the application can use the BufferSubData() command to
+      store data in a buffer object. They can also be filled using ReadPixels
+      (with ARB_pixel_buffer_object), or filled using extensions such as the
+      new transform feedback extension.  
+
+      If the layout of a uniform in buffer object memory is known, these
+      different ways of filling a buffer object could be leveraged.  On the
+      other hand, different compiler implementations may want a different
+      packing schemes that may or may not match an end-user's expectations
+      (e.g., all individual uniforms might be stored as vec4's).  If only the
+      Uniform*() API were allowed to modify buffer objects, we could
+      completely hide the layout of bindable uniforms.  Unfortuantely, that
+      would limit how the buffer object can be linked to other sources of
+      data.
+
+      RESOLUTION: RESOLVED.  The memory layout of a bindable uniform variable
+      will not be specified.  However, a query function will be added that
+      allows applications to determine the layout and load their buffer object
+      via API's other than Uniform*() accordingly if they choose.
+      Unfortunately, the layout may not be consistent across implementations
+      of this extension.
+
+      Providing a better standard set of packing rules is highly desirable,
+      and we hope to design and add such functionality in an extension in the
+      near future.
+
+   3. How is synchronization handled between a program object using a buffer
+      object and updates to the buffer object?
+
+      DISCUSSION: For example, what happens when a ReadPixels into a buffer
+      object is outstanding, that is bound to a bindable uniform while the
+      program object, containing the bindable uniform, is in use?
+
+      RESOLUTION: UNRESOLVED. It is probably the GL implementation's
+      responsibility to properly synchronize such usages. This issue needs
+      solving for GL_EXT_texture_buffer_object also, and should be consistent.
+
+   4. A limited number of bindable uniforms can exist in one program
+      object. Should this limit be queriable?
+
+      DISCUSSION: The link operation will fail if too many bindable uniforms
+      are declared and active. Should the limit on the number of active
+      bindable uniforms be queriable by the application?
+
+      RESOLUTION: Yes, this limit is queriable.
+
+   5. Is the limit discussed in the previous issue per shader type?
+
+      DISCUSSION: Is there a different limit for vertex shader and fragment
+      shaders? Hardware might support different limits. The storage for
+      uniform variables is a limit queriable per shader type, thus it would be
+      nice to be consistent with the existing model.
+
+      RESOLUTION: YES.
+
+   6. Can an application find out programmatically that a uniform is declared
+      as a bindable uniform?
+
+      DISCUSSION: Using GetActiveUniform() the application can
+      programmatically find out which uniforms are active, what their type and
+      size etc it. Do we need to add a mechanism for an application to find
+      out if an active uniform is a bindable uniform?
+
+      RESOLUTION: UNRESOLVED. To be consistent, the answer should be
+      yes. However, extending GetActiveUniform() is not possible, which means
+      we need a new API command. If we define a new API command, it probably
+      is better to define something like:  GetNewActiveUniform(int program,
+      uint index, enum property, void *data); Or alternatively, define new API
+      to query the properties of a uniform per uniform location:
+      GetActiveUniformProperty(int program, int location, enum property, void
+      *data)
+
+   7. What to do when the buffer object bound to a bindable uniform is not big
+      enough to back the uniform or if no buffer object is bound at all?
+
+      DISCUSSION: The size of a buffer object can be changed, after it is
+      bound, by calling BufferData. It is possible that the buffer object
+      isn't sufficiently big enough to back the bindable uniform.  This is an
+      issue when loading values for uniforms and when actually rendering. In
+      the case of loading uniforms, should the Uniform* API generate an error?
+      In the case of rendering, should this be a Begin error?
+
+      RESOLUTION: RESOLVED. It is a Begin error if a buffer object is too
+      small or no buffer object is bound at all. The Uniform* commands will
+      generate an error in these cases as well.
+
+   8. What restrictions are there on binding a buffer object to more than one
+      bindable uniform?
+
+      DISCUSSION: Can a buffer object be bound to more than one uniform within
+      a program object? No, this does not seem to be a good idea.  Can a
+      buffer object be bound to more than one uniform in different program
+      objects? Yes, this is useful functionality to have. If each uniform is
+      also of the same type, then data access in program object A then the
+      same access in program object B results in the same data. In the latter
+      case, if the uniform variables are arrays, must the arrays have the same
+      length declared? No, that is too big of a restriction. The application
+      is responsible for making sure the buffer object is sufficiently sized
+      to provide storage for the largest bindable uniform array.
+
+      RESOLUTION: RESOLVED.
+
+   9. It is not allowed to bind a buffer object to more than one bindable
+      uniform in a program object. There are several operations that could be
+      affected by this rule: UseProgram(), the uniform loading commands
+      Uniform*, Begin, RasterPos and any related rendering command. Should
+      each operation generate an error if the rule is violated?
+
+      DISCUSSION: See also issue 7. The UseProgram command could generate an
+      error if the rule is violated. However, it is possible to change the
+      binding of a buffer object to a bindable uniform even after UseProgram
+      has been issued. Thus should the Uniform* commands also check for this?
+      If so, is that going to be a performance burden on uniform loading? Or
+      should it be undefined?  Finally, at rendering time violation of this
+      rule will have to be checked. If violated, it seems to make sense to
+      generate an error.
+
+      RESOLUTION: RESOLVED. Make violation of the rule a Begin error and a
+      Uniform* error.
+
+  10. How to provide the ability to use bindable uniform arrays (or bindable
+      uniform arrays of structures) where the amount of data can differ based
+      on the buffer object bound to it?
+
+      DISCUSSION: In other words, the size of the bindable uniform is no
+      longer declared in the shader, but determined by the buffer object
+      backing it. This can be achieved through a variety of ways:
+
+      bindable uniform vec3 foo[1];
+
+      Where we would allow indexing 'off the end' of the array 'foo', because
+      it is backed by a buffer object. The actual size of the array will be
+      implicitly inferred from the buffer object bound to it. It'll be the
+      shader's responsibility to not index outside the size of the buffer
+      object. That in turn means that the layout in buffer object memory of a
+      bindable uniform needs to be exposed to the application.
+
+      Or we could support something like:
+
+      bindable uniform vec3 foo[100000]; // Some really big number
+
+      and make all accesses inside the buffer object bound to "foo" legal.
+
+      Or we could support something like:
+
+      bindable uniform float foo[];
+
+      foo[3] = 1.0;
+      foo[i]  = .
+
+      Where 'i' could be a run-time index.
+
+      RESOLUTION: For now, we will not support this functionality.
+
+  11. Do we want to have bindable namespaces instead of the uniform qualifier
+      "bindable"?
+
+      DISCUSSION: Something like this:
+
+      bindable {
+        vec3 blarg;
+        int booyah;
+      };
+
+      where "blarg" and "booyah" can be referred to directly, but are both
+      bindable to the same buffer. You can achieve this with bindable uniforms
+      stored in structures:
+
+      bindable uniform struct {
+        vec3 blarg;
+        int booyah;
+      } foo;
+
+      but then have to use "foo.blarg" and "foo.booyah".
+
+      RESOLUTION: Not in this extension. This might be nice programming sugar,
+      but not essential.  Such a feature may be added in a future extension
+      building on this one.
+
+  12. How can an application load data into a bindable uniform?
+
+      RESOLUTION: See also issue 2. Uniform variables declared as bindable can
+      be loaded using the existing Uniform* commands, or data can be loaded in
+      the buffer object bound to the uniform using any of the existing
+      mechanisms.
+
+  13. Should it be allowed to load data, using the Uniform* commands, into a
+      buffer object that is bound to more than one bindable uniform variable
+      in a program object?
+
+      DISCUSSION: It is a Begin error to attempt to render in this situation.
+
+      RESOLUTION: Yes, to be consistent with the Begin error, it is also an
+      error to load a value in this case.
+
+  14. Should a buffer object binding point be provided for bindable uniforms?
+
+      DISCUSSION: All current OpenGL buffer object manipulation functions take
+      a <target> to which a buffer object must be bound.  In this extension,
+      buffer objects are bound to uniforms stored in a program, and are not
+      bound directly to the context.  So these bindings may not be used to
+      manipulate the 
+
+      RESOLUTION:  Yes, a new <target> called UNIFORM_BUFFER_EXT is provided.
+
+      The following is a simple example of creating, binding, and populating a
+      buffer object for a bindable uniform named "stuff", which is an array of
+      vec4 values:
+
+         GLuint program, buffer;
+         GLint location, size;
+         GLfloat values;
+
+          // ... compile shaders and link <program>
+          location = glGetUniformLocation(program, "stuff");
+          size = GetUniformBufferSize(program, location);
+          glGenBuffers(1, &buffer);
+          glBindBuffer(GL_UNIFORM_BUFFER_EXT, buffer);
+          glBufferData(GL_UNIFORM_BUFFER_EXT, size, NULL, STATIC_READ);
+          glUniformBufferEXT(program, location, buffer);
+          ...
+          glUseProgram(program);
+          glUniform4fv(location, count, values);
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     15   04/04/08  aeddy     Moved state sections into the proper order.
+
+     14   02/14/08  pbrown    Clarify some confusing language about the memory
+                              layout restrictions and GetUniformOffsetEXT.
+
+     13   12/13/07  pbrown    Minor clarification on what values can be passed
+                              to GetUniformBufferSizeEXT and UniformBufferEXT.
+
+     12   12/15/06  pbrown    Documented that the '#extension' token
+                              for this extension should begin with "GL_",
+                              as apparently called for per convention.
+
+     11      --               Pre-release revisions.

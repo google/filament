@@ -1,0 +1,862 @@
+Name
+
+    NV_vertex_program3
+
+Name Strings
+
+    GL_NV_vertex_program3
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Data:         10/12/2009
+    NVIDIA Revision:            7
+
+Number
+
+    306
+
+Dependencies
+
+    ARB_vertex_program is required.
+    NV_vertex_program2_option is required.
+    This extension interacts with ARB_fragment_program_shadow.
+
+Overview
+
+    This extension, like the NV_vertex_program2_option extension,
+    provides additional vertex program functionality to extend the
+    standard ARB_vertex_program language and execution environment.
+    ARB programs wishing to use this added functionality need only add:
+
+        OPTION NV_vertex_program3;
+
+    to the beginning of their vertex programs.
+
+    New functionality provided by this extension, above and beyond that
+    already provided by NV_vertex_program2_option extension, includes: 
+
+        * texture lookups in vertex programs,
+
+        * ability to push and pop address registers on the stack,
+
+        * address register-relative addressing for vertex attribute and
+          result arrays, and
+
+        * a second four-component condition code.
+
+Issues
+
+    Should we provided a separate "!!VP3.0" program type, like the
+    "!!VP2.0" type defined in NV_vertex_program2?
+
+      RESOLVED:  No.  Since ARB_vertex_program has been fully defined
+      (it wasn't in the !!VP2.0 time-frame), we will simply define
+      language extensions to !!ARBvp1.0 that expose new functionality.
+      The NV_vertex_program2_option specification followed this same
+      pattern for the NV3X family (GeForce FX, Quadro FX).
+
+    Should this be called "NV_vertex_program3_option"?
+
+      RESOLVED:  No.  The similar extension to !!ARBvp1.0 called
+      "NV_vertex_program2_option" got that name only because the simpler
+      "NV_vertex_program2" name had already been used.
+
+    Is there a limit on the number of texture units that can be accessed
+    by a vertex program?
+
+      RESOLVED:  Yes.  The limit may be lower than the total number of texture
+      image units available and is given by the implementation-dependent
+      constant MAX_VERTEX_TEXTURE_IMAGE_UNITS_ARB.  Any program that attempts
+      to use more unique texture image units will fail to load.  Programs can
+      use any texture image unit number, as long as they don't use too many
+      simultaneously.  As an example, the GeForce 6 series of GPUs provides 16
+      texture image units accessible to vertex programs, but no more than four
+      can be used simultaneously.  It is not an error to use texture image
+      units 12-15 in a program.
+
+      This limitation is identical to the one in the ARB_vertex_shader
+      extensions -- both extensions use the same enum to query the number of
+      available image units.  Violating this limit in GLSL results in a link
+      error.
+
+    Is there a restriction on the texture targets that can be accessed by a
+    vertex program?
+
+      RESOLVED:  Yes -- for any texture image unit, vertex and fragment
+      processing can not use different targets.  If they do, an
+      INVALID_OPERATION is generated at Begin-time.  This resolution is
+      consistent with resultion of the same issue in the ARB_vertex_shader
+      extension and OpenGL 2.0.
+
+    Since vertices don't have screen space partial derivatives, how is
+    the LOD used for texture accesses defined?
+
+      RESOLVED:  The TXL instruction allows a program to explicitly
+      set an LOD; the LOD for all other texture instructions is zero.
+      The texture LOD bias specified in the texture object and environment
+      do apply to all vertex texture lookups.
+
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        MAX_VERTEX_TEXTURE_IMAGE_UNITS_ARB              0x8B4C
+
+Additions to Chapter 2 of the OpenGL 1.4 Specification (OpenGL Operation)
+
+    Modify Section 2.14.2, Vertex Program Grammar and Restrictions
+
+    (mostly add to existing grammar rules, as extended by
+    NV_vertex_program2_option)
+
+    <optionName>            ::= "NV_vertex_program3"
+
+    <instruction>           ::= <TexInstruction>
+
+    <ALUInstruction>        ::= <ASTACKop_instruction>
+
+    <TexInstruction>        ::= <TEXop_instruction>
+
+    <ASTACKop_instruction>  ::= <PUSHAop> <instOperandAddrVNS>
+                              | <POPAop> <instResultAddr>
+
+    <PUSHAop>               ::= "PUSHA"
+
+    <POPAop>                ::= "POPA"
+
+    <TEXop_instruction>     ::= <TEXop> <instResult> "," <instOperandV> "," 
+                                <texTarget>
+
+    <TEXop>                 ::= "TEX"
+                              | "TXP"
+                              | "TXB"
+                              | "TXL"
+
+    <texTarget>             ::= <texImageUnit> "," <texTargetType>
+
+    <texImageUnit>          ::= "texture" <optTexImageUnitNum>
+
+    <optTexImageUnitNum>    ::= /* empty */
+                              | "[" <texImageUnitNum> "]"
+
+    <texImageUnitNum>       ::= <integer> 
+                                /*[0,MAX_TEXTURE_IMAGE_UNITS_ARB-1]*/
+
+    <texTargetType>         ::= "1D"
+                              | "2D"
+                              | "3D"
+                              | "CUBE"
+                              | "RECT"
+
+    <attribVtxBasic>        ::= "texcoord" "[" <arrayMemRel> "]"
+                              | "attrib" "[" <arrayMemRel> "]"
+
+    <resultVtxBasic>        ::= "texcoord" "[" <arrayMemRel> "]"
+
+    <ccMaskRule>            ::= "EQ0"
+                              | "GE0"
+                              | "GT0"
+                              | "LE0"
+                              | "LT0"
+                              | "NE0"
+                              | "TR0"
+                              | "FL0"
+                              | "EQ1"
+                              | "GE1"
+                              | "GT1"
+                              | "LE1"
+                              | "LT1"
+                              | "NE1"
+                              | "TR1"
+                              | "FL1"
+
+    (modify description of reserved identifiers)
+    
+    ... The following strings are reserved keywords and may not be used
+    as identifiers:
+
+        ABS, ADD, ADDRESS, ALIAS, ARA, ARL, ARR, ATTRIB, BRA, CAL, COS,
+        DP3, DP4, DPH, DST, END, EX2, EXP, FLR, FRC, LG2, LIT, LOG, MAD,
+        MAX, MIN, MOV, MUL, OPTION, OUTPUT, PARAM, POPA, POW, PUSHA, RCC,
+        RCP, RET, RSQ, SEQ, SFL, SGE, SGT, SIN, SLE, SLT, SNE, SUB, SSG,
+        STR, SWZ, TEMP, TEX, TXB, TXL, TXP, XPD, program, result, state,
+        and vertex.
+
+    Modify Section 2.14.3.1, Vertex Attributes
+
+    (add new bindings to binding table)
+
+      Vertex Attribute Binding  Components  Underlying State
+      ------------------------  ----------  --------------------------------
+      ...
+      vertex.texcoord[A+n]      (s,t,r,q)   indexed texture coordinate
+      vertex.attrib[A+n]        (x,y,z,w)   indexed generic vertex attribute
+
+    If a vertex attribute binding matches "vertex.texcoord[A+n]", where
+    "A" is a component of an address register (Section 2.14.3.5), a
+    texture coordinate number <c> is computed by adding the current
+    value of the address register component and <n>.  The "x", "y",
+    "z", and "w" components of the vertex attribute variable are
+    filled with the "s", "t", "r", and "q" components, respectively,
+    of the vertex texture coordinates for texture unit <c>.  If <c>
+    is negative or greater than or equal to MAX_TEXTURE_COORDS_ARB,
+    the vertex attribute variable is undefined.
+
+    If a vertex attribute binding matches "vertex.attrib[A+n]", where
+    "A" is a component of an address register (Section 2.14.3.5), a
+    vertex attribute number <a> is computed by adding the current value
+    of the address register component and <n>.  The "x", "y", "z", and
+    "w" components of the vertex attribute variable are filled with the
+    "x", "y", "z", and "w" components, respectively, of generic vertex
+    attribute <a>.  If <a> is negative or greater than or equal to
+    MAX_VERTEX_ATTRIBS_ARB, the vertex attribute variable is undefined.
+
+    Modify Section 2.14.3.4, Vertex Program Results
+
+    (add new binding to binding table)
+
+      Binding                        Components  Description
+      -----------------------------  ----------  ----------------------------
+      ...
+      result.texcoord[A+n]           (s,t,r,q)   indexed texture coordinate
+
+    If a result variable binding matches "result.texcoord[A+n]", where "A"
+    is a component of an address register (Section 2.14.3.5), a texture
+    coordinate number <c> is computed by adding the current value of
+    the address register component and <n>.  Updates to the "x", "y",
+    "z", and "w" components of the result variable set the "s", "t",
+    "r" and "q" components, respectively, of the transformed vertex's
+    texture coordinates for texture unit <c>.  If <c> is negative or
+    greater than or equal to MAX_TEXTURE_COORDS_ARB, the effects of
+    updates to vertex attribute variable are undefined and may overwrite
+    other programs results.
+
+    Modify Section 2.14.3.X, Condition Code Registers (added in
+    NV_Vertex_program2_option)
+
+    The vertex program condition code registers are two four-component
+    vectors, called CC0 and CC1.  Each component of this register is one
+    of four enumerated values: GT (greater than), EQ (equal), LT (less
+    than), or UN (unordered).  The condition code register can be used
+    to mask writes to registers and to evaluate conditional branches.
+
+    Most vertex program instructions can optionally update one of the
+    two condition code registers.  When a vertex program instruction
+    updates a condition code register, a condition code component is set
+    to LT if the corresponding component of the result is less than zero,
+    EQ if it is equal to zero, GT if it is greater than zero, and UN if
+    it is NaN (not a number).
+
+    The condition code registers are initialized to vectors of EQ values
+    each time a vertex program executes.
+
+    Modify Section 2.14.3.7, Vertex Program Resource Limits
+
+    (add new paragraph to end of section) In addition to the previous limits,
+    the number of unique texture image units that can be accessed
+    simultaneously by a vertex program is limited.  The limit is given by the
+    implementation-dependent constant MAX_VERTEX_TEXTURE_IMAGE_UNITS_ARB, and
+    may be lower than the total number of texture image units provided.  If
+    the number of texture image units referenced by a vertex program exceeds
+    this limit, the program will fail to load.
+    
+    Modify Section 2.14.4, Vertex Program Execution Environment
+
+    (modify Begin-time error language for vertex program execution to cover
+    invalid texture uses)
+
+    If vertex program mode is enabled and the currently bound program object
+    does not contain a valid vertex program, the error INVALID_OPERATION will
+    be generated by Begin, RasterPos, and any command that implicitly calls
+    Begin (e.g., DrawArrays).
+
+    If vertex program mode is enabled and the currently bound program object
+    accesses a texture image unit, the texture target used must be consistent
+    with the target (if any) used for fragment processing.  If vertex and
+    fragment processing require the use of different texture targets on the
+    same texture image unit, the error INVALID_OPERATION will be generated by
+    Begin, RasterPos, and any command that implicitly calls Begin.
+
+    (modify instruction table) There are forty-eight vertex program
+    instructions.  Vertex program instructions may have up to eight
+    variants, including a suffix of "C" or "C0" to allow an update of
+    condition code register zero (section 2.14.3.X), a suffix of "C1"
+    to allow an update of condition code register one, and a suffix of
+    "_SAT" to clamp the result vector components to the range [0,1].
+    For example, the eight forms of the "ADD" instruction are "ADD",
+    "ADDC", "ADDC0", "ADDC1", "ADD_SAT", "ADDC_SAT", "ADDC0_SAT", and
+    "ADDC1_SAT".  The instructions and their respective input and output
+    parameters are summarized in Table X.5.
+
+                  Modifiers
+      Instruction   C S   Inputs  Output   Description
+      -----------   - -   ------  ------   --------------------------------
+      ABS           X X   v       v        absolute value
+      ADD           X X   v,v     v        add
+      ARA           X -   a       a        address register add
+      ARL           X -   s       a        address register load
+      ARR           X -   v       a        address register load (round)
+      BRA           - -   c       -        branch
+      CAL           - -   c       -        subroutine call
+      COS           X X   s       ssss     cosine
+      DP3           X X   v,v     ssss     3-component dot product
+      DP4           X X   v,v     ssss     4-component dot product
+      DPH           X X   v,v     ssss     homogeneous dot product
+      DST           X X   v,v     v        distance vector
+      EX2           X X   s       ssss     exponential base 2
+      EXP           X X   s       v        exponential base 2 (approximate)
+      FLR           X X   v       v        floor
+      FRC           X X   v       v        fraction
+      LG2           X X   s       ssss     logarithm base 2
+      LIT           X X   v       v        compute light coefficients
+      LOG           X X   s       v        logarithm base 2 (approximate)
+      MAD           X X   v,v,v   v        multiply and add
+      MAX           X X   v,v     v        maximum
+      MIN           X X   v,v     v        minimum
+      MOV           X X   v       v        move
+      MUL           X X   v,v     v        multiply
+      POPA          - -   -       a        pop address register
+      POW           X X   s,s     ssss     exponentiate
+      PUSHA         - -   a       -        push address register
+      RCC           X X   s       ssss     reciprocal (clamped)
+      RCP           X X   s       ssss     reciprocal
+      RET           - -   c       -        subroutine return
+      RSQ           X X   s       ssss     reciprocal square root
+      SEQ           X X   v,v     v        set on equal
+      SFL           X X   v,v     v        set on false
+      SGE           X X   v,v     v        set on greater than or equal
+      SGT           X X   v,v     v        set on greater than
+      SIN           X X   s       ssss     sine
+      SLE           X X   v,v     v        set on less than or equal
+      SLT           X X   v,v     v        set on less than
+      SNE           X X   v,v     v        set on not equal
+      SSG           X X   v       v        set sign
+      STR           X X   v,v     v        set on true
+      SUB           X X   v,v     v        subtract
+      SWZ           X X   v       v        extended swizzle
+      TEX           X X   v       v        texture lookup
+      TXB           X X   v       v        texture lookup with LOD bias
+      TXL           X X   v       v        texture lookup with explicit LOD
+      TXP           X X   v       v        projective texture lookup
+      XPD           X X   v,v     v        cross product
+
+      Table X.5:  Summary of vertex program instructions.  The columns
+      "C" and "S" indicate whether the "C", "C0", and "C1" condition code
+      update modifiers, and the "_SAT" saturation modifiers, respectively,
+      are supported for the opcode.  "v" indicates a floating-point vector
+      input or output, "s" indicates a floating-point scalar input,
+      "ssss" indicates a scalar output replicated across a 4-component
+      result vector, "a" indicates a vector address register, and "c"
+      indicates a condition code test.
+
+    Rewrite Section 2.14.4.3,  Vertex Program Destination Register Update
+
+    A vertex program instruction can optionally clamp the results of
+    a floating-point result vector to the range [0,1].  The components
+    of the result vector are clamped to [0,1] if the saturation suffix
+    "_SAT" is present in the instruction.
+
+    Most vertex program instructions write a 4-component result vector to
+    a single temporary or vertex result register.  Writes to individual
+    components of the destination register are controlled by individual
+    component write masks specified as part of the instruction.
+
+    The component write mask is specified by the <optionalMask> rule
+    found in the <maskedDstReg> rule.  If the optional mask is "",
+    all components are enabled.  Otherwise, the optional mask names
+    the individual components to enable.  The characters "x", "y",
+    "z", and "w" match the x, y, z, and w components respectively.
+    For example, an optional mask of ".xzw" indicates that the x, z,
+    and w components should be enabled for writing but the y component
+    should not.  The grammar requires that the destination register mask
+    components must be listed in "xyzw" order.  The condition code write
+    mask is specified by the <ccMask> rule found in the <instResultCC>
+    and <instResultAddrCC> rules.  Otherwise, the selected condition
+    code register is loaded and swizzled according to the swizzle
+    codes specified by <swizzleSuffix>.  Each component of the swizzled
+    condition code is tested according to the rule given by <ccMaskRule>.
+    <ccMaskRule> may have the values "EQ", "NE", "LT", "GE", LE", or "GT",
+    which mean to enable writes if the corresponding condition code field
+    evaluates to equal, not equal, less than, greater than or equal, less
+    than or equal, or greater than, respectively.  Comparisons involving
+    condition codes of "UN" (unordered) evaluate to true for "NE" and
+    false otherwise.  For example, if the condition code is (GT,LT,EQ,GT)
+    and the condition code mask is "(NE.zyxw)", the swizzle operation
+    will load (EQ,LT,GT,GT) and the mask will thus will enable writes on
+    the y, z, and w components.  In addition, "TR" always enables writes
+    and "FL" always disables writes, regardless of the condition code.
+    If the condition code mask is empty, it is treated as "(TR)".
+
+    Each component of the destination register is updated with the result
+    of the vertex program instruction if and only if the component is
+    enabled for writes by both the component write mask and the condition
+    code write mask.  Otherwise, the component of the destination register
+    remains unchanged.
+
+    A vertex program instruction can also optionally update the condition
+    code register.  The condition code is updated if the condition
+    code register update suffix "C" is present in the instruction.
+    The instruction "ADDC" will update the condition code; the otherwise
+    equivalent instruction "ADD" will not.  If condition code updates
+    are enabled, each component of the destination register enabled
+    for writes is compared to zero.  The corresponding component of
+    the condition code is set to "LT", "EQ", or "GT", if the written
+    component is less than, equal to, or greater than zero, respectively.
+    Condition code components are set to "UN" if the written component is
+    NaN (not a number).  Values of -0.0 and +0.0 both evaluate to "EQ".
+    If a component of the destination register is not enabled for writes,
+    the corresponding condition code component is also unchanged.
+
+    In the following example code,
+
+        # R1=(-2, 0, 2, NaN)              R0                  CC
+        MOVC R0, R1;               # ( -2,  0,   2, NaN) (LT,EQ,GT,UN)
+        MOVC R0.xyz, R1.yzwx;      # (  0,  2, NaN, NaN) (EQ,GT,UN,UN)
+        MOVC R0 (NE), R1.zywx;     # (  0,  0, NaN,  -2) (EQ,EQ,UN,LT)
+
+    the first instruction writes (-2,0,2,NaN) to R0 and updates the
+    condition code to (LT,EQ,GT,UN).  The second instruction, only the
+    "x", "y", and "z" components of R0 and the condition code are updated,
+    so R0 ends up with (0,2,NaN,NaN) and the condition code ends up with
+    (EQ,GT,UN,UN).  In the third instruction, the condition code mask
+    disables writes to the x component (its condition code field is "EQ"),
+    so R0 ends up with (0,0,NaN,-2) and the condition code ends up with
+    (EQ,EQ,UN,LT).
+
+    The following pseudocode illustrates the process of writing a
+    result vector to the destination register.  In the pseudocode,
+    "instrSaturate" is TRUE if and only if result saturation is
+    enabled, "instrMask" refers to the component write mask given by
+    the <optWriteMask> rule.  "ccMaskRule" refers to the condition code
+    mask rule given by <ccMask> and "updatecc" is TRUE if and only if
+    condition code updates are enabled.  "result", "destination", and "cc"
+    refer to the result vector, the register selected by <dstRegister>
+    and the condition code, respectively.  Condition codes do not exist
+    in the VP1 execution environment.
+
+      boolean TestCC(CondCode field) {
+          switch (ccMaskRule) {
+          case "EQ":  return (field == "EQ");
+          case "NE":  return (field != "EQ");
+          case "LT":  return (field == "LT");
+          case "GE":  return (field == "GT" || field == "EQ");
+          case "LE":  return (field == "LT" || field == "EQ");
+          case "GT":  return (field == "GT");
+          case "TR":  return TRUE;
+          case "FL":  return FALSE;
+          case "":    return TRUE;
+          }
+      }
+
+      enum GenerateCC(float value) {
+        if (value == NaN) {
+          return UN;
+        } else if (value < 0) {
+          return LT;
+        } else if (value == 0) {
+          return EQ;
+        } else {
+          return GT;
+        }
+      }
+
+      void UpdateDestination(floatVec destination, floatVec result)
+      {
+          floatVec merged;
+          ccVec    mergedCC;
+
+          // Clamp result components to [0,1] if requested in the instruction.
+          if (instrSaturate) {
+              if (result.x < 0)      result.x = 0;
+              else if (result.x > 1) result.x = 1;
+              if (result.y < 0)      result.y = 0;
+              else if (result.y > 1) result.y = 1;
+              if (result.z < 0)      result.z = 0;
+              else if (result.z > 1) result.z = 1;
+              if (result.w < 0)      result.w = 0;
+              else if (result.w > 1) result.w = 1;
+          }
+
+          // Merge the converted result into the destination register, under
+          // control of the compile- and run-time write masks.
+          merged = destination;
+          mergedCC = cc;
+          if (instrMask.x && TestCC(cc.c***)) {
+              merged.x = result.x;
+              if (updatecc) mergedCC.x = GenerateCC(result.x);
+          }
+          if (instrMask.y && TestCC(cc.*c**)) {
+              merged.y = result.y;
+              if (updatecc) mergedCC.y = GenerateCC(result.y);
+          }
+          if (instrMask.z && TestCC(cc.**c*)) {
+              merged.z = result.z;
+              if (updatecc) mergedCC.z = GenerateCC(result.z);
+          }
+          if (instrMask.w && TestCC(cc.***c)) {
+              merged.w = result.w;
+              if (updatecc) mergedCC.w = GenerateCC(result.w);
+          }
+
+          // Write out the new destination register and condition code.
+          destination = merged;
+          cc = mergedCC;
+      }
+
+    While this rule describes floating-point results, the same logic
+    applies to the integer results generated by the ARA, ARL, and ARR
+    instructions.
+
+    Add to Section 2.14.4.5, Vertex Program Options
+
+    Section 2.14.4.5.3, NV_vertex_program3 Program Option
+
+    If a vertex program specifies the "NV_vertex_program3" option, the
+    ARB_vertex_program grammar and execution environment are extended
+    to take advantage of all the features of the "NV_vertex_program2"
+    option, plus the following features:
+
+        * several new instructions:
+
+          * POPA -- pop address register off stack        
+          * PUSHA -- push address register onto stack
+          * TEX -- texture lookup
+          * TXB -- texture lookup w/LOD bias
+          * TXL -- texture lookup w/explicit LOD
+          * TXP -- projective texture lookup
+
+        * address register-relative addressing for vertex texture
+          coordinate and generic attribute arrays,
+
+        * address register-relative addressing for vertex texture
+          coordinate result array, and
+
+        * a second four-component condition code.
+
+
+    Modify Section 2.14.5.34,  RET:  Subroutine Call Return
+
+    The RET instruction conditionally returns from a subroutine initiated
+    by a CAL instruction by popping an instruction reference off the
+    top of the call stack and transferring control to the referenced
+    instruction.  The following pseudocode describes the operation of
+    the instruction:
+
+      if (TestCC(cc.c***) || TestCC(cc.*c**) || 
+          TestCC(cc.**c*) || TestCC(cc.***c)) {
+        if (callStackDepth <= 0) {
+          // terminate vertex program normally
+        } else {
+          callStackDepth--;
+          if (callStack[callStackDepth] is a instruction reference) {
+            instruction = callStack[callStackDepth];
+          } else {
+            // terminate vertex program abnormally
+          }
+        }
+
+        // continue execution at <instruction>
+      } else {
+        // do nothing
+      }
+
+    In the pseudocode, <callStackDepth> is the depth of the call stack,
+    <callStack> is an array holding the call stack, and <instruction> is
+    a reference to an instruction previously pushed onto the call stack.
+
+    If the call stack is empty when RET executes, the vertex program
+    terminates normally.
+
+    The vertex program terminates abnormally if the entry at the top of the
+    call stack is not an instruction reference pushed by CAL.  When a vertex
+    program terminates abnormally, all of the vertex program results are
+    undefined.
+
+    Add to Section 2.14.5,  Vertex Program Instruction Set
+
+    Section 2.14.5.43, POPA:  Pop Address Register Stack    
+
+    The POPA instruction generates a integer result vector by popping
+    an entry off of the call stack.
+
+      if (callStackDepth <= 0) {
+        terminate vertex program;
+      } else {
+        callStackDepth--;
+        if (callStack[callStackDepth] is an address register) {
+          iresult = callStack[callStackDepth];
+        } else {
+          terminate vertex program;
+        }
+      }
+
+    POPA does not support non-default write masks; a program will fail to load
+    if it includes a component write mask other than ".xyzw" or a condition
+    code write mask test other than "TR".
+
+    In the pseudocode, <callStackDepth> is the current depth of the call
+    stack and <callStack> is an array holding the call stack.  
+
+    The vertex program terminates abnormally if it executes a POPA instruction
+    when the call stack is empty, or when the entry at the top of the call
+    stack is not an address register pushed by PUSHA.  When a vertex program
+    terminates abnormally, all of the vertex program results are undefined.
+
+    Section 2.14.5.44, PUSHA:  Push Address Register Stack    
+
+    The PUSHA instruction pushes the address register operand onto the
+    call stack, which is also used for subroutine calls.  The PUSHA
+    instruction does not generate a result vector.
+
+      tmp = AddrVectorLoad(op0);
+      if (callStackDepth >= MAX_PROGRAM_CALL_DEPTH_NV) {
+        terminate vertex program;
+      } else {
+        callStack[callStackDepth] = tmp;
+        callStackDepth++;
+      }
+
+    In the pseudocode, <callStackDepth> is the current depth of the call
+    stack and <callStack> is an array holding the call stack.
+
+    The vertex program terminates abnormally if it executes a PUSHA
+    instruction when the call stack is full.  When a vertex program terminates
+    abnormally, all of the vertex program results are undefined.
+
+    Component swizzling is not supported when the operand is loaded.
+
+    Section 2.14.5.45, TEX:  Texture Lookup
+
+    The TEX instruction uses the single vector operand to perform a
+    lookup in the specified texture map, yielding a 4-component result
+    vector containing filtered texel values.  The (s,t,r,q) coordinates
+    used for the texture lookup are (x,y,z,1), where x, y, and z are
+    components of the vector operand.
+
+      tmp = VectorLoad(op0);
+      result = TextureSample(tmp.x, tmp.y, tmp.z, 1.0, 0.0, unit, target);
+
+    where <unit> and <target> are the texture image unit number and
+    target type, matching the <texImageUnitNum> and <texTargetType>
+    grammar rules.
+
+    The resulting sample is mapped to RGBA as described in Table 3.21,
+    and the R, G, B, and A values are written to the x, y, z, and w
+    components, respectively, of the result vector.
+
+    Since partial derivatives of the texture coordinates are not defined,
+    the base LOD value for vertex texture lookups is defined to be
+    zero.  The value of lambda' used in equation 3.16 will be simply
+    clamp(texobj_bias + texunit_bias).
+
+    Section 2.14.5.46, TXB:  Texture Lookup (With LOD Bias)
+
+    The TXB instruction uses the single vector operand to perform a
+    lookup in the specified texture map, yielding a 4-component result
+    vector containing filtered texel values.  The (s,t,r,q) coordinates
+    used for the texture lookup are (x,y,z,1), where x, y, and z are
+    components of the vector operand.  The w component of the operand
+    is used as an additional LOD bias.
+
+      tmp = VectorLoad(op0);
+      result = TextureSample(tmp.x, tmp.y, tmp.z, 1.0, tmp.w, unit, target);
+
+    where <unit> and <target> are the texture image unit number and
+    target type, matching the <texImageUnitNum> and <texTargetType>
+    grammar rules.
+
+    The resulting sample is mapped to RGBA as described in Table 3.21,
+    and the R, G, B, and A values are written to the x, y, z, and w
+    components, respectively, of the result vector.
+
+    Since partial derivatives of the texture coordinates are not defined,
+    the base LOD value for vertex texture lookups is defined to be
+    zero.  The value of lambda' used in equation 3.16 will be simply
+    clamp(texobj_bias + texunit_bias + tmp.w).  
+
+    Since the base LOD value is zero, the TXB instruction is completely
+    equivalent to the TXL instruction, where the w component contains
+    an explicit base LOD value.
+
+    Section 2.14.5.47, TXL:  Texture Lookup (With Explicit LOD)
+
+    The TXL instruction uses the single vector operand to perform a
+    lookup in the specified texture map, yielding a 4-component result
+    vector containing filtered texel values.  The (s,t,r,q) coordinates
+    used for the texture lookup are (x,y,z,1), where x, y, and z are
+    components of the vector operand.  The w component of the operand
+    is used as the base LOD for the texture lookup.
+
+      tmp = VectorLoad(op0); 
+      result = TextureSampleLOD(tmp.x, tmp.y, tmp.z, 1.0, tmp.w, unit, target);
+
+    where <unit> and <target> are the texture image unit number and
+    target type, matching the <texImageUnitNum> and <texTargetType>
+    grammar rules.
+
+    The resulting sample is mapped to RGBA as described in Table 3.21,
+    and the R, G, B, and A values are written to the x, y, z, and w
+    components, respectively, of the result vector.
+
+    The value of lambda' used in equation 3.16 will be simply tmp.w +
+    clamp(texobj_bias + texunit_bias), where tmp.w is the base LOD.
+
+    Section 2.14.5.48, TXP:  Texture Lookup (Projective)
+
+    The TXP instruction uses the single vector operand to perform a
+    lookup in the specified texture map, yielding a 4-component result
+    vector containing filtered texel values.  The (s,t,r,q) coordinates
+    used for the texture lookup are (x,y,z,w), where x, y, z, and w are
+    the four components of the vector operand.
+
+      tmp = VectorLoad(op0);
+      result = TextureSample(tmp.x, tmp.y, tmp.z, tmp.w, 0.0, unit, target);
+
+    where <unit> and <target> are the texture image unit number and
+    target type, matching the <texImageUnitNum> and <texTargetType>
+    grammar rules.
+
+    The resulting sample is mapped to RGBA as described in Table 3.21,
+    and the R, G, B, and A values are written to the x, y, z, and w
+    components, respectively, of the result vector.
+
+    Since partial derivatives of the texture coordinates are not defined,
+    the base LOD value for vertex texture lookups is defined to be
+    zero.  The value of lambda' used in equation 3.16 will be simply
+    clamp(texobj_bias + texunit_bias).
+
+Additions to Chapter 3 of the OpenGL 1.4 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 1.4 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.4 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.4 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 1.4 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Dependencies on ARB_vertex_program
+
+    ARB_vertex_program is required.
+
+    This specification and NV_vertex_program2_option are based on a
+    modified version of the grammar published in the ARB_vertex_program
+    specification.  This modified grammar includes a few structural
+    changes to better accommodate new functionality from this and
+    other extensions, but should be functionally equivalent to the
+    ARB_vertex_program grammar.  See NV_vertex_program2_option for
+    details on the base grammar.
+
+Dependencies on NV_vertex_program2_option
+
+    NV_vertex_program2_option is required.  
+
+    If the NV_vertex_program3 program option is specified, all
+    the functionality described in both this extension and the
+    NV_vertex_program2_option specification is available.
+
+Dependencies on ARB_fragment_program_shadow
+
+    If this extension and ARB_fragment_program shadow are both supported,
+    vertex programs may include the option statement:
+
+      OPTION ARB_fragment_program_shadow;
+
+    which enables the use of SHADOW1D, SHADOW2D, and SHADOWRECT texture
+    targets in texture lookup instructions, as described in the
+    ARB_fragment_program_shadow specification.
+
+    NVIDIA NOTE:  Drivers prior to September 2006 do not support the use of
+    this option, and will not accept texture lookups with SHADOW1D, SHADOW2D,
+    and SHADOWRECT targets.  Shadow mapping in vertex programs will result in
+    software fallbacks on GeForce 6 and GeForce 7 series GPUs, but may be done
+    in hardware on future GPUs.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State:
+
+                                             Minimum
+    Get Value             Type  Get Command   Value   Description                 Section   Attr.
+    ---------             ----  -----------  -------  --------------------------  --------  -----
+    MAX_VERTEX_TEXTURE_    Z+   GetIntegerv     1     Number of separate texture  2.14.3.7  -
+      IMAGE_UNITS_ARB                                 image units that can be
+                                                      accessed by a vertex program
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  --------------------------------------------
+    7     10/12/09  pbrown    Update grammar/documentation of PUSHA/POPA to
+                              reflect the implementation.  <instResultAddr> is
+                              used for POPA with some semantic checks.  Note
+                              that some driver versions erroneously allowed
+                              conditional write masks on POPA.  Also clarify
+                              that ARB_fragment_program_shadow includes
+                              support for "SHADOWRECT".
+
+    6     09/27/06  pbrown    Document that ARB_fragment_program_shadow is
+                              allowed, to enable the use of "SHADOW1D" and
+                              "SHADOW2D" targets for texture lookups.
+
+    5     11/07/05  pbrown    Fix PUSHA documentation to specify the right
+                              constant name used for overflow testing.
+
+    4     09/01/05  pbrown    Fix spec language to document that a vertex
+                              program will fail to compile if it uses "too
+                              many" textures -- previously only documented
+                              in the issues section.
+
+    3     08/25/05  pbrown    Document that using a different texture target
+                              than fragment processing on the same texture
+                              unit results in an INVALID_OPERATION error at
+                              Begin time.  This is consistent with GLSL
+                              language in the ARB_shader_objects and OpenGL
+                              2.0 specifications.  The implementation has
+                              always done this, but it was overlooked in
+                              the spec language.
+
+    2     06/23/04  pbrown    Documented that vertex results are undefined
+                              when a vertex program terminates abnormally
+                              (e.g., PUSHA/POPA stack overflow/underflow).
+                              Documented error in RET if the top of the call
+                              stack contains a value written by PUSHA.
+
+    1     --------  pbrown    Initial pre-release revisions.
+

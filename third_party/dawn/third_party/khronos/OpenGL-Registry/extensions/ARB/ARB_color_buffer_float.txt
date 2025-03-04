@@ -1,0 +1,1055 @@
+Name
+
+    ARB_color_buffer_float
+
+Name Strings
+
+    GL_ARB_color_buffer_float
+    WGL_ARB_pixel_format_float
+    GLX_ARB_fbconfig_float
+
+Contributors
+
+    Pat Brown, NVIDIA
+    James Jones, NVIDIA
+    Jon Leech
+    Rob Mace, ATI
+    V Moya
+    Brian Paul, Tungsten Graphics
+
+Contact
+
+    Dale Kirkland, NVIDIA (dkirkland 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2004-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on October 22, 2004.
+
+Version
+
+    Based on the ATI_pixel_format_float extension, version 5
+    Enables based on work by Pat Brown from the color_clamp_control proposal
+
+    Last Modified Date:  April 1, 2015
+    Version:             9
+
+Number
+
+    ARB Extension #39
+
+Dependencies
+
+    This extension is written against the OpenGL 2.0 Specification
+    but will work with the OpenGL 1.5 Specification.
+
+    WGL_ARB_pixel_format is required.
+
+    This extension interacts with ARB_fragment_program.
+
+    This extension interacts with ARB_fragment_shader.
+
+    This extension interacts with NV_float_buffer.
+
+    This extension interacts with ATI_pixel_format_float.
+
+Overview
+
+    The standard OpenGL pipeline is based on a fixed-point pipeline.
+    While color components are nominally floating-point values in the
+    pipeline, components are frequently clamped to the range [0,1] to
+    accomodate the fixed-point color buffer representation and allow
+    for fixed-point computational hardware.
+
+    This extension adds pixel formats or visuals with floating-point
+    RGBA color components and controls for clamping of color
+    components within the pipeline.
+
+    For a floating-point RGBA pixel format, the size of each float
+    components is specified using the same attributes that are used
+    for defining the size of fixed-point components.  32-bit
+    floating-point components are in the standard IEEE float format.
+    16-bit floating-point components have 1 sign bit, 5 exponent bits,
+    and 10 mantissa bits.
+
+    Clamping control provides a way to disable certain color clamps
+    and allow programs, and the fixed-function pipeline, to deal in
+    unclamped colors.  There are controls to modify clamping of vertex
+    colors, clamping of fragment colors throughout the pipeline, and
+    for pixel return data.
+
+    The default state for fragment clamping is "FIXED_ONLY", which
+    has the behavior of clamping colors for fixed-point color buffers
+    and not clamping colors for floating-pont color buffers.
+
+    Vertex colors are clamped by default.
+
+
+IP Status
+
+    SGI owns US Patent #6,650,327, issued November 18, 2003. SGI
+    believes this patent contains necessary IP for graphics systems
+    implementing floating point (FP) rasterization and FP framebuffer
+    capabilities.
+
+    SGI will not grant the ARB royalty-free use of this IP for use in
+    OpenGL, but will discuss licensing on RAND terms, on an individual
+    basis with companies wishing to use this IP in the context of
+    conformant OpenGL implementations. SGI does not plan to make any
+    special exemption for open source implementations.
+
+    Contact Doug Crisman at SGI Legal for the complete IP disclosure.
+
+Issues
+
+    1. How is this extension different from the ATI_pixel_format_float
+       extension?
+
+       RESOLVED:  By default, this extension behaves like the
+       ATI_pixel_format_float, but also adds additional controls for
+       color clamping.
+
+    2. Should the clamp controls be automatically inferred based on
+       the format of the color buffer or textures used?
+
+       RESOLVED:  Explicit controls should be supported -- this allows
+       the use of floating-point buffers to emulate fixed-point
+       operation, and allows for operating on unclamped values even
+       when rendering to a fixed-point framebuffer.
+
+       However, a default clamping mode called "FIXED_ONLY" is defined
+       that enables clamping only when rendering to a fixed-point color
+       buffer, which is the default for fragment processing.  This is
+       done to maintain compatibility with previous extensions
+       (ATI_pixel_format_float), and to allow applications to switch
+       between fixed- and floating-point color buffers without having
+       to change the clamping mode on each switch.
+
+    3. How does the clamping control affect the blending equation?
+
+       RESOLVED:  For fixed-point color buffers, the inputs and the
+       result of the blending equation are clamped.  For floating-point
+       color buffers, no clamping occurs.
+
+    4. Should the requirements for the representable range of color
+       components be increased?
+
+       RESOLVED:  No.  Such a spec change would be complicated, since
+       the required precision may vary based on color buffer precision.
+       Despite the fact that there is no spec requirement, GL
+       implementations should have at least as much precision/range in
+       their colors as can be found in the framebuffer.
+
+    5. Should the vertex color clamping control apply to RasterPos?
+       WindowPos?
+
+       RESOLVED:  Yes to both.  RasterPos is processed just like a
+       vertex, so the vertex color clamping control applies
+       automatically.  The WindowPos language in the OpenGL 2.0
+       specification explicitly refers to color clamping.  Instead,
+       we modify the language to perform normal processing, but with
+       lighting forced off.  This will result in the color clamping
+       logic applying.
+
+    6. What control should apply to DrawPixels RGBA components?
+
+       RESOLVED:  The fragment color clamp control.
+
+    7. Should this extension modify the clamping of the texture
+       environment color components?  TEXTURE_ENV_COLOR components
+       are currently specified to be clamped to [0,1] when TexEnv is
+       called.
+
+       RESOLVED:  Yes.  The texture environment color is no longer
+       clamped when specified.  If fragment color clamping is enabled,
+       it will be clamped to [0,1] on use.
+
+    8. In texture environment application, should color components used
+       as an interpolation factor (e.g., alpha) be clamped to [0,1]?
+
+       RESOLVED:  No.  For interpolation-type blends, the weighting
+       factor is normally in the range [0,1].  But the math is well-
+       defined in the cases where it falls outside this range.  When
+       fragment color clamping is enabled, all sources are clamped to
+       [0,1], so this is not an issue.
+
+   9. In the COMBINE texture environment mode, should any of the
+       source argument operands be clamped to [0,1] even when fragment
+       clamping is disabled?  For example, ONE_MINUS_* mappings are
+       simple in a fixed-point pipeline are simple, but more
+       complicated in a floating-point one.
+
+       RESOLVED:  No.  The math behind ONE_MINUS_* is well-defined for
+       all inputs.
+
+   10. Should the clamping controls affect the texture comparison mode
+       for shadow mapping?
+
+       RESOLVED:  No.  The r coordinate should still be clamped to
+       [0,1] to match the depth texture.  The result of the
+       comparison will naturally lie in the range [0,1].
+
+   11. Should the clamping controls affect the result of color sum?
+
+       RESOLVED:  Yes.
+
+   12. Should the clamping controls affect the computed fog factor?
+
+       RESOLVED:  No.  The fog factor is not a color -- it is used to
+       blend between the fragment color and the fog color.  The factor
+       should always be clamped to [0,1].
+
+   13. Should this extension modify the clamping of the fog color
+       components?  FOG_COLOR components are specified to be clamped
+       to [0,1] when Fogfv is called.
+
+       RESOLVED:  Yes.  Fog color components are no longer clamped
+       when specified, but will be clamped when fog is applied if
+       fragment color clamping is enabled.
+
+   14. How does this extension interact with antialiasing application
+       (Section 3.12 of the OpenGL 2.0 spec)?
+
+       RESOLVED:  Multiply floating-point alpha by coverage, even if
+       the alpha value is not being used as opacity.  If applications
+       don't want this multiplication, they should not render
+       antialiased primitives. No spec language changes are needed
+       here.
+
+   15. How does this extension interact with multisample point fade
+       (Section 3.13 of the OpenGL 2.0 spec)?
+
+       RESOLVED:  Multiply floating-point alpha by the fade factor,
+       even if the alpha value is not being used as opacity.  If
+       applications don't want this multiplication, they should not
+       use multisample point fade.  No spec language changes are
+       needed here.
+
+   16. Should this extension modify the clamping of the alpha test
+       reference value?
+
+       RESOLVED:  Yes.  The reference value is not clamped when
+       specified, by may be clamped when it is used.
+
+   17. Should this extension modify the clamping of the constant blend
+       color components?
+
+       RESOLVED:  Yes.  The blend color is not clamped when specified.
+       When rendering to a fixed-point framebuffer, the blend color
+       will be clamped as part of the blending operation.
+
+   18. Should this extension modify the clamping of clear colors?
+
+       RESOLVED:  Yes.  The clear color is not clamped when specified.
+       When clearing color buffers, the clear color is converted to
+       the format of the color buffer.
+
+   19. Should we provide a control to disable implicit clamping of
+       ReadPixels data?  If so, how should it be specified?
+
+       RESOLVED:  Yes.  It is explicitely controlled by the target
+       CLAMP_READ_COLOR_ARB of the ClampColorARB function and clamps
+       the color during the final conversion.
+
+   20. How does this extension interact with CopyPixels?
+
+       RESOLVED: It has no special interaction.  CopyPixels is specified
+       as roughly a ReadPixels/DrawPixels sequence, but the read color
+       clamp modified by this specification occur during final
+       conversion and therefore would not apply. The fragment color
+       clamp does affect the DrawPixels portion of the operation,
+       however.  The net result is that calling CopyPixels with a
+       floating-point framebuffer will clamp color components if
+       fragment color clamping is enabled.
+
+   21. Should these clamping controls interact with PushAttrib and
+       PopAttrib? If so, what group should they belong to?
+
+       RESOLVED:  For consistency, yes.  Historically, all enables are
+       pushed and popped with both the enable bit and a second bit
+       corresponding to the function performed by the enable.  The
+       present spec calls for pushing the vertex color clamp with the
+       lighting group and the fragment and read color clamp with the
+       color-buffer group (for lack of a better choice).
+
+   22. Should this extension require a floating-point color buffer
+       or texture?
+
+       RESOLVED:  No.  This extension provides the ability to pass an
+       unclamped color between vertex and fragment programs/shaders,
+       which may be useful. This was possible prior to this extension,
+       by passing the color data as texture coordinates or named
+       varying variables (for vertex/fragment shaders).
+
+   23. Does this extension interact with the ARB_vertex_program or
+       ARB_vertex_shader extensions?
+
+       RESOLVED:  Only in the most trivial way.  Both of these
+       extensions refer to the color clamping logic (Section 2.14.6
+       in the OpenGL 2.0 specification).  This extension modifies that
+       logic to be under control of the CLAMP_VERTEX_COLOR_ARB enable.
+       It follows that this enable also controls the clamping of vertex
+       program or vertex shader results.
+
+   24. Does this extension interact with the ARB_fragment_program or
+       ARB_fragment_shader extensions?
+
+       RESOLVED:  Yes.  The only interaction is that the fragment color
+       clamp enable determines if the final color(s) produced by the
+       fragment program/shader has its components clamped to [0,1].
+
+       However, the fragment color clamp enable affects only the final
+       result; it does NOT affect any computations performed during
+       program execution. Note that the same clamping can be done
+       explicitly in a fragment program or shader.
+       ARB_fragment_program provides the "_SAT" opcode suffix to clamp
+       instruction results to [0,1].
+
+   25. Should this extension modify the clamping of the texture border
+       color components?
+
+       RESOLVED:  Not by this extension.  See the ARB_texture_float
+       extension.
+
+   26. When using vertex and fragment programs/shaders, should color
+       clamping be specified in the shader instead?
+
+       RESOLVED:  No.  All the existing program/shader extensions call
+       for the color outputs to be clamped to [0,1], except that
+       previous floating-point color buffer extensions disabled the
+       clamp of fragment program/shader outputs.
+
+       While it would be straightforward to have required that vertex
+       or fragment programs manually clamp their outputs if desired,
+       adding such a requirement at this point would pose compatibility
+       issues.  It would probably require introduction of a special
+       directive to indicate that colors are unclamped.
+
+       If a GL implementation internally performs color clamping in a
+       vertex or fragment program, it may be necessary to recompile the
+       program if the corresponding clamp enable changes.
+
+   27. If certain colors in the OpenGL state vector were clamped in
+       previous versions of the spec, but now have the clamping
+       removed, do queries need to return clamped values for
+       compatibility with older GL versions? Should we add new query
+       tokens to return unclamped values?
+
+       RESOLVED: To minimize impact on this specification while allowing
+       for compatibility with older GL versions, the values of the
+       vertex/fragment color clamp enables should affect queries of such
+       state.  If the corresponding color clamp is enabled, components
+       will be clamped to [0,1] when returned.  Since color clamping is
+       enabled by default for fixed-point color buffers, the removal of
+       the clamps will not be observable by applications unless they
+       disable one or both clamps or choose a floating-point buffer
+       (which will not happen for "old" applications).
+
+       Note that this spec relaxes the clamp on the current raster
+       color, but we don't need to add a clamp on the corresponding
+       query.  The current raster color is clamped when the GL computes
+       it, unless vertex color clamping is disabled by the application.
+
+   28. At what precision should alpha test be carried out?  At the
+       precision of the framebuffer?  Or some other unspecified
+       precision?  What happens if you have a framebuffer with no
+       alpha?
+
+       RESOLVED: No specific precision requirements are added, except
+       that the reference value used in the alpha test should be
+       converted to the same precision and in the same manner as the
+       fragment's alpha. This requirement is intended to avoid cases
+       where the act of converting the alpha value of a fragment to
+       fixed-point (or lower-precision floating-point) might change the
+       result of the test.
+
+   29. How does this extension interact with accumulation buffers?
+
+       RESOLVED: This extension does not modify the nature of
+       accumulation buffers.  Adding semantics for floating-point
+       accumulation buffers is left for a possible future extension.
+       The clamp on the RETURN operation is controlled by the fragment
+       color clamp enable.
+
+   30. How does this extension interact with OpenGL FEEDBACK mode?
+
+       RESOLVED: OpenGL FEEDBACK mode returns colors after clipping,
+       which is done after the vertex color clamping.  Therefore, the
+       colors returned will be clamped to [0,1] if and only if vertex
+       color clamping is enabled.  No spec language changes are
+       necessary.
+
+   31. Should we relax the language in Section 2.14.9 (Final Color
+       Processing) to not require conversion to fixed-point?
+
+       RESOLVED: Adding floating-point vertex colors requires that
+       this language be modified.  Even for the clamped case, it seems
+       reasonable for implementations to simply clamp a floating-point
+       value to [0,1] without converting to a fixed-point
+       representation.  This specification makes converting colors to
+       fixed-point optional.  Colors will obviously still be converted
+       to fixed-point eventually if the framebuffer is fixed-point.
+
+   32. What should be done about the "preserving the bits" requirement
+       for Color*{ub,us,ui} commands in Section 2.14.9?
+
+       RESOLVED: If colors are represented as floats internally and
+       the frame-buffer is fixed-point, do we require that the MSBs of
+       fixed-point colors that don't go through lighting, and
+       non-trivial interpolation, or any non-trivial fragment operations
+       show up in the MSBs of the framebuffer?
+
+   33. How does this extension interact with multisample
+       ALPHA_TO_COVERAGE, where an alpha value expected to be in the
+       range [0,1] is turned into a set of coverage bits?
+
+       UNRESOLVED: For the purposes of generating sample coverage from
+       fragment alpha, the alpha values are effectively clamped to
+       [0,1].  Negative alpha values correspond to no coverage; alpha
+       values greater than one correspond to full coverage.
+
+   34. What happens if there are no color buffers in the framebuffer
+       and a clamp control is set to FIXED_ONLY?
+
+       RESOLVED: The present language treats a zero-bit color buffer
+       as fixed-point.
+
+   35. Should the clamping of fragment shader output gl_FragData[n]
+       be controlled by the fragment color clamp.
+
+       RESOLVED: Since the destination of the FragData is a color
+       buffer, the fragment color clamp control should apply.
+
+   36. Should logical operations be disabled for floating-point
+       color buffers.
+
+       RESOLVED:  Yes.  This matches the behavior in the ATI
+       specification.
+
+   37. Is it expected that a floating-point color read from a
+       floating-point color buffer exactly match a floating-point
+       color in a fragment?  Will the alpha test of GL_EQUAL
+       be expected to work?
+
+       RESOLVED: This behavior is not required by this extension.
+       Floating-point data may have different precision at different
+       parts of the pipeline.
+
+   38. How does this extension handle the case where a floating-point
+       and a fixed-point buffer exists?
+
+       RESOLVED: For vertex colors, clamping occurs if any color
+       buffer are floating point.   Fragment colors are handled
+       based on the format (fixed or float) of the color buffer
+       that they will be drawn to.
+
+New Procedures and Functions
+
+    void ClampColorARB(enum target, enum clamp);
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        RGBA_FLOAT_MODE_ARB                     0x8820
+
+    Accepted by the <target> parameter of ClampColorARB and the <pname>
+    parameter of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev.
+
+        CLAMP_VERTEX_COLOR_ARB                  0x891A
+        CLAMP_FRAGMENT_COLOR_ARB                0x891B
+        CLAMP_READ_COLOR_ARB                    0x891C
+
+    Accepted by the <clamp> parameter of ClampColorARB.
+
+        FIXED_ONLY_ARB                          0x891D
+        FALSE
+        TRUE
+
+    Accepted as a value in the <piAttribIList> and <pfAttribFList>
+    parameter arrays of wglChoosePixelFormatARB, and returned in the
+    <piValues> parameter array of wglGetPixelFormatAttribivARB, and the
+    <pfValues> parameter array of wglGetPixelFormatAttribfvARB:
+
+        WGL_TYPE_RGBA_FLOAT_ARB                 0x21A0
+
+    Accepted as values of the <render_type> arguments in the
+    glXCreateNewContext and glXCreateContext functions
+
+        GLX_RGBA_FLOAT_TYPE_ARB                 0x20B9
+
+    Accepted as a bit set in the GLX_RENDER_TYPE variable
+
+        GLX_RGBA_FLOAT_BIT_ARB                  0x00000004
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Add a new Section 2.1.2, (p. 6):
+
+    2.1.2  16-Bit Floating-Point Numbers
+
+    A 16-bit floating-point number has a 1-bit sign (S), a 5-bit
+    exponent (E), and a 10-bit mantissa (M).  The value of a 16-bit
+    floating-point number is determined by the following:
+
+        (-1)^S * 0.0,                        if E == 0 and M == 0,
+        (-1)^S * 2^-14 * (M / 2^10),         if E == 0 and M != 0,
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if 0 < E < 31,
+        (-1)^S * INF,                        if E == 31 and M == 0, or
+        NaN,                                 if E == 31 and M != 0,
+
+    where
+
+        S = floor((N mod 65536) / 32768),
+        E = floor((N mod 32768) / 1024), and
+        M = N mod 1024.
+
+    Implementations are also allowed to use any of the following
+    alternative encodings:
+
+        (-1)^S * 0.0,                        if E == 0 and M != 0,
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if E == 31 and M == 0, or
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if E == 31 and M != 0,
+
+    Any representable 16-bit floating-point value is legal as input
+    to a GL command that accepts 16-bit floating-point data.  The
+    result of providing a value that is not a floating-point number
+    (such as infinity or NaN) to such a command is unspecified, but
+    must not lead to GL interruption or termination.  Providing a
+    denormalized number or negative zero to GL must yield predictable
+    results.
+
+    Modify Section 2.13 (Current Raster Position), p. 54
+
+    (modify last paragraph on p. 55) Lighting, texture coordinate
+    generation and transformation, and clipping are not performed by
+    the WindowPos functions. Instead, in RGBA mode, the current raster
+    color and secondary color are obtained from the current color and
+    secondary color, respectively.  If vertex color clamping is enable,
+    the current raster color and secondary color are clamped to [0, 1].
+    In color index mode, the current raster color index is set to the
+    current color index.  The current raster texture coordinates are
+    set to the current texture coordinates, and the valid bit is set.
+
+    Modify Section 2.14 (Colors and Coloring), p. 57
+
+    (modify last paragraph on p.57) ... After lighting, RGBA colors are
+    optionally clamped to the range [0,1]. ...
+
+    Modify Section 2.14.6 (Clamping or Masking), p. 69
+
+    (modify first and second paragraphs of section) When the GL is in
+    RGBA mode and vertex color clamping is enabled, all components of
+    both primary and secondary colors are clamped to the range [0,1]
+    after lighting. If color clamping is disabled, the primary and
+    secondary colors are unmodified. Vertex color clamping is controlled
+    by calling
+
+        void ClampColorARB(enum target, enum clamp)
+
+    with a <target> set to CLAMP_VERTEX_COLOR_ARB.  If <clamp> is TRUE,
+    vertex color clamping is enabled; if <clamp> is FALSE, vertex color
+    clamping is disabled.  If <clamp> is FIXED_ONLY_ARB, vertex color
+    clamping is enabled if all enabled color buffers have fixed-point
+    components.
+
+    For a color index, the index is first converted to...
+
+    (add paragraph at the end of the section) The state required for
+    color clamping is an enumerant.  Vertex color clamping is initially
+    TRUE.
+
+    Replace Section 2.14.9 (Final Color Processing), p. 71
+
+    In RGBA mode with vertex color clamping disabled, the floating-
+    point RGBA components are not modified.
+
+    In RGBA mode with vertex clamping enabled, each color component
+    (already clamped to [0,1]) may be converted (by rounding to nearest)
+    to a fixed-point value with m bits. We assume that the fixed-point
+    representation used represents each value k/(2^m - 1), with k in the
+    set {0, 1, . . . , 2^m - 1}, as k (e.g. 1.0 is represented in binary
+    as a string of all ones). m must be at least as large as the number
+    of bits in the corresponding component of the framebuffer. m must be
+    at least 2 for A if the framebuffer does not contain an A component,
+    or if there is only 1 bit of A in the framebuffer.  GL
+    implementations are not required to convert clamped color components
+    to fixed-point.
+
+    Because a number of the form k/(2^m - 1) may not be represented
+    exactly as a limited-precision floating-point quantity, we place a
+    further requirement on the fixed-point conversion of RGBA
+    components. Suppose that lighting is disabled, the color associated
+    with a vertex has not been clipped, and one of Colorub, Colorus, or
+    Colorui was used to specify that color. When these conditions are
+    satisfied, an RGBA component must convert to a value that matches
+    the component as specified in the Color command: if m is less than
+    the number of bits b with which the component was specified, then
+    the converted value must equal the most significant m bits of the
+    specified value; otherwise, the most significant b bits of the
+    converted value must equal the specified value.
+
+    In color index mode, a color index is converted (by rounding to
+    nearest) to a fixed-point value with at least as many bits as there
+    are in the color index portion of the framebuffer.
+
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    Modify Section 3.6.4 (Rasterization of Pixel Rectangles), p. 126
+
+    (modify next-to-last paragraph, p.136, "Final Conversion") ... For
+    RGBA components, if fragment color clamping is enabled, each
+    element is clamped to [0,1], and may be converted to fixed-point
+    according to the rules given in section 2.14.9 (Final Color
+    Processing).  If fragment color clamping is disabled, RGBA
+    components are unmodified.  Fragment color clamping is controlled
+    using ClampColorARB, as described in section 2.14.6, with a
+    <target> of CLAMP_FRAGMENT_COLOR_ARB.
+
+    (add new paragraph at the end of "Final Conversion", p.137) The
+    state required for fragment color clamping is an enumerant.
+    Fragment color clamping is initially set to FIXED_ONLY_ARB.
+
+    Modify Section 3.8.13 (Texture Environments and Functions), p.182
+
+    (modify third paragraph, p. 183, removing clamping language)
+     ...TEXTURE_ENV_COLOR is set to an RGBA color by providing four
+    single-precision floating-point values.  If integers are provided
+    for TEXTURE ENV COLOR, then they are converted to floating-point
+    as specified in table 2.9 for signed integers.
+
+    (replace the sixth paragraph of p. 183) If fragment color clamping
+    is enabled, all of these color values, including the results, are
+    clamped to the range [0,1].  If fragment color clamping is
+    disabled, the values are not clamped.  The texture functions are
+    specified in tables 3.22, 3.23, and 3.24.
+
+    (modify seventh paragraph of p. 183) ... ALPHA_SCALE, respectively.
+    If fragment color clamping is enabled, the arguments and results
+    used in table 3.24 are clamped to [0,1].  Otherwise, the results
+    are unmodified.
+
+    Modify Section 3.9 (Color Sum), p. 191
+
+    (modify second paragraph) ... the A component of c_sec is unused.
+    If color sum is disabled, then c_pri is assigned to c.  The
+    components of c are then clamped to the range [0,1] if and only
+    if fragment color clamping is enabled.
+
+    Modify Section 3.10 (Fog), p. 191
+
+    (modify fourth paragraph, p. 192, removing clamping language) ...If
+    these are not floating-point values, then they are converted to
+    floating-point using the conversion given in table 2.9 for signed
+    integers.  If fragment color clamping is enabled, the components of
+    C_r and C_f and the result C are clamped to the range [0,1] before
+    the fog blend is performed.
+
+    Modify Section 3.11.2 (Shader Execution), p. 194
+
+    (modify Shader Inputs, first paragraph, p. 196) The built-in
+    variables gl_Color and gl_SecondaryColor hold the R, G, B, and A
+    components, respectively, of the fragment color and secondary
+    color. If the primary color or the secondary color components are
+    represented by the GL as fixed-point values, they undergo an
+    implied conversion to floating-point.  This conversion must leave
+    the values 0 and 1 invariant. Floating-point color components
+    (resulting from a disabled vertex color clamp) are unmodified.
+
+    (modify Shader Outputs, first paragraph, p. 196) ... These are
+    gl_FragColor, gl_FragData[n], and gl_FragDepth.  If fragment
+    clamping is enabled, the final fragment color values or the final
+    fragment data values written by a fragment shader are clamped to
+    the range [0, 1] and then may be converted to fixed-point as
+    described in section 2.14.9.  If fragment clamping is disabled,
+    the final fragment color values or the final fragment data values
+    are not modified.  The final fragment depth...
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Framebuffer)
+
+    Modify Chapter 4 Introduction, (p. 198)
+
+    (modify third paragraph, p. 198)  Color buffers consist of either
+    unsigned integer color indices, R, G, B and optionally A unsigned
+    integer values, or R, G, B, and optionally A floating-point values.
+    The number of bitplanes...
+
+    Modify Section 4.1.3 (Multisample Fragment Operations), p. 200
+
+    (modify last paragraph, p. 200) ...and all 0's corresponding to all
+    alpha values being 0.  The alpha values used to generate a coverage
+    value are clamped to the range [0,1]. It is also intended ...
+
+    Modify Section 4.1.5 (Alpha Test), p. 201
+
+    (modify first paragraph of section, deleting clamping of
+     reference value)  ... The test is controlled with
+
+       void AlphaFunc(enum func, float ref);
+
+    func is a symbolic constant indicating the alpha test function;
+    ref is a reference value.  When performing the alpha test, the GL
+    will convert the reference value to the same representation as the
+    the fragment's alpha value (floating-point or fixed-point).
+    For fixed-point, the reference value is converted according to the
+    rules given for an A component in section 2.14.9 and the fragment's
+    alpha value is rounded to the nearest integer.  The possible ...
+
+    Modify Section 4.1.8 (Blending), p. 205
+
+    (modify first paragraph, p. 206) Source and destination values are
+    combined according to the blend equation, quadruplets of source and
+    destination weighting factors determined by the blend functions, and
+    a constant blend color to obtain a new set of R, G, B, and A values,
+    as described below.
+
+    If the color buffer is fixed-point, the components of the source
+    and destination values and blend factors are clamped to [0, 1]
+    prior to evaluating the blend equation, the components of the
+    blending result are clamped to [0,1] and converted to fixed-
+    point values in the manner described in section 2.14.9. If the
+    color buffer is floating-point, no clamping occurs.  The
+    resulting four values are sent to the next operation.
+
+    (modify fifth paragraph, p. 206) Fixed-point destination
+    (framebuffer) components are taken to be fixed-point values
+    represented according to the scheme given in section 2.14.9
+    (Final Color Processing).  Constant color components, floating-
+    point destination components, and source (fragment) components are
+    taken to be floating point values. If source components are
+    represented internally by the GL as either fixed-point values they
+    are also interepreted according to section 2.14.9.
+
+    (modify Blend Color section removing the clamp, p. 209) The
+    constant color C_c to be used in blending is specified with the
+    command
+
+       void BlendColor(float red, float green, float blue, float alpha);
+
+    The constant color can be used in both the source and destination
+    blending functions.
+
+    Replace Section 4.1.9 (Dithering), p. 209
+
+    Dithering selects between two representable color values or indices.
+    A representable value is a value that has an exact representation in
+    the color buffer.  In RGBA mode dithering selects, for each color
+    component, either the most positive representable color value (for
+    that particular color component) that is less than or equal to the
+    incoming color component value, c, or the most negative
+    representable color value that is greater than or equal to c.  The
+    selection may depend on the x_w and y_w coordinates of the pixel, as
+    well as on the exact value of c.  If one of the two values does not
+    exist, then the selection defaults to the other value.
+
+    In color index mode dithering selects either the largest
+    representable index that is less than or equal to the incoming
+    color value, c, or the smallest representable index that is greater
+    than or equal to c.  If one of the two indices does not exist, then
+    the selection defaults to the other value.
+
+    Many dithering selection algorithms are possible, but an individual
+    selection must depend only on the incoming color index or component
+    value and the fragment's x and y window coordinates.  If dithering
+    is disabled, then each incoming color component c is replaced with
+    the most positive representable color value (for that particular
+    component) that is less than or equal to c, or by the most negative
+    representable value, if no representable value is less than or equal
+    to c; a color index is rounded to the nearest representable index
+    value.
+
+    Dithering is enabled with Enable and disabled with Disable using the
+    symbolic constant DITHER.  The state required is thus a single bit.
+    Initially dithering is enabled.
+
+    Section 4.1.10 (Logical Operation), p. 210
+
+    (insert after the first sentence, p. 210)  Logical operation has no
+    effect on a floating-point destination color buffer.  However, if
+    COLOR_LOGIC_OP is enabled, blending is still disabled.
+
+    Modify Section 4.2.3 (Clearing the Buffers), p. 215
+
+    (modify second paragraph, p. 216, removing clamp of clear color)
+
+       void ClearColor(float r, float g, float b, float a);
+
+    sets the clear value for the color buffers in RGBA mode.
+
+    (add to the end of first partial paragraph, p. 217) ... then a
+    Clear directed at that buffer has no effect.  Fixed-point RGBA
+    color buffers are cleared to a color values derived by taking the
+    clear color, clamping to [0,1], and converting to fixed-point
+    according to the rules of section 2.14.9.
+
+    Modify Section 4.2.4 (The Accumulation Buffer), p. 217
+
+    (modify second paragraph in section, p. 217) ... Using ACCUM
+    obtains R, G, B, and A components from the color buffer currently
+    selected for reading (section 4.3.2). If the color buffer is
+    fixed-point, each component is considered as a fixed-point value
+    in [0,1] (see section 2.14.9) and is converted to floating-point.
+    Each result is then multiplied ...
+
+    (modify second paragraph on p. 218) The RETURN operation takes
+    each color value from the accumulation buffer and multiplies each
+    of the R, G, B, and A components by <value>.  If fragment color
+    clamping is enabled, the results are then clamped to the range
+    [0,1]. ...
+
+    Modify Section 4.3.2 (Reading Pixels), p. 219
+
+    (modify paragraph at top of page, p. 222)  ... For a fixed-point
+    color buffer, each element is taken to be a fixed-point value in
+    [0, 1] with m bits, where m is the number of bits in the
+    corresponding color component of the selected buffer (see
+    section 2.14.9).  For floating-point color buffer, the elements
+    are unmodified.
+
+    (modify second paragraph of "Final Conversion", p. 222) For an
+    RGBA color, if <type> is not FLOAT, or if the CLAMP_READ_COLOR_ARB
+    is TRUE, or CLAMP_READ_COLOR_ARB is FIXED_ONLY_ARB and the selected
+    color buffer is a fixed-point buffer, each component is first
+    clamped to [0,1].  Then the appropriate conversion...
+
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Modify Section 6.1.2, Data Conversions, p. 245
+
+    (add new paragraph at the end of the section, p. 245) If fragment
+    color clamping is enabled, querying of the texture border color,
+    texture environment color, fog color, alpha test reference value,
+    blend color, and RGBA clear color will clamp the corresponding
+    state values to [0,1] before returning them.  This behavior
+    provides compatibility with previous versions of the GL that
+    clamped these values when specified.
+
+Additions to Chapter 1 of the GLX 1.3 Specification (Overview)
+
+    None
+
+Additions to Chapter 2 of the GLX 1.3 Specification (GLX Operation)
+
+    None
+
+Additions to Chapter 3 of the GLX 1.3 Specification (Functions and
+Errors)
+
+    Replace Section 3.3.3 (p.12) Paragraph 4 to:
+
+    The attribute GLX_RENDER_TYPE has as its value a mask
+    indicating what type of GLXContext a drawable created with
+    the corresponding GLXFBConfig can be bound to. The following
+    bit settings are supported: GLX_RGBA_BIT, GLX_RGBA_FLOAT_BIT_ARB, and
+    GLX_COLOR_INDEX_BIT. If combinations of bits are set in the mask then
+    drawables created with the GLXFBConfig can be bound to those
+    corresponding types of rendering contexts.
+
+    Add to Section 3.3.3 (p.15) after first paragraph:
+
+    Note that floating point rendering is only supported for
+    GLXPbuffer drawables.  The GLX_DRAWABLE_TYPE attribute of
+    the GLXFBConfig must have the GLX_PBUFFER_BIT bit set and
+    the GLX_RENDER_TYPE attribute must have the
+    GLX_RGBA_FLOAT_BIT_ARB set.
+
+    Modify Section 3.3.7 (p.25 Rendering Contexts) remove period
+    at end of second paragraph and replace with:
+
+    ; if render_type is set to GLX_RGBA_FLOAT_TYPE_ARB, then a context that
+    supports floating point RGBA rendering is created.
+
+Additions to Chapter 4 of the GLX 1.3 Specification (Encoding on the
+X Byte Stream)
+
+    None
+
+Additions to Chapter 5 of the GLX 1.3 Specification (Extending
+OpenGL)
+
+    None
+
+Additions to Chapter 6 of the GLX 1.3 Specification (GLX Versions)
+
+    None
+
+Additions to Chapter 7 of the GLX 1.3 Specification (Glossary)
+
+    None
+
+Additions to the GLX Specification
+
+    Modify the bit field GLX_RENDER_TYPE to:
+
+    GLX_RENDER_TYPE
+    The type of pixel data. This bit field can have one of the following
+    bits set: GLX_RGBA_BIT, GLX_RGBA_FLOAT_BIT_ARB, GLX_COLOR_INDEX_BIT
+
+    Adds to the accepted values of the <render_type> argument
+    in the glXCreateNewContext and glXCreateContextWithSGIX
+    functions to:
+
+    <render_type>
+    Type of rendering context requested. This argument can have the
+    following values: GLX_RGBA_TYPE, GLX_RGBA_FLOAT_TYPE_ARB,
+    GLX_COLOR_INDEX_TYPE
+
+GLX Protocol
+
+    The following rendering commands are sent to the server as part
+    of a glXRender request:
+
+    ClampColorARB
+        2            12              rendering command length
+        2            234             rendering command opcode
+        4            CARD32          target
+        4            CARD32          clamp
+
+Additions to the WGL Specification
+
+    Modify the values accepted by WGL_PIXEL_TYPE_ARB to:
+
+        WGL_PIXEL_TYPE_ARB
+        The type of pixel data. This can be set to WGL_TYPE_RGBA_ARB,
+        WGL_TYPE_RGBA_FLOAT_ARB, or WGL_TYPE_COLORINDEX_ARB.
+
+Dependencies on WGL_ARB_pixel_format
+
+    The WGL_ARB_pixel_format extension must be used to determine a
+    pixel format with float components.
+
+Dependencies on ARB_fragment_program
+
+    (modify 2nd paragraph of Section 3.11.4.4 language) If fragment
+    color clamping is enabled, the fragment's color components are first
+    clamped to the range [0,1] and are optionally converted to fixed
+    point as in section 2.14.9.  If the fragment program does not write
+    result.color, the color will be undefined in subsequent stages.
+
+Dependencies on ARB_fragment_shader
+
+    (modify 1st paragraph of Section 3.11.6 language) ... are
+    gl_FragColor and gl_FragDepth.  If fragment color clamping is
+    enabled, the final fragment color values written by a fragment
+    shader are clamped to the range [0,1] and are optionally converted
+    to fixed-point as described in section 2.14.9, Final Color
+    Processing.  ...
+
+Dependencies on NV_float_buffer
+
+    Note that the WGL/GLX enumerants for the NV and ARB extensions
+    do not have the same values, so it is possible to distinguish
+    between "NV" and "ARB" pixel formats.
+
+    If NV_float_buffer and ARB_color_buffer_float are both supported,
+    restrictions imposed by NV_float_buffer are removed.  In
+    particular, antialiasing application, multisample fragment
+    operations, alpha test, and blending are all performed as
+    specified in this extension.  Additionally, it is not necessary to
+    use a fragment program or shader to render to a floating-point
+    color buffer allocated using the NV_float_buffer extension.
+
+    Note also that vertex color clamp portion of this extension does
+    not interact with NV_float_buffer.
+
+Dependencies on ATI_pixel_format_float
+
+    The basic policy of ATI_pixel_format_float regarding clamping is
+    that vertex color clamping is unaffected (still enabled) and that
+    fragment color clamping is automatically disabled when rendering
+    to floating-point color buffers.
+
+    This extension is designed so that the defaults are compatible
+    with the ATI_pixel_format_float, so there is no need for separate
+    "ATI" and "ARB" floating-point pixel formats.
+
+
+Errors
+
+    None
+
+New State
+
+    (modify table 6.10, p. 271)
+                                                    Initial
+    Get Value                   Type  Get Command   Value     Description      Sec.    Attribute
+    -------------------------   ----  -----------   -------   ---------------  ----    ---------
+    CLAMP_VERTEX_COLOR_ARB      B     GetIntegerv   TRUE      vertex color     2.14.6  lighting/enable
+                                                              clamping
+    CLAMP_FRAGMENT_COLOR_ARB    B     GetIntegerv   FIXED_    fragment color   2.14.6  color-buffer/enable
+                                                    ONLY_ARB  clamping
+    CLAMP_READ_COLOR_ARB        B     GetIntegerv   FIXED_    read color       2.14.6  color-buffer/enable
+                                                    ONLY_ARB  clamping
+
+    (modify table 6.33, p. 294)
+
+                                                    Minimum
+    Get Value                  Type   Get Command   Value    Description       Sec.   Attribute
+    ------------------------   ----   -----------   -------  ----------------  ----   ----------
+    RGBA_FLOAT_MODE_ARB        B      GetBooleanv   -        True if RGBA      2.7    -
+                                                             components are
+                                                             floats
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    Rev.    Date    Author     Changes
+    ----  -------- ---------  --------------------------------------------
+      1   2/26/04  Kirkland   Initial version based on the ATI extension.
+
+      2   3/11/04  Kirkland   Changed spec to be both a GL and WGL spec.
+                              Updated language for float16 number handling.
+                              Added bit encodings for half values.
+                              Removed the clamped color query.
+                              Updated the language for dithering.
+
+      3   7/23/04  Kirkland   Added alternative encodings options for
+                              float16 format.
+
+      4   9/17/04  Kirkland   Merged the color clamp control spec with
+                              this spec.
+                              Updated to reference the OpenGL 2.0 spec.
+                              Added the specification for GLX.
+
+      5   10/1/04  Kirkland   Updated IP section.
+                              Reviewed by the ARB and closed all
+                              UNRESOLVED issues.
+                              Added an invariant that discusses the
+                              handling of the alpha test.
+
+      6   2/6/07   Jon Leech  Fix typos in enum naming.
+
+      7   2/13/07  Jon Leech  Add GLX protocol from James Jones
+                              at NVIDIA.
+
+      8   2/15/07  Jon Leech  Assign GLX rendering opcode.
+
+      9   4/1/15   Jon Leech  Add missing _ARB suffix to 
+                              GLX_RGBA_FLOAT_TYPE and GLX_RGBA_FLOAT_BIT
+                              (bug 13717).

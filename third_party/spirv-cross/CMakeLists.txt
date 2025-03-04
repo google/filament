@@ -19,7 +19,7 @@
 #  2. The MIT License, found at <http://opensource.org/licenses/MIT>.
 #
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.6)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -77,7 +77,7 @@ set(spirv-cross-build-version "unknown")
 find_package(Git)
 if (GIT_FOUND)
 	execute_process(
-		COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+		COMMAND ${GIT_EXECUTABLE} describe --always --tags --dirty=+
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		OUTPUT_VARIABLE spirv-cross-build-version
 		ERROR_QUIET
@@ -243,7 +243,7 @@ set(spirv-cross-util-sources
 		${CMAKE_CURRENT_SOURCE_DIR}/spirv_cross_util.hpp)
 
 set(spirv-cross-abi-major 0)
-set(spirv-cross-abi-minor 57)
+set(spirv-cross-abi-minor 59)
 set(spirv-cross-abi-patch 0)
 set(SPIRV_CROSS_VERSION ${spirv-cross-abi-major}.${spirv-cross-abi-minor}.${spirv-cross-abi-patch})
 
@@ -465,7 +465,19 @@ if (SPIRV_CROSS_CLI)
 		#  - Update the reference files
 		#  - Get cycle counts from malisc
 		#  - Keep failing outputs
-		find_package(PythonInterp)
+		if (${CMAKE_VERSION} VERSION_GREATER "3.12")
+			find_package(Python3)
+			if (${PYTHON3_FOUND})
+				set(PYTHONINTERP_FOUND ON)
+				set(PYTHON_VERSION_MAJOR 3)
+				set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+			else()
+				set(PYTHONINTERP_FOUND OFF)
+			endif()
+		else()
+			find_package(PythonInterp)
+		endif()
+
 		find_program(spirv-cross-glslang NAMES glslangValidator
 				PATHS ${CMAKE_CURRENT_SOURCE_DIR}/external/glslang-build/output/bin
 				NO_DEFAULT_PATH)

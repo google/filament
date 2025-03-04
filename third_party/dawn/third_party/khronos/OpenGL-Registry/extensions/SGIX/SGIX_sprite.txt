@@ -1,0 +1,267 @@
+
+Name
+	
+    SGIX_sprite
+
+
+Name Strings
+
+    GL_SGIX_sprite
+
+Version
+
+    $Date: 1996/04/09 22:54:47 $ $Revision: 1.11 $
+
+Number
+
+    52
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides support for viewpoint dependent alignment
+    of geometry, in particular geometry that rotates about a point or
+    a specified axis to face the eye point.  The primary use is for
+    quickly rendering roughly cylindrically or spherically symmetric
+    objects, e.g. trees, smoke, clouds, etc. using geometry textured
+    with a partially transparent texture map.
+
+    Rendering sprite geometry requires applying a transformation to
+    primitives before the current model view. This matrix includes a
+    rotation which is computed based on the current model view matrix
+    and a translation which is specified explicitly
+    (SPRITE_TRANSLATION_SGIX). The current model view matrix itself
+    is not modified.
+
+    Primitives are first transformed by a rotation, depending on the
+    sprite mode:
+
+	SPRITE_AXIAL_SGIX: The front of the object is rotated about
+	an axis so that it faces the eye as much as the axis
+	constraint allows.  This is used for roughly rendering cylindrical
+	objects such as trees in visual simulation. 
+
+	SPRITE_OBJECT_ALIGNED_SGIX: The front of the object is
+	rotated about a point to face the eye with the remaining
+	rotational degree of freedom specified by aligning the top
+	of the object with a specified axis in object coordinates.
+	This is used for spherical objects and special effects such
+	as smoke which must maintain an alignment in object
+	coordinates for realism.
+
+	SPRITE_EYE_ALIGNED_SGIX: The front of the object is rotated
+	about a point to face the eye with the remaining rotational
+	degree of freedom specified by aligning the top of the object
+	with a specified axis in eye coordinates. This is used for
+	rendering sprites which must maintain an alignment on the
+	screen, such as 3D annotations.
+
+    The axis of rotation or alignment, SPRITE_AXIS_SGIX, can be 
+    an arbitrary direction to support geocentric coordinate frames
+    in which "up" is not along X, Y or Z.
+
+    Sprite geometry is modeled in a canonical frame: +Z is the up
+    vector. -Y is the front vector which is rotated to point towards
+    the eye. In the discussion below, the eye vector is the vector to
+    the eye from the origin of the model view frame translated by the
+    sprite position.
+
+New Procedures and Functions
+
+	void SpriteParameteriSGIX(enum pname, int param);
+	void SpriteParameterfSGIX(enum pname, float param);
+	void SpriteParameterivSGIX(enum pname, int* params);
+	void SpriteParameterfvSGIX(enum pname, float* params);
+			
+Issues
+
+    * Should the canonical modeling frame of the geometry be specifiable?
+      - requires API for "up" and "front" vectors; additional math
+
+    * Should sprites for annotation be clip or eye aligned?  Clip
+      alignment is a nearly trivial extension of object aligned. 
+      However, once the projection matrix assumes rotation things
+      are unpredictable and we should avoid this complexity.
+      
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+	SPRITE_SGIX
+
+    Accepted by the <pname> parameter of SpriteParameteriSGIX, and 
+    SpriteParameterfSGIX:
+
+	SPRITE_MODE_SGIX
+
+    Accepted by the <pname> parameter of SpriteParameterivSGIX, and 
+    SpriteParameterfvSGIX, and by the <pname> parameter of GetBooleanv, 
+    GetIntegerv, GetFloatv, and GetDoublev:
+
+	SPRITE_MODE_SGIX
+	SPRITE_AXIS_SGIX
+	SPRITE_TRANSLATION_SGIX
+
+    Accepted by the <param> parameter of SpriteParameteriSGIX and
+    and SpriteParameterfSGIX, and by the <params> parameter of
+    SpriteParameterivSGIX and SpriteParameterfvSGIX, when the
+    <pname> parameter is SPRITE_MODE_SGIX:
+
+        SPRITE_AXIAL_SGIX
+	SPRITE_OBJECT_ALIGNED_SGIX
+	SPRITE_EYE_ALIGNED_SGIX
+    
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    SPRITE_SGIX is enabled and disabled using Enable and Disable with
+    target equal to SPRITE_SGIX.  When SPRITE_SGIX is enabled, the
+    current sprite mode, axis, translation and the ModelView matrix
+    are used to generate a sprite transformation which is applied to 
+    subsequent primitives before applying the current model view matrix.
+
+    When the sprite mode is SPRITE_AXIAL_SGIX, the sprite transformation
+    is arranged such that, after sprite and ModelView transformation,
+    the front vector is pointing as nearly towards the origin of the
+    eye coordinate system as possible.
+
+    Each primitive is first rotated so that the sprite up vector aligns
+    with the sprite axis which is specified in the current model view
+    frame. Then the primitive is rotated about the axis so its
+    front vector is parallel with the projection of the eye vector
+    into the plane perpendicular to the rotation axis. Then the
+    primitive is translated by the specified translation. 
+
+    There are four unique matrices involved in computing the transformation
+    required for sprite geometry:
+
+	M - model-view matrix
+	T - sprite translation matrix
+	A - sprite axis rotation matrix
+	R - sprite up vector/axis alignment rotation matrix
+
+    Note that in SPRITE_AXIAL_SGIX mode, the R matrix is a function of M,
+    T and A since the eye vector is derived from the inverse transpose matrix 
+    of the compound (M * T * A). In both the SPRITE_OBJECT_ALIGNED_SGIX and 
+    the SPRITE_EYE_ALIGNED_SGIX modes, the eye vector is extracted from the 
+    inverse transpose of the compound (M * T).
+
+    Given the coordinates of SPRITE_TRANSLATION_SGIX the sprite translation 
+    matrix (T) is constructed. Both A and R are rotation matrices generated 
+    by computing an angle of rotation and the sprite axis (computing sine and 
+    cosine of the rotation angle suffices for computing a rotation matrix). 
+    The computation of the matrices (T, A, R) are given in Chapter 2.9 of 
+    the 1.0 OpenGL Specification (Matrices). 
+
+    The angle and axis of rotation parameters for generating rotation matrix 
+    A are computed as follows:
+
+	    cosTheta = (V0 (dot) V1);
+	    rotAxis = (V0 (cross) V1);
+	    sinTheta = |rotAxis|;
+
+    V0 is the canonical up vector. V1 is the sprite axis (SPRITE_AXIS_SGIX)
+    when in SPRITE_AXIAL_SGIX mode. In either the SPRITE_OBJECT_ALIGNED_SGIX 
+    and the SPRITE_EYE_ALIGNED_SGIX modes V1 is the sprite axis aligned by 
+    removing its component along the eye vector. The computation of V1 in
+    the latter cases is as follows:
+
+	    scalar = Eye (dot) spriteAxis;
+	    alignedSpriteAxis = spriteAxis - (scalar * Eye); 
+
+    The rotation axis for computing the R matrix is the canonical up
+    vector. The angle of rotation is computed as follows:
+
+	    cosTheta = (Eye (dot) canonicalFront);
+	    sinTheta = (Eye (dot) canonicalRight);
+
+    Sprite primitive geometry is transformed from object coordinates
+    to eye coordinates by the following compound matrix (MM):
+
+		MM = M * T * A * R
+
+    Sprite geometry is not limited to vertex based primitives and evaluators
+    may apply as well.
+
+    Normals associated with sprite geometry are transformed by the inverse 
+    transpose of the compound matrix (MM). In general, the user would not 
+    want clip planes to be transformed by the compound matrix. In a similar 
+    manner, raster position and texture coordinates (for certain texgen 
+    modes). The user should be warrant that once glClipPlanes, glTexGen or 
+    glRasterPos are called within a glEnable/Disable (SPRITE_SGIX) delimitors, 
+    the associated geometry will be transformed by the compound matrix (MM).
+
+    When the sprite mode is SPRITE_OBJECT_ALIGN or SPRITE_EYE_ALIGN,
+    the sprite transformation rotates the front vector towards the eye
+    while keeping the up vector as aligned as possible with the
+    current sprite axis, i.e. the up vector is rotated to be parallel
+    to the projection of the current sprite axis into the plane
+    perpendicular to the front vector.  Depending on the current
+    sprite mode, the sprite axis is taken to be expressed in object
+    (SPRITE_OBJECT_ALIGNED_SGIX) or transformed into eye 
+    (SPRITE_EYE_ALIGNED_SGIX) coordinates. The transformation into
+    eye space uses the compound (M * T).  
+
+    Regardless of the sprite transformation mode, the projection matrix 
+    obviously assumes no rotation elements. This is again to warrant the 
+    user against overriding the sprite transformation. 
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None 
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on SGI_extension_name
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated if SpriteParameteriSGIX or SpriteParameterfSGIX
+    parameter <pname> is not SPRITE_MODE_SGIX.
+
+    INVALID_ENUM is generated if SpriteParameterivSGIX or SpriteParameterfvSGIX
+    parameter <pname> is not SPRITE_AXIS_SGIX or SPRITE_TRANSLATION_SGIX.
+
+    INVALID_ENUM is generated if SpriteParameteriSGIX or SpriteParameterfSGIX
+    parameter <pname> is SPRITE_MODE_SGIX, and parameter <param> is not
+    SPRITE_AXIAL_SGIX, SPRITE_OBJECT_ALIGNED_SGIX, or SPRITE_EYE_ALIGNED_SGIX.
+
+    INVALID_OPERATION is generated if glSpriteParameterSGIX is executed
+    between the execution of glBegin and the corresponding execution of
+    glEnd.
+
+New State
+
+                                                Initial
+    Get Value                Get Command  Type  Value   	  Attrib
+    ---------                -----------  ----  -------           ------
+    SPRITE_SGIX		     IsEnabled	   B	FALSE	          transform/enable    
+    SPRITE_MODE_SGIX	     GetIntegerv   I	SPRITE_AXIAL_SGIX transform
+    SPRITE_AXIS_SGIX	     GetFloatv	   V	(0,0,1)           transform
+    SPRITE_TRANSLATION_SGIX  GetFloatv	   V	(0,0,0)           transform
+
+New Implementation Dependent State
+                                                                
+    None
+
