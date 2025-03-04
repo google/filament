@@ -5,44 +5,44 @@ precision highp int;
 layout(binding = 1, std140) uniform buf1
 {
     highp vec2 resolution;
-} _9;
+} _12;
 
 layout(binding = 0, std140) uniform buf0
 {
     highp vec2 injectionSwitch;
-} _13;
+} _17;
 
 layout(location = 0) out highp vec4 _GLF_color;
 
 bool checkSwap(highp float a, highp float b)
 {
-    bool _153 = gl_FragCoord.y < (_9.resolution.y / 2.0);
-    highp float _160;
-    if (_153)
+    bool _33 = gl_FragCoord.y < (_12.resolution.y / 2.0);
+    highp float _38;
+    if (_33)
     {
-        _160 = a;
+        _38 = a;
     }
     else
     {
-        highp float _159 = 0.0;
-        _160 = _159;
+        highp float _355 = 0.0;
+        _38 = _355;
     }
-    bool _147;
+    bool _35;
     do
     {
-        highp float _168;
-        if (_153)
+        highp float _39;
+        if (_33)
         {
-            _168 = b;
+            _39 = b;
         }
         else
         {
-            highp float _167 = 0.0;
-            _168 = _167;
+            highp float _360 = 0.0;
+            _39 = _360;
         }
-        if (_153)
+        if (_33)
         {
-            _147 = _160 > _168;
+            _35 = _38 > _39;
         }
         if (true)
         {
@@ -53,31 +53,31 @@ bool checkSwap(highp float a, highp float b)
             break;
         }
     } while(false);
-    highp float _180;
-    if (_153)
+    highp float _42;
+    if (_33)
     {
-        highp float _179 = 0.0;
-        _180 = _179;
+        highp float _367 = 0.0;
+        _42 = _367;
     }
     else
     {
-        _180 = a;
+        _42 = a;
     }
-    highp float _186;
-    if (_153)
+    highp float _43;
+    if (_33)
     {
-        highp float _185 = 0.0;
-        _186 = _185;
+        highp float _372 = 0.0;
+        _43 = _372;
     }
     else
     {
-        _186 = b;
+        _43 = b;
     }
-    if (!_153)
+    if (!_33)
     {
-        _147 = _180 < _186;
+        _35 = _42 < _43;
     }
-    return _147;
+    return _35;
 }
 
 void main()
@@ -85,7 +85,7 @@ void main()
     highp float data[10];
     for (int i = 0; i < 10; i++)
     {
-        data[i] = float(10 - i) * _13.injectionSwitch.y;
+        data[i] = float(10 - i) * _17.injectionSwitch.y;
     }
     for (int i_1 = 0; i_1 < 9; i_1++)
     {
@@ -106,7 +106,7 @@ void main()
             }
         }
     }
-    if (gl_FragCoord.x < (_9.resolution.x / 2.0))
+    if (gl_FragCoord.x < (_12.resolution.x / 2.0))
     {
         _GLF_color = vec4(data[0] / 10.0, data[5] / 10.0, data[9] / 10.0, 1.0);
     }

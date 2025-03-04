@@ -2,10 +2,8 @@
 
 out gl_PerVertex
 {
-    vec4 gl_Position;
+    invariant vec4 gl_Position;
 };
-
-invariant gl_Position;
 
 vec4 _main()
 {
@@ -14,7 +12,7 @@ vec4 _main()
 
 void main()
 {
-    vec4 _14 = _main();
-    gl_Position = _14;
+    vec4 _17 = _main();
+    gl_Position = _17;
 }
 

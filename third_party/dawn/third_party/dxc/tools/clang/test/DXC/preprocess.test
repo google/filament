@@ -1,0 +1,6 @@
+
+
+// Preprocess
+// RUN: %dxc /T ps_6_0 %S/Inputs/smoke.hlsl /P %t.preprocessed.hlsl
+// RUN: FileCheck --input-file=%t.preprocessed.hlsl %s --check-prefix=PREPROCESSED
+// PREPROCESSED:float4 main

@@ -17,9 +17,9 @@ float GetValue_1(EmptyStructTest self)
 
 void main()
 {
-    EmptyStructTest _23 = EmptyStructTest(0);
+    EmptyStructTest _24 = EmptyStructTest(0);
     EmptyStructTest emptyStruct;
     float value = GetValue(emptyStruct);
-    value = GetValue_1(_23);
+    value = GetValue_1(_24);
 }
 

@@ -1,0 +1,93 @@
+Name
+
+    INGR_interlace_read
+
+Name Strings
+
+    GL_INGR_interlace_read
+
+Version
+
+    Date: 12/14/98    Revision: 1.0
+
+Number
+
+    175
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides a way to skip rows of pixels when reading
+    or copying pixel rectangles.  This extension is complementary to
+    the EXT_interlace extension except that it has no affect on getting
+    texture images.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of of Enable, Disable, IsEnabled, and
+    by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    GetDoublev:
+
+      INTERLACE_READ_INGR                   0x8568
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    [In section 4.3.2 "Reading Pixels" the specification of an interlace
+    read operation is added to the GL Specification in the sectino on
+    "Obtaining Pixels from the FrameBuffer."]
+
+    Reading interlaced rows of pixels is enabled or disabled with Enable
+    or Disable using the symbolic constant INTERLACE_READ_INGR.  If
+    INTERLACE_READ_INGR is disabled, then ReadPixels obtains values from
+    the selected buffer from each pixel with lower left hand corner at
+    (x+i, y+j) for 0 <= i < width and 0 <= j < height; this pixel is said
+    to be the ith pixel in the jth row.
+
+    If INTERLACE_READ_INGR is enabled, then ReadPixels obtains values
+    from the selected buffer from each pixel with lower left hand corner
+    at (x+i, y+(j*2)) for 0 <= i < width and 0 <= j < height; this pixel
+    is said to be the ith pixel in the jth row.
+
+    If any of these pixels lies outside of the window...
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    Get Value              Get Command        Type    Initial Value    Attribute
+    --------------------   ---------------    -----   --------------   -------------
+    INTERLACE_READ_INGR     IsEnabled          B       False            pixel/enable
+
+New Implementation Dependent State
+
+    None

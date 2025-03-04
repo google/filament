@@ -1,0 +1,985 @@
+\documentclass{article}
+
+% Various packages of possible use. {index} creates problems for some reason.
+% \usepackage{index}
+\def\specpdftitle{The Khronos OpenGL API Registry Schema}
+\usepackage[pdftex,bookmarksnumbered=true,linktocpage,plainpages=false,pdftitle={\specpdftitle},colorlinks=true]{hyperref}
+\usepackage{amsmath,enumerate,epsfig,framed,mdframed,multicol,longtable,times,url}
+\usepackage[normalem]{ulem}
+% underscore allows use of _ instead of \_ in text. [strings] allows _ in file names
+\usepackage[strings]{underscore}
+\usepackage[breakwords,fit]{truncate}
+
+\makeatletter
+\makeatother
+\makeindex
+
+% Some commonly used abbreviations
+
+\def\code#1{{\tt #1}}
+\def\tag#1{{\tt <#1>\index{<#1>}}}
+\def\attr#1{{\tt #1\index{#1}}}
+
+\begin{document}
+
+\title{The Khronos OpenGL API Registry Schema}
+\author{Jon Leech}
+\date{Last updated 2020-10-27}
+\maketitle
+
+\begin{abstract}
+
+This document describes the Khronos OpenGL API Registry XML schema, and provides
+some additional information about using the registry and scripts to generate
+C header files. The underlying XML files and scripts, as well as headers
+generated from the current authoritative copy of the XML files, can be
+obtained from the OpenGL-Registry github repository at
+
+\begin{center}
+{\bf \href{https://github.com/KhronosGroup/OpenGL-Registry}
+          {https://github.com/KhronosGroup/OpenGL-Registry}}
+\end{center}
+
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+
+The registry uses an XML representation of the API and a set of Python 3
+scripts to manipulate the XML, based on the lxml Python bindings. It comes
+with an XML schema and validator. Outside users are welcome to submit pull
+requests on github, although the XML schema itself is mature and unlikely to
+change at this point.
+
+Other APIs defined by Khronos, such as Vulkan and OpenXR, use a similar XML
+schema originally based on the OpenGL schema to describe those APIs.
+
+Some groups outside Khronos have their own XML based API descriptions,
+often used for additional purposes such as library code generators or
+extension loaders, and it may be desirable to construct XSLT or other
+translators between the schema.
+
+
+\section{Getting Started}
+
+Once the repository has been downloaded, if you're running
+in a Linux command-line environment and have Python 3, the lxml Python
+bindings, and libxml installed, you should just be able to invoke
+\code{make} and generate C/C++ header files for all the following
+targets:
+
+\begin{itemize}
+\item \code{GL/glext.h} - OpenGL 1.2 (and later) compatibility profile
+      API + extensions
+\item \code{GL/glcorearb.h} - OpenGL core profile API + extensions
+\item \code{GLES/gl.h} - OpenGL compatibility profile API
+\item \code{GLES/glext.h} - OpenGL ES 1.x extensions
+\item \code{GLES2/gl2.h} - OpenGL ES 2.x API
+\item \code{GLES2/gl2ext.h} - OpenGL ES 2.x extensions
+\item \code{GLES3/gl3.h} - OpenGL ES 3.x API
+\item \code{GL/glx.h} - GLX API
+\item \code{GL/glxext.h} - GLX 1.3 (and later) API + extensions
+\item \code{GL/wgl.h} - WGL API
+\item \code{GL/wglext.h} - WGL extensions
+\item \code{EGL/egl.h} - EGL (still being worked on)
+\end{itemize}
+
+Starting with the Makefile rules and inspecting the files \code{gl.xml},
+\code{genheaders.py}, and \code{reg.py} will be necessary if you want to
+repurpose the registry for reasons other than header file generation, or
+to generate headers for languages other than C.
+
+If you're running in a Microsoft Windows, MaxOS X, or other non-Linux
+environment, there are equivalent versions of Python and GNU Make, although
+we haven't tested this ourselves. Feedback would be helpful. If you're using
+Windows 10, you should probably try to build in the Ubuntu Linux subsystem
+rather than older Unix emulation environments such as Cygwin.
+
+
+\subsection{Header Generation Script - \code{genheaders.py}}
+
+When generating header files using the \code{genheaders.py} script, an
+API name and profile name are required, as shown in the Makefile
+examples. Additionally, specific versions and extensions can be required
+or excluded. Based on this information, the generator script extracts
+the relevant interfaces and creates a C-language header file for them.
+\code{genheaders.py} contains predefined generator options for OpenGL compatibility
+and core profiles, OpenGL ES 1 / 2 / 3, GLX, and WGL headers.
+
+The generator script is intended to be generalizable to other languages
+by writing new generator classes. Such generators would have to rewrite
+the C types and definitions in the XML to something appropriate to their
+language.
+
+\subsection{Registry Processing Script - \code{reg.py}}
+
+Actual XML registry processing is done in \code{reg.py}, which contains
+several objects and methods for loading registries and extracting
+interfaces and extensions for use in header generation. There is some
+internal documentation in the form of comments although nothing more
+extensive exists yet, and it's possible the Python scripts will evolve
+significantly based on public feedback.
+
+
+\section{XML Registry Schema}
+\label{schema}
+
+The format of an XML registry is a top level \tag{registry} tag
+containing \tag{types}, \tag{enums}, \tag{commands}, \tag{feature}, and
+\tag{extension} tags describing the different elements of an API, as
+explained below. This description corresponds to a formal Relax NG
+schema file, \code{registry.rnc}, against which the XML registry files
+can be validated.
+
+At present there are separate registries for:
+
+\begin{itemize}
+\item OpenGL and OpenGL ES - \code{gl.xml}
+\item GLX - \code{glx.xml}
+\item WGL - \code{wgl.xml}
+\item EGL - \code{egl.xml} (still in development)
+\end{itemize}
+
+\subsection{Profiles}
+\label{schema:profile}
+
+Types and enumerants can have different definitions depending on the API
+profile requested, which allows us to accomodate minor incompatibilities
+in the OpenGL and OpenGL ES APIs, for example. Features and extensions
+can include some elements conditionally depending on the API profile
+requested.
+
+\subsection{API Names}
+\label{schema:apiname}
+
+Several tags use a \attr{api} attribute. This is an arbitrary string,
+specified at header generation time, for labelling properties of a
+specific API. The string can be, but is not necessarily, an actual API
+name. As used in \code{genheaders.py} and \code{gl.xml}, the API names
+are \code{gl}, \code{gles1}, and \code{gles2}, corresponding to OpenGL,
+OpenGL ES 1, and OpenGL ES 2/3, respectively.
+
+
+\section{Registry Root (\tag{registry} tag)}
+\label{schema:root}
+
+A \tag{registry} contains the entire definition of one or more related
+APIs.
+
+\subsection{Attributes of \tag{registry} tags}
+
+None.
+
+\subsection{Contents of \tag{registry} tags}
+
+Zero or more of each of the following tags, normally in this order
+(although order shouldn't be important):
+
+\begin{itemize}
+\item \tag{comment} - Contains arbitrary text, such as a copyright
+      statement. Unused.
+\item \tag{types} (see section~\ref{tag:types}) - defines API types.
+      Usually only one tag is used.
+\item \tag{groups} (see section~\ref{tag:groups}) - defines named groups
+      of tokens for possible parameter validation in API bindings for
+      languages other than C. Usually only one tag is used.
+\item \tag{enums} (see section~\ref{tag:enums}) - defines API enumerants
+      (tokens). Usually multiple tags are used.
+\item \tag{commands} (see section~\ref{tag:commands}) - defines API
+      commands (functions). Usually only one tag is used.
+\item \tag{feature} (see section~\ref{tag:feature}) - defines API
+      feature interfaces (API versions, more or less). One tag per
+      feature set.
+\item \tag{extensions} (see section~\ref{tag:extensions}) - defines API
+      extension interfaces. Usually only one tag is used, wrapping many
+      extensions.
+\end{itemize}
+
+
+\section{API types (\tag{types} tag)}
+\label{tag:types}
+
+The \tag{types} tag contains individual \tag{type} tags describing each
+of the derived types used in the API.
+
+Each \tag{type} tag contains legal C code, with attributes or embedded
+tags denoting the type name.
+
+\subsection{Attributes of \tag{type} tags}
+
+\begin{itemize}
+\item \attr{requires} - another type name this type requires to complete
+      its definition.
+\item \attr{name} - name of this type (if not defined in the tag body).
+\item \attr{api} - an API name (see \tag{feature} below) which
+      specializes this definition of the named type, so that the same
+      API types may have different definitions for e.g. GL ES and GL.
+\item \attr{comment} - arbitrary string (unused).
+\end{itemize}
+
+\subsection{Contents of \tag{type} tags}
+
+\tag{type} contains text which is legal C code for a type declaration.
+It may also contain embedded tags:
+
+\begin{itemize}
+\item \tag{apientry/} - insert a platform calling convention macro here
+      during header generation, used mostly for function pointer types.
+\item \tag{name} - contains the name of this type (if not defined in the
+      tag attributes).
+\end{itemize}
+
+\subsection{Example of a \tag{types} tag}
+
+\begin{verbatim}
+<types>
+    <type name="stddef"><![CDATA[#include <stddef.h>]]></type>
+    <type requires="stddef">typedef ptrdiff_t <name>GLintptr</name>;</type>
+</types>
+\end{verbatim}
+
+If the {\tt GLint64} type is required by a command, this will result in
+the following declarations:
+
+\begin{verbatim}
+#include <stddef.h>
+typedef ptrdiff_t GLintptr;
+\end{verbatim}
+
+
+\section{Enumerant Groups (\tag{groups} tag)}
+\label{tag:groups}
+
+The \tag{groups} tags contain individual \tag{group} tags describing
+some of the group annotations used for return and parameter types.
+
+\subsection{Attributes of \tag{groups} tags}
+
+None.
+
+\subsection{Contents of \tag{groups} tags}
+
+Each \tag{groups} block contains zero or more \tag{group} tags, in
+arbitrary order (although they are typically ordered by group name, to
+improve human readability).
+
+\subsection{Example of \tag{groups} tags}
+
+\begin{verbatim}
+<groups>
+    <group name="AccumOp">
+        <enum name="GL_ACCUM"/>
+    </group>
+
+    <group name="AttribMask">
+        <enum name="GL_ACCUM_BUFFER_BIT"/>
+        <enum name="GL_ALL_ATTRIB_BITS"/>
+    </group>
+</groups>
+\end{verbatim}
+
+
+\section{Enumerant Group (\tag{group} tag)}
+\label{tag:group}
+
+Each \tag{group} tag defines a single group annotation.
+
+\subsection{Attributes of \tag{group} tags}
+
+\begin{itemize}
+\item \attr{name} - group name, an arbitrary string for grouping a set
+      of enums together within a broader namespace.
+\end{itemize}
+
+\subsection{Contents of \tag{group} tags}
+
+\tag{group} tags may contain zero or more \tag{enum} tags. Each
+\tag{enum} tag may contain only a \attr{name} attribute, which should
+correspond to a \tag{enum} definition in an \tag{enums} block.
+
+\subsection{Meaning of \tag{group} tags}
+\label{tag:group:meaning}
+
+If a \tag{proto} or \tag{param} tag of a \tag{command} has a
+\attr{group} attribute defined, and that attribute matches a \tag{group}
+name, then the return type or parameter type is considered to be
+constrained to values defined by the corresponding \tag{group}. C
+language bindings do not attempt to enforce this constraint in any way,
+but other language bindings may try to do so.
+
+
+\section{Enumerant Blocks (\tag{enums} tag)}
+\label{tag:enums}
+
+The \tag{enums} tags contain individual \tag{enum} tags describing each of the
+token (enumerant) names used in the API.
+
+\subsection{Attributes of \tag{enums} tags}
+
+\begin{itemize}
+\item \attr{namespace} - a string for grouping many different enums
+      together, currently unused but typically something like \code{GL}
+      for all enums in the OpenGL / OpenGL ES shared namespace. Multiple
+      \tag{enums} tags can share the same namespace.
+\item \attr{type} - a string describing the data type of the values of
+      this group of enums, currently unused. The only string used at
+      present in the is \code{bitmask}.
+\item \attr{start}, \attr{end} - integers defining the start and end of
+      a reserved range of enumerants for a particular vendor or purpose.
+      \attr{start} must be $\leq$ \attr{end}. These fields define formal
+      enumerant allocations within a namespace, and are made by the
+      Khronos Registrar on request from implementers following the enum
+      allocation policy.
+\item \attr{vendor} - string describing the vendor or purposes to whom a
+      reserved range of enumerants is allocated.
+\item \attr{comment} - arbitrary string (unused)
+\end{itemize}
+
+\subsection{Contents of \tag{enums} tags}
+
+Each \tag{enums} block contains zero or more \tag{enum} and \tag{unused}
+tags, in arbitrary order (although they are typically ordered by sorting
+on enumerant values, to improve human readability).
+
+\subsection{Example of \tag{enums} tags}
+
+\begin{verbatim}
+<enums namespace="AttribMask" type="bitmask">
+    <enum value="0x00000001"  name="GL_CURRENT_BIT" />
+    <enum value="0x00000002"  name="GL_POINT_BIT" />
+</enums>
+<enums namespace="GL" start="0x80E0" end="0x810F" vendor="MS">
+    <enum value="0x80E0"      name="GL_BGR" />
+        <unused start="0x80E1" end="0x810F" />
+</enums>
+\end{verbatim}
+
+When processed into a C header, and assuming all these tokens were
+required, this results in
+
+\begin{verbatim}
+#define GL_CURRENT_BIT 0x00000001
+#define GL_POINT_BIT   0x00000001
+#define GL_BGR         0x80E0
+\end{verbatim}
+
+
+\section{Enumerants (\tag{enum} tag)}
+\label{tag:enum}
+
+Each \tag{enum} tag defines a single GL (or other API) token.
+
+\subsection{Attributes of \tag{enum} tags}
+
+\begin{itemize}
+\item \attr{value} - enumerant value, a legal C constant (usually a
+      hexadecimal integer).
+\item \attr{name} - enumerant name, a legal C preprocessor token name.
+\item \attr{api} - an API name which specializes this definition of the
+      named enum, so that different APIs may have different values for
+      the same token (used to address a few accidental incompatibilities
+      between GL and GL ES).
+\item \attr{type} - legal C suffix for the value to force it to a
+      specific type. Currently only \code{u} and \code{ull} are used,
+      for \code{unsigned} 32- and 64-bit integer values, respectively.
+      Separated from the \attr{value} field since this eases parsing and
+      sorting of values, and is rarely used.
+\item \attr{group} - group name, an arbitrary string for grouping a set of
+      enums together within a broader namespace.
+      \par {\bf Note:} the \tag{group} tag (see section~\ref{tag:group})
+      serves the same purpose, but is deprecated in favor of this attribute.
+      Eventually all \tag{group} tags will be removed from the XML
+      registries.
+\item \attr{alias} - name of another enumerant this is an alias of, used
+      where token names have been changed as a result of profile changes
+      or for consistency purposes. An enumerant alias is simply a
+      different \attr{name} for the exact same \attr{value}. At present,
+      enumerants which are promoted from extension to core API status
+      are not tagged as aliases - just enumerants tagged as aliases in
+      the {\em Changed Tokens} sections of appendices to the OpenGL
+      Specification. This might change in the future.
+\end{itemize}
+
+\subsection{Contents of \tag{enum} tags}
+
+\tag{enum} tags have no allowed contents. All information is contained
+in the attributes.
+
+
+\section{Unused Enumerants (\tag{unused} tag)}
+\label{tag:unused}
+
+Each \tag{unused} tag defines a range of enumerants which is allocated,
+but not yet assigned to specific enums. This just tracks the unused
+values and is not needed for header generation.
+
+\subsection{Attributes of \tag{unused} tags}
+
+\begin{itemize}
+\item \attr{start}, \attr{end} - integers defining the start and end of
+      an unused range of enumerants. \attr{start} must be $\leq$
+      \attr{end}. This range should not exceed the range reserved by the
+      surrounding \tag{enums} tag.
+\item \attr{vendor} - string describing the vendor or purposes to whom a
+      reserved range of enumerants is allocated. Usually identical to
+      the \attr{vendor} attribute of the surrounding \attr{enums} block.
+\item \attr{comment} - arbitrary string (unused)
+\end{itemize}
+
+\subsection{Contents of \tag{unused} tags}
+
+None.
+
+
+\section{Command Blocks (\tag{commands} tag)}
+\label{tag:commands}
+
+The \tag{commands} tag contains definitions of each of the functions
+(commands) used in the API.
+
+\subsection{Attributes of \tag{commands} tags}
+
+\begin{itemize}
+\item \attr{namespace} - a string defining the namespace in which
+      commands live, currently unused but typically something like
+      \code{GL}.
+\end{itemize}
+
+\subsection{Contents of \tag{commands} tags}
+
+Each \tag{commands} block contains zero or more \tag{command} tags, in
+arbitrary order (although they are typically ordered by sorting on the
+command name, to improve human readability).
+
+
+\section{Commands (\tag{command} tag)}
+\label{tag:command}
+
+The \tag{command} tag contains a structured definition of a single API
+command (function).
+
+\subsection{Attributes of \tag{command} tags}
+
+\begin{itemize}
+\item \attr{comment} - arbitrary string (unused).
+\end{itemize}
+
+\subsection{Contents of \tag{command} tags}
+
+\begin{itemize}
+\item \tag{proto} must be the first element, and is a tag defining the C
+      function prototype of a command as described below, up to the
+      function name but not including function parameters.
+\item \tag{param} elements for each command parameter follow, defining
+      its name and type, as described below. If a command takes no
+      arguments, it has no \tag{param} tags.
+\end{itemize}
+
+Following these elements, the remaining elements in a \tag{command}
+tag are optional and may be in any order:
+
+\begin{itemize}
+\item \tag{alias} has one attribute, \attr{name}, containing a string which is the
+      name of another command this command is an alias of, used when
+      promoting a function from extension to ARB or ARB to API status. A
+      command alias describes the case where there are two function
+      names which resolve to the {\bf same} client library code, so (for
+      example) the case where a command is promoted but is also given
+      different GLX protocol would {\bf not} be an alias in this sense.
+\item \tag{vecequiv} has one attribute, \attr{name}, containing a string which is
+      the name of another command which is the {\em vector equivalent}
+      of this command. For example, the vector equivalent of
+      \code{glVertex3f} is \code{glVertex3fv}.
+\item \tag{glx} defines GLX protocol information for this command, as
+      described below. Many GL commands don't have GLX protocol defined,
+      and other APIs such as EGL and WGL don't use GLX at all.
+\end{itemize}
+
+
+\subsection{Command prototype (\tag{proto} tags)}
+\label{tag:command:proto}
+
+The \tag{proto} tag defines the return type and name of a command.
+
+\subsubsection{Attributes of \tag{proto} tags}
+
+\begin{itemize}
+\item \attr{group} - group name, an arbitrary string.
+\end{itemize}
+
+If the group name is defined, it may be interpreted as described in
+section~\ref{tag:group:meaning}.
+
+\subsubsection{Contents of \tag{proto} tags}
+
+The text elements of a \tag{proto} tag, with all other tags removed, is
+legal C code describing the return type and name of a command. In addition
+it may contain two semantic tags:
+
+\begin{itemize}
+\item The \tag{ptype} tag is optional, and contains text which is a
+      valid type name found in \tag{type} tag, and indicates that this
+      type must be previously defined for the definition of the command
+      to succeed. Builtin C types, and any derived types which are
+      expected to be found in other header files, should not be wrapped
+      in \tag{ptype} tags.
+\item The \tag{name} tag is required, and contains the command name
+      being described.
+\end{itemize}
+
+\subsection{Command parameter (\tag{param} tags)}
+\label{tag:command:param}
+
+The \tag{param} tag defines the type and name of a parameter.
+
+\subsubsection{Attributes of \tag{param} tags}
+
+\begin{itemize}
+\item \attr{group} - group name, an arbitrary string.
+\item \attr{len} - parameter length, either an integer specifying the
+      number of elements of the parameter \tag{ptype}, or a complex
+      string expression with poorly defined syntax, usually representing
+      a length that is computed as a combination of other command
+      parameter values, and possibly current GL state as well.
+\item \attr{class} - an arbitrary string defining the type of object handles
+      passed in this parameter. Handles with different types are not
+      compatible; for example, handles created with
+      \attr{class}{\tt="buffer"} can not be passed to a parameter with
+      \attr{class}{\tt="shader"}.
+\end{itemize}
+
+If the group name is defined, it may be interpreted as described in
+section~\ref{tag:group:meaning}.
+
+\subsubsection{Contents of \tag{param} tags}
+
+The text elements of a \tag{param} tag, with all other tags removed, is
+legal C code describing the type and name of a function parameter. In
+addition it may contain two semantic tags:
+
+\begin{itemize}
+\item The \tag{ptype} tag is optional, and contains text which is a
+      valid type name found in \tag{type} tag, and indicates that this
+      type must be previously defined for the definition of the command
+      to succeed. Builtin C types, and any derived types which are
+      expected to be found in other header files, should not be wrapped
+      in \tag{ptype} tags.
+\item The \tag{name} tag is required, and contains the command name
+      being described.
+\end{itemize}
+
+\subsection{Example of a \tag{commands} tag}
+
+\begin{verbatim}
+<commands>
+    <command>
+        <proto>void <name>glBeginConditionalRenderNV</name></proto>
+        <param><ptype>GLuint</ptype> <name>id</name></param>
+        <param><ptype>GLenum</ptype> <name>mode</name></param>
+        <alias name="glBeginConditionalRender" />
+        <glx type="render" opcode="348" />
+    </command>
+</commands>
+\end{verbatim}
+
+When processed into a C header, this results in
+
+\begin{verbatim}
+void glBeginConditionalRenderNV(GLuint id, GLenum mode);
+\end{verbatim}
+
+
+\section{API Features / Versions (\tag{feature} tag)}
+\label{tag:feature}
+
+API features are described in individual \tag{feature} tags. A feature
+is the set of interfaces (enumerants and commands) defined by a
+particular API and version, such as OpenGL 4.0 or OpenGL ES 3.0, and
+includes all API profiles of that version.
+
+\subsection{Attributes of \tag{feature} tags}
+
+\begin{itemize}
+\item \attr{api} - API name this feature is for (see
+      section~\ref{schema:apiname}), such as \code{gl} or \code{gles2}.
+\item \attr{name} - version name, used as the C preprocessor token under
+      which the version's interfaces are protected against multiple
+      inclusion. Example: \code{GL\_VERSION\_4\_2}.
+\item \attr{protect} - an additional preprocessor token used to protect
+      a feature definition. Usually another feature or extension
+      \attr{name}. Rarely used, for odd circumstances where the
+      definition of a feature or extension requires another to be
+      defined first.
+\item \attr{number} - feature version number, usually a string
+      interpreted as $majorNumber.minorNumber$. Example: \code{4.2}.
+\item \attr{comment} - arbitrary string (unused)
+\end{itemize}
+
+\subsection{Contents of \tag{feature} tags}
+
+Zero or more \tag{require} and \tag{remove} tags (see
+section~\ref{tag:required}), in arbitrary order. Each tag describes a
+set of interfaces that is respectively required for, or removed from,
+this feature, as described below.
+
+\subsection{Example of a \tag{feature} tag}
+
+\begin{verbatim}
+<feature api="gl" name="GL_VERSION_3_0" number="3.0">
+    <require>
+        <enum name="GL_COMPARE_REF_TO_TEXTURE" />
+        <enum name="GL_CLIP_DISTANCE0" />
+        <command name="glEndTransformFeedback" />
+    </require>
+    <require profile="compatibility">
+        <enum name="GL_INDEX" />
+    </require>
+</feature>
+\end{verbatim}
+
+When processed into a C header for the \code{compatibility} profile of
+OpenGL, this results in (assuming the usual definitions of these GL
+interfaces):
+
+\begin{verbatim}
+#ifndef GL_VERSION_3_0
+#define GL_VERSION_3_0 1
+#define GL_COMPARE_REF_TO_TEXTURE         0x884E
+#define GL_CLIP_DISTANCE0                 0x3000
+#define GL_INDEX                          0x8222
+typedef void (APIENTRYP PFNGLENDTRANSFORMFEEDBACKPROC) (void);
+#ifdef GL_GLEXT_PROTOTYPES
+GLAPI void APIENTRY glEndTransformFeedback (void);
+#endif
+#endif /* GL_VERSION_3_0 */
+\end{verbatim}
+
+If processed into a header for the \code{core} profile, the definition of
+\code{GL\_INDEX} would not appear.
+
+
+\section{Extension Blocks (\tag{extensions} tag)}
+\label{tag:extensions}
+
+The \tag{extensions} tag contains definitions of each of the extenions
+which are defined for the API.
+
+\subsection{Attributes of \tag{extensions} tags}
+
+None.
+
+\subsection{Contents of \tag{extensions} tags}
+
+Each \tag{extensions} block contains zero or more \tag{extension} tags,
+each describing an API extension, in arbitrary order (although they are
+typically ordered by sorting on the extension name, to improve human
+readability).
+
+
+\section{API Extensions (\tag{extension} tag)}
+\label{tag:extension}
+
+API extensions are described in individual \tag{extension} tags. An
+extension is the set of interfaces defined by a particular API extension
+specification, such as \code{ARB\_multitexture}. \tag{extension} is
+similar to \tag{feature}, but instead of having \attr{version} and
+\attr{profile} attributes, instead has a \attr{supported} attribute,
+which describes the set of API names which the extension can potentially
+be implemented against.
+
+\subsection{Attributes of \tag{extension} tags}
+
+\begin{itemize}
+\item \attr{supported} - a regular expression, with an implicit
+      \code{\^{}} and \code{\$} bracketing it, which should match the
+      \attr{api} tag of a set of \tag{feature} tags.
+\item \attr{protect} - an additional preprocessor token used to protect
+      an extension definition. Usually another feature or extension
+      \attr{name}. Rarely used, for odd circumstances where the
+      definition of an extension requires another to be defined first.
+\item \attr{comment} - arbitrary string (unused)
+\end{itemize}
+
+\subsection{Contents of \tag{extension} tags}
+
+Zero or more \tag{require} and \tag{remove} tags (see
+section~\ref{tag:required}), in arbitrary order. Each tag describes a
+set of interfaces that is respectively required for, or removed from,
+this extension, as described below.
+
+\subsection{Example of an \tag{extensions} tag}
+
+\begin{verbatim}
+<extensions>
+    <extension name="GL_ARB_robustness" supported="gl|glcore" >
+        <require>
+            <enum name="GL_NO_ERROR" />
+            <command name="glGetGraphicsResetStatusARB" />
+        </require>
+        <require api="gl" profile="compatibility">
+            <command name="glGetnMapdvARB" />
+        </require>
+    </extension>
+</extensions>
+\end{verbatim}
+
+The \attr{supported} attribute says that the extension can be supported for
+either the GL compatibility (\code{gl}) or GL core (\code{glcore}) API
+profiles, but not for other APIs. When processed into a C header for the
+\code{core} profile of OpenGL, this results in (assuming the usual
+definitions of these GL interfaces):
+
+\begin{verbatim}
+#ifndef GL_ARB_robustness
+#define GL_ARB_robustness 1
+#define GL_NO_ERROR                       0
+typedef GLenum (APIENTRYP PFNGLGETGRAPHICSRESETSTATUSARBPROC) (void);
+#ifdef GL_GLEXT_PROTOTYPES
+GLAPI GLenum APIENTRY glGetGraphicsResetStatusARB (void);
+#endif
+#endif /* GL_ARB_robustness */
+\end{verbatim}
+
+
+\section{Required and Removed Interfaces (\tag{require} and \tag{remove} tags)}
+\label{tag:required}
+
+A \tag{require} block defines a set of interfaces (types, enumerants and
+commands) {\em required} by a \tag{feature} or \tag{extension}. A
+\tag{remove} block defines a set of interfaces {\em removed} by a
+\tag{feature} (this is primarily useful for the OpenGL core profile,
+which removed many interfaces - extensions should never remove
+interfaces, although this usage is allowed by the schema). Except for
+the tag name and behavior, the contents of \tag{require} and
+\tag{remove} tags are identical.
+
+\subsection{Attributes of \tag{require} and \tag{remove} tags}
+
+\begin{itemize}
+\item \attr{profile} - string name of an API profile. Interfaces in the
+      tag are only required (or removed) if the specified profile is
+      being generated. If not specified, interfaces are required (or
+      removed) for all API profiles.
+\item \attr{comment} - arbitrary string (unused)
+\item \attr{api} - an API name (see section~\ref{schema:apiname}). Interfaces
+      in the tag are only required (or removed) if the specified API is
+      being generated. If not specified, interfaces are required (or
+      removed) for all APIs.
+
+      {\bf The \attr{api} attribute is only supported inside
+      \tag{extension} tags,} since \tag{feature} tags already define a
+      specific API.
+\end{itemize}
+
+\subsection{Contents of \tag{require} and \tag{remove} tags}
+
+Zero or more of the following tags, in any order:
+
+\begin{itemize}
+\item \tag{command} specifies an required (or removed) command defined
+      in a \tag{commands} block. The tag has no content, but contains
+      elements:
+
+      \begin{itemize}
+      \item \attr{name} - name of the command (required).
+      \item \attr{comment} - arbitrary string (optional and unused).
+      \end{itemize}
+\item \tag{enum} specifies an required (or removed) enumerant defined in
+      a \tag{enums} block. The tag has no content, but contains
+      elements:
+
+      \begin{itemize}
+      \item \attr{name} - name of the enumerant (required).
+      \item \attr{comment} - arbitrary string (optional and unused).
+      \end{itemize}
+\item \tag{type} specifies a required (or removed) type defined in a
+      \tag{types} block. Most types are picked up implicitly by using
+      the \tag{ptype} tags of commands, but in a few cases, additional
+      types need to be specified explicitly (it is unlikely that a type
+      would ever be removed, although this usage is allowed by the
+      schema). The tag has no content, but contains elements:
+
+      \begin{itemize}
+      \item \attr{name} - name of the type (required).
+      \item \attr{comment} - arbitrary string (optional and unused).
+      \end{itemize}
+\end{itemize}
+
+
+\section{General Discussion}
+\label{general}
+
+
+\subsection{Stability of the XML Database and Schema}
+\label{general:stability}
+
+The new registry schema, scripts, and databases are evolving in response
+to feedback and to Khronos' own wishlist. This means the XML schema is
+subject to change, although most such change will probably be confined
+to adding attributes to existing tags. The XML databases such as
+\code{gl.xml} will evolve in response to schema changes, to new
+extensions and API versions, and to general cleanup, such as
+canonicalization of the XML or sorting of \tag{command} and
+\tag{extension} tags by name. Changes to the schema will be described in
+the change log of this document (see section~\ref{changelog}). Changes
+to the \code{.xml} files will be described in Github revision history.
+
+
+\subsection{Feature Enhancements to the Registry}
+\label{general:enhancements}
+
+There are lots of tools and additional tags that would make the XML format
+more expressive and the tools more capable. Khronos is open to hosting
+additional processing scripts for other purposes related to the definition
+of the API and bindings to it.
+
+A partial wishlist follows:
+
+\begin{itemize}
+\item Enhance \tag{command} \tag{alias} tags to describe more relaxed
+      sorts of aliases, such as commands equivalent in behavior and
+      interface, but using different GLX protocol (this might be called
+      a {\em client-side alias} or something of the sort).
+\end{itemize}
+
+\subsection{Type Annotations and Relationship to \code{.spec} Files}
+\label{general:annotations}
+
+The initial releases of the XML Registry did not include type annotation
+and array length information from the old \code{.spec} files, which
+generated a number of complaints from people writing bindings of OpenGL
+to languages other than C. The majority of these annotations have now
+been added to the XML, in the form of \tag{group} tags (see
+section~\ref{tag:group}) defining groups of related enumerants,
+\attr{group} attributes on \tag{proto} and \tag{param} tags specifying
+that the corresponding return type belongs to a group, and \attr{len}
+attributes on \tag{param} tags specifying the array length of the
+corresponding parameter.
+
+There are many caveats regarding these annotations. For the most part
+they date from SGI's OpenGL 1.1 implementation, and have not been
+updated. The defined \tag{group}s therefore do not cover many API
+parameters which {\bf could} be given a group, and in many cases, the
+defined \tag{group}s have not been updated to add new enumerants from
+later versions of OpenGL and OpenGL extensions. The group names are
+often somewhat misleading (with imbedded vendor extension tags, while
+the corresponding features have been promoted).
+
+The \tag{group}s added to \code{gl.xml} are the enumerant groups defined
+in \code{enum.spec}, and \code{enumext.spec}. Many additional group
+names were used in the annotations in \code{gl.spec}, and they
+fall in several categories discussed below.
+
+
+\subsubsection{Simple API Type Aliases}
+
+Group names that were simply an alias for a GL type have been left
+entirely out of \code{gl.xml}, since they offer no useful additional
+information.
+
+For example, a parameter described as \code{UInt32} in \code{gl.spec} is
+not annotated with \code{group="UInt32"} in \code{gl.xml}, because this
+offers no information about the parameter not already present in its
+declaration as \code{<ptype>GLuint</ptype>}.
+
+A few examples of such groups are \code{cl\_context},
+\code{handleARB}, \code{Int32}, and \code{sync}.
+
+
+\subsubsection{Numeric Constraints}
+
+Group names representing some type of numerical constraint on a value
+are retained in \tag{proto} and \tag{param} \attr{group} attributes, but
+no definition exists. This is because the existing \tag{group} mechanism
+can only describe constraints to specific enumerant names.
+
+This is not a regression relative to the \code{.spec} files, which also
+did not describe the meaning of these groups.
+
+A few examples of such groups are \code{CheckedFloat32},
+\code{ClampedFixed}, and \code{CoordD}.
+
+
+\subsubsection{GL Object Names}
+
+Group names representing an object name obtained from e.g. a
+\code{glGen*} command, such as a display list name, are retained in in
+\tag{proto} and \tag{param} \attr{group} attributes, but no definition
+exists. This is because the existing \tag{group} mechanism can only
+describe constraints to specific enumerant names.
+
+This is not a regression relative to the \code{.spec} files, which also
+did not describe the meaning of these groups.
+
+A few examples of such groups are \code{List} and \code{Path}.
+
+
+\subsubsection{Groups Not Defined Yet}
+
+Group names representing enumerant groups which were not defined in
+\code{enum.spec} and \code{enumext.spec} are retained in \tag{proto} and
+\tag{param} \attr{group} attributes, but no definition exists. Such
+groups usually are a result of vendors contributing \code{gl.spec}
+entries for an extension without contributing corresponding
+\code{enum.spec} entries.
+
+This is not a regression relative to the \code{.spec} files, which also
+did not describe the meaning of these groups.
+
+A few examples of such groups are \code{ArrayObjectPNameATI},
+\code{BinormalPointerTypeEXT}, and \code{SpriteParameterNameSGIX}.
+
+
+\subsubsection{Other Groups}
+
+There are probably a few groups which are present in \code{gl.xml} but
+should not be. These can be gradually cleaned up over time.
+
+
+\subsubsection{Validating Groups}
+
+The \code{genheaders.py} script has been enhanced to allow validating
+groups during header generation. Invoking it with the
+\code{-validate} option, for example via:
+
+\code{\$ genheaders.py -validate -registry gl.xml}
+
+\noindent will generate a text dump on standard output showing all
+parameter type \attr{group} attributes which do {\bf not} have
+corresponding \tag{group} tags.
+
+
+\section{Change Log}
+\label{changelog}
+
+\begin{itemize}
+\item 2020-10-27 - Add \attr{class} attribute to \tag{param} tags (github
+      pull request 428), update document title and make minor tweaks to
+      reflect this not being the only Khronos XML API schema in use, and
+      having migrated from Subversion to Github.
+\item 2020-01-11 - Add \attr{group} attribute to \tag{enum} tags, and
+      deprecate \tag{group} tags (github issue 335).
+\item 2017-01-20 - Update for the move to the new github repository.
+\item 2014-06-16 - Add \tag{vendor} attribute to \tag{unused} tags.
+\item 2013-09-17 - Add \tag{comment} attribute to \tag{command} tags
+      within \tag{commands}.
+\item 2013-06-24 - Add \tag{groups} and \tag{group} tags, renamed
+      \tag{enums} attribute \attr{class} to \attr{group}, and add
+      parameter type annotation attributes \attr{group} and \attr{len}
+      to both \tag{proto} and \tag{param}. Add
+      section~\ref{general:annotations} discussing limitations of these
+      annotations. Still need to add examples of the annotation
+      attributes.
+\item 2013-06-19 - Added \tag{extensions} tag block as a wrapper around
+      groups of \tag{extension} tags, to ease XML transformations such
+      as sorting extensions by name.
+\item 2013-06-14 - Expanded description of tags, better formatting
+\item 2013-06-12 - First release, text file format
+\end{itemize}
+
+\input{readme.ind}
+
+% \printindex
+
+\end{document}

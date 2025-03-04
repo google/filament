@@ -1,0 +1,175 @@
+Name
+
+    EXT_422_pixels
+
+Name Strings
+
+    GL_EXT_422_pixels
+
+Version
+
+    Date: 3/22/1998    Version 1.2
+
+Number
+
+    178
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides support for converting 422 pixels in host
+    memory to 444 pixels as part of the pixel storage operation.
+
+    The pixel unpack storage operation treats a 422 pixel as a 2 element
+    format where the first element is C (chrominance) and the second
+    element is L (luminance). Luminance is present on all pixels; a full
+    chrominance value requires two pixels.
+
+    The pixel pack storage operation converts RGB to a 422 pixel defined as
+    a 2 element format where the first element stored is C (chrominance)
+    and the second element stored is L (luminance).  Luminance is present
+    on all pixels; a full chrominance value requires two pixels.
+
+    Both averaging and non-averaging is supported for green and blue
+    assignments for pack and unpack operations.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <format> parameter of DrawPixels, ReadPixels,
+    TexImage1D, TexImage2D, GetTexImage, TexImage3D, TexSubImage1D,
+    TexSubImage2D, TexSubImage3D, GetHistogram, GetMinmax,
+    ConvolutionFilter1D, ConvolutionFilter2D, ConvolutionFilter3D,
+    GetConvolutionFilter, SeparableFilter2D, SeparableFilter3D,
+    GetSeparableFilter, ColorTable, and GetColorTable.
+
+        422_EXT                            0x80CC
+        422_REV_EXT                        0x80CD
+        422_AVERAGE_EXT                    0x80CE
+        422_REV_AVERAGE_EXT                0x80CF
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    The four tokens defined by this extension are added to Table 3.6:
+
+      Format Name           Element Meaning and Order   Target Buffer
+      -------------------   -------------------------   --------------
+      422_EXT                       C, L, C, L              Color
+      422_REV_EXT                   L, C, L, C              Color
+      422_AVERAGE_EXT               C, L, C, L              Color
+      422_REV_AVERAGE_EXT           L, C, L, C              Color
+
+      Table 3.6: DrawPixels and ReadPixels formats.  The second column
+      gives a description of and the number and order of elements in a
+      group.  Unless specified as an index, formats yield components.
+
+    3.6.4 Rasterization of Pixel Rectangles
+
+    [The new formats are added to the discussion of "Conversion to RGB"]
+
+    This step is applied only if <format> is 422_EXT, 422_REV_EXT,
+    422_AVERAGE_EXT, or 422_AVERAGE_REV_EXT.  For 422_EXT and
+    422_REV_EXT, the assignment of the elements in a group to
+    R, G, and B are defined in the following equations:
+
+          Even Pixel           Odd Pixel
+        -------------        -------------
+         R = L[n*2]           R = L[n*2+1]
+         G = C[n*2]           G = C[n*2]
+         B = C[n*2+1]         B = C[n*2+1]
+
+    where 0 < n < width/2. If the <width> of the image is odd, then
+    the last column of pixels will have an undefined color value.
+
+    For 422_AVERAGE_EXT and 422_AVERAGE_REV_EXT, the assignment of the
+    elements in a group to R, G, and B are defined in the following
+    equations:
+
+          Even Pixel             Odd Pixel (Averaged)
+        -------------        ------------------------------
+         R = L[n*2]           R = L[n*2+1]
+         G = C[n*2]           G = (C[n*2] + C[n*2+2]) / 2
+         B = C[n*2+1]         B = (C[n*2+1] + C[n*2+3]) / 2
+
+    where 0 < n < width/2. If the <width> of the image is odd, then the
+    last column of pixels will have an undefined color value.  If the
+    pixels at [n*2+2] or [n*2+3] are not present, then the non-averaging
+    odd pixel equations are used for that pixel.
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    [The new formats are added to the discussion of "Obtaining Pixels
+    from the Framebuffer."]
+
+    [A new section, "Conversion to 422," is added after the section
+    "Conversion to L."]
+
+    This step applies only to RGBA component groups, and only if the
+    <format> is 422_EXT, 422_REV_EXT, 422_AVERAGE_EXT, or
+    422_AVERAGE_REV_EXT.  For 422_EXT, RGB is converted to a 422 pixel
+    defined as a 2 element format where the first element stored is
+    C (chrominance) and the second element stored is L (luminance).
+    For 422_REV_EXT, the first element stored is luminance and the
+    second element stored is chrominance.
+
+    Luminance is present on all pixels; only one chrominance value is
+    present on each pixel.  The conversion is performed according to the
+    following equations.
+
+          Even Pixel           Odd Pixel
+        -------------        -------------
+         L = R[n*2]           L = R[n*2+1]
+         C = G[n*2]           C = B[n*2]
+
+    where 0 < n < width/2.
+
+    For 422_AVERAGE_EXT and 422_AVERAGE_REV_EXT, the calculation of
+    the chrominance is performed by averaging adjacent pixel components
+    according to the following equations:
+
+             Even Pixel (Averaged)              Odd Pixel (Averaged)
+        ------------------------------      -----------------------------
+         L = R[n*2]                          L = R[n*2+1]
+         C = (G[n*2] + G[n*2+1]) / 2         C = (B[n*2] + B[n*2+1]) / 2
+
+    where 0 < n < width/2.  If the pixel at [n*2+1] is not present, then
+    the non-averaging pixel equations are used for that pixel.
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

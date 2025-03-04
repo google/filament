@@ -1,12 +1,12 @@
-struct _15
+struct _16
 {
     float _m0;
 };
 
-static const _15 _25 = { 0.0f };
-static const _15 _26 = { 1.0f };
-static const float _29[2] = { 0.0f, 1.0f };
-static const float _30[2] = { 1.0f, 0.0f };
+static const _16 _30 = { 0.0f };
+static const _16 _31 = { 1.0f };
+static const float _34[2] = { 0.0f, 1.0f };
+static const float _35[2] = { 1.0f, 0.0f };
 
 static float4 FragColor;
 
@@ -15,7 +15,7 @@ struct SPIRV_Cross_Output
     float4 FragColor : SV_Target0;
 };
 
-void spvSelectComposite(out _15 out_value, bool cond, _15 true_val, _15 false_val)
+void spvSelectComposite(out _16 out_value, bool cond, _16 true_val, _16 false_val)
 {
     if (cond)
     {
@@ -45,12 +45,12 @@ void frag_main()
     FragColor = false ? 1.0f.xxxx : 0.0f.xxxx;
     FragColor = float4(bool4(false, true, false, true).x ? float4(1.0f, 1.0f, 0.0f, 1.0f).x : float4(0.0f, 0.0f, 0.0f, 1.0f).x, bool4(false, true, false, true).y ? float4(1.0f, 1.0f, 0.0f, 1.0f).y : float4(0.0f, 0.0f, 0.0f, 1.0f).y, bool4(false, true, false, true).z ? float4(1.0f, 1.0f, 0.0f, 1.0f).z : float4(0.0f, 0.0f, 0.0f, 1.0f).z, bool4(false, true, false, true).w ? float4(1.0f, 1.0f, 0.0f, 1.0f).w : float4(0.0f, 0.0f, 0.0f, 1.0f).w);
     FragColor = float4(bool4(false, true, false, true));
-    _15 _38;
-    spvSelectComposite(_38, false, _25, _26);
-    _15 _32 = _38;
+    _16 _38;
+    spvSelectComposite(_38, false, _30, _31);
+    _16 _36 = _38;
     float _39[2];
-    spvSelectComposite(_39, true, _29, _30);
-    float _33[2] = _39;
+    spvSelectComposite(_39, true, _34, _35);
+    float _37[2] = _39;
 }
 
 SPIRV_Cross_Output main()

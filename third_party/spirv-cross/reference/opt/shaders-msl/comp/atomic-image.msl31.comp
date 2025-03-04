@@ -1,0 +1,72 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct SSBO
+{
+    uint u32;
+    int i32;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& ssbo [[buffer(0)]], texture2d<uint, access::read_write> uImage [[texture(0)]], texture2d<int, access::read_write> iImage [[texture(1)]])
+{
+    uint _19 = uImage.atomic_fetch_add(uint2(int2(1, 5)), 1u).x;
+    uint _27 = uImage.atomic_fetch_add(uint2(int2(1, 5)), 1u).x;
+    iImage.write(int4(int(_27)), uint2(int2(1, 6)));
+    uint _32 = uImage.atomic_fetch_or(uint2(int2(1, 5)), 1u).x;
+    uint _34 = uImage.atomic_fetch_xor(uint2(int2(1, 5)), 1u).x;
+    uint _36 = uImage.atomic_fetch_and(uint2(int2(1, 5)), 1u).x;
+    uint _38 = uImage.atomic_fetch_min(uint2(int2(1, 5)), 1u).x;
+    uint _40 = uImage.atomic_fetch_max(uint2(int2(1, 5)), 1u).x;
+    uint _44;
+    uint4 _102;
+    do
+    {
+        _102.x = 10u;
+    } while (!uImage.atomic_compare_exchange_weak(uint2(int2(1, 5)), &_102, 2u) && _102.x == 10u);
+    _44 = _102.x;
+    int _47 = iImage.atomic_fetch_add(uint2(int2(1, 6)), 1).x;
+    int _49 = iImage.atomic_fetch_or(uint2(int2(1, 6)), 1).x;
+    int _51 = iImage.atomic_fetch_xor(uint2(int2(1, 6)), 1).x;
+    int _53 = iImage.atomic_fetch_and(uint2(int2(1, 6)), 1).x;
+    int _55 = iImage.atomic_fetch_min(uint2(int2(1, 6)), 1).x;
+    int _57 = iImage.atomic_fetch_max(uint2(int2(1, 6)), 1).x;
+    int _61;
+    int4 _104;
+    do
+    {
+        _104.x = 10;
+    } while (!iImage.atomic_compare_exchange_weak(uint2(int2(1, 5)), &_104, 2) && _104.x == 10);
+    _61 = _104.x;
+    uint _68 = atomic_fetch_add_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _70 = atomic_fetch_or_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _72 = atomic_fetch_xor_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _74 = atomic_fetch_and_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _76 = atomic_fetch_min_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _78 = atomic_fetch_max_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _80 = atomic_exchange_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _82;
+    do
+    {
+        _82 = 10u;
+    } while (!atomic_compare_exchange_weak_explicit((device atomic_uint*)&ssbo.u32, &_82, 2u, memory_order_relaxed, memory_order_relaxed) && _82 == 10u);
+    int _85 = atomic_fetch_add_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _87 = atomic_fetch_or_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _89 = atomic_fetch_xor_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _91 = atomic_fetch_and_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _93 = atomic_fetch_min_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _95 = atomic_fetch_max_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _97 = atomic_exchange_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _99;
+    do
+    {
+        _99 = 10;
+    } while (!atomic_compare_exchange_weak_explicit((device atomic_int*)&ssbo.i32, &_99, 2, memory_order_relaxed, memory_order_relaxed) && _99 == 10);
+}
+

@@ -1,0 +1,19 @@
+#version 460
+
+struct Data
+{
+    uint arr[3];
+};
+
+layout(set = 0, binding = 0, std430) buffer B0
+{
+    Data d[];
+};
+
+void main()
+{
+    Data d1;
+    d[0].arr = d1.arr;
+}
+
+

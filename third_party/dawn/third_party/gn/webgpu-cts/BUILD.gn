@@ -1,0 +1,144 @@
+# Copyright 2022 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# Note: This file is intentionally not used by any other BUILD.gn in Dawn.
+# Instead, Chromium depends directly on this file to build the WebGPU CTS.
+# Scripts called from this file assume Dawn is checked out inside Chromium.
+
+import("../../../scripts/dawn_overrides_with_defaults.gni")
+
+group("webgpu-cts") {
+  public_deps = [
+    ":compile_src",
+    ":copy_resources",
+    ":verify_gen_ts_dep_list",
+  ]
+  data = [ "test_list.txt" ]
+}
+
+list_from_ts_sources_txt = read_file("ts_sources.txt", "list lines")
+
+ts_source_inputs = [ "../../webgpu-cts/tsconfig.json" ]
+foreach(file, list_from_ts_sources_txt) {
+  ts_source_inputs += [ "../../webgpu-cts/$file" ]
+}
+
+js_outputs = []
+foreach(ts_file, filter_exclude(list_from_ts_sources_txt, [ "*.d.ts" ])) {
+  js_file = string_replace(ts_file, ".ts", ".js")
+  js_node_file = string_replace(js_file, "src/", "src-node/", 1)
+
+  js_outputs += [ "$target_gen_dir/../../webgpu-cts/$js_file" ]
+
+  if (js_node_file != "src-node/common/runtime/wpt.js" &&
+      js_node_file != "src-node/common/runtime/standalone.js" &&
+      js_node_file != "src-node/common/runtime/helper/test_worker.js" &&
+      js_node_file !=
+      "src-node/webgpu/web_platform/worker/worker_launcher.js") {
+    js_outputs += [ "$target_gen_dir/../../webgpu-cts/$js_node_file" ]
+  }
+}
+foreach(ts_file,
+        filter_include(list_from_ts_sources_txt, [ "src/webgpu/*.spec.ts" ])) {
+  worker_js_file =
+      string_replace(string_replace(ts_file, ".spec.ts", ".as_worker.js"),
+                     "src/webgpu/",
+                     "src/webgpu/webworker/",
+                     1)
+  js_outputs += [ "$target_gen_dir/../../webgpu-cts/$worker_js_file" ]
+}
+
+action("compile_src") {
+  script = "${dawn_root}/webgpu-cts/scripts/compile_src.py"
+
+  inputs = [
+             "//third_party/node/node_modules/typescript/lib/tsc.js",
+             "//third_party/node/node.py",
+             "${dawn_root}/webgpu-cts/scripts/tsc_ignore_errors.py",
+
+             # If the only change is that a file is deleted, we still need to
+             # rebuild so that listing.js gets updated.
+             "ts_sources.txt",
+           ] + ts_source_inputs
+
+  outputs = js_outputs
+  data = js_outputs
+
+  args = [ rebase_path("$target_gen_dir/../../webgpu-cts", root_build_dir) ]
+}
+
+list_from_resource_files_txt = read_file("resource_files.txt", "list lines")
+resource_file_inputs = []
+foreach(file, list_from_resource_files_txt) {
+  resource_file_inputs += [ "$file" ]
+}
+
+action("copy_resources") {
+  # Note: We use a python script to perform the copy here instead of a "copy"
+  # action because of limitations of source expansions. This copy needs to:
+  # * move files to outside the target's directory
+  # * remove '/src/' from within the path
+  # * copy subdirectories.
+  # It does not seem possible to do all of these things with a source expansion.
+  src_dir = "../../webgpu-cts/src/resources/"
+  dst_dir = "$target_gen_dir/../../webgpu-cts/resources/"
+
+  inputs = []
+  outputs = [ "$target_out_dir/run_$target_name.stamp" ]
+  foreach(resource_file, resource_file_inputs) {
+    inputs += [ "$src_dir/$resource_file" ]
+    outputs += [ "$dst_dir/$resource_file" ]
+  }
+  data = outputs
+
+  script = "${dawn_root}/webgpu-cts/scripts/copy_files.py"
+  args = [
+    "--src_dir",
+    rebase_path(src_dir, root_build_dir),
+    "--dst_dir",
+    rebase_path(dst_dir, root_build_dir),
+    "--file_list",
+    rebase_path("resource_files.txt", root_build_dir),
+    "--stamp",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
+action("verify_gen_ts_dep_list") {
+  script = "${dawn_root}/webgpu-cts/scripts/gen_ts_dep_lists.py"
+  inputs = [
+    "../../../DEPS",
+    "resource_files.txt",
+    "ts_sources.txt",
+  ]
+  outputs = [ "$target_out_dir/run_$target_name.stamp" ]
+  args = [
+    "--check",
+    "--stamp",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}

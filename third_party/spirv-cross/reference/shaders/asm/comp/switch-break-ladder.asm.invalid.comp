@@ -14,21 +14,21 @@ void main()
     int a;
     for (;;)
     {
-        bool _22_ladder_break = false;
+        bool _17_ladder_break = false;
         switch (c)
         {
             case 5:
             {
                 for (;;)
                 {
-                    bool _30_ladder_break = false;
+                    bool _25_ladder_break = false;
                     switch (o.d)
                     {
                         case 10:
                         case 20:
                         {
                             c += c;
-                            _30_ladder_break = true;
+                            _25_ladder_break = true;
                             break;
                         }
                         default:
@@ -36,7 +36,7 @@ void main()
                             continue;
                         }
                     }
-                    if (_30_ladder_break)
+                    if (_25_ladder_break)
                     {
                         break;
                     }
@@ -48,11 +48,11 @@ void main()
             case 3:
             {
                 a = c;
-                _22_ladder_break = true;
+                _17_ladder_break = true;
                 break;
             }
         }
-        if (_22_ladder_break)
+        if (_17_ladder_break)
         {
             break;
         }

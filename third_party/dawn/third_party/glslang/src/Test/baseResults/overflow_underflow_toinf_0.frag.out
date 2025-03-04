@@ -1,0 +1,75 @@
+overflow_underflow_toinf_0.frag
+Shader version: 320
+0:? Sequence
+0:4  Function Definition: main( ( global void)
+0:4    Function Parameters: 
+0:9    Sequence
+0:9      Sequence
+0:9        move second child to first child ( temp highp float)
+0:9          'correct' ( temp highp float)
+0:9          Constant:
+0:9            1.000000
+0:10      Sequence
+0:10        move second child to first child ( temp highp float)
+0:10          'correct1' ( temp highp float)
+0:10          Constant:
+0:10            1.000000
+0:11      Sequence
+0:11        move second child to first child ( temp highp 4-component vector of float)
+0:11          'foo' ( temp highp 4-component vector of float)
+0:11          Constant:
+0:11            0.000000
+0:11            -0.000000
+0:11            +1.#INF
+0:11            -1.#INF
+0:12      move second child to first child ( temp highp 4-component vector of float)
+0:12        'my_FragColor' ( out highp 4-component vector of float)
+0:12        Construct vec4 ( temp highp 4-component vector of float)
+0:12          Constant:
+0:12            0.000000
+0:12          'correct' ( temp highp float)
+0:12          'correct1' ( temp highp float)
+0:12          Constant:
+0:12            1.000000
+0:?   Linker Objects
+0:?     'my_FragColor' ( out highp 4-component vector of float)
+
+
+Linked fragment stage:
+
+
+Shader version: 320
+0:? Sequence
+0:4  Function Definition: main( ( global void)
+0:4    Function Parameters: 
+0:9    Sequence
+0:9      Sequence
+0:9        move second child to first child ( temp highp float)
+0:9          'correct' ( temp highp float)
+0:9          Constant:
+0:9            1.000000
+0:10      Sequence
+0:10        move second child to first child ( temp highp float)
+0:10          'correct1' ( temp highp float)
+0:10          Constant:
+0:10            1.000000
+0:11      Sequence
+0:11        move second child to first child ( temp highp 4-component vector of float)
+0:11          'foo' ( temp highp 4-component vector of float)
+0:11          Constant:
+0:11            0.000000
+0:11            -0.000000
+0:11            +1.#INF
+0:11            -1.#INF
+0:12      move second child to first child ( temp highp 4-component vector of float)
+0:12        'my_FragColor' ( out highp 4-component vector of float)
+0:12        Construct vec4 ( temp highp 4-component vector of float)
+0:12          Constant:
+0:12            0.000000
+0:12          'correct' ( temp highp float)
+0:12          'correct1' ( temp highp float)
+0:12          Constant:
+0:12            1.000000
+0:?   Linker Objects
+0:?     'my_FragColor' ( out highp 4-component vector of float)
+

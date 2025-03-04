@@ -1,0 +1,55 @@
+# Top level owners, if you can, try to look at more targeted OWNERS
+cwallez@chromium.org
+dneto@google.com
+dsinclair@chromium.org
+geofflang@chromium.org
+jiawei.shao@intel.com
+jrprice@google.com
+
+per-file DEPS=*
+per-file .gitignore=*
+per-file README.md=file://docs/OWNERS
+
+
+# Allows approving build rule changes, without giving owners for
+# everything
+per-file CMake*=rharrison@chromium.org,amaiorano@google.com
+per-file BUILD.*=rharrison@chromium.org,amaiorano@google.com
+
+# gitlinks that anyone can update just like DEPS
+per-file build=*
+per-file buildtools=*
+per-file testing=*
+per-file third_party/abseil-cpp=*
+per-file third_party/angle=*
+per-file third_party/catapult=*
+per-file third_party/clang-format/script=*
+per-file third_party/depot_tools=*
+per-file third_party/dxc=*
+per-file third_party/dxheaders=*
+per-file third_party/glfw=*
+per-file third_party/glslang/src=*
+per-file third_party/google_benchmark/src=*
+per-file third_party/googletest=*
+per-file third_party/gpuweb=*
+per-file third_party/jinja2=*
+per-file third_party/libc++/src=*
+per-file third_party/libc++abi/src=*
+per-file third_party/markupsafe=*
+per-file third_party/node-addon-api=*
+per-file third_party/node-api-headers=*
+per-file third_party/protobuf=*
+per-file third_party/spirv-cross/src=*
+per-file third_party/spirv-headers/src=*
+per-file third_party/spirv-tools/src=*
+per-file third_party/swiftshader=*
+per-file third_party/vulkan_memory_allocator=*
+per-file third_party/vulkan-deps=*
+per-file third_party/vulkan-headers/src=*
+per-file third_party/vulkan-loader/src=*
+per-file third_party/vulkan-tools/src=*
+per-file third_party/vulkan-utility-libraries/src=*
+per-file third_party/vulkan-validation-layers/src=*
+per-file third_party/webgpu-cts=*
+per-file third_party/zlib=*
+per-file tools/clang=*

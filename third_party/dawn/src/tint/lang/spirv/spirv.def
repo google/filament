@@ -1,0 +1,412 @@
+// Copyright 2023 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+////////////////////////////////////////////////////////////////////////////////
+// Spirv builtin definition file                                              //
+//                                                                            //
+// After modifying this file, run:                                            //
+//    tools/run gen                                                           //
+// from the Dawn source directory.                                            //
+//                                                                            //
+// See docs/tint/intrinsic_definition_files.md for syntax                     //
+////////////////////////////////////////////////////////////////////////////////
+
+import "src/tint/lang/core/address_space.def"
+import "src/tint/lang/core/access.def"
+import "src/tint/lang/core/subgroup_matrix_kind.def"
+import "src/tint/lang/core/texel_format.def"
+
+type bool
+type f32
+type f16
+type i32
+type u32
+type vec2<T>
+type vec3<T>
+type vec4<T>
+type mat2x2<T>
+type mat2x3<T>
+type mat2x4<T>
+type mat3x2<T>
+type mat3x3<T>
+type mat3x4<T>
+type mat4x2<T>
+type mat4x3<T>
+type mat4x4<T>
+@display("vec{N}<{T}>")     type vec<N: num, T>
+@display("mat{N}x{M}<{T}>") type mat<N: num, M: num, T>
+type atomic<T>
+type sampler
+type sampler_comparison
+type texture_1d<T>
+type texture_2d<T>
+type texture_2d_array<T>
+type texture_3d<T>
+type texture_cube<T>
+type texture_cube_array<T>
+type texture_multisampled_2d<T>
+type texture_depth_2d
+type texture_depth_2d_array
+type texture_depth_cube
+type texture_depth_cube_array
+type texture_depth_multisampled_2d
+type texture_storage_1d<F: texel_format, A: access>
+type texture_storage_2d<F: texel_format, A: access>
+type texture_storage_2d_array<F: texel_format, A: access>
+type texture_storage_3d<F: texel_format, A: access>
+type ptr<S: address_space, T, A: access>
+type input_attachment<T>
+
+type struct_with_runtime_array
+type sampled_image<T>
+
+type subgroup_matrix<S: subgroup_matrix_kind, T, C: num, R: num>
+
+match f32_f16: f32 | f16
+match iu32: i32 | u32
+match fiu32: f32 | i32 | u32
+match fiu32_f16: f32 | i32 | u32 | f16
+match scalar: f32 | f16 | i32 | u32 | bool
+
+match read_write: access.read_write
+match storage
+  : address_space.storage
+match workgroup_or_storage
+  : address_space.workgroup
+  | address_space.storage
+
+match function_private_workgroup_storage
+  : address_space.function
+  | address_space.private
+  | address_space.workgroup
+  | address_space.storage
+
+match samplers
+  : sampler
+  | sampler_comparison
+
+match f32_texel_format
+  : texel_format.r8unorm
+  | texel_format.bgra8unorm
+  | texel_format.rgba8unorm
+  | texel_format.rgba8snorm
+  | texel_format.rgba16float
+  | texel_format.r32float
+  | texel_format.rg32float
+  | texel_format.rgba32float
+match i32_texel_format
+  : texel_format.rgba8sint
+  | texel_format.rgba16sint
+  | texel_format.r32sint
+  | texel_format.rg32sint
+  | texel_format.rgba32sint
+match u32_texel_format
+  : texel_format.rgba8uint
+  | texel_format.rgba16uint
+  | texel_format.r32uint
+  | texel_format.rg32uint
+  | texel_format.rgba32uint
+
+match readable
+  : access.read
+  | access.read_write
+match writable
+  : access.write
+  | access.read_write
+
+match subgroup_matrix_elements: f32 | f16 | u32 | i32
+match subgroup_matrix_kind_left : subgroup_matrix_kind.left
+match subgroup_matrix_kind_right : subgroup_matrix_kind.right
+match subgroup_matrix_kind_result : subgroup_matrix_kind.result
+
+////////////////////////////////////////////////////////////////////////////////
+// Builtin Functions                                                          //
+////////////////////////////////////////////////////////////////////////////////
+implicit(I: u32, A: access) fn array_length(ptr<storage, struct_with_runtime_array, A>, I) -> u32
+
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_and(ptr<S, atomic<T>, read_write>, U, U, T) -> T
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_compare_exchange(ptr<S, atomic<T>, read_write>, U, U, U, T, T) -> T
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_exchange(ptr<S, atomic<T>, read_write>, U, U, T) -> T
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_iadd(ptr<S, atomic<T>, read_write>, U, U, T) -> T
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_isub(ptr<S, atomic<T>, read_write>, U, U, T) -> T
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_load(ptr<S, atomic<T>, read_write>, U, U) -> T
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_or(ptr<S, atomic<T>, read_write>, U, U, T) -> T
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_smax(ptr<S, atomic<T>, read_write>, U, U, T) -> T
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_smin(ptr<S, atomic<T>, read_write>, U, U, T) -> T
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_store(ptr<S, atomic<T>, read_write>, U, U, T)
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_umax(ptr<S, atomic<T>, read_write>, U, U, T) -> T
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_umin(ptr<S, atomic<T>, read_write>, U, U, T) -> T
+@stage("fragment", "compute") implicit(T: iu32, U: u32, S: workgroup_or_storage) fn atomic_xor(ptr<S, atomic<T>, read_write>, U, U, T) -> T
+
+implicit(N: num, T: f32_f16) fn dot(vec<N, T>, vec<N, T>) -> T
+
+implicit(A: f32, B: iu32) fn image_dref_gather(sampled_image<texture_depth_2d>, vec2<f32>, A, B) -> vec4<f32>
+implicit(A: f32, B: iu32, C: iu32) fn image_dref_gather(sampled_image<texture_depth_2d>, vec2<f32>, A, B, vec2<C>) -> vec4<f32>
+implicit(A: f32, B: iu32) fn image_dref_gather(sampled_image<texture_depth_2d_array>, vec3<f32>, A, B) -> vec4<f32>
+implicit(A: f32, B: iu32, C: iu32) fn image_dref_gather(sampled_image<texture_depth_2d_array>, vec3<f32>, A, B, vec2<C>) -> vec4<f32>
+implicit(A: f32, B: iu32) fn image_dref_gather(sampled_image<texture_depth_cube>, vec3<f32>, A, B) -> vec4<f32>
+implicit(A: f32, B: iu32) fn image_dref_gather(sampled_image<texture_depth_cube_array>, vec4<f32>, A, B) -> vec4<f32>
+
+implicit(T: fiu32, C: iu32, I: iu32, S: iu32) fn image_fetch(texture_1d<T>, C, I, S) -> vec4<T>
+implicit(T: fiu32, C: iu32, I: iu32, S: iu32) fn image_fetch(texture_2d<T>, vec2<C>, I, S) -> vec4<T>
+implicit(T: fiu32, C: iu32, I: iu32, S: iu32) fn image_fetch(texture_2d_array<T>, vec3<C>, I, S) -> vec4<T>
+implicit(T: fiu32, C: iu32, I: iu32, S: iu32) fn image_fetch(texture_3d<T>, vec3<C>, I, S) -> vec4<T>
+implicit(T: fiu32, C: iu32, I: iu32, S: iu32) fn image_fetch(texture_multisampled_2d<T>, vec2<C>, I, S) -> vec4<T>
+implicit(I: iu32, C: iu32, S: iu32) fn image_fetch(texture_depth_2d, vec2<C>, I, S) -> vec4<f32>
+implicit(I: iu32, C: iu32, S: iu32) fn image_fetch(texture_depth_2d_array, vec3<C>, I, S) -> vec4<f32>
+implicit(I: iu32, C: iu32, S: iu32) fn image_fetch(texture_depth_multisampled_2d, vec2<C>, I, S) -> vec4<f32>
+
+implicit(T: fiu32, A: iu32, B: iu32) fn image_gather(sampled_image<texture_1d<T> >, vec2<f32>, A, B) -> vec4<T>
+implicit(T: fiu32, A: iu32, B: iu32) fn image_gather(sampled_image<texture_2d<T> >, vec2<f32>, A, B) -> vec4<T>
+implicit(T: fiu32, A: iu32, B: iu32) fn image_gather(sampled_image<texture_2d<T> >, vec2<f32>, A, B, vec2<i32>) -> vec4<T>
+implicit(T: fiu32, A: iu32, B: iu32) fn image_gather(sampled_image<texture_2d_array<T> >, vec3<f32>, A, B) -> vec4<T>
+implicit(T: fiu32, A: iu32, B: iu32, C: iu32) fn image_gather(sampled_image<texture_2d_array<T> >, vec3<f32>, A, B, vec2<C>) -> vec4<T>
+implicit(T: fiu32, A: iu32, B: iu32) fn image_gather(sampled_image<texture_3d<T> >, vec2<f32>, A, B) -> vec4<T>
+implicit(T: fiu32, A: iu32, B: iu32) fn image_gather(sampled_image<texture_cube<T> >, vec3<f32>, A, B) -> vec4<T>
+implicit(T: fiu32, A: iu32, B: iu32) fn image_gather(sampled_image<texture_cube_array<T> >, vec4<f32>, A, B) -> vec4<T>
+implicit(A: iu32, B: iu32) fn image_gather(sampled_image<texture_depth_2d>, vec2<f32>, A, B) -> vec4<f32>
+implicit(A: iu32, B: iu32, C: iu32) fn image_gather(sampled_image<texture_depth_2d>, vec2<f32>, A, B, vec2<C>) -> vec4<f32>
+implicit(A: iu32, B: iu32) fn image_gather(sampled_image<texture_depth_2d_array>, vec3<f32>, A, B) -> vec4<f32>
+implicit(A: iu32, B: iu32, C: iu32) fn image_gather(sampled_image<texture_depth_2d_array>, vec3<f32>, A, B, vec2<C>) -> vec4<f32>
+implicit(A: iu32, B: iu32) fn image_gather(sampled_image<texture_depth_cube>, vec3<f32>, A, B) -> vec4<f32>
+implicit(A: iu32, B: iu32) fn image_gather(sampled_image<texture_depth_cube_array>, vec4<f32>, A, B) -> vec4<f32>
+
+implicit(T: fiu32) fn image_query_size(texture_1d<T>) -> u32
+implicit(T: fiu32) fn image_query_size(texture_2d<T>) -> vec2<u32>
+implicit(T: fiu32) fn image_query_size(texture_2d_array<T>) -> vec3<u32>
+implicit(T: fiu32) fn image_query_size(texture_3d<T>) -> vec3<u32>
+implicit(T: fiu32) fn image_query_size(texture_cube<T>) -> vec2<u32>
+implicit(T: fiu32) fn image_query_size(texture_cube_array<T>) -> vec3<u32>
+implicit(T: fiu32) fn image_query_size(texture_multisampled_2d<T>) -> vec2<u32>
+fn image_query_size(texture_depth_2d) -> vec2<u32>
+fn image_query_size(texture_depth_2d_array) -> vec3<u32>
+fn image_query_size(texture_depth_cube) -> vec2<u32>
+fn image_query_size(texture_depth_cube_array) -> vec3<u32>
+fn image_query_size(texture_depth_multisampled_2d) -> vec2<u32>
+implicit(F: texel_format, A: access) fn image_query_size(texture_storage_1d<F, A>) -> u32
+implicit(F: texel_format, A: access) fn image_query_size(texture_storage_2d<F, A>) -> vec2<u32>
+implicit(F: texel_format, A: access) fn image_query_size(texture_storage_2d_array<F, A>) -> vec3<u32>
+implicit(F: texel_format, A: access) fn image_query_size(texture_storage_3d<F, A>) -> vec3<u32>
+
+implicit(T: fiu32, A: iu32) fn image_query_size_lod(texture_1d<T>, A) -> u32
+implicit(T: fiu32, A: iu32) fn image_query_size_lod(texture_2d<T>, A) -> vec2<u32>
+implicit(T: fiu32, A: iu32) fn image_query_size_lod(texture_2d_array<T>, A) -> vec3<u32>
+implicit(T: fiu32, A: iu32) fn image_query_size_lod(texture_3d<T>, A) -> vec3<u32>
+implicit(T: fiu32, A: iu32) fn image_query_size_lod(texture_cube<T>, A) -> vec2<u32>
+implicit(T: fiu32, A: iu32) fn image_query_size_lod(texture_cube_array<T>, A) -> vec3<u32>
+implicit(A: iu32) fn image_query_size_lod(texture_depth_2d, A) -> vec2<u32>
+implicit(A: iu32) fn image_query_size_lod(texture_depth_2d_array, A) -> vec3<u32>
+implicit(A: iu32) fn image_query_size_lod(texture_depth_cube, A) -> vec2<u32>
+implicit(A: iu32) fn image_query_size_lod(texture_depth_cube_array, A) -> vec3<u32>
+
+implicit(F: f32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_1d<F, A>, C, S) -> vec4<f32>
+implicit(F: i32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_1d<F, A>, C, S) -> vec4<i32>
+implicit(F: u32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_1d<F, A>, C, S) -> vec4<u32>
+implicit(F: f32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_2d<F, A>, vec2<C>, S) -> vec4<f32>
+implicit(F: i32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_2d<F, A>, vec2<C>, S) -> vec4<i32>
+implicit(F: u32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_2d<F, A>, vec2<C>, S) -> vec4<u32>
+implicit(F: f32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_2d_array<F, A>, vec3<C>, S) -> vec4<f32>
+implicit(F: i32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_2d_array<F, A>, vec3<C>, S) -> vec4<i32>
+implicit(F: u32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_2d_array<F, A>, vec3<C>, S) -> vec4<u32>
+implicit(F: f32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_3d<F, A>, vec3<C>, S) -> vec4<f32>
+implicit(F: i32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_3d<F, A>, vec3<C>, S) -> vec4<i32>
+implicit(F: u32_texel_format, A: readable, C: iu32, S: iu32) fn image_read(texture_storage_3d<F, A>, vec3<C>, S) -> vec4<u32>
+implicit(T: fiu32, C: iu32) fn image_read(input_attachment: input_attachment<T>, vec2<C>) -> vec4<T>
+
+implicit(T: fiu32, C: iu32) fn image_sample_implicit_lod(sampled_image<texture_1d<T> >, f32, C) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_implicit_lod(sampled_image<texture_2d<T> >, vec2<f32>, C) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_implicit_lod(sampled_image<texture_2d<T> >, vec2<f32>, C, f32) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_implicit_lod(sampled_image<texture_2d<T> >, vec2<f32>, C, f32, vec2<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_implicit_lod(sampled_image<texture_2d<T> >, vec2<f32>, C, vec2<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_implicit_lod(sampled_image<texture_2d_array<T> >, vec3<f32>, C) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_implicit_lod(sampled_image<texture_2d_array<T> >, vec3<f32>, C, f32) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_implicit_lod(sampled_image<texture_2d_array<T> >, vec3<f32>, C, vec2<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_implicit_lod(sampled_image<texture_2d_array<T> >, vec3<f32>, C, f32, vec2<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_implicit_lod(sampled_image<texture_3d<T> >, vec3<f32>, C) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_implicit_lod(sampled_image<texture_3d<T> >, vec3<f32>, C, f32) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_implicit_lod(sampled_image<texture_3d<T> >, vec3<f32>, C, f32, vec3<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_implicit_lod(sampled_image<texture_3d<T> >, vec3<f32>, C, vec3<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_implicit_lod(sampled_image<texture_cube<T> >, vec3<f32>, C) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_implicit_lod(sampled_image<texture_cube<T> >, vec3<f32>, C, f32) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_implicit_lod(sampled_image<texture_cube_array<T> >, vec4<f32>, C) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_implicit_lod(sampled_image<texture_cube_array<T> >, vec4<f32>, C, f32) -> vec4<f32>
+implicit(C: iu32) fn image_sample_implicit_lod(sampled_image<texture_depth_2d>, vec2<f32>, C) -> vec4<f32>
+implicit(C: iu32, D: iu32) fn image_sample_implicit_lod(sampled_image<texture_depth_2d>, vec2<f32>, C, vec2<D>) -> vec4<f32>
+implicit(C: iu32) fn image_sample_implicit_lod(sampled_image<texture_depth_cube>, vec3<f32>, C) -> vec4<f32>
+implicit(C: iu32) fn image_sample_implicit_lod(sampled_image<texture_depth_2d_array>, vec3<f32>, C) -> vec4<f32>
+implicit(C: iu32, D: iu32) fn image_sample_implicit_lod(sampled_image<texture_depth_2d_array>, vec3<f32>, C, vec2<D>) -> vec4<f32>
+implicit(C: iu32) fn image_sample_implicit_lod(sampled_image<texture_depth_cube_array>, vec4<f32>, C) -> vec4<f32>
+
+implicit(T: fiu32, C: iu32) fn image_sample_explicit_lod(sampled_image<texture_2d<T> >, vec2<f32>, C, f32) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_explicit_lod(sampled_image<texture_2d<T> >, vec2<f32>, C, vec2<f32>, vec2<f32>) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_explicit_lod(sampled_image<texture_2d<T> >, vec2<f32>, C, f32, vec2<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_explicit_lod(sampled_image<texture_2d<T> >, vec2<f32>, C, vec2<f32>, vec2<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_explicit_lod(sampled_image<texture_2d<T> >, vec2<f32>, C, vec2<f32>, vec2<f32>, vec2<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_explicit_lod(sampled_image<texture_2d_array<T> >, vec3<f32>, C, f32) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_explicit_lod(sampled_image<texture_2d_array<T> >, vec3<f32>, C, vec2<f32>, vec2<f32>) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_explicit_lod(sampled_image<texture_2d_array<T> >, vec3<f32>, C, f32, vec2<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_explicit_lod(sampled_image<texture_2d_array<T> >, vec3<f32>, C, vec2<f32>, vec2<f32>, vec2<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_explicit_lod(sampled_image<texture_3d<T> >, vec3<f32>, C, f32) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_explicit_lod(sampled_image<texture_3d<T> >, vec3<f32>, C, vec3<f32>, vec3<f32>) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_explicit_lod(sampled_image<texture_3d<T> >, vec3<f32>, C, f32, vec3<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32, D: iu32) fn image_sample_explicit_lod(sampled_image<texture_3d<T> >, vec3<f32>, C, vec3<f32>, vec3<f32>, vec3<D>) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_explicit_lod(sampled_image<texture_cube<T> >, vec3<f32>, C, f32) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_explicit_lod(sampled_image<texture_cube<T> >, vec3<f32>, C, vec3<f32>, vec3<f32>) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_explicit_lod(sampled_image<texture_cube_array<T> >, vec4<f32>, C, f32) -> vec4<f32>
+implicit(T: fiu32, C: iu32) fn image_sample_explicit_lod(sampled_image<texture_cube_array<T> >, vec4<f32>, C, vec3<f32>, vec3<f32>) -> vec4<f32>
+implicit(C: iu32) fn image_sample_explicit_lod(sampled_image<texture_depth_2d>, vec2<f32>, C, f32) -> vec4<f32>
+implicit(C: iu32, D: iu32) fn image_sample_explicit_lod(sampled_image<texture_depth_2d>, vec2<f32>, C, f32, vec2<D>) -> vec4<f32>
+implicit(C: iu32) fn image_sample_explicit_lod(sampled_image<texture_depth_2d_array>, vec3<f32>, C, f32) -> vec4<f32>
+implicit(C: iu32, D: iu32) fn image_sample_explicit_lod(sampled_image<texture_depth_2d_array>, vec3<f32>, C, f32, vec2<D>) -> vec4<f32>
+implicit(C: iu32) fn image_sample_explicit_lod(sampled_image<texture_depth_cube>, vec3<f32>, C, f32) -> vec4<f32>
+implicit(C: iu32) fn image_sample_explicit_lod(sampled_image<texture_depth_cube_array>, vec4<f32>, C, f32) -> vec4<f32>
+
+implicit(C: iu32) fn image_sample_dref_implicit_lod(sampled_image<texture_depth_2d>, vec2<f32>, f32, C) -> f32
+implicit(C: iu32, D: iu32) fn image_sample_dref_implicit_lod(sampled_image<texture_depth_2d>, vec2<f32>, f32, C, vec2<D>) -> f32
+implicit(C: iu32) fn image_sample_dref_implicit_lod(sampled_image<texture_depth_2d_array>, vec3<f32>, f32, C) -> f32
+implicit(C: iu32, D: iu32) fn image_sample_dref_implicit_lod(sampled_image<texture_depth_2d_array>, vec3<f32>, f32, C, vec2<D>) -> f32
+implicit(C: iu32) fn image_sample_dref_implicit_lod(sampled_image<texture_depth_cube>, vec3<f32>, f32, C) -> f32
+implicit(C: iu32) fn image_sample_dref_implicit_lod(sampled_image<texture_depth_cube_array>, vec4<f32>, f32, C) -> f32
+
+implicit(C: iu32) fn image_sample_dref_explicit_lod(sampled_image<texture_depth_2d>, vec2<f32>, f32, C, f32) -> f32
+implicit(C: iu32, D: iu32) fn image_sample_dref_explicit_lod(sampled_image<texture_depth_2d>, vec2<f32>, f32, C, f32, vec2<D>) -> f32
+implicit(C: iu32) fn image_sample_dref_explicit_lod(sampled_image<texture_depth_2d_array>, vec3<f32>, f32, C, f32) -> f32
+implicit(C: iu32, D: iu32) fn image_sample_dref_explicit_lod(sampled_image<texture_depth_2d_array>, vec3<f32>, f32, C, f32, vec2<D>) -> f32
+implicit(C: iu32) fn image_sample_dref_explicit_lod(sampled_image<texture_depth_cube>, vec3<f32>, f32, C, f32) -> f32
+implicit(C: iu32) fn image_sample_dref_explicit_lod(sampled_image<texture_depth_cube_array>, vec4<f32>, f32, C, f32) -> f32
+
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_1d<f32_texel_format, writable>, C, vec4<f32>, D)
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_1d<i32_texel_format, writable>, C, vec4<i32>, D)
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_1d<u32_texel_format, writable>, C, vec4<u32>, D)
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_2d<f32_texel_format, writable>, vec2<C>, vec4<f32>, D)
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_2d<i32_texel_format, writable>, vec2<C>, vec4<i32>, D)
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_2d<u32_texel_format, writable>, vec2<C>, vec4<u32>, D)
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_2d_array<f32_texel_format, writable>, vec3<C>, vec4<f32>, D)
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_2d_array<i32_texel_format, writable>, vec3<C>, vec4<i32>, D)
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_2d_array<u32_texel_format, writable>, vec3<C>, vec4<u32>, D)
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_3d<f32_texel_format, writable>, vec3<C>, vec4<f32>, D)
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_3d<i32_texel_format, writable>, vec3<C>, vec4<i32>, D)
+implicit(C: iu32, D: iu32) fn image_write(texture_storage_3d<u32_texel_format, writable>, vec3<C>, vec4<u32>, D)
+
+implicit(T: f32_f16, K: num, C: num, R: num) fn matrix_times_matrix(mat<K, R, T>, mat<C, K, T>) -> mat<C, R, T>
+implicit(T: f32_f16, N: num, M: num) fn matrix_times_scalar(mat<N, M, T>, T) -> mat<N, M, T>
+implicit(T: f32_f16, N: num, M: num) fn matrix_times_vector(mat<N, M, T>, vec<N, T>) -> vec<M, T>
+
+implicit(T: fiu32, S: samplers) fn sampled_image(texture_1d<T>, S) -> sampled_image<texture_1d<T> >
+implicit(T: fiu32, S: samplers) fn sampled_image(texture_2d<T>, S) -> sampled_image<texture_2d<T> >
+implicit(T: fiu32, S: samplers) fn sampled_image(texture_2d_array<T>, S) -> sampled_image<texture_2d_array<T> >
+implicit(T: fiu32, S: samplers) fn sampled_image(texture_3d<T>, S) -> sampled_image<texture_3d<T> >
+implicit(T: fiu32, S: samplers) fn sampled_image(texture_cube<T>, S) -> sampled_image<texture_cube<T> >
+implicit(T: fiu32, S: samplers) fn sampled_image(texture_cube_array<T>, S) -> sampled_image<texture_cube_array<T> >
+implicit(S: samplers) fn sampled_image(texture_depth_2d, S) -> sampled_image<texture_depth_2d>
+implicit(S: samplers) fn sampled_image(texture_depth_2d_array, S) -> sampled_image<texture_depth_2d_array>
+implicit(S: samplers) fn sampled_image(texture_depth_cube, S) -> sampled_image<texture_depth_cube>
+implicit(S: samplers) fn sampled_image(texture_depth_cube_array, S) -> sampled_image<texture_depth_cube_array>
+
+implicit(T: scalar) fn select(bool, T, T) -> T
+implicit(N: num, T: scalar) fn select(vec<N, bool>, vec<N, T>, vec<N, T>) -> vec<N, T>
+
+implicit(T: f32_f16, N: num, M: num) fn vector_times_matrix(vec<N, T>, mat<M, N, T>) -> vec<M, T>
+implicit(T: f32_f16, N: num) fn vector_times_scalar(vec<N, T>, T) -> vec<N, T>
+
+implicit(T: f32_f16) fn normalize(T) -> T
+implicit(N: num, T: f32_f16) fn normalize(vec<N, T>) -> vec<N, T>
+
+implicit(T: f32_f16) fn inverse(mat2x2<T>) -> mat2x2<T>
+implicit(T: f32_f16) fn inverse(mat3x3<T>) -> mat3x3<T>
+implicit(T: f32_f16) fn inverse(mat4x4<T>) -> mat4x4<T>
+
+implicit(T: iu32) fn sign<R: iu32>(T) -> R
+implicit(T: iu32, N: num) fn sign<R: iu32>(vec<N, T>) -> vec<N, R>
+
+implicit(T: iu32) fn abs<R: iu32>(T) -> R
+implicit(T: iu32, N: num) fn abs<R: iu32>(vec<N, T>) -> vec<N, R>
+
+implicit(T: iu32, U: iu32) fn smax<R: iu32>(T, U) -> R
+implicit(T: iu32, U: iu32, N: num) fn smax<R: iu32>(vec<N, T>, vec<N, U>) -> vec<N, R>
+implicit(T: iu32, U: iu32) fn smin<R: iu32>(T, U) -> R
+implicit(T: iu32, U: iu32, N: num) fn smin<R: iu32>(vec<N, T>, vec<N, U>) -> vec<N, R>
+implicit(T: iu32, U: iu32, V: iu32) fn sclamp<R: iu32>(T, U, V) -> R
+implicit(T: iu32, U: iu32, V: iu32, N: num) fn sclamp<R: iu32>(vec<N, T>, vec<N, U>,  vec<N, V>) -> vec<N, R>
+
+implicit(T: iu32, U: iu32) fn umax<R: iu32>(T, U) -> R
+implicit(T: iu32, U: iu32, N: num) fn umax<R: iu32>(vec<N, T>, vec<N, U>) -> vec<N, R>
+implicit(T: iu32, U: iu32) fn umin<R: iu32>(T, U) -> R
+implicit(T: iu32, U: iu32, N: num) fn umin<R: iu32>(vec<N, T>, vec<N, U>) -> vec<N, R>
+implicit(T: iu32, U: iu32, V: iu32) fn uclamp<R: iu32>(T, U, V) -> R
+implicit(T: iu32, U: iu32, V: iu32, N: num) fn uclamp<R: iu32>(vec<N, T>, vec<N, U>,  vec<N, V>) -> vec<N, R>
+
+implicit(T: iu32) fn findILsb<R: iu32>(T) -> R
+implicit(T: iu32, N: num) fn findILsb<R: iu32>(vec<N, T>) -> vec<N, R>
+implicit(T: iu32) fn findSMsb<R: iu32>(T) -> R
+implicit(T: iu32, N: num) fn findSMsb<R: iu32>(vec<N, T>) -> vec<N, R>
+implicit(T: iu32) fn findUMsb<R: iu32>(T) -> R
+implicit(T: iu32, N: num) fn findUMsb<R: iu32>(vec<N, T>) -> vec<N, R>
+
+implicit(T: f32_f16) fn refract(T, T, T) -> T
+implicit(T: f32_f16, N: num) fn refract(vec<N, T>, vec<N, T>, T) -> vec<N, T>
+implicit(T: f32_f16) fn reflect(T, T) -> T
+implicit(T: f32_f16, N: num) fn reflect(vec<N, T>, vec<N, T>) -> vec<N, T>
+
+implicit(T: f32_f16) fn faceForward(T, T, T) -> T
+implicit(T: f32_f16, N: num) fn faceForward(vec<N, T>, vec<N, T>, vec<N, T>) -> vec<N, T>
+
+implicit(T: f32_f16, U: iu32) fn ldexp(T, U) -> T
+implicit(N: num, T: f32_f16, U: iu32) fn ldexp(vec<N, T>, vec<N, U>) -> vec<N, T>
+
+implicit(T: f32_f16, S: function_private_workgroup_storage) fn modf(x: T, i: ptr<S, T, writable>) -> T
+implicit(T: f32_f16, N: num, S: function_private_workgroup_storage) fn modf(x: vec<N, T>,
+                                                                            i: ptr<S, vec<N, T>, writable>) -> vec<N, T>
+
+implicit(T: f32_f16,
+         R: iu32,
+         S: function_private_workgroup_storage) fn frexp(x: T, i: ptr<S, R, writable>) -> T
+implicit(T: f32_f16,
+         R: iu32,
+         N: num,
+         S: function_private_workgroup_storage) fn frexp(x: vec<N, T>, i: ptr<S, vec<N, R>, writable>) -> vec<N, T>
+
+////////////////////////////////////////////////////////////////////////////////
+// SPV_KHR_integer_dot_product instructions
+////////////////////////////////////////////////////////////////////////////////
+fn sdot(u32, u32, u32) -> i32
+fn udot(u32, u32, u32) -> u32
+
+////////////////////////////////////////////////////////////////////////////////
+// SPV_KHR_cooperative_matrix instructions
+////////////////////////////////////////////////////////////////////////////////
+@stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num)
+  fn cooperative_matrix_load<T: subgroup_matrix<K, S, C, R> >(
+    ptr<workgroup_or_storage, S, readable>, u32, u32, u32) -> T
+@stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num) fn cooperative_matrix_store(
+  ptr<workgroup_or_storage, S, writable>, subgroup_matrix<K, S, C, R>, u32, u32, u32)
+@must_use @stage("compute") implicit(S: subgroup_matrix_elements, C: num, R: num, K: num) fn cooperative_matrix_mul_add(
+  subgroup_matrix<subgroup_matrix_kind_left, S, K, R>,
+  subgroup_matrix<subgroup_matrix_kind_right, S, C, K>,
+  subgroup_matrix<subgroup_matrix_kind_result, S, C, R>)
+  -> subgroup_matrix<subgroup_matrix_kind_result, S, C, R>
+

@@ -114,7 +114,10 @@ MetalDriver::MetalDriver(
     : mPlatform(*platform),
       mContext(new MetalContext),
       mHandleAllocator(
-              "Handles", driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck),
+                "Handles",
+                driverConfig.handleArenaSize,
+                driverConfig.disableHandleUseAfterFreeCheck,
+                driverConfig.disableHeapHandleTags),
       mStereoscopicType(driverConfig.stereoscopicType) {
     mContext->driver = this;
 

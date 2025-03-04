@@ -8,9 +8,9 @@ struct SPIRV_Cross_Input
 
 void comp_main()
 {
-    uint _24 = gl_GlobalInvocationID.z;
+    uint _18 = gl_GlobalInvocationID.z;
     uint _25;
-    ssbos[NonUniformResourceIndex(_24)].InterlockedAdd(0, 1u, _25);
+    ssbos[NonUniformResourceIndex(_18)].InterlockedAdd(0, 1u, _25);
 }
 
 [numthreads(1, 1, 1)]

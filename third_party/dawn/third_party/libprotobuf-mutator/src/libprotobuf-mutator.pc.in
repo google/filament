@@ -1,0 +1,9 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=${prefix}/lib
+includedir=${prefix}/include/libprotobuf-mutator
+
+Name: libprotobuf-mutator
+Description: randomly mutate protobuffers for fuzzing
+Version: 0
+Cflags: -I${includedir} -I${includedir}/src
+Libs: -L${libdir} -lprotobuf-mutator-libfuzzer -lprotobuf-mutator

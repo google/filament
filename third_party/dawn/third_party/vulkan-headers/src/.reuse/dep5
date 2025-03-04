@@ -1,0 +1,15 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Vulkan-Headers
+Source: https://github.com/KhronosGroup/Vulkan-Headers
+
+Files: registry/profiles/VP_KHR_roadmap.json
+Copyright: 2022-2024 The Khronos Group Inc.
+License: Apache-2.0
+
+Files: registry/validusage.json
+Copyright: 2018-2024 The Khronos Group Inc.
+License: Apache-2.0
+
+Files: .github/ISSUE_TEMPLATE/bug_report.md .github/pull_request_template.md
+Copyright: 2022-2024 The Khronos Group Inc.
+License: Apache-2.0

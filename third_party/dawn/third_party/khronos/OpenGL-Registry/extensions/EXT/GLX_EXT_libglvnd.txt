@@ -1,0 +1,186 @@
+Name
+
+    EXT_libglvnd
+
+Name Strings
+
+    GLX_EXT_libglvnd
+
+Contact
+
+    Kyle Brenneman, NVIDIA, kbrenneman at nvidia.com
+
+Contributors
+
+    Kyle Brenneman
+    Adam Jackson
+    Andy Ritger
+    Robert Morell
+    Arthur Huillet
+    Martin Peres
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: March 8, 2016
+    Revision: 1
+
+Number
+
+    OpenGL Extension #482
+
+Dependencies
+
+    GLX version 1.3 is required.
+
+    This specification is written against the wording of the GLX 1.4
+    Specification.
+
+Overview
+
+    This extension allows the vendor-neutral GLX client library,
+    libglvnd, to determine which vendor-specific driver is needed to
+    support a given GLX drawable or X11 screen.
+
+    This GLX extension is not intended to be used directly by
+    applications.  Instead, it is intended to be used by the GLX client
+    library.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Types
+
+    None
+
+New Tokens
+
+    Accepted by the <name> parameter of glXQueryServerString:
+
+        GLX_VENDOR_NAMES_EXT    0x20F6
+
+Additions to Chapter 3 of the GLX 1.4 Specification
+(Functions and Errors)
+
+    [Modify Section 3.3.2, GLX Versioning]
+
+    [Replace the 2nd sentence of the 5th paragraph with the following]
+
+    "The possible values for <name> and the format of the strings is the
+    same as for glXGetClientString. <name> may also be
+    GLX_VENDOR_NAMES_EXT."
+
+    [Add the following paragraph to the end of the section]
+
+    "If <name> is GLX_VENDOR_NAMES_EXT, then the returned string is a
+    space-separated sequence of vendor names. The names are in order of
+    preference, with the most preferred vendor first."
+
+
+    [Modify Section 3.3.6, Querying Attributes]
+
+    [Replace the 2nd sentence of the 1st paragraph with the following]
+
+    "<attribute> must be set to one of GLX_WIDTH, GLX_HEIGHT,
+    GLX_PRESERVED_CONTENTS, GLX_LARGEST_PBUFFER, GLX_FBCONFIG_ID, or
+    GLX_SCREEN"
+
+    [Add the following paragraph just before the last of the section]
+
+    "If <attribute> is GLX_SCREEN, then <value> will be the screen
+    number that the drawable was created on."
+
+GLX Protocol
+
+    This extension does not add any new requests. The
+    GLX_VENDOR_NAMES_EXT enum is used with the existing
+    glXQueryServerString request, and GLX_SCREEN is added to the
+    attributes in the glXGetDrawableAttributes reply.
+
+Errors
+
+    None
+
+Issues
+    1)  Should GLX_VENDOR_NAMES_EXT contain a single vendor name or a
+        list of names?
+
+        RESOLVED: Allow a list of names.
+
+        Allowing multiple names would allow for multiple client-side
+        vendor libraries that work with a single server-side driver.
+        With only a single name, selecting between multiple client
+        drivers would require some form of additional configuration.
+
+        For example, some vendors may have both a proprietary
+        client-side vendor library and an open source vendor library
+        that work with the same server-side driver. In that case, the
+        server would return the names for both of the vendor libraries.
+        The client would then try loading each vendor library as
+        described below in Issue 3.
+
+    2)  What order should the vendor names be returned in?
+
+        RESOLVED: If there are multiple vendor names, then the client
+        should use the names earlier in the list in preference to names
+        later in the list.
+
+        Specifically, the GLX client library will try to load and use
+        each vendor name, in the order that the server lists them. It
+        will stop when it finds the first vendor that works.
+
+    3)  How are vendor names defined and interpreted?
+
+        RESOLVED: The vendor names for a screen are defined based on the
+        server's GLX implementation. Typically, a server will simply
+        send the name of the driver that controls the screen.
+
+        The GLX client library is responsible for translating the vendor
+        name to a vendor library name. The details of the translation
+        are part of the interface between the vendor library and the GLX
+        client library, and so are not defined in this specification.
+
+    4)  Does the vendor name list need a new enum? Could it be appended
+        to the GLX_VENDOR string instead?
+
+        RESOLVED: Use a new enum. The vendor-specific part of the
+        GLX_VENDOR string is by definition arbitrary, even if in
+        practice every most if not all GLX implementatinos leave it
+        blank.
+
+        In addition, using a new enum also makes parsing the string much
+        easier. The client can simply pass the unmodified string to
+        strtok or strtok_r.
+
+    5)  Do we need to define the interaction with GLX_SGIX_pbuffer?
+
+        RESOLVED. No. Any client or server that implements this
+        extension will already support GLX 1.3, so using
+        glXQueryDrawable to look up a screen number is sufficient.
+
+        There's no harm if a server includes a GLX_SCREEN attribute in
+        its GetDrawableAttributesSGIX reply, so a server is still free
+        to use the same codepath for GetDrawableAttributesSGIX and
+        glXGetDrawableAttributes.
+
+    6)  Do we want to add GLX_SCREEN to the list of fbconfig attributes
+        as well?
+
+        RESOLVED: No. Adding GLX_SCREEN to glXGetFBConfigAttrib would be
+        redundant, because a client can already find the screen number
+        for a GLXFBConfig using glXGetVisualFromFBConfig and indirectly
+        using glXGetFBConfigs.
+
+Revision History
+
+    1. 8 March 2016
+        - Initial draft.
+

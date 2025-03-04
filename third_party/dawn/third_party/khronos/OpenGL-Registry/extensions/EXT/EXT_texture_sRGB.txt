@@ -1,0 +1,833 @@
+Name
+
+    EXT_texture_sRGB
+
+Name Strings
+
+    GL_EXT_texture_sRGB
+
+Contributors
+
+    Alain Bouchard, Matrox
+    Brian Paul, Tungsten Graphics
+    Daniel Vogel, Epic Games
+    Eric Werness, NVIDIA
+    Kiril Vidimce, Pixar
+    Mark J. Kilgard, NVIDIA
+    Pat Brown, NVIDIA
+    Yanjun Zhang, S3 Graphics
+    Jeremy Sandmel, Apple
+    Herb Kuta, Quantum3D
+     
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Status
+
+    Implemented by NVIDIA's Release 80 driver series for GeForce FX
+    (NV3x), GeForce 6 and 7 Series (NV4x and G7x), and Quadro FX (NV3xGL,
+    NV4xGL, G7xGL).
+
+Version
+
+    Date: January 24, 2007
+    Revision: 0.8
+
+Number
+
+    315
+
+Dependencies
+
+    OpenGL 1.1 required
+
+    EXT_texture_compression_s3tc interacts with this extension.
+
+    NV_texture_compression_vtc interacts with this extension.
+
+    This extension is written against the OpenGL 2.0 (September 7,
+    2004) specification.
+
+Overview
+
+    Conventional texture formats assume a linear color space.  So for
+    a conventional internal texture format such as GL_RGB8, the 256
+    discrete values for each 8-bit color component map linearly and
+    uniformly to the [0,1] range.
+
+    The sRGB color space is based on typical (non-linear) monitor
+    characteristics expected in a dimly lit office.  It has been
+    standardized by the International Electrotechnical Commission (IEC)
+    as IEC 61966-2-1. The sRGB color space roughly corresponds to 2.2
+    gamma correction.
+
+    This extension adds a few new uncompressed and compressed color
+    texture formats with sRGB color components.
+
+Issues
+
+    1)  What should this extension be called?
+
+        RESOLVED: EXT_texture_sRGB.
+
+        The "EXT_texture" part indicates the extension is in the texture
+        domain and "sRGB" indicates the extension is adding a set of
+        sRGB formats.  ARB_texture_float is similarly named where "_float"
+        indicates float texture formats are added by the extension.
+
+        The mixed-case spelling of sRGB is the established usage so
+        "_sRGB" is preferred to "_srgb".  The "s" stands for standard
+        (color space).
+
+        For token names, we use "SRGB" since token names are uniformly
+        capitalized.
+
+    2)  Should this extension mandate that sRGB conversion be performed
+        pre-filtering?
+
+        RESOLVED:  Post-filtering sRGB color conversion is allowed though
+        pre-filtering conversion is the preferred approach.
+
+        Ideally, sRGB conversion moves from the non-linear sRGB to the
+        linear RGB color space.  However, implementations should be
+        provided leeway as to whether sRGB conversion occurs before or
+        after texture filtering of RGB components.
+
+    3)  Should the alpha component of sRGB texture formats be
+        gamma-corrected?
+
+        RESOLVED:  No.  Alpha is correctly understood to be a weighting
+        factor that is best stored in a linear representation.  The alpha
+        component should always be stored as a linear value.
+
+        "SRGB_ALPHA" is used to indicate sRGB formats with an alpha
+        component.  This naming (as opposed to something like "SRGBA")
+        helps highlight the fact that the alpha component is separate
+        and stored with a linear distribution of precision.
+
+    4)  Should formats for sRGB luminance values be supported? 
+
+        RESOLVED:  Yes.  Implementations can always support luminance
+        and luminance-alpha sRGB formats as an RGB8 or RGBA8 format with
+        replicated R, G, and B values.
+
+        For lack of a better term, "SLUMINANCE" will be used within
+        token names to indicate sRGB values with identical red, green,
+        and blue components.
+
+    5)  Should formats for sRGB intensity values be supported? 
+
+        RESOLVED:  No.  Intensity uses the same value for both luminance
+        and alpha.  Treating a single value as an sRGB luminance value
+        and a linear alpha value is undesirable.
+
+        Hardware design is simplified if alpha never involves sRGB
+        conversions.
+
+    6)  Should all component sizes be supported for sRGB components or
+        just 8-bit?
+
+        RESOLVED:  Just 8-bit.  For sRGB values with more than 8 bit of
+        precision, a linear representation may be easier to work with
+        and adequately represent dim values.  Storing 5-bit and 6-bit
+        values in sRGB form is unnecessary because applications
+        sophisticated enough to sRGB to maintain color precision will
+        demand at least 8-bit precision for sRGB values.
+
+        Because hardware tables are required sRGB conversions, it doesn't
+        make sense to burden hardware with conversions that are unlikely
+        when 8-bit is the norm for sRGB values.
+
+    7)  Should color tables, convolution kernels, histogram table,
+        and minmax table entries support sRGB formats?
+
+        RESOLVED:  No.
+
+        The internalformat for histogram table entries determines the bit
+        precision of the histogram bin counters so indicating the sRGB
+        color space is meaningless in this context.  The internalformat
+        for minmax table entries simply indicates the components
+        for minmax bounding so indicating the sRGB color space is
+        meaningless.
+
+        Convolution filter values are weighting factors rather than
+        color values needing a color space.
+
+        Color table entries may be colors but the component values are
+        typically stored with more than 8 bits already.  For example,
+        software implementations of the OpenGL color table functionality
+        typically store colors in floating-point.
+
+    8)  Should generic compressed sRGB formats be supported?
+
+        RESOLVED:  Yes.  Implementations are free simply to use
+        uncompressed sRGB formats to implement the GL_COMPRESSED_SRGB_*
+        formats.
+
+    9)  Should S3TC compressed sRGB formats be supported?
+
+        RESOLVED:  Yes, but only if EXT_texture_compression_s3tc is also
+        advertised.  For competitive reasons, we expect OpenGL will need
+        an S3TC-based block compression format for sRGB data.
+
+        Rather than expose a separate "sRGB_compression" extension,
+        it makes more sense to specify a dependency between
+        EXT_texture_compression_s3tc and this extension such that when
+        BOTH extensions are exposed, the GL_COMPRESSED_SRGB*_S3TC_DXT*_EXT
+        tokens are accepted.
+
+        We avoid explicitly requiring S3TC formats when EXT_texture_sRGB
+        is advertised to avoid IP encumbrances.
+
+    10) Should the S3TC decompression algorithm be affected by support
+        for sRGB component values?
+
+        RESOLVED:  No.
+
+        S3TC involves the linear weighting of two per-block R5G6B5 colors.
+        The sRGB to linear RGB color conversion should occur AFTER the
+        linear weighting of the two per-block colors performed during
+        texel decompression.
+
+        Also be aware that an sRGB value with 8-bit red, green, and blue
+        components must be quantized to a 5, 6, and 5 bits respectively
+        to form the two per-block R5G6B5 colors.
+
+        S3TC compressors may wish to account for the sRGB color space
+        as part of the compression algorithm.
+
+    11) Should VTC compressed sRGB formats be supported?
+
+        RESOLVED.  Yes, for the same reasons as S3TC.
+
+    12) Should pixel data entering or exiting the OpenGL pixel path be
+        labeled as sRGB or conventional linear RGB?  This would allow
+        pixels labeled as sRGB to be converted to a linear RGB color space
+        prior to processing by the pixel path which includes operations
+        such as convolution, scale, and bias that presume a linear
+        color space.  If the destination (say a texture with an sRGB
+        internal format) was sRGB, then linear RGB components would be
+        converted to sRGB prior to being packed into the texture image.
+        This would assume new format parameters to glDrawPixels and
+        glReadPixels indicating the source or destination format was
+        sRGB if a GL_SRGB_EXT or GL_SRGB_ALPHA_EXT format is specified.
+        Likewise, a format parameter to glTexImage2D such as GL_SRGB_EXT
+        would indicate the pixel data was already in an sRGB color space
+        where GL_RGB would indicate a linear color space.  New state
+        would indicate if the framebuffer held sRGB or linear RGB pixels.
+
+        RESOLVED:  No.
+
+        The pixel path should be left blind to color spaces and provide
+        no implicit conversions.
+
+        Core pixel maps and ARB_imaging provides sufficient color
+        tables so that applications interested in managing color space
+        conversions within the pixel path can do so themselves.
+
+        A 256 entry table outputting floating-point values is sufficient
+        to convert sRGB to linear RGB.
+
+        However when converting from linear RGB to sRGB, one must
+        be careful to make sure the source linear RGB values are
+        specified with more than 8 bits of precision and the color
+        table to implement the conversion must likewise have more than
+        256 entries.  A power-of-two table sufficient to map values
+        to each of the 256 sRGB encodings for an 8-bit sRGB component
+        requires at least 4096 entries (a fairly large color table).
+
+        Because vertex and fragment programs and shaders operate in
+        floating-point and have sufficient programmability to implement
+        the sRGB to linear RGB and vice versa without resorting to large
+        tables.
+
+    13) Does this extension imply filtered results from sRGB texture
+        have more than 8 bits of precision?
+
+        RESOLVED:  Effectively, yes.
+
+        8-bit components of sRGB texels are converted to linear RGB values
+        which requires more than 8 bits to avoid lose of precision.
+        This implies the filtering involve more than 8 bits of color
+        precision per component.  Moreover, fragment color (whether by
+        a fragment program, vertex program, or glTexEnv modes) should
+        operate at precision beyond 8 bits per color component.
+
+        The exact precision maintained (and its distribution) is left to
+        implementations to define but returning at least 12 but more
+        likely 16 linear bits per component, post-filtering, is a
+        reasonable expectation for developers.
+
+        This extension assumes fragment coloring is performed
+
+    14) What must be specified as far as how do you convert to and from
+        sRGB and linear RGB color spaces?
+
+        RESOLVED:  The specification language needs to only supply the
+        sRGB to linear RGB conversion (see section 3.8.x below).
+
+        For completeness, the accepted linear RGB to sRGB conversion
+        (the inverse of the function specified in section 3.8.x) is as
+        follows:
+
+        Given a linear RGB component, cl, convert it to an sRGB component,
+        cs, in the range [0,1], with this pseudo-code:
+
+            if (isnan(cl)) {
+                /* Map IEEE-754 Not-a-number to zero. */
+                cs = 0.0;
+            } else if (cl > 1.0) {
+                cs = 1.0;
+            } else if (cl < 0.0) {
+                cs = 0.0;
+            } else if (cl < 0.0031308) {
+                cs = 12.92 * cl;
+            } else {
+                cs = 1.055 * pow(cl, 0.41666) - 0.055;
+            }
+
+         sRGB components are typically stored as unsigned 8-bit
+         fixed-point values.  If cs is computed with the above
+         pseudo-code, cs can be converted to a [0,255] integer with this
+         formula:
+
+            csi = floor(255.0 * cs + 0.5)
+
+    15) Does this extension provide any sort of sRGB framebuffer formats
+        or guarantee images rendered with sRGB textures will "look good"
+        when output to a device supporting an sRGB color space?
+
+        RESOLVED:  No.
+
+        Whether the displayed framebuffer is displayed to a monitor that
+        faithfully reproduces the sRGB color space is beyond the scope
+        of this extension.  This involves the gamma correction and color
+        calibration of the physical display device.
+
+        With this extension, artists can author content in an sRGB color
+        space and provide that sRGB content for use as texture imagery
+        that can be properly converted to linear RGB and filtered as part
+        of texturing in a way that preserves the sRGB distribution of
+        precision, but that does NOT mean sRGB pixels are output
+        to the framebuffer.  Indeed, this extension provides texture
+        formats that convert sRGB to linear RGB as part of filtering.
+
+        With programmable shading, an application could perform a
+        linear RGB to sRGB conversion just prior to emitting color
+        values from the shader.  Even so, OpenGL blending (other than
+        simple modulation) will perform linear math operations on values
+        stored in a non-linear space which is technically incorrect for
+        sRGB-encoded colors.
+
+        One way to think about these sRGB texture formats is that they
+        simply provide color components with a distribution of values
+        distributed to favor precision towards 0 rather than evenly
+        distributing the precision with conventional non-sRGB formats
+        such as GL_RGB8.
+
+    16) How does this extension interact with EXT_framebuffer_object?
+
+        RESOLVED:  No specific interaction language is necessary but
+        there is no provision that pixels written into a framebuffer
+        object with a texture with an sRGB internal format for its color
+        buffer will in anyway convert the output color values into an sRGB
+        color space.  A fragment program or shader could be written to
+        convert linear RGB values to sRGB values prior to shader output,
+        but NO automatic conversion is performed.  
+
+        So you can create a texture with an sRGB internal format (such
+        as GL_SRGB8_ALPHA8_EXT), bind that texture  to a framebuffer
+        object with glFramebufferTexture2DEXT, and then render into
+        that framebuffer.  If you then texture with the sRGB texture,
+        the texels within the texture are treated as sRGB values for
+        filtering.
+
+    17) Should sRGB be supported with a texture parameter rather than
+        new texture formats?
+
+        RESOLVED:  Adding new texture formats is the right approach.
+
+        Hardware is expected to implements sRGB conversions via hardwired
+        look-up tables.  Such tables are expensive (when sRGB isn't
+        being used, they are basically "wasted gates") and so we want to
+        minimize the number of unique tables that hardware must support.
+        However OpenGL supports various component sizes for RGB and RGBA
+        textures.
+
+        Various RGB texture formats have different bit sizes for R, G,
+        and B that map to [0,1].  Think about RGB5.  It encodes values
+        0/15, 1/15, 2/15, ... 14/15, and 15/15.  Excepting 0/15==0.0
+        and 15/15==1.0, those values are different than the values
+        for RGB8 which would be 0/255, 1/255, ... 254/255, 255/255.
+        Technically, you'd need a different sRGB table to toggle between
+        RGB4 and sRGB4 than you'd need to toggle between RGB8 and sRGB8.
+        There are also RGB12 and RGB16 textures where it is simply not
+        tractable to implement 4096 and 65,536 entry tables, nor is the
+        "real" sRGB conversion math cheap enough to evaluate directly
+        at those precisions.
+
+        What this extension shouldn't require is sRGB conversion for
+        any component sizes beyond 8-bit.  Indeed, it appears the only
+        component sizes sRGB users really care about are 8-bit components.
+        This is because if you have more than 8 bits per component,
+        you typically have enough precision to avoid the complexity
+        created by a non-linear RGB component encoding.  Additionally,
+        sRGB users are picky about color reproduction so fewer than 8
+        bits is generally not acceptable to them.
+
+        The problem with making a "toggle" (say controlled by
+        glTexParameter) is that hardware would very likely (indeed
+        it's pretty much certain) not implement toggling between RGB12
+        and sRGB12 formats.  Recall that OpenGL doesn't mandate internal
+        formats so you can request GL_RGB8 and have the implementation
+        actually given you RGB12 or RGB10 or R5G6B5.
+
+        It is inappropriate to put in a texture parameter mode where
+        we say "this mode works just with GL_RGB8 and GL_RGBA8 and yet
+        only when the underlying internal format is actually RGB8 or
+        RGBA8".  We'd also surely preclude floating-point RGB formats,
+        signed RGB formats, new HDR formats, and certain compressed RGB
+        formats from being included because such formats don't really
+        even make sense for sRGB.
+
+        By adding new formats specifically for the sRGB color space,
+        we avoid all these problems.
+
+        We also avoid an awkward precedent where other more varied
+        color spaces (CYMK, XYZ, and YUV being obvious examples) have
+        to "toggle" between RGB and RGBA formats.  Indeed, already
+        extensions for such other color spaces (YUV and CMYK at least)
+        set the precedent of introducing new texture formats.
+
+    18) How is the texture border color handled for sRGB formats?
+
+        RESOLVED:  The texture border color is specified as four
+        floating-point values.  Given that the texture border color can
+        be specified at such high precision, it is always treated as a
+        linear RGBA value.
+
+        Only texel components are converted from the sRGB encoding to a
+        linear RGB value ahead of texture filtering.  The border color
+        can be used "as is" without any conversion.
+
+        The implication of this is, for example, that two textures with
+        GL_RGBA8 and GL_SRGB8_ALPHA8_EXT internal formats respectively and
+        a border color of (0.4, 0.2, 0.9, 0.1) and the GL_CLAMP_TO_BORDER
+        wrap mode will both return (0.4, 0.2, 0.9, 0.1) if 100% of the
+        border color is sampled.
+
+        By keeping the texture border color specified as a linear
+        RGB value at the API level allows developers to specify the
+        high-precision texture border color in a single consistent color
+        space without concern for how the sRGB conversion is implemented
+        in relation to filtering.
+
+        An implementation that does post-filtering sRGB conversion is
+        likely to store convert the texture border color to sRGB within
+        the driver so it can be filtered with the sRGB values coming
+        from texels and then the filtered sRGB value is converted to
+        linear RGB.
+
+        By maintaining the texture border color always in linear RGB,
+        we avoid developers having to know if an implementation is
+        performing the sRGB conversion (ideally) pre-filtering or (less
+        ideally) post-filtering.  
+
+    19) How does this extension interact with NV_texture_expand_normal?
+
+        RESOLVED:  sRGB components are not affected by the "expand normal"
+        mode even though they are unsigned components because they have
+        non-linear precision (similar to floating-point).
+
+        The alpha component of GL_SRGB8_ALPHA8_EXT and other sRGB formats
+        with an alpha component is affected by the "expand normal" mode.
+
+        The sRGB formats have unsigned components with [0,1] range which
+        is the requirement for the NV_texture_expand_normal extension's
+        operation.
+
+        Be warned because sRGB formats distribute their precision more
+        towards zero, enabling the GL_EXPAND_NORMAL_NV mode with sRGB
+        textures will mean there are more representable negative values
+        than positive values.  For example, the 8-bit value 128 maps
+        roughly to zero when encoded with a GL_RGB8 internal format and
+        then remapped with the GL_EXPAND_NORMAL_NV mode.  In contrast,
+        the sRGB encoded 8-bit value 188 maps roughly to zero when encoded
+        with a GL_SRGB8_ALPHA8 internal format and then remapped with
+        GL_EXPAND_NORMAL_NV.  Still 0 will map to -1 and 255 will map
+        to +1 in either case.
+
+    20) What values should glGetTexImage return?  Are the sRGB values
+        returned "as-is" or are they converted to linear RGB first?
+
+        RESOLVED:  sRGB values are returned "as-is" without an
+        sRGB-to-linear conversion.  Unlike other commands that transfer
+        pixel data, "No pixel transform operations are performed" on
+        the queried texture image.
+
+    21) How does glCopyTex[Sub]Image work with sRGB?  Suppose we're
+        rendering to a floating point pbuffer or framebuffer object and
+        do CopyTexImage.  Are the linear framebuffer values converted
+        to sRGB during the copy?
+
+        RESOLVED:  No, linear framebuffer values will NOT be automatically
+        converted to the sRGB encoding during the copy.  If such a
+        conversion is desired, as explained in issue 12, the red, green,
+        and blue pixel map functionality can be used to implement a
+        linear-to-sRGB encoding translation.
+
+    22) Should the new COMPRESSED_SRGB_* formats be listed in an
+        implementation's GL_COMPRESSED_TEXTURE_FORMATS list?
+
+        RESOLVED:  No.  Section 3.8.1 says formats listed by
+        GL_COMPRESSED_TEXTURE_FORMATS are "suitable for general-purpose
+        usage."  The non-linear distribution of red, green, and
+        blue for these sRGB compressed formats makes them not really
+        general-purpose.
+
+    23) Could this extension be implemented by hardware with no special
+        hardware support for sRGB but does support native GL_RGB12 or
+        GL_RGB16 textures?  If so, how?
+
+        RESOLVED.  Yes.
+
+        The conversion from the sRGB encoding to linear encoding described
+        in section 3.8.x could be performed at texture specification
+        time (after the image has been transformed by the pixel path)
+        rather than texture fetch time.
+
+        When glTexImage2D, glTexSubImage2D, glCopyTexImage2D, etc. occur,
+        the pixels would be transformed by the pixel path as normal and
+        then when pixels are converted to the internal texture format,
+        the section 3.8.x conversion is applied to the red, green, and
+        blue components (not alpha).  The result of this conversion
+        can be quantized and stored into the respective red, green,
+        or blue 12-bit or 16-bit component of the stored texel.
+
+        This means when a texture fetch occurs, no fetch-time conversion
+        is required.
+
+        The advantages of this approach is that sRGB conversion is
+        pre-filtering (the ideal) and the hardware is not required to have
+        texture fetch hardware to perform the special sRGB conversion.
+
+        The disadvantage of this technique is that sRGB textures may
+        require more space than required if 8-bit component sRGB components
+        are stored in texture memory.
+
+        The ability to implement this extension in this manner provides
+        one more justification to avoid a "toggle" texture parameter
+        for sRGB conversion or not.
+
+        One caveat to this approach is that glGetTexImage should
+        return the texel values with the sRGB conversion from section
+        3.8.x "reverse converted".  (The section 3.8.x function is
+        reversible.) As specified, the conversion is performed at fetch
+        time so the understanding is that data returned by glGetTexImage
+        should be the texels prior to the conversion.  If the components
+        are stored converted, that means they must be reverse-converted
+        when returned by glGetTexImage.
+
+    24) How should mipmap generation work for sRGB textures?
+
+        RESOLVED:  The best way to perform mipmap generation for sRGB
+        textures is by downsampling the sRGB image in a linear color
+        space.
+
+        This involves converting the RGB components of sRGB texels
+        in a given texture image level to linear RGB space, filtering
+        appropriately in that linear RGB space, and then converting the
+        linear RGB values to sRGB for storage in the downsampled texture
+        level image.
+
+        (Remember alpha, when present, is linear even in sRGB texture
+        formats.)
+
+        The OpenGL specification says "No particular filter algorithm
+        is required, though a box filter is recommended as the default
+        filter" meaning there is no requirement for how even non-sRGB
+        mipmaps should be generated.  So while the resolution to this
+        issue is technically a recommendation, it is however a strongly
+        advised recommendation.
+
+        The rationale for why sRGB textures should be converted to
+        linear space prior to filtering and converted back to sRGB after
+        filtering is clear.  If an implementation naively simply performed
+        linear filtering on (non-linear) sRGB components as if they were
+        in a linear space, the result tends to be a subtle darkening of
+        the texture images as mipmap generation continues recursively.
+        This darkening is an inappropriate basis that the resolved
+        "best way" above would avoid.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of TexImage1D, TexImage2D,
+    TexImage3D, CopyTexImage1D, CopyTexImage2D:
+
+        SRGB_EXT                                       0x8C40
+        SRGB8_EXT                                      0x8C41
+        SRGB_ALPHA_EXT                                 0x8C42
+        SRGB8_ALPHA8_EXT                               0x8C43
+        SLUMINANCE_ALPHA_EXT                           0x8C44
+        SLUMINANCE8_ALPHA8_EXT                         0x8C45
+        SLUMINANCE_EXT                                 0x8C46
+        SLUMINANCE8_EXT                                0x8C47
+        COMPRESSED_SRGB_EXT                            0x8C48
+        COMPRESSED_SRGB_ALPHA_EXT                      0x8C49
+        COMPRESSED_SLUMINANCE_EXT                      0x8C4A
+        COMPRESSED_SLUMINANCE_ALPHA_EXT                0x8C4B
+
+    Accepted by the <internalformat> parameter of TexImage2D,
+    CopyTexImage2D, and CompressedTexImage2DARB and the <format> parameter
+    of CompressedTexSubImage2DARB:
+
+        COMPRESSED_SRGB_S3TC_DXT1_EXT                  0x8C4C
+        COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT            0x8C4D
+        COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT            0x8C4E
+        COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT            0x8C4F
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+ -- Section 3.8.1, Texture Image Specification:
+
+    Add 4 new rows to Table 3.16 (page 154).
+
+        Sized                  Base             R     G     B     A     L     I     D
+        Internal Format        Internal Format  bits  bits  bits  bits  bits  bits  bits
+        ---------------------  ---------------  ----  ----  ----  ----  ----  ----  ----
+        SRGB8_EXT              RGB              8     8     8
+        SRGB8_ALPHA8_EXT       RGBA             8     8     8     8
+        SLUMINANCE_EXT         LUMINANCE                               8
+        SLUMINANCE_ALPHA8_EXT  LUMINANCE_ALPHA                    8    8
+
+    Add 4 new rows to Table 3.17 (page 155).
+
+        Compressed Internal Format           Base Internal Format
+        -----------------------------------  --------------------
+        COMPRESSED_SRGB_S3TC_DXT1_EXT        RGB
+        COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT  RGBA
+        COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT  RGBA
+        COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT  RGBA
+
+    Add 4 new rows to Table 3.18 (page 155).
+
+        Generic Compressed Internal Format  Base Internal Format
+        ----------------------------------  --------------------
+        COMPRESSED_SRGB_EXT                 RGB
+        COMPRESSED_SRGB_ALPHA_EXT           RGBA
+        COMPRESSED_SLUMINANCE_EXT           LUMINANCE
+        COMPRESSED_SLUMINANCE_ALPHA_EXT     LUMINANCE_ALPHA
+
+ -- Section 3.8.x, sRGB Texture Color Conversion
+
+    Insert this section AFTER section 3.8.14 Texture Comparison Modes
+    and BEFORE section 3.8.15 Texture Application.
+
+    "If the currently bound texture's internal format is one
+    of SRGB_EXT, SRGB8_EXT, SRGB_ALPHA_EXT, SRGB8_ALPHA8_EXT,
+    SLUMINANCE_ALPHA_EXT, SLUMINANCE8_ALPHA8_EXT, SLUMINANCE_EXT,
+    SLUMINANCE8_EXT, COMPRESSED_SRGB_EXT, COMPRESSED_SRGB_ALPHA_EXT,
+    COMPRESSED_SLUMINANCE_EXT COMPRESSED_SLUMINANCE_ALPHA_EXT,
+    COMPRESSED_SRGB_S3TC_DXT1_EXT, COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, or
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT, the red, green, and blue
+    components are converted from an sRGB color space to a linear color
+    space as part of filtering described in sections 3.8.8 and 3.8.9.
+    Any alpha component is left unchanged.  Ideally, implementations
+    should perform this color conversion on each sample prior to filtering
+    but implementations are allowed to perform this conversion after
+    filtering (though this post-filtering approach is inferior to
+    converting from sRGB prior to filtering).
+
+    The conversion from an sRGB encoded component, cs, to a linear
+    component, cl, is as follows.
+
+            {  cs / 12.92,                 cs <= 0.04045
+       cl = {
+            {  ((cs + 0.055)/1.055)^2.4,   cs >  0.04045
+
+    Assume cs is the sRGB component in the range [0,1]."
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the OpenGL Shading Language specification
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on ARB_texture_compression and OpenGL 1.3 or later
+
+    If ARB_texture_compression or OpenGL 1.3 or later is NOT supported,
+    ignore the new COMPRESSED_* tokens, the additions to tables 3.17
+    and 3.18, and the errors associated with the Compressed* commands.
+
+Dependencies on EXT_texture_compression_s3tc
+
+    If EXT_texture_compression_s3tc is NOT supported, ignore the new
+    COMPRESSED_*_S3TC_DXT* tokens, the additions to table 3.17, errors
+    related to the COMPRESSED_*_S3TC_DXT* tokens, and related discussion.
+
+    Add COMPRESSED_SRGB_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, and
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT to token lists in the section
+    3.8.2 specification language added by EXT_texture_compression_s3tc
+    when the internal formats COMPRESSED_RGB_S3TC_DXT1_EXT,
+    COMPRESSED_RGBA_S3TC_DXT1_EXT, COMPRESSED_RGBA_S3TC_DXT3_EXT, and
+    COMPRESSED_RGBA_S3TC_DXT5_EXT are listed.
+
+Dependencies on NV_texture_compression_vtc
+
+    If NV_texture_compression_vtc IS supported, allow the following
+    tokens to be accepted by the <internalformat> parameter
+    of CompressedTexImage3DARB and the <format> parameter of
+    CompressedTexSubImage3DARB:
+
+        COMPRESSED_SRGB_S3TC_DXT1_EXT
+        COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT
+        COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT
+        COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    Relaxation of INVALID_ENUM errors
+    ---------------------------------
+
+    TexImage1D, TexImage2D, TexImage3D, CopyTexImage1D, CopyTexImage2D,
+    CompressedTexImage2DARB, CompressedTexSubImage2DARB now accept the
+    new tokens as listed in the "New Tokens" section.
+
+    New errors
+    ----------
+
+    INVALID_OPERATION is generated by CompressedTexImage2DARB if
+    if <internalformat> is COMPRESSED_SRGB_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, or
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT and <border> is not equal to
+    zero.
+
+    INVALID_OPERATION is generated by TexSubImage2D
+    CopyTexSubImage2D, or CompressedTexSubImage2D if INTERNAL_FORMAT is
+    COMPRESSED_SRGB_S3TC_DXT1_EXT, COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, or
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT and any of the following apply:
+    <width> is not a multiple of four or equal to TEXTURE_WIDTH; <height>
+    is not a multiple of four or equal to TEXTURE_HEIGHT; <xoffset>
+    or <yoffset> is not a multiple of four.
+
+    INVALID_ENUM is generated by CompressedTexImage1DARB if
+    <internalformat> is COMPRESSED_SRGB_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, or
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT.
+
+    INVALID_ENUM is generated by CompressedTexSubImage1DARB if <format> is
+    COMPRESSED_SRGB_S3TC_DXT1_EXT, COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, or
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT.
+
+    Errors if NV_texture_compression_vtc is NOT supported
+    -----------------------------------------------------
+
+    INVALID_ENUM is generated by CompressedTexImage3DARB if
+    <internalformat> is COMPRESSED_SRGB_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, or
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT.
+
+    INVALID_ENUM is generated by CompressedTexSubImage3DARB if <format> is
+    COMPRESSED_SRGB_S3TC_DXT1_EXT, COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, or
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT.
+
+    Errors if NV_texture_compression_vtc IS supported
+    -----------------------------------------------------
+
+    INVALID_OPERATION is generated by CompressedTexImage3DARB
+    if <internalformat> is COMPRESSED_SRGB_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, or
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT and <border> is not equal to
+    zero.
+
+    INVALID_OPERATION is generated by TexSubImage3D or CopyTexSubImage3D
+    if INTERNAL_FORMAT is COMPRESSED_SRGB_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, or
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT and any of the following apply:
+    <width> is not a multiple of four or equal to TEXTURE_WIDTH; <height>
+    is not a multiple of four or equal to TEXTURE_HEIGHT; <xoffset>
+    or <yoffset> is not a multiple of four.
+
+    INVALID_OPERATION is generated by CompressedTexSubImage3D
+    if INTERNAL_FORMAT is COMPRESSED_SRGB_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, or
+    COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT and any of the following apply:
+    <width> is not a multiple of four or equal to TEXTURE_WIDTH; <height>
+    is not a multiple of four or equal to TEXTURE_HEIGHT; <depth> is not
+    a multiple of four or equal to TEXTURE_DEPTH; <xoffset> <yoffset>,
+    or <zoffset> is not a multiple of four.
+
+New State
+
+    In table 6.17, Textures (page 278), increment the 42 in "n x Z42*"
+    by 16 (or 12 if EXT_texture_compression_s3tc is not supported).
+
+    [NOTE: The OpenGL 2.0 specification actually should read "n x Z48*"
+    because of the 6 generic compressed internal formats in table 3.18.]
+
+New Implementation Dependent State
+
+    None
+
+NVIDIA Implementation Details
+
+    GeForce FX, Quadro FX, and GeForce 6 and 7 Series GPUs store
+    sRGB texels at 8 bits per component.  sRGB conversion occurs
+    post-filtering.
+
+Revision History
+
+    0.8:  Add issue 24 with recommendation for sRGB mipmap generation.
+
+    0.7:  Add issue 23 about alternative implementation based on
+          either GL_RGB12 or GL_RGB16 based on discussions with Jeremy
+          Sandmel.
+
+    0.6:  Add issue 22 about GL_COMPRESSED_TEXTURE_FORMATS.
+
+    0.5:  Fix grammar, add issues 20 and 21 based on Brian Paul's
+          feedback.
+
+    0.4:  Update issue 18 based on Matrox feedback.
+    
+    0.3:  Update NV_texture_expand_normal interaction.

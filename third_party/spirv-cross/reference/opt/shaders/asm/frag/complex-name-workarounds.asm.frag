@@ -6,10 +6,10 @@ layout(location = 0) out vec4 b;
 
 void main()
 {
-    vec4 _28 = (_ + a) + _;
-    b = _28;
+    vec4 _32 = (_ + a) + _;
+    b = _32;
     b = _;
-    b = _28;
+    b = _32;
     b = _;
 }
 

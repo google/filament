@@ -1,0 +1,109 @@
+
+// RUN: %dxc %S/Inputs/smoke.hlsl /D "semantic = SV_Position" /T vs_6_0 /Zi /Qembed_debug /DDX12 /Fo %t.dxa.cso
+
+// RUN: %dxa %t.dxa.cso -listfiles | FileCheck %s --check-prefix=FILES
+// FILES:smoke.hlsl
+
+// RUN: %dxa %t.dxa.cso -listparts | FileCheck %s --check-prefix=PARTS
+// PARTS-DAG:DXIL
+// PARTS-DAG:ILDB
+// PARTS-DAG:RTS0
+// PARTS-DAG:PSV0
+// PARTS-DAG:STAT
+// PARTS-DAG:ILDN
+// PARTS-DAG:HASH
+// PARTS-DAG:ISG1
+// PARTS-DAG:OSG1
+
+
+// RUN: %dxa %t.dxa.cso -extractpart dbgmodule -o %t.dxa.cso.dbgmodule
+
+// RUN: %dxa %t.dxa.cso.dbgmodule -listfiles | FileCheck %s --check-prefix=DBG_FILES
+// DBG_FILES:smoke.hlsl
+
+// RUN: %dxa %t.dxa.cso.dbgmodule -extractfile=* | FileCheck %s --check-prefix=EXTRACT_FILE
+// EXTRACT_FILE:float4 main()
+
+
+// RUN: %dxa %t.dxa.cso -extractpart module -o %t.dxa.cso.plain.bc
+// RUN: %dxa %t.dxa.cso.plain.bc -o %t.rebuilt-container.cso
+// RUN: %dxc -dumpbin %t.rebuilt-container.cso | FileCheck %s --check-prefix=REBUILD
+
+// RUN: %dxc -dumpbin %t.dxa.cso -Fc %t.dxa.ll
+// RUN: %dxa %t.dxa.ll -o %t.rebuilt-container2.cso
+// RUN: %dxc -dumpbin %t.rebuilt-container2.cso | FileCheck %s --check-prefix=REBUILD
+
+// REBUILD:define void @main()
+
+// RUN: %dxa %t.dxa.cso -dumpreflection | FileCheck %s --check-prefix=REFLECTION
+// REFLECTION: ID3D12ShaderReflection:
+// REFLECTION-NEXT: D3D12_SHADER_DESC:
+// REFLECTION-NEXT:     Shader Version: Vertex 6.0
+// REFLECTION-NEXT:     Creator: dxc
+// REFLECTION-NEXT:     Flags: 0
+// REFLECTION-NEXT:     ConstantBuffers: 1
+// REFLECTION-NEXT:     BoundResources: 1
+// REFLECTION-NEXT:     InputParameters: 0
+// REFLECTION-NEXT:     OutputParameters: 1
+// REFLECTION-NEXT:     InstructionCount: 10
+// REFLECTION-NEXT:     TempArrayCount: 0
+// REFLECTION-NEXT:     DynamicFlowControlCount: 0
+// REFLECTION-NEXT:     ArrayInstructionCount: 0
+// REFLECTION-NEXT:     TextureNormalInstructions: 0
+// REFLECTION-NEXT:     TextureLoadInstructions: 0
+// REFLECTION-NEXT:     TextureCompInstructions: 0
+// REFLECTION-NEXT:     TextureBiasInstructions: 0
+// REFLECTION-NEXT:     TextureGradientInstructions: 0
+// REFLECTION-NEXT:     FloatInstructionCount: 1
+// REFLECTION-NEXT:     IntInstructionCount: 1
+// REFLECTION-NEXT:     UintInstructionCount: 0
+// REFLECTION-NEXT:     CutInstructionCount: 0
+// REFLECTION-NEXT:     EmitInstructionCount: 0
+// REFLECTION-NEXT:     cBarrierInstructions: 0
+// REFLECTION-NEXT:     cInterlockedInstructions: 0
+// REFLECTION-NEXT:     cTextureStoreInstructions: 0
+// REFLECTION-NEXT:   OutputParameter Elements: 1
+// REFLECTION-NEXT:     D3D12_SIGNATURE_PARAMETER_DESC: SemanticName: SV_POSITION SemanticIndex: 0
+// REFLECTION-NEXT:       Register: 0
+// REFLECTION-NEXT:       SystemValueType: D3D_NAME_POSITION
+// REFLECTION-NEXT:       ComponentType: D3D_REGISTER_COMPONENT_FLOAT32
+// REFLECTION-NEXT:       Mask: xyzw (15)
+// REFLECTION-NEXT:       ReadWriteMask: ---- (0) (AlwaysReads/NeverWrites)
+// REFLECTION-NEXT:       Stream: 0
+// REFLECTION-NEXT:       MinPrecision: D3D_MIN_PRECISION_DEFAULT
+// REFLECTION-NEXT:   Constant Buffers:
+// REFLECTION-NEXT:     ID3D12ShaderReflectionConstantBuffer:
+// REFLECTION-NEXT:       D3D12_SHADER_BUFFER_DESC: Name: $Globals
+// REFLECTION-NEXT:         Type: D3D_CT_CBUFFER
+// REFLECTION-NEXT:         Size: 16
+// REFLECTION-NEXT:         uFlags: 0
+// REFLECTION-NEXT:         Num Variables: 1
+// REFLECTION-NEXT:       {
+// REFLECTION-NEXT:         ID3D12ShaderReflectionVariable:
+// REFLECTION-NEXT:           D3D12_SHADER_VARIABLE_DESC: Name: g
+// REFLECTION-NEXT:             Size: 4
+// REFLECTION-NEXT:             StartOffset: 0
+// REFLECTION-NEXT:             uFlags: (D3D_SVF_USED)
+// REFLECTION-NEXT:             DefaultValue: <nullptr>
+// REFLECTION-NEXT:           ID3D12ShaderReflectionType:
+// REFLECTION-NEXT:             D3D12_SHADER_TYPE_DESC: Name: int
+// REFLECTION-NEXT:               Class: D3D_SVC_SCALAR
+// REFLECTION-NEXT:               Type: D3D_SVT_INT
+// REFLECTION-NEXT:               Elements: 0
+// REFLECTION-NEXT:               Rows: 1
+// REFLECTION-NEXT:               Columns: 1
+// REFLECTION-NEXT:               Members: 0
+// REFLECTION-NEXT:               Offset: 0
+// REFLECTION-NEXT:           CBuffer: $Globals
+// REFLECTION-NEXT:       }
+// REFLECTION-NEXT:   Bound Resources:
+// REFLECTION-NEXT:     D3D12_SHADER_INPUT_BIND_DESC: Name: $Globals
+// REFLECTION-NEXT:       Type: D3D_SIT_CBUFFER
+// REFLECTION-NEXT:       uID: 0
+// REFLECTION-NEXT:       BindCount: 1
+// REFLECTION-NEXT:       BindPoint: 0
+// REFLECTION-NEXT:       Space: 0
+// REFLECTION-NEXT:       ReturnType: <unknown: 0>
+// REFLECTION-NEXT:       Dimension: D3D_SRV_DIMENSION_UNKNOWN
+// REFLECTION-NEXT:       NumSamples (or stride): 0
+// REFLECTION-NEXT:       uFlags: (D3D_SIF_USERPACKED)

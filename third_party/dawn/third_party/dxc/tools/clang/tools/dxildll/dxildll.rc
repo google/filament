@@ -1,0 +1,9 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
+// This file is distributed under the University of Illinois Open Source License. See LICENSE.TXT for details.
+
+#define RC_FILE_DESCRIPTION  "DirectX IL for Redistribution"
+#define RC_INTERNAL_NAME     "DirectX IL for Redistribution"
+#define RC_ORIGINAL_FILENAME "dxil.dll"
+
+#include "resources\windows_version_resource.rc"

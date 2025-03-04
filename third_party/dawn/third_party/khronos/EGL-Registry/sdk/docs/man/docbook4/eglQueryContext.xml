@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook MathML Module V1.1b1//EN"
+                            "http://www.oasis-open.org/docbook/xml/mathml/1.1CR1/dbmathml.dtd">
+<refentry xml:base="" id="eglQueryContext">
+    <refentryinfo>
+         <copyright>
+             <year>2003-2014</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </refentryinfo>
+    <refmeta>
+        <refentrytitle>eglQueryContext</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglQueryContext</refname>
+        <refpurpose>
+            return <acronym>EGL</acronym> rendering context information
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLBoolean <function>eglQueryContext</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLContext <parameter>context</parameter></paramdef>
+                <paramdef>EGLint <parameter>attribute</parameter></paramdef>
+                <paramdef>EGLint * <parameter>value</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL display connection.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>context</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL rendering context to query.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attribute</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the EGL rendering context attribute to be returned.
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>value</parameter></term>
+                <listitem>
+                    <para>
+                        Returns the requested value.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="description"><title>Description</title>
+        <para>
+            <function>eglQueryContext</function> returns in
+            <parameter>value</parameter> the value of
+            <parameter>attribute</parameter> for <parameter>context</parameter>.
+            <parameter>attribute</parameter> can be one of the following:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_CONFIG_ID</constant></term>
+                <listitem><para>
+                    Returns the ID of the EGL frame buffer configuration
+                    with respect to which the context was created.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_CONTEXT_CLIENT_TYPE</constant></term>
+                <listitem><para>
+                    Returns the type of client API which the context
+                    supports (one of
+                    <constant>EGL_OPENGL_API</constant>,
+                    <constant>EGL_OPENGL_ES_API</constant>, or
+                    <constant>EGL_OPENVG_API</constant>).
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_CONTEXT_CLIENT_VERSION</constant></term>
+                <listitem><para>
+                    Returns the version of the client API which the
+                    context supports, as specified at context creation
+                    time. The resulting value is only meaningful for an
+                    OpenGL ES context.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_RENDER_BUFFER</constant></term>
+                <listitem>
+                    <para>
+                        Returns the buffer which client API rendering
+                        via the context will use. The value returned
+                        depends on properties of both the context, and
+                        the surface to which the context is bound:
+                    </para>
+                    <itemizedlist>
+                    <listitem><para>
+                        If the context is bound to a pixmap surface,
+                        then <constant>EGL_SINGLE_BUFFER</constant> will
+                        be returned.
+                    </para></listitem>
+                    <listitem><para>
+                        If the context is bound to a pbuffer surface,
+                        then <constant>EGL_BACK_BUFFER</constant> will
+                        be returned.
+                    </para></listitem>
+                    <listitem><para>
+                        If the context is bound to a window surface,
+                        then either <constant>EGL_BACK_BUFFER</constant>
+                        or <constant>EGL_SINGLE_BUFFER</constant> may be
+                        returned. The value returned depends on both the
+                        buffer requested by the setting of the
+                        <constant>EGL_RENDER_BUFFER</constant> property
+                        of the surface (which may be queried by calling
+                        <function>eglQuerySurface</function>), and on
+                        the client API (not all client APIs support
+                        single-buffer rendering to window surfaces).
+                    </para></listitem>
+                    <listitem><para>
+                        If the context is not bound to a surface, such
+                        as an OpenGL ES context bound to a framebuffer
+                        object, then <constant>EGL_NONE</constant> will
+                        be returned.
+                    </para></listitem>
+                    </itemizedlist>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 id="notes"><title>Notes</title>
+        <para>
+            Attributes <constant>EGL_CONTEXT_CLIENT_TYPE</constant> and
+            <constant>EGL_RENDER_BUFFER</constant> are supported only if
+            the EGL version is 1.2 or greater.
+        </para>
+        <para>
+            Attribute <constant>EGL_CONTEXT_CLIENT_VERSION</constant> is
+            supported only if the EGL version is 1.3 or greater.
+        </para>
+    </refsect1>
+    <refsect1 id="errors"><title>Errors</title>
+        <para>
+            <constant>EGL_FALSE</constant> is returned on failure,
+            <constant>EGL_TRUE</constant> otherwise.
+            <parameter>value</parameter> is not modified when
+            <constant>EGL_FALSE</constant> is returned.
+        </para>
+        <para>
+            <constant>EGL_BAD_DISPLAY</constant> is generated if
+            <parameter>display</parameter> is not an EGL display connection.
+        </para>
+        <para>
+            <constant>EGL_NOT_INITIALIZED</constant> is generated if
+            <parameter>display</parameter> has not been initialized.
+        </para>
+        <para>
+            <constant>EGL_BAD_CONTEXT</constant> is generated if
+            <parameter>context</parameter> is not an EGL rendering context.
+        </para>
+        <para>
+            <constant>EGL_BAD_ATTRIBUTE</constant> is generated if
+            <parameter>attribute</parameter> is not a valid context attribute.
+        </para>
+    </refsect1>
+    <refsect1 id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglCreateContext</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <refsect3 id="Copyright"><title></title>
+        <!-- Content included from copyright.inc.xsl -->
+        <imageobject>
+                <imagedata fileref="KhronosLogo.jpg" format="jpg" />
+        </imageobject>
+        <para />
+    </refsect3>
+</refentry>

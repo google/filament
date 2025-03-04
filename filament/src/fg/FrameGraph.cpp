@@ -529,16 +529,40 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
         if (resources.find(resourceHandle.index) != resources.end())
             continue;
 
-        std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
         if (resourceNode->getRefCount() == 0)
             continue;
+
+        std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
+        auto emplace_resource_property =
+            [&resourceProps](utils::CString key, utils::CString value) {
+                resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property{
+                    .name = std::move(key),
+                    .value = std::move(value)
+                });
+            };
+        auto emplace_resource_descriptor = [this, &emplace_resource_property](
+            const FrameGraphHandle& resourceHandle) {
+            // TODO: A better way to handle generic resource types. Right now we only have one
+            // resource type so it works
+            auto descriptor = static_cast<Resource<FrameGraphTexture> const*>(
+                getResource(resourceHandle))->descriptor;
+            emplace_resource_property("width",
+                utils::CString(std::to_string(descriptor.width).data()));
+            emplace_resource_property("height",
+                utils::CString(std::to_string(descriptor.height).data()));
+            emplace_resource_property("depth",
+                utils::CString(std::to_string(descriptor.depth).data()));
+            emplace_resource_property("format",
+                utils::to_string(descriptor.format));
+
+        };
+
         if (resourceNode->getParentNode() != nullptr) {
-            resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property {
-                .name = "is_subresource",
-                .value = utils::CString(std::to_string(
-                    resourceNode->getParentHandle().index).data())
-            });
+            emplace_resource_property("is_subresource_of",
+                utils::CString(std::to_string(
+                        resourceNode->getParentHandle().index).data()));
         }
+        emplace_resource_descriptor(resourceHandle);
         resources.emplace(resourceHandle.index, fgviewer::FrameGraphInfo::Resource(
                               resourceHandle.index,
                               utils::CString(resourceNode->getName()),

@@ -52,8 +52,8 @@ struct main0_out
 
 struct main0_in
 {
-    uint3 m_57;
-    ushort2 m_61;
+    uint3 m_58;
+    ushort2 m_63;
     spvUnsafeArray<float, 2> gl_ClipDistance;
     spvUnsafeArray<float, 1> gl_CullDistance;
 };

@@ -46,7 +46,7 @@ struct Concrete : public MyHandle {
 #endif
 
 TEST(HandlesTest, useAfterFreePool) {
-    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES, false);
+    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES);
 
     Handle<MyHandle> handleA = allocator.allocate<Concrete>();
     allocator.deallocate(handleA);
@@ -59,7 +59,7 @@ TEST(HandlesTest, useAfterFreePool) {
 }
 
 TEST(HandlesTest, useAfterFreeHeap) {
-    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES, false);
+    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES);
 
     // Use up all the non-heap handles.
     for (int i = 0; i < POOL_HANDLE_COUNT; i++) {
@@ -87,7 +87,7 @@ TEST(HandlesTest, useAfterFreeHeap) {
 }
 
 TEST(HandlesTest, isValid) {
-    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES, false);
+    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES);
     Handle<MyHandle> poolHandle = allocator.allocate<Concrete>();
     EXPECT_TRUE((poolHandle.getId() & HANDLE_HEAP_FLAG) == 0u);
 

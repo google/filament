@@ -5,23 +5,23 @@ layout(binding = 0, std430) buffer SSBO
 {
     uvec4 u;
     ivec4 i;
-} _4;
+} _6;
 
 void main()
 {
-    uvec4 _19 = _4.u;
-    ivec4 _20 = _4.i;
-    _4.u = uvec4(findLSB(_19));
-    _4.i = findLSB(_19);
-    _4.u = uvec4(findLSB(_20));
-    _4.i = findLSB(_20);
-    _4.u = uvec4(findMSB(_19));
-    _4.i = findMSB(_19);
-    _4.u = uvec4(findMSB(uvec4(_20)));
-    _4.i = findMSB(uvec4(_20));
-    _4.u = uvec4(findMSB(ivec4(_19)));
-    _4.i = findMSB(ivec4(_19));
-    _4.u = uvec4(findMSB(_20));
-    _4.i = findMSB(_20);
+    uvec4 _19 = _6.u;
+    ivec4 _20 = _6.i;
+    _6.u = uvec4(findLSB(_19));
+    _6.i = findLSB(_19);
+    _6.u = uvec4(findLSB(_20));
+    _6.i = findLSB(_20);
+    _6.u = uvec4(findMSB(_19));
+    _6.i = findMSB(_19);
+    _6.u = uvec4(findMSB(uvec4(_20)));
+    _6.i = findMSB(uvec4(_20));
+    _6.u = uvec4(findMSB(ivec4(_19)));
+    _6.i = findMSB(ivec4(_19));
+    _6.u = uvec4(findMSB(_20));
+    _6.i = findMSB(_20);
 }
 

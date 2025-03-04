@@ -1,0 +1,65 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template <typename T>
+T reduce_add(vec<T, 2> v) { return v.x + v.y; }
+template <typename T>
+T reduce_add(vec<T, 3> v) { return v.x + v.y + v.z; }
+template <typename T>
+T reduce_add(vec<T, 4> v) { return v.x + v.y + v.z + v.w; }
+
+struct InOut3
+{
+    ushort4 x;
+    ushort4 y;
+    int acc;
+    int result;
+};
+
+struct InOut2
+{
+    uint x;
+    uint y;
+    uint result;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+struct InOut
+{
+    uint4 x;
+    uint4 y;
+    int result;
+};
+
+kernel void main0(device void* spvBufferAliasSet0Binding1 [[buffer(0)]])
+{
+    device auto& comp3 = *(device InOut3*)spvBufferAliasSet0Binding1;
+    device auto& comp2 = *(device InOut2*)spvBufferAliasSet0Binding1;
+    int sdot_int = reduce_add(int4(short4(comp3.x)) * int4(short4(comp3.y)));
+    uint sdot_uint = reduce_add(uint4(short4(comp3.x)) * uint4(short4(comp3.y)));
+    uint udot_uint = reduce_add(uint4(comp3.x) * uint4(comp3.y));
+    int sudot_int = reduce_add(int4(short4(comp3.x)) * int4(comp3.y));
+    uint sudot_uint = reduce_add(uint4(short4(comp3.x)) * uint4(comp3.y));
+    uchar spdot8 = reduce_add(uchar4(as_type<char4>(comp2.x)) * uchar4(as_type<char4>(comp2.y)));
+    ushort spdot16 = reduce_add(ushort4(as_type<char4>(comp2.x)) * ushort4(as_type<char4>(comp2.y)));
+    uint spdot32 = reduce_add(uint4(as_type<char4>(comp2.x)) * uint4(as_type<char4>(comp2.y)));
+    int spdoti32 = reduce_add(int4(as_type<char4>(comp2.x)) * int4(as_type<char4>(comp2.y)));
+    uchar updot8 = reduce_add(uchar4(as_type<uchar4>(comp2.x)) * uchar4(as_type<uchar4>(comp2.y)));
+    ushort updot16 = reduce_add(ushort4(as_type<uchar4>(comp2.x)) * ushort4(as_type<uchar4>(comp2.y)));
+    uint updot32 = reduce_add(uint4(as_type<uchar4>(comp2.x)) * uint4(as_type<uchar4>(comp2.y)));
+    uchar supdot8 = reduce_add(uchar4(as_type<char4>(comp2.x)) * uchar4(as_type<uchar4>(comp2.y)));
+    ushort supdot16 = reduce_add(ushort4(as_type<char4>(comp2.x)) * ushort4(as_type<uchar4>(comp2.y)));
+    uint supdot32 = reduce_add(uint4(as_type<char4>(comp2.x)) * uint4(as_type<uchar4>(comp2.y)));
+    int supdoti32 = reduce_add(int4(as_type<char4>(comp2.x)) * int4(as_type<uchar4>(comp2.y)));
+    int sdotaddsat_int = int(addsat(reduce_add(int4(short4(comp3.x)) * int4(short4(comp3.y))), comp3.acc));
+    uint sdotaddsat_uint = uint(addsat(reduce_add(int4(short4(comp3.x)) * int4(short4(comp3.y))), comp3.acc));
+    uint udotaddsat_uint = uint(addsat(reduce_add(uint4(comp3.x) * uint4(comp3.y)), uint(comp3.acc)));
+    int sudotaddsat_int = int(addsat(reduce_add(int4(short4(comp3.x)) * int4(comp3.y)), comp3.acc));
+    uint sudotaddsat_uint = uint(addsat(reduce_add(int4(short4(comp3.x)) * int4(comp3.y)), comp3.acc));
+}
+

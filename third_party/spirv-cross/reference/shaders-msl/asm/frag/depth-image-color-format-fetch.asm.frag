@@ -21,27 +21,27 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-void _108(int _109, texture2d<float> _8, device _7& _10)
+void _112(int _113, texture2d<float> _8, device _7& _10)
 {
-    int2 _113 = int2(_109 - 8 * (_109 / 8), _109 / 8);
-    _10._m0[_109] = _8.read(uint2(_113), 0);
+    int2 _117 = int2(_113 - 8 * (_113 / 8), _113 / 8);
+    _10._m0[_113] = _8.read(uint2(_117), 0);
 }
 
 static inline __attribute__((always_inline))
-float4 _98(float4 _119, texture2d<float> _8, device _7& _10)
+float4 _102(float4 _122, texture2d<float> _8, device _7& _10)
 {
-    for (int _121 = 0; _121 < 64; _121++)
+    for (int _124 = 0; _124 < 64; _124++)
     {
-        _108(_121, _8, _10);
+        _112(_124, _8, _10);
     }
-    return _119;
+    return _122;
 }
 
 fragment main0_out main0(main0_in in [[stage_in]], device _7& _10 [[buffer(0)]], texture2d<float> _8 [[texture(0)]])
 {
     main0_out out = {};
-    float4 _97 = _98(in.m_2, _8, _10);
-    out.m_3 = _97;
+    float4 _101 = _102(in.m_2, _8, _10);
+    out.m_3 = _101;
     return out;
 }
 

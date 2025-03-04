@@ -1,0 +1,23 @@
+// https://gpuweb.github.io/gpuweb/wgsl/#texel-formats
+enum texel_format {
+  bgra8unorm
+  rgba8unorm
+  rgba8snorm
+  rgba8uint
+  rgba8sint
+  rgba16uint
+  rgba16sint
+  rgba16float
+  r32uint
+  r32sint
+  r32float
+  rg32uint
+  rg32sint
+  rg32float
+  rgba32uint
+  rgba32sint
+  rgba32float
+
+  // requires chromium_internal_graphite
+  r8unorm
+}

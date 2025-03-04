@@ -1,0 +1,86 @@
+
+Name
+
+    EXT_pixel_transform_color_table
+
+Name Strings
+
+    GL_EXT_pixel_transform_color_table
+
+Version
+
+    $Date: 1997/06/04 06:08:41 $ $Revision: 1.1 $
+
+Number
+
+    139
+
+Dependencies
+
+    SGI_color_table is required
+    EXT_pixel_transform is required
+
+Overview
+
+    This extension defines a color table that is applied immediately
+    after the pixel transformation operation.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, and
+    by the <target> parameter of ColorTableSGI, ColorTableParameterivSGI,
+    ColorTableParameterfvSGI, GetColorTableSGI, GetColorTableParameterivSGI,
+    and GetColorTableParameterfvSGI:
+
+        PIXEL_TRANSFORM_COLOR_TABLE_EXT
+
+    Accepted by the <target> parameter of ColorTableSGI,
+    GetColorTableParameterivSGI, and GetColorTableParameterfvSGI:
+
+        PROXY_PIXEL_TRANSFORM_COLOR_TABLE_EXT
+
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    The operation of the PIXEL_TRANSFORM_COLOR_TABLE is added to the GL
+    Specification in section 3.6.3, "Rasterization of Pixel Rectangles".
+    This color table behaves in the manner described in the SGI_color_table
+    extension, and it is located immediately after the pixel transformation
+    operation.  This color table can be enabled or disabled separately from
+    the pixel transformation operation by calling Enable or Disable with
+    PIXEL_TRANSFORM_COLOR_TABLE.  It can be modified using the procedures
+    defined in the SGI_color_table extension.  The proxy version of this table
+    can be set or queried by using a target value of
+    PROXY_PIXEL_TRANSFORM_COLOR_TABLE.
+
+
+Additions to the GLX Specification
+    
+    None
+
+
+Dependencies on SGI_color_table
+
+    SGI_color_table is required.  
+    This extension adds another table to the list specified by SGI_color_table.
+    This new table can be manipulated using the procedures defined by
+    SGI_color_table.
+
+    EXT_pixel_transform is required.  This extension builds on the capabilities
+    defined by EXT_pixel_transform.
+
+New State
+                                                                                        Initial
+    Get Value                                   Get Command                     Type    Value     Attrib
+    ---------                                   -----------                     ----    -------   ------
+    PIXEL_TRANSFORM_COLOR_TABLE_EXT             IsEnabled                        B       False    pixel/enable
+    PIXEL_TRANSFORM_COLOR_TABLE_EXT             GetColorTableEXT                3 x I    empty      -
+
+New Implementation Dependent State
+
+    None
+

@@ -1,0 +1,437 @@
+Name
+
+    ARB_sample_locations
+
+Name Strings
+
+    GL_ARB_sample_locations
+
+Contact
+
+    Piers Daniell, NVIDIA Corporation (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Jeff Bolz, NVIDIA
+    Pat Brown, NVIDIA
+    Mathias Heyer, NVIDIA
+
+Notice
+
+    Copyright (c) 2015 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 26, 2015.
+    Ratified by the Khronos Board of Promoters on August 7, 2015.
+
+Version
+
+    Last Modified Date:         June 11, 2015
+    Revision:                   4
+
+Number
+
+    ARB Extension #181
+
+Dependencies
+
+    This extension is written against the OpenGL 4.5 specification
+    (Compatibility Profile).
+
+    This extension interacts with OpenGL ES 3.1.
+
+Overview
+
+    This extension allows an application to modify the locations of samples
+    within a pixel used in multisample rasterization.  Additionally, it allows
+    applications to specify different sample locations for each pixel in a
+    group of adjacent pixels, which may increase antialiasing quality
+    (particularly if a custom resolve shader is used that takes advantage of
+    these different locations).
+
+    It is common for implementations to optimize the storage of depth values
+    by storing values that can be used to reconstruct depth at each sample
+    location, rather than storing separate depth values for each sample. For
+    example, the depth values from a single triangle can be represented using
+    plane equations.  When the depth value for a sample is needed, it is
+    automatically evaluated at the sample location. Modifying the sample
+    locations causes the reconstruction to no longer evaluate the same depth
+    values as when the samples were originally generated.  This extension
+    provides a command to "evaluate" and store per-sample depth values using
+    the currently programmed sample locations, which allows the application to
+    manage this issue if/when necessary.
+
+    The programmable sample locations are used during rasterization and for
+    evaluation of depth functions during normal geometric rendering. The
+    programmable locations are associated with a framebuffer object rather
+    than an individual depth buffer, so if the depth buffer is used as a
+    texture the texture sampling may be done at the standard sample
+    locations. Additionally, commands that do not render geometric primitives
+    (e.g. ReadPixels, BlitFramebuffer, CopyTexSubImage2D, etc.) may use the
+    standard sample locations to evaluate depth functions rather than the
+    programmable locations. If a single depth buffer is used at different
+    times with different sample locations, the depth functions may be
+    interpreted using the current sample locations.
+
+New Procedures and Functions
+
+    void FramebufferSampleLocationsfvARB(enum target, uint start,
+                                         sizei count, const float *v);
+    void NamedFramebufferSampleLocationsfvARB(uint framebuffer, uint start,
+                                              sizei count, const float *v);
+
+    void EvaluateDepthValuesARB();
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+        SAMPLE_LOCATION_SUBPIXEL_BITS_ARB                0x933D
+        SAMPLE_LOCATION_PIXEL_GRID_WIDTH_ARB             0x933E
+        SAMPLE_LOCATION_PIXEL_GRID_HEIGHT_ARB            0x933F
+        PROGRAMMABLE_SAMPLE_LOCATION_TABLE_SIZE_ARB      0x9340
+
+    Accepted by the <pname> parameter of GetMultisamplefv:
+
+        // Alias of SAMPLE_POSITION. Before NV_expms, the spec used "location".
+        SAMPLE_LOCATION_ARB                              0x8E50
+        PROGRAMMABLE_SAMPLE_LOCATION_ARB                 0x9341
+
+    Accepted by the <pname> parameter of FramebufferParameteri,
+    GetFramebufferParameteriv:
+
+        FRAMEBUFFER_PROGRAMMABLE_SAMPLE_LOCATIONS_ARB    0x9342
+        FRAMEBUFFER_SAMPLE_LOCATION_PIXEL_GRID_ARB       0x9343
+
+Additions to Chapter 9 of the OpenGL 4.5 (Compatibility Profile) Specification
+(Framebuffers and Framebuffer Objects)
+
+    Modify Section 9.2.1 (Framebuffer Object Parameters), p. 330
+
+    Change the error:
+
+    "An INVALID_OPERATION error is generated if the default framebuffer is
+    bound to <target>." into "An INVALID_OPERATION error is generated if the
+    default framebuffer is bound to <target> and <pname> is neither
+    FRAMEBUFFER_PROGRAMMABLE_SAMPLE_LOCATIONS_ARB nor
+    FRAMEBUFFER_SAMPLE_LOCATION_PIXEL_GRID_ARB."
+
+    Modify Section 9.2.3 (Framebuffer Object Queries), p. 332
+
+    Change the error:
+
+    "An INVALID_OPERATION error is generated if the default framebuffer is
+    bound to <target>." into "An INVALID_OPERATION error is generated if the
+    default framebuffer is bound to <target> and <pname> is neither
+    FRAMEBUFFER_PROGRAMMABLE_SAMPLE_LOCATIONS_ARB nor
+    FRAMEBUFFER_SAMPLE_LOCATION_PIXEL_GRID_ARB."
+
+Additions to Chapter 14 of the OpenGL 4.5 (Compatibility Profile) Specification
+(Fixed-Function Primitive Assembly and Rasterization)
+
+    Modify Section 14.3.1 (Multisampling), p. 527
+
+    Remove the paragraph describing "GetMultisamplefv", and append the
+    following to the section.
+
+    Each framebuffer has a set of default sample locations, depending on the
+    number of samples in the attachments or the value of FRAMEBUFFER_DEFAULT_-
+    SAMPLES (for framebuffer objects) or the number of samples in the pixel
+    format (for the default framebuffer). Each framebuffer also has a set of
+    programmable sample locations, which may be used instead of the default
+    sample locations. The programmable sample locations are controlled by the
+    commands:
+
+        void FramebufferSampleLocationsfvARB(enum target, uint start,
+                                             sizei count, const float *v);
+        void NamedFramebufferSampleLocationsfvARB(uint framebuffer, uint start,
+                                             sizei count, const float *v);
+
+    <target> or <framebuffer> selects the framebuffer whose programmable
+    sample locations are modified. There are <N> pairs of programmable sample
+    locations values in a framebuffer, where <N> is the value of
+    PROGRAMMABLE_SAMPLE_LOCATION_TABLE_SIZE_ARB. Each programmable sample
+    location is specified as a pair of floating point values in the range
+    [0,1], corresponding to the x and y locations respectively in GL pixel
+    space. (0.5, 0.5) thus corresponds to the pixel center. Sample locations
+    outside of [0,1] result in undefined behavior.  These commands accept
+    <count> pairs of values in <v> and update locations for samples <start> to
+    <start>+<count>-1.  The location for sample <i> is taken from
+    v[2*(i-start)] and v[2*(i-start)+1].
+
+    Errors:
+
+      An INVALID_VALUE error is generated if the sum of <start> and <count> is
+      greater than PROGRAMMABLE_SAMPLE_LOCATION_TABLE_SIZE_ARB.
+
+    Default and programmable sample locations may be queried with the command:
+
+        void GetMultisamplefv(enum pname, uint index, float *val);
+
+    <index> corresponds to which sample location should be returned, and the
+    sample location is returned as two floating-point values in val[0] and
+    val[1]. If <pname> is SAMPLE_LOCATION_ARB (aliasing SAMPLE_POSITION),
+    a default sample location is returned and <index> must be less than
+    the value of SAMPLES. If <pname> is PROGRAMMABLE_SAMPLE_LOCATION_ARB,
+    a programmable sample location is returned and <index> must be less
+    than the value of PROGRAMMABLE_SAMPLE_LOCATION_TABLE_SIZE_ARB.
+
+    Sample locations are rounded on use to the precision indicated by the value
+    of SAMPLE_LOCATION_SUBPIXEL_BITS_ARB (i.e. rounded to the nearest
+    2^{-subpixelbits}). This precision may depend on the number of samples in
+    the framebuffer. The initial programmable sample locations are all
+    (0.5,0.5).
+
+    Errors:
+
+        An INVALID_ENUM error is generated if <target> is not
+        DRAW_FRAMEBUFFER, READ_FRAMEBUFFER, or FRAMEBUFFER.
+
+        An INVALID_OPERATION error is generated by
+        NamedFramebufferSampleLocationsfvARB if <framebuffer> is not
+        the name of an existing framebuffer object.
+
+        An INVALID_VALUE error is generated if <pname> is SAMPLE_LOCATION_ARB
+        and <index> is greater than or equal to the value of SAMPLES.
+
+        An INVALID_VALUE error is generated if <pname> is
+        PROGRAMMABLE_SAMPLE_LOCATION_ARB and <index> is greater than or equal
+        to the value of PROGRAMMABLE_SAMPLE_LOCATION_TABLE_SIZE_ARB.
+
+        An INVALID_ENUM error is generated if <pname> is not
+        SAMPLE_LOCATION_ARB or PROGRAMMABLE_SAMPLE_LOCATION_ARB.
+
+    Programmable sample locations are enabled by calling FramebufferParameteri
+    with a <pname> of FRAMEBUFFER_PROGRAMMABLE_SAMPLE_LOCATIONS_ARB and a
+    non-zero value of <param>. The initial value of FRAMEBUFFER_PROGRAMMABLE_-
+    SAMPLE_LOCATIONS_ARB is zero.
+
+    Programmable sample locations can vary across pixels, based on the pixel x
+    and y coordinate. A framebuffer has a sample location pixel grid which may
+    depend on the number of samples. This grid size can be queried by calling
+    GetIntegerv with a <pname> of SAMPLE_LOCATION_PIXEL_GRID_WIDTH_ARB and
+    SAMPLE_LOCATION_PIXEL_GRID_HEIGHT_ARB, which returns the grid dimensions for
+    the draw framebuffer.
+
+    If FRAMEBUFFER_PROGRAMMABLE_SAMPLE_LOCATIONS_ARB is enabled and the
+    framebuffer parameter FRAMEBUFFER_SAMPLE_LOCATION_PIXEL_GRID_ARB is enabled
+    (non-zero), sample locations are selected as follows:
+
+        grid_x = value of SAMPLE_LOCATION_PIXEL_GRID_WIDTH_ARB;
+        grid_y = value of SAMPLE_LOCATION_PIXEL_GRID_HEIGHT_ARB;
+
+        pixel_x = <window x coordinate> mod grid_x;
+        pixel_y = <window y coordinate> mod grid_y;
+
+        num_samples = value of SAMPLES;
+        sample_i = (pixel_y*grid_x + pixel_x)*num_samples + sample_index;
+
+        float *table = FRAMEBUFFER_PROGRAMMABLE_SAMPLE_LOCATIONS_ARB;
+        sample_location.xy = (table[2*sample_i], table[2*sample_i+1]);
+
+    If FRAMEBUFFER_PROGRAMMABLE_SAMPLE_LOCATIONS_ARB is enabled and
+    FRAMEBUFFER_SAMPLE_LOCATION_PIXEL_GRID_ARB is disabled, sample locations are
+    selected as follows:
+
+        sample_i = sample_index;
+
+        float *table = FRAMEBUFFER_PROGRAMMABLE_SAMPLE_LOCATIONS_ARB;
+        sample_location.xy = (table[2*sample_i], table[2*sample_i+1]);
+
+    If a framebuffer is incomplete, querying the value of
+    SAMPLE_LOCATION_SUBPIXEL_BITS_ARB, SAMPLE_LOCATION_PIXEL_GRID_WIDTH_ARB, and
+    SAMPLE_LOCATION_PIXEL_GRID_HEIGHT_ARB will return zero.
+
+    Add new Subsection 14.3.1.X (Resolving Depth Values)
+
+    It is common for implementations to optimize the storage of depth values
+    by storing values that can be used to reconstruct depth at each sample
+    location, rather than storing separate depth values for each sample. For
+    example, the depth values from a single triangle can be represented using
+    plane equations.  When the depth value for a sample is needed, it is
+    automatically evaluated at the sample location. Modifying the sample
+    locations causes the reconstruction to no longer evaluate the same depth
+    values as when the samples were originally generated.  The choice of using
+    separate depth values for each sample or some other reconstruction method
+    is implementation-dependent and may not be queried.
+
+    If per-sample depth values need to be reconstructed, some commands may
+    evaluate depth values using default sample locations even if programmable
+    sample locations are enabled.  This evaluation can occur either when
+    reading sample values or when updating one sample requires the
+    implementation to reconstruct depth values for a group of neighboring
+    samples. These commands include ReadPixels, DrawPixels, CopyPixels,
+    GetTexImage, CopyTexImage, CopyTexSubImage, TexImage, TexSubImage, and
+    BlitFramebuffer. Texturing from a depth texture whose values need to be
+    reconstructed may also evaluate depth functions as the default sample
+    locations.
+
+    The command
+
+        void EvaluateDepthValuesARB();
+
+    evaluates depth values for all samples in the current depth buffer
+    (subject to the pixel ownership and scissor tests) and stores each value
+    in the depth buffer.  This can be used to ensure that later accesses will
+    use depth values consistent with the sample locations used when the
+    samples were generated.  If the current framebuffer has no depth buffer,
+    EvaluateDepthValuesARB will have no effect.
+
+
+New Implementation Dependent State
+
+                                                      Minimum
+    Get Value                    Type    Get Command  Value   Description                   Sec.
+    ---------                    ------- -----------  ------- ------------------------      ------
+    PROGRAMMABLE_SAMPLE_-          Z+    GetIntegerv     2    Size of programmable sample   14.3.1
+        LOCATION_TABLE_SIZE_ARB                               location table
+
+New State
+
+    Table 23.84 (Framebuffer Dependent Values):
+
+    Get Value                               Get Command       Type        Minimum Value    Description             Sec.    Attribute
+    ---------                               -----------       ----        -------------    -----------             ----    ---------
+    SAMPLE_LOCATION_SUBPIXEL_BITS_ARB       GetIntegerv        Z+             4            Precision of sample     14.3.1  -
+                                                                                           locations
+    SAMPLE_LOCATION_PIXEL_GRID_WIDTH_ARB    GetIntegerv        Z+             1            Size of programmable    14.3.1  -
+                                                                                           location grid
+    SAMPLE_LOCATION_PIXEL_GRID_HEIGHT_ARB   GetIntegerv        Z+             1            Size of programmable    14.3.1  -
+                                                                                           location grid
+    SAMPLE_LOCATION_ARB                     GetMultisamplefv   n*2*R[0,1] impl-dependent   Default sample          14.3.1 -
+                                                                                           positions
+    Table 23.30. (Framebuffer):
+
+    Get Value                               Get Command     Type    Initial Value    Description             Sec.    Attribute
+    ---------                               -----------     ----    -------------    -----------             ----    ---------
+    FRAMEBUFFER_PROGRAMMABLE_-              GetFramebuffer-  B          FALSE        Enable programmable     14.3.1  -
+        SAMPLE_LOCATIONS_ARB                Parameteriv                              sample locations
+    FRAMEBUFFER_SAMPLE_LOCATION_-           GetFramebuffer-  B          FALSE        Enable varying          14.3.1  -
+        PIXEL_GRID_ARB                      Parameteriv                              locations per pixel
+    PROGRAMMABLE_SAMPLE_LOCATION_ARB        GetMultisamplefv n*2*R[0,1] (0.5,0.5)    Programmable sample     14.3.1  -
+                                                                                     locations
+
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    None.
+
+Errors
+
+    INVALID_VALUE is generated by FramebufferSampleLocationsfvARB or
+    NamedFramebufferSampleLocationsfvARB if the sum of <start> and <count> is
+    greater than PROGRAMMABLE_SAMPLE_LOCATION_TABLE_SIZE_ARB.
+
+    INVALID_VALUE is generated by GetMultisamplefv if <pname> is
+    PROGRAMMABLE_SAMPLE_LOCATION_ARB and <index> is greater than or equal to
+    the value of PROGRAMMABLE_SAMPLE_LOCATION_TABLE_SIZE_ARB.
+
+    Some errors in the original specification are relaxed to allow for new
+    functionality provided by this extension (e.g., allowing programmable
+    sample location framebuffer parameters to be set on the default
+    framebuffer).
+
+Interactions with OpenGL ES 3.1
+
+    If implemented in OpenGL ES 3.1, remove references to GetDoublev,
+    DrawPixels, CopyPixels and GetTexImage.
+
+Issues
+
+    (1) Why is SAMPLE_LOCATION_ARB added?
+
+    RESOLVED: Prior to the NV_explicit_multisample spec (and its incorporation
+    into ARB_texture_multisample), the spec used the word "location" to
+    describe the placement of the sample within a pixel, rather than
+    "position". This alias of SAMPLE_POSITION is added to return to that
+    convention.
+
+    (2) How should values that depend on the number of samples be handled for
+    incomplete framebuffers?
+
+    RESOLVED: Return zero. Other such queries (e.g. RED_BITS) are undefined
+    but do not generate an error. Let's be more well-defined, but still not
+    generate an error.
+
+    (3) Should programmable sample locations affect non-multisample rendering?
+
+    RESOLVED: No, the programmable sample locations only apply to multisample
+    rasterization rules. Non-multisample rasterization is generally defined by
+    rules involving "fragment centers" or (for lines) a diamond around the
+    fragment center. Multisample rasterization is defined by rules involving
+    sample points being inside or outside of a region defined by the primitive.
+    Thus, only multisample rasterization rules are affected by modifying the
+    sample locations.
+
+    (4) How does this extension differ from AMD_sample_positions?
+
+    RESOLVED:  There are a few differences between this extension and
+    AMD_sample_positions:
+
+    - This extension allows the sample locations to vary per-pixel within a
+      grid of adjacent pixels.
+
+    - This extension specifies some limitations on texturing on various copy
+      operations when a source image was generated with programmable
+      locations, or to existing samples the framebuffer when the sample
+      locations change.  It also provides an explicit "resolve" operation that
+      allows one to ensure that correct values are stored in all samples when
+      non-framebuffer operations not supporting the programmable locations are
+      used.  This issue is not explicitly handled in the AMD extension.
+
+    - This extension has explicit framebuffer parameters enabling programmable
+      sample locations and multi-pixel grid support.  The AMD extension lets
+      you effectively delete all programmable sample locations and revert to
+      default locations via programming a new location using a NULL pointer.
+
+    - The sample locations in this extension are explicitly framebuffer object
+      state, with separate state available for the default framebuffer (zero).
+      It's unclear from the AMD extension whether the state is global or per
+      framebuffer object, though a note in comment (1) ("Any other fbos will
+      not be affected by this change") suggests it might also be framebuffer
+      object state.
+
+    (5) Can PROGRAMMABLE_SAMPLE_LOCATION_TABLE_SIZE_ARB be less than SAMPLES
+    for a specific framebuffer?
+
+    RESOLVED: In order to allow the application to specify the sample
+    locations for all samples, the implementation must make the size of
+    PROGRAMMABLE_SAMPLE_LOCATION_TABLE_SIZE_ARB at least as big as the
+    framebuffer SAMPLES size. It would be invalid for an implementation
+    to report a PROGRAMMABLE_SAMPLE_LOCATION_TABLE_SIZE_ARB less than
+    any framebuffer SAMPLES size.
+
+Revision History
+
+    Revision 1
+    - Branch from NV_sample_locations
+
+    Revision 2  pdaniell 5/26
+    - Rename ResolveDepthValuesARB() to EvaluateDepthValuesARB().
+
+    Revision 3  ewerness 6/5
+    - Complete rename of ResolveDepthValuesARB() to EvaluateDepthValuesARB().
+
+    Revision 4  pdaniell 6/11
+    - Add issue (5) to cover question in bug 14100.
