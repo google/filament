@@ -21,6 +21,7 @@
 #include "FilamentAPI-impl.h"
 
 #include <utils/CString.h>
+#include <utils/StaticString.h>
 
 namespace filament {
 
@@ -49,6 +50,10 @@ IndexBuffer::Builder& IndexBuffer::Builder::bufferType(IndexType const indexType
 
 IndexBuffer::Builder& IndexBuffer::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
+}
+
+IndexBuffer::Builder& IndexBuffer::Builder::name(utils::StaticString const& name) noexcept {
+    return BuilderNameMixin::name(name);
 }
 
 IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
