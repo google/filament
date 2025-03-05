@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGLDRIVER_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGLDRIVER_H
 
+#include "gl_headers.h"
 #include "DriverBase.h"
 #include "OpenGLContext.h"
 #include "OpenGLDriverBase.h"
@@ -34,6 +35,7 @@
 #include <backend/Platform.h>
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
+#include <backend/BufferObjectStreamDescriptor.h>
 
 #include "private/backend/Driver.h"
 #include "private/backend/HandleAllocator.h"
@@ -58,6 +60,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <unordered_map>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -363,6 +366,8 @@ private:
 
     // the must be accessed from the user thread only
     std::vector<GLStream*> mStreamsWithPendingAcquiredImage;
+
+    std::unordered_map<GLuint, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
 
     void attachStream(GLTexture* t, GLStream* stream) noexcept;
     void detachStream(GLTexture* t) noexcept;

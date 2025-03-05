@@ -24,6 +24,7 @@
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Texture.h"
+#include "details/Stream.h"
 
 #include "private/filament/EngineEnums.h"
 
@@ -188,6 +189,23 @@ void FMaterialInstance::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     mDescriptorSet.terminate(driver);
     driver.destroyBufferObject(mUbHandle);
+}
+
+void FMaterialInstance::commitStreamUniformAssociations(FEngine::DriverApi& driver) {
+    if (!mTextureParameters.empty()) {
+        bool hasStreamUniformAssociations = false;
+        for (auto const& [binding, p]: mTextureParameters) {
+            ssize_t offset = mMaterial->getUniformInterfaceBlock().getTransformFieldOffset(binding);
+            if (offset >= 0) {
+                hasStreamUniformAssociations = true;
+                auto stream = p.texture->getStream()->getHandle();
+                addStreamUniformAssociation(offset, stream, BufferObjectStreamAssociationType::TRANSFORM_MATRIX);
+            }
+        }
+        if (hasStreamUniformAssociations) {
+            driver.registerBufferObjectStreams(mUbHandle, getStreamUniformDescriptor());
+        }
+    }
 }
 
 void FMaterialInstance::commit(DriverApi& driver) const {
