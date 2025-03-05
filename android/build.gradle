@@ -11,6 +11,9 @@
 // com.google.android.filament.exclude-vulkan
 //     When set, support for Vulkan will be excluded.
 //
+// com.google.android.filament.include-webgpu
+//     When set, enables WebGPU support.
+//
 // com.google.android.filament.fgviewer
 //     When set, enables fgviewer
 //
@@ -64,9 +67,13 @@ buildscript {
             .gradleProperty("com.google.android.filament.exclude-vulkan")
             .isPresent()
 
-     def fgviewer = providers
-             .gradleProperty("com.google.android.filament.fgviewer")
-             .isPresent()
+    def includeWebGPU = providers
+            .gradleProperty("com.google.android.filament.include-webgpu")
+            .isPresent()
+
+    def fgviewer = providers
+                 .gradleProperty("com.google.android.filament.fgviewer")
+                 .isPresent()
 
     def matdbg = providers
             .gradleProperty("com.google.android.filament.matdbg")
@@ -122,6 +129,7 @@ buildscript {
         "-DANDROID_STL=c++_static",
         "-DFILAMENT_DIST_DIR=${filamentPath}".toString(),
         "-DFILAMENT_SUPPORTS_VULKAN=${excludeVulkan ? 'OFF' : 'ON'}".toString(),
+        "-DFILAMENT_SUPPORTS_WEBGPU=${includeWebGPU ? 'ON' : 'OFF'}".toString(),
         "-DFILAMENT_ENABLE_FGVIEWER=${fgviewer ? 'ON' : 'OFF'}".toString(),
         "-DFILAMENT_ENABLE_MATDBG=${matdbg ? 'ON' : 'OFF'}".toString(),
         "-DFILAMENT_DISABLE_MATOPT=${matnopt ? 'ON' : 'OFF'}".toString()

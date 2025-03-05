@@ -44,6 +44,8 @@ function print_help {
     echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
     echo "        Exclude Vulkan support from the Android build."
+    echo "    -W"
+    echo "        Include WebGPU support for the target platform. (NOT functional atm)."
     echo "    -s"
     echo "        Add iOS simulator support to the iOS build."
     echo "    -e"
@@ -192,6 +194,9 @@ INSTALL_COMMAND=
 VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
 VULKAN_ANDROID_GRADLE_OPTION=""
 
+WEBGPU_OPTION="-DFILAMENT_SUPPORTS_WEBGPU=OFF"
+WEBGPU_ANDROID_GRADLE_OPTION=""
+
 EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=OFF"
 
 MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
@@ -265,6 +270,7 @@ function build_desktop_target {
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
             ${EGL_ON_LINUX_OPTION} \
             ${FGVIEWER_OPTION} \
+            ${WEBGPU_OPTION} \
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${ASAN_UBSAN_OPTION} \
@@ -329,6 +335,7 @@ function build_webgl_with_target {
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../webgl-${lc_target}/filament" \
             -DWEBGL=1 \
+            ${WEBGPU_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ../..
         ln -sf "out/cmake-webgl-${lc_target}/compile_commands.json" \
@@ -405,6 +412,7 @@ function build_android_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${VULKAN_ANDROID_OPTION} \
+            ${WEBGPU_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ../..
@@ -523,6 +531,7 @@ function build_android {
             -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
+            ${WEBGPU_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
             :filament-android:assembleDebug \
@@ -572,6 +581,7 @@ function build_android {
             -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
+            ${WEBGPU_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
             :filament-android:assembleRelease \
@@ -640,6 +650,7 @@ function build_ios_target {
             -DIOS=1 \
             -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
             ${FGVIEWER_OPTION} \
+            ${WEBGPU_OPTION} \
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${STEREOSCOPIC_OPTION} \
@@ -829,7 +840,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgijmp:q:uvslwedtk:bx:S:X:" opt; do
+while getopts ":hacCfgimp:q:uvWslwedtk:bx:S:X:" opt; do
     case ${opt} in
         h)
             print_help
@@ -948,6 +959,11 @@ while getopts ":hacCfgijmp:q:uvslwedtk:bx:S:X:" opt; do
             VULKAN_ANDROID_GRADLE_OPTION="-Pcom.google.android.filament.exclude-vulkan"
             echo "Disabling support for Vulkan in the core Filament library."
             echo "Consider using -c after changing this option to clear the Gradle cache."
+            ;;
+        W)
+            WEBGPU_OPTION="-DFILAMENT_SUPPORTS_WEBGPU=ON"
+            WEBGPU_ANDROID_GRADLE_OPTION="-Pcom.google.android.filament.include-webgpu"
+            echo "Enable support for WebGPU(Experimental) in the core Filament library."
             ;;
         s)
             IOS_BUILD_SIMULATOR=true
