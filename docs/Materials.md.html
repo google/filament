@@ -991,10 +991,12 @@ Type
 
 Value
 :     Each entry is an object with the properties `name` and `type`, both of `string` type. The
-      name must be a valid GLSL identifier. Entries also have an optional `precision`, which can be
+      name must be a valid GLSL identifier. Entries have an optional `precision`, which can be
       one of `default` (best precision for the platform, typically `high` on desktop, `medium` on
       mobile), `low`, `medium`, `high`. The type must be one of the types described in
-      table [materialParamsTypes].
+      table [materialParamsTypes]. For external textures, entries also have an option 
+      transformUniformName parameter to specify the name of the shader parameter that will be 
+      used to expose the transform matrix associated with the external sampler.  
 
          Type          |            Description
 :----------------------|:---------------------------------
