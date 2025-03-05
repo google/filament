@@ -65,7 +65,7 @@ public:
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept;
 
     // must be called on GLES context thread, returns the transform matrix
-    void getTransformMatrix(Stream* stream, math::mat3f* uvTransform) noexcept;
+    math::mat3f getTransformMatrix(Stream* stream) noexcept;
 
 private:
     ExternalStreamManagerAndroid() noexcept;

@@ -323,11 +323,9 @@ public:
     /**
      * Returns the transform matrix of the texture attached to the stream.
      * @param stream Stream to get the transform matrix from
-     * @param uvTransform Output parameter: Transform matrix of the image bound to the texture.
+     * @param uvTransform Output parameter: Transform matrix of the image bound to the texture. Returns identity if not supported.
      */
-    virtual void getTransformMatrix(
-            Stream* UTILS_NONNULL stream,
-            math::mat3f* UTILS_NONNULL uvTransform) noexcept;
+    virtual math::mat3f getTransformMatrix(Stream* UTILS_NONNULL stream) noexcept;
 
 
     // --------------------------------------------------------------------------------------------

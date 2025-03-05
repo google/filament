@@ -169,7 +169,7 @@ void ExternalStreamManagerAndroid::updateTexImage(Stream* handle, int64_t* times
     }
 }
 
-void ExternalStreamManagerAndroid::getTransformMatrix(Stream* handle, math::mat3f* uvTransform) noexcept {
+math::mat3f ExternalStreamManagerAndroid::getTransformMatrix(Stream* handle) noexcept {
     EGLStream const* stream = static_cast<EGLStream*>(handle);
     math::mat4f out = math::mat4f();
     if (__builtin_available(android 28, *)) {
@@ -183,7 +183,7 @@ void ExternalStreamManagerAndroid::getTransformMatrix(Stream* handle, math::mat3
         env->DeleteLocalRef(jout);
         VirtualMachineEnv::handleException(env);
     }
-    *uvTransform = math::mat3f {
+    return math::mat3f {
         out[0][0], out[0][1], out[0][3],
         out[1][0], out[1][1], out[1][3],
         out[3][0], out[3][1], out[3][3],
