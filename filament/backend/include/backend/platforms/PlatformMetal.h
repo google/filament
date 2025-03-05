@@ -20,11 +20,16 @@
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 
-#import <Metal/Metal.h>
-
 namespace filament::backend {
 
 struct PlatformMetalImpl;
+
+// In order for this header to be compatible with Objective-C and C++, we use these wrappers around
+// id<MTL*> objects.
+// See PlatformMetal-Objc.h.
+struct MetalDevice;
+struct MetalCommandQueue;
+struct MetalCommandBuffer;
 
 class PlatformMetal final : public Platform {
 public:
@@ -41,21 +46,22 @@ public:
      * free to decide which one to use. On mobile systems with a single GPU, implementations should
      * simply return the result of MTLCreateSystemDefaultDevice();
      */
-    virtual id<MTLDevice> createDevice() noexcept;
+    virtual void createDevice(MetalDevice& outDevice) noexcept;
 
     /**
      * Create a command submission queue on the Metal device object.
      *
      * @param device The device which was returned from createDevice()
      */
-    virtual id<MTLCommandQueue> createCommandQueue(id<MTLDevice> device) noexcept;
+    virtual void createCommandQueue(
+            MetalDevice& device, MetalCommandQueue& outCommandQueue) noexcept;
 
     /**
      * Obtain a MTLCommandBuffer enqueued on this Platform's MTLCommandQueue. The command buffer is
      * guaranteed to execute before all subsequent command buffers created either by Filament, or
      * further calls to this method.
      */
-    id<MTLCommandBuffer> createAndEnqueueCommandBuffer() noexcept;
+    void createAndEnqueueCommandBuffer(MetalCommandBuffer& outCommandBuffer) noexcept;
 
     /**
      * The action to take if a Drawable cannot be acquired.

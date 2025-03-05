@@ -29,6 +29,7 @@
 
 #include <tsl/robin_map.h>
 
+#include <atomic>
 #include <cstddef>
 #include <exception>
 #include <mutex>
@@ -426,7 +427,7 @@ private:
     // Below is only used when running out of space in the HandleArena
     mutable utils::Mutex mLock;
     tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
-    HandleBase::HandleId mId = 0;
+    std::atomic<HandleBase::HandleId> mId = 0;
     bool mUseAfterFreeCheckDisabled = false;
 };
 

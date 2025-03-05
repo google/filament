@@ -144,6 +144,16 @@ inline VulkanLayout getDefaultLayoutImpl(VkImageUsageFlags vkusage) {
     return getDefaultLayoutImpl(usage);
 }
 
+SamplerType getSamplerTypeFromDepth(uint32_t const depth) {
+  return depth > 1 ? SamplerType::SAMPLER_2D_ARRAY
+                                  : SamplerType::SAMPLER_2D;
+}
+
+uint8_t getLayerCountFromDepth(uint32_t const depth) {
+    return getLayerCount(getSamplerTypeFromDepth(depth), depth);
+}
+
+
 } // anonymous namespace
 
 VulkanTextureState::VulkanTextureState(VkDevice device, VmaAllocator allocator,
@@ -165,12 +175,12 @@ VulkanTextureState::VulkanTextureState(VkDevice device, VmaAllocator allocator,
 VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator,
         fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, VkImage image,
         VkDeviceMemory memory, VkFormat format, uint8_t samples, uint32_t width,
-        uint32_t height, TextureUsage tusage, VulkanStagePool& stagePool)
-    : HwTexture(SamplerType::SAMPLER_2D, 1, samples, width, height, 1, TextureFormat::UNUSED,
+        uint32_t height, uint32_t depth, TextureUsage tusage, VulkanStagePool& stagePool)
+    : HwTexture(getSamplerTypeFromDepth(depth), 1, samples, width, height, depth, TextureFormat::UNUSED,
               tusage),
       mState(fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, device,
               allocator, commands, stagePool, format, fvkutils::getViewType(SamplerType::SAMPLER_2D),
-              1, 1, getDefaultLayoutImpl(tusage), any(usage & TextureUsage::PROTECTED))) {
+              /*mipLevels=*/1, getLayerCountFromDepth(depth), getDefaultLayoutImpl(tusage), any(usage & TextureUsage::PROTECTED))) {
     mState->mTextureImage = image;
     mState->mTextureImageMemory = memory;
     mPrimaryViewRange = mState->mFullViewRange;
@@ -255,9 +265,9 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
         // Validate that the format is actually sampleable.
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(physicalDevice, state->mVkFormat, &props);
+        vkGetPhysicalDeviceFormatProperties(physicalDevice, mState->mVkFormat, &props);
         if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-            FVK_LOGW << "Texture usage is SAMPLEABLE but format " << state->mVkFormat << " is not "
+            FVK_LOGW << "Texture usage is SAMPLEABLE but format " << mState->mVkFormat << " is not "
                     "sampleable with optimal tiling." << utils::io::endl;
         }
 #endif
@@ -639,15 +649,16 @@ bool VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, VkImageSubresourceR
 
     if (hasTransitions) {
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
-        FVK_LOGD << "transition texture=" << state->mTextureImage << " (" << range.baseArrayLayer
+        FVK_LOGD << "transition texture=" << mState->mTextureImage << " (" << range.baseArrayLayer
                  << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
                  << range.levelCount << ")" << " from=" << oldLayout << " to=" << newLayout
-                 << " format=" << state->mVkFormat << " depth=" << isVkDepthFormat(state->mVkFormat)
+                 << " format=" << mState->mVkFormat << " depth="
+                 << fvkutils::isVkDepthFormat(mState->mVkFormat)
                  << " slice-by-slice=" << transitionSliceBySlice << utils::io::endl;
 #endif
     } else {
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
-        FVK_LOGD << "transition texture=" << state->mTextureImage << " (" << range.baseArrayLayer
+        FVK_LOGD << "transition texture=" << mState->mTextureImage << " (" << range.baseArrayLayer
                  << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
                  << range.levelCount << ")" << " to=" << newLayout
                  << " is skipped because of no change in layout" << utils::io::endl;

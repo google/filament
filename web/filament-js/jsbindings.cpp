@@ -1453,6 +1453,8 @@ class_<TextureSampler>("TextureSampler")
 /// Texture ::core class:: 2D image or cubemap that can be sampled by the GPU, possibly mipmapped.
 class_<Texture>("Texture")
     .class_function("Builder", (TexBuilder (*)()) [] { return TexBuilder(); })
+    .class_function("isTextureFormatMipmappable", &Texture::isTextureFormatMipmappable)
+    .class_function("validatePixelFormatAndType", &Texture::validatePixelFormatAndType)
     .function("generateMipmaps", &Texture::generateMipmaps)
     .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {

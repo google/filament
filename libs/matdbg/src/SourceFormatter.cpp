@@ -34,7 +34,7 @@ std::string SourceFormatter::format(char const* source) {
     while (fgets(output, 1024, fp) != NULL) {}
 
     int status = pclose(fp);
-    if (!fp || !WEXITSTATUS(status)) {
+    if (!fp || WEXITSTATUS(status)) {
         std::call_once(mClangWarningFlag, []() {
             utils::slog.w << "[matdbg] unable to run clang-format to format shader file. "
                           << "Please make sure it's installed." << utils::io::endl;

@@ -96,6 +96,7 @@ private:
     utils::FixedCapacityVector<fvkmemory::resource_ptr<VulkanTexture>> mColors;
     fvkmemory::resource_ptr<VulkanTexture> mDepth;
     VkExtent2D mExtent;
+    uint32_t mLayerCount;
     uint32_t mCurrentSwapIndex;
     std::function<void(Platform::SwapChain* handle)> mExplicitImageReadyWait = nullptr;
     bool mAcquired;

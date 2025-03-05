@@ -82,6 +82,10 @@ bool Texture::isTextureFormatSupported(Engine& engine, InternalFormat const form
     return FTexture::isTextureFormatSupported(downcast(engine), format);
 }
 
+bool Texture::isTextureFormatMipmappable(Engine& engine, InternalFormat const format) noexcept {
+    return FTexture::isTextureFormatMipmappable(downcast(engine), format);
+}
+
 bool Texture::isProtectedTexturesSupported(Engine& engine) noexcept {
     return FTexture::isProtectedTexturesSupported(downcast(engine));
 }
@@ -98,6 +102,10 @@ size_t Texture::computeTextureDataSize(Format const format, Type const type, siz
 void Texture::generatePrefilterMipmap(Engine& engine, PixelBufferDescriptor&& buffer,
         const FaceOffsets& faceOffsets, PrefilterOptions const* options) {
     downcast(this)->generatePrefilterMipmap(downcast(engine), std::move(buffer), faceOffsets, options);
+}
+
+bool Texture::validatePixelFormatAndType(InternalFormat internalFormat, Format format, Type type) noexcept {
+    return FTexture::validatePixelFormatAndType(internalFormat, format, type);
 }
 
 } // namespace filament

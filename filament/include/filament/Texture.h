@@ -91,6 +91,9 @@ public:
     /** @return Whether a backend supports a particular format. */
     static bool isTextureFormatSupported(Engine& engine, InternalFormat format) noexcept;
 
+    /** @return Whether a backend supports mipmapping of a particular format. */
+    static bool isTextureFormatMipmappable(Engine& engine, InternalFormat format) noexcept;
+
     /** @return Whether this backend supports protected textures. */
     static bool isProtectedTexturesSupported(Engine& engine) noexcept;
 
@@ -100,6 +103,8 @@ public:
     static size_t computeTextureDataSize(Format format, Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
 
+    /** @return Whether a combination of texture format, pixel format and type is valid. */
+    static bool validatePixelFormatAndType(InternalFormat internalFormat, Format format, Type type) noexcept;
 
     /**
      * Options for environment prefiltering into reflection map

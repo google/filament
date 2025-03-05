@@ -31,6 +31,7 @@
 #include "MetalTimerQuery.h"
 
 #include <backend/platforms/PlatformMetal.h>
+#include <backend/platforms/PlatformMetal-ObjC.h>
 
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
@@ -120,8 +121,11 @@ MetalDriver::MetalDriver(
     TrackedMetalBuffer::setPlatform(platform);
     ScopedAllocationTimer::setPlatform(platform);
 
-    mContext->device = mPlatform.createDevice();
-    assert_invariant(mContext->device);
+    MetalDevice device;
+    device.device = nil;
+    mPlatform.createDevice(device);
+    mContext->device = device.device;
+    FILAMENT_CHECK_POSTCONDITION(mContext->device) << "Could not obtain Metal device.";
 
     mContext->emptyBuffer = [mContext->device newBufferWithLength:16
                                                           options:MTLResourceStorageModePrivate];
@@ -186,7 +190,13 @@ MetalDriver::MetalDriver(
             [mContext->device.name containsString:@"Apple A8 GPU"] ||
             [mContext->device.name containsString:@"Apple A7 GPU"];
 
-    mContext->commandQueue = mPlatform.createCommandQueue(mContext->device);
+    MetalCommandQueue commandQueue;
+    commandQueue.commandQueue = nil;
+    mPlatform.createCommandQueue(device, commandQueue);
+    FILAMENT_CHECK_POSTCONDITION(commandQueue.commandQueue)
+            << "Could not create Metal command queue.";
+
+    mContext->commandQueue = commandQueue.commandQueue;
     mContext->pipelineStateCache.setDevice(mContext->device);
     mContext->depthStencilStateCache.setDevice(mContext->device);
     mContext->samplerStateCache.setDevice(mContext->device);
@@ -1398,6 +1408,9 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
 
 void MetalDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
     FILAMENT_CHECK_PRECONDITION(isInRenderPass(mContext))
             << "setPushConstant must be called inside a render pass.";
     assert_invariant(static_cast<size_t>(stage) < mContext->currentPushConstants.size());
@@ -1705,6 +1718,9 @@ void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
 }
 
 void MetalDriver::bindPipeline(PipelineState const& ps) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "bindPipeline() without a valid command encoder.";
     DEBUG_LOG("bindPipeline(ps = { program = %d }))\n", ps.program.getId());
@@ -1860,6 +1876,9 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
 }
 
 void MetalDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "bindRenderPrimitive() without a valid command encoder.";
 
