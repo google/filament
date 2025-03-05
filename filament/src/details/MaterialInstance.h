@@ -222,20 +222,6 @@ public:
         }
     }
 
-    inline void addStreamUniformAssociation(uint32_t const offset, backend::Handle<backend::HwStream> const& stream, backend::BufferObjectStreamAssociationType const associationType) noexcept {
-        mStreamUniformAssociations.push_back({offset, stream, associationType});
-    }
-        
-    // get the list of offsets and streams
-    backend::BufferObjectStreamDescriptor getStreamUniformDescriptor() const noexcept {
-        backend::BufferObjectStreamDescriptor descriptor;
-        descriptor.streams.reserve(mStreamUniformAssociations.size());
-        for (auto const& [offset, stream, associationType] : mStreamUniformAssociations) {
-            descriptor.streams.push_back({offset, stream, associationType});
-        }
-        return descriptor;
-    }
-
     void setDefaultInstance(bool const value) noexcept {
         mIsDefaultInstance = value;
     }
@@ -288,14 +274,7 @@ private:
     tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
     mutable DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
-    
-    struct StreamUniformAssociation {
-        uint32_t offset;
-        backend::Handle<backend::HwStream> stream;
-        backend::BufferObjectStreamAssociationType associationType;
-    };
-    
-    std::vector<StreamUniformAssociation> mStreamUniformAssociations;
+    bool hasStreamUniformAssociations = false;
 
     backend::PolygonOffset mPolygonOffset{};
     backend::StencilState mStencilState{};

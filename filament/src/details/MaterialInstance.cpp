@@ -193,24 +193,24 @@ void FMaterialInstance::terminate(FEngine& engine) {
 
 void FMaterialInstance::commitStreamUniformAssociations(FEngine::DriverApi& driver) {
     if (!mTextureParameters.empty()) {
-        bool hasStreamUniformAssociations = false;
+        backend::BufferObjectStreamDescriptor descriptor;
         for (auto const& [binding, p]: mTextureParameters) {
             ssize_t offset = mMaterial->getUniformInterfaceBlock().getTransformFieldOffset(binding);
             if (offset >= 0) {
                 hasStreamUniformAssociations = true;
                 auto stream = p.texture->getStream()->getHandle();
-                addStreamUniformAssociation(offset, stream, BufferObjectStreamAssociationType::TRANSFORM_MATRIX);
+                descriptor.streams.push_back({uint32_t(offset), stream, BufferObjectStreamAssociationType::TRANSFORM_MATRIX});
             }
         }
-        if (hasStreamUniformAssociations) {
-            driver.registerBufferObjectStreams(mUbHandle, getStreamUniformDescriptor());
+        if (descriptor.streams.size() > 0) {
+            driver.registerBufferObjectStreams(mUbHandle, std::move(descriptor));
         }
     }
 }
 
 void FMaterialInstance::commit(DriverApi& driver) const {
     // update uniforms if needed
-    if (mUniforms.isDirty()) {
+    if (mUniforms.isDirty() || hasStreamUniformAssociations) {
         driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
     if (!mTextureParameters.empty()) {
