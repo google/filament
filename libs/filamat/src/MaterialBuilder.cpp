@@ -617,14 +617,14 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
             sbb.add({ param.name.data(), param.name.size() },
                     binding, param.samplerType, param.format, param.precision, param.multisample);
             if (!param.transformName.empty()) {
-                ibb.add({{{ param.transformName.data(), param.transformName.size() },
-                          0, UniformType::MAT3, Precision::DEFAULT, uint8_t(binding), FeatureLevel::FEATURE_LEVEL_0 }});
+                ibb.add({{{ param.transformName.data(), param.transformName.size() }, uint8_t(binding),
+                          0, UniformType::MAT3, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 }});
             }
             binding++;
         } else if (param.isUniform()) {
             ibb.add({{{ param.name.data(), param.name.size() },
                       uint32_t(param.size == 1u ? 0u : param.size), param.uniformType,
-                      param.precision, 0, FeatureLevel::FEATURE_LEVEL_0 }});
+                      param.precision, FeatureLevel::FEATURE_LEVEL_0 }});
         }
     }
 
@@ -651,11 +651,11 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     }
 
     if (mBlendingMode == BlendingMode::MASKED) {
-        ibb.add({{ "_maskThreshold", 0, UniformType::FLOAT, Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 }});
+        ibb.add({{ "_maskThreshold", 0, UniformType::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 }});
     }
 
     if (mDoubleSidedCapability) {
-        ibb.add({{ "_doubleSided", 0, UniformType::BOOL, Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 }});
+        ibb.add({{ "_doubleSided", 0, UniformType::BOOL, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 }});
     }
 
     mRequiredAttributes.set(VertexAttribute::POSITION);
