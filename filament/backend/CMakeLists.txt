@@ -104,7 +104,6 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
     if (ANDROID)
         list(APPEND SRCS src/opengl/platforms/ExternalStreamManagerAndroid.cpp)
         list(APPEND SRCS src/opengl/platforms/PlatformEGLAndroid.cpp)
-        list(APPEND SRCS src/BackendUtilsAndroid.cpp)
     elseif (IOS)
         list(APPEND SRCS src/opengl/platforms/PlatformCocoaTouchGL.mm)
         list(APPEND SRCS src/opengl/platforms/CocoaTouchExternalImage.mm)
@@ -245,6 +244,10 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUPlatform.cpp
             src/webgpu/WebGPUPlatform.h
     )
+endif()
+
+if (ANDROID)
+    list(APPEND SRCS src/BackendUtilsAndroid.cpp)
 endif()
 
 # ==================================================================================================
