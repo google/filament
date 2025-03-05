@@ -95,39 +95,39 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
     static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(PerViewUib::_name)
             .add({
-            { "viewFromWorldMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "worldFromViewMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "clipFromViewMatrix",     0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "viewFromClipMatrix",     0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "viewFromWorldMatrix",    0, Type::MAT4,   Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "worldFromViewMatrix",    0, Type::MAT4,   Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "clipFromViewMatrix",     0, Type::MAT4,   Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "viewFromClipMatrix",     0, Type::MAT4,   Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
             { "clipFromWorldMatrix",    CONFIG_MAX_STEREOSCOPIC_EYES,
-                                           Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "worldFromClipMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "userWorldFromWorldMatrix",0,Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "clipTransform",          0, Type::FLOAT4, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+                                           Type::MAT4,   Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "worldFromClipMatrix",    0, Type::MAT4,   Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "userWorldFromWorldMatrix",0,Type::MAT4,   Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "clipTransform",          0, Type::FLOAT4, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
 
-            { "clipControl",            0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "time",                   0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "temporalNoise",          0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "userTime",               0, Type::FLOAT4, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "clipControl",            0, Type::FLOAT2, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "time",                   0, Type::FLOAT,  Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "temporalNoise",          0, Type::FLOAT,  Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "userTime",               0, Type::FLOAT4, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
 
             // ------------------------------------------------------------------------------------
             // values below should only be accessed in surface materials
             // ------------------------------------------------------------------------------------
 
-            { "resolution",             0, Type::FLOAT4, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "logicalViewportScale",   0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "logicalViewportOffset",  0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "resolution",             0, Type::FLOAT4, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "logicalViewportScale",   0, Type::FLOAT2, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "logicalViewportOffset",  0, Type::FLOAT2, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
 
-            { "lodBias",                0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "refractionLodOffset",    0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "lodBias",                0, Type::FLOAT, Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "refractionLodOffset",    0, Type::FLOAT, Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
             { "derivativesScale",       0, Type::FLOAT2                  },
 
-            { "oneOverFarMinusNear",    0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "nearOverFarMinusNear",   0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "cameraFar",              0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "exposure",               0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 }, // high precision to work around #3602 (qualcom),
-            { "ev100",                  0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "needsAlphaChannel",      0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "oneOverFarMinusNear",    0, Type::FLOAT,  Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "nearOverFarMinusNear",   0, Type::FLOAT,  Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "cameraFar",              0, Type::FLOAT,  Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "exposure",               0, Type::FLOAT,  Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 }, // high precision to work around #3602 (qualcom),
+            { "ev100",                  0, Type::FLOAT,  Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "needsAlphaChannel",      0, Type::FLOAT,  Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
 
             // AO
             { "aoSamplingQualityAndEdgeDistance", 0, Type::FLOAT         },
@@ -141,17 +141,17 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "lightChannels",          0, Type::INT                     },
             { "froxelCountXY",          0, Type::FLOAT2                  },
 
-            { "iblLuminance",           0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "iblRoughnessOneLevel",   0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "iblLuminance",           0, Type::FLOAT,  Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "iblRoughnessOneLevel",   0, Type::FLOAT,  Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
             { "iblSH",                  9, Type::FLOAT3                  },
 
             // ------------------------------------------------------------------------------------
             // Directional Lighting [variant: DIR]
             // ------------------------------------------------------------------------------------
-            { "lightDirection",         0, Type::FLOAT3, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "lightDirection",         0, Type::FLOAT3, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
             { "padding0",               0, Type::FLOAT                   },
-            { "lightColorIntensity",    0, Type::FLOAT4, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "sun",                    0, Type::FLOAT4, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "lightColorIntensity",    0, Type::FLOAT4, Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "sun",                    0, Type::FLOAT4, Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
             { "shadowFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
@@ -176,19 +176,19 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // ------------------------------------------------------------------------------------
             // Fog [variant: FOG]
             // ------------------------------------------------------------------------------------
-            { "fogDensity",              0, Type::FLOAT3,Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "fogStart",                0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "fogMaxOpacity",           0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogDensity",              0, Type::FLOAT3,Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogStart",                0, Type::FLOAT, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogMaxOpacity",           0, Type::FLOAT, Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogMinMaxMip",            0, Type::UINT,  Precision::HIGH },
-            { "fogHeightFalloff",        0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "fogCutOffDistance",       0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "fogColor",                0, Type::FLOAT3, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "fogColorFromIbl",         0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "fogInscatteringStart",    0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "fogInscatteringSize",     0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogHeightFalloff",        0, Type::FLOAT, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogCutOffDistance",       0, Type::FLOAT, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogColor",                0, Type::FLOAT3, Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogColorFromIbl",         0, Type::FLOAT, Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogInscatteringStart",    0, Type::FLOAT, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogInscatteringSize",     0, Type::FLOAT, Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogOneOverFarMinusNear",  0, Type::FLOAT, Precision::HIGH },
             { "fogNearOverFarMinusNear", 0, Type::FLOAT, Precision::HIGH },
-            { "fogFromWorldMatrix",      0, Type::MAT3, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogFromWorldMatrix",      0, Type::MAT3, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
 
             // ------------------------------------------------------------------------------------
             // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
@@ -203,12 +203,12 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // --------------------------------------------------------------------------------------------
             // user defined global variables
             // --------------------------------------------------------------------------------------------
-            { "custom",                  4, Type::FLOAT4, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "custom",                  4, Type::FLOAT4, Precision::HIGH, 0, FeatureLevel::FEATURE_LEVEL_0 },
 
             // --------------------------------------------------------------------------------------------
             // for feature level 0 / es2 usage
             // --------------------------------------------------------------------------------------------
-            { "rec709",                  0, Type::INT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "rec709",                  0, Type::INT,  Precision::DEFAULT, 0, FeatureLevel::FEATURE_LEVEL_0 },
             { "es2Reserved0",            0, Type::FLOAT                  },
             { "es2Reserved1",            0, Type::FLOAT                  },
             { "es2Reserved2",            0, Type::FLOAT                  },
@@ -224,7 +224,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 BufferInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
     static BufferInterfaceBlock const uib =  BufferInterfaceBlock::Builder()
             .name(PerRenderableUib::_name)
-            .add({{ "data", CONFIG_MAX_INSTANCES, BufferInterfaceBlock::Type::STRUCT, {}, {},
+            .add({{ "data", CONFIG_MAX_INSTANCES, BufferInterfaceBlock::Type::STRUCT, {}, 0, {},
                     "PerRenderableData", sizeof(PerRenderableData), "CONFIG_MAX_INSTANCES" }})
             .build();
     return uib;
@@ -243,7 +243,7 @@ BufferInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
     static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(ShadowUib::_name)
             .add({{ "shadows", CONFIG_MAX_SHADOWMAPS,
-                    BufferInterfaceBlock::Type::STRUCT, {}, {},
+                    BufferInterfaceBlock::Type::STRUCT, {}, 0, {},
                     "ShadowData", sizeof(ShadowUib::ShadowData) }})
             .build();
     return uib;
@@ -253,7 +253,7 @@ BufferInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
     static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(PerRenderableBoneUib::_name)
             .add({{ "bones", CONFIG_MAX_BONE_COUNT,
-                    BufferInterfaceBlock::Type::STRUCT, {}, {},
+                    BufferInterfaceBlock::Type::STRUCT, {}, 0, {},
                     "BoneData", sizeof(PerRenderableBoneUib::BoneData) }})
             .build();
     return uib;
@@ -279,7 +279,7 @@ BufferInterfaceBlock const& UibGenerator::getFroxelRecordUib() noexcept {
 BufferInterfaceBlock const& UibGenerator::getFroxelsUib() noexcept {
     static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(FroxelsUib::_name)
-            .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH, {},
+            .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH, 0, {},
                     {}, {}, "CONFIG_FROXEL_BUFFER_HEIGHT"}})
             .build();
     return uib;

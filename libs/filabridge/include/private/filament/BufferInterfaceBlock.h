@@ -41,6 +41,7 @@ public:
         uint32_t size;
         backend::UniformType type;
         backend::Precision precision{};
+        uint8_t associatedSampler;
         backend::FeatureLevel minFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_1;
         std::string_view structName{};
         uint32_t stride{};
@@ -68,6 +69,7 @@ public:
         bool isArray;               // true if the field is an array
         uint32_t size;              // size of the array in elements, or 0 if not an array
         Precision precision;        // precision of this field
+        uint8_t associatedSampler;   // sampler associated with this field
         backend::FeatureLevel minFeatureLevel; // below this feature level, this field is not needed
         utils::CString structName;  // name of this field structure if type is STRUCT
         utils::CString sizeName;    // name of the size parameter in the shader
@@ -152,6 +154,10 @@ public:
     // negative value if name doesn't exist or Panic if exceptions are enabled
     ssize_t getFieldOffset(std::string_view name, size_t index) const;
 
+    // returns offset in bytes of the transform matrix for the given external texture binding
+    // returns -1 if the field doesn't exist
+    ssize_t getTransformFieldOffset(uint8_t binding) const;
+
     FieldInfo const* getFieldInfo(std::string_view name) const;
 
     bool hasField(std::string_view name) const noexcept {
@@ -179,6 +185,7 @@ private:
     utils::CString mName;
     utils::FixedCapacityVector<FieldInfo> mFieldInfoList;
     std::unordered_map<std::string_view , uint32_t> mInfoMap;
+    std::unordered_map<uint8_t, uint32_t> mTransformOffsetMap;
     uint32_t mSize = 0; // size in bytes rounded to multiple of 4
     Alignment mAlignment = Alignment::std140;
     Target mTarget = Target::UNIFORM;

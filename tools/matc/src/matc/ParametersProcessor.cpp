@@ -153,6 +153,12 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         std::cerr << "parameters: name value must be STRING." << std::endl;
         return false;
     }
+    
+    const JsonishValue* transformNameValue = jsonObject.getValue("transformName");
+    if (transformNameValue && transformNameValue->getType() != JsonishValue::STRING) {
+        std::cerr << "parameters: transformName value must be STRING." << std::endl;
+        return false;
+    }
 
     const JsonishValue* precisionValue = jsonObject.getValue("precision");
     if (precisionValue) {
@@ -221,7 +227,12 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
 
         auto multisample = multiSampleValue ? multiSampleValue->toJsonBool()->getBool() : false;
 
-        builder.parameter(nameString.c_str(), type, format, precision, multisample);
+        if (transformNameValue) {
+            auto transformName = transformNameValue->toJsonString()->getString();
+            builder.parameter(nameString.c_str(), type, format, precision, multisample, transformName.c_str());
+        } else {
+            builder.parameter(nameString.c_str(), type, format, precision, multisample);
+        }
 
     } else {
         std::cerr << "parameters: the type '" << typeString
