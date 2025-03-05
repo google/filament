@@ -20,11 +20,6 @@
 
 #include <utils/CString.h>
 
-#ifdef __ANDROID__
-#include <android/hardware_buffer.h>
-#include <backend/DriverEnums.h>
-#endif //__ANDROID__
-
 #include <string_view>
 
 namespace filament::backend {
@@ -540,83 +535,6 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
            return false;
     }
 }
-
-#ifdef __ANDROID__
-TextureFormat mapToFilamentFormat(unsigned int format, bool isSrgbTransfer) noexcept {
-    if (isSrgbTransfer) {
-        switch (format) {
-            case AHARDWAREBUFFER_FORMAT_R8G8B8_UNORM:
-                return TextureFormat::SRGB8;
-            default:
-                return TextureFormat::SRGB8_A8;
-        }
-    }
-    switch (format) {
-        case AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM:
-        case AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM:
-            return TextureFormat::RGBA8;
-        case AHARDWAREBUFFER_FORMAT_R8G8B8_UNORM:
-        case AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420:
-            return TextureFormat::RGB8;
-        case AHARDWAREBUFFER_FORMAT_R5G6B5_UNORM:
-            return TextureFormat::RGB565;
-        case AHARDWAREBUFFER_FORMAT_R16G16B16A16_FLOAT:
-            return TextureFormat::RGBA16F;
-        case AHARDWAREBUFFER_FORMAT_R10G10B10A2_UNORM:
-            return TextureFormat::RGB10_A2;
-        case AHARDWAREBUFFER_FORMAT_D16_UNORM:
-            return TextureFormat::DEPTH16;
-        case AHARDWAREBUFFER_FORMAT_D24_UNORM:
-            return TextureFormat::DEPTH24;
-        case AHARDWAREBUFFER_FORMAT_D24_UNORM_S8_UINT:
-            return TextureFormat::DEPTH24_STENCIL8;
-        case AHARDWAREBUFFER_FORMAT_D32_FLOAT:
-            return TextureFormat::DEPTH32F;
-        case AHARDWAREBUFFER_FORMAT_D32_FLOAT_S8_UINT:
-            return TextureFormat::DEPTH32F_STENCIL8;
-        case AHARDWAREBUFFER_FORMAT_S8_UINT:
-            return TextureFormat::STENCIL8;
-        case AHARDWAREBUFFER_FORMAT_R8_UNORM:
-            return TextureFormat::R8;
-        default:
-            return TextureFormat::UNUSED;
-    }
-}
-
-TextureUsage mapToFilamentUsage(unsigned int usage, TextureFormat format) noexcept {
-    TextureUsage usageFlags = TextureUsage::NONE;
-
-    if (usage & AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE) {
-        usageFlags |= TextureUsage::SAMPLEABLE;
-    }
-
-    if (usage & AHARDWAREBUFFER_USAGE_GPU_FRAMEBUFFER) {
-        if (isDepthFormat(format)) {
-            usageFlags |= TextureUsage::DEPTH_ATTACHMENT;
-        }
-        if (isStencilFormat(format)) {
-            usageFlags |= TextureUsage::STENCIL_ATTACHMENT;
-        }
-        if (isColorFormat(format)) {
-            usageFlags |= TextureUsage::COLOR_ATTACHMENT;
-        }
-    }
-
-    if (usage & AHARDWAREBUFFER_USAGE_GPU_DATA_BUFFER) {
-        usageFlags |= TextureUsage::UPLOADABLE;
-    }
-
-    if (usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT) {
-        usageFlags |= TextureUsage::PROTECTED;
-    }
-
-    if (usageFlags == TextureUsage::NONE) {
-        usageFlags = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-    }
-
-    return usageFlags;
-}
-#endif //__ANDROID__
 
 } // namespace backend::filament
 

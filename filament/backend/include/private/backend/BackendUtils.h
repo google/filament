@@ -71,18 +71,6 @@ size_t getBlockHeight(TextureFormat format) noexcept;
  */
 bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped);
 
-#ifdef __ANDROID__
-/**
- * Maps AHardwareBuffer format to TextureFormat.
- */
-TextureFormat mapToFilamentFormat(unsigned int format, bool isSrgbTransfer) noexcept;
-
-/**
- * Maps AHardwareBuffer usage to TextureUsage.
- */
-TextureUsage mapToFilamentUsage(unsigned int usage, TextureFormat format) noexcept;
-#endif //__ANDROID__
-
 } // namespace filament
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILS_H
