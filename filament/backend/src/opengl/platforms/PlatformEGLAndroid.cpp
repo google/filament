@@ -283,6 +283,10 @@ void PlatformEGLAndroid::updateTexImage(Stream* stream, int64_t* timestamp) noex
     mExternalStreamManager.updateTexImage(stream, timestamp);
 }
 
+void PlatformEGLAndroid::getTransformMatrix(Stream* stream, math::mat3f* uvTransform) noexcept {
+    mExternalStreamManager.getTransformMatrix(stream, uvTransform);
+}
+
 int PlatformEGLAndroid::getOSVersion() const noexcept {
     return mOSVersion;
 }

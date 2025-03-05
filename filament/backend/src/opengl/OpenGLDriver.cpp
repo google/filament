@@ -2163,6 +2163,16 @@ int64_t OpenGLDriver::getStreamTimestamp(Handle<HwStream> sh) {
     return 0;
 }
 
+math::mat3f OpenGLDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
+    if (sh) {
+        GLStream* s = handle_cast<GLStream*>(sh);
+        math::mat3f out;
+        mPlatform.getTransformMatrix(s->stream, &out);
+        return out;
+    }
+    return math::mat3f();
+}
+
 void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
     if (fh) {
         GLFence* f = handle_cast<GLFence*>(fh);

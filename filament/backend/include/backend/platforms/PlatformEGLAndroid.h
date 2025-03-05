@@ -86,6 +86,7 @@ protected:
     void attach(Stream* stream, intptr_t tname) noexcept override;
     void detach(Stream* stream) noexcept override;
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept override;
+    void getTransformMatrix(Stream* stream, math::mat3f* uvTransform) noexcept override;
 
     /**
      * Converts a AHardwareBuffer to EGLImage

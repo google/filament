@@ -33,6 +33,7 @@ typedef struct ASurfaceTexture ASurfaceTexture;
 #include <jni.h>
 
 #include <stdint.h>
+#include <math/mat3.h>
 
 namespace filament::backend {
 
@@ -63,6 +64,9 @@ public:
     // must be called on GLES context thread, updates the stream content
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept;
 
+    // must be called on GLES context thread, returns the transform matrix
+    void getTransformMatrix(Stream* stream, math::mat3f* uvTransform) noexcept;
+
 private:
     ExternalStreamManagerAndroid() noexcept;
     ~ExternalStreamManagerAndroid() noexcept;
@@ -88,6 +92,7 @@ private:
 
     jmethodID mSurfaceTextureClass_updateTexImage{};
     jmethodID mSurfaceTextureClass_getTimestamp{};
+    jmethodID mSurfaceTextureClass_getTransformMatrix{};
     jmethodID mSurfaceTextureClass_attachToGLContext{};
     jmethodID mSurfaceTextureClass_detachFromGLContext{};
 };

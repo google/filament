@@ -38,6 +38,7 @@ typedef struct ASurfaceTexture ASurfaceTexture;
 #include <stdint.h>
 
 #include <new>
+#include <math/mat4.h>
 
 using namespace utils;
 
@@ -73,6 +74,7 @@ JNIEnv* ExternalStreamManagerAndroid::getEnvironmentSlow() noexcept {
     mSurfaceTextureClass_attachToGLContext = env->GetMethodID(SurfaceTextureClass, "attachToGLContext", "(I)V");
     mSurfaceTextureClass_detachFromGLContext = env->GetMethodID(SurfaceTextureClass, "detachFromGLContext", "()V");
     mSurfaceTextureClass_getTimestamp = env->GetMethodID(SurfaceTextureClass, "getTimestamp", "()J");
+    mSurfaceTextureClass_getTransformMatrix = env->GetMethodID(SurfaceTextureClass, "getTransformMatrix", "([F)V");
     return env;
 }
 
@@ -165,6 +167,27 @@ void ExternalStreamManagerAndroid::updateTexImage(Stream* handle, int64_t* times
         *timestamp = env->CallLongMethod(stream->jSurfaceTexture, mSurfaceTextureClass_getTimestamp);
         VirtualMachineEnv::handleException(env);
     }
+}
+
+void ExternalStreamManagerAndroid::getTransformMatrix(Stream* handle, math::mat3f* uvTransform) noexcept {
+    EGLStream const* stream = static_cast<EGLStream*>(handle);
+    math::mat4f out = math::mat4f();
+    if (__builtin_available(android 28, *)) {
+        ASurfaceTexture_getTransformMatrix(stream->nSurfaceTexture, &out[0][0]);
+    } else {
+        JNIEnv* const env = getEnvironment();
+        assert_invariant(env); // we should have called attach() by now
+        auto jout = env->NewFloatArray(16);
+        env->CallVoidMethod(stream->jSurfaceTexture, mSurfaceTextureClass_getTransformMatrix, jout);
+        env->GetFloatArrayRegion(jout, 0, 16, &out[0][0]);
+        env->DeleteLocalRef(jout);
+        VirtualMachineEnv::handleException(env);
+    }
+    *uvTransform = math::mat3f {
+        out[0][0], out[0][1], out[0][3],
+        out[1][0], out[1][1], out[1][3],
+        out[3][0], out[3][1], out[3][3],
+    };
 }
 
 } // namespace filament::backend
