@@ -182,6 +182,7 @@ enum class ShaderLanguage {
     SPIRV = 2,
     MSL = 3,
     METAL_LIBRARY = 4,
+    WGSL = 5,
 };
 
 static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) {

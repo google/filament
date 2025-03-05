@@ -540,13 +540,13 @@ void GLSLTools::prepareShaderParser(MaterialBuilder::TargetApi targetApi,
                 shader.setEnvInput(EShSourceGlsl, stage, EShClientOpenGL, version);
                 shader.setEnvClient(EShClientOpenGL, EShTargetOpenGL_450);
                 break;
+            case MaterialBuilderBase::TargetApi::WEBGPU:
             case MaterialBuilderBase::TargetApi::VULKAN:
             case MaterialBuilderBase::TargetApi::METAL:
                 shader.setEnvInput(EShSourceGlsl, stage, EShClientVulkan, version);
                 shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_1);
                 break;
             // TODO: Handle webgpu here
-            case MaterialBuilderBase::TargetApi::WEBGPU:
             case MaterialBuilderBase::TargetApi::ALL:
                 // can't happen
                 break;

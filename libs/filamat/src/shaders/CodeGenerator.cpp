@@ -175,6 +175,10 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
             break;
         // TODO: Handle webgpu here
         case TargetApi::WEBGPU:
+            //For now, no differences so inherit the same changes.
+            // TODO Define a separte environment, OR relevant checks
+            out << "#define TARGET_VULKAN_ENVIRONMENT\n";
+            break;
         case TargetApi::ALL:
             // invalid should never happen
             break;
@@ -723,6 +727,8 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
                 break;
             // TODO: Handle webgpu here
             case TargetApi::WEBGPU:
+                out << "set = " << +set << ", binding = " << +binding << ", ";
+            break;
             case TargetApi::ALL:
                 // nonsensical, shouldn't happen.
                 break;
@@ -811,6 +817,8 @@ io::sstream& CodeGenerator::generateCommonSamplers(utils::io::sstream& out,
                     break;
                 // TODO: Handle webgpu here
                 case TargetApi::WEBGPU:
+                    out << "layout(binding = " << +info.binding << ", set = " << +set << ") ";
+                break;
                 case TargetApi::ALL:
                     // should not happen
                     break;

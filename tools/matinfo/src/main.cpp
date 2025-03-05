@@ -532,7 +532,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
             return true;
         }
-
+        //TODO Include a printWgsl logic here
         if (config.printMetal) {
             const filament::backend::ShaderLanguage language = config.binary
                     ? filament::backend::ShaderLanguage::METAL_LIBRARY
