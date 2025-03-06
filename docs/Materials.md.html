@@ -994,9 +994,10 @@ Value
       name must be a valid GLSL identifier. Entries have an optional `precision`, which can be
       one of `default` (best precision for the platform, typically `high` on desktop, `medium` on
       mobile), `low`, `medium`, `high`. The type must be one of the types described in
-      table [materialParamsTypes]. For external textures, entries also have an option 
-      transformUniformName parameter to specify the name of the shader parameter that will be 
-      used to expose the transform matrix associated with the external sampler.  
+      table [materialParamsTypes]. For Android external textures, entries also have an optional 
+      transformName parameter to specify the name of the material parameter that will be 
+      used to expose the transform matrix associated with the external sampler. In iOS and Vulkan,
+      this will always be identity. 
 
          Type          |            Description
 :----------------------|:---------------------------------
