@@ -68,11 +68,11 @@ async function fetchMatIds() {
 }
 
 async function queryActiveShaders() {
-    const activeMaterials = await _fetchJson("api/active");
+    const activeVariants = await _fetchJson("api/active");
     const actives = {};
-    for (matid in activeMaterials) {
-        const backend = activeMaterials[matid][0];
-        const variants = activeMaterials[matid].slice(1);
+    for (matid in activeVariants) {
+        const backend = activeVariants[matid][0];
+        const variants = activeVariants[matid].slice(1);
         actives[matid] = {
             backend, variants
         };
