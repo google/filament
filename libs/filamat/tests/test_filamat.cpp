@@ -891,6 +891,72 @@ TEST_F(MaterialCompiler, FeatureLevel0Ess3CallFails) {
   EXPECT_FALSE(result.isValid());
 }
 
+#if TINT_BUILD_SPV_READER
+TEST_F(MaterialCompiler, WgslConversionBakedColor) {
+    std::string bakedColorCodeFrag(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = getColor();
+        }
+    )");
+    filamat::MaterialBuilder builder;
+    builder.targetApi(filamat::MaterialBuilderBase::TargetApi::WEBGPU);
+    builder.material(bakedColorCodeFrag.c_str());
+    builder.shading(filamat::MaterialBuilder::Shading::UNLIT);
+    builder.name("BakedColor");
+    builder.culling(CullingMode::NONE);
+    builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
+    builder.require(filament::VertexAttribute::COLOR);
+    builder.variantFilter(static_cast<filament::UserVariantFilterMask>(
+            filament::UserVariantFilterBit::SKINNING | filament::UserVariantFilterBit::STE));
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, WgslConversionSandboxLitTransparent) {
+    std::string litTransparentCodeFrag(R"(
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = materialParams.baseColor * materialParams.alpha;
+        material.baseColor.a = materialParams.alpha;
+        material.roughness = materialParams.roughness;
+        material.metallic = materialParams.metallic;
+        material.reflectance = materialParams.reflectance;
+        material.sheenColor = materialParams.sheenColor;
+        material.sheenRoughness = materialParams.sheenRoughness;
+        material.clearCoat = materialParams.clearCoat;
+        material.clearCoatRoughness = materialParams.clearCoatRoughness;
+        material.anisotropy = materialParams.anisotropy;
+        material.emissive = materialParams.emissive;
+    }
+    )");
+    filamat::MaterialBuilder builder;
+    builder.targetApi(filamat::MaterialBuilderBase::TargetApi::WEBGPU);
+    builder.material(litTransparentCodeFrag.c_str());
+    builder.shading(filamat::MaterialBuilder::Shading::LIT);
+    builder.name("LitTransparent");
+    builder.blending(filament::BlendingMode::TRANSPARENT);
+    builder.specularAntiAliasing(true);
+
+    builder.parameter("alpha", 1, UniformType::FLOAT);
+    builder.parameter("baseColor", 1, UniformType::FLOAT3);
+    builder.parameter("roughness", 1, UniformType::FLOAT);
+    builder.parameter("metallic", 1, UniformType::FLOAT);
+    builder.parameter("reflectance", 1, UniformType::FLOAT);
+    builder.parameter("sheenColor", 1, UniformType::FLOAT3);
+    builder.parameter("sheenRoughness", 1, UniformType::FLOAT);
+    builder.parameter("clearCoat", 1, UniformType::FLOAT);
+    builder.parameter("clearCoatRoughness", 1, UniformType::FLOAT);
+    builder.parameter("anisotropy", 1, UniformType::FLOAT);
+    builder.parameter("emissive", 1, UniformType::FLOAT4);
+
+    builder.variantFilter(static_cast<filament::UserVariantFilterMask>(
+            filament::UserVariantFilterBit::SKINNING | filament::UserVariantFilterBit::STE));
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+#endif
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
