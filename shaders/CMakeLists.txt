@@ -11,48 +11,48 @@ endif()
 # Sources and headers
 # ==================================================================================================
 set(SHADERS
-        src/ambient_occlusion.fs
-        src/brdf.fs
+        src/surface_ambient_occlusion.fs
+        src/surface_brdf.fs
         src/common_defines.glsl
         src/common_getters.glsl
-        src/common_instancing.glsl
+        src/surface_instancing.glsl
         src/common_graphics.fs
-        src/common_lighting.fs
-        src/common_material.fs
+        src/surface_lighting.fs
+        src/surface_material.fs
         src/common_math.glsl
         src/common_shading.fs
-        src/common_shadowing.glsl
-        src/common_types.glsl
-        src/depth_main.fs
-        src/fog.fs
-        src/getters.cs
-        src/getters.fs
-        src/getters.vs
-        src/light_directional.fs
-        src/light_indirect.fs
-        src/light_reflections.fs
-        src/light_punctual.fs
-        src/main.cs
-        src/main.fs
-        src/main.vs
-        src/material_inputs.fs
-        src/material_inputs.vs
-        src/post_process.fs
-        src/post_process.vs
+        src/surface_shadowing.glsl
+        src/surface_types.glsl
+        src/surface_depth_main.fs
+        src/surface_fog.fs
+        src/surface_getters.cs
+        src/surface_getters.fs
+        src/surface_getters.vs
+        src/surface_light_directional.fs
+        src/surface_light_indirect.fs
+        src/surface_light_reflections.fs
+        src/surface_light_punctual.fs
+        src/surface_main.cs
+        src/surface_main.fs
+        src/surface_main.vs
+        src/surface_material_inputs.fs
+        src/surface_material_inputs.vs
+        src/post_process_main.fs
+        src/post_process_main.vs
         src/post_process_getters.vs
         src/post_process_inputs.fs
         src/post_process_inputs.vs
-        src/shading_lit.fs
-        src/shading_lit_custom.fs
-        src/shading_model_cloth.fs
-        src/shading_model_standard.fs
-        src/shading_model_subsurface.fs
-        src/shading_parameters.fs
-        src/shading_reflections.fs
-        src/shading_unlit.fs
-        src/shadowing.fs
-        src/varyings.glsl
-        src/vignette.fs
+        src/surface_shading_lit.fs
+        src/surface_shading_lit_custom.fs
+        src/surface_shading_model_cloth.fs
+        src/surface_shading_model_standard.fs
+        src/surface_shading_model_subsurface.fs
+        src/surface_shading_parameters.fs
+        src/surface_shading_reflections.fs
+        src/surface_shading_unlit.fs
+        src/surface_shadowing.fs
+        src/surface_varyings.glsl
+        src/inline_vignette.fs
 )
 
 # These files aren't part of libshaders, but are included by materials inside
@@ -60,7 +60,7 @@ set(SHADERS
 #
 # tone_mapping.fs
 # conversion_functions.fs
-# dithering.fs
+# inline_dithering.fs
 
 set(MINIFIED_DIR ${CMAKE_CURRENT_BINARY_DIR}/minified)
 

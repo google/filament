@@ -22,11 +22,11 @@ kernel void main0(constant cb5_struct& cb0_5 [[buffer(0)]], texture2d<uint, acce
     float4 r0;
     r0.x = as_type<float>(int(gl_LocalInvocationID.x) << 4);
     r0.y = as_type<float>(int(gl_LocalInvocationID.x));
-    uint _44 = as_type<uint>(r0.x) >> 2u;
-    uint4 _51 = as_type<uint4>(cb0_5._m0[uint(as_type<int>(r0.y)) + 1u]);
-    u0.write(_51.xxxx, spvTexelBufferCoord(_44));
-    u0.write(_51.yyyy, spvTexelBufferCoord((_44 + 1u)));
-    u0.write(_51.zzzz, spvTexelBufferCoord((_44 + 2u)));
-    u0.write(_51.wwww, spvTexelBufferCoord((_44 + 3u)));
+    uint _41 = as_type<uint>(r0.x) >> 2u;
+    uint4 _50 = as_type<uint4>(cb0_5._m0[uint(as_type<int>(r0.y)) + 1u]);
+    u0.write(_50.xxxx, spvTexelBufferCoord(_41));
+    u0.write(_50.yyyy, spvTexelBufferCoord((_41 + 1u)));
+    u0.write(_50.zzzz, spvTexelBufferCoord((_41 + 2u)));
+    u0.write(_50.wwww, spvTexelBufferCoord((_41 + 3u)));
 }
 

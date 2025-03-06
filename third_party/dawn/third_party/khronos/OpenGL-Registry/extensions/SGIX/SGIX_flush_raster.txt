@@ -1,0 +1,102 @@
+XXX - not complete yet
+
+Name
+
+    SGIX_flush_raster
+
+Name Strings
+
+    GL_SGIX_flush_raster
+
+Version
+
+    $Date: 1996/05/09 22:06:50 $ $Revision: 1.4 $
+
+Number
+
+    61
+
+Dependencies
+
+    None
+
+Overview
+
+    This extensions provides a way to ensure that all raster operations 
+    currently in the pipeline will be completed before the next 
+    raster operation begins. We define a raster operation as an operation
+    that involves the rasterization stage of the OpenGL pipeline.
+    The implementation is free to decide what consitutes flushing the
+    raster subsystem.
+
+    The motivation is to allow accurate instrumentation by 
+    including this call before stopping rasterization measurements.
+    There are cases where Finish() is used, but a FlushRaster()
+    would suffice, so this extension is deliberately kept independent 
+    of the instruments extension.
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    void FlushRasterSGIX(void);
+
+New Tokens
+
+    None 
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    Make the title of section 5.5 Flush and Finish
+    be
+    section 5.5 Flush, Finish and FlushRaster
+
+    Add to section 5.5:
+
+    A call to FlushRasterSGIX
+    indicates that all commands that have previously been sent to the GL
+    that would result in rasterization will complete before rasterization
+    from following commands is started. The implementation is free to
+    determine the exact point in the OpenGL pipeline at which rasterization
+    begins.
+
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    XXX - not complete yet
+
+Errors
+
+    INVALID_OPERATION is generated if FlushRasterSGIX is executed between
+    execution of Begin and the corresponding execution of End.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

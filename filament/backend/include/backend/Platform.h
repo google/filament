@@ -25,6 +25,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <atomic>
+
 namespace filament::backend {
 
 class Driver;
@@ -40,6 +42,50 @@ public:
     struct SwapChain {};
     struct Fence {};
     struct Stream {};
+
+    class ExternalImageHandle;
+
+    class ExternalImage {
+        friend class ExternalImageHandle;
+        std::atomic_uint32_t mRefCount{0};
+    protected:
+        virtual ~ExternalImage() noexcept;
+    };
+
+    class ExternalImageHandle {
+        ExternalImage* UTILS_NULLABLE mTarget = nullptr;
+        static void incref(ExternalImage* UTILS_NULLABLE p) noexcept;
+        static void decref(ExternalImage* UTILS_NULLABLE p) noexcept;
+
+    public:
+        ExternalImageHandle() noexcept;
+        ~ExternalImageHandle() noexcept;
+        explicit ExternalImageHandle(ExternalImage* UTILS_NULLABLE p) noexcept;
+        ExternalImageHandle(ExternalImageHandle const& rhs) noexcept;
+        ExternalImageHandle(ExternalImageHandle&& rhs) noexcept;
+        ExternalImageHandle& operator=(ExternalImageHandle const& rhs) noexcept;
+        ExternalImageHandle& operator=(ExternalImageHandle&& rhs) noexcept;
+
+        explicit operator bool() const noexcept { return mTarget != nullptr; }
+
+        ExternalImage* UTILS_NULLABLE get() noexcept { return mTarget; }
+        ExternalImage const* UTILS_NULLABLE get() const noexcept { return mTarget; }
+
+        ExternalImage* UTILS_NULLABLE operator->() noexcept { return mTarget; }
+        ExternalImage const* UTILS_NULLABLE operator->() const noexcept { return mTarget; }
+
+        ExternalImage& operator*() noexcept { return *mTarget; }
+        ExternalImage const& operator*() const noexcept { return *mTarget; }
+
+        void clear() noexcept;
+        void reset(ExternalImage* UTILS_NULLABLE p) noexcept;
+
+    private:
+        friend utils::io::ostream& operator<<(utils::io::ostream& out,
+                ExternalImageHandle const& handle);
+    };
+
+    using ExternalImageHandleRef = ExternalImageHandle const&;
 
     /**
      * The type of technique for stereoscopic rendering. (Note that the materials used will need to
@@ -80,6 +126,11 @@ public:
          * Disable backend handles use-after-free checks.
          */
         bool disableHandleUseAfterFreeCheck = false;
+
+        /**
+         * Disable backend handles tags for heap allocated (fallback) handles
+         */
+        bool disableHeapHandleTags = false;
 
         /**
          * Force GLES2 context if supported, or pretend the context is ES2. Only meaningful on
@@ -123,7 +174,7 @@ public:
      *
      * @return nullptr on failure, or a pointer to the newly created driver.
      */
-    virtual backend::Driver* UTILS_NULLABLE createDriver(void* UTILS_NULLABLE sharedContext,
+    virtual Driver* UTILS_NULLABLE createDriver(void* UTILS_NULLABLE sharedContext,
             const DriverConfig& driverConfig) noexcept = 0;
 
     /**

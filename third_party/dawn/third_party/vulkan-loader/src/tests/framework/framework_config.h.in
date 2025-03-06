@@ -1,0 +1,113 @@
+/*
+ * Copyright (c) 2021-2022 The Khronos Group Inc.
+ * Copyright (c) 2021-2022 Valve Corporation
+ * Copyright (c) 2021-2022 LunarG, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and/or associated documentation files (the "Materials"), to
+ * deal in the Materials without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Materials, and to permit persons to whom the Materials are
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice(s) and this permission notice shall be included in
+ * all copies or substantial portions of the Materials.
+ *
+ * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ *
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE MATERIALS OR THE
+ * USE OR OTHER DEALINGS IN THE MATERIALS.
+ *
+ * Author: Charles Giessen <charles@lunarg.com>
+ */
+
+#pragma once
+#define FRAMEWORK_BUILD_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+
+#define FRAMEWORK_VULKAN_LIBRARY_PATH "$<TARGET_FILE:vulkan>"
+
+#define SHIM_LIBRARY_NAME "$<TARGET_FILE:shim-library>"
+
+#define TEST_ICD_BUILD_LOCATION "$<TARGET_FILE_DIR:test_icd_export_none>"
+
+// TestICD Binaries
+#define TEST_ICD_PATH_EXPORT_NONE "$<TARGET_FILE:test_icd_export_none>"
+#define TEST_ICD_PATH_EXPORT_ICD_GIPA "$<TARGET_FILE:test_icd_export_icd_gipa>"
+#define TEST_ICD_PATH_EXPORT_NEGOTIATE_INTERFACE_VERSION "$<TARGET_FILE:test_icd_export_negotiate_interface_version>"
+
+#define TEST_ICD_PATH_VERSION_2 "$<TARGET_FILE:test_icd_version_2>"
+
+#define TEST_JSON_NAME_VERSION_2_UNICODE "\xf0\x9f\x8c\x8b"
+#define TEST_ICD_PATH_VERSION_2_UNICODE "$<TARGET_FILE:test_unicode>"
+
+// assumes version 2 exports
+#define TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA "$<TARGET_FILE:test_icd_version_2_export_icd_gpdpa>"
+
+// Assumes version 2 exports
+#define TEST_ICD_PATH_VERSION_2_EXPORT_ICD_ENUMERATE_ADAPTER_PHYSICAL_DEVICES \
+    "$<TARGET_FILE:test_icd_version_2_export_icd_enumerate_adapter_physical_devices>"
+
+// All possible defines for v6
+#define TEST_ICD_PATH_VERSION_6 "$<TARGET_FILE:test_icd_version_6>"
+
+// Version 7
+#define TEST_ICD_PATH_VERSION_7 "$<TARGET_FILE:test_icd_version_7>"
+#define TEST_ICD_PATH_VERSION_7_WIHTOUT_EXPORTS "$<TARGET_FILE:test_icd_version_7_without_exports>"
+
+// TestLayer binaries
+#define TEST_LAYER_PATH_EXPORT_BASE "$<TARGET_FILE:test_layer_export_base>"
+#define TEST_LAYER_PATH_EXPORT_VERSION_0 "$<TARGET_FILE:test_layer_export_version_0>"
+#define TEST_LAYER_PATH_EXPORT_VERSION_1 "$<TARGET_FILE:test_layer_export_version_1>"
+#define TEST_LAYER_PATH_EXPORT_VERSION_2 "$<TARGET_FILE:test_layer_export_version_2>"
+#define TEST_LAYER_WRAP_OBJECTS "$<TARGET_FILE:test_layer_wrap_objects>"
+#define TEST_LAYER_WRAP_OBJECTS_1 "$<TARGET_FILE:test_layer_wrap_objects_1>"
+#define TEST_LAYER_WRAP_OBJECTS_2 "$<TARGET_FILE:test_layer_wrap_objects_2>"
+#define TEST_LAYER_WRAP_OBJECTS_3 "$<TARGET_FILE:test_layer_wrap_objects_3>"
+
+#define COMPLEX_JSON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/data/VkLayer_complex_file.json"
+#define FUZZER_OUTPUT_JSON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/data/fuzzer_output.json"
+
+#define CLUSTERFUZZ_TESTCASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data/fuzz_test_minimized_test_cases"
+
+// Dummy Binaries
+#if _WIN32 || _WIN64
+#define DUMMY_BINARY_WINDOWS_64 "${CMAKE_CURRENT_SOURCE_DIR}/data/binaries/dummy_library_pe_64.dll"
+#define DUMMY_BINARY_WINDOWS_32 "${CMAKE_CURRENT_SOURCE_DIR}/data/binaries/dummy_library_pe_32.dll"
+#define BAD_DUMMY_BINARY_WINDOWS_64 "${CMAKE_CURRENT_SOURCE_DIR}/data/binaries/libdummy_library_elf_64.dll"
+#define BAD_DUMMY_BINARY_WINDOWS_32 "${CMAKE_CURRENT_SOURCE_DIR}/data/binaries/libdummy_library_elf_32.dll"
+#endif
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__GNU__) || defined(__QNX__)
+#define DUMMY_BINARY_LINUX_64 "${CMAKE_CURRENT_SOURCE_DIR}/data/binaries/libdummy_library_elf_64.so"
+#define DUMMY_BINARY_LINUX_32 "${CMAKE_CURRENT_SOURCE_DIR}/data/binaries/libdummy_library_elf_32.so"
+#define BAD_DUMMY_BINARY_LINUX_64 "${CMAKE_CURRENT_SOURCE_DIR}/data/binaries/dummy_library_pe_64.so"
+#define BAD_DUMMY_BINARY_LINUX_32 "${CMAKE_CURRENT_SOURCE_DIR}/data/binaries/dummy_library_pe_32.so"
+#endif
+
+// Convenience macro so that tests don't need to write a bunch of platform defines
+#if _WIN32 || _WIN64
+#if _WIN64
+#define CURRENT_PLATFORM_DUMMY_BINARY_WRONG_TYPE DUMMY_BINARY_WINDOWS_32
+#define CURRENT_PLATFORM_DUMMY_BINARY_BAD BAD_DUMMY_BINARY_WINDOWS_64
+#else
+#define CURRENT_PLATFORM_DUMMY_BINARY_WRONG_TYPE DUMMY_BINARY_WINDOWS_64
+#define CURRENT_PLATFORM_DUMMY_BINARY_BAD BAD_DUMMY_BINARY_WINDOWS_32
+#endif
+#endif
+#if defined(__linux__) || defined(__GNU__)
+#if __x86_64__ || __ppc64__ || __aarch64__
+#define CURRENT_PLATFORM_DUMMY_BINARY_WRONG_TYPE DUMMY_BINARY_LINUX_32
+#define CURRENT_PLATFORM_DUMMY_BINARY_BAD BAD_DUMMY_BINARY_LINUX_64
+#else
+#define CURRENT_PLATFORM_DUMMY_BINARY_WRONG_TYPE DUMMY_BINARY_LINUX_64
+#define CURRENT_PLATFORM_DUMMY_BINARY_BAD BAD_DUMMY_BINARY_LINUX_32
+#endif
+#endif
+// Apple doesn't have 32 bit but this should allow tests to run as if it was supported
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__QNX__)
+#define CURRENT_PLATFORM_DUMMY_BINARY_WRONG_TYPE DUMMY_BINARY_LINUX_32
+#define CURRENT_PLATFORM_DUMMY_BINARY_BAD BAD_DUMMY_BINARY_LINUX_64
+#endif

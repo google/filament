@@ -1,0 +1,24 @@
+struct Data
+{
+    uint arr[3];
+};
+
+static uint _33;
+
+RWByteAddressBuffer _13 : register(u0);
+
+void comp_main()
+{
+    uint _32[3] = { _33, _33, _33 };
+    [unroll]
+    for (int _0ident = 0; _0ident < 3; _0ident++)
+    {
+        _13.Store(_0ident * 4 + 0, _32[_0ident]);
+    }
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

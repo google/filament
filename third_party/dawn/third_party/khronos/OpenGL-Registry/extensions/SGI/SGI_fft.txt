@@ -1,0 +1,378 @@
+Name
+
+    SGI_fft
+
+Name Strings
+
+    GL_SGI_fft
+
+Status
+
+    XXX - Not complete yet!!!
+
+Version
+
+    Last Modified Date: April 24, 2000
+    Author Revision: $Header: //depot/main/doc/registry/extensions/SGI/fft.spec#11 $
+
+Number
+
+    99
+
+Dependencies
+
+    SGI_complex is required
+    SGI_complex_type is required
+    SGI_color_table affects the definition of this extension
+    EXT_convolution affects the definition of this extension
+
+Overview
+
+    The Fast Fourier Transform (FFT) is a set of efficient algorithms for
+    computing the discrete Fourier transform (DFT) that are based on the
+    fundamental principle of decomposing the computation of the Fourier
+    transform of a sequence into successively smaller discrete Fourier
+    transforms.
+
+    This extension defines complex to complex pixel formats 1-dimensional
+    fast Fourier transforms in the pixel transfer process.  Pixel drawing,
+    reading and copying are all candidates for FFTs. Note that it is possible
+    to compute the forward DFT, inverse DFT, multi-dimensional DFT, real to
+    complex DFT, and any combination of the above efficiently, using the complex
+    to complex 1-dimensional forward FFT only.
+
+    The number of input elements must be a power of two. If the original
+    series size is not a power of two, the data can be padded with zeros or
+    resampled to meet this prerequisite. It is the user's responsibility to
+    satisfy this constraint.
+
+    FFT precision is implementation dependent.
+
+    This extension replaces the convolution block of the pixel pipeline 
+    with a new pixel transform block.  The pixel transform block
+    can be configured to be the convolution operation defined by the
+    EXT_convolution extension or the fft operation defined in this extension.
+    It also can be enabled or disabled all together.
+
+Issues
+
+    * some platforms (i.e Moosehead and MG) may initially only implement 1D and
+      2D FFT's, if this is the case, should we break up the 3D extension as a
+      separate one?  Will these machines be forced to say that this extension
+      is not 'fully' supported if they do not implement 3D?
+
+      resolved: we will only support 1D ffts and allow later
+      expandibility to 2D and 3D.  still need to resolve whether we
+      support 1D in row, column, and depth order on 2D and 3D images
+      to make it easier to build 2D and 3D ffts.
+
+    * We also have to take in account a possible broadening of the restricted
+      list of input sizes of powers of 2, to sizes whos prime factors are 2, 3,
+      and maybe even 5. The motivation is induced by standard video image sizes
+      that are not always powers of 2. The FFT of the zero padded series and
+      the FFT of the original series are not always equivalent
+
+      resolved: we will only support power of 2 input sizes
+
+    * 1D FFTs are defined on images of all dimensions.  This is different from
+      the way CONVOLUTIONS are defined.  We might need a parameter or name that
+      specifies in what dimension does a 1D FFT applied to an incoming n-D
+      image.
+    
+    * we refer to the new pixel processing block which can be configured
+      as either convolution or fft as the pixel transform.  Is there a better
+      name for this.
+    
+    * it seems the way the spec is defined, that only way to disable the
+      scale and bias is to select convolve as the transform and use disable 
+      the convolve using Disable.  Is there a better way?
+
+    * Even though the algorithm is not described in the spec, this
+      knowledge might have some importance to the user, because
+      precision becomes a more important issue, and the size of the
+      FFT directly supported will typically be limited. In order to
+      provide operators that can be used as basic blocks for computing
+      larger size of FFTs, some extra parameters might be appropriate.
+
+      This is a low priority issue, as the suggested parameters can be added
+      later, if the need arises.
+
+        FFT_TYPE_UNKNOWN_SGI
+        FFT_TYPE_RADIX4_DIF_NIO_SGI
+        FFT_TYPE_RADIX4_DIT_NOO_SGI
+
+        DIF - Decimation in Frequency
+        DIT - Decimation in Time
+        NIO - Normal Input Order
+        NOO - Normal Output Order
+
+      The FFT_SORT_SGI parameter can be used to suppress sorting into digit
+      reverse order.
+
+    * The TRANSPOSE_SGI parameter can be used to transpose a 2-D image after
+      performing 1-D fft on the image rows before it is placed at the
+      destination color buffer, in order to expedite the 2-D fft.
+
+      HP has already an extension in effect, I'm told, that does those kind of
+      operations on images. It make sense to place it immediately before the
+      zoom operation.
+
+New Procedures and Functions
+
+    void PixelTransformSGI(enum target);
+
+    void PixelTransformParameterfSGI(enum target,
+                          enum pname,
+                          float param);
+
+    void PixelTransformParameterfvSGI(enum target,
+                           enum pname,
+                           const float* params);
+
+    void PixelTransformParameteriSGI(enum target,
+                          enum pname,
+                          int param);
+
+    void PixelTransformParameterivSGI(enum target,
+                           enum pname,
+                           const int* params);
+
+    void GetPixelTransformParameterfvSGI(enum target,
+                              enum pname,
+                              float* params);
+
+    void GetPixelTransformParameterivSGI(enum target,
+                              enum pname,
+                              int* params);
+
+New Tokens
+
+    Accepted by the <target> parameter of PixelTransformSGI:
+
+        CONVOLUTION_SGI                         0x81C5
+        FFT_1D_SGI                              0x81C6
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        PIXEL_TRANSFORM_OPERATOR_SGI		0x81C4
+    
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        PIXEL_TRANSFORM_SGI                     0x81C7
+    
+    Accepted by the <pname> parameter of GetPixelTransformParameterfvSGI
+    and GetPixelTransformParameterivSGI:
+
+        MAX_FFT_WIDTH_SGI                       0x81C8
+
+    Accepted by the <pname> parameter of PixelTransferi, PixelTransferf,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        POST_TRANSFORM_RED_SCALE_SGI            ????
+        POST_TRANSFORM_GREEN_SCALE_SGI          ????
+        POST_TRANSFORM_BLUE_SCALE_SGI           ????
+        POST_TRANSFORM_ALPHA_SCALE_SGI          ????
+        POST_TRANSFORM_RED_BIAS_SGI             ????
+        POST_TRANSFORM_GREEN_BIAS_SGI           ????
+        POST_TRANSFORM_BLUE_BIAS_SGI            ????
+        POST_TRANSFORM_ALPHA_BIAS_SGI           ????
+
+    *Note* - values defined in the spec, but not documented below
+
+        SORT_SGI                                = 0x81C9
+        TRANSPOSE_SGI                           = 0x81CA
+
+Additions to Chapter 2 of the OpenGL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL Specification (Rasterization)
+
+    The specification of pixel operators is added to the GL Specification in 
+    section 3.6.2, "Pixel Transfer Modes." 
+
+    The operations of the pixel transforms are added to the GL Specification in
+    section 3.6.3, "Rasterization of Pixel Rectangles, immediately following the
+    subsection "Index Lookup", and immediately prior to the operations described
+    by EXT_histogram.  Transforms are enabled, disabled, and queried by calling
+    Enable, Disable and IsEnabled respectively.  The pixel transform is enabled
+    by default.  A particular transform is selected by calling PixelTransformSGI
+    with the <target> parameter set to one of: CONVOLUTION_SGI, or FFT_1D_SGI.
+    The pixel transform is performed only for RGBA groups, though these groups
+    may have been specified as color indexes and converted to RGBA by index
+    table lookup.
+
+    The convolution transform is described in the EXT_convolution
+    specification.
+
+    If pixel transform is enabled and FFT_1D_SGI is selected, the 1-dimensional
+    fft is applied to the image passed to TexImage1D, and to 1-dimensional
+    textures queried by GetTexImage.  It is applied on a per-row basis to
+    the 2-dimensional images passed to DrawPixels, CopyPixels, ReadPixels, 
+    TexImage2D, TexSubImage2DEXT, CopyTexImage2DEXT, CopyTexSubImage2DEXT, 
+    and to 2-dimensional images queried by GetTexImage. It is also applied
+    on a per-row basis to the 3-dimensional images passed to CopyTexSubImage3DEXT, 
+    TexImage3DEXT, and TexSubImage3DEXT, and to 3-dimensional images queried by 
+    GetTexImage.
+
+    The discrete fourier transform is a complex valued sum of products of
+    source image pixels and the discretely sampled function exp(2PIikn/N).
+    [exp(2PIix) == sin(x)+icos(x)]
+
+    Source image pixels always have four components: red, green, blue,
+    and alpha.  Individual color components of each source image pixel
+    are always independently processed as part of the transform.
+    The discrete fourier transform is defined differently for each of
+    the three transform types.  In the following equations the
+
+        SUM{}{}equation
+
+    notation indicates the sum of the equation evaluated for all
+    combinations of conditions indicated within the curly brackets.  The
+    variables Ws, Hs, and Ds refer to the dimensions of the source
+    pixel image.
+
+    The discrete fourier transform equation is:
+
+        1-dimensional transform:
+
+            C[n] = SUM{k = 0 through Ws-1}
+
+                        Cs[k]*exp(2PIikn/Ws)
+        
+    The inverse transform equation is:
+
+        1-dimensional transform:
+
+            C[n] = SUM{k = 0 through Ws-1}
+
+                        Cs[k]*exp(-2PIikn/Ws)
+                        -----
+                         Ws
+
+    The particular fft algorithm is left unspecified to allow greater
+    flexibility for implementations.
+
+    If a pixel transform operation is performed, the resulting image is scaled
+    and biased by parameters specified using the PixelTransfer command.
+    These operations are:
+
+        red = red * POST_TRANSFORM_RED_SCALE_SGI
+            + POST_TRANSFORM_RED_BIAS_SGI
+
+        green = green * POST_TRANSFORM_GREEN_SCALE_SGI
+              + POST_TRANSFORM_GREEN_BIAS_SGI
+
+        blue = blue * POST_TRANSFORM_BLUE_SCALE_SGI
+             + POST_TRANSFORM_BLUE_BIAS_SGI
+
+        alpha = alpha * POST_TRANSFORM_ALPHA_SCALE_SGI
+              + POST_TRANSFORM_ALPHA_BIAS_SGI
+
+    If no fft operation is performed, the scale and bias are not
+    performed either.
+
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The operation of fft during pixel copy and query operations is
+    identical to the operation during pixel drawing and texture image
+    definition.
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    Commands GetPixelTransformParameterfvSGI and
+    GetPixelTransformParameterivSGI are not include in display lists.
+    They are always executed immediately.
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    Integer and floating point query functions
+    GetPixelTransformParameterivSGI and
+    GetPixelTransformParameterfvSGI are provided.  <target> must be
+    FFT_1D_SGI.  <pname> must be MAX_FFT_WIDTH_SGI.  The value of the
+    specified parameter is returned in <params>.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+  
+    None
+
+Dependencies on EXT_convolution
+
+    If EXT_convolution is defined, then the post convolution scale and
+    bias enumerants POST_CONVOLUTION_RED_SCALE_EXT,
+    POST_CONVOLUTION_GREEN_SCALE_EXT, POST_CONVOLUTION_BLUE_SCALE_EXT,
+    POST_CONVOLUTION_ALPHA_SCALE_EXT, POST_CONVOLUTION_RED_BIAS_EXT,
+    POST_CONVOLUTION_GREEN_BIAS_EXT, POST_CONVOLUTION_BLUE_BIAS_EXT,
+    and POST_CONVOLUTION_ALPHA_BIAS_EXT are aliased with the
+    corresponding POST_TRANSFORM scale and biases in the obvious way.
+    The commands ConvolutionParameterfEXT, ConvolutionParameterfvEXT,
+    ConvolutionParameteriEXT, ConvolutionParameterivEXT,
+    GetConvolutionParameterfvEXT, and GetConvolutionParameterivEXT are
+    equivalent to the corresponding PixelTransformParameterfSGI,
+    PixelTransformParameterfvSGI, PixelTransformParameteriSGI,
+    PixelTransformParameterivSGI, GetPixelTransformParameterfvSGI, and
+    GetPixelTransformParameterivSGI commands and should be superseded 
+    by the PixelTransform versions of the commands.
+
+    If EXT_convolution is not defined, then specifying CONVOLUTION_SGI for the
+    <target> parameter to the command PixelTransformSGI will result in an
+    INVALID_OPERATION error.
+
+Errors
+
+    INVALID_ENUM is generated if PixelTransformParameteriSGI,
+    PixelTransformParameterfSGI, PixelTransformParameterivSGI,
+    PixelTransformParameterfvSGI, GetPixelTransformParameterivSGI, or 
+    GetPixelTransformParameterfvSGI parameter <target> is not
+    FFT_1D_SGI.
+
+    INVALID_ENUM is generated if PixelTransformParameteriSGI,
+    PixelTransformParameterfSGI, PixelTransformParameterivSGI, or
+    PixelTransformParameterfvSGI, parameter <target> is GL_FFT_1D_SGI, and
+    parameter <pname> is not TRANSPOSE_SGI.
+
+    INVALID_ENUM is generated if GetPixelTransformParameterivSGI,
+    or GetPixelTransformParameterfvSGI, parameter <target> is GL_FFT_1D_SGI, and
+    parameter <pname> is not MAX_FFT_WIDTH_SGI or TRANSPOSE_SGI.
+
+    INVALID_VALUE is generated if the width, <x> specified in DrawPixels,
+    TexImage1D or TexImage2D is less than zero, or greater than
+    MAX_FFT_WIDTH_SGI or not a power or two.
+
+    INVALID_OPERATION is generated if PixelTransformParameterfSGI,
+    PixelTransformParameterfvSGI, PixelTransformParameteriSGI,
+    PixelTransformParameterivSGI, GetPixelTransformParameterfvSGI, or
+    GetPixelTransformParameterivSGI is executed between execution of
+    Begin and the corresponding execution of End.
+
+
+New State
+
+    Get Value                           Get Command                     Type            Initial Value           Attribute
+    ---------                           -----------                     ----            -------------           ---------
+    POST_TRANSFORM_RED_SCALE_SGI        GetFloatv                       R               1                       pixel
+    POST_TRANSFORM_GREEN_SCALE_SGI      GetFloatv                       R               1                       pixel
+    POST_TRANSFORM_BLUE_SCALE_SGI       GetFloatv                       R               1                       pixel
+    POST_TRANSFORM_ALPHA_SCALE_SGI      GetFloatv                       R               1                       pixel
+    POST_TRANSFORM_RED_BIAS_SGI         GetFloatv                       R               0                       pixel
+    POST_TRANSFORM_GREEN_BIAS_SGI       GetFloatv                       R               0                       pixel
+    POST_TRANSFORM_BLUE_BIAS_SGI        GetFloatv                       R               0                       pixel
+    POST_TRANSFORM_ALPHA_BIAS_SGI       GetFloatv                       R               0                       pixel
+    PIXEL_TRANSFORM_OPERATOR_SGI	GetIntegerv			Z2		CONVOLUTION		pixel
+    PIXEL_TRANSFORM_SGI			IsEnabled			B		TRUE			pixel/enable
+
+New Implementation Dependent State
+
+    Get Value                           Get Command                     Type            Minimum Value
+    ---------                           -----------                     ----            -------------
+    MAX_FFT_WIDTH_SGI                   GetPixelTransformParameterivSGI 1 x Z+          256

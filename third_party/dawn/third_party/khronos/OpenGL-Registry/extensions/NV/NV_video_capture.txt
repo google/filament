@@ -1,0 +1,1545 @@
+Name
+
+    NV_video_capture
+
+Name Strings
+
+    GL_NV_video_capture
+    GLX_NV_video_capture
+    WGL_NV_video_capture
+Contributors
+
+    James Jones
+    Robert Morell
+    Andy Ritger
+    Antonio Tejada
+    Thomas True
+
+Contact
+
+    James Jones, NVIDIA Corporation (jajones 'at' nvidia.com)
+
+Status
+
+    Complete.  Shipping in NVIDIA 190.XX drivers
+
+Version
+
+    Last Modified Date: Jul 8, 2011
+    Author Revision: 24
+
+Number
+
+    374
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    ARB_vertex_buffer_object is required.
+
+    EXT_framebuffer_object is required.
+
+    EXT_timer_query is required for 64-bit integer type definitions
+    only.
+
+    NV_present_video is required for the definition of the FRAME_NV
+    token and the wglQueryCurrentContextNV function only.
+
+    Written based on the wording of the OpenGL 3.0 specification.
+
+Overview
+
+    This extension provides a mechanism for streaming video data
+    directly into texture objects and buffer objects.  Applications can
+    then display video streams in interactive 3D scenes and/or
+    manipulate the video data using the GL's image processing
+    capabilities.
+
+New Procedures and Functions
+
+    void BeginVideoCaptureNV(uint video_capture_slot);
+
+    void BindVideoCaptureStreamBufferNV(uint video_capture_slot,
+                                        uint stream, enum frame_region,
+                                        intptrARB offset);
+
+    void BindVideoCaptureStreamTextureNV(uint video_capture_slot,
+                                         uint stream, enum frame_region,
+                                         enum target, uint texture);
+
+    void EndVideoCaptureNV(uint video_capture_slot);
+
+    void GetVideoCaptureivNV(uint video_capture_slot, enum pname,
+                             int *params);
+
+    void GetVideoCaptureStream{i,f,d}vNV(uint video_capture_slot,
+                                         uint stream, enum pname,
+                                         T *params);
+
+    enum VideoCaptureNV(uint video_capture_slot, uint *sequence_num,
+                        uint64EXT *capture_time);
+
+    void VideoCaptureStreamParameter{i,f,d}vNV(uint video_capture_slot,
+                                               uint stream,
+                                               GLenum pname,
+                                               const T *params);
+
+
+    int glXBindVideoCaptureDeviceNV(Display *dpy,
+                                    unsigned int video_capture_slot,
+                                    GLXVideoCaptureDeviceNV device);
+
+    GLXVideoCaptureDeviceNV *
+        glXEnumerateVideoCaptureDevicesNV(Display *dpy, int screen,
+                                          int *nelements);
+
+    void glXLockVideoCaptureDeviceNV(Display *dpy,
+                                     GLXVideoCaptureDeviceNV device);
+
+    int glXQueryVideoCaptureDeviceNV(Display *dpy,
+                                     GLXVideoCaptureDeviceNV device,
+                                     int attribute, int *value);
+
+    void glXReleaseVideoCaptureDeviceNV(Display *dpy,
+                                        GLXVideoCaptureDeviceNV device);
+
+
+    BOOL wglBindVideoCaptureDeviceNV(UINT uVideoSlot,
+                                     HVIDEOINPUTDEVICENV hDevice);
+
+    UINT wglEnumerateVideoCaptureDevicesNV(HDC hDc,
+                                     HVIDEOINPUTDEVICENV *phDeviceList);
+
+    BOOL wglLockVideoCaptureDeviceNV(HDC hDc,
+                                     HVIDEOINPUTDEVICENV hDevice);
+
+    BOOL wglQueryVideoCaptureDeviceNV(HDC hDc,
+                                      HVIDEOINPUTDEVICENV hDevice,
+                                      int iAttribute, int *piValue);
+
+    BOOL wglReleaseVideoCaptureDeviceNV(HDC hDc,
+                                        HVIDEOINPUTDEVICENV hDevice);
+
+New Types
+
+    typedef XID GLXVideoCaptureDeviceNV
+
+    DECLARE_HANDLE(HVIDEOINPUTDEVICENV);
+
+New Tokens
+
+    Accepted by the <target> parameters of BindBufferARB, BufferDataARB,
+    BufferSubDataARB, MapBufferARB, UnmapBufferARB, GetBufferSubDataARB,
+    GetBufferParameterivARB, and GetBufferPointervARB:
+
+        VIDEO_BUFFER_NV                            0x9020
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        VIDEO_BUFFER_BINDING_NV                    0x9021
+
+    Accepted by the <frame_region> parameter of
+    BindVideoCaptureStreamBufferNV, and BindVideoCaptureStreamTextureNV:
+
+        FIELD_UPPER_NV                             0x9022
+        FIELD_LOWER_NV                             0x9023
+
+    Accepted by the <pname> parameter of GetVideoCaptureivNV:
+
+        NUM_VIDEO_CAPTURE_STREAMS_NV               0x9024
+        NEXT_VIDEO_CAPTURE_BUFFER_STATUS_NV        0x9025
+
+    Accepted by the <pname> parameter of
+    GetVideoCaptureStream{i,f,d}vNV:
+
+        LAST_VIDEO_CAPTURE_STATUS_NV               0x9027
+        VIDEO_BUFFER_PITCH_NV                      0x9028
+        VIDEO_CAPTURE_FRAME_WIDTH_NV               0x9038
+        VIDEO_CAPTURE_FRAME_HEIGHT_NV              0x9039
+        VIDEO_CAPTURE_FIELD_UPPER_HEIGHT_NV        0x903A
+        VIDEO_CAPTURE_FIELD_LOWER_HEIGHT_NV        0x903B
+        VIDEO_CAPTURE_TO_422_SUPPORTED_NV          0x9026
+
+    Accepted by the <pname> parameter of
+    GetVideoCaptureStream{i,f,d}vNV and as the <pname> parameter of
+    VideoCaptureStreamParameter{i,f,d}vNV:
+
+        VIDEO_COLOR_CONVERSION_MATRIX_NV           0x9029
+        VIDEO_COLOR_CONVERSION_MAX_NV              0x902A
+        VIDEO_COLOR_CONVERSION_MIN_NV              0x902B
+        VIDEO_COLOR_CONVERSION_OFFSET_NV           0x902C
+        VIDEO_BUFFER_INTERNAL_FORMAT_NV            0x902D
+        VIDEO_CAPTURE_SURFACE_ORIGIN_NV            0x903C
+
+    Returned by VideoCaptureNV:
+
+        PARTIAL_SUCCESS_NV                         0x902E
+
+    Returned by VideoCaptureNV and GetVideoCaptureStream{i,f,d}vNV
+    when <pname> is LAST_VIDEO_CAPTURE_STATUS_NV:
+
+        SUCCESS_NV                                 0x902F
+        FAILURE_NV                                 0x9030
+
+    Accepted in the <params> parameter of
+    VideoCaptureStreamParameter{i,f,d}vNV when <pname> is
+    VIDEO_BUFFER_INTERNAL_FORMAT_NV and returned by
+    GetVideoCaptureStream{i,f,d}vNV when <pname> is
+    VIDEO_BUFFER_INTERNAL_FORMAT_NV:
+
+        YCBYCR8_422_NV                             0x9031
+        YCBAYCR8A_4224_NV                          0x9032
+        Z6Y10Z6CB10Z6Y10Z6CR10_422_NV              0x9033
+        Z6Y10Z6CB10Z6A10Z6Y10Z6CR10Z6A10_4224_NV   0x9034
+        Z4Y12Z4CB12Z4Y12Z4CR12_422_NV              0x9035
+        Z4Y12Z4CB12Z4A12Z4Y12Z4CR12Z4A12_4224_NV   0x9036
+        Z4Y12Z4CB12Z4CR12_444_NV                   0x9037
+
+    Accepted in the attribute list of the GLX reply to the
+    glXEnumerateVideoCaptureDevicesNV command:
+
+        GLX_DEVICE_ID_NV                           0x20CD
+
+    Accepted by the <attribute> parameter of glXQueryContext:
+
+        GLX_NUM_VIDEO_CAPTURE_SLOTS_NV             0x20CF
+
+    Accepted by the <attribute> parameter of
+    glXQueryVideoCaptureDeviceNV:
+
+        GLX_UNIQUE_ID_NV                           0x20CE
+
+    Accepted by the <iAttribute> parameter of wglQueryCurrentContextNV:
+
+        WGL_NUM_VIDEO_CAPTURE_SLOTS_NV             0x20CF
+
+    Accepted by the <iAttribute> parameter of
+    wglQueryVideoCaptureDeviceNV:
+
+        WGL_UNIQUE_ID_NV                           0x20CE
+
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Add a new section after Section 4.4 and, if NV_present_video is
+    present, before Section 4.5 "Displaying Buffers."
+
+    "Section 4.5, Video Capture
+
+    "Video capture can be used to transfer pixels from a video input
+    device to textures or buffer objects.   Video input devices are
+    accessed by binding them to a valid video capture slot in a context
+    using window-system specific functions.  Valid video capture slots
+    are unsigned integers in the range 1 to the implementation dependent
+    maximum number of slots, inclusive.   Trying to perform video
+    capture operations on an invalid video capture slot or a video
+    capture slot with no device bound to it will generate
+    INVALID_OPERATION.
+    
+    "The values captured can be transformed by a fixed-function color
+    conversion pipeline before they are written to the destination.
+    Each video input device can have an implementation-dependent number
+    of input streams associated with it.  Pixels are transferred from
+    all streams on a device simultaneously.
+
+    "Video capture can be started and stopped on a specified video
+    capture slot with the commands
+
+      void BeginVideoCaptureNV(uint video_capture_slot)
+
+    and
+
+      void EndVideoCaptureNV(uint video_capture_slot)
+
+    respectively.  After BeginVideoCaptureNV is called, the capture
+    device bound to <video_capture_slot> will begin filling a queue of
+    raw buffers with incoming video data.  If capture is already in the
+    requested state, INVALID_OPERATION is generated.
+    
+    "To move data from the raw buffers into the GL, buffer objects or
+    textures must be bound to the individual video capture streams.  A
+    video capture stream refers to a single video source.  Each video
+    capture slot must provide one or more video capture streams.
+    Streams are referred to by their index, starting from zero.  If an
+    invalid stream index is specified, INVALID_VALUE is generated.
+    
+    Buffer objects or textures can be bound to streams using the
+    commands
+
+      void BindVideoCaptureStreamBufferNV(uint video_capture_slot,
+                                          uint stream,
+                                          enum frame_region,
+                                          intptrARB offset);
+
+    or
+
+      void BindVideoCaptureStreamTextureNV(uint video_capture_slot,
+                                           uint stream,
+                                           enum frame_region,
+                                           enum target, uint texture);
+
+    where <stream> is the index of the stream to bind the object to and
+    <frame_region> is the spatial region of the frame, specified
+    by one of FRAME_NV, FIELD_UPPER_NV, or FIELD_LOWER_NV.  If
+    FIELD_UPPER_NV and FIELD_LOWER_NV are used, two objects must be
+    bound to the stream; one for the upper field and one for the lower
+    field.  If only one field is bound at capture time,
+    INVALID_OPERATION is generated.
+    
+    "For buffer object capture, the buffer bound to the
+    VIDEO_BUFFER_NV target is used.  An offset into the buffer object
+    can be specified using the <offset> parameter.  The offset provided
+    must be a multiple of the size, in bytes, of a pixel in the internal
+    format specified for this stream or INVALID_VALUE will be generated
+    at frame capture time.  To unbind a buffer object from a video
+    capture stream region, bind buffer object 0 to the region.  The
+    internal format of the pixel data stored in the buffer object can be
+    specified using the VideoCaptureStreamParameter functions described
+    below, with <pname> set to VIDEO_BUFFER_INTERNAL_FORMAT_NV and
+    <params> set to a color-renderable internal format (as defined in
+    section 4.4.4), or one of the Y'CbCr/Y'CbCrA formats defined in
+    table 4.13.  Specifying other internal formats will generate
+    INVALID_ENUM.
+
+                                              Element Meaning    Format
+    Format Name                               and Order          Layout
+    ----------------------------------------  ----------------   -------
+    YCBYCR8_422_NV                            Y'0, Cb, Y'1, Cr   4:2:2
+
+    YCBAYCRA8_4224_NV                         Y'0, Cb, A0,       4:2:2:4
+                                              Y'1, Cr, A1
+
+    Z6Y10Z6CB10Z6Y10Z6CR10_422_NV             6 zero bits, Y'0,  4:2:2
+                                              6 zero bits, Cb,
+                                              6 zero bits, Y'1,
+                                              6 zero bits, Cr
+
+    Z6Y10Z6CB10Z6A10Z6Y10Z6CR10Z6A10_4224_NV  6 zero bits, Y'0,  4:2:2:4
+                                              6 zero bits, Cb,
+                                              6 zero bits, A0,
+                                              6 zero bits, Y'1,
+                                              6 zero bits, Cr,
+                                              6 zero bits, A1
+
+    Z4Y12Z4CB12Z4Y12Z4CR12_422_NV             4 zero bits, Y'0,  4:2:2
+                                              4 zero bits, Cb,
+                                              4 zero bits, Y'1,
+                                              4 zero bits, Cr
+
+    Z4Y12Z4CB12Z4A12Z4Y12Z4CR12Z4A12_4224_NV  4 zero bits, Y'0,  4:2:2:4
+                                              4 zero bits, Cb,
+                                              4 zero bits, A0,
+                                              4 zero bits, Y'1,
+                                              4 zero bits, Cr,
+                                              4 zero bits, A1
+
+    Z4Y12Z4CB12Z4CR12_444_NV                  4 zero bits, Y',   4:4:4
+                                              4 zero bits, Cb,
+                                              4 zero bits, Cr
+    
+    Table 4.13 - Video capture buffer internal formats
+
+    "For texture object capture, the texture named <texture> on <target>
+    is used.  The internal format of the texture must be color-
+    renderable as defined in section 4.4.4 at capture time, or
+    INVALID_OPERATION is generated.  Only 2D textures can be used as
+    video capture destinations.  If <target> is not TEXTURE_2D or
+    TEXTURE_RECTANGLE, INVALID_OPERATION is generated.  If <target>
+    does not refer to a texture target supported by the current context,
+    INVALID_ENUM is generated.  To unbind a texture from a video capture
+    stream region without binding a new one, bind texture 0 to the
+    region.  If <texture> is non-zero and does not name an existing
+    texture object, INVALID_VALUE is generated.
+
+    "Captured video data will have 2, 3, or 4 components per pixel.  The
+    number of components and their layout is determined based on the
+    format of the data output by the video capture device.  This may
+    differ from the data format of the data received by the video
+    capture device if it has internal data format conversion hardware.
+    For example, if the device is configured to resample data with a
+    4:2:2 layout up to a 4:4:4:4 layout, the effective format is
+    4:4:4:4.  If the formats in table 4.13 are used, the format layout
+    must be compatible with the format of the captured data, as defined
+    in table 4.14, or INVALID_ENUM is generated.  Compatibility with
+    4:2:2 and 4:2:2:4 capture format layouts can be queried using the
+    GetVideoCaptureStream{i,f,d}vNV commands with <pname> set to
+    VIDEO_CAPTURE_TO_422_SUPPORTED_NV as described below.
+
+    Effective      Compatible
+    Format Layout  Capture Format Layouts
+    -------------  ----------------------
+    4:2:2          4:2:2, 4:2:2:4
+    4:2:2:4        4:2:2, 4:2:2:4
+    4:4:4          4:4:4, 4:4:4:4
+    4:4:4:4        4:4:4, 4:4:4:4
+
+    Table 4.14 - Compatible format layouts.
+    
+    "If the effective capture data format is 4:2:2, there will be 2
+    components per pixel.  If capturing to a format from table 4.13, it
+    will take two incoming pixels to make up one pixel group referred to
+    by the destination layout.  The first pixel's components 1 and 2 will
+    be written to the destination pixel group's Y'0 and Cb components.
+    The second pixel's components 1 and 2 will be written to the
+    destination pixel group's Y'1 and Cr components.  Otherwise, the
+    captured pixel's components 1 and 2 will be written to the
+    destination R and G components respectively and there is no concept
+    of pixel groups.  If the effective capture data format is 4:4:4,
+    there will be 3 components per pixel.  If capturing to a format from
+    table 4.13, the captured components 1, 2, and 3 will be written to
+    the Y', Cb, and Cr components respectively.  Otherwise the components
+    1, 2, and 3 will be written to the destination R, G, and B components
+    respectively.  If the effective capture data format is 4:2:2:4 or
+    4:4:4:4, the mapping will be the same as that of 4:2:2 or 4:4:4
+    respectively, but the final component will always be stored in the
+    destination A or A' component.  If the destination format does not
+    contain a component used by the mapping above, the source's
+    corresponding component will be ignored.  If the destination has
+    components not mentioned in the mapping above for the current
+    effective capture data format, the value in those components will be
+    undefined after a capture operation.
+
+    "After objects have been bound to the video capture streams,
+
+      enum VideoCaptureNV(uint video_capture_slot, uint *sequence_num,
+                          uint64EXT *capture_time);
+
+    can be called to capture one frame of video.  If no frames are
+    available, this call will block until frames are ready for capture
+    or an error occurs.  VideoCaptureNV will return one of SUCCESS_NV,
+    PARTIAL_SUCCESS_NV, or FAILURE_NV.  If the capture operation
+    completed successfully on all stream with objects bound, SUCCESS_NV
+    is returned.  If some streams succeeded PARTIAL_SUCCESS_NV is
+    returned.  If the capture failed on all streams, or if the capture
+    state on the specified slot is invalid, FAILURE_NV is returned.  In
+    addition, the following GL errors are generated if FAILURE_NV was
+    returned because of invalid capture state:
+
+      * INVALID_OPERATION if any stream has both texture and buffer
+        objects bound.
+
+      * INVALID_VALUE if any buffer objects bound are not large enough
+        to contain the the data from the region they are bound to at the
+        specified offset.
+
+      * INVALID_VALUE if the dimensions of any textures bound do not
+        match the dimensions of the region they are bound to.
+
+      * INVALID_OPERATION if the base level of any textures bound has
+        not been defined.
+
+      * INVALID_OPERATION if the internal formats of any textures bound
+        to the same stream does not match.
+
+      * INVALID_OPERATION if automatic mipmap generation is enabled for
+        any textures bound.
+    
+    "If PARTIAL_SUCCESS_NV is returned, the command
+
+      void GetVideoCaptureStream{i,f,d}vNV(uint video_capture_slot,
+                                           uint stream, enum pname,
+                                           T *params);
+
+    can be used with <pname> set to LAST_VIDEO_CAPTURE_STATUS_NV to
+    determine which streams the capture succeeded on.
+
+    "After a successful or partially successful VideoCaptureNV call,
+    <sequence_num> will be set to the sequence number of the frame
+    captured, beginning at 0 for the first frame after BeginVideoCapture
+    was called, and <capture_time> is set to the GPU time, in
+    nanoseconds, that the video capture device began capturing the
+    frame.  Note that the time VideoCaptureNV was called does not affect
+    the value returned in <capture_time>.  The time returned is relative
+    to when the video frame first reached the capture hardware, not when
+    the GL requested delivery of the next captured frame.  After a
+    failed VideoCaptureNV call, the values in <sequence_num> and
+    <capture_time> are undefined.
+
+    "When capturing data with a 4:4:4 or 4:4:4:4 layout without using
+    one of the destination formats from table 4.13 the captured pixels
+    are run through the color conversion process illustrated in figure
+    4.4 as they are transferred from the capture device's raw buffers to
+    the bound capture objects.
+
+                         |a|   
+      Output =  clamp( M |b| +  Offset )
+                         |c|
+                         |d|
+
+      Figure 4.4, Video capture color conversion pipeline. When the stream
+        is in YUVA color space: a = Yi, b=Ui, c=Vi and d = Ai. When in
+        RGBA color space, a = Gi, b=Bi, c=Ri and d = Ai.
+
+    "<M> and <Offset> are the color conversion matrix and color
+    conversion offset for the video capture stream, respectively, and
+    <clamp> is an operation that clamps each component of the result to
+    the range specified by the corresponding components of <Cmin> and
+    <Cmax> for the video capture stream.  Each component of <Cmin> is
+    calculated by taking the maximum of the corresponding component
+    in the vector specified by VIDEO_COLOR_CONVERSION_MIN_NV, as
+    described below, and the minimum value representable by the format
+    of the destination surface.  Similarly, each component of <Cmax>
+    is calculated by taking the minimum of the corresponding component
+    in the vector specified by VIDEO_COLOR_CONVERSION_MAX_NV and the
+    maximum value representable by the format.
+
+    "When the destination format uses fixed-point or floating-point
+    internal storage, the captured video data will be converted to a
+    floating-point representation internally before the color
+    conversion step.  The following equation describes the conversion:
+
+      f = ( c - Dmin ) / ( Dmax - Dmin )
+
+    "Where <c> is the value of the incoming component, <Dmin> and <Dmax>
+    are the minimum and maximum values, respectively, that the video
+    capture device can generate in its current configuration, and <f> is
+    the resulting floating-point value.  Note that <Dmin> and <Dmax>
+    refer to the numerical range of the incoming data format.  They are
+    not affected by any clamping requirements of the captured data
+    format.
+
+    "The commands
+
+      void VideoCaptureStreamParameter{i,f,d}vNV(uint
+                                                 video_capture_slot,
+                                                 uint stream,
+                                                 enum pname,
+                                                 const T *params);
+
+    can be used to specify video capture stream parameters.  The value
+    or values in <params> are assigned to video capture stream parameter
+    specified as <pname>.  To specify a stream's conversion matrix, set
+    <pname> to VIDEO_COLOR_CONVERSION_MATRIX_NV, and set <params> to an
+    array of 16 consecutive values, which are used as the elements of a
+    4 x 4 column-major matrix.  If the video capture stream's data
+    format does not include an alpha component, the fourth column of the
+    matrix is ignored.  The color conversion matrix is initialized to
+    a 4x4 identity matrix when a video capture device is bound.
+
+    "To specify the video capture stream color conversion offset vector,
+    set <pname> to to VIDEO_COLOR_CONVERSION_OFFSET_NV and <params> to
+    an array of 4 consecutive values.  If the video capture stream's
+    data format does not include an alpha component, the fourth
+    component of the vector is ignored.  Initially the offset vector
+    is the zero vector.
+
+    "To specify the video capture stream color conversion clamp values,
+    set <pname> to one of VIDEO_COLOR_CONVERSION_MIN_NV or
+    VIDEO_COLOR_CONVERSION_MAX_NV and <params> to an array of 4
+    consecutive values.  If the video capture stream's data format does
+    not include an alpha component, the fourth component of the vectors
+    is ignored.  Initially the minimum and maximum values are set to
+    the zero vector and <1, 1, 1, 1> respectively.  Note that care
+    should be taken to set the maximum vector correctly when using
+    destination capture formats that do not store normalized values,
+    such as integer texture formats.
+
+    "To set the orientation of the captured video data, set <pname> to
+    VIDEO_CAPTURE_SURFACE_ORIGIN_NV and <params> to LOWER_LEFT or
+    UPPER_LEFT.  The default value is LOWER_LEFT, which means the bottom
+    left of the captured region of the video image will be at texture
+    coordinate <0,0> in any textures bound as capture desitnations, and
+    will be first pixel in any buffer objects bound as capture
+    destinations.  If UPPER_LEFT is used as the origin, the image will
+    be mirrored vertically.  If <params> contains any value other than
+    LOWER_LEFT or UPPER_LEFT, INVALID_ENUM is generated."
+
+    If NV_present_video is present, section 4.5 "Displaying Buffers"
+    becomes section 4.6.
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    In section 5.4, "Display Lists", add the following to the list of
+    commands that are not compiled into display lists:
+
+    "Video capture commands: BeginVideoCaptureNV, 
+        BindVideoCaptureStreamBufferNV, BindVideoCaptureStreamTextureNV,
+        EndVideoCaptureNV, VideoCaptureNV,
+        VideoCaptureStreamParameter{i,f,d}vNV
+
+Additions to Chapter 6 of the 1.1 Specification (State and State
+Requests)
+
+    Add a new section after Section 6.1.14, "Shader and Program Queries"
+
+    "Section 6.1.15, Video Capture State Queries
+
+    "The command
+
+      void GetVideoCaptureivNV(uint video_capture_slot, enum pname,
+                               int *params);
+
+    returns properties of the video capture device bound to
+    <video_capture_slot> in <params>.  The parameter value to return is
+    specified in <pname>.
+
+    "If <pname> is NEXT_VIDEO_CAPTURE_BUFFER_STATUS_NV, TRUE is returned
+    if VideoCaptureNV will not block and FALSE is returned otherwise.
+    If <pname> is NUM_VIDEO_CAPTURE_STREAMS_NV, the number of available
+    video capture streams on the device bound to <video_capture_slot> is
+    returned.
+
+    "The command
+
+      void GetVideoCaptureStream{i,f,d}vNV(uint video_capture_slot,
+                                           uint stream, enum pname,
+                                           uint *params);
+
+    returns properties of an individual video stream on the video
+    capture device bound to <video_capture_slot> in <params>.  The
+    parameter value to return is specified in <pname>.
+
+    "If <pname> is LAST_VIDEO_CAPTURE_STATUS_NV, SUCCESS_NV will be
+    returned if the last call to VideoCaptureNV captured valid pixels
+    data for the entire frame on this stream.  Otherwise, FAILURE_NV
+    will be returned.  If <pname> is VIDEO_BUFFER_INTERNAL_FORMAT_NV,
+    the internal format used when capturing to a buffer object is
+    returned.  Initially the internal format is RGBA8.  If <pname> is
+    VIDEO_BUFFER_PITCH_NV, the pitch of the image data captured when a
+    buffer object is bound to this stream is returned.  The pitch is
+    based on the internal format so it should be queried whenever the
+    internal format is changed.  If <pname> is
+    VIDEO_COLOR_CONVERSION_MATRIX_NV an array of 16 values representing
+    the column-major color conversion matrix is returned.  Initially
+    this matrix is the identity matrix.  If <pname> is
+    VIDEO_COLOR_CONVERSION_OFFSET_NV, 4 values representing the color
+    conversion offset vector are returned.  Initially the offset vector
+    is [ 0 0 0 0 ].  If <pname> is VIDEO_COLOR_CONVERSION_MIN_NV or
+    VIDEO_COLOR_CONVERSION_MAX_NV, 4 values representing the color
+    conversion minimum or maximum vectors are returned, respectively.
+    Initially the minimum is [ 0 0 0 0 ] and the maximum is
+    [ 1 1 1 1 ].  If <pname> is VIDEO_CAPTURE_FRAME_WIDTH_NV,
+    VIDEO_CAPTURE_FRAME_HEIGHT_NV, VIDEO_CAPTURE_FIELD_UPPER_HEIGHT_NV,
+    or VIDEO_CAPTURE_FIELD_LOWER_HEIGHT_NV, the frame/field width, frame
+    height, upper field height, or lower field height of the data the
+    bound video capture device is configured to capture, respectively,
+    are returned.  If <pname> is VIDEO_CAPTURE_SURFACE_ORIGIN_NV,
+    LOWER_LEFT or UPPER_LEFT is returned.  If <pname> is
+    VIDEO_CAPTURE_TO_422_SUPPORTED_NV, TRUE is returned if using one of
+    the 4:2:2 formats from table 4.13 when capturing to buffer objects
+    on this stream is supported.  Otherwise, FALSE is returned.
+
+
+Additions to Chapter 2 of the GLX 1.4 Specification (GLX Operation)
+
+    None
+
+Additions to Chapter 3 of the GLX 1.4 Specification (Functions and
+Errors)
+
+    Modify table 3.5:
+
+    Attribute                       Type  Description
+    ------------------------------  ----  ------------------------------
+    GLX_FBCONFIG_ID                 XID   XID of GLXFBCconfig associated
+                                          with context
+    GLX_RENDER_TYPE                 int   type of rendering supported
+    GLX_SCREEN                      int   screen number
+    GLX_NUM_VIDEO_CAPTURE_SLOTS_NV  int   number of video capture slots
+                                          this context supports
+
+    Add a section between Sections 3.3.10 and 3.3.11:
+
+    3.3.11a  Video Capture Devices
+
+    "GLX video capture devices can be used to stream video data from an
+    external source directly into GL objects for use in rendering or
+    readback.  Use
+
+      GLXVideoCaptureDeviceNV *
+          glXEnumerateVideoCaptureDevicesNV(Display *dpy,
+                                            int screen,
+                                            int *nElements);
+
+    "to generate an array of video capture devices.  The number of
+    elements in the array is returned in <nElements>.  Each element of
+    the array is a video capture device on <screen>.  Use XFree to free
+    the memory returned by glXEnumerateVideoCaptureDevicesNV.
+
+    "GLX video capture devices are abstract objects that refer to a
+    physical capture device.  Each physical capture device will have a
+    unique ID that can be used to identify it when coordinating device
+    usage and setup with other APIs.  To query the unique ID of the
+    physical device backing a GLX video capture device, use
+
+      int glXQueryVideoCaptureDeviceNV(Display *dpy,
+                                       GLXVideoCaptureDeviceNV device,
+                                       int attribute, int *value);
+
+    "where <attribute> must be GLX_UNIQUE_ID_NV.  On success, the unique
+    ID will be returned in <value> and the function will return Success.
+    If <device> does not refer to a video capture device GLX_BAD_VALUE
+    will be returned.  If <attribute> does not name a video capture
+    device attribute GLX_BAD_ATTRIBUTE will be returned.
+
+    "Before using a video capture device, it must be locked.  Once a
+    video capture device is locked by a client, no other client can lock
+    a video capture device with the same unique ID until the lock is
+    released or the connection between the client holding the lock and
+    the X server is broken.  To lock a video capture device to a display
+    connection, use
+
+      void glXLockVideoCaptureDeviceNV(Display *dpy,
+                                       GLXVideoCaptureDeviceNV device);
+
+    "If <device> does not name a video capture device, BadValue is
+    generated.  If <device> is already locked <BadMatch> is generated.
+
+    "After successfully locking a video capture device, use
+
+      int glXBindVideoCaptureDeviceNV(Display *dpy,
+                                      unsigned int video_capture_slot,
+                                      GLXVideoCaptureDeviceNV device);
+
+      
+    "to bind it to the capture slot <video_capture_slot> in the current
+    context.  If the slot is already bound, the device it's bound to
+    it will be unbound first.  To unbind a video capture device, bind
+    device None to the video capture slot the device is bound to.  If
+    the bind is successful, Success is returned.  If there is no context
+    current GLX_BAD_CONTEXT is returned or GLXBadContext is generated.
+    If <video_capture_slot> is not a valid capture slot on the current
+    context, BadMatch is generated.  If <device> does not name a video
+    capture device, BadValue is generated.  If <device> is already bound
+    to a video capture slot, GLX_BAD_VALUE is returned.  If <device> is
+    not locked by <dpy>, BadMatch is generated."
+    
+    "GLX does not provide a mechanism to configure the video capture
+    process.  It is expected that device vendors provide a vendor-
+    specific mechanism for configuring or detecting properties such as
+    the incoming video signal and data format.  However, GLX does expect
+    that devices are fully configured before glXBindVideoCaptureDeviceNV
+    is called.  Changing device properties that affect the format of the
+    captured data will cause the results of video capture to be
+    undefined.
+
+    "When finished capturing data on a locked video capture device, use
+
+      void glXReleaseVideoCaptureDeviceNV(Display *dpy,
+                                        GLXVideoCaptureDeviceNV device);
+
+    to unlock it. The application must unbind the device before
+    releasing it, or BadMatch will be generated.  If <device> does not
+    name a video capture device, BadValue is generated.  If <device>
+    is not locked by <dpy>, BadMatch is generated.
+
+Additions to Chapter 4 of the GLX 1.4 Specification (Encoding on the X
+Byte Stream)
+
+    None
+
+Additions to Chapter 5 of the GLX 1.4 Specification (Extending OpenGL)
+
+Additions to Chapter 6 of the GLX 1.4 Specification (GLX Versions)
+
+    None
+
+GLX Protocol
+
+    BindVideoCaptureDeviceNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       5                       request length
+        4       1412                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_capture_slot
+        4       CARD32                  device
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       0                       reply length
+        4       CARD32                  status
+        20                              unused
+ 
+    EnumerateVideoCaptureDeviceNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       4                       request length
+        4       1413                    vendor specific opcode
+        4                               unused
+        4       CARD32                  screen
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       n                       reply length, n = 2 * d * p
+        4       CARD32                  num_devices (d)
+        4       CARD32                  num_properties (p)
+        16                              unused
+        4*n     LISTofATTRIBUTE_PAIR    attribute, value pairs
+ 
+    LockVideoCaptureDeviceNV
+        1       CARD8                   opcode (X assigned)
+        1       16                      GLX opcode (glXVendorPrivate)
+        2       4                       request length
+        4       1414                    vendor specific opcode
+        4                               unused
+        4       CARD32                  device
+ 
+    ReleaseVideoCaptureDeviceNV
+        1       CARD8                   opcode (X assigned)
+        1       16                      GLX opcode (glXVendorPrivate)
+        2       4                       request length
+        4       1415                    vendor specific opcode
+        4                               unused
+        4       CARD32                  device
+ 
+    BeginVideoCaptureNV
+        1       CARD8                   opcode (X assigned)
+        1       16                      GLX opcode (glXVendorPrivate)
+        2       4                       request length
+        4       1400                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_cpture_slot
+ 
+    BindVideoCaptureStreamBufferNV
+        1       CARD8                   opcode (X assigned)
+        1       16                      GLX opcode (glXVendorPrivate)
+        2       8                       request length
+        4       1401                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        8       CARD64                  offset
+        4       CARD32                  video_cpture_slot
+        4       CARD32                  stream
+        4       ENUM                    frame_region
+ 
+    BindVideoCaptureStreamBufferNV
+        1       CARD8                   opcode (X assigned)
+        1       16                      GLX opcode (glXVendorPrivate)
+        2       8                       request length
+        4       1402                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_cpture_slot
+        4       CARD32                  stream
+        4       ENUM                    frame_region
+        4       ENUM                    target
+        4       CARD32                  texture
+ 
+    EndVideoCaptureNV
+        1       CARD8                   opcode (X assigned)
+        1       16                      GLX opcode (glXVendorPrivate)
+        2       4                       request length
+        4       1403                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_cpture_slot
+ 
+    GetVideoCaptureivNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       5                       request length
+        4       1404                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_capture_slot
+        4       ENUM                    pname
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       m                       reply length, m = (n==1 ? 0 : n)
+        4                               unused
+        4       CARD32                  n
+ 
+        if (n=1) this follows:
+ 
+        4       INT32                   params
+        12                              unused
+ 
+        otherwise this follows:
+ 
+        16                              unused
+        n*4     LISTofINT32             params
+ 
+    GetVideoCaptureStreamivNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       6                       request length
+        4       1405                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_capture_slot
+        4       CARD32                  stream
+        4       ENUM                    pname
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       m                       reply length, m = (n==1 ? 0 : n)
+        4                               unused
+        4       CARD32                  n
+ 
+        if (n=1) this follows:
+ 
+        4       INT32                   params
+        12                              unused
+ 
+        otherwise this follows:
+ 
+        16                              unused
+        n*4     LISTofINT32             params
+ 
+    GetVideoCaptureStreamfvNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       6                       request length
+        4       1406                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_capture_slot
+        4       CARD32                  stream
+        4       ENUM                    pname
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       m                       reply length, m = (n==1 ? 0 : n)
+        4                               unused
+        4       CARD32                  n
+ 
+        if (n=1) this follows:
+ 
+        4       FLOAT32                 params
+        12                              unused
+ 
+        otherwise this follows:
+ 
+        16                              unused
+        n*4     LISTofFLOAT32           params
+ 
+    GetVideoCaptureStreamdvNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       6                       request length
+        4       1407                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_capture_slot
+        4       CARD32                  stream
+        4       ENUM                    pname
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       m                       reply length, m = (n==1 ? 0 : n*2)
+        4                               unused
+        4       CARD32                  n
+ 
+        if (n=1) this follows:
+ 
+        8       FLOAT64                 params
+        8                               unused
+ 
+        otherwise this follows:
+ 
+        16                              unused
+        n*8     LISTofFLOAT64           params
+ 
+    VideoCaptureNV
+        1       CARD8                   opcode (X assigned)
+        1       17                      GLX opcode (glXVendorPrivateWithReply)
+        2       4                       request length
+        4       1408                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_capture_slot
+      =>
+        1       CARD8                   reply
+        1                               unused
+        2       CARD16                  sequence number
+        4       0                       reply length
+        4                               unused
+        4                               unused
+        8       CARD64                  capture_time
+        4       CARD32                  sequence_num
+        4                               unused
+ 
+    VideoCaptureStreamParameterivNV
+        1       CARD8                   opcode (X assigned)
+        1       16                      GLX opcode (glXVendorPrivate)
+        2       6+n                     request length
+        4       1409                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_cpture_slot
+        4       CARD32                  stream
+        4       ENUM                    pname
+                0x9029 n=16             GL_VIDEO_COLOR_CONVERSION_MATRIX_NV
+                0x902A n=4              GL_VIDEO_COLOR_CONVERSION_MAX_NV
+                0x902B n=4              GL_VIDEO_COLOR_CONVERSION_MIN_NV
+                0x902C n=4              GL_VIDEO_COLOR_CONVERSION_OFFSET_NV
+                0x902D n=1              GL_VIDEO_BUFFER_INTERNAL_FORMAT_NV
+                0x902D n=1              GL_VIDEO_CAPTURE_SURFACE_ORIGIN_NV
+                else n=0                command is erroneous
+        4*n     LISTofINT32             params
+ 
+    VideoCaptureStreamParameterfvNV
+        1       CARD8                   opcode (X assigned)
+        1       16                      GLX opcode (glXVendorPrivate)
+        2       6+n                     request length
+        4       1410                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_cpture_slot
+        4       CARD32                  stream
+        4       ENUM                    pname
+                0x9029 n=16             GL_VIDEO_COLOR_CONVERSION_MATRIX_NV
+                0x902A n=4              GL_VIDEO_COLOR_CONVERSION_MAX_NV
+                0x902B n=4              GL_VIDEO_COLOR_CONVERSION_MIN_NV
+                0x902C n=4              GL_VIDEO_COLOR_CONVERSION_OFFSET_NV
+                0x902D n=1              GL_VIDEO_BUFFER_INTERNAL_FORMAT_NV
+                0x902D n=1              GL_VIDEO_CAPTURE_SURFACE_ORIGIN_NV
+                else n=0                command is erroneous
+        4*n     LISTofFLOAT32           params
+ 
+    VideoCaptureStreamParameterdvNV
+        1       CARD8                   opcode (X assigned)
+        1       16                      GLX opcode (glXVendorPrivate)
+        2       6+n*2                   request length
+        4       1411                    vendor specific opcode
+        4       GLX_CONTEXT_TAG         context tag
+        4       CARD32                  video_cpture_slot
+        4       CARD32                  stream
+        4       ENUM                    pname
+                0x9029 n=16             GL_VIDEO_COLOR_CONVERSION_MATRIX_NV
+                0x902A n=4              GL_VIDEO_COLOR_CONVERSION_MAX_NV
+                0x902B n=4              GL_VIDEO_COLOR_CONVERSION_MIN_NV
+                0x902C n=4              GL_VIDEO_COLOR_CONVERSION_OFFSET_NV
+                0x902D n=1              GL_VIDEO_BUFFER_INTERNAL_FORMAT_NV
+                0x902D n=1              GL_VIDEO_CAPTURE_SURFACE_ORIGIN_NV
+                else n=0                command is erroneous
+        8*n     LISTofFLOAT64           params
+
+Additions to the WGL Specification
+
+    Modify section "Querying WGL context attributes" from NV_present_video
+
+    Replace the last two sentences of the last paragraph in the section
+    with:
+
+    "If <iAttribute> is WGL_NUM_VIDEO_SLOTS_NV, the number of valid video
+    output slots in the current context is returned.  If <iAttribute> is
+    WGL_NUM_VIDEO_CAPTURE_SLOTS_NV, the number of valid video capture
+    slots in the current context is returned."
+
+    Add a new section "Video Capture Devices"
+
+    "WGL video capture devices can be used to stream video data from an
+    external source directly into GL objects for use in rendering or
+    readback.  Use
+
+      UINT wglEnumerateVideoCaptureDevicesNV(HDC hDc,
+                                     HVIDEOINPUTDEVICENV *phDeviceList);
+
+    "to query the available video capture devices on <hDc>.  The number
+    of devices is returned, and if phDeviceList is not NULL, an array of
+    valid device handles is returned in it.  The command will assume
+    <phDeviceList> is large enough to hold all available handles so the
+    application should take care to first query the number of devices
+    and allocate an appropriately sized array.
+
+    "WGL video capture device handles refer to a physical capture
+    device.  Each physical capture device will have a unique ID that can
+    be used to identify it when coordinating device usage and setup with
+    other APIs.  To query the unique ID of the physical device backing a
+    WGL video capture device handle, use
+
+      BOOL wglQueryVideoCaptureDeviceNV(HDC hDc,
+                                       HVIDEOINPUTDEVICENV hDevice,
+                                       int iAttribute, int *piValue);
+
+    "where <iAttribute> must be WGL_UNIQUE_ID_NV.  On success, the
+    unique ID will be returned in <piValue>.
+
+    "Before using a video capture device, it must be locked.  Once a
+    video capture device is locked by a process, no other process can
+    lock a video capture device with the same unique ID until the lock
+    is released or the process ends.  To lock a video capture device,
+    use
+
+      BOOL wglLockVideoCaptureDeviceNV(HDC hDc,
+                                       HVIDEOINPUTDEVICENV hDevice);
+
+    "After successfully locking a video capture device, use
+
+      BOOL wglBindVideoCaptureDeviceNV(UINT uVideoSlot,
+                                       HVIDEOINPUTDEVICENV hDevice);
+
+      
+    "to bind it to the capture slot <video_capture_slot> in the current
+    context.  If the slot is already bound, the device it's bound to 
+    will be unbound first. 
+    It's an error to bind an already bound device to a different slot.
+    To unbind a video capture device, bind device NULL to the
+    video capture slot the device is bound to.
+
+    "WGL does not provide a mechanism to configure the video capture
+    process.  It is expected that device vendors provide a vendor-
+    specific mechanism for configuring or detecting properties such as
+    the incoming video signal and data format.  However, WGL does expect
+    that devices are fully configured before wglBindVideoCaptureDeviceNV
+    is called.  Changing device properties that affect the format of the
+    captured data will cause the results of video capture to be
+    undefined.
+
+    "When finished capturing data on a locked video capture device, use
+
+      BOOL wglReleaseVideoCaptureDeviceNV(HDC hDc,
+                                          HVIDEOINPUTDEVICENV hDevice);
+
+    to unlock it. The application must unbind the device before releasing it,
+    it's an error to release a device that is still bound.
+
+Errors
+
+    INVALID_VALUE is generated if <video_capture_slot> is less than 1 or
+    greater than the number of video capture slots supported by the
+    current context when calling BeginVideoCaptureNV,
+    BindVideoCaptureStreamBufferNV, BindVideoCaptureStreamTextureNV,
+    EndVideoCaptureNV, GetVideoCaptureivNV,
+    GetVideoCaptureStream{i,f,d}vNV, VideoCaptureNV, or
+    VideoCaptureStreamParameter{i,f,d}vNV.
+
+    INVALID_OPERATION is generated if there is no video capture device
+    bound to the slot specified by <video_capture_slot> when calling 
+    BeginVideoCaptureNV, BindVideoCaptureStreamBufferNV,
+    BindVideoCaptureStreamTextureNV, EndVideoCaptureNV,
+    GetVideoCaptureivNV, GetVideoCaptureStream{i,f,d}vNV,
+    VideoCaptureNV, or VideoCaptureStreamParameter{i,f,d}vNV.
+
+    INVALID_OPERATION is generated if BeginVideoCaptureNV is called on a
+    video capture slot that is already capturing or if EndVideoCaptureNV
+    is called on a video capture slot that is not capturing.
+
+    INVALID_VALUE is generated if stream is greater than the number of
+    streams provided by the currently bound video capture device when
+    calling BindVideoCaptureStreamBufferNV,
+    BindVideoCaptureStreamTextureNV,
+    GetVideoCaptureStreamParameter{i,f,d}vNV, or
+    VideoCaptureStreamParameter{i,f,d}vNV.
+
+    INVALID_ENUM is generated if <frame_region> is not one of FRAME_NV,
+    FIELD_UPPER_NV, or FIELD_LOWER_NV when calling
+    BindVideoCaptureStreamBufferNV or BindVideoCaptureStreamTextureNV.
+
+    INVALID_OPERATION is generated if <target> is a valid texture target
+    but not TEXTURE_2D or TEXTURE_RECTANGLE when calling
+    BindVideoCaptureStreamTextureNV
+
+    INVALID_ENUM is generated if <target> does not refer to a texture
+    target supported by the GL when calling
+    BindVideoCaptureStreamTextureNV.
+
+    INVALID_VALUE is generated if <texture> is not 0 and does not name
+    an existing texture object when calling
+    BindVideoCaptureStreamTextureNV.
+
+    INVALID_ENUM is generated if <pname> does not name a valid video
+    capture slot parameter when calling GetVideoCaptureivNV or a
+    valid video capture stream parameter when calling
+    GetVideoCaptureStream{i,f,d}vNV or a settable video capture stream
+    parameter when calling VideoCaptureStreamParameterivNV.
+
+    INVALID_ENUM is generated if the buffer internal format is not a
+    supported texture internal format or one of the values in table
+    4.13 when calling VideoCaptureStreamParameter{i,f,d}vNV.
+
+    INVALID_ENUM is generated if the buffer internal format is not
+    a value in table 4.13 and is not color renderable when calling
+    VideoCaptureStreamParameter{i,f,d}vNV.
+
+    INVALID_ENUM is generated if the buffer internal format is a value
+    in table 4.13 and the format layout is not compatible with the
+    effective capture data format as describe in table 4.14 when calling
+    VideoCapturStreamParameter{i,f,d}vNV.
+
+    INVALID_ENUM is generated if <params> does not contain one of
+    LOWER_LEFT or UPPER_LEFT when <pname> is
+    VIDEO_CAPTURE_SURFACE_ORIGIN_NV when calling
+    VideoCaptureStreamParameter{i,f,d}vNV.
+
+    INVALID_OPERATION is generated if any stream has a mixture of
+    buffer objects and texture objects bound when VideoCaptureNV is
+    called.
+
+    INVALID_VALUE is generated if any buffer objects bound are not large
+    enough to contain the data that would be captured from the region
+    they are bound to at the offset specified when VideoCaptureNV is
+    called.
+
+    INVALID_VALUE is generated if the dimensions of any textures bound
+    to the video capture slot do not match the dimensions of the region
+    they are bound to when VideoCaptureNV is called.
+
+    INVALID_OPERATION is generated if the base level of any textures
+    bound to the video capture slot has not been defined when
+    VideoCaptureNV is called.
+
+    INVALID_OPERATION is generated if the internal format of all
+    textures bound to a given video capture stream does not match when
+    VideoCaptureNV is called.
+
+    INVALID_OPERATION is generated if the format of any textures bound
+    to the video capture slot is not color renderable when
+    VideoCaptureNV is called.
+
+    INVALID_OPERATION is generated if automatic mipmap generation is
+    enabled on any of the textures bound to the video capture slot when
+    VideoCaptureNV is called.
+
+    INVALID_OPERATION is generated if one field of a stream has an
+    object bound to it but the other field does not when VideoCaptureNV
+    is called.
+
+    INVALID_VALUE is generated when VideoCaptureNV is called if the
+    <offset> provided when calling BindVideoCaptureStreamBufferNV is not
+    a multiple of the size, in bytes, of a pixel in the internal format
+    of the capture buffer.
+
+New State
+
+Add a new table, between tables 6.44 and 6.45:
+
+                                   Get          Initial
+    Get Value                Type  Command      Value    Description   Sec.  Attribute
+    -----------------------  ----  -----------  -------  ------------  ----  ------------
+    VIDEO_BUFFER_BINDING_NV  Z+    GetIntegerv  0        Video buffer  4.5   -
+                                                         binding
+
+    Table 6.45. Video Capture State
+
+Add a new table, after the above:
+
+                                               Get                Initial
+    Get Value                            Type  Command            Value        Description   Sec.  Attribute
+    -----------------------------------  ----  -----------------  -------      -----------   ----  ---------
+    NEXT_VIDEO_CAPTURE_BUFFER_STATUS_NV  B     GetVideoCaptureiv  FALSE        Status of     4.5   -
+                                                                               next video
+                                                                               capture
+                                                                               buffer.
+
+    Table 6.46. Video Capture Slot State
+
+Add a new table, after the above:
+
+                                               Get                      Initial
+    Get Value                            Type  Command                  Value         Description   Sec.  Attribute
+    -----------------------------------  ----  -----------------------  ------------  ------------  ----  ---------
+    LAST_VIDEO_CAPTURE_STATUS_NV         Z3    GetVideoCaptureStreamiv  SUCCESS_NV    Status of     4.5   -
+                                                                                      last video
+                                                                                      operation
+
+    VIDEO_BUFFER_INTERNAL_FORMAT_NV      Z+    GetVideoCaptureStreamiv  See sec. 4.5  Format of     4.5   -
+                                                                                      video
+                                                                                      capture
+                                                                                      buffers
+                                                                                      bound to
+                                                                                      this stream
+
+    VIDEO_BUFFER_PITCH_NV                Z+    GetVideoCaptureStreamiv  See sec. 4.5  Pitch of      4.5   -
+                                                                                      video
+                                                                                      capture
+                                                                                      buffers
+                                                                                      bound to
+                                                                                      this stream
+
+    VIDEO_CAPTURE_FRAME_WIDTH_NV         Z+    GetVideoCaptureStreamiv  See sec. 4.5  width of      4.5   -
+                                                                                      a frame or
+                                                                                      field on
+                                                                                      currently  
+                                                                                      bound video
+                                                                                      capture
+                                                                                      device.
+
+    VIDEO_CAPTURE_FRAME_HEIGHT_NV        Z+    GetVideoCaptureStreamiv  See sec. 4.5  height of     4.5   -
+                                                                                      a full frame
+                                                                                      on currently  
+                                                                                      bound video
+                                                                                      capture
+                                                                                      device.
+
+    VIDEO_CAPTURE_FIELD_UPPER_HEIGHT_NV  Z+    GetVideoCaptureStreamiv  See sec. 4.5  height of     4.5   -
+                                                                                      upper field
+                                                                                      on currently  
+                                                                                      bound video
+                                                                                      capture
+                                                                                      device.
+
+    VIDEO_CAPTURE_FIELD_LOWER_HEIGHT_NV  Z+    GetVideoCaptureStreamiv  See sec. 4.5  height of     4.5   -
+                                                                                      lower field
+                                                                                      on currently  
+                                                                                      bound video
+                                                                                      capture
+                                                                                      device.
+
+    VIDEO_CAPTURE_SURFACE_ORIGIN_NV      Z2    GetVideoCaptureStreamiv  LOWER_LEFT    orientation   4.5   -
+                                                                                      of captured
+                                                                                      video image
+
+    VIDEO_CAPTURE_TO_422_SUPPORTED_NV    B     GetVideoCaptureStreamiv  See sec 4.5   support for   4.5   -
+                                                                                      4:2:2 or
+                                                                                      4:2:2:4
+                                                                                      capture.
+
+    VIDEO_COLOR_CONVERSION_MATRIX_NV     M4    GetVideoCaptureStreamfv  Identity      Color         4.5   -
+                                                                        Matrix        Conversion 
+                                                                                      Matrix
+
+    VIDEO_COLOR_CONVERSION_MAX_NV        R4    GetVideoCaptureStreamfv  <1,1,1,1>     Color         4.5   -
+                                                                                      Conversion 
+                                                                                      Clamp Max
+
+    VIDEO_COLOR_CONVERSION_MIN_NV        R4    GetVideoCaptureStreamfv  <0,0,0,0>     Color         4.5   -
+                                                                                      Conversion 
+                                                                                      Clamp Min
+
+    VIDEO_COLOR_CONVERSION_OFFEST_NV     R4    GetVideoCaptureStreamfv  <0,0,0,0>     Color         4.5   -
+                                                                                      Conversion 
+                                                                                      Offset
+
+    -                                    Z+    -                        0             name of       4.5   -
+                                                                                      object bound
+                                                                                      to frame
+                                                                                      or upper
+                                                                                      field
+
+    -                                    Z+    -                        0             name of       4.5   -
+                                                                                      object bound
+                                                                                      to lower
+                                                                                      field
+
+    -                                    B     -                        -             Is a frame    4.5   -
+                                                                                      or fields
+                                                                                      bound.
+
+    Table 6.47. Video Capture Stream State
+
+New Implementation Dependent State
+
+(Table 6.50, p. 388)
+
+                                        Get                Initial
+    Get Value                     Type  Command            Value         Description    Sec.  Attribute
+    ----------------------------  ----  -----------------  ------------  -------------  ----  ---------
+    NUM_VIDEO_CAPTURE_STREAMS_NV  Z+    GetVideoCaptureiv  See Sec. 4.5  Number of      4.5   -
+                                                                         video capture
+                                                                         streams on
+                                                                         this video
+                                                                         capture slot
+
+Usage Examples:
+
+    This example demonstrates binding a video capture device to a
+    GLX context.
+
+        GLXVideoCaptureDevice *devices;
+        GLXVideoCaptureDevice device;
+        int numDevices;
+
+        devices = glXEnumerateVideoCaptureDevicesNV(dpy, 0,
+                                                    &numDevices);
+
+        // Assumes at least 1 device is available and is not locked.
+        device = devices[0];
+        XFree(devices);
+
+        glXLockVideoCaptureDeviceNV(dpy, device);
+
+        glXBindVideoCaptureDeviceNV(dpy, 1, device);
+
+        BeginVideoCaptureNV(1);
+
+        while (use_device) {
+            // Do main capture loop here.
+        }
+
+        EndVideoCaptureNV(1);
+
+        // Unbind and release the capture device.
+        glXBindVideoCaptureDeviceNV(dpy, 1, None);
+
+        glXReleaseVideoCaptureDeviceNV(dpy, device);
+        
+
+    This example demonstrates capturing 1080p video data from two
+    sources, streaming the first to system memory, and displaying the
+    second with the NV_present_video extension.  It assumes video
+    capture and video output devices are already bound to the current
+    context.
+
+        uint video_out_buffer;
+        uint video_out_texture;
+        int buffer_pitch;
+        int video_buffer_format = RGB8;
+
+        // Create a video output buffer object.
+        GenBuffersARB(1, &video_out_buffer);
+
+        // Create and init a video output texture object.
+        GenTextures(1, &video_out_texture);
+        BindTexture(TEXTURE_2D, video_out_texture);
+        TexImage2D(TEXTURE_2D, 0, RGB8, 1920, 1080, 0, RGB, BYTE, NULL);
+
+        // Set up the outputs for stream 0.
+        // Set the buffer object data format.
+        VideoCaptureStreamParameterivNV(1, 0,
+                                        VIDEO_BUFFER_INTERNAL_FORMAT_NV,
+                                        &video_buffer_format);
+
+        // Get the video buffer pitch
+        GetVideoCaptureStreamivNV(1, 0, VIDEO_BUFFER_PITCH_NV,
+                                  &buffer_pitch);
+
+        // Allocate space in the buffer object.
+        BindBufferARB(VIDEO_BUFFER_NV, video_out_buffer);
+        BufferDataARB(VIDEO_BUFFER_NV, buffer_pitch * 1080, NULL,
+                      STREAM_READ_ARB);
+
+        // Bind the buffer object to the video capture stream.
+        BindVideoCaptureStreamBufferNV(1, 0, FRAME_NV, 0);
+
+        // Bind the outputs for stream 1
+        BindVideoCaptureStreamTextureNV(1, 1, FRAME_NV, GL_TEXTURE_2D,
+                                        video_out_texture);
+
+        // Start the capture process
+        BeginVideoCaptureNV(1);
+
+        // Loop capturing data
+        while (...) {
+            uint64EXT timestamp;
+            uint sequence_num;
+            
+            // Capture the video to a buffer object
+            VideoCaptureNV(1, &sequence_num, &timestamp);
+
+            // Pull stream 0's video data back to local memory
+            BindBufferARB(VIDEO_BUFFER_NV, video_out_buffer);
+            GetBufferSubDataARB(VIDEO_BUFFER_NV, 0, buffer_pitch * 1080,
+                                someMallocMem1);
+
+            // Present stream 1's video data using NV_present_video
+            PresentFrameKeyedNV(1, 0, 0, 0, GL_FRAME_NV,
+                                GL_TEXTURE_2D, video_out_texture, 0,
+                                GL_NONE, 0, 0);
+
+            // Do something with the data in someMallocMem1 here,
+            // such as save it to disk.
+        }
+
+        // Pause/Stop capturing.
+        EndVideoCaptureNV(1);
+
+Issues
+
+    Should there be separate bind points for each input stream
+    rather than having BindVideoCaptureStreamBufferNV?
+
+       [RESOLVED] No.  BindVideoCaptureStreamBufferNV makes it simpler
+       to use an implementation-dependent number of streams and
+       reduces the number of tokens introduced.  The downside is one
+       extra step for the application at setup time, and possibly one
+       extra step in the loop.
+
+    Should VideoCaptureNV return values, making it synchronize the
+    client and server, or generate asynchronous query results?
+
+       [RESOLVED] VideoCaptureNV will return a status code and other
+       capture statistics immediately.  The application will likely need
+       to use these values to decide how to use the captured data.
+
+    How should video capture devices be presented to the application?
+
+       [RESOLVED] In GLX, video capture devices are X resources
+       with their own XID.  Device enumeration returns a list of XIDs to
+       the application.  The application can query the unique ID of the
+       underlying physical device associated with the XID.
+
+       In WGL, handles to the physical devices are returned.
+
+       There may be many X resources or windows handles referring to the
+       same video device, but only one X client or handle at a time
+       can own the physical device.  This is accomplished with the lock
+       and release entry points.
+
+    How does the application determine if a given capture operation
+    returned valid data.
+
+       [RESOLVED] VideoCaptureNV will have an enum return value
+       that specifies the overall status of the capture.  It will be
+       able to indicate success, partial success (some streams captured
+       valid data), or failure (no streams captured valid data).  The
+       user can then query the individual streams to determine if they
+       captured valid data on the last capture call.
+
+    The capture process involves a colorspace transformation in which
+    the user can specify a conversion matrix.  Should this matrix be
+    configurable per-stream or is per-video-capture device sufficient?
+
+       [RESOLVED] Per-stream matrices will be used.  This could be
+       useful if the devices connected to each stream have different
+       color characteristics and therefore each need different
+       conversion matrices.
+
+    Should there be a way to specify color clamp values for each stream
+    and each color component?
+
+       [RESOLVED] Yes.  Some video specifications require color data to
+       be in a certain range, so clamping is needed.
+
+    How do the color conversion parameters affect captured data when
+    using a 4:2:2 capture format?
+
+       [RESOLVED] The color conversion step is skipped when the
+       destination format is listed in table 4.13 or the effective
+       capture data format layout isn't 4:4:4 or 4:4:4:4.
+
+    Does video capture slot state belong to the context or the video
+    capture device.
+
+       [RESOLVED] The video capture state lives in the context.  Setting
+       video capture slot state does not affect the video capture device
+       itself.  Any video capture slot state that affects the video
+       capture hardware will be applied to the hardware when the device
+       is bound to the slot.
+
+    What happens to video capture slot state when a device is unbound,
+    or, does video capture slot state persist across device bindings?
+
+       [RESOLVED] Since much of the video capture slot state depends on
+       the currently bound device, the state should be reset to default
+       values whenever a device is bound.
+
+    Is video capture slot state defined when no device is bound to the
+    slot?  Should querying video capture slot state when no device is
+    bound generate an error?
+
+       [RESOLVED] Much of the state only has meaning when a device is
+       bound.  For example, the number of streams depends on how many
+       streams the bound device exposes.  Because of this, querying
+       video capture state on a slot with no bound device should
+       generate an INVALID_OPERATION error.  This operation would
+       essentially be the video capture equivalent of making GL calls
+       without a current context.
+
+    What should the default values for all the video capture per-slot
+    and per-stream state be?
+
+       [RESOLVED] Initial values have been specified in the spec and
+       the state tables.
+
+
+Revision History
+    Fifth external draft: 2011/7/8
+      -Fixed video slots used in second usage example
+
+    Fourth external draft: 2009/9/28
+      -Added "New Types" section
+
+    Third external draft: 2009/9/8
+
+    Second external draft: 2009/7/31
+
+    First external draft: 2009/2/23

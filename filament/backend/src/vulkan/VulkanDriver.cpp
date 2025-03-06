@@ -26,9 +26,12 @@
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
-#include "memory/ResourceManager.h"
-#include "memory/ResourcePointer.h"
+#include "vulkan/memory/ResourceManager.h"
+#include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/Conversion.h"
+#include "vulkan/utils/Definitions.h"
 
+#include <backend/DriverEnums.h>
 #include <backend/platforms/VulkanPlatform.h>
 
 #include <utils/CString.h>
@@ -43,11 +46,13 @@ using namespace bluevk;
 
 using utils::FixedCapacityVector;
 
+#if defined(__clang__)
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 #pragma clang diagnostic ignored "-Wunused-parameter"
+#endif
 
 namespace filament::backend {
 
@@ -197,7 +202,10 @@ Dispatcher VulkanDriver::getDispatcher() const noexcept {
 VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& context,
         Platform::DriverConfig const& driverConfig) noexcept
     : mPlatform(platform),
-      mResourceManager(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck),
+      mResourceManager(
+              driverConfig.handleArenaSize,
+              driverConfig.disableHandleUseAfterFreeCheck,
+              driverConfig.disableHeapHandleTags),
       mAllocator(createAllocator(mPlatform->getInstance(), mPlatform->getPhysicalDevice(),
               mPlatform->getDevice())),
       mContext(context),
@@ -205,13 +213,14 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
               mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
               mPlatform->getProtectedGraphicsQueueFamilyIndex(), &mContext),
       mPipelineLayoutCache(mPlatform->getDevice()),
-      mPipelineCache(mPlatform->getDevice(), mAllocator),
+      mPipelineCache(mPlatform->getDevice()),
       mStagePool(mAllocator, &mCommands),
       mFramebufferCache(mPlatform->getDevice()),
       mSamplerCache(mPlatform->getDevice()),
       mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
       mReadPixels(mPlatform->getDevice()),
       mDescriptorSetManager(mPlatform->getDevice(), &mResourceManager),
+      mQueryManager(mPlatform->getDevice()),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mStereoscopicType(driverConfig.stereoscopicType) {
 
@@ -236,8 +245,6 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
                 << " error=" << static_cast<int32_t>(result);
     }
 #endif
-
-    mTimestamps = std::make_unique<VulkanTimestamps>(mPlatform->getDevice());
 }
 
 VulkanDriver::~VulkanDriver() noexcept = default;
@@ -295,6 +302,10 @@ ShaderModel VulkanDriver::getShaderModel() const noexcept {
 #endif
 }
 
+ShaderLanguage VulkanDriver::getShaderLanguage() const noexcept {
+    return ShaderLanguage::SPIRV;
+}
+
 void VulkanDriver::terminate() {
     // Flush and wait here to make sure all queued commands are executed and resources that are tied
     // to those commands are no longer referenced.
@@ -304,7 +315,7 @@ void VulkanDriver::terminate() {
     mDefaultRenderTarget = {};
     mBoundPipeline = {};
 
-    mTimestamps.reset();
+    mQueryManager.terminate();
 
     mBlitter.terminate();
     mReadPixels.terminate();
@@ -536,16 +547,25 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
         backend::TextureSwizzle a) {
    TextureSwizzle const swizzleArray[] = {r, g, b, a};
-   VkComponentMapping const swizzle = getSwizzleMap(swizzleArray);
+   VkComponentMapping const swizzle = fvkutils::getSwizzleMap(swizzleArray);
    auto src = resource_ptr<VulkanTexture>::cast(&mResourceManager, srch);
    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, src, swizzle);
    texture.inc();
 }
 
-void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th,
+void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th,
         backend::SamplerType target,  backend::TextureFormat format,
-        uint32_t width, uint32_t height, backend::TextureUsage usage, void* externalImage) {
+        uint32_t width, uint32_t height, backend::TextureUsage usage,
+        Platform::ExternalImageHandleRef externalImage) {
+    FVK_SYSTRACE_SCOPE();
+
+    // FIXME: implement createTextureExternalImage2R
+}
+
+void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::SamplerType target,
+        backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
+        void* externalImage) {
     FVK_SYSTRACE_SCOPE();
 
     const auto& metadata = mPlatform->getExternalImageMetadata(externalImage);
@@ -555,13 +575,13 @@ void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th,
 
     assert_invariant(width == metadata.width);
     assert_invariant(height == metadata.height);
-    assert_invariant(getVkFormat(format) == metadata.format);
+    assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
 
     const auto& data = mPlatform->createExternalImage(externalImage, metadata);
 
     auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
         mAllocator, &mResourceManager, &mCommands, data.first, data.second, metadata.format,
-        1, metadata.width, metadata.height, usage, mStagePool);
+        1, metadata.width, metadata.height, /*depth=*/1, usage, mStagePool);
 
     texture.inc();
 }
@@ -783,6 +803,10 @@ Handle<HwTexture> VulkanDriver::createTextureViewSwizzleS() noexcept {
     return mResourceManager.allocHandle<VulkanTexture>();
 }
 
+Handle<HwTexture> VulkanDriver::createTextureExternalImage2S() noexcept {
+    return mResourceManager.allocHandle<VulkanTexture>();
+}
+
 Handle<HwTexture> VulkanDriver::createTextureExternalImageS() noexcept {
     return mResourceManager.allocHandle<VulkanTexture>();
 }
@@ -829,8 +853,7 @@ Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
-    auto query = resource_ptr<VulkanTimerQuery>::construct(&mResourceManager,
-            mTimestamps->getNextQuery());
+    auto query = mQueryManager.getNextQuery(&mResourceManager);
     query.inc();
     return Handle<VulkanTimerQuery>(query.id());
 }
@@ -862,6 +885,7 @@ void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
         return;
     }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
+    mQueryManager.clearQuery(vtq);
     vtq.dec();
 }
 
@@ -930,7 +954,7 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
 // the GPU supports the given texture format with non-zero optimal tiling features.
 bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
-    VkFormat vkformat = getVkFormat(format);
+    VkFormat vkformat = fvkutils::getVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -957,7 +981,7 @@ bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
 }
 
 bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
-    VkFormat vkformat = getVkFormat(format);
+    VkFormat vkformat = fvkutils::getVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -1015,12 +1039,11 @@ bool VulkanDriver::isDepthStencilResolveSupported() {
 
 bool VulkanDriver::isDepthStencilBlitSupported(TextureFormat format) {
     auto const& formats = mContext.getBlittableDepthStencilFormats();
-    return std::find(formats.begin(), formats.end(), getVkFormat(format)) != formats.end();
+    return std::find(formats.begin(), formats.end(), fvkutils::getVkFormat(format)) !=
+           formats.end();
 }
 
-bool VulkanDriver::isProtectedTexturesSupported() {
-    return false;
-}
+bool VulkanDriver::isProtectedTexturesSupported() { return false; }
 
 bool VulkanDriver::isDepthClampSupported() {
     return mContext.isDepthClampSupported();
@@ -1091,8 +1114,8 @@ FeatureLevel VulkanDriver::getFeatureLevel() {
 
 math::float2 VulkanDriver::getClipSpaceParams() {
     // virtual and physical z-coordinate of clip-space is in [-w, 0]
-    // Note: this is actually never used (see: main.vs), but it's a backend API, so we implement it
-    // properly.
+    // Note: this is actually never used (see: surface_main.vs), but it's a backend API, so we
+    // implement it properly.
     return math::float2{ 1.0f, 0.0f };
 }
 
@@ -1163,6 +1186,9 @@ void VulkanDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
     scheduleDestroy(std::move(data));
 }
 
+void VulkanDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
+}
+
 void VulkanDriver::setupExternalImage(void* image) {
 }
 
@@ -1172,26 +1198,25 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
         return TimerQueryResult::NOT_READY;
     }
 
-    auto results = mTimestamps->getResult(vtq);
-    uint64_t timestamp0 = results[0];
-    uint64_t available0 = results[1];
-    uint64_t timestamp1 = results[2];
-    uint64_t available1 = results[3];
-
-    if (available0 == 0 || available1 == 0) {
+    auto results = mQueryManager.getResult(vtq);
+    if (results.beginAvailable == 0 || results.endAvailable == 0) {
         return TimerQueryResult::NOT_READY;
     }
 
-    FILAMENT_CHECK_POSTCONDITION(timestamp1 >= timestamp0)
-            << "Timestamps are not monotonically increasing.";
+    uint64_t const begin = results.beginTime;
+    uint64_t const end = results.endTime;
+    if (begin >= end) {
+        // TODO: queries might have ran on different command buffers.
+        FVK_LOGW << "Timestamps are not monotonically increasing. " << utils::io::endl;
+        *elapsedTime = 0;
+        return TimerQueryResult::ERROR;
+    }
 
     // NOTE: MoltenVK currently writes system time so the following delta will always be zero.
     // However there are plans for implementing this properly. See the following GitHub ticket.
     // https://github.com/KhronosGroup/MoltenVK/issues/773
-
     float const period = mContext.getPhysicalDeviceLimits().timestampPeriod;
-    uint64_t delta = uint64_t(float(timestamp1 - timestamp0) * period);
-    *elapsedTime = delta;
+    *elapsedTime = uint64_t(float(end - begin) * period);
     return TimerQueryResult::AVAILABLE;
 }
 
@@ -1673,30 +1698,30 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     auto rt = mCurrentRenderPass.renderTarget;
 
     VulkanPipelineCache::RasterState const vulkanRasterState{
-        .cullMode = getCullMode(rasterState.culling),
-        .frontFace = getFrontFace(rasterState.inverseFrontFaces),
+        .cullMode = fvkutils::getCullMode(rasterState.culling),
+        .frontFace = fvkutils::getFrontFace(rasterState.inverseFrontFaces),
         .depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? true : false,
         .blendEnable = rasterState.hasBlending(),
         .depthWriteEnable = rasterState.depthWrite,
         .alphaToCoverageEnable = rasterState.alphaToCoverage,
-        .srcColorBlendFactor = getBlendFactor(rasterState.blendFunctionSrcRGB),
-        .dstColorBlendFactor = getBlendFactor(rasterState.blendFunctionDstRGB),
-        .srcAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionSrcAlpha),
-        .dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha),
+        .srcColorBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionSrcRGB),
+        .dstColorBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionDstRGB),
+        .srcAlphaBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionSrcAlpha),
+        .dstAlphaBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionDstAlpha),
         .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
         .rasterizationSamples = rt->getSamples(),
         .depthClamp = rasterState.depthClamp,
         .colorTargetCount = rt->getColorTargetCount(mCurrentRenderPass),
         .colorBlendOp = rasterState.blendEquationRGB,
-        .alphaBlendOp =  rasterState.blendEquationAlpha,
+        .alphaBlendOp = rasterState.blendEquationAlpha,
         .depthCompareOp = rasterState.depthFunc,
         .depthBiasConstantFactor = depthOffset.constant,
-        .depthBiasSlopeFactor = depthOffset.slope
+        .depthBiasSlopeFactor = depthOffset.slope,
     };
 
     // unfortunately in Vulkan the topology is per pipeline
     VkPrimitiveTopology const topology =
-            VulkanPipelineCache::getPrimitiveTopology(pipelineState.primitiveType);
+            fvkutils::getPrimitiveTopology(pipelineState.primitiveType);
 
     // Declare fixed-size arrays that get passed to the pipeCache and to vkCmdBindVertexBuffers.
     VkVertexInputAttributeDescription const* attribDesc = vbi->getAttribDescriptions();
@@ -1728,7 +1753,7 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     mBoundPipeline = {
         .program = program,
         .pipelineLayout = pipelineLayout,
-        .descriptorSetMask = DescriptorSetMask(descriptorSetMaskTable[layoutCount]),
+        .descriptorSetMask = fvkutils::DescriptorSetMask(descriptorSetMaskTable[layoutCount]),
     };
 
     mPipelineCache.bindLayout(pipelineLayout);
@@ -1832,12 +1857,12 @@ void VulkanDriver::scissor(Viewport scissorBox) {
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-    mTimestamps->beginQuery(&(mCommands.get()), vtq);
+    mQueryManager.beginQuery(&(mCommands.get()), vtq);
 }
 
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-     mTimestamps->endQuery(&(mCommands.get()), vtq);
+    mQueryManager.endQuery(&(mCommands.get()), vtq);
 }
 
 void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
@@ -1877,4 +1902,6 @@ template class ConcreteDispatcher<VulkanDriver>;
 
 } // namespace filament::backend
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif

@@ -1,0 +1,564 @@
+Name
+
+    ARB_compute_variable_group_size
+
+Name Strings
+
+    GL_ARB_compute_variable_group_size
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Slawomir Grajewski, Intel Corporation
+    Jeannot Breton, NVIDIA
+    Daniel Koch, NVIDIA
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 3, 2013.
+    Ratified by the Khronos Board of Promoters on July 19, 2013.
+
+Version
+
+    Last Modified Date:         December 10, 2018
+    Revision:                   9
+
+Number
+
+    ARB Extension #153
+
+Dependencies
+
+    This extension is written against the OpenGL 4.3 (Compatibility Profile)
+    Specification, dated August 6, 2012.
+
+    This extension is written against the OpenGL Shading Language
+    Specification, Version 4.30, Revision 7, dated September 24, 2012.
+
+    OpenGL 4.3 or ARB_compute_shader is required.
+
+    This extension interacts with NV_compute_program5.
+
+Overview
+
+    This extension allows applications to write generic compute shaders that
+    operate on workgroups with arbitrary dimensions.  Instead of specifying a
+    fixed workgroup size in the compute shader, an application can use a
+    compute shader using the /local_size_variable/ layout qualifer to indicate
+    a variable workgroup size.  When using such compute shaders, the new
+    command DispatchComputeGroupSizeARB should be used to specify both a
+    workgroup size and workgroup count.
+
+    In this extension, compute shaders with fixed group sizes must be
+    dispatched by DispatchCompute and DispatchComputeIndirect.  Compute
+    shaders with variable group sizes must be dispatched via
+    DispatchComputeGroupSizeARB.  No support is provided in this extension for
+    indirect dispatch of compute shaders with a variable group size.
+
+New Procedures and Functions
+
+    void DispatchComputeGroupSizeARB(uint num_groups_x, uint num_groups_y,
+                                     uint num_groups_z, uint group_size_x,
+                                     uint group_size_y, uint group_size_z);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetIntegerv, GetBooleanv, GetFloatv,
+    GetDoublev and GetInteger64v:
+
+        MAX_COMPUTE_VARIABLE_GROUP_INVOCATIONS_ARB      0x9344
+        MAX_COMPUTE_FIXED_GROUP_INVOCATIONS_ARB         0x90EB (see note)
+
+    Accepted by the <pname> parameter of GetIntegeri_v, GetBooleani_v,
+    GetFloati_v, GetDoublei_v and GetInteger64i_v:
+
+        MAX_COMPUTE_VARIABLE_GROUP_SIZE_ARB             0x9345
+        MAX_COMPUTE_FIXED_GROUP_SIZE_ARB                0x91BF (see note)
+
+    Note:  MAX_COMPUTE_FIXED_GROUP_INVOCATIONS_ARB and
+    MAX_COMPUTE_FIXED_GROUP_SIZE_ARB are aliases for the OpenGL 4.3 core enums
+    MAX_COMPUTE_WORK_GROUP_INVOCATIONS and MAX_COMPUTE_WORK_GROUP_SIZE,
+    respectively.
+
+
+Modifications to the OpenGL 4.3 (Compatibility Profile) Specification
+
+    Modify Chapter 19, Compute Shaders, p. 585
+
+    (modify second paragraph, p. 585)
+
+    ... One or more workgroups is launched by calling
+
+      void DispatchCompute(uint num_groups_x, uint num_groups_y,
+                           uint num_groups_z)
+
+    or
+
+      void DispatchComputeGroupSizeARB(uint num_groups_x, uint num_groups_y,
+                                       uint num_groups_z, uint group_size_x,
+                                       uint group_size_y, uint group_size_z);
+
+    (modify second paragraph, p. 586)
+
+    For DispatchCompute, the workgroup size in each dimension must be
+    specified at compile time in the active program for the compute shader
+    stage.  The workgroup size is specified using an input layout qualifer
+    ...
+
+    (insert after second paragraph, p. 586)
+
+    For DispatchComputeGroupSizeARB, the workgroup size must be specified as
+    variable in the active program for the compute shader stage.  The group
+    size used to execute the compute shader is taken from the <group_size_x>,
+    <group_size_y>, and <group_size_z> parameters.  For the purposes of the
+    COMPUTE_WORK_GROUP_SIZE query, a program without a workgroup size
+    specified at compile time will be considered to have a size of zero in
+    each dimension.
+
+    (modify the third paragraph, p. 586)
+
+    The maximum size of a workgroup may be determined by calling
+    GetIntegeri_v with <index> set to 0, 1, or 2 to retrieve the maximum work
+    size in the X, Y and Z dimension, respectively.  <target> should be set to
+    MAX_COMPUTE_FIXED_GROUP_SIZE_ARB for compute shaders with fixed group
+    sizes or MAX_COMPUTE_VARIABLE_GROUP_SIZE_ARB for compute shaders with
+    variable local group sizes.  Furthermore, the maximum number of
+    invocations in a single workgroup (i.e., the product of the three
+    dimensions) may be determined by calling GetIntegerv with <pname> set to
+    MAX_COMPUTE_FIXED_GROUP_INVOCATIONS_ARB for compute shaders with fixed
+    group sizes or MAX_COMPUTE_VARIABLE_GROUP_INVOCATIONS_ARB for compute
+    shaders with variable group sizes.
+
+    (insert after the first INVALID_OPERATION error in the first error block,
+     shared between DispatchCompute and DispatchComputeGroupSizeARB, p. 586)
+
+    An INVALID_OPERATION error is generated by DispatchCompute if the active
+    program for the compute shader stage has a variable workgroup
+    size.
+
+    An INVALID_OPERATION error is generated by DispatchComputeGroupSizeARB if
+    the active program for the compute shader stage has a fixed workgroup
+    size.
+
+    (insert at the end of the first error block, shared between
+     DispatchCompute and DispatchComputeGroupSizeARB, p. 586)
+
+    An INVALID_VALUE error is generated by DispatchComputeGroupSizeARB if any
+    of <group_size_x>, <group_size_y>, or <group_size_z> is less than or equal
+    to zero or greater than the maximum workgroup size for compute
+    shaders with variable group size (MAX_COMPUTE_VARIABLE_GROUP_SIZE_ARB) in
+    the corresponding dimension.
+
+    An INVALID_VALUE error is generated by DispatchComputeGroupSizeARB if the
+    product of <group_size_x>, <group_size_y>, and <group_size_z> exceeds the
+    implementation-dependent maximum workgroup invocation count for
+    compute shaders with variable group size
+    (MAX_COMPUTE_VARIABLE_GROUP_INVOCATIONS_ARB).
+
+    (insert at the end of the first error block, for DispatchComputeIndirect,
+     p. 587)
+
+    An INVALID_OPERATION error is generated if the active program for the
+    compute shader stage has a variable workgroup size.
+
+
+Modifications to the OpenGL Shading Language Specification, Version 4.30
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_compute_variable_group_size : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_ARB_compute_variable_group_size        1
+
+
+    Modify Section 4.4.1.4, Compute Shader Inputs (p. 59)
+
+    (add to list of layout qualifiers for compute shader inputs, p. 59)
+
+      layout-qualifier-id
+        local_size_x = integer-constant
+        local_size_y = integer-constant
+        local_size_z = integer-constant
+        local_size_variable
+
+    (modify the last paragraph, p. 59)
+
+    The local_size_x, local_size_y, and local_size_z qualifiers are used to
+    declare a fixed local group size for the kernel in the first, second...
+
+    (modify the second to last paragaph in the section)
+
+    If the fixed local group size of the shader in any dimension...
+    ... If multiple compute shaders attached to a single program object declare
+    a fixed local group size, the declarations must be identical; otherwise a
+    link-time error results.
+
+    (insert before the last paragraph of the section, p. 60)
+
+    The *local_size_variable* qualifier is used to declare that
+    the local group size of the shader is variable, and will be specified
+    using arguments to OpenGL API compute dispatch commands.  If a compute
+    shader including a *local_size_variable* qualifier also declares a
+    fixed local group size using the *local_size_x*, *local_size_y*, or
+    *local_size_z* qualifiers, a compile-time error results.  If one compute
+    shader attached to a program declares a variable local group size and a
+    second compute shader attached to the same program declares a fixed
+    local group size, a link-time error results.
+
+    (modify last paragraph of the section, p. 60, which specified link errors
+     if *local_size* layout qualifiers were omitted)
+
+    Furthermore, if a program object contains any compute shaders, at least
+    one must contain an input layout qualifier specifying a fixed or variable
+    local group size for the program, or a link-time error will occur.
+
+
+    Modify Section 7.1, Built-In Language Variables, p. 110
+
+    (add to list of compute built-ins, p. 110)
+
+      in    uvec3 gl_NumWorkGroups;     // already exists in 4.30
+      const uvec3 gl_WorkGroupSize;     // already exists in 4.30
+      in    uvec3 gl_LocalGroupSizeARB; // new!
+
+    (modify third paragraph, p. 113)
+
+    The built-in constant gl_WorkGroupSize is a compute-shader constant ...
+    It is a compile-time error to use gl_WorkGroupSize in a shader that does
+    not declare a fixed local group size, or before that shader has declared
+    a fixed local group size, using local_size_x, local_size_y, and
+    local_size_z.   ...
+
+    (insert after third paragraph, p. 113)
+
+    The built-in variable /gl_LocalGroupSizeARB/ is a compute-shader input
+    variable containing the workgroup size for the current compute-
+    shader workgroup.  For compute shaders with a fixed local group size (using
+    *local_size_x*, *local_size_y*, or *local_size_z* layout qualifiers), its
+    value will be the same as the constant /gl_WorkGroupSize/.  For compute
+    shaders with a variable local group size (using *local_size_variable*),
+    the value of /gl_LocalGroupSizeARB/ will be the workgroup
+    size specified in the OpenGL API command dispatching the current
+    compute shader work.
+
+    (modify next-to-last paragraph, p. 113)
+
+    The built-in variable gl_LocalInvocationID ...  The possible values for
+    this varaible range across the workgroup size, i.e., (0,0,0) to
+    (gl_LocalGroupSizeARB.x - 1, gl_LocalGroupSizeARB.y - 1,
+    gl_LocalGroupSizeARB.z - 1).
+
+    (modify last paragraph, p. 113)
+
+    The built-in variable gl_GlobalInvocationID ...  This is computed as:
+
+      gl_GlobalInvocationID = gl_WorkGroupID * gl_LocalGroupSizeARB +
+                              gl_LocalInvocationID;
+
+
+    (modify first paragraph, p. 114)
+
+    The built-in variable gl_LocalInvocationIndex ...  This is computed as:
+
+      gl_LocalInvocationIndex =
+        gl_LocalInvocationID.z * (gl_LocalGroupSizeARB.x *
+                                  gl_LocalGroupSizeARB.y) +
+        gl_LocalInvocationID.y * gl_LocalGroupSizeARB.x +
+        gl_LocalInvocationID.x;
+
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Dependencies on NV_compute_program5
+
+    If NV_compute_program5 is supported, variable workgroup sizes are
+    supported for assembly programs.  Make the following edits to the
+    NV_compute_program5 specification:
+
+    (modify the NV_compute_program5 edits to Section 2.X.3.2, Program
+     Attribute Variables)
+
+    If a compute attribute binding matches "invocation.groupsize", the "x",
+    "y", and "z" components of the invocation attribute variable are filled
+    the "x", "y", and "z" dimensions, respectively, of the workgroup,
+    as specified by the GROUP_SIZE declaration for programs with fixed-size
+    workgroups or through the OpenGL API for programs with variable-size
+    workgroups.  The "w" component of the attribute is undefined.
+
+    (add to section 2.X.6 of the NV_gpu_program4/5 spec, Program Options)
+
+    + Compute Shader Variable Group Size (ARB_compute_variable_group_size)
+
+    If a program specifies the "ARB_compute_variable_group_size" option, it
+    supports variable-size workgroups.  Compute programs with a variable
+    workgroup size must be dispatched with DispatchComputeGroupSizeARB.  Compute
+    programs with a fixed workgroup size must be dispatched with
+    DispatchCompute or DispatchComputeIndirect.
+
+    (modify Section 2.X.7.Y, Compute Program Declarations)
+
+    - Shader Thread Group Size (GROUP_SIZE)
+
+    The GROUP_SIZE statement declares the number of shader threads in a one-,
+    two-, or three-dimensional workgroup.  The statement must have one
+    to three unsigned integer arguments.  Each argument must be less than or
+    equal to the value of the implementation-dependent limit
+    MAX_COMPUTE_LOCAL_WORK_SIZE for its corresponding dimension (X, Y, or Z).
+    If the ARB_compute_variable_group_size option is specified, no fixed group
+    size should be specified and a program will fail to load if it includes
+    any GROUP_SIZE declaration.  If the ARB_compute_variable_group_size option
+    is not specified, a program will fail to load unless it contains exactly
+    one GROUP_SIZE declaration.
+
+Errors
+
+    An INVALID_OPERATION error is generated by DispatchCompute or
+    DispatchComputeIndirect if the active program for the compute shader stage
+    has a variable workgroup size.
+
+    An INVALID_OPERATION error is generated by DispatchComputeGroupSizeARB if
+    the active program for the compute shader stage has a fixed workgroup
+    size.
+
+    An INVALID_VALUE error is generated by DispatchComputeGroupSizeARB if any
+    of <group_size_x>, <group_size_y>, or <group_size_z> is less than or equal
+    to zero or greater than the maximum workgroup size for compute
+    shaders with variable group size (MAX_COMPUTE_VARIABLE_GROUP_SIZE_ARB) in
+    the corresponding dimension.
+
+    An INVALID_VALUE error is generated by DispatchComputeGroupSizeARB if the
+    product of <group_size_x>, <group_size_y>, and <group_size_z> exceeds the
+    implementation-dependent maximum workgroup invocation count for
+    compute shaders with variable group size
+    (MAX_COMPUTE_VARIABLE_GROUP_INVOCATIONS_ARB).
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    Add to Table 23.73 (Implementation Dependent Compute Shader Limits),
+    p. 716
+
+                                                    Minimum
+    Get Value                  Type  Get Command     Value     Description                    Sec.
+    -------------------------  ----  -------------  ---------  ----------------------------   ------
+    MAX_COMPUTE_VARIABLE_      3xZ+  GetIntegeri_v  512 (x,y)  maximum local group size for   19
+      WORK_GROUP_SIZE_ARB                           64 (z)     compute shaders with variable
+                                                               group size (per dimension)
+    MAX_COMPUTE_VARIABLE_      Z+    GetIntegerv    512        maximum number of invocations  19
+      WORK_GROUP_                                              in a group for compute shaders
+      INVOCATIONS_ARB                                          with variable group size
+
+    In table 23.73, rename entries for "MAX_COMPUTE_WORK_GROUP_SIZE" and
+    "MAX_COMPUTE_WORK_GROUP_INVOCATIONS" to use the labels
+    "MAX_COMPUTE_FIXED_GROUP_SIZE_ARB" and
+    "MAX_COMPUTE_FIXED_GROUP_INVOCATIONS_ARB", respectively.  Also modify the
+    description of these entries to refer to "compute shaders with fixed group
+    size".
+
+Issues
+
+    (1) If a compute shader declares a workgroup size, can it be dispatched
+        using OpenGL APIs accepting an explicit workgroup size as part of the
+        command?  If so, what happens?
+
+      RESOLVED:  No.  Attempting to do so will generate an INVALID_OPERATION
+      error.
+
+      Since the fixed workgroup size may affect the compilation of the shader
+      and the value of certain built-in constants, having the OpenGL API
+      override the workgroup size baked into the compute shader seems
+      suspect.  We could conceivably allow an explicit workgroup size in the
+      OpenGL API and require that it match the workgroup size baked into the
+      compute shader, but doing so seems to be of limited value.
+
+    (2) If a compute shader doesn't declare a workgroup size, can it be
+        dispatched using OpenGL APIs that do not accept an explicit workgroup
+        size as part of the command?  If so, what happens?
+
+      RESOLVED:  No.  Attempting to do so will generate an INVALID_OPERATION
+      error.
+
+      We could theoretically treat this case as allowing OpenGL
+      implementations to pick a workgroup size that "works well" on a
+      particular piece of hardware.  However, that wouldn't resolve the
+      question of what the "num_groups" arguments to DispatchCompute would
+      mean if the group size were implementation-dependent.  One could
+      intepret the "num_groups" arguments as specifying the number of
+      *invocations* in each dimension, as though the group size were 1x1x1.
+      But it's just easier to make this condition an error, as we do for APIs
+      attempting to override the group size of a compute shader.
+
+    (3) What new GLSL built-ins should we provide to expose the group size
+        specified in the OpenGL API?
+
+      RESOLVED:  We will provide a new built-in variable exposing the group
+      size specified in the API.  The name choice is potentially tricky, since
+      we now have two different "workgroup size" variables -- a previously
+      existing constant for the fixed workgroup size and now a second input
+      for the variable workgroup size specified in the API.  We choose the
+      name "gl_LocalGroupSizeARB" here, which seems to fit reasonably well with
+      existing inputs such as "gl_LocalInvocationID".
+
+      If we had provided this functionality in the original compute shader
+      extension, maybe we could have only had "gl_LocalGroupSizeARB"?
+      However, the constant "gl_WorkGroupSize" would still be useful for
+      sizing built-in arrays for shaders with a fixed workgroup size.  For
+      example, a shader might want to declare a shared variable with one
+      instance per workgroup invocation, such as:
+
+        shared float shared_values[gl_WorkGroupSize.x * gl_WorkGroupSize.y *
+                                   gl_WorkGroupSize.z];
+
+      Such declarations would be illegal using the input
+      "gl_LocalGroupSizeARB".
+
+    (4) Do we need to modify the behavior of existing GLSL built-ins for
+        compute shaders without an explicit workgroup size?
+
+      RESOLVED:  No, not really.
+
+      The constant gl_WorkGroupSize seems like it would be affected by
+      omitting an explicit workgroup size.  However, it is already an error
+      to use gl_WorkGroupSize in a shader before a workgroup size layout
+      qualifier is declared.  That would make its use illegal in shaders where
+      workgroup size layout qualifiers are not declared at all.
+
+      We do need to make minor modifications to the language describing other
+      built-in inputs such as gl_LocalInvocationIndex, that are today defined
+      to be a function of the constant gl_WorkGroupSize.  We modify these
+      definitions to use the input gl_LocalGroupSizeARB instead.
+
+    (5) Should we provide a function (e.g.,
+        DispatchComputeIndirectGroupSizeARB) that takes both a workgroup
+        count and a workgroup size from indirect dispatch buffers?  If so,
+        what do we do if the workgroup size is not positive or exceeds
+        implementation-dependent limits?
+
+      RESOLVED:  No, let's leave this out of this extension.
+
+    (6) Is it necessary for compute shaders to include a "#extension"
+        directive to enable this extension in order to link successfully
+        without a fixed workgroup size?
+
+      RESOLVED:  Yes, compute shaders will have to use the
+      "local_size_variable" layout qualifier to declare a variable workgroup
+      size, and an "#extension" directive is required to be able to use that
+      layout qualifier.
+
+      In unextended OpenGL 4.3, we get a link error if no shaders in the
+      program exercise an existing language feature (declaring the fixed
+      workgroup size).  We could have simply removed this error, but the general
+      rule for "#extension" is that a user should be able to determine if a
+      shader were legal or not simply by examining the source code.
+
+      Note that it is necessary to use "#extension" to use the new built-in
+      input (gl_LocalGroupSizeARB) provided by this extension.
+
+    (7) Do we need different implementation-dependent limits for dynamic group
+    sizes?
+
+      RESOLVED:  Yes, some implementations of this extension may require lower
+      limits for variable local group sizes.  We add new tokens
+      MAX_COMPUTE_VARIABLE_GROUP_SIZE_ARB and
+      MAX_COMPUTE_VARIABLE_GROUP_INVOCATIONS_ARB to query these limits.
+      Implementations must support variable group dimensions of 512/512/64,
+      with at least 512 invocations per group.  The minimum limits for fixed
+      group sizes in unextended OpenGL 4.3 are 1024/1024/64 with at least 1024
+      invocations per group.
+
+    (8) Do we need an explicit query to determine if a program with a compute
+    shader has a fixed or variable local group size?
+
+      RESOLVED:  No.  The existing COMPUTE_WORK_GROUP_SIZE query will return
+      zero when using a shader with a variable local group size, and will
+      always return non-zero values for shaders with a fixed group size.
+
+Revision History
+
+    Revision 9, December 10, 2018 (Jon Leech)
+      - Use 'workgroup' consistently throughout (Bug 11723, internal API
+        issue 87).
+
+    Revision 8, May 30, 2013 (pbrown)
+      - Fix a typo in the MAX_COMPUTE_VARIABLE_GROUP_SIZE_ARB description;
+        that limit applies only to shaders with variable group sizes.
+
+    Revision 7, May 30, 2013 (pbrown)
+      - Mark issue (8) as resolved.
+
+    Revision 6, May 12, 2013 (JohnK)
+      - Editorial things:
+         - be more consistent/broader with "fixed local group size" language
+           (vs. variable), and related, also bringing in another paragraph from
+           the core spec.
+         - move spec. more toward using bold layout qualifier ids everywhere
+         - few minor typos, other tiny changes
+
+    Revision 5, May 8, 2013
+      - Assign enum values for new tokens.
+      - Add interaction with NV_compute_program5 assembly programs.
+
+    Revision 4, May 7, 2013
+      - Add new implementation limits MAX_COMPUTE_VARIABLE_GROUP_SIZE_ARB and
+        MAX_COMPUTE_VARIABLE_GROUP_INVOCATIONS_ARB for compute shaders with
+        variable group sizes, with minimum values of 512/512/64 and 512,
+        respectively.
+      - Add new tokens MAX_COMPUTE_FIXED_GROUP_SIZE_ARB and
+        MAX_COMPUTE_FIXED_GROUP_INVOCATIONS_ARB for compute shaders with fixed
+        group sizes, which are aliased to existing OpenGL 4.3 tokens
+        (MAX_COMPUTE_WORK_GROUP_SIZE and MAX_COMPUTE_WORK_GROUP_INVOCATIONS).
+
+    Revision 3, May 4, 2013
+      - Add ARB suffixes for the new entry point (DispatchComputeGroupSizeARB)
+        and GLSL built-in variable (gl_LocalGroupSizeARB).
+      - Add a missing INVALID_OPERATION error to DispatchComputeIndirect,
+        which requires a compute shader with a variable local group size.
+      - Add new issue (8) about querying if a program with a compute shader
+        has a fixed or variable group size.
+
+    Revision 2, May 3, 2013
+      - Modify the spec to accept an explicit layout qualifer
+        /local_size_variable/ to specify a compute shader with a variable
+        local group size instead of inferring it from the lack of fixed-size
+        layout qualifiers.
+      - Modify some spec language to refer to the existing and new types of
+        compute shaders as having a fixed and variable local group size,
+        respectively.
+      - Mark various issues as resolved based on work group discussions.
+      - Add new issue (7) about different implementation-dependent size limits
+        for compute shaders with variable-size work groups.
+
+    Revision 1, January 20, 2013
+      - Initial revision.

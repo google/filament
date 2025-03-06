@@ -1,0 +1,538 @@
+Name
+
+    3DFX_multisample
+
+Name Strings
+
+    GL_3DFX_multisample
+    GLX_3DFX_multisample
+    WGL_3DFX_multisample
+
+Contact
+
+    Paula Womack, 3dfx Interactive (paulaw 'at' 3dfx.com)
+
+Status
+
+    Complete.
+
+Version
+
+    Date: April 18, 2000; Version 1.1
+
+Number
+
+    207
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    GLX 1.2 is required.
+    WGL_ARB_extensions_string is required.
+    WGL_ARB_pixel_format is required.
+    GLX_EXT_fbconfig and GLX 1.3 affect the definition of this extension.
+    This spec is written against OpenGL 1.2 and GLX 1.3
+
+Overview
+
+    This extension provides a mechanism to antialias all GL primitives:
+    points, lines, polygons, bitmaps, and images. The technique is to
+    sample all primitives multiple times at each pixel. The color sample
+    values are resolved to a single, displayable color each time a pixel
+    is updated, so the antialiasing appears to be automatic at the
+    application level. Because each sample includes depth and stencil
+    information, the depth and stencil functions perform equivalently to
+    the single-sample mode.
+
+    An additional buffer, called the multisample buffer, is added to the
+    framebuffer. Pixel sample values, including color, depth, and
+    stencil values, are stored in this buffer. When the framebuffer
+    includes a multisample buffer, it does not also include separate
+    depth or stencil buffers, even if the multisample buffer does not
+    store depth or stencil values. Color buffers (left/right,
+    front/back, and aux) do coexist with the multisample buffer,
+    however.
+
+    Multisample antialiasing is most valuable for rendering polygons,
+    because it requires no sorting for hidden surface elimination, and
+    it correctly handles adjacent polygons, object silhouettes, and even
+    intersecting polygons. If only points or lines are being rendered,
+    the "smooth" antialiasing mechanism provided by the base GL may
+    result in a higher quality image.
+
+    This extension is a subset of SGIS_multisample. It differs in these
+    key ways:
+
+       * Fragment alpha values are not affected by the fragment sample mask
+       * The sample locations may or may not be fixed. Thus, there is no
+	 support for rendering the scene multiple times with different
+	 sample points.
+       * Fragment masks are not computed for images or for bitmasks.
+
+    Because of these differences a new extension was created. However,
+    it is not expected that this extension will co-exist with
+    SGIS_multisample. Because of this and the fact that there are only
+    32 push/pop bits the MULTISAMPLE_BIT_SGIS state value is the same as
+    MUTLISAMPLE_BIT_3DFX.
+
+IP Status
+
+    No issues.
+
+Issues
+
+    Should tbuffer be kept as a separate extension?
+
+    Yes. The ability to define a write mask for the fragment mask should
+    be kept separate. This feature is orthogonal to SGIS_multisample,
+    while 3DFX_multisample is not. 3DFX_multisample is a strict subset
+    of SGIS_multisample.
+
+    Should the multisample buffer be defined as a separate buffer?
+
+    Yes. It does not need to be implemented this way though. Since GL
+    rendering is done off screen and then blitted (to handle window
+    clipping) the multisample buffer can actually be the same as the
+    offscreen front and back buffers. The blit engine handles reads and
+    writes to/from AA buffers so ReadPixels will work correctly.
+
+    Should we allow the depth values for the different samples to differ
+    when AA is off?
+
+    No. This will be a bug on hardware that operates this way. In
+    practice it should not be a big issue.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <attrib_list> parameter of glXChooseFBConfig and
+    glXChooseVisual and by the <attribute> parameter of
+    glXGetFBConfigAttrib and glXGetConfig:
+
+	GLX_SAMPLE_BUFFERS_3DFX			    0x8050
+	GLX_SAMPLES_3DFX			    0x8051
+
+    Accepted in the <piAttributes> parameter array of
+    wglGetPixelFormatAttribivARB, and wglGetPixelFormatAttribfvARB, and
+    in the <piAttribIList> and <pfAttribFList> parameter arrays of
+    wglChoosePixelFormatARB:
+
+	WGL_SAMPLE_BUFFERS_3DFX			    0x2060
+	WGL_SAMPLES_3DFX			    0x2061
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+	MULTISAMPLE_3DFX			    0x86B2
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetIntegerv, and GetFloatv:
+
+	SAMPLE_BUFFERS_3DFX			    0x86B3
+	SAMPLES_3DFX				    0x86B4
+
+    Accepted by the <mask> parameter of PushAttrib:
+
+	MULTISAMPLE_BIT_3DFX			    0x20000000
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    If SAMPLE_BUFFERS_3DFX is one, the rasterization of all GL
+    primitives is changed, and is referred to as multisample
+    rasterization. Otherwise primitive rasterization operates as it is
+    described in the GL specification, and is referred to as
+    single-sample rasterization. The value of SAMPLE_BUFFERS_3DFX is an
+    implementation dependent constant, and is queried by calling
+    GetIntegerv with pname set to SAMPLE_BUFFERS_3DFX.
+
+    During multisample rasterization the contents of a pixel fragment
+    are changed in two ways. First, each fragment includes a coverage
+    mask with SAMPLES_3DFX bits. The value of SAMPLES_3DFX is an
+    implementation dependent constant, and is queried by calling
+    GetIntegerv with pname set to SAMPLES_3DFX. Second, each fragment
+    includes SAMPLES_3DFX depth values, instead of the single depth
+    value that is maintained in single-sample rasterization mode. Each
+    pixel fragment thus consists of integer x and y grid coordinates, a
+    color, SAMPLES_3DFX depth values, texture coordinates, a coverage
+    value, and the SAMPLES_3DFX-bit mask.
+
+    The behavior of multisample rasterization is a function of
+    MULTISAMPLE_3DFX, which is enabled and disabled by calling Enable or
+    Disable, with cap set to MULTISAMPLE_3DFX. Its value is queried
+    using IsEnabled, with cap set to MULTISAMPLE_3DFX.
+
+    If MULTISAMPLE_3DFX is disabled, multisample rasterization of all
+    primitives is equivalent to single-sample rasterization, except that
+    the fragment coverage mask is set to all ones. The depth values may
+    all be set to the single value that would have been assigned by
+    single-sample rasterization, or they may be assigned as described
+    below for MULTISAMPLE_3DFX-enabled multisample rasterization.
+
+    If MULTISAMPLE_3DFX is enabled, multisample rasterization of all
+    primitives differs substantially from single-sample rasterization.
+    It is understood that each pixel in the framebuffer has SAMPLES_3DFX
+    locations associated with it. These locations are exact positions,
+    rather than regions or areas, and each is referred to as a sample
+    point. The sample points associated with a pixel may be located
+    inside or outside of the unit square that is considered to bound the
+    pixel. Furthermore, the pattern (relative location) of sample points
+    may be identical for each pixel in the framebuffer, or it may
+    differ. The locations of the sample points are fixed by the
+    implementation and it is not possible to query the actual sample
+    locations of a pixel.
+
+    If the sample patterns differ per pixel, they should be aligned to
+    window, not screen, boundaries. Otherwise rendering results will be
+    window-position specific. The invariance requirement described in
+    section 3.1 is relaxed for all enabled multisample rasterization,
+    because the sample patterns may be a function of pixel location.
+
+    3.3.2 Point Multisample Rasterization
+
+    If MULTISAMPLE_3DFX is enabled, and SAMPLE_BUFFERS_3DFX is one, then
+    points are rasterized using the following algorithm, regardless of
+    whether point antialiasing (POINT_SMOOTH) is enabled or disabled.
+    Point rasterization produces a fragment for each framebuffer pixel
+    with one or more sample points that intersect the region lying
+    within the circle having diameter equal to the current point width
+    and centered at the point's (Xw,Yw). The coverage value for each
+    fragment is 1. Mask bits that correspond to sample points that
+    intersect the circular region are 1, other mask bits are 0. All
+    depth values of the fragment are assigned the depth value of the
+    point being rasterized. The data associated with each fragment are
+    otherwise the data associated with the point being rasterized.
+
+    Point size range and number of gradations are equivalent to those
+    supported for antialiased points.
+
+    3.4.4 Line Multisample Rasterization
+
+    If MULTISAMPLE_3DFX is enabled, and SAMPLE_BUFFERS_3DFX is one, then
+    lines are rasterized using the following algorithm, regardless of
+    whether line antialiasing (LINE_SMOOTH) is enabled or disabled. Line
+    rasterization produces a fragment for each framebuffer pixel with
+    one or more sample points that intersect the rectangular region that
+    is described in the Antialiasing section of 3.4.2 (Other Line
+    Segment Features). If line stippling is enabled, the rectangular
+    region is subdivided into adjacent unit-length rectangles, with some
+    rectangles eliminated according to the procedure given under Line
+    Stipple, where "fragment" is replaced by "rectangle".
+
+    The coverage value for each fragment is 1. Mask bits that correspond
+    to sample points that intersect a retained rectangle are 1, other
+    mask bits are 0. Each depth value is produced by substituting the
+    corresponding sample location into equation 3.1, then using the
+    result to evaluate equation 3.3. The data associated with each
+    fragment are otherwise computed by evaluating equation 3.1 at the
+    fragment center, then substituting into equation 3.2.
+
+    Line width range and number of gradations are equivalent to those
+    supported for antialiased lines.
+
+    3.5.7 Polygon Multisample Rasterization
+
+    If MULTISAMPLE_3DFX is enabled, and SAMPLE_BUFFERS_3DFX is one, then
+    polygons are rasterized using the following algorithm, regardless of
+    whether polygon antialiasing (POLYGON_SMOOTH) is enabled or
+    disabled. Polygon rasterization produces a fragment for each
+    framebuffer pixel with one or more sample points that satisfy the
+    point sampling criteria described in section 3.5.1, including the
+    special treatment for sample points that lie on a polygon boundary
+    edge. If a polygon is culled, based on its orientation and the
+    CullFace mode, then no fragments are produced during rasterization.
+    Fragments are culled by the polygon stipple just as they are for
+    aliased and antialiased polygons.
+
+    The coverage value for each fragment is 1. Mask bits that correspond
+    to sample points that satisfy the point sampling criteria are 1,
+    other mask bits are 0. Each depth value is produced by substituting
+    the corresponding sample location into the barycentric equations
+    described in section 3.5.1, using the approximation to equation 3.4
+    that omits w components. The data associated with each fragment are
+    otherwise computed by barycentric evaluation using the fragment's
+    center point.
+
+    If POLYGON_OFFSET_FILL is enabled then the offset value computed in
+    equation 3.7 is added to all sample depth values.
+
+    The rasterization described above applies only to the FILL state of
+    PolygonMode. For POINT and LINE, the rasterizations described in
+    3.3.2 (Point Multisample Rasterization) and 3.4.4 (Line Multisample
+    Rasterization) apply with the additional requirement that the sample
+    depth values must be offset by the value computed in equation 3.7
+    when POLYGON_OFFSET_POINT or POLYGON_OFFSET_LINE is enabled.
+
+    3.6.5 Multisample Rasterization of Pixel Rectangles
+
+    If MULTISAMPLE_3DFX is enabled, and SAMPLE_BUFFERS_3DFX is one, then
+    pixel rectangles are rasterized using the following algorithm. Let
+    (Xrp,Yrp) be the current raster position. (If the current raster
+    position is invalid, then DrawPixels is ignored.) If a particular
+    group (index or components) is the nth in a row and belongs to the
+    mth row, consider the region in window coordinates bounded by the
+    rectangle with corners
+
+	    (Xrp + Zx*n, Yrp + Zy*m)
+
+    and
+
+	    (Xrp + Zx*(n+1), Yrp + Zy*(m+1))
+
+    where Zx and Zy are the pixel zoom factors specified by PixelZoom,
+    and may each be either positive or negative. A fragment representing
+    group n,m is produced for each framebuffer pixel with one or more
+    sample points that lie inside, or on the bottom or left boundary, of
+    this rectangle. Each fragment so produced takes its associated data
+    from the group and from the current raster position, in a manner
+    consistent with SGIX_pixel_texture (if it is implemented) or in a
+    manner consistent with the discussion in the Conversion to Fragments
+    subsection of section 3.6.4 of the GL specification. All depth
+    sample values are assigned the same value, taken either from the
+    group (if it is a depth component group) or from the current raster
+    position (if it is not).
+
+    A single pixel rectangle will generate multiple, perhaps very many
+    fragments for the same framebuffer pixel, depending on the pixel
+    zoom factors.
+
+    3.7.1 Bitmap Multisample Rasterization
+
+    If MULTISAMPLE_3DFX is enabled, and SAMPLE_BUFFERS_3DFX is one, then
+    bitmaps are rasterized using the following algorithm. If the current
+    raster position is invalid, the bitmap is ignored. Otherwise, a
+    screen-aligned array of pixel-size rectangles is constructed, with
+    its lower-left corner at (Xrp,Yrp), and its upper right corner a
+    (Xrp+w,Yrp+h), where w and h are the width and height of the bitmap.
+    Rectangles in this array are eliminated if the corresponding bit in
+    the bitmap is zero, and are retained otherwise. Bitmap rasterization
+    produces a fragment for each framebuffer pixel with one or more
+    sample points either inside or on the bottom or left edge of a
+    retained rectangle.
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    4.1.9 Multisample Fragment Operations
+
+    If the DrawBuffers mode is NONE, no change is made to any
+    multisample or color buffer. Otherwise, fragment processing is as
+    described below.
+
+    If MULTISAMPLE_3DFX is enabled, and SAMPLE_BUFFERS_3DFX is one, the
+    stencil test, depth test, blending, and dithering operations
+    described in sections 4.1.4, 4.1.5, 4.1.6, and 4.1.7 are performed
+    for each pixel sample, rather than just once for each fragment.
+    Failure of the stencil or depth test results in termination of the
+    processing of that sample, rather than discarding of the fragment.
+    All operations are performed on the color, depth, and stencil values
+    stored in the multisample buffer (to be described in a following
+    section). The contents of the color buffers are not modified at this
+    point.
+
+    Stencil, depth, blending, and dithering operations are performed for
+    a pixel sample only if that sample's fragment mask bit is 1. If the
+    corresponding mask bit is 0, no operations are performed for that
+    sample. Depth operations use the fragment depth value that is
+    specific to each sample. The single fragment color value is used for
+    all sample operations, however, as is the current stencil value.
+
+    If MULTISAMPLE_3DFX is disabled, and SAMPLE_BUFFERS_3DFX is one, the
+    fragment may be treated exactly as described above, with
+    optimization possible because the fragment mask must be all 1's.
+    Further optimization is allowed, however. An implementation may
+    choose to identify a centermost sample, and to perform stencil and
+    depth tests on only that sample. Regardless of the outcome of the
+    stencil test, all multisample buffer stencil sample values are set
+    to the appropriate new stencil value. If the depth test passes, all
+    multisample buffer depth sample values are set to the depth of the
+    fragment's centermost sample's depth value, and all multisample
+    buffer color sample values are set to the color value of the
+    incoming fragment. Otherwise, no change is made to any multisample
+    buffer color or depth value.
+
+    After all operations have been completed on the multisample buffer,
+    the color sample values are combined to produce a single color
+    value, and that value is written into each color buffer that is
+    currently enabled, based on the DrawBuffers mode. The method of
+    combination is not specified, though a simple average computed
+    independently for each color component is recommended.
+
+    4.2.2.5 Fine Control of Multisample Buffer Updates
+
+    When SAMPLE_BUFFERS_3DFX is one, ColorMask, DepthMask, and
+    StencilMask control the modification of values in the multisample
+    buffer. The color mask has no effect on modifications to the color
+    buffers. If the color mask is entirely disabled, the color sample
+    values must still be combined (as described above) and the result
+    used to replace the color values of the buffers enabled by
+    DrawBuffers.
+
+    4.2.3.5 Clearing the Multisample Buffer
+
+    The color samples of the multisample buffer are cleared when one or
+    more color buffers are cleared, as specified by the Clear mask bit
+    COLOR_BUFFER_BIT and the DrawBuffers mode. If the DrawBuffers mode
+    is NONE, the color samples of the multisample buffer cannot be
+    cleared.
+
+    Clear mask bits DEPTH_BUFFER_BIT and STENCIL_BUFFER_BIT indicate
+    that the depth and stencil samples of the multisample buffer are to
+    be cleared. If Clear mask bit DEPTH_BUFFER_BIT is specified, and if
+    the DrawBuffers mode is not NONE, then the multisample depth buffer
+    samples are cleared. Likewise, if Clear mask bit STENCIL_BUFFER_BIT
+    is specified, and if the DrawBuffers mode is not NONE, then the
+    multisample stencil buffer is cleared.
+
+    4.3.2 Reading Pixels
+
+    [These changes are made to the text in section 4.3.2, following the
+    subheading Obtaining Pixels from the Framebuffer.]
+
+    Follow the sentence "If there is no depth buffer, the error
+    INVALID_OPERATION occurs." with: If there is a multisample buffer
+    (SAMPLE_BUFFERS_3DFX is 1) then values are obtained from the depth
+    samples in this buffer. It is recommended that the depth value of
+    the centermost sample be used, though implementations may choose any
+    function of the depth sample values at each pixel.
+
+    Follow the sentence "if there is no stencil buffer, the error
+    INVALID_OPERATION occurs." with: If there is a multisample buffer,
+    then values are obtained from the stencil samples in this buffer. It
+    is recommended that the stencil value of the centermost sample be
+    used, though implementations may choose any function of the stencil
+    sample values at each pixel.
+
+    This extension makes no change to the way that color values are
+    obtained from the framebuffer.
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    An additional group of state variables, MULTISAMPLE_BIT_3DFX, is
+    defined by this extension. When PushAttrib is called with bit
+    MULTISAMPLE_BIT_3DFX set, the multisample group of state variables
+    is pushed onto the attribute stack. When PopAttrib is called, these
+    state variables are restored to their previous values if they were
+    pushed. Some multisample state is included in the ENABLE_BIT group
+    as well. In order to avoid incompatibility with GL implementations
+    that do not support 3DFX_multisample, ALL_ATTRIB_BITS does not
+    include MULTISAMPLE_BIT_3DFX.
+
+Additions to the GLX 1.3 Specification
+
+    The parameter GLX_SAMPLE_BUFFERS_3DFX is added to
+    glXGetFBConfigAttrib. When queried, by calling glXGetFBConfigAttrib
+    with attribute set to GLX_SAMPLE_BUFFERS_3DFX, it returns the number
+    of multisample buffers included in the visual. For a normal visual,
+    the return value is zero. A return value of one indicates that a
+    single multisample buffer is available. The number of samples per
+    pixel is queried by calling glXGetFBConfigAttrib with attribute set
+    to GLX_SAMPLES_3DFX. It is understood that the number of color,
+    depth, and stencil bits per sample in the multisample buffer are as
+    specified by the GLX_*_SIZE parameters. It is also understood that
+    there are no single-sample depth or stencil buffers associated with
+    this visual -- the only depth and stencil buffers are those in the
+    multisample buffer. GLX_SAMPLES_3DFX is zero if
+    GLX_SAMPLE_BUFFERS_3DFX is zero.
+
+    glXChooseFBConfig accepts GLX_SAMPLE_BUFFERS_3DFX in attrib_list,
+    followed by the minimum number of multisample buffers that can be
+    accepted. Visuals with the smallest number of multisample buffers
+    that meets or exceeds the specified minimum number are preferred.
+    Currently operation with more than one multisample buffer is
+    undefined, so the returned value will be either zero or one.
+
+    glXChooseFBConfig accepts GLX_SAMPLES_3DFX in attrib_list, followed
+    by the minimum number of samples that can be accepted in the
+    multisample buffer. Visuals with the smallest number of samples that
+    meets or exceeds the specified minimum number are preferred.
+
+    The multisample FBConfig attributes are added to table 3.4 as follows:
+
+    Attribute		    Default Selection Criteria	Sort Priority
+    ---------		    ------- ------------------	-------------
+    GLX_SAMPLE_BUFFERS_3DFX 0	    Smaller
+    GLX_SAMPLES_3DFX	    0	    Smaller
+
+    If the GLX implementation is 1.2 or less, then
+    GLX_SAMPLE_BUFFERS_3DFX and GLX_SAMPLES_3DFX are accepted by
+    glXChooseVisual and glXGetConfig.
+
+    If the color samples in the multisample buffer store fewer bits than
+    are stored in the color buffers, this fact will not be reported
+    accurately. Presumably a compression scheme is being employed, and
+    is expected to maintain an aggregate resolution equal to that of the
+    color buffers.
+
+Additions to WGL
+
+    The parameters WGL_SAMPLE_BUFFERS_3DFX and WGL_SAMPLES_3DFX are
+    added to wglGetPixelFormatAttribivARB and
+    wglGetPixelFormatAttribfvARB. WGL_SAMPLE_BUFFERS_3DFX indicates the
+    number of multisample buffers included in the pixel format. For a
+    normal pixel format, the return value is zero. A return value of one
+    indicates that a single multisample buffer is available.
+    WGL_SAMPLES_3DFX gives the number of samples per pixel. It is
+    understood that the number of color, depth, and stencil bits per
+    sample in the multisample buffer are as specified by the WGL_*_BITS
+    parameters. It is also understood that there are no single-sample
+    depth or stencil buffers associated with this pixel format -- the
+    only depth and stencil buffers are those in the multisample buffer.
+    WGL_SAMPLES_3DFX is zero if WGL_SAMPLE_BUFFERS_3DFX is zero.
+
+    wglChoosePixelFormatARB accepts WGL_SAMPLE_BUFFERS_3DFX in
+    piAttribIList and/or pfAttribFList, followed by the minimum number
+    of multisample buffers that can be accepted. Pixel formats with the
+    smallest number of multisample buffers that meet or exceed the
+    specified minimum number are preferred. Currently operation with
+    more than one multisample buffer is undefined, so the returned value
+    will be either zero or one.
+
+    wglChoosePixelFormatARB accepts WGL_SAMPLES_3DFX in piAttribIList
+    and/or pfAttribFList, followed by the minimum number of samples that
+    can be accepted in the multisample buffer. Pixel formats with the
+    smallest number of samples that meet or exceed the specified minimum
+    number are preferred.
+
+Errors
+
+    None
+
+New State
+
+
+    Get Value		Get Command Type    Initial Value   Attribute
+    ---------		----------- ----    -------------   ---------
+    MULTISAMPLE_3DFX	IsEnabled   B	    TRUE	    multisample/enable
+
+New Implementation Dependent State
+
+    Get Value		Get Command Type    Minimum Value
+    ---------		----------- ----    -------------
+    SAMPLE_BUFFERS_3DFX GetIntegerv Z+	    0
+    SAMPLES_3DFX	GetIntegerv Z+	    0
+
+Dependencies on GLX 1.3 and GLX_EXT_fbconfig
+
+    If GLX 1.3 is not supported and GLX_EXT_fbconfig is not supported
+    then all references to glXGetFBConfigAttrib and glXGetConfig are
+    removed.
+
+Revision History
+
+    Version 1.1 - April 18, 2000 (Jon Leech, SGI)
+
+	Specified value of MULTISAMPLE_BIT_3DFX. Assigned values to
+	GLX_SAMPLE_BUFFERS_3DFX and GLX_SAMPLES_3DFX. Conversion from
+	HTML -> text and formatting cleanup.

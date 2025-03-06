@@ -19,7 +19,6 @@
 
 #include "VulkanCommands.h"
 #include "VulkanMemory.h"
-#include "VulkanUtility.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
@@ -47,12 +46,7 @@ struct VulkanTexture;
 // VulkanPipelineCache manages a cache of descriptor sets and pipelines.
 //
 // Please note the following limitations:
-//
-// - Push constants are not supported. (if adding support, see VkPipelineLayoutCreateInfo)
-// - Only DESCRIPTOR_TYPE_COUNT descriptor sets are bound at a time.
 // - Assumes that viewport and scissor should be dynamic. (not baked into VkPipeline)
-// - Assumes that uniform buffers should be visible across all shader stages.
-//
 class VulkanPipelineCache {
 public:
     VulkanPipelineCache(VulkanPipelineCache const&) = delete;
@@ -61,15 +55,10 @@ public:
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;
     static constexpr uint32_t VERTEX_ATTRIBUTE_COUNT = MAX_VERTEX_ATTRIBUTE_COUNT;
 
-    // The ProgramBundle contains weak references to the compiled vertex and fragment shaders.
-    struct ProgramBundle {
-        VkShaderModule vertex;
-        VkShaderModule fragment;
-        VkSpecializationInfo* specializationInfos = nullptr;
-    };
-
+#if defined(__clang__)
     #pragma clang diagnostic push
     #pragma clang diagnostic warning "-Wpadded"
+#endif
 
     // The RasterState POD contains standard graphics-related state like blending, culling, etc.
     // The following states are omitted because Filament never changes them:
@@ -103,16 +92,7 @@ public:
 
     static_assert(sizeof(RasterState) == 16, "RasterState must not have implicit padding.");
 
-    struct UniformBufferBinding {
-        VkBuffer buffer;
-        VkDeviceSize offset;
-        VkDeviceSize size;
-    };
-
-    // Upon construction, the pipeCache initializes some internal state but does not make any Vulkan
-    // calls. On destruction it will free any cached Vulkan objects that haven't already been freed.
-    VulkanPipelineCache(VkDevice device, VmaAllocator allocator);
-    ~VulkanPipelineCache();
+    VulkanPipelineCache(VkDevice device);
 
     void bindLayout(VkPipelineLayout layout) noexcept;
 
@@ -121,31 +101,14 @@ public:
 
     // Each of the following methods are fast and do not make Vulkan calls.
     void bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept;
-    void bindRasterState(const RasterState& rasterState) noexcept;
+    void bindRasterState(RasterState const& rasterState) noexcept;
     void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
-
     void bindVertexArray(VkVertexInputAttributeDescription const* attribDesc,
             VkVertexInputBindingDescription const* bufferDesc, uint8_t count);
 
     // Destroys all managed Vulkan objects. This should be called before changing the VkDevice.
     void terminate() noexcept;
-
-    static VkPrimitiveTopology getPrimitiveTopology(PrimitiveType pt) noexcept {
-        switch (pt) {
-            case PrimitiveType::POINTS:
-                return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-            case PrimitiveType::LINES:
-                return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-            case PrimitiveType::LINE_STRIP:
-                return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-            case PrimitiveType::TRIANGLES:
-                return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-            case PrimitiveType::TRIANGLE_STRIP:
-                return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-        }
-    }
-
     void gc() noexcept;
 
 private:
@@ -212,10 +175,9 @@ private:
         bool operator()(const PipelineKey& k1, const PipelineKey& k2) const;
     };
 
+#if defined(__clang__)
     #pragma clang diagnostic pop
-
-    // CACHE ENTRY STRUCTS
-    // -------------------
+#endif
 
     // The timestamp associated with a given cache entry represents time as a count of flush
     // events since the cache was constructed. If any cache entry was most recently used over
@@ -229,18 +191,8 @@ private:
         Timestamp lastUsed;
     };
 
-    struct PipelineLayoutCacheEntry {
-        VkPipelineLayout handle;
-        Timestamp lastUsed;
-    };
-
-    // CACHE CONTAINERS
-    // ----------------
-
     using PipelineMap = tsl::robin_map<PipelineKey, PipelineCacheEntry,
             PipelineHashFn, PipelineEqual>;
-
-private:
 
     PipelineCacheEntry* getOrCreatePipeline() noexcept;
 
@@ -248,11 +200,9 @@ private:
 
     // These helpers all return unstable pointers that should not be stored.
     PipelineCacheEntry* createPipeline() noexcept;
-    PipelineLayoutCacheEntry* getOrCreatePipelineLayout() noexcept;
 
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;
-    VmaAllocator mAllocator = VK_NULL_HANDLE;
 
     // Current requirements for the pipeline layout, pipeline, and descriptor sets.
     PipelineKey mPipelineRequirements = {};

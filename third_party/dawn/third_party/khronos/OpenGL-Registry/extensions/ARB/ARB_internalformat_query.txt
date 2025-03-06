@@ -1,0 +1,575 @@
+Name
+
+    ARB_internalformat_query
+
+Name Strings
+
+    GL_ARB_internalformat_query
+
+Contact
+
+    Jan-Harald Fredriksen (jan-harald.fredriksen 'at' arm.com)
+    Daniel Koch (daniel 'at' transgaming 'dot' com)
+
+Contributors
+
+    Bruce Merry, ARM
+    Daniel Koch, Transgaming
+    Acorn Pooley, NVIDIA
+    Christophe Riccio, Imagination Technologies
+
+Notice
+
+    Copyright (c) 2011-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on 2011/06/20.
+    Approved by the Khronos Promoters on 2011/07/29.
+
+Version
+
+    Last Modified Date: June 13, 2011
+    Revision: 7 
+
+Number
+
+    ARB Extension #112
+
+Dependencies
+
+    OpenGL 3.0 or ARB_framebuffer_object is required.
+
+    This extension is written against the OpenGL 4.1 (Core Profile)
+    Specification (July 25, 2010).
+
+    ARB_texture_multisample affects the definition of this extension.
+
+Overview
+
+    OpenGL 4.1 has a number of queries to indicate the maximum number of
+    samples available for different formats. These give a coarse-grained
+    query mechanism e.g. an implementation can expose different sample
+    counts for integer and floating-point formats, but not for different
+    floating-point formats. There is also no convenient way for the user
+    to determine the granularity of sample counts available, only the
+    maximum.
+
+    This extension adds a query mechanism that allows the user to
+    determine which sample counts are available for a specific internal
+    format.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void GetInternalformativ(enum target, enum internalformat,
+                             enum pname, sizei bufSize, int *params);
+
+New Types
+
+    None.
+
+New Tokens
+
+    Accepted by the <target> parameter of GetInternalformativ:
+
+        RENDERBUFFER
+        TEXTURE_2D_MULTISAMPLE
+        TEXTURE_2D_MULTISAMPLE_ARRAY
+
+    Accepted by the <pname> parameter of GetInternalformativ:
+
+        SAMPLES
+        NUM_SAMPLE_COUNTS                          0x9380
+
+Additions to Chapter 2 of the OpenGL 4.1 (Core Profile) Specification
+(OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 4.1 (Core Profile) Specification
+(Rasterization)
+
+    In section 3.8.6 (Multisample Textures), replace the bulleted
+    list of error conditions (for exceeding MAX_*_SAMPLES) and the
+    preceeding sentence with:
+
+        "The error INVALID_OPERATION will be generated if <samples> is
+        greater than the maximum number of samples supported for this
+        <target> and <internalformat>, which can be determined by
+        calling GetInternalformativ with a <pname> of SAMPLES (see
+        section 6.X)."
+
+    In the following paragraph, remove "or if samples is greater
+    than MAX_SAMPLES".
+
+Additions to Chapter 4 of the OpenGL 4.1 (Core Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    In section 4.4.2 (Attaching Images to Framebuffer Objects), under
+    the description of RenderbufferStorageMultisample:
+
+    Replace
+
+        "If either <width> or <height> is greater than the value of
+        MAX_RENDERBUFFER_SIZE, or if <samples> is greater than the value
+        of MAX_SAMPLES, then the error INVALID_VALUE is generated. If
+        <internalformat> is a signed or unsigned integer format and
+        <samples> is greater than the value of MAX_INTEGER_SAMPLES, then
+        the error INVALID_OPERATION is generated (see ``Required
+        Renderbuffer Formats'' below)."
+
+    with
+
+        "If either <width> or <height> is greater than the value of
+        MAX_RENDERBUFFER_SIZE then the error INVALID_VALUE is
+        generated. If <samples> is greater than the maximum number of
+        samples supported for <internalformat> then the error
+        INVALID_OPERATION is generated (see GetInternalformativ in
+        section 6.X)."
+
+Additions to Chapter 5 of the OpenGL 4.1 (Compatibility Profile)
+Specification (Special Functions)
+
+    Add GetInternalformativ to the list of commands not included in
+    display lists.
+
+Additions to Chapter 6 of the OpenGL 4.1 (Core Profile) Specification
+(State and State Requests)
+
+    Add a new section 6.1.X "Internalformat queries"
+
+    Information about implementation-dependent support for internal
+    formats can be queried with the command
+
+    void GetInternalformativ(enum target, enum internalformat,
+                             enum pname, sizei bufSize, int *params);
+
+    <internalformat> must be color-renderable, depth-renderable or
+    stencil-renderable (as defined in section 4.4.4).
+
+    <target> indicates the usage of the <internalformat>, and must be
+    one of RENDERBUFFER, TEXTURE_2D_MULTISAMPLE, or
+    TEXTURE_2D_MULTISAMPLE_ARRAY, corresponding to usage as a
+    renderbuffer, 2D multisample texture, or 2D multisample array
+    texture.
+
+    No more than <bufSize> integers will be written into <params>. If
+    more data are available, they will be ignored and no error will be
+    generated.
+
+    <pname> indicates the information to query, and is one of the
+    following:
+
+    - SAMPLES: The sample counts supported for this <format> and
+      <target> are written into <params>, in descending order. Only
+      positive values are returned.
+    - NUM_SAMPLE_COUNTS: The number of sample counts that would be
+      returned by querying SAMPLES is returned in <params>.
+
+    Note that querying SAMPLES with a <bufSize> of 1 will return just
+    the maximum supported number of samples for this format.
+
+    The maximum value in SAMPLES is guaranteed to be at least the lowest
+    of the following:
+    - The value of GetIntegerv(MAX_INTEGER_SAMPLES), if <internalformat>
+      is a signed or unsigned integer format.
+    - The value of GetIntegerv(MAX_DEPTH_TEXTURE_SAMPLES), if
+      <internalformat> is a depth/stencil-renderable format and <target>
+      is TEXTURE_2D_MULTISAMPLE or TEXTURE_2D_MULTISAMPLE_ARRAY.
+    - The value of GetIntegerv(MAX_COLOR_TEXTURE_SAMPLES), if
+      <internalformat> is a color-renderable format and <target> is
+      TEXTURE_2D_MULTISAMPLE or TEXTURE_2D_MULTISAMPLE_ARRAY.
+    - The value of GetIntegerv(MAX_SAMPLES).
+
+Additions to Appendix A of the OpenGL 4.1 (Core Profile) Specification
+(Invariance)
+
+    None.
+
+Additions to Appendix D of the OpenGL 4.1 (Core Profile) Specification
+(Shared Objects and Multiple Contexts)
+
+    None.
+
+GLX Protocol
+
+    XXX - TODO.
+
+Dependencies on ARB_texture_multisample
+
+    If OpenGL 3.2 or ARB_texture_multisample is not supported, then
+    TEXTURE_2D_MULTISAMPLE and TEXTURE_2D_MULTISAMPLE_ARRAY are not
+    supported <target> parameters to GetInternalformativ.
+
+Dependencies on OpenGL ES
+
+    If implemented on OpenGL ES (together with an extension adding
+    RenderbufferStorageMultisample), then this extension behaves as
+    specified, except:
+
+    - Ignore all references to multisample textures and display lists.
+    - Ignore all references to MAX_COLOR_TEXTURE_SAMPLES,
+      MAX_DEPTH_TEXTURE_SAMPLES, MAX_INTEGER_SAMPLES and MAX_SAMPLES.
+
+Errors
+
+    If the <internalformat> parameter to GetInternalformativ is not
+    color-, depth- or stencil-renderable, then an INVALID_ENUM error is
+    generated.
+
+    If the <target> parameter to GetInternalformativ is not one of
+    TEXTURE_2D_MULTISAMPLE, TEXTURE_2D_MULTISAMPLE_ARRAY or RENDERBUFFER
+    then an INVALID_ENUM error is generated.
+
+    If the <pname> parameter to GetInternalformativ is not SAMPLES
+    or NUM_SAMPLE_COUNTS, then an INVALID_ENUM error is generated.
+
+    If the <bufSize> parameter to GetInternalformativ is negative,
+    then an INVALID_VALUE error is generated.
+
+    If the <samples> parameter to TexImage2DMultisample,
+    TexImage3DMultisample or RenderbufferStorageMultisample is greater
+    than the maximum number of samples supported for the target and
+    internalformat, an INVALID_OPERATION error is generated.
+
+    An INVALID_VALUE error is no longer generated if the <samples>
+    argument to TexImage2DMultisample, TexImage3DMultisample or
+    RenderbufferStorageMultisample is greater than the value of
+    GetIntegerv(MAX_SAMPLES).
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    Changes to table 6.52, p. 393 (Implementation Dependent Values)
+
+                                                                Minimum
+    Get Value                  Type    Get Command              Value    Description                            Sec.
+    ---------                  ----    -----------              -------  ------------------------------------   -----
+    MAX_DEPTH_TEXTURE_SAMPLES  Z+      GetIntegerv               1       Maximum number of samples supported    6.1.X
+                                                                         for all depth/stencil formats in a
+                                                                         multisample texture
+    MAX_COLOR_TEXTURE_SAMPLES  Z+      GetIntegerv               1       Maximum number of samples supported    6.1.X
+                                                                         for all color formats in a
+                                                                         multisample texture
+    MAX_INTEGER_SAMPLES        Z+      GetIntegerv               1       Maximum number of samples supported    6.1.X
+                                                                         for all integer format multisample
+                                                                         buffers
+
+    (only the description and section numbers change)
+
+    Changes to table 6.54, p. 395 (Framebuffer Dependent Values)
+
+                                                                Minimum
+    Get Value                  Type    Get Command              Value    Description                            Sec.
+    ---------                  ----    -----------              -------  ------------------------------------   -----
+    MAX_SAMPLES                Z+      GetIntegerv               4       Maximum number of samples supported    6.1.X
+                                                                         for all non-integer formats
+
+    (only the description and section number change - note this query should
+    probably be in table 6.52 to start with)
+
+    Add new table 6.X Internalformat-specific Implementation Dependent Values after 6.52
+
+                                                                Minimum
+    Get Value                  Type    Get Command              Value    Description                            Sec.
+    ---------                  ----    -----------              -------  ------------------------------------   -----
+    SAMPLES                    0*xZ+   GetInternalformativ       fn1     Supported sample counts                6.X
+    NUM_SAMPLE_COUNTS          Z+      GetInternalformativ       1       Number of supported sample counts      6.X
+
+    fn1: see section 6.X.
+
+Sample Code
+
+    To determine all the sample counts available for a specific
+    renderbuffer format:
+
+    GLint *samples;
+    GLint samples_length, i;
+
+    glGetInternalformativ(GL_RENDERBUFFER, format,
+                          GL_NUM_SAMPLE_COUNTS, 1, &samples_length);
+    samples = malloc(samples_length * sizeof(GLint));
+    glGetInternalformativ(GL_RENDERBUFFER, format,
+                          GL_SAMPLES, samples_length, samples);
+    for (i = 0; i < samples_length; i++)
+    {
+        printf("Format %#x supports %d samples\n", samples[i]);
+    }
+
+    To determine the maximum sample count available for a specific
+    renderbuffer format:
+
+    GLint max_samples;
+    glGetInternalformativ(GL_RENDERBUFFER, format,
+                          GL_SAMPLES, 1, &max_samples);
+
+Conformance Tests
+
+    1. Test each of the error conditions described in Errors.
+
+    2. For each format that is not color-, depth- or stencil-renderable
+    (if any), test that INVALID_ENUM is generated if passed to
+    GetInternalformativ (e.g. LUMINANCE_ALPHA).
+
+    3. Call GetInternalformativ for each <pname> in turn with a
+    <bufSize> of zero; check that <params> is not modified and that no
+    error results.
+
+    4. For each color-, depth- or stencil-renderable format and each
+    target:
+       4.1. Query NUM_SAMPLE_COUNTS and verify that it is greater than
+       zero.
+       4.2. Query SAMPLES, using a larger-than-necessary buffer, and
+       check that only NUM_SAMPLE_COUNTS values are written.
+       4.3. Check that the values returned by SAMPLES are all positive
+       and strictly decreasing.
+       4.4. Query MAX_SAMPLES and check that it matches the first value
+       returned by SAMPLES.
+       4.5. Check that MAX_SAMPLES is at least the lower bound computed
+       from MAX_SAMPLES, MAX_INTEGER_SAMPLES, MAX_COLOR_TEXTURE_SAMPLES
+       and MAX_DEPTH_TEXTURE_SAMPLES.
+       4.6. Check that MAX_SAMPLE_MASK_WORDS is at least
+       ceil(MAX_SAMPLES / 32).
+
+Issues
+
+    1) Should we have the MAX_SAMPLES query as well as the SAMPLES
+    query? It's syntactic sugar (since you can just take the largest
+    value in the SAMPLES array), but very convenient sugar since you
+    don't have to allocate a dynamically-sized array. It also simplifies
+    the specification.
+
+    RESOLVED: no, we don't need it. Passing a <bufSize> of 1 when
+    querying SAMPLES gives the same effect.
+
+    2) Should we explicitly include 0 in the list of sample counts
+    (meaning "not multisampled")? It might allow one to indicate that certain
+    formats are flat-out unsupported with certain targets but supported with
+    others.
+
+    RESOLVED: no, we would rather layer on a separate <pname> later.
+
+    3) For multisample textures, is a per-target query too fine-grained?
+    Should the <target> just be TEXTURE instead of
+    TEXTURE_2D_MULTISAMPLE[_ARRAY]?
+
+    RESOLVED: Keep the per-target query as it may useful to distinguish
+    results for some future values of <pname>.
+
+    4) What should the new command be called?
+
+    RESOLVED: GetInternalformativ
+
+    GetInternalformativ is potentially confusing, but consistent with
+    GL precedent such as GetQueryiv (which returns information such as
+    the number of bits supported for a specific query target).
+
+    5) What should the query of the number of samples counts be called?
+
+    RESOLVED: NUM_SAMPLE_COUNTS
+
+    The original proposal was NUM_SAMPLES, which is consistent with
+    NUM_COMPRESSED_TEXTURE_FORMATS. However, it's confusing because what
+    is being queried is not the number of samples (whereas
+    NUM_COMPRESSED_TEXTURE_FORMATS is the number of compressed texture
+    formats). NUM_SAMPLE_COUNTS is also consistent with the
+    NUM_COMPRESSED_TEXTURE_FORMATS precedent and the description of this
+    value.
+
+    Another proposal was SAMPLES_LENGTH, but this is misleading
+    because in OpenGL LENGTH is only used for string length.
+
+    6) What should GetIntegerv(MAX_INTEGER_SAMPLES) and similar queries
+    return (excluding MAX_SAMPLES - see next issue)?
+
+    Discussion: there are (at least) two options:
+
+    A. Querying MAX_INTEGER_SAMPLES returns a count that is guaranteed
+    to be supported for all integer formats, but some integer formats
+    may support more samples and the existing errors are relaxed to
+    allow this.
+
+    B. Require that all integer formats support the same maximum number
+    of samples, and GetInternalformativ becomes an alternative
+    interface to the same set of limits.
+
+    RESOLVED: option A.
+
+    7) What should GetIntegerv(MAX_SAMPLES) return?
+
+    In OpenGL 4.1, MAX_SAMPLES serves two purposes.
+    A. An upper bound on the number of samples supported for any format.
+    This manifests in INVALID_VALUE errors when trying to use more than
+    this number.
+    B. A number of samples that is guaranteed to be supported for all
+    formats that don't fall into certain classes (such as integer
+    formats).
+
+    Backwards compatibility would suggest that it should return option
+    B in future, although this leaves no way to determine the maximum
+    number of samples supported for any format unless a new query is
+    introduced.
+
+    RESOLVED: option B.
+
+    8) Does this extension make the MAX_SAMPLES query unnecessary?
+
+    RESOLVED: MAX_SAMPLES will need to be retained in API versions where
+    it already exists (for backwards compatibilities), but there is no
+    need to add it as this query provides more accurate information and
+    it is expected that shipping hardware will support different numbers
+    of samples for different formats.
+
+    9) Can we query additional properties supported for an internal format
+    in addition to multisample-related information with this API?
+
+    RESOLVED: DEFERRED. Yes this API is suitable for that, but the 
+    specification is left for a layered extension.
+
+    Other possible <pnames> include:
+      MAX_WIDTH
+        - maximum width of object
+      MAX_HEIGHT
+        - maximum height of object
+      MAX_DEPTH   
+        - maximum depth/# of layers of object
+      MAX_COMBINED_SIZE   
+        - maximum size of object (w*h*d) (due to implementation-specific
+          limitations)
+      FRAMEBUFFER_RENDERABLE  
+        - can be rendered to via FBO attachment
+      FRAMEBUFFER_RENDERABLE_BLEND    
+        - can be rendered to via FBO attachment when blending is enabled
+      MIPMAPS 
+        - more than one mipmap can be supported
+      GENERATE_MIPMAPS    
+        - is generate mipmaps supported
+      READPIXEL   
+        - framebuffers with this internal format can be read directly with 
+          an appropriate format/type by ReadPixels
+      FILTER_LINEAR   
+        - can the MIN/MAG filter be set to LINEAR values? Are filters other 
+          than NEAREST supported?
+      SRGB_READ   
+        - texture reads from this internalformat occur in SRGB colorspace
+      SRGB_WRITE  
+        - framebuffers with this internalformat can be rendered to with 
+          FRAMEBUFFER_SRGB enabled
+      SRGB_DECODE 
+        - textures of this format support toggling TEXTURE_SRGB_DECODE 
+          (ie EXT_texture_sRGB_decode)
+      VERTEX_TEXTURE  
+        - textures with this internalformat can be sampled from vertex shaders
+      TESS_CONTROL_TEXTURE    
+        - textures with this internalformat can be sampled from tessellation
+          control shaders
+      TESS_EVALUATION_TEXTURE 
+        - textures with this internalformat can be sampled from tessellation
+          evaluation shaders
+      GEOMETRY_TEXTURE    
+        - textures with this internalformat can be sampled from geometry shaders
+      FRAGMENT_TEXTURE    
+        - textures with this internalformat can be sampled from fragment shaders
+      TEXTURE_SHADOW  
+        - textures with this internalformat support shadow samplers
+      TEXTURE_GATHER  
+        - textures with this internalformat support texture gather operations
+      TEXTURE_GATHER_SHADOW   
+        - textures with this internalformat support texture gather operations
+          with shadow samplers
+      SHADER_IMAGE_LOAD   
+        - textures with this internalformat support image load operations
+          from shaders
+      SHADER_IMAGE_STORE  
+        - textures with this internalformat support image store operations
+          from shaders
+      SHADER_IMAGE_ATOMIC 
+        - textures with this internalformat support atomic memory operations
+          from shaders
+      FORMAT_SUPPORTED    
+        - the requested internal format is known and supported for at least
+          some subset of the possible operations
+      ACTUAL_INTERNALFORMAT   
+        - the actual internalformat used by the implementation when the
+          specified internalformat is requested
+      PERFORMANCE_HINT    
+        - an indication that this format will or may operate at reduced
+          performance in some cases (should this be a bitfield, array, 
+          or a specific bit on each of the other queries?)
+
+    Possible values for some of the above pnames:
+        - HARDWARE (or SUPPORTED), SOFTWARE (or CAVEAT), UNSUPPORTED.
+
+    Additional Values for <target> that would be valid for 
+      TEXTURE_1D
+      TEXTURE_1D_ARRAY
+      TEXTURE_2D
+      TEXTURE_2D_ARRAY
+      TEXTURE_3D
+      TEXTURE_CUBE_MAP
+      TEXTURE_CUBE_MAP_ARRAY
+      TEXTURE_RECTANGLE
+      TEXTURE_BUFFER
+    Could also consider meta targets such as: 
+      ALL
+      ANY
+      TEXTURE
+
+
+    10) Is the <target> parameter required?  If so, should it be the first or
+    second parameter?
+
+    RESOLVED: 
+    a) Yes. It is possible that in some implementations and for some of the possible
+    uses of this query, that the results will depend on the texture target.
+    b) First parameter. All other entry points that take a <target> have it as the
+    first parameter. 
+
+Revision History
+    
+    Revision 7, 2011/06/13 dgkoch
+      - recast as ARB extension
+
+    Revision 6, 2011/05/19 dgkoch
+      - resolved issue 3, 9 per F2F.
+
+    Revision 5, 2011/05/16 dgkoch
+      - resolved issue 10 per F2F. Keep target; as the first parameter.
+      - fix extension name
+      - updates to Issue 9
+
+    Revision 4, 2011/05/11 dgkoch
+      - also fix the formal paramter in the New Functions area
+      - updates to issue 9, added issue 10
+
+    Revision 3, 2011/05/05 dgkoch
+      - rename the formal parameter from 'format' to 'internalformat' 
+        to match the spec body.
+      - changed SAMPLES_LENGTH to NUM_SAMPLE_COUNTS
+      - added issue 9
+
+    Revision 2, 2011/04/21 bmerry
+      - Fix typo InternalFormat -> Internalformat
+      - Removed per-format MAX_SAMPLES query
+      - Marked issues 1, 2, and 4-7 as resolved
+
+    Revision 1, 2011/04/13 bmerry
+      - First draft.

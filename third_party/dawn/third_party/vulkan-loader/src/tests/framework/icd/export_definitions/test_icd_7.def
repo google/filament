@@ -1,0 +1,6 @@
+LIBRARY test_icd_version_7
+EXPORTS
+    vk_icdGetInstanceProcAddr
+    vk_icdNegotiateLoaderICDInterfaceVersion
+    vk_icdEnumerateAdapterPhysicalDevices
+    vk_icdGetPhysicalDeviceProcAddr

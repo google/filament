@@ -1,0 +1,869 @@
+    Name
+
+        EXT_fragment_shading_rate
+
+    Name Strings
+
+        GL_EXT_fragment_shading_rate
+        GL_EXT_fragment_shading_rate_primitive
+        GL_EXT_fragment_shading_rate_attachment
+
+    Contributors
+
+        Jan-Harald Fredriksen, Arm
+        Ralph Potter, Samsung
+        Tate Hornbeck, Qualcomm
+        Laurie Hedge, Imagination Technologies
+        Contributors to QCOM_shading_rate
+
+    Contact
+
+        Jan-Harald Fredriksen ( jan-harald.fredriksen 'at' arm.com)
+
+    Status
+
+        Complete
+
+    Version
+
+        Last Modified Date: July 7, 2022
+        Revision: #2
+
+    Number
+
+        OpenGL ES Extension #340
+
+    Dependencies
+
+        OpenGL ES 2.0 is required.  This extension is written against OpenGL ES 3.2.
+
+        This extension interacts with OVR_multiview.
+        This extension interacts with QCOM_framebuffer_foveated and QCOM_texture_foveated
+        This extension interacts with EXT_shader_pixel_local_storage and
+        EXT_shader_pixel_local_storage2
+
+        When the GL_EXT_fragment_shading_rate extension or the
+        GL_EXT_fragment_shading_rate_attachment extension is advertised, the
+        implementation must also advertise either GLSL extension
+        GL_EXT_fragment_shading_rate or GLSL extension
+        GL_EXT_fragment_invocation_density (both documented separately).
+        The GLSL extensions provide built-in variables that allow fragment
+        shaders to determine the effective shading rate used for fragment
+        invocations.
+
+        When the GL_EXT_fragment_shading_rate_primitive extension is advertised,
+        the implementation must also advertise GLSL
+        extension "GL_EXT_fragment_shading_rate" (documented separately), which
+        provides new built-in variables that allow vertex and geometry shaders to
+        specify the fragment shading per primitive and also allow fragment shaders to
+        determine the effective shading rate used for fragment invocations.
+
+    Overview
+
+        By default, OpenGL runs a fragment shader once for each pixel covered by a
+        primitive being rasterized.  When using multisampling, the outputs of that
+        fragment shader are broadcast to each covered sample of the fragment's
+        pixel.  When using multisampling, applications can optionally request that
+        the fragment shader be run once per color sample (e.g., by using the "sample"
+        qualifier on one or more active fragment shader inputs), or run a minimum
+        number of times per pixel using SAMPLE_SHADING enable and the
+        MinSampleShading frequency value.
+
+        This extension allows applications to specify fragment shading rates of less
+        than 1 invocation per pixel.  Instead of invoking the fragment shader
+        once for each covered pixel, the fragment shader can be run once for a
+        group of adjacent pixels in the framebuffer.  The outputs of that fragment
+        shader invocation are broadcast to each covered sample for all of the pixels
+        in the group.  The initial version of this extension allows for groups of
+        1, 2, 4, 8, and 16 pixels.
+
+        This can be useful for effects like motion volumetric rendering
+        where a portion of scene is processed at full shading rate and a portion can
+        be processed at a reduced shading rate, saving power and processing resources.
+        The requested rate can vary from (finest and default) 1 fragment shader
+        invocation per pixel to (coarsest) one fragment shader invocation for each
+        4x4 block of pixels.
+
+    New Tokens
+
+        Accepted by the <attachment> parameter of FramebufferShadingRateEXT
+        and GetFramebufferAttachmentParameteriv:
+
+            SHADING_RATE_ATTACHMENT_EXT                             0x96D1
+
+        Allowed in the <rate> parameter in ShadingRateEXT:
+            SHADING_RATE_1X1_PIXELS_EXT                             0x96A6
+            SHADING_RATE_1X2_PIXELS_EXT                             0x96A7
+            SHADING_RATE_1X4_PIXELS_EXT                             0x96AA
+            SHADING_RATE_2X1_PIXELS_EXT                             0x96A8
+            SHADING_RATE_2X2_PIXELS_EXT                             0x96A9
+            SHADING_RATE_2X4_PIXELS_EXT                             0x96AD
+            SHADING_RATE_4X1_PIXELS_EXT                             0x96AB
+            SHADING_RATE_4X2_PIXELS_EXT                             0x96AC
+            SHADING_RATE_4X4_PIXELS_EXT                             0x96AE
+
+        Accepted by the <combinerOp0> and <combinerOp1> parameters of
+        ShadingRateCombinerOpsEXT:
+
+            FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_EXT              0x96D2
+            FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_EXT           0x96D3
+            FRAGMENT_SHADING_RATE_COMBINER_OP_MIN_EXT               0x96D4
+            FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_EXT               0x96D5
+            FRAGMENT_SHADING_RATE_COMBINER_OP_MUL_EXT               0x96D6
+
+        Accepted by the <pname> parameter of GetIntegerv, GetBooleanv, GetFloatv,
+        and GetInteger64v:
+
+            SHADING_RATE_EXT                                                         0x96D0
+            MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT                     0x96D7
+            MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT                     0x96D8
+            MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT                    0x96D9
+            MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT                    0x96DA
+            MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_ASPECT_RATIO_EXT              0x96DB
+            MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_LAYERS_EXT                          0x96DC
+            FRAGMENT_SHADING_RATE_WITH_SHADER_DEPTH_STENCIL_WRITES_SUPPORTED_EXT     0x96DD
+            FRAGMENT_SHADING_RATE_WITH_SAMPLE_MASK_SUPPORTED_EXT                     0x96DE
+            FRAGMENT_SHADING_RATE_ATTACHMENT_WITH_DEFAULT_FRAMEBUFFER_SUPPORTED_EXT  0x96DF
+            FRAGMENT_SHADING_RATE_NON_TRIVIAL_COMBINERS_SUPPORTED_EXT                0x8F6F
+
+    New Procedures and Functions
+
+        void ShadingRateEXT(enum rate)
+        void ShadingRateCombinerOpsEXT(enum combinerOp0, enum combinerOp1)
+        void FramebufferShadingRateEXT(enum target, enum attachment, uint texture, int baseLayer, sizei numLayers, sizei texelWidth, sizei texelHeight)
+        void GetFragmentShadingRatesEXT(sizei samples, sizei maxCount, sizei *count, enum *shadingRates)
+
+    Modifications to the OpenGL ES 3.2 Specification
+
+        Modify Section 8.14.1, Scale Factor and Level of Detail, p. 196
+
+        (Modify the function approximating Scale Factor (P), to allow implementations
+         to scale implicit derivatives based on the shading rate.  The scale occurs before
+         the LOD bias and before LOD clamping).
+
+         Modify the definitions of (mu, mv, mw):
+
+                        |   du       du    |
+              mu = max  |  -----  , -----  |
+                        |   dx       dy    |
+
+                        |   dv       dv    |
+              mv = max  |  -----  , -----  |
+                        |   dx       dy    |
+
+                        |   dw       dw    |
+              mw = max  |  -----  , -----  |
+                        |   dx       dy    |
+         to:
+                        |   du          du        |
+              mu = max  |  ---- * sx , ---- * sy  |
+                        |   dx          dy        |
+
+                        |   dv          dv        |
+              mv = max  |  ---- * sx , ---- * sy  |
+                        |   dx          dy        |
+
+                        |   dw          dw        |
+              mw = max  |  ---- * sx , ---- * sy  |
+                        |   dx          dy        |
+
+              where (sx, sy) refer to _effective shading rate_ (w', h') specified in
+              section 13.X.2.
+
+        Modifications to Chapter 9 of the OpenGL ES 3.2 Specification (Framebuffers
+        and Framebuffer Objects)
+
+            Modify the description of GetFramebufferAttachmentParameteriv to include
+            SHADING_RATE_ATTACHMENT_EXT:
+
+            "Otherwise, attachment must be one of the attachment points of the framebuffer
+             listed in table 9.1 or SHADING_RATE_ATTACHMENT_EXT."
+
+            Add the following to the list of conditions required for framebuffer
+            attachment completeness in section 9.4.1 (Framebuffer Attachment
+            Completeness):
+
+            If <image> is a two-dimensional array and the attachment
+            is SHADING_RATE_ATTACHMENT_EXT, all the selected layers,
+            [<baseLayer>, <baseLayer> + <numLayers>), are less than the layer
+            count of the texture.
+
+        Modify Section 13.4, Multisampling, p. 353
+
+        (add to the end of the section)
+
+            When SHADING_RATE_EXT is set to a value other than SHADING_RATE_1X1_PIXELS_EXT,
+            the rasterization will occur at the _effective shading rate_ (Section 13.X) and
+            will result in fragments covering a <W>x<H> group of pixels.
+
+            When multisample rasterization is enabled, the samples of the fragment will consist
+            of the samples for each of the pixels in the group.  The fragment center will be
+            the center of this group of pixels.  Each fragment will include a coverage value
+            with (W x H x SAMPLES) bits.  For example, if SHADING_RATE_EXT is 2x2 and the
+            currently bound framebuffer object has SAMPLES equal to 4 (4xMSAA), then the fragment
+            will consist of 4 pixels and 16 samples.  Similarly, each fragment will have
+            (W * H * SAMPLES) depth values and associated data.
+
+        The contents of Section 13.4.1, Sample Shading, p. 355 is moved to the new Section 13.X.3, "Sample Shading".
+
+        Add new section 13.X before Section 13.5, Points, p. 355
+
+            Section 13.X, Shading Rate
+
+            By default, each fragment processed by programmable fragment processing
+            corresponds to a single pixel with a single (x,y) coordinate. When using
+            multisampling, implementations are permitted to run separate fragment shader
+            invocations for each sample, but often only run a single invocation for all
+            samples of the fragment.  We will refer to the density of fragment shader
+            invocations as the _shading rate_.
+            Applications can use the shading rate to increase the size of fragments to
+            cover multiple pixels and reduce the amount of fragment shader work.
+            Applications can also use the shading rate to explicitly control the minimum
+            number of fragment shader invocations when multisampling.
+
+            Section 13.X.1, Draw Call Fragment Shading Rate
+
+            The draw call fragment shading rate can controlled with the command
+
+               void ShadingRateEXT(enum rate);
+
+            <rate> specifies the value of SHADING_RATE_EXT, and defines the
+            _shading rate_.  Valid values for <rate> are described in
+            table X.1
+
+                Shading Rate                   Size
+                ----------------------------   -----
+                SHADING_RATE_1X1_PIXELS_EXT    1x1
+                SHADING_RATE_1X2_PIXELS_EXT    1x2
+                SHADING_RATE_1X4_PIXELS_EXT    1x4
+                SHADING_RATE_2X1_PIXELS_EXT    2x1
+                SHADING_RATE_2X2_PIXELS_EXT    2x2
+                SHADING_RATE_2X4_PIXELS_EXT    2x4
+                SHADING_RATE_4X1_PIXELS_EXT    4x1
+                SHADING_RATE_4X2_PIXELS_EXT    4x2
+                SHADING_RATE_4X4_PIXELS_EXT    4x4
+
+                Table X.1:  Shading rates accepted by ShadingRateEXT.  An
+                entry of "<W>x<H>" in the "Size" column indicates that the shading
+                rate request for fragments with a width and height (in pixels) of <W>
+                and <H>, respectively.
+
+            If the shading rate is specified with ShadingRateEXT, it will apply to all
+            draw buffers.  If the shading rate has not been set, the shading rate
+            will be SHADING_RATE_1X1_PIXELS_EXT.  In either case, the shading rate will
+            be further adjusted as described in the following sections.
+
+            Errors
+
+                INVALID_ENUM is generated by ShadingRateEXT if <rate> is not
+                a valid shading rate from table X.1
+
+
+[[If GL_EXT_fragment_shading_rate_primitive is supported]]
+            Section 13.X.2, Primitive Fragment Shading Rate
+
+            The primitive fragment shading rate can be set via the gl_PrimitiveShadingRateEXT
+            built-in in the last active pre-rasterization shader stage. The rate associated
+            with a given primitive is sourced from the value written to gl_PrimitiveShadingRateEXT
+            by that primitive’s provoking vertex.
+            If the last active pre-rasterization shader stage does not write to
+            gl_PrimitiveShadingRateEXT,then it is as if the shader specified a
+            fragment shading rate value of 0, indicating a horizontal and vertical
+            rate of 1 pixel.
+
+[[If GL_EXT_fragment_shading_rate_attachment is supported]]
+            Section 13.X.3, Attachment Fragment Shading Rate
+
+            An attachment shading rate can be set by attaching a specified image from a
+            texture object as one of the logical buffers of a framebuffer
+            object with the command:
+
+            void FramebufferShadingRateEXT(enum target, enum attachment, uint texture, GLint baseLayer, GLsizei numLayers, GLsizei texelWidth, GLsizei texelHeight);
+
+            <target> must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER, or FRAMEBUFFER.
+            FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER.
+
+            <attachment> must be SHADING_RATE_ATTACHMENT_EXT.
+
+            If <texture> is not zero, then <texture> must name an existing
+            immutable-format texture with a target of TEXTURE_2D or TEXTURE_2D_ARRAY
+            with a format of R8UI.
+
+            If <texture> has multiple mipmap levels, only the base level will be
+            used as the fragment shading rate attachment.
+
+            <baseLayer> specifies the base layer of a two-dimensional image within
+            <texture>.
+
+            <numLayers> specifies the number of layers, starting from <baseLayer> from
+            within <texture> to attach.
+
+            <texelWidth> is the width of the framebuffer corresponding to each texel
+            in a fragment shading rate attachment. It must be a power-of-two value that
+            is greater or equal to MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT
+            and less than or equal to MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT.
+
+            The values of MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT
+            and MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT
+            indicate, respectively, the minimum and maximum supported width of
+            the portion of the framebuffer corresponding to each texel in a
+            fragment shading rate attachment. Both values must be a power-of-two
+            and the value of MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT
+            must be less than or equal to the value of
+            MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT.
+
+            <texelHeight> is the height of the framebuffer corresponding to each texel
+            in a fragment shading rate attachment. It must be a power-of-two value that
+            is greater or equal to MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT
+            and less than or equal to MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT.
+
+            The values of MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT
+            and MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT
+            indicate, respectively, the minimum and maximum supported height of
+            the portion of the framebuffer corresponding to each texel in a
+            fragment shading rate attachment. Both values must be a power-of-two
+            and the value of MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT
+            must be less than or equal to the value of
+            MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT.
+
+            Each pixel in the framebuffer is assigned an attachment fragment shading rate
+            by the corresponding texel in the fragment shading rate attachment, according to:
+
+                x' = floor(x / region_x)
+                y' = floor(y / region_y)
+
+            where x' and y' are the coordinates of a texel in the fragment shading
+            rate attachment, x and y are the coordinates of the pixel in the
+            framebuffer, and region_x and region_y are the size of the region each
+            texel corresponds to, as defined by the <texelWidth> and <texelHeight>
+            parameters to FramebufferShadingRateEXT.
+
+            [[If OVR_Multiview is supported]]
+            If multiview is enabled and the shading rate attachment has multiple
+            layers, the shading rate attachment texel is selected from the layer
+            determined by the gl_ViewID_OVR built-in. If multiview is disabled, and
+            both the shading rate attachment and the framebuffer have multiple
+            layers, the shading rate attachment texel is selected from the layer
+            determined by the Layer built-in. Otherwise, the texel is
+            unconditionally selected from the first layer of the attachment.
+
+            The fragment size is encoded into the first component of the identified
+            texel as follows:
+
+                size_w = 2^((texel/4)&3)
+                size_h = 2^(texel&3)
+
+            where texel is the value in the first component of the identified
+            texel, and size_w and size_h are the width and height of the fragment
+            size, decoded from the texel.
+            If no fragment shading rate attachment is specified, this size is
+            calculated as size_w = size_h = 1.
+
+            Applications must not specify a width or height greater than 4 by this
+            method.
+            The encoding of the gl_ShadingRateEXT built-in in
+            GL_EXT_fragment_shading_rate adheres to the above encoding.
+
+            Errors
+
+                An INVALID_ENUM error is generated if <target> is not
+                DRAW_FRAMEBUFFER, READ_FRAMEBUFFER, or FRAMEBUFFER.
+
+                An INVALID_ENUM error is generated if <attachment> is not
+                SHADING_RATE_ATTACHMENT_EXT.
+
+                An INVALID_VALUE error is generated if <texture> is not zero
+                and is not the name of an immutable texture object.
+
+                An INVALID_VALUE error is generated if <baseLayer> is greater
+                than or equal to the value of
+                MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_LAYERS_EXT.
+
+                An INVALID_VALUE error is generated if <numLayers> is greater
+                than the value of
+                MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_LAYERS_EXT.
+
+                An INVALID_VALUE error is generated if
+                <texelWidth> / <texelHeight> is larger than
+                MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_ASPECT_RATIO_EXT.
+
+                An INVALID_VALUE error is generated if
+                <texelHeight> / <texelWidth> is larger than
+                MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_ASPECT_RATIO_EXT.
+
+                An INVALID_OPERATION error is generated if the default
+                framebuffer is bound to <target> and the value of
+                FRAGMENT_SHADING_RATE_ATTACHMENT_WITH_DEFAULT_FRAMEBUFFER_SUPPORTED_EXT
+                is FALSE.
+
+            Section 13.X.4, Combining the Fragment Shading Rates
+
+            The final rate (Cxy') used for fragment shading must be one of the rates returned by
+            GetFragmentShadingRatesEXT for the sample count
+            used by rasterization.
+
+            If any of the following conditions are met, Cxy' must be set to {1,1}:
+                * Per-sample shading is enabled.
+                * The fragment shader statically writes to gl_FragDepth and the
+                  value of FRAGMENT_SHADING_RATE_WITH_SHADER_DEPTH_STENCIL_WRITES_SUPPORTED_EXT
+                  is FALSE.
+                * The value of FRAGMENT_SHADING_RATE_WITH_SAMPLE_MASK_SUPPORTED_EXT is FALSE
+                  and either the value of SAMPLE_MASK_VALUE does not have all bits of all words set,
+                  or the fragment shader statically writes to gl_SampleMask.
+                * The fragment shader statically references the gl_FragCoord built-in variable and does
+                  not enable the GL_EXT_fragment_shading_rate extension.
+
+            Otherwise, each of the specified shading rates are combined and then used to derive the value of Cxy'.
+            As there are three ways to specify shading rates, two combiner
+            operations are specified - between the pipeline and primitive shading
+            rates, and between the result of that and the attachment shading rate.
+
+            The fragment shading rate combiner operations can controlled with the command
+
+                void ShadingRateCombinerOpsEXT(enum combinerOp0, enum combinerOp1)
+
+            <combinerOps> is an array of combiner equations, specified as:
+
+                * FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_EXT specifies a combiner operation of combine(Axy ,Bxy) = Axy.
+                * FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_EXT specifies a combiner operation of combine(Axy,Bxy) = Bxy.
+                * FRAGMENT_SHADING_RATE_COMBINER_OP_MIN_EXT specifies a combiner operation of combine(Axy,Bxy) = min(Axy,Bxy).
+                * FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_EXT specifies a combiner operation of combine(Axy,Bxy) = max(Axy,Bxy).
+                * FRAGMENT_SHADING_RATE_COMBINER_OP_MUL_EXT specifies a combiner operation of combine(Axy,Bxy) = Axy*Bxy.
+
+            where combine(Axy,Bxy) is the combine operation, and Axy and Bxy are the inputs to the operation.
+
+           The FRAGMENT_SHADING_RATE_COMBINER_OP_MIN_EXT, FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_EXT, and
+           FRAGMENT_SHADING_RATE_COMBINER_OP_MUL_EXT combiner operations are only supported if the value of
+           FRAGMENT_SHADING_RATE_NON_TRIVIAL_COMBINERS_SUPPORTED_EXT is TRUE.
+
+           These operations are performed in a component-wise fashion.
+
+           This is used to generate a combined fragment area using the equation:
+
+               Cxy = combine(Axy,Bxy)
+
+           where Cxy is the combined fragment area result, and Axy and Bxy are the fragment areas of the
+           fragment shading rates being combined.
+           Two combine operations are performed, first with Axy equal to the draw call fragment shading rate
+           and Bxy equal to the primitive fragment shading rate, with the combine() operation selected by
+           combinerOp0. A second combination is then performed, with Axy equal to the result of the first
+           combination and Bxy equal to the attachment fragment shading rate, with the combine() operation
+           selected by combinerOp1. The result of the second combination is used as the final fragment
+           shading rate, reported via the ShadingRateKHR built-in.
+           Implementations may clamp the Cxy result of each combiner operation separately, or only after the
+           second combiner operation.
+
+           If the final combined rate is one of the rates returned by GetFragmentShadingRatesEXT for the
+           sample count used by rasterization, Cxy' = Cxy. Otherwise, Cxy' is selected from the rates returned
+           by GetFragmentShadingRatesEXT for the sample count used by rasterization.
+           From this list of supported rates, the following steps are applied in order, to select a single value:
+
+               1. Keep only rates where Cx' ≤ Cx and Cy' ≤ Cy.
+                  * Implementations may also keep rates where Cx' ≤ Cy and Cy' ≤ Cx.
+               2. Keep only rates with the highest area (Cx' × Cy').
+               3. Keep only rates with the lowest aspect ratio (Cx' + Cy').
+               4. In cases where a wide (e.g. 4x1) and tall (e.g. 1x4) rate remain, the implementation may choose
+                  either rate. However, it must choose this rate consistently for the same shading rates and
+                  combiner operations for the lifetime of the GL context.
+
+            Errors
+
+                An INVALID_ENUM error is generated if <combinerOp0> is not
+                FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_EXT,
+                FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_EXT,
+                FRAGMENT_SHADING_RATE_COMBINER_OP_MIN_EXT,
+                FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_EXT, or
+                FRAGMENT_SHADING_RATE_COMBINER_OP_MUL_EXT
+
+                An INVALID_ENUM error is generated if <combinerOp1> is not
+                FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_EXT,
+                FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_EXT,
+                FRAGMENT_SHADING_RATE_COMBINER_OP_MIN_EXT,
+                FRAGMENT_SHADING_RATE_COMBINER_OP_MAX_EXT, or
+                FRAGMENT_SHADING_RATE_COMBINER_OP_MUL_EXT
+
+                An INVALID_OPERATION error is generated if
+                the value of
+                FRAGMENT_SHADING_RATE_NON_TRIVIAL_COMBINERS_SUPPORTED_EXT
+                is FALSE and <combinerOp0> is not
+                FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_EXT or
+                FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_EXT
+
+                An INVALID_OPERATION error is generated if
+                the value of
+                FRAGMENT_SHADING_RATE_NON_TRIVIAL_COMBINERS_SUPPORTED_EXT
+                is FALSE and <combinerOp1> is not
+                FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_EXT or
+                FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_EXT
+
+[[If GL_EXT_fragment_shading_rate_primitive is not supported]]
+                An INVALID_OPERATION error is generated if <combinerOp0> is not
+                FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_EXT
+
+[[If GL_EXT_fragment_shading_rate_attachment is not supported]]
+                An INVALID_OPERATION error is generated if <combinerOp1> is not
+                FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_EXT
+
+
+            Section 13.X.5 Sample Shading
+
+            [[The contents from Section 13.4.1, Sample Shading, p. 355 is copied here]]
+
+        Modifications to Section 13.8.2, Scissor Test (p. 367)
+        (add to the end of the section)
+
+        When the _effective shading rate_ results in fragments covering more than one pixel,
+        the scissor tests are performed separately for each pixel in the fragment.
+        If a pixel covered by a fragment fails the scissor test, that pixel is
+        treated as though it was not covered by the primitive.  If all pixels covered
+        by a fragment are either not covered by the primitive being rasterized or fail
+        the scissor test, the fragment is discarded.
+
+        Modifications to Section 13.8.3, Multisample Fragment Operations (p. 368)
+
+       (modify the last sentence of the the first paragraph to indicate that sample mask
+        operations are performed when shading rate is used, even if multisampling is not
+        enabled which can produce fragments covering more than one pixel where each pixel
+        is considered a "sample")
+
+        Change the following sentence from:
+            "If the value of SAMPLE_BUFFERS is not one, this step is skipped."
+        to:
+            "This step is skipped if SAMPLE_BUFFERS is not one, unless SHADING_RATE_EXT
+            is set to a value other than SHADING_RATE_1X1_PIXELS_EXT."
+
+        (add to the end of the section)
+
+        When the _effective shading rate_ results in fragments covering more than one pixel,
+        each fragment will generate a composite coverage mask that includes separate
+        coverage bits for each sample in each pixel covered by the fragment.  This
+        composite coverage mask will be used by the GLSL built-in input variable
+        gl_SampleMaskIn[] and updated according to the built-in output variable
+        gl_SampleMask[].  The number of composite coverage mask bits in the built-in
+        variables and their mapping to a specific pixel and sample number
+        within that pixel is implementation-defined.
+
+        Modify Section 14.1, Fragment Shader Variables (p. 370)
+
+        (modify sixth paragraph, p. 371, specifying that the "centroid" location
+         for multi-pixel fragments is implementation-dependent, and is allowed to
+         be outside the primitive)
+
+        After the following sentence:
+            "When interpolating variables declared using "centroid in",
+             the variable is sampled at a location within the pixel covered
+             by the primitive generating the fragment."
+        Add the following sentence:
+            "When the _effective shading rate_ results in fragments covering more than one
+            pixel, variables declared using "centroid in" are sampled from an
+            implementation-dependent location within any one of the covered pixels."
+
+        Modify Section 15.1, Per-Fragment Operations (p. 378)
+
+        (insert a new paragraph after the first paragraph of the section)
+
+        When the _effective shading rate_ results in fragments covering multiple pixels,
+        the operations described in the section are performed independently for
+        each pixel covered by the fragment.  The set of samples covered by each pixel
+        is determined by extracting the portion of the fragment's composite coverage
+        that applies to that pixel, as described in section 13.8.3.
+
+
+        Section 13.X.5 Fragment shading rate queries
+
+        The supported fragment shading rates can be queried with the command
+
+               void GetFragmentShadingRatesEXT(sizei samples, sizei maxCount, sizei *count, enum *shadingRates);
+
+        The actual number of rates written into <shadingRates> is returned in <count>. If no rates are
+        supported, <count> is set to zero. If <count> is NULL then it is ignored. The maximum number of
+        rates that may be written into <shadingRates> is specified by <maxCount>.
+
+        The shading rates must include the combinations listed in Table X.2.
+
+                Samples       |   Shading Rate
+                --------------|--------------------------------
+                1             |   SHADING_RATE_1X1_PIXELS_EXT,
+                              |   SHADING_RATE_1X2_PIXELS_EXT,
+                              |   SHADING_RATE_2X1_PIXELS_EXT,
+                              |   SHADING_RATE_2X2_PIXELS_EXT
+                --------------|--------------------------------
+                4             |   SHADING_RATE_1X1_PIXELS_EXT,
+                              |   SHADING_RATE_1X2_PIXELS_EXT,
+                              |   SHADING_RATE_2X1_PIXELS_EXT,
+                              |   SHADING_RATE_2X2_PIXELS_EXT
+                -----------------------------------------------
+
+                Table X.2:  Required shading rates
+
+
+    New State
+
+    Add to table 21.7, Rasterization
+
+    Get Value                               Type  Get Command  Initial Value                     Description              Sec
+    -------------------------------------   ----  -----------  --------------------------------  --------------           ------
+    SHADING_RATE_EXT                        E     GetIntegerv  SHADING_RATE_1X1_PIXELS_EXT       draw call shading rate   13.X.1
+
+
+[[If GL_EXT_fragment_shading_rate_attachment is supported]]
+    Add to table 21.40, Implementation Dependent Values
+
+    Get Value                                                   Type  Get Command  Minimum Value  Description                         Sec
+    -------------------------------------                       ----  -----------  -------------  --------------                      ------
+    MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT        Z+    GetIntegerv  32 (**)        minimum supported width of the      13.X.3
+                                                                                                  portion of the framebuffer
+                                                                                                  corresponding to each texel in
+                                                                                                  a fragment shading rate attachment
+    MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT       Z+    GetIntegerv  32 (**)        minimum supported height of the     13.X.3
+                                                                                                  portion of the framebuffer
+                                                                                                  corresponding to each texel in
+                                                                                                  a fragment shading rate attachment
+    MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT        Z+    GetIntegerv  8              maximum supported width of the      13.X.3
+                                                                                                  portion of the framebuffer
+                                                                                                  corresponding to each texel in
+                                                                                                  a fragment shading rate attachment
+    MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT       Z+    GetIntegerv  8              maximum supported height of the     13.X.3
+                                                                                                  portion of the framebuffer
+                                                                                                  corresponding to each texel in
+                                                                                                  a fragment shading rate attachment
+    MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_ASPECT_RATIO_EXT Z+    GetIntegerv  1              maximum aspect ratio between the    13.X.3
+                                                                                                  width and height of the portion of
+                                                                                                  the framebuffer corresponding to
+                                                                                                  each texel in a fragment shading
+                                                                                                  rate attachment
+    MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_LAYERS_EXT             Z+    GetIntegerv  1              maximum number of layers in a
+                                                                                                  fragment shading rate attachment    13.X.3     
+    FRAGMENT_SHADING_RATE_WITH_SHADER_DEPTH_STENCIL_WRITES_SUPPORTED_EXT
+                                                                B     GetBooleanv  -              support for writing FragDepth from  13.X.4
+                                                                                                  a fragment shader for multi-pixel
+                                                                                                  fragments                                                                                           
+    FRAGMENT_SHADING_RATE_WITH_SAMPLE_MASK_SUPPORTED_EXT        B     GetBooleanv  -              support for sample masks with       13.X.4
+                                                                                                  multi-pixel fragments
+    FRAGMENT_SHADING_RATE_ATTACHMENT_WITH_-                     B    GetBooleanv  -               support for attachment shading      13.X.3
+    DEFAULT_FRAMEBUFFER_SUPPORTED_EXT                                                             rates on the default framebuffer
+    FRAGMENT_SHADING_RATE_NON_TRIVIAL_COMBINERS_SUPPORTED_EXT   B    GetBooleanv  -               support for non-trivial combiners   13.X.4
+
+
+    (**) The value of MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT is the maximum allowed, not the minimum
+    (**) The value of MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT is the maximum allowed, not the minimum
+
+
+    Interactions with OVR_Multiview
+
+        If OVR_Multiview is supported, SHADING_RATE_EXT applies to all views.
+
+    Interactions with QCOM_framebuffer_foveated and QCOM_texture_foveated
+
+        QCOM_framebuffer_foveated and QCOM_texture_foveated specify a pixel
+        density which is exposed as a fragment size via the fragment
+        shader built-in gl_FragSizeEXT.  This extension defines an effective
+        shading rate which is exposed to fragment shaders via the shader
+        built-in gl_ShadingRateEXT. If either foveation extension is enabled in
+        conjunction with this extension, then the values of the gl_FragSizeEXT
+        and gl_ShadingRateEXT built-ins will be the component-wise product of
+        both fragment sizes.
+
+    Interactions with GL_EXT_fragment_invocation_density
+
+        If the shader enables the GL_EXT_fragment_invocation_density in combination
+        with this extension, then the gl_FragSizeEXT and gl_FragInvocationCountEXT
+        built-in variables contain the fragment size and the number of invocations,
+        respectively, based on the effective fragment shading rate.
+
+    Interactions with GL_EXT_shader_pixel_local_storage and GL_EXT_shader_pixel_local_storage2
+
+        Pixel local storage is not supported in combination with shading
+        rates other than SHADING_RATE_1X1_PIXELS_EXT.
+
+        Attempting to enable pixel local storage while the currently bound
+        framebuffer object has a non-zero value of SHADING_RATE_ATTACHMENT_EXT
+        will generate an INVALID_OPERATION error.
+        Attempting to enable pixel local storage while the current value
+        of SHADING_RATE_EXT is not SHADING_RATE_1X1_PIXELS_EXT will
+        generate an INVALID_OPERATION error.
+        If pixel local storage is enabled, an INVALID_OPERATION error will
+        be generated by ShadingRateEXT if <rate> is not
+        SHADING_RATE_1X1_PIXELS_EXT.
+
+        [[If GL_EXT_fragment_shading_rate_primitive is supported]]
+        A program will fail to link if a per primitive shading rate
+        is specified in a vertex or geometry shader while the fragment
+        shader statically reads or writes to a pixel local storage
+        variable.
+
+    Interactions with GL_EXT_shader_framebuffer_fetch and GL_EXT_shader_framebuffer_fetch_non_coherent
+
+        When the value of SAMPLE_BUFFERS is 0, gl_LastFragData[] is populated with
+        the value last written to one of the pixels to which the current fragment
+        is destined, chosen in an implementation-dependent manner.
+        When the value of SAMPLE_BUFFERS is 1 and the
+        current framebuffer color is accessed in the fragment shader, the fragment
+        shader will be invoked separately for each covered sample. Since this is
+        equivalent to per-sample shading, the fragment shading rate will be set to
+        {1,1} in this case.
+
+    Interactions with GL_ARM_shader_framebuffer_fetch and GL_ARM_shader_framebuffer_fetch_depth_stencil
+
+        If FETCH_PER_SAMPLE_ARM is enabled, the fragment shading rate is set to {1,1}.
+
+        Otherwise, the values of gl_LastFragColorARM, gl_LastFragDepthARM and
+        gl_LastFragStencilARM, is the color, depth, or stencil value, respectively,
+        is an implementation-dependent combination of the values of the pixels to which
+        the current fragment is destined.
+        If the current render target is multisampled, the values are an
+        implementation-dependent combination of the samples covered by the fragment.
+
+    Issues
+
+        (1) Do we need individual 'feature bits' for the draw call, primitive, and
+            attachment shading rates?
+
+        RESOLVED: Yes.
+
+        This extension exposes different extension strings for these features:
+         * GL_EXT_fragment_shading_rate is the baseline, and requires per draw call shading rates
+         * GL_EXT_fragment_shading_rate_attachment adds support for shading rate attachments
+         * GL_EXT_fragment_shading_rate_primitive adds support for per primitive shading rates
+
+        (2) What optional parameters and options should we expose?
+
+        RESOLVED: For reference, the Vulkan VK_KHR_fragment_shading_rate extension has the
+        following properties:
+
+        typedef struct VkPhysicalDeviceFragmentShadingRatePropertiesKHR {
+            VkStructureType          sType;
+            void*                    pNext;
+            VkExtent2D               minFragmentShadingRateAttachmentTexelSize;
+            VkExtent2D               maxFragmentShadingRateAttachmentTexelSize;
+            uint32_t                 maxFragmentShadingRateAttachmentTexelSizeAspectRatio;
+            VkBool32                 primitiveFragmentShadingRateWithMultipleViewports;
+            VkBool32                 layeredShadingRateAttachments;
+            VkBool32                 fragmentShadingRateNonTrivialCombinerOps;
+            VkExtent2D               maxFragmentSize;
+            uint32_t                 maxFragmentSizeAspectRatio;
+            uint32_t                 maxFragmentShadingRateCoverageSamples;
+            VkSampleCountFlagBits    maxFragmentShadingRateRasterizationSamples;
+            VkBool32                 fragmentShadingRateWithShaderDepthStencilWrites;
+            VkBool32                 fragmentShadingRateWithSampleMask;
+            VkBool32                 fragmentShadingRateWithShaderSampleMask;
+            VkBool32                 fragmentShadingRateWithConservativeRasterization;
+            VkBool32                 fragmentShadingRateWithFragmentShaderInterlock;
+            VkBool32                 fragmentShadingRateWithCustomSampleLocations;
+            VkBool32                 fragmentShadingRateStrictMultiplyCombiner;
+        } VkPhysicalDeviceFragmentShadingRatePropertiesKHR;
+
+       The mapping to this extension is as follows:
+
+            minFragmentShadingRateAttachmentTexelSize              => MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT
+                                                                      MIN_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT
+            maxFragmentShadingRateAttachmentTexelSize              => MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_WIDTH_EXT
+                                                                      MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_HEIGHT_EXT
+            maxFragmentShadingRateAttachmentTexelSizeAspectRatio   => MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_TEXEL_ASPECT_RATIO_EXT
+            primitiveFragmentShadingRateWithMultipleViewports      => - (not supported; would be an interaction with GL_OES_viewport_array)
+            layeredShadingRateAttachments                          => MAX_FRAGMENT_SHADING_RATE_ATTACHMENT_LAYERS_EXT
+            fragmentShadingRateNonTrivialCombinerOps               => FRAGMENT_SHADING_RATE_NON_TRIVIAL_COMBINERS_SUPPORTED_EXT
+            maxFragmentSize                                        => - (not exposed as a limit; min requirements are stated in description of GetFragmentShadingRatesEXT)
+            maxFragmentSizeAspectRatio                             => - (not exposed as a limit; min requirements are stated in description of GetFragmentShadingRatesEXT)
+            maxFragmentShadingRateCoverageSamples                  => - (not exposed as a limit; min requirements are stated in description of GetFragmentShadingRatesEXT)
+            maxFragmentShadingRateRasterizationSamples             => - (not exposed as a limit; min requirements are stated in description of GetFragmentShadingRatesEXT)
+            fragmentShadingRateWithShaderDepthStencilWrites        => FRAGMENT_SHADING_RATE_WITH_SHADER_DEPTH_STENCIL_WRITES_SUPPORTED_EXT
+            fragmentShadingRateWithSampleMask                      => FRAGMENT_SHADING_RATE_WITH_SAMPLE_MASK_SUPPORTED_EXT
+            fragmentShadingRateWithShaderSampleMask                => FRAGMENT_SHADING_RATE_WITH_SAMPLE_MASK_SUPPORTED_EXT
+            fragmentShadingRateWithConservativeRasterization       => - (not supported; would be an interaction with GL_NV_conservative_raster and GL_INTEL_conservative_rasterization)
+            fragmentShadingRateWithFragmentShaderInterlock         => - (not supported; would be an interaction with GL_NV_fragment_shader_interlock)
+            fragmentShadingRateWithCustomSampleLocations           => - (not supported; would be an interaction with GL_NV_sample_locations)
+            fragmentShadingRateStrictMultiplyCombiner              => - (implicitly required)
+
+      (3) Should we add enumerants for 1x4 and 4x1 shading rates?
+
+        RESOLVED: Yes, they are all included, but support is optional.
+
+      (4) Should we have an equivalent to PRESERVE_SHADING_RATE_ASPECT_RATIO_QCOM
+          from QCOM_shading_rate?
+
+        RESOLVED: No. This extension follows the conventions of the
+        VK_KHR_fragment_shading_rate extension, where the aspect ratios are
+        constrained in a slightly different way than in QCOM_shading_rate.
+
+      (5) Should the GLSL dependency be on GL_EXT_fragment_invocation_density or
+          GLSL_EXT_fragment_shading_rate?
+
+        RESOLVED: Primarily GL_EXT_fragment_shading_rate, but
+        GL_EXT_fragment_invocation_density is also sufficient unless
+        GL_EXT_fragment_shading_rate_primitive is used.
+
+      (6) What is the interaction with QCOM_framebuffer_foveated and QCOM_texture_foveated?
+
+        RESOLVED: See Interactions.
+
+      (7) What fragment shading rates should be required?
+
+        RESOLVED: The current draft matches the minimum requirements in other APIs
+        (assuming 2xMSAA is not supported).
+
+     (8) What are the interactions with GL_EXT_fragment_invocation_density?
+
+        REESOLVED: If a shader declares that extension (and the implementation
+        supports it), then the built-in variables defined by the extension
+        will be filled with values representing the effective fragment shading
+        rate.
+
+     (9) How do we handle gl_FragCoord in the cases where the shader does not
+         enable GL_EXT_fragment_shading_rate?
+
+        RESOLVED: We fall back to 1x1 shading rate.
+
+        The implementation may need to calculate gl_FragCoord differently depending
+        on the shading rate. But the shading rate is not known at shader
+        compile-time. The implementation could add instructions to the shader
+        to handle this, but that could affect performance in the general case
+        - even when no shading rate is specified.
+
+        A potential solution is to fallback to a 1x1 shading rate if the shader
+        accesses gl_FragCoord unless GL_EXT_fragment_shading_rate is enabled.
+        Enabling the extension acts as a hint that the shading rate will be
+        specified at run-time.
+
+    (10) How does this compare to GL_NV_shading_rate_image and
+         GL_NV_primitive_shading_rate?
+
+        RESOLVED: GL_NV_shading_rate_image and GL_NV_primitive_shading_rate
+        offer similar functionality as this extension, but exposes it in a
+        slightly different way.
+
+        Differences include:
+         - This extension does not include the concept of a shader rate image
+           palette. In the case where no shading image is bound,
+           GL_NV_shading_rate_image uses the palette to provide a per draw-call
+           rate. This extension sets the per-draw call rate separately.
+        - GL_NV_shading_rate_image does not include rate combiners.
+        - GL_NV_shading_rate_image does not allow the shading rates to be
+          changed for the default framebuffer.
+        - This extension binds the shading rate as a framebuffer attachment,
+          GL_NV_shading_rate_image binds it directly to the state vector.
+
+    (11) Should we include any functionality or restrictions from
+         GL_NV_shading_rate_image?
+
+       RESOLVED:
+
+       Interactions with ARB_fragment_shader_interlock are not included
+       No equivalent of ShadingRateImageBarrierNV is included
+       No equivalent of ShadingRateSampleOrderNV and ShadingRateSampleOrderCustomNV
+       is included.
+       Restrictions on using fragment shading rate with the default framebuffer
+       are included - by the DEFAULT_FRAMEBUFFER_SUPPORTED_EXT state.
+
+    (12) Can we reuse the shading rate enumeration values from
+         GL_QCOM_shading_rate?
+
+       RESOLVED: Yes, since the semantics are identical.
+
+
+    Revision History
+
+        Rev.    Date     Author    Changes
+        ----  --------   --------  ----------------------------------------------
+         1    2022-05-30 jhf       Initial EXT draft
+         2    2022-07-07 jhf       Fixed typos in the spec text

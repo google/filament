@@ -1,0 +1,634 @@
+Name
+
+    ARB_timer_query
+
+Name Strings
+
+    GL_ARB_timer_query
+
+Contact
+
+    Piers Daniell, NVIDIA Corporation (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Axel Mamode, Sony
+    Brian Paul, Tungsten Graphics
+    Bruce Merry, ARM
+    James Jones, NVIDIA Corporation
+    Pat Brown, NVIDIA
+    Remi Arnaud, Sony
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Last Modified Date: August 9, 2014
+    Revision: 13
+
+Number
+
+    ARB Extension #85
+
+Dependencies
+
+    This extension is written against the OpenGL 3.2 specification.
+
+Overview
+
+    Applications can benefit from accurate timing information in a number of
+    different ways.  During application development, timing information can
+    help identify application or driver bottlenecks.  At run time,
+    applications can use timing information to dynamically adjust the amount
+    of detail in a scene to achieve constant frame rates.  OpenGL
+    implementations have historically provided little to no useful timing
+    information.  Applications can get some idea of timing by reading timers
+    on the CPU, but these timers are not synchronized with the graphics
+    rendering pipeline.  Reading a CPU timer does not guarantee the completion
+    of a potentially large amount of graphics work accumulated before the
+    timer is read, and will thus produce wildly inaccurate results.
+    glFinish() can be used to determine when previous rendering commands have
+    been completed, but will idle the graphics pipeline and adversely affect
+    application performance.
+
+    This extension provides a query mechanism that can be used to determine
+    the amount of time it takes to fully complete a set of GL commands, and
+    without stalling the rendering pipeline.  It uses the query object
+    mechanisms first introduced in the occlusion query extension, which allow
+    time intervals to be polled asynchronously by the application.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+     void QueryCounter(uint id, enum target);
+
+     void GetQueryObjecti64v(uint id, enum pname, int64 *params);
+     void GetQueryObjectui64v(uint id, enum pname, uint64 *params);
+
+New Tokens
+
+    Accepted by the <target> parameter of BeginQuery, EndQuery, and
+    GetQueryiv:
+
+        TIME_ELAPSED                                   0x88BF
+
+    Accepted by the <target> parameter of GetQueryiv and QueryCounter.
+    Accepted by the <value> parameter of GetBooleanv, GetIntegerv,
+    GetInteger64v, GetFloatv, and GetDoublev:
+
+        TIMESTAMP                                      0x8E28
+
+Additions to Chapter 2 of the OpenGL 3.2 (Core Profile) Specification
+(OpenGL Operation)
+
+    (Modify table 2.1, Correspondence of command suffix letters to GL argument
+     types, p. 14) Add one new type and suffix:
+
+    Letter Corresponding GL Type
+    ------ ---------------------
+    ui64   uint64
+
+    (Modify Section 2.14, Asynchronous Queries, p. 89)
+
+    Asynchronous queries provide a mechanism to return information about the
+    processing of a sequence of GL commands. There are three query types
+    supported by the GL. Transform feedback queries (see section 2.16) return
+    information on the number of vertices and primitives processed by the GL
+    and written to one or more buffer objects. Occlusion queries (see section
+    4.1.6) count the number of fragments or samples that pass the depth test.
+    Timer queries (section 5.4) record the amount of time needed to fully
+    process these commands or the current time of the GL.
+
+Additions to Chapter 3 of the OpenGL 3.2 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 3.2 Specification (Per-Fragment
+Operations and the Framebuffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 3.2 Specification (Special Functions)
+
+    (Add new Section 5.4, Timer Queries, p. 246)
+
+    Timer queries use query objects to track the amount of time needed to
+    fully complete a set of GL commands, or to determine the current time
+    of the GL.
+
+    When BeginQuery and EndQuery are called with a <target> of
+    TIME_ELAPSED, the GL prepares to start and stop the timer used for
+    timer queries.  The timer is started or stopped when the effects from all
+    previous commands on the GL client and server state and the framebuffer
+    have been fully realized.  The BeginQuery and EndQuery commands may return
+    before the timer is actually started or stopped.  When the timer query
+    timer is finally stopped, the elapsed time (in nanoseconds) is written to
+    the corresponding query object as the query result value, and the query
+    result for that object is marked as available.
+
+    If the elapsed time overflows the number of bits, <n>, available to hold
+    elapsed time, its value becomes undefined.  It is recommended, but not
+    required, that implementations handle this overflow case by saturating at
+    2^n - 1.
+
+    A timer query object is created with the command
+
+         void QueryCounter(uint id, enum target);
+
+    <target> must be TIMESTAMP. If <id> is an unused query object name, the
+    name is marked as used and associated with a new query object of type
+    TIMESTAMP. Otherwise <id> must be the name of an existing query object
+    of that type.
+
+    When QueryCounter is called, the GL records the current time into
+    the corresponding query object. The time is recorded after all previous
+    commands on the GL client and server state and the framebuffer have been
+    fully realized. When the time is recorded, the query result for that
+    object is marked available. QueryCounter timer queries can be used
+    within a BeginQuery / EndQuery block where the <target> is TIME_ELAPSED
+    and it does not affect the result of that query object.
+
+** core profile only
+    QueryCounter fails and an INVALID\_OPERATION error is generated if <id>
+    is not a name returned from a previous call to GenQueries, or if such a
+    name has since been deleted with DeleteQueries.
+** end core profile only
+
+    If <id> is already in use within a BeginQuery / EndQuery block, or if
+    <id> is the name of an existing query object whose type does not match
+    <target>, an INVALID_OPERATION error is generated.
+
+    The current time of the GL may be queried by calling GetIntegerv or
+    GetInteger64v with the symbolic constant TIMESTAMP. This will return the
+    GL time after all previous commands have reached the GL server but have
+    not yet necessarily executed. By using a combination of this synchronous
+    get command and the asynchronous timestamp query object target,
+    applications can measure the latency between when commands reach the GL
+    server and when they are realized in the framebuffer.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and State
+Requests)
+
+    (Modify Section 6.1.6, Asynchronous Queries, p. 255)
+
+    Section 6.1.6, Asynchronous Queries
+
+    The command
+
+      boolean IsQuery(uint id);
+
+    returns TRUE if <id> is the name of a query object. If <id> is zero, or if
+    <id> is a non-zero value that is not the name of a query object, IsQuery
+    returns FALSE.
+
+    Information about a query target can be queried with the command
+
+      void GetQueryiv(enum target, enum pname, int *params);
+
+    <target> identifies the query target and can be SAMPLES_PASSED for
+    occlusion queries, PRIMITIVES_GENERATED and
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN for primitive queries, or
+    TIME_ELAPSED or TIMESTAMP for timer queries.
+
+    If <pname> is CURRENT_QUERY, the name of the currently active query for
+    <target>, or zero if no query is active, will be placed in <params>.
+
+    If <pname> is QUERY_COUNTER_BITS, the implementation-dependent number of
+    bits used to hold the query result for <target> will be placed in
+    <params>.  The number of query counter bits may be zero, in which case
+    the counter contains no useful information.
+
+    For primitive queries (PRIMITIVES_GENERATED and
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN) if the number of bits is non-zero,
+    the minimum number of bits allowed is 32.
+
+    For occlusion queries (SAMPLES_PASSED), if the number of bits is
+    non-zero, the minimum number of bits allowed is a function of the
+    implementation's maximum viewport dimensions (MAX_VIEWPORT_DIMS). The
+    counter must be able to represent at least two overdraws for every pixel
+    in the viewport. The formula to compute the allowable minimum value
+    (where <n> is the minimum number of bits) is:
+
+        n = min(32, ceil(log_2(maxViewportWidth * maxViewportHeight * 2))).
+
+    For timer queries (TIME_ELAPSED and TIMESTAMP), if the number
+    of bits is non-zero, the minimum number of bits allowed is 30 which
+    will allow at least 1 second of timing.
+
+    The state of a query object can be queried with the commands
+
+        void GetQueryObjectiv(uint id, enum pname, int *params);
+        void GetQueryObjectuiv(uint id, enum pname, uint *params);
+        void GetQueryObjecti64v(uint id, enum pname, int64 *params);
+        void GetQueryObjectui64v(uint id, enum pname, uint64 *params);
+
+    If <id> is not the name of a query object, or if the query object named
+    by <id> is currently active, then an INVALID_OPERATION error is
+    generated.
+
+    If <pname> is QUERY_RESULT, then the query object's result
+    value is returned as a single integer in <params>. If the value is so
+    large in magnitude that it cannot be represented with the requested type,
+    then the nearest value representable using the requested type is
+    returned. If the number of query counter bits for target is zero, then
+    the result is returned as a single integer with the value zero.
+
+    There may be an indeterminate delay before the above query returns. If
+    <pname> is QUERY_RESULT_AVAILABLE, FALSE is returned if such a delay
+    would be required; otherwise TRUE is returned. It must always be true
+    that if any query object returns a result available of TRUE, all queries
+    of the same type issued prior to that query must also return TRUE.
+
+    Querying the state for any given query object forces that occlusion
+    query to complete within a finite amount of time.
+
+    If multiple queries are issued using the same object name prior to
+    calling GetQueryObject[u]i[64]v, the result and availability information
+    returned will always be from the last query issued. The results from any
+    queries before the last one will be lost if they are not retrieved before
+    starting a new query on the same <target> and <id>.
+
+Interactions with NV_present_video and NV_video_capture
+
+    The GL timer recorded by this extension is the same timer as that used
+    by the NV_present_video and NV_video_capture extensions. This allows
+    the timer to be used with any of these extensions interchangeably.
+
+Interactions with the Compatibility Profile
+
+    In the compatibility profile, query objects support application-provided
+    names, and the language requiring an error is <id> is not a name
+    returned from GenQueries is removed. This is noted in the body text
+    above.
+
+Errors
+
+    The error INVALID_ENUM is generated if BeginQuery or EndQuery is called
+    where <target> is not SAMPLES_PASSED,
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN or TIME_ELAPSED.
+
+    The error INVALID_ENUM is generated if GetQueryiv is called where
+    <target> is not SAMPLES_PASSED, TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN,
+    TIME_ELAPSED or TIMESTAMP.
+
+    The error INVALID_ENUM is generated if QueryCounter is called where
+    <target> is not TIMESTAMP.
+
+    The error INVALID_OPERATION is generated if QueryCounter is called
+    on a query object that is already in use inside a BeginQuery/EndQuery.
+
+    The error INVALID_OPERATION is generated if QueryCounter is called on
+    a query object whose type is not TIMESTAMP.
+
+    (in the core profile only)
+    The error INVALID_OPERATION is generated if QueryCounter is called
+    where <id> is not a name returned from a previous call to GenQueries,
+    or if such a name has since been deleted with DeleteQueries.
+
+    The error INVALID_OPERATION is generated if GetQueryObjecti64v or
+    GetQueryObjectui64v is called where <id> is not the name of a query
+    object.
+
+    The error INVALID_OPERATION is generated if GetQueryObjecti64v or
+    GetQueryObjectui64v is called where <id> is the name of a currently
+    active query object.
+
+    The error INVALID_ENUM is generated if GetQueryObjecti64v or
+    GetQueryObjectui64v is called where <pname> is not QUERY_RESULT or
+    QUERY_RESULT_AVAILABLE.
+
+New State
+
+    None.
+
+Examples
+
+    (1) Here is some rough sample code that demonstrates the intended usage
+        of this extension.
+
+        GLuint queries[N];
+        GLint available = 0;
+        // timer queries can contain more than 32 bits of data, so always
+        // query them using the 64 bit types to avoid overflow
+        GLuint64 timeElapsed = 0;
+
+        // Create a query object.
+        glGenQueries(N, queries);
+
+        // Start query 1
+        glBeginQuery(GL_TIME_ELAPSED, queries[0]);
+
+        // Draw object 1
+        ....
+
+        // End query 1
+        glEndQuery(GL_TIME_ELAPSED);
+
+        ...
+
+        // Start query N
+        glBeginQuery(GL_TIME_ELAPSED, queries[N-1]);
+
+        // Draw object N
+        ....
+
+        // End query N
+        glEndQuery(GL_TIME_ELAPSED);
+
+        // Wait for all results to become available
+        while (!available) {
+            glGetQueryObjectiv(queries[N-1], GL_QUERY_RESULT_AVAILABLE, &available);
+        }
+
+        for (i = 0; i < N; i++) {
+            // See how much time the rendering of object i took in nanoseconds.
+            glGetQueryObjectui64v(queries[i], GL_QUERY_RESULT, &timeElapsed);
+
+            // Do something useful with the time.  Note that care should be
+            // taken to use all significant bits of the result, not just the
+            // least significant 32 bits.
+            AdjustObjectLODBasedOnDrawTime(i, timeElapsed);
+        }
+
+        This example is sub-optimal in that it stalls at the end of every
+        frame to wait for query results.  Ideally, the collection of results
+        would be delayed one frame to minimize the amount of time spent
+        waiting for the GPU to finish rendering.
+
+    (2) This example is basically the same as the example above but uses
+        QueryCounter instead.
+
+        GLuint queries[N+1];
+        GLint available = 0;
+        // timer queries can contain more than 32 bits of data, so always
+        // query them using the 64 bit types to avoid overflow
+        GLuint64 timeStart, timeEnd, timeElapsed = 0;
+
+        // Create a query object.
+        glGenQueries(N+1, queries);
+
+        // Query current timestamp 1
+        glQueryCounter(queries[0], GL_TIMESTAMP);
+
+        // Draw object 1
+        ....
+
+        // Query current timestamp N
+        glQueryCounter(queries[N-1], GL_TIMESTAMP);
+
+        // Draw object N
+        ....
+
+        // Query current timestamp N+1
+        glQueryCounter(queries[N], GL_TIMESTAMP);
+
+        // Wait for all results to become available
+        while (!available) {
+            glGetQueryObjectiv(queries[N], GL_QUERY_RESULT_AVAILABLE, &available);
+        }
+
+        for (i = 0; i < N; i++) {
+            // See how much time the rendering of object i took in nanoseconds.
+            glGetQueryObjectui64v(queries[i], GL_QUERY_RESULT, &timeStart);
+            glGetQueryObjectui64v(queries[i+1], GL_QUERY_RESULT, &timeEnd);
+            timeElapsed = timeEnd - timeStart;
+
+            // Do something useful with the time.  Note that care should be
+            // taken to use all significant bits of the result, not just the
+            // least significant 32 bits.
+            AdjustObjectLODBasedOnDrawTime(i, timeElapsed);
+        }
+
+    (3) This example demonstrates how to measure the latency between GL
+        commands reaching the server and being realized in the framebuffer.
+
+        /* Submit a frame of rendering commands */
+        while (!doneRendering) {
+          ...
+          glDrawElements(...);
+        }
+
+        /*
+         * Measure rendering latency:
+         *
+         * Some commands may have already been submitted to hardware,
+         * and some of those may have already completed.  The goal is
+         * to measure the time it takes for the remaining commands to
+         * complete, thereby measuring how far behind the app the GPU
+         * is lagging, but without synchronizing the GPU with the CPU.
+         */
+
+        /* Queue a query to find out when the frame finishes on the GL */
+        glQueryCounter(endFrameQuery, GL_TIMESTAMP);
+
+        /* Get the current GL time without stalling the GL */
+        glGet(GL_TIMESTAMP, &flushTime);
+
+        /* Finish the frame, submitting outstanding commands to the GL */
+        SwapBuffers();
+
+        /* Render another frame */
+
+        /*
+         * Later, compare the query result of <endFrameQuery>
+         * and <flushTime> to measure the latency of the frame
+         */
+
+
+Issues from EXT_timer_query
+
+    (1) What time interval is being measured?
+
+    RESOLVED:  The timer starts when all commands prior to BeginQuery() have
+    been fully executed.  At that point, everything that should be drawn by
+    those commands has been written to the framebuffer.  The timer stops
+    when all commands prior to EndQuery() have been fully executed.
+
+    (2) What unit of time will time intervals be returned in?
+
+    RESOLVED:  Nanoseconds (10^-9 seconds).  This unit of measurement allows
+    for reasonably accurate timing of even small blocks of rendering
+    commands.  The granularity of the timer is implementation-dependent.  A
+    32-bit query counter can express intervals of up to approximately 4
+    seconds.
+
+    (3) What should be the minimum number of counter bits for timer queries?
+
+    RESOLVED:  30 bits, which will allow timing sections that take up to 1
+    second to render.
+
+    (4) How are counter results of more than 32 bits returned?
+
+    RESOLVED:  Via two new datatypes, int64EXT and uint64EXT, and their
+    corresponding GetQueryObject entry points.  These types hold integer
+    values and have a minimum bit width of 64.
+
+    UPDATE: This resolution was relevant for EXT_timer_query and OpenGL 2.0.
+    OpenGL 3.2 now has int64 and uint64 datatypes as part of the core spec.
+
+    (5) Should the extension measure total time elapsed between the full
+        completion of the BeginQuery and EndQuery commands, or just time
+        spent in the graphics library?
+
+    RESOLVED:  This extension will measure the total time elapsed between
+    the full completion of these commands.  Future extensions may implement
+    a query to determine time elapsed at different stages of the graphics
+    pipeline.
+
+    (6) This extension introduces a second query type supported by
+        BeginQuery/EndQuery.  Can multiple query types be active
+        simultaneously?
+
+    RESOLVED:  Yes; an application may perform an occlusion query and a
+    timer query simultaneously.  An application can not perform multiple
+    occlusion queries or multiple timer queries simultaneously.  An
+    application also can not use the same query object for an occlusion
+    query and a timer query simultaneously.
+
+    (7) Do query objects have a query type permanently associated with them?
+
+    RESOLVED:  No.  A single query object can be used to perform different
+    types of queries, but not at the same time.
+
+    Having a fixed type for each query object simplifies some aspects of the
+    implementation -- not having to deal with queries with different result
+    sizes, for example.  It would also mean that BeginQuery() with a query
+    object of the "wrong" type would result in an INVALID_OPERATION error.
+
+    UPDATE: This resolution was relevant for EXT_timer_query and OpenGL 2.0.
+    Since EXT_transform_feedback has since been incorporated into the core,
+    the resolution is that BeginQuery will generate error INVALID_OPERATION
+    if <id> represents a query object of a different type.
+
+    (8) How predictable/repeatable are the results returned by the timer
+        query?
+
+    RESOLVED:  In general, the amount of time needed to render the same
+    primitives should be fairly constant.  But there may be many other
+    system issues (e.g., context switching on the CPU and GPU, virtual
+    memory page faults, memory cache behavior on the CPU and GPU) that can
+    cause times to vary wildly.
+
+    Note that modern GPUs are generally highly pipelined, and may be
+    processing different primitives in different pipeline stages
+    simultaneously.  In this extension, the timers start and stop when the
+    BeginQuery/EndQuery commands reach the bottom of the rendering pipeline.
+    What that means is that by the time the timer starts, the GL driver on
+    the CPU may have started work on GL commands issued after BeginQuery,
+    and the higher pipeline stages (e.g., vertex transformation) may have
+    started as well.
+
+   (9) What should the new 64 bit integer type be called?
+
+    RESOLVED: The new types will be called GLint64EXT/GLuint64EXT  The new
+    command suffixes will be i64 and ui64.  These names clearly convey the
+    minimum size of the types.  These types are similar to the C99 standard
+    type int_least64_t, but we use names similar to the C99 optional type
+    int64_t for simplicity.
+
+    UPDATE: This resolution was relevant for EXT_timer_query and OpenGL 2.0.
+    OpenGL 3.2 now has int64 and uint64 datatypes as part of the core spec.
+    The i64 suffix already exists in OpenGL 3.2 and the ui64 suffix has been
+    added as part of this extension.
+
+Issues
+
+   (10) What about tile-based implementations? The effects of a command are
+        not complete until the frame is completely rendered. Timing recorded
+        before the frame is complete may not be what developers expect. Also
+        the amount of time needed to render the same primitives is not
+        consistent, which conflicts with issue (8) above. The time depends on
+        how early or late in the scene it is placed.
+
+    RESOLVED: The current language supports tile-based rendering okay as it
+    is written. Developers are warned that using timers on tile-based
+    implementation may not produce results they expect since rendering is not
+    done in a linear order. Timing results are calculated when the frame is
+    completed and may depend on how early or late in the scene it is placed.
+
+   (11) Can the GL implementation use different clocks to implement the
+        TIME_ELAPSED and TIMESTAMP queries?
+
+    RESOLVED: Yes, the implementation can use different internal clocks to
+    implement TIME_ELAPSED and TIMESTAMP. If different clocks are
+    used it is possible there is a slight discrepancy when comparing queries
+    made from TIME_ELAPSED and TIMESTAMP; they may have slight
+    differences when both are used to measure the same sequence. However, this
+    is unlikely to affect real applications since comparing the two queries is
+    not expected to be useful.
+
+   (12) Why do BeginQuery and QueryCounter have the same arguments in the
+        opposite order?
+
+    RESOLVED: Due to an unfortunate oversight, which cannot be fixed at
+    this point.
+
+
+Revision History
+
+    Rev.  Date          Author    Changes
+    ----  ------------  --------  -------------------------------------------
+    13    Aug 9, 2014   Jon Leech Fix typo in example 3 (bug 12552).
+
+    12    Jul 11, 2013  Jon Leech Change type of queries[] in sample code to
+                                  GLuint (public bug 432).
+
+    11    Apr 13, 2012  Jon Leech Clean up error language, add error for
+                                  query objects which are not of type
+                                  TIMESTAMP, and add issue 12 (Khronos
+                                  internal bug 7662)
+
+    10    June 3, 2011  dkoch     Add INVALID_OPERATION error when calling
+                                  QueryCounter with a non-generated <id> in
+                                  the core profile (Khronos internal bug 7662).
+
+     9    Dec 18, 2009  pdaniell  Remove ambiguous language about "interuptions
+                                  to the GL". Rename CURRENT_TIME to TIMESTAMP.
+
+     8    Dec 10, 2009  Jon Leech Improve description of QueryCounter command.
+
+     7    Dec 10, 2009  Jon Leech Replace non-ASCII punctuation.
+
+     6    Dec 07, 2009  pdaniell  Remove ARB suffix from new tokens for core.
+
+     5    Oct 29, 2009  pdaniell  TIMESTAMP_ARB renamed to CURRENT_TIME_ARB.
+                                  Issue (11) raised about using different
+                                  clocks to implement CURRENT_TIME and
+                                  TIME_ELAPSED queries. Add example (3) for
+                                  calculating the GL latency.
+
+     4    Oct 23, 2009  pdaniell  Add support for TIMESTAMP_ARB as a <value>
+                                  to Get* to allow synchronous time query.
+
+     3    Oct 15, 2009  pdaniell  Resolved Issue (10). Added Interactions
+                                  with NV_present_video and NV_video_capture
+                                  section.
+
+     2    Oct 15, 2009  pdaniell  Clarified some of the old EXT_timer_query
+                                  Issues wrt OpenGL 3.2. Added specification
+                                  for the TIMESTAMP_ARB time. Added new Issue
+                                  for tile-based implementations. Issue 3
+                                  resolution added to the spec.
+
+     1    Oct 13, 2009  pdaniell  Initial revision based on EXT_timer_query

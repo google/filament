@@ -1,0 +1,177 @@
+
+Name
+
+    HP_convolution_border_modes
+
+Name Strings
+
+    GL_HP_convolution_border_modes
+
+Version
+
+    $Date: 1997/06/12 01:51:36 $ $Revision: 1.3 $
+
+Number
+
+    67
+
+Dependencies
+
+    EXT_convolution is required
+
+Overview
+
+    This extension provides some additional border modes for the
+    EXT_convolution extension.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <param> parameter of ConvolutionParameteriEXT,
+    and ConvolutionParameterfEXT, and by the <params> parameter of
+    ConvolutionParameterivEXT and ConvolutionParameterfvEXT, when the
+    <pname> parameter is CONVOLUTION_BORDER_MODE_EXT:
+
+	IGNORE_BORDER_HP
+	CONSTANT_BORDER_HP
+	REPLICATE_BORDER_HP
+
+    Accepted by the <pname> parameter of ConvolutionParameterivEXT,
+    ConvolutionParameterfvEXT, GetConvolutionParameterivEXT, and
+    GetConvolutionParameterfvEXT:
+
+	CONVOLUTION_BORDER_COLOR_HP
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The description of the convolution border mode is replaced with
+    the following:
+
+    The convolution border mode for a specific convolution filter is
+    specified using ConvolutionParameteriEXT with the <target>
+    parameter set to the name of the filter, the <pname> parameter
+    set to CONVOLUTION_BORDER_MODE_EXT, and <param> set to one of
+    REDUCE_EXT, IGNORE_BORDER_HP, CONSTANT_BORDER_HP,
+    or REPLICATE_BORDER_HP.
+
+    The width and height of source images convolved with border mode
+    REDUCE_EXT are reduced by Wf-1 and Hf-1, respectively.  If this
+    reduction would generate a resulting image with zero or negative
+    width and/or height, the output is simply null, with no error
+    generated.  The coordinates of the image that results from a
+    convolution with border mode REDUCE_EXT are zero through Ws-Wf
+    in width, and zero through Hs-Hf in height.  In cases where
+    errors can result from the specification of invalid image
+    dimensions, it is these resulting dimensions that are tested,
+    not the dimensions of the source image.  (A specific example is
+    TexImage1D and TexImage2D, which specify constraints for image
+    dimensions.  Even if TexImage1D or TexImage2D is called with a
+    null pixel pointer, the dimensions of the resulting texture image
+    are those that would result from the convolution of the specified
+    image.)  
+
+    For the remaining border modes, we define Cw = floor(Wf / 2)
+    and Ch = floor(Hf / 2).  The coordinates (Cw, Ch) define the
+    center of the convolution filter.
+
+    If the convolution border mode is IGNORE_BORDER_HP, the output
+    image has the same dimensions as the source image.  The convolution
+    filter is moved around the source image so that its center passes
+    over every pixel in the source image.  At each location, the sum of
+    products is computed and the result is written in the destination
+    image at the location that corresponds to the pixel location where
+    the convolution filter is centered.  However, the sum of products
+    is not computed for any pixel where the convolution filter extends
+    beyond one of the edges of the source image.  Instead, for these
+    locations, the pixel value from the source image is copied to
+    the destination image.
+
+    If the convolution border mode is CONSTANT_BORDER_HP then
+    convolution does not change the size of the source image.  The
+    result of the convolution is the same as if the source image were
+    surrounded by pixels with the same color as the current convolution
+    border color.  Whenever the convolution filter extends beyond one
+    of the edges of the source image, the constant-color border pixels
+    are used as input to the filter.  The current convolution border
+    color is set by calling ConvolutionParameterivEXT or
+    ConvolutionParameterfvEXT with <pname> set to
+    CONVOLUTION_BORDER_COLOR_HP and <params> containing
+    four values that comprise the RGBA color to be used as the image
+    border.  Integer color components are interpreted linearly such that
+    the most positive integer maps to 1.0, and the most negative integer
+    maps to -1.0.  Floating point color components are clamped to the
+    range [0,1] when they are specified.
+
+    The convolution border mode REPLICATE_BORDER_HP also produces an
+    output image with the same dimensions as the source image.  The
+    behavior of this mode is identical to that of the IGNORE_BORDER_HP
+    mode except for the treatment of pixel locations where the
+    convolution filter extends beyond the edge of the source image.
+    For these locations, it is as if the outermost one-pixel border
+    of the source image was replicated.  Conceptually, each pixel
+    in the leftmost one-pixel column of the source image is replicated
+    Cw times to provide additional image data along the left edge,
+    each pixel in the rightmost one-pixel column is replicated Cw times
+    to provide additional image data along the right edge, and each
+    pixel value in the top and bottom one-pixel rows is replicated to
+    create Ch rows of image data along the top and bottom edges.
+    The pixel value at each corner is also replicated in order to
+    provide data for the convolution operation at each corner of
+    the source image.
+    
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Dependencies on EXT_convolution
+
+    EXT_convolution is required.  This extension adds capability to
+    the convolution operations defined in that extension.
+
+Errors
+
+    INVALID_ENUM is generated if ConvolutionParameterivEXT or
+    ConvolutionParameterfvEXT parameter <pname> is not
+    CONVOLUTION_FILTER_SCALE_EXT, CONVOLUTION_FILTER_BIAS_EXT,
+    CONVOLUTION_BORDER_MODE_EXT, or CONVOLUTION_BORDER_COLOR_HP.
+
+    INVALID_ENUM is generated if ConvolutionParameteriEXT,
+    ConvolutionParameterfEXT, ConvolutionParameterivEXT, or
+    ConvolutionParameterfvEXT parameter <pname> is
+    CONVOLUTION_BORDER_MODE_EXT and parameter <params> is
+    not one of REDUCE_EXT, IGNORE_BORDER_HP, CONSTANT_BORDER_HP,
+    or REPLICATE_BORDER_HP.
+
+    INVALID_ENUM is generated if GetConvolutionParameterivEXT or
+    GetConvolutionParameterfvEXT parameter <pname> is not
+    CONVOLUTION_FILTER_SCALE_EXT, CONVOLUTION_FILTER_BIAS_EXT,
+    CONVOLUTION_BORDER_MODE_EXT, CONVOLUTION_FORMAT_EXT,
+    CONVOLUTION_WIDTH_EXT, CONVOLUTION_HEIGHT_EXT,
+    MAX_CONVOLUTION_WIDTH_EXT, MAX_CONVOLUTION_HEIGHT_EXT,
+    or CONVOLUTION_BORDER_COLOR_HP.
+
+New State
+									 Initial
+    Get Value				Get Command		Type	  Value 	Attrib
+    ---------				-----------		----	 -------	------
+    CONVOLUTION_BORDER_COLOR_HP	   GetConvolutionParameterfvHP	 C	(0,0,0,0)	pixel
+
+New Implementation Dependent State
+
+    None

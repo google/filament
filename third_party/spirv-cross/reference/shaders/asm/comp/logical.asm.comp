@@ -24,8 +24,8 @@ bool and(bool a, bool b)
 
 bvec2 and(bvec2 a, bvec2 b)
 {
-    bvec2 _98 = bvec2(a.x && b.x, a.y && b.y);
-    return not(bvec2(_98.x || b.x, _98.y || b.y));
+    bvec2 _48 = bvec2(a.x && b.x, a.y && b.y);
+    return not(bvec2(_48.x || b.x, _48.y || b.y));
 }
 
 bvec3 and(bvec3 a, bvec3 b)

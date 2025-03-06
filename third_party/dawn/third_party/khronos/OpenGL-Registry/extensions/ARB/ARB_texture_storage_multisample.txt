@@ -1,0 +1,314 @@
+Name
+
+    ARB_texture_storage_multisample
+
+Name Strings
+
+    GL_ARB_texture_storage_multisample
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2012-2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date: April 21, 2015
+    Version: 9
+
+Number
+
+    ARB Extension #141
+
+Dependencies
+
+    OpenGL 4.2 or ARB_texture_storage is required.
+
+    EXT_direct_state_access affects the definition of this extension.
+
+    This extension is written against the OpenGL 4.2 (Core) Specification.
+
+Overview
+
+    The ARB_texture_storage extension and OpenGL 4.2 introduced the concept
+    of immutable texture objects. With these objects, once their data store
+    has been sized and allocated, it could not be resized for the lifetime
+    of the objects (although its content could be updated). OpenGL
+    implementations may be able to take advantage of the knowledge that the
+    underlying data store of certain objects cannot be deleted or otherwise
+    reallocated without destruction of the whole object (normally, a much
+    heavier weight and less frequent operation). Immutable storage
+    for all types of textures besides multisample and buffer textures was
+    introduced by ARB_texture_storage. For completeness, this extension
+    introduces immutable storage for multisampled textures.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+        void TexStorage2DMultisample(enum target,
+                                     sizei samples,
+                                     enum internalformat,
+                                     sizei width,
+                                     sizei height,
+                                     boolean fixedsamplelocations);
+
+        void TexStorage3DMultisample(enum target,
+                                     sizei samples,
+                                     enum internalformat,
+                                     sizei width,
+                                     sizei height,
+                                     sizei depth,
+                                     boolean fixedsamplelocations);
+
+        (the following two functions are provided if and only if
+         EXT_direct_state_access is supported)
+
+        void TextureStorage2DMultisampleEXT(uint texture,
+                                            enum target,
+                                            sizei samples,
+                                            enum internalformat,
+                                            sizei width,
+                                            sizei height,
+                                            boolean fixedsamplelocations);
+
+        void TextureStorage3DMultisampleEXT(uint texture,
+                                            enum target,
+                                            sizei samples,
+                                            enum internalformat,
+                                            sizei width,
+                                            sizei height,
+                                            sizei depth,
+                                            boolean fixedsamplelocations);
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 4.2 (Core Profile) Specification
+(OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Core Profile) Specification
+(Rasterization)
+
+    Modifications to Section 3.9.8, "Texture Parameters":
+
+    Add TEXTURE_2D_MULTISAMPLE and TEXTURE_2D_MULTISAMPLE_ARRAY to the
+    texture targets accepted by TexParameter*.
+
+    At the end of Section 3.9.8, modify the last sentence to be:
+
+    An INVALID_OPERATION error is generated if TEXTURE_BASE_LEVEL is set
+    to any value other than zero.
+
+    Add the following paragraph to the end of Section 3.9.8:
+
+    When <target> is TEXTURE_2D_MULTISAMPLE or
+    TEXTURE_2D_MULTISAMPLE_ARRAY, certain texture parameters may not be
+    specified. In this case, an INVALID_OPERATION error is generated if the
+    parameter is any sampler state value from table 6.18. An
+    INVALID_OPERATION error is generated if TEXTURE_BASE_LEVEL is set to any
+    value other than zero.
+
+    In Subsection 3.9.16, "Immutable-Format Texture Images", add the following,
+    after the discussion of TexStorage3D on p. 260:
+
+        void TexStorage2DMultisample(enum target,
+                                     sizei samples,
+                                     enum internalformat,
+                                     sizei width,
+                                     sizei height,
+                                     boolean fixedsamplelocations);
+
+    specifies a two-dimensional multisample texture (or proxy). <target> must
+    be TEXTURE_2D_MULTISAMPLE or PROXY_TEXTURE_2D_MULTISAMPLE. The
+    pseudo-code is equivalent to calling TexImage2DMultisample with the
+    equivalently named parameters set to the same values.
+
+        void TexStorage3DMultisample(enum target,
+                                     sizei samples,
+                                     enum internalformat,
+                                     sizei width,
+                                     sizei height,
+                                     sizei depth,
+                                     boolean fixedsamplelocations);
+
+    specifies a two-dimensional multisample array texture (or proxy). <target>
+    must be TEXTURE_2D_MULTISAMPLE_ARRAY or PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY.
+    The pseudo-code is equivalent to calling TexImage3DMultisample with the
+    equivalently named parameters set to the same values.
+
+    The functions
+
+        void TextureStorage2DMultisampleEXT(uint texture,
+                                            enum target,
+                                            sizei samples,
+                                            enum internalformat,
+                                            sizei width,
+                                            sizei height,
+                                            boolean fixedsamplelocations);
+
+    and
+
+        void TextureStorage3DMultisampleEXT(uint texture,
+                                            enum target,
+                                            sizei samples,
+                                            enum internalformat,
+                                            sizei width,
+                                            sizei height,
+                                            sizei depth,
+                                            boolean fixedsamplelocations);
+
+    behave similarly to TexStorage2DMultisample and TexStorage3DMultisample,
+    respectively, except that the texture whose storage to allocate is given
+    by the <texture> parameter rather than being retrieved from the binding of the
+    active texture unit specified by <target>. <name> must be a name previously
+    reserved by a call to GenTextures and not subsequently deleted. If
+    <texture> is not the name of an existing texture object, then one is
+    created with that name.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Core Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Core Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Core Profile) Specification
+(State and State Requests)
+
+    Modifications to Section 6.1.3, "Enumerated Queries"
+
+    Modify the paragraph describing the <target> parameter to of
+    GetTexParameter* as follows:
+
+    <target> may be one of TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_RECTANGLE, TEXTURE_CUBE_MAP,
+    TEXTURE_CUBE_MAP_ARRAY, TEXTURE_2D_MULTISAMPLE or
+    TEXTURE_2D_MULTISAMPLE_ARRAY, indicating the currently bound one-, two-,
+    three-dimensional, one- or two-dimensional array, rectangular, cube map,
+    cube map array, two-dimensional multisample, or two-dimensional
+    multisample array texture object, respectively.
+
+Errors
+
+    INVALID_OPERATION is generated by TexStorage2DMultisample and
+    TexStorage3DMultisample if <samples> is greater than the maximum number
+    of samples supported for the specified <target> and <internalformat>
+    combination.
+
+    INVALID_OPERATION is generated by TexStorage2DMultisample or
+    TexStorage3DMultisample if the value of TEXTURE_IMMUTABLE_FORMAT for the
+    texture currently bound to <target> on the active texture unit is TRUE.
+
+    INVALID_OPERATION is generated by TextureStorage2DMultisampleEXT and
+    TextureStorage3DMultisampleEXT if <target> does not match the target
+    of the texture object named by the <texture> parameter.
+
+    INVALID_VALUE is generated by TexStorage2DMultisample and
+    TexStorage3DMultisample if <width> or <height> is greater than the value
+    of MAX_TEXTURE_SIZE.
+
+    INVALID_VALUE is generated by TexStorage3DMultisample if <depth> is
+    greater than the value of MAX_ARRAY_TEXTURE_LAYERS.
+
+    INVALID_OPERATION is generated by TexParameter* if <target> is
+    TEXTURE_RECTANGLE, <pname> is TEXTURE_BASE_LEVEL, and <value> is not
+    zero.
+
+    INVALID_OPERATION is generated by TexParameter* if <target> is either
+    TEXTURE_2D_MULTISAMPLE or TEXTURE_2D_MULTISAMPLE_ARRAY, <pname> is
+    TEXTURE_BASE_LEVEL, and <value> is not zero.
+
+    INVALID_ENUM is generated by TexStorage2DMultisample if <target> is not
+    TEXTURE_2D_MULTISAMPLE or PROXY_TEXTURE_2D_MULTISAMPLE.
+
+    INVALID_ENUM is generated by TexStorage3DMultisample if <target> is not
+    TEXTURE_2D_MULTISAMPLE_ARRAY or PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY.
+
+    INVALID_OPERATION is generated by TexParameter* if <target> is either
+    TEXTURE_2D_MULTISAMPLE or TEXTURE_2D_MULTISAMPLE_ARRAY and <pname>
+    is sampler state value from table 6.18.
+
+New State
+
+    None.
+
+Conformance Tests
+
+    TBD
+
+Dependencies on EXT_direct_state_access
+
+    If the EXT_direct_state_access extension is not supported, remove all
+    references to TextureStorage2DMultisampleEXT and TextureStorage3DMultisampleEXT.
+
+Issues
+
+    1) Should TexStorage3DMultisample generate INVALID_VALUE if the
+       <depth> parameter exceeds the allowed limits? Which limit to use?
+
+       DISCUSSION: We do generate errors if <width> or <height> are
+       greater than the value of MAX_TEXTURE_SIZE but it is unclear
+       whether MAX_3D_TEXTURE_SIZE or MAX_ARRAY_TEXTURE_LAYERS should
+       be used. Currently, only MAX_ARRAY_TEXTURE_LAYERS would make
+       sense, but we can also specify the error checking behavior to
+       be based on the <target> parameter.
+       On the other hand, TexImage3DMultisample does not generate
+       any errors based on the value of the <depth> parameter.
+
+       RESOLVED: Match the behavior of TexImage3DMultisample.
+
+Revision History
+
+    Rev.  Date        Author    Changes
+    ----  ----------  --------  ------------------------------------------------
+     9    04/21/2015  Jon Leech Change texture size limits for <depth> parameter
+                                of TexImage3DMultisample to the value of
+                                MAX_ARRAY_TEXTURE_LAYERS (Bug 11135).
+     8    02/28/2014  Jon Leech Change texture size limits for
+                                TexImage3DMultisample to the value of
+                                MAX_3D_TEXTURE_SIZE (Bugs 11134, 11135).
+     7    06/28/2012  pdaniell  Update the error conditions again based on
+                                our agreement in today's ARB meeting.
+     6    06/27/2012  Jon Leech Clean up new error conditions for 2D MS
+                                targets with TexParameter*.
+     5    06/21/2012  gsellers  Allow multisample targets to be used with
+                                TexParameter* and GetTexParameter*.
+     4    05/29/2012  Jon Leech Finish fixing typos with <fixedsamplelocations>.
+     3    05/14/2012  pbrown    Fix typos in <internalformat> parameter names;
+                                change the <internalformat> and
+                                <fixedsamplelocations> parameters to use lower
+                                case for consistency with existing APIs.
+     2    05/02/2012  drakos    Added EXT suffix to TextureStorage*Multisample
+                                where it was missing.
+                                Added issue #1.
+                                Removed error condition based on the value
+                                of <depth>.
+     1    04/19/2012  gsellers  Initial draft

@@ -383,9 +383,14 @@ void FMaterial::terminate(FEngine& engine) {
     auto const& materialInstanceResourceList = engine.getMaterialInstanceResourceList();
     auto pos = materialInstanceResourceList.find(this);
     if (UTILS_LIKELY(pos != materialInstanceResourceList.cend())) {
-        FILAMENT_CHECK_PRECONDITION(pos->second.empty())
-                << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                << pos->second.size() << " instances still alive.";
+        if (engine.features.engine.debug.assert_destroy_material_before_material_instance) {
+            FILAMENT_CHECK_PRECONDITION(pos->second.empty())
+                    << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                    << pos->second.size() << " instances still alive.";
+        } else {
+            utils::slog.e << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                          << pos->second.size() << " instances still alive.";
+        }
     }
 
 
@@ -975,9 +980,9 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
     int const maxInstanceCount = (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)
                                  ? 1 : CONFIG_MAX_INSTANCES;
 
-    int const maxFroxelBufferHeight = int(std::min(
-            FROXEL_BUFFER_MAX_ENTRY_COUNT / 4,
-            engine.getDriverApi().getMaxUniformBufferSize() / 16u));
+    // The 16u below denotes the 16 bytes in a uvec4, which is how the froxel buffer is stored.
+    int const maxFroxelBufferHeight =
+            int(Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()) / 16u);
 
     bool const staticTextureWorkaround =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
@@ -1098,8 +1103,13 @@ void FMaterial::precacheDepthVariants(FEngine const& engine) {
     // later, when/if needed by createAndCacheProgram(). Doing it now potentially uses more
     // memory and increases init time, but reduces hiccups during the first frame.
     if (UTILS_UNLIKELY(mIsDefaultMaterial)) {
+        const bool stereoSupported = mEngine.getDriverApi().isStereoSupported();
         auto const allDepthVariants = VariantUtils::getDepthVariants();
         for (auto const variant: allDepthVariants) {
+            // Don't precache any stereo variants if stereo is not supported.
+            if (!stereoSupported && Variant::isStereoVariant(variant)) {
+                continue;
+            }
             assert_invariant(Variant::isValidDepthVariant(variant));
             if (hasVariant(variant)) {
                 prepareProgram(variant);

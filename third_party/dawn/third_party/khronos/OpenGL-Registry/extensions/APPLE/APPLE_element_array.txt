@@ -1,0 +1,288 @@
+Name
+
+    APPLE_element_array
+
+Name Strings
+
+    GL_APPLE_element_array
+
+Contact
+
+    Bob Beretta, Apple Computer (beretta 'at' apple.com)
+
+Version
+
+    1.0
+
+Number
+
+    271
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.3 specification.
+
+    Assumes support for the APPLE_vertex_array_range extension.
+
+Overview
+
+    This extension provides facilities to improve DrawElements style vertex
+    indices submission performance by allowing index arrays.  Using this
+    extension these arrays can be contained inside a vertex array range and
+    thus pulled directly by the graphics processor, avoiding the CPU overhead
+    of touching the index data.
+
+    This extension is most useful when used in conjunction with the
+    APPLE_vertex_array_range extension. APPLE_vertex_array_range provides an
+    interface for storing vertex array data. In cases where large amounts of
+    vertex data are in use, the index data used to construct primitives
+    (typically as passed to the GL through DrawElements) can impose a
+    significant bandwidth burden. APPLE_element_array allows the application to
+    specify independent arrays of elements, which can then be cached using
+    APPLE_vertex_array_range.  In effect this creates a more orthogonal
+    interface for both vertex indices and data.
+
+
+Issues
+
+    Must the element array be enabled?
+
+        RESOLVED: Yes, for orthogonality with the rest of the API.
+
+New Procedures and Functions
+
+    void ElementPointerAPPLE(enum type, const void *pointer);
+
+    void DrawElementArrayAPPLE(enum mode, int first, sizei count)
+
+    void DrawRangeElementArrayAPPLE(enum mode, uint start,
+                                    uint end, int first, sizei count)
+
+    void MultiDrawElementArrayAPPLE(enum mode, const int *first,
+                                    const sizei *count, sizei primcount);
+
+    void MultiDrawRangeElementArrayAPPLE(enum mode, uint start, uint end,
+                                         const int *first,
+                                         const sizei *count,
+                                         sizei primcount);
+
+
+New Tokens
+
+    Accepted by the <array> parameter of EnableClientState and
+    DisableClientState and the <value> parameter of IsEnabled:
+
+        ELEMENT_ARRAY_APPLE             0x8A0C
+
+    Accepted by the <value> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        ELEMENT_ARRAY_TYPE_APPLE        0x8A0D
+
+    Accepted by the <pname> parameter of GetPointerv:
+
+        ELEMENT_ARRAY_POINTER_APPLE     0x8A0E
+
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    In section 2.6.3, GL Commands within Begin/End, add
+    ElementArrayAPPLE to the list of commands that are not allowed
+    within any Begin/End pair, but may or may not generate an error.
+
+
+    Inserted in section 2.8, Vertex Arrays, after the description of
+    DrawRangeElements, but before the description of
+    InterleavedArrays:
+
+    "The commands
+
+        void DrawElementArrayAPPLE(enum mode, int first, sizei count)
+
+        void DrawRangeElementArrayAPPLE(enum mode, uint start,
+                                        uint end, int first, sizei count)
+
+    can be used to construct a sequence of geometric primitives in the same
+    manner as DrawElements and DrawRangeElements, but using a previously defined
+    array of indices. For DrawElementArrayAPPLE, the <mode> and <count>
+    arguments match the corresponding arguments to DrawElements. For
+    DrawRangeElementArrayAPPLE, the <mode>, <start>, <end> and <count> arguments
+    match the corresponding arguments to DrawRangeElements.  For either routine,
+    the <first> argument specifies the first element of the current element
+    array to be used in generating primitives.
+
+    For both DrawElementArrayAPPLE and DrawRangeElementArrayAPPLE, the list of
+    indices used to generate primitives is defined by the command
+
+        void ElementPointer(enum type, const void *pointer)
+
+    The <pointer> argument is used to specify the list of indices, and the
+    <type> argument specifies their format. These arguments match the <type> and
+    <indices> arguments to DrawElements and DrawRangeElements, and the allowed
+    types match those accepted by these two commands -- GL_UNSIGNED_BYTE,
+    GL_UNSIGNED_SHORT, and GL_UNSIGNED_INT. ElementPointer does not specify a
+    stride between successive indices in the array, the values must be stored
+    sequentially in memory.
+
+    The commands MultiDrawElementArrayAPPLE and MultiDrawRangeElementArrayAPPLE
+    provides functionality equivalent to EXT_multi_draw_arrays allowing multiple
+    lists of indices in one call.
+
+
+    The command
+
+      void MultiDrawElementArrayAPPLE(enum mode, const int *first,
+                                   const sizei *count, sizei primcount)
+
+    is equivalent to the following sequence of commands:
+
+        for(i=0; i<primcount; i++) {
+            if ((*(first+i)>=0) && (*(count+i)>0))
+                DrawElementArrayAPPLE(mode, *(first+i), *(count+i));
+        }
+
+    and the command
+
+      void MultiDrawRangeElementArrayAPPLE(enum mode, uint start, uint end,
+                                        const int *first,
+                                        const sizei *count,
+                                        sizei primcount)
+
+    is equivalent to the following sequence of commands:
+
+        for(i=0; i<primcount; i++) {
+            if ((*(first+i)>=0) && (*(count+i)>0))
+                DrawRangeElementArrayAPPLE(mode, start, end, *(first+i),
+                                           *(count+i));
+        }
+
+    The array of element indices can be enabled and disabled by calling
+    EnableClientState and DisableClientState with the argument
+    ELEMENT_ARRAY_APPLE. DrawElements and DrawRangeElements ignore the currently
+    enabled element array.
+
+    If a DrawElementArrayAPPLE or DrawRangeElementArrayAPPLE command is issued
+    when there is no currently enabled element array, an error is generated, no
+    drawing is done and the current state is not updated."
+
+
+    Replace the last paragraph of section 2.8 "Vertex Arrays" (page 28) with the
+    following:
+
+    "If the number of supported texture units (the value of MAX_TEXTURE_UNITS)
+    is k, then the client state required to implement vertex arrays consists of
+    5+k boolean values, 6+k memory pointers, 5+k integer stride values, 5+k
+    symbolic constants representing array types, and 3+k integers representing
+    values per element. In the initial state, the boolean values are each
+    disabled, the memory pointers are each null, the strides are each zero, the
+    array types are each FLOAT, except for the element array type, which is
+    UNSIGNED_INT, and the integers representing values per element are each
+    four."
+
+
+    Add to the section describing the operation of the vertex array range:
+
+    "When the vertex array range is valid, changes to element array data used by
+    the DrawElementArrayAPPLE, DrawRangeElementArrayAPPLE,
+    MultiDrawElementArrayAPPLE, and MultiDrawRangeElementArrayAPPLE commands
+    need to be synchronized in the same manner as other vertex array data.
+
+    Undefined vertices maybe generated by DrawElementArrayAPPLE,
+    DrawRangeElementArrayAPPLE, MultiDrawElementArrayAPPLE, or
+    MultiDrawRangeElementArrayAPPLE when the vertex array range is enabled if
+    any element required by the element array falls outside of the vertex array
+    range."
+
+
+Additions to Chapter 3 of the 1.3 Specification (Rasterization)
+
+    None
+
+
+Additions to Chapter 4 of the 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+
+Additions to Chapter 5 of the 1.3 Specification (Special Functions)
+
+    In section 5.4, Display Lists, change the last sentence of the first
+    paragraph to read:
+
+    "(Vertex array and element array pointers are de-referenced when the
+    commands ArrayElement, DrawArrays, DrawElements, DrawRangeElements,
+    DrawElementArrayAPPLE, or DrawRangeElementArrayAPPLE are accumulated into a
+    display list.)
+
+    In section 5.4, Display Lists, add ElementArrayAPPLE to the list of commands
+    that are not compiled into display lists but are executed immediately.  In
+    additional add to the end of the section:
+
+    "If a display list is compiled while VERTEX_ARRAY_RANGE_APPLE is enabled,
+    the commands ArrayElement, DrawArrays, DrawElements,
+    DrawRangeElements, DrawElementArrayAPPLE, DrawRangeElementArrayAPPLE,
+    MultiDrawElementArrayAPPLE, and MultiDrawRangeElementArrayAPPLE are
+    accumulated into a display list as if VERTEX_ARRAY_RANGE_APPLE is
+    disabled."
+
+
+Additions to Chapter 6 of the 1.3 Specification (State and State
+Requests)
+
+    In "Pointer and String Queries", section 6.1.11, add
+    ELEMENT_ARRAY_POINTER_APPLE to the list of possible values for the
+    <pname> parameter of GetPointerv.
+
+
+Additions to the specification of APPLE_vertex_array_range
+
+    The element array is included in the vertex array data that is expected
+    to reside fully within the specified vertex array range, if enabled.  If
+    elements in the array lie outside the current vertex array range the
+    result is undefined.
+
+
+Errors
+
+    The error INVALID_OPERATION is generated if DrawElementArrayAPPLE,
+    DrawRangeElementArrayAPPLE, MultiDrawElementArrayAPPLE, or
+    MultiDrawRangeElementArrayAPPLE is called between the execution of Begin and
+    the corresponding execution of End.
+
+    The error INVALID_VALUE is generated if DrawElementArrayAPPLE or
+    DrawRangeElementArrayAPPLE is called where either <first> or <count> is
+    negative.
+
+    The error INVALID_VALUE is generated if MultiDrawElementArrayAPPLE or
+    MultiDrawRangeElementArrayAPPLE is called where <primcount> is negative.
+
+    The error INVALID_VALUE is generated if DrawRangeElementArrayAPPLE or
+    MultiDrawRangeElementArrayAPPLE is called where <start> is greater than
+    <end>.
+
+    INVALID_ENUM is generated if the <type> parameter of ElementPointerAPPLE is
+    not UNSIGNED_BYTE, UNSIGNED_SHORT, or UNSIGNED_INT.
+
+    INVALID_OPERATION is generated if a DrawElementArrayAPPLE,
+    DrawRangeElementArrayAPPLE, MultiDrawElementArrayAPPLE or
+    MultiDrawRangeElementArrayAPPLE command is issued when there is no currently
+    enabled element array.
+
+
+New State
+
+    Added to table 6.6, Vertex Array Data
+
+    Get Value                   Get Command     Type    Initial Value   Attrib
+    ---------                   -----------     ----    -------------   ------
+    ELEMENT_ARRAY_APPLE         IsEnabled       B       False           client
+    ELEMENT_ARRAY_TYPE_APPLE    GetIntegerv     Z4      UNSIGNED_INT    client
+    ELEMENT_ARRAY_POINTER_APPLE GetPointerv     Z+      0               client
+
+
+Implementation Notes
+
+    For maximum performance, applications should use
+    UNSIGNED_SHORT or UNSIGNED_INT indices.
+

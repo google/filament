@@ -1,0 +1,540 @@
+Name
+
+    EXT_pixel_format
+
+Name Strings
+
+    WGL_EXT_pixel_format
+
+Version
+
+    $Date: 1999/04/03 08:41:17 $ $Revision: 1.4 $
+
+Number
+
+    170
+
+Dependencies
+
+    WGL_EXT_extensions_string is required.
+
+Overview
+
+    This extension adds functions to query pixel format attributes
+    and to choose from the list of pixel formats supported by a device.
+
+    These functions treat pixel formats as opaque types: attributes
+    are specified by name rather than by accessing them directly as
+    fields in a structure.  Thus the list of attributes can be easily
+    extended.
+    
+    Attribute names are defined which correspond to all of the values
+    in the PIXELFORMATDESCRIPTOR and LAYERPLANEDESCRIPTOR data structures.
+    Additionally this interface allows pixel formats to be supported
+    which have attributes that cannot be represented using the standard
+    pixel format functions, i.e. DescribePixelFormat, DescribeLayerPlane,
+    ChoosePixelFormat, SetPixelFormat, and GetPixelFormat.
+
+Issues
+
+    1. No provision is made to support extended pixel format attributes in
+       metafiles.
+    2. The transparent value pixel format attribute doesn't have separate red,
+       green and blue values. This is OK since this can be done as an
+       additional extension.
+    3. Should we add DONT_CARE values for some of the pixel format attributes?
+       No we should just ignore attributes that aren't specified in the list
+       passed to wglChoosePixelFormatEXT.
+    4. Should wglGetPixelFormatAttrib*vEXT ignore the <iLayerPlane> parameter
+       when the attribute specified only applies to the main planes (e.g.,
+       when the attribute is set to WGL_NUMBER_OVERLAYS) or should it require
+       <iLayerPlane> to be set to zero? It will just ignore the parameter.
+    5. Should wglGetPixelFormatAttribivEXT convert floating point values to
+       fixed point? No, wglChoosePixelFormatEXT needs a way to accept floating
+       point values. pfAttribFList accomplishes this.
+    6. Should wglChoosePixelFormatEXT take an <iLayerPlane> parameter? Typically
+       <iLayerPlane> would be set to zero and a pixel format would be selected
+       based on the attributes of the main plane, so there is no <iLayerPlane>
+       parameter. This should be OK; applications won't typically select a
+       pixel format on the basis of overlay attributes. They can always call
+       wglGetPixelFormatAttrib*vEXT to get a pixel format that has the desired
+       overlay values.
+    7. Application programmers must check to see if a particular extension
+       is supported before using any pixel format attributes associated with
+       the extension. For example, if WGL_EXT_pbuffer is not supported then
+       it is an error to specify WGL_DRAW_TO_PBUFFER_EXT in the attribute list
+       to wglGetPixelFormatAttrib*vEXT or wglChoosePixelFormatEXT.
+
+New Procedures and Functions
+
+    BOOL wglGetPixelFormatAttribivEXT(HDC hdc,
+                                      int iPixelFormat,
+                                      int iLayerPlane,
+                                      UINT nAttributes,
+                                      int *piAttributes,
+                                      int *piValues);
+
+    BOOL wglGetPixelFormatAttribfvEXT(HDC hdc,
+                                      int iPixelFormat,
+                                      int iLayerPlane,
+                                      UINT nAttributes,
+                                      int *piAttributes,
+                                      FLOAT *pfValues);
+
+    BOOL wglChoosePixelFormatEXT(HDC hdc,
+                                 const int *piAttribIList,
+                                 const FLOAT *pfAttribFList,
+                                 UINT nMaxFormats,
+                                 int *piFormats,
+                                 UINT *nNumFormats);
+
+New Tokens
+
+    Accepted in the <piAttributes> parameter array of
+    wglGetPixelFormatAttribivEXT, and wglGetPixelFormatAttribfvEXT:
+
+        WGL_NUMBER_PIXEL_FORMATS_EXT         0x2000
+
+    Accepted in the <piAttributes> parameter array of
+    wglGetPixelFormatAttribivEXT, and wglGetPixelFormatAttribfvEXT,
+    and in the <piAttribIList> and <pfAttribFList> parameter arrays
+    of wglChoosePixelFormatEXT:
+
+        WGL_DRAW_TO_WINDOW_EXT               0x2001
+        WGL_DRAW_TO_BITMAP_EXT               0x2002
+        WGL_ACCELERATION_EXT                 0x2003
+        WGL_NEED_PALETTE_EXT                 0x2004
+        WGL_NEED_SYSTEM_PALETTE_EXT          0x2005
+        WGL_SWAP_LAYER_BUFFERS_EXT           0x2006
+        WGL_SWAP_METHOD_EXT                  0x2007
+        WGL_NUMBER_OVERLAYS_EXT              0x2008
+        WGL_NUMBER_UNDERLAYS_EXT             0x2009
+        WGL_TRANSPARENT_EXT                  0x200A
+        WGL_TRANSPARENT_VALUE_EXT            0x200B
+        WGL_SHARE_DEPTH_EXT                  0x200C
+        WGL_SHARE_STENCIL_EXT                0x200D
+        WGL_SHARE_ACCUM_EXT                  0x200E
+        WGL_SUPPORT_GDI_EXT                  0x200F
+        WGL_SUPPORT_OPENGL_EXT               0x2010
+        WGL_DOUBLE_BUFFER_EXT                0x2011
+        WGL_STEREO_EXT                       0x2012
+        WGL_PIXEL_TYPE_EXT                   0x2013
+        WGL_COLOR_BITS_EXT                   0x2014
+        WGL_RED_BITS_EXT                     0x2015
+        WGL_RED_SHIFT_EXT                    0x2016
+        WGL_GREEN_BITS_EXT                   0x2017
+        WGL_GREEN_SHIFT_EXT                  0x2018
+        WGL_BLUE_BITS_EXT                    0x2019
+        WGL_BLUE_SHIFT_EXT                   0x201A
+        WGL_ALPHA_BITS_EXT                   0x201B
+        WGL_ALPHA_SHIFT_EXT                  0x201C
+        WGL_ACCUM_BITS_EXT                   0x201D
+        WGL_ACCUM_RED_BITS_EXT               0x201E
+        WGL_ACCUM_GREEN_BITS_EXT             0x201F
+        WGL_ACCUM_BLUE_BITS_EXT              0x2020
+        WGL_ACCUM_ALPHA_BITS_EXT             0x2021
+        WGL_DEPTH_BITS_EXT                   0x2022
+        WGL_STENCIL_BITS_EXT                 0x2023
+        WGL_AUX_BUFFERS_EXT                  0x2024
+
+    Accepted in the <piAttribIList> and <pfAttribFList> parameter arrays
+    of wglChoosePixelFormatEXT.  And returned in the <piValues> parameter
+    array of wglGetPixelFormatAttribivEXT, and the <pfValues> parameter
+    array of wglGetPixelFormatAttribfvEXT,
+
+        WGL_NO_ACCELERATION_EXT              0x2025
+        WGL_GENERIC_ACCELERATION_EXT         0x2026
+        WGL_FULL_ACCELERATION_EXT            0x2027
+
+        WGL_SWAP_EXCHANGE_EXT                0x2028
+        WGL_SWAP_COPY_EXT                    0x2029
+        WGL_SWAP_UNDEFINED_EXT               0x202A
+
+        WGL_TYPE_RGBA_EXT                    0x202B
+        WGL_TYPE_COLORINDEX_EXT              0x202C
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the WGL Specification
+
+    Pixel Formats
+
+    WGL uses pixel format indices to refer to the pixel formats supported by a
+    device.  The standard pixel format functions DescribePixelFormat,
+    DescribeLayerPlane, ChoosePixelFormat, SetPixelFormat, and GetPixelFormat
+    specify pixel format attributes using the PIXELFORMATDESCRIPTOR and
+    LAYERPLANEDESCRIPTOR data structures.
+
+    An additional set of functions may be used to query and specify pixel
+    format attributes by name.
+
+    Querying Pixel Format Attributes
+
+    The following two functions can be used to query pixel format attributes
+    by specifying a list of attributes to be queried and providing a buffer
+    in which to receive the results from the query.  These functions can be
+    used to query the attributes of both the main plane and layer planes
+    of a given pixel format.
+
+        BOOL wglGetPixelFormatAttribivEXT(HDC hdc,
+                                          int iPixelFormat,
+                                          int iLayerPlane,
+                                          UINT nAttributes,
+                                          int *piAttributes,
+                                          int *piValues);
+
+    <hdc> specifies the device context on which the pixel format is
+    supported.
+
+    <iPixelFormat> is an index that specifies the pixel format. The pixel
+    formats that a device context supports are identified by positive
+    one-based integer indexes.
+
+    <iLayerPlane> specifies which plane is being queried. Positive values
+    of <iLayerPlane> identify overlay planes, where 1 is the first overlay
+    plane over the main plane, 2 is the second overlay plane over the
+    first overlay plane, and so on. Negative values identify underlay
+    planes, where -1 is the first underlay plane under the main plane,
+    -2 is the second underlay plane under the first underlay plane and
+    so on. Use zero for the main plane.
+
+    <nAttributes> specifies the number of attributes being queried.
+
+    <piAttributes> specifies an array of pixel format attribute identifiers
+    which specify the attributes to be queried.  The following values are
+    accepted:
+
+        WGL_NUMBER_PIXEL_FORMATS_EXT
+        The number of pixel formats for the device context. The
+        <iLayerPlane> and <iPixelFormat> parameters are ignored if this
+        attribute is specified.
+
+        WGL_DRAW_TO_WINDOW_EXT
+        True if the pixel format can be used with a window. The <iLayerPlane>
+        parameter is ignored if this attribute is specified.
+
+        WGL_DRAW_TO_BITMAP_EXT
+        True if the pixel format can be used with a memory bitmap. The
+        <iLayerPlane> parameter is ignored if this attribute is specified.
+
+        WGL_ACCELERATION_EXT
+        Indicates whether the pixel format is supported by the driver.
+        If this is set to WGL_NO_ACCELERATION_EXT then only the software
+        renderer supports this pixel format; if this is set to
+        WGL_GENERIC_ACCELERATION_EXT then the pixel format is supported by
+        an MCD driver; if this is set to WGL_FULL_ACCELERATION_EXT then the
+        pixel format is supported by an ICD driver.
+
+        WGL_NEED_PALETTE_EXT
+        A logical palette is required to achieve the best results for this
+        pixel type. The <iLayerPlane> parameter is ignored if this attribute
+        is specified.
+
+        WGL_NEED_SYSTEM_PALETTE_EXT
+        The hardware supports one hardware palette in 256-color mode only.
+        The <iLayerPlane> parameter is ignored if this attribute is
+        specified.
+
+        WGL_SWAP_LAYER_BUFFERS_EXT
+        True if the hardware can swap layer planes independently of the
+        main planes. The <iLayerPlane> parameter is ignored if this
+        attribute is specified.
+
+        WGL_SWAP_METHOD_EXT
+        If the color buffer has a back buffer, then this indicates how
+        they are swapped. If it is set to WGL_SWAP_EXCHANGE_EXT then
+        swapping exchanges the front and back buffer contents; if it is
+        set to WGL_SWAP_COPY_EXT then swapping copies the back buffer
+        contents to the front buffer; if it is set to
+        WGL_SWAP_UNDEFINED_EXT then the back buffer contents are copied
+        to the front buffer but the back buffer contents are undefined
+        after the operation. The <iLayerPlane> parameter is ignored if
+        this attribute is specified.
+
+        WGL_NUMBER_OVERLAYS_EXT
+        The number of overlay planes. The <iLayerPlane> parameter is ignored
+        if this attribute is specified.
+
+        WGL_NUMBER_UNDERLAYS_EXT
+        The number of underlay planes. The <iLayerPlane> parameter is
+        ignored if this attribute is specified.
+
+        WGL_TRANSPARENT_EXT
+        True if transparency is supported. Use the WGL_TRANSPARENT_VALUE
+        attribute to retrieve the transparent color value.
+
+        WGL_TRANSPARENT_VALUE_EXT
+        Specifies the transparent color or index value. Typically this
+        value is the same for all layer planes.
+
+        WGL_SHARE_DEPTH_EXT
+        True if the layer plane shares the depth buffer with the main
+        planes. If <iLayerPlane> is zero, this is always true.
+
+        WGL_SHARE_STENCIL_EXT
+        True if the layer plane shares the stencil buffer with the main
+        planes. If <iLayerPlane> is zero, this is always true.
+
+        WGL_SHARE_ACCUM_EXT
+        True if the layer plane shares the accumulation buffer with the
+        main planes. If <iLayerPlane> is zero, this is always true.
+
+        WGL_SUPPORT_GDI_EXT
+        True if GDI rendering is supported.
+
+        WGL_SUPPORT_OPENGL_EXT
+        True if OpenGL is supported.
+
+        WGL_DOUBLE_BUFFER_EXT
+        True if the color buffer has back/front pairs.
+
+        WGL_STEREO_EXT
+        True if the color buffer has left/right pairs.
+
+        WGL_PIXEL_TYPE_EXT
+        The type of pixel data. This can be set to WGL_TYPE_RGBA_EXT or
+        WGL_TYPE_COLORINDEX_EXT.
+
+        WGL_COLOR_BITS_EXT
+        The number of color bitplanes in each color buffer. For RGBA pixel
+        types, it is the size of the color buffer, excluding the alpha
+        bitplanes, For color-index pixels, it is the size of the color
+        index buffer.
+
+        WGL_RED_BITS_EXT
+        The number of red bitplanes in each RGBA color buffer.
+
+        WGL_RED_SHIFT_EXT
+        The shift count for red bitplanes in each RGBA color buffer.
+
+        WGL_GREEN_BITS_EXT
+        The number of green bitplanes in each RGBA color buffer.
+
+        WGL_GREEN_SHIFT_EXT
+        The shift count for green bitplanes in each RGBA color buffer.
+
+        WGL_BLUE_BITS_EXT
+        The number of blue bitplanes in each RGBA color buffer.
+
+        WGL_BLUE_SHIFT_EXT
+        The shift count for blue bitplanes in each RGBA color buffer.
+
+        WGL_ALPHA_BITS_EXT
+        The number of alpha bitplanes in each RGBA color buffer.
+
+        WGL_ALPHA_SHIFT_EXT
+        The shift count for alpha bitplanes in each RGBA color buffer.
+
+        WGL_ACCUM_BITS_EXT
+        The total number of bitplanes in the accumulation buffer.
+
+        WGL_ACCUM_RED_BITS_EXT
+        The number of red bitplanes in the accumulation buffer.
+
+        WGL_ACCUM_GREEN_BITS_EXT
+        The number of green bitplanes in the accumulation buffer.
+
+        WGL_ACCUM_BLUE_BITS_EXT
+        The number of blue bitplanes in the accumulation buffer.
+
+        WGL_ACCUM_ALPHA_BITS_EXT
+        The number of alpha bitplanes in the accumulation buffer.
+
+        WGL_DEPTH_BITS_EXT
+        The depth of the depth (z-axis) buffer.
+
+        WGL_STENCIL_BITS_EXT
+        The depth of the stencil buffer.
+
+        WGL_AUX_BUFFERS_EXT
+        The number of auxiliary buffers.
+
+    <piValues> points to a buffer into which the results of the query
+    will be placed.  Floating point attribute values are rounded to the
+    nearest integer value. The caller must allocate this array and it
+    must have at least nAttributes entries.
+
+    If the function succeeds, the return value is TRUE. If the
+    function fails, the return value is FALSE. To get extended error
+    information, call GetLastError.
+
+    An error is generated if <piAttributes> contains an invalid
+    attribute, if <iPixelFormat> is larger than the number of pixel
+    formats, if <iLayerPlane> doesn't refer to an existing layer plane,
+    or if <hdc> is invalid.
+
+    If FALSE is returned, <piValues> will not have been modified.
+
+        BOOL wglGetPixelFormatAttribfvEXT(HDC hdc,
+                                          int iPixelFormat,
+                                          int iLayerPlane,
+                                          UINT nAttributes,
+                                          int *piAttributes,
+                                          FLOAT *pfValues);
+
+
+    <hdc> specifies the device context on which the pixel format is
+    supported.
+
+    <iPixelFormat> is an index that specifies the pixel format. The pixel
+    formats that a device context supports are identified by positive
+    one-based integer indexes.
+
+    <iLayerPlane> specifies which plane is being queried. Positive values
+    of <iLayerPlane> identify overlay planes, where 1 is the first overlay
+    plane over the main plane, 2 is the second overlay plane over the
+    first overlay plane, and so on. Negative values identify underlay
+    planes, where -1 is the first underlay plane under the main plane,
+    -2 is the second underlay plane under the first underlay plane and
+    so on. Use zero for the main plane.
+
+    <piAttributes> is an array of pixel format attribute identifiers which
+    specify the attributes to be queried.  The values accepted are the
+    same as for wglGetPixelFormatAttribivEXT.
+
+    <pfValues> is a pointer to a buffer into which the results of the query
+    will be placed.  Integer attribute values are converted floating point
+    The caller must allocate this array and it must have at least
+    <nAttributes> entries.
+
+    If the function succeeds, the return value is TRUE. If the
+    function fails, the return value is FALSE. To get extended error
+    information, call GetLastError.
+
+    An error is generated if <piAttributes> contains an invalid
+    attribute, if <iPixelFormat> is larger than the number of pixel
+    formats, if <iLayerPlane> doesn't refer to an existing layer plane,
+    or if <hdc> is invalid.
+
+    If FALSE is returned, <pfValues> will not have been modified.
+
+    Supported Pixel Formats
+
+    The maximum index of the pixel formats which can be referenced
+    by the standard pixel format functions is returned by a successful
+    call to DescribePixelFormat.  This may be less than the maximum
+    index of the pixel formats which can be referenced by
+    wglGetPixelFormatAttribivEXT and wglGetPixelFormatAttribfvEXT.
+    (determined by querying WGL_NUMBER_PIXEL_FORMATS_EXT).
+
+    The pixel format of a "displayable" object (e.g. window, bitmap) is
+    specified by passing its index to SetPixelFormat.  Therefore, pixel
+    formats which cannot be referenced by the standard pixel format
+    functions are "non displayable".
+
+    Indices are assigned to pixel formats in the following order:
+
+    1. Accelerated pixel formats that are displayable
+
+    2. Accelerated pixel formats that are displayable and which
+       have extended attributes
+
+    3. Generic pixel formats
+
+    4. Accelerated pixel formats that are non displayable
+    
+    ChoosePixelFormat will never select pixel formats from either
+    group 2 or group 4.  Each pixel format in group 2 is required to
+    appear identical to some pixel format in group 1 when queried by
+    DescribePixelFormat.  Consequently, ChoosePixelFormat will always
+    select a format from group 1 when it might otherwise have selected
+    a format from group 2.  Pixel formats in group 4 cannot be accessed
+    by ChoosePixelFormat at all.
+
+    The following function may be used to select from among all of the
+    pixel formats supported by a device.  This function accepts attributes
+    for the main planes.  A list of pixel formats that match the
+    specified attributes is returned with the "best" pixel formats
+    at the start of the list (order is device dependent).
+
+        BOOL wglChoosePixelFormatEXT(HDC hdc,
+                                     const int *piAttribIList,
+                                     const FLOAT *pfAttribFList,
+                                     UINT nMaxFormats,
+                                     int *piFormats,
+                                     UINT *nNumFormats);
+
+    <hdc> specifies the device context.
+
+    <piAttribIList> specifies a list of attribute {type, value} pairs
+    containing integer attribute values. All the attributes in
+    <piAttribIList> are followed by the corresponding desired value.
+    The list is terminated with 0.
+
+    <pfAttribFList> specifies a list of attribute {type, value} pairs
+    containing floating point attribute values. All the attributes in
+    <pfAttribFList> are followed by the corresponding desired value.
+    The list is terminated with 0.
+
+    <nMaxFormats> specifies the maximum number of pixel formats to be
+    returned.
+
+    <piFormats> points to an array of returned indices of the matching
+    pixel formats. The best pixel formats (i.e., closest match and best
+    format for the hardware) are at the head of the list. The caller must
+    allocate this array and it must have at least <nMaxFormats> entries.
+
+    <nNumFormats> returns the number of matching formats. This value may
+    be larger than <nMaxFormats>.
+
+    If the function succeeds, the return value is TRUE.  If the function
+    fails the return value is FALSE. To get extended error information,
+    call GetLastError.
+
+    If FALSE is returned, <piFormats> will not have been modified.
+
+    wglChoosePixelFormatEXT selects pixel formats to return based on
+    the attribute values specified in <piAttribIList> and <pfAttribFList>.
+    All attribute values described in wglGetPixelFormatAttribiv are
+    supported with the exception of WGL_NUMBER_PIXEL_FORMATS_EXT.
+
+    All attributes except WGL_NUMBER_OVERLAYS_EXT, WGL_NUMBER_UNDERLAYS_EXT,
+    WGL_SWAP_LAYER_BUFFERS_EXT, WGL_SHARE_DEPTH_EXT, WGL_SHARE_STENCIL_EXT
+    and WGL_SHARE_ACCUM_EXT apply to the main planes and not to any layer
+    planes.  Applications that need to find a pixel format that supports a
+    layer plane with specific buffer attributes, must go through the list
+    that is returned and call wglGetPixelFormatAttrib*vEXT to find one with
+    the appropriate attributes.
+
+    Attributes that are specified in neither <piAttribIList> nor
+    <pfAttribFList> are ignored (i.e., they are not looked at during the
+    selection process).
+
+    If both <piAttribIList> and <pfAttribFList> are NULL or empty then
+    all pixel formats for this device are returned.
+
+    An error is generated if <piAttribIList> or <pfAttribFList> contain an
+    invalid attribute or if <hdc> is invalid.
+
+    Although it is not an error, the new API calls should not be mixed with
+    old API calls. It is not necessary to change existing OpenGL programs.
+    However, application writers should be encouraged to use the new API
+    whenever possible.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+

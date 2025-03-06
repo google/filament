@@ -2,17 +2,17 @@
 #extension GL_KHR_shader_subgroup_ballot : require
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
-layout(set = 0, binding = 0) uniform usamplerBuffer _4;
-layout(set = 0, binding = 0, r32ui) uniform writeonly uimageBuffer _5;
+layout(set = 0, binding = 0) uniform usamplerBuffer _8;
+layout(set = 0, binding = 0, r32ui) uniform writeonly uimageBuffer _11;
 
-uvec4 WaveMatch(uint _45)
+uvec4 WaveMatch(uint _25)
 {
-    uvec4 _52;
+    uvec4 _35;
     for (;;)
     {
-        bool _51 = _45 == subgroupBroadcastFirst(_45);
-        _52 = subgroupBallot(_51);
-        if (_51)
+        bool _34 = _25 == subgroupBroadcastFirst(_25);
+        _35 = subgroupBallot(_34);
+        if (_34)
         {
             break;
         }
@@ -21,16 +21,16 @@ uvec4 WaveMatch(uint _45)
             continue;
         }
     }
-    return _52;
+    return _35;
 }
 
 void main()
 {
-    uvec4 _32 = WaveMatch(texelFetch(_4, int(gl_GlobalInvocationID.x)).x);
-    uint _37 = gl_GlobalInvocationID.x * 4u;
-    imageStore(_5, int(_37), uvec4(_32.x));
-    imageStore(_5, int(_37 + 1u), uvec4(_32.y));
-    imageStore(_5, int(_37 + 2u), uvec4(_32.z));
-    imageStore(_5, int(_37 + 3u), uvec4(_32.w));
+    uvec4 _37 = WaveMatch(texelFetch(_8, int(gl_GlobalInvocationID.x)).x);
+    uint _42 = gl_GlobalInvocationID.x * 4u;
+    imageStore(_11, int(_42), uvec4(_37.x));
+    imageStore(_11, int(_42 + 1u), uvec4(_37.y));
+    imageStore(_11, int(_42 + 2u), uvec4(_37.z));
+    imageStore(_11, int(_42 + 3u), uvec4(_37.w));
 }
 

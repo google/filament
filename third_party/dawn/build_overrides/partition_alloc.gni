@@ -1,0 +1,70 @@
+# Copyright 2023 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import("//build/config/android/config.gni")
+import("//build/config/cast.gni")
+import("//build/config/chromeos/ui_mode.gni")
+import("//build/config/compiler/compiler.gni")
+import("//build/config/cronet/config.gni")
+import("//build/config/dcheck_always_on.gni")
+import("//build/config/logging.gni")
+import("//build/config/sanitizers/sanitizers.gni")
+
+partition_alloc_enable_arc_config = "//build/config/compiler:enable_arc"
+
+# partition_alloc is performance critical and it should generally be optimized for speed, even in
+# debug mode. Dawn doesn't really need its debug version.
+partition_alloc_remove_configs =
+    [ "//build/config/compiler:default_optimization" ]
+partition_alloc_add_configs = [ "//build/config/compiler:optimize_speed" ]
+
+# MSVC's cl.exe compiler is not supported.
+_compiler_supported = is_clang || !is_win
+
+# Windows: debug CRT is not compatible with the allocator shim.
+_build_type_supported = !is_win || (!is_component_build && !is_debug)
+
+_platform_supported =
+    is_android || is_apple || is_chromeos || is_fuchsia || is_linux || is_win
+
+# Sanitizers replace the allocator, don't replace it ourselves with partition_alloc.
+_is_using_sanitizers = is_asan || is_hwasan || is_lsan || is_tsan || is_msan
+
+_supported = _compiler_supported && _build_type_supported &&
+             _platform_supported && !_is_using_sanitizers
+
+use_partition_alloc_as_malloc_default = _supported
+use_allocator_shim_default = _supported
+enable_backup_ref_ptr_support_default = _supported
+put_ref_count_in_previous_slot_default = true
+enable_backup_ref_ptr_slow_checks_default = false
+enable_dangling_raw_ptr_checks_default = _supported
+
+# This is the default build configuration for pointers/raw_ptr*.
+raw_ptr_zero_on_construct_default = true
+raw_ptr_zero_on_move_default = true
+raw_ptr_zero_on_destruct_default = false
+
+# Allow embedders to opt-out of C++20 build which is set as default.
+#
+# Dawn still uses C++17 only, because of Skia.
+assert_cpp20_default = false

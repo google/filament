@@ -17,7 +17,9 @@
 #include "VulkanPlatformSwapChainImpl.h"
 
 #include "vulkan/VulkanConstants.h"
-#include "vulkan/VulkanUtility.h"
+#include "vulkan/utils/Definitions.h"
+#include "vulkan/utils/Helper.h"
+#include "vulkan/utils/Image.h"
 
 #include <backend/DriverEnums.h>
 
@@ -29,9 +31,8 @@ namespace filament::backend {
 namespace {
 
 std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& context,
-        VkDevice device, VkExtent2D extent, VkFormat format,
-        bool isProtected) {
-    bool const isDepth = isVkDepthFormat(format);
+        VkDevice device, VkExtent2D extent, VkFormat format, bool isProtected) {
+    bool const isDepth = fvkutils::isVkDepthFormat(format);
     // Filament expects blit() to work with any texture, so we almost always set these usage flags
     // (see copyFrame() and readPixels()).
     VkImageUsageFlags const blittable =
@@ -83,9 +84,9 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
     return std::tuple(image, imageMemory);
 }
 
-VkFormat selectDepthFormat(VkFormatList const& depthFormats, bool hasStencil) {
+VkFormat selectDepthFormat(fvkutils::VkFormatList const& depthFormats, bool hasStencil) {
     auto const formatItr = std::find_if(depthFormats.begin(), depthFormats.end(),
-            hasStencil ? isVkStencilFormat : isVkDepthFormat);
+            hasStencil ? fvkutils::isVkStencilFormat : fvkutils::isVkDepthFormat);
     assert_invariant(
             formatItr != depthFormats.end() && "Cannot find suitable swapchain depth format");
     return *formatItr;
@@ -169,7 +170,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
 
     // Find a suitable surface format.
     FixedCapacityVector<VkSurfaceFormatKHR> const surfaceFormats
-            = enumerate(vkGetPhysicalDeviceSurfaceFormatsKHR, mPhysicalDevice, mSurface);
+            = fvkutils::enumerate(vkGetPhysicalDeviceSurfaceFormatsKHR, mPhysicalDevice, mSurface);
     std::array<VkFormat, 2> expectedFormats = {
             VK_FORMAT_R8G8B8A8_UNORM,
             VK_FORMAT_B8G8R8A8_UNORM,
@@ -193,8 +194,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     // Verify that our chosen present mode is supported. In practice all devices support the FIFO
     // mode, but we check for it anyway for completeness.  (and to avoid validation warnings)
     VkPresentModeKHR const desiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-    FixedCapacityVector<VkPresentModeKHR> presentModes
-            = enumerate(vkGetPhysicalDeviceSurfacePresentModesKHR, mPhysicalDevice, mSurface);
+    FixedCapacityVector<VkPresentModeKHR> presentModes = fvkutils::enumerate(
+            vkGetPhysicalDeviceSurfacePresentModesKHR, mPhysicalDevice, mSurface);
     bool foundSuitablePresentMode = false;
     for (VkPresentModeKHR mode: presentModes) {
         if (mode == desiredPresentMode) {
@@ -251,7 +252,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateSwapchainKHR failed."
                                                        << " error=" << static_cast<int32_t>(result);
 
-    mSwapChainBundle.colors = enumerate(vkGetSwapchainImagesKHR, mDevice, mSwapchain);
+    mSwapChainBundle.colors = fvkutils::enumerate(vkGetSwapchainImagesKHR, mDevice, mSwapchain);
     mSwapChainBundle.colorFormat = surfaceFormat.format;
     mSwapChainBundle.depthFormat =
             selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
@@ -329,7 +330,7 @@ bool VulkanPlatformSurfaceSwapChain::hasResized() {
             || perceivedExtent.height == VULKAN_UNDEFINED_EXTENT) {
         perceivedExtent = mFallbackExtent;
     }
-    return !equivalent(mSwapChainBundle.extent, perceivedExtent);
+    return !fvkutils::equivalent(mSwapChainBundle.extent, perceivedExtent);
 }
 
 bool VulkanPlatformSurfaceSwapChain::isProtected() {

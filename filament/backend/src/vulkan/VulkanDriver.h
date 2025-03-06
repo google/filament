@@ -26,12 +26,14 @@
 #include "VulkanReadPixels.h"
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
-#include "VulkanUtility.h"
+#include "VulkanQueryManager.h"
+#include "vulkan/caching/VulkanDescriptorSetManager.h"
+#include "vulkan/caching/VulkanPipelineLayoutCache.h"
+#include "vulkan/memory/ResourceManager.h"
+#include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/Definitions.h"
+
 #include "backend/DriverEnums.h"
-#include "caching/VulkanDescriptorSetManager.h"
-#include "caching/VulkanPipelineLayoutCache.h"
-#include "memory/ResourceManager.h"
-#include "memory/ResourcePointer.h"
 
 #include "DriverBase.h"
 #include "private/backend/Driver.h"
@@ -93,6 +95,7 @@ private:
     Dispatcher getDispatcher() const noexcept final;
 
     ShaderModel getShaderModel() const noexcept final;
+    ShaderLanguage getShaderLanguage() const noexcept final;
 
     template<typename T>
     friend class ConcreteDispatcher;
@@ -117,7 +120,6 @@ private:
 
     VulkanPlatform* mPlatform = nullptr;
     fvkmemory::ResourceManager mResourceManager;
-    std::unique_ptr<VulkanTimestamps> mTimestamps;
 
     resource_ptr<VulkanSwapChain> mCurrentSwapChain;
     resource_ptr<VulkanRenderTarget> mDefaultRenderTarget;
@@ -136,18 +138,20 @@ private:
     VulkanBlitter mBlitter;
     VulkanReadPixels mReadPixels;
     VulkanDescriptorSetManager mDescriptorSetManager;
+    VulkanQueryManager mQueryManager;
 
     // This is necessary for us to write to push constants after binding a pipeline.
     struct {
         resource_ptr<VulkanProgram> program;
         VkPipelineLayout pipelineLayout;
-        DescriptorSetMask descriptorSetMask;
+        fvkutils::DescriptorSetMask descriptorSetMask;
     } mBoundPipeline = {};
 
     // We need to store information about a render pass to enable better barriers at the end of a
     // renderpass.
     struct {
-        using AttachmentArray = CappedArray<VulkanAttachment, MAX_RENDERTARGET_ATTACHMENT_TEXTURES>;
+        using AttachmentArray =
+                fvkutils::StaticVector<VulkanAttachment, MAX_RENDERTARGET_ATTACHMENT_TEXTURES>;
         AttachmentArray attachments;
     } mRenderPassFboInfo = {};
 

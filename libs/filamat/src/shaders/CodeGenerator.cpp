@@ -42,7 +42,7 @@ io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
     return out;
 }
 
-utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, ShaderStage stage,
+utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out, ShaderStage stage,
         MaterialInfo const& material, filament::Variant v) const {
     switch (mShaderModel) {
         case ShaderModel::MOBILE:
@@ -78,7 +78,11 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                     out << "#endif\n\n";
                     break;
                 case StereoscopicType::MULTIVIEW:
-                    out << "#extension GL_OVR_multiview2 : require\n";
+                    if (mTargetApi == TargetApi::VULKAN) {
+                        out << "#extension GL_EXT_multiview : enable\n";
+                    } else {
+                        out << "#extension GL_OVR_multiview2 : require\n";
+                    }
                     break;
                 case StereoscopicType::NONE:
                     break;
@@ -101,7 +105,11 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                     // Nothing to generate
                     break;
                 case StereoscopicType::MULTIVIEW:
-                    out << "#extension GL_OVR_multiview2 : require\n";
+                    if (mTargetApi == TargetApi::VULKAN) {
+                        out << "#extension GL_EXT_multiview : enable\n";
+                    } else {
+                        out << "#extension GL_OVR_multiview2 : require\n";
+                    }
                     break;
                 case StereoscopicType::NONE:
                     break;
@@ -124,7 +132,9 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             // Nothing to generate
             break;
         case StereoscopicType::MULTIVIEW:
-            out << "layout(num_views = " << material.stereoscopicEyeCount << ") in;\n";
+            if (mTargetApi != TargetApi::VULKAN) {
+                out << "layout(num_views = " << material.stereoscopicEyeCount << ") in;\n";
+            }
             break;
         case StereoscopicType::NONE:
             break;
@@ -163,6 +173,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         case TargetApi::METAL:
             out << "#define TARGET_METAL_ENVIRONMENT\n";
             break;
+        // TODO: Handle webgpu here
+        case TargetApi::WEBGPU:
         case TargetApi::ALL:
             // invalid should never happen
             break;
@@ -285,35 +297,12 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL",
             +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL, 1);
 
-    if (mTargetApi == TargetApi::VULKAN) {
-        // Note: This is a hack for a hack.
-        //
-        // Vulkan doesn't support sizing arrays within a block with specialization constants,
-        // as per this paragraph of the ARB_spir_v specification:
-        //      https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_gl_spirv.txt
-        //
-        //      Arrays inside a block may be sized with a specialization constant,
-        //      but the block will have a static layout. Changing the specialized size will
-        //      not re-layout the block. In the absence of explicit offsets, the layout will be
-        //      based on the default size of the array.
-        //
-        // CONFIG_MAX_INSTANCES is only needed for WebGL, so we can replace it with a constant.
-        // CONFIG_FROXEL_BUFFER_HEIGHT can be hardcoded to 2048 because only 3% of Android devices
-        //                             only support 16KiB buffer or less (1024 lines).
-        //
-        // We *could* leave these as a specialization constant, but this triggers a crashing bug with
-        // some Adreno drivers on Android. see: https://github.com/google/filament/issues/6444
-        //
-        out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
-        out << "const int CONFIG_FROXEL_BUFFER_HEIGHT = 2048;\n";
-    } else {
-        generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
-                +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
+    generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
+            +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
 
-        // the default of 1024 (16KiB) is needed for 32% of Android devices
-        generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
-                +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
-    }
+    // the default of 1024 (16KiB) is needed for 32% of Android devices
+    generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
+            +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
 
     // directional shadowmap visualization
     generateSpecializationConstant(out, "CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP",
@@ -324,7 +313,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION, false);
 
     // Workaround a Metal pipeline compilation error with the message:
-    // "Could not statically determine the target of a texture". See light_indirect.fs
+    // "Could not statically determine the target of a texture". See surface_light_indirect.fs
     generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND",
             +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND, false);
 
@@ -409,21 +398,21 @@ Precision CodeGenerator::getDefaultUniformPrecision() const {
     }
 }
 
-io::sstream& CodeGenerator::generateEpilog(io::sstream& out) {
+io::sstream& CodeGenerator::generateCommonEpilog(io::sstream& out) {
     out << "\n"; // For line compression all shaders finish with a newline character.
     return out;
 }
 
-io::sstream& CodeGenerator::generateCommonTypes(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceTypes(io::sstream& out, ShaderStage stage) {
     out << '\n';
     switch (stage) {
         case ShaderStage::VERTEX:
             out << '\n';
-            out << SHADERS_COMMON_TYPES_GLSL_DATA;
+            out << SHADERS_SURFACE_TYPES_GLSL_DATA;
             break;
         case ShaderStage::FRAGMENT:
             out << '\n';
-            out << SHADERS_COMMON_TYPES_GLSL_DATA;
+            out << SHADERS_SURFACE_TYPES_GLSL_DATA;
             break;
         case ShaderStage::COMPUTE:
             break;
@@ -431,31 +420,31 @@ io::sstream& CodeGenerator::generateCommonTypes(io::sstream& out, ShaderStage st
     return out;
 }
 
-io::sstream& CodeGenerator::generateShaderMain(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceMain(io::sstream& out, ShaderStage stage) {
     switch (stage) {
         case ShaderStage::VERTEX:
-            out << SHADERS_MAIN_VS_DATA;
+            out << SHADERS_SURFACE_MAIN_VS_DATA;
             break;
         case ShaderStage::FRAGMENT:
-            out << SHADERS_MAIN_FS_DATA;
+            out << SHADERS_SURFACE_MAIN_FS_DATA;
             break;
         case ShaderStage::COMPUTE:
-            out << SHADERS_MAIN_CS_DATA;
+            out << SHADERS_SURFACE_MAIN_CS_DATA;
             break;
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderStage type) {
-    if (type == ShaderStage::VERTEX) {
-        out << SHADERS_POST_PROCESS_VS_DATA;
-    } else if (type == ShaderStage::FRAGMENT) {
-        out << SHADERS_POST_PROCESS_FS_DATA;
+io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderStage stage) {
+    if (stage == ShaderStage::VERTEX) {
+        out << SHADERS_POST_PROCESS_MAIN_VS_DATA;
+    } else if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_POST_PROCESS_MAIN_FS_DATA;
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderStage stage,
+io::sstream& CodeGenerator::generateCommonVariable(io::sstream& out, ShaderStage stage,
         const MaterialBuilder::CustomVariable& variable, size_t index) {
     auto const& name = variable.name;
     const char* precisionString = getPrecisionQualifier(variable.precision);
@@ -475,7 +464,7 @@ io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderStage stage
     return out;
 }
 
-io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage type,
+io::sstream& CodeGenerator::generateSurfaceShaderInputs(io::sstream& out, ShaderStage stage,
         const AttributeBitset& attributes, Interpolation interpolation,
         MaterialBuilder::PushConstantList const& pushConstants) const {
     auto const& attributeDatabase = MaterialBuilder::getAttributeDatabase();
@@ -488,7 +477,7 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
         generateDefine(out, attributeDatabase[i].getDefineName().c_str(), true);
     });
 
-    if (type == ShaderStage::VERTEX) {
+    if (stage == ShaderStage::VERTEX) {
         out << "\n";
         attributes.forEachSetBit([&out, &attributeDatabase, this](size_t i) {
             auto const& attribute = attributeDatabase[i];
@@ -507,16 +496,16 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
     }
 
     out << "\n";
-    out << SHADERS_VARYINGS_GLSL_DATA;
+    out << SHADERS_SURFACE_VARYINGS_GLSL_DATA;
     return out;
 }
 
-io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
+io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage stage,
         const CString& name, size_t index,
         MaterialBuilder::VariableQualifier qualifier,
         MaterialBuilder::Precision precision,
         MaterialBuilder::OutputType outputType) const {
-    if (name.empty() || type == ShaderStage::VERTEX) {
+    if (name.empty() || stage == ShaderStage::VERTEX) {
         return out;
     }
 
@@ -577,10 +566,10 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
 }
 
 
-io::sstream& CodeGenerator::generateDepthShaderMain(io::sstream& out, ShaderStage type) {
-    assert(type != ShaderStage::VERTEX);
-    if (type == ShaderStage::FRAGMENT) {
-        out << SHADERS_DEPTH_MAIN_FS_DATA;
+io::sstream& CodeGenerator::generateSurfaceDepthMain(io::sstream& out, ShaderStage stage) {
+    assert(stage != ShaderStage::VERTEX);
+    if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_DEPTH_MAIN_FS_DATA;
     }
     return out;
 }
@@ -724,7 +713,8 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
                 // in the GLSL 4.5 / ESSL 3.1 case, the set is not used and binding is unique
                 out << "binding = " << +binding << ", ";
                 break;
-
+            // TODO: Handle webgpu here
+            case TargetApi::WEBGPU:
             case TargetApi::ALL:
                 // nonsensical, shouldn't happen.
                 break;
@@ -776,7 +766,7 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
     return out;
 }
 
-io::sstream& CodeGenerator::generateSamplers(utils::io::sstream& out,
+io::sstream& CodeGenerator::generateCommonSamplers(utils::io::sstream& out,
         filament::DescriptorSetBindingPoints set,
         filament::SamplerInterfaceBlock::SamplerInfoList const& list) const {
     if (list.empty()) {
@@ -811,7 +801,8 @@ io::sstream& CodeGenerator::generateSamplers(utils::io::sstream& out,
                     // GLSL 4.5 / ESSL 3.1 require the 'binding' layout qualifier
                     out << "layout(binding = " << getUniqueSamplerBindingPoint() << ") ";
                     break;
-
+                // TODO: Handle webgpu here
+                case TargetApi::WEBGPU:
                 case TargetApi::ALL:
                     // should not happen
                     break;
@@ -825,7 +816,7 @@ io::sstream& CodeGenerator::generateSamplers(utils::io::sstream& out,
     return out;
 }
 
-io::sstream& CodeGenerator::generateSubpass(io::sstream& out, SubpassInfo subpass) {
+io::sstream& CodeGenerator::generatePostProcessSubpass(io::sstream& out, SubpassInfo subpass) {
     if (!subpass.isValid) {
         return out;
     }
@@ -1013,21 +1004,19 @@ io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQualit
     return out;
 }
 
-io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderStage stage) {
-
+io::sstream& CodeGenerator::generateSurfaceCommon(io::sstream& out, ShaderStage stage) {
     out << SHADERS_COMMON_MATH_GLSL_DATA;
-
     switch (stage) {
         case ShaderStage::VERTEX:
-            out << SHADERS_COMMON_INSTANCING_GLSL_DATA;
-            out << SHADERS_COMMON_SHADOWING_GLSL_DATA;
+            out << SHADERS_SURFACE_INSTANCING_GLSL_DATA;
+            out << SHADERS_SURFACE_SHADOWING_GLSL_DATA;
             break;
         case ShaderStage::FRAGMENT:
-            out << SHADERS_COMMON_INSTANCING_GLSL_DATA;
-            out << SHADERS_COMMON_SHADOWING_GLSL_DATA;
+            out << SHADERS_SURFACE_INSTANCING_GLSL_DATA;
+            out << SHADERS_SURFACE_SHADOWING_GLSL_DATA;
             out << SHADERS_COMMON_SHADING_FS_DATA;
             out << SHADERS_COMMON_GRAPHICS_FS_DATA;
-            out << SHADERS_COMMON_MATERIAL_FS_DATA;
+            out << SHADERS_SURFACE_MATERIAL_FS_DATA;
             break;
         case ShaderStage::COMPUTE:
             out << '\n';
@@ -1037,89 +1026,87 @@ io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderStage stage) 
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessCommon(io::sstream& out, ShaderStage type) {
+io::sstream& CodeGenerator::generatePostProcessCommon(io::sstream& out, ShaderStage stage) {
     out << SHADERS_COMMON_MATH_GLSL_DATA;
-    if (type == ShaderStage::VERTEX) {
-    } else if (type == ShaderStage::FRAGMENT) {
+    if (stage == ShaderStage::VERTEX) {
+    } else if (stage == ShaderStage::FRAGMENT) {
         out << SHADERS_COMMON_SHADING_FS_DATA;
         out << SHADERS_COMMON_GRAPHICS_FS_DATA;
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generateFog(io::sstream& out, ShaderStage type) {
-    if (type == ShaderStage::VERTEX) {
-    } else if (type == ShaderStage::FRAGMENT) {
-        out << SHADERS_FOG_FS_DATA;
+io::sstream& CodeGenerator::generateSurfaceFog(io::sstream& out, ShaderStage stage) {
+    if (stage == ShaderStage::VERTEX) {
+    } else if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_FOG_FS_DATA;
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generateCommonMaterial(io::sstream& out, ShaderStage type) {
-    if (type == ShaderStage::VERTEX) {
-        out << SHADERS_MATERIAL_INPUTS_VS_DATA;
-    } else if (type == ShaderStage::FRAGMENT) {
-        out << SHADERS_MATERIAL_INPUTS_FS_DATA;
+io::sstream& CodeGenerator::generateSurfaceMaterial(io::sstream& out, ShaderStage stage) {
+    if (stage == ShaderStage::VERTEX) {
+        out << SHADERS_SURFACE_MATERIAL_INPUTS_VS_DATA;
+    } else if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_MATERIAL_INPUTS_FS_DATA;
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderStage type) {
-    if (type == ShaderStage::VERTEX) {
+io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderStage stage) {
+    if (stage == ShaderStage::VERTEX) {
         out << SHADERS_POST_PROCESS_INPUTS_VS_DATA;
-    } else if (type == ShaderStage::FRAGMENT) {
+    } else if (stage == ShaderStage::FRAGMENT) {
         out << SHADERS_POST_PROCESS_INPUTS_FS_DATA;
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessGetters(io::sstream& out, ShaderStage type) {
+io::sstream& CodeGenerator::generatePostProcessGetters(io::sstream& out, ShaderStage stage) {
     out << SHADERS_COMMON_GETTERS_GLSL_DATA;
-    if (type == ShaderStage::VERTEX) {
+    if (stage == ShaderStage::VERTEX) {
         out << SHADERS_POST_PROCESS_GETTERS_VS_DATA;
-    } else if (type == ShaderStage::FRAGMENT) {
+    } else if (stage == ShaderStage::FRAGMENT) {
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generateGetters(io::sstream& out, ShaderStage stage) {
+io::sstream& CodeGenerator::generateSurfaceGetters(io::sstream& out, ShaderStage stage) {
     out << SHADERS_COMMON_GETTERS_GLSL_DATA;
     switch (stage) {
         case ShaderStage::VERTEX:
-            out << SHADERS_GETTERS_VS_DATA;
+            out << SHADERS_SURFACE_GETTERS_VS_DATA;
             break;
         case ShaderStage::FRAGMENT:
-            out << SHADERS_GETTERS_FS_DATA;
+            out << SHADERS_SURFACE_GETTERS_FS_DATA;
             break;
         case ShaderStage::COMPUTE:
-            out << SHADERS_GETTERS_CS_DATA;
+            out << SHADERS_SURFACE_GETTERS_CS_DATA;
             break;
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generateParameters(io::sstream& out, ShaderStage type) {
-    if (type == ShaderStage::VERTEX) {
-    } else if (type == ShaderStage::FRAGMENT) {
-        out << SHADERS_SHADING_PARAMETERS_FS_DATA;
+io::sstream& CodeGenerator::generateSurfaceParameters(io::sstream& out, ShaderStage stage) {
+    if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_SHADING_PARAMETERS_FS_DATA;
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderStage type,
+io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage stage,
         filament::Variant variant, Shading shading, bool customSurfaceShading) {
-    if (type == ShaderStage::VERTEX) {
-    } else if (type == ShaderStage::FRAGMENT) {
-        out << SHADERS_COMMON_LIGHTING_FS_DATA;
+    if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_LIGHTING_FS_DATA;
         if (filament::Variant::isShadowReceiverVariant(variant)) {
-            out << SHADERS_SHADOWING_FS_DATA;
+            out << SHADERS_SURFACE_SHADOWING_FS_DATA;
         }
 
         // the only reason we have this assert here is that we used to have a check,
         // which seemed unnecessary.
         assert_invariant(shading != Shading::UNLIT);
 
-        out << SHADERS_BRDF_FS_DATA;
+        out << SHADERS_SURFACE_BRDF_FS_DATA;
         switch (shading) {
             case Shading::UNLIT:
                 // can't happen
@@ -1127,54 +1114,53 @@ io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderStage type
             case Shading::SPECULAR_GLOSSINESS:
             case Shading::LIT:
                 if (customSurfaceShading) {
-                    out << SHADERS_SHADING_LIT_CUSTOM_FS_DATA;
+                    out << SHADERS_SURFACE_SHADING_LIT_CUSTOM_FS_DATA;
                 } else {
-                    out << SHADERS_SHADING_MODEL_STANDARD_FS_DATA;
+                    out << SHADERS_SURFACE_SHADING_MODEL_STANDARD_FS_DATA;
                 }
                 break;
             case Shading::SUBSURFACE:
-                out << SHADERS_SHADING_MODEL_SUBSURFACE_FS_DATA;
+                out << SHADERS_SURFACE_SHADING_MODEL_SUBSURFACE_FS_DATA;
                 break;
             case Shading::CLOTH:
-                out << SHADERS_SHADING_MODEL_CLOTH_FS_DATA;
+                out << SHADERS_SURFACE_SHADING_MODEL_CLOTH_FS_DATA;
                 break;
         }
 
-        out << SHADERS_AMBIENT_OCCLUSION_FS_DATA;
-        out << SHADERS_LIGHT_INDIRECT_FS_DATA;
+        out << SHADERS_SURFACE_AMBIENT_OCCLUSION_FS_DATA;
+        out << SHADERS_SURFACE_LIGHT_INDIRECT_FS_DATA;
 
         if (variant.hasDirectionalLighting()) {
-            out << SHADERS_LIGHT_DIRECTIONAL_FS_DATA;
+            out << SHADERS_SURFACE_LIGHT_DIRECTIONAL_FS_DATA;
         }
         if (variant.hasDynamicLighting()) {
-            out << SHADERS_LIGHT_PUNCTUAL_FS_DATA;
+            out << SHADERS_SURFACE_LIGHT_PUNCTUAL_FS_DATA;
         }
 
-        out << SHADERS_SHADING_LIT_FS_DATA;
+        out << SHADERS_SURFACE_SHADING_LIT_FS_DATA;
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generateShaderUnlit(io::sstream& out, ShaderStage type,
+io::sstream& CodeGenerator::generateSurfaceUnlit(io::sstream& out, ShaderStage stage,
         filament::Variant variant, bool hasShadowMultiplier) {
-    if (type == ShaderStage::VERTEX) {
-    } else if (type == ShaderStage::FRAGMENT) {
+    if (stage == ShaderStage::FRAGMENT) {
         if (hasShadowMultiplier) {
             if (filament::Variant::isShadowReceiverVariant(variant)) {
-                out << SHADERS_SHADOWING_FS_DATA;
+                out << SHADERS_SURFACE_SHADOWING_FS_DATA;
             }
         }
-        out << SHADERS_SHADING_UNLIT_FS_DATA;
+        out << SHADERS_SURFACE_SHADING_UNLIT_FS_DATA;
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generateShaderReflections(utils::io::sstream& out, ShaderStage type) {
-    if (type == ShaderStage::VERTEX) {
-    } else if (type == ShaderStage::FRAGMENT) {
-        out << SHADERS_COMMON_LIGHTING_FS_DATA;
-        out << SHADERS_LIGHT_REFLECTIONS_FS_DATA;
-        out << SHADERS_SHADING_REFLECTIONS_FS_DATA;
+io::sstream& CodeGenerator::generateSurfaceReflections(utils::io::sstream& out,
+        ShaderStage stage) {
+    if (stage == ShaderStage::FRAGMENT) {
+        out << SHADERS_SURFACE_LIGHTING_FS_DATA;
+        out << SHADERS_SURFACE_LIGHT_REFLECTIONS_FS_DATA;
+        out << SHADERS_SURFACE_SHADING_REFLECTIONS_FS_DATA;
     }
     return out;
 }

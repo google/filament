@@ -12,12 +12,12 @@ struct SSBOScalar
     packed_rm_float3x3 c;
 };
 
-kernel void main0(device SSBOScalar& _4 [[buffer(0)]])
+kernel void main0(device SSBOScalar& _6 [[buffer(0)]])
 {
-    float3x3 _20 = transpose(float3x3(float3(_4.b[0]), float3(_4.b[1]), float3(_4.b[2])));
-    _4.b[0] = float3x3(float3(_4.c[0]), float3(_4.c[1]), float3(_4.c[2]))[0];
-    _4.b[1] = float3x3(float3(_4.c[0]), float3(_4.c[1]), float3(_4.c[2]))[1];
-    _4.b[2] = float3x3(float3(_4.c[0]), float3(_4.c[1]), float3(_4.c[2]))[2];
-    _4.a = _20 * float3(_4.a);
+    float3x3 _24 = transpose(float3x3(float3(_6.b[0]), float3(_6.b[1]), float3(_6.b[2])));
+    _6.b[0] = float3x3(float3(_6.c[0]), float3(_6.c[1]), float3(_6.c[2]))[0];
+    _6.b[1] = float3x3(float3(_6.c[0]), float3(_6.c[1]), float3(_6.c[2]))[1];
+    _6.b[2] = float3x3(float3(_6.c[0]), float3(_6.c[1]), float3(_6.c[2]))[2];
+    _6.a = _24 * float3(_6.a);
 }
 

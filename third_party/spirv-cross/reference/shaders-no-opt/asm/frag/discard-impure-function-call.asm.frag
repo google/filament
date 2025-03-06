@@ -15,7 +15,7 @@ vec4 foobar(int a)
 void main()
 {
     int param = vA;
-    vec4 _25 = foobar(param);
+    vec4 _31 = foobar(param);
     FragColor = vec4(10.0);
 }
 

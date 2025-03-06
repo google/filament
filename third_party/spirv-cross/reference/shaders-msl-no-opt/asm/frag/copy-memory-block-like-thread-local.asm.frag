@@ -159,12 +159,12 @@ struct _3
 
 fragment void main0()
 {
-    spvUnsafeArray<float, 4> _20;
-    _20[0u] = 0.0;
-    _20[1u] = 0.0;
-    _20[2u] = 0.0;
-    _20[3u] = 0.0;
-    _3 _19;
-    spvArrayCopyFromStackToStack1(_19._m0, _20.elements);
+    spvUnsafeArray<float, 4> _34;
+    _34[0u] = 0.0;
+    _34[1u] = 0.0;
+    _34[2u] = 0.0;
+    _34[3u] = 0.0;
+    _3 _33;
+    spvArrayCopyFromStackToStack1(_33._m0, _34.elements);
 }
 

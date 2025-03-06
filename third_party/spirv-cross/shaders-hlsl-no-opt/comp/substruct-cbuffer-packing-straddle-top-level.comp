@@ -1,0 +1,12 @@
+#version 450
+
+layout(set = 0, binding = 0, std140) uniform UboData
+{
+    vec3 data0;
+    // uint padding0; // 4 bytes of padding here
+    ivec2 data1;
+};
+
+void main()
+{
+}

@@ -1,0 +1,71 @@
+# Copyright 2018-2023 The ANGLE Project Authors.
+# Copyright 2019-2023 LunarG, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+import("//build_overrides/vulkan_headers.gni")
+
+config("vulkan_headers_config") {
+  include_dirs = [ "include" ]
+  defines = []
+
+  if (is_win) {
+    defines += [ "VK_USE_PLATFORM_WIN32_KHR" ]
+  }
+  if (defined(vulkan_use_x11) && vulkan_use_x11) {
+    defines += [ "VK_USE_PLATFORM_XCB_KHR" ]
+  }
+  if (defined(vulkan_use_wayland) && vulkan_use_wayland) {
+    defines += [ "VK_USE_PLATFORM_WAYLAND_KHR" ]
+    if (defined(vulkan_wayland_include_dirs)) {
+      include_dirs += vulkan_wayland_include_dirs
+    }
+  }
+  if (is_android) {
+    defines += [ "VK_USE_PLATFORM_ANDROID_KHR" ]
+  }
+  if (is_fuchsia) {
+    defines += [ "VK_USE_PLATFORM_FUCHSIA" ]
+  }
+  if (is_apple) {
+    defines += [ "VK_USE_PLATFORM_METAL_EXT" ]
+  }
+  if (is_mac) {
+    defines += [ "VK_USE_PLATFORM_MACOS_MVK" ]
+  }
+  if (is_ios) {
+    defines += [ "VK_USE_PLATFORM_IOS_MVK" ]
+  }
+  if (defined(is_ggp) && is_ggp) {
+    defines += [ "VK_USE_PLATFORM_GGP" ]
+  }
+  if (is_clang) {
+    cflags = [
+      "-Wno-redundant-parens",
+    ]
+  }
+}
+
+# Vulkan headers only, no compiled sources.
+source_set("vulkan_headers") {
+  sources = [
+    "include/vulkan/vk_icd.h",
+    "include/vulkan/vk_layer.h",
+    "include/vulkan/vk_platform.h",
+    "include/vulkan/vulkan.h",
+    "include/vulkan/vulkan.hpp",
+    "include/vulkan/vulkan_core.h",
+    "include/vulkan/vulkan_screen.h",
+    "include/vk_video/vulkan_video_codec_av1std_decode.h",
+    "include/vk_video/vulkan_video_codec_av1std_encode.h",
+    "include/vk_video/vulkan_video_codec_av1std.h",
+    "include/vk_video/vulkan_video_codec_h264std_decode.h",
+    "include/vk_video/vulkan_video_codec_h264std_encode.h",
+    "include/vk_video/vulkan_video_codec_h264std.h",
+    "include/vk_video/vulkan_video_codec_h265std_decode.h",
+    "include/vk_video/vulkan_video_codec_h265std_encode.h",
+    "include/vk_video/vulkan_video_codec_h265std.h",
+    "include/vk_video/vulkan_video_codecs_common.h",
+  ]
+  public_configs = [ ":vulkan_headers_config" ]
+}

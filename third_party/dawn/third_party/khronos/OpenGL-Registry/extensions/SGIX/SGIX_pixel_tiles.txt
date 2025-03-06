@@ -1,0 +1,408 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_pixel_tiles
+
+Name Strings
+
+    GL_SGIX_pixel_tiles
+
+Version
+
+    $Date: 1995/07/27 17:34:55 $ $Revision: 1.3 $
+
+Number
+
+    46
+
+Dependencies
+
+    EXT_texture3D affects the definition of this extension
+    EXT_subtexture affects the definition of this extension
+    EXT_convolution is required
+    EXT_texture4D affects the definition of this extension
+
+Overview
+
+    This extension deals with the interaction of existing GL functions that
+    read pixels from memory, applications that use grids of tiles of pixels, 
+    and convolution.
+
+    Applications that deal with large multi-dimensional images sometimes
+    break the image into a grid of rectangular tiles of pixels. Such an
+    approach can help control memory use and expedite roaming through an 
+    image that is large with respect to the available memory. 
+
+    GL functions that cause pixels to be read from memory (e.g., DrawPixels 
+    and TexImage2D) assume the pixels are stored as a single series of rows
+    of pixels. The grid of tiles is essentially a sequence of the structures
+    that the pixel reading functions assume. When an application that uses
+    tiling uses a GL function such as DrawPixels, it must iterate
+    through the tiles, either coalescing the tiles into a single tile in
+    preparation for a single GL call or calling the GL function for each tile.
+
+    The convolution operation imposes strict ordering on the way pixels
+    in a subimage that crosses tile boundaries must be transferred: the rows 
+    of pixels transferred must span the entire subimage. Applications 
+    that use tiles of pixels and convolution must copy the subimage to be 
+    transferred from the grid of tiles to a contiguous region, then pass the
+    now-contiguous rows of pixels to the convolution function. If the
+    coalescing of tiles is not needed for some other reason or is not a 
+    side effect of some necessary operation, it is just redundant movement 
+    of the pixels.
+
+    This extension seeks to eliminate the extra copy of data by extending the 
+    existing GL functions to accept, as a source of pixels in memory, a 
+    grid of tiles of pixels in addition to the current sequence of rows 
+    of pixels.
+
+    
+Issues
+
+    * This extension is currently defined for 1 to 4 dimensions. Convolution 
+      is the driving force for this extension, yet is defined for only 1 and 
+      2 dimensions. Should we remove support in this extension for 3 and 4
+      dimensions (until it exists in a convolution extension)? Should we
+      consider confining the extension to only 2 dimensions?
+
+    * We anticipate accelerators for moving pixels around in various
+      implementations. What is the right way to communicate information
+      between an application and the underlying acceleration
+      code/hardware? We believe that memory alignment will be important, 
+      as will some sort of caching. What else should be considered?
+      Are there better ways to express the information?
+
+    * gluScaleImage, gluBuild1DMipmaps, and gluBuild2DMipmaps could be
+      handled similarly in an associated extension. Should this happen?
+
+    * Should EXT_color_table affect this extension? It does have some
+      DrawPixel-like semantics.
+
+Reasoning
+
+    * It is desirable to try to accelerate the GL pixel transfer operations 
+      with special hardware or highly optimized code. Imaging applications 
+      tend to lose the intended benefit of these optimizations in cases where 
+      tiles of pixels are used; significant amounts of time are spent 
+      repackaging data to correspond to the GL model and comply with the 
+      constraints of convolution. Since support for imaging applications was 
+      a primary impetus for the convolution extension, it seems appropriate 
+      to extend the model of pixel storage to also support imaging 
+      applications.
+
+    * For symmetry in the GL interface it would be reasonable to have 
+      this extension cover the storage layout of both source and destination
+      pixels. The assymmetry exists because we are only concerned with 
+      sources that will be undergoing convolution. A tiled destination 
+      that results from convolution can be filled tile by tile.
+    
+    * All the state in this extension is located in the client side. This
+      helps constrain the scope of the extension. No GLX protocol or server
+      side changes need to be made.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        PIXEL_TILE_BEST_ALIGNMENT_SGIX
+        PIXEL_TILE_CACHE_INCREMENT_SGIX
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, GetDoublev, PixelStoref, and PixelStorei:
+
+        PIXEL_TILE_WIDTH_SGIX
+        PIXEL_TILE_HEIGHT_SGIX
+        PIXEL_TILE_GRID_WIDTH_SGIX
+        PIXEL_TILE_GRID_HEIGHT_SGIX
+        PIXEL_TILE_GRID_DEPTH_SGIX
+        PIXEL_TILE_CACHE_SIZE_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The pixel storage modes are augmented to support 3D and 4D image formats 
+    in memory as well as this extension. Table 3.1 is replaced with the table 
+    below:
+
+        Parameter Name               Type        Initial Value   Valid Range
+        --------------               ----        -------------   -----------
+        UNPACK_SWAP_BYTES            boolean     FALSE           TRUE/FALSE
+        UNPACK_LSB_FIRST             boolean     FALSE           TRUE/FALSE
+        UNPACK_ROW_LENGTH            integer     0               [0, infinity]
+        UNPACK_SKIP_ROWS             integer     0               [0, infinity]
+        UNPACK_SKIP_PIXELS           integer     0               [0, infinity]
+        UNPACK_ALIGNMENT             integer     4               1, 2, 4, 8
+        UNPACK_IMAGE_HEIGHT_EXT      integer     0               [0, infinity]
+        UNPACK_SKIP_IMAGES_EXT       integer     0               [0, infinity]
+        UNPACK_IMAGE_DEPTH_SGIS      integer     0               [0, infinity]
+        UNPACK_SKIP_VOLUMES_SGIS     integer     0               [0, infinity]
+        PIXEL_TILE_WIDTH_SGIX        integer     0               [0, infinity]
+        PIXEL_TILE_HEIGHT_SGIX       integer     0               [0, infinity]
+        PIXEL_TILE_GRID_WIDTH_SGIX   integer     0               [0, infinity]
+        PIXEL_TILE_GRID_HEIGHT_SGIX  integer     0               [0, infinity]
+        PIXEL_TILE_GRID_DEPTH_SGIX   integer     0               [0, infinity]
+        PIXEL_TILE_CACHE_SIZE_SGIX   integer     impl. dep.      [0, infinity]
+
+        Table 3.1: PixelStore parameters pertaining to one or more of
+        DrawPixels, TexImage1D, TexImage2D, TexImage3DEXT, TexImage4DSGIS,
+        TexSubImage1DEXT, TexSubImage2DEXT, TexSubImage3DEXT, and
+        TexSubImage4DSGIS.
+
+    Section 3.6.3, starting with the third paragraph in the UNPACKING
+    section and continuing to the paragraph beginning with "Calling 
+    DrawPixels with a type of BITMAP" is changed to read:
+
+    Groups held in memory as the source for a transfer operation can
+    be in one of two formats: as groups arranged in a single rectangle, or 
+    as groups arranged in a grid of rectangles (or tiles). The method of
+    storage is indicated by the state of PIXEL_TILE_GRID_WIDTH_SGIX. If 
+    PIXEL_TILE_GRID_WIDTH_SGIX is greater than 0, the image is contained in 
+    a grid of tiles. If less than or equal to 0, the source is a single 
+    rectangle.
+
+    UNPACKING A SINGLE RECTANGLE
+    ============================
+
+    When groups in memory are treated as being arranged in a rectangle, the
+    rectangle consists of a series of rows, with the first element of the
+    first group of the first row pointed to by the pointer passed to
+    DrawPixels. If the value of UNPACK_ROW_LENGTH is not positive, then the
+    number of groups in a row is width; otherwise the number of groups is
+    UNPACK_ROW_LENGTH. If the first element of a row is at location p in 
+    memory, then the location of the first element of the Nth row is obtained
+    by skipping
+
+                              p + Nk
+
+    where N is the row number (counting from zero) and k is defined as
+
+                             / nl                   s>=a,
+                        k = <
+                             \ a/s ceiling(snl/a)   s<a
+
+    where n is the number of elements in a group, l is the number of groups 
+    in the row, a is the value of UNPACK_ALIGNMENT, and s is the size, in
+    units of GL ubytes, of an element. If the number of bits per element
+    is not 1, 2, 4, or 8 times the number of bits in a GL ubyte, then 
+    k = nl for all values of a.
+
+    There is a mechanism for selecting a subrectangle of groups from a 
+    larger containing rectangle. This mechanism relies on three integer
+    parameters: UNPACK_ROW_LENGTH, UNPACK_SKIP_ROWS, and UNPACK_SKIP_PIXELS.
+    Before obtaining the first group from memory, the pointer supplied to 
+    DrawPixels is effectively advanced by (UNPACK_SKIP_PIXELS)n + 
+    (UNPACK_SKIP_ROWS)k elements. Then width groups are obtained from 
+    contiguous elements in memory (without advancing the pointer), after
+    which the pointer is advanced by k elements. height sets of width groups
+    of values are obtained this way. See Figure 3.8.
+
+
+    UNPACKING PIXEL TILES
+    =====================
+
+                    |<- TW ->|
+                    |<---------- Grid Width ----------->|
+
+            --  --  +--------+--------+--------+--------+
+            G       |        |        |        |        |
+            r   TH  |      +-+--------+--------+--+     |
+            i       |t8    | |t9      |t10     |t11     |
+            d   --  +------+-+--------+--------+--+-----+
+                    |      | |        |        |  |     |
+            H       |      | |        |        |  |     |
+            e       |t4    | |t5      |t6      |t7|     |
+            i       +------+-+--------+--------+--+-----+
+            g       |      | |        |        |  |     |
+            h   --  |<-SP->+-+--------+--------+--+     |
+            t   SR  |t0      |t1      |t2      |t3      |
+            --  --  +--------+--------+--------+--------+
+
+      Figure 3.8.a???. Selecting a subimage from a tiled image source.
+                  TW -> PIXEL_TILE_WIDTH_SGIX
+                  TH -> PIXEL_TILE_HEIGHT_SGIX
+                  SR -> UNPACK_SKIP_ROWS
+                  SP -> UNPACK_SKIP_PIXELS
+                  Grid Width  -> PIXEL_TILE_GRID_WIDTH_SGIX
+                  Grid Height -> PIXEL_TILE_GRID_HEIGHT_SGIX
+
+
+    When groups are held in memory as a grid of tiles, the image rectangle 
+    consists of a series of rows of rectangular tiles. See Figure 3.8.a???. 
+    Each tile consists of a series of tile rows. A row of the image will
+    cross all tiles in a row of the grid. Unlike the single rectangle 
+    method for holding groups in memory, the number of groups in a row of 
+    the tiled image is defined as PIXEL_TILE_WIDTH_SGIX * 
+    PIXEL_TILE_GRID_WIDTH_SGIX, where PIXEL_TILE_WIDTH_SGIX is the number
+    of groups in a row of a single tile and PIXEL_TILE_GRID_WIDTH_SGIX is
+    the number of tiles in the width of the image. UNPACK_ROW_LENGTH is 
+    ignored when using pixel tiles.
+
+    Groups are arranged within a single tile exactly as described above for
+    groups arranged in a single rectangle. The computation of the 
+    starting address of a row within a tile is also the same. The method
+    for computing the starting address of a row in the image is to first 
+    establish the row of tiles in the grid containing the row of groups in 
+    the image, then to locate the address of the row within the tile. The 
+    index of the first tile that contains the row can be computed as:
+
+                             index = n * floor(r/h)
+
+    where index is the (0-based) index of the tile, n is the number of tiles
+    across the image, PIXEL_TILE_GRID_WIDTH_SGIX, r is the (0-based) group
+    row number, and h is the number of rows per tile, PIXEL_TILE_HEIGHT_SGIX.
+    The starting address within each of the tiles in the row across the 
+    image is computed as defined in the simple rectangle case, but using a 
+    row number that is the original row number modulo the number of rows 
+    per tile, PIXEL_TILE_HEIGHT_SGIX.
+    
+    That groups are being held in memory as a grid of tiles is indicated 
+    by PIXEL_TILE_GRID_WIDTH_SGIX containing a value greater than 0.
+    The <pixels> parameter of DrawPixels, TexImage1D, TexImage2D, 
+    TexImage3DEXT, TexImage4DSGIS, TexSubImage1DEXT, TexSubImage2DEXT, 
+    TexSubImage3DEXT, or TexSubImage4DSGIS is a pointer to a vector of 
+    starting addresses for each of the tiles. 
+
+    When transferring a subimage from the grid of tiles, a complete row of
+    groups crossing the entire subimage is transferred before the first
+    group of the next subimage row is transferred. Thus, for a subimage that
+    crosses tiles, the sequence of groups transferred will be 
+    indistinguishable from the sequence that would have occurred had the 
+    subimage been taken from a simple rectangular image. 
+ 
+    For 1-dimensional transfers, such as those of TexImage1D, and
+    TexSubImage1DEXT, PIXEL_TILE_GRID_WIDTH_SGIX must be set to a non-zero
+    positive value indicating pixel tiles are being used and
+    PIXEL_TILE_WIDTH_SGIX must be set to a positive value indicating the 
+    tile width.
+
+    For 2-dimensional transfers, such as those of DrawPixels, TexImage2D, and
+    TexSubImage2DEXT, PIXEL_TILE_GRID_WIDTH_SGIX must be set to a non-zero
+    positive value indicating both that pixel tiles are being used and the 
+    number of tiles in width of the image. PIXEL_TILE_WIDTH_SGIX and 
+    PIXEL_TILE_HEIGHT_SGIX must be set to positive values indicating 
+    the tile width and height (in groups), respectively.
+
+    3-dimensional transfers, such as those of TexImage3DEXT and 
+    TexSubImage3DEXT, additionally require the specification of a 
+    positive value for PIXEL_TILE_GRID_HEIGHT_SGIX. The value of 
+    UNPACK_IMAGE_HEIGHT_EXT is ignored. A 3-dimensional space is stored as
+    a series of 2-dimensional images. The index of the first tile in the
+    Nth image is N * PIXEL_TILE_GRID_WIDTH_SGIX * 
+    PIXEL_TILE_GRID_HEIGHT_SGIX.
+
+    4-dimensional transfers, such as those of  TexImage4DSGIS and
+    TexSubImage4DSGIS, additionally require the specification of a 
+    positive value for PIXEL_TILE_GRID_DEPTH_SGIX. The value of 
+    UNPACK_IMAGE_DEPTH_SGIS is ignored. The 4-dimensional space is stored as
+    a series of 3-dimensional volumes. The index of the first tile in the
+    Nth volume is N * PIXEL_TILE_GRID_WIDTH_SGIX * 
+    PIXEL_TILE_GRID_HEIGHT_SGIX * PIXEL_TILE_GRID_DEPTH_SGIX.
+
+    Some implementation-dependent pixel storage state is included to help
+    accelerate pixel transfers. PIXEL_TILE_BEST_ALIGNMENT_SGIX provides
+    the optimal memory alignment for the starting address of pixel tiles. 
+    Anticipated acceleration schemes depend on the caching of information
+    from previous transfers to try to accelerate new transfers. The
+    particular resource needed to accelerate the transfer (e.g., locked
+    user memory) may be limited or particularly valuable to a user.
+    Two pixel store values, PIXEL_TILE_CACHE_INCREMENT_SGIX and 
+    PIXEL_TILE_CACHE_SIZE_SGIX, are provided to give the user some control
+    over the amount of the resource in use. PIXEL_TILE_CACHE_SIZE_SGIX is
+    a variable that indicates the current amount of the caching resource in 
+    use. It is settable to some set of discrete values. If the user attempts 
+    to set PIXEL_TILE_CACHE_SIZE_SGIX to some value that is not in the set, 
+    the variable will actually be set to the nearest acceptable value. Setting
+    the variable to 0 will turn any caching off and release the resource.
+    PIXEL_TILE_CACHE_INCREMENT_SGIX is a gettable value that indicates the
+    approximate change in cache size from the current value to the next 
+    larger acceptable value.    
+
+    BITMAP
+    ======
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not supported, this extension does not support 3
+    and 4 dimensions, all discussion of 3 and 4 dimensions is void, references
+    to the function TexImage3DEXT are removed, and the following tokens are 
+    no longer defined:
+
+        PIXEL_TILE_GRID_HEIGHT_SGIX
+        PIXEL_TILE_GRID_DEPTH_SGIX
+
+Dependencies on EXT_subtexture
+
+    If EXT_subtexture is not supported, references to TexSubImage1DEXT, 
+    TexSubImage2DEXT, and TexSubImage3DEXT are removed from this extension.
+
+Dependencies on EXT_convolution
+
+    This extension requires EXT_convolution. If the EXT_convolution is
+    not supported, this extension is unnecessary.
+
+Dependencies on EXT_texture4D
+
+    If EXT_texture4D is not supported, this extension does not support 4
+    dimensions, all discussion of 4 dimensions is void, references to the
+    functions TexImage4DSGIS and TexSubImage4DSGIS are removed, and the 
+    following token is no longer defined:
+
+        PIXEL_TILE_GRID_DEPTH_SGIX
+
+GLX Protocol
+
+    None
+
+Errors
+
+    GL_INVALID_OPERATION is generated by DrawPixels, TexImage1D, TexImage2D, 
+    TexImage3DEXT, TexImage4DSGIS, TexSubImage1DEXT, TexSubImage2DEXT, 
+    TexSubImage3DEXT, or TexSubImage4DSGIS if the groups are to be read from
+    pixel tiles and the specified size of the grid of pixel tiles is 
+    insufficient to hold the specified subimage.
+
+New State
+
+    Get Value                           Get Command     Type    Value   Attrib
+    ---------                           -----------     ----    ------- ------
+    PIXEL_TILE_WIDTH_SGIX		GetIntegerv     Z+      0       client
+    PIXEL_TILE_HEIGHT_SGIX		GetIntegerv     Z+      0       client
+    PIXEL_TILE_GRID_WIDTH_SGIX		GetIntegerv     Z+      0       client
+    PIXEL_TILE_GRID_HEIGHT_SGIX		GetIntegerv     Z+      0       client
+    PIXEL_TILE_GRID_DEPTH_SGIX		GetIntegerv     Z+      0       client
+ 
+New Implementation Dependent State
+
+    Get Value                           Get Command     Type    Attrib
+    ---------                           -----------     ----    ------
+    PIXEL_TILE_BEST_ALIGNMENT_SGIX      GetIntegerv     Z+      client
+    PIXEL_TILE_CACHE_INCREMENT_SGIX     GetIntegerv     Z+      client
+    PIXEL_TILE_CACHE_SIZE_SGIX          GetIntegerv     Z+      client
+
+

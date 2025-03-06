@@ -1,0 +1,13 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
+
+#include <windows.h>
+#include <ntverp.h>
+
+#define VER_FILETYPE                  VFT_DLL
+#define VER_FILESUBTYPE               VFT_UNKNOWN
+#define VER_FILEDESCRIPTION_STR       "DXBC to DXIL Converter"
+#define VER_INTERNALNAME_STR          "DXBC to DXIL Converter"
+#define VER_ORIGINALFILENAME_STR      "dxbc2dxil.exe"
+
+#include <common.ver>

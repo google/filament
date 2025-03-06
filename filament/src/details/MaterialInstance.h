@@ -94,6 +94,8 @@ public:
 
     backend::CullingMode getCullingMode() const noexcept { return mCulling; }
 
+    backend::CullingMode getShadowCullingMode() const noexcept { return mShadowCulling; }
+
     bool isColorWriteEnabled() const noexcept { return mColorWrite; }
 
     bool isDepthWriteEnabled() const noexcept { return mDepthWrite; }
@@ -135,7 +137,15 @@ public:
 
     void setTransparencyMode(TransparencyMode mode) noexcept;
 
-    void setCullingMode(CullingMode const culling) noexcept { mCulling = culling; }
+    void setCullingMode(CullingMode const culling) noexcept {
+        mCulling = culling;
+        mShadowCulling = culling;
+    }
+
+    void setCullingMode(CullingMode const color, CullingMode const shadow) noexcept {
+        mCulling = color;
+        mShadowCulling = shadow;
+    }
 
     void setColorWrite(bool const enable) noexcept { mColorWrite = enable; }
 
@@ -271,7 +281,9 @@ private:
     float mSpecularAntiAliasingThreshold = 0.0f;
 
     backend::CullingMode mCulling : 2;
+    backend::CullingMode mShadowCulling : 2;
     backend::RasterState::DepthFunc mDepthFunc : 3;
+
     bool mColorWrite : 1;
     bool mDepthWrite : 1;
     bool mHasScissor : 1;
@@ -283,8 +295,8 @@ private:
 
     // Scissor rectangle is specified as: Left Bottom Width Height.
     backend::Viewport mScissorRect = { 0, 0,
-            (uint32_t)std::numeric_limits<int32_t>::max(),
-            (uint32_t)std::numeric_limits<int32_t>::max()
+            uint32_t(std::numeric_limits<int32_t>::max()),
+            uint32_t(std::numeric_limits<int32_t>::max())
     };
 
     utils::CString mName;

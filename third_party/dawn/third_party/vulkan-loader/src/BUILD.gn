@@ -1,0 +1,323 @@
+# Copyright (C) 2018-2019 The ANGLE Project Authors.
+# Copyright (C) 2019-2023 LunarG, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build_overrides/build.gni")
+import("//build_overrides/vulkan_loader.gni")
+
+declare_args() {
+  custom_vulkan_loader_library_name = ""
+}
+
+if (is_fuchsia) {
+  import("//build/cpp/sdk_shared_library.gni")
+  import("//build/sdk/sdk_documentation.gni")
+}
+
+if (!is_android) {
+  vulkan_undefine_configs = []
+}
+if (is_win) {
+  vulkan_undefine_configs += [
+    "//build/config/win:nominmax",
+    "//build/config/win:unicode",
+  ]
+}
+
+config("vulkan_internal_config") {
+  defines = [ "VK_ENABLE_BETA_EXTENSIONS" ]
+  if (is_clang || !is_win) {
+    cflags = [
+      "-Wno-conversion",
+      "-Wno-extra-semi",
+      "-Wno-sign-compare",
+      "-Wno-unreachable-code",
+      "-Wno-unused-function",
+      "-Wno-unused-variable",
+    ]
+  }
+  if (is_fuchsia) {
+    defines += [
+      "SYSCONFDIR=\"/config\"",
+      "EXTRASYSCONFDIR=\"/pkg/data\"",
+    ]
+  }
+  if (is_linux || is_chromeos || is_mac) {
+    defines += [
+      "SYSCONFDIR=\"/etc\"",
+      "FALLBACK_CONFIG_DIRS=\"/etc/xdg\"",
+      "FALLBACK_DATA_DIRS=\"/usr/local/share:/usr/share\"",
+    ]
+  }
+  if (is_apple && !vulkan_loader_shared) {
+    defines += [ "APPLE_STATIC_LOADER" ]
+  }
+}
+
+# Vulkan loader
+# -------------
+
+config("vulkan_loader_config") {
+  include_dirs = [
+    "loader/generated",
+    "loader",
+  ]
+  defines = [
+    "LOADER_USE_UNSAFE_FILE_SEARCH=1",
+  ]
+
+  if (is_win) {
+    cflags = [ "/wd4201" ]
+  }
+  if (is_linux || is_chromeos) {
+    # assume secure_getenv() is available
+    defines += [
+      "HAVE_SECURE_GETENV",
+      "LOADER_ENABLE_LINUX_SORT",
+    ]
+  }
+}
+
+if (!is_android) {
+  if (is_fuchsia) {
+    library_type = "sdk_shared_library"
+  } else if (vulkan_loader_shared) {
+    library_type = "shared_library"
+  } else {
+    library_type = "static_library"
+  }
+  support_unknown_function_handling = false
+  if (defined(ar_path) && ar_path != "" && !is_win && (current_cpu == "arm64" || current_cpu == "x86_64")) {
+    support_unknown_function_handling = true
+    static_library("asm_offset") {
+      sources = [ "loader/asm_offset.c" ]
+      deps = [
+        "$vulkan_headers_dir:vulkan_headers",
+      ]
+
+      if (is_fuchsia) {
+        deps += [
+          ":dlopen_fuchsia",
+        ]
+      }
+
+      # Output raw assembly instead of compiled object file. The assembly will be included as a member of the output ar file.
+      cflags = [ "-S" ]
+      configs += [ ":vulkan_internal_config" ]
+      configs += [ ":vulkan_loader_config" ]
+    }
+
+    action("gen_defines") {
+      script = "scripts/parse_asm_values.py"
+      deps = [ ":asm_offset" ]
+
+      inputs = [
+        "$target_out_dir/libasm_offset.a",
+        ar_path,
+      ]
+      if (current_cpu == "arm64") {
+        cpu = "aarch64"
+      } else {
+        cpu = "x86_64"
+      }
+      args = [
+        rebase_path("$target_gen_dir/gen_defines.asm", root_build_dir),
+        rebase_path("$target_out_dir/libasm_offset.a", root_build_dir),
+        "GAS",
+        "Clang",
+        cpu,
+        rebase_path(ar_path, root_build_dir),
+        "libasm_offset.asm_offset.c.o",
+      ]
+      outputs = [ "$target_gen_dir/gen_defines.asm" ]
+    }
+  }
+
+  if (is_win) {
+    action("gen_loader_rc") {
+      script = "scripts/generate_loader_rc.py"
+      inputs = [
+        "loader/loader.rc",
+      ]
+      args = [
+        rebase_path("loader/loader.rc", root_build_dir),
+        rebase_path("$target_gen_dir/loader.rc", root_build_dir),
+      ]
+      if (is_official_build) {
+        args += [ "--is_official" ]
+      }
+      outputs = [ "$target_gen_dir/loader.rc" ]
+    }
+  }
+
+  target(library_type, "libvulkan") {
+    sources = [
+      "loader/adapters.h",
+      "loader/allocation.c",
+      "loader/allocation.h",
+      "loader/cJSON.c",
+      "loader/cJSON.h",
+      "loader/debug_utils.c",
+      "loader/debug_utils.h",
+      # Should only be linked when assembler is used
+      # "loader/dev_ext_trampoline.c",
+      "loader/extension_manual.c",
+      "loader/extension_manual.h",
+      "loader/generated/vk_layer_dispatch_table.h",
+      "loader/generated/vk_loader_extensions.h",
+      "loader/generated/vk_object_types.h",
+      "loader/gpa_helper.h",
+      "loader/gpa_helper.c",
+      "loader/loader_common.h",
+      "loader/loader_environment.c",
+      "loader/loader_environment.h",
+      "loader/loader.c",
+      "loader/loader.h",
+      "loader/loader_json.c",
+      "loader/loader_json.h",
+      "loader/log.c",
+      "loader/log.h",
+      # Should only be linked when assembler is used
+      # "loader/phys_dev_ext.c",
+      "loader/settings.c",
+      "loader/settings.h",
+      "loader/stack_allocation.h",
+      "loader/terminator.c",
+      "loader/trampoline.c",
+      "loader/unknown_function_handling.h",
+      "loader/unknown_function_handling.c",
+      "loader/vk_loader_layer.h",
+      "loader/vk_loader_platform.h",
+      "loader/wsi.c",
+      "loader/wsi.h",
+    ]
+
+    if (custom_vulkan_loader_library_name != "") {
+      output_name = custom_vulkan_loader_library_name
+    } else {
+      if (is_win) {
+        output_name = "vulkan-1"
+      } else {
+        output_name = "vulkan"
+
+        # Create libvulkan.so.1 on Linux instead of libvulkan.so
+        if ((is_linux || is_chromeos) && vulkan_loader_shared) {
+          output_extension = "so.1"
+        }
+      }
+    }
+
+    deps = []
+    if (is_win) {
+      sources += [
+        "loader/dirent_on_windows.c",
+        "loader/dirent_on_windows.h",
+        "loader/loader_windows.c",
+        "loader/loader_windows.h",
+        "$target_gen_dir/loader.rc",
+        "loader/vulkan-1.def",
+      ]
+      if (!is_clang) {
+        cflags = [
+          "/wd4054",  # Type cast from function pointer
+          "/wd4055",  # Type cast from data pointer
+          "/wd4100",  # Unreferenced formal parameter
+          "/wd4152",  # Nonstandard extension used (pointer conversion)
+          "/wd4201",  # Nonstandard extension used: nameless struct/union
+          "/wd4214",  # Nonstandard extension used: bit field types other than
+                      # int
+          "/wd4232",  # Nonstandard extension used: address of dllimport is not
+                      # static
+          "/wd4305",  # Type cast truncation
+          "/wd4706",  # Assignment within conditional expression
+          "/wd4996",  # Unsafe stdlib function
+        ]
+      }
+      if (is_clang) {
+        cflags = [ "-Wno-incompatible-pointer-types" ]
+      }
+      libs = [ "Cfgmgr32.lib" ]
+      deps += [ ":gen_loader_rc" ]
+    }
+    if (is_linux || is_chromeos) {
+      sources += [
+        "loader/loader_linux.c",
+        "loader/loader_linux.h",
+      ]
+    }
+    if (is_mac) {
+      frameworks = [ "CoreFoundation.framework" ]
+    }
+    public_deps = [ "$vulkan_headers_dir:vulkan_headers" ]
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+    configs += [ ":vulkan_internal_config" ]
+    public_configs = [ ":vulkan_loader_config" ]
+    configs -= vulkan_undefine_configs
+
+    if (is_fuchsia) {
+      category = "partner"
+
+      # The Vulkan loader's interface is defined by standard Khronos vulkan headers
+      # which can be obtained separately from the loader implementation itself.
+      no_headers = true
+
+      deps += [
+        ":dlopen_fuchsia",
+        "//sdk/lib/fdio",
+      ]
+
+      runtime_deps = [ "//sdk/lib/fdio:fdio_sdk" ]
+    }
+    if (support_unknown_function_handling) {
+      if (current_cpu == "arm64") {
+        sources += [ "loader/unknown_ext_chain_gas_aarch.S" ]
+      } else if (current_cpu == "x86_64") {
+        sources += [ "loader/unknown_ext_chain_gas_x86.S" ]
+      } else {
+        assert(false, "Unexpected CPU $current_cpu")
+      }
+
+      defines += ["UNKNOWN_FUNCTIONS_SUPPORTED=1"]
+      deps += [ ":gen_defines" ]
+      include_dirs = [ "$target_gen_dir" ]
+    }
+  }
+}
+
+if (is_fuchsia) {
+  source_set("dlopen_fuchsia") {
+    sources = [
+      "loader/dlopen_fuchsia.c",
+      "loader/dlopen_fuchsia.h",
+    ]
+
+    deps = [
+      "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_c_client",
+      "//sdk/lib/fdio",
+    ]
+  }
+
+  sdk_documentation("vulkan_license") {
+    name = "vulkan_license"
+    category = "public"
+
+    files = [
+      {
+        source = "LICENSE.txt"
+        dest = "LICENSE.vulkan"
+      },
+    ]
+  }
+}

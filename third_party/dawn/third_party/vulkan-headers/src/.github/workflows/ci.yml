@@ -1,0 +1,83 @@
+# Copyright 2022-2023 LunarG, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: ci
+
+on:
+  push:
+  pull_request:
+
+env:
+  CMAKE_GENERATOR: Ninja
+
+permissions:
+    contents: read
+
+jobs:
+  cmake-unix:
+    runs-on: ${{ matrix.os }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+        cmake-version: [ '3.22.1', 'latest']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: ${{ matrix.cmake-version }}
+      - uses: ilammy/msvc-dev-cmd@v1
+      - run: cmake -S . -B build -D VULKAN_HEADERS_ENABLE_TESTS=ON -D VULKAN_HEADERS_ENABLE_INSTALL=ON -G Ninja
+      - run: cmake --build ./build
+      - run: cmake --install build/ --prefix build/install
+      - run: ctest --output-on-failure
+        working-directory: build
+
+  cmake-windows:
+    runs-on: windows-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    strategy:
+      matrix:
+        cmake-version: [ '3.22.1', 'latest']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: ${{ matrix.cmake-version }}
+      - uses: ilammy/msvc-dev-cmd@v1
+      - run: cmake -S . -B build -D VULKAN_HEADERS_ENABLE_TESTS=ON -D VULKAN_HEADERS_ENABLE_INSTALL=ON -G Ninja
+      - run: cmake --build ./build
+      - run: cmake --install build/ --prefix build/install
+      - run: ctest --output-on-failure
+        working-directory: build
+
+  windows_clang:
+    runs-on: windows-2022
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    strategy:
+      matrix:
+          compiler: [ clang, clang-cl ]
+    steps:
+        - uses: actions/checkout@v4
+        - uses: ilammy/msvc-dev-cmd@v1
+        - run: |
+            cmake -S . -B build `
+            -D CMAKE_C_COMPILER=${{matrix.compiler}} `
+            -D CMAKE_CXX_COMPILER=${{matrix.compiler}} `
+            -D CMAKE_BUILD_TYPE=Release `
+            -D VULKAN_HEADERS_ENABLE_TESTS=ON `
+            -D VULKAN_HEADERS_ENABLE_INSTALL=ON `
+            -G Ninja
+        - run: cmake --build ./build
+        - run: cmake --install build/ --prefix build/install
+        - run: ctest --output-on-failure
+          working-directory: build
+
+  reuse:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    steps:
+    - uses: actions/checkout@v4
+    - name: REUSE Compliance Check
+      uses: fsfe/reuse-action@v5

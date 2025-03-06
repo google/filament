@@ -576,6 +576,7 @@ public:
 			if (!ptr)
 				return nullptr;
 
+			vacants.reserve(num_objects);
 			for (unsigned i = 0; i < num_objects; i++)
 				vacants.push_back(&ptr[i]);
 

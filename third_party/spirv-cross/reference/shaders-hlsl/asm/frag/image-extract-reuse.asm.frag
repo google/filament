@@ -17,9 +17,9 @@ uint2 spvTextureSize(Texture2D<float4> Tex, uint Level, out uint Param)
 
 void frag_main()
 {
+    uint _18_dummy_parameter;
     uint _19_dummy_parameter;
-    uint _20_dummy_parameter;
-    Size = int2(spvTextureSize(uTexture, uint(0), _19_dummy_parameter)) + int2(spvTextureSize(uTexture, uint(1), _20_dummy_parameter));
+    Size = int2(spvTextureSize(uTexture, uint(0), _18_dummy_parameter)) + int2(spvTextureSize(uTexture, uint(1), _19_dummy_parameter));
 }
 
 SPIRV_Cross_Output main()

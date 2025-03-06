@@ -253,7 +253,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
 
     // The model matrix below is in fact inverted to get the view matrix and passed to the
     // shader as 'viewFromWorldMatrix', and is used in the VSM case to compute the depth metric.
-    // (see depth_main.fs). Note that in the case of VSM, 'b' below is identity.
+    // (see surface_depth_main.fs). Note that in the case of VSM, 'b' below is identity.
     mCamera->setModelMatrix(FCamera::rigidTransformInverse(highPrecisionMultiplyd(Mv, b)));
     mCamera->setCustomProjection(mat4(Mn * F * WLMp), znear, zfar);
 
@@ -315,7 +315,7 @@ ShadowMap::ShaderParameters ShadowMap::updatePunctual(
 
     // The model matrix below is in fact inverted to get the view matrix and passed to the
     // shader as 'viewFromWorldMatrix', and is used in the VSM case to compute the depth metric.
-    // (see depth_main.fs). Note that in the case of VSM, 'b' below is identity.
+    // (see surface_depth_main.fs). Note that in the case of VSM, 'b' below is identity.
     mCamera->setModelMatrix(FCamera::rigidTransformInverse(highPrecisionMultiplyd(Mv, b)));
     mCamera->setCustomProjection(highPrecisionMultiplyd(Mn, Mp), nearPlane, farPlane);
 
@@ -719,7 +719,7 @@ mat4f ShadowMap::computeVsmLightSpaceMatrix(const mat4f& lightSpacePcf,
     // For VSM, we want to leave the z coordinate in linear light-space, normalized between [0, 1],
     //  i.e. remapping [near, far] to [0, 1].
     // When sampling a VSM shadow map, the shader follows suit, and doesn't divide by w for the z
-    // coordinate. See shadowing.fs.
+    // coordinate. See surface_shadowing.fs.
     // compute z' = -(Mv * position).z / (far - near) - (near / (far - near))
     const float scale =   1.0f / (zfar - znear);
     mat4f lightSpaceVsm{ lightSpacePcf };

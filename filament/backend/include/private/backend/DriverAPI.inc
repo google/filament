@@ -126,8 +126,10 @@
  * Driver API below...
  */
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
+#endif
 
 DECL_DRIVER_API_0(tick)
 
@@ -212,6 +214,14 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureViewSwizzle,
         backend::TextureSwizzle, g,
         backend::TextureSwizzle, b,
         backend::TextureSwizzle, a)
+
+DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImage2,
+        backend::SamplerType, target,
+        backend::TextureFormat, format,
+        uint32_t, width,
+        uint32_t, height,
+        backend::TextureUsage, usage,
+        backend::Platform::ExternalImageHandleRef, image)
 
 DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImage,
         backend::SamplerType, target,
@@ -353,6 +363,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthClampSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage2, backend::Platform::ExternalImageHandleRef, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::TimerQueryResult, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)
@@ -533,7 +544,9 @@ DECL_DRIVER_API_N(scissor,
         Viewport, scissor)
 
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 
 #undef EXPAND
 

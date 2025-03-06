@@ -19,6 +19,7 @@
 
 #include "DriverBase.h"
 #include "OpenGLContext.h"
+#include "OpenGLDriverBase.h"
 #include "OpenGLTimerQuery.h"
 #include "GLBufferObject.h"
 #include "GLDescriptorSet.h"
@@ -26,11 +27,10 @@
 #include "GLTexture.h"
 #include "ShaderCompilerService.h"
 
-#include <backend/platforms/OpenGLPlatform.h>
-
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <backend/PipelineState.h>
 #include <backend/Platform.h>
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
@@ -41,6 +41,7 @@
 #include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
 
 #include <math/vec4.h>
@@ -74,14 +75,14 @@ class OpenGLProgram;
 class TimerQueryFactoryInterface;
 struct PushConstantBundle;
 
-class OpenGLDriver final : public DriverBase {
+class OpenGLDriver final : public OpenGLDriverBase {
     inline explicit OpenGLDriver(OpenGLPlatform* platform,
             const Platform::DriverConfig& driverConfig) noexcept;
-    ~OpenGLDriver() noexcept final;
-    Dispatcher getDispatcher() const noexcept final;
+    ~OpenGLDriver() noexcept override;
+    Dispatcher getDispatcher() const noexcept override;
 
 public:
-    static Driver* create(OpenGLPlatform* platform, void* sharedGLContext,
+    static OpenGLDriver* create(OpenGLPlatform* platform, void* sharedGLContext,
             const Platform::DriverConfig& driverConfig) noexcept;
 
     class DebugMarker {
@@ -184,7 +185,7 @@ public:
             std::condition_variable cond;
             FenceStatus status{ FenceStatus::TIMEOUT_EXPIRED };
         };
-        std::shared_ptr<State> state{ std::make_shared<GLFence::State>() };
+        std::shared_ptr<State> state{ std::make_shared<State>() };
     };
 
     OpenGLDriver(OpenGLDriver const&) = delete;
@@ -203,11 +204,20 @@ private:
         return mShaderCompilerService;
     }
 
-    ShaderModel getShaderModel() const noexcept final;
+    ShaderModel getShaderModel() const noexcept override;
+    ShaderLanguage getShaderLanguage() const noexcept override;
 
     /*
-     * Driver interface
+     * OpenGLDriver interface
      */
+
+    utils::CString getVendorString() const noexcept override {
+        return utils::CString{ mContext.state.vendor };
+    }
+
+    utils::CString getRendererString() const noexcept override {
+        return utils::CString{ mContext.state.renderer };
+    }
 
     template<typename T>
     friend class ConcreteDispatcher;
@@ -235,21 +245,21 @@ private:
     }
 
     template<typename D, typename B, typename ... ARGS>
-    typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
+    std::enable_if_t<std::is_base_of_v<B, D>, D>*
     construct(Handle<B> const& handle, ARGS&& ... args) {
         return mHandleAllocator.destroyAndConstruct<D, B>(handle, std::forward<ARGS>(args) ...);
     }
 
     template<typename B, typename D,
-            typename = typename std::enable_if<std::is_base_of<B, D>::value, D>::type>
+            typename = std::enable_if_t<std::is_base_of_v<B, D>, D>>
     void destruct(Handle<B>& handle, D const* p) noexcept {
         return mHandleAllocator.deallocate(handle, p);
     }
 
     template<typename Dp, typename B>
-    typename std::enable_if_t<
+    std::enable_if_t<
             std::is_pointer_v<Dp> &&
-            std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
+            std::is_base_of_v<B, std::remove_pointer_t<Dp>>, Dp>
     handle_cast(Handle<B>& handle) {
         return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
@@ -260,9 +270,9 @@ private:
     }
 
     template<typename Dp, typename B>
-    inline typename std::enable_if_t<
+    std::enable_if_t<
             std::is_pointer_v<Dp> &&
-            std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
+            std::is_base_of_v<B, std::remove_pointer_t<Dp>>, Dp>
     handle_cast(Handle<B> const& handle) {
         return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
@@ -287,13 +297,13 @@ private:
 
     void setStencilState(StencilState ss) noexcept;
 
-    void setTextureData(GLTexture* t,
+    void setTextureData(GLTexture const* t,
             uint32_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& p);
 
-    void setCompressedTextureData(GLTexture* t,
+    void setCompressedTextureData(GLTexture const* t,
             uint32_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
@@ -302,7 +312,7 @@ private:
     void renderBufferStorage(GLuint rbo, GLenum internalformat, uint32_t width,
             uint32_t height, uint8_t samples) const noexcept;
 
-    void textureStorage(OpenGLDriver::GLTexture* t, uint32_t width, uint32_t height,
+    void textureStorage(GLTexture* t, uint32_t width, uint32_t height,
             uint32_t depth, bool useProtectedMemory) noexcept;
 
     /* State tracking GL wrappers... */
@@ -334,9 +344,9 @@ private:
     void updateDescriptors(utils::bitset8 invalidDescriptorSets) noexcept;
 
     struct {
-        backend::DescriptorSetHandle dsh;
+        DescriptorSetHandle dsh;
         std::array<uint32_t, CONFIG_UNIFORM_BINDING_COUNT> offsets;
-    } mBoundDescriptorSets[MAX_DESCRIPTOR_SET_COUNT];
+    } mBoundDescriptorSets[MAX_DESCRIPTOR_SET_COUNT] = {};
 
     void clearWithRasterPipe(TargetBufferFlags clearFlags,
             math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept;

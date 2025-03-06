@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Vulkan Utility Libraries
+Source: https://github.com/KhronosGroup/Vulkan-Utility-Libraries
+
+# These files are routinely updated from another repo
+Files: scripts/known_good.json scripts/update_deps.py scripts/CMakeLists.txt
+Copyright: 2023 The Khronos Group Inc.
+License: Apache-2.0

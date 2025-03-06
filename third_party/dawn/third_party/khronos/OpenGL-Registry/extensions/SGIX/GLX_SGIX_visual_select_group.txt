@@ -1,0 +1,146 @@
+Name
+
+    SGIX_visual_select_group
+
+Name Strings
+
+    GLX_SGIX_visual_select_group
+
+Contact
+
+    David Gorgen, Silicon Graphics (dgorgen 'at' sgi.com)
+    Wei Li, Silicon Graphics (weili 'at' sgi.com)
+
+Status
+
+    Complete
+
+Version
+
+    Last Modified Date: November 28, 2000
+    Author Revision: 1.0
+    $Date: 2000/11/28 10:27:39 $Revision: 1.0 $
+
+Number
+
+    234
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides a mechanism to lower visual selection 
+    priorities that glXChooseVisual or glXChooseFBConfig defines.  
+    A new visual attribute is introduced, providing a way for servers
+    to group visuals to different visual selection categories.
+    The visual selection priorities of all the visuals in one category
+    may be higher or lower than the ones in another category.  
+    The visual selection priorities in one category follow the rules
+    of glXChooseVisual or glXChooseFBConfig.  The new attribute is 
+    invisible to users so can't be queried by glXGetConfig or 
+    glXGetFBConfigAttrib.
+
+IP Status
+
+    TBD
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    The token
+
+        GLX_VISUAL_SELECT_GROUP_SGIX   0x8028
+
+    is used to communicate between servers and GLX client.
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None
+
+Additions to Chapter 2 of the GLX 1.3 Specification (GLX Operation)
+
+    None
+
+Additions to Chapter 3 of the GLX 1.3 Specification (Functions and Errors)
+
+    The attribute GLX_VISUAL_SELECT_GROUP_SGIX is used to specify the visual
+    selection categories. Visuals in the i-th category have higher visual 
+    selection priorities than the ones in (i+1)-th category.  If a matching 
+    visual is found in the i-th category, glXChooseVisual will return 
+    the best match and will not continue searching, while glXChooseFBConfig 
+    will continue searching all the categories and will sort the matches 
+    such that the matches in the i-th category are listed before the matches 
+    in the (i+1)-th category in the matching list.
+
+    The attribute GLX_VISUAL_SELECT_GROUP_SGIX is used for the communication
+    between servers and GLX client.  It is not accepted by the <attrib_list>
+    parameter of glXChooseVisual, or glXChooseFBConfig, or glXGetConfig, or
+    glXGetFBConfigAttrib.
+
+    All visuals which have no GLX_VISUAL_SELECT_GROUP_SGIX attribute behave 
+    as though its value was zero.
+
+Additions to Chapter 4 of the GLX 1.3 Specification (Encoding on the X
+Byte Stream)
+
+    None
+
+Additions to Chapter 5 of the GLX 1.3 Specification (Extending OpenGL)
+
+    None
+
+Additions to Chapter 6 of the GLX 1.3 Specification (GLX Versions)
+
+    None
+ 
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State 
+   
+    None
+
+Revision History
+
+    None
+

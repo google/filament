@@ -1,0 +1,7 @@
+// REQUIRES: system-windows
+
+// RUN: %dxc /T ps_6_0 %S/Inputs/bom-main-ascii.hlsl -I Inputs | FileCheck %s
+// RUN: %dxc /T ps_6_0 %S/Inputs/bom-main-utf8.hlsl -I Inputs | FileCheck %s
+// RUN: %dxc /T ps_6_0 %S/Inputs/bom-main-utf16le.hlsl -I Inputs | FileCheck %s
+
+// CHECK:define void @main()

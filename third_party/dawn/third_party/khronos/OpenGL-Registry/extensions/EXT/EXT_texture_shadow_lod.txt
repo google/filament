@@ -1,0 +1,161 @@
+Name
+
+    EXT_texture_shadow_lod
+
+Name Strings
+
+    GL_EXT_texture_shadow_lod
+
+Contact
+
+    Billy Clack, NVIDIA Corporation (bclack 'at' nvidia.com)
+
+Contributors
+
+    Ashwin Lele, NVIDIA Corporation 
+    Daniel Koch, NVIDIA Corporation 
+    Graeme Leese, Broadcom Corporation
+    Pyarelal Knowles, NVIDIA Corporation 
+    Sagar Ghuge, Intel Corporation
+    Mark Janes, Intel Corporation
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: June 3, 2019
+    Revision:   2
+
+Number
+
+    OpenGL Extension #539
+    OpenGL ES Extension #320
+
+Dependencies
+
+    OpenGL 2.0 or OpenGL ES 3.0 is required.
+
+    This extension is written against the OpenGL Shading Language
+    Specification, version 4.60.5 dated July 14, 2018.
+    
+    The same shading language modifications should also be applied to the
+    OpenGL ES Shading Language Specification, version 3.20.4 under the
+    corresponding sections.
+
+    This extension interacts with ARB_texture_cube_map_array and OpenGL 4.0.
+
+    This extension interacts with OES_texture_cube_map_array and OpenGL ES 3.2.
+
+    This extension interacts with EXT_texture_cube_map_array and OpenGL ES 3.2.
+
+    This extension requires EXT_gpu_shader4 or equivalent functionality.
+
+Overview
+
+    This extension adds support for various shadow sampler types with texture
+    functions having interactions with the LOD of texture lookups.  Modern
+    shading languages support LOD queries for shadow sampler types, but until
+    now the OpenGL Shading Language Specification has excluded multiple texture
+    function overloads involving LOD calculations with various shadow samplers.
+    Shading languages for other APIs do support the equivalent LOD-based
+    texture sampling functions for these types which has made porting between
+    those shading languages to GLSL cumbersome and has required the usage of
+    sub-optimal workarounds.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Modification to the OpenGL Shading Language Specification, Version 4.60.5
+
+    Including the following line in a shader can be used to control
+    the language features described in this extension:
+
+      #extension GL_EXT_texture_shadow_lod : <behavior>
+
+    where <behavior> is specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_EXT_texture_shadow_lod         1
+
+
+    Add to section 8.9.2 "Texel Lookup Functions" (p. 170):
+
+    (Add variants of the texture lookup functions with supplied bias p. 170)
+
+    float texture(sampler2DArrayShadow sampler, vec4 P [, float bias])
+    float texture(samplerCubeArrayShadow sampler, vec4 P, float compare [, float bias])
+
+
+    (Add variant of the texture lookup function with supplied offset and optional supplied bias p. 170)
+
+    float textureOffset(sampler2DArrayShadow sampler, vec4 P, ivec2 offset [, float bias])
+
+
+    (Add new functions to the set of allowed texture LOD lookup functions p. 170)
+
+    float textureLod(sampler2DArrayShadow sampler, vec4 P, float lod)
+    float textureLod(samplerCubeShadow sampler, vec4 P, float lod)
+    float textureLod(samplerCubeArrayShadow sampler, vec4 P, float compare, float lod)
+    float textureLodOffset(sampler2DArrayShadow sampler, vec4 P, float lod, ivec2 offset)
+
+Dependencies on ARB_texture_cube_map_array and OpenGL 4.0
+
+    If neither ARB_texture_cube_map_array nor OpenGL 4.0 are supported for
+    OpenGL contexts, ignore references to samplerCubeArrayShadow.
+
+Dependencies on OES_texture_cube_map_array, EXT_texture_cube_map_array and OpenGL ES 3.2
+
+    If neither OES_texture_cube_map_array, EXT_texture_cube_map_array, nor OpenGL ES 3.2 are supported for
+    OpenGL ES contexts, ignore references to samplerCubeArrayShadow.
+
+Issues
+
+    (1)  Are there any other texture function and sampler combinations that are
+         missing from the specifications that might be valid combinations?
+
+         RESOLVED: Yes, as of GLSL 4.60.5 and ESSL 3.20.4, there are other
+         missing texture functions and sampler combinations that might be valid
+         but this extension does not add support for.
+
+         There is no support for Cube samplers and textureOffset family of
+         functions, and no support for Array samplers with textureProj family
+         of functions.  This extension does not add support for these functions
+         since they are 1) not related to shadow samplers and thus outside the
+         scope of this extension, 2) not yet clear if these combinations should
+         be supported at all, and 3) if support should be added then each
+         family of missing functions is deserving of its own extension.
+
+         textureGrad() is missing support for samplerCubeArrayShadow in both
+         the GLSL and ESSL specifications, and is also missing support for
+         gsampler2DArray variants only in the ESSL specification.  The
+         samplerCubeArrayShadow variant is not included in this extension
+         because not all vendors can easily support the additional parameter
+         beyond the gradients.  The missing gsampler2DArray variants in ESSL
+         are not added because they are unrelated to shadow types and thus
+         outside the scope of this extension.
+
+    (2)  The GLSL specification already contains a definition for
+         textureOffset() with sampler2DArrayShadow; does this mean only the optional
+         bias variant of this function is needed?
+
+         RESOLVED:  Yes for GLSL, but the ESSL specification does
+         not have either the non-bias or bias variants of this function so both
+         variants should be defined according to this extension.
+
+Revision History
+
+    Revision 2
+    - Minor correction on contributor name.
+
+    Revision 1
+    - Initial version.
+
+

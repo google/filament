@@ -1,0 +1,106 @@
+XXX - Not complete yet!!!
+Name
+
+    SGIX_complex_polar
+
+Name Strings
+
+    GL_SGIX_complex_polar
+
+Version
+
+    $Date: 1996/06/12 03:45:06 $ $Revision: 1.2 $
+
+Number
+
+    ??
+
+Dependencies
+
+    SGIX_complex is required
+
+Overview
+
+    This extension generates the magnitude and phase of a complex input
+    source.  Computing the spectrum (magnitude) and the phase of a
+    fourier transform (a typical complex input source) is useful
+    for signal and image processing applications.
+
+
+Issues
+
+    - this extension is somewhat of hack to work around the problem
+      of generating only 1 component from an input that has 2 components:
+      real and imaginary.  This extension is really computing 2 operations
+      that, for generality, should be defined as atomic operations.
+    
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by the
+    <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+	COMPLEX_POLAR_EXT        0x????
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+
+****On RedTail we'll be implementing this through texture LUTs. However,
+    the more natural fit would be to do it as a post blending operation.
+    Thus, I'm unclear as to what chapter this description will fall in:
+
+    The specification of generating the magnitude and phase of a fourier
+    signal is added to the GL Specification in section X.X.X.  The resulting
+    fragment will be:
+
+	C_real' = SQRT((Cs_real * Cs_real) + (Cd_imaginary * Cd_imaginary))
+	C_imaginary' = arctan(Cs_real / Cs_imaginary)
+
+    where Cs_real and Cs_imaginary are the source fragment real and imaginary
+    subcomponents and C_real' and C_imaginary' are the result fragment
+    subcomponents.
+
+    In all cases the above equation is evaluated separately for each
+    color component.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    Get Value		Get Command	Type	Initial Value	Attribute
+    ---------		-----------	----	-------------	---------
+    COMPLEX_POLAR_EXT	IsEnabled	 B	False      	color-buffer
+
+New Implementation Dependent State
+
+    None

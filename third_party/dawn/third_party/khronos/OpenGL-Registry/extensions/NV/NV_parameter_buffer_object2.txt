@@ -1,0 +1,557 @@
+Name
+
+    NV_parameter_buffer_object2
+
+Name Strings
+
+    GL_NV_parameter_buffer_object2
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping (July 2009, Release 190)
+
+Version
+
+    Last Modified Date:         09/09/09
+    NVIDIA Revision:            2
+
+Number
+
+    378
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    NV_gpu_program4 is required.
+
+    NV_parameter_buffer_object is required.
+
+    This extension is written against the NV_gpu_program4 specification.
+
+    NV_shader_buffer_load trivially affects the definition of this extension.
+
+Overview
+
+    This extension builds on the NV_parameter_buffer_object extension to
+    provide additional flexibility in sourcing data from buffer objects.  
+
+    The original NV_parameter_buffer_object (PaBO) extension provided the
+    ability to bind buffer objects to a set of numbered binding points and
+    access them in assembly programs as though they were arrays of 32-bit
+    scalars (via the BUFFER variable type) or arrays of four-component vectors
+    with 32-bit scalar components (via the BUFFER4 variable type).  However,
+    the functionality it provided had some significant limits on flexibility.
+    Since any given buffer binding point could be used either as a BUFFER or
+    BUFFER4, but not both, programs couldn't do both 32- and 128-bit fetches
+    from a single binding point.  Additionally, No support was provided for
+    8-, 16-, or 64-bit fetches, though they could be emulated using a larger
+    loads, with bitfield operations and/or write masking to put components in
+    the right places.  Indexing was supported, but strides were limited to 4-
+    and 16-byte multiples, depending on whether BUFFER or BUFFER4 is used.
+
+    This new extension provides the buffer variable declaration type CBUFFER
+    to specify a buffer that is treated as an array of bytes, rather than an
+    array of words or vectors.  The LDC instruction allows programs to extract
+    a vector of data from a CBUFFER variable, using a size and component count
+    specified in the opcode modifier.  1-, 2-, and 4-component fetches are
+    supported.  The LDC instruction supports byte offsets using normal array
+    indexing mechanisms; both run-time and immediate offsets are supported.
+    Offsets used for a buffer object fetch are required to be aligned to the
+    size of the fetch (1, 2, 4, 8, or 16 bytes).
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to Chapter 2 of the OpenGL 3.0 Specification (OpenGL Operation)
+
+    (All modifications are relative to Section 2.X, GPU Programs, from the
+     NV_gpu_program4 specification.)
+
+    Modify Section 2.X.2, Program Grammar
+
+    (add after the long list of grammar rules) If a program specifies the
+    NV_parameter_buffer_object2 program option, the following rules are added
+    to the NV_gpu_program4 base program grammar:
+
+    <VECTORop>              ::= "LDC"
+
+    <opModifier>            ::= "F32";
+                              | "F32X2";
+                              | "F32X4";
+                              | "S8";
+                              | "S16";
+                              | "S32";
+                              | "S32X2";
+                              | "S32X4";
+                              | "U8";
+                              | "U16";
+                              | "U32";
+                              | "U32X2";
+                              | "U32X4";
+
+    <bufferDeclType>        ::= "CBUFFER"
+
+
+    Modify Section 2.X.3.6, Program Parameter Buffers
+
+    (modify the paragraph describing the different type of parameter buffer
+    variable declarations to include support for "CBUFFER".)
+
+    Program parameter buffer variables are treated as an array of
+    single-component words if the <bufferDeclType> grammar rule matches
+    "BUFFER" or as an array of four-component vectors if it matches "BUFFER4".
+    Program parameter buffers may also be declared as an array of basic
+    machine units from which data can be extracted using the LDC (load
+    constant) instruction, if <bufferDeclType> matches "CBUFFER".  Parameter
+    buffer variables declared using "CBUFFER" may not be used as an operand in
+    any instruction other than LDC, while "BUFFER" and "BUFFER4" variables may
+    not be used with LDC.  A program will fail to load if a variable declared
+    as "BUFFER" and another variable declared as "BUFFER4" use the same buffer
+    binding point.  There is no limitation on the use of "CBUFFER" variables
+    in conjunction with "BUFFER" or "BUFFER4" variables using the same buffer
+    binding point.
+
+    (modify/restructure the paragraph describing basic program parameter
+     bindings to handle the byte bindings provided by "CBUFFER" variables)
+
+    If a program parameter buffer binding matches "program.buffer[a][b]", the
+    program parameter variable corresponds to element <b> of the buffer object
+    bound to binding point <a>.  Each element of the bound buffer object is
+    treated as:
+
+      * a single basic machine unit of data, if the variable is declared using
+        "CBUFFER";
+
+      * a single word of data that can hold an integer or floating-point
+        value, if the variable is declared as "BUFFER"; or
+
+      * four words of data that can hold integer or floating-point values, if
+        the variable is declared as "BUFFER4".
+
+    When a binding corresponding to a "BUFFER" variable is used as an operand,
+    the selected word is broadcast to all four components of the variable.
+    When a binding corresponding to a "BUFFER4" variable is used as an
+    operand, the four components of the selected buffer element are loaded
+    into the variable.  A binding corresponding to a "CBUFFER" variable may be
+    used only in the LDC instruction, and will be used there as a pointer to
+    extract operand values from buffer memory.  If no buffer object is bound
+    to binding point <a>, or the bound buffer object is not large enough to
+    hold element <b>, the values used are undefined.  The binding point <a>
+    must be a nonnegative integer constant.
+
+
+    Modify Section 2.X.4, Program Execution Environment
+
+    (Add to the set of opcodes in Table X.13)
+
+                  Modifiers 
+      Instruction F I C S H D  Out Inputs    Description
+      ----------- - - - - - -  --- --------  --------------------------------
+      LDC         X X X X - F  v   v         load from constant buffer
+
+
+    Modify Section 2.X.4.1, Program Instruction Modifiers
+
+    (Add to Table X.14, Instruction Modifiers, and to the corresponding
+    description following the table)
+
+      Modifier  Description
+      --------  -----------------------------------------------
+      F32       Access one 32-bit floating-point value
+      F32X2     Access two 32-bit floating-point values
+      F32X4     Access four 32-bit floating-point values
+      S8        Access one 8-bit signed integer value
+      S16       Access one 16-bit signed integer value
+      S32       Access one 32-bit signed integer value
+      S32X2     Access two 32-bit signed integer values
+      S32X4     Access four 32-bit signed integer values
+      U8        Access one 8-bit unsigned integer value
+      U16       Access one 16-bit unsigned integer value
+      U32       Access one 32-bit unsigned integer value
+      U32X2     Access two 32-bit unsigned integer values
+      U32X4     Access four 32-bit unsigned integer values
+
+    For memory load operations, the "F32", "F32X2", "F32X4", "S8", "S16",
+    "S32", "S32X2", "S32X4", "U8", "U16", "U32", "U32X2", and "U32X4" storage
+    modifiers control how data are loaded from memory.  Storage modifiers are
+    supported by the LDC and LOAD instructions and are covered in more detail
+    in the descriptions of these instructions.  These instructions must
+    specify exactly one of these modifiers, and may not specify any of the
+    base data type modifiers (F,U,S) described above.  The base data type of
+    the result vector of a LOAD or LDC instruction is trivially derived from
+    the storage modifier.
+
+
+    Add New Section 2.X.4.5, Program Memory Access
+
+    Programs may load from buffer object memory via the LDC (load constant)
+    and LOAD (global load) instructions.
+
+    Load instructions read 8, 16, 32, 64, or 128 bits of data from a source
+    address to produce a four-component vector, according to the storage
+    modifier specified with the instruction.  The storage modifier has three
+    parts:
+
+      - a base data type, "F", "S", or "U", specifying that the instruction
+        fetches floating-point, signed integer, or unsigned integer values,
+        respectively;
+
+      - a component size, specifying that the components fetched by the
+        instruction have 8, 16, or 32 bits; and
+
+      - an optional component count, where "X2" and "X4" indicate that two or
+        four components be fetched, and no count indicates a single component
+        fetch.
+
+    When the storage modifier specifies that fewer than four components should
+    be fetched, remaining components are filled with zeroes.  When performing
+    a global load (LOAD), the GPU address is specified as an instruction
+    operand.  When performing a constant buffer load (LDC), the GPU address is
+    derived by adding the base address of the bound buffer object to an offset
+    specified as an instruction operand.  Given a GPU address <address> and a
+    storage modifier <modifier>, the memory load can be described by the
+    following code:
+
+      result_t_vec BufferMemoryLoad(char *address, OpModifier modifier)
+      {
+        result_t_vec result = { 0, 0, 0, 0 };
+        switch (modifier) {
+        case F32:
+            result.x = ((float32_t *)address)[0];
+            break;
+        case F32X2:
+            result.x = ((float32_t *)address)[0];
+            result.y = ((float32_t *)address)[1];
+            break;
+        case F32X4:
+            result.x = ((float32_t *)address)[0];
+            result.y = ((float32_t *)address)[1];
+            result.z = ((float32_t *)address)[2];
+            result.w = ((float32_t *)address)[3];
+            break;
+        case S8:
+            result.x = ((int8_t *)address)[0];
+            break;
+        case S16:
+            result.x = ((int16_t *)address)[0];
+            break;
+        case S32:
+            result.x = ((int32_t *)address)[0];
+            break;
+        case S32X2:
+            result.x = ((int32_t *)address)[0];
+            result.y = ((int32_t *)address)[1];
+            break;
+        case S32X4:
+            result.x = ((int32_t *)address)[0];
+            result.y = ((int32_t *)address)[1];
+            result.z = ((int32_t *)address)[2];
+            result.w = ((int32_t *)address)[3];
+            break;
+        case U8:
+            result.x = ((uint8_t *)address)[0];
+            break;
+        case U16:
+            result.x = ((uint16_t *)address)[0];
+            break;
+        case U32:
+            result.x = ((uint32_t *)address)[0];
+            break;
+        case U32X2:
+            result.x = ((uint32_t *)address)[0];
+            result.y = ((uint32_t *)address)[1];
+            break;
+        case U32X4:
+            result.x = ((uint32_t *)address)[0];
+            result.y = ((uint32_t *)address)[1];
+            result.z = ((uint32_t *)address)[2];
+            result.w = ((uint32_t *)address)[3];
+            break;
+        }
+        return result;
+      }
+
+    The offset used for the constant buffer loads must be aligned to the fetch
+    size corresponding to the storage opcode modifier.  For S8 and U8, the
+    offset has no alignment requirements.  For S16 and U16, the offset must be
+    a multiple of two basic machine units.  For F32, S32, and U32, the offset
+    must be a multiple of four.  For F32X2, S32X2, and U32X2, the offset must
+    be a multiple of eight.  For F32X4, S32X4, and U32X4, the offset must be a
+    multiple of sixteen.  If an offset is not correctly aligned, the values
+    returned by a constant buffer load will be undefined.
+
+
+    Modify Section 2.X.6, Program Options
+
+    + Extended Parameter Buffer Object Support (NV_parameter_buffer_object2)
+
+    If a program specifies the "NV_parameter_buffer_object2" option, it may
+    use the CBUFFER statement to declare program parameter buffer variables
+    and the LDC instruction to load data from parameter buffer variables using
+    arbitrary offsets.
+
+
+    Modify Section 2.X.8, Program Instruction Set
+
+    Section 2.X.8.Z, LDC:  Load from Constant Buffer
+
+    The LDC instruction loads a vector operand from a buffer object to yield a
+    result vector.  The operand used for the LDC instruction must correspond
+    to a parameter buffer variable declared using the "CBUFFER" statement; a
+    program will fail to load if any other type of operand is used in an LDC
+    instruction.
+
+      result = BufferMemoryLoad(&op0, storageModifier);
+
+    A base operand vector is fetched from memory as described in Section
+    2.X.4.5, with the GPU address derived from the binding corresponding to
+    the operand.  A final operand vector is derived from the base operand
+    vector by applying swizzle, negation, and absolute value operand modifiers
+    as described in Section 2.X.4.2.
+
+    The amount of memory in any given buffer object binding accessible by the
+    LDC instruction may be limited.  If any component fetched by the LDC
+    instruction extends 4*<n> or more basic machine units from the beginning
+    of the buffer object binding, where <n> is the implementation-dependent
+    constant MAX_PROGRAM_PARAMETER_BUFFER_SIZE_NV, the value fetched for that
+    component will be undefined.
+
+    LDC supports no base data type modifiers, but requires exactly one storage
+    modifier.  The base data types of the operand and result vectors are
+    derived from the storage modifier.
+
+
+Additions to Chapter 3 of the OpenGL 3.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 3.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 3.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 3.0 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 3.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+Errors
+
+    No new errors.
+
+Dependencies on NV_shader_buffer_load
+
+    If NV_shader_buffer_load (or equivalent functionality) is not supported,
+    references to the "LOAD" opcode in the description of the opcode modifiers
+    for "LDC" should be removed.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) What sort of alignment requirements, if any, should be imposed on the
+        operand provided to the LDC instruction?
+
+      RESOLVED:  The offset of the operand must be aligned according to the
+      size of the fetch.  For 1-, 2-, and 4-component fetches, the offset must
+      be a multiple of <N>, 2*<N>, and 4*<N>, where <N> is the size in bytes
+      of the components being fetched.
+
+    (2) NV_parameter_buffer_object provides an implementation-dependent limit
+        on the portion of a buffer object that may be fetched via BUFFER and
+        BUFFER4 variables?  Should the same limits apply to the LDC
+        instruction?
+
+      RESOLVED:  Yes.  On currently shipping NVIDIA GPUs, the maximum program
+      parameter buffer size is 16384 32-bit words, or 64KB.  Buffers larger
+      than 64KB may be used, but any fetches accessing memory beyond the first
+      64KB of a buffer binding will return undefined values.
+
+    (3) Should we support fetches of 3-component vectors?  If so, what should
+    be the minimum alignment for the specified offset?
+
+      RESOLVED:  No, we'll leave 3-component vectors out of this extension.
+      This limitation can be worked around by either by doing three separate
+      single-component fetches or a four-component fetch with an appropriate
+      write mask.  The former approach supports indexing in a tightly packed
+      array of 3-component vectors; the latter would require that array
+      elements be padded to four components.
+
+    (4) Should we support fetches of 8- and 16-bit components?
+
+      RESOLVED:  Yes, we will support fetches of 8- and 16-bit signed and
+      unsigned integers.
+
+      Fetches of vectors of 8- and 16-bit integers are not supported but may
+      be emulated by performing shift/mask operations on the results of 32-bit
+      fetches.
+
+      Fetches of 16-bit floating-point values, or floating-point vectors
+      thereof, are not supported.  A single fp16 fetch may be emulated using a
+      16-bit unsigned integer fetch and the UP2H instruction to convert the 16
+      LSBs of the fetch to a floating-point value.  The encoding of 16-bit
+      floating-point values is described in section 2.1.2 of the OpenGL 3.0
+      specification.
+
+    (5) Should we support fetches of 64-bit components?
+
+      RESOLVED:  No; the instruction set provided by NV_gpu_program4 does not
+      support 64-bit components anywhere.  If future instructions support
+      64-bit components, this restriction should be removed.
+
+    (6) How should the operands of the LDC instruction should be specified?
+
+      RESOLVED:  We will create a new type of buffer variable ("CBUFFER"),
+      which defines an array of bytes to be fetched form.  The type of fetch
+      to perform is specified by a storage modifier (as in
+      NV_shader_buffer_load).  An offset relative to the buffer binding (in
+      bytes) may be specified using normal array indexing syntax, and an index
+      computed at run-time is supported.
+
+      Some examples:
+
+        CBUFFER buffer[] = { program.buffer[0] };
+        TEMP      i;
+        MOV.S     i, 32;                  # computed offset of 32B
+        LDC.F32   result, buffer[12];     # (x,0,0,0) from bytes 12..15
+        LDC.F32X4 result, buffer[16];     # (x,y,z,w) from bytes 16..31
+        LDC.U8    result, buffer[i.x+3];  # (x,0,0,0) from byte 35
+        LDC.S32   result, buffer[i.x+12]; # (x,0,0,0) from bytes 44..47
+        LDC.U32X2 result, buffer[i.x+8];  # (x,y,0,0) from bytes 40..47
+        LDC.S16   result, buffer[i.x+2];  # (x,0,0,0) from bytes 34..35
+
+      We chose to provide the new buffer variable type (CBUFFER) rather than
+      reusing BUFFER or BUFFER4.  For CBUFFER variables, "buffer[12]"
+      unambiguously specifies a 12-byte offset.  For BUFFER or BUFFER4
+      variables, an operand of "buffer[12]" already has an existing meaning,
+      implying an offset of 12 words or vectors, which would be 48 or 192
+      bytes, respectively.  Because we want to be able to fetch 8-, and 16-bit
+      units, having an offset multiplied by four doesn't make sense.  We could
+      have had LDC simply ignore the type of binding and always interpret an
+      index as a byte offset, but chose the new declaration type to avoid
+      confusion.
+        
+      We also considered an approach where the buffer and offset were
+      specified in separate operands.  That would be similar to texture, where
+      the coordinates and texture are specified separately.  The first operand
+      would have been interpreted as a unsigned scalar specifying a byte
+      offset, the second operand would have specified a buffer variable
+      binding, and a pointer would be obtained by adding the two
+      operands. This would have looked something like:
+
+        BUFFER buffer[] = { program.buffer[0] };
+        LDC.S32X2 result, offset.x, buffer;
+
+      We chose not to implement this approach mainly because this syntax would
+      require specifying a new type of instruction; the syntax we adopted
+      simply reuses existing vector operand and indexing mechanisms.
+      Additionally, the syntax in this extension provides immediate offsets
+      for "free", which the operand-buffer syntax would not support directly
+      without additional new syntax.  For example, to load a structure with a
+      pair of two-component vectors using offset-buffer syntax, you would have
+      to do something like:
+
+        BUFFER buffer[] = { program.buffer[0] };
+        TEMP offset;
+        LDC.S32X2 result1, offset.x, buffer;
+        ADD.U offset.x, offset.x, 8;            # bump offset to second vector
+        LDC.S32X2 result2, offset.x, buffer;
+
+    (7) How should the fetches in the LDC instruction interact with other
+        operand modifiers (swizzle, absolute value, negation)?  With result
+        modifiers (condition codes, saturation)?
+
+      RESOLVED:  These features will be orthogonal.  When any of these
+      modifiers are specified, the base data type to which they apply come
+      from the storage modifier of the LDC instruction.
+
+      The LDC instruction is defined to produce a "base operand vector" from a
+      memory fetch.  This isn't particularly different from normal operands,
+      where a base operand vector is derived from the binding corresponding to
+      the operand.  In both cases, the components of this vector are swizzled
+      and have optional absolute value and negation operations performed to
+      produce a final vector operand, as is the case with other vector
+      operands.  
+
+      If condition code operations or saturation are specified for the result
+      vector, these operations are performed using the appropriate data types.
+
+    (8) What happens if a non-zero base offset is specified for a CBUFFER
+        variable?
+
+      RESOLVED:  A subset of the bytes in a buffer object can be specified
+      using range syntax like the following:
+
+        CBUFFER buffer[] = { program.buffer[0][16..31] };
+
+      The sub-range need not start at the beginning of the buffer object; in
+      the example above, it starts 16 bytes into the buffer.  When accessing a
+      parameter buffer variable corresponding to such a sub-range, an array
+      index is relative to the base of the sub-range.  So the offset of the
+      sub-range is effectively added to the index used for the LDC operand:
+
+        LDC.F32   result, buffer[12];     # (x,0,0,0) from bytes 28..31
+
+    (9) What happens if a non-array CBUFFER variable is used?
+
+      RESOLVED:  A non-array variable may be used with LDC.  However, array
+      indexing isn't supported with non-array variables, so all LDC loads
+      using that variable will fetch using the same base address.
+
+        CBUFFER bufferElement = program.buffer[0][32];
+        LDC.U8    result, buffer;     # (x,0,0,0) from byte 32
+        LDC.S16   result, buffer;     # (x,0,0,0) from bytes 32..33
+        LDC.F32   result, buffer;     # (x,0,0,0) from bytes 32..35
+        LDC.F32X4 result, buffer;     # (x,y,z,w) from bytes 32..47
+
+    (10) Should single-component fetches from LDC smear their results across
+         all four components of the result vector, to allow packing multiple
+         non-vectors into a single vector?
+
+      RESOLVED:  No.  However, swizzle suffixes on the operand will provide
+      this capability for free.  For example, let's say you wanted to fetch
+      four scalars from a buffer and pack the results into a single temporary
+      vector.  The swizzle syntax lets you do this by smearing the real
+      component (always fetched in "x") into the other components:
+
+        CBUFFER buffer[] = { program.buffer[0] };
+        LDC.F32 temp.x, buffer[16];
+        LDC.F32 temp.y, buffer[28].x;
+        LDC.F32 temp.z, buffer[32].x;
+        LDC.F32 temp.w, buffer[40].x;
+        
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     1              pbrown    Internal revisions.
+     2    09/09/09  mjk       Assigned number
