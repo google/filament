@@ -173,6 +173,8 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         case TargetApi::METAL:
             out << "#define TARGET_METAL_ENVIRONMENT\n";
             break;
+        // TODO: Handle webgpu here
+        case TargetApi::WEBGPU:
         case TargetApi::ALL:
             // invalid should never happen
             break;
@@ -711,7 +713,8 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
                 // in the GLSL 4.5 / ESSL 3.1 case, the set is not used and binding is unique
                 out << "binding = " << +binding << ", ";
                 break;
-
+            // TODO: Handle webgpu here
+            case TargetApi::WEBGPU:
             case TargetApi::ALL:
                 // nonsensical, shouldn't happen.
                 break;
@@ -798,7 +801,8 @@ io::sstream& CodeGenerator::generateCommonSamplers(utils::io::sstream& out,
                     // GLSL 4.5 / ESSL 3.1 require the 'binding' layout qualifier
                     out << "layout(binding = " << getUniqueSamplerBindingPoint() << ") ";
                     break;
-
+                // TODO: Handle webgpu here
+                case TargetApi::WEBGPU:
                 case TargetApi::ALL:
                     // should not happen
                     break;

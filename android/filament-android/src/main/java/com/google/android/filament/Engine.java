@@ -139,6 +139,10 @@ public class Engine {
          */
         METAL,
         /**
+         * Select the WebGPU driver if platform supports it.
+         */
+        WEBGPU,
+        /**
          * Selects the no-op driver for testing purposes.
          */
         NOOP,
