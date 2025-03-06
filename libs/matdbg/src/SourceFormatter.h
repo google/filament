@@ -18,6 +18,7 @@
 #define MATDBG_SOURCE_FORMATTER_H
 
 #include <mutex>
+#include <string>
 
 namespace filament::matdbg {
 
