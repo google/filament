@@ -58,6 +58,7 @@
 
 #include <math/vec2.h>
 #include <math/vec3.h>
+#include <math/mat3.h>
 
 #include <algorithm>
 #include <chrono>
@@ -2161,6 +2162,14 @@ int64_t OpenGLDriver::getStreamTimestamp(Handle<HwStream> sh) {
         return s->user_thread.timestamp;
     }
     return 0;
+}
+
+math::mat3f OpenGLDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
+    if (sh) {
+        GLStream* s = handle_cast<GLStream*>(sh);        
+        return mPlatform.getTransformMatrix(s->stream);
+    }
+    return math::mat3f();
 }
 
 void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
