@@ -1068,7 +1068,7 @@ struct ExternalSamplerKey {
 
             auto h1 = ycbcrH(k.mYcbcr);
             auto h2 = spmH(k.mSpm);
-            return h1 ^ h1 ^ k.mExtFmt;
+            return h1 ^ h2 ^ k.mExtFmt;
         }
     };
     struct EqualTo {
