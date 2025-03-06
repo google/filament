@@ -274,7 +274,6 @@ private:
     tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
     mutable DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
-    bool hasStreamUniformAssociations = false;
 
     backend::PolygonOffset mPolygonOffset{};
     backend::StencilState mStencilState{};
