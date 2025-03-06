@@ -192,7 +192,7 @@ void FMaterialInstance::terminate(FEngine& engine) {
 }
 
 void FMaterialInstance::commitStreamUniformAssociations(FEngine::DriverApi& driver) {
-    bool hasStreamUniformAssociations = false;
+    hasStreamUniformAssociations = false;
     if (!mTextureParameters.empty()) {
         backend::BufferObjectStreamDescriptor descriptor;
         for (auto const& [binding, p]: mTextureParameters) {
@@ -206,16 +206,12 @@ void FMaterialInstance::commitStreamUniformAssociations(FEngine::DriverApi& driv
         if (descriptor.streams.size() > 0) {
             driver.registerBufferObjectStreams(mUbHandle, std::move(descriptor));
         }
-        // update uniforms if needed
-        if (hasStreamUniformAssociations) {
-            driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
-        }
     }
 }
 
 void FMaterialInstance::commit(DriverApi& driver) const {
     // update uniforms if needed
-    if (mUniforms.isDirty()) {
+    if (mUniforms.isDirty() || hasStreamUniformAssociations) {
         driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
     if (!mTextureParameters.empty()) {

@@ -653,8 +653,8 @@ void FEngine::prepare() {
 
     for (auto& materialInstanceList: mMaterialInstances) {
         materialInstanceList.second.forEach([&driver](FMaterialInstance* item) {
-            item->commit(driver);
             item->commitStreamUniformAssociations(driver);
+            item->commit(driver);
         });
     }
 
