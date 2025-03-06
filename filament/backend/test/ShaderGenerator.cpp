@@ -150,7 +150,8 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(ShaderStage stage, std::s
 
     assert_invariant(backend == Backend::OPENGL ||
            backend == Backend::METAL  ||
-           backend == Backend::VULKAN);
+           backend == Backend::VULKAN ||
+           backend == Backend::WEBGPU);
 
     if (backend == Backend::OPENGL) {
         if (isMobile) {
@@ -166,6 +167,8 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(ShaderStage stage, std::s
         return { result.c_str(), result.c_str() + result.length() + 1 };
     } else if (backend == Backend::VULKAN) {
         return { (uint8_t*)spirv.data(), (uint8_t*)(spirv.data() + spirv.size()) };
+    } else if (backend == Backend::WEBGPU){
+        filamat::GLSLPostProcessor::spirvToWgsl(&spirv, &result);
     }
 
     return {};

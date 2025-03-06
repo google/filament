@@ -197,6 +197,11 @@ static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguag
             return "MSL";
         case ShaderLanguage::METAL_LIBRARY:
             return "Metal precompiled library";
+        case ShaderLanguage::WGSL:
+            return "WebGPU";
+        // TODO Should we add this?
+        default:
+            return "Unknown";
     }
 }
 
