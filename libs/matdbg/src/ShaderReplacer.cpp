@@ -135,6 +135,10 @@ ShaderReplacer::ShaderReplacer(Backend backend, ShaderLanguage language,
             mMaterialTag = ChunkType::MaterialMetal;
             mDictionaryTag = ChunkType::DictionaryText;
             break;
+        case backend::ShaderLanguage::WGSL:
+            mMaterialTag = ChunkType::MaterialWgsl;
+            mDictionaryTag = ChunkType::DictionaryText;
+            break;
         case backend::ShaderLanguage::SPIRV:
             mMaterialTag = ChunkType::MaterialSpirv;
             mDictionaryTag = ChunkType::DictionarySpirv;
