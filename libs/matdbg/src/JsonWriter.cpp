@@ -254,6 +254,10 @@ bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
             json << "metal";
             chunkType = ChunkType::MaterialMetal;
             break;
+        case ShaderLanguage::WGSL:
+            json << "webgpu";
+            chunkType = ChunkType::MaterialWgsl;
+            break;
         default:
             return false;
     }
