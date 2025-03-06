@@ -367,6 +367,7 @@ private:
     void attachStream(GLTexture* t, GLStream* stream) noexcept;
     void detachStream(GLTexture* t) noexcept;
     void replaceStream(GLTexture* t, GLStream* stream) noexcept;
+    math::mat3f getStreamTransformMatrix(Handle<HwStream> sh);
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     // tasks executed on the main thread after the fence signaled
