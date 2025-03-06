@@ -448,8 +448,7 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
                       fieldAssociatedSampler,
                       uint32_t(fieldSize == 1 ? 0 : fieldSize),
                       BufferInterfaceBlock::Type(fieldType),
-                      BufferInterfaceBlock::Precision(fieldPrecision),
-                      fieldAssociatedSampler }});
+                      BufferInterfaceBlock::Precision(fieldPrecision) }});
     }
 
     *uib = builder.build();
