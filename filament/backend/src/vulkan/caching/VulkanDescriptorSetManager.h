@@ -19,7 +19,6 @@
 
 #include "vulkan/VulkanHandles.h"
 #include "vulkan/VulkanTexture.h"
-#include "vulkan/VulkanUtility.h"
 #include "vulkan/VulkanSamplerCache.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Definitions.h"  // For DescriptorSetMask
