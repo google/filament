@@ -987,6 +987,12 @@ VulkanPlatform::ImageData VulkanPlatform::createExternalImage(void* externalImag
     return createExternalImageImpl(externalImage, mImpl->mDevice, nullptr, metadata);
 }
 
+VkSampler VulkanPlatform::createExternalSampler(SamplerYcbcrConversion chroma,
+    SamplerParams sampler,
+    uint32_t internalFormat) {
+    return createExternalSamplerImpl(mImpl->mDevice, chroma, sampler, internalFormat);
+}
+
 #undef SWAPCHAIN_RET_FUNC
 
 }// namespace filament::backend
