@@ -192,6 +192,7 @@ void FMaterialInstance::terminate(FEngine& engine) {
 }
 
 void FMaterialInstance::commitStreamUniformAssociations(FEngine::DriverApi& driver) {
+    hasStreamUniformAssociations = false;
     if (!mTextureParameters.empty()) {
         backend::BufferObjectStreamDescriptor descriptor;
         for (auto const& [binding, p]: mTextureParameters) {
