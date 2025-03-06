@@ -2561,7 +2561,7 @@ void OpenGLDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh, Buffe
 
 
 // specialization for mat3f (which has a different alignment, see std140 layout rules)
-void copyMat3f(void* addr, size_t const offset, const mat3f& v) noexcept {
+static void copyMat3f(void* addr, size_t const offset, const mat3f& v) noexcept {
     struct mat43 {
         float v[3][4];
     };

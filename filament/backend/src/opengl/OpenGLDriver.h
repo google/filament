@@ -17,7 +17,6 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGLDRIVER_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGLDRIVER_H
 
-#include "gl_headers.h"
 #include "DriverBase.h"
 #include "OpenGLContext.h"
 #include "OpenGLDriverBase.h"
