@@ -1,0 +1,6 @@
+LIBRARY test_icd_export_negotiate_interface_version
+EXPORTS
+    vkGetInstanceProcAddr
+    vkCreateInstance
+    vkEnumerateInstanceExtensionProperties
+    vk_icdNegotiateLoaderICDInterfaceVersion

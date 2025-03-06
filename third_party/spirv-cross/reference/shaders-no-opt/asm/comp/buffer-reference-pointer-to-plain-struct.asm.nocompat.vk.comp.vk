@@ -1,0 +1,28 @@
+#version 450
+#extension GL_EXT_buffer_reference2 : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+struct Foo
+{
+    uint a;
+    uint b;
+};
+
+layout(buffer_reference) buffer FooPointer;
+layout(std430, buffer_reference, buffer_reference_align = 8) buffer FooPointer
+{
+    Foo value;
+};
+
+layout(set = 0, binding = 0, std430) buffer SSBO
+{
+    Foo foos[4];
+    FooPointer ptrfoo;
+} _7;
+
+void main()
+{
+    _7.foos[0].a = 0u;
+    _7.ptrfoo.value.a = 1u;
+}
+

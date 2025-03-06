@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglGetProcAddress - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglGetProcAddress">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglGetProcAddress — 
+            return a <abbr class="acronym">GL</abbr> or an <abbr class="acronym">EGL</abbr>
+            extension function
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">void (* <strong class="fsfunc">eglGetProcAddress</strong>(</code>
+              </td>
+              <td>char const * <var class="pdparam">procname</var>))(void<code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>procname</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the name of the function to return.
+                    </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglGetProcAddress</code> returns the address of
+            the client API or EGL function named by
+            <em class="parameter"><code>procname</code></em>. <em class="parameter"><code>procname</code></em>
+            must be a null-terminated string. The pointer returned should be
+            cast to a function pointer matching the function's definition in
+            the corresponding API or extension specification. A return value
+            of <code class="constant">NULL</code> indicates that the specific
+            function does not exist for the implementation.
+        </p>
+        <p>
+            A non-<code class="constant">NULL</code> return value does not guarantee
+            that an extension function is actually supported at runtime. The
+            client must also make a corresponding query, such as
+            <code class="function">glGetString</code>(<code class="constant">GL_EXTENSIONS</code>)
+            for OpenGL and OpenGL ES extensions;
+            <code class="function">vgGetString</code>(<code class="constant">VG_EXTENSIONS</code>)
+            for OpenVG extensions;
+            <code class="function">eglQueryString</code>(<em class="parameter"><code>display</code></em>,
+            <code class="constant">EGL_EXTENSIONS</code>); or query the EGL or client
+            API version for non-extension functions, to determine if a
+            function is supported by EGL or a specific client API context.
+        </p>
+        <p>
+            Client API function pointers returned by
+            <code class="function">eglGetProcAddress</code> are independent of the
+            display and the currently bound client API context, and may be
+            used by any client API context which supports the function.
+        </p>
+        <p>
+            <code class="function">eglGetProcAddress</code> may be queried for all
+            EGL and client API functions supported by the implementation
+            (whether those functions are extensions or not, and whether they
+            are supported by the current client API context or not).
+        </p>
+        <p>
+            For functions that are queryable with
+            <code class="function">eglGetProcAddress</code>, implementations may
+            choose to also export those functions statically from the object
+            libraries implementing those functions. However, portable
+            clients cannot rely on this behavior.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            If the EGL version is not 1.5 or greater, only queries of EGL
+            and client API <span class="emphasis"><em>extension</em></span> functions will
+            succeed.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <code class="function">glGetString</code>
+            <a class="citerefentry" href="eglQueryString.xhtml"><span class="citerefentry"><span class="refentrytitle">eglQueryString</span></span></a>    </p>
+        <code class="function">vgGetString</code>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

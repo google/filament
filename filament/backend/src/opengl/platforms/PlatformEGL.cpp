@@ -117,7 +117,9 @@ bool PlatformEGL::isOpenGL() const noexcept {
     return false;
 }
 
-Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
+PlatformEGL::ExternalImageEGL::~ExternalImageEGL() = default;
+
+Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) noexcept {
     mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
@@ -295,7 +297,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     clearGlError();
 
     // success!!
-    return OpenGLPlatform::createDefaultDriver(this, sharedContext, driverConfig);
+    return createDefaultDriver(this, sharedContext, driverConfig);
 
 error:
     // if we're here, we've failed
@@ -549,7 +551,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
     return sc;
 }
 
-void PlatformEGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
+void PlatformEGL::destroySwapChain(SwapChain* swapChain) noexcept {
     if (swapChain) {
         SwapChainEGL const* const sc = static_cast<SwapChainEGL const*>(swapChain);
         if (sc->sur != EGL_NO_SURFACE) {
@@ -562,7 +564,7 @@ void PlatformEGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
     }
 }
 
-bool PlatformEGL::isSwapChainProtected(Platform::SwapChain* swapChain) noexcept {
+bool PlatformEGL::isSwapChainProtected(SwapChain* swapChain) noexcept {
     if (swapChain) {
         SwapChainEGL const* const sc = static_cast<SwapChainEGL const*>(swapChain);
         return bool(sc->flags & SWAP_CHAIN_CONFIG_PROTECTED_CONTENT);
@@ -583,10 +585,10 @@ bool PlatformEGL::makeCurrent(ContextType type,
     return success == EGL_TRUE ? true : false;
 }
 
-void PlatformEGL::makeCurrent(Platform::SwapChain* drawSwapChain,
-        Platform::SwapChain* readSwapChain,
-        utils::Invocable<void()> preContextChange,
-        utils::Invocable<void(size_t index)> postContextChange) noexcept {
+void PlatformEGL::makeCurrent(SwapChain* drawSwapChain,
+        SwapChain* readSwapChain,
+        Invocable<void()> preContextChange,
+        Invocable<void(size_t index)> postContextChange) noexcept {
 
     assert_invariant(drawSwapChain);
     assert_invariant(readSwapChain);
@@ -645,7 +647,7 @@ void PlatformEGL::makeCurrent(Platform::SwapChain* drawSwapChain,
     }
 }
 
-void PlatformEGL::commit(Platform::SwapChain* swapChain) noexcept {
+void PlatformEGL::commit(SwapChain* swapChain) noexcept {
     if (swapChain) {
         SwapChainEGL const* const sc = static_cast<SwapChainEGL const*>(swapChain);
         if (sc->sur != EGL_NO_SURFACE) {
@@ -668,7 +670,7 @@ Platform::Fence* PlatformEGL::createFence() noexcept {
     return f;
 }
 
-void PlatformEGL::destroyFence(Platform::Fence* fence) noexcept {
+void PlatformEGL::destroyFence(Fence* fence) noexcept {
 #ifdef EGL_KHR_reusable_sync
     EGLSyncKHR sync = (EGLSyncKHR) fence;
     if (sync != EGL_NO_SYNC_KHR) {
@@ -678,7 +680,7 @@ void PlatformEGL::destroyFence(Platform::Fence* fence) noexcept {
 }
 
 FenceStatus PlatformEGL::waitFence(
-        Platform::Fence* fence, uint64_t timeout) noexcept {
+        Fence* fence, uint64_t timeout) noexcept {
 #ifdef EGL_KHR_reusable_sync
     EGLSyncKHR sync = (EGLSyncKHR) fence;
     if (sync != EGL_NO_SYNC_KHR) {
@@ -699,16 +701,10 @@ FenceStatus PlatformEGL::waitFence(
 OpenGLPlatform::ExternalTexture* PlatformEGL::createExternalImageTexture() noexcept {
     ExternalTexture* outTexture = new(std::nothrow) ExternalTexture{};
     glGenTextures(1, &outTexture->id);
-    if (UTILS_LIKELY(ext.gl.OES_EGL_image_external_essl3)) {
-        outTexture->target = GL_TEXTURE_EXTERNAL_OES;
-    } else {
-        // if texture external is not supported, revert to texture 2d
-        outTexture->target = GL_TEXTURE_2D;
-    }
     return outTexture;
 }
 
-void PlatformEGL::destroyExternalImage(ExternalTexture* texture) noexcept {
+void PlatformEGL::destroyExternalImageTexture(ExternalTexture* texture) noexcept {
     glDeleteTextures(1, &texture->id);
     delete texture;
 }
@@ -728,6 +724,18 @@ bool PlatformEGL::setExternalImage(void* externalImage,
     return true;
 }
 
+Platform::ExternalImageHandle PlatformEGL::createExternalImage(EGLImageKHR eglImage) noexcept {
+    auto* const p = new(std::nothrow) ExternalImageEGL;
+    p->eglImage = eglImage;
+    return ExternalImageHandle{p};
+}
+
+bool PlatformEGL::setExternalImage(ExternalImageHandleRef externalImage,
+        UTILS_UNUSED_IN_RELEASE ExternalTexture* texture) noexcept {
+    auto const* const eglExternalImage = static_cast<ExternalImageEGL const*>(externalImage.get());
+    return setExternalImage(eglExternalImage->eglImage, texture);
+}
+
 // -----------------------------------------------------------------------------------------------
 
 void PlatformEGL::initializeGlExtensions() noexcept {
@@ -738,7 +746,7 @@ void PlatformEGL::initializeGlExtensions() noexcept {
     ext.gl.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
 }
 
-EGLContext PlatformEGL::getContextForType(OpenGLPlatform::ContextType type) const noexcept {
+EGLContext PlatformEGL::getContextForType(ContextType type) const noexcept {
     switch (type) {
         case ContextType::NONE:
             return EGL_NO_CONTEXT;

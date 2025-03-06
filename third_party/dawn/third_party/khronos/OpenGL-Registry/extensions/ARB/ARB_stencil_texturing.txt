@@ -1,0 +1,227 @@
+Name
+
+    ARB_stencil_texturing
+
+Name Strings
+
+    GL_ARB_stencil_texturing
+
+Contact
+
+    Piers Daniell, NVIDIA Corporation (pdaniell 'at' nvidia.com)
+
+Contributors
+
+    Bruce Merry
+    Jeff Bolz, NVIDIA
+    Pat Brown, NVIDIA
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date:         March 19, 2013
+    Revision:                   5
+
+Number
+
+    ARB Extension #138
+
+Dependencies
+
+    OpenGL 1.1, ARB_depth_texture and EXT_packed_depth_stencil are required.
+
+    This extension is written against The OpenGL 4.2 (Compatibility Profile)
+    specification.
+
+Overview
+
+    This extension allows texturing of the stencil component of a packed depth
+    stencil texture. Stencil values are returned as unsigned integers. It is
+    not possible to sample both depth and stencil values from the same
+    texture, and this extension allows the app to select which is sampled for
+    the bound texture.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameter* and GetTexParameter*:
+
+        DEPTH_STENCIL_TEXTURE_MODE                       0x90EA
+
+Additions to the OpenGL 4.2 (Compatibility Profile) Specification
+
+Changes to Section 2.14.12 (Shader Execution), page 144
+
+Add a new new bullet point on page 149:
+
+    "* The sampler used in a texture lookup function is one of the shadow
+    sampler types, the texture object's internal format is DEPTH_STENCIL,
+    and the DEPTH_STENCIL_TEXTURE_MODE is not DEPTH_COMPONENT."
+
+Then change the following paragraph that reads:
+
+    "The stencil index texture internal component is ignored if the base
+    internal format is DEPTH_STENCIL."
+
+To the following:
+
+    "The stencil index texture internal component is ignored if the base
+    internal format is DEPTH_STENCIL and the DEPTH_STENCIL_TEXTURE_MODE
+    is not STENCIL_INDEX.
+
+    Texture lookups involving texture objects with an internal format of
+    DEPTH_STENCIL can read the stencil value as described in section
+    3.10.18 by setting the DEPTH_STENCIL_TEXTURE_MODE to STENCIL_INDEX.
+    The stencil value is read as an integer and assigned to R_t. An unsigned
+    integer sampler should be used to lookup the stencil component, otherwise
+    the results are undefined."
+
+Changes to Section 3.10.8 (Texture Parameters), page 322
+
+In Table 3.22 (Texture parameters and their values) add the following
+entry:
+
+    "
+    Name                        Type  Legal Values
+    -------------               ----  ------------------------------
+    DEPTH_STENCIL_TEXTURE_MODE  enum  DEPTH_COMPONENT, STENCIL_INDEX
+    "
+
+Changes to Section 3.10.13 (Combined Depth/Stencil Textures), page 342
+
+Modify the paragraph to read:
+
+    "If the texture image has a base internal format of DEPTH_STENCIL, then
+    the stencil index texture component is ignored by default. The texture
+    value <T> does not include a stencil index component, but includes
+    only the depth component. In order to access the stencil index texture
+    component the DEPTH_STENCIL_TEXTURE_MODE texture parameter should be
+    set to STENCIL_INDEX. When this mode is set the depth component is ignored
+    and the texture value includes only the stencil index component. The
+    stencil index value is treated as an unsigned integer texture and
+    returns an unsigned integer value when sampled. When sampling the stencil
+    index only NEAREST filtering is supported. The DEPTH_STENCIL_TEXTURE_MODE
+    is ignored for non depth/stencil textures."
+
+Changes to Section 3.10.14 (Texture Completeness), page 343
+
+Add a new bullet point for the conditions that cause the texture
+to not be complete:
+
+    "* The internal format of the texture is DEPTH_STENCIL, the
+    DEPTH_STENCIL_TEXTURE_MODE for the texture is STENCIL_INDEX and either the
+    magnification filter or the minification filter is not NEAREST."
+
+Changes to Section 3.10.18 (Texture Comparison Modes), page 356
+
+Modify the following paragraph:
+
+    "Let Dt be the depth texture value and St be the stencil index component
+    of a depth/stencil texture. If there is no stencil component the value of
+    St is undefined. Let Dref be the reference value..."
+
+Insert a new paragraph after the paragraphs that ends:
+
+    "Then the effective texture value is computed as follows:
+        If the base internal format is DEPTH_STENCIL and the value of
+    DEPTH_STENCIL_TEXTURE_MODE is STENCIL_INDEX, then
+            r = St
+        Otherwise if the value of TEXTURE_COMPARE_MODE is NONE, then
+            r = Dt
+        Otherwise if the value of TEXTURE_COMPARE_MODE is
+    COMPARE_REF_TO_TEXTURE, then r depends on the texture comparison
+    function as shown in table 3.31.
+        The resulting r is assigned ..."
+
+Additions to Chapter 8 of the OpenGL Shading Language 4.20.6 Specification
+
+Insert a new paragraph at the end of Section 8.9:
+
+    "For depth/stencil textures, the sampler type should match the component
+    being accessed as set through the OpenGL API. When the depth/stencil texture
+    mode is set to DEPTH_COMPONENT, a floating-point sampler type should be used.
+    When the depth/stencil texture mode is set to STENCIL_INDEX, an unsigned integer
+    sampler type should be used. Doing a texture lookup with an unsupported
+    combination will return undefined values."
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    (Table 6.24, Textures) add the following entry:
+
+    Get Value                       Type  Get Command        Initial Value   Description                             Section
+    -------------                   ----  -----------        -------------   -----------                             -------
+    DEPTH_STENCIL_TEXTURE_MODE      n*Z2  GetTexParameteriv  DEPTH_COMPONENT Depth stencil texture mode              3.10.8
+
+New Implementation Dependent State
+
+    None
+
+Issues
+
+    1) Should we support combined depth/stencil in one lookup?
+
+       RESOLVED: No because depth is float and stencil is integer and we
+       have no way to return both with the existing samplers. Also some
+       implementations may not have an easy way to retrive both depth and
+       stencil in one lookup.
+
+    2) How does this interact with texture filters (e.g., LINEAR)?
+
+       RESOLVED: Sampling the stencil values will behave like integer textures.
+       There is no filtering.
+
+    3) I assume DEPTH_STENCIL_TEXTURE_MODE is ignored unless the texture
+       itself has a DEPTH_STENCIL internal format?
+
+       RESOLVED: Correct.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------------
+    5     03/19/13  Jon Leech Fix STENCIL_COMPONENT -> STENCIL_INDEX typo
+                              (Bug 10077).
+
+    4     05/04/12  pdaniell  Add missing spec stating how the stencil value
+                              is assigned to the color vector result of the
+                              texture lookup function. Clarified the filtering
+                              used for stencil index sampling.
+
+    3     05/03/12  pdaniell  Add enum value. Use DEPTH_COMPONENT and
+                              STENCIL_INDEX instead of DEPTH and STENCIL for
+                              the valid DEPTH_STENCIL_TEXTURE_MODEs. These
+                              better represent "Pixel Formats".
+
+    2     03/15/12  pdaniell  Fixes based on feedback from Bruce Merry.
+
+    1     10/25/11  pdaniell  Initial version.

@@ -1,0 +1,304 @@
+Name
+
+    OML_sync_control
+
+Name Strings
+
+    GLX_OML_sync_control
+
+Contact
+
+    Randi Rost, 3Dlabs (rost 'at' 3dlabs.com)
+
+Status
+
+    Complete. Approved by the Khronos SIG on July 19, 2001.
+
+Version
+
+    Last Modified Date: 07/23/2001   Revision: 6.0
+
+    Based on WGL_OML_sync_control Revision 16.0
+
+Number
+
+    238
+
+Dependencies
+
+    The extension is written against the OpenGL 1.2.1 Specification
+    and the GLX 1.3 Specification, although it should work on previous
+    versions of these specifications.
+
+Overview
+
+    This extension provides the control necessary to ensure
+    synchronization between events on the graphics card (such as
+    vertical retrace) and other parts of the system. It provides support
+    for applications with real-time rendering requirements by providing
+    precise synchronization between graphics and streaming video or
+    audio.
+
+    This extension incorporates the use of three counters that provide
+    the necessary synchronization. The Unadjusted System Time (or UST)
+    is a 64-bit monotonically increasing counter that is available
+    throughout the system. UST is not a resource that is controlled
+    by OpenGL, so it is not defined further as part of this extension.
+    The graphics Media Stream Counter (or graphics MSC) is a counter
+    that is unique to the graphics subsystem and increments for each
+    vertical retrace that occurs. The Swap Buffer Counter (SBC) is an
+    attribute of a GLXDrawable and is incremented each time a swap
+    buffer action is performed on the associated drawable.
+
+    The use of these three counters allows the application to
+    synchronize graphics rendering to vertical retraces and/or swap
+    buffer actions, and to synchronize other activities in the system
+    (such as streaming video or audio) to vertical retraces and/or
+    swap buffer actions.
+
+    Functions are provided to allow an application to detect when an
+    MSC or SBC has reached a certain value. This function will block
+    until the specified value has been reached. Applications that want
+    to continue other processing while waiting are expected to call
+    these blocking functions from a thread that is separate from the
+    main processing thread(s) of the application.
+
+    This extension carefully defines the observable order in which
+    things occur in order to allow implementations to perform
+    optimizations and avoid artifacts such as tearing, while at the
+    same time providing a framework for consistent behavior from the
+    point of view of an application.
+
+Issues
+
+    None.
+
+IP Status
+
+    No known issues.
+
+New Procedures and Functions
+
+    Bool glXGetSyncValuesOML(Display* dpy,
+			     GLXDrawable drawable,
+			     int64_t* ust,
+			     int64_t* msc,
+			     int64_t* sbc)
+
+    Bool glXGetMscRateOML(Display* dpy,
+			  GLXDrawable drawable,
+			  int32_t* numerator,
+			  int32_t* denominator)
+
+    int64_t glXSwapBuffersMscOML(Display* dpy,
+				 GLXDrawable drawable,
+				 int64_t target_msc,
+				 int64_t divisor,
+				 int64_t remainder)
+
+    Bool glXWaitForMscOML(Display* dpy,
+			  GLXDrawable drawable,
+			  int64_t target_msc,
+			  int64_t divisor,
+			  int64_t remainder,
+			  int64_t* ust,
+			  int64_t* msc,
+			  int64_t* sbc)
+
+    Bool glXWaitForSbcOML(Display* dpy,
+			  GLXDrawable drawable,
+			  int64_t target_sbc,
+			  int64_t* ust,
+			  int64_t* msc,
+			  int64_t* sbc)
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None
+
+Additions to the GLX 1.3 Specification
+
+    glXGetSyncValuesOML returns the current UST/MSC/SBC triple. A UST
+    timestamp is obtained each time the graphics MSC is incremented.
+    If this value does not reflect the value of the UST at the time the
+    first scan line of the display begins passing through the video
+    output port, it will be adjusted by the graphics driver to do so
+    prior to being returned by any of the functions defined by this
+    extension.
+
+    This UST timestamp, together with the current graphics MSC and the
+    current SBC, comprise the current UST/MSC/SBC triple. The UST,
+    graphics MSC, and SBC values are not part of the render context
+    state. These values cannot be pushed or popped. The graphics MSC
+    value is initialized to 0 when the graphics device is initialized.
+    The SBC is per-window state and is initialized to 0 when the
+    GLXDrawable data structure is initialized.
+
+    The SBC value is incremented by the graphics driver at the completion
+    of each buffer swap (e.g., the pixel copy has been completed or the
+    hardware register that swaps memory banks has been written). For pixel
+    formats that do not contain a back buffer, the SBC will always be
+    returned as 0.
+
+    The graphics MSC value is incremented once for each screen refresh.
+    For a non-interlaced display, this means that the graphics MSC value
+    is incremented for each frame. For an interlaced display, it means
+    that it will be incremented for each field. For a multi-monitor
+    system, the monitor used to determine MSC is screen 0 of <display>.
+
+    glXGetMscRateOML returns the rate at which the MSC will be incremented
+    for the display associated with <hdc>. The rate is expressed in Hertz
+    as <numerator> / <denominator>. If the MSC rate in Hertz is an
+    integer, then <denominator> will be 1 and <numerator> will be
+    the MSC rate.
+
+    glXSwapBuffersMscOML has the same functionality as glXSwapBuffers,
+    except for the following. The swap indicated by a call to
+    glXSwapBuffersMscOML does not perform an implicit glFlush. The
+    indicated swap will not occur until all prior rendering commands
+    affecting the buffer have been completed. Once prior rendering
+    commands have been completed, if the current MSC is less than
+    <target_msc>, the buffer swap will occur when the MSC value becomes
+    equal to <target_msc>. Once prior rendering commands have completed,
+    if the current MSC is greater than or equal to <target_msc>, the
+    buffer swap will occur the next time the MSC value is incremented
+    to a value such that MSC % <divisor> = <remainder>. If <divisor> = 0,
+    the swap will occur when MSC becomes greater than or equal to
+    <target_msc>.
+
+    Once glXSwapBuffersMscOML has been called, subsequent OpenGL commands
+    can be issued immediately.	If the thread's current context is made
+    current to another drawable, or if the thread makes another context
+    current on another drawable, rendering can proceed immediately.
+
+    If there are multiple outstanding swaps for the same window, at most
+    one such swap can be satisfied per increment of MSC.  The order of
+    satisfying outstanding swaps of a window must be the order they were
+    issued. Each window that has an outstanding swap satisfied by the same
+    current MSC should have one swap done.
+
+    If a thread issues a glXSwapBuffersMscOML call on a window, then
+    issues OpenGL commands while still current to this window (which now
+    has a pending glXSwapBuffersMscOML call), the commands will be executed
+    in the order they were received, subject to implementation resource
+    constraints.  Furthermore, subsequent commands that would affect
+    the back buffer will only affect the new back buffer (that is, the
+    back buffer after the swap completes). Such commands do not affect
+    the current front buffer.
+
+    If the graphics driver utilizes an extra thread to perform the wait,
+    it is expected that this thread will have a high priority so that
+    the swap will occur at the earliest possible moment once all the
+    conditions for swapping have been satisfied.
+
+    glXSwapBuffersMscOML will return the value that will correspond to
+    the value of the SBC when the buffer swap actually occurs (in other
+    words, the return value will be the current value of the SBC + the
+    number of pending buffer swaps + 1).  It will return a value of -1
+    if the function failed because of errors detected in the input
+    parameters.  glXSwapBuffersMscOML is a no-op and will always return
+    0 if the specified drawable was created with a non-double-buffered
+    GLXFBConfig or if the specified drawable is a GLXPixmap.
+
+    glXWaitForMscOML can be used to cause the calling thread to wait
+    until a specific graphics MSC value has been reached. If the current
+    MSC is less than the <target_msc> parameter for glXWaitForMscOML,
+    glXWaitForMscOML will block until the MSC value becomes equal to
+    <target_msc> and then will return the current values for UST, MSC,
+    and SBC. Otherwise, the function will block until the MSC value is
+    incremented to a value such that MSC % <divisor> = <remainder> and
+    then will return the current values for UST, MSC, and SBC. If
+    <divisor> = 0, then the wait will return as soon as MSC >= <target_msc>.
+
+    glXWaitForSbcOML can be used to cause the calling thread to wait
+    until a specific SBC value has been reached. This function will block
+    until the SBC value for <hdc> becomes equal to <target_sbc> and then
+    will return the current values for UST, MSC, and SBC. If the SBC
+    value is already greater than or equal to <target_sbc>, the function
+    will return immediately with the current values for UST, MSC, and
+    SBC. If <target_sbc> = 0, the function will block until all previous
+    swaps requested with glXSwapBuffersMscOML for that window have
+    completed.	It will then return the current values for UST, MSC,
+    and SBC.
+
+    When glXSwapBuffersMscOML has been called to cause a swap at a
+    particular MSC, an application process would observe the following
+    order of execution for that MSC:
+
+	1. The window for which a glXSwapBuffersMscOML call has been
+	   issued has been completely scanned out to the display for
+	   the previous MSC
+	2. The swap buffer action for that window begins
+	3. All the swap buffer actions for all the windows for the
+	   application process are completed
+	4. SBC and MSC values are atomically incremented
+	5. Any calls to glXWaitForMscOML or glXWaitForSbcOML that
+	   are satisfied by the new values for SBC and graphics
+	   MSC are released
+
+    The functions glXGetSyncValuesOML, glXGetMscRateOML, glXWaitForMscOML,
+    and glXWaitForSbcOML will each return TRUE if the function completed
+    successfully, FALSE otherwise.
+
+Errors
+
+    Each of the functions defined by this extension will generate a
+    GLX_BAD_CONTEXT error if there is no current GLXContext.
+
+    glXWaitForMscOML and glXWaitForSbcOML will each generate a
+    GLX_BAD_CONTEXT error if the current context is not direct.
+
+    glXSwapBuffersMscOML and glXWaitForMscOML will each generate
+    a GLX_BAD_VALUE error if <divisor> is less than zero, or if
+    <remainder> is less than zero, or if <remainder> is greater
+    than or equal to a non-zero <divisor>, or if <target_msc> is
+    less than zero.
+
+    glXWaitForSbcOML will generate a GLX_BAD_VALUE error if
+    <target_sbc> is less than zero.
+
+GLX Protocol
+
+    TBD
+
+New State
+
+    Get Value		 Get Command	    Type    Initial Value
+    ---------		 -----------	    ----    -------------
+      [UST]	     glXGetSyncValuesOML      Z      unspecified
+      [MSC]	     glXGetSyncValuesOML      Z		  0
+      [SBC]	     glXGetSyncValuesOML      Z		  0
+
+New Implementation Dependent State
+
+    None
+
+
+
+
+
+
+
+

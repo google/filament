@@ -1,0 +1,561 @@
+Name
+
+    ARB_get_program_binary
+
+Name Strings
+
+    GL_ARB_get_program_binary
+
+Contributors
+
+    Acorn Pooley
+    Aske Simon Christensen
+    Bruce Merry
+    David Garcia
+    Eric Werness
+    Georg Kolling
+    Greg Roth
+    Jason Green
+    Jeff Bolz
+    Jeremy Sandmel
+    Joey Blankenship
+    Jon Leech
+    Mark Callow
+    Pat Brown
+    Robert Simpson
+    Tom Olson
+
+Contact
+
+    Benj Lipchak, APPLE (lipchak 'at' apple.com)
+    Greg Roth, NVIDIA (groth 'at' nvidia.com)
+    Piers Daniell, NVIDIA (pdaniell 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2010-2016 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 9, 2010.
+    Approved by the Khronos Board of Promoters on July 23, 2010.
+
+Version
+
+    Last Modified Date: January 11, 2019
+    Revision: #10
+
+Number
+
+    ARB Extension #96
+
+Dependencies
+
+    OpenGL 3.0 is required.
+
+    Written based on the wording of the OpenGL 3.2 compatibility specification.
+
+Overview
+
+    This extension introduces new commands to retrieve and set the binary
+    representation of a program object.  GetProgramBinary allows an
+    application to cache compiled and linked programs to avoid compiling and
+    linking when used again. This may even allow the GL itself to act as an
+    offline compiler.  The resulting program binary can be reloaded into the
+    GL via ProgramBinary.  This is a very useful path for applications that
+    wish to remain portable by shipping pure GLSL source shaders, yet would
+    like to avoid the cost of compiling their shaders at runtime.  Instead an
+    application can supply its GLSL source shaders during first application run,
+    or even during installation.  The application then compiles and links its
+    shaders and reads back the program binaries.  On subsequent runs, only the
+    program binaries need be supplied.
+
+    ProgramBinary may also accept binaries in vendor-specific formats
+    produced by specialized offline compilation tools. This extension does not
+    add any such formats, but allows for them in further extensions. Though the
+    level of optimization may not be identical -- the offline shader compiler
+    may have the luxury of more aggressive optimization at its disposal --
+    program binaries generated online by the GL are interchangeable with those
+    generated offline by an SDK tool.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void GetProgramBinary(uint program, sizei bufSize, sizei *length,
+                          enum *binaryFormat, void *binary);
+
+    void ProgramBinary(uint program, enum binaryFormat,
+                       const void *binary, sizei length);
+
+    void ProgramParameteri(uint program, enum pname, int value);
+
+New Tokens
+
+    Accepted by the <pname> parameter of ProgramParameteri and
+    GetProgramiv:
+
+        PROGRAM_BINARY_RETRIEVABLE_HINT             0x8257
+
+    Accepted by the <pname> parameter of GetProgramiv:
+
+        PROGRAM_BINARY_LENGTH                       0x8741
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetInteger64v, GetFloatv and GetDoublev:
+
+        NUM_PROGRAM_BINARY_FORMATS                  0x87FE
+        PROGRAM_BINARY_FORMATS                      0x87FF
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification (OpenGL Operation)
+
+    Update section 2.14 "Vertex Shaders", insert before the last sentence of
+    the third paragraph:
+
+
+    "... which generates executable code from all the compiled shader objects
+    attached to the program. Alternatively, pre-compiled program binary code
+    may be directly loaded into a program object. When a linked program object
+    is used..."
+
+    Add the following paragraphs above the description of DeleteProgram, p. 86:
+
+    To set a program object parameter, call
+
+        void ProgramParameteri(uint program, enum pname, int value)
+
+    <pname> identifies which parameter to set for <program>. <value> holds the
+    value being set.
+
+    If <pname> is PROGRAM_BINARY_RETRIEVABLE_HINT, <value> must be TRUE or
+    FALSE, and indicates whether a program binary is likely to be retrieved
+    later, as described for ProgramBinary in section 2.14.3. This hint will
+    not take effect until the next time LinkProgram or ProgramBinary has
+    been called successfully.
+
+    Add section 2.14.3, Program Binaries
+
+    "The command
+
+        void GetProgramBinary(uint program, sizei bufSize, sizei *length,
+                              enum *binaryFormat, void *binary);
+
+    returns a binary representation of the program object's compiled and
+    linked executable source, henceforth referred to as its program binary.
+    The maximum number of bytes that may be written into <binary> is specified
+    by <bufSize>.  If <bufSize> is less than the number of bytes in the program
+    binary, then an INVALID_OPERATION error is thrown.  Otherwise, the actual
+    number of bytes written into <binary> is returned in <length> and its
+    format is returned in <binaryFormat>.  If <length> is NULL, then no
+    length is returned.
+
+    The number of bytes in the program binary can be queried by calling
+    GetProgramiv with <pname> PROGRAM_BINARY_LENGTH.  When a program object's
+    LINK_STATUS is FALSE, its program binary length is zero, and a call
+    to GetProgramBinary will generate an INVALID_OPERATION error.
+
+    The command
+
+        void ProgramBinary(uint program, enum binaryFormat,
+                           const void *binary, sizei length);
+
+    loads a program object with a program binary previously returned from
+    GetProgramBinary.  This is useful for future instantiations of the GL to
+    avoid online compilation, while still using OpenGL Shading Language source
+    shaders as a portable initial format.  <binaryFormat> and <binary> must be
+    those returned by a previous call to GetProgramBinary, and <length> must
+    be the length of the program binary as returned by GetProgramBinary or
+    GetProgramiv with <pname> PROGRAM_BINARY_LENGTH. Loading the program
+    binary will fail, setting the LINK_STATUS of <program> to FALSE, if
+    these conditions are not met.
+
+    Loading a program binary may also fail if the implementation determines
+    that there has been a change in hardware or software configuration from
+    when the program binary was produced such as having been compiled with
+    an incompatible or outdated version of the compiler. In this case the
+    application should fall back to providing the original OpenGL Shading
+    Language source shaders, and perhaps again retrieve the program binary
+    for future use.
+
+    A program object's program binary is replaced by calls to LinkProgram or
+    ProgramBinary. Where linking success or failure is concerned,
+    ProgramBinary can be considered to perform an implicit linking operation.
+    LinkProgram and ProgramBinary both set the program object's LINK_STATUS
+    to TRUE or FALSE, as queried with GetProgramiv, to reflect success or
+    failure and update the information log, queried with GetProgramInfoLog, to
+    provide details about warnings or errors.
+
+    A successful call to ProgramBinary will reset all uniform variables to
+    their initial values. The initial value is either the value of the
+    variable's initializer as specified in the original shader source, or 0
+    if no initializer was present.
+
+    Additionally, all vertex shader input and fragment shader output
+    assignments that were in effect when the program was linked before saving
+    are restored when ProgramBinary is called.
+
+    If ProgramBinary fails to load a binary, no error is generated, but any
+    information about a previous link or load of that program object is
+    lost. Thus, a failed load does not restore the old state of <program>.
+    The failure does not alter other program state not affected by linking
+    such as the attached shaders, and the vertex attribute and fragment data
+    location bindings as set by BindAttribLocation and BindFragDataLocation.
+
+    Queries of values NUM_PROGRAM_BINARY_FORMATS and PROGRAM_BINARY_FORMATS
+    return the number of program binary formats and the list of program binary
+    format values supported by an implementation.  The <binaryFormat> returned
+    by GetProgramBinary must be present in this list.
+
+    Any program binary retrieved using GetProgramBinary and submitted using
+    ProgramBinary under the same configuration must be successful. Any
+    programs loaded successfully by ProgramBinary must be run properly with
+    any legal GL state vector.
+
+    If a GL implementation needs to recompile or otherwise modify program
+    executables based on GL state outside the program, GetProgramBinary is
+    required to save enough information to allow such recompilation.
+
+    To indicate that a program binary is likely to be retrieved,
+    ProgramParameteri should be called with <pname>
+    PROGRAM_BINARY_RETRIEVABLE_HINT and <value> TRUE. This setting will not
+    be in effect until the next time LinkProgram or ProgramBinary has been
+    called successfully. Additionally, GetProgramBinary calls may be
+    deferred until after using the program with all non-program state
+    vectors that it is likely to encounter. Such deferral may allow
+    implementations to save additional information in the program binary
+    that would minimize recompilation in future uses of the program binary."
+
+    Modify Section 2.14.8, Required State
+
+    Add the following bullet to the state required per program object:
+
+      * boolean holding the hint to the retrievability of the program binary,
+      initially FALSE.
+
+
+Additions to Chapter 6 of the OpenGL 3.2 Specification (State and State
+Requests)
+
+    Modify section 6.1.16, Shader and Program Objects
+
+    Add to the end of the description of GetProgramiv, p. 385:
+
+    If <pname> is PROGRAM_BINARY_RETRIEVABLE_HINT, the current value of
+    whether the binary retrieval hint is enabled for <program> is returned.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    An INVALID_VALUE error is generated if the <program> argument to
+    GetProgramBinary, ProgramBinary, or ProgramParameteri is not the name of
+    a program object previously created with CreateProgram.
+
+    An INVALID_ENUM error is generated if the <pname> argument to
+    ProgramParameteri is not PROGRAM_BINARY_RETRIEVABLE_HINT.
+
+    An INVALID_VALUE error is generated if the <value> argument to
+    ProgramParameteri is not TRUE or FALSE.
+
+    An INVALID_OPERATION error is generated if GetProgramBinary is called
+    when the program object, <program>, does not contain a valid program
+    binary as reflected by its LINK_STATUS state; if <bufSize> is not big
+    enough to contain the entire program binary; or if the value of
+    NUM_PROGRAM_BINARY_FORMATS is zero.
+
+New State
+
+    (table 6.42, Program Object State) add the following:
+
+    Get Value                       Type  Get Command      Initial Value  Description                      Section
+    -------------                   ----  -----------      -------------  -----------                      -------
+    PROGRAM_BINARY_LENGTH           Z+    GetProgramiv     0              Length of program binary         2.14.3
+    PROGRAM_BINARY_RETRIEVABLE_HINT Z     GetProgramiv     FALSE          Retriavable binary hint enabled  2.14.3
+    -                               Z1    GetProgramBinary N/A            Binary representation of program 2.14.3
+
+    (table 6.51, Implementation Dependent Values) add the following:
+
+    Get Value                       Type    Get Command          Minimum Value  Description                        Section
+    -------------                   ----    -----------          -------------  -----------                        -------
+    PROGRAM_BINARY_FORMATS          0* x Z  GetIntegerv          N/A            Enumerated program binary formats  2.14.3
+    NUM_PROGRAM_BINARY_FORMATS      Z       GetIntegerv          0              Number of program binary formats   2.14.3
+
+Sample Usage
+
+    void retrieveProgramBinary(const GLchar* vsSource, const GLchar* fsSource,
+                               const char* myBinaryFileName,
+                               GLenum* binaryFormat)
+    {
+        GLuint        newFS, newVS;
+        GLuint        newProgram;
+        const GLchar* sources[1];
+        GLint         success;
+
+        GLint   binaryLength;
+        void*   binary;
+        FILE*   outfile;
+
+        //
+        //  Create new shader/program objects and attach them together.
+        //
+        newVS = glCreateShader(GL_VERTEX_SHADER);
+        newFS = glCreateShader(GL_FRAGMENT_SHADER);
+        newProgram = glCreateProgram();
+        glAttachShader(newProgram, newVS);
+        glAttachShader(newProgram, newFS);
+
+        //
+        //  Supply GLSL source shaders, compile, and link them
+        //
+        sources[0] = vsSource;
+        glShaderSource(newVS, 1, sources, NULL);
+        glCompileShader(newVS);
+
+        sources[0] = fsSource;
+        glShaderSource(newFS, 1, sources, NULL);
+        glCompileShader(newFS);
+
+        glProgramParameteri(newProgram, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
+        glLinkProgram(newProgram);
+        glGetProgramiv(newProgram, GL_LINK_STATUS, &success);
+
+        if (!success)
+        {
+            //
+            // Fallback to simpler source shaders?  Take my toys and go home?
+            //
+        }
+
+        glUseProgram(newProgram);
+
+        //
+        // Perform rendering and state changes likely to be encountered.
+        //
+        DoRendering(newProgram);
+
+        //
+        //  Retrieve the binary from the program object
+        //
+        glGetProgramiv(newProgram, GL_PROGRAM_BINARY_LENGTH, &binaryLength);
+        binary = (void*)malloc(binaryLength);
+        glGetProgramBinary(newProgram, binaryLength, NULL, binaryFormat, binary);
+
+        //
+        //  Cache the program binary for future runs
+        //
+        outfile = fopen(myBinaryFileName, "wb");
+        fwrite(binary, binaryLength, 1, outfile);
+        fclose(outfile);
+        free(binary);
+
+        //
+        // Clean up
+        //
+        glDeleteShader(newVS);
+        glDeleteShader(newFS);
+        glDeleteProgram(newProgram);
+    }
+
+    void loadProgramBinary(const char* myBinaryFileName, GLenum binaryFormat,
+                           GLuint progObj)
+    {
+        GLint   binaryLength;
+        void*   binary;
+        GLint   success;
+        FILE*   infile;
+
+        //
+        //  Read the program binary
+        //
+        infile = fopen(myBinaryFileName, "rb");
+        fseek(infile, 0, SEEK_END);
+        binaryLength = (GLint)ftell(infile);
+        binary = (void*)malloc(binaryLength);
+        fseek(infile, 0, SEEK_SET);
+        fread(binary, binaryLength, 1, infile);
+        fclose(infile);
+
+        //
+        //  Load the binary into the program object -- no need to link!
+        //
+        glProgramBinary(progObj, binaryFormat, binary, binaryLength);
+        free(binary);
+
+        glGetProgramiv(progObj, GL_LINK_STATUS, &success);
+
+        if (!success)
+        {
+            //
+            // Something must have changed since the program binaries
+            // were cached away.  Fallback to source shader loading path,
+            // and then retrieve and cache new program binaries once again.
+            //
+        }
+    }
+
+Issues
+
+    1. Do we need to consider state dependencies when using this extension?
+
+    RESOLVED: A little. A program binary retrieved with GetProgramBinary
+    can be expected to work regardless of the current GL state in effect at the
+    time it was retrieved with GetProgramBinary, loaded with
+    ProgramBinary, installed as part of render state with UseProgram, or used
+    for drawing with DrawArrays or DrawElements.
+
+    However, in many cases, internal state dependencies affect the way source
+    shaders are compiled. State considerations may indicate whether
+    optimizations are available or if workarounds are necessary. In
+    consideration of these issues, users of this extension should be advised
+    that querying the program binary after the full range of state
+    configurations have been seen may allow the implementation to include
+    optimized versions and avoid recompiles that may affect performance.
+
+    2. How are shader objects involved, if at all?
+
+    RESOLVED: Shader objects play no part in the specification of program
+    binaries.  (See also Issue 3.)
+
+    The program binary retrieved by GetProgramBinary is the one installed
+    during the most recent call to LinkProgram or ProgramBinary, i.e. the one
+    which would go into effect if we were to call UseProgram.  Attaching
+    different shader objects after the most recent call to LinkProgram is
+    inconsequential.
+
+    3. Should we throw an error as a programming aid if there are shader objects
+       attached to the program object when ProgramBinary is called?
+
+    RESOLVED: No, they are irrelevant but harmless, and GL precedent is to throw
+    errors on bad state combinations, not on harmless ones.  Besides, the
+    programmer should discover pretty quickly that they're getting the wrong
+    shader, if they accidentally called ProgramBinary instead of LinkProgram.
+    Also, an app may intentionally leave the attachments in place if it for some
+    reason is switching back and forth between loading a program object with
+    program binaries, and loading it with compiled GLSL shaders.
+
+    4. Where are the binary formats defined and described?
+
+    RESOLVED: This extension provides a common infrastructure for retrieving and
+    loading program binaries.  A vendor extension must also be present in order
+    to define one or more binary formats, thereby populating the list of
+    PROGRAM_BINARY_FORMATS.  The <binaryFormat> returned by
+    GetProgramBinary is always one of the binary formats in this list.  If
+    ProgramBinary is called with a <binaryFormat> not in this list, the
+    implementation will throw an INVALID_ENUM error.
+
+    The beauty of this extension, however, is that an application does not need
+    to be aware of the vendor extension on any given implementation.  It only
+    needs to retrieve a program binary with an anonymous <binaryFormat> and
+    resupply that same <binaryFormat> when loading the program binary.
+
+    5. Under what conditions might a call to ProgramBinary fail?
+
+    RESOLVED: Even if a program binary is successfully retrieved with
+    GetProgramBinary and then in a future run the program binary is
+    resupplied with ProgramBinary, and all of the parameters are correct,
+    the program binary load may still fail.
+
+    This can happen if there has been a change to the hardware or software on
+    the system, such as a hardware upgrade or driver update.  In this case the
+    PROGRAM_BINARY_FORMATS list may no longer contain the binary format
+    associated with the cached program binary, and INVALID_ENUM will be thrown
+    if the cached program binary format is passed into ProgramBinary anyway.
+
+    Even if the cached program binary format is still valid, ProgramBinary
+    may still fail to load the cached binary.  This is the driver's way of
+    signaling to the app that it needs to recompile and recache its program
+    binaries because there has been some important change to the online
+    compiler, such as a bug fix or a significant new optimization.
+
+    6. Can BindAttribLocation be called after ProgramBinary to remap an
+       attribute location used by the program binary?
+
+    RESOLVED: No.  BindAttribLocation only affects the result of a subsequent
+    call to LinkProgram.  LinkProgram operates on the attached shader objects
+    and replaces any program binary loaded prior to LinkProgram.  So there is no
+    mechanism to remap an attribute location after loading a program binary.
+
+    However, an application is free to remap an attribute location prior to
+    retrieving the program binary.  By calling BindAttribLocation followed by
+    LinkProgram, an application can remap the attribute location.  If this is
+    followed by a call to GetProgramBinary, the retrieved program binary will
+    include the desired attribute location assignment.
+
+    7. How does this spec differ from the OES_get_program_binary and why?
+
+    To better facilitate state-dependent optimizations and workarounds, a hint
+    is provided to ensure that the implementation includes any state-based
+    variants it might encounter. These dependencies also encourage the
+    programmer to retrieve binary programs late in the execution, after
+    relevant state changes have already occurred.
+
+    There are other areas where language was clarified, but this is meant to
+    be consistent with the intent of the original specification and not to
+    alter previously established behavior.
+
+    8. How does ProgramBinary interact with uniform values, including
+       shader-specified defaults?
+
+    RESOLVED: All uniforms specified in the binary are reset to their shader-
+    specified defaults, or to zero if they aren't specified, when the program
+    binary is loaded. The spec language has been updated to specify this
+    behavior.
+
+    9. Should ProgramBinary be expected to load a previously saved program
+       binary even if non-program state has changed enough such that a
+       recompile is needed by the GL implementation.
+
+    RESOLVED: Yes. Given the same configuration, for example hardware, driver
+    version, etc., the GL implementation should save as much data as it needs
+    with the program binary such that if a recompile is necessary it has all
+    the data it needs to do this. Only if the configuration changes, it is
+    acceptable to fail ProgramBinary.
+
+    The application may use the PROGRAM_BINARY_RETRIEVABLE_HINT hint to
+    indicate to the GL implementation that this program will likely be saved
+    with GetProgramBinary at some point. This will give the GL implementation
+    the opportunity to track any state changes made to the program before
+    being saved such that when it is loaded again a recompile can be avoided.
+
+Revision History
+
+    10 01/11/2019 Add an error for ProgramBinary if there are no binary
+                  formats (Bug 16155).
+
+    09 07/05/2016 Fix missing GL_ prefix in example code.
+
+    08 10/08/2013 Change GLvoid -> void (Bug 10412).
+
+    07 06/14/2012 Clean up descriptions of "failed binary", add errors,
+                  and move HINT description back to ProgramParameteri.
+
+    06 07/19/2010 Fixed a teenie typo with OES left on ProgramBinaryOES in
+                  issue #3.
+
+    05 05/26/2010 Modifications based on feedback from Pat Brown and the
+                  ARB f2f.
+
+    04 05/17/2010 Restore the old "int" type for the length parameter
+                  to ProgramBinary since matching the ratified GLES is more
+                  important in this case.
+
+    03 05/10/2010 Various minor cleanup based on feedback from Bruce.
+
+    02 04/09/2010 Converted to ARB version for inclusion in OpenGL 4.1.
+
+    01 01/11/2010 Initial EXT version.

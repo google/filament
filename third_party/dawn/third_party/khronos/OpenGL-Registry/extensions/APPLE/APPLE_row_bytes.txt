@@ -1,0 +1,163 @@
+Name
+
+    APPLE_row_bytes
+
+Name Strings
+
+    GL_APPLE_row_bytes
+
+Contributors
+
+    Andrew Barnes
+    John Rosasco
+
+Contact
+
+    John Rosasco, Apple Computer (jdr 'at' apple.com)
+
+Status
+
+    TBD
+
+Version
+
+    Last Modified: October 17, 2006
+    Revision: #2
+
+Number
+
+    372
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+    Written based on the wording of the OpenGL 2.1 specification.
+
+Overview
+
+    The APPLE_row_bytes extension was developed to relax the limitations
+    within GL regarding the packing and unpacking of pixel data from
+    arbitrary arrangements in memory.
+
+    Prior to this extension, similar, albeit more restrictive, functionality
+    existed in GL using pixel storage modes for unpacking, packing, and
+    alignment.  The limitation of the existing mechanism lies primarily in how
+    packing or unpacking of data is specified with pixel atomicity rather than
+    basic machine units.  To some extent, this pixel granularity can be
+    overcome using pixel storage modes GL_UNPACK_ALIGNMENT and
+    GL_PACK_ALIGNMENT.  Both of these parameters are specified in basic
+    machine units but their range of possible values is restricted and even
+    then they do not allow for the packing and unpacking of pixel data in a
+    fully arbitrary manner.
+
+    Consider this simple example:
+
+        Consider a column of pixels in memory.  The pixels are of GL_RGB 
+        format and GL_UNSIGNED_BYTE type resulting in 3 bytes per pixel.
+        Now consider that this column of pixel data was arranged in memory
+        such that each row of the image (in this case each pixel) has two
+        bytes padding or space between them.
+
+        Each row of 1 pixel then has 5 bytes.  An attempting to express this
+        memory arrangement with existing pixel storage semantics would
+        naturally start with a GL_UNPACK_ROW_LENGTH of 1 because there is
+        one pixel per row.  However, no valid value of GL_UNPACK_ALIGNMENT,
+        1, 2, 4, or 8, will allow the proper row padding to express this 
+        memory arrangement.
+
+Glossary
+
+    Storage mode class - delineation of packing vs unpacking pixel storage
+    mode values.
+
+Issues
+
+    What happens when row bytes pixel storage values are specified in
+    conjunction with row length or alignment values ?
+
+        Specifying non-zero row bytes packing or unpacking values will
+        override all values specified for both row length and alignment
+        of the same class.  In other words, if GL_PACK_ROW_BYTES is
+        specified as non-zero, it overrides values of both 
+        GL_PACK_ROW_LENGTH and GL_PACK_ALIGNMENT.  The same scenario is
+        true of unpacking pixel storage parameters.
+
+    How do you switch between using row length and alignment values to row
+    bytes values ?
+
+        Set the row bytes value to zero for the same storage mode class
+        to use conventional row length and alignment semantics.  Set
+        row bytes to non-zero to use APPLE_row_bytes semantics.
+
+    Does the semantics for packing need to match that of unpacking ?
+    (i.e. if you are unpacking with row bytes semantics do you need to pack with
+    row bytes ?)
+
+        No.  Storage mode class semantics are independent.
+
+    If retrieving data from GL, such as in a ReadPixels() or
+    GetTexImage(), do the unpack settings have any effect ?
+
+        Yes.  If the format and type of the data of a source or destination
+        for packing or unpacking is not known, as in the case of a
+        ReadPixels() call or a GetTexImage() call, the storage mode class
+        values for the unknown arrangement should be set to GL default
+        values.  In the case cited above, the packing modes can be specified
+        but the unpacking modes should be set to default GL values.
+
+    What are the default values for GL_PACK_ROW_BYTES and GL_UNPACK_ROW_BYTES
+    ?
+        Zero.
+
+
+New Procedures and Functions
+
+    None.
+
+
+Errors
+
+    None.
+
+
+New Types
+
+    None.
+
+
+New Tokens
+
+    Accepted by the <pname> parameter of PixelStorei and the <pname>
+    parameter of GetIntegerv:
+
+        PACK_ROW_BYTES_APPLE          0x8A15
+        UNPACK_ROW_BYTES_APPLE        0x8A16
+
+
+New State
+
+    Get Value               Get Command     Type    Value       Attrib
+    ---------               -----------     ----    -------     ------
+    PACK_ROW_BYTES_APPLE    GetIntegerv     Z+      0           client_pixel_store   
+    UNPACK_ROW_BYTES_APPLE  GetIntegerv     Z+      0           client_pixel_store  
+
+
+
+Additions to table 3.1 of the 2.1 specification (PixelStore parameters (write)):
+
+    Parameter Name          Type        Initial Value   Valid Range
+    UNPACK_ROW_BYTES_APPLE  integer     0               [0, inf]
+
+
+Additions to table 4.5 of the 2.1 specification (PixelStore parameters (read)):
+
+    Parameter Name          Type        Initial Value   Valid Range
+    PACK_ROW_BYTES_APPLE    integer     0               [0, inf]
+
+
+Version History
+
+#1 - Initial document.
+
+#2 - Added state segment.

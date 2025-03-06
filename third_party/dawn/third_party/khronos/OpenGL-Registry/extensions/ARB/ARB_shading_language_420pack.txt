@@ -1,0 +1,1214 @@
+Name
+
+    ARB_shading_language_420pack
+
+Name Strings
+
+    GL_ARB_shading_language_420pack
+
+Contact
+
+    John Kessenich (cepheus 'at' frii.com)
+
+Contributors
+
+    Pat Brown, NVIDIA
+    Jeff Bolz, NVIDIA
+    Pierre Boudier, AMD
+    Piers Daniell, NVIDIA
+    Patrick Doane, Blizzard
+    John Kessenich
+    Daniel Koch, Transgaming
+    Bill Licea-Kane, AMD
+    Barthold Lichtenbelt, NVIDIA
+    Ian Romanick, Intel
+    Bruce Merry, ARM
+    Graham Sellers, AMD
+    Robert Simpson, Qualcomm
+    
+Notice
+
+    Copyright (c) 2011-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB 25-Jul-2011.
+    Approved by the Khronos Promoters on 2011/07/29.
+
+Version
+
+    Last Modified Date: 11-Sep-2014
+    Revision: 4
+
+Number
+
+    ARB Extension #108
+
+Dependencies
+
+    GLSL 1.3 is required for all features.  GLSL 1.4 is required 
+    declaring a binding for a uniform block, as uniform blocks were not 
+    present until version 1.4.
+
+    This extension interacts with the ARB_shader_image_load_store 
+    extension, for assigning locations to image variables.
+
+    References to *patch* are not valid unless tessellation stages are
+    present and enabled.
+
+    While this document is self-contained, clarifying context for how to 
+    add the following changes can be seen by looking at version 4.20 of 
+    the GLSL specification.
+
+Overview
+
+    This is a language feature only extension formed from changes made
+    to version 4.20 of GLSL.  It includes:
+
+    * Add line-continuation using '\', as in C++.
+
+    * Change from ASCII to UTF-8 for the language character set and also 
+      allow any characters inside comments.
+
+    * Allow implicit conversions of return values to the declared type of 
+      the function.
+
+    * The *const* keyword can be used to declare variables within a function 
+      body with initializer expressions that are not constant expressions.
+
+    * Qualifiers on variable declarations no longer have to follow a strict 
+      order. The layout qualifier can be used multiple times, and multiple 
+      parameter qualifiers can be used.  However, this is not as
+      straightforward as saying declarations have arbitrary lists of 
+      initializers.  Typically, one qualifier from each class of qualifiers
+      is allowed, so care is now taken to classify them and say so.  Then, 
+      of these, order restrictions are removed.
+
+    * Add layout qualifier identifier "binding" to bind the location of a
+      uniform block.  This requires version 1.4 of GLSL.  If this extension
+      is used with an earlier version than 1.4, this feature is not present.
+    
+    * Add layout qualifier identifier "binding" to bind units to sampler 
+      and image variable declarations.
+    
+    * Add C-style curly brace initializer lists syntax for initializers. 
+      Full initialization of aggregates is required when these are used.
+
+    * Allow ".length()" to be applied to vectors and matrices, returning 
+      the number of components or columns.
+
+    * Allow swizzle operations on scalars.
+
+    * Built-in constants for gl_MinProgramTexelOffset and 
+      gl_MaxProgramTexelOffset.
+
+IP Status
+
+    No known IP claims.
+
+Additions to Chapter 3 of the OpenGL Shading Language
+
+    Change the opening of 3.1 Character Set to
+
+    "The source character set used for the OpenGL shading languages, outside of 
+    comments, is a subset of UTF-8. It includes the following characters:    
+
+        "The backslash ( \ ) as the line-continuation character when used as 
+         the last character of a line, just before a new line."
+
+    and after the list, referring to all the characters:
+
+    "An error will be given if any other character is used outside a comment.
+
+    "There are no trigraphs. There are no escape sequences or other uses of the 
+    backslash beyond use as the line-continuation character."
+
+    At the end of section 3.2, add
+
+    "Line numbers are one more than the number of new lines that have been 
+    processed, including counting the new lines that will be removed by the 
+    line-continuation character ( \ ).
+
+    "Lines separated by the line-continuation character preceding a new line 
+    are concatenated together before either comment processing or preprocessing.
+    No white space is substituted for the line-continuation character. That is, 
+    a single token could be formed by the concatenation by taking the characters
+    at the end of one line concatenating them with the characters at the 
+    beginning of the next line."
+
+        float f\
+        oo;
+        // forms a single line equivalent to "float foo;"
+        // (assuming '\' is the last character before the new line and "oo" are
+        // the first two characters of the next line)
+
+    Add to the preprocessor:
+
+    "Preprocessing takes places after new lines have been removed by the 
+    line-continuation character."
+
+    "Including the following line in a shader will enable module import and
+    related extended language features described in this extension:
+
+        #extension GL_ARB_shading_language_420pack : <behavior>
+
+    where <behavior> is as specified in section 3.3 for the #extension
+    directive."
+
+    A new preprocessor macro is added to the OpenGL Shading Language:
+
+      #define GL_ARB_shading_language_420pack    1
+
+    Add to the section on comments
+
+    "Inside comments, any byte values may be used, except a byte whose value 
+    is 0. No errors will be given for the content of comments and no validation 
+    on the content of comments need be done.
+
+    "Removal of new lines by the line-continuation character ( \ ) logically 
+    occurs before comments are processed. That is, a single-line comment ending 
+    in the line-continuation character ( \ ) includes the next line in the 
+    comment."
+
+        // a single-line comment containing the next line \
+        a = b; // this is still in the first comment
+    
+Additions to Chapter 4 of the OpenGL Shading Language
+
+    Add to the syntax description of integer literals:
+
+    "When tokenizing, the maximal token matching the above will be recognized
+    before a new token is started."
+
+    Add to the syntax description of floating-point literals:
+
+    "When tokenizing, the maximal token matching the above will be recognized 
+    before a new token is started."
+
+    Add to the description of .length():
+
+    "This returns a type int."
+
+    Add a new section for initializers
+
+    "Initializers
+
+    "At declaration, an initial value for an aggregate variable may be provided, 
+    specified as an equals (=) followed by an initializer. The initializer is 
+    either an assignment-expression or a list of initializers enclosed in curly
+    braces.  The grammar for the initializer is:
+
+        initializer :
+            assignment-expression
+            { initializer-list }
+            { initializer-list , }
+
+        initializer-list :
+            initializer
+            initializer-list , initializer
+
+    "The assignment-expression is a normal expression except that a comma ( , ) 
+    outside parentheses is interpreted as the end of the initializer, not as the 
+    sequence operator. As explained in more detail below, this allows creation 
+    of nested initializers: The aggregate and its initializer must exactly match
+    in terms of nesting, number of components/elements/members present at each
+    level, and types of components/elements/members.
+
+    "An assignment-expression in an initializer must be either the same type as
+    the object it initializes or be a type that can be converted to the object's 
+    type according to section 4.1.10 "Implicit Conversions". Since these include 
+    constructors, an aggregate can be initialized by either a constructor or an
+    initializer list; an element in an initializer list can be a constructor.
+
+    "If an initializer is a list of initializers enclosed in curly braces, the 
+    variable being declared must be a vector, a matrix, an array, or a 
+    structure.
+
+        int i = { 1 }; // illegal, i is not an aggregate
+
+    "A list of initializers enclosed in a matching set of curly braces is
+    applied to one aggregate. This may be the variable being declared or an
+    aggregate contained in the variable being declared. Individual
+    initializers from the initializer list are applied to the elements/members
+    of the aggregate, in order.
+
+    "If the aggregate has a vector type, initializers from the list are applied 
+    to the components of the vector, in order, starting with component 0. The 
+    number of initializers must match the number of components.
+
+    "If the aggregate has a matrix type, initializers from the list must be 
+    vector initializers and are applied to the columns of the matrix, in order, 
+    starting with column 0. The number of initializers must match the number of 
+    columns.
+
+    "If the aggregate has a structure type, initializers from the list are
+    applied to the members of the structure, in the order declared in the 
+    structure, starting with the first member. The number of initializers must
+    match the number of members.
+
+    "Applying these rules, the following matrix declarations are equivalent:
+
+        mat2x2 a = mat2( vec2( 1.0, 0.0 ), vec2( 0.0, 1.0 ) );
+        mat2x2 b = { vec2( 1.0, 0.0 ), vec2( 0.0, 1.0 ) };
+        mat2x2 c = { { 1.0, 0.0 }, { 0.0, 1.0 } };
+
+    "All of the following declarations are illegal.
+
+        float a[2] = { 3.4, 4.2, 5.0 }; // illegal
+        vec2 b = { 1.0, 2.0, 3.0 }; // illegal
+        mat3x3 c = { vec3(0.0), vec3(1.0), vec3(2.0), vec3(3.0) }; // illegal
+        mat2x2 d = { 1.0, 0.0, 0.0, 1.0 }; // illegal, can't flatten nesting
+        struct {
+            float a;
+            int b;
+        } e = { 1.2, 2, 3 }; // illegal
+
+    "In all cases, the innermost initializer (i.e., not a list of initializers 
+    enclosed in curly braces) applied to an object must have the same type as 
+    the object being initialized or be a type that can be converted to the
+    object's type according to section 4.1.10 "Implicit Conversions". In the 
+    latter case, an implicit conversion will be done on the initializer before 
+    the assignment is done. All of the following declarations are illegal.
+
+        int a = true; // illegal
+        vec4 b[2] = { vec4(0.0), 1.0 }; // illegal
+        mat4x2 c = { vec3(0.0), vec3(1.0) }; // illegal
+
+        struct S1 {
+            vec4 a;
+            vec4 b;
+        };
+
+        struct {
+            float s;
+            float t;
+        } d[] = { S1(vec4(0.0), vec4(1.1)) }; // illegal
+
+    "If an initializer (of either form) is provided for an unsized array, the 
+    size of the array is determined by the number of top-level (non-nested) 
+    initializers within the initializer. All of the following declarations 
+    create arrays explicitly sized with five elements:
+
+        float a[] = float[](3.4, 4.2, 5.0, 5.2, 1.1);
+        float b[] = { 3.4, 4.2, 5.0, 5.2, 1.1 };
+        float c[] = a; // c is explicitly size 5
+        float d[5] = b; // means the same thing
+
+    "It is an error to have too few or too many initializers in an initializer 
+    list for the aggregate being initialized. That is, all elements of an array, 
+    all members of a structure, all columns of a matrix, and all components of a 
+    vector must have exactly one initializer expression present, with no 
+    unconsumed initializers.
+
+    Change the definition of the storage qualifier *const* in the table:
+
+        const    |     a variable whose value cannot be changed
+
+    Change the definition of storage qualifiers to only include the following 
+    rows
+
+        const
+        in
+        out
+        attribute
+        uniform
+        varying
+
+    (Removing "centroid in", "sample in", "centroid out", "sample out", 
+    "centroid varying", "patch in", and "patch out".)
+
+    and with this introduction:
+
+    "Variable declarations may have at most one storage qualifier specified in 
+    front of the type."
+
+    and make a new class "Auxiliary Storage Qualifier" to contain
+ 
+        Auxiliary Storage | Meaning
+        Qualifier         |
+        -----------------   -------
+        centroid          | centroid-based interpolation
+        sample            | per-sample interpolation
+        patch             | per-tessellation-patch attributes
+
+    add that
+    
+    "Some input and output qualified variables can be qualified with at most one 
+    additional auxiliary storage qualifier.
+
+    "Not all combinations of qualification are allowed. Which variable types can 
+    have which qualifiers are specifically defined in upcoming sections."
+
+    Removing
+
+    "These interpolation qualifiers may only precede the qualifiers in, 
+    centroid in, sample in, out, centroid out, or sample out in a 
+    declaration."
+
+    Change the last paragraph in this section to say
+
+    "Initializers in global declarations may only be used in declarations of 
+    global variables with no storage qualifier, with a *const* qualifier or 
+    with a uniform qualifier...."
+
+    Change the Constant Qualifier section to instead say
+
+    "Named compile-time constants or read-only variables can be declared using 
+    the const qualifier.  The const qualifier can be used with any of the 
+    non-void transparent basic data types, as well as with structures and arrays 
+    of these. It is an error to write to a const variable outside of its
+    declaration, so they must be initialized when declared.  For example,
+
+        const vec3 zAxis = vec3 (0.0, 0.0, 1.0);
+        const float ceiling = a + b; // a and b not necessarily constants
+
+    "Structure members may not be qualified with *const*. Structure variables 
+    can be declared as *const*, and initialized with a structure constructor or 
+    initializer.  
+
+    "Initializers for *const* declarations at global scope must be 
+    constant expressions..."
+
+    In the Constant Expressions section, change the *const* bullet to say
+
+        * a variable declared with the const qualifier and an initializer, 
+          where the initializer is a constant expression
+
+    and add the bullet
+
+        * valid use of the length() method on a sized object, whether or not the 
+          object itself is constant
+
+    Add to "Inputs" section
+
+    "It is an error to use any auxiliary or interpolation qualifiers on a vertex
+    shader input."
+
+    "Applying the *patch* qualifier to inputs can only be done in tessellation
+    evaluation shaders."
+
+    "The auxiliary storage qualifiers *centroid* and *sample* can also be 
+    applied, as well as the interpolation qualifiers *flat*, *noperspective*,
+    and *smooth*."
+
+    Change all occurances of "patch in qualifier" to "patch qualifier" or 
+    "patch in qualifiers". Similarly for any occurances of "patch out", 
+    "centroid in", "sample in", "centroid out", and "sample out", through-out 
+    the specification.
+
+    Also change
+    
+    "Fragment shader inputs get per-fragment values, typically interpolated 
+    from a previous stage's outputs. They are declared in fragment shaders 
+    with the in storage qualifier, the centroid in storage qualifier, ..."
+    
+    to
+    
+    "Fragment shader inputs get per-fragment values, typically interpolated 
+    from a previous stage's outputs. They are declared in fragment shaders 
+    with the in storage qualifier.  The auxiliary storage qualifiers centroid
+    and sample can also be applied, as well as the interpolation qualifiers 
+    flat, noperspective, and smooth..."
+    
+    Change
+    
+    "They are declared in fragment shaders with the in storage qualifier, the 
+    centroid in storage qualifier, or the deprecated varying and centroid 
+    varying storage qualifiers."
+        
+    to
+    
+    "They are declared in fragment shaders with the in storage qualifier or the 
+    deprecated varying storage qualifier."
+
+    Add to the "Outputs" section
+
+    "A variable also cannot be declared with both the *in* and the *out* 
+    qualifiers."
+
+    Change
+    
+    "Vertex, tessellation evaluation, and geometry output variables output 
+    per-vertex data and are declared using the out, centroid out, or sample out 
+    storage qualifiers"
+    
+    to
+    
+    "Vertex, tessellation evaluation, and geometry output variables output 
+    per-vertex data and are declared using the out storage qualifier"
+
+    Change
+    
+    "It is an error to use patch out in a vertex, tessellation evaluation, 
+    or geometry shader."
+    
+    to
+    
+    "Applying *patch* to an output can only be done in a tessellation control
+    shader."
+
+    Change
+    
+    "Per vertex output variables are arrayed (see arrayed under 4.3.4 Inputs) 
+    and declared using out or centroid out storage qualifiers."
+    
+    to
+
+    "Per-vertex output variables are arrayed and declared using the *out*
+    qualifier without the *patch* qualifier.  Per-patch output variables are
+    declared using the *patch* and *out* storage qualifiers."
+
+    Add
+
+    "It is an error to use auxiliary storage qualifiers or interpolation 
+    qualifiers on an output in a fragment shader."
+
+    Modify Interface Blocks with new relaxed qualifier rules:
+
+    "If optional qualifiers are used, they can include interpolation qualifiers,
+    auxiliary storage qualifiers, and storage qualifiers..."
+
+    Add to Layout Qualifiers:
+
+    "More than one layout qualifier may appear in a single declaration. If the 
+    same layout-qualifier-name occurs in multiple layout qualifiers for the same 
+    declaration, the last one overrides the former ones."
+
+    Add to Uniform Block Layout Qualifiers, if the base language version is 1.4 
+    or above:
+
+        layout-qualifier-id
+            binding = integer-constant
+
+    "The binding identifier specifies the uniform buffer binding point 
+    corresponding to the uniform block, which will be used to obtain the 
+    values of the member variables of the block. It is an error to specify the
+    binding identifier for the global scope or for block member declarations. 
+    Any uniform block declared without a binding identifier is initially 
+    assigned to block binding point zero. After a program is linked, the 
+    binding points used for uniform blocks declared with or without a binding 
+    identifier can be updated by the OpenGL API.
+
+    "If the binding identifier is used with a uniform block instanced as an 
+    array then the first element of the array takes the specified block binding
+    and each subsequent element takes the next consecutive uniform block 
+    binding point.
+
+    "If the binding point for any uniform block instance is less than zero, or 
+    greater than or equal to the implementation-dependent maximum number of 
+    uniform buffer bindings, a compilation error will occur.  When the binding 
+    identifier is used with a uniform block instanced as an array of size N, 
+    all elements of the array from binding through binding + N - 1 must be
+    within this range."
+
+    Add for sampler and image layout qualifiers:
+
+    Note: The "image" variable aspect of this interacts with
+    ARB_shader_image_load_store and only applies if the extension 
+    ARB_shader_image_load_store is enabled.
+
+    "Uniform layout qualifiers can be used to bind opaque uniform variables to 
+    specific buffers or units.  Texture image units can be bound to samplers 
+    and image units can be bound to images.
+
+        layout-qualifier-id
+            binding = integer-constant
+
+    "The identifier binding specifies which unit will be bound. Any uniform 
+    sampler or image variable declared without a binding qualifier is 
+    initially bound to unit zero. After a program is linked, the unit
+    referenced by a sampler or image uniform variable declared with or 
+    without a binding identifier can be updated by the OpenGL API.
+
+    "If the binding identifier is used with an array, the first element of the 
+    array takes the specified unit and each subsequent element takes the next 
+    consecutive unit.
+
+    If the binding is less than zero, or greater than or equal to the 
+    implementation-dependent maximum supported number of units, a compilation 
+    error will occur. When the binding identifier is used with an array of size
+    N, all elements of the array from binding through binding + N - 1 must be 
+    within this range."
+
+    Change the "Interpolation" section to be the "Interplotation Qualifiers"
+    section and change the first paragraph to now be the following.
+
+    "Inputs and outputs that could be interpolated can be further qualified by 
+    at most one of the following interpolation qualifiers:
+
+        Qualifier          Meaning
+        ---------          -------
+        smooth             perspective correct interpolation
+        flat               no interpolation
+        noperspective      linear interpolation
+
+    "The presence of and type of interpolation is controlled by the above 
+    interpolation qualifiers as well as the auxiliary storage qualifiers 
+    *centroid* and *sample*. The auxiliary storage qualifier *patch* is not 
+    used for interpolation; it is an error to use interpolation qualifiers with
+    *patch*.
+
+    Add the following parameter qualifier
+
+        Qualifier          Meaning
+        ---------          -------
+        const              for function parameters that cannot be written to
+
+    and note that precision qualifiers are also allowed on parameters.
+
+    Delete the following sentence in the "Invariant Qualifier" section:
+
+    "The invariant qualifier must appear before any interpolation qualifiers 
+    or storage qualifiers when combined with a declaration."
+
+    Replace the "Order of Qualification" section with the following
+
+    4.11 "Order and Repetition of Qualification"
+
+    "When multiple qualifiers are present in a variable or parameter
+    declaration, they may appear in any order, but they must all appear before
+    the type. The layout qualifier is the only qualifier that can appear more
+    than once. Further, a declaration can have at most one storage qualifier,
+    at most one auxiliary storage qualifier, and at most one interpolation
+    qualifier. If inout is used, neither in nor out may be used.  Multiple 
+    memory qualifiers can be used. Any violation of these rules will cause a 
+    compile-time error."
+
+Additions to Chapter 5 of the OpenGL Shading Language
+
+    Change the section title "Vector Components" to be "Vector and Scalar
+    Components and Length".  In that section do the following.
+
+    Change first sentence to "The names of the components of a vector or
+    scalar are denoted by a single letter."
+
+    Add the following last sentence to its paragraph:
+
+    "The component names x, r, and s are, for example, synonyms for the same
+    (first) component in a vector.  They are also the names of the only 
+    component in a scalar."
+
+    Add to the example
+
+        float height;
+        height.x // is legal
+        height.y // is illegal
+
+    and to the third example
+
+        float f = 1.2;
+        vec4 dup = f.xxxx; // dup = (1.2, 1.2, 1.2, 1.2)
+
+    "This notation is more concise than the constructor syntax. To form an 
+    r-value, it can be applied to any expression that results in a vector or 
+    scalar r-value. Any resulting vector of any operation must be a valid 
+    vector in the language; hence the following is illegal:"
+
+        vec4 f;
+        vec4 g = pos.xyzwxy.xyzw; // illegal; pos.xyzwxy is non-existent "vec6"
+
+    Add to the end of this section:
+
+    "The *length* method may be applied to vectors (but not scalars). The 
+    result is the number of components in the vector. For example,
+
+        vec3 v;
+        const int L = v.length();
+
+    "sets the constant L to 3. The type returned by .length() on a vector is 
+    *int*."
+
+    Add to the Matrix Components section:
+
+    "The length method may be applied to matrices. The result is the number 
+    of columns of the matrix. For example,
+
+        mat3x4 v;
+        const int L = v.length();
+
+    "sets the constant L to 3. The type returned by .length() on a matrix 
+    is *int*."
+
+Additions to Chapter 6 of the OpenGL Shading Language
+
+    Add to the "Function Definitions" section the following functionality 
+    regarding function return values:
+
+    "If the type of returnValue does not match returnType, there must be an 
+    implicit conversion in section 4.1.10 "Implicit Conversions" that 
+    converts the type of returnValue to returnType, or a compile error will 
+    result."
+
+    and the clarifations:
+
+    "A void function can only use return without a return argument, even if 
+    the return argument has void type. Return statements only accept values:
+
+        void func1() { }
+        void func2() { return func1(); } // illegal return statement
+
+    "Only a precision qualifier is allowed on the return type of a function. 
+    Formal parameters can have parameter, precision, and memory qualifiers, 
+    but no other qualifiers."
+
+    Under the section "Function Calling Conventions" change to the *inout*
+    bullet:
+
+        * "The keyword *inout* is used as a qualifier to denote the parameter 
+          is to be both copied in and copied out. It means the same thing as 
+          specifying both in and out."
+
+    and the following grammar changes:  Delete the const-qualifier parts of
+    the existing grammar and instead use
+
+        parameter-qualifiers :
+            empty
+            list of parameter-qualifier
+
+        parameter-qualifier :
+            empty
+            const
+            in
+            out
+            inout
+            memory qualifier
+            precision qualifier
+
+Additions to Chapter 7 of the OpenGL Shading Language
+
+    Add to the built-in constants
+
+        const int gl_MinProgramTexelOffset = -7;
+        const int gl_MaxProgramTexelOffset = 8;
+
+Additions to Chapter 9 of the OpenGL Shading Language
+
+    TBD.
+
+Conformance Tests
+
+    Verify that the following two vectors are identical:
+
+        vec4 a = vec4(1.0);
+        vec4 b = (1.0).xxxx;
+
+    Verify that the following generates a compilation error:
+
+        vec2 a = 1.xx;
+
+    Verify that the following two vectors are identical:
+
+        vec2 a = (1).xx;
+        vec2 b = vec2(1.0);
+
+    Verify that the following two arrays are identical:
+
+        vec4 a[] = vec4 [] (vec4(1.2), vec4(0.0), vec4(0.0), vec4(0.0),
+                            vec4(0.0), vec4(0.0), vec4(0.0), vec4(2.4),
+                            vec4(0.0), vec4(0.0), vec4(0.0), vec4(0.0),
+                            vec4(0.0), vec4(0.0), vec4(0.0), vec4(3.6));
+        vec4 b[] =        { vec4(1.2), vec4(0.0), vec4(0.0), vec4(0.0),
+                            vec4(0.0), vec4(0.0), vec4(0.0), vec4(2.4),
+                            vec4(0.0), vec4(0.0), vec4(0.0), vec4(0.0),
+                            vec4(0.0), vec4(0.0), vec4(0.0), vec4(3.6) };
+
+    Verify that the following two arrays are identical:
+
+        vec4 a[12] = vec4 [] (vec4(1.2), vec4(0.0), vec4(0.0), vec4(0.0),
+                              vec4(0.0), vec4(0.0), vec4(0.0), vec4(2.4),
+                              vec4(0.0), vec4(0.0), vec4(0.0), vec4(0.0));
+        vec4 b[12] =        { vec4(1.2), vec4(0.0), vec4(0.0), vec4(0.0),
+                              vec4(0.0), vec4(0.0), vec4(0.0), vec4(2.4) };
+
+    Verify that the following three matrices are identical:
+
+        mat2x2 a = mat2(  vec2( 1.0, 0.0 ), vec2( 0.0, 1.0 ) );
+        mat2x2 b =      { vec2( 1.0, 0.0 ), vec2( 0.0, 1.0 ) };
+        mat2x2 c =      {     { 1.0, 0.0 },     { 0.0, 1.0 } };
+
+    Verify that the following generates a compliation error:
+
+        float a[2] = { 1.0, 2.0, 3.0 };
+
+    Verify that the following generates a compliation error:
+
+        mat2x2 d = { 1.0, 0.0, 0.0, 1.0 };
+
+
+    Verify that the output of the following fragment shader is (0, 1, 0, 1):
+
+    #version 410
+    #extension GL_ARB_shading_language_420pack: require
+    out vec4 color;
+    void main()
+    {
+        color = (vec2(0).length() == 2) ? vec4(0, 1, 0, 1) : vec4(1, 0, 0, 1);
+    }
+
+    Repeat the above test with vec2(0).length() replaced by ivec2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by uvec2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by bvec2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dvec2(0).length().
+
+
+    Verify that the output of the following fragment shader is (0, 1, 0, 1):
+
+    #version 410
+    #extension GL_ARB_shading_language_420pack: require
+    out vec4 color;
+    void main()
+    {
+        color = (vec3(0).length() == 3) ? vec4(0, 1, 0, 1) : vec4(1, 0, 0, 1);
+    }
+
+    Repeat the above test with vec3(0).length() replaced by ivec3(0).length().
+
+    Repeat the above test with vec3(0).length() replaced by uvec3(0).length().
+
+    Repeat the above test with vec3(0).length() replaced by bvec3(0).length().
+
+    Repeat the above test with vec3(0).length() replaced by dvec3(0).length().
+
+
+    Verify that the output of the following fragment shader is (0, 1, 0, 1):
+
+    #version 410
+    #extension GL_ARB_shading_language_420pack: require
+    out vec4 color;
+    void main()
+    {
+        color = (vec4(0).length() == 4) ? vec4(0, 1, 0, 1) : vec4(1, 0, 0, 1);
+    }
+
+    Repeat the above test with vec4(0).length() replaced by ivec4(0).length().
+
+    Repeat the above test with vec4(0).length() replaced by uvec4(0).length().
+
+    Repeat the above test with vec4(0).length() replaced by bvec4(0).length().
+
+    Repeat the above test with vec4(0).length() replaced by dvec4(0).length().
+
+
+    Verify that the output of the following fragment shader is (0, 1, 0, 1):
+
+    #version 410
+    #extension GL_ARB_shading_language_420pack: require
+    out vec4 color;
+    void main()
+    {
+        color = (mat2(0).length() == 2) ? vec4(0, 1, 0, 1) : vec4(1, 0, 0, 1);
+    }
+
+    Repeat the above test with mat2(0).length() replaced by mat2x2(0).length().
+
+    Repeat the above test with mat2(0).length() replaced by dmat2x2(0).length().
+
+    Repeat the above test with mat2(0).length() replaced by mat2x3(0).length().
+
+    Repeat the above test with mat2(0).length() replaced by dmat2x3(0).length().
+
+    Repeat the above test with mat2(0).length() replaced by mat2x4(0).length().
+
+    Repeat the above test with mat2(0).length() replaced by dmat2x4(0).length().
+
+
+    Verify that the output of the following fragment shader is (0, 1, 0, 1):
+
+    #version 410
+    #extension GL_ARB_shading_language_420pack: require
+    out vec4 color;
+    void main()
+    {
+        color = (mat3(0).length() == 3) ? vec4(0, 1, 0, 1) : vec4(1, 0, 0, 1);
+    }
+
+    Repeat the above test with mat3(0).length() replaced by mat3x2(0).length().
+
+    Repeat the above test with mat3(0).length() replaced by dmat3x2(0).length().
+
+    Repeat the above test with mat3(0).length() replaced by mat3x3(0).length().
+
+    Repeat the above test with mat3(0).length() replaced by dmat3x3(0).length().
+
+    Repeat the above test with mat3(0).length() replaced by mat3x4(0).length().
+
+    Repeat the above test with mat3(0).length() replaced by dmat3x4(0).length().
+
+
+    Verify that the output of the following fragment shader is (0, 1, 0, 1):
+
+    #version 410
+    #extension GL_ARB_shading_language_420pack: require
+    out vec4 color;
+    void main()
+    {
+        color = (mat4(0).length() == 4) ? vec4(0, 1, 0, 1) : vec4(1, 0, 0, 1);
+    }
+
+    Repeat the above test with mat4(0).length() replaced by mat4x2(0).length().
+
+    Repeat the above test with mat4(0).length() replaced by dmat4x2(0).length().
+
+    Repeat the above test with mat4(0).length() replaced by mat4x3(0).length().
+
+    Repeat the above test with mat4(0).length() replaced by dmat4x3(0).length().
+
+    Repeat the above test with mat4(0).length() replaced by mat4x4(0).length().
+
+    Repeat the above test with mat4(0).length() replaced by dmat4x4(0).length().
+
+
+    Verify that the output of the following fragment shader is (0, 1, 0, 1):
+
+    #version 410
+    #extension GL_ARB_shading_language_420pack: require
+    out vec4 color;
+    void main()
+    {
+        color = (mat2(0)[0].length() == 2)
+            ? vec4(0, 1, 0, 1) : vec4(1, 0, 0, 1);
+    }
+
+    Repeat the above test with mat2(0)[0].length() replaced by
+    mat2x2(0)[0].length().
+
+    Repeat the above test with mat2(0)[0].length() replaced by
+    dmat2x2(0)[0].length().
+
+    Repeat the above test with mat2(0)[0].length() replaced by
+    mat3x2(0)[0].length().
+
+    Repeat the above test with mat2(0)[0].length() replaced by
+    dmat3x2(0)[0].length().
+
+    Repeat the above test with mat2(0)[0].length() replaced by
+    mat4x2(0)[0].length().
+
+    Repeat the above test with mat2(0)[0].length() replaced by
+    dmat4x2(0)[0].length().
+
+
+    Verify that the output of the following fragment shader is (0, 1, 0, 1):
+
+    #version 410
+    #extension GL_ARB_shading_language_420pack: require
+    out vec4 color;
+    void main()
+    {
+        color = (mat3(0)[0].length() == 3)
+            ? vec4(0, 1, 0, 1) : vec4(1, 0, 0, 1);
+    }
+
+    Repeat the above test with mat3(0)[0].length() replaced by
+    mat2x3(0)[0].length().
+
+    Repeat the above test with mat3(0)[0].length() replaced by
+    dmat2x3(0)[0].length().
+
+    Repeat the above test with mat3(0)[0].length() replaced by
+    mat3x3(0)[0].length().
+
+    Repeat the above test with mat3(0)[0].length() replaced by
+    dmat3x3(0)[0].length().
+
+    Repeat the above test with mat3(0)[0].length() replaced by
+    mat4x3(0)[0].length().
+
+    Repeat the above test with mat3(0)[0].length() replaced by
+    dmat4x3(0)[0].length().
+
+
+    Verify that the output of the following fragment shader is (0, 1, 0, 1):
+
+    #version 410
+    #extension GL_ARB_shading_language_420pack: require
+    out vec4 color;
+    void main()
+    {
+        color = (mat4(0)[0].length() == 4)
+            ? vec4(0, 1, 0, 1) : vec4(1, 0, 0, 1);
+    }
+
+    Repeat the above test with mat4(0)[0].length() replaced by
+    mat2x4(0)[0].length().
+
+    Repeat the above test with mat4(0)[0].length() replaced by
+    dmat2x4(0)[0].length().
+
+    Repeat the above test with mat4(0)[0].length() replaced by
+    mat3x4(0)[0].length().
+
+    Repeat the above test with mat4(0)[0].length() replaced by
+    dmat3x4(0)[0].length().
+
+    Repeat the above test with mat4(0)[0].length() replaced by
+    mat4x4(0)[0].length().
+
+    Repeat the above test with mat4(0)[0].length() replaced by
+    dmat4x4(0)[0].length().
+
+
+    Verify that the following shader generates a compilation error:
+
+    #version 410
+    #extension GL_ARB_shading_language_420pack: require
+    out vec4 color;
+    void main()
+    {
+        float v;
+        int l = v.length();
+        color = vec4(1, 0, 0, 1);
+    }
+
+    Repeat the above test with "float v" replaced by "int v".
+
+    Repeat the above test with "float v" replaced by "uint v".
+
+    Repeat the above test with "float v" replaced by "bool v".
+
+    Repeat the above test with "float v" replaced by "double v".
+
+
+    Verify that the following shader compiles without error:
+
+    #version 410
+    #extension GL_ARB_shading_language_420pack: require
+    void main()
+    {
+        float b[vec2(0).length()];
+    }
+
+    Repeat the above test with vec2(0).length() replaced by ivec2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by uvec2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by bvec2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dvec2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by ivec3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by uvec3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by bvec3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dvec3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by ivec4(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by uvec4(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by bvec4(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dvec4(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat2x2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat2x3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat2x4(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat3x2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat3x3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat3x4(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat4(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat4x2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat4x3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by mat4x4(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat2x2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat2x3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat2x4(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat3x2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat3x3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat3x4(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat4(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat4x2(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat4x3(0).length().
+
+    Repeat the above test with vec2(0).length() replaced by dmat4x4(0).length().
+
+    More TBD.
+
+Issues
+
+    1) How is the ambiguity of swizzling an integer literal resolved?
+
+        RESOLVED: Greedy lexing. The sequence "5.x" will be interpreted
+        as the floating-point literal 5.0 followed by the identifier "x".
+
+    2) Should the array subscript operator be applicable to scalars as it is
+       to vectors?
+
+        RESOLVED: NO.  In conduction with the rest of the features of this
+        extension, this would allow writing generic code such as:
+
+            #define SUM_COMPONENTS(value, result) \
+                do {
+                    for (int i = 0; i < (value).length(); i++)
+                        result += (value)[i];
+                } while (0)
+
+        However, using macros in this fashion is a poor approximation
+        of generic functions.  Until a better mechanism is added to
+        GLSL, there is little utility in array accesses to scalars or
+        single component vectors.
+
+    3) Should vectors and matrices also be able to use initializer lists?
+
+        RESOLVED: YES.  Many places in the language treat vectors as 2, 3, or
+        4 element arrays of a scalar type.  Matrices are often treated as
+        arrays of vector types.  Continuing that treatment here is logical.
+
+    4) What happens when an explicitly sized array is initialized with too few
+       elements?  Is it allowed?
+
+        RESOLVED: DISALLOWED.  In C/C++ this is allowed.  The uninitialized
+        elements are implicitly initialized to the appropriate reprensentation
+        of zero.  However, the belief is that this enables a variety of
+        programming errors that are difficult to debug on a GPU.
+
+    5) Can scalars be initialized using an initializer list?
+
+        RESOLVED: NO. In C/C++ this is allowed.  The ISO C99 specification
+        specifically say, "The initializer for a scalar shall be a single
+        expression, optionally enclosed in braces."  However, this may
+        pose problems if / when a vec1 type is added.
+
+    6) Are initializer lists for vectors flexible in the same way that vector
+       constructors are?  Specifically, is the initialzier list for 'c',
+       below, legal?
+
+        vec2 a = vec2(2, 3);
+        vec4 b = vec4(1, a, 4);   // b = { 1, 2, 3, 4 }
+        vec4 c = { 1, a, 4 };     // Legal?
+
+        RESOLVED: NO.  In C++ there is a distinction between a constructor
+        and an initializer list.  If you had vec2 and vec4 classes in C++, a
+        constructor 'vec4(float, vec2, float)' might exist, but the
+        initializer list for 'c' would not be legal.
+
+    7) Does adding *const* for read-only variables effect array sizing?
+    
+    RESOLVED.  No. Array sizing changes are not part of this proposal.  Array 
+    sizing rules stay the same, where sizes must be compile-time constants, 
+    whether or not the keyword 'const' was involved, just like it always has 
+    been.  The following was and still is disallowed:  
+    
+        "void foo(const s) { int a[s]; }", 
+    
+    as will be 
+    
+        "void foo() { const s = exp; int a[s]; }".
+    
+    8)  Should we allow non-compile-time constant initializers for const at 
+    global scope as well?
+    
+        RESOLVED.  No.  Would make linking more difficult.  
+    
+    9) Do we want to add the new C++ constexpr for declaring constant 
+    functions?
+    
+        RESOLVED.  No, not yet, could be a potential performance benefit in the 
+        future, but treat as a separate extension.  Note that most built-in 
+        functions are already understood to be "constexpr".  This has been
+        submitted into bugzilla.
+    
+    10) What combinations of interpolation qualifiers are allowed?  Before, 
+    you could take one of smooth, flat, and noperspective and combine that with 
+    one of centroid, sample, or patch.  What do combinations do we actually 
+    want?  Do we want multiple intances of a single qualifier allowed?  
+    (E.g. two layout qualifiers, or "in out"?)
+    
+        RESOLVED.  Allow multiple "layout".  Not anything else.
+
+    11) Should we allow multiple block declarations to use the same
+    binding point?  For example:
+           layout(binding = 3) uniform Block1 { ... };
+           layout(binding = 3) uniform Block2 { ... };
+           
+       RESOLVED: There is no reason to disallow this usage; in particular,
+       existing UBO shaders effectively declare all blocks with
+       "layout(block = 0)".
+       
+    12) Should the qualifier be called "location", "block" or "binding"?
+    
+       RESOLVED: The qualifier is called "binding" because it makes it more
+       clear what parameter of UniformBlockBinding that this qualifier
+       affects. "block" could be confused with either the
+       <uniformBlockIndex> or <uniformBlockBinding> and "location" might be
+       confused with the current uses of the qualifier "location" for
+       attribute locations or it could be confused with uses of "location"
+       for uniform variable location, which blocks don't have.
+
+    13) Should sampler initialization use a layout(binding) qualifier
+       instead of specifying a uniform initializer?
+       
+       RESOLVED: Revision #4 of the sampler initialization spec uses a 
+       layout(binding) qualifier for sampler uniforms. This is more 
+       forward looking and makes the spec more consistent with 
+       ARB_uniform_block_binding_initialization and
+       ARB_shader_atomic_counters.       
+
+Revision History
+
+    Revision 4, 11-Sep-2014 (pbrown)
+      - Fix minor typo.
+    Revision 3, 13-May-2014 (John Kessenich)
+      - Resolve bug 10593.
+    Revision 2, 25-Jul-2011 (John Kessenich)
+      - Mark as complete and approved.
+      - Tidy up some formating and non-raw-text quote marks.
+      - Pull in the initializers for images, to completely subsume
+        GL_ARB_uniform_sampler_initialization.
+      - Point out image and patch dependencies.
+    Revision 1, 5-Jul-2011 (John Kessenich)
+      - Initial version.  Formed by combing the content of the
+        4.20 draft specification and the content of draft
+        extensions:
+        * ARB_shading_language_vec1
+        * ARB_shading_language_relaxed_qualifiers
+        * ARB_shading_language_length
+        * ARB_shading_language_initializer_list
+        * GL_ARB_uniform_block_binding_initialization
+        * GL_ARB_uniform_sampler_initialization (just sampler binding)
+        Issues were carried across and renumbered.
+        Conformance tests were carried over.
+

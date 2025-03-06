@@ -17,22 +17,22 @@ struct SPIRV_Cross_Output
 void frag_main()
 {
     float phi;
-    float4 _36;
-    int _51;
-    _51 = 0;
+    float4 _45;
+    int _57;
+    _57 = 0;
     phi = 1.0f;
-    _36 = float4(1.0f, 2.0f, 1.0f, 2.0f);
+    _45 = float4(1.0f, 2.0f, 1.0f, 2.0f);
     for (;;)
     {
-        FragColor = _36;
-        if (_51 < 4)
+        FragColor = _45;
+        if (_57 < 4)
         {
-            if (v0[_51] > 0.0f)
+            if (v0[_57] > 0.0f)
             {
-                float2 _48 = phi.xx;
-                _51++;
+                float2 _43 = phi.xx;
+                _57++;
                 phi += 2.0f;
-                _36 = uImage.SampleLevel(_uImage_sampler, _48, 0.0f);
+                _45 = uImage.SampleLevel(_uImage_sampler, _43, 0.0f);
                 continue;
             }
             else

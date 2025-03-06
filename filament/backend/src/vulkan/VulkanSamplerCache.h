@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_BACKEND_VULKANSAMPLERCACHE_H
 
 #include "VulkanContext.h"
-#include "VulkanUtility.h"
 
 #include <tsl/robin_map.h>
 

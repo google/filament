@@ -1,0 +1,145 @@
+
+XXX - Not complete.
+
+Name
+
+    SGIX_ycrcba
+
+Name Strings
+
+    GL_SGIX_ycrcba
+
+Version
+
+    Last Modified Date: 01/16/1998
+    $Date: 1998/01/16 21:47:41 $ $Revision: 1.2 $
+
+Number
+
+    203
+
+Dependencies
+
+    This extension, combined with the subsample.spec
+    (SGIX_subsample) extension obsoletes the current ycrcb.spec
+    (SGIX_ycrcb) extension. Support of SGIX_ycrcb should be
+    accomplished using the SGIX_subsample and SGIX_ycrcba.
+
+    EXT_texture3D affects the definition of this extension
+    EXT_subtexture affects the definition of this extension
+    EXT_histogram affects the definition of this extension
+    EXT_convolution affects the definition of this extension
+    SGI_color_table affects the definition of this extension
+
+
+Overview
+
+    This extension provides a method for OpenGL to read and store
+    images that are defined in standard YCRCB and YCRCBA video color
+    spaces.  As with the CYMK extension, conversion to RGBA takes place
+    immediately following the unpack pixel store, and preceding the
+    pack pixel store operations, and is only available on transfers to
+    and from memory.  The algorithms that convert between YCRCB and
+    RGBA are "black-box" in nature, and left undefined by the
+    extension, however it is recommended that conversion comply with
+    the CCIR standard. This extension specifies the format of a pixel
+    rectangle independent of component subsampling. Component
+    subsampling is specified using a separate extension.
+
+    Two new formats are added, YCRCB_SGIX and YCRCBA_SGIX.
+
+    YCRCB_SGIX is defined as a 3 component format representing the Cb,
+    Y, and Cr values per pixel. YCRCBA_SGIX is defined as a 4 component
+    format representing Cb, Y, Cr, and A values per pixel.
+
+    As with the CMYK extension, this extension doesn't preclude the
+    possibility of other higher quality conversion methods.
+
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <format> parameter of DrawPixels, ReadPixels,
+    TexImage1D, TexImage2D, TexImage3DEXT, TexImage4DSGIS, TexSubImage1DEXT,
+    TexSubImage2DEXT, TexSubImage3DEXT, TexSubImage4DSGIS, GetTexImage,
+    ColorTableSGI, GetColorTableSGI, ConvolutionFilter1DEXT,
+    ConvolutionFilter2DEXT, ConvolutionFilter3DEXT, GetConvolutionFilterEXT,
+    SeparableFilter2DEXT, SeparableFilter3DEXT, GetSeparableFilterEXT,
+    GetHistogramEXT, and GetMinmaxEXT:
+
+	YCRCB_SGIX				0x8318
+	YCRCBA_SGIX				0x8319
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    Two entries are added to table 3.5 (DrawPixels and ReadPixels formats):
+
+									Target
+	Name			Type		Elements		Buffer
+	----			----		--------		------
+	YCRCB_SGIX		Component	Cb chroma value,	Color
+						Y luminance value,
+						Cr chroma value
+
+	YCRCBA_SGIX		Component	Cb chroma value,	Color
+						Y luminance value,
+						Cr chroma value,
+						A
+
+	Table 3.5: DrawPixels and ReadPixels formats.  The third column
+	gives a description of and the number and order of elements in a
+	group.
+
+    The new formats YCRCB_SGIX and YCRCBA_SGIX are added to the
+    discussion of Conversion to RGB.  If the format is either of these two
+    values, then the chroma and luminance values in each group are converted
+    to R, G, and B values using an undefined algorithm.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    The new formats are added to the discussion of Obtaining Pixels from the
+    Framebuffer.
+
+    The new formats are added to the discussion of Index Lookup.
+
+    A new section, "Conversion to YCrCb," is added immediately
+    following the section "Conversion to L." Or "Conversion to L" is
+    expanded to cover conversion to L, YCrCb, and CMYK
+
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+

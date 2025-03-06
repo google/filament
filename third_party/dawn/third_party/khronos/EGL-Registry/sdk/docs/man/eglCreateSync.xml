@@ -1,0 +1,311 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglCreateSync">
+    <info>
+         <copyright>
+             <year>2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglCreateSync</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglCreateSync</refname>
+        <refpurpose>
+            create a new <acronym>EGL</acronym> sync object
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLSync <function>eglCreateSync</function></funcdef>
+                <paramdef>EGLDisplay <parameter>display</parameter></paramdef>
+                <paramdef>EGLEnum <parameter>type</parameter></paramdef>
+                <paramdef>EGLAttrib const * <parameter>attrib_list</parameter></paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>display</parameter></term>
+                <listitem><para>
+                    Specifies the <acronym>EGL</acronym> display connection.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>type</parameter></term>
+                <listitem><para>
+                    Specifies the type of sync object to create.
+                </para></listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><parameter>attrib_list</parameter></term>
+                <listitem><para>
+                    Specifies attributes and attribute values for the sync
+                    object being created.
+                </para></listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <firstterm>sync objects</firstterm> are provided to enable
+            synchronization of client API operations between threads and/or
+            between API contexts. Sync objects may be tested or waited upon
+            by application threads.
+        </para>
+        <para>
+            Sync objects have a status with two possible states:
+            <firstterm>signaled</firstterm> and
+            <firstterm>unsignaled</firstterm>. Initially, sync objects are
+            unsignaled. EGL may be asked to wait for a sync object to become
+            signaled, or a sync object's status may be queried.
+        </para>
+        <para>
+            Depending on the type of a sync object, its status may be
+            changed either by an external event, or by explicitly signaling
+            and unsignaling the sync.
+        </para>
+        <para>
+            <function>eglCreateSync</function> creates a sync object of the specified
+            <parameter>type</parameter> associated with the specified display
+            <parameter>display</parameter>, and returns a handle to the new object.
+            <parameter>attrib_list</parameter> is an attribute-value list specifying
+            other attributes of the sync object, terminated by an attribute entry
+            <constant>EGL_NONE</constant>. Attributes not specified in the list will be
+            assigned their default values.
+        </para>
+        <para>
+            Once the <firstterm>condition</firstterm> of the sync object is satisfied,
+            the sync is signaled, causing any <function>eglClientWaitSync</function> or
+            <function>eglWaitSync</function> commands blocking on
+            <parameter>sync</parameter> to unblock.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="fencesync"><title>Creating Fence Sync Objects</title>
+        <para>
+            If <parameter>type</parameter> is
+            <constant>EGL_SYNC_FENCE</constant>, a fence sync object is
+            created. In this case <parameter>attrib_list</parameter> must be
+            <constant>NULL</constant> or empty (containing only
+            <constant>EGL_NONE</constant>). Attributes of the fence sync
+            object, and their initial values, are:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_SYNC_TYPE</constant></term>
+                <listitem>
+                    <para>
+                        <constant>EGL_SYNC_FENCE</constant>
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_SYNC_STATUS</constant></term>
+                <listitem>
+                    <para>
+                        <constant>EGL_UNSIGNALED</constant>
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_SYNC_CONDITION</constant></term>
+                <listitem>
+                    <para>
+                        <constant>EGL_SYNC_PRIOR_COMMANDS_COMPLETE</constant>
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+        <para>
+            When a fence sync object is created, <function>eglCreateSync</function> also inserts a
+            fence command into the command stream of the bound client API's current
+            context (i.e., the context returned by <function>eglGetCurrentContext</function>), and
+            associates it with the newly created sync object.
+        </para>
+        <para>
+            The only condition supported for fence sync objects is
+            <constant>EGL_SYNC_PRIOR_COMMANDS_COMPLETE</constant>, which is satisfied by completion of
+            the fence command corresponding to the sync object, and all preceding
+            commands in the associated client API context's command stream. The sync
+            object will not be signaled until all effects from these commands on the
+            client API's internal and framebuffer state are fully realized. No other
+            state is affected by execution of the fence command.
+        </para>
+        <para>
+            Creation of fence sync objects requires support from the bound
+            client API, and will not succeed unless the client API satisfies
+            one of the following properties. Note that
+            <function>eglWaitSync</function> also requires satisfying these
+            conditions.
+        </para>
+        <para>
+            <itemizedlist>
+            <listitem>
+                <para>
+                    client API is OpenGL, and either the OpenGL version is
+                    3.2 or greater, or the <constant>GL_ARB_sync</constant>
+                    extension is supported.
+                </para>
+            </listitem>
+            <listitem>
+                <para>
+                    client API is OpenGL ES, and either the OpenGL ES
+                    version is 3.0 or greater, or the
+                    <constant>GL_OES_EGL_sync</constant> extension is
+                    supported.
+                </para>
+            </listitem>
+            <listitem>
+                <para>
+                    client API is OpenVG, and the
+                    <constant>VG_KHR_EGL_sync</constant> extension is
+                    supported.
+                </para>
+            </listitem>
+            </itemizedlist>
+        </para>
+    </refsect1>
+    <refsect1 xml:id="openclsync"><title>Creating OpenCL Event Sync Objects</title>
+        <para>
+            If <parameter>type</parameter> is
+            <constant>EGL_SYNC_CL_EVENT</constant>, an OpenCL event sync
+            object is created. In this case
+            <parameter>attrib_list</parameter> must contain the attribute
+            <constant>EGL_CL_EVENT_HANDLE</constant>, set to a valid OpenCL
+            event handle returned by a call to
+            <function>clEnqueueReleaseGLObjects</function> or
+            <function>clEnqueueReleaseEGLObjects</function>; other types of
+            OpenCL event handles are not supported. Note that
+            <constant>EGL_CL_EVENT_HANDLE</constant> is not a queriable
+            property of a sync object. Attributes of the OpenCL event sync
+            object, and their initial values, are:
+        </para>
+        <variablelist>
+            <varlistentry>
+                <term><constant>EGL_SYNC_TYPE</constant></term>
+                <listitem>
+                    <para>
+                        <constant>EGL_SYNC_CL_EVENT</constant>
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_SYNC_STATUS</constant></term>
+                <listitem>
+                    <para>
+                        Depends on status of <parameter>event</parameter>
+                    </para>
+                </listitem>
+            </varlistentry>
+            <varlistentry>
+                <term><constant>EGL_SYNC_CONDITION</constant></term>
+                <listitem>
+                    <para>
+                        <constant>EGL_SYNC_CL_EVENT_COMPLETE</constant>
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+        <para>
+            The status of such a sync object depends on
+            <parameter>event</parameter>. When the status of
+            <parameter>event</parameter> is <constant>CL_QUEUED</constant>,
+            <constant>CL_SUBMITTED</constant>, or
+            <constant>CL_RUNNING</constant>, the status of the linked sync
+            object will be <constant>EGL_UNSIGNALED</constant>. When the
+            status of <parameter>event</parameter> changes to
+            <constant>CL_COMPLETE</constant>, the status of the linked sync
+            object will become <constant>EGL_SIGNALED</constant>.
+        </para>
+        <para>
+            The only condition supported for OpenCL event sync objects is
+            <constant>EGL_SYNC_CL_EVENT_COMPLETE</constant>, which is
+            satisfied when the status of the OpenCL event associated with
+            the sync object changes to <constant>CL_COMPLETE</constant>.
+        </para>
+        <para>
+            Creating a linked sync object places a reference on the linked
+            OpenCL event object. When the sync object is deleted, the
+            reference will be removed from the event object.
+        </para>
+        <para>
+            However, implementations are not required to validate the OpenCL
+            event, and passing an invalid event handle in
+            <parameter>attrib_list</parameter> may result in undefined
+            behavior up to and including program termination.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            <function>eglCreateSync</function> is supported only if the EGL
+            version is 1.5 or greater.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            <function>eglCreateSync</function> returns
+            <constant>EGL_NO_SYNC</constant> on failure.
+        </para>
+        <para>
+            If <parameter>display</parameter> is not the name of a valid,
+            initialized <type>EGLDisplay</type>, an
+            <constant>EGL_BAD_DISPLAY</constant> error is generated.
+        </para>
+        <para>
+            If <parameter>attrib_list</parameter> contains an attribute name
+            not defined for the type of sync object being created, an
+            <constant>EGL_BAD_ATTRIBUTE</constant> error is generated.
+        </para>
+        <para>
+            If <parameter>type</parameter> is not a supported type of sync
+            object, an <constant>EGL_BAD_PARAMETER</constant> error is
+            generated.
+        </para>
+        <para>
+            If <parameter>type</parameter> is
+            <constant>EGL_SYNC_FENCE</constant> and no context is current
+            for the bound API (i.e.,
+            <function>eglGetCurrentContext</function> returns
+            <constant>EGL_NO_CONTEXT</constant>), an
+            <constant>EGL_BAD_MATCH</constant> error is generated.
+        </para>
+        <para>
+            If <parameter>type</parameter> is
+            <constant>EGL_SYNC_FENCE</constant> and
+            <parameter>display</parameter> does not match the
+            <type>EGLDisplay</type> of the currently bound context for the
+            currently bound client API (the <type>EGLDisplay</type> returned
+            by <function>eglGetCurrentDisplay</function>), an
+            <constant>EGL_BAD_MATCH</constant> error is generated.
+        </para>
+        <para>
+            If <parameter>type</parameter> is
+            <constant>EGL_SYNC_FENCE</constant> and the current context for
+            the currently bound client API does not support fence commands,
+            an <constant>EGL_BAD_MATCH</constant> error is generated.
+        </para>
+        <para>
+            If <parameter>type</parameter> is
+            <constant>EGL_SYNC_CL_EVENT</constant> and
+            <constant>EGL_CL_EVENT_HANDLE</constant> is not specified in
+            <parameter>attrib_list</parameter>, or its attribute value is
+            not a valid OpenCL event handle as described above, then an
+            <constant>EGL_BAD_ATTRIBUTE</constant> error is generated.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <function>clEnqueueReleaseGLObjects</function>,
+            <function>clEnqueueReleaseEGLObjects</function>,
+            <citerefentry><refentrytitle>eglClientWaitSync</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglCreateSync</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentContext</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglGetCurrentDisplay</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglWaitSync</refentrytitle></citerefentry>
+        </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

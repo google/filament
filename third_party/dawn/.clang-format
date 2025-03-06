@@ -1,0 +1,10 @@
+# http://clang.llvm.org/docs/ClangFormatStyleOptions.html
+BasedOnStyle: Chromium
+
+ColumnLimit: 100
+
+# Use 4 space indents
+IndentWidth: 4
+ObjCBlockIndentWidth: 4
+AccessModifierOffset: -2
+InsertBraces: true

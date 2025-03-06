@@ -165,15 +165,15 @@ struct SSBO
 
 kernel void main0(device SSBO& ssbo [[buffer(0)]], constant SSBO& ubo [[buffer(1)]])
 {
-    threadgroup uint2 _18[2];
+    threadgroup spvUnsafeArray<uint2, 2> _18;
     spvArrayCopyFromDeviceToDevice1(ssbo._m0[0u]._m0, ssbo._m0[0u]._m1);
     spvArrayCopyFromConstantToDevice1(ssbo._m0[0u]._m0, ubo._m0[0u]._m1);
-    spvUnsafeArray<uint2, 2> _24;
-    spvArrayCopyFromStackToDevice1(ssbo._m0[0u]._m0, _24.elements);
-    spvArrayCopyFromThreadGroupToDevice1(ssbo._m0[0u]._m0, _18);
-    spvArrayCopyFromDeviceToThreadGroup1(_18, ssbo._m0[0u]._m1);
-    spvArrayCopyFromDeviceToStack1(_24.elements, ssbo._m0[0u]._m1);
-    spvArrayCopyFromConstantToThreadGroup1(_18, ubo._m0[0u]._m1);
-    spvArrayCopyFromConstantToStack1(_24.elements, ubo._m0[0u]._m1);
+    spvUnsafeArray<uint2, 2> _23;
+    spvArrayCopyFromStackToDevice1(ssbo._m0[0u]._m0, _23.elements);
+    spvArrayCopyFromThreadGroupToDevice1(ssbo._m0[0u]._m0, _18.elements);
+    spvArrayCopyFromDeviceToThreadGroup1(_18.elements, ssbo._m0[0u]._m1);
+    spvArrayCopyFromDeviceToStack1(_23.elements, ssbo._m0[0u]._m1);
+    spvArrayCopyFromConstantToThreadGroup1(_18.elements, ubo._m0[0u]._m1);
+    spvArrayCopyFromConstantToStack1(_23.elements, ubo._m0[0u]._m1);
 }
 

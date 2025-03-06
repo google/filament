@@ -1,0 +1,6 @@
+
+// REQUIRES: system-windows
+
+// RUN: %batch -lib-link -multi-thread %S\Inputs\batch_cmds2.txt
+// RUN: %batch -lib-link -multi-thread %S\Inputs\batch_cmds.txt
+// RUN: %batch  -multi-thread %S\Inputs\batch_cmds.txt

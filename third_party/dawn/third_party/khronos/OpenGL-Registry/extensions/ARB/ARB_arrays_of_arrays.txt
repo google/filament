@@ -1,0 +1,429 @@
+Name
+
+    ARB_arrays_of_arrays
+
+Name Strings
+
+    GL_ARB_arrays_of_arrays
+
+Contact
+
+    John Kessenich (cepheus 'at' frii.com)
+
+Contributors
+
+    XXX
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date: 2012/07/01
+    Revision: 7
+
+Number
+
+    ARB Extension #120
+
+Dependencies
+
+    GLSL 1.2 is required.
+
+    OpenGL ?? (Core Profile) specification is required.  (See issues.)
+
+Overview
+
+    Multi-dimensional arrays are a frequently requested feature.  This extension
+    removes the restriciton that arrays cannot be formed into arrays, allowing
+    arrays of arrays to be declared.  Technically, removing this restriction is 
+    all that is necessary to enable this feature, but it is worthwhile showing
+    what the result of doing that looks like.
+
+    The following will be true of arrays of arrays
+
+    - They will first class objects.  (They know their size, can be passed by 
+      copy-in semantics to functions, etc.)
+
+    - They will only be one-dimensional arrays of other first class objects.
+      (arrays are already first class objects).
+
+    - The syntax
+
+        vec4 a[3][2];
+
+      Declares a one-dimensional array of size 3 of one-dimensional arrays of 
+      size 2 of vec4s.  Also, these syntaxes do the same thing:
+
+        vec4[2] a[3];
+        vec4[3][2] a;
+
+      or, looking at more dimensions, these are all the same
+
+        int a[1][2][3][4][5][6];
+
+        int[1][2][3][4][5][6] a;
+
+        int[4][5][6] a[1][2][3];
+
+      note this latter is equivalent to C, in meaning the same thing, if done as
+
+        typedef int int456[4][5][6];
+
+        int456 a[1][2][3];
+
+      that is, this GLSL proposal matches C behavior in this way.  The type needed for
+      both constructors and nameless parameters is:
+
+         int[1][2][3][4][5][6]
+
+    - This type could be declared as a formal parameter in a function prototype as
+
+        void foo(vec4[3][2]);
+
+    - Accessing is done as
+
+        a[x][y]  // x selects which array of size 2 is desired
+                 // y selects which vec4 is desired
+
+        a[x]     // this results in a one-dimensional array, with all rights and
+                 // priviledges implied
+
+    - The .length() operator works as normal:
+
+        a.length()     // this is 3
+        a[x].length()  // this is 2
+
+    - The constructor for the above is
+
+        vec4[3][2](vec4[2](vec4(0.0), vec4(1.0)),   
+                   vec4[2](vec4(0.0), vec4(1.0)),   
+                   vec4[2](vec4(0.0), vec4(1.0)))
+
+    - Initializers for the above are
+
+        vec4 a[3][2] = vec4[3][2](vec4[2](vec4(0.0), vec4(1.0)),   
+                                  vec4[2](vec4(0.0), vec4(1.0)),   
+                                  vec4[2](vec4(0.0), vec4(1.0)));
+
+        // or
+
+        vec4 a[3][2] = {vec4[2](vec4(0.0), vec4(1.0)),   
+                        vec4[2](vec4(0.0), vec4(1.0)),   
+                        vec4[2](vec4(0.0), vec4(1.0))) };
+
+        // or 
+
+        vec4 a[3][2] = {{ vec4(0.0), vec4(1.0) },   
+                        { vec4(0.0), vec4(1.0) },   
+                        { vec4(0.0), vec4(1.0) }  };  // requires matching nesting of 
+                                                      // {} with object's hierarchy
+
+
+    Note that all the above is naturally already specified in the core 
+    specification.
+
+
+New Procedures and Functions
+
+
+New Tokens
+
+
+Additions to Chapter 2 of the OpenGL 4.2 (Core Profile) Specification
+(OpenGL Operation)
+
+
+Additions to Chapter 3 of the OpenGL 4.2 (Core Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Core Profile) Specification
+(Per-Fragment Operations and the Framebuffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Core Profile) Specification
+(Special Functions)
+
+
+Additions to Chapter 6 of the OpenGL 4.2 (Core Profile) Specification
+(State and State Requests)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL Shading Language Specification, Version
+4.20 (Variables and Types)
+
+    Section 4.1.9 Arrays
+
+    Rewrite the sentences "Only one-dimensional arrays may be declared. All 
+    basic types and structures can be formed into arrays." as 
+
+    "Arrays only have a single dimension (a single number within "[ ]", 
+     however, arrays of arrays can be declared.  All types (basic types, 
+     structures, arrays) can be formed into an array."
+
+    "When in transparent memory (like in a uniform block), the layout is that 
+     the 'inner' (right-most in declaration) dimensions iterate faster than the 
+     out dimensions.  That is, for the above, the order in memory would be:
+
+         low address...a[0][0] a[0][1] a[1][0] a[1][1] a[2][0] a[2][1]...high address"
+
+    Expand the examples in this section by incorporating the declaration and
+    use content from the overview section above.
+
+    Add
+
+        vec4 a[3][2];
+        a.length()     // this is 3
+        a[x].length()  // this is 2
+
+    When the *length* method will return a compile-time constant, the expression 
+    in brackets (x above) will be evaluated and subject to the rules required
+    for array indexes, but the array will not be deferenced.  Thus, behavior
+    is well defined even if the run-time value of the expression is out of bounds.
+
+    Remove the illegal examples of arrays of arrays.
+
+    Add the following:
+
+    "For unsized arrays, only the outermost dimension can be lacking a
+    size. A type that includes an unknown array size cannot be formed into
+    an array until it gets an explicit size."
+
+    Section 4.1.11 Initializers
+
+    Expand the examples in this section by incorporating the initializer
+    content from the overview section above.
+
+    Section 4.3.4 Input Variables
+
+    For this paragraph, keep this introductory text the same
+
+    "Some inputs and outputs are arrayed, meaning that for an interface between 
+    two shader stages either the input or output declaration requires an extra 
+    level of array indexing for the declarations to match.  
+
+    but rewrite the remainder
+
+    "For example, with 
+    the interface between a vertex shader and a geometry shader, vertex shader 
+    output variables and geometry shader input variables of the same name must 
+    match in type and qualification, except that the vertex shader name cannot 
+    be declared as an array while the geometry shader name must be declared 
+    as an array, to allow for vertex indexing.  
+    It is a link error if a 
+    non-arrayed input is not declared with the same type, qualification, and 
+    array dimensionality as the matching output.  It is an error if an arrayed 
+    input is not declared as an array of the same type and qualification as the 
+    corresponding (non-array) output. Symmetrically, it is an error if an 
+    arrayed output is not  declared as an array of the same type and 
+    qualification as the corresponding (non-array) input."
+
+    instead as 
+
+    "For example, with 
+    the interface between a vertex shader and a geometry shader, vertex shader 
+    output variables and geometry shader input variables of the same name must 
+    match in type and storage qualification, except that the geometry shader will have 
+    one more array dimension than the vertex shader, to allow for vertex 
+    indexing.
+    If such an arrayed interface variable is not declared with the necessary 
+    additional input or output array dimension, a link-time error will result."
+
+    "For non-arrayed interfaces (meaning array dimensionally stays the same between 
+    stages), it is a link-time error if the input variable is not declared with the 
+    same type, including array dimensionality, as the matching output variable."
+
+    Remove the following paragraph
+
+    "If the output corresponding to an arrayed input is itself an array, it 
+    must appear in an output block (see interface blocks below) in the 
+    outputting shader and in an input block in the inputting shader with a block
+    instance name declared as an array.  This is required because two-dimensional 
+    arrays are not supported."
+
+    Section 4.3.6 Output Variables
+
+    Remove the following paragraph
+
+    "As described under the section 4.3.4 'Input Variables' above, if a 
+    per-vertex output of the tessellation control shader is itself an array 
+    with multiple values per vertex, it must appear in an output block (see 
+    interface blocks below) in the tessellation control shader with a block 
+    instance name declared as an array."
+
+Additions to Chapter 5 of the OpenGL Shading Language Specification, Version
+4.20 (Built-in Variables)
+
+    Section 5.4 Array Constructors
+
+    Expand the constructor examples with the constructor examples from the
+    overview section of this specification.
+
+    Section 5.7 Structure and Array Operations
+
+    Expand the examples with the .length() and [] examples from the overview
+    section of this specification.
+
+Changes to the grammar
+
+    There are 7 pairs of rules that allowed either an empty array 
+    declaration or one with a size.  For example:
+
+        init_declarator_list:
+                init_declarator_list COMMA IDENTIFIER LEFT_BRACKET RIGHT_BRACKET 
+                init_declarator_list COMMA IDENTIFIER LEFT_BRACKET constant_expression RIGHT_BRACKET 
+
+    plus 1 rule for parameter array declarations:
+        
+        parameter_declarator:
+                type_specifier IDENTIFIER LEFT_BRACKET constant_expression RIGHT_BRACKET 
+
+    These 15 total (2*7 + 1) declaration rules are all replaced with 8 uses 
+    of a new rule array_specifier:
+
+        array_specifier:
+                LEFT_BRACKET RIGHT_BRACKET
+                LEFT_BRACKET constant_expression RIGHT_BRACKET
+                array_specifier LEFT_BRACKET RIGHT_BRACKET
+                array_specifier LEFT_BRACKET constant_expression RIGHT_BRACKET
+
+    For example, the pair given in the example above becomes:
+
+        init_declarator_list:
+                init_declarator_list COMMA IDENTIFIER array_specifier
+
+    The LEFT_BRACKET now appears in exactly 5 rules now; the 1 for postfix 
+    expressions (remains unchanged) and the 4 for array_specifier.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+
+1.  Do we want to support the following form as well?
+
+        vec4[3][2] a;
+
+    Probably, to match the constructor and formal parameter declaration.  These
+    require that 
+
+        vec4[3][2]   // a valid type
+
+    is a type in its own right, and the general syntax to declare something is 
+
+        <type> <name>
+
+    GLSL already has required the following since 1.2:
+
+        vec4[3] a;
+
+    RESOLUTION: Yes, allow this syntax.
+    
+2.  What does the enumeration API look like?  Don't want to enumerate down to 
+    10,000 little individual elements, want something more hierarchical instead.
+
+    This will significantly effect this extension if this extension turns into
+    defining a new discovery API.
+
+    Nested issue: What about optimizers eliminating holes in a data structure?
+
+    RESOLUTION: Belongs in another extension.
+
+3.  How are large buffer/memory arrays declared?  E.g.,
+
+        buffer vec4 a[][2];
+
+    RESOLUTION: Belongs in another extension.  Probably will be
+
+        buffer BufferBlock {
+            vec4 a[][2];
+        };
+
+4.  Can large memory arrays be passed by reference to a function?  Want to pick 
+    up pointer-like feature without full introduction of pointers.
+
+    RESOLUTION: Belongs in another extension.
+
+5.  How does this extension interact with ??, which is adding the large 
+    memory/buffer style arrays.
+
+    RESOLUTION: Belongs in another extension.
+
+6.  Can vertex inputs be arrays of arrays?
+
+    RESOLUTION: Yes.  
+
+7.  Can fragment outputs be arrays of arrays?
+
+    RESOLUTION: Yes.
+
+8.  Can vertex outputs be arrays of arrays?  Note that some stage inputs can 
+    now be arrays of arrays, due to adding a new array level to a previous
+    stage's output type.
+
+    RESOLUTION: Yes.
+
+9.  Can uniforms be arrays of arrays?
+
+    RESOLUTION: Yes.
+
+10.  Can interface blocks (e.g. uniform blocks) be arrays of arrays?
+
+    RESOLUTION: Yes.
+
+11.  Can subroutine variables be arrays of arrays?
+
+    Recommended: Yes.
+
+    RESOLUTION:
+
+12.  Do we want to eliminate the syntax?
+
+    vec4[2] a[3];  // same as vec4 a[3][2];
+
+    It might seem the 3 and 2 should be reversed.  However, thinking through how 
+    precedence, the grammar, etc. all work, this is actually very well defined 
+    and correct and consistent with C/C++.
+
+    RESOLUTION: Yes, allow these syntaxes.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+     7    1-Jul-2012  JohnK     Added grammar changes.
+     6   10-May-2012  JohnK     Editorial fixes before merging into core spec.
+     5   16-Mar-2012  JohnK     Update with resolutions from language meeting
+                                (Generally, allow arrays of arrays for most I/O, 
+                                 and allow the syntaxes that naturally fall out.)
+     4   24-Feb-2012  JohnK     Minor clarifications within issues.
+     3    3-Feb-2012  JohnK     Fix reversed 2/3, add new example, resolve issues 2-5
+     2    1-Feb-2012  JohnK     Flesh out with specification language
+     1    1-Feb-2012  JohnK     Initial revision

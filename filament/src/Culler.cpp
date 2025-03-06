@@ -40,12 +40,16 @@ void Culler::intersects(
     float4 const * const UTILS_RESTRICT planes = frustum.mPlanes;
 
     count = round(count);
+#if defined(__clang__)
     #pragma clang loop vectorize_width(FILAMENT_CULLER_VECTORIZE_HINT)
+#endif
     for (size_t i = 0; i < count; i++) {
         int visible = ~0;
         float4 const sphere(b[i]);
 
+#if defined(__clang__)
         #pragma clang loop unroll(full)
+#endif
         for (size_t j = 0; j < 6; j++) {
             // clang doesn't seem to generate vector * scalar instructions, which leads
             // to increased register pressure and stack spills
@@ -69,11 +73,15 @@ void Culler::intersects(
     float4 const * UTILS_RESTRICT const planes = frustum.mPlanes;
 
     count = round(count);
+#if defined(__clang__)
     #pragma clang loop vectorize_width(FILAMENT_CULLER_VECTORIZE_HINT)
+#endif
     for (size_t i = 0; i < count; i++) {
         int visible = ~0;
 
+#if defined(__clang__)
         #pragma clang loop unroll(full)
+#endif
         for (size_t j = 0; j < 6; j++) {
             // clang doesn't seem to generate vector * scalar instructions, which leads
             // to increased register pressure and stack spills

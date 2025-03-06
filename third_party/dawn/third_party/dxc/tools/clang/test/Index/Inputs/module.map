@@ -1,0 +1,8 @@
+// See vfsoverlay.yaml
+module ModuleNeedsVFS {
+  header "ModuleNeedsVFS.h"
+  export *
+}
+framework module * { }
+
+module ModuleUndef { header "module-undef.h" }

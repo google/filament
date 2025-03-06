@@ -1,0 +1,82 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(64u, 1u, 1u);
+
+static inline __attribute__((always_inline))
+void testAdd(threadgroup uint& var)
+{
+    uint _29 = atomic_fetch_add_explicit((threadgroup atomic_uint*)&var, 1u, memory_order_relaxed);
+}
+
+static inline __attribute__((always_inline))
+void testMin(threadgroup uint& var)
+{
+    uint _31 = atomic_fetch_min_explicit((threadgroup atomic_uint*)&var, 2u, memory_order_relaxed);
+}
+
+static inline __attribute__((always_inline))
+void testMax(threadgroup uint& var)
+{
+    uint _33 = atomic_fetch_max_explicit((threadgroup atomic_uint*)&var, 3u, memory_order_relaxed);
+}
+
+static inline __attribute__((always_inline))
+void testOr(threadgroup uint& var)
+{
+    uint _35 = atomic_fetch_or_explicit((threadgroup atomic_uint*)&var, 5u, memory_order_relaxed);
+}
+
+static inline __attribute__((always_inline))
+void testXor(threadgroup uint& var)
+{
+    uint _37 = atomic_fetch_xor_explicit((threadgroup atomic_uint*)&var, 6u, memory_order_relaxed);
+}
+
+static inline __attribute__((always_inline))
+void testExchange(threadgroup uint& var)
+{
+    uint _39 = atomic_exchange_explicit((threadgroup atomic_uint*)&var, 7u, memory_order_relaxed);
+}
+
+static inline __attribute__((always_inline))
+void testCompSwap(threadgroup uint& var)
+{
+    uint _42;
+    do
+    {
+        _42 = 8u;
+    } while (!atomic_compare_exchange_weak_explicit((threadgroup atomic_uint*)&var, &_42, 9u, memory_order_relaxed, memory_order_relaxed) && _42 == 8u);
+}
+
+static inline __attribute__((always_inline))
+void testStore(threadgroup uint& var)
+{
+    atomic_store_explicit((threadgroup atomic_uint*)&var, 10u, memory_order_relaxed);
+}
+
+static inline __attribute__((always_inline))
+void foo(threadgroup uint& var)
+{
+    testAdd(var);
+    testMin(var);
+    testMax(var);
+    testOr(var);
+    testXor(var);
+    testExchange(var);
+    testCompSwap(var);
+    testStore(var);
+}
+
+kernel void main0()
+{
+    threadgroup uint var;
+    foo(var);
+}
+

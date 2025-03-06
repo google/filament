@@ -1,0 +1,49 @@
+# Clean copy of third_party/libprotobuf-mutator/BUILD.gn from
+# Chromium, with non-relavent portions removed
+
+# Copyright 2017 The Chromium Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/sanitizers/sanitizers.gni")
+import("//testing/libfuzzer/fuzzer_test.gni")
+
+config("public_config") {
+  include_dirs = [ "src/" ]
+}
+
+config("private_config") {
+  cflags = [ "-Wno-shadow" ]
+}
+
+source_set("libprotobuf-mutator") {
+  testonly = true
+
+  # Remove *San and coverage for a performance boost.
+  configs -= not_fuzzed_remove_configs
+  configs += [
+    "//build/config/sanitizers:not_fuzzed",
+    ":private_config",
+  ]
+
+  public_configs = [ ":public_config" ]
+
+  sources = [
+    "src/src/binary_format.cc",
+    "src/src/libfuzzer/libfuzzer_macro.cc",
+    "src/src/libfuzzer/libfuzzer_mutator.cc",
+    "src/src/mutator.cc",
+    "src/src/text_format.cc",
+    "src/src/utf8_fix.cc",
+  ]
+
+  # Allow users of LPM to use protobuf reflection and other features from
+  # protobuf_full.
+  public_deps = [ "//third_party/protobuf:protobuf_full" ]
+
+  # Let ClusterFuzz builders know to not build targets that depend on
+  # libprotobuf-mutator for AFL or Chrome OS.
+  if (use_afl || current_toolchain == "//build/toolchain/cros:target") {
+    all_dependent_configs = [ "//testing/libfuzzer:no_clusterfuzz" ]
+  }
+}

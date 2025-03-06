@@ -828,6 +828,8 @@ static void showErrorMessage(const char* materialName, filament::Variant variant
         case TargetApi::METAL:
             targetApiString = "Metal.\n";
             break;
+        case TargetApi::WEBGPU:
+            targetApiString = "WebGPU.\n";
         case TargetApi::ALL:
             assert(0); // Unreachable.
             break;
@@ -937,15 +939,15 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 // explicitly remove them when using filamat lite.
                 std::string shader;
                 if (v.stage == backend::ShaderStage::VERTEX) {
-                    shader = sg.createVertexProgram(
+                    shader = sg.createSurfaceVertexProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
                             info, v.variant, mInterpolation, mVertexDomain);
                 } else if (v.stage == backend::ShaderStage::FRAGMENT) {
-                    shader = sg.createFragmentProgram(
+                    shader = sg.createSurfaceFragmentProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
                             info, v.variant, mInterpolation, mVariantFilter);
                 } else if (v.stage == backend::ShaderStage::COMPUTE) {
-                    shader = sg.createComputeProgram(
+                    shader = sg.createSurfaceComputeProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
                             info);
                 }
@@ -1025,6 +1027,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
 
                 switch (targetApi) {
+                    // TODO: Handle webgpu here
+                    case TargetApi::WEBGPU:
                     case TargetApi::ALL:
                         // should never happen
                         break;
@@ -1438,15 +1442,15 @@ std::string MaterialBuilder::peek(backend::ShaderStage stage,
 
     switch (stage) {
         case backend::ShaderStage::VERTEX:
-            return sg.createVertexProgram(
+            return sg.createSurfaceVertexProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
                     params.featureLevel, info, {}, mInterpolation, mVertexDomain);
         case backend::ShaderStage::FRAGMENT:
-            return sg.createFragmentProgram(
+            return sg.createSurfaceFragmentProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
                     params.featureLevel, info, {}, mInterpolation, mVariantFilter);
         case backend::ShaderStage::COMPUTE:
-            return sg.createComputeProgram(
+            return sg.createSurfaceComputeProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
                     params.featureLevel, info);
     }

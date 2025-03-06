@@ -14,10 +14,8 @@ shared float shared_v;
 void main()
 {
     float _15 = atomicAdd(shared_v, 2.0);
-    float value = _15;
     float _24 = atomicAdd(_18.v, _15);
     float _39 = imageAtomicAdd(uImage, ivec2(gl_GlobalInvocationID.xy), _15);
     float _45 = imageAtomicExchange(uImage, ivec2(gl_GlobalInvocationID.xy), _15);
-    value = _45;
 }
 

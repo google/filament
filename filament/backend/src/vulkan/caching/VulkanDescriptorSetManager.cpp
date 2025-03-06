@@ -16,11 +16,10 @@
 
 #include "VulkanDescriptorSetManager.h"
 
-#include <vulkan/VulkanCommands.h>
-#include <vulkan/VulkanHandles.h>
-#include <vulkan/VulkanUtility.h>
-#include <vulkan/VulkanConstants.h>
-#include <vulkan/VulkanImageUtility.h>
+#include "vulkan/VulkanCommands.h"
+#include "vulkan/VulkanHandles.h"
+#include "vulkan/VulkanConstants.h"
+
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
@@ -207,17 +206,17 @@ uint32_t createBindings(VkDescriptorSetLayoutBinding* toBind, uint32_t count, Vk
     mask.forEachSetBit([&](size_t index) {
         VkShaderStageFlags stages = 0;
         uint32_t binding = 0;
-        if (index < getFragmentStageShift<Bitmask>()) {
+        if (index < fvkutils::getFragmentStageShift<Bitmask>()) {
             binding = (uint32_t) index;
             stages |= VK_SHADER_STAGE_VERTEX_BIT;
-            auto fragIndex = index + getFragmentStageShift<Bitmask>();
+            auto fragIndex = index + fvkutils::getFragmentStageShift<Bitmask>();
             if (mask.test(fragIndex)) {
                 stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
                 alreadySeen.set(fragIndex);
             }
         } else if (!alreadySeen.test(index)) {
             // We are in fragment stage bits
-            binding = (uint32_t) (index - getFragmentStageShift<Bitmask>());
+            binding = (uint32_t) (index - fvkutils::getFragmentStageShift<Bitmask>());
             stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
         }
 
@@ -347,7 +346,6 @@ private:
             mVkLayouts;
 };
 
-
 VulkanDescriptorSetManager::VulkanDescriptorSetManager(VkDevice device,
         fvkmemory::ResourceManager* resourceManager)
     : mDevice(device),
@@ -377,10 +375,10 @@ void VulkanDescriptorSetManager::unbind(uint8_t setIndex) {
 }
 
 void VulkanDescriptorSetManager::commit(VulkanCommandBuffer* commands,
-        VkPipelineLayout pipelineLayout, DescriptorSetMask const& setMask) {
+        VkPipelineLayout pipelineLayout, fvkutils::DescriptorSetMask const& setMask) {
     // setMask indicates the set of descriptor sets the driver wants to bind, curMask is the
     // actual set of sets that *needs* to be bound.
-    DescriptorSetMask curMask = setMask;
+    fvkutils::DescriptorSetMask curMask = setMask;
 
     auto& updateSets = mStashedSets;
     auto& lastBoundSets = mLastBoundInfo.boundSets;
@@ -459,7 +457,7 @@ void VulkanDescriptorSetManager::updateSampler(fvkmemory::resource_ptr<VulkanDes
     } else {
         info.imageView = texture->getViewForType(range, expectedType);
     }
-    info.imageLayout = imgutil::getVkLayout(texture->getDefaultLayout());
+    info.imageLayout = fvkutils::getVkLayout(texture->getDefaultLayout());
     VkWriteDescriptorSet const descriptorWrite = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .pNext = nullptr,

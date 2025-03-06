@@ -1,0 +1,110 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>EGL Technical Note #1 - EGL 1.4 and Ancillary Buffer Preservation</title><link rel="stylesheet" href="igstyle.css" type="text/css"><meta name="generator" content="DocBook XSL Stylesheets V1.75.1"><meta name="description" content="Summarizes ancillary buffer preservation issues across eglSwapBuffers, including recent changes to behavior defined by the EGL 1.4 Specification."></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div lang="en" class="article" title="EGL Technical Note #1 - EGL 1.4 and Ancillary Buffer Preservation"><div class="titlepage"><div><div><h2 class="title"><a name="id2598382"></a>EGL Technical Note #1 - EGL 1.4 and Ancillary Buffer Preservation</h2></div><div><p class="edition"> First  Edition</p></div><div><p class="releaseinfo"></p></div><div><div class="authorgroup"><div class="editor"><h4 class="editedby">Edited by</h4><h3 class="editor"><span class="firstname">Jon</span> <span class="surname">Leech</span></h3><div class="affiliation"><span class="orgname">Khronos Group<br></span></div></div></div></div><div><p class="copyright">Copyright © 2010 The Khronos Group Inc.</p></div><div><a href="legal.html">Legal Notice</a></div><div><div class="abstract" title="Abstract"><p class="title"><b>Abstract</b></p><p> Summarizes <em class="glossterm"><a class="glossterm" href="#ancillary" title="Ancillary Buffers">ancillary
+	     buffer</a></em> preservation issues across
+	     <code class="code">eglSwapBuffers</code>, including recent changes to
+	     behavior defined by the EGL 1.4 Specification. </p></div></div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="section"><a href="#introduction">1. Introduction</a></span></dt><dt><span class="section"><a href="#usecases">2.  Use Cases for Buffer Preservation </a></span></dt><dt><span class="section"><a href="#bufquery">3.  Color Buffer Preservation Queries and Controls </a></span></dt><dt><span class="section"><a href="#nocontrol">4.  No Control of Auxillary Buffer Preservation; Compatibility
+	    Issues </a></span></dt><dt><span class="section"><a href="#extensions">5.  EGL Extensions for Control of Ancillary Buffer Preservation
+    </a></span></dt><dt><span class="appendix"><a href="#id2602337">A. Glossary</a></span></dt><dt><span class="appendix"><a href="#id2595698">B. Document History</a></span></dt><dt><span class="appendix"><a href="#id2585500">C. Acknowledgements</a></span></dt></dl></div><div class="mediaobject" align="center"><img src="Khronos-1600-Transparent-May07.png" align="middle" width="270" alt="Khronos Group logo"></div><div class="section" title="1. Introduction"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="introduction"></a>1. Introduction</h2></div></div></div><p> Calling <code class="code">eglSwapBuffers</code> may or may not result in
+	   the preservation of the contents of the color buffer and
+	   ancillary buffers (depth, stencil, and alpha mask) of the
+	   surface being swapped. Some applications may rely on buffer
+	   contents being preserved. This note discusses scenarios in
+	   which buffer preservation is desirable, describes all the EGL
+	   entry points and attributes relevant to buffer preservation,
+	   and describes a change in preservation behavior made in the
+	   <a class="ulink" href="http://www.khronos.org/registry/egl/" target="_top"> EGL 1.4
+	   Specification </a> update of February 23, 2010. This
+	   change may require changes to certain applications which rely
+	   on ancillary buffer preservation and are being moved to new
+	   platforms or new EGL implementations. </p><p> Many applications do not require buffer preservation, since
+	   they clear all buffers being used and completely redraw their
+	   contents for each frame. Such applications need not consider
+	   the issues discussed in this note. </p></div><div class="section" title="2.  Use Cases for Buffer Preservation"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="usecases"></a>2.  Use Cases for Buffer Preservation </h2></div></div></div><p> An example of the use of buffer preservation is an
+	   application which wishes to build up an image step by step by
+	   drawing multiple layers, and to display the partial images
+	   resulting from each each successive layer being drawn.
+	   </p><p> If color and ancillary buffer contents are known to be
+	   preserved across <code class="code">eglSwapBuffers</code>, such an
+	   application can construct and display each step by drawing
+	   only the most recent layer and performing
+	   <code class="code">eglSwapBuffers</code>. </p><p> If buffer contents are not known to be preserved, the
+	   application can instead, for each frame being displayed,
+	   redraw all layers up to the most recent. Alternatively, the
+	   application may explicitly save the contents of required
+	   buffers by reading them back (with e.g.
+	   <code class="code">glReadPixels</code>) prior to
+	   <code class="code">eglSwapBuffers</code>, and restore them (with e.g.
+	   <code class="code">glDrawPixels</code> or drawing a textured quad) prior
+	   to drawing the next layer. However, both of these approaches
+	   are likely to incur significant performance penalties.
+	   </p></div><div class="section" title="3.  Color Buffer Preservation Queries and Controls"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="bufquery"></a>3.  Color Buffer Preservation Queries and Controls </h2></div></div></div><p> To determine if <code class="code">eglSwapBuffers</code> will preserve
+	   color buffer contents of a surface, call </p><p> <code class="code">
+	   eglQuerySurface(dpy, surface, EGL_SWAP_BEHAVIOR, &amp;value);
+    </code> </p><p> where <code class="code">surface</code> is the <span class="type">EGLSurface</span>
+	   being queried, <code class="code">dpy</code> is the
+	   <span class="type">EGLDisplay</span> <code class="code">surface</code> belongs to, and
+	   <code class="code">value</code> is a pointer to an <span class="type">EGLint</span>. On
+	   success, <code class="code">*value</code> will contain either
+	   <code class="constant">EGL_BUFFER_PRESERVED</code>, indicating that
+	   color buffer contents are preserved, or
+	   <code class="constant">EGL_BUFFER_DESTROYED</code>, indicating that
+	   color buffer contents are not preserved. </p><p> Some surfaces allow applications to control whether or not
+	   the color buffer contents are preserved. If
+	   <code class="constant">EGL_SWAP_BEHAVIOR_PRESERVED_BIT</code> is set
+	   in the <code class="constant">EGL_SURFACE_TYPE</code> attribute of the
+	   <span class="type">EGLConfig</span> used to create <code class="code">surface</code>,
+	   then calling </p><p> <code class="code">
+	   eglSurfaceAttrib(dpy, surface, EGL_SWAP_BEHAVIOR,
+	   EGL_BUFFER_PRESERVED)
+    </code> </p><p> will cause color buffer contents to be preserved across
+	   future calls to <code class="code">eglSwapBuffers</code>, while calling
+	   </p><p> <code class="code">
+	   eglSurfaceAttrib(dpy, surface, EGL_SWAP_BEHAVIOR,
+	   EGL_BUFFER_DESTOYED)
+    </code> </p><p> will cause color buffer contents to not be preserved. When
+	   this control is available, there may be a significant
+	   performance penalty for requesting color buffer preservation.
+	   </p><p> If <code class="constant">EGL_SWAP_BEHAVIOR_PRESERVED_BIT</code> is
+	   not set in the <code class="constant">EGL_SURFACE_TYPE</code>
+	   attribute, then control of color buffer preservation is not
+	   allowed for this surface. In this case, calling
+	   <code class="code">eglSurfaceAttrib</code> with <code class="code">attribute</code>
+	   <code class="constant">EGL_SWAP_BEHAVIOR</code> will fail and generate
+	   an <code class="constant">EGL_BAD_MATCH</code> error. </p></div><div class="section" title="4.  No Control of Auxillary Buffer Preservation; Compatibility Issues"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="nocontrol"></a>4.  No Control of Auxillary Buffer Preservation; Compatibility
+	    Issues </h2></div></div></div><p> In versions of the EGL 1.4 Specification prior to February 23,
+	   2010, the specification implied that the color buffer
+	   preservation behavior described above also applied to ancillary
+	   (depth, stencil, and alpha mask) buffer contents. The
+	   Specification of February 23, 2010 revises the buffer
+	   preservation queries and controls and explicitly states that
+	   they only apply to the color buffer. </p><p> As a result, the EGL 1.4 API has no way to determine or
+	   control whether <code class="code">eglSwapBuffers</code> will preserve
+	   ancillary buffer contents. Some implementations do so and
+	   some do not. We know that this is a backwards-incompatible
+	   change. The change was made because some common hardware
+	   incurs very high penalties for ancillary buffer preservation.
+	   Despite what prior versions of the Specification said, EGL
+	   implementations on these devices often did not preserve
+	   ancillary buffers. Khronos felt that developers would be
+	   better off if we explicitly acknowledged this situation.
+	   </p><p> This change in the Specification is not expected to result in
+	   changes to implementations, and therefore driver updates are
+	   unlikely to adversely affect any application which relies on
+	   ancillary buffer preservation. However, developers of such
+	   applications must be aware that when porting to another
+	   platform, they may find that ancillary buffer contents are
+	   not preserved. </p></div><div class="section" title="5.  EGL Extensions for Control of Ancillary Buffer Preservation"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="extensions"></a>5.  EGL Extensions for Control of Ancillary Buffer Preservation
+    </h2></div></div></div><p> The EGL Working Group is currently developing an EGL extension
+	   which will allow explicitly control over ancillary buffer
+	   preservation in a fashion similar to color buffer preservation.
+	   We expect this extension specification to be completed later in
+	   2010. Vendors will then choose whether or not to implement the
+	   extension in their drivers. The extension specification will
+	   be published in the
+	   <a class="ulink" href="http://www.khronos.org/registry/egl/" target="_top"> Khronos
+	   Registry</a> when it is finalized. </p></div><div class="appendix" title="A. Glossary"><h2 class="title" style="clear: both"><a name="id2602337"></a>A. Glossary</h2><div class="glosslist"><dl><dt><a name="ancillary"></a>Ancillary Buffers</dt><dd><p> Buffers of an <span class="type">EGLSurface</span> other than the
+	  color buffer. These may include the depth and/or stencil
+	  buffers for use by OpenGL ES, and the alpha mask buffer for
+	  use by OpenVG. </p></dd></dl></div></div><div class="appendix" title="B. Document History"><h2 class="title" style="clear: both"><a name="id2595698"></a>B. Document History</h2><div class="revhistory"><table border="0" width="100%" summary="Revision history"><tr><th align="left" valign="top" colspan="3"><b>Revision History</b></th></tr><tr><td align="left">Revision 1.0</td><td align="left">March 30, 2010</td><td align="left">jpl</td></tr><tr><td class="revremark" align="left" colspan="3">Public Release.</td></tr></table></div></div><div class="appendix" title="C. Acknowledgements"><h2 class="title" style="clear: both"><a name="id2585500"></a>C. Acknowledgements</h2><p>Members of the Khronos EGL Working Group, especially Acorn
+    Pooley, Ben Bowman, Ian Romanick, Mark Callow, and Maurice Ribble.
+    Additional thanks to Mark Callow for the Docbook stylesheets and
+    build process used to build this document</p></div></div></body></html>

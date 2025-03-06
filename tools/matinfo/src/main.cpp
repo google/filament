@@ -422,7 +422,8 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
     if (config.serverPort) {
         // Spin up a web server on a secondary thread.
-        DebugServer server(Backend::DEFAULT, config.serverPort);
+        DebugServer server(Backend::DEFAULT, filament::backend::ShaderLanguage::ESSL3,
+                config.serverPort);
         if (!server.isReady()) {
             return false;
         }

@@ -1,0 +1,193 @@
+Name
+
+    IBM_multimode_draw_arrays
+
+Name Strings
+
+    GL_IBM_multimode_draw_arrays
+
+Contact
+
+    Ian Romanick, IBM (idr 'at' us.ibm.com)
+
+Version
+
+    IBM Date: 2003/12/16 15:48:00  Revision: 1.2 
+
+Number
+
+    200
+
+Dependencies
+
+    OpenGL 1.1 is required. The language is written against the OpenGL 1.2
+    specification.
+
+Overview
+
+    These functions behave identically to the standard OpenGL 1.1 functions
+    glDrawArrays() and glDrawElements() except they handle multiple lists of
+    vertices and multiple primitive modes in one call. Their main purpose is
+    to allow one function call to render more than one primitive regardless
+    of the primitive mode. 
+
+    This extension is similar to the EXT_multi_draw_arrays extension 
+    except that it accomodates the specification of a  unique mode for
+    each primitive.
+
+
+New Procedures and Functions
+
+    void glMultiModeDrawArraysIBM(const GLenum *mode,
+                                  const GLint *first,
+                                  const GLsizei *count,
+                                  GLsizei primcount,
+                                  GLint modestride)
+    Parameters
+    ----------
+        mode            Points to an array of primitive modes.
+                        Symbolic constants GL_POINTS,
+                        GL_LINE_STRIP, GL_LINE_LOOP, GL_LINES,
+                        GL_TRIANGLE_STRIP, GL_TRIANGLE_FAN,
+                        GL_TRIANGLES, GL_QUAD_STRIP, GL_QUADS,
+                        and GL_POLYGON are accepted primitive modes.
+
+        first           Points to an array of starting indices in
+                        the enabled arrays.
+
+        count           Points to an array of the number of indices
+                        to be rendered.
+
+        primcount       Specifies the size of first and count arrays.
+                        The number of primitives.
+
+
+        modestride      Specifies the how the mode array is strided.
+                        Typical values are 0 (single primitive mode 
+                        for all primitives) and sizeof(GLenum) 
+                        (seperate primitive mode for each primitive).
+
+
+    void glMultiModeDrawElementsIBM(const GLenum *mode,
+                                    const GLsizei *count,
+                                    GLenum type,
+                                    const void * const *indices,
+                                    GLsizei primcount,
+                                    GLint modestride)
+
+    Parameters
+    ----------
+        mode            Points to an array of primitive modes.
+                        Symbolic constants GL_POINTS,
+                        GL_LINE_STRIP, GL_LINE_LOOP, GL_LINES,
+                        GL_TRIANGLE_STRIP, GL_TRIANGLE_FAN,
+                        GL_TRIANGLES, GL_QUAD_STRIP, GL_QUADS,
+                        and GL_POLYGON are accepted primitive modes.
+
+        count           Points to an array of the element counts
+
+        type            Specifies the type of the values in indices.
+                        Must be  one  of GL_UNSIGNED_BYTE,
+                        GL_UNSIGNED_SHORT, or GL_UNSIGNED_INT.
+
+        indices         Specifies a  pointer to the location where
+                        the indices are stored.
+
+        primcount       Specifies the size of the count array. The
+                        number of primitives.
+
+        modestride      Specifies the how the mode array is strided.
+                        Typical values are 0 (single primitive mode 
+                        for all primitives) and sizeof(GLenum) 
+                        (seperate primitive mode for each primitive).
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    Section 2.8 Vertex Arrays:
+
+    The command
+
+        void glMultiModeDrawArraysIBM(const GLenum *mode,
+                                      const GLint *first,
+                                      const GLsizei *count,
+                                      GLsizei primcount,
+                                      GLint modestride)
+
+    Behaves identically to DrawArrays except that a list of arrays and
+    a list of primitive modes is specified instead. The number of lists 
+    is specified in the primcount parameter. It has the same effect as:
+
+        for(i=0; i<primcount; i++) {
+           if (*(count+i)>0) 
+               DrawArrays(*((GLenum *)((char *)mode+i*modestride)), 
+                          *(first+i), 
+                          *(count+i));
+        }
+
+    The command
+
+        void glMultiModeDrawElementsIBM(const GLenum *mode,
+                                        const GLsizei *count,
+                                        GLenum type,
+                                        const void * const *indices,
+                                        GLsizei primcount,
+                                        GLint modestride)
+
+    Behaves identically to DrawElements except that a list of arrays and
+    a list of primitive mode is specified instead. The number of lists is
+    specified in the primcount parameter. It has the same effect as:
+
+        for(i=0; i<primcount; i++) {
+            if (*(count+i)>0) 
+                DrawElements(*((GLenum *)((char *)mode+i*modestride)), 
+                             *(count+i), 
+                             type,
+                             *(indices+i));
+        }
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations and
+
+    None.
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None.
+
+Additions to the GLX Specification
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    GL_INVALID_ENUM is generated if <mode> contains an unaccepted value.
+
+    GL_VALUE is generated if <primcount> is negative.
+
+    GL_INVALID_OPERATION is generated if glMultiModeDrawArraysIBM or
+    glMultiModeDrawElementsIBM is executed between the execution of glBegin
+    and the corresponding glEnd.
+
+New State
+
+    None.
+
+Revision History
+
+    2003/12/16  idr      Added missing const-qualifiers.
+    1998/12/10           Initial version.

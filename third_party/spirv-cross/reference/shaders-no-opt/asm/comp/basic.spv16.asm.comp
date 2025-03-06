@@ -4,10 +4,10 @@ layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 layout(binding = 0, std430) buffer SSBO
 {
     float values[];
-} _3;
+} _4;
 
 void main()
 {
-    _3.values[gl_GlobalInvocationID.x] += 2.0;
+    _4.values[gl_GlobalInvocationID.x] += 2.0;
 }
 

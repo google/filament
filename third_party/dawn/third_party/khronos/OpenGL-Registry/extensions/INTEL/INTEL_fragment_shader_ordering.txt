@@ -1,0 +1,195 @@
+Name
+
+    INTEL_fragment_shader_ordering
+
+Name Strings
+
+    GL_INTEL_fragment_shader_ordering
+
+Contact
+
+    Slawomir Grajewski, Intel  (slawomir.grajewski 'at' intel.com)
+
+Contributors
+
+    Tim Foley, Intel
+    Brent Insko, Intel 
+    Tomasz Janczak, Intel
+    Marco Salvi, Intel 
+    Larry Seiler, Intel
+    Tomasz Poniecki, Intel
+
+Status
+
+    Draft.
+
+Version
+
+    Last Modified Date:        08/29/2013
+    INTEL Revision:            3
+
+Number
+
+    OpenGL Extension #441
+
+Dependencies
+
+    This extension is written against the OpenGL 4.4 (Core Profile) 
+    Specification.
+
+    This extension is written against version 4.40 (revision 6) of the OpenGL
+    Shading Language Specification.
+
+    OpenGL 4.2 or ARB_shader_image_load_store is required;GLSL 4.20 is
+    required.
+
+Overview
+
+    Graphics devices may execute in parallel fragment shaders referring to the
+    same window xy coordinates. Framebuffer writes are guaranteed to be
+    processed in primitive rasterization order, but there is no order guarantee
+    for other instructions and image or buffer object accesses in
+    particular.
+
+    The extension introduces a new GLSL built-in function, 
+    beginFragmentShaderOrderingINTEL(), which blocks execution of a fragment 
+    shader invocation until invocations from previous primitives that map to 
+    the same xy window coordinates (and same sample when per-sample shading
+    is active) complete their execution. All memory transactions from previous 
+    fragment shader invocations are made visible to the fragment shader 
+    invocation that called beginFragmentShaderOrderingINTEL() when the function 
+    returns. 
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_INTEL_fragment_shader_ordering : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_INTEL_fragment_shader_ordering 1
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to the OpenGL 4.4 (Core Profile) Specification 
+
+       Modify section 2.11.13 Shader Memory Access
+       (add new text in last bullet on p. 143)
+       
+       The exception is when the built-in function 
+       beginFragmentShaderOrderingINTEL() is used. This function creates a 
+       region in a fragment shader in which memory operations complete and are 
+       made visible in rasterization order for fragments that overlap in xy 
+       window coordinates.
+       
+       (add new paragraph after second paragraph on p. 144)
+       
+       The built-in function beginFragmentShaderOrderingINTEL() may be used to 
+       provide ordering of reads and writes performed by fragment shader 
+       invocations that overlap in xy window coordinates. Calling 
+       beginFragmentShaderOrderingINTEL() guarantees that any memory 
+       transactions issued by shader invocations from previous primitives, 
+       mapped to same xy window coordinates (and same sample when per-sample 
+       shading is active), complete and are visible to the shader invocation 
+       that called beginFragmentShaderOrderingINTEL().
+
+
+Modifications to the OpenGL Shading Language Specification, Version 4.40
+(revision 6)
+
+
+    Modify Section 8.17 Shader Memory Control Functions
+
+    (add to the table, p. 178)
+
+    Syntax
+    ------
+
+    void beginFragmentShaderOrderingINTEL()
+
+
+    This function is available only in fragment shaders.
+
+    Description
+    -----------
+
+    The beginFragmentShaderOrderingINTEL() function blocks fragment shader 
+    execution until completion of all shader invocations from previous 
+    primitives that map to the same window xy coordinates (and same sample 
+    if appropriate). All memory transactions from previous fragment shader
+    invocations mapped to same xy window coordinates are made visible to 
+    the current fragment shader invocation when this function returns. 
+    When per-fragment shading is active, the ordering guarantee applies 
+    regardless of whether previous and current invocations cover overlapping 
+    or disjoint sets of samples under same fragment of window xy coordinates. 
+    When per-sample shading is active, the ordering guarantee applies to 
+    shader invocations mapped to the same sample number under same window xy
+    coordinates. This function has no effect on shader execution for fragments
+    with non-overlapping window xy coordinates.
+
+    
+    The beginFragmentShaderOrderingINTEL() function can be called under control
+    flow, including non-uniform control flow. Synchronization and ordering
+    guarantees are valid only if the conditional branch is taken during 
+    execution. It is valid for a fragment shader to dynamically execute 
+    multiple calls to beginFragmentShaderOrderingINTEL(). In such cases, the 
+    first executed call will block as described above, but subsequent calls 
+    will never block.
+
+
+    Note there is no explicit built-in function to signal the end of the region 
+    that should be ordered. Instead, the region that will be ordered logically 
+    extends to the end of fragment shader execution.
+
+
+    GLSL code example
+    -----------------
+
+    layout(binding = 0, rgba8) uniform image2D image;
+
+    vec4 main()
+    {
+        ... compute output color 
+        if (color.w > 0)        // potential non-uniform control flow
+        {
+            beginFragmentShaderOrderingINTEL();
+            ... read/modify/write image         // ordered access guaranteed 
+        }
+        ... no ordering guarantees (as varying branch might not be taken) 
+ 
+        beginFragmentShaderOrderingINTEL();
+
+        ... update image again                  // ordered access guaranteed 
+    }
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    None. 
+
+Revision History
+
+    Rev.    Date    Author        Changes
+    ----  --------  --------     -----------------------------------------
+     1    07/30/13  S.Grajewski  Initial revision.
+     2    08/26/13  T.Janczak    removed per-image synchronization 
+     3    08/29/13  T.Janczak    incorporate internal review feedback 

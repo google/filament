@@ -16,7 +16,7 @@
         }
     ],
     "types" : {
-        "_5" : {
+        "_7" : {
             "name" : "SSBO0",
             "members" : [
                 {
@@ -36,7 +36,7 @@
     },
     "ssbos" : [
         {
-            "type" : "_5",
+            "type" : "_7",
             "name" : "SSBO0",
             "block_size" : 0,
             "set" : 0,

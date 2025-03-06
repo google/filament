@@ -1,0 +1,100 @@
+Name
+
+    SGIX_impact_pixel_texture
+
+Name Strings
+
+    GL_SGIX_impact_pixel_texture
+
+Version
+
+    $Date: 1997/03/27 18:08:54 $ $Revision: 1.2 $
+
+Number
+
+    126
+
+Dependencies
+
+    GL_SGIX_pixel_texture
+
+Overview
+
+    This extension allows the Impact Graphics system to perform pixel texture
+    operations with 4D textures, and accomplish the fourth interpolation with
+    a two-pass operation, using the frame-buffer blend. This involves two
+    new filter functions for the "q" dimension only, ceiling and floor, in
+    addition to the nearest function, the default on Impact Graphics.  Also,
+    there is an "alpha-shifting" function which prevents loss of precision in
+    the alpha value used in the frame-buffer blend.
+
+Issues
+
+    *	Will this extension be needed/utilized by other platforms?
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <mode> parameter of PixelTexGenSGIX:
+
+	PIXEL_TEX_GEN_Q_CEILING_SGIX
+	PIXEL_TEX_GEN_Q_FLOOR_SGIX
+	PIXEL_TEX_GEN_Q_ROUND_SGIX
+	PIXEL_TEX_GEN_ALPHA_LS_SGIX
+	PIXEL_TEX_GEN_ALPHA_MS_SGIX
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    This extension, similar to the pixel_texture.spec modifies the
+    "Conversion to Fragments" subsection of section 3.6.3 (Rasterization
+    of Pixel Rectangles) of the GL Specification. Immediately following
+    the text added by the pixel_texture.spec, insert the following:
+
+    If the PixelTexGenSGIX mode is RGBA, the Impact graphics system cannot
+    perform the "q" interpolation, so the correct result can be obtained
+    by a two-pass operation using the frame-buffer blend to interpolate
+    the two passes. The two passes use ceiling and floor functions,
+    specified by calling TexParameter with the minfilter and maxfilter
+    set to PIXEL_TEX_GEN_Q_CEILING_SGIX and PIXEL_TEX_GEN_Q_FLOOR_SGIX.
+    These functions can be disabled by calling TexParameter with
+    PIXEL_TEX_GEN_Q_ROUND_SGIX, the default.  To produce the correct
+    fragment alpha for interpolation, the alpha-replace mode (see above)
+    is used to replace the texture alpha by the pixel group's alpha
+    component. This alpha needs to be shifted (scaled) by a value based
+    on the texture "q" size; this can be done with the texture color table.
+    For large values an additional shift is possible by calling
+    PixelTexGenSGIX with PIXEL_TEX_GEN_ALPHA_LS_SGIX. This will send the
+    least significant 8 bits of a 12-bit alpha to the texture color table.
+    The default is to send the most significant 8 bits by calling
+    PixelTexGenSGIX with PIXEL_TEX_GEN_ALPHA_MS_SGIX.
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    None
+
+New State
+
+    Get Value			 Get Command	 Type Initial Value Attrib
+    ---------			 -----------	 ---- ------------- ------
+    PIXEL_TEX_GEN_Q_CEILING_SGIX GetTexParameter  Z3     NONE	     pixel
+    PIXEL_TEX_GEN_Q_FLOOR_SGIX   GetTexParameter  Z3     NONE	     pixel
+    PIXEL_TEX_GEN_Q_ROUND_SGIX   GetTexParameter  Z3     NONE	     pixel
+
+New Implementation Dependent State
+
+    None

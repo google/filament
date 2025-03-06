@@ -399,8 +399,10 @@ float3 DisplayRangeToneMapper::operator()(float3 const c) const noexcept {
 //------------------------------------------------------------------------------
 
 struct GenericToneMapper::Options {
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wshadow"
+#endif
     void setParameters(
             float contrast,
             float midGrayIn,
@@ -424,7 +426,9 @@ struct GenericToneMapper::Options {
         inputScale = (a * b * (midGrayOut - 1.0f)) / c;
         outputScale = midGrayOut * (a - b) / c;
     }
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 
     float contrast;
     float midGrayIn;

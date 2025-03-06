@@ -32,6 +32,7 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
@@ -478,6 +479,106 @@ bool FrameGraph::isAcyclic() const noexcept {
 void FrameGraph::export_graphviz(utils::io::ostream& out, char const* name) {
     mGraph.export_graphviz(out, name);
 }
+
+fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) const {
+#if FILAMENT_ENABLE_FGVIEWER
+    fgviewer::FrameGraphInfo info{utils::CString(viewName)};
+    std::vector<fgviewer::FrameGraphInfo::Pass> passes;
+
+    auto first = mPassNodes.begin();
+    const auto activePassNodesEnd = mActivePassNodesEnd;
+    while (first != activePassNodesEnd) {
+        PassNode *const pass = *first;
+        ++first;
+
+        assert_invariant(!pass->isCulled());
+        std::vector<fgviewer::ResourceId> reads;
+        auto const &readEdges = mGraph.getIncomingEdges(pass);
+        for (auto const &edge: readEdges) {
+            // all incoming edges should be valid by construction
+            assert_invariant(mGraph.isEdgeValid(edge));
+            auto resourceNode = static_cast<const ResourceNode*>(mGraph.getNode(edge->from));
+            assert_invariant(resourceNode);
+            if (resourceNode->getRefCount() == 0)
+                continue;
+
+            reads.push_back(resourceNode->resourceHandle.index);
+        }
+
+        std::vector<fgviewer::ResourceId> writes;
+        auto const &writeEdges = mGraph.getOutgoingEdges(pass);
+        for (auto const &edge: writeEdges) {
+            // It is possible that the node we're writing to has been culled.
+            // In this case we'd like to ignore the edge.
+            if (!mGraph.isEdgeValid(edge)) {
+                continue;
+            }
+            auto resourceNode = static_cast<const ResourceNode*>(mGraph.getNode(edge->to));
+            assert_invariant(resourceNode);
+            if (resourceNode->getRefCount() == 0)
+                continue;
+            writes.push_back(resourceNode->resourceHandle.index);
+        }
+        passes.emplace_back(utils::CString(pass->getName()),
+            std::move(reads), std::move(writes));
+    }
+
+    std::unordered_map<fgviewer::ResourceId, fgviewer::FrameGraphInfo::Resource> resources;
+    for (const auto &resourceNode: mResourceNodes) {
+        const FrameGraphHandle resourceHandle = resourceNode->resourceHandle;
+        if (resources.find(resourceHandle.index) != resources.end())
+            continue;
+
+        if (resourceNode->getRefCount() == 0)
+            continue;
+
+        std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
+        auto emplace_resource_property =
+            [&resourceProps](utils::CString key, utils::CString value) {
+                resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property{
+                    .name = std::move(key),
+                    .value = std::move(value)
+                });
+            };
+        auto emplace_resource_descriptor = [this, &emplace_resource_property](
+            const FrameGraphHandle& resourceHandle) {
+            // TODO: A better way to handle generic resource types. Right now we only have one
+            // resource type so it works
+            auto descriptor = static_cast<Resource<FrameGraphTexture> const*>(
+                getResource(resourceHandle))->descriptor;
+            emplace_resource_property("width",
+                utils::CString(std::to_string(descriptor.width).data()));
+            emplace_resource_property("height",
+                utils::CString(std::to_string(descriptor.height).data()));
+            emplace_resource_property("depth",
+                utils::CString(std::to_string(descriptor.depth).data()));
+            emplace_resource_property("format",
+                utils::to_string(descriptor.format));
+
+        };
+
+        if (resourceNode->getParentNode() != nullptr) {
+            emplace_resource_property("is_subresource_of",
+                utils::CString(std::to_string(
+                        resourceNode->getParentHandle().index).data()));
+        }
+        emplace_resource_descriptor(resourceHandle);
+        resources.emplace(resourceHandle.index, fgviewer::FrameGraphInfo::Resource(
+                              resourceHandle.index,
+                              utils::CString(resourceNode->getName()),
+                              std::move(resourceProps))
+        );
+    }
+
+    info.setResources(std::move(resources));
+    info.setPasses(std::move(passes));
+
+    return info;
+#else
+    return fgviewer::FrameGraphInfo();
+#endif
+}
+
 
 // ------------------------------------------------------------------------------------------------
 

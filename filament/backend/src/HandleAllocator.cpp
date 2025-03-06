@@ -80,9 +80,16 @@ HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& ar
 
 template <size_t P0, size_t P1, size_t P2>
 HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size,
-        bool disableUseAfterFreeCheck) noexcept
+        bool disableUseAfterFreeCheck,
+        bool disableHeapHandleTags) noexcept
     : mHandleArena(name, size, disableUseAfterFreeCheck),
-      mUseAfterFreeCheckDisabled(disableUseAfterFreeCheck) {
+      mUseAfterFreeCheckDisabled(disableUseAfterFreeCheck),
+      mHeapHandleTagsDisabled(disableHeapHandleTags) {
+}
+
+template <size_t P0, size_t P1, size_t P2>
+HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size) noexcept
+    : HandleAllocator(name, size, false, false) {
 }
 
 template <size_t P0, size_t P1, size_t P2>
@@ -174,12 +181,20 @@ CString DebugTag::findHandleTag(HandleBase::HandleId key) const noexcept {
 }
 
 UTILS_NOINLINE
-void DebugTag::writeHandleTag(HandleBase::HandleId key, CString&& tag) noexcept {
+void DebugTag::writePoolHandleTag(HandleBase::HandleId key, CString&& tag) noexcept {
     // This line is the costly part. In the future, we could potentially use a custom
     // allocator.
     std::unique_lock const lock(mDebugTagLock);
-    // Pool based tags will be recycled after a certain age. Heap-based tag will never be recycled, therefore,
-    // this can grow indefinitely, once we're in the slow mode.
+    // Pool based tags will be recycled after a certain age.
+    mDebugTags[key] = std::move(tag);
+}
+
+UTILS_NOINLINE
+void DebugTag::writeHeapHandleTag(HandleBase::HandleId key, CString&& tag) noexcept {
+    // This line is the costly part. In the future, we could potentially use a custom
+    // allocator.
+    std::unique_lock const lock(mDebugTagLock);
+    // FIXME: Heap-based tag will never be recycled, therefore, this can grow indefinitely, once we're in the slow mode.
     mDebugTags[key] = std::move(tag);
 }
 

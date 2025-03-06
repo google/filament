@@ -1,0 +1,213 @@
+Name
+
+    ARB_seamless_cube_map
+
+Name Strings
+
+    GL_ARB_seamless_cube_map
+
+Contributors
+
+    Bill Licea-Kane, AMD
+    Bruce Merry, ARM
+    Graham Sellers, AMD
+    Ian Romanick, Intel
+    Jeff Bolz, NVIDIA
+    Pat Brown, NVIDIA
+    Pierre Boudier, AMD
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2009-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on July 3, 2009.
+
+Version
+
+    Last Modified Date:         07/21/2009
+    Author revision:            4
+
+Number
+
+    ARB Extension #65
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+    ARB_texture_cube_map is required.
+
+    EXT_texture_filter_anisotropic affects the definition of this extension.
+
+    This extension is written against the OpenGL 3.1 Specification.
+
+Overview
+
+    When sampling from cube map textures, a three-dimensional texture
+    coordinate is used to select one of the cube map faces and generate
+    a two dimensional texture coordinate ( s t ), at which a texel is
+    sampled from the determined face of the cube map texture. Each face
+    of the texture is treated as an independent two-dimensional texture,
+    and the generated ( s t ) coordinate is subjected to the same
+    clamping and wrapping rules as for any other two dimensional texture
+    fetch.
+
+    Although it is unlikely that the generated ( s t ) coordinate lies
+    significantly outside the determined cube map face, it is often the
+    case that the locations of the individual elements required during a
+    linear sampling do not lie within the determined face, and their
+    coordinates will therefore be modified by the selected clamping and
+    wrapping rules. This often has the effect of producing seams or
+    other discontinuities in the sampled texture.
+
+    This extension allows implementations to take samples from adjacent
+    cube map faces, providing the ability to create seamless cube maps.
+
+IP Status
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv
+    and GetDoublev:
+
+    TEXTURE_CUBE_MAP_SEAMLESS                   0x884F
+
+
+Additions to Chapter 3 of the 3.1 Specification (Rasterization)
+
+    Section 3.8.7, Cube Map Texture Selection, p. 143, change the last
+    paragraph from
+
+    "This new ( s t ) is used to find a texture value in the determined
+     face's two-dimensional texture image using the rules given in
+     sections 3.8.7 through 3.8.9."
+
+    to:
+
+    Seamless Cube Map Filtering
+    ---------------------------
+
+    Seamless cube map filtering is enabled or disabled by calling Enable
+    or Disable, respectively, with the symbolic constant
+    TEXTURE_CUBE_MAP_SEAMLESS.
+
+    When seamless cube map filtering is disabled, the new (s t) is used
+    to find a texture value in the determined face's two-dimensional
+    image using the rules given in sections 3.8.9 through 3.8.10.
+
+    When seamless cube map filtering is enabled, the rules for texel
+    selection in sections 3.8.9 through 3.8.10 are modified so that
+    texture wrap modes are ignored. Instead,
+
+    * If NEAREST filtering is done within a miplevel, always apply wrap
+      mode CLAMP_TO_EDGE.
+    * If LINEAR filtering is done within a miplevel, always apply wrap mode
+      CLAMP_TO_BORDER. Then,
+      o If a texture sample location would lie in the texture border in
+        either u or v, instead select the corresponding texel from the
+        appropriate neighboring face.
+      o If a texture sample location would lie in the texture border in
+        both u and v (in one of the corners of the cube), there is no
+        unique neighboring face from which to extract one texel. The
+        recommended method is to average the values of the three
+        available samples. However, implementations are free to
+        construct this fourth texel in another way, so long as, when the
+        three available samples have the same value, this texel also has
+        that value.
+
+    The required state is one bit indicating whether seamless cube map
+    filtering is enabled or disabled. Initially, it is disabled.
+
+    Add final paragraphs to Section 3.8.7
+
+    "When TEXTURE_MAX_ANISOTROPY_EXT is greater than 1.0, an
+     implementation may sample from the texture at multiple locations in
+     order to produce a filtered texel value. In this case, some of the
+     required samples may lie outside the determined cube map face. If
+     TEXTURE_CUBE_MAP_SEAMLESS is enabled, it is implementation defined
+     as to whether these samples are taken from the determined face, or
+     from the appropriate adjacent cube map face."
+
+Errors
+
+    None.
+
+Dependencies on EXT_texture_filter_anisotropic
+
+    If EXT_texture_filter_anisotropic is not supported, remove the
+    final paragraph added to Section 3.8.6 which references
+    TEXTURE_MAX_ANISOTROPY_EXT.
+
+New State
+
+    In table 6.42, Miscellaneous, p. 279, add the following:
+
+    Get Value                     Type    Get Command           Init Val      Description                  Sec.   Attribute
+    ---------------------------   ------  --------------------  --------      --------------------------   ------ ---------
+    TEXTURE_CUBE_MAP_SEAMLESS       B     IsEnabled             FALSE         Seamless cube map filtering  3.8.6  -
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    1) Should this be a new wrap mode, or a separate state?
+
+       RESOLVED: It cannot be a normal wrap mode because it does not
+       apply per dimension, but rather to a texture as a whole.
+       Therefore, it is a separate state item.
+
+    2) What is the interaction with anisotropic filtering as described
+       in EXT_texture_filter_anisotropic?
+
+       RESOLVED: EXT_texture_filter_anisotropic leaves the
+       implementation of anisotropic filtering implementation defined.
+       Therefore, this extension does the same.
+
+    3) Should this be per-texture, or a global state?
+
+       RESOLVED: While in some cases it may be desirable to mix seamless
+       and non-seamless cube map texture sampling, it is sufficient to
+       leave this spec defining a global state and provide per-texture
+       support in another extension.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     4    07/21/09  Jon Leech Reformat to 80 columns and update
+                              ambiguous sample location to match
+                              the 3.2 spec (bug 5357).
+
+     3    07/20/09  Jon Leech Assign enum value and remove _ARB suffix.
+
+     2    07/01/09  wwlk      Updated per bug 5292.
+                              Re-written against the OpenGL 3.1 specification.
+
+     1    05/07/09  gsellers  Initial draft based on
+                              AMD_texture_cube_face_select

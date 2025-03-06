@@ -1,0 +1,347 @@
+Name
+
+    AMD_interleaved_elements
+
+Name Strings
+
+    GL_AMD_interleaved_elements
+
+Contact
+
+    Graham Sellers (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Sergey Leontyev, AMD
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date: 2 May 2013
+    Revision: 3
+
+Number
+
+    431
+
+Dependencies
+
+    This extension is written against version 4.3 of the Core Profile OpenGL
+    Specification, dated August 6, 2012.
+
+Overview
+
+        The glDrawElements function and its variants (instanced and indirect,
+    for example) allow OpenGL to draw indexed arrays of vertices. Since its
+    inception, OpenGL has supported unsigned bytes, unsigned shorts and
+    unsigned integers as index types. However, all enabled vertex arrays may
+    be represented by at most one shared index.
+
+        A common scenario in graphics rendering is that several faces share
+    a vertex where, for each face some properties of a vertex (position and
+    texture coordinates, for example) should be common but others must be
+    unique (colors, normals, and so on). Consider a mesh of a cube with
+    per-face normals, for example. There are 8 vertices and 6 normals, and 12
+    triangles (where each face of the cube is represented as two triangles).
+    To render this cube, we must compute the 24 unique permutations of
+    position and normal and build a new element list to index into it. In
+    fact, any advantage of indexed draw is lost here as the number of required
+    permutations is equal to the final vertex count required to draw the
+    object.
+
+        This extension allows OpenGL to process multi-component packed element
+    data. The maximum size of a vertex's index data is not increased, but the
+    facility to store 2 16-bit or 2 or 4 8-bit indices per vertex is introduced.
+    Each vertex attribute is given a swizzle property to allow its index to
+    be sourced from one of up to 4 channels of index data. This effectively
+    allows an application to supply multiple interleaved streams of index data
+    to OpenGL. Each vertex attribute is given a 'channel selector' to select
+    one of the up to 4 channels of vertex index information presented to
+    OpenGL. This enables the use-case described above and many more.
+    The swizzle parameter is also applied to vertex indices passed to shaders,
+    and updates to the definition of base vertex parameters and primitive
+    restart are applied.
+
+New Procedures and Functions
+
+    void VertexAttribParameteriAMD(uint index, enum pname, int param);
+
+New Tokens
+
+    Accepted by the <pname> parameter of VertexAttribParameteriAMD and
+    GetVertexAttrib{iv|dv|fv|Iiv|Iuiv|Ldv}:
+
+        VERTEX_ELEMENT_SWIZZLE_AMD                          0x91A4
+
+    Selected by the <pname> parameter of ProgramParameteri and GetProgramiv:
+
+        VERTEX_ID_SWIZZLE_AMD                               0x91A5
+
+    Accepted by the <param> parameter of VertexAttribParameteriAMD:
+
+        RED                                                 0x1903
+        GREEN                                               0x1904
+        BLUE                                                0x1905
+        ALPHA                                               0x1906
+
+    Accepted by the <type> parameter of DrawElements, DrawElementsInstanced,
+    DrawElementsInstancedBaseInstance and DrawElementsIndirect:
+
+        RG8UI                                               0x8238
+        RG16UI                                              0x823A
+        RGBA8UI                                             0x8D7C
+
+IP Status
+
+    None.
+
+Additions to Chapter 7 of the OpenGL Core Profile Specification, Version 4.3,
+"Programs and Shaders"
+
+    Add to the parameters accepted by ProgramParameteri, p.82:
+
+        If <pname> is VERTEX_ID_SWIZZLE_AMD, <value> should be set to
+    RED, GREEN, BLUE or ALPHA to indicate that the first, second, third
+    or fourth component of the vertex element vector be propagated to the
+    gl_VertexID vertex shader input as described in subsection 11.1.3.9.
+    The initial value of VERTEX_ID_SWIZZLE_AMD is RED.
+
+Additions to Chapter 10 of the OpenGL Core Profile Specification, Version 4.3,
+"Vertex Specification and Drawing Commands"
+
+    Insert Subsection 10.3.2, "Vertex Attribute Parameters", renumber
+    subsequent sections:
+
+        Each vertex attribute possesses a set of parameters that control
+    its behavior. Parameters for a vertex attribute may be set by calling:
+
+        void VertexAttribParameteriAMD(uint index,
+                                       enum pname,
+                                       int param);
+
+    where <index> identifies the generic vertex attribute array whose parameter
+    to modify. If <pname> is VERTEX_ELEMENT_SWIZZLE_AMD, then <param>
+    specifies the component of the vertex element that is to be used to
+    source the vertex indices for the selected vertex attribute. Its value
+    may be RED, GREEN, BLUE or ALPHA to select the first, second, third or
+    fourth component of the vertex element.
+
+    In section 10.3.2, "Primitive Restart", modify the language describing
+    how the restart index is compared to the vertex element index, p.302
+    as follows:
+
+        When one of the Draw* commands transfers a set of generic attribute
+    array elements to the GL, if all present index channels in the passed
+    element index are equal to the primitive restart index, then the GL
+    does not process those elements as a vertex. Instead ... *include
+    remainder of section verbatim.*
+
+    In the description of DrawElementsOneInstance (p. 311), replace the
+    sentence beginning "The ith element transferred by..." with:
+
+    For each enabled vertex attribute, the ith element transferred by
+    DrawElementsOneInstance will be taken from that attribute's selected
+    channel of the element whose values are stored currently bound element
+    array buffer at offset indices + i.
+
+    Replace the paragraph explaining the <type> parameter to
+    DrawElementsOneIntance (p. 311):
+
+        <type> may be UNSIGNED_BYTE, UNSIGNED_SHORT or UNSIGNED_INT,
+    indicating that the index values are of GL type ubyte, ushort or uint,
+    respectively, RG8UI or RG16UI, indicating that the index values are pairs
+    of GL type ubyte or ushort, respectively, or RGBA8UI, indicating that
+    index values are quadruplets of GL type ubyte. ...
+
+    Modify the language describing the DrawElements*BaseVertex* functions
+    on p.314 as follows:
+
+        ... are equivalent to the commands with the same base name (without
+    the BaseVertex suffix), except that the ith element transferred by
+    the corresponding draw call will be taken from the selected channel
+    of the element vector indices[i] + <basevertex>. That is, the value of
+    <basevertex> is added to the vertex index after channel selection.
+    ... *include remainder of description verbatim.*
+
+    Add to the list of accepted values for the <pname> parameter to
+    GetVertexAttrib* in Section 10.6, "Vertex Array and Vertex Array Object
+    Queries", p. 317:
+
+        ... VERTEX_ELEMENT_SWIZZLE_AMD.
+
+Additions to Chapter 11 of the OpenGL Core Profile Specification, Version 4.3,
+"Programmable Vertex Processing"
+
+    In Subsection 11.1.3.9, "Shader Inputs", p.338, modify the description
+    of gl_VertexID as follows:
+
+        gl_VertexID holds the integer index i stored in the selected component
+    of the element implicitly passed by DrawArrays or one of the other drawing
+    commands defined in section 10.5. The component of the element data
+    stored in gl_VertexID may be specified by calling ProgramParameteri with
+    <pname> set to VERTEX_ID_SWIZZLE_AMD as specified in section 7.3.
+
+New State
+
+    Append to Table 23.4, "Vertex Array Object State (cont.)":
+
+    +------------------------------+----------+---------------------+----------------+---------------------------------------------+----------+
+    | Get Value                    | Type     | Get Command         | Initial Value  | Description                                 | Sec      |
+    +------------------------------+----------+---------------------+----------------+---------------------------------------------+----------+
+    | VERTEX_ELEMENT_SWIZZLE_AMD   | 16 * x E | GetVertexAttribiv   | RED            | Channel selector for vertex attribute index | 10.3.2   |
+    +------------------------------+----------+---------------------+----------------+---------------------------------------------+----------+
+
+    Append to Table 23.39, "Program Object State (cont.)":
+
+    +------------------------+-------+---------------+----------------+------------------------------------+----------+
+    | Get Value              | Type  | Get Command   | Initial Value  | Description                        | Sec      |
+    +------------------------+-------+---------------+----------------+------------------------------------+----------+
+    | VERTEX_ID_SWIZZLE_AMD  | E     | GetProgramiv  | RED            | Channel selector for gl_VertexID   | 11.1.3.9 |
+    +------------------------+-------+---------------+----------------+------------------------------------+----------+
+
+New Implementation Dependent State
+
+    None.
+
+Errors
+
+    INVALID_ENUM is generated by VertexAttribParameteri if <pname> is not an
+    accepted token.
+
+    INVALID_VALUE is generated by VertexAttribParameteri if <value> is not an
+    acceptable value for the specified value of <pname>.
+
+Examples
+
+    // Basic per-face normals
+
+    // Normal data
+    static const float normals[] =
+    {
+        0.0f, 0.0f, 1.0f,   // Positive Z
+        0.0f, 0.0f, -1.0f,  // Negative Z
+        0.0f, 1.0f, 0.0f,   // Positive Y
+        0.0f, -1.0f, 0.0f,  // Negative Y
+        1.0f, 0.0f, 0.0f,   // Positive X
+        -1.0f, 0.0f, 0.0f,  // Negative X
+    };
+
+    // Position data
+    static const float positions[] =
+    {
+        -1.0f, -1.0f, -1.0f,
+        // <More data here>
+        1.0f, 1.0f, 1.0f
+    };
+
+    // Put the above data into a buffer and bind them as separate vertex
+    // attributes.
+    GLuint vertex_buffer;
+    glGenBuffers(1, &vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, sizeof(positions) + sizeof(normals),
+                 NULL, GL_STATIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(positions), positions);
+    glBufferSubData(GL_ARRAY_BUFFER, sizeof(positions),
+                    sizeof(normals), normals);
+    // ... etc. Set up vertex attributes.
+
+    // Index data
+    static const unsigned short indices[] =
+    {
+        0, 0,       // vertex 0: position index, normal index
+        1, 0,       // vertex 1: position index, normal index
+        2, 0,       // vertex 2: position index, normal index
+        1, 0,       // vertex 3: position index, normal index
+        2, 0,       // ... six vertices, forming
+        3, 0,       // ... two complete triangles, all using normals[0]
+        0, 1,
+        2, 1,
+        3, 1,
+        3, 1,
+        4, 1,       // ... six more vertices, forming
+        2, 1,       // ... two more triangles, all using normals[1]
+        // etc...
+    };
+
+    GLuint index_buffer;
+    glGenBuffers(1, &index_buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices),
+                 indices, GL_STATIC_DRAW);
+
+    // Okay... here's the new code. Set up vertex attribute 0 (position) to
+    // consume the RED channel of the vertex index and attribute 1 (normal)
+    // to consume the GREEN (second) channel of the vertex index. Then
+    // draw with GL_RG16UI (two channel, 16-bit unsigned int) as the index
+    // type.
+    glVertexAttribParameteriAMD(0, GL_VERTEX_ELEMENT_SWIZZLE_AMD, GL_RED);
+    glVertexAttribParameteriAMD(1, GL_VERTEX_ELEMENT_SWIZZLE_AMD, GL_GREEN);
+
+    glDrawElements(GL_TRIANGLES,
+                   sizeof(indices) / (2 * sizeof(unsigned short)),
+                   GL_RG16UI,
+                   NULL);
+
+Issues
+
+    1) What is the effect of multi-channel vertex indices on gl_VertexID?
+
+       RESOLVED: The VERTEX_ID_SWIZZLE_AMD program parameter selects the
+       channel of vector element types to be passed to gl_VertexID. By
+       default, this is RED, which is backwards compatible with single-channel
+       types.
+
+    2) How does this interact with primitive-restart indices?
+
+       RESOLVED: If all present channels of the vertex index vector match the
+       restart index, then the element index is considered to match.
+
+    3) How does baseVertex affect this?
+
+       RESOLVED: The same base vertex value is added to each each vertex
+       element component after channel selection for each of the enabled
+       vertex attributes. This choice is primarily motivated by the behavior
+       of base vertex elements encoded in indirect draw commands.
+
+    4) Does this feature disable potential optimizations such as vertex
+       reuse?
+
+       RESOVLED: No, vertex reuse should continue to function correctly.
+       Each unique vector of indices should produce a unique set of vertex
+       shader outputs (modulo side effects) and will hit a naive vertex
+       reuse cache. Nothing precludes more advanced optimization strategies
+       from being implemented, however.
+
+    5) Is it possible to get at all two or four channels of the vertex index
+       using a built-in input to the vertex shader?
+
+       RESOLVED: No. A single channel selection is provided. Providing more
+       data could be implemented by introducing a new built-in integer vector
+       input to the shader, but we have chosen not to do at this time.
+
+    6) What is the value of missing channels? For example, if we render with
+       GL_RG16UI indices but set certain attributes to GL_BLUE or GL_ALPHA
+       swizzle, what index value is used for those channels?
+
+       RESOLVED: Zero.
+
+    7) Are the traditional GL_RED, GL_GREEN, GL_BLUE, and GL_ALPHA terms
+       appropriate for this use?
+
+       RESOLVED: Not really, but are they appropriate for normals? g-buffers?
+       Any other arbitrary data that might be in a buffer or texture?
+       It's not worth introducing new enumerants just for this - we'll use
+       R, G, B, A.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     3    05/02/2013  gsellers  Shipping. Finalize spec ready for posting.
+     2    01/25/2013  gsellers  Resolve issues 1, 2, 3. Polish spec.
+     1    01/17/2013  gsellers  Initial draft
+

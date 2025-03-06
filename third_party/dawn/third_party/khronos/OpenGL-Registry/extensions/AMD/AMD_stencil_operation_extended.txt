@@ -1,0 +1,248 @@
+Name
+
+    AMD_stencil_operation_extended
+
+Name Strings
+
+    GL_AMD_stencil_operation_extended
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:         01/11/2012
+    Author Revision:            4
+
+Number
+
+    413
+
+Dependencies
+
+    OpenGL 1.0 is required.
+
+    The definition of this extension is affected by EXT_stencil_wrap and
+    OpenGL 2.0.
+
+    This extension is written against the OpenGL Specification, Version 4.2
+    (Core Profile).
+
+Overview
+
+    Stencil buffers are special buffers that allow tests to be made against an
+    incoming value and action taken based on that value. The stencil buffer is
+    updated during rasterization, and the operation used to update the stencil
+    buffer is chosen based on whether the fragment passes the stencil test,
+    and if it does, whether it passes the depth test. Traditional OpenGL
+    includes support for several primitive operations, such as incrementing,
+    or clearing the content of the stencil buffer, or replacing it with a
+    specified reference value.
+
+    This extension adds support for an additional set of operations that may
+    be performed on the stencil buffer under each circumstance. Additionally,
+    this extension separates the value used as the source for stencil
+    operations from the reference value, allowing different values to be used
+    in the stencil test, and in the update of the stencil buffer.
+
+IP Status
+
+    None.
+
+New Procedures and Functions
+
+    void StencilOpValueAMD(enum face, uint value);
+
+New Tokens
+
+    Accepted by the <sfail>, <dpfail> and <dppass> parameters of StencilOp
+    and StencilOpSeparate:
+
+        SET_AMD                                     0x874A
+        AND                                         0x1501
+        XOR                                         0x1506
+        OR                                          0x1507
+        NOR                                         0x1508
+        EQUIV                                       0x1509
+        NAND                                        0x150E
+        REPLACE_VALUE_AMD                           0x874B
+
+    Accepted by the <param> parameter of GetIntegerv, GetFloatv, GetBooleanv
+    GetDoublev and GetInteger64v:
+
+        STENCIL_OP_VALUE_AMD                        0x874C
+        STENCIL_BACK_OP_VALUE_AMD                   0x874D
+
+Additions to Chapter 2 of the OpenGL 4.2 (Core Profile) Specification
+(OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Core Profile) Specification
+(Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Core Profile) Specification
+(Per-Fragment Operations and the Framebuffer)
+
+    Add to the functions introduced in Section 4.1.4 "Stencil Test", p.287
+
+        The stencil test is controlled with
+
+            <leave existing functions in place>
+            void StencilOpValueAMD(enum face, uint value);
+
+    Modify the paragraph beginning "StencilFuncSeparate and StencilOpSeparate
+    take a <face> argument...", p.288
+
+        StencilFuncSeparate, StencilOpSeparate and StencilOpValue take a
+    <face> argument which can be FRONT, BACK or FRONT_AND_BACK and indicates
+    which set of state is affected.
+
+    Replace the second and third paragraphs on p.288, describing StencilOp and
+    StencilOpSeparate with the following three paragraphs:
+
+        StencilOp and StencilOpSeparate take three arguments that indicate what
+    happens to the stored stencil value if this or certain subsequent tests fail
+    or pass. sfail indicates what action is taken if the stencil test fails.
+    The inputs to the stencil operation are the stencil reference value, the
+    stencil operation source value, and the current content of the stencil
+    buffer. The accepted symbolic constants are KEEP, ZERO, SET_AMD, REPLACE,
+    REPLACE_VALUE_AMD, INCR, DECR, INVERT, INCR_WRAP, DECR_WRAP, AND, XOR, OR,
+    NOR, EQUIV, and NAND. These correspond to keeping the current value, setting
+    to zero, setting to the maximum representable value, replacing with the
+    reference value, replacing with the operation source value, incrementing by
+    the operation source  value with saturation, decrementing by the operation
+    source value with saturation, bitwise inverting it, incrementing by the
+    operation source value without saturation, decrementing by the operation
+    source value without saturation, logically ANDing the operation source
+    value value with it, logically XORing the operation source value value with
+    it, logically ORing the operation source value with it, logically NORing
+    the operation source value with it, logically XORing the operation source
+    value with it and replacing the it with the logically inverted result of
+    that computation, and logically NANDing the operation source value with it,
+    respectively.
+
+        For purposes of increment, decrement, the stencil bits are considered
+    as an unsigned integer. Incrementing or decrementing with saturation clamps
+    the stencil value between 0 and the maximum representable value.
+    Incrementing without saturation will wrap such that incrementing the
+    content of the stencil buffer in such a way that overflow occurs will cause
+    the result of the operation to be masked by the number of bits representable
+    by the stencil buffer. Decrementing without saturation will wrap such that
+    decrementing the content of the stencil buffer in a manner such that the
+    result of the subtraction would be negative causes the two's complement
+    result to be interpreted as an unsigned integer and masked to the number of
+    bits representable by the stencil buffer.
+
+        The stencil operation source value is set by calling StencilOpValueAMD
+    with <face> set to GL_FRONT, GL_BACK or GL_FRONT_AND_BACK, and <value> set
+    to the new value of the stencil operation source value.
+
+    Modify the paragraph beginning "If the stencil test fails, the ... ", p.288
+    as follows:
+
+        If the stencil test fails, the incoming fragment is discarded. The state
+    required consists of the most recent values passed to StencilFunc or
+    StencilFuncSeparate, to StencilOp or StencilOpSeparate, and to
+    StencilOpValueAMD, and a bit indicating whether stencil testing is enabled
+    or disabled. In the initial state, stenciling is disabled, the front and
+    back reference values are both zero, the front and back stencil comparison
+    functions are both ALWAYS, the front and back stencil mask are both set to
+    the value 2^S - 1, where S is greater than or equal to the number of bits
+    in the deepest buffer supported by the GL implementation, and the front
+    and back stencil operation values are both 1. Initially, all three front
+    and back stencil operations are KEEP.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Core Profile) Specification
+(Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Core Profile) Specification
+(State and State Requests)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    INVALID_ENUM is generated by StencilOpValueAMD if <face> is not FRONT,
+    BACK or FRONT_AND_BACK.
+
+New State
+
+    Modify Table 6.20 "Pixel Operations", p.394:
+
+    +--------------------------------+----------+---------------+-----------+-------------------------------------------+--------+
+    |                                |          | Get           | Initial   |                                           |        |
+    | Get Value                      | Type     | Command       | Value     | Description                               | Sec.   |
+    +--------------------------------+----------+---------------+-----------+-------------------------------------------+--------+
+    | STENCIL_FAIL                   | Z16      | GetIntegerv   | KEEP      | Front stencil fail action                 | 4.1.4  |
+    | STENCIL_PASS_DEPTH_FAIL        | Z16      | GetIntegerv   | KEEP      | Front stencil depth buffer fail action    | 4.1.4  |
+    | STENCIL_PASS_DEPTH_PASS        | Z16      | GetIntegerv   | KEEP      | Front stencil depth buffer pass action    | 4.1.4  |
+    | STENCIL_BACK_FAIL              | Z16      | GetIntegerv   | KEEP      | Back stencil fail action                  | 4.1.4  |
+    | STENCIL_BACK_PASS_DEPTH_FAIL   | Z16      | GetIntegerv   | KEEP      | Back stencil depth buffer fail action     | 4.1.4  |
+    | STENCIL_BACK_PASS_DEPTH_PASS   | Z16      | GetIntegerv   | KEEP      | Back stencil depth buffer pass action     | 4.1.4  |
+    | STENCIL_OP_VALUE_AMD           | Z+       | GetIntegerv   | 1         | Front stencil operation value             | 4.1.4  |
+    | STENCIL_BACK_OP_VALUE_AMD      | Z+       | GetIngeterv   | 1         | Back stencil operation value              | 4.1.4  |
+    +--------------------------------+----------+---------------+-----------+-------------------------------------------+--------+
+
+    NOTE: The existing STENCIL{_BACK}_{*} enumerants  change have changed from Z8 to Z16.
+
+Dependencies on EXT_stencil_wrap
+
+    If EXT_stencil_wrap is not supported, remove references to INCR_WRAP and
+    DECR_WRAP. Also, change the definition of the STENCIL_{*} state to Z14
+    rather than Z16.
+
+Dependencies on OpenGL 2.0
+
+    If the GL version is less than 2.0, remove all references to
+    StencilOpSeparate. Furthermore, the <face> parameter to StencilOpValueAMD
+    must be FRONT_AND_BACK, otherwise an INVALID_ENUM error will be generated.
+
+Issues
+
+    1) Is the stencil mask applied to the stencil operation value?
+
+    RESOLVED: No, only to the reference and current values before the test.
+    The stencil operation is carried out on the full value. The stencil write
+    mask is applied to the result during stencil buffer update, however.
+
+    2) Is this really backwards compatible? Does it break OpenGL?
+
+    RESOLVED: Yes, this is backwards compatible and does not break anything.
+    The INCR{_WRAP} and DECR{_WRAP} operations have been semantically redefined
+    to be generalized add and subtract operations. However, the stencil
+    operation source value is used in the addition operation and its default is
+    1. Therefore, in the default state (assuming the stencil operation source
+    value is not changed), INCR and DECR still increment and decrement by 1.
+
+    3) What if I want to apply a logical operation with the stencil reference
+    value and the current stencil buffer contents?
+
+    RESOLVED: Set the stencil operation source value to the same thing as the
+    stencil reference value.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  ----------  --------  -----------------------------------------
+    4     01/11/2012  gsellers  Update for OpenGL 4.2. Prepare for posting.
+    3     12/17/2010  yunzhang  update enum definitions
+    2     06/10/2010  gsellers  Add separate stencil op value. Add issues.
+    1     06/08/2010  gsellers  Initial revision

@@ -44,9 +44,9 @@ struct spvUnsafeArray
     }
 };
 
-constant float4 _32 = {};
+constant float4 _33 = {};
 
-constant spvUnsafeArray<float4, 2> _34 = spvUnsafeArray<float4, 2>({ float4(0.0), float4(0.0) });
+constant spvUnsafeArray<float4, 2> _35 = spvUnsafeArray<float4, 2>({ float4(0.0), float4(0.0) });
 
 struct main0_out
 {
@@ -68,12 +68,12 @@ fragment main0_out main0(main0_in in [[stage_in]])
     _38.z = 3.0;
     _38.w = 4.0;
     out.FragColor = _38;
-    float4 _6 = _37;
-    _6.x = 1.0;
-    _6.y = 2.0;
-    _6.z = 3.0;
-    _6.w = 4.0;
-    out.FragColor = _6;
+    float4 _8 = _37;
+    _8.x = 1.0;
+    _8.y = 2.0;
+    _8.z = 3.0;
+    _8.w = 4.0;
+    out.FragColor = _8;
     float4 _42 = _37;
     _42.x = 1.0;
     _42.y = 2.0;
@@ -99,7 +99,7 @@ fragment main0_out main0(main0_in in [[stage_in]])
     float4 _53 = float4(0.0);
     _53.x = 1.0;
     out.FragColor = _53;
-    spvUnsafeArray<float4, 2> _54 = _34;
+    spvUnsafeArray<float4, 2> _54 = _35;
     _54[1].z = 1.0;
     _54[0].w = 2.0;
     out.FragColor = _54[0];

@@ -36,6 +36,14 @@
 
 #include <functional>
 
+#if FILAMENT_ENABLE_FGVIEWER
+#include <fgviewer/FrameGraphInfo.h>
+#else
+namespace filament::fgviewer {
+    class FrameGraphInfo{};
+} // namespace filament::fgviewer
+#endif
+
 namespace filament {
 
 class ResourceAllocatorInterface;
@@ -433,6 +441,12 @@ public:
 
     //! export a graphviz view of the graph
     void export_graphviz(utils::io::ostream& out, const char* name = nullptr);
+
+    /**
+     * Export a fgviewer::FrameGraphInfo for current graph.
+     * Note that this function should be called after FrameGraph::compile().
+     */
+    fgviewer::FrameGraphInfo getFrameGraphInfo(const char *viewName) const;
 
 private:
     friend class FrameGraphResources;

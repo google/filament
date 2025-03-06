@@ -1,0 +1,183 @@
+[submodule "buildtools"]
+	path = buildtools
+	url = https://chromium.googlesource.com/chromium/src/buildtools
+	gclient-condition = dawn_standalone
+[submodule "third_party/clang-format/script"]
+	path = third_party/clang-format/script
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/clang/tools/clang-format
+	gclient-condition = dawn_standalone
+[submodule "third_party/depot_tools"]
+	path = third_party/depot_tools
+	url = https://chromium.googlesource.com/chromium/tools/depot_tools
+	gclient-condition = dawn_standalone
+[submodule "third_party/libc++/src"]
+	path = third_party/libc++/src
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxx
+	gclient-condition = dawn_standalone
+[submodule "third_party/libc++abi/src"]
+	path = third_party/libc++abi/src
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxxabi
+	gclient-condition = dawn_standalone
+[submodule "third_party/libdrm/src"]
+	path = third_party/libdrm/src
+	url = https://chromium.googlesource.com/chromiumos/third_party/libdrm
+	gclient-condition = dawn_standalone and host_os == "linux"
+[submodule "build"]
+	path = build
+	url = https://chromium.googlesource.com/chromium/src/build
+	gclient-condition = dawn_standalone
+[submodule "tools/clang"]
+	path = tools/clang
+	url = https://chromium.googlesource.com/chromium/src/tools/clang
+	gclient-condition = dawn_standalone
+[submodule "tools/rust"]
+	path = tools/rust
+	url = https://chromium.googlesource.com/chromium/src/tools/rust
+	gclient-condition = dawn_standalone and checkout_rust
+[submodule "testing"]
+	path = testing
+	url = https://chromium.googlesource.com/chromium/src/testing
+	gclient-condition = dawn_standalone
+[submodule "third_party/libFuzzer/src"]
+	path = third_party/libFuzzer/src
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/compiler-rt/lib/fuzzer
+	gclient-condition = dawn_standalone
+[submodule "third_party/googletest"]
+	path = third_party/googletest
+	url = https://chromium.googlesource.com/external/github.com/google/googletest
+	gclient-condition = dawn_standalone
+[submodule "third_party/catapult"]
+	path = third_party/catapult
+	url = https://chromium.googlesource.com/catapult
+	gclient-condition = dawn_standalone
+[submodule "third_party/google_benchmark/src"]
+	path = third_party/google_benchmark/src
+	url = https://chromium.googlesource.com/external/github.com/google/benchmark
+	gclient-condition = dawn_standalone
+[submodule "third_party/jinja2"]
+	path = third_party/jinja2
+	url = https://chromium.googlesource.com/chromium/src/third_party/jinja2
+	gclient-condition = dawn_standalone
+[submodule "third_party/markupsafe"]
+	path = third_party/markupsafe
+	url = https://chromium.googlesource.com/chromium/src/third_party/markupsafe
+	gclient-condition = dawn_standalone
+[submodule "third_party/glfw"]
+	path = third_party/glfw
+	url = https://chromium.googlesource.com/external/github.com/glfw/glfw
+[submodule "third_party/vulkan_memory_allocator"]
+	path = third_party/vulkan_memory_allocator
+	url = https://chromium.googlesource.com/external/github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+	gclient-condition = dawn_standalone
+[submodule "third_party/angle"]
+	path = third_party/angle
+	url = https://chromium.googlesource.com/angle/angle
+	gclient-condition = dawn_standalone
+[submodule "third_party/swiftshader"]
+	path = third_party/swiftshader
+	url = https://swiftshader.googlesource.com/SwiftShader
+	gclient-condition = dawn_standalone
+[submodule "third_party/vulkan-deps"]
+	path = third_party/vulkan-deps
+	url = https://chromium.googlesource.com/vulkan-deps
+	gclient-condition = dawn_standalone
+[submodule "third_party/glslang/src"]
+	path = third_party/glslang/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/glslang
+	gclient-condition = dawn_standalone
+[submodule "third_party/spirv-cross/src"]
+	path = third_party/spirv-cross/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Cross
+	gclient-condition = dawn_standalone
+[submodule "third_party/spirv-headers/src"]
+	path = third_party/spirv-headers/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Headers
+	gclient-condition = dawn_standalone
+[submodule "third_party/spirv-tools/src"]
+	path = third_party/spirv-tools/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Tools
+	gclient-condition = dawn_standalone
+[submodule "third_party/vulkan-headers/src"]
+	path = third_party/vulkan-headers/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Headers
+	gclient-condition = dawn_standalone
+[submodule "third_party/vulkan-loader/src"]
+	path = third_party/vulkan-loader/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Loader
+	gclient-condition = dawn_standalone
+[submodule "third_party/vulkan-tools/src"]
+	path = third_party/vulkan-tools/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Tools
+	gclient-condition = dawn_standalone
+[submodule "third_party/vulkan-utility-libraries/src"]
+	path = third_party/vulkan-utility-libraries/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Utility-Libraries
+	gclient-condition = dawn_standalone
+[submodule "third_party/vulkan-validation-layers/src"]
+	path = third_party/vulkan-validation-layers/src
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-ValidationLayers
+	gclient-condition = dawn_standalone
+[submodule "third_party/zlib"]
+	path = third_party/zlib
+	url = https://chromium.googlesource.com/chromium/src/third_party/zlib
+	gclient-condition = dawn_standalone
+[submodule "third_party/abseil-cpp"]
+	path = third_party/abseil-cpp
+	url = https://chromium.googlesource.com/chromium/src/third_party/abseil-cpp
+	gclient-condition = dawn_standalone
+[submodule "third_party/dxc"]
+	path = third_party/dxc
+	url = https://chromium.googlesource.com/external/github.com/microsoft/DirectXShaderCompiler
+[submodule "third_party/dxheaders"]
+	path = third_party/dxheaders
+	url = https://chromium.googlesource.com/external/github.com/microsoft/DirectX-Headers
+	gclient-condition = host_os != "win"
+[submodule "third_party/khronos/OpenGL-Registry"]
+	path = third_party/khronos/OpenGL-Registry
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/OpenGL-Registry
+[submodule "third_party/khronos/EGL-Registry"]
+	path = third_party/khronos/EGL-Registry
+	url = https://chromium.googlesource.com/external/github.com/KhronosGroup/EGL-Registry
+[submodule "third_party/webgpu-cts"]
+	path = third_party/webgpu-cts
+	url = https://chromium.googlesource.com/external/github.com/gpuweb/cts
+	gclient-condition = build_with_chromium
+[submodule "third_party/node-api-headers"]
+	path = third_party/node-api-headers
+	url = https://github.com/nodejs/node-api-headers
+	gclient-condition = dawn_node
+[submodule "third_party/node-addon-api"]
+	path = third_party/node-addon-api
+	url = https://github.com/nodejs/node-addon-api
+	gclient-condition = dawn_node
+[submodule "third_party/gpuweb"]
+	path = third_party/gpuweb
+	url = https://github.com/gpuweb/gpuweb
+	gclient-condition = dawn_node
+[submodule "third_party/protobuf"]
+	path = third_party/protobuf
+	url = https://chromium.googlesource.com/chromium/src/third_party/protobuf
+	gclient-condition = dawn_standalone
+[submodule "tools/protoc_wrapper"]
+	path = tools/protoc_wrapper
+	url = https://chromium.googlesource.com/chromium/src/tools/protoc_wrapper
+	gclient-condition = dawn_standalone
+[submodule "third_party/libprotobuf-mutator/src"]
+	path = third_party/libprotobuf-mutator/src
+	url = https://chromium.googlesource.com/external/github.com/google/libprotobuf-mutator
+	gclient-condition = dawn_standalone
+[submodule "third_party/jsoncpp"]
+	path = third_party/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp
+	gclient-condition = dawn_standalone
+[submodule "third_party/langsvr"]
+	path = third_party/langsvr
+	url = https://github.com/google/langsvr
+	gclient-condition = dawn_standalone
+[submodule "third_party/partition_alloc"]
+	path = third_party/partition_alloc
+	url = https://chromium.googlesource.com/chromium/src/base/allocator/partition_allocator
+	gclient-condition = dawn_standalone
+[submodule "third_party/llvm-libc/src"]
+	path = third_party/llvm-libc/src
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libc.git

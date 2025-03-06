@@ -1,0 +1,434 @@
+Name
+
+    NV_packed_depth_stencil
+
+Name Strings
+
+    GL_NV_packed_depth_stencil
+
+Contact
+
+    Matt Craighead, NVIDIA Corporation (mcraighead 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2000, 2001.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Shipping (version 1.1)
+
+Version
+    
+    NVIDIA Date: August 22, 2001 (version 1.1)
+
+Number
+
+    226
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.2.1 specification.
+
+    SGIX_depth_texture affects the definition of this extension.
+
+Overview
+
+    Many OpenGL implementations have chosen to interleave the depth and
+    stencil buffers into one buffer, often with 24 bits of depth
+    precision and 8 bits of stencil data.  32 bits is more than is needed
+    for the depth buffer much of the time; a 24-bit depth buffer, on the
+    other hand, requires that reads and writes of depth data be unaligned
+    with respect to power-of-two boundaries.  On the other hand, 8 bits
+    of stencil data is more than sufficient for most applications, so it
+    is only natural to pack the two buffers into a single buffer with
+    both depth and stencil data.  OpenGL never provides direct access to
+    the buffers, so the OpenGL implementation can provide an interface to
+    applications where it appears the one merged buffer is composed of
+    two logical buffers.
+
+    One disadvantage of this scheme is that OpenGL lacks any means by
+    which this packed data can be handled efficiently.  For example, when
+    an application reads from the 24-bit depth buffer, using the type
+    GL_UNSIGNED_SHORT will lose 8 bits of data, while GL_UNSIGNED_INT has
+    8 too many.  Both require expensive format conversion operations.  A
+    24-bit format would be no more suitable, because it would also suffer
+    from the unaligned memory accesses that made the standalone 24-bit
+    depth buffer an unattractive proposition in the first place.
+
+    Many applications, such as parallel rendering applications, may also
+    wish to draw to or read back from both the depth and stencil buffers
+    at the same time.  Currently this requires two separate operations,
+    reducing performance.  Since the buffers are interleaved, drawing to
+    or reading from both should be no more expensive than using just one;
+    in some cases, it may even be cheaper.
+
+    This extension provides a new data format, GL_DEPTH_STENCIL_NV, that
+    can be used with the glDrawPixels, glReadPixels, and glCopyPixels
+    commands, as well as a packed data type, GL_UNSIGNED_INT_24_8_NV,
+    that is meant to be used with GL_DEPTH_STENCIL_NV.  No other formats
+    are supported with GL_DEPTH_STENCIL_NV.  If SGIX_depth_texture is
+    supported, GL_DEPTH_STENCIL_NV/GL_UNSIGNED_INT_24_8_NV data can also
+    be used for textures; this provides a more efficient way to supply
+    data for a 24-bit depth texture.
+
+    GL_DEPTH_STENCIL_NV data, when passed through the pixel path,
+    undergoes both depth and stencil operations.  The depth data is
+    scaled and biased by the current GL_DEPTH_SCALE and GL_DEPTH_BIAS,
+    while the stencil data is shifted and offset by the current
+    GL_INDEX_SHIFT and GL_INDEX_OFFSET.  The stencil data is also put
+    through the stencil-to-stencil pixel map.
+
+    glDrawPixels of GL_DEPTH_STENCIL_NV data operates similarly to that
+    of GL_STENCIL_INDEX data, bypassing the OpenGL fragment pipeline
+    entirely, unlike the treatment of GL_DEPTH_COMPONENT data.  The
+    stencil and depth masks are applied, as are the pixel ownership and
+    scissor tests, but all other operations are skipped.
+
+    glReadPixels of GL_DEPTH_STENCIL_NV data reads back a rectangle from
+    both the depth and stencil buffers.
+
+    glCopyPixels of GL_DEPTH_STENCIL_NV data copies a rectangle from
+    both the depth and stencil buffers.  Like glDrawPixels, it applies
+    both the stencil and depth masks but skips the remainder of the
+    OpenGL fragment pipeline.
+
+    glTex[Sub]Image[1,2,3]D of GL_DEPTH_STENCIL_NV data loads depth data
+    into a depth texture.  glGetTexImage of GL_DEPTH_STENCIL_NV data can
+    be used to retrieve depth data from a depth texture.
+
+Issues
+
+    *   Depth data has a format of GL_DEPTH_COMPONENT, and stencil data
+        has a format of GL_STENCIL_INDEX.  So shouldn't the enumerant be
+        called GL_DEPTH_COMPONENT_STENCIL_INDEX_NV?
+
+        RESOLVED: No, this is fairly clumsy.
+
+    *   Should we support CopyPixels?
+
+        RESOLVED: Yes.  Right now copying stencil data means masking off
+        just the stencil bits, while copying depth data has strange
+        unintended consequences (fragment operations) and is difficult to
+        implement.  It is easy and useful to add CopyPixels support.
+
+    *   Should we support textures?
+
+        RESOLVED: Yes.  24-bit depth textures have no good format without
+        this extension.
+
+    *   Should the depth/stencil format support other standard types,
+        like GL_FLOAT or GL_UNSIGNED_INT?
+
+        RESOLVED: No, this extension is designed to be minimalist.
+        Supporting more types gains little because the new types will
+        just require data format conversions.  Our goal is to match the
+        native format of the buffer, not add broad new classes of
+        functionality.
+
+    *   Should the 24/8 format be supported for other formats, such as
+        LUMINANCE_ALPHA?  Should we support an 8/24 reversed format as
+        well?
+
+        RESOLVED: No and no, this adds implementation burden and gains us
+        little, if anything.
+
+    *   Does anything need to be written in the spec on the topic of
+        using GL_DEPTH_STENCIL_NV formats for glTexImage* or
+        glGetTexImage?
+
+        RESOLVED: No.  Since the SGIX_depth_texture extension spec was
+        never actually written (the additions to Section 3 are "XXX -
+        lots" and a few brief notes on how it's intended to work), it's
+        impossible to write what would essentially be amendments to that
+        spec.
+
+        However, it is worthwhile to mention here the intended behavior.
+        When downloading into a depth component texture, the stencil
+        indices are ignored, and when retrieving a depth component
+        texture, the stencil indices obtained from the texture are
+        undefined.
+
+    *   Should anything be said about performance?
+
+        RESOLVED: No, not in the spec.  However, common sense should
+        apply.  Apps should probably check that GL_DEPTH_BITS is 24 and
+        that GL_STENCIL_BITS is 8 before using either the new DrawPixels
+        or ReadPixels formats.  CopyPixels is probably safe regardless of
+        the size of either buffer.  The 24/8 format should probably only
+        be used with 24-bit depth textures.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <format> parameter of DrawPixels, ReadPixels,
+    TexImage1D, TexImage2D, TexImage3D, TexSubImage1D, TexSubImage2D,
+    TexSubImage3D, and GetTexImage, and by the <type> parameter of
+    CopyPixels:
+
+        DEPTH_STENCIL_NV                               0x84F9
+
+    Accepted by the <type> parameter of DrawPixels, ReadPixels,
+    TexImage1D, TexImage2D, TexImage3D, TexSubImage1D, TexSubImage2D,
+    TexSubImage3D, and GetTexImage:
+
+        UNSIGNED_INT_24_8_NV                           0x84FA
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    Update the first paragraph on page 90 to say:
+
+    "... If the GL is in color index mode and <format> is not one of
+    COLOR_INDEX, STENCIL_INDEX, DEPTH_COMPONENT, or DEPTH_STENCIL_NV,
+    then the error INVALID_OPERATION occurs.  If <type> is BITMAP and
+    <format> is not COLOR_INDEX or STENCIL_INDEX then the error
+    INVALID_ENUM occurs.  If <format> is DEPTH_STENCIL_NV and <type> is
+    not UNSIGNED_INT_24_8_NV then the error INVALID_ENUM occurs.  Some
+    additional constraints on the combinations of <format> and <type>
+    values that are accepted is discussed below."
+
+    Add a row to Table 3.5 (page 91):
+
+      type Parameter                GL Type    Special
+      ------------------------------------------------
+      ...                           ...        ...
+      UNSIGNED_INT_2_10_10_10_REV   uint       Yes
+      UNSIGNED_INT_24_8_NV          uint       Yes
+
+    Add a row to Table 3.6 (page 92):
+
+      Format Name       Element Meaning and Order      Target Buffer
+      ------------------------------------------------------------------
+      ...               ...                            ...
+      DEPTH_COMPONENT   Depth                          Depth
+      DEPTH_STENCIL_NV  Depth and Stencil Index        Depth and Stencil
+      ...               ...                            ...
+
+    Add a row to Table 3.8 (page 94):
+
+      type Parameter               GL Type  Components  Pixel Formats
+      ------------------------------------------------------------------
+      ...                          ...      ...         ...
+      UNSIGNED_INT_2_10_10_10_REV  uint     4           RGBA,BGRA
+      UNSIGNED_INT_24_8_NV         uint     2           DEPTH_STENCIL_NV
+
+    Update the last paragraph on page 93 to say:
+
+    "Calling DrawPixels with a <type> of UNSIGNED_BYTE_3_3_2, ...,
+    UNSIGNED_INT_2_10_10_10_REV, or UNSIGNED_INT_24_8_NV is a special
+    case in which all the components of each group are packed into a
+    single unsigned byte, unsigned short, or unsigned int, depending on
+    the type."
+
+    Add the following diagram to Table 3.11 (page 97):
+
+    UNSIGNED_INT_24_8_NV
+
+       31 30 29 28 27 26 ... 12 11 10 9 8 7 6 5 4 3 2 1 0
+      +----------------------------------+---------------+
+      |           1st Component          | 2nd Component |
+      +----------------------------------+---------------+
+
+    Add a row to Table 3.12 (page 98):
+
+      Format           |  1st     2nd     3rd     4th
+      -----------------+-------------------------------
+      ...              |  ...     ...     ...     ...
+      BGRA             |  blue    green   red     alpha
+      DEPTH_STENCIL_NV |  depth   stencil N/A     N/A
+
+    Add the following paragraph to the end of the section "Conversion to
+    floating-point" (page 99):
+
+    "For groups of components that contain both standard components and
+    index elements, such as DEPTH_STENCIL_NV, the index elements are not
+    converted."
+
+    Update the last paragraph in the section "Conversion to Fragments"
+    (page 100) to say:
+
+    "... Groups arising from DrawPixels with a <format> of STENCIL_INDEX
+    or DEPTH_STENCIL_NV are treated specially and are described in
+    section 4.3.1."
+
+    Update the first paragraph of section 3.6.5 "Pixel Transfer
+    Operations" (pages 100-101) to say:
+
+    "The GL defines five kinds of pixel groups:
+
+       1. RGBA component: Each group comprises four color components:
+          red, green, blue, and alpha.
+       2. Depth component: Each group comprises a single depth component.
+       3. Color index: Each group comprises a single color index.
+       4. Stencil index: Each group comprises a single stencil index.
+       5. Depth/stencil: Each group comprises a depth component and a
+          stencil index."
+
+    Update the first paragraph in the section "Arithmetic on Components"
+    (page 101) to say:
+
+    "This step applies only to RGBA component and depth component groups
+    and the depth components in depth/stencil groups. ..."
+
+    Update the first paragraph in the section "Arithmetic on Indices"
+    (page 101) to say:
+
+    "This step applies only to color index and stencil index groups and
+    the stencil indices in depth/stencil groups. ..."
+
+    Update the first paragraph in the section "Stencil Index Lookup"
+    (page 102) to say:
+
+    "This step applies only to stencil index groups and the stencil
+    indices in depth/stencil groups. ..."
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Replace section 4.3.1 "Writing to the Stencil Buffer" (page 156) with
+    the following:
+
+    "4.3.1 Writing to the Stencil Buffer or to the Depth and Stencil
+    Buffers
+
+    The operation of DrawPixels was described in section 3.6.4, except if
+    the <format> argument was STENCIL_INDEX or DEPTH_STENCIL_NV.  In this
+    case, all operations described for DrawPixels take place, but window
+    (x,y) coordinates, each with the corresponding stencil index or depth
+    value and stencil index, are produced in lieu of fragments.  Each
+    coordinate-data pair is sent directly to the per-fragment operations,
+    bypassing the texture, fog, and antialiasing application stages of
+    rasterization.  Each pair is then treated as a fragment for purposes
+    of the pixel ownership and scissor tests; all other per-fragment
+    operations are bypassed.  Finally, each stencil index is written to
+    its indicated location in the framebuffer, subject to the current
+    setting of StencilMask, and if a depth component is present, if the
+    setting of DepthMask is not FALSE, it is also written to the
+    framebuffer; the setting of DepthTest is ignored.
+
+    The error INVALID_OPERATION results if there is no stencil buffer, or
+    if the <format> argument was DEPTH_STENCIL_NV, if there is no depth
+    buffer."
+
+    Add the following paragraph after the second paragraph of the
+    section "Obtaining Pixels from the Framebuffer" (page 158):
+
+    "If the <format> is DEPTH_STENCIL_NV, then values are taken from both
+    the depth buffer and the stencil buffer.  If there is no depth buffer
+    or if there is no stencil buffer, the error INVALID_OPERATION
+    occurs.  If the <type> parameter is not UNSIGNED_INT_24_8_NV, the
+    error INVALID_ENUM occurs."
+
+    Update the third paragraph on page 159 to say:
+
+    "If the GL is in RGBA mode, and <format> is one of RED, GREEN, BLUE,
+    ALPHA, RGB, RGBA, BGR, BGRA, LUMINANCE, or LUMINANCE_ALPHA, then red,
+    green, blue, and alpha values are obtained from the framebuffer
+
+    Update the first sentence of the section "Conversion of RGBA values"
+    (page 159) to say:
+
+    "This step applies only if the GL is in RGBA mode, and then only if
+    <format> is neither STENCIL_INDEX, DEPTH_COMPONENT, nor
+    DEPTH_STENCIL_NV."
+
+    Update the section "Conversion of Depth values" (page 159) to say:
+
+    "This step applies only if <format> is DEPTH_COMPONENT or
+    DEPTH_STENCIL_NV.  Each element taken from the depth buffer is taken
+    to be a fixed-point value in [0,1] with m bits, where m is the number
+    of bits in the depth buffer (see section 2.10.1)."
+
+    Add a row to Table 4.6 (page 160):
+
+      type Parameter         Index Mask
+      ---------------------------------
+      ...                    ...
+      INT                    2^31-1
+      UNSIGNED_INT_24_8_NV   2^8-1
+
+    Add the following paragraph to the end of the section "Final
+    Conversion" (page 160):
+
+    "For a depth/stencil pair, first the depth component is clamped to
+    [0,1].  Then the appropriate conversion formula from Table 4.7 is
+    applied to the depth component, while the index is masked by the
+    value given in Table 4.6 or converted to a GL float data type if the
+    <type> is FLOAT."
+
+    Add a row to Table 4.7 (page 161):
+
+      type Parameter                GL Type  Component Conversion ...
+      ------------------------------------------------------------------
+      ...                           ...      ...
+      UNSIGNED_INT_2_10_10_10_REV   uint     c = (2^N - 1)f
+      UNSIGNED_INT_24_8_NV          uint     c = (2^N - 1)f (depth only)
+
+    Update the second and third paragraphs of section 4.3.3 (page 162) to
+    say:
+
+    "<type> is a symbolic constant that must be one of COLOR, STENCIL,
+    DEPTH, or DEPTH_STENCIL_NV, indicating that the values to be
+    transfered are colors, stencil values, depth values, or depth/stencil
+    pairs, respectively. The first four arguments have the same
+    interpretation as the corresponding arguments to ReadPixels.
+
+    Values are obtained from the framebuffer, converted (if appropriate),
+    then subjected to the pixel transfer operations described in section
+    3.6.5, just as if ReadPixels were called with the corresponding
+    arguments.  If the <type> is STENCIL, DEPTH, or DEPTH_STENCIL_NV,
+    then it is as if the <format> for ReadPixels were STENCIL_INDEX,
+    DEPTH_COMPONENT, or DEPTH_STENCIL_NV, respectively.  If the <type> is
+    COLOR, then if the GL is in RGBA mode, it is as if the <format> were
+    RGBA, while if the GL is in color index mode, it is as if the
+    <format> were COLOR_INDEX."
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    The error INVALID_ENUM is generated if DrawPixels or ReadPixels is
+    called where format is DEPTH_STENCIL_NV and type is not
+    UNSIGNED_INT_24_8_NV.
+
+    The error INVALID_OPERATION is generated if DrawPixels or ReadPixels
+    is called where type is UNSIGNED_INT_24_8_NV and format is not
+    DEPTH_STENCIL_NV.
+
+    The error INVALID_OPERATION is generated if DrawPixels or ReadPixels
+    is called where format is DEPTH_STENCIL_NV and there is not both a
+    depth buffer and a stencil buffer.
+
+    The error INVALID_OPERATION is generated if CopyPixels is called
+    where type is DEPTH_STENCIL_NV and there is not both a depth buffer
+    and a stencil buffer.
+
+New State
+
+    None.
+
+Revision History
+
+    August 22, 2001 - Fixed a small typo in the updates to Section 4.3.3.

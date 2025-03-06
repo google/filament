@@ -3,7 +3,7 @@
 
 using namespace metal;
 
-constant float4 _21 = {};
+constant float4 _44 = {};
 
 struct main0_out
 {
@@ -18,23 +18,23 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]])
 {
     main0_out out = {};
-    float4 _24;
-    _24 = _21;
-    float4 _33;
+    float4 _45;
+    _45 = _44;
+    float4 _46;
     for (;;)
     {
         if (in.counter == 10)
         {
-            _33 = float4(10.0);
+            _46 = float4(10.0);
             break;
         }
         else
         {
-            _33 = float4(30.0);
+            _46 = float4(30.0);
             break;
         }
     }
-    out.FragColor = _33;
+    out.FragColor = _46;
     return out;
 }
 

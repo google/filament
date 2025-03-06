@@ -174,7 +174,7 @@ void FSkinningBuffer::setBones(FEngine& engine, Handle<HwBufferObject> handle,
 }
 
 // This value is limited by ES3.0, ES3.0 only guarantees 2048.
-// When you change this value, you must change MAX_SKINNING_BUFFER_WIDTH at getters.vs
+// When you change this value, you must change MAX_SKINNING_BUFFER_WIDTH at surface_getters.vs
 constexpr size_t MAX_SKINNING_BUFFER_WIDTH = 2048;
 
 static inline size_t getSkinningBufferWidth(size_t const pairCount) noexcept {

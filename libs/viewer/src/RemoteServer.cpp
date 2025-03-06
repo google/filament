@@ -208,8 +208,8 @@ bool MessageReceiver::handleData(CivetServer* server, struct mg_connection* conn
 
 void MessageSender::sendMessage(const char* label, const char* buffer, size_t bufsize) {
     for (auto iter : connections) {
-        mg_websocket_write(iter.first, 0x80, label, strlen(label) + 1);
-        mg_websocket_write(iter.first, 0x80, buffer, bufsize);
+        mg_websocket_write(const_cast<mg_connection *>(iter.first), 0x80, label, strlen(label) + 1);
+        mg_websocket_write(const_cast<mg_connection *>(iter.first), 0x80, buffer, bufsize);
     }
 }
 

@@ -22,9 +22,11 @@
 #include "VulkanDriver.h"
 
 #include "VulkanMemory.h"
-#include "VulkanUtility.h"
 #include "vulkan/memory/ResourcePointer.h"
-#include "spirv/VulkanSpirvUtils.h"
+#include "vulkan/utils/Conversion.h"
+#include "vulkan/utils/Definitions.h"
+#include "vulkan/utils/Image.h"
+#include "vulkan/utils/Spirv.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
@@ -56,10 +58,10 @@ template<typename Bitmask>
 inline void fromStageFlags(backend::ShaderStageFlags stage, descriptor_binding_t binding,
         Bitmask& mask) {
     if ((bool) (stage & ShaderStageFlags::VERTEX)) {
-        mask.set(binding + getVertexStageShift<Bitmask>());
+        mask.set(binding + fvkutils::getVertexStageShift<Bitmask>());
     }
     if ((bool) (stage & ShaderStageFlags::FRAGMENT)) {
-        mask.set(binding + getFragmentStageShift<Bitmask>());
+        mask.set(binding + fvkutils::getFragmentStageShift<Bitmask>());
     }
 }
 
@@ -123,6 +125,15 @@ fvkmemory::resource_ptr<VulkanTexture> initMsaaTexture(
         texture->setSidecar(msTexture);
     }
     return msTexture;
+}
+
+VulkanAttachment createSwapchainAttachment(const fvkmemory::resource_ptr<VulkanTexture> texture) {
+    return VulkanAttachment {
+        .texture = texture,
+        .level = 0,
+        .layerCount = static_cast<uint8_t>(texture ? texture->getPrimaryViewRange().layerCount : 1),
+        .layer = 0,
+    };
 }
 
 } // anonymous namespace
@@ -205,7 +216,7 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
         size_t dataSize = blob.size();
 
         if (!specializationConstants.empty()) {
-            workaroundSpecConstant(blob, specializationConstants, shader);
+            fvkutils::workaroundSpecConstant(blob, specializationConstants, shader);
             data = (uint32_t*) shader.data();
             dataSize = shader.size() * 4;
         }
@@ -271,22 +282,21 @@ void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain
     height = extent.height;
     mProtected = swapchain->isProtected();
 
-    VulkanAttachment color = {};
-    color.texture = swapchain->getCurrentColor();
+    VulkanAttachment color = createSwapchainAttachment(swapchain->getCurrentColor());
     mInfo->attachments = {color};
 
     auto& fbkey = mInfo->fbkey;
     auto& rpkey = mInfo->rpkey;
 
     rpkey.colorFormat[0] = color.getFormat();
+    rpkey.viewCount = color.layerCount;
     fbkey.width = width;
     fbkey.height = height;
     fbkey.color[0] = color.getImageView();
     fbkey.resolve[0] = VK_NULL_HANDLE;
 
     if (swapchain->getDepth()) {
-        VulkanAttachment depth = {};
-        depth.texture = swapchain->getDepth();
+        VulkanAttachment depth = createSwapchainAttachment(swapchain->getDepth());
         mInfo->attachments.push_back(depth);
         mInfo->depthIndex = 1;
 
@@ -313,8 +323,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     // Constrain the sample count according to both kinds of sample count masks obtained from
     // VkPhysicalDeviceProperties. This is consistent with the VulkanTexture constructor.
     auto const& limits = context.getPhysicalDeviceLimits();
-    samples = reduceSampleCount(samples, limits.framebufferDepthSampleCounts &
-            limits.framebufferColorSampleCounts);
+    samples = samples = fvkutils::reduceSampleCount(samples,
+            limits.framebufferDepthSampleCounts & limits.framebufferColorSampleCounts);
 
     auto& rpkey = mInfo->rpkey;
     rpkey.samples = samples;
@@ -497,7 +507,7 @@ VulkanVertexBufferInfo::VulkanVertexBufferInfo(
         Attribute attrib = attributes[attribIndex];
         bool const isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
         bool const isNormalized = attrib.flags & Attribute::FLAG_NORMALIZED;
-        VkFormat vkformat = getVkFormat(attrib.type, isNormalized, isInteger);
+        VkFormat vkformat = fvkutils::getVkFormat(attrib.type, isNormalized, isInteger);
 
         // HACK: Re-use the positions buffer as a dummy buffer for disabled attributes. Filament's
         // vertex shaders declare all attributes as either vec4 or uvec4 (the latter for bone

@@ -1,0 +1,8 @@
+LIBRARY test_layer_export_version_0
+EXPORTS
+    vkEnumerateInstanceLayerProperties
+    vkEnumerateInstanceExtensionProperties
+    vkEnumerateDeviceLayerProperties
+    vkEnumerateDeviceExtensionProperties
+    test_layer_GetInstanceProcAddr
+    test_layer_GetDeviceProcAddr

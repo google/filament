@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglQueryAPI - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglQueryAPI">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglQueryAPI — Query the current rendering API</p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLenum <strong class="fsfunc">eglQueryAPI</strong>(</code>
+              </td>
+              <td><code>void)</code>;</td>
+              <td> </td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglQueryAPI</code> returns the value of the
+            current rendering API for EGL in the thread it is called
+            from. The current rendering API is set by
+            <a class="citerefentry" href="eglBindAPI.xhtml"><span class="citerefentry"><span class="refentrytitle">eglBindAPI</span></span></a>,
+            and affects the behavior of other EGL commands.
+        </p>
+        <p>
+            The value returned will be one of the valid
+            <em class="parameter"><code>api</code></em> parameters to
+            <a class="citerefentry" href="eglBindAPI.xhtml"><span class="citerefentry"><span class="refentrytitle">eglBindAPI</span></span></a>, or
+            <code class="constant">EGL_NONE</code>.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            <code class="function">eglQueryAPI</code> is supported only if the
+            EGL version is 1.2 or greater.
+        </p>
+        <p>
+            The initial value of the current rendering API is
+            <code class="constant">EGL_OPENGL_ES_API</code> unless OpenGL ES is
+            not supported by an implementation, in which case the
+            initial value is <code class="constant">EGL_NONE</code> (however,
+            <code class="constant">EGL_NONE</code> is not a valid
+            <em class="parameter"><code>api</code></em> parameter to
+            <code class="function">eglQueryAPI</code>).
+        </p>
+        <p>
+            The current rendering API can be changed by calling
+            <a class="citerefentry" href="eglBindAPI.xhtml"><span class="citerefentry"><span class="refentrytitle">eglBindAPI</span></span></a>.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            None.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="eglBindAPI.xhtml"><span class="citerefentry"><span class="refentrytitle">eglBindAPI</span></span></a>,
+            <a class="citerefentry" href="eglCreateContext.xhtml"><span class="citerefentry"><span class="refentrytitle">eglCreateContext</span></span></a>,
+            <a class="citerefentry" href="eglGetCurrentContext.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetCurrentContext</span></span></a>,
+            <a class="citerefentry" href="eglGetCurrentDisplay.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetCurrentDisplay</span></span></a>,
+            <a class="citerefentry" href="eglGetCurrentSurface.xhtml"><span class="citerefentry"><span class="refentrytitle">eglGetCurrentSurface</span></span></a>,
+            <a class="citerefentry" href="eglMakeCurrent.xhtml"><span class="citerefentry"><span class="refentrytitle">eglMakeCurrent</span></span></a>,
+            <a class="citerefentry" href="eglWaitClient.xhtml"><span class="citerefentry"><span class="refentrytitle">eglWaitClient</span></span></a>,
+            <a class="citerefentry" href="eglWaitNative.xhtml"><span class="citerefentry"><span class="refentrytitle">eglWaitNative</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

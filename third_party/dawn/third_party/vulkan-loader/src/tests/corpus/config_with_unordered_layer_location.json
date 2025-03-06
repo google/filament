@@ -1,0 +1,40 @@
+{
+    "file_format_version": "1.2.0",
+    "settings_array": [
+        {
+            "app_keys": [
+                "/out/settings_fuzzer",
+                "/work/settings_fuzzer"
+            ],
+            "stderr_log": "/tmp/stderr.log",
+            "log_locations": [
+                {
+                    "destinations":["/tmp"],
+                    "filters":["all"]
+                }
+            ],
+            "layers": [
+                {
+                    "control": "auto",
+                    "name": "test",
+                    "path": "test",
+                    "treat_as_implicit_manifest": true
+                },
+                {
+                    "control": "unordered_layer_location",
+                    "name": "test2",
+                    "path": "test2",
+                    "treat_as_implicit_manifest": true
+                }
+            ]
+        },
+        {
+            "app_keys": [
+                "val1",
+                "val2",
+                "val3",
+                "val4"
+            ]
+        }
+    ]
+}

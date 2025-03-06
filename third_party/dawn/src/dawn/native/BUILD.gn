@@ -1,0 +1,1002 @@
+# Copyright 2020 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("../../../scripts/dawn_overrides_with_defaults.gni")
+
+import("//build_overrides/build.gni")
+import("${dawn_root}/generator/dawn_generator.gni")
+import("${dawn_root}/scripts/dawn_component.gni")
+import("${dawn_root}/scripts/dawn_features.gni")
+
+# The VVLs are an optional dependency, only use it if the path has been set.
+enable_vulkan_validation_layers = dawn_enable_vulkan_validation_layers &&
+                                  dawn_vulkan_validation_layers_dir != ""
+if (enable_vulkan_validation_layers) {
+  import("//build_overrides/vulkan_validation_layers.gni")
+}
+
+# Swiftshader is an optional dependency, only use it if the path has been set.
+use_swiftshader = dawn_use_swiftshader && dawn_swiftshader_dir != ""
+if (use_swiftshader) {
+  assert(dawn_enable_vulkan,
+         "dawn_use_swiftshader requires dawn_enable_vulkan=true")
+  import("${dawn_swiftshader_dir}/src/Vulkan/vulkan.gni")
+}
+
+# The Vulkan loader is an optional dependency, only use it if the path has been
+# set.
+if (dawn_enable_vulkan) {
+  enable_vulkan_loader =
+      dawn_enable_vulkan_loader && dawn_vulkan_loader_dir != ""
+}
+
+group("abseil") {
+  # When building within Chromium or ANGLE we need to include "//third_party/abseil-cpp:absl" while
+  # it's beneficial to be more specific with standalone Dawn, especially when it comes to
+  # including it as a dependency in other projects (such as Skia).
+  if (build_with_chromium || build_with_angle) {
+    public_deps = [ "$dawn_abseil_dir:absl" ]
+  } else {
+    public_deps = [
+      "${dawn_root}/third_party/gn/abseil-cpp:bits",
+      "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_map",
+      "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_set",
+      "${dawn_root}/third_party/gn/abseil-cpp:inlined_vector",
+      "${dawn_root}/third_party/gn/abseil-cpp:str_format",
+      "${dawn_root}/third_party/gn/abseil-cpp:strings",
+    ]
+  }
+}
+
+config("internal") {
+  configs = [
+    "${dawn_root}/src/dawn/common:internal_config",
+    "${dawn_root}/src/tint:tint_public_config",
+  ]
+}
+
+# Config that adds the @executable_path rpath if needed so that Swiftshader or the Vulkan loader are found.
+config("vulkan_rpath") {
+  if (is_apple && dawn_enable_vulkan &&
+      (use_swiftshader || enable_vulkan_loader)) {
+    ldflags = [
+      "-rpath",
+      "@executable_path/",
+    ]
+  }
+}
+
+# Config that adds delayloads when built as a shared library or component,
+# useful as we're linking user32.lib which can't always be loaded in the
+# chromium sandbox under win32k lockdown.
+config("win_delayload") {
+  ldflags = [ "/DELAYLOAD:user32.dll" ]
+}
+
+# Config that adds include directory for vulkan-utility-libraries.
+config("vulkan_utility_libraries_include") {
+  include_dirs = [ "${dawn_vulkan_utility_libraries_dir}/include" ]
+}
+
+dawn_json_generator("utils_gen") {
+  target = "native_utils"
+  outputs = [
+    "src/dawn/native/ChainUtils_autogen.h",
+    "src/dawn/native/ChainUtils_autogen.cpp",
+    "src/dawn/native/Features_autogen.h",
+    "src/dawn/native/Features_autogen.inl",
+    "src/dawn/native/ProcTable.cpp",
+    "src/dawn/native/dawn_platform_autogen.h",
+    "src/dawn/native/wgpu_structs_autogen.h",
+    "src/dawn/native/wgpu_structs_autogen.cpp",
+    "src/dawn/native/ValidationUtils_autogen.h",
+    "src/dawn/native/ValidationUtils_autogen.cpp",
+    "src/dawn/native/webgpu_absl_format_autogen.h",
+    "src/dawn/native/webgpu_absl_format_autogen.cpp",
+    "src/dawn/native/webgpu_StreamImpl_autogen.cpp",
+    "src/dawn/native/ObjectType_autogen.h",
+    "src/dawn/native/ObjectType_autogen.cpp",
+  ]
+}
+
+if (dawn_enable_opengl) {
+  dawn_generator("opengl_loader_gen") {
+    script = "${dawn_root}/generator/opengl_loader_generator.py"
+    args = [
+      "--gl-xml",
+      rebase_path("${dawn_opengl_registry_dir}/xml/gl.xml", root_build_dir),
+      "--supported-extensions",
+      rebase_path("opengl/supported_extensions.json", root_build_dir),
+    ]
+    outputs = [
+      "src/dawn/native/opengl/OpenGLFunctionsBase_autogen.cpp",
+      "src/dawn/native/opengl/OpenGLFunctionsBase_autogen.h",
+      "src/dawn/native/opengl/opengl_platform_autogen.h",
+    ]
+  }
+}
+
+# Public dawn native headers so they can be publicly visible for
+# dependencies of dawn native
+source_set("headers") {
+  public_deps = [ "${dawn_root}/include/dawn:cpp_headers" ]
+  all_dependent_configs = [ "${dawn_root}/include/dawn:public" ]
+  sources = [
+    "${dawn_root}/include/dawn/native/DawnNative.h",
+    "${dawn_root}/include/dawn/native/dawn_native_export.h",
+
+    # Include all backend's public headers so that dependencies can include
+    # them even when the backends are disabled.
+    "${dawn_root}/include/dawn/native/D3D11Backend.h",
+    "${dawn_root}/include/dawn/native/D3D12Backend.h",
+    "${dawn_root}/include/dawn/native/D3DBackend.h",
+    "${dawn_root}/include/dawn/native/MetalBackend.h",
+    "${dawn_root}/include/dawn/native/NullBackend.h",
+    "${dawn_root}/include/dawn/native/OpenGLBackend.h",
+    "${dawn_root}/include/dawn/native/VulkanBackend.h",
+  ]
+}
+
+# The meat of the compilation for dawn native so that we can cheaply have
+# shared_library / static_library versions of it. It compiles all the files
+# except those that define exported symbols.
+source_set("sources") {
+  deps = [
+    ":headers",
+    ":utils_gen",
+    "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/tint/api",
+    "${dawn_root}/src/tint/lang/wgsl/features",
+  ]
+  defines = []
+  libs = []
+  data_deps = []
+
+  configs += [
+    ":internal",
+    "${dawn_root}/src/tint:tint_public_config",
+  ]
+
+  # Enable -Wglobal-constructors here only, instead of in internal_config,
+  # because gtest and some other targets don't build with it.
+  if (is_clang) {
+    cflags = [ "-Wglobal-constructors" ]
+  }
+
+  # Dependencies that are needed to compile dawn native entry points in
+  # FooBackend.cpp need to be public deps so they are propagated to the
+  # dawn native target
+  public_deps = [
+    ":abseil",
+    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
+    "${dawn_root}/src/dawn/platform",
+  ]
+
+  sources = get_target_outputs(":utils_gen")
+  sources += [
+    "Adapter.cpp",
+    "Adapter.h",
+    "ApplyClearColorValueWithDrawHelper.cpp",
+    "ApplyClearColorValueWithDrawHelper.h",
+    "AsyncTask.cpp",
+    "AsyncTask.h",
+    "AttachmentState.cpp",
+    "AttachmentState.h",
+    "BackendConnection.cpp",
+    "BackendConnection.h",
+    "BindGroup.cpp",
+    "BindGroup.h",
+    "BindGroupLayout.cpp",
+    "BindGroupLayout.h",
+    "BindGroupLayoutInternal.cpp",
+    "BindGroupLayoutInternal.h",
+    "BindGroupTracker.h",
+    "BindingInfo.cpp",
+    "BindingInfo.h",
+    "BlitBufferToDepthStencil.cpp",
+    "BlitBufferToDepthStencil.h",
+    "BlitColorToColorWithDraw.cpp",
+    "BlitColorToColorWithDraw.h",
+    "BlitDepthToDepth.cpp",
+    "BlitDepthToDepth.h",
+    "BlitTextureToBuffer.cpp",
+    "BlitTextureToBuffer.h",
+    "Blob.cpp",
+    "Blob.h",
+    "BlobCache.cpp",
+    "BlobCache.h",
+    "BuddyAllocator.cpp",
+    "BuddyAllocator.h",
+    "BuddyMemoryAllocator.cpp",
+    "BuddyMemoryAllocator.h",
+    "Buffer.cpp",
+    "Buffer.h",
+    "CacheKey.cpp",
+    "CacheKey.h",
+    "CacheRequest.cpp",
+    "CacheRequest.h",
+    "CacheResult.h",
+    "CachedObject.cpp",
+    "CachedObject.h",
+    "CallbackTaskManager.cpp",
+    "CallbackTaskManager.h",
+    "ChainUtils.h",
+    "ChainUtilsImpl.inl",
+    "CommandAllocator.cpp",
+    "CommandAllocator.h",
+    "CommandBuffer.cpp",
+    "CommandBuffer.h",
+    "CommandBufferStateTracker.cpp",
+    "CommandBufferStateTracker.h",
+    "CommandEncoder.cpp",
+    "CommandEncoder.h",
+    "CommandValidation.cpp",
+    "CommandValidation.h",
+    "Commands.cpp",
+    "Commands.h",
+    "CompilationMessages.cpp",
+    "CompilationMessages.h",
+    "ComputePassEncoder.cpp",
+    "ComputePassEncoder.h",
+    "ComputePipeline.cpp",
+    "ComputePipeline.h",
+    "CopyTextureForBrowserHelper.cpp",
+    "CopyTextureForBrowserHelper.h",
+    "CreatePipelineAsyncEvent.cpp",
+    "CreatePipelineAsyncEvent.h",
+    "Device.cpp",
+    "Device.h",
+    "DynamicUploader.cpp",
+    "DynamicUploader.h",
+    "EncodingContext.cpp",
+    "EncodingContext.h",
+    "EnumClassBitmasks.h",
+    "EnumMaskIterator.h",
+    "Error.cpp",
+    "Error.h",
+    "ErrorData.cpp",
+    "ErrorData.h",
+    "ErrorInjector.cpp",
+    "ErrorInjector.h",
+    "ErrorScope.cpp",
+    "ErrorScope.h",
+    "ErrorSink.h",
+    "EventManager.cpp",
+    "EventManager.h",
+    "ExecutionQueue.cpp",
+    "ExecutionQueue.h",
+    "ExternalTexture.cpp",
+    "ExternalTexture.h",
+    "Features.cpp",
+    "Features.h",
+    "Format.cpp",
+    "Format.h",
+    "Forward.h",
+    "ImmediateConstantsLayout.h",
+    "ImmediateConstantsTracker.cpp",
+    "ImmediateConstantsTracker.h",
+    "IndirectDrawMetadata.cpp",
+    "IndirectDrawMetadata.h",
+    "IndirectDrawValidationEncoder.cpp",
+    "IndirectDrawValidationEncoder.h",
+    "Instance.cpp",
+    "Instance.h",
+    "IntegerTypes.h",
+    "InternalPipelineStore.cpp",
+    "InternalPipelineStore.h",
+    "Limits.cpp",
+    "Limits.h",
+    "ObjectBase.cpp",
+    "ObjectBase.h",
+    "ObjectContentHasher.cpp",
+    "ObjectContentHasher.h",
+    "PassResourceUsage.cpp",
+    "PassResourceUsage.h",
+    "PassResourceUsageTracker.cpp",
+    "PassResourceUsageTracker.h",
+    "PerStage.cpp",
+    "PerStage.h",
+    "PhysicalDevice.cpp",
+    "PhysicalDevice.h",
+    "Pipeline.cpp",
+    "Pipeline.h",
+    "PipelineCache.cpp",
+    "PipelineCache.h",
+    "PipelineLayout.cpp",
+    "PipelineLayout.h",
+    "PooledResourceMemoryAllocator.cpp",
+    "PooledResourceMemoryAllocator.h",
+    "ProgrammableEncoder.cpp",
+    "ProgrammableEncoder.h",
+    "QueryHelper.cpp",
+    "QueryHelper.h",
+    "QuerySet.cpp",
+    "QuerySet.h",
+    "Queue.cpp",
+    "Queue.h",
+    "RenderBundle.cpp",
+    "RenderBundle.h",
+    "RenderBundleEncoder.cpp",
+    "RenderBundleEncoder.h",
+    "RenderEncoderBase.cpp",
+    "RenderEncoderBase.h",
+    "RenderPassEncoder.cpp",
+    "RenderPassEncoder.h",
+    "RenderPassWorkaroundsHelper.cpp",
+    "RenderPassWorkaroundsHelper.h",
+    "RenderPipeline.cpp",
+    "RenderPipeline.h",
+    "ResourceHeap.h",
+    "ResourceHeapAllocator.h",
+    "ResourceMemoryAllocation.cpp",
+    "ResourceMemoryAllocation.h",
+    "RingBufferAllocator.cpp",
+    "RingBufferAllocator.h",
+    "Sampler.cpp",
+    "Sampler.h",
+    "ScratchBuffer.cpp",
+    "ScratchBuffer.h",
+    "Serializable.h",
+    "ShaderModule.cpp",
+    "ShaderModule.h",
+    "SharedBufferMemory.cpp",
+    "SharedBufferMemory.h",
+    "SharedFence.cpp",
+    "SharedFence.h",
+    "SharedResourceMemory.cpp",
+    "SharedResourceMemory.h",
+    "SharedTextureMemory.cpp",
+    "SharedTextureMemory.h",
+    "Subresource.cpp",
+    "Subresource.h",
+    "SubresourceStorage.h",
+    "Surface.cpp",
+    "Surface.h",
+    "SwapChain.cpp",
+    "SwapChain.h",
+    "SystemEvent.cpp",
+    "SystemEvent.h",
+    "SystemHandle.cpp",
+    "SystemHandle.h",
+    "Texture.cpp",
+    "Texture.h",
+    "TintUtils.cpp",
+    "TintUtils.h",
+    "ToBackend.h",
+    "Toggles.cpp",
+    "Toggles.h",
+    "UsageValidationMode.h",
+    "VisitableMembers.h",
+    "WaitAnySystemEvent.h",
+    "dawn_platform.h",
+    "stream/BlobSource.cpp",
+    "stream/BlobSource.h",
+    "stream/ByteVectorSink.cpp",
+    "stream/ByteVectorSink.h",
+    "stream/Sink.h",
+    "stream/Source.h",
+    "stream/Stream.cpp",
+    "stream/Stream.h",
+    "utils/WGPUHelpers.cpp",
+    "utils/WGPUHelpers.h",
+    "webgpu_absl_format.cpp",
+    "webgpu_absl_format.h",
+  ]
+
+  if (dawn_use_x11) {
+    sources += [
+      "X11Functions.cpp",
+      "X11Functions.h",
+    ]
+  }
+
+  if (is_android) {
+    sources += [
+      "AHBFunctions.cpp",
+      "AHBFunctions.h",
+    ]
+  }
+
+  # Only win32 app needs to link with user32.lib
+  # In UWP, all available APIs are defined in WindowsApp.lib
+  if (is_win && !dawn_is_winuwp) {
+    libs += [
+      "user32.lib",
+      "delayimp.lib",
+    ]
+    public_configs = [ ":win_delayload" ]
+  }
+
+  if (dawn_is_winuwp && is_debug) {
+    # DXGIGetDebugInterface1 is defined in dxgi.lib
+    # But this API is tagged as a development-only capability
+    # which implies that linking to this function will cause
+    # the application to fail Windows store certification
+    # So we only link to it in debug build when compiling for UWP.
+    # In win32 we load dxgi.dll using LoadLibrary
+    # so no need for static linking.
+    libs += [ "dxgi.lib" ]
+  }
+
+  # TODO(dawn:766):
+  # Should link dxcompiler.lib and WinPixEventRuntime_UAP.lib in UWP
+  # Somehow use dxcompiler.lib makes CoreApp unable to activate
+  # WinPIX should be added as third party tools and linked statically
+
+  if (dawn_enable_d3d11 || dawn_enable_d3d12) {
+    sources += [
+      "d3d/BackendD3D.cpp",
+      "d3d/BackendD3D.h",
+      "d3d/BlobD3D.cpp",
+      "d3d/BlobD3D.h",
+      "d3d/D3DCompilationRequest.h",
+      "d3d/D3DError.cpp",
+      "d3d/D3DError.h",
+      "d3d/DeviceD3D.cpp",
+      "d3d/DeviceD3D.h",
+      "d3d/Forward.h",
+      "d3d/KeyedMutex.cpp",
+      "d3d/KeyedMutex.h",
+      "d3d/PhysicalDeviceD3D.cpp",
+      "d3d/PhysicalDeviceD3D.h",
+      "d3d/PlatformFunctions.cpp",
+      "d3d/PlatformFunctions.h",
+      "d3d/QueueD3D.cpp",
+      "d3d/QueueD3D.h",
+      "d3d/ShaderUtils.cpp",
+      "d3d/ShaderUtils.h",
+      "d3d/SharedFenceD3D.cpp",
+      "d3d/SharedFenceD3D.h",
+      "d3d/SharedTextureMemoryD3D.cpp",
+      "d3d/SharedTextureMemoryD3D.h",
+      "d3d/SwapChainD3D.cpp",
+      "d3d/SwapChainD3D.h",
+      "d3d/TextureD3D.cpp",
+      "d3d/TextureD3D.h",
+      "d3d/UtilsD3D.cpp",
+      "d3d/UtilsD3D.h",
+      "d3d/d3d_platform.h",
+    ]
+  }
+
+  if (dawn_enable_d3d11) {
+    libs += [ "dxguid.lib" ]
+    sources += [
+      "d3d11/BackendD3D11.cpp",
+      "d3d11/BackendD3D11.h",
+      "d3d11/BindGroupD3D11.cpp",
+      "d3d11/BindGroupD3D11.h",
+      "d3d11/BindGroupLayoutD3D11.cpp",
+      "d3d11/BindGroupLayoutD3D11.h",
+      "d3d11/BindGroupTrackerD3D11.cpp",
+      "d3d11/BindGroupTrackerD3D11.h",
+      "d3d11/BufferD3D11.cpp",
+      "d3d11/BufferD3D11.h",
+      "d3d11/CommandBufferD3D11.cpp",
+      "d3d11/CommandBufferD3D11.h",
+      "d3d11/CommandRecordingContextD3D11.cpp",
+      "d3d11/CommandRecordingContextD3D11.h",
+      "d3d11/ComputePipelineD3D11.cpp",
+      "d3d11/ComputePipelineD3D11.h",
+      "d3d11/DeviceD3D11.cpp",
+      "d3d11/DeviceD3D11.h",
+      "d3d11/DeviceInfoD3D11.cpp",
+      "d3d11/DeviceInfoD3D11.h",
+      "d3d11/Forward.h",
+      "d3d11/PhysicalDeviceD3D11.cpp",
+      "d3d11/PhysicalDeviceD3D11.h",
+      "d3d11/PipelineLayoutD3D11.cpp",
+      "d3d11/PipelineLayoutD3D11.h",
+      "d3d11/PlatformFunctionsD3D11.cpp",
+      "d3d11/PlatformFunctionsD3D11.h",
+      "d3d11/QuerySetD3D11.cpp",
+      "d3d11/QuerySetD3D11.h",
+      "d3d11/QueueD3D11.cpp",
+      "d3d11/QueueD3D11.h",
+      "d3d11/RenderPipelineD3D11.cpp",
+      "d3d11/RenderPipelineD3D11.h",
+      "d3d11/SamplerD3D11.cpp",
+      "d3d11/SamplerD3D11.h",
+      "d3d11/ShaderModuleD3D11.cpp",
+      "d3d11/ShaderModuleD3D11.h",
+      "d3d11/SharedFenceD3D11.cpp",
+      "d3d11/SharedFenceD3D11.h",
+      "d3d11/SharedTextureMemoryD3D11.cpp",
+      "d3d11/SharedTextureMemoryD3D11.h",
+      "d3d11/SwapChainD3D11.cpp",
+      "d3d11/SwapChainD3D11.h",
+      "d3d11/TextureD3D11.cpp",
+      "d3d11/TextureD3D11.h",
+      "d3d11/UtilsD3D11.cpp",
+      "d3d11/UtilsD3D11.h",
+    ]
+  }
+
+  if (dawn_enable_d3d12) {
+    if (dawn_use_built_dxc) {
+      deps += [ "$dawn_root/third_party/gn/dxc:dxcompiler" ]
+      defines += [ "DAWN_USE_BUILT_DXC" ]
+      data_deps += [ "$dawn_root/third_party/gn/dxc:copy_dxil_dll" ]
+    }
+    libs += [ "dxguid.lib" ]
+    sources += [
+      "d3d12/BackendD3D12.cpp",
+      "d3d12/BackendD3D12.h",
+      "d3d12/BindGroupD3D12.cpp",
+      "d3d12/BindGroupD3D12.h",
+      "d3d12/BindGroupLayoutD3D12.cpp",
+      "d3d12/BindGroupLayoutD3D12.h",
+      "d3d12/BufferD3D12.cpp",
+      "d3d12/BufferD3D12.h",
+      "d3d12/CPUDescriptorHeapAllocationD3D12.cpp",
+      "d3d12/CPUDescriptorHeapAllocationD3D12.h",
+      "d3d12/CommandBufferD3D12.cpp",
+      "d3d12/CommandBufferD3D12.h",
+      "d3d12/CommandRecordingContext.cpp",
+      "d3d12/CommandRecordingContext.h",
+      "d3d12/ComputePipelineD3D12.cpp",
+      "d3d12/ComputePipelineD3D12.h",
+      "d3d12/D3D12Info.cpp",
+      "d3d12/D3D12Info.h",
+      "d3d12/DeviceD3D12.cpp",
+      "d3d12/DeviceD3D12.h",
+      "d3d12/Forward.h",
+      "d3d12/GPUDescriptorHeapAllocationD3D12.cpp",
+      "d3d12/GPUDescriptorHeapAllocationD3D12.h",
+      "d3d12/HeapAllocatorD3D12.cpp",
+      "d3d12/HeapAllocatorD3D12.h",
+      "d3d12/HeapD3D12.cpp",
+      "d3d12/HeapD3D12.h",
+      "d3d12/IntegerTypes.h",
+      "d3d12/PageableD3D12.cpp",
+      "d3d12/PageableD3D12.h",
+      "d3d12/PhysicalDeviceD3D12.cpp",
+      "d3d12/PhysicalDeviceD3D12.h",
+      "d3d12/PipelineLayoutD3D12.cpp",
+      "d3d12/PipelineLayoutD3D12.h",
+      "d3d12/PlatformFunctionsD3D12.cpp",
+      "d3d12/PlatformFunctionsD3D12.h",
+      "d3d12/QuerySetD3D12.cpp",
+      "d3d12/QuerySetD3D12.h",
+      "d3d12/QueueD3D12.cpp",
+      "d3d12/QueueD3D12.h",
+      "d3d12/RenderPassBuilderD3D12.cpp",
+      "d3d12/RenderPassBuilderD3D12.h",
+      "d3d12/RenderPipelineD3D12.cpp",
+      "d3d12/RenderPipelineD3D12.h",
+      "d3d12/ResidencyManagerD3D12.cpp",
+      "d3d12/ResidencyManagerD3D12.h",
+      "d3d12/ResourceAllocatorManagerD3D12.cpp",
+      "d3d12/ResourceAllocatorManagerD3D12.h",
+      "d3d12/ResourceHeapAllocationD3D12.cpp",
+      "d3d12/ResourceHeapAllocationD3D12.h",
+      "d3d12/SamplerD3D12.cpp",
+      "d3d12/SamplerD3D12.h",
+      "d3d12/SamplerHeapCacheD3D12.cpp",
+      "d3d12/SamplerHeapCacheD3D12.h",
+      "d3d12/ShaderModuleD3D12.cpp",
+      "d3d12/ShaderModuleD3D12.h",
+      "d3d12/ShaderVisibleDescriptorAllocatorD3D12.cpp",
+      "d3d12/ShaderVisibleDescriptorAllocatorD3D12.h",
+      "d3d12/SharedBufferMemoryD3D12.cpp",
+      "d3d12/SharedBufferMemoryD3D12.h",
+      "d3d12/SharedFenceD3D12.cpp",
+      "d3d12/SharedFenceD3D12.h",
+      "d3d12/SharedTextureMemoryD3D12.cpp",
+      "d3d12/SharedTextureMemoryD3D12.h",
+      "d3d12/StagingDescriptorAllocatorD3D12.cpp",
+      "d3d12/StagingDescriptorAllocatorD3D12.h",
+      "d3d12/StreamImplD3D12.cpp",
+      "d3d12/SwapChainD3D12.cpp",
+      "d3d12/SwapChainD3D12.h",
+      "d3d12/TextureCopySplitter.cpp",
+      "d3d12/TextureCopySplitter.h",
+      "d3d12/TextureD3D12.cpp",
+      "d3d12/TextureD3D12.h",
+      "d3d12/UtilsD3D12.cpp",
+      "d3d12/UtilsD3D12.h",
+      "d3d12/d3d12_platform.h",
+    ]
+  }
+
+  if (dawn_enable_metal) {
+    frameworks = [
+      "IOKit.framework",
+      "IOSurface.framework",
+      "Metal.framework",
+      "QuartzCore.framework",
+    ]
+    if (is_mac) {
+      frameworks += [ "Cocoa.framework" ]
+    }
+    sources += [
+      "Surface_metal.mm",
+      "metal/BackendMTL.h",
+      "metal/BackendMTL.mm",
+      "metal/BindGroupLayoutMTL.h",
+      "metal/BindGroupLayoutMTL.mm",
+      "metal/BindGroupMTL.h",
+      "metal/BindGroupMTL.mm",
+      "metal/BufferMTL.h",
+      "metal/BufferMTL.mm",
+      "metal/CommandBufferMTL.h",
+      "metal/CommandBufferMTL.mm",
+      "metal/CommandRecordingContext.h",
+      "metal/CommandRecordingContext.mm",
+      "metal/ComputePipelineMTL.h",
+      "metal/ComputePipelineMTL.mm",
+      "metal/DeviceMTL.h",
+      "metal/DeviceMTL.mm",
+      "metal/Forward.h",
+      "metal/MultiDrawEncoder.h",
+      "metal/MultiDrawEncoder.mm",
+      "metal/PhysicalDeviceMTL.h",
+      "metal/PhysicalDeviceMTL.mm",
+      "metal/PipelineLayoutMTL.h",
+      "metal/PipelineLayoutMTL.mm",
+      "metal/QuerySetMTL.h",
+      "metal/QuerySetMTL.mm",
+      "metal/QueueMTL.h",
+      "metal/QueueMTL.mm",
+      "metal/RenderPipelineMTL.h",
+      "metal/RenderPipelineMTL.mm",
+      "metal/SamplerMTL.h",
+      "metal/SamplerMTL.mm",
+      "metal/ShaderModuleMTL.h",
+      "metal/ShaderModuleMTL.mm",
+      "metal/SharedFenceMTL.h",
+      "metal/SharedFenceMTL.mm",
+      "metal/SharedTextureMemoryMTL.h",
+      "metal/SharedTextureMemoryMTL.mm",
+      "metal/SwapChainMTL.h",
+      "metal/SwapChainMTL.mm",
+      "metal/TextureMTL.h",
+      "metal/TextureMTL.mm",
+      "metal/UtilsMetal.h",
+      "metal/UtilsMetal.mm",
+    ]
+
+    # If a "build with ARC" config is present, remove it.
+    if (filter_include(configs, [ "//build/config/compiler:enable_arc" ]) !=
+        []) {
+      configs -= [ "//build/config/compiler:enable_arc" ]
+    }
+  }
+
+  if (dawn_enable_null) {
+    sources += [
+      "null/DeviceNull.cpp",
+      "null/DeviceNull.h",
+    ]
+  }
+
+  if ((dawn_enable_opengl || dawn_enable_vulkan) &&
+      dawn_enable_spirv_validation) {
+    sources += [
+      "SpirvValidation.cpp",
+      "SpirvValidation.h",
+    ]
+    deps += [
+      "${dawn_spirv_tools_dir}:spvtools_opt",
+      "${dawn_spirv_tools_dir}:spvtools_val",
+    ]
+  }
+
+  if (dawn_enable_opengl) {
+    public_deps += [
+      ":opengl_loader_gen",
+      "${dawn_root}/src/tint/api/common:common",
+      "${dawn_root}/third_party/khronos:khronos_platform",
+    ]
+    sources += get_target_outputs(":opengl_loader_gen")
+    sources += [
+      "opengl/BackendGL.cpp",
+      "opengl/BackendGL.h",
+      "opengl/BindGroupGL.cpp",
+      "opengl/BindGroupGL.h",
+      "opengl/BindGroupLayoutGL.cpp",
+      "opengl/BindGroupLayoutGL.h",
+      "opengl/BindingPoint.h",
+      "opengl/BufferGL.cpp",
+      "opengl/BufferGL.h",
+      "opengl/CommandBufferGL.cpp",
+      "opengl/CommandBufferGL.h",
+      "opengl/ComputePipelineGL.cpp",
+      "opengl/ComputePipelineGL.h",
+      "opengl/ContextEGL.cpp",
+      "opengl/ContextEGL.h",
+      "opengl/DeviceGL.cpp",
+      "opengl/DeviceGL.h",
+      "opengl/DisplayEGL.cpp",
+      "opengl/DisplayEGL.h",
+      "opengl/EGLFunctions.cpp",
+      "opengl/EGLFunctions.h",
+      "opengl/Forward.h",
+      "opengl/GLFormat.cpp",
+      "opengl/GLFormat.h",
+      "opengl/OpenGLFunctions.cpp",
+      "opengl/OpenGLFunctions.h",
+      "opengl/OpenGLVersion.cpp",
+      "opengl/OpenGLVersion.h",
+      "opengl/PersistentPipelineStateGL.cpp",
+      "opengl/PersistentPipelineStateGL.h",
+      "opengl/PhysicalDeviceGL.cpp",
+      "opengl/PhysicalDeviceGL.h",
+      "opengl/PipelineGL.cpp",
+      "opengl/PipelineGL.h",
+      "opengl/PipelineLayoutGL.cpp",
+      "opengl/PipelineLayoutGL.h",
+      "opengl/QuerySetGL.cpp",
+      "opengl/QuerySetGL.h",
+      "opengl/QueueGL.cpp",
+      "opengl/QueueGL.h",
+      "opengl/RenderPipelineGL.cpp",
+      "opengl/RenderPipelineGL.h",
+      "opengl/SamplerGL.cpp",
+      "opengl/SamplerGL.h",
+      "opengl/ShaderModuleGL.cpp",
+      "opengl/ShaderModuleGL.h",
+      "opengl/SharedFenceEGL.cpp",
+      "opengl/SharedFenceEGL.h",
+      "opengl/SharedFenceGL.cpp",
+      "opengl/SharedFenceGL.h",
+      "opengl/SharedTextureMemoryEGL.cpp",
+      "opengl/SharedTextureMemoryEGL.h",
+      "opengl/SharedTextureMemoryGL.cpp",
+      "opengl/SharedTextureMemoryGL.h",
+      "opengl/SwapChainEGL.cpp",
+      "opengl/SwapChainEGL.h",
+      "opengl/TextureGL.cpp",
+      "opengl/TextureGL.h",
+      "opengl/UtilsEGL.cpp",
+      "opengl/UtilsEGL.h",
+      "opengl/UtilsGL.cpp",
+      "opengl/UtilsGL.h",
+      "opengl/opengl_platform.h",
+    ]
+    include_dirs = [ "//third_party/khronos" ]
+  }
+
+  if (dawn_enable_vulkan) {
+    configs += [ ":vulkan_utility_libraries_include" ]
+    public_deps += [ "${dawn_vulkan_headers_dir}:vulkan_headers" ]
+    sources += [
+      "vulkan/BackendVk.cpp",
+      "vulkan/BackendVk.h",
+      "vulkan/BindGroupLayoutVk.cpp",
+      "vulkan/BindGroupLayoutVk.h",
+      "vulkan/BindGroupVk.cpp",
+      "vulkan/BindGroupVk.h",
+      "vulkan/BufferVk.cpp",
+      "vulkan/BufferVk.h",
+      "vulkan/CommandBufferVk.cpp",
+      "vulkan/CommandBufferVk.h",
+      "vulkan/CommandRecordingContextVk.cpp",
+      "vulkan/CommandRecordingContextVk.h",
+      "vulkan/ComputePipelineVk.cpp",
+      "vulkan/ComputePipelineVk.h",
+      "vulkan/DescriptorSetAllocation.h",
+      "vulkan/DescriptorSetAllocator.cpp",
+      "vulkan/DescriptorSetAllocator.h",
+      "vulkan/DeviceVk.cpp",
+      "vulkan/DeviceVk.h",
+      "vulkan/ExternalHandle.h",
+      "vulkan/FencedDeleter.cpp",
+      "vulkan/FencedDeleter.h",
+      "vulkan/Forward.h",
+      "vulkan/PhysicalDeviceVk.cpp",
+      "vulkan/PhysicalDeviceVk.h",
+      "vulkan/PipelineCacheVk.cpp",
+      "vulkan/PipelineCacheVk.h",
+      "vulkan/PipelineLayoutVk.cpp",
+      "vulkan/PipelineLayoutVk.h",
+      "vulkan/PipelineVk.cpp",
+      "vulkan/PipelineVk.h",
+      "vulkan/QuerySetVk.cpp",
+      "vulkan/QuerySetVk.h",
+      "vulkan/QueueVk.cpp",
+      "vulkan/QueueVk.h",
+      "vulkan/RefCountedVkHandle.h",
+      "vulkan/RenderPassCache.cpp",
+      "vulkan/RenderPassCache.h",
+      "vulkan/RenderPipelineVk.cpp",
+      "vulkan/RenderPipelineVk.h",
+      "vulkan/ResolveTextureLoadingUtilsVk.cpp",
+      "vulkan/ResolveTextureLoadingUtilsVk.h",
+      "vulkan/ResourceHeapVk.cpp",
+      "vulkan/ResourceHeapVk.h",
+      "vulkan/ResourceMemoryAllocatorVk.cpp",
+      "vulkan/ResourceMemoryAllocatorVk.h",
+      "vulkan/SamplerVk.cpp",
+      "vulkan/SamplerVk.h",
+      "vulkan/ShaderModuleVk.cpp",
+      "vulkan/ShaderModuleVk.h",
+      "vulkan/SharedFenceVk.cpp",
+      "vulkan/SharedFenceVk.h",
+      "vulkan/SharedTextureMemoryVk.cpp",
+      "vulkan/SharedTextureMemoryVk.h",
+      "vulkan/StreamImplVk.cpp",
+      "vulkan/SwapChainVk.cpp",
+      "vulkan/SwapChainVk.h",
+      "vulkan/TextureVk.cpp",
+      "vulkan/TextureVk.h",
+      "vulkan/UniqueVkHandle.h",
+      "vulkan/UtilsVulkan.cpp",
+      "vulkan/UtilsVulkan.h",
+      "vulkan/VulkanError.cpp",
+      "vulkan/VulkanError.h",
+      "vulkan/VulkanExtensions.cpp",
+      "vulkan/VulkanExtensions.h",
+      "vulkan/VulkanFunctions.cpp",
+      "vulkan/VulkanFunctions.h",
+      "vulkan/VulkanInfo.cpp",
+      "vulkan/VulkanInfo.h",
+      "vulkan/external_memory/MemoryImportParams.h",
+      "vulkan/external_memory/MemoryService.cpp",
+      "vulkan/external_memory/MemoryService.h",
+      "vulkan/external_memory/MemoryServiceImplementation.cpp",
+      "vulkan/external_memory/MemoryServiceImplementation.h",
+      "vulkan/external_semaphore/SemaphoreService.cpp",
+      "vulkan/external_semaphore/SemaphoreService.h",
+      "vulkan/external_semaphore/SemaphoreServiceImplementation.cpp",
+      "vulkan/external_semaphore/SemaphoreServiceImplementation.h",
+    ]
+
+    if (is_android || is_linux || is_chromeos) {
+      sources += [
+        "vulkan/external_semaphore/SemaphoreServiceImplementationFD.cpp",
+        "vulkan/external_semaphore/SemaphoreServiceImplementationFD.h",
+      ]
+      if (is_android) {
+        sources += [
+          "vulkan/external_memory/MemoryServiceImplementationAHardwareBuffer.cpp",
+          "vulkan/external_memory/MemoryServiceImplementationAHardwareBuffer.h",
+        ]
+      } else if (is_linux || is_chromeos) {
+        sources += [
+          "vulkan/external_memory/MemoryServiceImplementationDmaBuf.cpp",
+          "vulkan/external_memory/MemoryServiceImplementationDmaBuf.h",
+          "vulkan/external_memory/MemoryServiceImplementationOpaqueFD.cpp",
+          "vulkan/external_memory/MemoryServiceImplementationOpaqueFD.h",
+        ]
+      }
+    } else if (is_fuchsia) {
+      sources += [
+        "vulkan/external_memory/MemoryServiceImplementationZirconHandle.cpp",
+        "vulkan/external_memory/MemoryServiceImplementationZirconHandle.h",
+        "vulkan/external_semaphore/SemaphoreServiceImplementationZirconHandle.cpp",
+        "vulkan/external_semaphore/SemaphoreServiceImplementationZirconHandle.h",
+      ]
+    }
+    if (dawn_is_winuwp) {
+      defines += [ "DAWN_IS_WINUWP" ]
+    }
+    if (enable_vulkan_validation_layers) {
+      defines += [
+        "DAWN_ENABLE_VULKAN_VALIDATION_LAYERS",
+        "DAWN_VK_DATA_DIR=\"$vulkan_data_subdir\"",
+      ]
+    }
+    if (enable_vulkan_loader) {
+      data_deps += [ "${dawn_vulkan_loader_dir}:libvulkan" ]
+    }
+    if (use_swiftshader) {
+      data_deps +=
+          [ "${dawn_swiftshader_dir}/src/Vulkan:swiftshader_libvulkan" ]
+      defines += [ "DAWN_ENABLE_SWIFTSHADER" ]
+    }
+    if (dawn_enable_spirv_validation) {
+      defines += [ "DAWN_ENABLE_SPIRV_VALIDATION" ]
+    }
+  }
+}
+
+# The static and shared libraries for dawn_native. Most of the files are
+# already compiled in dawn_native_sources, but we still need to compile
+# files defining exported symbols.
+dawn_component("native") {
+  DEFINE_PREFIX = "DAWN_NATIVE"
+
+  #Make headers publicly visible
+  public_deps = [ ":headers" ]
+
+  deps = [
+    ":sources",
+    "${dawn_root}/src/dawn/common",
+  ]
+  sources = [ "DawnNative.cpp" ]
+  configs = [ ":internal" ]
+  public_configs = [ ":vulkan_rpath" ]
+
+  if (dawn_enable_d3d11 || dawn_enable_d3d12) {
+    sources += [ "d3d/D3DBackend.cpp" ]
+  }
+  if (dawn_enable_d3d11) {
+    sources += [ "d3d11/D3D11Backend.cpp" ]
+  }
+  if (dawn_enable_d3d12) {
+    sources += [ "d3d12/D3D12Backend.cpp" ]
+  }
+  if (dawn_enable_metal) {
+    sources += [ "metal/MetalBackend.mm" ]
+  }
+  if (dawn_enable_null) {
+    sources += [ "null/NullBackend.cpp" ]
+  }
+  if (dawn_enable_opengl) {
+    sources += [ "opengl/OpenGLBackend.cpp" ]
+  }
+  if (dawn_enable_vulkan) {
+    sources += [ "vulkan/VulkanBackend.cpp" ]
+
+    if (enable_vulkan_validation_layers) {
+      data_deps =
+          [ "${dawn_vulkan_validation_layers_dir}:vulkan_validation_layers" ]
+      if (!is_android) {
+        data_deps +=
+            [ "${dawn_vulkan_validation_layers_dir}:vulkan_gen_json_files" ]
+      }
+    }
+  }
+}
+
+dawn_json_generator("webgpu_dawn_native_proc_gen") {
+  target = "webgpu_dawn_native_proc"
+  outputs = [ "src/dawn/native/webgpu_dawn_native_proc.cpp" ]
+}
+
+source_set("webgpu_dawn_native_proc_sources") {
+  sources = get_target_outputs(":webgpu_dawn_native_proc_gen")
+  deps = [
+    ":headers",
+    ":webgpu_dawn_native_proc_gen",
+  ]
+}
+
+dawn_component("webgpu_dawn") {
+  # For a single library - build `webgpu_dawn_shared` with GN args:
+  #   dawn_complete_static_libs = true - to package a single lib
+  #
+  #   is_debug = false
+  #    - setting this to true makes library over 50Mb
+  #
+  #   use_custom_libcxx = false
+  #    - Otherwise, libc++ symbols may conflict if the
+  #      library is used outside of Chromium.
+  #
+  #   dawn_use_swiftshader = false
+  #   angle_enable_swiftshader = false
+  #    - SwiftShader can't be built without use_custom_libcxx.
+  #      It should be built separately.
+  DEFINE_PREFIX = "WGPU"
+  output_name = "webgpu_dawn"
+
+  deps = [
+    ":static",
+    ":webgpu_dawn_native_proc_sources",
+  ]
+}

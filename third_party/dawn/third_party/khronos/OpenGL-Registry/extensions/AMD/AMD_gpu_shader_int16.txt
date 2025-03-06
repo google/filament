@@ -1,0 +1,700 @@
+Name
+
+    AMD_gpu_shader_int16
+
+Name Strings
+
+    GL_AMD_gpu_shader_int16
+
+Contact
+
+    Dominik Witczak, AMD (dominik.witczak 'at' amd.com)
+
+Contributors
+
+    Daniel Rakos, AMD
+    Matthaeus G. Chajdas, AMD
+    Quentin Lin, AMD
+    Rex Xu, AMD
+    Timothy Lottes, AMD
+    Zhi Cai, AMD
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         03/28/2018
+    Author Revision:            #2
+
+Number
+
+    OpenGL Extension #507
+
+Dependencies
+
+    This extension is written against version 4.50 of the OpenGL Shading
+    Language Specification.
+
+    GLSL 4.00 is required.
+
+    This extension interacts with AMD_gpu_shader_half_float.
+    This extension interacts with ARB_gpu_shader_int64.
+    This extension interacts with KHR_vulkan_glsl.
+
+Overview
+
+    This extension was developed to allow implementations supporting 16-bit
+    integers to expose the feature in GLSL.
+
+    The extension introduces the following features for all shader types:
+
+      * new built-in functions to pack and unpack 32-bit integer types into a
+        two-component 16-bit integer vector;
+
+      * new built-in functions to convert half-precision floating-point
+        values to or from their 16-bit integer bit encodings;
+
+      * vector relational functions supporting comparisons of vectors of
+        16-bit integer types; and
+
+      * common functions abs, frexp, ldexp, sign, min, max, clamp, and mix
+        supporting arguments of 16-bit integer types.
+
+
+New Procedures and Functions
+
+    NONE
+
+
+New Tokens
+
+    NONE
+
+
+Modifications to the OpenGL Shading Language Specification, Version 4.50
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_AMD_gpu_shader_int16 : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_AMD_gpu_shader_int16       1
+
+
+Additions to Chapter 3 of the OpenGL Shading Language Specification (Basics)
+
+    Modify Section 3.6, Keywords
+
+    (add the following to the list of reserved keywords at p. 18)
+
+    int16_t  i16vec2  i16vec3  i16vec4  uint16_t  u16vec2  u16vec3  u16vec4
+
+
+Additions to Chapter 4 of the OpenGL Shading Language Specification
+(Variables and Types)
+
+    Modify Section 4.1, Basic Types
+
+    (add to the basic "Transparent Types" table, p. 19)
+
+    +-----------+------------------------------------------------------------+
+    | Type      | Meaning                                                    |
+    +-----------+------------------------------------------------------------+
+    | int16_t   | a 16-bit signed integer                                    |
+    | uint16_t  | a 16-bit unsigned integer                                  |
+    | i16vec2   | a two-component 16-bit signed integer vector               |
+    | i16vec3   | a three-component 16-bit signed integer vector             |
+    | i16vec4   | a four-component 16-bit signed integer vector              |
+    | u16vec2   | a two-component 16-bit unsigned integer vector             |
+    | u16vec3   | a three-component 16-bit unsigned integer vector           |
+    | u16vec4   | a four-component 16-bit unsigned integer vector            |
+    +-----------+------------------------------------------------------------+
+
+
+    Modify Section 4.1.3, Integers
+
+    (replace first paragraph of the section, p. 26)
+
+    Signed and unsigned integer variables are fully supported. In this
+    document, the term integer is meant to generally include both signed and
+    unsigned integers, including both 16-bit and 32-bit integers. Unsigned
+    integers of type uint16_t, u16vec2, u16vec3, and u16vec4 have exactly 16 bits
+    of precision, while unsigned integers of type uint, uvec2, uvec3, and
+    uvec4 have exactly 32 bits of precision. Signed integers of type int16_t,
+    i16vec2, i16vec3, and i16vec4 have exactly 16 bits of precision, while signed
+    integers of type int, ivec2, ivec3, and ivec4 have exactly 32 bits of precision.
+    Addition, subtraction, and shift operations resulting in overflow or underflow
+    will not cause any exceptions, nor will they saturate, rather they will "wrap"
+    to yield the low-order bits of the result. Divison and multiplication operations
+    resulting in overflow or underflow will not cause any exception but will result in
+    an undefined value.
+
+    Change "integer-suffix" definition:
+
+     "integer-suffix:
+         unsigned-suffix short-suffixopt
+         short-suffix
+
+      unsigned-suffix: one of
+          u U
+      short-suffix: one of
+          s S
+
+    Modify the next paragraph to say:
+     "No white space is allowed between the digits of an integer constant,
+     including after the leading 0 or after the leading 0x or 0X of a constant,
+     or before the integer-suffix. When tokenizing, the maximal token matching
+     the above will be recognized before a new token is started.
+     When the suffix is present, the literal type is determined as follows:
+     -------------------------------------
+     | suffix           | type           |
+     -------------------------------------
+     | no suffix        | int            |
+     | u or U           | uint           |
+     | s or S           | int16_t        |
+     | both u/U and s/S | uint16_t       |
+     -------------------------------------
+     A leading unary minus sign (-) is interpreted as an arithmetic
+     unary negation, not as part of the constant. Hence, literals themselves
+     are always expressed with non-negative syntax, though they could result
+     in a negative value."
+
+     Modify subsection 4.1.10 Implicit Conversions to say:
+     "In some situations, an expression and its type will be implicitly
+      converted to a different type. Such conversion are classified into the
+      following types: integral promotions, floating-point promotions,
+      integral conversions, floating-point conversions, and
+      floating-integral conversions.
+
+      The following table shows allowed integral promotions:
+      --------------------------------------------------------
+      | Type of    |     Can be implicitly promoted to       |
+      | expression |                                         |
+      --------------------------------------------------------
+      | int16_t    | int, int64_t, uint16_t                  |
+      | uint16_t   | uint, uint64_t                          |
+      --------------------------------------------------------
+      | i16vec2    | ivec2, i64vec2, u64vec2                 |
+      | u16vec2    | uvec2, u64vec2                          |
+      --------------------------------------------------------
+      | i16vec3    | ivec3, i64vec3, u64vec3                 |
+      | u16vec3    | uvec3, u64vec3                          |
+      --------------------------------------------------------
+      | i16vec4    | ivec4, i64vec4, u64vec4                 |
+      | u16vec4    | uvec4, u64vec4                          |
+      --------------------------------------------------------
+
+       The following table shows allowed integral conversions:
+      -------------------------------------------------------------------------
+      | Type of    |     Can be implicitly converted to                       |
+      | expression |                                                          |
+      -------------------------------------------------------------------------
+      | int16_t    | uint16_t, uint, uint64_t                                 |
+      | i16vec2    | u16vec2, uvec2, u64vec2                                  |
+      | i16vec3    | u16vec3, uvec3, u64vec3                                  |
+      | i16vec4    | u16vec4, uvec4, u64vec4                                  |
+      | uint16_t   | uint, uint64_t                                           |
+      | u16vec2    | uvec2, u64vec2                                           |
+      | u16vec3    | uvec3, u64vec3                                           |
+      | u16vec4    | uvec4, u64vec4                                           |
+      | int        | uint, uint64_t                                           |
+      -------------------------------------------------------------------------
+
+      The following table shows allowed floating-integral conversions:
+      --------------------------------------------------------
+      | Type of    |     Can be implicitly converted to      |
+      | expression |                                         |
+      --------------------------------------------------------
+      | int16_t    | double, float16_t, float                |
+      | i16vec2    | dvec2, f16vec2, vec2                    |
+      | i16vec3    | dvec3, f16vec3, vec3                    |
+      | i16vec4    | dvec4, f16vec4, vec4                    |
+      | uint16_t   | double, float16_t, float                |
+      | u16vec2    | dvec2, f16vec2, vec2                    |
+      | u16vec3    | dvec3, f16vec3, vec3                    |
+      | u16vec4    | dvec4, f16vec4, vec4                    |
+      | int        | float                                   |
+      | ivec2      | vec2                                    |
+      | ivec3      | vec3                                    |
+      | ivec4      | vec4                                    |
+      | uint       | float                                   |
+      | uvec2      | vec2                                    |
+      | uvec3      | vec3                                    |
+      | uvec4      | vec4                                    |
+      --------------------------------------------------------
+
+      When performing implicit conversion for binary operators, there may be
+      multiple data types to which the two operands can be converted. For
+      example, when adding an int32_t value to a uint32_t value, both values
+      can be implicitly converted to uint32_t, float32_t, and double. In such
+      cases conversion happens as defined as follows:
+      (Note: In this paragraph vector and matrix types are referred to as
+      types derived from scalar types with the same bit width and bit
+      interpretation)
+        - If either operand has type double or derived from double,
+          the other shall be converted to double or derived type.
+        - Otherwise, if either operand has type float32_t or derived from
+          float32_t, the other shall be converted to float32_t or derived type.
+        - Otherwise, if either operand has type float16_t or derived from
+          float16_t, the other shall be converted to float16_t or derived type.
+        - Otherwise, the integral promotions shall be performed on both
+          operands. Then the following rules shall be applied to the promoted
+          operands:
+           - If both operands have the same type, no further conversion
+             is needed.
+           - Otherwise, if both operands have signed integer types or both
+             have unsigned integer types, the operand with the type of lesser
+             integer conversion rank shall be converted to the type of the
+             operand with greater rank.
+           - Otherwise, if the operand that has unsigned integer type has rank
+             greater than or equal to the rank of the type of the other
+             operand, the operand with signed integer type shall be converted
+             to the type of the operand with unsigned integer type.
+           - Otherwise, if the type of the operand with signed integer type can
+             represent all of the values of the type of the operand with
+             unsigned integer type, the operand with unsigned integer type
+             shall be converted to the type of the operand with signed
+             integer type.
+           - Otherwise, both operands shall be converted to the unsigned
+             integer type corresponding to the type of the operand with signed
+             integer type.
+
+      The conversions listed in the following subsections are done only as
+      indicated by other sections of this specification.
+
+      Every integer type has an integer conversion rank defined as follows:
+       - No two signed integer types have the same rank.
+       - The rank of a scalar signed integer type shall be greater than the rank
+         of any scalar signed integer type with a smaller size.
+       - The rank of any vector signed integer type is equal to the rank of the
+         base scalar signed integer type.
+       - The rank of int64_t shall be greater than the rank of int32_t, which
+         shall be greater than the rank of int16_t.
+       - The rank of any scalar unsigned integer type shall equal the rank of
+         the corresponding scalar signed integer type.
+       - The rank of any vector unsigned integer type is equal to the rank of
+         the respective scalar unsigned integer type.
+
+Additions to Chapter 5 of the OpenGL Shading Language Specification
+(Operators and Expressions)
+
+    Modify Section 5.4.1, Conversion and Scalar Constructors
+
+    (add after first list of constructor examples on p. 97)
+
+    bool(int16_t)       // converts a 16-bit signed integer value to a Boolean
+                        // value.
+    bool(uint16_t)      // converts a 16-bit unsigned integer value to a Boolean
+                        // value.
+    double(int16_t)     // converts a 16-bit signed integer value to a double
+                        // value.
+    double(uint16_t)    // converts a 16-bit unsigned integer value to a double
+                        // value.
+    float(int16_t)      // converts a 16-bit signed integer value to a float
+                        // value.
+    float(uint16_t)     // converts a 16-bit unsigned integer value to a float
+                        // value.
+    float16_t(int16_t)  // converts a 16-bit signed integer value to a 16-bit
+                        // float value.
+    float16_t(uint16_t) // converts a 16-bit unsigned integer value to a 16-bit
+                        // float value.
+    int16_t(bool)       // converts a Boolean value to a 16-bit signed integer
+                        // value.
+    int16_t(double)     // converts a double value to a 16-bit signed integer
+                        // value.
+    int16_t(float)      // converts a float value to a 16-bit signed integer
+                        // value.
+    int16_t(float16_t)  // converts a 16-bit float value to a 16-bit signed
+                        // integer value.
+    int16_t(int64_t)    // converts a 64-bit signed integer value to a 16-bit
+                        // signed integer value.
+    int16_t(int)        // converts a signed integer value to a 16-bit signed
+                        // integer value.
+    int16_t(uint)       // converts an unsigned integer value to a 16-bit signed
+                        // integer value.
+    int16_t(uint16_t)   // converts a 16-bit unsigned integer value to a 16-bit
+                        // signed integer value.
+    int16_t(uint64_t)   // converts a 64-bit unsigned integer value to a 16-bit
+                        // signed integer value.
+    int(int16_t)        // converts a 16-bit signed integer value to a signed
+                        // integer value.
+    int(uint16_t)       // converts a 16-bit unsigned integer value to a signed
+                        // integer value.
+    int64_t(int16_t)    // converts a 16-bit signed integer value to a 64-bit
+                        // signed integer value.
+    int64_t(uint16_t)   // converts a 16-bit unsigned integer value to a 64-bit
+                        // signed integer value.
+    uint16_t(bool)      // converts a Boolean value to a 16-bit unsigned integer
+                        // value.
+    uint16_t(double)    // converts a double value to a 16-bit unsigned integer
+                        // value.
+    uint16_t(float)     // converts a float value to a 16-bit unsigned integer
+                        // value.
+    uint16_t(float16_t) // converts a 16-bit float value to a 16-bit unsigned
+                        // integer value.
+    uint16_t(int)       // converts a signed integer value to a 16-bit unsigned
+                        // integer value.
+    uint16_t(int16_t)   // converts a 16-bit signed integer value to a 16-bit
+                        // unsigned integer value.
+    uint16_t(uint)      // converts an unsigned integer value to a 16-bit unsigned
+                        // integer value.
+    uint16_t(int64_t)   // converts a 64-bit signed integer value to a 16-bit
+                        // unsigned integer value.
+    uint16_t(uint64_t)  // converts a 64-bit unsigned integer value to a 16-bit
+                        // unsigned integer value.
+    uint(int16_t)       // converts a 16-bit signed integer value to an unsigned
+                        // integer value.
+    uint(uint16_t)      // converts a 16-bit unsigned integer value to an unsigned
+                        // integer value.
+    uint64_t(int16_t)   // converts a 16-bit signed integer value to a 64-bit
+                        // unsigned integer value.
+    uint64_t(uint16_t)  // converts a 16-bit unsigned integer value to a 64-bit
+                        // unsigned integer value.
+
+   (modify second sentence of first paragraph on p. 98)
+
+    ... is dropped. It is undefined to convert a negative floating-point value
+    to an uint or uint16_t.
+
+    (replace third paragraph on p. 98)
+
+    The constructors int(uint) and int16_t(uint16_t) preserve the bit pattern
+    in the argument, which will change the argument's value if its sign bit is
+    set. The constructor uint(int) and uint16_t(int16_t) preserve the bit
+    pattern in the argument, which will change its value if it is negative.
+
+
+Additions to Chapter 6 of the OpenGL Shading Language Specification
+(Statements and Structure)
+
+    Modify Section 6.1, Function Defintions
+
+    (replace second rule in third paragraph on p. 113)
+
+      2. A match involving a conversion from a signed integer, unsigned
+         integer, or floating-point type to a similar type having a larger
+         number of bits is better than a match involving any other implicit
+         conversion.
+
+
+Additions to Chapter 8 of the OpenGL Shading Language Specification
+(Built-in Functions)
+
+    (insert after third sentence of last paragraph on p. 132)
+
+    ... genUType is used as the argument. Where the input arguments (and
+    corresponding output) can be int16_t, i16vec2, i16vec3, i16vec4,
+    genI16Type is used as the argument. Where the input arguments (and
+    corresponding output) can be uint16_t, u16vec2, u16vec3, u16vec4,
+    genU16Type is used as the argument.
+
+
+    Modify Section 8.3, Common Functions
+
+    (add to the table of common functions on p. 136)
+
+    +-------------------------------------------------+----------------------------------------------------+
+    | Syntax                                          | Desciption                                         |
+    +-------------------------------------------------+----------------------------------------------------+
+    | genI16Type abs(genI16Type x)                    | Returns x if x >= 0; otherwise it returns -x.      |
+    +-------------------------------------------------+----------------------------------------------------+
+    | genI16Type sign(genI16Type x)                   | Returns 1 if x > 0, 0 if x = 0, or -1 if x < 0.    |
+    +-------------------------------------------------+----------------------------------------------------+
+    | genI16Type min(genI16Type x,                    | Returns y if y < x; otherwise it returns x.        |
+    |                genI16Type y)                    |                                                    |
+    | genI16Type min(genI16Type x,                    |                                                    |
+    |                int16_t y)                       |                                                    |
+    | genU16Type min(genU16Type x,                    |                                                    |
+    |                genU16Type y)                    |                                                    |
+    | genU16Type min(genU16Type x,                    |                                                    |
+    |                uint16_t y)                      |                                                    |
+    +-------------------------------------------------+----------------------------------------------------+
+    | genI16Type max(genI16Type x,                    | Returns y if x < y; otherwise it returns x.        |
+    |                genI16Type y)                    |                                                    |
+    | genI16Type max(genI16Type x,                    |                                                    |
+    |                int16_t y)                       |                                                    |
+    | genU16Type max(genU16Type x,                    |                                                    |
+    |                genU16Type y)                    |                                                    |
+    | genU16Type max(genU16Type x,                    |                                                    |
+    |                uint16_t y)                      |                                                    |
+    +-------------------------------------------------+----------------------------------------------------+
+    | genI16Type clamp(genI16Type x,                  | Returns min(max(x, minVal), maxVal).               |
+    |                  genI16Type minVal,             |                                                    |
+    |                  genI16Type maxVal)             | Results are undefined if minVal > maxVal.          |
+    | genI16Type clamp(genI16Type x,                  |                                                    |
+    |                  int16_t minVal,                |                                                    |
+    |                  int16_t maxVal)                |                                                    |
+    | genU16Type clamp(genU16Type x,                  |                                                    |
+    |                  genU16Type minVal,             |                                                    |
+    |                  genU16Type maxVal)             |                                                    |
+    | genU16Type clamp(genU16Type x,                  |                                                    |
+    |                  uint16_t minVal,               |                                                    |
+    |                  uint16_t maxVal)               |                                                    |
+    +-------------------------------------------------+----------------------------------------------------+
+    | genI16Type mix(genI16Type x,                    | Selects which vector each returned component comes |
+    |                genI16Type y,                    | from. For a component of a that is false, the      |
+    |                genBType a)                      | corresponding component of x is returned. For a    |
+    | genU16Type mix(genU16Type x,                    | component of a that is true, the corresponding     |
+    |                genU16Type y,                    | component of y is returned.                        |
+    |                genBType a)                      |                                                    |
+    +-------------------------------------------------+----------------------------------------------------+
+    | genI16Type float16BitsToInt16(genF16Type value) | Returns a signed or unsigned 16-bit integer value  |
+    | genU16Type float16BitsToUint16(genF16Type value)| representing the encoding of a 16-bit float. The   |
+    |                                                 | half floating-point value's bit-level              |
+    |                                                 | representation is preserved                        |
+    +-------------------------------------------------+----------------------------------------------------+
+    | genF16Type int16BitsToFloat16(genI16Type value) | Returns a half-floating point value corresponding  |
+    | genF16Type uint16BitsToFloat16(genU16Type value)| to a signed or unsigned 16-bit integer encoding of |
+    |                                                 | a 16-bit float. If a NaN is passed in, it will not |
+    |                                                 | signal, and the resulting value is unspecified. If |
+    |                                                 | an Inf is passed in, the resulting value is the    |
+    |                                                 | corresponding Inf.                                 |
+    +-------------------------------------------------+----------------------------------------------------+
+    | genF16Type frexp(genF16Type x,                  | Splits x into a floating-point significand in the  |
+    |                  out genI16Type exp)            | range [0.5, 1.0) and an integral exponent of two,  |
+    |                                                 | such that:                                         |
+    |                                                 |                                                    |
+    |                                                 | x = significand * 2 ** exponent                    |
+    |                                                 |                                                    |
+    |                                                 | The significand is returned by the function and    |
+    |                                                 | the exponent is returned in the parameter exp. For |
+    |                                                 | a floating-point value of zero, the significand    |
+    |                                                 | and exponent are both zero. For a floating-point   |
+    |                                                 | value that is an infinity or is not a number, the  |
+    |                                                 | results are undefined.                             |
+    |                                                 |                                                    |
+    |                                                 | If an implementation supports negative 0,          |
+    |                                                 | frexp(-0) should return -0; otherwise it will      |
+    |                                                 | return 0.                                          |
+    +-------------------------------------------------+----------------------------------------------------+
+    | genF16Type ldexp(genF16Type x,                  | Returns x * (2 ** exp).                            |
+    |                  genI16Type exp)                |                                                    |
+    +-------------------------------------------------+----------------------------------------------------+
+
+
+    Modify Section 8.4, Floating-Point and Integer Pack and Unpack Functions
+
+    (add to the table of pack and unpack functions on p. 149
+
+    +-----------------------------------+------------------------------------------------------+
+    | Syntax                            | Desciption                                           |
+    +-----------------------------------+------------------------------------------------------+
+    |                                   | Returns an unsigned 32- or 64-bit integer obtained   |
+    | int      packInt2x16 (i16vec2 v)  | by packing the components of a two- or               |
+    | int64_t  packInt4x16 (i16vec4 v)  | four-component 16-bit signed or unsigned integer     |
+    | uint     packUint2x16(u16vec2 v)  | vector, respectively. The first vector component     |
+    | uint64_t packUint4x16(u16vec4 v)  | specifies the 16 least significant bits; the         |
+    |                                   | last component specifies the 16 most significant     |
+    |                                   | bits.                                                |
+    +-----------------------------------+------------------------------------------------------+
+    |                                   | Returns a signed or unsigned integer vector built    |
+    | i16vec2 unpackInt2x16 (int      v)| from a 32- or 64-bit signed or unsigned integer      |
+    | i16vec4 unpackInt4x16 (int64_t  v)| scalar, respectively. The first component of the     |
+    | u16vec2 unpackUint2x16(uint     v)| vector contains the 16 least significant bits of the |
+    | u16vec4 unpackUint4x16(uint64_t v)| input; the last component specifies the 16 most      |
+    |                                   | significant bits.                                    |
+    |                                   |                                                      |
+    +-----------------------------------+------------------------------------------------------+
+
+
+    Modify Section, 8.7, Vector Relational Functions
+
+    Modify the first table to state:
+
+    +-------------+-----------------------------+
+    | Placeholder | Specific Types Allowed      |
+    +-------------+-----------------------------+
+    | i16vec      | i16vec2, i16vec3, i16vec4   |
+    | u16vec      | u16vec2, u16vec3, u16vec4   |
+    +-------------+-----------------------------+
+
+    (add to the table of vector relational functions at the bottom of p. 147)
+
+    +-------------------------------------------+-----------------------------------------------+
+    | Syntax                                    | Desciption                                    |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec lessThan(i16vec x, i16vec y)         | Returns the component-wise compare of x < y.  |
+    | bvec lessThan(u16vec x, u16vec y)         |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec lessThanEqual(i16vec x, i16vec y)    | Returns the component-wise compare of x <= y. |
+    | bvec lessThanEqual(u16vec x, u16vec y)    |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec greaterThan(i16vec x, i16vec y)      | Returns the component-wise compare of x > y.  |
+    | bvec greaterThan(u16vec x, u16vec y)      |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec greaterThanEqual(i16vec x, i16vec y) | Returns the component-wise compare of x >= y. |
+    | bvec greaterThanEqual(u16vec x, u16vec y) |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec equal(i16vec x, i16vec y)            | Returns the component-wise compare of x == y. |
+    | bvec equal(u16vec x, u16vec y)            |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | bvec notEqual(i16vec x, i16vec y)         | Returns the component-wise compare of x != y. |
+    | bvec notEqual(u16vec x, u16vec y)         |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+
+
+    Modify language in the Overview section of GL_KHR_vulkan_glsl
+
+    Replace the following sentence:
+
+    The constant_id can only be applied to a scalar *int*, a scalar *float*
+    or a scalar *bool*.
+
+    with:
+
+    The constant_id can only be applied to a scalar *int* (incl. 16-bit signed
+    and unsigned integers), a scalar *float* or a scalar *bool*.
+
+
+Dependencies on AMD_gpu_shader_half_float
+
+    If the shader enables only AMD_gpu_shader_int16, but not AMD_gpu_shader_half_float
+    then:
+
+    * the table describing floating-integral conversions is discarded.
+    * the float16BitsTo{Int, Uint}16(), {int, uint}16BitsToFloat16(), frexp()
+      and ldexp() functions are unavailable.
+
+
+Dependencies on ARB_gpu_shader_int64:
+
+    If the shader enables only AMD_gpu_shader_int16, but not ARB_gpu_shader_int64
+    then:
+    
+    * all references to int64_t and uint64_t should be ignored.
+
+Dependencies on KHR_vulkan_glsl:
+
+    If the shader only enables AMD_gpu_shader_int16, but not KHR_vulkan_glsl,
+    then any changes to the language of the latter specification should be discarded.
+
+Dependencies on AMD_shader_trinary_minmax
+
+    If the shader enables AMD_shader_trinary_minmax, this extension adds
+    additional common functions.
+
+    Modify Section 8.3, Common Functions
+
+    (add to the table of common functions on p. 144)
+
+    +-------------------------------------------+-----------------------------------------------+
+    | Syntax                                    | Description                                   |
+    +-------------------------------------------+-----------------------------------------------+
+    | genI16Type min3(genI16Type x,             | Returns the per-component minimum value of x, |
+    |                 genI16Type y,             | y, and z.                                     |
+    |                 genI16Type z)             |                                               |
+    | genU16Type min3(genU16Type x,             |                                               |
+    |                 genU16Type y,             |                                               |
+    |                 genU16Type z)             |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | genI16Type max3(genI16Type x,             | Returns the per-component maximum value of x, |
+    |                 genI16Type y,             | y, and z.                                     |
+    |                 genI16Type z)             |                                               |
+    | genU16Type max3(genU16Type x,             |                                               |
+    |                 genU16Type y,             |                                               |
+    |                 genU16Type z)             |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+    | genI16Type mid3(genI16Type x,             | Returns the per-component median value of x,  |
+    |                 genI16Type y,             | y, and z.                                     |
+    |                 genI16Type z)             |                                               |
+    | genU16Type mid3(genU16Type x,             |                                               |
+    |                 genU16Type y,             |                                               |
+    |                 genU16Type z)             |                                               |
+    +-------------------------------------------+-----------------------------------------------+
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) Should the new int16_t and uint16_t types support types as members of
+        uniform blocks and shader storage buffer blocks?
+        
+    RESOLVED: Yes, both types can be used in both SSBOs and UBOs, each consuming
+              2 basic machine units.
+
+
+    (2) Should we support int16_t and uint16_t types as members of uniform blocks,
+        shader storage buffer blocks, or as transform feedback varyings?
+
+      RESOLVED: Yes, support all of them. both types  consume two basic machine
+      units. Some examples:
+
+          struct S {
+
+              uint16_t   x;     // rule 1:  align = 2, takes offsets 0-1
+              u16vec2    y;     // rule 2:  align = 4, takes offsets 4-7
+              u16vec3    z;     // rule 3:  align = 8, takes offsets 8-13
+          };
+
+          layout(std140) uniform B1 {
+
+              uint16_t   a;     // rule 1:  align = 2, takes offsets 0-1
+              u16vec2    b;     // rule 2:  align = 4, takes offsets 4-7
+              u16vec3    c;     // rule 3:  align = 8, takes offsets 8-13
+              uint16_t   d[2];  // rule 4:  align = 16, array stride = 16,
+                                //          takes offsets 16-47
+              S          g;     // rule 9:  align = 16, g.x takes offsets
+                                //          48-49, g.y takes offsets 52-55,
+                                //          g.z takes offsets 56-63
+              S          h[2];  // rule 10: align = 16, array stride = 16, h[0]
+                                //          takes offsets 64-77, h[1] takes
+                                //          offsets 78-93
+          };
+
+          layout(std430) buffer B2 {
+
+              uint16_t   o;     // rule 1:  align = 2, takes offsets 0-1
+              u16vec2    p;     // rule 2:  align = 4, takes offsets 4-7
+              u16vec3    q;     // rule 3:  align = 8, takes offsets 8-13
+              uint16_t   r[2];  // rule 4:  align = 2, array stride = 2, takes
+                                //          offsets 14-17
+              S          u;     // rule 9:  align = 8, u.x takes offsets
+                                //          24-25, u.y takes offsets 28-31, u.z
+                                //          takes offsets 32-37
+              S          v[2];  // rule 10: align = 8, array stride = 16, v[0]
+                                //          takes offsets 40-55, v[1] takes
+                                //          offsets 56-71
+          };
+          
+    (3) Are interactions with GL_AMD_shader_ballot supported?
+    (4) Are interactions with GL_AMD_shader_explicit_vertex_parameter supported?
+    (5) Are interactions with GL_AMD_shader_trinary_minmax supported?
+    
+    RESOLVED: Not yet. These will be resolved at a later time.
+
+    (6) Does this extension provide a new subpassLoad() function prototype which
+        returns a(n) {u}int16 vector value?
+
+    RESOLVED: No. This functionality may be added at a later time in a separate
+              extension.
+
+    (7) Can the new int16 and uint16 types be used as array indexes?
+
+    RESOLVED: No.
+
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+    2     03/28/2018  rexu      Add interactions with AMD_shader_trinary_minmax.
+                                New common functions are added to support
+                                16-bit integer type in these trinary operations.
+
+    1     06/08/2017  dwitczak  First release.
