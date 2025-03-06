@@ -293,11 +293,6 @@ class FrameGraphTable extends LitElement {
                 margin-right: 5px;
                 user-select: none;
             }
-
-            .hidden {
-                display: none;
-            }
-
             .scrollable-table td,
             .scrollable-table th {
                 padding: 12px;
@@ -351,6 +346,7 @@ class FrameGraphTable extends LitElement {
         super();
         this.frameGraphData = null;
         this.selectedResourceId = -1;
+        this.collapsedResources = new Set();
     }
 
     updated(props) {
@@ -369,11 +365,13 @@ class FrameGraphTable extends LitElement {
     }
 
     _toggleCollapse(resourceIndex) {
-        const subresourceRows = this.shadowRoot.querySelectorAll(`[id^="subresource-${resourceIndex}-"]`);
-        const icon = this.shadowRoot.querySelector(`#resource-${resourceIndex} .toggle-icon`);
-        const isHidden = subresourceRows[0]?.classList.contains('hidden');
-        subresourceRows.forEach(row => row.classList.toggle('hidden'));
-        icon.textContent = isHidden ? '▼' : '▶';
+        if (this.collapsedResources.has(resourceIndex)) {
+            this.collapsedResources.delete(resourceIndex);
+        }
+        else {
+            this.collapsedResources.add(resourceIndex);
+        }
+        this.requestUpdate();
     }
 
     _handleResourceClick(ev) {
@@ -384,13 +382,16 @@ class FrameGraphTable extends LitElement {
         }));
     }
 
-    _renderResourceUsage(allPasses, resourceId, defaultColor) {
+    _renderResourceUsage(allPasses, resourceIds, defaultColor) {
         return allPasses.map((passData, index) => {
-            const isRead = passData?.reads.includes(resourceId);
-            const isWrite = passData?.writes.includes(resourceId);
+            const isRead = resourceIds.some(resourceId => passData?.reads.includes(resourceId));
+            const isWrite = resourceIds.some(resourceId => passData?.writes.includes(resourceId));
             let type = null;
+
             const hasUsed = (passData) => {
-                return passData?.reads.includes(resourceId) || passData?.writes.includes(resourceId);
+                return resourceIds.some(resourceId =>
+                    passData?.reads.includes(resourceId) || passData?.writes.includes(resourceId)
+                );
             };
             const hasBeenUsedBefore = allPasses.slice(0, index).some(hasUsed);
             const willBeUsedLater = allPasses.slice(index + 1).some(hasUsed);
@@ -399,6 +400,7 @@ class FrameGraphTable extends LitElement {
             else if (isRead) type = RESOURCE_USAGE_TYPE_READ;
             else if (isWrite) type = RESOURCE_USAGE_TYPE_WRITE;
             else if (hasBeenUsedBefore && willBeUsedLater) type = RESOURCE_USAGE_TYPE_NO_ACCESS;
+
             return html`
                 <td style="background-color: ${unsafeCSS(this._getCellColor(type, defaultColor))};">
                     ${type ?? nothing}
@@ -423,23 +425,37 @@ class FrameGraphTable extends LitElement {
     }
 
     _renderResourceRow(resource, resourceIndex, resources, allPasses) {
-        const hasSubresources = resources.some(subresource => this._isSubresourceOfParent(subresource, resource));
+        const subresourceIds = resources
+            .filter(subresource => this._isSubresourceOfParent(subresource, resource))
+            .map(subresource => subresource.id);
+
+        const hasSubresources = subresourceIds.length > 0;
+        const isCollapsed = this.collapsedResources.has(resourceIndex);
+        // Show the aggregated resource usage when the subresources are collapsed.
+        const resourceIds = isCollapsed ? [resource.id, ...subresourceIds]:[resource.id];
+
         const onClickResource = () => this._handleResourceClick(resource.id);
         const selectedStyle = resource.id === this.selectedResourceId ? "selected" : "";
 
         return html`
-        <tr id="resource-${resourceIndex}">
-            <th class="sticky-col resource ${selectedStyle}" @click="${onClickResource}">
-                ${hasSubresources ? html`
-                    <span class="toggle-icon"
-                        @click="${() => this._toggleCollapse(resourceIndex)}">▶</span>` : nothing}
-                ${resource.name}
-            </th>
-            ${this._renderResourceUsage(allPasses, resource.id, DEFAULT_COLOR)}
-        </tr>
-        ${this._renderSubresourceRows(resources, resource, resourceIndex, allPasses)}
-    `;
+            <tr id="resource-${resourceIndex}">
+                <th class="sticky-col resource ${selectedStyle}" @click="${onClickResource}">
+                    ${hasSubresources 
+                        ? html`
+                            <span class="toggle-icon"
+                                  @click="${(e) => { e.stopPropagation(); this._toggleCollapse(resourceIndex); }}">
+                              ${isCollapsed ? '▶' : '▼'}
+                            </span>` 
+                        : nothing}
+                    ${resource.name}
+                    ${hasSubresources && isCollapsed ? html`(${subresourceIds.length})` : nothing}
+                </th>
+                ${this._renderResourceUsage(allPasses, resourceIds, DEFAULT_COLOR)}
+            </tr>
+            ${!isCollapsed ? this._renderSubresourceRows(resources, resource, resourceIndex, allPasses) : nothing}
+        `;
     }
+
 
     _renderSubresourceRows(resources, parentResource, resourceIndex, allPasses) {
         return resources
@@ -452,13 +468,13 @@ class FrameGraphTable extends LitElement {
         const selectedStyle = subresource.id === this.selectedResourceId ? "selected" : "";
 
         return html`
-        <tr id="subresource-${resourceIndex}-${subIndex}" class="collapsible hidden">
+        <tr id="subresource-${resourceIndex}-${subIndex}" class="collapsible">
             <td class="sticky-col resource ${selectedStyle}"
                 @click="${onClickResource}"
                 style="background-color: ${SUBRESOURCE_COLOR}">
                 ${subresource.name}
             </td>
-            ${this._renderResourceUsage(allPasses, subresource.id, SUBRESOURCE_COLOR)}
+            ${this._renderResourceUsage(allPasses, [subresource.id], SUBRESOURCE_COLOR)}
         </tr>
     `;
     }
