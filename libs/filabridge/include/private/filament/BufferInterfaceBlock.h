@@ -40,12 +40,28 @@ public:
         std::string_view name;
         uint32_t size;
         backend::UniformType type;
-        backend::Precision precision{};
-        uint8_t associatedSampler;
-        backend::FeatureLevel minFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_1;
-        std::string_view structName{};
-        uint32_t stride{};
-        std::string_view sizeName{};
+        backend::Precision precision;
+        uint8_t associatedSampler = 0;
+        backend::FeatureLevel minFeatureLevel;
+        std::string_view structName;
+        uint32_t stride;
+        std::string_view sizeName;
+        
+        InterfaceBlockEntry() = default;
+        InterfaceBlockEntry(std::string_view name, uint32_t size, backend::UniformType type,
+                backend::Precision precision = {},
+                backend::FeatureLevel minFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_1, std::string_view structName = {},
+                uint32_t stride = {}, std::string_view sizeName = {}) noexcept
+                : name(name), size(size), type(type), precision(precision),
+                associatedSampler(0), minFeatureLevel(minFeatureLevel),
+                structName(structName), stride(stride), sizeName(sizeName) {}
+        InterfaceBlockEntry(std::string_view name, uint8_t associatedSampler, uint32_t size, backend::UniformType type,
+                backend::Precision precision = {},
+                backend::FeatureLevel minFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_1, std::string_view structName = {},
+                uint32_t stride = {}, std::string_view sizeName = {}) noexcept
+                : name(name), size(size), type(type), precision(precision),
+                associatedSampler(associatedSampler), minFeatureLevel(minFeatureLevel),
+                structName(structName), stride(stride), sizeName(sizeName) {}
     };
 
     BufferInterfaceBlock();
