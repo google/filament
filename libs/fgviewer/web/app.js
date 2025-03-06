@@ -16,7 +16,7 @@
 
 import {LitElement, html, css, unsafeCSS, nothing} from "https://unpkg.com/lit@2.8.0?module";
 
-const kUntitledPlaceholder = "untitled";
+const kUntitledPlaceholder = "Untitled View";
 
 // CSS constants
 const FOREGROUND_COLOR = '#fafafa';
