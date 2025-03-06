@@ -26,6 +26,7 @@
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
+#include "math/mat3.h"
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Conversion.h"
@@ -908,7 +909,7 @@ Handle<HwStream> VulkanDriver::createStreamAcquired() {
 }
 
 void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
-        CallbackHandler* handler, StreamCallback cb, void* userData) {
+        CallbackHandler* handler, StreamCallback cb, void* userData, math::mat3f transform) {
 }
 
 void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {

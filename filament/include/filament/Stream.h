@@ -25,6 +25,7 @@
 #include <utils/compiler.h>
 
 #include <stdint.h>
+#include <math/mat3.h>
 
 namespace filament {
 
@@ -189,9 +190,10 @@ public:
      *                   The callback tales two arguments: the AHardwareBuffer and the userdata.
      * @param userdata   Optional closure data. Filament will pass this into the callback when it
      *                   releases the image.
+     * @param transform  Optional transform matrix to apply to the image.
      */
     void setAcquiredImage(void* UTILS_NONNULL image,
-            Callback UTILS_NONNULL callback, void* UTILS_NULLABLE userdata) noexcept;
+            Callback UTILS_NONNULL callback, void* UTILS_NULLABLE userdata, math::mat3f transform = math::mat3f()) noexcept;
 
     /**
      * @see setAcquiredImage(void*, Callback, void*)
@@ -202,10 +204,11 @@ public:
      *                   It callback tales two arguments: the AHardwareBuffer and the userdata.
      * @param userdata   Optional closure data. Filament will pass this into the callback when it
      *                   releases the image.
+     * @param transform  Optional transform matrix to apply to the image.
      */
     void setAcquiredImage(void* UTILS_NONNULL image,
             backend::CallbackHandler* UTILS_NULLABLE handler,
-            Callback UTILS_NONNULL callback, void* UTILS_NULLABLE userdata) noexcept;
+            Callback UTILS_NONNULL callback, void* UTILS_NULLABLE userdata, math::mat3f transform = math::mat3f()) noexcept;
 
     /**
      * Updates the size of the incoming stream. Whether this value is used is

@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_ACQUIREDIMAGE_H
 
 #include <backend/DriverEnums.h>
+#include "math/mat3.h"
 
 namespace filament::backend {
 
@@ -32,6 +33,7 @@ struct AcquiredImage {
     backend::StreamCallback callback = nullptr;
     void* userData = nullptr;
     CallbackHandler* handler = nullptr;
+    math::mat3f transform;
 };
 
 } // namespace filament::backend

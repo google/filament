@@ -176,7 +176,7 @@ public:
         CallbackData(CallbackData&&) = delete;
         CallbackData& operator=(CallbackData const &) = delete;
         CallbackData& operator=(CallbackData&&) = delete;
-        void* storage[8] = {};
+        void* storage[13] = {};
         static CallbackData* obtain(DriverBase* allocator);
         static void release(CallbackData* data);
     protected:

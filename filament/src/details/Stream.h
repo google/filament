@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_DETAILS_STREAM_H
 
 #include "downcast.h"
+#include "math/mat3.h"
 
 #include <filament/Stream.h>
 
@@ -36,8 +37,8 @@ public:
 
     backend::Handle<backend::HwStream> getHandle() const noexcept { return mStreamHandle; }
 
-    void setAcquiredImage(void* image, Callback callback, void* userdata) noexcept;
-    void setAcquiredImage(void* image, backend::CallbackHandler* handler, Callback callback, void* userdata) noexcept;
+    void setAcquiredImage(void* image, Callback callback, void* userdata, math::mat3f transform) noexcept;
+    void setAcquiredImage(void* image, backend::CallbackHandler* handler, Callback callback, void* userdata, math::mat3f transform) noexcept;
 
     void setDimensions(uint32_t width, uint32_t height) noexcept;
 

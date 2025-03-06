@@ -2087,7 +2087,7 @@ Handle<HwStream> OpenGLDriver::createStreamAcquired() {
 // called only once per frame. If the user pushes images to the same stream multiple times in a
 // single frame, we emit a warning and honor only the final image, but still invoke all callbacks.
 void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
-        CallbackHandler* handler, StreamCallback cb, void* userData) {
+        CallbackHandler* handler, StreamCallback cb, void* userData, math::mat3f transform) {
     GLStream* glstream = handle_cast<GLStream*>(sh);
     assert_invariant(glstream->streamType == StreamType::ACQUIRED);
 
@@ -2097,7 +2097,7 @@ void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
     }
 
     glstream->user_thread.pending = mPlatform.transformAcquiredImage({
-            hwbuffer, cb, userData, handler });
+            hwbuffer, cb, userData, handler, transform });
 
     if (glstream->user_thread.pending.image != nullptr) {
         // If there's no pending image, do nothing. Note that GL_OES_EGL_image does not let you pass
