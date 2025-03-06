@@ -18,7 +18,7 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_ACQUIREDIMAGE_H
 
 #include <backend/DriverEnums.h>
-#include "math/mat3.h"
+#include <math/mat3.h>
 
 namespace filament::backend {
 
