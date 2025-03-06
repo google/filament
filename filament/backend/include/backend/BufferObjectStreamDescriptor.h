@@ -50,7 +50,7 @@ public:
         BufferObjectStreamAssociationType associationType;
     };
 
-    std::vector<StreamDataDescriptor> streams;
+    std::vector<StreamDataDescriptor> mStreams;
 };
 
 } // namespace filament::backend

@@ -2600,7 +2600,7 @@ void OpenGLDriver::updateBufferObject(
     if (UTILS_UNLIKELY(!mStreamUniformDescriptors.empty())) {
         auto streamDescriptors = mStreamUniformDescriptors.find(bo->gl.id);
         if (streamDescriptors != mStreamUniformDescriptors.end()) {
-            for (auto const& [offset, stream, associationType] : streamDescriptors->second.streams) {
+            for (auto const& [offset, stream, associationType] : streamDescriptors->second.mStreams) {
                 if (associationType == BufferObjectStreamAssociationType::TRANSFORM_MATRIX) {
                     auto transform = getStreamTransformMatrix(stream);
                     copyMat3f(bd.buffer, offset, transform);
