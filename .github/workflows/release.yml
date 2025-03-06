@@ -9,6 +9,11 @@ name: Release
 env:
   RELEASE_TAG: ${{ github.event.inputs.release_tag }}
 
+# The default GITHUB_TOKEN does not have write permissions, which is needed to upload release
+# assets.
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
     inputs:
