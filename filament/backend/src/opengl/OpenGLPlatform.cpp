@@ -141,6 +141,10 @@ void OpenGLPlatform::updateTexImage(
         UTILS_UNUSED int64_t* timestamp) noexcept {
 }
 
+math::mat3f OpenGLPlatform::getTransformMatrix(
+    UTILS_UNUSED Stream* stream) noexcept {
+return math::mat3f();
+}
 
 OpenGLPlatform::ExternalTexture* OpenGLPlatform::createExternalImageTexture() noexcept {
     return nullptr;
