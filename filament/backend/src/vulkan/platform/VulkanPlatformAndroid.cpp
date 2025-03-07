@@ -240,7 +240,7 @@ VkSampler VulkanPlatform::createExternalSamplerImpl(
         .components = fvkutils::getSwizzleMap({chroma.r, chroma.g, chroma.b, chroma.a}),
         .xChromaOffset = fvkutils::getChromaLocation(chroma.xChromaOffset),
         .yChromaOffset = fvkutils::getChromaLocation(chroma.yChromaOffset),
-        .chromaFilter = (chroma.filter == SamplerMagFilter::NEAREST)
+        .chromaFilter = (chroma.chromaFilter == SamplerMagFilter::NEAREST)
                             ? VK_FILTER_NEAREST
                             : VK_FILTER_LINEAR,
     };
