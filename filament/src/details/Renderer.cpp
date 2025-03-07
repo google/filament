@@ -638,6 +638,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     if (isRenderingMultiview) {
         hasPostProcess = false;
         msaaOptions.enabled = false;
+
+        // Picking is not supported for multiview rendering. Clear any pending picking queries.
+        view.clearPickingQueries();
     }
     const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
 

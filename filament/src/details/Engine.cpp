@@ -652,7 +652,8 @@ void FEngine::prepare() {
     DriverApi& driver = getDriverApi();
 
     for (auto& materialInstanceList: mMaterialInstances) {
-        materialInstanceList.second.forEach([&driver](FMaterialInstance const* item) {
+        materialInstanceList.second.forEach([&driver](FMaterialInstance* item) {
+            item->commitStreamUniformAssociations(driver);
             item->commit(driver);
         });
     }
