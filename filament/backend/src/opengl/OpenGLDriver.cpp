@@ -38,6 +38,7 @@
 #include <backend/Platform.h>
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
+#include <backend/BufferObjectStreamDescriptor.h>
 
 #include "private/backend/CommandStream.h"
 #include "private/backend/Dispatcher.h"
@@ -2551,6 +2552,38 @@ void OpenGLDriver::updateIndexBuffer(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
+void OpenGLDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh, BufferObjectStreamDescriptor&& streams) {
+    DEBUG_MARKER()
+
+    GLBufferObject* bo = handle_cast<GLBufferObject*>(boh);
+    mStreamUniformDescriptors[bo->gl.id] = std::move(streams);
+}
+
+
+// specialization for mat3f (which has a different alignment, see std140 layout rules)
+static void copyMat3f(void* addr, size_t const offset, const mat3f& v) noexcept {
+    struct mat43 {
+        float v[3][4];
+    };
+
+    addr = static_cast<char*>(addr) + offset;
+    mat43& temp = *static_cast<mat43*>(addr);
+
+    temp.v[0][0] = v[0][0];
+    temp.v[0][1] = v[0][1];
+    temp.v[0][2] = v[0][2];
+
+    temp.v[1][0] = v[1][0];
+    temp.v[1][1] = v[1][1];
+    temp.v[1][2] = v[1][2];
+
+    temp.v[2][0] = v[2][0];
+    temp.v[2][1] = v[2][1];
+    temp.v[2][2] = v[2][2];
+
+    // don't store anything in temp.v[][3] because there could be uniforms packed there
+}
+
 void OpenGLDriver::updateBufferObject(
         Handle<HwBufferObject> boh, BufferDescriptor&& bd, uint32_t byteOffset) {
     DEBUG_MARKER()
@@ -2562,6 +2595,19 @@ void OpenGLDriver::updateBufferObject(
 
     if (bo->gl.binding == GL_ARRAY_BUFFER) {
         gl.bindVertexArray(nullptr);
+    }
+
+    if (UTILS_UNLIKELY(!mStreamUniformDescriptors.empty())) {
+        auto streamDescriptors = mStreamUniformDescriptors.find(bo->gl.id);
+        if (streamDescriptors != mStreamUniformDescriptors.end()) {
+            for (auto const& [offset, stream, associationType] : streamDescriptors->second.mStreams) {
+                if (associationType == BufferObjectStreamAssociationType::TRANSFORM_MATRIX) {
+                    auto transform = getStreamTransformMatrix(stream);
+                    copyMat3f(bd.buffer, offset, transform);
+                }
+            }
+            mStreamUniformDescriptors.erase(streamDescriptors);
+        }
     }
 
     if (UTILS_UNLIKELY(bo->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {

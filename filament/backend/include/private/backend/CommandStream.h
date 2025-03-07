@@ -22,6 +22,7 @@
 #include "private/backend/Driver.h"
 
 #include <backend/BufferDescriptor.h>
+#include <backend/BufferObjectStreamDescriptor.h>
 #include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>

@@ -65,6 +65,8 @@ public:
 
     void terminate(FEngine& engine);
 
+    void commitStreamUniformAssociations(FEngine::DriverApi& driver);
+    
     void commit(FEngine::DriverApi& driver) const;
 
     void use(FEngine::DriverApi& driver) const;
@@ -272,6 +274,7 @@ private:
     tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
     mutable DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
+    bool mHasStreamUniformAssociations = false;
 
     backend::PolygonOffset mPolygonOffset{};
     backend::StencilState mStencilState{};
