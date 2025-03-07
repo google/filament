@@ -55,6 +55,13 @@ PixelDataType getComponentType(VkFormat format);
 uint32_t getComponentCount(VkFormat format);
 VkComponentMapping getSwizzleMap(TextureSwizzle const swizzle[4]);
 VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags);
+
+// Needed by the Platform for external sampler creation
+VkSamplerMipmapMode getMipmapMode(SamplerMinFilter filter);
+VkSamplerAddressMode getWrapMode(SamplerWrapMode mode);
+VkBool32 getCompareEnable(SamplerCompareMode mode);
+float getMaxLod(SamplerMinFilter filter);
+
 // Ycbcr related functions
 VkSamplerYcbcrModelConversion getYcbcrModelConversion(SamplerYcbcrModelConversion model);
 VkSamplerYcbcrRange getYcbcrRange(SamplerYcbcrRange range);
