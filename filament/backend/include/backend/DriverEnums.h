@@ -30,6 +30,7 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
+#include <utils/Hash.h>
 
 #include <math/vec4.h>
 
@@ -918,10 +919,10 @@ enum class SamplerCompareFunc : uint8_t {
 
 enum class SamplerYcbcrModelConversion : uint8_t {
     RGB_IDENTITY = 0,
-    YCBCR_IDENTITY=1,
-    YCBCR_709=2,
-    YCBCR_601=3,
-    YCBCR_2020=4,
+    YCBCR_IDENTITY = 1,
+    YCBCR_709 = 2,
+    YCBCR_601 = 3,
+    YCBCR_2020 = 4,
 };
 
 enum class SamplerYcbcrRange : uint8_t {
@@ -931,24 +932,24 @@ enum class SamplerYcbcrRange : uint8_t {
 
 enum class ChromaLocation : uint8_t {
     COSITED_EVEN = 0,
-    MIDPOINT=1,
+    MIDPOINT = 1,
 };
 
 //! Sampler parameters
 struct SamplerParams {             // NOLINT
-    SamplerMagFilter filterMag : 1;//!< magnification filter (NEAREST)
-    SamplerMinFilter filterMin : 3;//!< minification filter  (NEAREST)
-    SamplerWrapMode wrapS : 2;     //!< s-coordinate wrap mode (CLAMP_TO_EDGE)
-    SamplerWrapMode wrapT : 2;     //!< t-coordinate wrap mode (CLAMP_TO_EDGE)
+    SamplerMagFilter filterMag      : 1;    //!< magnification filter (NEAREST)
+    SamplerMinFilter filterMin      : 3;    //!< minification filter  (NEAREST)
+    SamplerWrapMode wrapS           : 2;    //!< s-coordinate wrap mode (CLAMP_TO_EDGE)
+    SamplerWrapMode wrapT           : 2;    //!< t-coordinate wrap mode (CLAMP_TO_EDGE)
 
-    SamplerWrapMode wrapR : 2;         //!< r-coordinate wrap mode (CLAMP_TO_EDGE)
-    uint8_t anisotropyLog2 : 3;        //!< anisotropy level (0)
-    SamplerCompareMode compareMode : 1;//!< sampler compare mode (NONE)
-    uint8_t padding0 : 2;              //!< reserved. must be 0.
+    SamplerWrapMode wrapR           : 2;    //!< r-coordinate wrap mode (CLAMP_TO_EDGE)
+    uint8_t anisotropyLog2          : 3;    //!< anisotropy level (0)
+    SamplerCompareMode compareMode  : 1;    //!< sampler compare mode (NONE)
+    uint8_t padding0                : 2;    //!< reserved. must be 0.
 
-    SamplerCompareFunc compareFunc : 3;//!< sampler comparison function (LE)
-    uint8_t padding1 : 5;              //!< reserved. must be 0.
-    uint8_t padding2 : 8;              //!< reserved. must be 0.
+    SamplerCompareFunc compareFunc  : 3;    //!< sampler comparison function (LE)
+    uint8_t padding1                : 5;    //!< reserved. must be 0.
+    uint8_t padding2                : 8;    //!< reserved. must be 0.
 
     struct Hasher {
         size_t operator()(const SamplerParams p) const noexcept {
@@ -990,7 +991,6 @@ private:
         return SamplerParams::LessThan{}(lhs, rhs);
     }
 };
-static_assert(sizeof(SamplerParams) == 4);
 
 // The limitation to 64-bits max comes from how we store a SamplerParams in our JNI code
 // see android/.../TextureSampler.cpp
@@ -1049,7 +1049,6 @@ private:
         return SamplerYcbcrConversion::LessThan{}(lhs, rhs);
     }
 };
-static_assert(sizeof(SamplerYcbcrConversion) == 4);
 
 // The limitation to 64-bits max comes from how we store a SamplerParams in our JNI code
 // see android/.../TextureSampler.cpp
@@ -1060,16 +1059,10 @@ struct ExternalSamplerKey {
     ExternalSamplerKey(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt):
         mYcbcrConversion(ycbcr), mSamplerParams(spm), mExternalFormat(extFmt) {
     }
-    struct Hasher {
-        size_t operator()(const ExternalSamplerKey& k) const {
-            SamplerYcbcrConversion::Hasher ycbcrH;
-            SamplerParams::Hasher spmH;
-
-            auto h1 = ycbcrH(k.mYcbcrConversion);
-            auto h2 = spmH(k.mSamplerParams);
-            return h1 ^ h2 ^ k.mExternalFormat;
-        }
-    };
+    bool operator==(ExternalSamplerKey const& rhs) const {
+        return (mYcbcrConversion == rhs.mYcbcrConversion && mSamplerParams == rhs.mSamplerParams &&
+                mExternalFormat == rhs.mExternalFormat);
+    }
     struct EqualTo {
         bool operator()(const ExternalSamplerKey& lhs, const ExternalSamplerKey& rhs) const noexcept {
             return (lhs.mYcbcrConversion == rhs.mYcbcrConversion &&
@@ -1081,6 +1074,9 @@ struct ExternalSamplerKey {
     SamplerParams mSamplerParams;
     uint32_t mExternalFormat;
 };
+// No implicit padding allowed due to it being a hash key.
+static_assert(sizeof(ExternalSamplerKey) == 12);
+using ExternalSamplerHash = utils::hash::MurmurHashFn<ExternalSamplerKey>;
 
 struct DescriptorSetLayoutBinding {
     DescriptorType type;

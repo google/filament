@@ -17,7 +17,6 @@
 
 #include "vulkan/VulkanConstants.h"
 
-
 #include <utils/Panic.h>
 #include "vulkan/utils/Image.h"
 #include "vulkan/utils/Conversion.h"
@@ -240,9 +239,7 @@ VkSampler VulkanPlatform::createExternalSamplerImpl(
         .components = fvkutils::getSwizzleMap(swizzleArray),
         .xChromaOffset = fvkutils::getChromaLocation(chroma.xChromaOffset),
         .yChromaOffset = fvkutils::getChromaLocation(chroma.yChromaOffset),
-        .chromaFilter = (chroma.chromaFilter == SamplerMagFilter::NEAREST)
-                            ? VK_FILTER_NEAREST
-                            : VK_FILTER_LINEAR,
+        .chromaFilter = fvkutils::getFilter(chroma.chromaFilter),
     };
     VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
     VkResult result = vkCreateSamplerYcbcrConversion(device, &conversionInfo,
@@ -266,7 +263,7 @@ VkSampler VulkanPlatform::createExternalSamplerImpl(
         .addressModeU = fvkutils::getWrapMode(params.wrapS),
         .addressModeV = fvkutils::getWrapMode(params.wrapT),
         .addressModeW = fvkutils::getWrapMode(params.wrapR),
-        .anisotropyEnable = params.anisotropyLog2 == 0 ? 0u : 1u,
+        .anisotropyEnable = params.anisotropyLog2 == 0 ? VK_FALSE : VK_TRUE,
         .maxAnisotropy = (float)(1u << params.anisotropyLog2),
         .compareEnable = fvkutils::getCompareEnable(params.compareMode),
         .compareOp = fvkutils::getCompareOp(params.compareFunc),

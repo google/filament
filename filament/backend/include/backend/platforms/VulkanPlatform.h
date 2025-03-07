@@ -366,7 +366,7 @@ private:
             const ExternalImageMetadata& metadata);
     static VkSampler createExternalSamplerImpl(VkDevice device,
             SamplerYcbcrConversion chroma, SamplerParams sampler,
-            uint32_t inernalFormat);
+            uint32_t internalFormat);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;

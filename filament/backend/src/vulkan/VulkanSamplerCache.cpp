@@ -39,7 +39,7 @@ VkSampler VulkanSamplerCache::getSampler(SamplerParams params) noexcept {
         .addressModeU = fvkutils::getWrapMode(params.wrapS),
         .addressModeV = fvkutils::getWrapMode(params.wrapT),
         .addressModeW = fvkutils::getWrapMode(params.wrapR),
-        .anisotropyEnable = params.anisotropyLog2 == 0 ? 0u : 1u,
+        .anisotropyEnable = params.anisotropyLog2 == 0 ? VK_FALSE : VK_TRUE,
         .maxAnisotropy = (float)(1u << params.anisotropyLog2),
         .compareEnable = fvkutils::getCompareEnable(params.compareMode),
         .compareOp = fvkutils::getCompareOp(params.compareFunc),
