@@ -24,12 +24,12 @@ StreamType Stream::getStreamType() const noexcept {
     return downcast(this)->getStreamType();
 }
 
-void Stream::setAcquiredImage(void* image, Callback const callback, void* userdata, math::mat3f transform) noexcept {
+void Stream::setAcquiredImage(void* image, Callback const callback, void* userdata, math::mat3f const & transform) noexcept {
     downcast(this)->setAcquiredImage(image, callback, userdata, transform);
 }
 
 void Stream::setAcquiredImage(void* image,
-        CallbackHandler* handler, Callback const callback, void* userdata, math::mat3f transform) noexcept {
+        CallbackHandler* handler, Callback const callback, void* userdata, math::mat3f const & transform) noexcept {
     downcast(this)->setAcquiredImage(image, handler, callback, userdata, transform);
 }
 

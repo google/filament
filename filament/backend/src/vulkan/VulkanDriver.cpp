@@ -908,8 +908,8 @@ Handle<HwStream> VulkanDriver::createStreamAcquired() {
     return {};
 }
 
-void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
-        CallbackHandler* handler, StreamCallback cb, void* userData, math::mat3f transform) {
+void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math::mat3f& transform,
+        CallbackHandler* handler, StreamCallback cb, void* userData) {
 }
 
 void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {

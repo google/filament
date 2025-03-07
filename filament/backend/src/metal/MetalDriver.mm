@@ -984,8 +984,8 @@ Handle<HwStream> MetalDriver::createStreamAcquired() {
     return {};
 }
 
-void MetalDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
-        CallbackHandler* handler, StreamCallback cb, void* userData, math::mat3f transform) {
+void MetalDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math::mat3f& transform,
+        CallbackHandler* handler, StreamCallback cb, void* userData) {
 }
 
 void MetalDriver::setStreamDimensions(Handle<HwStream> stream, uint32_t width,

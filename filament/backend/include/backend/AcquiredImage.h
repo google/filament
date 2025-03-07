@@ -33,7 +33,6 @@ struct AcquiredImage {
     backend::StreamCallback callback = nullptr;
     void* userData = nullptr;
     CallbackHandler* handler = nullptr;
-    math::mat3f transform;
 };
 
 } // namespace filament::backend

@@ -2086,8 +2086,8 @@ Handle<HwStream> OpenGLDriver::createStreamAcquired() {
 // setAcquiredImage should be called by the user outside of beginFrame / endFrame, and should be
 // called only once per frame. If the user pushes images to the same stream multiple times in a
 // single frame, we emit a warning and honor only the final image, but still invoke all callbacks.
-void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
-        CallbackHandler* handler, StreamCallback cb, void* userData, math::mat3f transform) {
+void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer, const math::mat3f& transform,
+        CallbackHandler* handler, StreamCallback cb, void* userData) {
     GLStream* glstream = handle_cast<GLStream*>(sh);
     assert_invariant(glstream->streamType == StreamType::ACQUIRED);
 
@@ -2097,7 +2097,7 @@ void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
     }
 
     glstream->user_thread.pending = mPlatform.transformAcquiredImage({
-            hwbuffer, cb, userData, handler, transform });
+            hwbuffer, cb, userData, handler });
 
     if (glstream->user_thread.pending.image != nullptr) {
         // If there's no pending image, do nothing. Note that GL_OES_EGL_image does not let you pass
@@ -2122,7 +2122,7 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
 
             // Bind the stashed EGLImage to its corresponding GL texture as soon as we start
             // making the GL calls for the upcoming frame.
-            driver->queueCommand([this, s, image = s->user_thread.acquired.image, previousImage]() {
+            driver->queueCommand([this, s, image = s->user_thread.acquired.image, previousImage, transform = s->user_thread.transform]() {
 
                 auto& streams = mTexturesWithStreamsAttached;
                 auto pos = std::find_if(streams.begin(), streams.end(),
@@ -2137,6 +2137,7 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
                         t->gl.target = t->externalTexture->target;
                         t->gl.id = t->externalTexture->id;
                         bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+                        s->gl_thread.transform = transform;
                     }
                 }
 
@@ -2171,7 +2172,7 @@ math::mat3f OpenGLDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
         if (s->streamType == StreamType::NATIVE) {
             return mPlatform.getTransformMatrix(s->stream);
         } else {
-            return s->user_thread.acquired.transform;
+            return s->gl_thread.transform;
         }
     }
     return math::mat3f();
