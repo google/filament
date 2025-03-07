@@ -891,7 +891,7 @@ TEST_F(MaterialCompiler, FeatureLevel0Ess3CallFails) {
   EXPECT_FALSE(result.isValid());
 }
 
-#if TINT_BUILD_SPV_READER
+#if FILAMENT_SUPPORTS_WEBGPU
 TEST_F(MaterialCompiler, WgslConversionBakedColor) {
     std::string bakedColorCodeFrag(R"(
         void material(inout MaterialInputs material) {
@@ -959,5 +959,10 @@ TEST_F(MaterialCompiler, WgslConversionSandboxLitTransparent) {
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    const int rv = RUN_ALL_TESTS();
+    if (testing::UnitTest::GetInstance()->test_to_run_count() == 0) {
+        //If you run a test filter that contains 0 tests that was likely not intentional. Fail in that scenario.
+        return 1;
+    }
+    return rv;
 }
