@@ -183,7 +183,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
             // invalid should never happen
             break;
     }
-    //TODO Should WEB GPU fall under SPIRV as well?
+
     switch (mTargetLanguage) {
         case TargetLanguage::GLSL:
             out << "#define FILAMENT_OPENGL_SEMANTICS\n";
