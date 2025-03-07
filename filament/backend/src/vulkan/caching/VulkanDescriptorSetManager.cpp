@@ -232,11 +232,17 @@ uint32_t createBindings(VkDescriptorSetLayoutBinding* toBind, uint32_t count, Vk
     return count;
 }
 
-inline VkDescriptorSetLayout createLayout(VkDevice device, BitmaskGroup const& bitmaskGroup) {
+inline VkDescriptorSetLayout createLayout(VkDevice device, BitmaskGroup const& bitmaskGroup,
+        const utils::FixedCapacityVector<VkSampler>& immutables) {
     // Note that the following *needs* to be static so that VkDescriptorSetLayoutCreateInfo will not
     // refer to stack memory.
     VkDescriptorSetLayoutBinding toBind[VulkanDescriptorSetLayout::MAX_BINDINGS];
     uint32_t count = 0;
+
+    // Set all the immutable samplers to the corresponding bind points ahead of time
+    for (uint32_t iSampler = 0; iSampler < immutables.size(); ++iSampler) {
+        toBind[iSampler].pImmutableSamplers = &immutables[iSampler];
+    }
 
     count = createBindings(toBind, count, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
             bitmaskGroup.dynamicUbo);
@@ -325,11 +331,23 @@ public:
         : mDevice(device) {}
 
     VkDescriptorSetLayout getVkLayout(VulkanDescriptorSetLayout::Bitmask const& bitmasks,
-            DescriptorSetLayout const& info) {
+            DescriptorSetLayout const& info,
+            VulkanSamplerCache& cache) {
         if (auto itr = mVkLayouts.find(bitmasks); itr != mVkLayouts.end()) {
             return itr->second;
         }
-        auto vklayout = createLayout(mDevice, bitmasks);
+
+        utils::FixedCapacityVector<VkSampler> immutables(info.bindings.size());
+        for (const auto& binding : info.bindings) {
+            if (binding.type == DescriptorType::SAMPLER_EXTERNAL) {
+                // Get or create the external sampler given this particular combo
+                const VkSampler samplerExt = cache.getExternalSampler(binding.sampler,
+                    binding.chroma, binding.internalFormat);
+                immutables.push_back(samplerExt);
+            }
+        }
+
+        auto vklayout = createLayout(mDevice, bitmasks, immutables);
         mVkLayouts[bitmasks] = vklayout;
         return vklayout;
     }
@@ -497,7 +515,7 @@ void VulkanDescriptorSetManager::initVkLayout(
         fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout,
         DescriptorSetLayout const& info,
         VulkanSamplerCache& cache) {
-    layout->setVkLayout(mLayoutManager->getVkLayout(layout->bitmask, info));
+    layout->setVkLayout(mLayoutManager->getVkLayout(layout->bitmask, info, cache));
 }
 
 void VulkanDescriptorSetManager::clearHistory() {
