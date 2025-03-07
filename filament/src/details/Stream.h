@@ -18,13 +18,14 @@
 #define TNT_FILAMENT_DETAILS_STREAM_H
 
 #include "downcast.h"
-#include "math/mat3.h"
 
 #include <filament/Stream.h>
 
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
+
+#include <math/mat3.h>
 
 namespace filament {
 
