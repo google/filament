@@ -225,6 +225,23 @@ static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage t
     }
 }
 
+enum class DescriptorType : uint8_t {
+    UNIFORM_BUFFER,
+    SHADER_STORAGE_BUFFER,
+    SAMPLER,
+    INPUT_ATTACHMENT,
+    SAMPLER_EXTERNAL
+};
+
+enum class DescriptorFlags : uint8_t {
+    NONE = 0x00,
+    DYNAMIC_OFFSET = 0x01
+};
+
+using descriptor_set_t = uint8_t;
+
+using descriptor_binding_t = uint8_t;
+
 /**
  * Bitmask for selecting render buffers
  */
@@ -982,21 +999,16 @@ static_assert(sizeof(SamplerParams) <= sizeof(uint64_t),
 
 //! Sampler parameters
 struct SamplerYcbcrConversion { // NOLINT
-    SamplerYcbcrModelConversion ycbcrModel : 3;
+    SamplerYcbcrModelConversion ycbcrModel : 4;
+    TextureSwizzle              r : 4;
+    TextureSwizzle              g : 4;
+    TextureSwizzle              b : 4;
+    TextureSwizzle              a : 4;
     SamplerYcbcrRange           ycbcrRange : 1;
-    uint8_t                     padding0   : 4;
-
-    TextureSwizzle              r        : 3;
-    TextureSwizzle              g        : 3;
-    uint8_t                     padding1 : 2;
-    TextureSwizzle              b        : 3;
-    TextureSwizzle              a        : 3;
-    uint8_t                     padding2 : 2;
-
     ChromaLocation              xChromaOffset : 1;
     ChromaLocation              yChromaOffset : 1;
-    SamplerMagFilter            chromaFilter  : 1;
-    uint8_t                     padding3      : 5;
+    SamplerMagFilter            chromaFilter : 1;
+    uint8_t                     padding;
 
     struct Hasher {
         size_t operator()(const SamplerYcbcrConversion p) const noexcept {
@@ -1009,10 +1021,7 @@ struct SamplerYcbcrConversion { // NOLINT
     struct EqualTo {
         bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
                 const noexcept {
-            assert_invariant(lhs.padding0 == 0);
-            assert_invariant(lhs.padding1 == 0);
-            assert_invariant(lhs.padding2 == 0);
-            assert_invariant(lhs.padding3 == 0);
+            assert_invariant(lhs.padding == 0);
             auto* pLhs = reinterpret_cast<uint32_t const*>
                 (reinterpret_cast<char const*>(&lhs));
             auto* pRhs = reinterpret_cast<uint32_t const*>
@@ -1024,10 +1033,7 @@ struct SamplerYcbcrConversion { // NOLINT
     struct LessThan {
         bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
                 const noexcept {
-            assert_invariant(lhs.padding0 == 0);
-            assert_invariant(lhs.padding1 == 0);
-            assert_invariant(lhs.padding2 == 0);
-            assert_invariant(lhs.padding3 == 0);
+            assert_invariant(lhs.padding == 0);
             auto* pLhs = reinterpret_cast<uint32_t const*>
                 (reinterpret_cast<char const*>(&lhs));
             auto* pRhs = reinterpret_cast<uint32_t const*>
@@ -1080,23 +1086,6 @@ struct ExternalSamplerKey {
     SamplerParams mSpm;
     uint32_t mExtFmt;
 };
-
-enum class DescriptorType : uint8_t {
-    UNIFORM_BUFFER,
-    SHADER_STORAGE_BUFFER,
-    SAMPLER,
-    INPUT_ATTACHMENT,
-    SAMPLER_EXTERNAL
-};
-
-enum class DescriptorFlags : uint8_t {
-    NONE = 0x00,
-    DYNAMIC_OFFSET = 0x01
-};
-
-using descriptor_set_t = uint8_t;
-
-using descriptor_binding_t = uint8_t;
 
 struct DescriptorSetLayoutBinding {
     DescriptorType type;

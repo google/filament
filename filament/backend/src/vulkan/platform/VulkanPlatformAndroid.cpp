@@ -220,23 +220,23 @@ VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(
 }
 
 VkSampler VulkanPlatform::createExternalSamplerImpl(
-        VkDevice device, SamplerYcbcrConversion chroma, SamplerParams sampler,
-        uint32_t externalFormat) {
+        VkDevice device, SamplerYcbcrConversion chroma, SamplerParams params,
+        uint32_t internalFormat) {
     VkExternalFormatANDROID externalFormat = {
         .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
         .pNext = nullptr,
-        .externalFormat = externalFormat,
+        .externalFormat = internalFormat,
     };
 
     VkSamplerYcbcrConversionCreateInfo conversionInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
         .pNext = &externalFormat,
         .format = VK_FORMAT_UNDEFINED,
-        .ycbcrModel = getYcbcrModelConversion(chroma.ycbcrModel),
-        .ycbcrRange = getYcbcrRange(chroma.range),
-        .components = getSwizzleMap({chroma.r, chroma.g, chroma.b, chroma.a}),
-        .xChromaOffset = getChromaLocation(chroma.xChromaOffset),
-        .yChromaOffset = getChromaLocation(chroma.yChromaOffset),
+        .ycbcrModel = fvkutils::getYcbcrModelConversion(chroma.ycbcrModel),
+        .ycbcrRange = fvkutils::getYcbcrRange(chroma.ycbcrRange),
+        .components = fvkutils::getSwizzleMap({chroma.r, chroma.g, chroma.b, chroma.a}),
+        .xChromaOffset = fvkutils::getChromaLocation(chroma.xChromaOffset),
+        .yChromaOffset = fvkutils::getChromaLocation(chroma.yChromaOffset),
         .chromaFilter = (chroma.filter == SamplerMagFilter::NEAREST)
                             ? VK_FILTER_NEAREST
                             : VK_FILTER_LINEAR,
@@ -266,7 +266,7 @@ VkSampler VulkanPlatform::createExternalSamplerImpl(
         .anisotropyEnable = params.anisotropyLog2 == 0 ? 0u : 1u,
         .maxAnisotropy = (float)(1u << params.anisotropyLog2),
         .compareEnable = getCompareEnable(params.compareMode),
-        .compareOp = getCompareOp(params.compareFunc),
+        .compareOp = fvkutils::getCompareOp(params.compareFunc),
         .minLod = 0.0f,
         .maxLod = getMaxLod(params.filterMin),
         .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
