@@ -34,6 +34,7 @@
 #include <backend/Platform.h>
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
+#include <backend/BufferObjectStreamDescriptor.h>
 
 #include "private/backend/Driver.h"
 #include "private/backend/HandleAllocator.h"
@@ -58,6 +59,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <unordered_map>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -364,9 +366,12 @@ private:
     // the must be accessed from the user thread only
     std::vector<GLStream*> mStreamsWithPendingAcquiredImage;
 
+    std::unordered_map<GLuint, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
+
     void attachStream(GLTexture* t, GLStream* stream) noexcept;
     void detachStream(GLTexture* t) noexcept;
     void replaceStream(GLTexture* t, GLStream* stream) noexcept;
+    math::mat3f getStreamTransformMatrix(Handle<HwStream> sh);
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     // tasks executed on the main thread after the fence signaled
