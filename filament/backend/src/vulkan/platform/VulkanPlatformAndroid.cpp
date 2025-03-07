@@ -231,13 +231,14 @@ VkSampler VulkanPlatform::createExternalSamplerImpl(
         .externalFormat = internalFormat,
     };
 
+    TextureSwizzle const swizzleArray[] = {chroma.r, chroma.g, chroma.b, chroma.a};
     VkSamplerYcbcrConversionCreateInfo conversionInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
         .pNext = &externalFormat,
         .format = VK_FORMAT_UNDEFINED,
         .ycbcrModel = fvkutils::getYcbcrModelConversion(chroma.ycbcrModel),
         .ycbcrRange = fvkutils::getYcbcrRange(chroma.ycbcrRange),
-        .components = fvkutils::getSwizzleMap({chroma.r, chroma.g, chroma.b, chroma.a}),
+        .components = fvkutils::getSwizzleMap(swizzleArray),
         .xChromaOffset = fvkutils::getChromaLocation(chroma.xChromaOffset),
         .yChromaOffset = fvkutils::getChromaLocation(chroma.yChromaOffset),
         .chromaFilter = (chroma.chromaFilter == SamplerMagFilter::NEAREST)
