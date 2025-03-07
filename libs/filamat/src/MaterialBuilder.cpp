@@ -909,6 +909,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         const bool targetApiNeedsSpirv =
                 (targetApi == TargetApi::VULKAN || targetApi == TargetApi::METAL);
         const bool targetApiNeedsMsl = targetApi == TargetApi::METAL;
+        const bool targetApiNeedsWgsl = targetApi == TargetApi::WEBGPU;
         const bool targetApiNeedsGlsl = targetApi == TargetApi::OPENGL;
 
         // Set when a job fails
@@ -923,9 +924,11 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 // TODO: avoid allocations when not required
                 std::vector<uint32_t> spirv;
                 std::string msl;
+                std::string wgsl;
 
                 std::vector<uint32_t>* pSpirv = targetApiNeedsSpirv ? &spirv : nullptr;
                 std::string* pMsl = targetApiNeedsMsl ? &msl : nullptr;
+                std::string* pWgsl = targetApiNeedsWgsl ? &wgsl : nullptr;
 
                 TextEntry glslEntry{};
                 BinaryEntry spirvEntry{};
@@ -1006,7 +1009,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     config.glsl.subpassInputToColorLocation.emplace_back(0, 0);
                 }
 
-                bool const ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl);
+                bool const ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl, pWgsl);
                 if (!ok) {
                     showErrorMessage(mMaterialName.c_str_safe(), v.variant, targetApi, v.stage,
                                      featureLevel, shader);
