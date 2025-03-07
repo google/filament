@@ -702,29 +702,19 @@ class MaterialSidePanel extends LitElement {
 
     updated(props) {
         if (props.has('database')) {
-            const items = [];
-
             // Names need not be unique, so we display a numeric suffix for non-unique names.
             // To achieve stable ordering of anonymous materials, we first sort by matid.
-            const labels = new Set();
             const matids = Object.keys(this.database).sort();
-            const duplicatedLabels = {};
-            for (const matid of matids) {
-                const name = this.database[matid].name || kUntitledPlaceholder;
-                if (labels.has(name)) {
-                    duplicatedLabels[name] = 0;
-                } else {
-                    labels.add(name);
-                }
-            }
+            const names = matids.map(matid => (this.database[matid].name || kUntitledPlaceholder));
+            const labelCount  = {};
+            names.forEach(name => labelCount[name] = (labelCount[name] || 0) + 1);
+            const duplicates = names.filter(name => labelCount[name] > 1);
 
             this.materials = matids.map((matid) => {
                 const material = this.database[matid];
                 let name = material.name || kUntitledPlaceholder;
-                if (name in duplicatedLabels) {
-                    const index = duplicatedLabels[name];
-                    duplicatedLabels[name] = index + 1;
-                    name = `${name} (${index})`;
+                if (duplicates.includes(name)) {
+                    name = `${name} (${labelCount[name]--})`;
                 }
                 return {
                     matid: matid,
@@ -938,8 +928,7 @@ class MatdbgViewer extends LitElement {
             }
         );
 
-        let materials = await fetchMaterials();
-        this.database = materials;
+        this.database = await fetchMaterials();
 
         // This is the user preferences stored in localStorage
         let hideInactiveVariantsVal = localStorage.getItem('option-hide-inactive-variants');
@@ -1070,8 +1059,8 @@ class MatdbgViewer extends LitElement {
                 const activeVariants = this.activeShaders[this.currentMaterial].variants;
                 const materialShaders = material[this.currentBackend];
                 for (let shader in materialShaders) {
-                    let ind = activeVariants.indexOf(+shader);
-                    if (ind >= 0) {
+                    const shaderVariant = materialShaders[shader].variant;
+                    if (activeVariants.indexOf(shaderVariant) >= 0) {
                         this.currentShaderIndex = +shader;
                         break;
                     }
