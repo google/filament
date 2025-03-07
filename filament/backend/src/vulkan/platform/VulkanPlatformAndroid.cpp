@@ -15,6 +15,9 @@
  */
 #include <backend/platforms/VulkanPlatform.h>
 
+#include <backend/DriverEnums.h>
+#include <backend/platforms/VulkanPlatformAndroid.h>
+
 #include "vulkan/VulkanConstants.h"
 
 #include <utils/Panic.h>
@@ -24,17 +27,43 @@
 #include <android/hardware_buffer.h>
 #include <android/native_window.h>
 
+#include <utility>
+
 using namespace bluevk;
 
 namespace filament::backend {
 
 namespace {
-void getVKFormatAndUsage(const AHardwareBuffer_Desc& desc, VkFormat& format,
-        VkImageUsageFlags& usage, bool& isProtected) {
+
+VkFormat transformVkFormat(VkFormat format, bool sRGB) {
+    if (!sRGB) {
+        return format;
+    }    
+    
+    switch (format) {
+        case VK_FORMAT_R8G8B8A8_UNORM:
+            format = VK_FORMAT_R8G8B8A8_SRGB;
+            break;
+        case VK_FORMAT_R8G8B8_UNORM:
+            format = VK_FORMAT_R8G8B8_SRGB;
+            break;
+        default:
+            break;
+    }
+
+    return format;
+}
+
+bool isProtectedFromUsage(uint64_t usage) {
+    return (usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT) ? true : false;
+}
+
+std::pair<VkFormat, VkImageUsageFlags> getVKFormatAndUsage(const AHardwareBuffer_Desc& desc, bool sRGB) {
+    VkFormat format = VK_FORMAT_UNDEFINED;
+    VkImageUsageFlags usage = 0;
     // Refer to "11.2.17. External Memory Handle Types" in the spec, and
     // Tables 13/14 for how the following derivation works.
     bool isDepthFormat = false;
-    isProtected = false;
     switch (desc.format) {
         case AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM:
             format = VK_FORMAT_R8G8B8A8_UNORM;
@@ -82,6 +111,8 @@ void getVKFormatAndUsage(const AHardwareBuffer_Desc& desc, VkFormat& format,
             format = VK_FORMAT_UNDEFINED;
     }
 
+    format = transformVkFormat(format, sRGB);
+
     // The following only concern usage flags derived from Table 14.
     usage = 0;
     if (desc.usage & AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE) {
@@ -98,16 +129,88 @@ void getVKFormatAndUsage(const AHardwareBuffer_Desc& desc, VkFormat& format,
     if (desc.usage & AHARDWAREBUFFER_USAGE_GPU_DATA_BUFFER) {
         usage = VK_IMAGE_USAGE_STORAGE_BIT;
     }
-    if (desc.usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT) {
-        isProtected = true;
+
+    return {format, usage};
+}
+
+TextureFormat mapToFilamentFormat(unsigned int format, bool isSrgbTransfer) noexcept {
+    if (isSrgbTransfer) {
+        switch (format) {
+            case AHARDWAREBUFFER_FORMAT_R8G8B8_UNORM:
+                return TextureFormat::SRGB8;
+            default:
+                return TextureFormat::SRGB8_A8;
+        }
+    }
+    switch (format) {
+        case AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM:
+        case AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM:
+            return TextureFormat::RGBA8;
+        case AHARDWAREBUFFER_FORMAT_R8G8B8_UNORM:
+        case AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420:
+            return TextureFormat::RGB8;
+        case AHARDWAREBUFFER_FORMAT_R5G6B5_UNORM:
+            return TextureFormat::RGB565;
+        case AHARDWAREBUFFER_FORMAT_R16G16B16A16_FLOAT:
+            return TextureFormat::RGBA16F;
+        case AHARDWAREBUFFER_FORMAT_R10G10B10A2_UNORM:
+            return TextureFormat::RGB10_A2;
+        case AHARDWAREBUFFER_FORMAT_D16_UNORM:
+            return TextureFormat::DEPTH16;
+        case AHARDWAREBUFFER_FORMAT_D24_UNORM:
+            return TextureFormat::DEPTH24;
+        case AHARDWAREBUFFER_FORMAT_D24_UNORM_S8_UINT:
+            return TextureFormat::DEPTH24_STENCIL8;
+        case AHARDWAREBUFFER_FORMAT_D32_FLOAT:
+            return TextureFormat::DEPTH32F;
+        case AHARDWAREBUFFER_FORMAT_D32_FLOAT_S8_UINT:
+            return TextureFormat::DEPTH32F_STENCIL8;
+        case AHARDWAREBUFFER_FORMAT_S8_UINT:
+            return TextureFormat::STENCIL8;
+        case AHARDWAREBUFFER_FORMAT_R8_UNORM:
+            return TextureFormat::R8;
+        default:
+            return TextureFormat::UNUSED;
     }
 }
 
-VulkanPlatform::ImageData allocateExternalImage(void* externalBuffer,
-        VkDevice device, const VkAllocationCallbacks* allocator,
-        VulkanPlatform::ExternalImageMetadata const& metadata) {
+TextureUsage mapToFilamentUsage(unsigned int usage, TextureFormat format) noexcept {
+    TextureUsage usageFlags = TextureUsage::NONE;
+
+    if (usage & AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE) {
+        usageFlags |= TextureUsage::SAMPLEABLE;
+    }
+
+    if (usage & AHARDWAREBUFFER_USAGE_GPU_FRAMEBUFFER) {
+        if (isDepthFormat(format)) {
+            usageFlags |= TextureUsage::DEPTH_ATTACHMENT;
+        }
+        if (isStencilFormat(format)) {
+            usageFlags |= TextureUsage::STENCIL_ATTACHMENT;
+        }
+        if (isColorFormat(format)) {
+            usageFlags |= TextureUsage::COLOR_ATTACHMENT;
+        }
+    }
+
+    if (usage & AHARDWAREBUFFER_USAGE_GPU_DATA_BUFFER) {
+        usageFlags |= TextureUsage::UPLOADABLE;
+    }
+
+    if (usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT) {
+        usageFlags |= TextureUsage::PROTECTED;
+    }
+
+    if (usageFlags == TextureUsage::NONE) {
+        usageFlags = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
+    }
+
+    return usageFlags;
+}
+
+VulkanPlatform::ImageData allocateExternalImage(AHardwareBuffer* buffer,
+        VkDevice device, VulkanPlatform::ExternalImageMetadata const& metadata) {
     VulkanPlatform::ImageData data;
-    AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
 
     // if external format we need to specifiy it in the allocation
     const bool useExternalFormat = metadata.format == VK_FORMAT_UNDEFINED;
@@ -140,7 +243,7 @@ VulkanPlatform::ImageData allocateExternalImage(void* externalBuffer,
     if (metadata.isProtected == false)
         imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
-    VkResult result = vkCreateImage(device, &imageInfo, allocator, &data.first);
+    VkResult result = vkCreateImage(device, &imageInfo, VKALLOC, &data.first);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
             << "vkCreateImage failed with error=" << static_cast<int32_t>(result);
 
@@ -160,27 +263,57 @@ VulkanPlatform::ImageData allocateExternalImage(void* externalBuffer,
         .pNext = &memoryDedicatedAllocateInfo,
         .allocationSize = metadata.allocationSize,
         .memoryTypeIndex = metadata.memoryTypeBits};
-    result = vkAllocateMemory(device, &allocInfo, allocator, &data.second);
+    result = vkAllocateMemory(device, &allocInfo, VKALLOC, &data.second);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
             << "vkAllocateMemory failed with error=" << static_cast<int32_t>(result);
 
     return data;
 }
 
-}// namespace
+} // namespace
 
-VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(void* externalImage,
-        VkDevice device) {
+namespace fvkandroid {
+
+ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid() = default;
+
+Platform::ExternalImageHandle createExternalImage(AHardwareBuffer const *buffer,
+        bool sRGB) noexcept {
+    if (__builtin_available(android 26, *)) {
+        AHardwareBuffer_Desc hardwareBufferDescription = {};
+        AHardwareBuffer_describe(buffer, &hardwareBufferDescription);
+
+        auto* const p = new (std::nothrow) ExternalImageVulkanAndroid;
+        p->aHardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
+        p->sRGB = sRGB;
+        p->height = hardwareBufferDescription.height;
+        p->width = hardwareBufferDescription.width;
+        TextureFormat textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
+        p->format = textureFormat;
+        p->usage = mapToFilamentUsage(hardwareBufferDescription.usage, textureFormat);
+        return Platform::ExternalImageHandle{p};
+    }
+    
+    return Platform::ExternalImageHandle{};
+}
+
+}
+
+VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
+        ExternalImageHandleRef externalImage, VkDevice device) {
+    auto const *fvkExternalImage =
+            static_cast<fvkandroid::ExternalImageVulkanAndroid const*>(externalImage.get());
+
     ExternalImageMetadata metadata;
-    AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalImage);
+    AHardwareBuffer* buffer = fvkExternalImage->aHardwareBuffer;
     if (__builtin_available(android 26, *)) {
         AHardwareBuffer_Desc bufferDesc;
         AHardwareBuffer_describe(buffer, &bufferDesc);
         metadata.width = bufferDesc.width;
         metadata.height = bufferDesc.height;
         metadata.layers = bufferDesc.layers;
-
-        getVKFormatAndUsage(bufferDesc, metadata.format, metadata.usage, metadata.isProtected);
+        metadata.isProtected = isProtectedFromUsage(bufferDesc.usage);
+        std::tie(metadata.format, metadata.usage) = getVKFormatAndUsage(bufferDesc,
+                fvkExternalImage->sRGB);
     }
     // In the unprotected case add R/W capabilities
     if (metadata.isProtected == false) {
@@ -197,20 +330,25 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
     };
     VkResult result = vkGetAndroidHardwareBufferPropertiesANDROID(device, buffer, &properties);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkGetAndroidHardwareBufferProperties failed with error="
-            << static_cast<int32_t>(result);
-    FILAMENT_CHECK_POSTCONDITION(metadata.format == formatInfo.format)
-            << "mismatched image format for external image (AHB)";
+        << "vkGetAndroidHardwareBufferProperties failed with error="
+        << static_cast<int32_t>(result);
+                            
+    VkFormat bufferPropertiesFormat = transformVkFormat(formatInfo.format, fvkExternalImage->sRGB);
+    FILAMENT_CHECK_POSTCONDITION(metadata.format == bufferPropertiesFormat)
+            << "mismatched image format( " << metadata.format << ") and queried format("
+            << bufferPropertiesFormat << ") for external image (AHB)";
     metadata.externalFormat = formatInfo.externalFormat;
     metadata.allocationSize = properties.allocationSize;
     metadata.memoryTypeBits = properties.memoryTypeBits;
     return metadata;
 }
 
-VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage,
-        VkDevice device, const VkAllocationCallbacks* allocator,
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageDataImpl(
+        ExternalImageHandleRef externalImage, VkDevice device,
         const ExternalImageMetadata& metadata) {
-    ImageData data = allocateExternalImage(externalImage, device, allocator, metadata);
+    auto const* fvkExternalImage =
+            static_cast<fvkandroid::ExternalImageVulkanAndroid const*>(externalImage.get());
+    ImageData data = allocateExternalImage(fvkExternalImage->aHardwareBuffer, device, metadata);
     VkResult result = vkBindImageMemory(device, data.first, data.second, 0);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
             << "vkBindImageMemory error=" << static_cast<int32_t>(result);
