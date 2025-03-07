@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
@@ -60,36 +61,6 @@ struct MaterialParams {
     float4 color;
     float4 scale;
 };
-
-struct ScreenshotParams {
-    int width;
-    int height;
-    const char* filename;
-    uint32_t pixelHashResult;
-};
-
-#ifdef FILAMENT_IOS
-static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, ScreenshotParams* params) {}
-#else
-static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, ScreenshotParams* params) {
-    using namespace image;
-    const size_t size = params->width * params->height * 4;
-    void* buffer = calloc(1, size);
-    auto cb = [](void* buffer, size_t size, void* user) {
-        ScreenshotParams* params = (ScreenshotParams*) user;
-        int w = params->width, h = params->height;
-        const uint32_t* texels = (uint32_t*) buffer;
-        params->pixelHashResult = utils::hash::murmur3(texels, size / 4, 0);
-        LinearImage image(w, h, 4);
-        image = toLinearWithAlpha<uint8_t>(w, h, w * 4, (uint8_t*) buffer);
-        std::ofstream pngstrm(params->filename, std::ios::binary | std::ios::trunc);
-        ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", params->filename);
-    };
-    PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb,
-            (void*) params);
-    dapi.readPixels(rt, 0, 0, params->width, params->height, std::move(pb));
-}
-#endif
 
 static void uploadUniforms(DriverApi& dapi, Handle<HwBufferObject> ubh, MaterialParams params) {
     MaterialParams* tmp = new MaterialParams(params);
@@ -246,23 +217,18 @@ TEST_F(BackendTest, ColorMagnify) {
         api.commit(swapChain);
     }
 
-    // Grab a screenshot.
-    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "ColorMagnify.png" };
     {
-        RenderFrame frame(api);
-        dumpScreenshot(api, dstRenderTargets[0], &params);
-        api.commit(swapChain);
+        ImageExpectations expectations(api);
+
+        {
+            RenderFrame frame(api);
+            EXPECT_IMAGE(dstRenderTargets[0], expectations,
+                    ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMagnify.png", 0x410bdd31));
+            api.commit(swapChain);
+        }
+
+        flushAndWait();
     }
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
-
-    // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0x410bdd31;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
-    EXPECT_TRUE(params.pixelHashResult == expected);
 }
 
 TEST_F(BackendTest, ColorMinify) {
@@ -313,18 +279,14 @@ TEST_F(BackendTest, ColorMinify) {
             srcRenderTargets[srcLevel], {0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel},
             SamplerMagFilter::LINEAR);
 
+    {
+        ImageExpectations expectations(api);
 
-    // Grab a screenshot.
-    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "ColorMinify.png" };
-    dumpScreenshot(api, dstRenderTargets[0], &params);
+        EXPECT_IMAGE(dstRenderTargets[0], expectations,
+                ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMinify.png", 0xf3d9c53f));
 
-    // Wait for the ReadPixels result to come back.
-    flushAndWait();
-
-    // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0xf3d9c53f;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
-    EXPECT_TRUE(params.pixelHashResult == expected);
+        flushAndWait();
+    }
 }
 
 TEST_F(BackendTest, ColorResolve) {
@@ -426,17 +388,14 @@ TEST_F(BackendTest, ColorResolve) {
             srcRenderTarget, {0, 0, kSrcTexWidth, kSrcTexHeight},
             SamplerMagFilter::NEAREST);
 
-    // Grab a screenshot.
-    ScreenshotParams sparams{ kDstTexWidth, kDstTexHeight, "ColorResolve.png" };
-    dumpScreenshot(api, dstRenderTarget, &sparams);
+    {
+        ImageExpectations expectations(api);
 
-    // Wait for the ReadPixels result to come back.
-    flushAndWait();
+        EXPECT_IMAGE(dstRenderTarget, expectations,
+                ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve.png", 0xebfac2ef));
 
-    // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0xebfac2ef;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sparams.pixelHashResult, expected);
-    EXPECT_TRUE(sparams.pixelHashResult == expected);
+        flushAndWait();
+    }
 }
 
 TEST_F(BackendTest, Blit2DTextureArray) {
@@ -494,23 +453,19 @@ TEST_F(BackendTest, Blit2DTextureArray) {
         api.commit(swapChain);
     }
 
-    // Grab a screenshot.
-    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "Blit2DTextureArray.png" };
     {
-        RenderFrame frame(api);
-        dumpScreenshot(api, dstRenderTarget, &params);
-        api.commit(swapChain);
+        ImageExpectations expectations(api);
+
+        {
+            RenderFrame frame(api);
+            EXPECT_IMAGE(dstRenderTarget, expectations,
+                    ScreenshotParams(kDstTexWidth, kDstTexHeight, "Blit2DTextureArray.png",
+                            0x8de7d55b));
+            api.commit(swapChain);
+        }
+
+        flushAndWait();
     }
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
-
-    // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0x8de7d55b;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
-    EXPECT_TRUE(params.pixelHashResult == expected);
 }
 
 TEST_F(BackendTest, BlitRegion) {
@@ -578,27 +533,19 @@ TEST_F(BackendTest, BlitRegion) {
         api.commit(swapChain);
     }
 
-    // Grab a screenshot.
-    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "BlitRegion.png" };
     {
-        RenderFrame frame(api);
-        dumpScreenshot(api, dstRenderTarget, &params);
-        api.commit(swapChain);
+        ImageExpectations expectations(api);
+
+        {
+            RenderFrame frame(api);
+            // TODO: for some reason, this test has very, very slight (as in one pixel) differences between
+            // OpenGL and Metal. So disable golden checking for now.
+            // EXPECT_IMAGE(dstRenderTarget, expectations, ScreenshotParams(kDstTexWidth, kDstTexHeight, "BlitRegion.png", 0x74fa34ed));
+            api.commit(swapChain);
+        }
+
+        flushAndWait();
     }
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
-
-    // TODO: for some reason, this test has very, very slight (as in one pixel) differences between
-    // OpenGL and Metal. So disable golden checking for now.
-    // Use the compare tool from ImageMagick to see visual differences:
-    // compare -verbose -metric mae BlitRegion_Metal.png BlitRegion_OpenGL.png difference.png
-    //
-    // const uint32_t expected = 0x74fa34ed;
-    // printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
-    // EXPECT_TRUE(params.pixelHashResult == expected);
 }
 
 TEST_F(BackendTest, BlitRegionToSwapChain) {
@@ -650,22 +597,24 @@ TEST_F(BackendTest, BlitRegionToSwapChain) {
     };
 
     {
-        RenderFrame frame(api);
+        ImageExpectations expectations(api);
+        {
+            {
+                RenderFrame frame(api);
 
-        api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTarget,
-                dstRect, srcRenderTargets[srcLevel],
-                srcRect, SamplerMagFilter::LINEAR);
+                api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTarget,
+                        dstRect, srcRenderTargets[srcLevel],
+                        srcRect, SamplerMagFilter::LINEAR);
 
-        ScreenshotParams params { kDstTexWidth, kDstTexHeight, "BlitRegionToSwapChain.png" };
-        dumpScreenshot(api, dstRenderTarget, &params);
+                api.commit(swapChain);
+            }
 
-        api.commit(swapChain);
+            // TODO: for some reason, this test has been disabled. It needs to be tested on all machines.
+            // EXPECT_IMAGE(dstRenderTarget, expectations,
+            //         ScreenshotParams(kDstTexWidth, kDstTexHeight, "BlitRegionToSwapChain.png", 0x0));
+        }
+        flushAndWait();
     }
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
 }
 
 } // namespace test
