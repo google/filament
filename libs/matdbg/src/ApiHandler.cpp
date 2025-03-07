@@ -336,7 +336,7 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
                 return error(__LINE__, uri);
             }
             bool const last = (++index) == mServer->mMaterialRecords.size();
-            mg_printf(conn, "\"%8.8x\": %s %s", pair.first, writer.getJsonString(),
+            mg_printf(conn, "\"%8.8x\": %s%s", pair.first, writer.getJsonString(),
                     last ? "" : ",");
         }
         mg_printf(conn, "}");
