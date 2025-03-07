@@ -72,10 +72,9 @@ async function queryActiveShaders() {
     const actives = {};
     for (matid in activeVariants) {
         const backend = activeVariants[matid][0];
-        const variants = activeVariants[matid].slice(1);
-        actives[matid] = {
-            backend, variants
-        };
+        const shaderModel = activeVariants[matid][1];
+        const variants = activeVariants[matid].slice(2);
+        actives[matid] = { backend, shaderModel, variants };
     }
     return actives;
 }

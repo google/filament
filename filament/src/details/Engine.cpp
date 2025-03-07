@@ -751,7 +751,8 @@ int FEngine::loop() {
     #endif
     if (portString != nullptr) {
         const int port = atoi(portString);
-        debug.server = new matdbg::DebugServer(mBackend, mDriver->getShaderLanguage(), port);
+        debug.server = new matdbg::DebugServer(mBackend, mDriver->getShaderLanguage(),
+                matdbg::DbgShaderModel((uint8_t) mDriver->getShaderModel()), port);
 
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
         // When this occurs, carry onward, developers can look at civetweb.txt for details.
