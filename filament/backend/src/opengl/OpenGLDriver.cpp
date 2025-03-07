@@ -2167,8 +2167,12 @@ int64_t OpenGLDriver::getStreamTimestamp(Handle<HwStream> sh) {
 
 math::mat3f OpenGLDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
     if (sh) {
-        GLStream* s = handle_cast<GLStream*>(sh);        
-        return mPlatform.getTransformMatrix(s->stream);
+        GLStream* s = handle_cast<GLStream*>(sh);
+        if (s->streamType == StreamType::NATIVE) {
+            return mPlatform.getTransformMatrix(s->stream);
+        } else {
+            return s->user_thread.acquired.transform;
+        }
     }
     return math::mat3f();
 }
