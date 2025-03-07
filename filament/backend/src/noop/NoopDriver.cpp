@@ -133,7 +133,7 @@ Handle<HwStream> NoopDriver::createStreamAcquired() {
     return {};
 }
 
-void NoopDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
+void NoopDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math::mat3f& transform,
         CallbackHandler* handler, StreamCallback cb, void* userData) {
 }
 

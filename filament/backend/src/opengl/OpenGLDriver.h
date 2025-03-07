@@ -161,7 +161,15 @@ public:
             uint8_t cur = 0;
             AcquiredImage acquired;
             AcquiredImage pending;
+            math::mat3f transform;
         } user_thread;
+
+        /*
+         * The fields below are accessed from the GL thread
+         */
+         struct {
+            math::mat3f transform;
+         } gl_thread;
     };
 
     struct GLRenderTarget : public HwRenderTarget {
