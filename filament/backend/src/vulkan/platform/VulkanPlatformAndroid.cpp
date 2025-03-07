@@ -17,7 +17,10 @@
 
 #include "vulkan/VulkanConstants.h"
 
+
 #include <utils/Panic.h>
+#include "vulkan/utils/Image.h"
+#include "vulkan/utils/Conversion.h"
 
 #include <bluevk/BlueVK.h>
 
