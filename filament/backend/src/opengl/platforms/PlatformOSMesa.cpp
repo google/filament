@@ -22,6 +22,10 @@
 #include <dlfcn.h>
 #include <memory>
 
+// This is to ensure that linking during compilation will not fail even if
+// OSMesaGetProcAddress is not linked.
+__attribute__((weak)) OSMESAproc OSMesaGetProcAddress(char const*);
+
 namespace filament::backend {
 
 using namespace backend;
@@ -51,10 +55,10 @@ private:
     using GetProcAddressFunc = OSMESAproc (*)(const char* funcName);
 
 public:
-    CreateContextFunc OSMesaCreateContext;
-    DestroyContextFunc OSMesaDestroyContext;
-    MakeCurrentFunc OSMesaMakeCurrent;
-    GetProcAddressFunc OSMesaGetProcAddress;
+    CreateContextFunc fOSMesaCreateContext;
+    DestroyContextFunc fOSMesaDestroyContext;
+    MakeCurrentFunc fOSMesaMakeCurrent;
+    GetProcAddressFunc fOSMesaGetProcAddress;
 
     OSMesaAPI() {
         constexpr char const* libraryNames[] = {"libOSMesa.so", "libosmesa.so"};
@@ -65,18 +69,25 @@ public:
             }
         }
         if (mLib) {
-            OSMesaGetProcAddress = (GetProcAddressFunc) dlsym(mLib, "OSMesaGetProcAddress");
+            // Loading from a libosmesa.os
+            fOSMesaGetProcAddress = (GetProcAddressFunc) dlsym(mLib, "OSMesaGetProcAddress");
         } else {
-            OSMesaGetProcAddress = (GetProcAddressFunc) dlsym(RTLD_LOCAL, "OSMesaGetProcAddress");
+            // Filament is built into a .so
+            fOSMesaGetProcAddress = (GetProcAddressFunc) dlsym(RTLD_LOCAL, "OSMesaGetProcAddress");
         }
 
-        FILAMENT_CHECK_PRECONDITION(OSMesaGetProcAddress)
-                << "Unable to against libOSMesa to create a software GL context";
+        if (!fOSMesaGetProcAddress) {
+            // Statically linking osmesa
+            fOSMesaGetProcAddress = OSMesaGetProcAddress;
+        }
 
-        OSMesaCreateContext = (CreateContextFunc) OSMesaGetProcAddress("OSMesaCreateContext");
-        OSMesaDestroyContext =
-                (DestroyContextFunc) OSMesaGetProcAddress("OSMesaDestroyContext");
-        OSMesaMakeCurrent = (MakeCurrentFunc) OSMesaGetProcAddress("OSMesaMakeCurrent");
+        FILAMENT_CHECK_PRECONDITION(fOSMesaGetProcAddress)
+                << "Unable to link against libOSMesa to create a software GL context";
+
+        fOSMesaCreateContext = (CreateContextFunc) fOSMesaGetProcAddress("OSMesaCreateContext");
+        fOSMesaDestroyContext =
+                (DestroyContextFunc) fOSMesaGetProcAddress("OSMesaDestroyContext");
+        fOSMesaMakeCurrent = (MakeCurrentFunc) fOSMesaGetProcAddress("OSMesaMakeCurrent");
     }
 
     ~OSMesaAPI() {
@@ -97,7 +108,7 @@ Driver* PlatformOSMesa::createDriver(void* const sharedGLContext,
 
     FILAMENT_CHECK_PRECONDITION(sharedGLContext == nullptr)
             << "shared GL context is not supported with PlatformOSMesa";
-    mContext = api->OSMesaCreateContext(GL_RGBA, NULL);
+    mContext = api->fOSMesaCreateContext(GL_RGBA, NULL);
 
     // We need to do a no-op makecurrent here so that the context will be in a correct state before
     // any GL calls.
@@ -113,7 +124,7 @@ Driver* PlatformOSMesa::createDriver(void* const sharedGLContext,
 
 void PlatformOSMesa::terminate() noexcept {
     OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
-    api->OSMesaDestroyContext(mContext);
+    api->fOSMesaDestroyContext(mContext);
     delete api;
     mOsMesaApi = nullptr;
 
@@ -141,7 +152,7 @@ bool PlatformOSMesa::makeCurrent(ContextType type, SwapChain* drawSwapChain,
     OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
     OSMesaSwapchain* impl = (OSMesaSwapchain*) drawSwapChain;
 
-    auto result = api->OSMesaMakeCurrent(mContext, (BackingType*) impl->buffer.get(),
+    auto result = api->fOSMesaMakeCurrent(mContext, (BackingType*) impl->buffer.get(),
             BACKING_GL_TYPE, impl->width, impl->height);
     FILAMENT_CHECK_POSTCONDITION(result == GL_TRUE) << "OSMesaMakeCurrent failed!";
 

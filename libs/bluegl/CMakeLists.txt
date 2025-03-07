@@ -52,6 +52,10 @@ include_directories(${PUBLIC_HDR_DIR})
 # we're building a library
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
+if(FILAMENT_SUPPORTS_OSMESA)
+    target_compile_options(${TARGET} PRIVATE -I${FILAMENT_OSMESA_PATH}/include/GL)
+endif()
+
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)

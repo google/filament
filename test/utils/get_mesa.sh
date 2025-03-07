@@ -35,9 +35,12 @@ if [[ "$GITHUB_WORKFLOW" ]]; then
     sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${GITHUB_CLANG_VERSION} 100
 else
     set +e
-    apt-get -y build-dep mesa
-    sudo apt -y remove llvm-18 llvm-18-*
+    sudo apt-get -y build-dep mesa
+    sudo apt -y remove llvm-18 llvm-18-* llvm-19 llvm-19-*
     set -e
+
+    CURRENT_CLANG_VERSION=$(clang --version | head -n 1 | awk '{ print $4 }' | awk 'BEGIN { FS="\\." } { print $1 }')
+    GITHUB_CLANG_VERSION=${GITHUB_CLANG_VERSION:-${CURRENT_CLANG_VERSION}}
 
     sudo apt-get -y install clang-${GITHUB_CLANG_VERSION} \
          libc++-${GITHUB_CLANG_VERSION}-dev \
