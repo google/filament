@@ -588,6 +588,32 @@ VkComponentMapping getSwizzleMap(TextureSwizzle const swizzle[4]) {
     return map;
 }
 
+VkFilter getFilter(SamplerMinFilter filter) {
+    switch (filter) {
+    case SamplerMinFilter::NEAREST:
+        return VK_FILTER_NEAREST;
+    case SamplerMinFilter::LINEAR:
+        return VK_FILTER_LINEAR;
+    case SamplerMinFilter::NEAREST_MIPMAP_NEAREST:
+        return VK_FILTER_NEAREST;
+    case SamplerMinFilter::LINEAR_MIPMAP_NEAREST:
+        return VK_FILTER_LINEAR;
+    case SamplerMinFilter::NEAREST_MIPMAP_LINEAR:
+        return VK_FILTER_NEAREST;
+    case SamplerMinFilter::LINEAR_MIPMAP_LINEAR:
+        return VK_FILTER_LINEAR;
+    }
+}
+
+VkFilter getFilter(SamplerMagFilter filter) {
+    switch (filter) {
+    case SamplerMagFilter::NEAREST:
+        return VK_FILTER_NEAREST;
+    case SamplerMagFilter::LINEAR:
+        return VK_FILTER_LINEAR;
+    }
+}
+
 VkSamplerMipmapMode getMipmapMode(SamplerMinFilter filter) {
     switch (filter) {
     case SamplerMinFilter::NEAREST:

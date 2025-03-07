@@ -260,8 +260,8 @@ VkSampler VulkanPlatform::createExternalSamplerImpl(
     VkSamplerCreateInfo samplerInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .pNext = &samplerYcbcrConversionInfo,
-        .magFilter = getFilter(params.filterMag),
-        .minFilter = getFilter(params.filterMin),
+        .magFilter = fvkutils::getFilter(params.filterMag),
+        .minFilter = fvkutils::getFilter(params.filterMin),
         .mipmapMode = fvkutils::getMipmapMode(params.filterMin),
         .addressModeU = fvkutils::getWrapMode(params.wrapS),
         .addressModeV = fvkutils::getWrapMode(params.wrapT),

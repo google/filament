@@ -23,32 +23,6 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-constexpr inline VkFilter getFilter(SamplerMinFilter filter) noexcept {
-    switch (filter) {
-        case SamplerMinFilter::NEAREST:
-            return VK_FILTER_NEAREST;
-        case SamplerMinFilter::LINEAR:
-            return VK_FILTER_LINEAR;
-        case SamplerMinFilter::NEAREST_MIPMAP_NEAREST:
-            return VK_FILTER_NEAREST;
-        case SamplerMinFilter::LINEAR_MIPMAP_NEAREST:
-            return VK_FILTER_LINEAR;
-        case SamplerMinFilter::NEAREST_MIPMAP_LINEAR:
-            return VK_FILTER_NEAREST;
-        case SamplerMinFilter::LINEAR_MIPMAP_LINEAR:
-            return VK_FILTER_LINEAR;
-    }
-}
-
-constexpr inline VkFilter getFilter(SamplerMagFilter filter) noexcept {
-    switch (filter) {
-        case SamplerMagFilter::NEAREST:
-            return VK_FILTER_NEAREST;
-        case SamplerMagFilter::LINEAR:
-            return VK_FILTER_LINEAR;
-    }
-}
-
 VulkanSamplerCache::VulkanSamplerCache(VkDevice device)
     : mDevice(device) {}
 
@@ -59,8 +33,8 @@ VkSampler VulkanSamplerCache::getSampler(SamplerParams params) noexcept {
     }
     VkSamplerCreateInfo samplerInfo {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = getFilter(params.filterMag),
-        .minFilter = getFilter(params.filterMin),
+        .magFilter = fvkutils::getFilter(params.filterMag),
+        .minFilter = fvkutils::getFilter(params.filterMin),
         .mipmapMode = fvkutils::getMipmapMode(params.filterMin),
         .addressModeU = fvkutils::getWrapMode(params.wrapS),
         .addressModeV = fvkutils::getWrapMode(params.wrapT),

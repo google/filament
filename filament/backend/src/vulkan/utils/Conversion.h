@@ -57,6 +57,8 @@ VkComponentMapping getSwizzleMap(TextureSwizzle const swizzle[4]);
 VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags);
 
 // Needed by the Platform for external sampler creation
+VkFilter getFilter(SamplerMinFilter filter);
+VkFilter getFilter(SamplerMagFilter filter);
 VkSamplerMipmapMode getMipmapMode(SamplerMinFilter filter);
 VkSamplerAddressMode getWrapMode(SamplerWrapMode mode);
 VkBool32 getCompareEnable(SamplerCompareMode mode);
