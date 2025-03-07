@@ -90,6 +90,9 @@ ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment, Backe
         case Backend::METAL:
             mShaderLanguage = filament::backend::ShaderLanguage::MSL;
             break;
+        case Backend::WEBGPU:
+            mShaderLanguage = filament::backend::ShaderLanguage::WGSL;
+            break;
         case Backend::NOOP:
             mShaderLanguage = filament::backend::ShaderLanguage::ESSL3;
             break;
@@ -114,6 +117,8 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(ShaderStage stage, std::s
     } else if (backend == Backend::METAL) {
         shader.insert(pos, "#define TARGET_METAL_ENVIRONMENT\n");
     } else if (backend == Backend::VULKAN) {
+        shader.insert(pos, "#define TARGET_VULKAN_ENVIRONMENT\n");
+    } else if (backend == Backend::WEBGPU) {
         shader.insert(pos, "#define TARGET_VULKAN_ENVIRONMENT\n");
     }
 

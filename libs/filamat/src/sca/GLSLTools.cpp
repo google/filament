@@ -525,6 +525,11 @@ EShMessages GLSLTools::glslangFlagsFromTargetApi(
                 //        choke on gl_VertexIndex.
                 msg |= (Type)EShMessages::EShMsgVulkanRules;
             }
+            if (targetApi == TargetApi::WEBGPU) {
+                // FIXME: We have to use EShMsgVulkanRules for WEBGPU, otherwise compilation will
+                //        choke on gl_VertexIndex.
+                msg |= (Type)EShMessages::EShMsgVulkanRules;
+            }
             return (EShMessages)msg;
     }
 }

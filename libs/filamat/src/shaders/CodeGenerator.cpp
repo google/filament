@@ -183,7 +183,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
             // invalid should never happen
             break;
     }
-
+    //TODO Should WEB GPU fall under SPIRV as well?
     switch (mTargetLanguage) {
         case TargetLanguage::GLSL:
             out << "#define FILAMENT_OPENGL_SEMANTICS\n";
@@ -194,6 +194,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     }
 
     if (mTargetApi == TargetApi::VULKAN ||
+        mTargetApi == TargetApi::WEBGPU ||
         mTargetApi == TargetApi::METAL ||
         (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP) ||
         mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
