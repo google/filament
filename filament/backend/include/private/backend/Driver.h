@@ -48,6 +48,7 @@
 namespace filament::backend {
 
 class BufferDescriptor;
+class BufferObjectStreamDescriptor;
 class CallbackHandler;
 class PixelBufferDescriptor;
 class Program;
