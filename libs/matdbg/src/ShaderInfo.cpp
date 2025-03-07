@@ -50,7 +50,6 @@ size_t getShaderCount(const ChunkContainer& container, ChunkType type) {
     return shaderCount;
 }
 
-
 bool getShaderInfo(const ChunkContainer& container, ShaderInfo* info, ChunkType chunkType) {
     if (!container.hasChunk(chunkType)) {
         return true;
