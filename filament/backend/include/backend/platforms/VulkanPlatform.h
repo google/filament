@@ -363,7 +363,7 @@ private:
     static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage,
             VkDevice device);
     static ImageData createExternalImageImpl(void* externalImage, VkDevice device,
-            const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata);
+            const ExternalImageMetadata& metadata);
     static VkSampler createExternalSamplerImpl(VkDevice device,
             SamplerYcbcrConversion chroma, SamplerParams sampler,
             uint32_t inernalFormat);

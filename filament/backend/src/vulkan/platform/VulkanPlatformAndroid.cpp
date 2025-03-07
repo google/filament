@@ -212,10 +212,9 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
 
 VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(
         void* externalImage, VkDevice device,
-        const VkAllocationCallbacks* allocator,
         const ExternalImageMetadata& metadata) {
     ImageData data =
-        allocateExternalImage(externalImage, device, allocator, metadata);
+        allocateExternalImage(externalImage, device, VKALLOC, metadata);
     VkResult result = vkBindImageMemory(device, data.first, data.second, 0);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
         << "vkBindImageMemory error=" << static_cast<int32_t>(result);

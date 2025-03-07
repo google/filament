@@ -935,20 +935,20 @@ enum class ChromaLocation : uint8_t {
 };
 
 //! Sampler parameters
-struct SamplerParams { // NOLINT
-    SamplerMagFilter filterMag      : 1;    //!< magnification filter (NEAREST)
-    SamplerMinFilter filterMin      : 3;    //!< minification filter  (NEAREST)
-    SamplerWrapMode wrapS           : 2;    //!< s-coordinate wrap mode (CLAMP_TO_EDGE)
-    SamplerWrapMode wrapT           : 2;    //!< t-coordinate wrap mode (CLAMP_TO_EDGE)
+struct SamplerParams {             // NOLINT
+    SamplerMagFilter filterMag : 1;//!< magnification filter (NEAREST)
+    SamplerMinFilter filterMin : 3;//!< minification filter  (NEAREST)
+    SamplerWrapMode wrapS : 2;     //!< s-coordinate wrap mode (CLAMP_TO_EDGE)
+    SamplerWrapMode wrapT : 2;     //!< t-coordinate wrap mode (CLAMP_TO_EDGE)
 
-    SamplerWrapMode wrapR           : 2;    //!< r-coordinate wrap mode (CLAMP_TO_EDGE)
-    uint8_t anisotropyLog2          : 3;    //!< anisotropy level (0)
-    SamplerCompareMode compareMode  : 1;    //!< sampler compare mode (NONE)
-    uint8_t padding0                : 2;    //!< reserved. must be 0.
+    SamplerWrapMode wrapR : 2;         //!< r-coordinate wrap mode (CLAMP_TO_EDGE)
+    uint8_t anisotropyLog2 : 3;        //!< anisotropy level (0)
+    SamplerCompareMode compareMode : 1;//!< sampler compare mode (NONE)
+    uint8_t padding0 : 2;              //!< reserved. must be 0.
 
-    SamplerCompareFunc compareFunc  : 3;    //!< sampler comparison function (LE)
-    uint8_t padding1                : 5;    //!< reserved. must be 0.
-    uint8_t padding2                : 8;    //!< reserved. must be 0.
+    SamplerCompareFunc compareFunc : 3;//!< sampler comparison function (LE)
+    uint8_t padding1 : 5;              //!< reserved. must be 0.
+    uint8_t padding2 : 8;              //!< reserved. must be 0.
 
     struct Hasher {
         size_t operator()(const SamplerParams p) const noexcept {
@@ -998,46 +998,39 @@ static_assert(sizeof(SamplerParams) <= sizeof(uint64_t),
         "SamplerParams must be no more than 64 bits");
 
 //! Sampler parameters
-struct SamplerYcbcrConversion { // NOLINT
+struct SamplerYcbcrConversion {// NOLINT
     SamplerYcbcrModelConversion ycbcrModel : 4;
-    TextureSwizzle              r : 4;
-    TextureSwizzle              g : 4;
-    TextureSwizzle              b : 4;
-    TextureSwizzle              a : 4;
-    SamplerYcbcrRange           ycbcrRange : 1;
-    ChromaLocation              xChromaOffset : 1;
-    ChromaLocation              yChromaOffset : 1;
-    SamplerMagFilter            chromaFilter : 1;
-    uint8_t                     padding;
+    TextureSwizzle r : 4;
+    TextureSwizzle g : 4;
+    TextureSwizzle b : 4;
+    TextureSwizzle a : 4;
+    SamplerYcbcrRange ycbcrRange : 1;
+    ChromaLocation xChromaOffset : 1;
+    ChromaLocation yChromaOffset : 1;
+    SamplerMagFilter chromaFilter : 1;
+    uint8_t padding;
 
     struct Hasher {
         size_t operator()(const SamplerYcbcrConversion p) const noexcept {
             // we don't use std::hash<> here, so we don't have to include <functional>
-            return *reinterpret_cast<uint32_t const*>
-                (reinterpret_cast<char const*>(&p));
+            return *reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&p));
         }
     };
 
     struct EqualTo {
-        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
-                const noexcept {
+        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) const noexcept {
             assert_invariant(lhs.padding == 0);
-            auto* pLhs = reinterpret_cast<uint32_t const*>
-                (reinterpret_cast<char const*>(&lhs));
-            auto* pRhs = reinterpret_cast<uint32_t const*>
-                (reinterpret_cast<char const*>(&rhs));
+            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
             return *pLhs == *pRhs;
         }
     };
 
     struct LessThan {
-        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
-                const noexcept {
+        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) const noexcept {
             assert_invariant(lhs.padding == 0);
-            auto* pLhs = reinterpret_cast<uint32_t const*>
-                (reinterpret_cast<char const*>(&lhs));
-            auto* pRhs = reinterpret_cast<uint32_t const*>
-                (reinterpret_cast<char const*>(&rhs));
+            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
             return *pLhs < *pRhs;
         }
     };
@@ -1065,26 +1058,28 @@ static_assert(sizeof(SamplerYcbcrConversion) <= sizeof(uint64_t),
 
 struct ExternalSamplerKey {
     ExternalSamplerKey(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt):
-        mYcbcr(ycbcr), mSpm(spm), mExtFmt(extFmt) {
+        mYcbcrConversion(ycbcr), mSamplerParams(spm), mExternalFormat(extFmt) {
     }
     struct Hasher {
         size_t operator()(const ExternalSamplerKey& k) const {
             SamplerYcbcrConversion::Hasher ycbcrH;
             SamplerParams::Hasher spmH;
 
-            auto h1 = ycbcrH(k.mYcbcr);
-            auto h2 = spmH(k.mSpm);
-            return h1 ^ h2 ^ k.mExtFmt;
+            auto h1 = ycbcrH(k.mYcbcrConversion);
+            auto h2 = spmH(k.mSamplerParams);
+            return h1 ^ h2 ^ k.mExternalFormat;
         }
     };
     struct EqualTo {
         bool operator()(const ExternalSamplerKey& lhs, const ExternalSamplerKey& rhs) const noexcept {
-            return (lhs.mYcbcr == rhs.mYcbcr && lhs.mSpm == rhs.mSpm && lhs.mExtFmt == rhs.mExtFmt);
+            return (lhs.mYcbcrConversion == rhs.mYcbcrConversion &&
+                lhs.mSamplerParams == rhs.mSamplerParams &&
+                lhs.mExternalFormat == rhs.mExternalFormat);
         }
     };
-    SamplerYcbcrConversion mYcbcr;
-    SamplerParams mSpm;
-    uint32_t mExtFmt;
+    SamplerYcbcrConversion mYcbcrConversion;
+    SamplerParams mSamplerParams;
+    uint32_t mExternalFormat;
 };
 
 struct DescriptorSetLayoutBinding {
