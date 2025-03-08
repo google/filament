@@ -90,9 +90,15 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
 }
 
 VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage,
-        VkDevice device, const VkAllocationCallbacks* allocator,
-        const ExternalImageMetadata& metadata) {
+        VkDevice device, const ExternalImageMetadata& metadata) {
     return {};
+}
+
+VkSampler VulkanPlatform::createExternalSamplerImpl(VkDevice device,
+    SamplerYcbcrConversion chroma,
+    SamplerParams sampler,
+    uint32_t internalFormat) {
+    return VK_NULL_HANDLE;
 }
 
 VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {

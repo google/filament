@@ -984,7 +984,13 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadata(
 
 VulkanPlatform::ImageData VulkanPlatform::createExternalImage(void* externalImage,
             const ExternalImageMetadata& metadata) {
-    return createExternalImageImpl(externalImage, mImpl->mDevice, nullptr, metadata);
+    return createExternalImageImpl(externalImage, mImpl->mDevice, metadata);
+}
+
+VkSampler VulkanPlatform::createExternalSampler(SamplerYcbcrConversion chroma,
+    SamplerParams sampler,
+    uint32_t internalFormat) {
+    return createExternalSamplerImpl(mImpl->mDevice, chroma, sampler, internalFormat);
 }
 
 #undef SWAPCHAIN_RET_FUNC
