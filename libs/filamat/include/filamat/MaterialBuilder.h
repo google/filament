@@ -81,7 +81,11 @@ public:
         VULKAN      = 0x02u,
         METAL       = 0x04u,
         WEBGPU        = 0x08u,
+#ifdef FILAMENT_SUPPORTS_WEBGPU
         ALL         = OPENGL | VULKAN | METAL | WEBGPU
+#else
+        ALL         = OPENGL | VULKAN | METAL
+#endif
     };
 
     /*
