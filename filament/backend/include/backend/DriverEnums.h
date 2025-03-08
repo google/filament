@@ -264,10 +264,6 @@ struct DescriptorSetLayoutBinding {
     }
 };
 
-struct DescriptorSetLayout {
-    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
-};
-
 /**
  * Bitmask for selecting render buffers
  */
@@ -1096,6 +1092,11 @@ struct ExternalSamplerKey {
 // No implicit padding allowed due to it being a hash key.
 static_assert(sizeof(ExternalSamplerKey) == 12);
 using ExternalSamplerHash = utils::hash::MurmurHashFn<ExternalSamplerKey>;
+
+struct DescriptorSetLayout {
+    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
+    utils::FixedCapacityVector<ExternalSamplerKey> externalSamplerData;
+};
 
 //! blending equation function
 enum class BlendEquation : uint8_t {
