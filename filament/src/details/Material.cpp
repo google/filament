@@ -1149,9 +1149,6 @@ void FMaterial::precacheDepthVariants(FEngine const& engine) {
 
 void FMaterial::processDescriptorSets(FEngine& engine, Builder const& builder,
         MaterialParser const* const parser) {
-    // This probably shouldn't live here
-    static utils::FixedCapacityVector<backend::ExternalSamplerKey> externalSamplerData;
-
     UTILS_UNUSED_IN_RELEASE bool success;
 
     success = parser->getDescriptorBindings(&mProgramDescriptorBindings);
@@ -1161,6 +1158,7 @@ void FMaterial::processDescriptorSets(FEngine& engine, Builder const& builder,
     success = parser->getDescriptorSetLayout(&descriptorSetLayout);
     assert_invariant(success);
 
+    auto& externalSamplerData = descriptorSetLayout[0].externalSamplerData;
     for (auto& binding: descriptorSetLayout[0].bindings) {
         if (binding.type == DescriptorType::SAMPLER_EXTERNAL) {
             const auto& samplerName = mSamplerInterfaceBlock.getSamplerInfo(binding.binding)->name;
@@ -1174,9 +1172,6 @@ void FMaterial::processDescriptorSets(FEngine& engine, Builder const& builder,
             if (iter == externalSamplerData.end()) {
                 binding.externalSamplerDataIndex = externalSamplerData.size();
                 externalSamplerData.push_back(key);
-                // binding.chroma = sampler->second.mChroma;
-                // binding.internalFormat = sampler->second.mInternalFormat;
-                // binding.sampler = sampler->second.mSampler;
             } else {
                 binding.externalSamplerDataIndex = std::distance(externalSamplerData.begin(), iter);
             }
