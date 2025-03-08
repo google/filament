@@ -18,6 +18,8 @@
 #define TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETMANAGER_H
 
 #include "vulkan/VulkanHandles.h"
+#include "vulkan/VulkanTexture.h"
+#include "vulkan/VulkanSamplerCache.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Definitions.h"  // For DescriptorSetMask
 
@@ -72,7 +74,9 @@ public:
     fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
-    void initVkLayout(fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
+    void initVkLayout(fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout,
+            DescriptorSetLayout const& info,
+            VulkanSamplerCache& cache);
 
     void clearHistory();
 

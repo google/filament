@@ -95,6 +95,13 @@ VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* external
     return {};
 }
 
+VkSampler VulkanPlatform::createExternalSamplerImpl(VkDevice device,
+    SamplerYcbcrConversion chroma,
+    SamplerParams sampler,
+    uint32_t internalFormat) {
+    return nullptr;
+}
+
 VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
     VulkanPlatform::ExtensionSet const ret = {
 #if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)

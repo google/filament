@@ -87,9 +87,18 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
             dsh = mDescriptorSetHandle, descriptors = mDescriptors.data()]
             (backend::descriptor_binding_t const binding) {
         if (layout.isSampler(binding)) {
-            driver.updateDescriptorSetTexture(dsh, binding,
+            if (descriptors[binding].texture.internalFormat != 0) {
+                driver.updateDescriptorSetExternalTexture(dsh, binding,
+                    descriptors[binding].texture.th,
+                    descriptors[binding].texture.params,
+                    descriptors[binding].texture.conversion,
+                    descriptors[binding].texture.internalFormat);
+            }
+            else {
+                driver.updateDescriptorSetTexture(dsh, binding,
                     descriptors[binding].texture.th,
                     descriptors[binding].texture.params);
+            }
         } else {
             driver.updateDescriptorSetBuffer(dsh, binding,
                     descriptors[binding].buffer.boh,
@@ -143,7 +152,20 @@ void DescriptorSet::setSampler(
     if (mDescriptors[binding].texture.th != th || mDescriptors[binding].texture.params != params) {
         mDirty.set(binding);
     }
-    mDescriptors[binding].texture = { th, params };
+    mDescriptors[binding].texture = { th, params, backend::SamplerYcbcrConversion(), 0};
+    mValid.set(binding, (bool)th);
+}
+
+// sets a sampler descriptor (external)
+void DescriptorSet::setExternalSampler(backend::descriptor_binding_t binding,
+    backend::Handle<backend::HwTexture> th,
+    backend::SamplerParams params,
+    backend::SamplerYcbcrConversion conversion,
+    uint32_t internalFormat) noexcept {
+    if (mDescriptors[binding].texture.th != th || mDescriptors[binding].texture.params != params) {
+        mDirty.set(binding);
+    }
+    mDescriptors[binding].texture = { th, params, conversion, internalFormat };
     mValid.set(binding, (bool)th);
 }
 
