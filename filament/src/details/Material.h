@@ -293,7 +293,8 @@ private:
 
     void precacheDepthVariants(FEngine const& engine);
 
-    void processDescriptorSets(FEngine& engine, MaterialParser const* parser);
+    void processDescriptorSets(FEngine& engine, Builder const& builder,
+            MaterialParser const* parser);
 
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
 

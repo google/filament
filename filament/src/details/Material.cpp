@@ -60,6 +60,7 @@
 #include <algorithm>
 #include <array>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <new>
 #include <optional>
@@ -124,6 +125,12 @@ struct Material::BuilderDetails {
     bool mDefaultMaterial = false;
     int32_t mShBandsCount = 3;
     Builder::ShadowSamplingQuality mShadowSamplingQuality = Builder::ShadowSamplingQuality::LOW;
+    struct ExternalImageInfo {
+        uint32_t mInternalFormat;
+        SamplerParams mSampler;
+        SamplerYcbcrConversion mChroma;
+    };
+    std::map<CString, ExternalImageInfo> mExternalInfos;
     std::unordered_map<
         CString,
         std::variant<int32_t, float, bool>,
@@ -145,6 +152,14 @@ BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = 
 Material::Builder& Material::Builder::package(const void* payload, size_t const size) {
     mImpl->mPayload = payload;
     mImpl->mSize = size;
+    return *this;
+}
+
+Material::Builder& Material::Builder::externalImageInfo(const char* UTILS_NONNULL name,
+        uint64_t externalFormat, SamplerParams sampler, SamplerYcbcrConversion chroma) noexcept {
+    FILAMENT_CHECK_PRECONDITION(name != nullptr) << "name cannot be null";
+    mImpl->mExternalInfos[{ name, std::strlen(name) }] = { static_cast<uint32_t>(externalFormat),
+        sampler, chroma };
     return *this;
 }
 
@@ -338,7 +353,7 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder,
     processBlendingMode(parser);
     processSpecializationConstants(engine, builder, parser);
     processPushConstants(engine, parser);
-    processDescriptorSets(engine, parser);
+    processDescriptorSets(engine, builder, parser);
     precacheDepthVariants(engine);
 
 #if FILAMENT_ENABLE_MATDBG
@@ -1132,7 +1147,8 @@ void FMaterial::precacheDepthVariants(FEngine const& engine) {
     }
 }
 
-void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* const parser) {
+void FMaterial::processDescriptorSets(FEngine& engine, Builder const& builder,
+        MaterialParser const* const parser) {
     UTILS_UNUSED_IN_RELEASE bool success;
 
     success = parser->getDescriptorBindings(&mProgramDescriptorBindings);
@@ -1141,6 +1157,20 @@ void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* con
     std::array<backend::DescriptorSetLayout, 2> descriptorSetLayout;
     success = parser->getDescriptorSetLayout(&descriptorSetLayout);
     assert_invariant(success);
+
+    for (auto& binding: descriptorSetLayout[0].bindings) {
+        if (binding.type == DescriptorType::SAMPLER_EXTERNAL) {
+            const auto& samplerName = mSamplerInterfaceBlock.getSamplerInfo(binding.binding)->name;
+            const auto& sampler = builder->mExternalInfos.find(samplerName);
+            assert_invariant(sampler != builder->mExternalInfos.end());
+
+            backend::ExternalSamplerKey key{ sampler->second.mChroma, sampler->second.mSampler,
+                sampler->second.mInternalFormat };
+            //binding.chroma = sampler->second.mChroma;
+            //binding.internalFormat = sampler->second.mInternalFormat;
+            //binding.sampler = sampler->second.mSampler;
+        }
+    }
 
     mDescriptorSetLayout = {
             engine.getDescriptorSetLayoutFactory(),

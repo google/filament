@@ -102,6 +102,20 @@ const SamplerInterfaceBlock::SamplerInfo* SamplerInterfaceBlock::getSamplerInfo(
     return &mSamplersInfoList[pos->second];
 }
 
+const SamplerInterfaceBlock::SamplerInfo* SamplerInterfaceBlock::getSamplerInfo(
+        Binding binding) const {
+    const SamplerInterfaceBlock::SamplerInfo* info = nullptr;
+    for (const auto& infoIter: mSamplersInfoList) {
+        if (infoIter.binding == binding) {
+            info = &infoIter;
+            break;
+        }
+    }
+    FILAMENT_CHECK_PRECONDITION(info != nullptr)
+            << "sampler binding \"" << binding << "\" not found";
+    return info;
+}
+
 utils::CString SamplerInterfaceBlock::generateUniformName(const char* group, const char* sampler) noexcept {
     char uniformName[256];
 
