@@ -127,6 +127,10 @@ static_assert(MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_ATTRIBUTE_COUNT,
 static constexpr size_t CONFIG_UNIFORM_BINDING_COUNT = 9;   // This is guaranteed by OpenGL ES.
 static constexpr size_t CONFIG_SAMPLER_BINDING_COUNT = 4;   // This is guaranteed by OpenGL ES.
 
+static constexpr uint32_t EXTERNAL_SAMPLER_DATA_INDEX_UNUSED =
+        uint32_t(-1);// Case where the descriptor set binding isnt using any external sampler state
+                     // and therefore doesn't have a valid entry.
+
 /**
  * Defines the backend's feature levels.
  */
@@ -242,6 +246,27 @@ enum class DescriptorFlags : uint8_t {
 using descriptor_set_t = uint8_t;
 
 using descriptor_binding_t = uint8_t;
+
+struct DescriptorSetLayoutBinding {
+    DescriptorType type;
+    ShaderStageFlags stageFlags;
+    descriptor_binding_t binding;
+    DescriptorFlags flags = DescriptorFlags::NONE;
+    uint16_t count = 0;
+
+    uint32_t externalSamplerDataIndex = EXTERNAL_SAMPLER_DATA_INDEX_UNUSED;
+
+    friend inline bool operator==(DescriptorSetLayoutBinding const& lhs,
+            DescriptorSetLayoutBinding const& rhs) noexcept {
+        return lhs.type == rhs.type && lhs.flags == rhs.flags && lhs.count == rhs.count &&
+               lhs.externalSamplerDataIndex == rhs.externalSamplerDataIndex &&
+               lhs.stageFlags == rhs.stageFlags;
+    }
+};
+
+struct DescriptorSetLayout {
+    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
+};
 
 /**
  * Bitmask for selecting render buffers
@@ -952,7 +977,7 @@ struct SamplerParams {             // NOLINT
     uint8_t padding2                : 8;    //!< reserved. must be 0.
 
     struct Hasher {
-        size_t operator()(const SamplerParams p) const noexcept {
+        size_t operator()(const SamplerParams& p) const noexcept {
             // we don't use std::hash<> here, so we don't have to include <functional>
             return *reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&p));
         }
@@ -992,10 +1017,7 @@ private:
     }
 };
 
-// The limitation to 64-bits max comes from how we store a SamplerParams in our JNI code
-// see android/.../TextureSampler.cpp
-static_assert(sizeof(SamplerParams) <= sizeof(uint64_t),
-        "SamplerParams must be no more than 64 bits");
+static_assert(sizeof(SamplerParams) == 4);
 
 //! Sampler parameters
 struct SamplerYcbcrConversion {// NOLINT
@@ -1050,61 +1072,30 @@ private:
     }
 };
 
-// The limitation to 64-bits max comes from how we store a SamplerParams in our JNI code
-// see android/.../TextureSampler.cpp
-static_assert(sizeof(SamplerYcbcrConversion) <= sizeof(uint64_t),
-    "SamplerYcbcrConversion must be no more than 64 bits");
+static_assert(sizeof(SamplerYcbcrConversion) == 4);
 
 struct ExternalSamplerKey {
     ExternalSamplerKey(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt):
-        mYcbcrConversion(ycbcr), mSamplerParams(spm), mExternalFormat(extFmt) {
+        YcbcrConversion(ycbcr), samplerParams(spm), externalFormat(extFmt) {
     }
     bool operator==(ExternalSamplerKey const& rhs) const {
-        return (mYcbcrConversion == rhs.mYcbcrConversion && mSamplerParams == rhs.mSamplerParams &&
-                mExternalFormat == rhs.mExternalFormat);
+        return (YcbcrConversion == rhs.YcbcrConversion && samplerParams == rhs.samplerParams &&
+                externalFormat == rhs.externalFormat);
     }
     struct EqualTo {
         bool operator()(const ExternalSamplerKey& lhs, const ExternalSamplerKey& rhs) const noexcept {
-            return (lhs.mYcbcrConversion == rhs.mYcbcrConversion &&
-                lhs.mSamplerParams == rhs.mSamplerParams &&
-                lhs.mExternalFormat == rhs.mExternalFormat);
+            return (lhs.YcbcrConversion == rhs.YcbcrConversion &&
+                lhs.samplerParams == rhs.samplerParams &&
+                lhs.externalFormat == rhs.externalFormat);
         }
     };
-    SamplerYcbcrConversion mYcbcrConversion;
-    SamplerParams mSamplerParams;
-    uint32_t mExternalFormat;
+    SamplerYcbcrConversion YcbcrConversion;
+    SamplerParams samplerParams;
+    uint32_t externalFormat;
 };
 // No implicit padding allowed due to it being a hash key.
 static_assert(sizeof(ExternalSamplerKey) == 12);
 using ExternalSamplerHash = utils::hash::MurmurHashFn<ExternalSamplerKey>;
-
-struct DescriptorSetLayoutBinding {
-    DescriptorType type;
-    ShaderStageFlags stageFlags;
-    descriptor_binding_t binding;
-    DescriptorFlags flags = DescriptorFlags::NONE;
-    uint16_t count = 0;
-
-    SamplerYcbcrConversion chroma;
-    SamplerParams sampler;
-    uint32_t internalFormat = 0;
-
-    friend inline bool operator==(
-        DescriptorSetLayoutBinding const& lhs,
-        DescriptorSetLayoutBinding const& rhs) noexcept {
-        return lhs.type == rhs.type &&
-            lhs.flags == rhs.flags &&
-            lhs.count == rhs.count &&
-            lhs.chroma == rhs.chroma &&
-            lhs.sampler == rhs.sampler &&
-            lhs.internalFormat == rhs.internalFormat &&
-            lhs.stageFlags == rhs.stageFlags;
-    }
-};
-
-struct DescriptorSetLayout {
-    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
-};
 
 //! blending equation function
 enum class BlendEquation : uint8_t {
