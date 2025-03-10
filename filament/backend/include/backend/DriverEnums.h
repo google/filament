@@ -242,28 +242,6 @@ using descriptor_set_t = uint8_t;
 
 using descriptor_binding_t = uint8_t;
 
-struct DescriptorSetLayoutBinding {
-    DescriptorType type;
-    ShaderStageFlags stageFlags;
-    descriptor_binding_t binding;
-    DescriptorFlags flags = DescriptorFlags::NONE;
-    uint16_t count = 0;
-
-    friend inline bool operator==(
-            DescriptorSetLayoutBinding const& lhs,
-            DescriptorSetLayoutBinding const& rhs) noexcept {
-        return lhs.type == rhs.type &&
-               lhs.flags == rhs.flags &&
-               lhs.count == rhs.count &&
-               lhs.stageFlags == rhs.stageFlags;
-    }
-};
-
-struct DescriptorSetLayout {
-    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
-};
-
-
 /**
  * Bitmask for selecting render buffers
  */
@@ -965,6 +943,24 @@ enum class SamplerCompareFunc : uint8_t {
     N           //!< Never. The depth / stencil test always fails.
 };
 
+enum class SamplerYcbcrModelConversion : uint8_t {
+    RGB_IDENTITY = 0,
+    YCBCR_IDENTITY=1,
+    YCBCR_709=2,
+    YCBCR_601=3,
+    YCBCR_2020=4,
+};
+
+enum class SamplerYcbcrRange : uint8_t {
+    ITU_FULL = 0,
+    ITU_NARROW = 1,
+};
+
+enum class ChromaLocation : uint8_t {
+    COSITED_EVEN = 0,
+    MIDPOINT=1,
+};
+
 //! Sampler parameters
 struct SamplerParams { // NOLINT
     SamplerMagFilter filterMag      : 1;    //!< magnification filter (NEAREST)
@@ -982,7 +978,7 @@ struct SamplerParams { // NOLINT
     uint8_t padding2                : 8;    //!< reserved. must be 0.
 
     struct Hasher {
-        size_t operator()(SamplerParams p) const noexcept {
+        size_t operator()(const SamplerParams p) const noexcept {
             // we don't use std::hash<> here, so we don't have to include <functional>
             return *reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&p));
         }
@@ -1027,6 +1023,124 @@ static_assert(sizeof(SamplerParams) == 4);
 // see android/.../TextureSampler.cpp
 static_assert(sizeof(SamplerParams) <= sizeof(uint64_t),
         "SamplerParams must be no more than 64 bits");
+
+//! Sampler parameters
+struct SamplerYcbcrConversion { // NOLINT
+    SamplerYcbcrModelConversion ycbcrModel : 4;
+    TextureSwizzle              r : 4;
+    TextureSwizzle              g : 4;
+    TextureSwizzle              b : 4;
+    TextureSwizzle              a : 4;
+    SamplerYcbcrRange           ycbcrRange : 1;
+    ChromaLocation              xChromaOffset : 1;
+    ChromaLocation              yChromaOffset : 1;
+    SamplerMagFilter            chromaFilter : 1;
+    uint8_t                     padding;
+
+    struct Hasher {
+        size_t operator()(const SamplerYcbcrConversion p) const noexcept {
+            // we don't use std::hash<> here, so we don't have to include <functional>
+            return *reinterpret_cast<uint32_t const*>
+                (reinterpret_cast<char const*>(&p));
+        }
+    };
+
+    struct EqualTo {
+        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
+                const noexcept {
+            assert_invariant(lhs.padding == 0);
+            auto* pLhs = reinterpret_cast<uint32_t const*>
+                (reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint32_t const*>
+                (reinterpret_cast<char const*>(&rhs));
+            return *pLhs == *pRhs;
+        }
+    };
+
+    struct LessThan {
+        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
+                const noexcept {
+            assert_invariant(lhs.padding == 0);
+            auto* pLhs = reinterpret_cast<uint32_t const*>
+                (reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint32_t const*>
+                (reinterpret_cast<char const*>(&rhs));
+            return *pLhs < *pRhs;
+        }
+    };
+
+private:
+    friend inline bool operator == (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
+            noexcept {
+        return SamplerYcbcrConversion::EqualTo{}(lhs, rhs);
+    }
+    friend inline bool operator != (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
+            noexcept {
+        return  !SamplerYcbcrConversion::EqualTo{}(lhs, rhs);
+    }
+    friend inline bool operator < (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
+            noexcept {
+        return SamplerYcbcrConversion::LessThan{}(lhs, rhs);
+    }
+};
+static_assert(sizeof(SamplerYcbcrConversion) == 4);
+
+// The limitation to 64-bits max comes from how we store a SamplerParams in our JNI code
+// see android/.../TextureSampler.cpp
+static_assert(sizeof(SamplerYcbcrConversion) <= sizeof(uint64_t),
+    "SamplerYcbcrConversion must be no more than 64 bits");
+
+struct ExternalSamplerKey {
+    ExternalSamplerKey(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt):
+        mYcbcr(ycbcr), mSpm(spm), mExtFmt(extFmt) {
+    }
+    struct Hasher {
+        size_t operator()(const ExternalSamplerKey& k) const {
+            SamplerYcbcrConversion::Hasher ycbcrH;
+            SamplerParams::Hasher spmH;
+
+            auto h1 = ycbcrH(k.mYcbcr);
+            auto h2 = spmH(k.mSpm);
+            return h1 ^ h2 ^ k.mExtFmt;
+        }
+    };
+    struct EqualTo {
+        bool operator()(const ExternalSamplerKey& lhs, const ExternalSamplerKey& rhs) const noexcept {
+            return (lhs.mYcbcr == rhs.mYcbcr && lhs.mSpm == rhs.mSpm && lhs.mExtFmt == rhs.mExtFmt);
+        }
+    };
+    SamplerYcbcrConversion mYcbcr;
+    SamplerParams mSpm;
+    uint32_t mExtFmt;
+};
+
+struct DescriptorSetLayoutBinding {
+    DescriptorType type;
+    ShaderStageFlags stageFlags;
+    descriptor_binding_t binding;
+    DescriptorFlags flags = DescriptorFlags::NONE;
+    uint16_t count = 0;
+
+    SamplerYcbcrConversion chroma;
+    SamplerParams sampler;
+    uint32_t internalFormat = 0;
+
+    friend inline bool operator==(
+        DescriptorSetLayoutBinding const& lhs,
+        DescriptorSetLayoutBinding const& rhs) noexcept {
+        return lhs.type == rhs.type &&
+            lhs.flags == rhs.flags &&
+            lhs.count == rhs.count &&
+            lhs.chroma == rhs.chroma &&
+            lhs.sampler == rhs.sampler &&
+            lhs.internalFormat == rhs.internalFormat &&
+            lhs.stageFlags == rhs.stageFlags;
+    }
+};
+
+struct DescriptorSetLayout {
+    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
+};
 
 //! blending equation function
 enum class BlendEquation : uint8_t {

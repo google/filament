@@ -411,6 +411,26 @@ void VulkanDriver::updateDescriptorSetBuffer(
     mDescriptorSetManager.updateBuffer(set, binding, buffer, offset, size);
 }
 
+void VulkanDriver::updateDescriptorSetExternalTexture(
+    backend::DescriptorSetHandle dsh,
+    backend::descriptor_binding_t binding,
+    backend::TextureHandle th,
+    SamplerParams params,
+    SamplerYcbcrConversion conversion,
+    uint32_t format) {
+    FVK_SYSTRACE_SCOPE();
+    auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
+    auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
+    assert_invariant(texture->target == SamplerType::SAMPLER_EXTERNAL);
+
+    VkSampler vksampler = mSamplerCache.getExternalSampler(params, conversion, format);
+    if (vksampler == nullptr) {
+        // ask the platform to create it
+        vksampler = mPlatform->createExternalSampler(conversion, params, format);
+    }
+    mDescriptorSetManager.updateSampler(set, binding, texture, vksampler);
+}
+
 void VulkanDriver::updateDescriptorSetTexture(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_binding_t binding,
@@ -420,7 +440,14 @@ void VulkanDriver::updateDescriptorSetTexture(
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
-    VkSampler const vksampler = mSamplerCache.getSampler(params);
+    VkSampler vksampler = nullptr;
+    if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
+        //vksampler = mSamplerCache.getSamplerExternal(params);
+    }
+    else {
+        vksampler = mSamplerCache.getSampler(params);
+    }
+    
     mDescriptorSetManager.updateSampler(set, binding, texture, vksampler);
 }
 
@@ -439,7 +466,7 @@ void VulkanDriver::finish(int dummy) {
 }
 
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
-        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh, 
         PrimitiveType pt) {
     auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
@@ -762,7 +789,7 @@ void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 void VulkanDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
         backend::DescriptorSetLayout&& info) {
     auto layout = resource_ptr<VulkanDescriptorSetLayout>::make(&mResourceManager, dslh, info);
-    mDescriptorSetManager.initVkLayout(layout);
+    mDescriptorSetManager.initVkLayout(layout, info, mSamplerCache);
     layout.inc();
 }
 
