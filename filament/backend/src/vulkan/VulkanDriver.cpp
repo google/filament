@@ -560,14 +560,6 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th,
         Platform::ExternalImageHandleRef externalImage) {
     FVK_SYSTRACE_SCOPE();
 
-    // FIXME: implement createTextureExternalImage2R
-}
-
-void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::SamplerType target,
-        backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
-        void* externalImage) {
-    FVK_SYSTRACE_SCOPE();
-
     const auto& metadata = mPlatform->getExternalImageMetadata(externalImage);
     if (metadata.isProtected) {
         usage |= backend::TextureUsage::PROTECTED;
@@ -577,13 +569,21 @@ void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::Sa
     assert_invariant(height == metadata.height);
     assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
 
-    const auto& data = mPlatform->createExternalImage(externalImage, metadata);
+    const auto& data = mPlatform->createExternalImageData(externalImage, metadata);
 
-    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
-        mAllocator, &mResourceManager, &mCommands, data.first, data.second, metadata.format,
-        1, metadata.width, metadata.height, /*depth=*/1, usage, mStagePool);
+    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th,
+            mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, data.first, data.second, metadata.format,
+            1, metadata.width, metadata.height, /*depth=*/1, usage, mStagePool);
 
     texture.inc();
+}
+
+void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::SamplerType target,
+        backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
+        void* externalImage) {
+    FVK_SYSTRACE_SCOPE();
+
+    // not supported in this backend
 }
 
 void VulkanDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
