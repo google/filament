@@ -28,7 +28,6 @@
 
 #include <stdint.h>
 
-
 namespace filament {
 
 class FStream;
