@@ -14,5 +14,8 @@ set(DAWN_SPIRV_HEADERS_DIR ${EXTERNAL}/spirv-headers)
 set(DAWN_GLSLANG_DIR ${EXTERNAL}/glslang/)
 if(IS_HOST_PLATFORM)
     set(TINT_BUILD_SPV_READER ON)
+elseif (ANDROID)
+    # Dawn sets TINT_BUILD_SPV_READER based on Vulkan, which is true for Android
+    set(TINT_BUILD_SPV_READER OFF)
 endif ()
 add_subdirectory(../  ${PROJECT_BINARY_DIR}/third_party/dawn)
