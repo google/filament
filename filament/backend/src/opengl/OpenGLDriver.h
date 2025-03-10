@@ -164,12 +164,7 @@ public:
             math::mat3f transform;
         } user_thread;
 
-        /*
-         * The fields below are accessed from the GL thread
-         */
-         struct {
-            math::mat3f transform;
-         } gl_thread;
+         math::mat3f transform;
     };
 
     struct GLRenderTarget : public HwRenderTarget {

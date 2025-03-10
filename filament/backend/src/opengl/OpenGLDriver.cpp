@@ -2137,7 +2137,7 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
                         t->gl.target = t->externalTexture->target;
                         t->gl.id = t->externalTexture->id;
                         bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
-                        s->gl_thread.transform = transform;
+                        s->transform = transform;
                     }
                 }
 
@@ -2172,7 +2172,7 @@ math::mat3f OpenGLDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
         if (s->streamType == StreamType::NATIVE) {
             return mPlatform.getTransformMatrix(s->stream);
         } else {
-            return s->gl_thread.transform;
+            return s->transform;
         }
     }
     return math::mat3f();

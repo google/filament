@@ -24,8 +24,10 @@
 
 #include <utils/compiler.h>
 
-#include <stdint.h>
 #include <math/mat3.h>
+
+#include <stdint.h>
+
 
 namespace filament {
 
@@ -193,7 +195,7 @@ public:
      * @param transform  Optional transform matrix to apply to the image.
      */
     void setAcquiredImage(void* UTILS_NONNULL image,
-            Callback UTILS_NONNULL callback, void* UTILS_NULLABLE userdata, math::mat3f const & transform = math::mat3f()) noexcept;
+            Callback UTILS_NONNULL callback, void* UTILS_NULLABLE userdata, math::mat3f const& transform = math::mat3f()) noexcept;
 
     /**
      * @see setAcquiredImage(void*, Callback, void*)
@@ -208,7 +210,7 @@ public:
      */
     void setAcquiredImage(void* UTILS_NONNULL image,
             backend::CallbackHandler* UTILS_NULLABLE handler,
-            Callback UTILS_NONNULL callback, void* UTILS_NULLABLE userdata, math::mat3f const & transform = math::mat3f()) noexcept;
+            Callback UTILS_NONNULL callback, void* UTILS_NULLABLE userdata, math::mat3f const& transform = math::mat3f()) noexcept;
 
     /**
      * Updates the size of the incoming stream. Whether this value is used is

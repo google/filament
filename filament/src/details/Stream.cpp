@@ -95,12 +95,12 @@ void FStream::terminate(FEngine& engine) noexcept {
 }
 
 void FStream::setAcquiredImage(void* image,
-    Callback const callback, void* userdata, math::mat3f const & transform) noexcept {
+    Callback const callback, void* userdata, math::mat3f const& transform) noexcept {
 mEngine.getDriverApi().setAcquiredImage(mStreamHandle, image, transform, nullptr, callback, userdata);
 }
 
 void FStream::setAcquiredImage(void* image,
-    CallbackHandler* handler, Callback const callback, void* userdata, math::mat3f const & transform) noexcept {
+    CallbackHandler* handler, Callback const callback, void* userdata, math::mat3f const& transform) noexcept {
 mEngine.getDriverApi().setAcquiredImage(mStreamHandle, image, transform, handler, callback, userdata);
 }
 
