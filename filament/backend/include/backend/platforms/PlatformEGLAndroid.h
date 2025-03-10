@@ -40,28 +40,26 @@ class ExternalStreamManagerAndroid;
  */
 class PlatformEGLAndroid : public PlatformEGL {
 public:
-
     PlatformEGLAndroid() noexcept;
     ~PlatformEGLAndroid() noexcept override;
 
     /**
      * Creates an ExternalImage from a EGLImageKHR
      */
-    ExternalImageHandle createExternalImage(AHardwareBuffer const *buffer, bool sRGB) noexcept;
+    ExternalImageHandle createExternalImage(AHardwareBuffer const* buffer, bool sRGB) noexcept;
 
     struct ExternalImageEGLAndroid : public ExternalImageEGL {
         AHardwareBuffer* aHardwareBuffer = nullptr;
         bool sRGB = false;
-        unsigned int width;             // Texture width
-        unsigned int height;            // Texture height
-        TextureFormat format;           // Texture format
-        TextureUsage usage;             // Texture usage flags
+        unsigned int width;  // Texture width
+        unsigned int height; // Texture height
+        TextureFormat format;// Texture format
+        TextureUsage usage;  // Texture usage flags
     protected:
         ~ExternalImageEGLAndroid() override;
     };
 
 protected:
-
     // --------------------------------------------------------------------------------------------
     // Platform Interface
 
@@ -79,9 +77,7 @@ protected:
 
     void terminate() noexcept override;
 
-    void beginFrame(
-            int64_t monotonic_clock_ns,
-            int64_t refreshIntervalNs,
+    void beginFrame(int64_t monotonic_clock_ns, int64_t refreshIntervalNs,
             uint32_t frameId) noexcept override;
 
     void preCommit() noexcept override;
@@ -109,12 +105,13 @@ protected:
 
     OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
     void destroyExternalImageTexture(ExternalTexture* texture) noexcept override;
-    bool setExternalImage(ExternalImageHandleRef externalImage, ExternalTexture* texture) noexcept override;
-    bool setImage(ExternalImageEGLAndroid const* eglExternalImage, ExternalTexture* texture) noexcept;
+    bool setExternalImage(ExternalImageHandleRef externalImage,
+            ExternalTexture* texture) noexcept override;
+    bool setImage(ExternalImageEGLAndroid const* eglExternalImage,
+            ExternalTexture* texture) noexcept;
 
 protected:
-    bool makeCurrent(ContextType type,
-            SwapChain* drawSwapChain,
+    bool makeCurrent(ContextType type, SwapChain* drawSwapChain,
             SwapChain* readSwapChain) noexcept override;
 
 private:
@@ -136,6 +133,6 @@ private:
     bool mAssertNativeWindowIsValid = false;
 };
 
-} // namespace filament::backend
+}// namespace filament::backend
 
-#endif // TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
+#endif// TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
