@@ -938,6 +938,8 @@ enum class SamplerCompareFunc : uint8_t {
     N           //!< Never. The depth / stencil test always fails.
 };
 
+//! this API is copied from (and only applies to) the Vulkan spec.
+//! These specify YUV to RGB conversions.
 enum class SamplerYcbcrModelConversion : uint8_t {
     RGB_IDENTITY = 0,
     YCBCR_IDENTITY = 1,
