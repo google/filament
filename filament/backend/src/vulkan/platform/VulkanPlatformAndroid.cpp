@@ -220,6 +220,59 @@ VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(
     return data;
 }
 
+VkImageView VulkanPlatform::createExternalImageViewImpl(VkDevice device, SamplerYcbcrConversion chroma,
+            uint32_t internalFormat, VkImage image, VkImageSubresourceRange range,
+            VkImageViewType viewType, VkComponentMapping swizzle){
+        VkExternalFormatANDROID externalFormat = {
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
+        .pNext = nullptr,
+        .externalFormat = internalFormat,
+    };
+
+    TextureSwizzle const swizzleArray[] = {chroma.r, chroma.g, chroma.b, chroma.a};
+    VkSamplerYcbcrConversionCreateInfo conversionInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
+        .pNext = &externalFormat,
+        .format = VK_FORMAT_UNDEFINED,
+        .ycbcrModel = fvkutils::getYcbcrModelConversion(chroma.ycbcrModel),
+        .ycbcrRange = fvkutils::getYcbcrRange(chroma.ycbcrRange),
+        .components = fvkutils::getSwizzleMap(swizzleArray),
+        .xChromaOffset = fvkutils::getChromaLocation(chroma.xChromaOffset),
+        .yChromaOffset = fvkutils::getChromaLocation(chroma.yChromaOffset),
+        .chromaFilter = fvkutils::getFilter(chroma.chromaFilter),
+    };
+    VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
+    VkResult result = vkCreateSamplerYcbcrConversion(device, &conversionInfo,
+                                                     nullptr, &conversion);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+        << "Unable to create Ycbcr Conversion."
+        << " error=" << static_cast<int32_t>(result);
+
+    VkSamplerYcbcrConversionInfo samplerYcbcrConversionInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,
+        .pNext = nullptr,
+        .conversion = conversion,
+    };
+
+    VkImageViewCreateInfo viewInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .pNext = &samplerYcbcrConversionInfo,
+        .flags = 0,
+        .image = image,
+        .viewType = viewType,
+        .format = VK_FORMAT_UNDEFINED,
+        .components = swizzle,
+        .subresourceRange = range,
+    };
+    VkImageView imageView;
+    result = vkCreateImageView(device, &viewInfo, VKALLOC, &imageView);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+        << "Unable to create VkImageView."
+        << " error=" << static_cast<int32_t>(result);
+
+    return imageView;
+}
+
 VkSampler VulkanPlatform::createExternalSamplerImpl(
         VkDevice device, SamplerYcbcrConversion chroma, SamplerParams params,
         uint32_t internalFormat) {
