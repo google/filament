@@ -40,7 +40,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define HandleAllocatorGL  HandleAllocator<32,  96, 136>    // ~4520 / pool / MiB
+#define HandleAllocatorGL  HandleAllocator<32,  96, 184>    // ~4520 / pool / MiB
 #define HandleAllocatorVK  HandleAllocator<64, 160, 312>    // ~1820 / pool / MiB
 #define HandleAllocatorMTL HandleAllocator<32,  64, 552>    // ~1660 / pool / MiB
 
@@ -50,7 +50,8 @@ namespace filament::backend {
 class DebugTag {
 public:
     DebugTag();
-    void writeHandleTag(HandleBase::HandleId key, utils::CString&& tag) noexcept;
+    void writePoolHandleTag(HandleBase::HandleId key, utils::CString&& tag) noexcept;
+    void writeHeapHandleTag(HandleBase::HandleId key, utils::CString&& tag) noexcept;
     utils::CString findHandleTag(HandleBase::HandleId key) const noexcept;
 
 private:
@@ -67,7 +68,9 @@ private:
 template<size_t P0, size_t P1, size_t P2>
 class HandleAllocator : public DebugTag {
 public:
-    HandleAllocator(const char* name, size_t size, bool disableUseAfterFreeCheck) noexcept;
+    HandleAllocator(const char* name, size_t size) noexcept;
+    HandleAllocator(const char* name, size_t size,
+            bool disableUseAfterFreeCheck, bool disableHeapHandleTags) noexcept;
     HandleAllocator(HandleAllocator const& rhs) = delete;
     HandleAllocator& operator=(HandleAllocator const& rhs) = delete;
     ~HandleAllocator();
@@ -250,7 +253,11 @@ public:
         if (UTILS_LIKELY(isPoolHandle(id))) {
             // Truncate the age to get the debug tag
             key &= ~(HANDLE_DEBUG_TAG_MASK ^ HANDLE_AGE_MASK);
-            writeHandleTag(key, std::move(tag));
+            writePoolHandleTag(key, std::move(tag));
+        } else {
+            if (!mHeapHandleTagsDisabled) {
+                writeHeapHandleTag(key, std::move(tag));
+            }
         }
     }
 
@@ -397,7 +404,7 @@ private:
     void deallocateHandleSlow(HandleBase::HandleId id, size_t size) noexcept;
 
     // We inline this because it's just 4 instructions in the fast case
-    inline std::pair<void*, uint32_t> handleToPointer(HandleBase::HandleId id) const noexcept {
+   std::pair<void*, uint32_t> handleToPointer(HandleBase::HandleId id) const noexcept {
         // note: the null handle will end-up returning nullptr b/c it'll be handled as
         // a non-pool handle.
         if (UTILS_LIKELY(isPoolHandle(id))) {
@@ -412,7 +419,7 @@ private:
     void* handleToPointerSlow(HandleBase::HandleId id) const noexcept;
 
     // We inline this because it's just 3 instructions
-    inline HandleBase::HandleId arenaPointerToHandle(void* p, uint32_t tag) const noexcept {
+   HandleBase::HandleId arenaPointerToHandle(void* p, uint32_t tag) const noexcept {
         char* const base = (char*)mHandleArena.getArea().begin();
         size_t const offset = (char*)p - base;
         assert_invariant((offset % Allocator::getAlignment()) == 0);
@@ -428,7 +435,10 @@ private:
     mutable utils::Mutex mLock;
     tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
     std::atomic<HandleBase::HandleId> mId = 0;
-    bool mUseAfterFreeCheckDisabled = false;
+
+    // constants
+    const bool mUseAfterFreeCheckDisabled;
+    const bool mHeapHandleTagsDisabled;
 };
 
 } // namespace filament::backend

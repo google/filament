@@ -59,7 +59,7 @@ def render_test(gltf_viewer, test_config, output_dir,
                 env=env, capture_output=False)
 
         if res == 0:
-          execute(f'mv -f {test.name}0.ppm {named_output_dir}/{out_name}.ppm', capture_output=False)
+          execute(f'mv -f {test.name}0.tif {named_output_dir}/{out_name}.tif', capture_output=False)
           execute(f'mv -f {test.name}0.json {named_output_dir}/{test.name}.json', capture_output=False)
         else:
           important_print(f'{test_desc} failed with error={res}')

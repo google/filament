@@ -1,0 +1,7 @@
+
+// dxc.exe shader model upgrade
+
+// RUN: %dxc  %S/Inputs/smoke.hlsl   /T ps_5_0 | FileCheck  %s --check-prefix=MODEL_UPGRADE
+
+// Make sure shader model upgrade to 6.0.
+// MODEL_UPGRADE:!{!"ps", i32 6, i32 0}

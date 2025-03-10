@@ -279,7 +279,7 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, UniformType type,
 
 
 MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
-        SamplerFormat format, ParameterPrecision precision, bool multisample) noexcept {
+        SamplerFormat format, ParameterPrecision precision, bool multisample, const char* transformName) noexcept {
     FILAMENT_CHECK_PRECONDITION(!multisample ||
             (format != SamplerFormat::SHADOW &&
                     (samplerType == SamplerType::SAMPLER_2D ||
@@ -288,7 +288,7 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType sample
                " as long as type is not SHADOW";
 
     FILAMENT_CHECK_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT) << "Too many parameters";
-    mParameters[mParameterCount++] = { name, samplerType, format, precision, multisample };
+    mParameters[mParameterCount++] = { name, samplerType, format, precision, multisample, transformName };
     return *this;
 }
 
@@ -609,12 +609,18 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     SamplerInterfaceBlock::Builder sbb;
     BufferInterfaceBlock::Builder ibb;
     // sampler bindings start at 1, 0 is the ubo
-    for (size_t i = 0, binding = 1, c = mParameterCount; i < c; i++) {
+    uint16_t binding = 1;
+    for (size_t i = 0, c = mParameterCount; i < c; i++) {
         auto const& param = mParameters[i];
         assert_invariant(!param.isSubpass());
         if (param.isSampler()) {
             sbb.add({ param.name.data(), param.name.size() },
-                    binding++, param.samplerType, param.format, param.precision, param.multisample);
+                    binding, param.samplerType, param.format, param.precision, param.multisample);
+            if (!param.transformName.empty()) {
+                ibb.add({{{ param.transformName.data(), param.transformName.size() }, uint8_t(binding),
+                          0, UniformType::MAT3, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 }});
+            }
+            binding++;
         } else if (param.isUniform()) {
             ibb.add({{{ param.name.data(), param.name.size() },
                       uint32_t(param.size == 1u ? 0u : param.size), param.uniformType,
@@ -828,6 +834,8 @@ static void showErrorMessage(const char* materialName, filament::Variant variant
         case TargetApi::METAL:
             targetApiString = "Metal.\n";
             break;
+        case TargetApi::WEBGPU:
+            targetApiString = "WebGPU.\n";
         case TargetApi::ALL:
             assert(0); // Unreachable.
             break;
@@ -1025,6 +1033,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
 
                 switch (targetApi) {
+                    // TODO: Handle webgpu here
+                    case TargetApi::WEBGPU:
                     case TargetApi::ALL:
                         // should never happen
                         break;

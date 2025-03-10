@@ -1,0 +1,354 @@
+XXX - Not complete.
+
+Name
+
+    SGIX_image_compression
+
+Name Strings
+
+    GL_SGIX_image_compression
+
+Version
+
+    $Date: 1997/06/05 16:11:49 $ $Revision: 1.5 $
+
+Number
+
+    ???
+
+Dependencies
+
+	None.
+
+Overview
+
+	This extension defines new pixel storage modes which are used in the
+	conversion of image data to and from compressed formats on the client
+	side.  These new compression and decompression operations take place
+	during the pixel packing and unpacking stages of the OpenGL pipeline,
+	respectively, and obey the same semantics as other packing and
+	unpacking modes.  This extension defines a framework in which further
+	extensions can provide support for specific compressed formats, and
+	also provides additional infrastructure which is common to various
+	compression techniques, without defining any specific compression
+	formats.  Other extensions will define compression formats which make
+	use of this framework.  A new pixel unpacking mode and a new pixel
+	packing mode are defined which specify the compressed format of pixel
+	data on the client side.  The only legal value this extension defines
+	for these storage modes is NONE; further compression extensions will
+	define additional legal values.
+
+	Many compression techniques utilize various component subsamplings, so
+	it is necessary to provide a mechanism to specify the up- and
+	down-sampling of components as pixel data is decompressed from- and
+	compressed to the client.  This extension defines a new pixel storage
+	mode to specify these sampling patterns, and four legal values.  When
+	pixel data is decompressed from the client and an unpacking upsampling
+	mode other than SAMPLE_444_SGIX is specified, the upsampling is
+	performed via simple component replication.  This preserves all
+	information in the incoming image data, so that if an application
+	requires other types of filtering, they may be performed after
+	decompression.  Similarly, when pixel data is compressed to the client
+	and a packing downsampling mode other than SAMPLE_444_SGIX is
+	specified, the downsampling is performed via simple component
+	decimation.  If an application requires other types of filtering, they
+	must be performed before compression.
+
+	Some compression formats specify a color space in which the pixels are
+	expressed before compression and after decompression.  To make support
+	of these formats more transparent, this extension adds a conversion
+	between the natural color space of the compression format and RGB.
+	This conversion can be enabled separately for packing and for unpacking
+	of pixel data.  When it is enabled for unpacking, the pixel data will
+	be converted to RGB after decompression.  When it is enabled for
+	packing, the pixel data will be assumed to be represented as RGB, and
+	converted as necessary before compression.  The client may wish to
+	disable these automatic conversion in order to apply filtering before
+	the color space conversion in the case of decompression, or after the
+	color space conversion in the case of compression.  When the
+	conversions are disabled, the client is responsible for performing the
+	appropriate color space conversions.  The alternate color spaces must
+	be defined by the additional compression format extensions.  If a new
+	format extension does not specify a preferred color space, this color
+	space conversion has no effect.
+
+Issues
+
+	- Should this be split into multiple extensions?
+
+	- How should bitrate/quality be controlled for vbr techniques?
+
+	- Instead of requiring each compression format extension to specify
+	  its own color space, this could be specified by the client using the
+	  <format> parameter.  This would require the creation of additional
+	  formats, but would also have the advantage of more accurately
+	  reflecting the format of pixel data, i.e., calling the format of DVC
+	  compressed data YCrCb rather than RGB.
+
+	- Should some additional support for up- and down-sampling methods
+	  other than replication and decimation be provided?
+
+	- Should we define an error for a bogus compressed frame?
+          Something like COMPRESSION_DATA_ERROR?
+
+	- We define all compression standards as operating on RGBA
+	  floating-point images.  Is this the correct decision?
+
+	- We ignore color-index images.  Is this the correct decision?
+
+	- The current scheme for subrectangle modes doesn't permit the
+	  old trick of drawing fields by setting ROW_LENGTH to twice
+	  the actual width of the image.  Probably the easiest way to
+	  fix this would be to add some new pixel storage parameter
+	  (FIELD_EXTRACT or something) which would be treated as
+	  though it were part of ROW_LENGTH in the non-compressed
+	  unpack case.  The non-compressed unpack case is a little
+	  harder -- it can be done by setting ROW_LEGNTH to one half
+	  the width, but bytes past the end of the last scan line are
+	  written. 
+
+	- What about three- and four-dimensional images?
+
+	- What about three- and four-dimensional subrectangle modes?
+
+New Procedures and Functions
+
+	None.
+
+New Tokens
+
+	Accepted by the <pname> parameter of PixelStoref, PixelStorei,
+	GetBooleanv, GetIntegerv, GetFloatv and GetDoublev:
+	
+		PACK_COMPRESSION_TYPE_SGIX
+		UNPACK_COMPRESSION_TYPE_SGIX
+		UNPACK_COMPRESSED_SIZE_SGIX
+		PACK_MAX_COMPRESSED_SIZE_SGIX
+		PACK_SAMPLE_SGIX
+		UNPACK_SAMPLE_SGIX
+	
+	Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+	GetFloatv and GetDoublev:
+
+		PACK_COMPRESSED_SIZE_SGIX
+
+	Accepted by the <param> parameter of PixelStoref and PixelStorei
+	when the <pname> parameter is PACK_SAMPLE_SGIX or
+	UNPACK_SAMPLE_SGIX:
+	
+		SAMPLE_444_SGIX
+		SAMPLE_422_SGIX
+		SAMPLE_411_SGIX
+		SAMPLE_420_SGIX
+
+	Accepted by the <pname> parameter of PixelStoref and
+	PixelStorei with a <param> parameter of TRUE or FALSE and by
+	the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv
+	and GetDoublev:
+	
+		PACK_FROM_RGB_SGIX
+		UNPACK_TO_RGB_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+	None.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+	3.6.1 Pixel Storage Modes
+	
+	The following is added to Table 3.1:
+	
+	Parameter Name			Type		Initial Value		Valid Range
+	--------------			----		-------------		-----------
+	UNPACK_COMPRESSION_TYPE_SGIX	integer		NONE			NONE
+	UNPACK_COMPRESSED_SIZE_SGIX	integer		0			[0,inf)
+	UNPACK_SAMPLE_SGIX		integer		SAMPLE_444_SGIX		SAMPLE_444_SGIX, SAMPLE_422_SGIX, SAMPLE_411_SGIX, SAMPLE_420_SGIX
+	UNPACK_TO_RGB_SGIX		boolean		TRUE			TRUE/FALSE
+		
+	3.6.3 Rasterization of Pixel Rectangles
+
+	The following is added to the introduction to section 3.6.3:
+	"Unpacking" refers to the reading of pixels from host memory.
+	Pixels are unpacked from host memory as either compressed or
+	uncompressed images.  If PACK_COMPRESSION_TYPE_SGIX is set to
+	NONE, the images are stored as uncompressed data and are
+	unpacked from host memory as described below.  If
+	PACK_COMPRESSION_TYPE_SGIX is set to a value other than NONE,
+	the images are compressed and are unpacked from host memory as
+	described in "Unpacking of Compressed Images".
+
+	The title of the "Unpacking" subsection is changed to
+	"Unpacking of Uncompressed Images."  All references to this
+	subsection are changed as well.
+
+	A new subsection, "Unpacking of Compressed Images," is added
+	between "Unpacking of Uncompressed Images" and the "Conversion
+	to Floating-Point."  The contents of the section are as
+	follows:
+
+	In this section, we describe the unpacking of compressed
+	images.  The first part describes how images are taken from
+	host memory as a byte stream.  Next, a description GL's
+	upsampling algorithms is provided since they are used by
+	several compressed formats.  After the upsampling description,
+	paragraphs added by other extensions describe the conversion
+	applied to the byte stream for a given
+	UNPACK_COMPRESSION_TYPE_SGIX.  After these descriptions, we
+	describe the application of subrectangle pixel storage modes.
+
+	GL supports four types of upsampling:  SAMPLE_444_SGIX,
+	SAMPLE_422_SGIX, SAMPLE_411_SGIX, and SAMPLE_420_SGIX.  The
+	type of upsampling performed is determined by the setting of
+	the UNPACK_SAMPLE_SGIX pixel storage parameter.
+	XXX say how the upsampling is performed for each of the
+	things.
+
+	Compressed images are taken from memory as an uninterrupted
+	sequence of bytes beginning at <data> whose length is given by
+	UNPACK_COMPRESSED_SIZE_SGIX.  The byte stream is passed to the
+	GL and interpreted as determined by the compression type given
+	by UNPACK_COMPRESSION_TYPE_SGIX.  The dimensions of the image
+	represented by the byte stream are determined as follows.  The
+	width of the image is equal to the value of UNPACK_ROW_LENGTH
+	if this value is positive, or to <width> otherwise.  The
+	height of the image is equal to the value of IMAGE_HEIGHT_EXT
+	if this value is positive, or to <height> otherwise.  The
+	width and height refer to the the size of the image after
+	upsampling (see below).
+
+	The pixel storage parameters UNPACK_SWAP_BYTES,
+	UNPACK_LSB_FIRST, and UNPACK_ALIGNMENT are ignored for
+	compressed images.  Subrectangle storage modes
+	(UNPACK_SKIP_ROWS, UNPACK_SKIP_PIXELS) are not applied as the
+	image is extracted from memory, but instead are applied after
+	the image has been decompressed.  This operation is described
+	in detail at the end of this section.
+
+	Once the byte stream has been taken from host memory, it is
+	decompressed as determined by the setting of
+	UNPACK_COMPRESSION_TYPE_SGIX.  The operations are described in
+	detail below.
+
+	The output of the decompression algorithm is a width by height
+	image.  A subrectangle of the image may be extracted as
+	determined by the pixel storage parameters UNPACK_SKIP_PIXELS,
+	UNPACK_SKIP_ROWS and by the <width> and <height> arguments to
+	the original entry point (see figure 3.8.  The result of
+	application of the subrect algorithm is a <width> by <height>
+	image.
+
+	To compute the subrectangle image, we consider the output of
+	the decompression algorithm as a two-dimensional array of
+	pixels Pin[0...(width-1)][0...(height-1)].  The first index
+	selects the column of the image, the second selects the row.
+	We consider the output of the subrectangle algorithm as a
+	two-dimensional array of pixels
+	Pout[0...(<width>-1)][0...(<height>-1)].  Each pixel the
+	output image is defined by:
+
+		Pout[i][j] = Pin[UNPACK_SKIP_PIXELS + i][UNPACK_SKIP_ROWS + j]
+
+	In this equation, we define the "=" operation to set each
+	channel of the output pixel equal to the equivalent channel of
+	the input pixel.  If any of the output pixels are generated
+	from pixels outside of the input image, the values of the
+	components of these pixels are undefined.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+	4.3.2 Reading Pixels
+	
+	The following entries are added to Table 4.5:
+
+	Parameter Name			Type		Initial Value		Valid Range
+	--------------			----		-------------		-----------
+	PACK_COMPRESSION_TYPE_SGIX	integer		NONE			NONE
+	PACK_MAX_COMPRESSED_SIZE_SGIX	integer		0			[0,inf)
+	PACK_SAMPLE_SGIX		integer		SAMPLE_444_SGIX		SAMPLE_444_SGIX, SAMPLE_422_SGIX, SAMPLE_411_SGIX, SAMPLE_420_SGIX
+	PACK_FROM_RGB_SGIX		boolean		TRUE			TRUE/FALSE
+	
+	The following needs to be added to the end of the "Final
+	Conversion" subsection: If image compression is on
+	(PACK_COMPRESSION_TYPE_SGIX is set to other than NONE), no
+	conversion is applied.
+
+	The subsection titled "Placement in Client Memory" is renamed
+	"Packing of Uncompressed Images."  The following is added to
+	the start of the subsection:  If image compression is not on
+	(PACK_COMPRESSION_TYPE_SGIX is set to NONE), the pixels of the
+	image are transferred to host memory as described in this
+	section.  If compression is on, the pixels are transferred as
+	described in "Packing of Compressed Images."
+
+	A new subsection, "Packing of Compressed Images," is added
+	after the subsection "Packing of Uncompressed Images."  The
+	contents of the subsection are as follows:
+
+	If image compression is on (PACK_COMPRESSION_TYPE_SGIX is set
+	to something other than NONE), images are placed in memory as
+	described in this section.  The floating-point image from the
+	final conversion step is used as the input to the compression
+	step.  The algorithm used for the compression step is
+	determined by the value of PACK_COMPRESSION_TYPE_SGIX.
+	Algorithms are described in separate extensions.  The size of
+	the image returned to the host is <width> by <height>.  The
+	pixel pack parameters PACK_SWAP_BYTES, PACK_LSB_FIRST,
+	PACK_ROW_LENGTH, PACK_SKIP_ROWS, PACK_SKIP_PIXELS, and
+	PACK_ALIGNMENT are not considered when reading back compressed
+	images.
+
+	The output of the compression step is a byte stream.  The
+	compression algorithm sets the value of
+	PACK_COMPRESSED_SIZE_SGIX to the length of the byte stream.
+	The bytes are placed in an uninterrupted stream starting at
+	the location <data> in host memory.  If the value of
+	PACK_MAX_COMPRESSED_SIZE_SGIX is greater than zero and the
+	value of PACK_COMPRESSED_SIZE_SGIX is greater than the value
+	of PACK_MAX_COMPRESSED_SIZE_SGIX, the error INVALID_OPERATION
+	is generated.  If this occurs, the contents of the first
+	PACK_MAX_COMPRESSED_SIZE_SGIX bytes after the <data> pointer
+	are undefined, but bytes outside this range are guaranteed to
+	be left unchanged.
+	
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+	None.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+	XXX
+
+Additions to the GLX Specification
+
+
+Errors
+
+	XXX
+	
+	INVALID_OPERATION is generated if the compressed data requested by a
+	ReadPixels or GetTexImage will occupy more than
+	PACK_MAX_COMPRESSED_SIZE bytes.
+
+
+	
+
+New State
+
+    Get Value			Get Command			Type		Initial Value		Attribute
+    ---------			-----------			----		-------------		---------
+    UNPACK_COMPRESSION_TYPE	GetIntegerv			Z1*		NONE			client
+    UNPACK_COMPRESSED_SIZE	GetIntegerv			Z+		0			client
+    UNPACK_SAMPLE_SGIX		GetIntegerv			Z4		SAMPLE_444_SGIX		client
+    UNPACK_TO_RGB_SGIX		GetBooleanv			B		TRUE			client
+    PACK_COMPRESSION_TYPE	GetIntegerv			Z1		NONE			client
+    PACK_COMPRESSED_SIZE	GetIntegerv			Z+		0			client
+    PACK_MAX_COMPRESSED_SIZE	GetIntegerv			Z+		0			client
+    PACK_SAMPLE_SGIX		GetIntegerv			Z4		SAMPLE_444_SGIX		client
+    PACK_FROM_RGB_SGIX		GetBooleanv			B		TRUE			client
+	
+
+New Implementation Dependent State
+
+	None.

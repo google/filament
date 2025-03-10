@@ -194,7 +194,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/utils/Spirv.h
             src/vulkan/utils/Spirv.cpp
             src/vulkan/utils/StaticVector.h
-            src/vulkan/VulkanAsyncHandles.cpp
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
@@ -216,6 +215,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanMemory.cpp
             src/vulkan/VulkanPipelineCache.cpp
             src/vulkan/VulkanPipelineCache.h
+            src/vulkan/VulkanQueryManager.cpp
+            src/vulkan/VulkanQueryManager.h
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp
@@ -234,6 +235,15 @@ if (FILAMENT_SUPPORTS_VULKAN)
     elseif (ANDROID)
         list(APPEND SRCS src/vulkan/platform/VulkanPlatformAndroid.cpp)
     endif()
+endif()
+
+if (FILAMENT_SUPPORTS_WEBGPU)
+    list(APPEND SRCS
+            src/webgpu/WebGPUDriver.cpp
+            src/webgpu/WebGPUDriver.h
+            src/webgpu/WebGPUPlatform.cpp
+            src/webgpu/WebGPUPlatform.h
+    )
 endif()
 
 # ==================================================================================================
@@ -338,6 +348,10 @@ if (FILAMENT_SUPPORTS_VULKAN)
     target_link_libraries(${TARGET} PRIVATE SPIRV-Headers)
 endif()
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    target_link_libraries(${TARGET} PRIVATE webgpu_dawn dawncpp_headers)
+endif()
+
 if (FILAMENT_SUPPORTS_METAL)
     target_link_libraries(${TARGET} PUBLIC "-framework Metal -framework CoreVideo")
 endif()
@@ -388,7 +402,7 @@ else()
             -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
             -Wgnu-conditional-omitted-operand
             -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
-            -Wover-aligned
+            -Wover-aligned -Wreorder-init-list
             -Werror
     )
     if (CMAKE_CXX_STANDARD EQUAL 20)
@@ -424,6 +438,10 @@ set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(TARGETS vkshaders ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
+
+if (FILAMENT_SUPPORTS_WEBGPU)
+    install(TARGETS webgpu_dawn ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
+endif()
 
 # ==================================================================================================
 # Test
@@ -469,7 +487,6 @@ if (APPLE AND NOT IOS)
     target_link_libraries(backend_test PRIVATE ${BACKEND_TEST_LIBS})
 
     set(BACKEND_TEST_DEPS
-            OGLCompiler
             OSDependent
             SPIRV
             SPIRV-Tools

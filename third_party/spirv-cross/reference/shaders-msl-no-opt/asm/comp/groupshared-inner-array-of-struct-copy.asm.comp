@@ -1,0 +1,78 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct Data
+{
+    spvUnsafeArray<float3, 16> sourceData;
+};
+
+kernel void main0(texture2d<float> g_inputTexture [[texture(0)]], texture2d<uint, access::write> g_output [[texture(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    threadgroup spvUnsafeArray<Data, 64> g_data;
+    uint _49;
+    _49 = 0u;
+    for (; _49 < 4u; _49++)
+    {
+        for (uint _56 = 0u; _56 < 4u; )
+        {
+            int3 _65 = int3(gl_GlobalInvocationID) + int3(int(_56), int(_49), 0);
+            g_data[gl_GlobalInvocationID.x].sourceData[(_49 * 4u) + _56] = g_inputTexture.read(uint2(_65.xy), _65.z).xyz;
+            _56++;
+            continue;
+        }
+    }
+    spvUnsafeArray<float3, 16> _45 = g_data[gl_GlobalInvocationID.x].sourceData;
+    uint _77;
+    _77 = 0u;
+    for (int _80 = 0; _80 < 16; )
+    {
+        _77 |= uint(fast::clamp(dot(_45[_80], float3(-1.0)), 0.0, 1.0));
+        _80++;
+        continue;
+    }
+    g_output.write(uint4(_77), uint2(gl_GlobalInvocationID.xy));
+}
+

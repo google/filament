@@ -1,0 +1,115 @@
+Name
+
+    NV_alpha_to_coverage_dither_control
+
+Name Strings
+
+    GL_NV_alpha_to_coverage_dither_control
+
+Contact
+
+   Pierre Boudier, NVIDIA Corporation (pboudier 'at' nvidia.com)
+    
+Contributors
+
+    Tristan Lorach, NVIDIA Corporation    
+    Christophe KULESZA, Dassault Systemes
+
+Status
+
+    Pending.
+
+Version
+
+    Last Modified Date:         May 31, 2017
+    Revision:                   1.01
+
+Number
+
+    500
+
+Dependencies
+
+    This extension is written against the OpenGL 4.4 specification 
+    (Core Profile) but may be used with the Compatibility profile or OpenGL ES 
+    2.0 or later.
+    
+Overview
+
+    NV_alpha_to_coverage_dither_control_triangles provides a new mechanism
+    to control whether dithering is applied when the existing alpha to coverage
+    functionality is used.
+    
+
+New Procedures and Functions
+
+    void AlphaToCoverageDitherControlNV(enum mode)
+    
+New Tokens
+
+    Accepted by the <param> parameter of AlphaToCoverageDitherControlNV():
+        ALPHA_TO_COVERAGE_DITHER_DEFAULT_NV             0x934D
+        ALPHA_TO_COVERAGE_DITHER_ENABLE_NV              0x934E
+        ALPHA_TO_COVERAGE_DITHER_DISABLE_NV             0x934F
+    
+    Accepted by the <param> of GetIntegerv():
+        ALPHA_TO_COVERAGE_DITHER_MODE_NV                0x92BF
+
+Modification to Chapter 17.3.3 of the OpenGL 4.4 (Core Profile) Specification
+(Multisample Fragment Operations)
+
+    Modify the paragraph describing SAMPLE_ALPHA_TO_COVERAGE with
+
+        ... No specific algorithm is required for converting the sample
+    alpha values to a temporary coverage value. It is intended that the 
+    number of 1's in the temporary coverage be proportional to the set 
+    of alpha values for the fragment, with all 1's  corresponding to 
+    the maximum of all alpha values, and all 0's corresponding to all 
+    alpha values being 0. The alpha values used to generate a coverage 
+    value are clamped to the range [0; 1]. It is also intended that the
+    algorithm be pseudo-random in nature, to avoid image artifacts due 
+    to regular coverage sample locations. 
+
+    The function AlphaToCoverageDitherControlNV() allows to specify the 
+    kind of algorithm: If the mode is ALPHA_TO_COVERAGE_DITHER_ENABLE, 
+    the algorithm is different at different pixel locations. The dithering 
+    should be defined relative to window, not screen, coordinates, so 
+    that rendering results are invariant with respect to window position.
+    If the mode is ALPHA_TO_COVERAGE_DITHER_DISABLE, then no dithering 
+    should be applied and the same conversion should happen regardless of 
+    the pixel coordinates. If the mode is ALPHA_TO_COVERAGE_DITHER_DEFAULT, 
+    then the algorithm is implementation dependent.
+
+    Addition to the Table 23.11. Multisampling:
+    ALPHA_TO_COVERAGE_DITHER_MODE  |  E  |  GetIntegerv  |  ALPHA_TO_COVERAGE_DITHER_DEFAULT  | Control dither for alpha to coverage |  17.3.3
+
+New State
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+    
+Modifications to the OpenGL Shading Language Specification, Version 4.40
+
+    None.
+
+Errors
+
+    None
+
+Issues
+
+    (XX) 
+
+Revision History
+
+    Revision 1.01
+    - fix incorrect enum names in the text section
+    Revision 1
+    - Internal revisions.

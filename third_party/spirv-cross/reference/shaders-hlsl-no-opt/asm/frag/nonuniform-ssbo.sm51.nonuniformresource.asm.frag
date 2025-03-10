@@ -16,17 +16,17 @@ struct SPIRV_Cross_Output
 void frag_main()
 {
     int i = vIndex;
-    int _42 = i + 60;
-    int _45 = i + 70;
-    ssbos[NonUniformResourceIndex(_42)].Store4(_45 * 16 + 16, asuint(20.0f.xxxx));
-    int _48 = i + 100;
-    uint _49;
-    ssbos[NonUniformResourceIndex(_48)].InterlockedAdd(0, 100u, _49);
-    int _51 = i;
-    uint _52;
-    ssbos[NonUniformResourceIndex(_51)].GetDimensions(_52);
-    _52 = (_52 - 16) / 16;
-    FragColor.z += float(int(_52));
+    int _23 = i + 60;
+    int _28 = i + 70;
+    ssbos[NonUniformResourceIndex(_23)].Store4(_28 * 16 + 16, asuint(20.0f.xxxx));
+    int _36 = i + 100;
+    uint _43;
+    ssbos[NonUniformResourceIndex(_36)].InterlockedAdd(0, 100u, _43);
+    int _47 = i;
+    uint _50;
+    ssbos[NonUniformResourceIndex(_47)].GetDimensions(_50);
+    _50 = (_50 - 16) / 16;
+    FragColor.z += float(int(_50));
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

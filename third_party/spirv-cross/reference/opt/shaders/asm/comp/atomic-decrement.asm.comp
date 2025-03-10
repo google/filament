@@ -10,7 +10,7 @@ layout(binding = 0, r32ui) uniform writeonly uimageBuffer u0;
 
 void main()
 {
-    uint _29 = atomicAdd(u0_counter.c, uint(-1));
-    imageStore(u0, floatBitsToInt(uintBitsToFloat(_29)), uvec4(uint(int(gl_GlobalInvocationID.x))));
+    uint _24 = atomicAdd(u0_counter.c, uint(-1));
+    imageStore(u0, floatBitsToInt(uintBitsToFloat(_24)), uvec4(uint(int(gl_GlobalInvocationID.x))));
 }
 

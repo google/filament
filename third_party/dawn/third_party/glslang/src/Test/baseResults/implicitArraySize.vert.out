@@ -1,0 +1,115 @@
+implicitArraySize.vert
+Shader version: 460
+0:? Sequence
+0:5  Function Definition: main( ( global void)
+0:5    Function Parameters: 
+0:6    Sequence
+0:6      move second child to first child ( temp float)
+0:6        direct index ( smooth temp float)
+0:6          'a' ( smooth out unsized 1-element array of float)
+0:6          Constant:
+0:6            0 (const int)
+0:6        Constant:
+0:6          0.100000
+0:7      move second child to first child ( temp float)
+0:7        direct index ( smooth temp float)
+0:7          'c' ( smooth out unsized 6-element array of float)
+0:7          Constant:
+0:7            5 (const int)
+0:7        Constant:
+0:7          0.100000
+0:?   Linker Objects
+0:?     'a' ( smooth out unsized 1-element array of float)
+0:?     'c' ( smooth out unsized 6-element array of float)
+0:?     'gl_VertexID' ( gl_VertexId int VertexId)
+0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)
+
+implicitArraySize.frag
+Shader version: 460
+0:? Sequence
+0:6  Function Definition: main( ( global void)
+0:6    Function Parameters: 
+0:7    Sequence
+0:7      move second child to first child ( temp float)
+0:7        direct index ( temp float)
+0:7          'b' ( out 5-element array of float)
+0:7          Constant:
+0:7            0 (const int)
+0:7        direct index ( smooth temp float)
+0:7          'a' ( smooth in unsized 2-element array of float)
+0:7          Constant:
+0:7            1 (const int)
+0:8      move second child to first child ( temp float)
+0:8        direct index ( temp float)
+0:8          'b' ( out 5-element array of float)
+0:8          Constant:
+0:8            1 (const int)
+0:8        direct index ( smooth temp float)
+0:8          'c' ( smooth in 3-element array of float)
+0:8          Constant:
+0:8            1 (const int)
+0:?   Linker Objects
+0:?     'a' ( smooth in unsized 2-element array of float)
+0:?     'c' ( smooth in 3-element array of float)
+0:?     'b' ( out 5-element array of float)
+
+
+Linked vertex stage:
+
+
+Linked fragment stage:
+
+ERROR: Linking vertex stage: Implicit size of unsized array doesn't match same symbol among multiple shaders.
+
+Shader version: 460
+0:? Sequence
+0:5  Function Definition: main( ( global void)
+0:5    Function Parameters: 
+0:6    Sequence
+0:6      move second child to first child ( temp float)
+0:6        direct index ( smooth temp float)
+0:6          'a' ( smooth out 1-element array of float)
+0:6          Constant:
+0:6            0 (const int)
+0:6        Constant:
+0:6          0.100000
+0:7      move second child to first child ( temp float)
+0:7        direct index ( smooth temp float)
+0:7          'c' ( smooth out 6-element array of float)
+0:7          Constant:
+0:7            5 (const int)
+0:7        Constant:
+0:7          0.100000
+0:?   Linker Objects
+0:?     'a' ( smooth out 1-element array of float)
+0:?     'c' ( smooth out 6-element array of float)
+0:?     'gl_VertexID' ( gl_VertexId int VertexId)
+0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)
+Shader version: 460
+0:? Sequence
+0:6  Function Definition: main( ( global void)
+0:6    Function Parameters: 
+0:7    Sequence
+0:7      move second child to first child ( temp float)
+0:7        direct index ( temp float)
+0:7          'b' ( out 5-element array of float)
+0:7          Constant:
+0:7            0 (const int)
+0:7        direct index ( smooth temp float)
+0:7          'a' ( smooth in 2-element array of float)
+0:7          Constant:
+0:7            1 (const int)
+0:8      move second child to first child ( temp float)
+0:8        direct index ( temp float)
+0:8          'b' ( out 5-element array of float)
+0:8          Constant:
+0:8            1 (const int)
+0:8        direct index ( smooth temp float)
+0:8          'c' ( smooth in 3-element array of float)
+0:8          Constant:
+0:8            1 (const int)
+0:?   Linker Objects
+0:?     'a' ( smooth in 2-element array of float)
+0:?     'c' ( smooth in 3-element array of float)
+0:?     'b' ( out 5-element array of float)
+

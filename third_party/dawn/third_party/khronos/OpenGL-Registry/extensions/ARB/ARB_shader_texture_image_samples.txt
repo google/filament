@@ -1,0 +1,310 @@
+Name
+
+    ARB_shader_texture_image_samples
+
+Name Strings
+
+    GL_ARB_shader_texture_image_samples
+
+Contact
+
+    Piers Daniell, NVIDIA (pdaniell@nvidia.com)
+    Mathias Schott, NVIDIA (mschott@nvidia.com)
+    
+Contributors
+
+    Tristan Lorach, NVIDIA (tlorach@nvidia.com)
+    Christophe Riccio, Unity (christophe.riccio@unity3d.com)
+    Evan Hart, NVIDIA (ehart@nvidia.com)
+    Jeannot Breton, NVIDIA (jbreton@nvidia.com)
+    
+Notice
+
+    Copyright (c) 2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. 
+    Approved by the ARB on June 26, 2014.
+    Ratified by the Khronos Board of Promoters on August 7, 2014.
+
+Version
+
+    Last Modified Date: May 28, 2014
+    Revision: 7
+
+Number
+
+    ARB Extension #166
+
+Dependencies
+
+    Either GLSL 1.50 or ARB_texture_multisample is required.
+
+    This extension is written against the OpenGL 4.4 specification and 
+    version 4.40 of the OpenGL Shading Language Specification.
+
+    This extension interacts with ARB_shader_image_load_store and GLSL 4.20.
+
+    This extension interacts with NV_gpu_program5, EXT_shader_image_load_store 
+    and NV_texture_multisample.
+    
+Overview
+
+    This extension provides GLSL built-in functions allowing shaders to query
+    the number of samples of a texture.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Additions to the OpenGL 4.4 (Core Profile) Specification
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Modifications to The OpenGL Shading Language Specification, Version 4.40.08
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_shader_texture_image_samples
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_ARB_shader_texture_image_samples 1
+
+  Add to table in section 8.9.1 "Texture Query Functions"
+
+    Syntax:
+     
+        int textureSamples(gsampler2DMS sampler)
+        int textureSamples(gsampler2DMSArray sampler)
+  
+    Description:
+
+        Returns the number of samples of the texture or textures bound to
+        <sampler>. 
+    
+Add to table in section 8.12 "Image Functions"
+
+    Syntax:
+
+        int imageSamples(gimage2DMS image)
+        int imageSamples(gimage2DMSArray image)
+ 
+    Description:
+
+        Returns the number of samples of the image or images bound to <image>. 
+     
+Dependencies on ARB_shader_image_load_store and GLSL 4.20.
+
+    If neither ARB_shader_image_load_store nor GLSL 4.20 is enabled in the
+    shader, then all overloads of imageSamples are removed.
+
+Dependencies on NV_gpu_program5, EXT_shader_image_load_store and 
+NV_texture_multisample
+
+    If NV_gpu_program5, EXT_shader_image_load_store and NV_texture_multisample
+    are supported, and "OPTION ARB_shader_texture_image_samples" is specified
+    in an assembly program, the following edits are made to extend the assembly
+    programming model documented in the NV_gpu_program4 extension and extended
+    by NV_gpu_program5, EXT_shader_image_load_store and NV_texture_multisample.  
+
+    If NV_gpu_program5, EXT_shader_image_load_store or NV_texture_multisample
+    are not supported, or if "OPTION ARB_shader_texture_image_samples" is not
+    specified in an assembly program, the contents of this dependencies section
+    should be ignored.
+
+    Section 2.X.2, Program Grammar
+
+    (add the following rules to the grammar)
+
+      <ImageInstruction>    ::= <IMQSop_instruction>
+
+      <IMQSop_instruction>  ::= <IMQSop> <opModifiers> <instResult> ","
+                                <imageAccess>
+   
+      <IMQSop>              ::= "IMQS"
+      
+      <TEXop_instruction>   ::= <TXQSop> <opModifiers> <instResult> "," 
+                                <texAccess>
+
+      <TXQSop>              ::= "TXQS"
+      
+      
+    Modify Section 2.X.4, Program Execution Environment  
+
+      Instr-      Modifiers 
+      uction  V  F I C S H D  Out Inputs    Description
+      ------- -- - - - - - -  --- --------  --------------------------------      
+      IMQS    50 - - - - - S  s   i         image sample query
+      TXQS    50 - - - - - S  s   t         texture sample query
+
+    (Add to "Section 2.X.6, Program Options" of the NV_gpu_program4 extension,
+    as extended by NV_gpu_program5)
+
+      + Texture and image sample query (ARB_shader_texture_image_samples)
+
+      If a program specifies the "ARB_shader_texture_image_samples" option, it
+      may use the instructions TXQS and IMQS.  If this option is not specified,
+      a program will fail to compile if it uses one of those two instructions.
+      
+      
+    Section 2.X.8.Z, IMQS:  Image sample query
+
+    The IMQS instruction returns the number of samples of the image unit 
+    specified by <imageUnit>.  Two image targets are supported:  2DMS and
+    ARRAY2DMS.  If the texture bound to the image unit has a TEXTURE_SAMPLES
+    value of 0, the instruction will return 1.  IMQS supports no data type
+    modifiers; the result scalar is interpreted as a signed integer.  IMQS
+    supports no storage modifier, since the number of sample is independent of 
+    the image unit format.  
+
+    
+    Section 2.X.8.Z, TXQS:  Texture sample query
+
+    The TXQS instruction returns the number of samples of the texture image
+    unit specified by <texImageUnit>.  Two texture targets are supported:
+    2DMS and ARRAY2DMS.  If the texture has a TEXTURE_SAMPLES value of 0, the
+    instruction will return 1.  TXQS supports no data type modifiers; the
+    result scalar is interpreted as a signed integer.
+    
+    
+Conformance Tests
+
+    <TBD>
+
+Issues
+
+    (1) What should we call this extension?
+        
+        GL_ARB_shader_image_size added imageSize which apparently was missed 
+            from GL_ARB_shader_image_load_store
+        GL_ARB_texture_multisample had textureSize built in, so no precedence
+      
+        Ideas: 
+            * GL_ARB_shader_sample_count_query
+            * GL_ARB_shader_samples_query
+            * GL_ARB_shader_texture_image_sample_count_query
+            * GL_ARB_shader_texture_image_samples
+            * GL_ARB_shader_texture_image_size_multisample
+            * GL_ARB_shader_texture_image_samples
+            * GL_ARB_shader_texture_samples
+    
+        RESOLVED: ARB_shader_texture_image_samples for now to 
+            follow the precedent set by GL_ARB_shader_image_size. 
+            
+            Might change depending on what the final resolution is for Issue (2)
+            
+    (2) How should we expose this?
+    
+        (A) separate  textureSamples/imageSamples functions to query 
+            just the number of samples
+            
+            orthogonal to other functions, makes it also easy to add non-awkward
+            versions for non MS textures that return 1.
+        
+        (B) (like that other API): extend textureSize/imageSize to return another
+            component in the returned (vec) value
+            
+            impossible to overload functions based on return type
+        
+        (C) textureSizeMS/imageSizeMS functions that return the number
+            of samples in the last component of the returned (vec) value
+            
+            Closer to that other API, but ugly and awkward to have non-ms textures
+            as arguments for a *SizeMS function.
+   
+        GL_ARB_texture_multisample Issue (5) suggests A) or (C) as options
+        
+        RESOLVED: Option A
+    
+    (3) Do we need overloads for g*Shadow samplers
+    
+        For consistency with textureSize.
+        
+        RESOLVED: No, see issue (5).
+        
+    (4) What other extensions interact with this
+
+        NV_gpu_program5, EXT_shader_image_load_store, and NV_texture_multisample.
+
+        What's the minimal GL/GLSL version we need to depend on.
+        
+        RESOLVED: The functionality added by this extension is
+        perfectly well defined in any shading language version that
+        supports multisample textures.  If the shading language, with
+        extensions, does not support images, then imageSamples is not
+        available.
+    
+    (5) Do we need overloads for non-MS textures and images
+
+        RESOLVED: No, since the always would return 1. If required, users can create 
+        their own overloads that return 1 for non-MS samplers.
+        
+    (6) Should we add functions to query the position of a sample
+    
+        RESOLVED: No because of the complexity and implementation burden
+        of supporting queries of multisample texture created with
+        fixedsamplelocation as false. In that case each pixel might have
+        different sample locations. If the app really needs to know the
+        sample location inside the shader it can pass in this data as
+        a uniforms initialized from GetMultisamplefv(SAMPLE_POSITION)
+        queries.
+        
+Revision History
+    Revision 8, 2015/09/08 (idr)
+      - Add interactions with various GLSL versions and extensions so
+        that this extension can be used with any GLSL version.
+
+    Revision 7, 2014/05/28 (mschott)
+      - Minor cleanups of NV_gpu_program5 dependencies in issue 5 and the introduction
+
+    Revision 6, 2014/05/27 (jbreton)
+      - Add NV_gpu_program5 dependencies
+
+    Revision 5, 2014/04/16 (pdaniell)
+      - Removed textureSamplePosition and imageSamplePosition
+      - Resolved issue 6
+
+    Revision 4, 2014/04/09 (mschott)
+      - added textureSamplePosition and imageSamplePosition
+      - added issue 6
+
+    Revision 3, 2014/03/31 (mschott)
+      - removed non-MS overloads
+      - added issue 5
+    
+    Revision 2, 2013/12/13 (mschott)
+      - Renamed to GL_ARB_texture_image_samples
+      - added shadow sampler overloads
+      
+    Revision 1, 2013/12/13 (mschott)
+      - First draft

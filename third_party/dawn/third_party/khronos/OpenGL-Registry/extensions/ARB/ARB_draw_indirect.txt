@@ -1,0 +1,401 @@
+Name
+
+    ARB_draw_indirect
+
+Name Strings
+
+    GL_ARB_draw_indirect
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    Barthold Lichtenbelt, NVIDIA
+    Bill Licea-Kane, AMD
+    Bruce Merry, ARM
+    Graham Sellers, AMD
+    Greg Roth, NVIDIA
+    Nick Haemel, AMD
+    Pierre Boudier, AMD
+    Piers Daniell, NVIDIA
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB at the 2010/01/22 F2F meeting.
+    Approved by the Khronos Board of Promoters on March 10, 2010.
+
+Version
+
+    Last Modified Date:         09/17/2012
+    Revision:                   7
+
+Number
+
+    ARB Extension #87
+
+Dependencies
+
+    OpenGL 3.1 is required.
+
+    This extension is written against the OpenGL 3.2 specification with 
+    the Compatibility Profile.
+
+    This extension interacts with NV_vertex_buffer_unified_memory.
+
+    This extension interacts with ARB_instanced_arrays.
+
+    This extension interacts with ARB_compatibility.
+
+Overview
+
+    This extension provides a mechanism for supplying the arguments to a 
+    DrawArraysInstanced or DrawElementsInstancedBaseVertex from buffer object
+    memory. This is not particularly useful for applications where the CPU 
+    knows the values of the arguments beforehand, but is helpful when the 
+    values will be generated on the GPU through any mechanism that can write
+    to a buffer object including image stores, atomic counters, or compute
+    interop. This allows the GPU to consume these arguments without a round-
+    trip to the CPU or the expensive synchronization that would involve. This
+    is similar to the DrawTransformFeedbackEXT command from 
+    EXT_transform_feedback2, but offers much more flexibility in both 
+    generating the arguments and in the type of Draws that can be accomplished.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    void DrawArraysIndirect(enum mode, const void *indirect);
+    void DrawElementsIndirect(enum mode, enum type, const void *indirect);
+
+New Tokens
+
+    Accepted by the <target> parameters of BindBuffer, BufferData,
+    BufferSubData, MapBuffer, UnmapBuffer, GetBufferSubData,
+    GetBufferPointerv, MapBufferRange, FlushMappedBufferRange,
+    GetBufferParameteriv, and CopyBufferSubData:
+
+        DRAW_INDIRECT_BUFFER                            0x8F3F
+
+    Accepted by the <value> parameter of GetIntegerv, GetBooleanv, GetFloatv,
+    and GetDoublev:
+
+        DRAW_INDIRECT_BUFFER_BINDING                    0x8F43
+
+Additions to Chapter 2 of the OpenGL 3.2 Specification (OpenGL Operation)
+
+    Add to Section 2.8.1 p. 40 (Drawing Commands)
+
+    The command
+
+        DrawArraysIndirect(enum mode, const void *indirect);
+
+    behaves as follows:
+
+        typedef struct {
+          GLuint count;
+          GLuint primCount;
+          GLuint first;
+          GLuint reservedMustBeZero;
+        } DrawArraysIndirectCommand;
+
+        if (mode is invalid) {
+            generate appropriate error
+        } else {
+            DrawArraysIndirectCommand *cmd = (DrawArraysIndirectCommand *)indirect;
+            DrawArraysInstanced(mode, cmd->first, cmd->count, cmd->primCount);
+        }
+
+    As with regular DrawArraysInstanced commands, the vertex attributes 
+    may be sourced from client arrays or vertex buffer objects (if buffers 
+    are bound). Unlike regular DrawArraysInstanced commands, the <first>
+    argument is unsigned and cannot cause an error. The results are undefined
+    if <reservedMustBeZero> is non-zero and may not result in program
+    termination.
+
+    The command
+
+        DrawElementsIndirect(enum mode, enum type, const void *indirect);
+
+    behaves as follows:
+
+        typedef struct {
+          GLuint count;
+          GLuint primCount;
+          GLuint firstIndex;
+          GLint  baseVertex;
+          GLuint reservedMustBeZero;
+        } DrawElementsIndirectCommand;
+
+        if (mode or type is invalid, or no index buffer) {
+            generate appropriate error
+        } else {
+            DrawElementsIndirectCommand *cmd = (DrawElementsIndirectCommand *)indirect;
+
+            DrawElementsInstancedBaseVertex(mode, cmd->count, type,
+                cmd->firstIndex * size-of-type, cmd->primCount, cmd->baseVertex);
+        }
+
+    As with regular DrawElementsInstancedBaseVertex commands, the vertex 
+    attributes may be sourced from client arrays or vertex buffer objects 
+    (if objects are bound). Unlike regular DrawElementsInstancedBaseVertex 
+    commands, the indices may not come from a client array and must come from 
+    an index buffer. If no element array buffer is bound, an INVALID_OPERATION 
+    error is generated. The results are undefined if <reservedMustBeZero> is
+    non-zero and may not result in program termination.
+
+    All elements of DrawArraysIndirectCommand and 
+    DrawElementsIndirectCommand are 32bit values, and both structures are
+    tightly packed.
+
+    Add to Section 2.9 (Buffer Objects)
+
+    Add to Table 2.7 (p. 48):
+
+    Target name                 Purpose                 Described in sections(s)
+    -----------------------     ----------              -------------------------
+    DRAW_INDIRECT_BUFFER        Indirect draw commands  2.9.9
+
+    Add a new Section 2.9.9 (Indirect Commands in Buffer Objects)
+
+    Arguments to DrawArraysIndirect and DrawElementsIndirect commands 
+    may be stored in buffer objects.
+
+    Initially zero is bound to DRAW_INDIRECT_BUFFER. In the
+    compatibility profile, this indicates that DrawArraysIndirect and
+    DrawElementsIndirect are to source their arguments directly from the 
+    pointer passed as their <indirect> parameters. In the core profile,
+    an INVALID_OPERATION error is generated if zero is bound to
+    DRAW_INDIRECT_BUFFER and DrawArraysIndirect or DrawElementsIndirect
+    is called.
+
+    A buffer object is bound to DRAW_INDIRECT_BUFFER by calling 
+    BindBuffer with <target> set to DRAW_INDIRECT_BUFFER, and <buffer>
+    set to the name of the buffer object. If no corresponding buffer 
+    object exists, one is initialized as defined in section 2.9.
+
+    While a non-zero buffer object name is bound to DRAW_INDIRECT_BUFFER,
+    DrawArraysIndirect and DrawElementsIndirect source their arguments
+    from that buffer object, using their <indirect> parameters as offsets
+    into the buffer object in the same fashion as described in section 2.9.3.
+    An INVALID_OPERATION error is generated if the commands source data
+    beyond the end of the buffer object or if <indirect> is not word aligned.
+
+Additions to Chapter 3 of the OpenGL 3.2 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 3.2 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 3.2 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 3.2 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 3.2 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    TBD.
+
+Errors
+
+    INVALID_ENUM is generated by DrawArraysIndirect/DrawElementsIndirect
+    if <mode> is not a valid begin mode.
+
+    INVALID_ENUM is generated by DrawElementsIndirect if <type> is not 
+    one of UNSIGNED_BYTE, UNSIGNED_SHORT, or UNSIGNED_INT.
+
+    INVALID_OPERATION is generated by DrawElementsIndirect if no buffer 
+    is bound to ELEMENT_ARRAY_BUFFER.
+
+    INVALID_OPERATION is generated by DrawArraysIndirect and
+    DrawElementsIndirect if zero is bound to DRAW_INDIRECT_BUFFER and if
+    the OpenGL context implements the core profile.
+
+    INVALID_OPERATION is generated by DrawArraysIndirect and
+    DrawElementsIndirect if commands source data beyond the end of a buffer
+    object or if <indirect> is not word aligned.
+
+New State
+
+    Update Table 6.11, p. 405 (Vertex Array Data not in Vertex Array objects)
+
+    Get Value                           Type    Get Command         Initial Value   Sec     Attribute
+    ---------                           ----    -----------         -------------   ---     ---------
+    DRAW_INDIRECT_BUFFER_BINDING         Z+     GetIntegerv               0         2.9     none
+
+New Implementation Dependent State
+
+    None.
+
+Dependencies on NV_vertex_buffer_unified_memory
+
+    If NV_vertex_buffer_unified_memory is supported, the following additional
+    edits are required:
+        
+    Accepted by the <cap> parameter of GetBufferParameterui64vNV:
+
+        DRAW_INDIRECT_BUFFER.
+
+    Accepted by the <cap> parameter of DisableClientState, 
+    EnableClientState, IsEnabled:
+
+        DRAW_INDIRECT_UNIFIED_NV                        0x8F40
+
+    Accepted by the <pname> parameter of BufferAddressRangeNV 
+    and the <value> parameter of GetIntegerui64vNV: 
+
+        DRAW_INDIRECT_ADDRESS_NV                        0x8F41
+
+    Accepted by the <value> parameter of GetIntegerv:
+
+        DRAW_INDIRECT_LENGTH_NV                         0x8F42
+
+    In Section 2.8.1, mention that vertex attributes and indices may be 
+    sourced from GPU addresses if VERTEX_ATTRIB_ARRAY_UNIFIED_NV/
+    ELEMENT_ARRAY_UNIFIED_NV are enabled.
+
+    Add to Section 2.9:
+
+    While DRAW_INDIRECT_UNIFIED_NV is enabled, DrawArraysIndirect and 
+    DrawElementsIndirect, source their arguments from the address 
+    specified by the command BufferAddressRange where <pname> is 
+    DRAW_INDIRECT_ADDRESS_NV and <index> is zero, added to the <indirect> 
+    parameter. If the commands source data beyond and including (<address>
+    + <length>), an INVALID_OPERATION error will be generated. If the draw
+    indirect address range does not belong to a buffer object that is 
+    resident at the time of the Draw, undefined results, possibly 
+    including program termination, may occur.
+
+    INVALID_OPERATION is generated by DrawElementsIndirect if no buffer 
+    is bound to ELEMENT_ARRAY_BUFFER and DRAW_INDIRECT_UNIFIED_NV is 
+    disabled.
+
+    INVALID_OPERATION is generated by DrawArraysIndirect and 
+    DrawElementsIndirect if DRAW_INDIRECT_UNIFIED_NV is enabled and
+    commands source data beyond and including (address + length).
+
+    Update Table 6.11:
+
+    Get Value                           Type    Get Command         Initial Value   Sec     Attribute
+    ---------                           ----    -----------         -------------   ---     ---------
+    DRAW_INDIRECT_UNIFIED_NV             B      IsEnabled               FALSE       2.9     none
+    DRAW_INDIRECT_ADDRESS_NV            Z64+    GetIntegerui64vNV         0         2.9     none
+    DRAW_INDIRECT_LENGTH_NV              Z+     GetIntegerv               0         2.9     none
+
+Dependencies on NV_vertex_buffer_unified_memory and ARB_compatibility
+
+    If the context version is greater than 3.0 and does not include 
+    ARB_compatibility functionality, then EnableClientState and 
+    DisableClientState have been deprecated and removed. This extension
+    adds back those commands if NV_vertex_buffer_unified_memory is supported, 
+    but only requires that they accept the DRAW_INDIRECT_UNIFIED_NV token.
+
+Dependencies on ARB_compatibility
+
+    When the ARB_compatibility extension is not supported, client arrays
+    cannot be used to source vertex attribute data.
+
+Dependencies on ARB_instanced_arrays
+
+    This extension does not require ARB_instanced_arrays, but reserves 
+    space in the Command structures such that a future extension could
+    add a "firstInstance" member which would initialize the instance 
+    counter used for computing which vertex attrib array element to use.
+    Note that ARB_instanced_arrays does not currently support 
+    "firstInstance", it only has a frequency divider.
+
+Issues
+
+    (1) What is this good for? 
+    
+    RESOLVED: Compute interoperability. Recirculating results written via
+    image stores or atomic counters.
+
+    (2) Should we allow indirect draws from client memory?  Should we have a 
+    buffer object binding for this?
+
+    RESOLVED: YES. Although, using client vertex arrays would somewhat defeat 
+    the purpose of this extension. Note that this issue only applies to 
+    implementations supporting the ARB_compatibility extension. 
+
+    One non-obvious restriction is that DrawElementsIndirect doesn't accept
+    an <indices> parameter, so an index buffer is required.    
+
+    (3) How do we specify the index size for DrawElements calls?
+
+    RESOLVED: Passed into the command, not pulled out of the struct.
+
+    (4) For DrawElements calls, in what unit are the offsets into the index
+    buffer.
+
+    RESOLVED: In indices, not in bytes.
+
+    (5) Should the new state be part of the VAO?
+
+    RESOLVED: No. 
+
+    (6) Should gl.h/glext.h provide structure definitions?
+
+    RESOLVED. No. It is not possible to define the structures in such a way
+    that all compilers would pack them correctly.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  ------------------------------------------------
+     7   09/17/2012 Jon Leech Remove BindBufferRange/Base from commands for
+                              which DRAW_INDIRECT_BUFFER is a valid target
+                              (Bug 7794).
+
+     6   03/07/2012 Jon Leech Add missing error when no indirect buffer is
+                              bound and the indirect draw commands are
+                              called (Bug 7211).
+
+     5   12/07/2009 pdaniell  Remove ARB suffix from new tokens for core spec.
+
+     4   10/29/2009 pdaniell  Convert to ARB.
+
+     3   10/21/2009 pdaniell  Minor edits based on Bruce's feedback. Added
+                              full list of Get* calls for new
+                              DRAW_INDIRECT_BUFFER_BINDING_EXT token.
+                              Specified behavior when reservedMustBeZero is
+                              non-zero. Added INVALID_VALUE error when
+                              <indirect> is not a multiple of GLuint.
+
+     2              jbolz     Internal revisions.
+
+     1              pbrown    Internal revisions.

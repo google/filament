@@ -16,8 +16,8 @@ void main()
     uint _30;
     vec4 _31;
     _30 = sparseTextureARB(uSamp, vUV, _31);
-    ResType _26 = ResType(_30, _31);
-    vec4 texel = _26._m1;
-    bool ret = sparseTexelsResidentARB(int(_26._m0));
+    ResType _24 = ResType(_30, _31);
+    vec4 texel = _24._m1;
+    bool ret = sparseTexelsResidentARB(int(_24._m0));
 }
 

@@ -1,0 +1,965 @@
+Name
+
+    SGIS_multitexture
+
+Name Strings
+
+    GL_SGIS_multitexture
+
+Version
+
+    $Date: 1998/10/15 00:54:19 $ $Revision: 1.20 $
+
+Number
+
+    116
+
+Dependencies
+
+    OpenGL 1.1 is required 
+    EXT_texture3D affects the definition of this extension.
+    SGIS_texture4D affects the definition of this extension.
+    SGIS_texture_border_clamp affects the definition of this extension.
+    SGI_texture_color_table affects the definition of this extension.
+    SGIS_texture_edge_clamp affects the definition of this extension.
+    SGIX_texture_add_env affects the definition of this extension.
+    SGIS_texture_filter4 affects the definition of this extension.
+    SGIS_texture_lod affects the definition of this extension.
+    SGIX_texture_lod_bias affects the definition of this extension.
+    SGIX_texture_scale_bias affects the definition of this extension.
+    SGIS_texture_select affects the definition of this extension.
+    SGIS_detail_texture affects the definition of this extension.
+    SGIS_sharpen_texture affects the definition of this extension.
+    SGIX_shadow affects the definition of this extension.
+    SGIX_shadow_ambient affects the definition of this extension.
+    SGIX_clipmap affects the definition of this extension.
+    SGIS_point_line_texgen affects the definition of this extension.
+
+Overview
+
+    This extension adds support for multiple active textures.  The texture
+    capabilities are symmetric for all active textures.  Any texture capability
+    extension supported for one texture must be supported for all active
+    textures.  Each active texture has its own state vector which includes
+    texture image and filtering parameters and texture environment application.
+
+    The texture environments are applied in a pipelined fashion whereby the
+    output of one texture environment is used as the input fragment color for
+    the texture environment for the next active texture.  Changes to texture
+    state other than texture coordinates are routed through a selector which
+    controls which instance of texture state is affected.
+
+              +-----+
+     Cf ----->|     |    +-----+                pipelined texture
+              | TE0 |--->|     |                environment
+    Ct0 ----->|     |    | TE1 |    +-----+
+              +-----+    |     |--->|     |
+    Ct1 ---------------->|     |    | TE2 |    +-----+
+                         +-----+    |     |--->|     |
+    Ct2 --------------------------->|     |    | TE3 |
+                                    +-----+    |     |--> cf'
+    Ct3 -------------------------------------->|     |
+                                               +-----+
+                .
+                .
+                .
+
+        Ct<i> = texture color from texture lookup <i>
+        Cf    = fragment color
+        TE    = texture environment
+    
+    Texture coordinate set, texture coordinate evaluator state, texture
+    generation function, and texture matrix are replicated independently of
+    the texture rasterization state and may differ in number from the
+    number of textures which can be active during rasterization.
+    Post-transform texture coordinates sets are associated with a texture
+    rasterization unit by binding them to a texture environment and they may
+    be multicast to several texture rasterization units.
+
+    The specification is written using four active textures and four
+    sets of texture coordinates though the actual number supported is
+    implementation dependent and can be larger or smaller than four.
+
+Issues
+
+    *  MultiTexCoord is an annoying name
+
+    *  alternatives for supplying fine grain texcoord
+
+        1. Tex<k>Coord<n><T>[v|f](<T> data);
+
+           a. efficient, no error checking required
+           d. adds *a lot* of new commands
+        
+        2. MultiTexCoord<n><T>[v|f](enum target, <T> data);
+
+           a. only a small number of commands added
+           a. can be fairly efficient (may need hw tweak)
+           d. needs range checking for <target>
+        
+        3. reuse TexCoord command and add SelectTextureCoordSetSGIS(enum target)
+           to control routing
+
+           a. only add one new commands
+           d. adds a lot of function call overhead when using multiple
+              textures
+           d. need to range check <target>
+
+    *  seems a little hacky to have SelectTextureSGIS control texture matrix
+       since that is part of transform state and to have it control evaluator
+       state yet SELECTED_TEXTURE itself is part of texture state.
+
+    *  SelectTextureSGIS probably should not affect client state such as
+       the vertex array state.
+        
+        it doesn't any more
+
+    *  mechanism to replicate input texcoords across multiple texture paths
+       could be done with a pre-transform multicast or post-transform
+       multicast.
+
+        done using TEXTURE_ENV_COORD_SET_SGIS texture parameter
+        which is a post-transform mechanism.
+
+       RESOLVED: leave the coord source binding separate from
+       the texture object state => needs a new command to set it.
+
+    *  need proxy/macro object to handle resource constraints
+        save for another extension?
+
+    *  still need a way to route textures to lighting block :(
+
+        defined in light_texture.spec
+
+    *  should there be a post-filter colortable per texture?
+
+    *  should the number of textures and the number of texture
+       coordinate paths be decoupled?
+        RESOLVED: yes
+        There are some issues with this.  We choose to break
+        texture state into 3 pieces:
+            1. client state deal with issuing texture coordinates
+               from the application
+            2. transform state which includes texgen, texture
+               matrix, evaluation maps, and texture coordinate
+               retrieval from Gets and Feedback.
+            3. rasterization state which includes texture
+               images, filter parameters and environment.
+        2 & 3 are both server state.  there is an implication
+        that 1 and 2 are a little more tightly coupled and
+        equal in number but we need to keep the client
+        state separate.
+        There is some clumsyness with referring to the 2nd
+        group of state as transform state.  There is a problem
+        that the texgen state is part of the texture state
+        used in PushAttrib and PopAttrib so some finessing
+        is required.
+
+    *  special treatment of name 0?
+
+        RESOLVED: no
+    
+    *  more texture environment functions, SUBTRACT, ...?
+        leading candidates are SUBTRACT and REVERSE_SUBTRACT
+        could also make a new version of environment which is
+        similar to blending.
+
+        RESOLVED: new environment, see texture_env.spec
+    
+    * more general combination of texture results?
+
+        RESOLVED: do them in add-on specs
+    
+    * allow texture environment computation to do something
+      even when texture is disabled. This contradicts the current
+      specification of texturing (the difference would show
+      up in the REPLACE environment), so we redefine this
+      behavior in a new environment (see texture_env.spec)
+
+    * support for interleaved arrays
+      
+      add a command which acts as a multiplier on the current
+      interleaved array token causing the texture coordinate
+      array to have <n> contiguous texture coords of the same
+      type and format.
+
+    * some clarifications:
+
+      SelectTextureCoordSetSGIS affects client state only and
+      affects the commands TexCoord<n>{T}[v], TexCoordPointer,
+      EnableClientState, and DisableClientState.  Display lists
+      contain texture coordinates for which the binding is fully
+      resolved to one of TEXTURE0_SGIS ..  TEXTURE<n>_SGIS.
+
+      I chose to remove MultiTexCoordPointerSGIS as it was difficult
+      to also include tokens which would make it possible to call
+      Enable/DisableClientState with a token corresponding to the
+      appropriate texture coordinate set, so SelectTextureCoordSetSGIS
+      is required to manipulate the array state.  To maintain symmetry,
+      I made all commands use SelectTextureCoordSetSGIS and the
+      MultiTexCoord<n>{T}[v]SGIS commands are added to help with
+      performance.  An alternative would be to have both
+      MultiTexCoordPointerSGIS and add new tokens
+      TEXTURE_COORD_ARRAY0_SGIS .. TEXTURE_COORD_ARRAY<n>_SGIS and
+      not give TEXTURE_COORD_ARRAY0_SGIS the same value as
+      TEXTURE_COORD_ARRAY, so that we can have the relationship
+      TEXTURE_COORD_ARRAY<i>_SGIS = TEXTURE_COORD_ARRAY0_SGIS+i.
+      This still might cause some confusion/asymmetry if the <target>
+      parameter of MultiTexCoordPointerSGIS/MultiTexCoord<n>{T}[v]SGIS
+      is TEXTURE0_SGIS .. TEXTURE<n>_SGIS but EnableClientState/
+      DisableClientState use TEXTURE_COORD_ARRAY0_SGIS ..
+      TEXTURE_COORD_ARRAY<n>_SGIS
+
+        
+
+New Procedures and Functions
+
+    void MultiTexCoord{1234}{sifd}SGIS(enum target, T coords);
+    void MultiTexCoord{1234}{sifd}vSGIS(enum target, T coords);
+
+    void InterleavedTextureCoordSetsSGIS(int factor);
+
+    void SelectTextureSGIS(enum target);
+
+    void SelectTextureCoordSetSGIS(enum target);
+
+    void SelectTextureTransformSGIS(enum target);
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+    SELECTED_TEXTURE_SGIS                       0x83C0
+    SELECTED_TEXTURE_COORD_SET_SGIS             0x83C1
+    SELECTED_TEXTURE_TRANSFORM_SGIS             0x83C2
+    MAX_TEXTURES_SGIS                           0x83C3
+    MAX_TEXTURE_COORD_SETS_SGIS                 0x83C4
+    TEXTURE_COORD_SET_INTERLEAVE_FACTOR_SGIS    0x83C5
+
+    Accepted by the <pname> parameter of TexEnvi, TexEnvf,
+    TexEnviv, TexEnvfv, GetTexEnviv, and GetTexEnvfv:
+
+    TEXTURE_ENV_COORD_SET_SGIS                  0x83C6
+
+    Accepted by the <target> parameter of SelectTextureSGIS,
+    SelectTextureTransformSGIS, SelectTextureCoordSetSGIS,
+    MultiTexCoord<n>{T}[v]SGIS, and the <param> of TexParameteri and
+    TexParameterf, and the <params> parameter of TexParameteriv, and
+    TexParameterfv:
+
+    TEXTURE0_SGIS                               0x83C7
+    TEXTURE1_SGIS                               0x83C8
+    TEXTURE2_SGIS                               0x83C9
+    TEXTURE3_SGIS                               0x83CA
+    <reserve enums for 32>
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    Section 2.6 Begin/End Paradigm
+
+    <amend paragraph 2 & 3>
+
+    Each vertex is specified with two, three, or four coordinates.  In
+    addition, a current normal, current texture coordinate set, and current
+    color may be used in processing each vertex.  Normals are used by the GL in
+    lighting calculations; the current normal is a three-dimensional vector
+    that may be set by sending three coordinates that specify it.  Texture
+    coordinates determine how a texture image is mapped onto a primitive.
+    Multiple sets of texture coordinates may be used to specify how multiple
+    texture images are mapped onto a primitive.  The number of texture
+    coordinate sets supported is implementation dependent but must be at least
+    one.
+
+    A color is associated with each vertex as it is specified. This associated
+    color is either the current color or a color produced by lighting
+    depending on whether or not lighting is enabled. Texture coordinates are
+    similarly associated with each vertex.  Multiple sets of texture coordinates
+    may be associated with a vertex.  Figure 2.2 summarizes the association of
+    auxiliary data with a transformed vertex to produce a processed vertex.
+
+    <amend figure 2.2 to include multiple texcoord processing blocks
+     (current texcoords, texgen, texture matrix)>
+
+    <amend paragraph 6>
+    Before a color has been assigned to a vertex, the state required by a vertex
+    is the vertex's coordinates, the current normal, and the current texture
+    coordinate sets.  Once color has been assigned, however, the current normal
+    is no longer needed. Because color assignment is done vertex-by-vertex, a
+    processed vertex comprises the vertex's coordinates, its assigned color,
+    and its texture coordinate sets.
+
+
+
+    Section 2.7 Vertex Specifications <texture coordinates>
+
+    <amend paragraph 2>
+
+    Current values are used in associating auxiliary data with a vertex
+    as described in section 2.6.  A current value may be changed at any time
+    by issuing an appropriate command.  The commands
+
+    void TexCoord{1234}{sifd}(T coords);
+    void TexCoord{1234}{sifd}v(T coords);
+
+    specify the current homogeneous texture coordinates, named s,t,r, and q.
+    The TexCoord1 family of commands set the s coordinate to the provided
+    single argument while setting t and r to 0 and q to 1.  Similarly,
+    TexCoord2 sets s and t to the specified values, r to 0, and q to 1;
+    TexCoord3 sets s, t, and r, with q set to 1, and TexCoord4 sets all four
+    texture coordinates.
+
+    Implementations may support more than 1 set of texture
+    coordinates.  The MultiTexCoord family of commands takes the
+    coordinate set to be modified as the <target> parameter.  The
+    <target> parameter is one of TEXTURE0_SGIS through
+    TEXTURE3_SGIS. If a <target> parameter greater than the number of
+    supported coordinate sets is specified, the command has no effect.
+    The command
+
+    void SelectTextureCoordSetSGIS(enum target);
+
+    is used to change the texture coordinate set modified by the TexCoord*
+    family of commands.  <target> is one of TEXTURE0_SGIS through TEXTURE3_SGIS
+    corresponding to the texture coordinate set to be modified by the TexCoord
+    commands.  The current coordinate set selection is part of client state rather
+    than server state.
+
+
+    Section 2.8 Vertex Arrays
+
+    <amend paragraph 1>
+
+    The vertex specification commands in section 2.7 accept data in almost any
+    format, but their use requires many command executions to specify even
+    simple geometry.  Vertex data may also be placed in arrays that are stored
+    in the client's address space. Blocks of data in these arrays may be used
+    to specify multiple geometric primitives through the execution of a single
+    GL command.  The client may specify 6 or more arrays at once: one each to
+    store vertex coordinates, edge flags, colors, color indices, normals and
+    one or more texture coordinate sets. The commands
+
+    void EdgeFlagPointer(sizei stride, void *pointer);
+    void VertexPointer(int size, enum type, sizei stride, void *pointer);
+    void ColorPointer(int size, enum type, sizei stride, void *pointer);
+    void IndexPointer(enum type, sizei stride, void *pointer);
+    void NormalPointer(enum type, sizei stride, void *pointer);
+    void TexCoordPointer(int size, enum type, sizei stride, void *pointer);
+
+    ...
+
+    <insert this paragraph> between paragraph 2 & 3>
+
+    In implementations which support more than one set of texture coordinates,
+    the command SelectTextureCoordSetSGIS is used to select the vertex array
+    parameters to be modified by the TexCoordPointer command and the array
+    affected by client state enable and disable commands with the
+    TEXTURE_COORD_ARRAY parameter.
+
+    <modify the section on interleaved arrays as follows>
+
+        The commands
+
+        void InterleavedArrays(enum format, sizei stride,
+            void *pointer) ;
+        
+        void InterleavedTextureCoordSetsSGIS(int factor) ;
+    
+    efficiently initializes the six arrays and their enables to one of 14
+    configurations. <format> must be one 14 symbolic constants: V2F, V3F,
+    C4UB_V2F, C4UB_V3F, C3F_V3F, N3F_V3F, C4F_N3F_V3F, T2F_V3F, T4F_V4F,
+    T2F_C4UB_V3F, T2F_C3F_V3F, T2F_N3F_V3F, T2F_C4F_N3F_V3F, T4F_C4F_N3F_V4F.
+    <factor> is an integer between 1 and SELECTED_TEXTURE_COORD_SET_SGIS
+    and specifies how many texture coordinate sets are enabled as part
+    of the InterleavedArrays command.
+
+        The effect of
+
+            InterleavedArrays(format, stride, pointer);
+            InterleavedTextureCoordSetsSGIS(factor);
+
+    is the same as the effect of the command sequence
+
+           <copy command sequence from 1.1 spec, but change the part dealing
+            with texture coords to>
+
+            GetIntegerv(SELECTED_TEXTURE_COORD_SET_SGIS, &x);
+            if (<et>) {
+                for(i = 0; i < factor; i++) {
+                    SelectTextureCoordSetSGIS(TEXTURE0_SGIS+i);
+                    EnableClientState(TEXTURE_COORD_ARRAY);
+                    TexCoordPointer(st, FLOAT, str, <pointer>+i*pc);
+                }
+                for(i = factor; i < MAX_TEXTURE_COORD_SETS_SGIS; i++) {
+                    SelectTextureCoordSetSGIS(TEXTURE0_SGIS+i);
+                    DisableClientState(TEXTURE_COORD_ARRAY);
+                }
+            } else {
+                for(i = 0; i < MAX_TEXTURE_COORD_SETS_SGIS; i++) {
+                    SelectTextureCoordSetSGIS(TEXTURE0_SGIS+i);
+                    DisableClientState(TEXTURE_COORD_ARRAY);
+                }
+            }
+            SelectTextureCoordSetSGIS(x);
+            pc *= factor;
+    
+
+    If the number of supported is texture coordinate sets,
+    MAX_TEXTURE_COORD_SETS_SGIS, is <k>, then the client state require to
+    implement vertex arrays consists of five plus <k> boolean values, five
+    plus <k> integer stride values, four plus <k> constants representing array
+    types, and three plus <k> integers representing values per element.  In the
+    initial state, the boolean values are each disabled, the memory pointers
+    are each null, the strides are each zero, the array types are each FLOAT,
+    and the integers representing values per element are each four.
+
+
+    Section 2.10.2 Matrices
+    
+    <amend paragraph 8 texture matrix>
+
+    There is another 4x4 matrix that is applied to texture coordinates.
+    This matrix is applied as
+
+                | m1 m5 m9  m13 | |s|
+                | m2 m6 m10 m14 | |t| ,
+                | m3 m7 m11 m15 | |r|
+                | m4 m8 m12 m16 | |q|
+
+    where the left matrix is the current texture matrix.  The Matrix is applied
+    to the coordinates resulting from texture coordinate generation which
+    (which may simply be the current texture coordinates), and the resulting
+    transformed coordinates become the texture coordinates associated with a
+    vertex.  Setting the matrix mode to TEXTURE causes the already described
+    matrix operations to apply to the texture matrix stack.
+
+    For implementations which support more than one set of texture coordinates,
+    there is a corresponding texture matrix stack for each coordinate set. Each
+    stack has the same depth. The texture matrix stack which is affected by the
+    matrix operations is set using the SelectTextureTransformSGIS command.
+
+    There is a stack of matrices for each of the matrix modes.  For MODELVIEW
+    mode, the stack depth is at least 32 (that is, there is a stack of at least
+    32 model-view matrices). For other modes, the depth is at least 2.  Texture
+    matrix stacks for all texture coordinate sets have the same depth.
+
+        void PushMatrix( void );
+
+    pushes the stack down by one, duplicating the current matrix in both the
+    top of the stack and the entry below it.
+
+        void PopMatrix( void );
+    
+    pops the top entry off of the stack, replacing the current matrix with the
+    matrix that was the second entry in the stack.  The pushing or popping
+    takes place on the stack corresponding to the current matrix mode.  Popping
+    a matrix off a stack with only one entry generates the error STACK_UNDERFLOW;
+    pushing a matrix onto a full stack generates STACK_OVERFLOW.
+
+    When the current matrix mode is TEXTURE, the texture matrix stack corresponding
+    to the currently selected textured is pushed or popped.
+
+    The state required to implement transformations consists of a three-value
+    integer indicating the current matrix mode, a stack of at least two 4x4
+    matrices for PROJECTION and one stack of at least two 4x4 matrices for
+    each set of texture coordinates, TEXTURE, as well as associated stack pointers,
+    and a stack of at least 32 4x4 matrices with an associated stack pointer for
+    MODELVIEW.  Initially, there is only one matrix on each stack and all
+    matrices are set to the identity.  The initial matrix mode is MODELVIEW.
+
+    Section 2.10.4 Generating texture coordinates
+
+    <amend paragraph 4>
+
+    The state required for texture coordinate generation for each set of
+    texture coordinates supported by the implementation comprises a
+    three-valued integer for each coordinate indicating coordinate generation
+    mode, and a bit for each coordinate to indicate whether texture coordinate
+    generation is enabled or disabled.  In addition, four coefficients are
+    required for the four coordinates for each of EYE_LINEAR and
+    OBJECT_LINEAR.  The initial state has the texture generation function
+    disabled for all texture coordinates.  The initial values of p_i for s
+    except p_1 which is one; for t all the p_i are zero except p_2, which is
+    1.  The values of p_i for r and q are all zero.  These values of p_i apply
+    for both the EYE_LINEAR and OBJECT_LINEAR versions.  Initially all texture
+    generation modes are EYE_LINEAR.
+
+    Section 2.12  Current Raster Position
+
+    <amend paragraph 2>
+
+    The current raster position consists of three window coordinates x_w,
+    y_w, and z_w, a clip coordinate w_c value, and eye coordinate distance,
+    a valid bit, and associated data consisting op a color and texture
+    coordinate sets.  It is set using one of the RasterPos commands:
+    ...
+
+    <amend paragraph 5>
+
+    The current raster position requires five single-precision floating-point
+    values for its x_w, y_w, and z_w window coordinates, its w_c clip
+    coordinate, and its eye coordinate distance, a single valid bit, a color
+    (RGBA and color index), and texture coordinates for each set of texture
+    coordinates supported by the implementation.  In the initial state, the
+    coordinates and texture coordinates and both (0,0,0,1), the eye coordinate
+    distance is 0, the valid bit is set, the associated RGBA color is (1,1,1,1)
+    and the associated color index is 1. In RGBA mode, the associated color
+    index always has its initial value; in color index mode, the RGBA color
+    always maintains its initial value.
+
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    Section 3.8 Texturing
+
+    <amend paragraphs 1 & 2>
+
+    Texturing maps a portion of one or more specified images onto each
+    primitive for which texturing is enabled.  This mapping is accomplished by
+    using the color of an image at the location indicated by a fragment's
+    (s,t,r) coordinates to modify the fragment's RGBA color (r is currently
+    ignored).  An implementation may support texturing using more than one
+    image at a time.  In this case the fragment carries multiple sets of
+    texture coordinates (s,t,r) which are used to index separate images to
+    produce color values which are collectively used to modify the fragment's
+    RGBA color.  Texturing is specified only for RGBA mode; its use in color
+    index mode is undefined.  The following subsections (up to and including
+    Section 3.8.5) specify the GL operation with a single texture and Section
+    3.8.6 specifies the details of how multiple textures interact.
+
+    The GL provides a means to specify the details of how texturing of a
+    primitive is effected. These details include specifications of the image to
+    be texture mapped, the means by which the image is filtered when applied to
+    the primitive, and the function that determines what RGBA value is produced
+    given a fragment color and an image value.
+
+
+    Section 3.8.4 Texture Objects
+
+    <add this paragraph to the end of the section>
+
+    The texture object name space is shared amongst all textures in multiple
+    texture implementations.   A texture object may be bound to more than one
+    texture target simultaneously, though they must all be of the same type
+    (e.g., TEXTURE_1D, TEXTURE_2D).  After a texture object is bound, any GL
+    operations on that target also affect any other target to which the same
+    texture object is bound.
+
+
+    Section 3.8.5 Texture Environments and Texture Functions
+
+    <amend the second half of paragraph 1>
+    The possible environment parameters are TEXTURE_ENV_MODE,
+    TEXTURE_ENV_COLOR, and TEXTURE_ENV_COORD_SET_SGIS.  TEXTURE_ENV_MODE may be
+    set to one of REPLACE, MODULATE, DECAL, or BLEND; TEXTURE_ENV_COLOR is set
+    to an RGBA color by providing four single-precision floating-point values
+    in the range [0,1](values outside this range are clamped to it).  If
+    integers are provided for TEXTURE_ENV_COLOR, then they are converted to
+    floating-point as specified in Table 2.6 for signed integers.
+    TEXTURE_ENV_COORD_SET_SGIS may be set to one of TEXTURE0_SGIS ..
+    TEXTURE<n>_SGIS where <n> is one less than the number of supported
+    texture coordinate sets.  If a floating-point value is provided, then it
+    is rounded to the nearest integer.
+
+    <insert before paragraph 3>
+
+    The value of TEXTURE_ENV_COORD_SET_SGIS specifies which set of fragment
+    texture coordinates are used to determine the texture value used in
+    the texture function.  The same set of texture coordinates may
+    be simultaneously used by multiple textures.
+
+    <replace paragraph 3>
+
+    The state required for the current texture environment consists of the
+    four-valued integer indicating the texture function, four floating-
+    point TEXTURE_ENV_COLOR values, and one MAX_TEXTURE_COORD_SETS_SGIS-valued
+    integer indicating the texture coordinate set binding. In the initial
+    state, the texture function is given by MODULATE, TEXTURE_ENV_COLOR is
+    (0,0,0,0), and texture coordinate set is TEXTURE0_SGIS.
+
+
+    Section 3.8.6 Texture Application <replace with this>
+
+    Texturing is enabled or disabled using the generic Enable and Disable
+    commands, respectively, with the symbolic constant TEXTURE_1D or TEXTURE_2D
+    to enable the one-dimensional or two-dimensional texture, respectively.  If
+    both the one- and two-dimensional textures are enabled, the two-dimensional
+    texture is used.  If all texturing is disabled, a rasterized fragment is
+    passed unaltered to the next stage of the GL (although its texture
+    coordinates may be discarded).  Otherwise, a texture value is found
+    according to the parameter values of the currently bound texture image of
+    the appropriate dimensionality using the rules given in sections 3.8.1 and
+    3.8.2.  This texture value is used along with the incoming fragment in
+    computing the texture function indicated by the currently bound texture
+    environment.  The result of this function replaces the incoming fragment's
+    R, G, B, and A values.  These are the color values passed to subsequent
+    operations.  Other data associated with the incoming fragment remain
+    unchanged, except that the texture coordinates may be discarded.
+
+    When multiple textures are supported, additional textures are each paired
+    with an environment function.  The second texture function is computed
+    using the texture value from the second texture, the fragment resulting
+    from the first texture function computation and the environment function
+    currently bound to the second texture.  If there is a third texture, the
+    fragment resulting from the second texture function is combined with the
+    third texture value using the environment function bound to the third
+    texture and so on.  Texturing is enabled and disabled individually for each
+    texture.  If texturing is disabled for one of the textures, then the
+    fragment result from the previous stage is passed unaltered to the next
+    stage.
+
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    Section 5.1 Evaluators
+
+    <amend second part of paragraph 2 to indicate that the evaluator
+    map modified is affected by SELECTED_TEXTURE_TRANSFORM_SGIS when the
+    the type parameter is one of the texture coordinates.>
+
+    <amend paragraph 7>
+
+    The evaluation of a defined map is enabled or disabled with Enable and
+    Disable using the constant corresponding to the map as described
+    above.  In implementations which support multiple texture coordinates the
+    affected texture evaluator map is further qualified by the value of
+    SELECTED_TEXTURE_TRANSFORM_SGIS.  The error INVALID_VALUE results if
+    either ustride or vstride is less than k, or if u1 is equal to u2, or
+    if v1 is equal to v2.
+
+
+    Section 5.3 Feedback
+
+    <amend bottom of paragraph 2>
+
+    The texture coordinates and colors returned are these resulting from the
+    clipping operations described in (section 2.13.8).  Only one set of texture
+    coordinates is returned even for implementations which support multiple
+    texture coordinates.  The texture coordinate set returned is the the one
+    corresponding to the value of SELECTED_TEXTURE_TRANSFORM_SGIS.
+
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    <add this paragraph after paragraph 14 regarding multi-valued state variables>
+
+    When multiple textures are supported, most texture state variables are
+    further qualified by the value of SELECTED_TEXTURE_TRANSFORM_SGIS or
+    SELECTED_TEXTURE_SGIS to determine which server texture state vector is
+    queried.  Client texture state variables such as texture coordinate
+    array pointers are qualified with SELECTED_TEXTURE_COORD_SET_SGIS.
+    Tables 6.5 through 6.22 indicate those state variables which are
+    qualified by SELECTED_TEXTURE_TRANSFORM_SGIS, SELECTED_TEXTURE_SGIS or
+    SELECTED_TEXTURE_COORD_SET_SGIS during state queries.
+
+    <add this paragraph after paragraph 16 regarding the TEXTURE_BIT>
+
+    When multiple textures are supported, operations on groups containing
+    replicated texture state push or pop all versions of texture state
+    within that group.  When server state for a group is pushed all state
+    in the group corresponding to TEXTURE0_SGIS is pushed first, followed by
+    state corresponding to TEXTURE1_SGIS, and so on up to and including the
+    state corresponding to TEXTURE<n>_SGIS where <n> is the value of
+    max{MAX_TEXTURES_SGIS, MAX_TEXTURE_COORD_SETS_SGIS}.  If state does
+    not exist for an attribute (this can occur when MAX_TEXTURES_SGIS is
+    not equal to MAX_TEXTURE_COORD_SETS_SGIS) then it is ignored.
+    When server state for a group is popped the replicated texture state is
+    restored in the opposite order that it was pushed, starting with state
+    corresponding to TEXTURE<n>_SGIS and ending with TEXTURE0_SGIS.
+    Identical rules are observed for client texture state push and pop
+    operations.
+
+    <rename vertex_array attribute group to vertex>
+
+
+Additions to the GLX Specification
+
+    None
+    
+GLX Protocol
+
+    TBD
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not supported than the functionality and state
+    associated with EXT_texture3D does not exist and is therefore not
+    extended.
+
+Dependencies on SGIS_texture4D
+
+    If SGIS_texture4D is not supported than the functionality and state
+    associated with SGIS_texture4D does not exist and is therefore not
+    extended.
+
+Dependencies on SGIS_texture_border_clamp
+
+    If SGIS_texture_border_clamp is not supported than the functionality and
+    state associated with SGIS_texture_border_clamp does not exist and is
+    therefore not extended.
+
+Dependencies on SGI_texture_color_table
+
+    If SGI_texture_color_table is not supported than the functionality and
+    state associated with SGI_texture_color_table does not exist and is
+    therefore not extended.
+
+Dependencies on SGIS_texture_edge_clamp
+
+    If SGIS_texture_edge_clamp is not supported than the functionality and
+    state associated with SGIS_texture_edge_clamp does not exist and is
+    therefore not extended.
+
+Dependencies on SGIX_texture_add_env
+
+    If SGIX_texture_add_env is not supported than the functionality and
+    state associated with SGIX_texture_add_env does not exist and is
+    therefore not extended.
+
+Dependencies on SGIS_texture_filter4
+
+    If SGIS_texture_filter4 is not supported than the functionality and
+    state associated with SGIS_texture_filter4 does not exist and is
+    therefore not extended.
+
+Dependencies on SGIS_texture_lod
+
+    If SGIS_texture_lod is not supported than the functionality and state
+    associated with SGIS_texture_lod does not exist and is therefore not
+    extended.
+
+Dependencies on SGIX_texture_lod_bias
+
+    If SGIX_texture_lod_bias is not supported than the functionality and
+    state associated with SGIX_texture_lod_bias does not exist and is
+    therefore not extended.
+
+Dependencies on SGIX_texture_scale_bias
+
+    If SGIX_texture_scale_bias is not supported than the functionality and
+    state associated with SGIX_texture_scale_bias does not exist and is
+    therefore not extended.
+
+Dependencies on SGIS_texture_select
+
+    If SGIS_texture_select is not supported than the functionality and state
+    associated with SGIS_texture_select does not exist and is therefore not
+    extended.
+
+Dependencies on SGIS_detail_texture
+
+    If SGIS_detail_texture is not supported than the functionality and state
+    associated with SGIS_detail_texture does not exist and is therefore not
+    extended.
+
+Dependencies on SGIS_sharpen_texture
+
+    If SGIS_sharpen_texture is not supported than the functionality and
+    state associated with SGIS_sharpen_texture does not exist and is
+    therefore not extended.
+
+Dependencies on SGIX_shadow
+
+    If SGIX_shadow is not supported than the functionality and state
+    associated with SGIX_shadow does not exist and is therefore not
+    extended.
+
+Dependencies on SGIX_shadow_ambient
+
+    If SGIX_shadow_ambient is not supported than the functionality and state
+    associated with SGIX_shadow_ambient does not exist and is therefore not
+    extended.
+
+Dependencies on SGIX_clipmap
+
+    If SGIX_clipmap is not supported than the functionality and state
+    associated with SGIX_clipmap does not exist and is therefore not
+    extended.
+
+Dependencies on SGIS_point_line_texgen
+
+    If SGIS_point_line_texgen is not supported than the functionality and
+    state associated with SGIS_point_line_texgen does not exist and is
+    therefore not extended.
+
+
+Errors
+
+    INVALID_ENUM is generated if SelectTextureSGIS,
+    SelectTextureTransformSGIS, SelectTextureCoordSetSGIS,
+    MultiTexCoord<n>{T}[v]SGIS, or MultiTexCoordPointer parameter <target> is
+    not TEXTURE0_SGIS .. TEXTURE3_SGIS.
+
+    INVALID_OPERATION is generated if SelectTextureCoordSetSGIS or
+    SelectTextureTransformSGIS parameter <target> is one of TEXTURE0_SGIS
+    .. TEXTURE3_SGIS and <target> is greater or equal than the number of
+    available textures coordinate sets.
+
+    INVALID_VALUE is generated if InterleavedTextureCoordSetsSGIS parameter
+    <factor> is not between 1 and MAX_TEXTURE_COORD_SETS_SGIS.
+
+    INVALID_OPERATION is generated if SelectTextureSGIS parameter <target> is
+    one of TEXTURE0_SGIS .. TEXTURE3_SGIS and <target> is greater or equal than
+    the number of available textures.
+
+    INVALID_ENUM is generated if TexEnv{T}[v] parameter <pname> is
+    TEXTURE_ENV_COORD_SET_SGIS and the <param> parameter is not one of
+    TEXTURE0_SGIS .. TEXTURE3_SGIS.
+
+    INVALID_OPERATION is generated if TexEnv{T}[v] parameter <pname>
+    is TEXTURE_ENV_COORD_SET_SGIS and the <param> parameter is greater or equal
+    than the number of available textures coordinate sets.
+
+    INVALID_OPERATION is generated if SelectTextureSGIS or
+    SelectTextureTransformSGIS is executed between execution of Begin and the
+    corresponding execution of End.
+
+    INVALID_OPERATION is generated if SelectTextureCoordSetSGIS or
+    MultiTexCoordPointerSGIS  is executed between execution of Begin and the
+    corresponding execution of End, but some implementations may not generate
+    the error.  In such cases the result of executing these commands is
+    undefined.
+
+New State
+
+    Get Value                           Get Command             Type            Initial Value           Attribute
+    ---------                           -----------             ----            -------------           ---------
+    SELECTED_TEXTURE_SGIS               GetIntegerv             Z4              TEXTURE0_SGIS           texture
+    SELECTED_TEXTURE_TRANSFORM_SGIS     GetIntegerv             Z4              TEXTURE0_SGIS           texture
+    SELECTED_TEXTURE_COORD_SET_SGIS     GetIntegerv             Z4              TEXTURE0_SGIS           vertex
+    TEXTURE_COORD_SET_INTERLEAVE_FACTOR_SGIS    GetIntegerv     Z4              1                       vertex
+
+Replicated State
+
+    Get Value                           Get Command             Type            Initial Value           Attribute
+    ---------                           -----------             ----            -------------           ---------
+  x CURRENT_TEXTURE_COORDS              GetFloatv               1* x T          (0,0,0,1)               current
+  x CURRENT_RASTER_TEXTURE_COORDS       GetFloatv               1* x T          (0,0,0,1)               current
+
+  c TEXTURE_COORD_ARRAY                 IsEnabled               1* x B          False                   vertex-array
+  c TEXTURE_COORD_ARRAY_SIZE            GetIntegerv             1* x Z+         0                       vertex-array
+  c TEXTURE_COORD_ARRAY_TYPE            GetIntegerv             1* x Z4         FLOAT                   vertex-array
+  c TEXTURE_COORD_ARRAY_STRIDE          GetIntegerv             1* x Z+         0                       vertex-array
+  c TEXTURE_COORD_ARRAY_POINTER         GetPointerv             1* x Y          0                       vertex-array
+
+  x TEXTURE_MATRIX                      GetFloatv               1* x 2* x M4    Identity                -
+  x TEXTURE_STACK_DEPTH                 GetIntegerv             1* x Z+         1                       -
+
+    TEXTURE_1D                          IsEnabled               1* x B          False                   texture/enable
+    TEXTURE_2D                          IsEnabled               1* x B          False                   texture/enable
+    TEXTURE_3D_EXT                      IsEnabled               1* x B          False                   texture/enable
+    TEXTURE_4D_SGIS                     IsEnabled               1* x B          False                   texture/enable
+    TEXTURE_BINDING_1D                  GetIntegerv             1* x Z+         0                       texture
+    TEXTURE_BINDING_2D                  GetIntegerv             1* x Z+         0                       texture
+    TEXTURE_BINDING_3D_EXT              GetIntegerv             1* x Z+         0                       texture
+    TEXTURE_BINDING_4D_SGIS             GetIntegerv             1* x Z+         0                       texture
+    TEXTURE                             GetTexImage             1* x n x I      see sec 3.8             -
+    TEXTURE_WIDTH                       GetTexLevelParameter    1* x n x Z+     0                       -
+    TEXTURE_HEIGHT                      GetTexLevelParameter    1* x n x Z+     0                       -
+   +TEXTURE_DEPTH_EXT                   GetTexLevelParameter    1* x n x Z+     0                       -
+    TEXTURE_BORDER                      GetTexLevelParameter    1* x n x Z+     0                       -
+    TEXTURE_INTERNAL_FORMAT             GetTexLevelParameter    1* x n x Z+     0                       -
+    (TEXTURE_COMPONENTS)
+    TEXTURE_RED_SIZE                    GetTexLevelParameter    1* x n x Z+     0                       -
+    TEXTURE_GREEN_SIZE                  GetTexLevelParameter    1* x n x Z+     0                       -
+    TEXTURE_BLUE_SIZE                   GetTexLevelParameter    1* x n x Z+     0                       -
+    TEXTURE_ALPHA_SIZE                  GetTexLevelParameter    1* x n x Z+     0                       -
+    TEXTURE_LUMINANCE_SIZE              GetTexLevelParameter    1* x n x Z+     0                       -
+    TEXTURE_INTENISTY_SIZE              GetTexLevelParameter    1* x n x Z+     0                       -
+    TEXTURE_BORDER_COLOR                GetTexParameter         1* x 2+ x C     (0,0,0,0)               texture
+    TEXTURE_MIN_FILTER                  GetTexParameter         1* x 2+ x Z6    see sec 3.8             texture
+    TEXTURE_MAG_FILTER                  GetTexParameter         1* x 2+ x Z2    see sec 3.8             texture
+    TEXTURE_WRAP_S                      GetTexParameter         1* x 2+ x Z2    REPEAT                  texture
+    TEXTURE_WRAP_T                      GetTexParameter         1* x 2+ x Z2    REPEAT                  texture
+   +TEXTURE_WRAP_R_EXT                  GetTexParameter         1* x 2+ x Z2    REPEAT                  texture
+   +TEXTURE_WRAP_Q_SGIS                 GetTexParameter         1* x 2+ x Z2    REPEAT                  texture
+    TEXTURE_PRIORITY                    GetTexParameterfv       1* x 2+ x R[0,1]        1               texture
+    TEXTURE_RESIDENT                    GetTexParameterfv       1* x 2+ x B     False                   texture
+
+   +TEXTURE_MIN_LOD_SGIS                GetTexParameterfv       1* x n x R      -1000                   texture
+   +TEXTURE_MAX_LOD_SGIS                GetTexParameterfv       1* x n x R      1000                    texture
+   +TEXTURE_BASE_LEVEL_SGIS             GetTexParameteriv       1* x n x R      0                       texture
+   +TEXTURE_MAX_LEVEL_SGIS              GetTexParameteriv       1* x n x R      1000                    texture
+
+   +TEXTURE_LOD_BIAS_S_SGIX             GetTexParameterfv       1* x n x R      0                       texture
+   +TEXTURE_LOD_BIAS_T_SGIX             GetTexParameterfv       1* x n x R      0                       texture
+   +TEXTURE_LOD_BIAS_R_SGIX             GetTexParameterfv       1* x n x R      0                       texture
+
+   +TEXTURE_FILTER4_FUNC_SGIS           GetTexFilterFuncSGIS    1* x 2 x Size x R       see text        texture
+
+   +DETAIL_TEXTURE_2D_BINDING_SGIS      GetIntegerv             1* x Z+         0                       texture
+   +DETAIL_TEXTURE_LEVEL_SGIS           GetTexParameteriv       1* x n x Z-     -4                      texture
+   +DETAIL_TEXTURE_MODE_SGIS            GetTexParameteriv       1* x n x Z2     ADD                     texture
+   +DETAIL_TEXTURE_FUNC_POINTS_SGIS     GetTexParameteriv       1* x n x Z+     2                       texture
+   +<DETAIL_TEXTURE_FUNC>               GetDetailTexFuncSGIS    1* x n x m x R  {0, 0}, {-4, 1}         texture
+
+   +SHARPEN_TEXTURE_FUNC_POINTS_SGIS    GetTexParameteriv       1* x n x Z+     2                       texture
+   +<SHARPEN_TEXTURE_FUNC>              GetSharpenTexFuncSGIS   1* x n x m x R  {0, 0}, {-4, 1}         texture
+
+   +TEXTURE_COMPARE_SGIX                GetTexParameter[if]v    1* x B          False                   texture
+   +TEXTURE_COMPARE_OPERATOR_SGIX       GetTexParameter[if]v    1* x Z_2        TEXTURE_LEQUAL_R_SGIX   texture
+
+   +SHADOW_AMBIENT_SGIX                 GetTexParameter[if]v    1* x R[0,1]     0.0                     texture
+
+   +TEXTURE_CLIPMAP_FRAME_SGIX          GetTexParameterf        1* x Z+         0                       texture
+   +TEXTURE_CLIPMAP_CENTER_SGIX         GetTexParameterfv       1* x 2 x Z+     0,0                     texture
+   +TEXTURE_CLIPMAP_OFFSET_SGIX         GetTexParameterfv       1* x 2 x Z+     0,0                     texture
+   +TEXTURE_CLIPMAP_VIRTUAL_DEPTH_SGIX  GetTexParameterfv       1* x 3 x Z+     0,0,0                   texture
+
+   +DUAL_TEXTURE_SELECT_SGIS            GetTexParameter         1* x n x 3 x Z2 0                       texture
+   +QUAD_TEXTURE_SELECT_SGIS            GetTexParameter         1* x n x 3 x Z4 0                       texture
+
+   +POST_TEXTURE_FILTER_BIAS_SGIX       GetTexParameterfv       1* x n x 4 x R  (0,0,0,0)               texture
+   +POST_TEXTURE_FILTER_SCALE_SGIX      GetTexParameterfv       1* x n x 4 x R  (1,1,1,1)               texture
+
+    TEXTURE_COLOR_TABLE_SGI             IsEnabled                       B               False           texture/enable
+   +COLOR_TABLE                         GetColorTableSGI                4 x I           empty           -
+   +COLOR_TABLE_FORMAT_SGI              GetColorTableParameterivSGI     2 x 4 x Z38     RGBA            -
+   +COLOR_TABLE_WIDTH_SGI               GetColorTableParameterivSGI     2 x 4 x Z+      0               -
+   +COLOR_TABLE_RED_SIZE_SGI            GetColorTableParameterivSGI     2 x 4 x Z+      0               -
+   +COLOR_TABLE_GREEN_SIZE_SGI          GetColorTableParameterivSGI     2 x 4 x Z+      0               -
+   +COLOR_TABLE_BLUE_SIZE_SGI           GetColorTableParameterivSGI     2 x 4 x Z+      0               -
+   +COLOR_TABLE_ALPHA_SIZE_SGI          GetColorTableParameterivSGI     2 x 4 x Z+      0               -
+   +COLOR_TABLE_LUMINANCE_SIZE_SGI      GetColorTableParameterivSGI     2 x 4 x Z+      0               -
+   +COLOR_TABLE_INTENSITY_SIZE_SGI      GetColorTableParameterivSGI     2 x 4 x Z+      0               -
+   +COLOR_TABLE_SCALE_SGI               GetColorTableParameterfvSGI     4 x R4          (1,1,1,1)       pixel
+   +COLOR_TABLE_BIAS_SGI                GetColorTableParameterfvSGI     4 x R4          (0,0,0,0)       pixel
+
+    TEXTURE_ENV_MODE                    GetTexEnviv             1* x Z4         MODULATE                texture
+    TEXTURE_ENV_COLOR                   GetTexEnviv             1* x C          (0,0,0,0)               texture
+    TEXTURE_ENV_COORD_SET_SGIS          GetTexEnviv             1* x Z4         see sec 3.8             texture
+  x TEXTURE_GEN_x                       IsEnabled               1* x 4 x B      False                   texture/enable
+  x EYE_PLANE                           GetTexGenfv             1* x 4 x R4     see sec 2.10.4          texture
+  x OBJECT_PLANE                        GetTexGenfv             1* x 4 x R4     see sec 2.10.4          texture
+  x TEXTURE_GEN_MODE                    GetTexGeniv             1* x 4 x Z3     EYE_LINEAR              texture
+
+   +TEXTURE_ENV_BIAS_SGIX               GetFloatv               1* x C          (0,0,0,0)               texture
+
+  x+EYE_POINT_SGIS                      GetTexGeniv             1* x 4 x R      (0,0,0,1)               texture
+  x+OBJECT_POINT_SGIS                   GetTexGeniv             1* x 4 x R      (0,0,0,1)               texture
+  x+EYE_LINE_SGIS                       GetTexGeniv             1* x 7 x R      (0,0,0,1,0,0,1)         texture
+  x+OBJECT_LINE_SGIS                    GetTexGeniv             1* x 7 x R      (0,0,0,1,0,0,1)         texture
+
+  x ORDER                               GetMapiv                (k+9) x Z8*     1                       -
+  x ORDER                               GetMapiv                (k+9) x 2 x Z8* 1,1                     -
+  x COEFF                               GetMapfv                (k+9) x 8* x Rn see sec 5.1             -
+  x COEFF                               GetMapfv                (k+9) x 8* x 8* x Rn    see sec 5.1             -
+  x DOMAIN                              GetMapfv                (k+9) x 2 x R   see sec 5.1             -
+  x DOMAIN                              GetMapfv                (k+9) x 4 x R   see sec 5.1             -
+  x MAP1_x                              IsEnabled               (k+9) x B       False                   -
+  x MAP2_x                              IsEnabled               (k+9) x B       False                   -
+
++ = state defined in another extension.
+x = state qualified by SELECTED_TEXTURE_TRANSFORM_SGIS
+c = state qualified by SELECTED_TEXTURE_COORD_SET_SGIS
+
+New Implementation Dependent State
+
+    Get Value                           Get Command             Type            Minimum Value
+    ---------                           -----------             ----            -------------
+    MAX_TEXTURES_SGIS                   GetIntegerv             Z+              1
+    MAX_TEXTURE_COORD_SETS_SGIS         GetIntegerv             Z+              1

@@ -208,13 +208,13 @@ void VulkanStagePool::terminate() noexcept {
         vmaDestroyImage(mAllocator, image->image, image->memory);
         delete image;
     }
-    mUsedStages.clear();
+    mUsedImages.clear();
 
     for (auto image : mFreeImages) {
         vmaDestroyImage(mAllocator, image->image, image->memory);
         delete image;
     }
-    mFreeStages.clear();
+    mFreeImages.clear();
 }
 
 } // namespace filament::backend

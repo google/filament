@@ -1,0 +1,408 @@
+Name
+
+    EXT_client_extensions
+
+Name Strings
+
+    EGL_EXT_client_extensions
+
+Contributors
+
+    Chad Versace <chad.versace@intel.com>
+    Ian Romanick <ian.d.romanick@intel.com>
+    Jakob Bornecrantz <jakob@vmware.com>
+    James Jones <jajones@nvidia.com>
+
+Contacts
+
+    Chad Versace <chad.versace@intel.com>
+
+Status
+
+    Complete
+
+Version
+
+    Version 11, 2013.10.10
+
+Number
+
+    EGL Extension #58
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires EGL 1.4.
+
+    This extension is written against the wording of the EGL 1.4
+    Specification.
+
+Overview
+
+    This extension introduces the concept of *extension type*, requires that
+    each EGL extension belong to exactly one type, and defines two types:
+    display and client.  It also provides a method to query, without
+    initializing a display, the set of supported client extensions.
+
+    A display extension adds functionality to an individual EGLDisplay. This
+    type of extension has always existed but, until EGL_EXT_client_extensions,
+    lacked an identifying name.
+
+    A client extension adds functionality that is independent of any display.
+    In other words, it adds functionality to the EGL client library itself. This
+    is a new type of extension defined by EGL_EXT_client_extensions.
+    EGL_EXT_client_extensions is itself a client extension.
+
+    We suggest that each future extension clearly state its type by including
+    the following toplevel section in its extension specification, preceding the
+    Dependencies section. For client extensions, this suggestion is
+    a requirement.
+
+        Extension Type
+
+            <Either "EGL display extension" or "EGL client extension" or
+             a future extension type.>
+
+    By cleanly separating display extensions from client extensions,
+    EGL_EXT_client_extensions solves a bootstrap problem for future EGL
+    extensions that will modify display initialization. To query for such
+    extensions without EGL_EXT_client_extensions, an EGL client would need to
+    initialize a throw-away EGLDisplay solely to query its extension string.
+    Initialization of the throw-away display may have undesired side-effects
+    (discussed in the issues section below) for EGL clients that wish to use the
+    new methods of display initialization.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to the EGL 1.4 Specification:
+
+
+    Add the following section to Chapter 2 "EGL Operation":
+
+    "2.n Extensions
+
+    EGL implementations may expose additional functionality beyond that
+    described by this specification. Additional functionality may include new
+    functions, new enumerant values, and extended behavior for existing
+    functions. Implementations advertise such extensions to EGL by exposing
+    *extension strings*, which are queryable with eglQueryString.
+
+    Each EGL extension belongs to exactly one of the following types:
+
+        Display Extensions
+            A *display extension* adds functionality to an individual
+            EGLDisplay. Different instances of EGLDisplay may support different
+            sets of display extensions.
+
+        Client Extensions
+            A *client extension* adds functionality that is independent of any
+            display.  In other words, it adds functionality to the EGL client
+            library itself. In a given process, there exists exactly one set,
+            possibly empty, of supported client extensions.  When the client
+            extension string is first queried, that set becomes immutable."
+
+    Replace the paragraph in section 3.3 "EGL Versioning" that begins "The
+    EGL_EXTENSIONS string" with the following text:
+
+    "The EGL_EXTENSIONS string describes which set of EGL extensions are
+    supported.  The string is zero-terminated and contains a space-separated
+    list of extension names; extension names themselves do not contain spaces.
+    If there are no extensions to EGL, then the empty string is returned.
+
+    If <dpy> is EGL_NO_DISPLAY, then the EGL_EXTENSIONS string describes the set
+    of supported client extensions. If <dpy> is a valid, initialized display,
+    then the EGL_EXTENSIONS string describes the set of display extensions
+    supported by the given display.  The set of supported client extensions is
+    disjoint from the set of extensions supported by any given display [fn].
+
+    [fn] This is a consequence of the requirement in Section 2.n Extensions that
+    each extension belong to exactly one extension type."
+
+    Replace the last paragraph of section 3.3 "EGL Versioning" with:
+
+    "On failure, NULL is returned.  An EGL_BAD_DISPLAY error is generated if
+    <dpy> is not a valid display, unless <dpy> is EGL_NO_DISPLAY and <name> is
+    EGL_EXTENSIONS.  An EGL_NOT_INITIALIZED error is generated if <dpy> is
+    a valid but uninitialized display.  An EGL_BAD_PARAMETER error is generated
+    if <name> is not one of the values described above."
+
+Conformance Tests
+
+    1. Before any call to eglGetDisplay, call `eglQueryString(EGL_NO_DISPLAY,
+       EGL_EXTENSIONS)`. Verify that either
+
+         a. The call returns NULL and generates EGL_BAD_DISPLAY.
+         b. The call returns an extension string that contains, at a minimum,
+            this extension and generates no error.
+
+    2. Obtain a display with eglGetDisplay but do not initialize it. Verity
+       that passing the uninitialized display to `eglQueryString(dpy,
+       EGL_EXTENSIONS)` returns NULL and generates EGL_NOT_INITIALIZED.
+
+    3. Obtain a list of display extensions by calling `eglQueryString(dpy,
+       EGL_EXTENSIONS)` on an initialized display. Obtain the list of client
+       extensions by calling `eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS)`.
+       If both calls succeed, verify the two lists are disjoint.
+
+Issues
+
+    1. How should clients detect if this extension is supported?
+
+       RESOLVED: If an EGL implementation supports this extension, then
+       `eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS)` returns
+       a well-formed extension string and generates no error.  Otherwise, it
+       returns NULL and generates EGL_BAD_DISPLAY.
+
+    2. On EGL platforms that define EGL_NO_DISPLAY as NULL, does not calling
+       `eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS)` risk a null pointer
+       dereference? Therefore, how is it possible on such platforms for
+       a client to safely detect if this extension is supported?
+
+       RESOLVED: According to the EGL 1.4 specification, calling
+       `eglQueryString(EGL_NO_DISPLAY, name)` returns NULL and generates
+       EGL_BAD_DISPLAY. No null pointer dereference occurs even if the
+       platform defines EGL_NO_DISPLAY as NULL.
+
+    3. What existing extensions should returned by
+       `eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS)`?
+
+       RESOLVED: Possibly EGL_NV_system_time.
+
+    4. What should be the relationship between the extension string of
+       EGL_NO_DISPLAY and the extension string of a valid display? That is,
+       should the former be a subset of the latter? Should the two be
+       disjoint? Should the relationship remain undefined?
+
+       Another phrasing of this issue is: When, if ever, should client
+       extensions appear in a display's extension string?
+
+       RESOLVED: The extension string of EGL_NO_DISPLAY must be disjoint
+       from the extension string of any valid display. That is, EGL_NO_DISPLAY
+       must advertise only client extensions, and valid displays must not
+       advertise client extensions.  By defining a clear relationship between
+       the two types of extension strings, we enforce consistent behavior among
+       implementations, thus preventing possible confusion from application
+       developers.
+
+       DISCUSSION: This resolution has special implications for systems where
+       libEGL is a vendor-independent library that loads and then dispatches
+       to the appropriate vendor-provided EGL library. The resolution requires
+       that client extensions, as well the construction of extension strings,
+       be at least partially implemented in the vendor-independent library.
+
+       The alternative resolution of mandating the 'superset' relation (that
+       is, that the extension string of a valid display must be a superset of
+       that of EGL_NO_DISPLAY) was rejected due to potential confusion on
+       behalf of the application developer as well as the driver implementer.
+       What follows is an example of each.
+
+           a) Suppose an EGL implementation supported creation of
+           a software-renderer EGLDisplay through a client extension named
+           EGL_XYZ_platform_software_renderer. If the 'superset' relation were
+           mandated, then each display, whether it were hardware-accelerated or
+           software-only, would advertise the EGL_XYZ_platform_software_renderer
+           extension string. This would likely confuse application developers.
+
+           b) If the 'superset' relation were mandated, then the possibility
+           exists that a vendor would ship a hybrid extension that is both
+           a client extension and a display extension. Such a hybrid extension
+           poses subtle difficulties for systems where libEGL is
+           a vendor-independent library that dispatches to the appropriate
+           vendor-provided EGL driver. On such a system, the extension's hybrid
+           nature may require that each vendor-provided EGL driver support the
+           extension before the vendor-independent EGL library could safely
+           expose the extension. By choosing the 'disjoint' relation rather
+           than 'superset', we prevent this problematic situation from
+           occuring.
+
+    5. Should client extension specifications explicitly state they are
+       returned in the extension string of EGL_NO_DISPLAY?
+
+       RESOLVED: Yes. Enforce this by requiring that client extension
+       specifications contain the toplevel section "Extension Type".
+
+    6. As explained in the overview section, this "extension solves
+       a bootstrap problem for future EGL extensions that modify display
+       initialization". What solutions to the bootstrap problem were
+       considered? Why was EGL_EXT_client_extensions chosen as the best
+       solution?
+
+       DISCUSSION: First let's discuss the exact nature of the bootstrap
+       problem and of the future EGL extensions that modify display
+       initialization.
+
+       Mesa's EGL implementation supports multiple native platforms (such as
+       Wayland, GBM, and X11) at runtime, and we expect that more
+       implementations will do so in the future.  The EGL API is deficient for
+       such implementations because it does not yet provide a way for clients
+       to query the set of supported native platforms. Also, EGL provides no
+       way for clients to specify to which platform the native display belongs
+       during display initialization.  (That is, eglGetDisplay has a native
+       display parameter, but no parameter specifying the native platform).
+
+       Future EGL extensions, currently under progress, will solve these
+       deficiencies in the EGL API by (1) adding a variant of eglGetDisplay
+       that allows specification of the platform to which the native display
+       belongs and (2) by advertising the set of native platforms supported by
+       the implementation.
+
+       However, there exists a bootstrap problem here. To query if a given
+       native platform is supported, the EGL client must initialize an
+       EGLDisplay to query its extension string. But, not yet knowing which
+       native platforms the EGL implementation supports, the client cannot
+       safely pass any native display to eglGetDisplay, and therefore cannot
+       obtain an extension string.
+
+       The following solutions to this bootstrap problem have been considered.
+       For conciseness, let's refer to the future EGL extensions that modify
+       display initialization as "client extensions".
+
+         1. PROPOSED SOLUTION: To determine if an EGL implementation supports
+            a given client extension, require that the EGL client call
+            eglGetProcAddress on some function defined by the extension.  If
+            eglGetProcAddress returns non-null, then the implementation
+            supports the extension.
+
+            ANALYSIS: The EGL 1.4 spec permits eglGetProcAddress to return
+            non-null for unrecognized function names. Therefore, this
+            solution's method may produce false positives on some
+            implementations.
+
+            Also, this solution does not permit detection of client extensions
+            that add no new functions.
+
+         2. PROPOSED SOLUTION: To determine if an EGL implementation supports
+            a given client extension, the EGL client should examine the
+            extension string of EGL_DEFAULT_DISPLAY.  Querying
+            EGL_DEFAULT_DISPLAY is a failsafe mechanism by which the EGL
+            client can obtain an extension string, because EGL_DEFAULT_DISPLAY
+            is a valid input to eglGetDisplay regardless of which platforms
+            the EGL implementation supports.
+
+            ANALYSIS: This solution is awkward. It requires that the client
+            initialize a throw-away EGLDisplay solely to query its extension
+            string, even though the desired extension is not a property of any
+            display but of the EGL library itself.
+
+            This solution also has a subtle fatal problem. It is not backwards
+            compatible with Mesa. As of 2013-06-07, Mesa's EGL implementation
+            stores at runtime a user-chosen native platform in global
+            write-once state.  Calling eglGetDisplay is one action that
+            results in writing to that state.  Therefore, if a client process
+            running on such a problematic version of Mesa initialized
+            EGL_DEFAULT_DISPLAY solely to detect some client extension, then
+            the client process would be confined for its lifetime to use only
+            that platform to which EGL_DEFAULT_DISPLAY belongs.  This
+            confinement may be fatal if the process had wanted to use
+            a different platform.
+
+         3. PROPOSED SOLUTION: Abandon the concept of client extensions.
+            Instead, in implementations that support multiple window systems
+            at runtime, eglGetDisplay should autodetect the platform to which
+            the native display belongs. A suitable error should be generated
+            if an unsupported native display is passed to eglGetDisplay.
+
+            ANALYSIS: For some native platforms, the display type is opaque
+            with no defined ABI. (For example, in libX11 the 'Display' type is
+            an opaque typedef).  There exists no method by which eglGetDisplay
+            could reliably detect that the given native display belongs to
+            such a platform.
+
+            This solution also has a subtle fatal problem. The client
+            extensions will likely specify that an EGL client may create EGL
+            resources from multiple platforms in the same process. But, Mesa's
+            global write-once state, mentioned above, prevents using multiple
+            platforms in one process.  Therefore, under this proposed solution
+            and on a system where a problematic version of Mesa is installed,
+            the client would be unable to detect if EGL supported multiple
+            platforms per process without committing to the platform to which
+            the first initialized display belonged.
+
+         4. ACCEPTED SOLUTION: Allow the EGL client to query the extension
+            string of EGL_NO_DISPLAY, which would contain the client
+            extensions.
+
+            ANALYSIS: This solution does not require the initialization of
+            a throw-away EGLDisplay, nor does it require that native display
+            types have a fixed ABI.
+
+            This is the solution described by this extension specification,
+            EGL_EXT_client_extensions.
+
+Revision History
+
+    Version 11, 2013.10.10 (Chad Versace)
+        - Fix conformance test #3. It should require that the display extension
+          list be disjoint to rather than a superset of the client extension
+          list.  (The 'superset' requirement was changed pre-publication to
+          'disjoint' in version 8).
+
+    Version 10, 2013.07.03 (Chad Versace)
+        - Version 9 and 10 are identical due to a versioning error.
+
+    Version 9, 2013.07.03 (Chad Versace)
+        - Define the concept of *extension type*, require require that each EGL
+          extension belong to exactly one type, and define two types: display
+          and client.
+        - Suggest new section "Extension Type" for future extension
+          specifications.
+        - Add new section 2.n Extensions.
+        - Simplify modifications to section 3.3 by using the new extension type
+          terminology.
+
+    Version 8, 2013.07.01 (Chad Versace)
+        - Change resolution of Issue 4 from the 'superset' relation to the
+          'disjoint' relation, according to discussion with Jakob Bornecrantz.
+          Acked by James Jones.
+
+    Version 7, 2013.06.10 (Chad Versace)
+        - Fix typos.
+          s/unitialized/uninitialized/
+          s/EGL_NO_EXTENSIONS/EGL_EXTENSIONS/
+
+    Version 6, 2013.06.07 (Chad Versace)
+        - Remove the Motivation section, merging its content into the Overview
+          section and Issue 6.
+
+    Version 5, 2013.06.07 (Chad Versace)
+        - Resolve issue 3 regarding classifying currently published extensions
+          as client extensions.
+        - Resolve issue 4 regarding the relationship among client and display
+          extension strings.
+        - Add and resolve issue 5, requiring client extension specifications
+          to contain language about the EGL_NO_DISPLAY extension string.
+
+    Version 4, 2013.05.14 (Chad Versace)
+        - Add issue 4.
+
+    Version 3, 2013.03.24 (Chad Versace)
+        - Fix conformance test condition 1.b. The returned extension string
+          should list, at a minimum, this extension. [Found by Ian Romanick].
+        - Add section "Movivation". [Requested by Ian Romanick].
+
+    Version 2, 2013.03.06 (Chad Versace)
+        - Remove enum EGL_CLIENT_EXTENSIONS_EXT. Reuse EGL_EXTENSIONS for that
+          purpose.
+        - To obtain client extensions, require the eglQueryString be called
+          with dpy=EGL_NO_DISPLAY rather than dpy=NULL. [Suggested by James
+          Jones].
+        - Add descriptions of conformance tests. [Suggested by Ian Romanick].
+        - Add sections "Overview" and "Issues".
+
+    Version 1, 2013.03.06 (Chad Versace)
+        - First draft
+
+# vim: filetype=text expandtab autoindent shiftwidth=4 textwidth=80:

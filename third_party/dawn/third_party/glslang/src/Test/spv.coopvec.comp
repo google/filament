@@ -1,0 +1,96 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_NV_cooperative_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer MatrixBuf {
+    float16_t matrixData[];
+} matrixBuf;
+
+layout(set = 0, binding = 0) buffer MatrixBuf2 {
+    int8_t matrixData[];
+} matrixBuf2;
+
+layout(constant_id = 0) const int matrixLayout = gl_CooperativeVectorMatrixLayoutColumnMajorNV;
+
+void main()
+{
+    coopvecNV<float, 5> v = coopvecNV<float, 5>(0.0);
+
+    vec3 x = vec3(1.0), y = vec3(2.0);
+    coopvecNV<float, 5> v2 = coopvecNV<float, 5>(x, y);
+
+    const vec3 x2 = vec3(1.0), y2 = vec3(2.0);
+    coopvecNV<float, 5> v3 = coopvecNV<float, 5>(x2, y2);
+
+    vec3 x3 = vec3(4, 5, 6), y3 = vec3(7, 8, 9);
+
+    coopvecNV<float, 5> v4 = coopvecNV<float, 5>(x3.zyx, y3.zzy);
+
+    coopvecNV<float16_t, 5> v5 = coopvecNV<float16_t, 5>(v4);
+
+    coopvecNV<float, 5> v6;
+
+    v6 = v + v2;
+    v6 = v - v2;
+    v6 = v * v2;
+    v6 = v / v2;
+
+    v6 += v;
+    v6 -= v;
+    v6 *= v;
+    v6 /= v;
+
+    float f;
+    v6 *= f;
+    v6 *= 5.0;
+
+    int len = v6.length();
+
+    v6[0] = f;
+    v6[4] = 5.0;
+
+    f += (v += v)[4];
+    v6 = v;
+
+    coopvecNV<float, 20> v7;
+    coopvecNV<float, 100> v8;
+    coopVecMatMulNV(v8, v7, gl_ComponentTypeFloat16NV, matrixBuf.matrixData, 11, gl_ComponentTypeFloat16NV, 100, 20, gl_CooperativeVectorMatrixLayoutRowMajorNV, false, 300);
+    coopvecNV<int8_t, 20> v9;
+    coopvecNV<int32_t, 100> v10;
+    uint32_t matrixOffset = 11;
+    coopVecMatMulNV(v10, v9, gl_ComponentTypeSignedInt8NV, matrixBuf2.matrixData, matrixOffset, gl_ComponentTypeSignedInt8NV, 100, 20, gl_CooperativeVectorMatrixLayoutColumnMajorNV, true, 300);
+
+    coopvecNV<float16_t, 2> f162 = coopvecNV<float16_t, 2>(v7.length());
+
+    float16_t f16;
+    coopvecNV<float16_t, 1> f161 = coopvecNV<float16_t, 1>(f16);
+
+    coopvecNV<float16_t, 7> v11, v12, v13;
+
+    v11 = max(v11, v12);
+    v11 = min(v11, v12);
+    v11 = step(v11, v12);
+    v11 = clamp(v11, v12, v13);
+    v11 = exp(v11);
+    v11 = log(v11);
+    v11 = tanh(v11);
+    v11 = atan(v11);
+    v11 = fma(v11, v12, v13);
+
+    coopVecMatMulAddNV(v8, v7, gl_ComponentTypeFloat16NV, matrixBuf.matrixData, 11, gl_ComponentTypeFloat16NV, matrixBuf.matrixData, 50, gl_ComponentTypeFloat16NV, 100, 20, gl_CooperativeVectorMatrixLayoutRowMajorNV, false, 300);
+    uint32_t biasOffset = 11;
+    coopVecMatMulAddNV(v10, v9, gl_ComponentTypeSignedInt8NV, matrixBuf2.matrixData, matrixOffset, gl_ComponentTypeSignedInt8NV, matrixBuf2.matrixData, biasOffset, gl_ComponentTypeSignedInt8NV, 100, 20, gl_CooperativeVectorMatrixLayoutColumnMajorNV, true, 300);
+
+    coopvecNV<uint32_t, 20> v14;
+    coopVecMatMulNV(v10, v14, gl_ComponentTypeSignedInt8PackedNV, matrixBuf2.matrixData, matrixOffset, gl_ComponentTypeSignedInt8NV, 100, 20, matrixLayout, true, 300);
+
+    f += (v += v)[len];
+}
+
+coopvecNV<float16_t, 1> foo(coopvecNV<float16_t, 1> x) { return x; }
+coopvecNV<float16_t, 2> foo(coopvecNV<float16_t, 2> x) { return x; }

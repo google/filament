@@ -128,6 +128,11 @@ public:
         bool disableHandleUseAfterFreeCheck = false;
 
         /**
+         * Disable backend handles tags for heap allocated (fallback) handles
+         */
+        bool disableHeapHandleTags = false;
+
+        /**
          * Force GLES2 context if supported, or pretend the context is ES2. Only meaningful on
          * GLES 3.x backends.
          */
@@ -144,13 +149,6 @@ public:
          *      - PlatformEGLAndroid
          */
         bool assertNativeWindowIsValid = false;
-
-        /**
-         * The action to take if a Drawable cannot be acquired. If true, the
-         * frame is aborted instead of panic. This is only supported for:
-         *      - PlatformMetal
-         */
-        bool metalDisablePanicOnDrawableFailure = false;
     };
 
     Platform() noexcept;

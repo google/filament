@@ -1,0 +1,107 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_calligraphic_fragment
+
+Name Strings
+
+    GL_SGIX_calligraphic_fragment
+
+Version
+
+    $Date: 1996/05/30 08:56:20 $ $Revision: 1.1 $
+
+Number
+
+    82
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides a minimal mechanism to control the copying of
+    fragment information to external hardware such as a calligraphic
+    display interface.  The initial implementation is intended to support
+    the calligraphic interface on InfiniteReality.  On InfiniteReality
+    when the interface is enabled, fragment information consisting of
+    some color and coverage data is sent to the interface.
+
+Issues
+
+    *	better name
+
+    *	it has no effect on rasterization, it only causes fragment information
+	to be sent out an additional interface.  How does this get described?
+
+    *	Should it disable the writing of fragments to the framebuffer (may make
+	it easier to describe in one of the sections if it actually effects
+	the framebuffer).
+
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameters of Enable and Disable
+
+	CALLIGRAPHIC_FRAGMENT_SGIX
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    New Section (Calligraphic Interface)
+
+    The command Enable with <pname> CALLIGRAPHIC_FRAGMENT_SGIX
+    causes fragment information to be copied to the calligraphic
+    interface as fragments are written to the color buffer(s).  Only
+    fragments that would cause updates to the color buffer are sent
+    to the interface.
+    If color buffer updates are disabled using ColorMask or DrawBuffer,
+    fragment information is still sent to the calligraphic interface.
+    The command Disable with <pname> CALLIGRAPHIC_FRAGMENT_SGIX disables
+    writing of fragment information to the calligraphic interface.
+
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    When PushAttrib is called with ENABLE_BIT enabled, the state of
+    the calligraphic interface enable is pushed. When an attribute set
+    that includes enable information is popped, the state of the
+    calligraphic interface is restored to the pushed value.
+
+Additions to the GLX Specification
+
+    None
+
+Errors
+
+    None
+
+New State
+
+								Initial
+    Get Value				Get Command	Type	Value	Attrib
+    ---------				-----------	----	-------	------
+    CALLIGRAPHIC_FRAGMENT_SGIX            IsEnabled      B       False  enable
+
+
+New Implementation Dependent State
+
+    None

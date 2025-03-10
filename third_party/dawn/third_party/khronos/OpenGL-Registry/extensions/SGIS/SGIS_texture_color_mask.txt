@@ -1,0 +1,177 @@
+Name
+
+    SGIS_texture_color_mask
+
+Name Strings
+
+    GL_SGIS_texture_color_mask
+
+Contact
+
+    Jon Leech, SGI (ljp 'at' sgi.com)
+
+Status
+
+    Complete. Not shipping yet.
+
+Version
+
+    Last Modified Date: December 13, 2004
+    Author Revision: $Header: //depot/main/doc/registry/extensions/SGI/texture_color_mask.spec#7 $
+
+Number
+
+    214
+
+Dependencies
+
+    ARB_texture_compression affects the definition of this extension.
+
+Overview
+
+    This extension implements the same functionality for texture
+    updates that glColorMask implements for color buffer updates.
+    Masks for updating textures with indexed internal formats
+    (the analog for glIndexMask) should be supported by a separate extension.
+
+    The extension allows an application to update a subset of
+    components in an existing texture.	The masks are applied after
+    all pixel transfer operations have been performed, immediately
+    prior to writing the texel value into texture memory.  They
+    apply to all texture updates.
+
+IP Status
+
+    No issues.
+
+Issues
+
+    * The functionality provided by this extension can already be
+      performed by using the color mask when rendering to the frame
+      buffer and then using CopyTexture to load the texture.
+
+    * This functionality may be hard to achieve with compressed textures.
+      It will require a read->decompress->modify->compress->write
+      operation.  This may be slower than the DrawPixels/CopyTexture
+      approach.
+
+New Procedures and Functions
+
+    void TextureColorMaskSGIS(boolean r, boolean g, boolean, b, boolean a );
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetIntegerv, and GetFloatv:
+
+	TEXTURE_COLOR_WRITEMASK_SGIS		= 0x81EF
+
+Additions to Chapter 2 of the OpenGL 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.1 Specification (Rasterization)
+
+    Before the section of Texture Parameters, add a section on
+    texture download masking.
+
+    Fine Control of Texture Image Updates
+
+    A set of masks can be used to mask the writing of bits into
+    textures. These masks are applied after all pixel transfer
+    operations have been performed, immediately before the bits are
+    written into the texture.
+
+    If the texture image being written is compressed, either in one of
+    the generic compressed formats defined by the base
+    ARB_texture_compression extension or in a compressed format defined
+    by an extension layering on ARB_texture_compression, then the
+    texture color mask is not used when writing that texture.
+
+    The command
+
+	void TextureColorMaskSGIS( boolean r, boolean g, boolean, b,
+	     boolean a );
+
+    is used to control updates to texture images with non-indexed
+    internal formats.
+
+    For an RGBA texture image, TextureColorMaskSGIS is used
+    to mask the writing of R, G, B, and A values to the texture image.
+    The r, g, b, and a parameters indicate whether R, G, B,
+    and A values, respectively, are written.  A value of TRUE
+    means the component is written; a value of FALSE means it is not.
+
+    For Luminance or Intensity texture images, the r parameter
+    indicates whether the Luminance or Intensity component
+    is written.  In this case, the g, b, and a parameters are
+    ignored.
+
+    In the initial state, all color masks are enabled for writing.
+
+    If a color mask is in effect when a texture image is being
+    defined for the first time, the values of the components whose
+    updates have been disabled are undefined.
+
+
+Additions to Chapter 4 of the OpenGL 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL OpenGL 1.1 Specification (State and State Requests)
+
+    The mask values are queried using GetIntegerv with <pname> set to
+    TEXTURE_COLOR_WRITEMASK_SGIS.
+
+    The masks are saved and restored when PushAttrib and PopAttrib
+    are called with TEXTURE_BIT set. They are included in the part of
+    texture state that is associated with the currently bound texture
+    objects.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    A new GL rendering command is added to support
+    TextureColorMaskSGIS(). The following command is sent to the server
+    as part of a glXRender request:
+
+	TextureColorMaskSGIS
+	    2		8		rendering command length
+	    2		2082		rendering command opcode
+	    1		BOOL		r
+	    1		BOOL		g
+	    1		BOOL		b
+	    1		BOOL		a
+
+Errors
+
+    INVALID_OPERATION is generated if TextureColorMaskSGIS is executed
+    between the execution of Begin and the corresponding execution of
+    End.
+
+New State
+
+(table 6.?, p. ???)
+
+    Get Value			    Type    Get Command     Initial Value   Description     Sec Attribute
+    ---------			    ----    -----------     -------------   -----------     --- ---------
+    TEXTURE_COLOR_WRITEMASK_SGIS    4xB     GetIntegerv     (T,T,T,T)	    Texture color   3.? texture
+									    writemask
+
+Revision History
+
+  * Version 6, 2004/12/13 - there was an error listed in the GLX
+    protocol (length 20, using 4 byte BOOL fields). In actuality the
+    generated protocol in use on IRIX, the development platform for this
+    extension, is 8 bytes long using single byte BOOLs. Thanks to Ian
+    Romanick for catching this.
+  * Version 5, 2001/03/14 - defined interaction with compressed textures
+    (that the write mask is ignored).

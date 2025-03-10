@@ -8,22 +8,22 @@ layout(location = 0) out vec4 FragColor;
 void main()
 {
     float phi;
-    vec4 _36;
-    int _51;
-    _51 = 0;
+    vec4 _45;
+    int _57;
+    _57 = 0;
     phi = 1.0;
-    _36 = vec4(1.0, 2.0, 1.0, 2.0);
+    _45 = vec4(1.0, 2.0, 1.0, 2.0);
     for (;;)
     {
-        FragColor = _36;
-        if (_51 < 4)
+        FragColor = _45;
+        if (_57 < 4)
         {
-            if (v0[_51] > 0.0)
+            if (v0[_57] > 0.0)
             {
-                vec2 _48 = vec2(phi);
-                _51++;
+                vec2 _43 = vec2(phi);
+                _57++;
                 phi += 2.0;
-                _36 = textureLod(uImage, _48, 0.0);
+                _45 = textureLod(uImage, _43, 0.0);
                 continue;
             }
             else

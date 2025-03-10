@@ -3,20 +3,20 @@
 
 using namespace metal;
 
-struct _6
+struct _3
 {
     float _m0[1];
 };
 
-constant uint _3_tmp [[function_constant(0)]];
-constant uint _3 = is_function_constant_defined(_3_tmp) ? _3_tmp : 1u;
-constant uint _4_tmp [[function_constant(2)]];
-constant uint _4 = is_function_constant_defined(_4_tmp) ? _4_tmp : 3u;
-constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(_3, 2u, _4);
+constant uint _15_tmp [[function_constant(0)]];
+constant uint _15 = is_function_constant_defined(_15_tmp) ? _15_tmp : 1u;
+constant uint _17_tmp [[function_constant(2)]];
+constant uint _17 = is_function_constant_defined(_17_tmp) ? _17_tmp : 3u;
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(_15, 2u, _17);
 
-kernel void main0(device _6& _8 [[buffer(0)]], device _6& _9 [[buffer(1)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+kernel void main0(device _3& _20 [[buffer(0)]], device _3& _21 [[buffer(1)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
 {
-    uint3 _23 = gl_WorkGroupSize;
-    _8._m0[gl_WorkGroupID.x] = _9._m0[gl_WorkGroupID.x] + _8._m0[gl_WorkGroupID.x];
+    uint3 _19 = gl_WorkGroupSize;
+    _20._m0[gl_WorkGroupID.x] = _21._m0[gl_WorkGroupID.x] + _20._m0[gl_WorkGroupID.x];
 }
 

@@ -1,0 +1,430 @@
+Name
+
+    ARB_shader_group_vote
+
+Name Strings
+
+    GL_ARB_shader_group_vote
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Contributors
+
+    John Kessenich
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 3, 2013.
+    Ratified by the Khronos Board of Promoters on July 19, 2013.
+
+Version
+
+    Last Modified Date:         December 10, 2018
+    Revision:                   7
+
+Number
+
+    ARB Extension #157
+
+Dependencies
+
+    This extension is written against the OpenGL 4.3 (Compatibility Profile)
+    Specification, dated August 6, 2012.
+
+    This extension is written against the OpenGL Shading Language
+    Specification, Version 4.30, Revision 7, dated September 24, 2012.
+
+    OpenGL 4.3 or ARB_compute_shader is required.
+
+    This extension interacts with NV_gpu_shader5.
+
+Overview
+
+    This extension provides new built-in functions to compute the composite of
+    a set of boolean conditions across a group of shader invocations.  These
+    composite results may be used to execute shaders more efficiently on a
+    single-instruction multiple-data (SIMD) processor.  The set of shader
+    invocations across which boolean conditions are evaluated is
+    implementation-dependent, and this extension provides no guarantee over
+    how individual shader invocations are assigned to such sets.  In
+    particular, the set of shader invocations has no necessary relationship
+    with the compute shader workgroup -- a pair of shader invocations
+    in a single compute shader workgroup may end up in different sets used by
+    these built-ins.
+
+    Compute shaders operate on an explicitly specified group of threads (a
+    workgroup), but many implementations of OpenGL 4.3 will even group
+    non-compute shader invocations and execute them in a SIMD fashion.  When
+    executing code like
+
+      if (condition) {
+        result = do_fast_path();
+      } else {
+        result = do_general_path();
+      }
+
+    where <condition> diverges between invocations, a SIMD implementation
+    might first call do_fast_path() for the invocations where <condition> is
+    true and leave the other invocations dormant.  Once do_fast_path()
+    returns, it might call do_general_path() for invocations where <condition>
+    is false and leave the other invocations dormant.  In this case, the
+    shader executes *both* the fast and the general path and might be better
+    off just using the general path for all invocations.
+
+    This extension provides the ability to avoid divergent execution by
+    evaluting a condition across an entire SIMD invocation group using code
+    like:
+
+      if (allInvocationsARB(condition)) {
+        result = do_fast_path();
+      } else {
+        result = do_general_path();
+      }
+
+    The built-in function allInvocationsARB() will return the same value for
+    all invocations in the group, so the group will either execute
+    do_fast_path() or do_general_path(), but never both.  For example, shader
+    code might want to evaluate a complex function iteratively by starting
+    with an approximation of the result and then refining the approximation.
+    Some input values may require a small number of iterations to generate an
+    accurate result (do_fast_path) while others require a larger number
+    (do_general_path).  In another example, shader code might want to evaluate
+    a complex function (do_general_path) that can be greatly simplified when
+    assuming a specific value for one of its inputs (do_fast_path).
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+Modifications to the OpenGL 4.3 (Compatibility Profile) Specification
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.30
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_shader_group_vote : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    New preprocessor #defines are added to the OpenGL Shading Language:
+
+      #define GL_ARB_shader_group_vote          1
+
+
+    Modify Chapter 8, Built-in Functions, p. 129
+
+    (insert a new section at the end of the chapter)
+
+    Section 8.18, Shader Invocation Group Functions
+
+    Implementations of the OpenGL Shading Language may optionally group
+    multiple shader invocations for a single shader stage into a single SIMD
+    invocation group, where invocations are assigned to groups in an
+    undefined, implementation-dependent manner.  Shader algorithms on such
+    implementations may benefit from being able to evaluate a composite of
+    boolean values over all active invocations in a group.
+
+    Syntax:
+
+      bool anyInvocationARB(bool value);
+      bool allInvocationsARB(bool value);
+      bool allInvocationsEqualARB(bool value);
+
+    The function anyInvocationARB() returns true if and only if <value> is
+    true for at least one active invocation in the group.
+
+    The function allInvocationsARB() returns true if and only if <value> is
+    true for all active invocations in the group.
+
+    The function allInvocationsEqualARB() returns true if <value> is the same
+    for all active invocations in the group.
+
+    For all of these functions, the same value is returned to all active
+    invocations in the group.
+
+    These functions may be called in conditionally executed code.  In groups
+    where some invocations do not execute the function call, the value
+    returned by the function is not affected by any invocation not calling the
+    function, even when <value> is well-defined for that invocation.
+
+    Since these functions depend on the values of <value> in an undefined
+    group of invocations, the value returned by these functions is largely
+    undefined.  However, anyInvocationARB() is guaranteed to return true if
+    <value> is true, and allInvocationsARB() is guaranteed to return false if
+    <value> is false.
+
+    Since implementations are not required to combine invocations into groups,
+    simply returning <value> for anyInvocationARB() and allInvocationsARB()
+    and returning true for allInvocationsEqualARB() is a legal implementation
+    of these functions.
+
+    For fragment shaders, invocations in a SIMD invocation group may include
+    invocations corresponding to pixels that are covered by a primitive being
+    rasterized, as well as invocations corresponding to neighboring pixels not
+    covered by the primitive.  The invocations for these neighboring "helper"
+    pixels may be created so that differencing can be used to evaluate
+    derivative functions like dFdx() and dFdx() (section 8.13) and implicit
+    derivatives used by texture() and related functions (section 8.9.2).  The
+    value of <value> for such "helper" pixels may affect the value returned by
+    anyInvocationARB(), allInvocationsARB(), and allInvocationsEqualARB().
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Dependencies on NV_gpu_shader5
+
+    The built-in functions defined by this extension provide the same
+    functionality as the anyThreadNV(), allThreadsNV(), allThreadsEqualNV()
+    functions in NV_gpu_shader5 and are implemented identically.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    (1) Should we provide built-ins exposing a fixed implementation-dependent
+        SIMD workgroup size and/or the "location" of a single invocation
+        within a fixed-size SIMD workgroup?
+
+      RESOLVED:  Not in this extension.
+
+    (2) Should we provide mechanisms for sharing arbitrary data values across
+        SIMD workgroups?
+
+      RESOLVED:  Not in this extension.
+
+      For compute shaders, shared memory may already be used to share values
+      across invocations in a single workgroup.
+
+    (3) Is this capability supported for all shader types or just compute
+        shaders?
+
+      RESOLVED:  All shader types.
+
+    (4) For compute shaders, is there any relationship between the
+        workgroup and the SIMD invocation group across which conditions are
+        evaluated?
+
+      RESOLVED:  No.
+
+    (5) Is there any necessary relationship between SIMD workgroups in this
+        extension and the workgroups for compute shaders?
+
+      RESOLVED:  No.  It is expected that the SIMD workgroups in this
+      extension are relatively small compared to a maximum-sized compute
+      workgroup.  On current NVIDIA GPUs, the SIMD workgroup size will be 32;
+      however, maximum workgroup size (MAX_COMPUTE_WORK_GROUP_INVOCATIONS)
+      for OpenGL 4.3 compute shaders is 1024.
+
+      Perhaps there might be some small value in guaranteeing that a SIMD
+      workgroup doesn't span compute workgroups.  However, it's not clear
+      that there is any specific value in doing so, and having such a
+      restriction could limit parallelism for very small compute workgroups
+      (where one might be able to fit multiple workgroups in a single SIMD
+      workgroup).
+
+    (6) How do the built-in functions work when called in conditionally
+        executed code?
+
+      RESOLVED:  When these functions are called inside flow control, the
+      value for invocations not executing the function call have no effect on
+      the result.  For example, consider this code:
+
+        bool result = false;
+        bool condition1, condition2;
+        if (condition1) {
+          result = allInvocationsARB(condition2);
+        }
+
+      For all invocations where <condition1> is false, the value of <result>
+      will be false because allInvocationsARB() is not called.  For the other
+      invocations, the value of <result> will be true if and only if
+      <condition2> is true for all invocations where <condition1> is also
+      true.  In this similar code:
+
+        if (condition1) {
+          result = allInvocationsARB(condition1);
+        }
+
+      allInvocationsARB() will always return true, since it will only be
+      called by invocations where <condition1> is true.
+
+    (7) What should an implementation do if it groups invocations into SIMD
+        execution groups differently for different shader types?
+
+      RESOLVED:  As specified, there is no requirement of a specific SIMD
+      group size.  Additionally, there is no implementation-dependent constant
+      requiring applications to expose a single SIMD group size.
+
+      If an implementation has different SIMD group sizes for different
+      shaders, its implementation of the built-in functions could reflect such
+      differences.  Additionally, if an implementation doesn't even support
+      SIMD execution for some shader types, it could simply treat each
+      invocation as its own group.
+
+    (8) Should we provide any query by which an application can discover the
+        SIMD execution group size for a particular implementation?  Or for a
+        particular shader type, if any implementation might behave like the
+        hypothetical one in issue (7)?
+
+      RESOLVED:  No.  Given the limited functionality provided by this
+      extension, it's not clear that there's anything useful applications
+      could do with this information.
+
+    (9) Fragment shaders have built-in functions -- dFdx(), dFdy(), and
+        texture() -- that need to compute derivatives of their inputs in
+        screen space.  These derivatives may be approximated by computing the
+        difference between the value of an input at the pixel in question and
+        a neighboring pixel.  For small or slivery triangles, a pixel may not
+        actually have a neighboring pixel covered by the primitive.  In order
+        to allow for such differencing, implementations may need to create
+        fragment shader invocations for uncovered neighboring pixels -- called
+        "helper pixels".  How do such fragment shader invocations affect the
+        results of invocation group built-ins?
+
+      RESOLVED:  We specify that the results of the built-in functions can be
+      affected by the inputs evaluated for "helper" pixels found in a SIMD
+      execution group.  If a condition is true for all "real" fragment shader
+      invocations but false for some "helper" invocation, it's possible that
+      allInvocationsARB() will return false.
+
+    (10) For certain shading language operations indexing into arrays of
+         resources (samplers, images, atomic counters, uniform blocks, and
+         shader storage blocks), indices must be dynamically uniform to have
+         defined results.  Are the values returned by these new built-in
+         functions considered dynamically uniform?
+
+      RESOLVED:  No.
+
+      As defined, the values returned by these built-in functions should be
+      the same for all invocations in the SIMD execution group that call them.
+      However, for the purposes of some of these operations requiring dynamic
+      uniformity, some implementations may require identical values over a
+      group of invocations larger than a single SIMD execution group.  Since
+      these built-ins produce results that are only identical within a single
+      group, they can't qualify as "dynamically uniform".
+
+      In this code:
+
+        uniform sampler2D samplers[2];
+        bool condition = non_uniform_condition();
+        vec4 texel = texture(samplers[condition ? 1 : 0], ...);
+
+      the sampler accessed is *not* dynamically uniform.  However, in this
+      code:
+
+        bool condition = allInvocationsARB(non_uniform_condition());
+        vec4 texel = texture(samplers[condition ? 1 : 0], ...);
+
+      the value of <condition> will be the same for all invocations in the
+      SIMD execution group, so the indexed used to access <samplers> will also
+      be the same.  However, if dynamic uniformity requires two SIMD execution
+      groups to have the same value, this wouldn't qualify because a second
+      group could have a different value for <condition>.
+
+    (11) Should we provide allInvocationsEqual() that could determine if the
+         value of an integer/floating-point/vector variable is the same for
+         all invocations in a SIMD execution group?
+
+      RESOLVED:  Not in this extension.
+
+    (12) Does the use of built-in functions such as allInvocationsARB() have
+         invariance issues?
+
+      RESOLVED:  Yes.  The assignment of invocations to SIMD execution groups
+      is implementation-dependent, and there is no guarantee that the
+      assignment will be identical when rendering the exact same primitives in
+      a different viewport, or even when rendering the same primitives in the
+      same locations in different frames.  Since the assignment of invocations
+      to groups may vary from frame to frame, the value returned by
+      allInvocationsARB() may also vary from frame to frame.
+
+      If the computations performed when allInvocationsARB() returns true
+      produce results nearly identical to those performed when it returns
+      false, the invariance may result in images that are identical except for
+      least significant bits.  If the computations are not identical, more
+      severe flickering could occur.
+
+    (13) How should we name this extension?
+
+      RESOLVED:  We originally called it ARB_shader_group_operations, we
+      considered a number of other options in addition to evaluating a boolean
+      predicate across a SIMD execution group.  But the final extension is
+      limited to this specific operation, so a more specific name seems
+      appropriate.  We are using the term "vote", as it (like real voting)
+      involves collecting "choices" of multiple entities to generate a single
+      result and then returning the result of that collective choice.
+
+Revision History
+
+    Revision 7, December 10, 2018 (Jon Leech)
+      - Use 'workgroup' consistently throughout (Bug 11723, internal API
+        issue 87).
+
+    Revision 6, May 30, 2013
+      - Mark issue (13) as resolved.
+
+    Revision 5, May 7, 2013
+      - Extend the introduction to include an example of the use of the new
+        built-in functions.
+      - Add explicit language indicating that these functions return the same
+        value for all invocations in a SIMD execution group.
+
+    Revision 4, May 3, 2013
+      - Add some more concrete examples to the introduction illustrating why
+        these functions may be useful.
+      - Rename the extension to ARB_shader_group_vote.
+      - Add spec language indicating that fragment shader "helper" pixels
+        may affect the results of these "vote" functions.
+      - Mark various issues as resolved per working group discussions.
+      - Add issues (11), (12), and (13).
+
+    Revision 3, April 19, 2013
+      - Add #extension infrastructure for this feature, since it will begin as
+        an ARB extension.  Add "ARB" suffixes on the names of the built-in
+        functions.
+      - Add discussion on issue (7) and new issues (8) through (10).
+
+    Revision 2, March 28, 2013
+      - Checkpoint updating some issues for spec review (not done yet).
+
+    Revision 1, January 20, 2013
+      - Initial revision.

@@ -27,10 +27,10 @@ using namespace filament::backend;
 static constexpr uint32_t HANDLE_HEAP_FLAG = 0x80000000u;
 static constexpr size_t POOL_SIZE_BYTES = 8 * 1024U * 1024U;
 // NOTE: actual count may be lower due to alignment requirements
-constexpr size_t const POOL_HANDLE_COUNT = POOL_SIZE_BYTES / (32 + 96 + 136); // 31775
+constexpr size_t const POOL_HANDLE_COUNT = POOL_SIZE_BYTES / (32 + 96 + 184); // 31775
 
 // This must match HandleAllocatorGL, so its implementation is present on all platforms.
-#define HandleAllocatorTest  HandleAllocator<32,  96, 136>    // ~4520 / pool / MiB
+#define HandleAllocatorTest  HandleAllocator<32,  96, 184>    // ~4520 / pool / MiB
 
 struct MyHandle {
 };
@@ -46,7 +46,7 @@ struct Concrete : public MyHandle {
 #endif
 
 TEST(HandlesTest, useAfterFreePool) {
-    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES, false);
+    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES);
 
     Handle<MyHandle> handleA = allocator.allocate<Concrete>();
     allocator.deallocate(handleA);
@@ -59,7 +59,7 @@ TEST(HandlesTest, useAfterFreePool) {
 }
 
 TEST(HandlesTest, useAfterFreeHeap) {
-    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES, false);
+    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES);
 
     // Use up all the non-heap handles.
     for (int i = 0; i < POOL_HANDLE_COUNT; i++) {
@@ -87,7 +87,7 @@ TEST(HandlesTest, useAfterFreeHeap) {
 }
 
 TEST(HandlesTest, isValid) {
-    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES, false);
+    HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES);
     Handle<MyHandle> poolHandle = allocator.allocate<Concrete>();
     EXPECT_TRUE((poolHandle.getId() & HANDLE_HEAP_FLAG) == 0u);
 

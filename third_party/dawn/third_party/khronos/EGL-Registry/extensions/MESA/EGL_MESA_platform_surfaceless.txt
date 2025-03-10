@@ -1,0 +1,120 @@
+Name
+
+    MESA_platform_surfaceless
+
+Name Strings
+
+    EGL_MESA_platform_surfaceless
+
+Contributors
+
+    Chad Versace <chadversary@google.com>
+    Haixia Shi <hshi@google.com>
+    Stéphane Marchesin <marcheu@google.com>
+    Zach Reizner <zachr@chromium.org>
+    Gurchetan Singh <gurchetansingh@google.com>
+
+Contacts
+
+    Chad Versace <chadversary@google.com>
+
+Status
+
+    DRAFT
+
+Version
+
+    Version 2, 2016-10-13
+
+Number
+
+    EGL Extension #104
+
+Extension Type
+
+    EGL client extension
+
+Dependencies
+
+    Requires EGL 1.5 or later; or EGL 1.4 with EGL_EXT_platform_base.
+
+    This extension is written against the EGL 1.5 Specification (draft
+    20140122).
+
+    This extension interacts with EGL_EXT_platform_base as follows. If the
+    implementation supports EGL_EXT_platform_base, then text regarding
+    eglGetPlatformDisplay applies also to eglGetPlatformDisplayEXT;
+    eglCreatePlatformWindowSurface to eglCreatePlatformWindowSurfaceEXT; and
+    eglCreatePlatformPixmapSurface to eglCreatePlatformPixmapSurfaceEXT.
+
+Overview
+
+    This extension defines a new EGL platform, the "surfaceless" platform. This
+    platfom's defining property is that it has no native surfaces, and hence
+    neither eglCreatePlatformWindowSurface nor eglCreatePlatformPixmapSurface
+    can be used. The platform is independent of any native window system.
+
+    The platform's intended use case is for enabling OpenGL and OpenGL ES
+    applications on systems where no window system exists. However, the
+    platform's permitted usage is not restricted to this case.  Since the
+    platform is independent of any native window system, it may also be used on
+    systems where a window system is present.
+
+New Types
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted as the <platform> argument of eglGetPlatformDisplay:
+
+        EGL_PLATFORM_SURFACELESS_MESA           0x31DD
+
+Additions to the EGL Specification
+
+    None.
+
+New Behavior
+
+    To determine if the EGL implementation supports this extension, clients
+    should query the EGL_EXTENSIONS string of EGL_NO_DISPLAY.
+
+    To obtain an EGLDisplay on the surfaceless platform, call
+    eglGetPlatformDisplay with <platform> set to EGL_PLATFORM_SURFACELESS_MESA.
+    The <native_display> parameter must be EGL_DEFAULT_DISPLAY.
+
+    eglCreatePlatformWindowSurface fails when called with a <display> that
+    belongs to the surfaceless platform. It returns EGL_NO_SURFACE and
+    generates EGL_BAD_NATIVE_WINDOW. The justification for this unconditional
+    failure is that the surfaceless platform has no native windows, and
+    therefore the <native_window> parameter is always invalid.
+
+    Likewise, eglCreatePlatformPixmapSurface also fails when called with a
+    <display> that belongs to the surfaceless platform.  It returns
+    EGL_NO_SURFACE and generates EGL_BAD_NATIVE_PIXMAP.
+
+    The surfaceless platform imposes no platform-specific restrictions on the
+    creation of pbuffers, as eglCreatePbufferSurface has no native surface
+    parameter.  Specifically, if the EGLDisplay advertises an EGLConfig whose
+    EGL_SURFACE_TYPE attribute contains EGL_PBUFFER_BIT, then the EGLDisplay
+    permits the creation of pbuffers with that config.
+
+Issues
+
+    None.
+
+Revision History
+
+    Version 2, 2016-10-13 (Chad Versace)
+        - Assign enum values
+        - Define interfactions with EGL 1.4 and EGL_EXT_platform_base.
+        - Add Gurchetan as contributor, as he implemented the pbuffer support.
+
+    Version 1, 2016-09-23 (Chad Versace)
+        - Initial version
+        - Posted for review at
+          https://lists.freedesktop.org/archives/mesa-dev/2016-September/129549.html

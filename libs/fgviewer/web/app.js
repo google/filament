@@ -38,7 +38,7 @@ const RESOURCE_USAGE_TYPE_WRITE = 'write';
 const RESOURCE_USAGE_TYPE_NO_ACCESS = 'no-access';
 const RESOURCE_USAGE_TYPE_READ_WRITE = 'read-write';
 
-const IS_SUBRESOURCE_KEY = 'is_subresource'
+const IS_SUBRESOURCE_KEY = 'is_subresource_of'
 
 class MenuSection extends LitElement {
     static get properties() {
@@ -150,13 +150,27 @@ class FrameGraphSidePanel extends LitElement {
                 font-weight: bolder;
                 color: ${FOREGROUND_COLOR};
             }
+            .resource-title {
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 5px;
+                font-size: ${REGULAR_FONT_SIZE}px;
+                color: ${UNSELECTED_COLOR};
+            }
+            .resource-content {
+                display: flex;
+                flex-direction: column;
+                font-size: ${REGULAR_FONT_SIZE}px;
+                color: ${UNSELECTED_COLOR};
+            }
         `;
     }
 
     static get properties() {
         return {
             connected: {type: Boolean, attribute: 'connected'},
-            currentFrameGraph: {type: String, attribute: 'current-framegraph'},
+            selectedFrameGraph: {type: String, attribute: 'selected-framegraph'},
+            selectedResourceId: {type: Number, attribute: 'selected-resource'},
 
             database: {type: Object, state: true},
             framegraphs: {type: Array, state: true},
@@ -172,37 +186,19 @@ class FrameGraphSidePanel extends LitElement {
 
     updated(props) {
         if (props.has('database')) {
-            const items = [];
-            // Names need not be unique, so we display a numeric suffix for non-unique names.
-            // To achieve stable ordering of anonymous framegraphs, we first sort by fgid.
-            const labels = new Set();
             const fgids = Object.keys(this.database).sort();
-            const duplicatedLabels = {};
-            for (const fgid of fgids) {
-                const name = this.database[fgid].viewName || kUntitledPlaceholder;
-                if (labels.has(name)) {
-                    duplicatedLabels[name] = 0;
-                } else {
-                    labels.add(name);
-                }
-            }
+            const labelCount = {};
 
-            this.framegraphs = fgids.map((fgid) => {
-                const framegraph = this.database[fgid];
-                let name = framegraph.viewName || kUntitledPlaceholder;
-                if (name in duplicatedLabels) {
-                    const index = duplicatedLabels[name];
-                    duplicatedLabels[name] = index + 1;
-                    name = `${name} (${index})`;
-                }
-                return {
-                    fgid: fgid,
-                    name: name,
-                    domain: "views"
-                };
+            this.framegraphs = fgids.map(fgid => {
+                const name = this.database[fgid].viewName || kUntitledPlaceholder;
+                const uniqueName = labelCount[name] !== undefined
+                    ? `${name} (${labelCount[name]++})`
+                    : (labelCount[name] = 0, name);
+                return { fgid, name: uniqueName };
             });
         }
     }
+
 
     _handleFrameGraphClick(ev) {
         this.dispatchEvent(new CustomEvent('select-framegraph', {
@@ -212,32 +208,51 @@ class FrameGraphSidePanel extends LitElement {
         }));
     }
 
-    render() {
-        const sections = (title) => {
-            const fgs = this.framegraphs
-                    .map((fg) => {
-                        const framegraph = this.database[fg.fgid];
-                        const onClick = this._handleFrameGraphClick.bind(this, fg.fgid);
-                        const isFrameGraphSelected = fg.fgid === this.currentFrameGraph;
-                        const fgName = (isFrameGraphSelected ? '● ' : '') + framegraph.viewName;
-                        return html`
-                            <div class="framegraph" @click="${onClick}" data-id="${fg.fgid}">
-                                ${fgName}
-                            </div>
-                        `;
-                    });
-            if (fgs.length > 0) {
-                return html`
-                    <menu-section title="${title}">${fgs}</menu-section>`;
-            }
+    _findCurrentResource() {
+        if (!this.selectedFrameGraph)
             return null;
+        const frameGraph = this.database[this.selectedFrameGraph];
+        return Object.values(frameGraph?.resources)
+            .find(resource => resource.id === this.selectedResourceId) || null;
+    }
+
+    render() {
+        const renderFrameGraphs = (title) => {
+            if (!this.framegraphs.length) return nothing;
+
+            return html`
+                <menu-section title="${title}">
+                    ${this.framegraphs.map(({ fgid, name }) => html`
+                        <div class="framegraph" 
+                            @click="${() => this._handleFrameGraphClick(fgid)}" 
+                            data-id="${fgid}">
+                            ${fgid === this.selectedFrameGraph ? '● ' : ''}${name}
+                        </div>
+                    `)}
+                </menu-section>
+            `;
+        };
+
+        const renderResourceDetails = (title) => {
+            const currentResource = this._findCurrentResource();
+            if (!currentResource) return nothing;
+
+            return html`
+                <menu-section title="${title}">
+                    <div class="resource-title">${currentResource.id}: ${currentResource.name}</div>
+                    ${currentResource.properties?.map(({ key, value }) => html`
+                <div class="resource-content">${key}: ${value}</div>
+            `)}
+                </menu-section>
+            `;
         };
 
         return html`
             <style>${this.dynamicStyle()}</style>
             <div class="container">
                 <div class="title">fgviewer</div>
-                ${sections("Views", "views") ?? nothing}
+                ${renderFrameGraphs("Views") ?? nothing}
+                ${renderResourceDetails("Resource Details") ?? nothing}
             </div>
         `;
     }
@@ -290,6 +305,10 @@ class FrameGraphTable extends LitElement {
                 border: 1px solid #ddd;
             }
 
+            .selected {
+                text-decoration: underline;
+            }
+
             .scrollable-table tr {
                 position: sticky;
                 padding: 12px;
@@ -305,6 +324,12 @@ class FrameGraphTable extends LitElement {
                 z-index: 1;
             }
 
+            .resource:hover {
+                text-decoration: underline;
+            }
+            .resource {
+                cursor: pointer;
+            }
             th {
                 min-width: 100px;
                 background-color: #f2f2f2;
@@ -318,12 +343,14 @@ class FrameGraphTable extends LitElement {
     static get properties() {
         return {
             frameGraphData: {type: Object, state: true}, // Expecting a JSON frame graph structure
+            selectedResourceId: {type: Number, attribute: 'selected-resource'},
         };
     }
 
     constructor() {
         super();
         this.frameGraphData = null;
+        this.selectedResourceId = -1;
     }
 
     updated(props) {
@@ -332,19 +359,13 @@ class FrameGraphTable extends LitElement {
         }
     }
 
-    _getCellColor(type, defaultColor) {
-        switch (type) {
-            case RESOURCE_USAGE_TYPE_READ:
-                return READ_COLOR;
-            case RESOURCE_USAGE_TYPE_WRITE:
-                return WRITE_COLOR;
-            case RESOURCE_USAGE_TYPE_NO_ACCESS:
-                return NO_ACCESS_COLOR;
-            case RESOURCE_USAGE_TYPE_READ_WRITE:
-                return READ_WRITE_COLOR;
-            default:
-                return defaultColor;
-        }
+    _getCellColor(type) {
+        return {
+            [RESOURCE_USAGE_TYPE_READ]: READ_COLOR,
+            [RESOURCE_USAGE_TYPE_WRITE]: WRITE_COLOR,
+            [RESOURCE_USAGE_TYPE_NO_ACCESS]: NO_ACCESS_COLOR,
+            [RESOURCE_USAGE_TYPE_READ_WRITE]: READ_WRITE_COLOR
+        }[type] || DEFAULT_COLOR;
     }
 
     _toggleCollapse(resourceIndex) {
@@ -355,7 +376,15 @@ class FrameGraphTable extends LitElement {
         icon.textContent = isHidden ? '▼' : '▶';
     }
 
-    _getRowHtml(allPasses, resourceId, defaultColor) {
+    _handleResourceClick(ev) {
+        this.dispatchEvent(new CustomEvent('select-resource', {
+            detail: ev,
+            bubbles: true,
+            composed: true
+        }));
+    }
+
+    _renderResourceUsage(allPasses, resourceId, defaultColor) {
         return allPasses.map((passData, index) => {
             const isRead = passData?.reads.includes(resourceId);
             const isWrite = passData?.writes.includes(resourceId);
@@ -383,51 +412,74 @@ class FrameGraphTable extends LitElement {
                 Number(prop.value) === parentResource.id)
     }
 
+    _isSubresource(resource) {
+        return resource.properties?.some(prop => prop.key === IS_SUBRESOURCE_KEY);
+    }
+
+    _renderResourceRows(resources, allPasses) {
+        return resources
+            .filter(resource => !this._isSubresource(resource))
+            .map((resource, resourceIndex) => this._renderResourceRow(resource, resourceIndex, resources, allPasses));
+    }
+
+    _renderResourceRow(resource, resourceIndex, resources, allPasses) {
+        const hasSubresources = resources.some(subresource => this._isSubresourceOfParent(subresource, resource));
+        const onClickResource = () => this._handleResourceClick(resource.id);
+        const selectedStyle = resource.id === this.selectedResourceId ? "selected" : "";
+
+        return html`
+        <tr id="resource-${resourceIndex}">
+            <th class="sticky-col resource ${selectedStyle}" @click="${onClickResource}">
+                ${hasSubresources ? html`
+                    <span class="toggle-icon"
+                        @click="${() => this._toggleCollapse(resourceIndex)}">▶</span>` : nothing}
+                ${resource.name}
+            </th>
+            ${this._renderResourceUsage(allPasses, resource.id, DEFAULT_COLOR)}
+        </tr>
+        ${this._renderSubresourceRows(resources, resource, resourceIndex, allPasses)}
+    `;
+    }
+
+    _renderSubresourceRows(resources, parentResource, resourceIndex, allPasses) {
+        return resources
+            .filter(subresource => this._isSubresourceOfParent(subresource, parentResource))
+            .map((subresource, subIndex) => this._renderSubresourceRow(subresource, resourceIndex, subIndex, allPasses));
+    }
+
+    _renderSubresourceRow(subresource, resourceIndex, subIndex, allPasses) {
+        const onClickResource = () => this._handleResourceClick(subresource.id);
+        const selectedStyle = subresource.id === this.selectedResourceId ? "selected" : "";
+
+        return html`
+        <tr id="subresource-${resourceIndex}-${subIndex}" class="collapsible hidden">
+            <td class="sticky-col resource ${selectedStyle}"
+                @click="${onClickResource}"
+                style="background-color: ${SUBRESOURCE_COLOR}">
+                ${subresource.name}
+            </td>
+            ${this._renderResourceUsage(allPasses, subresource.id, SUBRESOURCE_COLOR)}
+        </tr>
+    `;
+    }
+
     render() {
-        if (!this.frameGraphData || !this.frameGraphData.passes || !this.frameGraphData.resources) return nothing;
+        if (!this.frameGraphData?.passes || !this.frameGraphData?.resources) return nothing;
+
         const allPasses = this.frameGraphData.passes;
         const resources = Object.values(this.frameGraphData.resources);
+
         return html`
             <div class="table-container">
                 <table class="scrollable-table">
                     <thead>
                     <tr>
                         <th class="sticky-col">Resources/Passes</th>
-                        ${allPasses.map(pass => html`
-                            <th>${pass.name}</th>`)}
+                        ${allPasses.map(pass => html`<th>${pass.name}</th>`)}
                     </tr>
                     </thead>
                     <tbody>
-                    ${resources.map((resource, resourceIndex) => {
-                        const isSubresource = resource.properties?.some(prop => prop.key === IS_SUBRESOURCE_KEY);
-                        if (isSubresource) return nothing;
-
-                        const hasSubresources = resources.some(subresource => this._isSubresourceOfParent(subresource, resource));
-                        return html`
-                            <tr id="resource-${resourceIndex}">
-                                <th class="sticky-col">
-                                    ${hasSubresources ? html`
-                                        <span
-                                            class="toggle-icon"
-                                            @click="${() => this._toggleCollapse(resourceIndex)}"
-                                        >▶</span>` : nothing}
-                                    ${resource.name}
-                                </th>
-                                ${this._getRowHtml(allPasses, resource.id, DEFAULT_COLOR)}
-                            </tr>
-                            ${resources.filter(subresource => this._isSubresourceOfParent(subresource, resource)
-                            ).map((subresource, subIndex) => html`
-                                <tr id="subresource-${resourceIndex}-${subIndex}"
-                                    class="collapsible hidden">
-                                    <td class="sticky-col"
-                                        style="background-color: ${SUBRESOURCE_COLOR}">
-                                        ${subresource.name}
-                                    </td>
-                                    ${this._getRowHtml(allPasses, subresource.id, SUBRESOURCE_COLOR)}
-                                </tr>
-                            `)}
-                        `;
-                    })}
+                    ${this._renderResourceRows(resources, allPasses)}
                     </tbody>
                 </table>
             </div>
@@ -476,8 +528,8 @@ class FrameGraphViewer extends LitElement {
     }
 
     _getFrameGraph() {
-        const framegraph = (this.database && this.currentFrameGraph) ?
-                this.database[this.currentFrameGraph] : null;
+        const framegraph = (this.database && this.selectedFrameGraph) ?
+                this.database[this.selectedFrameGraph] : null;
         return framegraph;
     }
 
@@ -485,13 +537,20 @@ class FrameGraphViewer extends LitElement {
         super();
         this.connected = false;
         this.database = {};
-        this.currentFrameGraph = null;
+        this.selectedFrameGraph = null;
+        this.selectedResourceId = -1;
         this.init();
 
         this.addEventListener('select-framegraph',
                 (ev) => {
-                    this.currentFrameGraph = ev.detail;
+                    this.selectedFrameGraph = ev.detail;
                 }
+        );
+
+        this.addEventListener('select-resource',
+            (ev) => {
+                this.selectedResourceId = ev.detail;
+            }
         );
     }
 
@@ -499,12 +558,13 @@ class FrameGraphViewer extends LitElement {
         return {
             connected: {type: Boolean, state: true},
             database: {type: Object, state: true},
-            currentFrameGraph: {type: String, state: true},
+            selectedFrameGraph: {type: String, state: true},
+            selectedResourceId: {type: Number, state: true},
         }
     }
 
     updated(props) {
-        if (props.has('currentFrameGraph') || props.has('database')) {
+        if (props.has('selectedFrameGraph') || props.has('database')) {
             const framegraph = this._getFrameGraph();
             this._framegraphTable.frameGraphData = framegraph;
             this._sidePanel.database = this.database;
@@ -516,11 +576,13 @@ class FrameGraphViewer extends LitElement {
         return html`
             <framegraph-sidepanel id="sidepanel"
                 ?connected="${this.connected}"
-                current-framegraph="${this.currentFrameGraph}" >
+                selected-framegraph="${this.selectedFrameGraph}" 
+                selected-resource="${this.selectedResourceId}">
             </framegraph-sidepanel>
             <framegraph-table id="table" 
                 ?connected="${this.connected}"
-                current-framegraph="${this.currentFrameGraph}"
+                selected-framegraph="${this.selectedFrameGraph}" 
+                selected-resource="${this.selectedResourceId}">
             </framegraph-table>
         `;
     }

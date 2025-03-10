@@ -1,0 +1,125 @@
+XXX needs more work.
+
+Name
+
+    SGIX_pixel_texture_lod
+
+Name Strings
+
+    GL_SGIX_pixel_texture_lod
+
+Version
+
+    $Date: 1998/07/22 18:07:16 $ $Revision: 1.9 $
+
+Number
+
+    128
+
+Dependencies
+
+    GL_SGIS_pixel_texture
+    can be implemented in parallel with pixel_texture_bits
+
+Overview
+
+    The pixel_texture extension provides a way to derive the
+    texture coordinates from RGBA pixel groups.  This extension
+    introduces a way to derive the lod (lambda) from the
+    pixel groups as well.
+
+Issues
+
+    * We don't operate in "bits" mode here. Extended Range
+      and Precision (erp) values are just erp values 
+      and old fashioned [0,1] values are interpeted as [0,1] values; 
+      this makes lambda uninteresting except for the erp case.
+      should we bother to define lambda in a way that is interesting
+      for non extended range and precision?
+
+    * Is it possible to compute lambda in a pixel field in a way that
+      makes this extension useful?
+
+      Seems like you can always do the shift and subtract trick and then
+      use blend function and lookup tables to compute the lod in a reasonably
+      efficient manner.
+
+    * Do we need to implicitly scale the lambda by the number of lods?
+
+    * Need to make sure this extension isn't too had to implement in
+      the hardware (bali).
+
+    * This extension is intended to be used with the color components
+      of the fragments derived from the current raster position.  Can
+      we leave that part of it orthogonal and let the application
+      set that explicitly using PIXEL_FRAGMENT_{RGB,ALPHA}_SOURCE_SGIX?
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <pname> parameter of PixelTexGenParameterSGIX:
+
+	PIXEL_TEX_GEN_LAMBDA_SOURCE_SGIX
+	
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    This extension, similar to the pixel_texture.spec, modifies the
+    "Conversion to Fragments" subsection of section 3.6.3 (Rasterization
+    of Pixel Rectangles) of the GL Specification. Immediately following
+    the text added by the pixel_texture.spec, insert the following:
+
+    If PIXEL_TEX_GEN_SGIX is enabled and the PixelTexGenSGIX 
+    pname PIXEL_TEX_GEN_LAMBDA_SOURCE_SGIX is set to ALPHA, 
+    the mapping from r,g,b,a to s,t,r,q is altered.
+
+    The alpha color component value becomes the lambda value, the log-base-2
+    of the ratio of the projected texel_area and pixel area. The boundary
+    of minification to magnification occurs at lambda = 0, with values
+    less than 0 corresponding to minification and values greater than
+    0 corresponding to magnification.  The alpha color component value
+    becomes the texture coordinate value.  The Q texture coordinate 
+    is set to 1.
+
+    If PIXEL_TEX_GEN_SGIX is enabled and the PixelTexGenSGIX 
+    pname PIXEL_TEX_GEN_LAMBDA_SOURCE_SGIX is set to ZERO, 
+    lambda is set to zero.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    XXX
+
+Errors
+
+    None
+
+New State
+
+    The following is added to Table 6.16. Pixels.
+
+    Get Value				Get Command			Type	Initial Value			Attrib
+    ---------				-----------			----	-------------			------
+    PIXEL_TEX_GEN_LAMBDA_SOURCE_SGIX	GetPixelTexGenParameterivSGIX	Z2	ZERO				pixel
+
+New Implementation Dependent State
+
+    None

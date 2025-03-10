@@ -7,24 +7,24 @@ using namespace metal;
 
 struct main0_out
 {
-    float4 m_4 [[color(0)]];
+    float4 m_6 [[color(0)]];
 };
 
 struct main0_in
 {
-    float2 m_3 [[user(locn0)]];
+    float2 m_4 [[user(locn0)]];
 };
 
 static inline __attribute__((always_inline))
-float4 _19(thread float2& _3, texture2d<float> _5, sampler _5Smplr)
+float4 _22(thread float2& _4, texture2d<float> _7, sampler _7Smplr)
 {
-    return _5.sample(_5Smplr, _3);
+    return _7.sample(_7Smplr, _4);
 }
 
-fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> _5 [[texture(0)]], sampler _5Smplr [[sampler(0)]])
+fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> _7 [[texture(0)]], sampler _7Smplr [[sampler(0)]])
 {
     main0_out out = {};
-    out.m_4 = _19(in.m_3, _5, _5Smplr);
+    out.m_6 = _22(in.m_4, _7, _7Smplr);
     return out;
 }
 

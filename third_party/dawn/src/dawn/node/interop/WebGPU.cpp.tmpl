@@ -1,0 +1,441 @@
+{{/*
+ Copyright 2021 The Dawn & Tint Authors
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+ 1. Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+
+ 3. Neither the name of the copyright holder nor the names of its
+    contributors may be used to endorse or promote products derived from
+    this software without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/}}
+
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/idlgen/main.go to generate the
+WebGPU.cpp source file.
+
+See:
+* https://github.com/ben-clayton/webidlparser/blob/main/ast/ast.go for the AST
+  types used by this template
+* tools/src/cmd/idlgen/main.go for additional structures and functions
+  used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- Include "WebGPUCommon.tmpl" -}}
+
+#include "src/dawn/node/interop/WebGPU.h"
+
+#include <unordered_map>
+
+#include "src/dawn/node/utils/Debug.h"
+
+namespace wgpu {
+namespace interop {
+
+namespace {
+
+{{template "Wrappers" $}}
+
+}  // namespace
+
+{{ range $ := .Declarations}}
+{{-        if IsDictionary $}}{{template "Dictionary" $}}
+{{-   else if IsInterface  $}}{{template "Interface"  $}}
+{{-   else if IsEnum       $}}{{template "Enum"       $}}
+{{-   end}}
+{{- end}}
+
+
+Napi::Object Initialize(Napi::Env env) {
+  auto* wrapper = Wrappers::Init(env);
+  auto exports = Napi::Object::New(env);
+{{- range $ := .Declarations}}
+{{-   if IsInterfaceOrNamespace $}}
+{{-     if not (HasAnnotation $ "LegacyNoInterfaceObject")}}
+  exports.Set(Napi::String::New(env, "{{$.Name}}"), wrapper->{{$.Name}}_ctor.Value());
+{{-     end}}
+{{-   end}}
+{{- end}}
+  return exports;
+}
+
+}  // namespace interop
+}  // namespace wgpu
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Wrappers emits the C++ 'Wrappers' class, which holds all the interface and
+-- namespace interop wrapper classes.
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Wrappers"}}
+// Wrappers holds all the Napi class constructors, and Napi::ObjectWrap type
+// declarations, for each of the WebIDL interface and namespace types.
+class Wrappers {
+  Wrappers(Napi::Env env) {
+{{-   range $ := .Declarations}}
+{{-     if IsInterfaceOrNamespace $}}
+    {{$.Name}}_ctor = Napi::Persistent(W{{$.Name}}::Class(env));
+{{-     end}}
+{{-   end}}
+  }
+
+  static Wrappers* instance;
+
+public:
+{{-   range $ := .Declarations}}
+{{-     if IsInterfaceOrNamespace $}}{{template "Wrapper" $}}
+{{-     end}}
+{{-   end}}
+
+  // Allocates and constructs the Wrappers instance
+  static Wrappers* Init(Napi::Env env) {
+    instance = new Wrappers(env);
+    return instance;
+  }
+
+  // Destructs and frees the Wrappers instance
+  static void Term(Napi::Env env) {
+    delete instance;
+    instance = nullptr;
+  }
+
+  static Wrappers* For(Napi::Env env) {
+    // Currently Napi only actually supports a single Env, so there's no point
+    // maintaining a map of Env to Wrapper. Note: This might not always be true.
+    return instance;
+  }
+
+{{   range $ := .Declarations}}
+{{-     if IsInterfaceOrNamespace $}}
+  Napi::FunctionReference {{$.Name}}_ctor;
+{{-     end}}
+{{-   end}}
+};
+
+Wrappers* Wrappers::instance = nullptr;
+{{- end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Wrapper emits the C++ wrapper class for the given ast.Interface or
+-- ast.Namespace.
+-- This wrapper class inherits from Napi::ObjectWrap, which binds the lifetime
+-- of the JavaScript object to the lifetime of the wrapper class instance.
+-- If the wrapper is for an interface, the wrapper object holds a unique_ptr to
+-- the interface implementation, and delegates all exposed method calls on to
+-- the implementation.
+-- See: https://github.com/nodejs/node-addon-api/blob/main/doc/object_wrap.md
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Wrapper"}}
+  struct W{{$.Name}} : public Napi::ObjectWrap<W{{$.Name}}> {
+{{-  $attributes := FlattenedAttributesOf $ }}
+{{-  $constants  := FlattenedConstantsOf  $ }}
+{{-  $methods    := FlattenedMethodsOf    $ }}
+{{-  if IsInterface $}}
+    std::unique_ptr<{{$.Name}}> impl;
+{{-  end}}
+    static Napi::Function Class(Napi::Env env) {
+      return DefineClass(env, "{{$.Name}}", {
+{{   if $s := SetlikeOf $}}
+        InstanceMethod("has", &W{{$.Name}}::has),
+        InstanceMethod("keys", &W{{$.Name}}::keys),
+        InstanceAccessor("size", &W{{$.Name}}::getSize, nullptr),
+        InstanceMethod(Napi::Symbol::WellKnown(env,"iterator"), &W{{$.Name}}::iterator),
+{{-  end}}
+{{-  range $m := $methods}}
+        InstanceMethod("{{$m.Name}}", &W{{$.Name}}::{{$m.Name}}, static_cast<napi_property_attributes>(napi_default_jsproperty)),
+{{-  end}}
+{{-  range $a := $attributes}}
+{{-   if not (HasAnnotation $a "SameObject")}}
+        InstanceAccessor("{{$a.Name}}", &W{{$.Name}}::get{{Title $a.Name}},
+{{-    if $a.Readonly}} nullptr,{{else}} &W{{$.Name}}::set{{Title $a.Name}},{{end -}}
+        napi_default_jsproperty),
+{{-   end}}
+{{-  end}}
+{{-  range $c := $constants}}
+        StaticValue("{{$c.Name}}", ToJS(env, {{$.Name}}::{{$c.Name}}), napi_default_jsproperty),
+{{-  end}}
+      });
+    }
+
+    W{{$.Name}}(const Napi::CallbackInfo& info) : ObjectWrap(info) {}
+
+{{-  if $s := SetlikeOf $}}
+    Napi::Value has(const Napi::CallbackInfo& info) {
+      std::tuple<{{template "Type" $s.Elem}}> args;
+      auto res = FromJS(info, args);
+      if (res) {
+          return ToJS(info.Env(), impl->has(info.Env(), std::get<0>(args)));
+      }
+      Napi::TypeError::New(info.Env(), res.error).ThrowAsJavaScriptException();
+      return {};
+    }
+    Napi::Value keys(const Napi::CallbackInfo& info) {
+      return ToJS(info.Env(), impl->keys(info.Env()));
+    }
+    Napi::Value getSize(const Napi::CallbackInfo& info) {
+      return ToJS(info.Env(), impl->getSize(info.Env()));
+    }
+    Napi::Value iterator(const Napi::CallbackInfo& info) {
+      return impl->iterator(info);
+    }
+{{-  end}}
+{{-  range $m := $methods}}
+{{-    $implSuffix := ""}}
+{{-    if ReturnsPromise $m}}
+{{-      $implSuffix = "Inner"}}
+    Napi::Value {{$m.Name}}(const Napi::CallbackInfo& info) {
+      return CatchExceptionIntoPromise(info.Env(), [&]() -> auto { return {{$m.Name}}Inner(info); });
+    }
+{{-    end}}
+    Napi::Value {{$m.Name}}{{$implSuffix}}(const Napi::CallbackInfo& info) {
+      std::string error;
+{{-    range $overload_idx, $o := $m.Overloads}}
+{{- $overloaded := gt (len $m.Overloads) 1}}
+      { {{if $overloaded}}// Overload {{$overload_idx}}{{end}}
+        std::tuple<
+{{-        range $i, $p := $o.Parameters}}
+{{-          if $i}}, {{end}}
+{{-          if      $p.Init    }}DefaultedParameter<{{template "Type" $p.Type}}>
+{{-          else if $p.Optional}}std::optional<{{template "Type" $p.Type}}>
+{{-          else               }}{{template "Type" $p.Type}}
+{{-          end}}
+{{-        end}}> args;
+
+{{-        range $i, $p := $o.Parameters}}
+{{-          if $p.Init}}
+        std::get<{{$i}} /* {{$p.Name}} */>(args).default_value = {{Eval "Literal" "Value" $p.Init "Type" $p.Type}};
+{{-          end}}
+{{-        end}}
+
+        auto res = FromJS(info, args);
+        if (res) {
+          {{/* indent */}}INTEROP_LOG(
+{{-        range $i, $p := $o.Parameters}}
+{{-          if $i}}, ", {{$p.Name}}: "{{else}}"{{$p.Name}}: "{{end}}, std::get<{{$i}}>(args)
+{{-        end}});
+          {{/* indent */}}
+{{-      if not (IsUndefinedType $o.Type) }}auto result = {{end -}}
+          impl->{{$o.Name}}(info.Env(){{range $i, $_ := $o.Parameters}}, std::get<{{$i}}>(args){{end}});
+          {{/* indent */ -}}
+{{-      if   IsUndefinedType $o.Type}}return info.Env().Undefined();
+{{-      else                        }}return ToJS(info.Env(), result);
+{{-      end                         }}
+        }
+        error = {{if $overloaded}}"\noverload {{$overload_idx}} failed to match:\n" + {{end}}res.error;
+      }
+{{-    end}}
+      Napi::TypeError::New(info.Env(), "no overload matched for {{$m.Name}}:\n" + error).ThrowAsJavaScriptException();
+      return {};
+    }
+{{-  end}}
+
+{{-  range $a := $attributes}}
+{{-   if not (HasAnnotation $a "SameObject")}}
+    Napi::Value get{{Title $a.Name}}(const Napi::CallbackInfo& info) {
+      return ToJS(info.Env(), impl->get{{Title $a.Name}}(info.Env()));
+    }
+{{-   if not $a.Readonly}}
+    void set{{Title $a.Name}}(const Napi::CallbackInfo& info, const Napi::Value& value) {
+      {{template "Type" $a.Type}} v{};
+      auto res = FromJS(info.Env(), value, v);
+      if (res) {
+        impl->set{{Title $a.Name}}(info.Env(), std::move(v));
+      } else {
+        res = res.Append("invalid value to {{$a.Name}}");
+        Napi::TypeError::New(info.Env(), res.error).ThrowAsJavaScriptException();
+      }
+    }
+{{-    end}}
+{{-   end}}
+{{-  end}}
+  };
+{{end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Dictionary emits the C++ method implementations and associated functions of
+-- the interop type that defines the given ast.Dictionary
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Dictionary"}}
+Result Converter<{{$.Name}}>::FromJS(Napi::Env env, Napi::Value value, {{$.Name}}& out) {
+  auto object = value.ToObject();
+  Result res;
+{{- template "DictionaryMembersFromJS" $}};
+  return Success;
+}
+
+Napi::Value Converter<{{$.Name}}>::ToJS(Napi::Env env, {{$.Name}} value) {
+  auto object = Napi::Object::New(env);
+{{- template "DictionaryMembersToJS" $}}
+  return object;
+}
+
+std::ostream& operator<<(std::ostream& o, const {{$.Name}}& dict) {
+    o << "{{$.Name}} {";
+{{-    range $i, $m := $.Members}}
+    o << {{if $i}}", "{{else}}" "{{end}} << "{{$m.Name}}: ";
+    utils::Write(o, dict.{{$m.Name}});
+{{-    end          }}
+    o << "}\n";
+    return o;
+}
+{{ end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- DictionaryMembersFromJS emits the C++ logic to convert each of the
+-- dictionary ast.Member fields from JavaScript to C++. Each call to ToJS() is
+-- emitted as a separate statement, and requires a 'Result res' local to be
+-- declared
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "DictionaryMembersFromJS"}}
+{{-    if $.Inherits}}{{template "DictionaryMembersFromJS" (Lookup $.Inherits)}}{{end}}
+{{-    range $i, $m := $.Members}}
+  {{/* indent */}}
+{{-      if   $m.Init }}res = interop::FromJSOptional(env, object.Get("{{$m.Name}}"), out.{{$m.Name}});
+{{-      else         }}res = interop::FromJS(env, object.Get("{{$m.Name}}"), out.{{$m.Name}});
+{{-      end          }}
+  if (!res) {
+    return res.Append("while converting member '{{$m.Name}}'");
+  }
+{{-    end}}
+{{- end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- DictionaryMembersToJS emits the C++ logic to convert each of the
+-- dictionary ast.Member fields to JavaScript from C++. Each call to ToJS() is
+-- emitted as a separate statement
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "DictionaryMembersToJS"}}
+{{-    if $.Inherits}}{{template "DictionaryMembersToJS" (Lookup $.Inherits)}}{{end}}
+{{-    range $m := $.Members}}
+  object.Set(Napi::String::New(env, "{{$m.Name}}"), interop::ToJS(env, value.{{$m.Name}}));
+{{-    end}}
+{{- end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Interface emits the C++ method implementations that define the given
+-- ast.Interface.
+-- Note: Most of the actual binding logic lives in the interface wrapper class.
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Interface"}}
+{{$.Name}}::{{$.Name}}() = default;
+
+{{$.Name}}* {{$.Name}}::Unwrap(Napi::Object object) {
+  auto* wrappers = Wrappers::For(object.Env());
+  if (!object.InstanceOf(wrappers->{{$.Name}}_ctor.Value())) {
+    return nullptr;
+  }
+  return Wrappers::W{{$.Name}}::Unwrap(object)->impl.get();
+}
+
+Interface<{{$.Name}}> {{$.Name}}::Bind(Napi::Env env, std::unique_ptr<{{$.Name}}>&& impl) {
+  auto* wrappers = Wrappers::For(env);
+  auto object = wrappers->{{$.Name}}_ctor.New({});
+  auto* wrapper = Wrappers::W{{$.Name}}::Unwrap(object);
+  wrapper->impl = std::move(impl);
+
+{{- /*Add the [SameObject] members as read-only property on the JS object.*/ -}}
+{{- range $a := AttributesOf $}}
+{{-   if HasAnnotation $a "SameObject"}}
+  object.DefineProperty(Napi::PropertyDescriptor::Value(
+    "{{$a.Name}}", ToJS(env, wrapper->impl->get{{Title $a.Name}}(env)), napi_default_jsproperty
+  ));
+{{-   end}}
+{{- end}}
+
+  return Interface<{{$.Name}}>(object);
+}
+
+{{$.Name}}::~{{$.Name}}() = default;
+{{ end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Enum emits the C++ associated functions of the interop type that defines the
+-- given ast.Enum
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Enum"}}
+bool Converter<{{$.Name}}>::FromString(std::string str, {{$.Name}}& out) {
+{{-  range $e := $.Values}}
+  if (str == {{$e.Value}}) {
+    out = {{$.Name}}::{{EnumEntryName $e.Value}};
+    return true;
+  }
+{{-  end}}
+  return false;
+}
+
+const char* Converter<{{$.Name}}>::ToString({{$.Name}} value) {
+  switch (value) {
+{{-  range $e := $.Values}}
+  case {{$.Name}}::{{EnumEntryName $e.Value}}:
+    return {{$e.Value}};
+{{-  end}}
+  }
+  return nullptr;
+}
+
+Result Converter<{{$.Name}}>::FromJS(Napi::Env env, Napi::Value value, {{$.Name}}& out) {
+  std::string str = value.ToString();
+  if (FromString(str, out)) {
+    return Success;
+  }
+  return Error(str + " is not a valid enum value of {{$.Name}}");
+}
+
+Napi::Value Converter<{{$.Name}}>::ToJS(Napi::Env env, {{$.Name}} value) {
+  switch (value) {
+{{-  range $e := $.Values}}
+  case {{$.Name}}::{{EnumEntryName $e.Value}}:
+    return Napi::String::New(env, {{$e.Value}});
+{{-  end}}
+  }
+  return env.Undefined();
+}
+
+std::ostream& operator<<(std::ostream& o, {{$.Name}} value) {
+  if (auto* s = Converter<{{$.Name}}>::ToString(value)) {
+    return o << s;
+  }
+  return o << "undefined<{{$.Name}}>";
+}
+
+{{end}}

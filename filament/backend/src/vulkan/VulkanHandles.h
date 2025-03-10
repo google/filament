@@ -55,7 +55,6 @@ inline uint8_t collapsedCount(Bitmask const& mask) {
 
 } // anonymous namespace
 
-class VulkanTimestamps;
 struct VulkanBufferObject;
 
 struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Resource {

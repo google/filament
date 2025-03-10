@@ -1,0 +1,895 @@
+Name
+
+    ARB_texture_cube_map_array
+
+Name Strings
+
+    GL_ARB_texture_cube_map_array
+
+Contact
+
+    Nick Haemel, AMD (nick.haemel 'at' amd.com)
+
+Contributors
+    Jeff Bolz,       NVIDIA
+    Yunjun Zhang,    AMD
+    Bill Licea-Kane, AMD
+    Graham Sellers,  AMD
+    Daniel Koch,     TransGaming
+    Mark Young,      AMD
+
+Notice
+
+    Copyright (c) 2009-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on July 3, 2009.
+
+Version
+
+    Last Modified Date: 12/07/2009
+    Author revision:    9
+
+Number
+
+    ARB Extension #71
+
+Dependencies
+
+    This extension is written against the OpenGL 3.0 specification and
+    version 1.30.08 of the OpenGL Shading Language specification.
+
+Overview
+
+    The GL_EXT_texture_array extension, and subsequently OpenGL 3.0 have
+    introduced the concept of one- and two-dimensional array textures.
+    An array texture is an ordered set of images with the same size and
+    format. Each image in an array texture has a unique level. This
+    extension expands texture array support to include cube map
+    textures.
+
+    A cube map array texture is a 2-dimensional array texture that may
+    contain many cube map layers. Each cube map layer is a unique cube
+    map image set. Images in a cube map array have the same size and
+    format limitations as one- and two-dimensional array textures. A
+    cube map array texture is specified using TexImage3D in a similar
+    manner to two-dimensional arrays. Cube map array textures can be
+    bound to a render targets of a frame buffer object as
+    two-dimensional arrays are using FramebufferTextureLayer.
+
+    When accessed by a programmable shader, a cube map array texture
+    acts as a single unit. The "s", "t", "r" texture coordinates are
+    treated as a regular cube map texture fetch. The "q" texture is
+    treated as an unnormalized floating-point value identifying the
+    layer of the cube map array texture. Cube map array texture lookups
+    do not filter between layers.
+
+    This extension does not provide for the use of cube map array
+    textures with fixed-function fragment processing.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <target> parameter of TexParameteri, TexParameteriv,
+    TexParameterf, TexParameterfv, BindTexture, and GenerateMipmap:
+
+        TEXTURE_CUBE_MAP_ARRAY_ARB                      0x9009
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetIntegerv and GetFloatv:
+
+        TEXTURE_BINDING_CUBE_MAP_ARRAY_ARB              0x900A
+
+    Accepted by the <target> parameter of TexImage3D, TexSubImage3D,
+    CompressedTeximage3D, CompressedTexSubImage3D and CopyTexSubImage3D:
+
+        TEXTURE_CUBE_MAP_ARRAY_ARB
+        PROXY_TEXTURE_CUBE_MAP_ARRAY_ARB                0x900B
+
+    Accepted by the <tex> parameter of GetTexImage:
+
+        TEXTURE_CUBE_MAP_ARRAY_ARB
+
+    Returned by the <type> parameter of GetActiveUniform:
+
+        SAMPLER_CUBE_MAP_ARRAY_ARB                      0x900C
+        SAMPLER_CUBE_MAP_ARRAY_SHADOW_ARB               0x900D
+        INT_SAMPLER_CUBE_MAP_ARRAY_ARB                  0x900E
+        UNSIGNED_INT_SAMPLER_CUBE_MAP_ARRAY_ARB         0x900F
+
+Additions to Chapter 2 of OpenGL 3.0 Specification (OpenGL Operation)
+
+    Modify section 2.20.3 "Shader Variables", page 91
+
+    (Add the following new return type to the 3rd paragraph on p.97)
+
+      SAMPLER_CUBE_MAP_ARRAY_ARB,
+      SAMPLER_CUBE_MAP_ARRAY_SHADOW_ARB,
+      INT_SAMPLER_CUBE_MAP_ARRAY_ARB,
+      UNSIGNED_INT_SAMPLER_CUBE_MAP_ARRAY_ARB,
+
+Addition to Chapter 3 of OpenGL 3.0 Specification (Rasterization)
+
+    Modify section 3.9, "Texturing", page 175
+
+    (modify the 3rd paragraph, p.175)
+
+    Six types of texture are supported; each is a collection of images
+    built from one-, two-, or three-dimensional array of image elements
+    referred to as texels. One-, two-, and three-dimensional textures
+    consist respectively of one-, two-, or three-dimensional texel
+    arrays. One- and two-dimensional array textures are arrays of one-
+    or two-dimensional images, consisting of one or more layers. A cube
+    map is a special two-dimensional array texture with six layers that
+    represent the faces of a cube. When accessing a cube map, the
+    texture coordinates are projected onto one of the six faces of the
+    cube. Finally a cube map array is a collection of cube map layers
+    stored as a two-dimensional array texture. When accessing a cube map
+    array, the texture coordinate "s", "t", "r" are applied similarly as
+    cube map while the last texture coordinate "q" is used as the index
+    of on the cube map slices.
+
+
+    Modify Section 3.9.1, Texture Image Specification, page 176
+
+    (modify the first paragraph of section, p. 176)
+
+    The command
+
+      void TexImage3D( enum target, int level, int internalformat,
+                       sizei width, sizei height, sizei depth, int border,
+                       enum format, enum type, void *data );
+
+    is used to specify a three-dimensional texture image. <target> must
+    be one of TEXTURE_3D for a three-dimensional texture or
+    TEXTURE_2D_ARRAY for a two-dimensional array texture or
+    TEXTURE_CUBE_MAP_ARRAY_ARB. Additionally, target may be
+    PROXY_TEXTURE_3D for a three-dimensional proxy texture,
+    PROXY_TEXTURE_2D_ARRAY for a two-dimensional proxy array texture, or
+    PROXY_TEXTURE_CUBE_MAP_ARRAY_ARB for a proxy cube map array texture.
+    If target is TEXTURE_CUBE_MAP_ARRAY_ARB or
+    PROXY_TEXTURE_CUBE_MAP_ARRAY_ARB, specifying a depth value that is
+    not a multiple of six results in an error of INVALID_VALUE.
+    INVALID_VALUE is also generated if the width and the height
+    parameters are not equal. ...
+
+    When <target> is TEXTURE_CUBE_MAP_ARRAY_ARB or
+    PROXY_TEXTURE_CUBE_MAP_ARRAY_ARB <width> and <height> must be equal,
+    otherwise the error INVALID_VALUE is generated. Also, <depth> must
+    be a multiple of six indicating 6N layer-faces in the cube map
+    array, otherwise the error INVALID_VALUE is generated.
+
+
+    (modify the third paragraph of section, p. 177)
+
+    Textures with a base internal format of DEPTH_COMPONENT or
+    DEPTH_STENCIL are supported by texture image specification commands
+    only if target is TEXTURE_1D, TEXTURE_2D, TEXTURE_1D_ARRAY,
+    TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP, TEXTURE_CUBE_MAP_ARRAY_ARB,
+    PROXY_TEXTURE_1D, PROXY_TEXTURE_2D, PROXY_TEXTURE_1D_ARRAY,
+    PROXY_TEXTURE_2D_ARRAY, PROXY_TEXTURE_CUBE_MAP or
+    PROXY_TEXTURE_CUBE_MAP_ARRAY_ARB. ...
+
+
+    (modify the second paragraph of section, p.186)
+
+    and w_b, h_b, and d_b are the specified border width, height, and
+    depth. wb and hb are the specified border value; d_b is the
+    specified border value if target is TEXTURE_3D, or zero if target is
+    TEXTURE_2D_ARRAY or TEXTURE_CUBE_MAP_ARRAY_ARB. Thus the last
+    two-dimensional image slice of the three-dimensional image is
+    indexed with the highest value of k. When <target> is
+    TEXTURE_CUBE_MAP_ARRAY_ARB. specifying a cube map array texture, k
+    refers to a layer-face. The layer is given by
+
+        layer = floor(k/6),
+
+    and the face is given by
+
+        face = k mod 6
+
+    When
+
+        face = 0: TEXTURE_CUBE_MAP_POSITVE_X,
+        face = 1: TEXTURE_CUBE_MAP_NEGATIVE_X,
+        face = 2: TEXTURE_CUBE_MAP_POSITVE_Y,
+        face = 3: TEXTURE_CUBE_MAP_NEGATIVE_Y,
+        face = 4: TEXTURE_CUBE_MAP_POSITVE_Z,
+        face = 5: TEXTURE_CUBE_MAP_NEGATIVE_Z.
+
+
+    (modify the fifth paragraph of section, p. 187)
+
+    ... The maximum allowable width and height of a cube map or cube map
+    array texture must be the same, and must be at least 2^(k-lod) + 2 *
+    b_t for image arrays level 0 through k, where k is the log base 2 of
+    MAX_CUBE_MAP_TEXTURE_SIZE. The maximum number of layers for one- and
+    two-dimensional array textures (height or depth, respectively), and
+    the maximum number of layer-faces for cube map array textures
+    (depth) must be at least MAX_ARRAY_TEXTURE_LAYERS_EXT for all
+    levels.
+
+    (modify the second last paragraph, p. 189)
+
+    An element (i, j, k) of the texel array is called a texel (for a
+    two-dimensional texture or one-dimensional array texture, k is
+    irrelevant; for a one-dimensional texture, j and k are both
+    irrelevant). If target is TEXTURE_2D_ARRAY or TEXTURE_3D, the
+    texture value for a fragment is determined by that fragment's
+    associated (s, t, r) coordinates, but may not correspond to any
+    actual texel. See figure 3.10. If target is
+    TEXTURE_CUBE_MAP_ARRAY_ARB, the texture value is determined by (s,
+    t, r, q) coordinates where "s", "t", "r" is defined to be the same
+    as for TEXTURE_CUBE_MAP and "q" is defined as the index of a
+    specific cube map in the cube map array.
+
+
+    (modify the first paragraph, p. 193)
+
+    ... and the target arguments of TexSubImage3D and CopyTexSubImage3D
+    must be TEXTURE_3D, TEXTURE_2D_ARRAY, or TEXTURE_CUBE_MAP_ARRAY_ARB.
+    The level parameter of each command specifies the level of the texel
+    array that is modified. If level is less than zero or greater than
+    the base 2 logarithm of the maximum texture width, height, or depth,
+    the error INVALID VALUE is generated.
+
+    (modify the second to last paragraph, p. 193)
+
+    Arguments <xoffset>, <yoffset>, and <zoffset> of TexSubImage3D and
+    CopyTex- SubImage3D specify the lower left texel coordinates of a
+    <width>-wide by <height>-high by <depth>-deep rectangular subregion
+    of the texel array. For cube map array textures, <zoffset> is the
+    first layer-face to update, and <depth> is the number layer-faces to
+    update. The depth argument ...
+
+
+    Modify Section 3.9.4, Texture Parameters, page 200
+
+    (modify the first paragraph of section, p. 200)
+
+    ... target is the target, either TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP or
+    TEXTURE_CUBE_MAP_ARRAY_ARB. ...
+
+
+    (modify third paragraph, p. 204)
+
+    ... For a one-dimensional or one-dimensional array texture, define
+    v(x, y) == 0 and w(x, y) == 0; for a two-dimensional,
+    two-dimensional array, cube map, or cube map array texture define
+    w(x, y) == 0. ...
+
+
+    (modify the first paragraph of "Mipmapping", p.209)
+
+    If the image array of level level_base, excluding its border, has
+    dimensions, w_t x h_t x d_t, then there are floor(log2(maxsize)) + 1
+    levels in the mipmap, where
+
+      maxsize = w_t,        for one-dimensional and one-dimensional
+                            array textures,
+
+      max(w_t, h_t),        for two-dimensional, two-dimensional array,
+                            cube map and cube map array textures,
+
+      max(w_t, h_t, d_t),   for three dimensional textures.
+
+
+    (modify the third paragraph in the "Automatic Mipmap Generation", p. 211)
+
+    The contents of the derived arrays are computed by repeated,
+    filtered reduction of the level_base array. For one- ,
+    two-dimensional or cube map array textures, each layer is filtered
+    independently. ...
+
+
+    (modify the first paragraph in the "Manual Mipmap Generation", p. 211)
+    Mipmaps can be generated manually with the command
+
+        void GenerateMipmap( enum target );
+
+    where target is one of TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP, or
+    TEXTURE_CUBE_MAP_ARRAY_ARB. ...
+
+
+    Modify Section 3.9.10, Texture Completeness, page 212
+
+    (add a new paragraph in the end of the section, p. 213)
+
+    A cube map array texture is cube array complete if it is complete
+    when treated as a two-dimensional array and cube complete for every
+    cube map slice within the array texture.
+
+
+    Modify Section 3.9.11, Texture State and Proxy State, page 214
+
+    (modify second and third paragraphs, p. 214)
+
+    In addition to image arrays for one-, two-, and three-dimensional
+    textures, one- and two-dimensional array textures, and the six image
+    arrays for the cube map texture, partially instantiated image arrays
+    are maintained for one-, two-, and three-dimensional textures and
+    one- and two-dimensional array textures, and cube map array
+    textures. Additionally, a single proxy image array is maintained for
+    the cube map texture. Each proxy image array includes width, height,
+    depth, border width, and internal format state values, as well as
+    state for the red, green, blue, alpha, luminance, and intensity
+    component resolutions. Proxy image arrays do not include image data,
+    nor do they include texture properties. ...
+
+
+    (update the first paragraph, p. 215)
+
+    Proxy arrays for one- and two-dimensional textures and one- and
+    two-dimensional array textures and cube map array textures are
+    operated on in the same way when TexImage1D is executed with target
+    specified as PROXY_TEXTURE_1D, TexImage2D is executed with target
+    specified as PROXY_TEXTURE_2D or PROXY_TEXTURE_1D_ARRAY, or
+    TexImage3D is executed with target specified as
+    PROXY_TETXURE_2D_ARRAY or PROXY_TEXTURE_CUBE_MAP_ARRAY_ARB.
+
+
+    Modify Section 3.9.12 Texture Objects, page 215
+
+    (update the beginning to add cube map array textures, p. 215)
+
+    In addition to the default textures TEXTURE_1D, TEXTURE_2D,
+    TEXTURE_3D, TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY,
+    and TEXTURE_CUBE_MAP_ARRAY_ARB, named one-, two-, and
+    three-dimensional, cube map, and one- , two-dimensional array
+    texture and cube map array texture objects can be created and
+    operated upon. The name space for texture objects is the unsigned
+    integers, with zero reserved by the GL.
+
+    A texture object is created by binding an unused name to TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY,
+    TEXTURE_2D_ARRAY, or TEXTURE_CUBE_MAP_ARRAY_ARB. The binding is
+    effected by calling
+
+      void BindTexture( enum target, uint texture );
+
+    with <target> set to the desired texture target and <texture> set to
+    the unused name. The resulting texture object is a new state vector,
+    comprising all the state values listed in section 3.8.11, set to the
+    same initial values. If the new texture object is bound to
+    TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP,
+    TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, or TEXTURE_CUBE_MAP_ARRAY_ARB,
+    it is and remains a one-, two-, three-dimensional, cube map, one- ,
+    two-dimensional array texture OR cube map array texture respectively
+    until it is deleted.
+
+    BindTexture may also be used to bind an existing texture object to
+    either TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP,
+    TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, or TEXTURE_CUBE_MAP_ARRAY_ARB.
+    The error INVALID_OPERATION is generated if an attempt is made to
+    bind a texture object of different dimensionality than the specified
+    target. If the bind is successful no change is made to the state of
+    the bound texture object, and any previous binding to target is
+    broken.
+
+    While a texture object is bound, GL operations on the target to
+    which it is bound affect the bound object, and queries of the target
+    to which it is bound return state from the bound object. If texture
+    mapping of the dimensionality of the target to which a texture
+    object is bound is enabled, the state of the bound texture object
+    directs the texturing operation.
+
+    In the initial state, TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, and
+    TEXTURE_CUBE_MAP_ARRAY_ARB have one-, two-, three-dimensional, cube
+    map, and one- and two-dimensional array and cube map array texture
+    state vectors respectively associated with them. In order that
+    access to these initial textures not be lost, they are treated as
+    texture objects all of whose names are 0. The initial one-, two-,
+    three-dimensional, cube map, one- and two-dimensional array and cube
+    map array textures are therefore operated upon, queried, and applied
+    as TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP,
+    TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, and TEXTURE_CUBE_MAP_ARRAY_ARB
+    respectively while 0 is bound to the corresponding targets.
+
+
+    (modify the first paragraph, p. 217)
+
+    ... a texture that is currently bound to one of the targets
+    TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP,
+    TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY, or TEXTURE_CUBE_MAP_ARRAY_ARB is
+    deleted, it is as though BindTexture had been executed with the same
+    target and texture zero. ...
+
+
+    (modify the second paragraph, p. 218)
+
+    The texture object name space, including the initial one-, two-, and
+    three dimensional, one- and two-dimensional array, cube map and cube
+    map array texture objects, is shared among all texture units. ...
+
+Additions to Chapter 4 of the OpenGL 3.0 Specification (Per-fragment Operations and the Frame Buffer)
+
+    Modify Section 4.4.2, Attaching Images to Framebuffer Objects, page 281
+
+    (modify the third paragraph in the section, p. 287)
+
+    The command
+
+      void FramebufferTextureLayer(enum target, enum attachment,
+                                   uint texture, int level, int layer);
+
+    operates identically to FramebufferTexture3D, except that it
+    attaches a single layer of a three-dimensional texture or a one- or
+    two-dimensional array texture, or a cube map array texture. <layer>
+    is an integer indicating the layer number, and is treated
+    identically to the <zoffset> parameter in FramebufferTexture3D for
+    three-dimensional textures, one- and two-dimensional textures. For
+    cube map array textures, <layer> mod 6 indicates a face of a cube
+    map slice within the cube map array. the order of the face is
+    defined as in 3.9.1. The error INVALID_VALUE is generated if <layer>
+    is negative. The error INVALID_OPERATION is generated if <texture>
+    is non-zero and is not the name of a three dimensional texture, one-
+    or two-dimensional array texture, or cube map array texture. Unlike
+    FramebufferTexture3D, no <textarget> parameter is accepted.
+
+    (modify last condition for framebuffer attachment completeness, p. 291)
+
+     * If FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is TEXTURE and
+        FRAMEBUFFER_ATTACHMENT_OBJECT_NAME names a one-dimensional,
+        two-dimensional or cube map array texture, then
+        FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER must be smaller than the
+        number of layers in the texture.
+
+    Modify Section 4.4.4.2, Framebuffer Completeness
+
+    (modify the completeness requirements of layered framebuffer
+    completeness added by GL_ARB_geometry_shader4)
+
+    * If any framebuffer attachment is layered, ... (i.e., three-
+      dimensional, cube map, one- or two dimensional array, or cube map
+      array textures).
+      { FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS_{EXT|ARB} }
+
+    * If any framebuffer attachment is layered, ... For one- and two-
+      dimensional array textures, and cube map array textures, the layer
+      count is the number of layers in the array texture.
+      { FRAMEBUFFER_INCOMPLETE_LAYER_COUNT_{EXT|ARB} }
+
+    Modify Section 4.4.7, Layered Framebuffers
+
+    (add the following paragraph following table X.4, Layer numbers
+    for cube map texture faces)
+
+    When cube map array texture levels are attached to a layered
+    framebuffer, the layer number corresponds to a layer-face. The
+    layer-face can be translated into an array layer and a cube map face
+    by
+
+        array_layer = floor(layer/6), and
+        face = layer mod 6.
+
+    The face number correspond to the cube map faces as listed in
+    table X.4.
+
+Additions to Chapter 5 of the OpenGL 3.0 specification (Special Functions)
+
+    Modify Section 5.4, Display List, page 306
+
+    (modify the fifth paragraph in the section, p. 311)
+
+    TexImage3D, TexImage2D, TexImage1D, Histogram, and ColorTable are
+    executed immediately when called with the corresponding proxy
+    arguments PROXY_TEXTURE_3D or PROXY_TEXTURE_2D_ARRAY or
+    PROXY_TEXTURE_CUBE_MAP_ARRAY_ARB; ...
+
+Additions to Chapter 6 of the OpenGL 3.0 specification (State and State Requests)
+
+    Modify Section 6.1.3, Enumerated Queries, page 316
+
+    (modify the last paragraph, p. 317)
+
+    GetTexParameter parameter <target> may be one of TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP, TEXTURE_1D_ARRAY,
+    TEXTURE_2D_ARRAY, or TEXTURE_CUBE_MAP_ARRAY_ARB, indicating the
+    currently bound one-, two-, three-dimensional, cube map, or one- or
+    two-dimensional array texture or cube map array texture.
+    GetTexLevelParameter parameter target may be one of TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_3D, TEXTURE_CUBE_MAP_POSITIVE_X,
+    TEXTURE_CUBE_MAP_NEGATIVE_X, TEXTURE_CUBE_MAP_POSITIVE_Y,
+    TEXTURE_CUBE_MAP_NEGATIVE_Y, TEXTURE_CUBE_MAP_POSITIVE_Z,
+    TEXTURE_CUBE_MAP_NEGATIVE_Z, TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY,
+    PROXY_TEXTURE_1D, PROXY_TEXTURE_2D, PROXY_TEXTURE_3D,
+    PROXY_TEXTURE_CUBE_MAP, PROXY_TEXTURE_1D_ARRAY,
+    PROXY_TEXTURE_2D_ARRAY, or PROXY_TEXTURE_CUBE_MAP_ARRAY, indicating
+    the one-, two-, or three-dimensional texture, one of the six
+    distinct 2D images making up the cube map texture, the one- or
+    two-dimensional array texture, or the one-, two-, three-dimensional,
+    cube map, or one- or two-dimensional array or cube map array proxy
+    state vector. ...
+
+
+    Modify Section 6.1.4, Texture Queries, page 322
+
+    (modify the first paragraph, p. 322)
+
+    The command
+
+      void GetTexImage( enum tex, int lod, enum format,
+                        enum type, void *img );
+
+    is used to obtain texture images. It is somewhat different from the
+    other get commands; tex is a symbolic value indicating which texture
+    (or texture face in the case of a cube map texture target name) is
+    to be obtained. TEXTURE_1D, TEXTURE_2D, TEXTURE_3D,
+    TEXTURE_1D_ARRAY, TEXTURE_2D_ARRAY and TEXTURE_CUBE_MAP_ARRAY_ARB
+    indicate a one-, two-, or three-dimensional texture, or one- or
+    two-dimensional array texture, or cube map array texture,
+    respectively. ...
+
+    (modify the third paragraph, p. 322)
+
+    GetTexImage obtains... from the first image to the last for
+    three-dimensional textures. One- and two-dimensional array textures
+    and cube map array textures are treated as two-dimensional
+    three-dimensional and three-dimensional images, respectively, where
+    the layers are treated as rows or images. These groups are then...
+
+    (modify the first paragraph, p. 323)
+
+    For three-dimensional ,two-dimensional array and cube map array
+    textures, pixel storage operations are applied as if the image were
+    two-dimensional, except that the additional pixel storage state
+    values PACK_IMAGE_HEIGHT and PACK_SKIP_IMAGES are applied. ...
+
+Dependencies on EXT_gpu_shader4 and the OpenGL Shading Language (GLSL)
+
+    Because there is no fixed-function pipeline access for cube map
+    array textures, this extension is only valid when EXT_gpu_shader4
+    and GLSL is supported. if GLSL is not supported, the shading
+    language modifications and references to SAMPLER_CUBE_MAP_ARRAY_ARB
+    and SAMPLER_CUBE_MAP_ARRAY_SHADOW_ARB should be removed.
+
+Errors
+
+    TexImage3D generates the error INVALID_VALUE if <target> is
+    TEXTURE_CUBE_MAP_ARRAY_ARB and <depth> is not a multiple of 6.
+
+    TexImage3D generates the error INVALID_VALUE if <target> is
+    TEXTURE_CUBE_MAP_ARRAY_ARB and <width> and <height> are not equal.
+
+New State
+
+    (add to table 6.19, p. 357)
+                                                              Initial
+    Get Value                           Type     Get Command  Value       Description                       Sec.    Attribute
+    ----------------------------------  -------  -----------  ----------  -----------------------------  ------  ---------
+    TEXTURE_BINDING_CUBE_MAP_ARRAY_ARB  2*x3xZ+  GetIntegerv    0         texture object bound              3.9.12  texture
+                                                                          to TEXTURE_CUBE_MAP_ARRAY_ARB
+
+    TEXTURE_CUBE_MAP_ARRAY_ARB          nxI      GetTexImage   see 3.9.1  cube map array texture image      3.9.1    -
+                                                                          at lod i
+
+Modification to the OpenGL shading Language Specification, Version 1.30.08
+
+    #extension GL_ARB_texture_cube_map_array: <behavior>
+
+    The above line is needed to control the GLSL features described in
+    this section.
+
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+     #define GL_ARB_texture_cube_map_array 1
+
+
+    Add to Section 3.6 "Keywords"
+
+    (add new sampler type )
+
+    samplerCubeArray, samplerCubeArrayShadow, isamplerCubeArray,
+    usamplerCubeArray
+
+
+    Add to Section 4.1 "Basic Types"
+
+    (add the following entries to the table: Floating Point Sampler Types)
+
+    samplerCubeArray         handle for accessing a cube map array texture
+
+    samplerCubeArrayShadow   handle for accessing a cube map array depth
+                             texture with comparison
+
+    (add the following entries to the table: Signed Integer Sampler Types)
+
+    isamplerCubeArray        handle for accessing an integer cube map
+                             array texture
+
+    (add the following entries to the table: Unsigned Integer Sampler Types)
+
+    usamplerCubeArray        handle for accessing an unsigned integer
+                             cube map array texture
+
+    Add at the end of Section 7.1
+       "Vertex and Geometry Shader Special Variables"
+
+    (after last paragraph already talking about gl_Layer)
+
+    The output variable gl_Layer takes on a special value when used with
+    an array of cubemap textures. Instead of simply refering to the
+    layer, it is used to reference a cube map face inside a particular
+    layer as well. Setting gl_Layer to the value (layer*6+face) will
+    render to the appropriate <face> of the cube defined in <layer>. The
+    face values are defined in Table 4.x of Section 4.4.7 'Layered
+    Framebuffers' of the GL spec, but repeated here for clarity:
+
+          face value            resulting target
+        --------------   ------------------------------
+              0            TEXTURE_CUBE_MAP_POSITVE_X
+              1            TEXTURE_CUBE_MAP_NEGATIVE_X
+              2            TEXTURE_CUBE_MAP_POSITVE_Y
+              3            TEXTURE_CUBE_MAP_NEGATIVE_Y
+              4            TEXTURE_CUBE_MAP_POSITVE_Z
+              5            TEXTURE_CUBE_MAP_NEGATIVE_Z
+
+    For example, to render to the Positive Y cube map face located in
+    the 5th layer of the cube map array, gl_Layer should be set to
+    (5*6+2).
+
+    Add to section 8.7 "Texture Lookup Functions"
+
+    (Add new functions to the set of allowed texture lookup functions p. 85):
+    Syntax:
+
+      ivec3 textureSize(samplerCubeArray sampler, int lod)
+      gvec4 texture(gsamplerCubeArray sampler, vec4 coord
+                    [, float bias])
+      gvec4 textureLod(gsamplerCubeArray sampler, vec4 coord, float lod)
+      ivec3 textureSize(samplerCubeArrayShadow sampler, int lod)
+      float texture(samplerCubeArrayShadow sampler, vec4 coord, float compare)
+      gvec4 textureGrad(gsamplerCubeArray sampler, vec4 coord,
+                        vec3 ddx, vec3 ddy);
+
+    Description:
+
+      Cube map array functions are similar to the equivalent cube map or
+      2D array functions. The value of coord.w is used to select the
+      layer of the array and the value coord.xyz is used to select the
+      location within the selected layer of the cubemap. See section 3.8
+      for more details. The shadow comparison texture functions take the
+      comparison value from a separate input rather than from the
+      primary coord vector.
+
+    Modify the Description of the textureSize function.
+
+       For the array forms, the last component of the return value is
+       the number of layers in the texture array, or the number of cubes
+       in the texture cube map array.
+
+Issues
+
+    (1) When fetching the Cubemap array texture in shader, should the
+        "q" coordinate be used to index a single layer of the whole
+        array as 2D array texture does, or to index a specific cubemap
+        within the array?
+
+      RESOLVED: "q" is used to index a specific cubemap in the array.
+      This is an intuitive selection because otherwise the it only need
+      2 coordinates instead of 3 to fetch a value in one layer of the
+      array.
+
+
+    (2) When specifying and indexing cube map array texture, should the
+        depth(layer) be the absolute number of layers in the array or
+        the number of cube maps?
+
+      RESOLVED: To support the indexing of cube map in cube map array, a
+      list of new api calls needs to be added, which may not be a
+      preferred direction.
+
+
+    (3) Should partial updates to a cube map set in a cube map array
+        texture be allowed?
+
+      RESOLVED: No, maintain the same restriction as updating a cube map
+      texture to retain orthogonality.
+
+
+    (4) Are cube map arrays cube maps where each "face" is an array or
+        arrays where each layer is a cube map? Should the API follow the
+        cube map or texture array paradigm? Should the data organization
+        for cube map arrays be exposed to or hidden from applications?
+
+      RESOLVED: Cube map arrays are specified in a manner similar to
+      two-dimensional array textures (as described in the
+      EXT_texture_array extension), where each mipmap level is
+      represented as a set of two-dimensional images. Each of these
+      two-dimensional images corresponds to a single face of a single
+      layer of the full cube map array, referred to as a "layer-face".
+      The first six two-dimensional images of the mipmap level
+      correspond to the six faces of the first layer of the cube map
+      array, and subsequent groups of six layer-faces correspond to
+      subsequent cube map array layers. For each cube map array layer,
+      the six two-dimensional images correspond to the positive X,
+      negative X, positive Y, negative Y, positive Z and negative Z
+      faces, respectively. A valid cube map array texture will thus
+      always have a multiple of 6 texture layers.
+
+      Cube maps and array textures use different paradigms for texture
+      image specification. Cube maps are specified one face at a time
+      (using TEXTURE_CUBE_MAP_POSITIVE_X, etc.). Sub-texture updates to
+      cube maps are also performed one face at a time. On the other
+      hand, array textures are specified entirely at once, and
+      sub-texture updates can span a subset of layers.
+
+      Cube map arrays follow the array texture paradigm. Cube map arrays
+      are specified all layer-faces at once or as a subset of
+      layer-faces. This avoids adding complexity to the API and targets
+      higher performance by lowering the number of calls necessary to
+      build a cube map array texture. It also ensures that there will
+      not be any texture completeness problems because of missing faces
+      or faces with mismatched sizes.
+
+      Since cube map array textures use the array texture paradigm, it
+      is necessary for applications to understand the data organization
+      of a cube map array. The data organization is exposed both at the
+      bitmap level and at the depth/zoffset/layer level. The <depth>
+      parameter used when specifying cube map array data is the number
+      of layer-faces. The <zoffset> parameter used for sub-texture
+      updates is also given as a layer-face. The <layer> parameter used
+      with the FBO API is also a layer-face.
+
+
+    (5) Should this organization be exposed when using geometry
+        programs/shaders to select layer-faces for rendering?
+
+      RESOLVED: Yes. Since layer-faces (layer*6+face) are exposed at the
+      API level, it is reasonable to expose this at the shader level.
+      The single layer output is preserved, and the value written to it
+      is interpreted as a layer-face.
+
+      Since the cube map array is treated as a special array of 2
+      dimensional textures, the user may render to it inside of a
+      geometry shader using the layered rendering functionality. The
+      user must first attach the cube map texture array to a framebuffer
+      color attachment using:
+
+            void FramebufferTextureARB(enum target, enum attachment,
+                                       uint texture, int level)
+
+      where <texture> defines the texture object containing a cube map
+      array texture.
+
+      Inside of the geometry shader, setting 'gl_Layer' to the value
+      (layer*6+face) will render to the appropriate <face> of the cube
+      defined in <layer>. The face values are defined in Table 4.x of
+      Section 4.4.7 'Layered Framebuffers' of the GL spec, but repeated
+      here for clarity:
+
+          face value            resulting target
+        --------------   ------------------------------
+              0            TEXTURE_CUBE_MAP_POSITVE_X
+              1            TEXTURE_CUBE_MAP_NEGATIVE_X
+              2            TEXTURE_CUBE_MAP_POSITVE_Y
+              3            TEXTURE_CUBE_MAP_NEGATIVE_Y
+              4            TEXTURE_CUBE_MAP_POSITVE_Z
+              5            TEXTURE_CUBE_MAP_NEGATIVE_Z
+
+      For example, to render to the Positive Y cube map face located in
+      the 5th layer of the cube map array, gl_Layer should be set to
+      (5*6+2).
+
+
+    (6) Should TexImage3D be enhanced to take TEXTURE_CUBE_MAP as a
+        <target> where the data is the whole cube map?
+
+      RESOLVED: No. From an implementation perspective this may be quite
+      simple (a cube map is a cube map array with one layer). However,
+      there is not much value added by doing this. An abundance of
+      existing code that uses cube maps would not benefit from the
+      change.
+
+
+    (7) Should the FBO API provide a mechanism for attaching a single
+        cube map from an array as an attachment for layered rendering?
+
+     RESOLVED: No. This is an interesting idea, but it doesn't provide
+     much functionality. This can easily be done as part of the geometry
+     program/shader. A more interesting idea for future versions of
+     OpenGL or as an extension is to allow texture data specified with
+     one texture target to be "typecast" or viewed as if specified with
+     a different target. Such an extension would allow an application to
+     view an array (or subset of an array) of two-dimensional texture
+     images as a two-dimensional array, a three-dimensional texture, or
+     a cube map array.
+
+
+    (8) How do you determine the maximum number of cube map array
+        texture layers allowed by an implementation?
+
+      RESOLVED: This extension treats cube map array textures like
+      two-dimensional array textures, except that the number of
+      layer-faces must be a multiple of six, and the width and height
+      must be equal. There is no separate query for the number of layers
+      in a cube map array, but the limit on the number of layers in an
+      array texture (EXT_texture_array) also applies to the total number
+      of layer-faces in a cube map array texture.
+
+      For example, if an implementation supporting this extension has a
+      limit of 512 layers for array, a cube map array texture may have
+      no more than floor(512/6) = 85 layers.
+
+    (9) Do we really need to define integer versions of cube map array
+        sampler types?
+
+      RESOLVED: Yes. It's not clear if they will be useful to any
+      applications, but there is no real reason no to provide them.
+
+    (10) Should we provide texture LOD functions for shadow sampler
+         targets?
+
+      RESOLVED: Yes. The level of detail computations for a texture used
+      as a shadow map are completely identical to that for other
+      textures.
+
+      However, we provide separate data types for the two textures
+      (e.g., sampler2D vs. sampler2DShadow), and there is no mechanism
+      to cast from one to the other. If we didn't provide these
+      functions, the only way to perform an LOD computation for a
+      texture used as a shadow map would be to bind the same texture
+      object to two different texture image units, one associated with a
+      shadow sampler and the other associated with a normal sampler.
+
+    (11) What built-in functions are available for 2D arrays that are
+         not provided for cube map arrays?
+
+      RESOLVED: Functions equivalent to the following 2D array functions
+      are not available for cube map arrays:
+
+        vec4 texelFetch2DArray(sampler2DArray sampler, ivec3 coord, int lod)
+        vec4 shadow2DArrayGrad(sampler2DArrayShadow sampler, vec4 coord,
+                               vec2 ddx, vec2 ddy);
+        vec4 texelFetch2DArrayOffset(sampler2DArray sampler, ivec3 coord,
+                                     int lod, ivec2 offset)
+        vec4 shadow2DArrayGradOffset(sampler2DArrayShadow sampler,
+                                     vec4 coord, vec2 ddx, vec2 ddy,
+                                     ivec2 offset);
+
+    (12) What does ivec3 textureSize(samplerCubeArray sampler, int lod)
+         in the z component?
+
+      Resolved: array_layer (that is, number of cube maps in the array).
+
+      The spec is currently ambiguous, and can be interpreted as
+      layer (the number of cube map faces) or array_layer = floor(layer/6),
+      the number of cube maps.
+ 
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     9    12/07/09  wwlk      Edit texture function table description
+                              as resolved in issue 12
+     8    12/07/09  wwlk      Resolved issue 12
+     7    11/13/09  wwlk      Added array size returned issue 12
+     6    11/11/09  wwlk      Correct more mistaken GLSL prototypes
+                              gSamplerCube takes vec3 ddx and ddy
+                              gSamplerCube do not have offsets
+                              gSamplerCubeArray should match.
+     5    09/09/09  groth     Correct some mistaken GLSL prototypes
+     4    08/02/09  Jon Leech Reformat to 80 columns and assign ARB
+                              extension number.
+     3    07/22/09  myoung    Fix gl_layer interaction description
+     2    06/30/09  gsellers  Fix enumerant values
+     1    05/06/09  nickh     First draft

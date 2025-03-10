@@ -1,0 +1,261 @@
+Name
+
+    NV_texture_env_combine4
+
+Name Strings
+
+    GL_NV_texture_env_combine4
+
+Contact
+
+    Michael Gold, NVIDIA Corporation (gold 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 1999, 2000, 2001.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Version
+
+    NVIDIA date: January 18, 2001
+    Version:     14
+
+Number
+
+    195
+
+Dependencies
+
+    EXT_texture_env_combine is required and is modified by this extension
+    ARB_multitexture affects the definition of this extension
+
+Overview
+
+    New texture environment function COMBINE4_NV allows programmable
+    texture combiner operations, including
+
+        ADD                     Arg0 * Arg1 + Arg2 * Arg3
+        ADD_SIGNED_EXT          Arg0 * Arg1 + Arg2 * Arg3 - 0.5
+
+    where Arg0, Arg1, Arg2 and Arg3 are derived from
+
+        ZERO                    the value 0
+        PRIMARY_COLOR_EXT       primary color of incoming fragment
+        TEXTURE                 texture color of corresponding texture unit
+        CONSTANT_EXT            texture environment constant color
+        PREVIOUS_EXT            result of previous texture environment; on
+                                texture unit 0, this maps to PRIMARY_COLOR_EXT
+        TEXTURE<n>_ARB          texture color of the <n>th texture unit
+
+    In addition, the result may be scaled by 1.0, 2.0 or 4.0.
+
+Issues
+
+    None
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv, and
+    TexEnviv when the <pname> parameter value is TEXTURE_ENV_MODE
+
+        COMBINE4_NV                                     0x8503
+
+    Accepted by the <pname> parameter of GetTexEnvfv, GetTexEnviv,
+    TexEnvf, TexEnvi, TexEnvfv, and TexEnviv when the <target> parameter
+    value is TEXTURE_ENV
+
+        SOURCE3_RGB_NV                                  0x8583
+        SOURCE3_ALPHA_NV                                0x858B
+        OPERAND3_RGB_NV                                 0x8593
+        OPERAND3_ALPHA_NV                               0x859B
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv, and
+    TexEnviv when the <pname> parameter value is SOURCE0_RGB_EXT,
+    SOURCE1_RGB_EXT, SOURCE2_RGB_EXT, SOURCE3_RGB_NV, SOURCE0_ALPHA_EXT,
+    SOURCE1_ALPHA_EXT, SOURCE2_ALPHA_EXT, or SOURCE3_ALPHA_NV
+
+        ZERO
+        TEXTURE<n>_ARB
+
+    where <n> is in the range 0 to NUMBER_OF_TEXTURE_UNITS_ARB-1.
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv, and
+    TexEnviv when the <pname> parameter value is OPERAND0_RGB_EXT,
+    OPERAND1_RGB_EXT, OPERAND2_RGB_EXT or OPERAND3_RGB_NV
+
+        SRC_COLOR
+        ONE_MINUS_SRC_COLOR
+        SRC_ALPHA
+        ONE_MINUS_SRC_ALPHA     
+
+    Accepted by the <params> parameter of TexEnvf, TexEnvi, TexEnvfv, and
+    TexEnviv when the <pname> parameter value is OPERAND0_ALPHA_EXT,
+    OPERAND1_ALPHA_EXT, OPERAND2_ALPHA_EXT, or OPERAND3_ALPHA_NV
+
+        SRC_ALPHA
+        ONE_MINUS_SRC_ALPHA     
+
+Additions to Chapter 2 of the OpenGL 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the OpenGL 1.2 Specification (Rasterization)
+
+    Added to subsection 3.8.9, before the paragraph describing the state
+    requirements:
+
+    If the value of TEXTURE_ENV_MODE is COMBINE4_NV, the form of the
+    texture function depends on the values of COMBINE_RGB_EXT and
+    COMBINE_ALPHA_EXT, according to table 3.21.  The RGB and ALPHA results
+    of the texture function are then multiplied by the values of
+    RGB_SCALE_EXT and ALPHA_SCALE, respectively.  The results are clamped
+    to [0,1].  If the value of COMBINE_RGB_EXT or COMBINE_ALPHA_EXT is not
+    one of the listed values, the result is undefined.
+
+        COMBINE_RGB_EXT or
+        COMBINE_ALPHA_EXT       Texture Function
+        ------------------      ----------------
+        ADD                     Arg0 * Arg1 + Arg2 * Arg3
+        ADD_SIGNED_EXT          Arg0 * Arg1 + Arg2 * Arg3 - 0.5
+
+        Table 3.21: COMBINE4_NV texture functions
+
+    The arguments Arg0, Arg1, Arg2 and Arg3 are determined by the values
+    of SOURCE<n>_RGB_EXT, SOURCE<n>_ALPHA_EXT, OPERAND<n>_RGB_EXT and
+    OPERAND<n>_ALPHA_EXT.  In the following two tables, Ct and At are the
+    filtered texture RGB and alpha values; Cc and Ac are the texture
+    environment RGB and alpha values; Cf and Af are the RGB and alpha of
+    the primary color of the incoming fragment; and Cp and Ap are the RGB
+    and alpha values resulting from the previous texture environment.  On
+    texture environment 0, Cp and Ap are identical to Cf and Af,
+    respectively.  Ct<n> and At<n> are the filtered texture RGB and alpha
+    values from the texture bound to the <n>th texture unit.  If the <n>th
+    texture unit is disabled, the value of each component is 1.  The
+    relationship is described in tables 3.22 and 3.23.
+
+        SOURCE<n>_RGB_EXT       OPERAND<n>_RGB_EXT      Argument
+        -----------------       --------------          --------
+        ZERO                    SRC_COLOR               0
+                                ONE_MINUS_SRC_COLOR     1
+                                SRC_ALPHA               0
+                                ONE_MINUS_SRC_ALPHA     1
+        TEXTURE                 SRC_COLOR               Ct
+                                ONE_MINUS_SRC_COLOR     (1-Ct)
+                                SRC_ALPHA               At
+                                ONE_MINUS_SRC_ALPHA     (1-At)
+        CONSTANT_EXT            SRC_COLOR               Cc
+                                ONE_MINUS_SRC_COLOR     (1-Cc)
+                                SRC_ALPHA               Ac
+                                ONE_MINUS_SRC_ALPHA     (1-Ac)
+        PRIMARY_COLOR_EXT       SRC_COLOR               Cf
+                                ONE_MINUS_SRC_COLOR     (1-Cf)
+                                SRC_ALPHA               Af
+                                ONE_MINUS_SRC_ALPHA     (1-Af)
+        PREVIOUS_EXT            SRC_COLOR               Cp
+                                ONE_MINUS_SRC_COLOR     (1-Cp)
+                                SRC_ALPHA               Ap
+                                ONE_MINUS_SRC_ALPHA     (1-Ap)
+        TEXTURE<n>_ARB          SRC_COLOR               Ct<n>
+                                ONE_MINUS_SRC_COLOR     (1-Ct<n>)
+                                SRC_ALPHA               At<n>
+                                ONE_MINUS_SRC_ALPHA     (1-At<n>)
+
+        Table 3.22: Arguments for COMBINE_RGB_EXT functions
+
+        SOURCE<n>_ALPHA_EXT     OPERAND<n>_ALPHA_EXT    Argument
+        -----------------       --------------          --------
+        ZERO                    SRC_ALPHA               0
+                                ONE_MINUS_SRC_ALPHA     1
+        TEXTURE                 SRC_ALPHA               At
+                                ONE_MINUS_SRC_ALPHA     (1-At)
+        CONSTANT_EXT            SRC_ALPHA               Ac
+                                ONE_MINUS_SRC_ALPHA     (1-Ac)
+        PRIMARY_COLOR_EXT       SRC_ALPHA               Af
+                                ONE_MINUS_SRC_ALPHA     (1-Af)
+        PREVIOUS_EXT            SRC_ALPHA               Ap
+                                ONE_MINUS_SRC_ALPHA     (1-Ap)
+        TEXTURE<n>_ARB          SRC_ALPHA               At<n>
+                                ONE_MINUS_SRC_ALPHA     (1-At<n>)
+
+        Table 3.23: Arguments for COMBINE_ALPHA_EXT functions
+
+Additions to Chapter 4 of the OpenGL 1.2 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the OpenGL 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_ENUM is generated if <params> value for SOURCE0_RGB_EXT,
+    SOURCE1_RGB_EXT, SOURCE2_RGB_EXT, SOURCE3_RGB_NV, SOURCE0_ALPHA_EXT,
+    SOURCE1_ALPHA_EXT, SOURCE2_ALPHA_EXT or SOURCE3_ALPHA_NV is not one of
+    ZERO, TEXTURE, CONSTANT_EXT, PRIMARY_COLOR_EXT, PREVIOUS_EXT or
+    TEXTURE<n>_ARB, where <n> is in the range 0 to
+    NUMBER_OF_TEXTURE_UNITS_ARB-1.
+
+    INVALID_ENUM is generated if <params> value for OPERAND0_RGB_EXT,
+    OPERAND1_RGB_EXT, OPERAND2_RGB_EXT or OPERAND3_RGB_NV is not one of
+    SRC_COLOR, ONE_MINUS_SRC_COLOR, SRC_ALPHA or ONE_MINUS_SRC_ALPHA.
+
+    INVALID_ENUM is generated if <params> value for OPERAND0_ALPHA_EXT
+    OPERAND1_ALPHA_EXT, OPERAND2_ALPHA_EXT, or OPERAND3_ALPHA_NV is not
+    one of SRC_ALPHA or ONE_MINUS_SRC_ALPHA.
+
+Modifications to EXT_texture_env_combine
+
+    This extension relaxes the restrictions on SOURCE<n>_RGB_EXT,
+    SOURCE<n>_ALPHA_EXT, OPERAND<n>_RGB_EXT and OPERAND<n>_ALPHA_EXT for
+    use with EXT_texture_env_combine.  All params specified by Table 3.22
+    and Table 3.23 are valid.
+
+Dependencies on ARB_multitexture
+
+    If ARB_multitexture is not implemented, all references to
+    TEXTURE<n>_ARB and NUMBER_OF_TEXTURE_UNITS_ARB are deleted.
+
+New State
+
+ Get Value           Get Command    Type      Initial Value        Attribute
+ ---------           -----------    ----      -------------        ---------
+ SOURCE3_RGB_NV      GetTexEnviv    n x Z5+n  ZERO                 texture
+ SOURCE3_ALPHA_NV    GetTexEnviv    n x Z5+n  ZERO                 texture
+ OPERAND3_RGB_NV     GetTexEnviv    n x Z2    ONE_MINUS_SRC_COLOR  texture
+ OPERAND3_ALPHA_NV   GetTexEnviv    n x Z2    ONE_MINUS_SRC_ALPHA  texture
+
+New Implementation Dependent State
+
+    None
+
+NVIDIA Implementation Details
+
+    Because of a hardware limitation, TNT, TNT2, GeForce, and Quadro
+    treat "scale by 4.0" with the COMBINE_RGB_EXT or COMBINE_ALPHA_EXT
+    mode of ADD_SIGNED_EXT as "scale by 2.0".
+
+Revision History
+
+    2/22/00 mjk - added NVIDIA Implementation Details
+

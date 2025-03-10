@@ -134,10 +134,10 @@ Engine* FEngine::create(Builder const& builder) {
                 .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
                 .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
                 .disableHandleUseAfterFreeCheck = instance->features.backend.disable_handle_use_after_free_check,
+                .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
                 .forceGLES2Context = instance->getConfig().forceGLES2Context,
                 .stereoscopicType = instance->getConfig().stereoscopicType,
                 .assertNativeWindowIsValid = instance->features.backend.opengl.assert_native_window_is_valid,
-                .metalDisablePanicOnDrawableFailure = instance->getConfig().metalDisablePanicOnDrawableFailure,
         };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
@@ -652,7 +652,8 @@ void FEngine::prepare() {
     DriverApi& driver = getDriverApi();
 
     for (auto& materialInstanceList: mMaterialInstances) {
-        materialInstanceList.second.forEach([&driver](FMaterialInstance const* item) {
+        materialInstanceList.second.forEach([&driver](FMaterialInstance* item) {
+            item->commitStreamUniformAssociations(driver);
             item->commit(driver);
         });
     }
@@ -728,10 +729,10 @@ int FEngine::loop() {
             .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
             .disableParallelShaderCompile = features.backend.disable_parallel_shader_compile,
             .disableHandleUseAfterFreeCheck = features.backend.disable_handle_use_after_free_check,
+            .disableHeapHandleTags = features.backend.disable_heap_handle_tags,
             .forceGLES2Context = mConfig.forceGLES2Context,
             .stereoscopicType =  mConfig.stereoscopicType,
             .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
-            .metalDisablePanicOnDrawableFailure = mConfig.metalDisablePanicOnDrawableFailure,
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 

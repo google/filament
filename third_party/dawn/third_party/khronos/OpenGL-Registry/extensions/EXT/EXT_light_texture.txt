@@ -1,0 +1,382 @@
+Name
+
+    EXT_light_texture
+
+Name Strings
+
+    GL_EXT_light_texture
+
+Version
+
+    Last Modified Date: September 26, 1998
+    Author Revision: $Header: //depot/main/doc/registry/extensions/EXT/light_texture.spec#15 $
+
+Number
+
+    117
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    EXT_fragment_lighting is required.
+    EXT_multitexture affects the definition of this extension.
+    SGIX_shadow affects the definition of this extension.
+    SGIX_color_range affects the definition of this extension.
+
+Overview
+
+    This extension defines a general mechanism for substituting the
+    fragment color computed during texture environment processing in
+    place of other fragment attributes such as the fragment normal, or
+    as sources for some of the computations in the fragment processing
+    pipeline, for example as material or light parameters in the
+    fragment lighting computations.
+
+
+    Cf ----------------------+
+                             |                 +-> to lighting parameters
+                             v                 |
+    +------------+        +--------+     +-------------+
+    |            |        |        |     |             |
+    | texel      |------->| texenv |-----| texture     |---> Cf' (to Light Environment
+    | generation |        |        |     | application |          or Fog)
+    |            |        |        |     |             |
+    +------------+        +--------+     +-------------+
+
+
+Patent Note
+
+    To the extent that SGI has patent rights that are unavoidably
+    infringed by all implementations of this extension, SGI will, upon
+    request, grant a license under such patent rights to the requesting
+    party subject to reasonable terms and conditions, and without
+    incremental charge or fee. Such license shall be non-exclusive, and
+    non-transferable, and shall be limited to implementations of the
+    extension in combination with any conformance certified
+    implementation of the OpenGL API. Such license is expressly
+    contingent upon a grant back of a non-exclusive, royalty-free,
+    perpetual, worldwide license to SGI and its OpenGL licensees under
+    the requesting party's patent rights that are unavoidably infringed
+    by all implementations of this extension or OpenGL.
+
+Issues
+
+    *  normal3 rather than normal?
+
+    *  other parameters, spotlight fall off, ...
+
+    *  implications of extended range colors. (do we clamp to [0,1]?)
+
+    *  TexturePath or DirectTexture rather than ApplyTexture?
+
+    *  special handling for alpha or luminance textures? (colormask?)
+
+    *  more tokens for driving multiple inputs, e.g. AMBIENT_DIFFUSE_AND_SPECULAR
+
+    *  normals need to be in the range [-1,1]
+        
+        when a texture is used as a normal, its components are scaled
+        and biased to the range [-1,1].
+
+
+New Procedures and Functions
+
+    void ApplyTextureEXT(enum mode);
+    void TextureLightEXT(enum pname)
+    void TextureMaterialEXT(enum face, enum mode);
+
+New Tokens
+
+    Accepted by the <mode> parameter of ApplyTextureEXT:
+
+    FRAGMENT_MATERIAL_EXT                       0x8349
+    FRAGMENT_NORMAL_EXT                         0x834A
+    FRAGMENT_DEPTH_EXT                          0x8452
+    FRAGMENT_COLOR_EXT                          0x834C
+
+    (*note*: FRAGMENT_DEPTH_EXT value changed from 0x834B on promotion
+    from SGIX, to avoid collision with EXT_fog_coord).
+
+    Accepted by the <pname> parameter of TextureLightEXT:
+
+    ATTENUATION_EXT                             0x834D
+    SHADOW_ATTENUATION_EXT                      0x834E
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+    TEXTURE_APPLICATION_MODE_EXT                0x834F
+    TEXTURE_LIGHT_EXT                           0x8350
+    TEXTURE_MATERIAL_FACE_EXT                   0x8351
+    TEXTURE_MATERIAL_PARAMETER_EXT              0x8352
+
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    Immediately before section 3.9 Fog:
+
+    Section 3.X Texture Application
+
+    The command
+
+    ApplyTextureEXT(enum mode);
+
+    determines how the color produced as a result of texture
+    environment processing is used for subsequent fragment
+    operations. Table 3.X.1 summarizes the interpretation of color
+    values for the values of the <mode> parameter.
+
+
+    --
+    FRAGMENT_COLOR_EXT      color is used as fragment color value
+    FRAGMENT_DEPTH_EXT      color is used as fragment depth value
+    FRAGMENT_LIGHT0_EXT     color is specified parameter for fragment light 0
+    ...
+    FRAGMENT_LIGHTn_EXT     color is specified parameter for fragment light n
+    FRAGMENT_MATERIAL_EXT   color is specified material parameter(s)
+    FRAGMENT_NORMAL_EXT     color is used as fragment normal
+
+    Table 3.X.1 ApplyTextureEXT
+    --
+
+    If <mode> is FRAGMENT_COLOR_EXT then the post-texture-environment
+    color is used as the fragment color during later fragment
+    computations.  This is the default behavior.  If <mode> is not
+    FRAGMENT_COLOR_EXT then the fragment color is the
+    pre-texture-environment color.
+
+    If <mode> is FRAGMENT_DEPTH_EXT then the red component of the
+    post-texture-environment color replaces the depth value for the
+    fragment.
+
+    If <mode> is FRAGMENT_NORMAL_EXT then the R, G, and B components
+    of the post-texture-environment color are used to compute the 
+    components nx, ny, and nz of the fragment normal vector as follows:
+    
+            nx = 2*R-1
+            ny = 2*G-1
+            nz = 2*B-1
+    
+    In effect, the post-texture-environment color components are scaled
+    and biased so that their range is [-1,1].
+
+    If <mode> is one of FRAGMENT_LIGHT0_EXT .. FRAGMENT_LIGHTn_EXT
+    then the post-texture-environment color substitutes a fragment
+    lighting parameter of the light indicated by <mode> during the
+    lighting computation for that fragment.  The substututed lighting
+    parameter is specified by the TextureLightEXT command described
+    in Section 3.X.2.
+
+    If <mode> is FRAGMENT_MATERIAL_EXT then the
+    post-texture-environment color substitutes a fragment material
+    parameter during the lighting computation for that fragment.  The
+    fragment material parameter substituted is specified by the
+    TextureMaterialEXT command described in Section 3.X.3.
+
+    If <mode> is changed from FRAGMENT_MATERIAL_EXT or
+    FRAGMENT_LIGHT0_EXT .. FRAGMENT_LIGHTn_EXT to another value, the
+    corresponding material or light parameter reverts back to the
+    current state value for that parameter, i.e., the value most
+    recently specified with one of the FragmentMaterial{T}[v]EXT or
+    FragmentLight{T}[v]EXT commands.  In particular, the state
+    parameters corresponding to the portions of the fragment lighting
+    computations being substituted by the texture application mode
+    continue to track the values specified by the
+    FragmentMaterial{T}[v]EXT and FragmentLight{T}[v]EXT commands.
+
+
+    Section 3.X.2 Texture Applied to Light Parameters
+
+    The command
+
+    TextureLightEXT(enum pname);
+    
+    determines which fragment light parameter is substituted with the
+    post-texture-environment color when the texture application mode
+    is one of the fragment lights. <pname> is one of AMBIENT, DIFFUSE,
+    SPECULAR, or ATTENUATION_EXT. If <pname> is AMBIENT, DIFFUSE, or
+    SPECULAR then the ambient, diffuse, or specular intensity
+    parameter is substituted.  If <pname> is ATTENUATION_EXT, then
+    the attenuation term att_i from equation (2.4) is subsituted with
+    the value of the red component of the post-texture-environment
+    color.  If <pname> is SHADOW_ATTENUATION_EXT then the fragment
+    lighting equation is augmented with an additional attenuation term
+    Shad_i:
+
+    Cl =  Em
+       + Am*As
+       SUM{_i = 0 through Nf-1} {
+       + Shad_i*Atten_i*SpotL_i*{
+            + Am*Al_i
+            + Dm*Dl_i*(N.L_i)
+            + Sm*Sl_i*(N.H_i)^n
+          }
+        }
+    
+    with Shad_i coming from the red component of the post-texture-environment
+    color.  If a post-environment texture color is not applied to
+    SHADOW_ATTENUATION_EXT for fragment light <i>, then Shad_i is effectively
+    1.0.
+
+
+    Section 3.X.3 Texture Applied to Material Parameters
+
+    The command
+
+    TextureMaterialEXT(enum face, enum mode);
+
+    determines which fragment material parameter is substituted with
+    the post-texture-environment color when the texture application
+    mode is FRAGMENT_MATERIAL_EXT.  <face> is one of FRONT, BACK, or
+    FRONT_AND_BACK, indicating whether the front material, back
+    material, or both are affected by the current color.  <mode> is on
+    of EMISSION, AMBIENT, DIFFUSE, SPECULAR, SHININESS, or
+    AMBIENT_AND_DIFFUSE and specifies which material property or
+    properties are substituted with the post-texture-environment
+    color.  If <mode> is EMISSION, AMBIENT, DIFFUSE, or SPECULAR, then
+    the value of e_cm, a_cm, d_cm, or s_cm from the fragment lighting
+    equations, respectively, will be substituted with the
+    post-texture-environment color.  If <mode> is AMBIENT_AND_DIFFUSE,
+    both a_cm and d_cm will be substituted.  If <mode> is SHININESS,
+    then s_rm will be substituted with 128.0*r, where r is the value
+    of the red component of the post-texture-environment color.
+
+    Section 3.X.4 Interactions with multiple textures
+
+    The color computed during texture environment processing for each
+    active texture can be independently controlled using
+    ApplyTextureEXT.  In the initial state all texture application
+    modes are FRAGMENT_COLOR_EXT and the logical flow of fragment
+    information through the OpenGL pipeline is shown in figure 3.X.5
+    with the result color of each texture environment stage serving as
+    input for the following stage.
+
+
+             Ct0        Ct1                Ctn
+              |          |                  |
+          +------+   +------+           +------+
+          |      |   |      |           |      |
+      Cf -| TE0  |-->| TE1  |--> ... -->| TEn  |--> Cf' (to fragment lighting/fog)
+          |      |   |      |           |      |
+          +------+   +------+           +------+
+
+    Figure 3.X.5
+
+    If the application mode for texture <i> is set to something other
+    than FRAGMENT_COLOR_EXT, then the input for texture environment
+    <i+1> becomes the original pre-texturing fragment color Cf.  If
+    the application mode for texture <i> is returned to
+    FRAGMENT_COLOR_EXT, then the input for texture environment <i+1>
+    reverts back to the result from texture environment <i>.  If i is
+    the last texture in the chain, then the pre-texturing fragment
+    color Cf is used for all subsequent fragment processing.  Figure
+    3.X.6 illustrates the case for the application mode for texture 1
+    set to something other than FRAGMENT_COLOR_EXT.
+
+             Ct0        Ct1          Ct2             Ctn
+              |          |    ^       |               |
+          +------+   +------+ |   +------+        +------+
+          |      |   |      | |   |      |        |      |
+      Cf -| TE0  |-->| TE1  |-+ +-| TE2  | ... -->| TEn  |--> Cf'
+       |  |      |   |      |   | |      |        |      |
+       |  +------+   +------+   | +------+        +------+
+       +------------------------+
+
+    Figure 3.X.6
+
+    It is possible for the application mode for more than one texture
+    to refer to the identical parameter, for example, the FRONT
+    DIFFUSE material color.  Such conflicts are resolved by having the
+    lowest numbered, enabled, texture provide the color value and any
+    higher numbered textures are ignored.  Note that when the
+    application mode is FRAGMENT_LIGHTi_EXT, the TextureLightEXT
+    <pname> parameter must be considered and when the application mode
+    is FRAGMENT_MATERIAL_EXT that the <face> and <mode> parameters
+    for TextureMaterialEXT must be considered.  A partial overlap
+    with the TextureMaterialEXT <face> and <mode> parameter (e.g.,
+    FRONT,DIFFUSE and FRONT_AND_BACK,DIFFUSE) is treated as a
+    conflict.
+
+    If there is a conflict between a material parameter being substituted
+    through FragmentColorMaterialEXT and TextureMaterialEXT, then the color
+    value assocaiated with the texture is ignored and the pre-texture fragment
+    color value is substituted.
+
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+Additions to the GLX Specification
+
+    None
+    
+GLX Protocol
+
+    TBD
+
+Dependencies on EXT_fragment_lighting
+
+    EXT_fragment_lighting is required since this extension pertains to how
+    fragment lighting computations are performed and this extension makes no
+    sense without fragment lighting.
+
+Dependencies on SGIX_color_range
+
+    <this is a note, not a true dependency -db>
+    The scale and bias of performed on colors when converting them
+    to fragment normals is done regardless of whether SGIX_color_range is
+    supported.
+
+Dependencies on EXT_multitexture
+
+    If EXT_multitexture is not supported only the single
+    post-texture-environment color is available for substitution and the
+    discussion of multiple textures in section 3.X.4 is void.
+
+Dependencies on SGIX_shadow
+
+    If SGIX_shadow is not supported then this extension does not define
+    the attenuation multiplier term SHADOW_ATTENUATION_EXT.  All discussion
+    of this attenuation term is void.
+
+Errors
+
+    INVALID_ENUM is generated if ApplyTextureEXT parameter <mode> is
+    not FRAGMENT_MATERIAL_EXT, FRAGMENT_LIGHT0_EXT
+    .. FRAGMENT_LIGHTn_EXT (where n is the value returned by querying
+    MAX_FRAGMENT_LIGHTS_EXT), FRAGMENT_NORMAL_EXT,
+    FRAGMENT_DEPTH_EXT, or FRAGMENT_COLOR_EXT.
+
+    INVALID_ENUM is generated if TextureLightEXT parameter <pname> is
+    not AMBIENT, DIFFUSE, SPECULAR, ATTENUATION_EXT, or
+    SHADOW_ATTENUATION_EXT.
+
+    INVALID_ENUM is generated if TextureMaterialEXT parameter <face>
+    is not FRONT, BACK, or FRONT_AND_BACK or if parameter <mode> is
+    not EMISSION, AMBIENT, DIFFUSE, SPECULAR, SHININESS, or
+    AMBIENT_AND_DIFFUSE.
+
+    INVALID_OPERATION is generated if ApplyTextureEXT,
+    TextureLightEXT, or TextureMaterialEXT is executed between
+    execution of Begin and the corresponding execution of End.
+
+New State
+
+    Get Value                           Get Command     Type    Initial Value       Attribute
+    ---------                           -----------     ----    -------------       ---------
+    TEXTURE_APPLICATION_MODE_EXT        GetIntegerv     Z10     FRAGMENT_COLOR_EXT  texture
+    TEXTURE_LIGHT_EXT                   GetIntegerv     Z5      DIFFUSE             texture
+    TEXTURE_MATERIAL_FACE_EXT           GetIntegerv     Z3      FRONT_AND_BACK      texture
+    TEXTURE_MATERIAL_PARAMETER_EXT      GetIntegerv     Z6      AMBIENT_AND_DIFFUSE texture
+
+New Implementation Dependent State
+
+    None

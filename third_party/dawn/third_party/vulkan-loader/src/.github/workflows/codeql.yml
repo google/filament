@@ -1,0 +1,101 @@
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Author: Joyce Brum <joycebrum@google.com>
+
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "main" ]
+  schedule:
+    - cron: '26 7 * * 1'
+
+permissions: {}
+
+jobs:
+  analyze:
+    name: Analyze
+    # Runner size impacts CodeQL analysis time. To learn more, please see:
+    #   - https://gh.io/recommended-hardware-resources-for-running-codeql
+    #   - https://gh.io/supported-runners-and-hardware-resources
+    #   - https://gh.io/using-larger-runners
+    # Consider using larger runners for possible analysis time improvements.
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 360
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'cpp', 'python' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@dd746615b3b9d728a6a37ca2045b68ca76d4841a # v3.28.8
+      with:
+        languages: ${{ matrix.language }}
+    #     If you wish to specify custom queries, you can do so here or in a config file.
+    #     By default, queries listed here will override any specified in a config file.
+    #     Prefix the list here with "+" to use these queries and those in the config file.
+
+    #     For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
+    #     queries: security-extended,security-and-quality
+
+
+    # Autobuild attempts to build any compiled languages (C/C++, C#, Go, Java, or Swift).
+    # If this step fails, then you should remove it and run the build manually
+    - name: Autobuild
+      if: matrix.language == 'python' 
+      uses: github/codeql-action/autobuild@dd746615b3b9d728a6a37ca2045b68ca76d4841a # v3.28.8
+
+    - uses: actions/setup-python@v5
+      if: matrix.language == 'cpp'
+      with:
+        python-version: '3.11'
+    - uses: lukka/get-cmake@latest
+      if: matrix.language == 'cpp'
+      with:
+        cmakeVersion: 3.22.1
+    - name: Install Dependencies
+      if: matrix.language == 'cpp'
+      run: |
+        sudo apt update
+        sudo apt install --yes --no-install-recommends libwayland-dev libxrandr-dev
+
+    - name: Generate build files
+      if: matrix.language == 'cpp'
+      run: cmake -S. -B build -D CMAKE_BUILD_TYPE=Release -D UPDATE_DEPS=ON
+      env:
+        CC: gcc
+        CXX: g++
+
+    - name: Build the loader
+      if: matrix.language == 'cpp'
+      run: cmake --build build
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@dd746615b3b9d728a6a37ca2045b68ca76d4841a # v3.28.8
+      with:
+        category: "/language:${{matrix.language}}"

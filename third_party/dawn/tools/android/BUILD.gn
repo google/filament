@@ -1,0 +1,223 @@
+# Copyright 2024 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("../../scripts/dawn_overrides_with_defaults.gni")
+
+import("${dawn_root}/generator/dawn_generator.gni")
+
+dawn_json_generator("jni_gen") {
+  target = "jni"
+  outputs = [
+    "cpp/methods.cpp",
+    "cpp/structures.cpp",
+    "cpp/structures.h",
+  ]
+}
+
+dawn_json_generator("kotlin_gen") {
+  target = "kotlin"
+  outputs = [
+    "java/android/dawn/Adapter.kt",
+    "java/android/dawn/AdapterInfo.kt",
+    "java/android/dawn/AdapterPropertiesSubgroups.kt",
+    "java/android/dawn/AdapterType.kt",
+    "java/android/dawn/AddressMode.kt",
+    "java/android/dawn/AsyncHelpers.kt",
+    "java/android/dawn/BackendType.kt",
+    "java/android/dawn/BindGroup.kt",
+    "java/android/dawn/BindGroupDescriptor.kt",
+    "java/android/dawn/BindGroupEntry.kt",
+    "java/android/dawn/BindGroupLayout.kt",
+    "java/android/dawn/BindGroupLayoutDescriptor.kt",
+    "java/android/dawn/BindGroupLayoutEntry.kt",
+    "java/android/dawn/BlendComponent.kt",
+    "java/android/dawn/BlendFactor.kt",
+    "java/android/dawn/BlendOperation.kt",
+    "java/android/dawn/BlendState.kt",
+    "java/android/dawn/Buffer.kt",
+    "java/android/dawn/BufferBindingLayout.kt",
+    "java/android/dawn/BufferBindingType.kt",
+    "java/android/dawn/BufferDescriptor.kt",
+    "java/android/dawn/BufferMapCallback.kt",
+    "java/android/dawn/BufferMapCallbackInfo.kt",
+    "java/android/dawn/BufferMapState.kt",
+    "java/android/dawn/BufferUsage.kt",
+    "java/android/dawn/CallbackMode.kt",
+    "java/android/dawn/Color.kt",
+    "java/android/dawn/ColorTargetState.kt",
+    "java/android/dawn/ColorWriteMask.kt",
+    "java/android/dawn/CommandBuffer.kt",
+    "java/android/dawn/CommandBufferDescriptor.kt",
+    "java/android/dawn/CommandEncoder.kt",
+    "java/android/dawn/CommandEncoderDescriptor.kt",
+    "java/android/dawn/CompareFunction.kt",
+    "java/android/dawn/CompilationInfo.kt",
+    "java/android/dawn/CompilationInfoCallback.kt",
+    "java/android/dawn/CompilationInfoCallbackInfo.kt",
+    "java/android/dawn/CompilationInfoRequestStatus.kt",
+    "java/android/dawn/CompilationMessage.kt",
+    "java/android/dawn/CompilationMessageType.kt",
+    "java/android/dawn/CompositeAlphaMode.kt",
+    "java/android/dawn/ComputePassDescriptor.kt",
+    "java/android/dawn/ComputePassEncoder.kt",
+    "java/android/dawn/ComputePipeline.kt",
+    "java/android/dawn/ComputePipelineDescriptor.kt",
+    "java/android/dawn/ComputeState.kt",
+    "java/android/dawn/ConstantEntry.kt",
+    "java/android/dawn/Constants.kt",
+    "java/android/dawn/CreateComputePipelineAsyncCallback.kt",
+    "java/android/dawn/CreateComputePipelineAsyncCallbackInfo.kt",
+    "java/android/dawn/CreatePipelineAsyncStatus.kt",
+    "java/android/dawn/CreateRenderPipelineAsyncCallback.kt",
+    "java/android/dawn/CreateRenderPipelineAsyncCallbackInfo.kt",
+    "java/android/dawn/CullMode.kt",
+    "java/android/dawn/DepthStencilState.kt",
+    "java/android/dawn/Device.kt",
+    "java/android/dawn/DeviceDescriptor.kt",
+    "java/android/dawn/DeviceLostCallback.kt",
+    "java/android/dawn/DeviceLostCallbackInfo.kt",
+    "java/android/dawn/DeviceLostReason.kt",
+    "java/android/dawn/ErrorFilter.kt",
+    "java/android/dawn/ErrorType.kt",
+    "java/android/dawn/Extent3D.kt",
+    "java/android/dawn/FeatureLevel.kt",
+    "java/android/dawn/FeatureName.kt",
+    "java/android/dawn/FilterMode.kt",
+    "java/android/dawn/FragmentState.kt",
+    "java/android/dawn/FrontFace.kt",
+    "java/android/dawn/Functions.kt",
+    "java/android/dawn/Future.kt",
+    "java/android/dawn/FutureWaitInfo.kt",
+    "java/android/dawn/IndexFormat.kt",
+    "java/android/dawn/Instance.kt",
+    "java/android/dawn/InstanceCapabilities.kt",
+    "java/android/dawn/InstanceDescriptor.kt",
+    "java/android/dawn/Limits.kt",
+    "java/android/dawn/LoadOp.kt",
+    "java/android/dawn/MapAsyncStatus.kt",
+    "java/android/dawn/MapMode.kt",
+    "java/android/dawn/MipmapFilterMode.kt",
+    "java/android/dawn/MultisampleState.kt",
+    "java/android/dawn/OptionalBool.kt",
+    "java/android/dawn/Origin3D.kt",
+    "java/android/dawn/PassTimestampWrites.kt",
+    "java/android/dawn/PipelineLayout.kt",
+    "java/android/dawn/PipelineLayoutDescriptor.kt",
+    "java/android/dawn/PopErrorScopeCallback.kt",
+    "java/android/dawn/PopErrorScopeCallbackInfo.kt",
+    "java/android/dawn/PopErrorScopeStatus.kt",
+    "java/android/dawn/PowerPreference.kt",
+    "java/android/dawn/PresentMode.kt",
+    "java/android/dawn/PrimitiveState.kt",
+    "java/android/dawn/PrimitiveTopology.kt",
+    "java/android/dawn/Proc.kt",
+    "java/android/dawn/QuerySet.kt",
+    "java/android/dawn/QuerySetDescriptor.kt",
+    "java/android/dawn/QueryType.kt",
+    "java/android/dawn/Queue.kt",
+    "java/android/dawn/QueueDescriptor.kt",
+    "java/android/dawn/QueueWorkDoneCallback.kt",
+    "java/android/dawn/QueueWorkDoneCallbackInfo.kt",
+    "java/android/dawn/QueueWorkDoneStatus.kt",
+    "java/android/dawn/RenderBundle.kt",
+    "java/android/dawn/RenderBundleDescriptor.kt",
+    "java/android/dawn/RenderBundleEncoder.kt",
+    "java/android/dawn/RenderBundleEncoderDescriptor.kt",
+    "java/android/dawn/RenderPassColorAttachment.kt",
+    "java/android/dawn/RenderPassDepthStencilAttachment.kt",
+    "java/android/dawn/RenderPassDescriptor.kt",
+    "java/android/dawn/RenderPassEncoder.kt",
+    "java/android/dawn/RenderPassMaxDrawCount.kt",
+    "java/android/dawn/RenderPipeline.kt",
+    "java/android/dawn/RenderPipelineDescriptor.kt",
+    "java/android/dawn/RequestAdapterCallback.kt",
+    "java/android/dawn/RequestAdapterCallbackInfo.kt",
+    "java/android/dawn/RequestAdapterOptions.kt",
+    "java/android/dawn/RequestAdapterStatus.kt",
+    "java/android/dawn/RequestDeviceCallback.kt",
+    "java/android/dawn/RequestDeviceCallbackInfo.kt",
+    "java/android/dawn/RequestDeviceStatus.kt",
+    "java/android/dawn/RequiredLimits.kt",
+    "java/android/dawn/SType.kt",
+    "java/android/dawn/Sampler.kt",
+    "java/android/dawn/SamplerBindingLayout.kt",
+    "java/android/dawn/SamplerBindingType.kt",
+    "java/android/dawn/SamplerDescriptor.kt",
+    "java/android/dawn/ShaderModule.kt",
+    "java/android/dawn/ShaderModuleDescriptor.kt",
+    "java/android/dawn/ShaderSourceSPIRV.kt",
+    "java/android/dawn/ShaderSourceWGSL.kt",
+    "java/android/dawn/ShaderStage.kt",
+    "java/android/dawn/Status.kt",
+    "java/android/dawn/StencilFaceState.kt",
+    "java/android/dawn/StencilOperation.kt",
+    "java/android/dawn/StorageTextureAccess.kt",
+    "java/android/dawn/StorageTextureBindingLayout.kt",
+    "java/android/dawn/StoreOp.kt",
+    "java/android/dawn/SupportedFeatures.kt",
+    "java/android/dawn/SupportedLimits.kt",
+    "java/android/dawn/SupportedWGSLLanguageFeatures.kt",
+    "java/android/dawn/Surface.kt",
+    "java/android/dawn/SurfaceCapabilities.kt",
+    "java/android/dawn/SurfaceConfiguration.kt",
+    "java/android/dawn/SurfaceDescriptor.kt",
+    "java/android/dawn/SurfaceGetCurrentTextureStatus.kt",
+    "java/android/dawn/SurfaceSourceAndroidNativeWindow.kt",
+    "java/android/dawn/SurfaceTexture.kt",
+    "java/android/dawn/Texture.kt",
+    "java/android/dawn/TexelCopyBufferInfo.kt",
+    "java/android/dawn/TexelCopyBufferLayout.kt",
+    "java/android/dawn/TexelCopyTextureInfo.kt",
+    "java/android/dawn/TextureAspect.kt",
+    "java/android/dawn/TextureBindingLayout.kt",
+    "java/android/dawn/TextureBindingViewDimensionDescriptor.kt",
+    "java/android/dawn/TextureDescriptor.kt",
+    "java/android/dawn/TextureDimension.kt",
+    "java/android/dawn/TextureFormat.kt",
+    "java/android/dawn/TextureSampleType.kt",
+    "java/android/dawn/TextureUsage.kt",
+    "java/android/dawn/TextureView.kt",
+    "java/android/dawn/TextureViewDescriptor.kt",
+    "java/android/dawn/TextureViewDimension.kt",
+    "java/android/dawn/UncapturedErrorCallback.kt",
+    "java/android/dawn/UncapturedErrorCallbackInfo.kt",
+    "java/android/dawn/VertexAttribute.kt",
+    "java/android/dawn/VertexBufferLayout.kt",
+    "java/android/dawn/VertexFormat.kt",
+    "java/android/dawn/VertexState.kt",
+    "java/android/dawn/VertexStepMode.kt",
+    "java/android/dawn/WGSLLanguageFeatureName.kt",
+    "java/android/dawn/WaitStatus.kt",
+  ]
+}
+
+group("android") {
+  deps = [
+    ":jni_gen",
+    ":kotlin_gen",
+  ]
+}

@@ -15,11 +15,11 @@ layout(set = 0, binding = 0, std430) buffer SSBO
     float b;
     float c;
     f16vec2 d;
-} _4;
+} _6;
 
 void main()
 {
-    _4.b = uintBitsToFloat(packFloat2x16(_4.a));
-    _4.d = unpackFloat2x16(floatBitsToUint(_4.c));
+    _6.b = uintBitsToFloat(packFloat2x16(_6.a));
+    _6.d = unpackFloat2x16(floatBitsToUint(_6.c));
 }
 

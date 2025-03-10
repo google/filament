@@ -26,6 +26,7 @@
 #include "VulkanReadPixels.h"
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
+#include "VulkanQueryManager.h"
 #include "vulkan/caching/VulkanDescriptorSetManager.h"
 #include "vulkan/caching/VulkanPipelineLayoutCache.h"
 #include "vulkan/memory/ResourceManager.h"
@@ -119,7 +120,6 @@ private:
 
     VulkanPlatform* mPlatform = nullptr;
     fvkmemory::ResourceManager mResourceManager;
-    std::unique_ptr<VulkanTimestamps> mTimestamps;
 
     resource_ptr<VulkanSwapChain> mCurrentSwapChain;
     resource_ptr<VulkanRenderTarget> mDefaultRenderTarget;
@@ -138,6 +138,7 @@ private:
     VulkanBlitter mBlitter;
     VulkanReadPixels mReadPixels;
     VulkanDescriptorSetManager mDescriptorSetManager;
+    VulkanQueryManager mQueryManager;
 
     // This is necessary for us to write to push constants after binding a pipeline.
     struct {

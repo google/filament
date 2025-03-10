@@ -1,0 +1,629 @@
+Name
+
+    EXT_texture_view
+
+Name Strings
+
+    GL_EXT_texture_view
+
+Contact
+
+    Jon Leech (oddhack 'at' sonic.net)
+    Daniel Koch, NVIDIA (dkoch 'at' nvidia.com)
+
+Contributors
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+    Pat Brown, NVIDIA
+    Slawomir Grajewski, Intel
+    Jon Leech
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+    Portions Copyright (c) 2013-2014 NVIDIA Corporation.
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: April 1, 2014
+    Revision: 8
+
+Number
+
+    OpenGL ES Extension #185
+
+Dependencies
+
+    OpenGL ES 3.1 and OpenGL ES Shading Language 3.10 are required.
+
+    This specification is written against the OpenGL ES 3.1 (March 17,
+    2014) and OpenGL ES 3.10 Shading Language (March 17, 2014)
+    Specifications.
+
+    EXT_texture_buffer affects the definition of this extension.
+
+    EXT_texture_cube_map_array affects the definition of this extension.
+
+    EXT_texture_compression_s3tc interacts with this extension.
+
+    EXT_texture_compression_rgtc interacts with this extension.
+
+    EXT_texture_compression_bptc interacts with this extension.
+
+    KHR_texture_compression_astc_ldr interacts with this extension.
+
+    KHR_texture_compression_astc_hdr interacts with this extension.
+
+    OES_texture_compression_astc interacts with this extension.
+
+Overview
+
+    This extension allows a texture's data store to be "viewed" in multiple
+    ways, either reinterpreting the data format/type as a different format/
+    type with the same element size, or by clamping the mipmap level range
+    or array slice range.
+
+    The goals of this extension are to avoid having these alternate views
+    become shared mutable containers of shared mutable objects, and to add
+    the views to the API in a minimally invasive way.
+
+    No new object types are added. Conceptually, a texture object is split
+    into the following parts:
+
+        - A data store holding texel data.
+        - State describing which portions of the data store to use, and how
+          to interpret the data elements.
+        - An embedded sampler object.
+        - Various other texture parameters.
+
+    With this extension, multiple textures can share a data store and have
+    different state describing which portions of the data store to use and
+    how to interpret the data elements. The data store is refcounted and not
+    destroyed until the last texture sharing it is deleted.
+
+    This extension leverages the concept of an "immutable texture".
+    Views can only be created of textures created with TexStorage*.
+
+
+New Procedures and Functions
+
+    void TextureViewEXT(uint texture, enum target, uint origtexture,
+                        enum internalformat,
+                        uint minlevel, uint numlevels,
+                        uint minlayer, uint numlayers);
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetTexParameterfv and
+    GetTexParameteriv:
+
+        TEXTURE_VIEW_MIN_LEVEL_EXT                      0x82DB
+        TEXTURE_VIEW_NUM_LEVELS_EXT                     0x82DC
+        TEXTURE_VIEW_MIN_LAYER_EXT                      0x82DD
+        TEXTURE_VIEW_NUM_LAYERS_EXT                     0x82DE
+        TEXTURE_IMMUTABLE_LEVELS                        0x82DF
+
+    Used as compatibility class names in table 8.X.2:
+
+        VIEW_CLASS_128_BITS
+        VIEW_CLASS_96_BITS
+        VIEW_CLASS_64_BITS
+        VIEW_CLASS_48_BITS
+        VIEW_CLASS_32_BITS
+        VIEW_CLASS_24_BITS
+        VIEW_CLASS_16_BITS
+        VIEW_CLASS_8_BITS
+        VIEW_CLASS_RGTC1_RED
+        VIEW_CLASS_RGTC2_RG
+        VIEW_CLASS_BPTC_UNORM
+        VIEW_CLASS_BPTC_FLOAT
+        VIEW_CLASS_S3TC_DXT1_RGB
+        VIEW_CLASS_S3TC_DXT1_RGBA
+        VIEW_CLASS_S3TC_DXT3_RGBA
+        VIEW_CLASS_S3TC_DXT5_RGBA
+        VIEW_CLASS_EAC_R11
+        VIEW_CLASS_EAC_RG11
+        VIEW_CLASS_ETC2_RGB
+        VIEW_CLASS_ETC2_RGBA
+        VIEW_CLASS_ETC2_EAC_RGBA
+        VIEW_CLASS_ASTC_4x4_RGBA
+        VIEW_CLASS_ASTC_5x4_RGBA
+        VIEW_CLASS_ASTC_5x5_RGBA
+        VIEW_CLASS_ASTC_6x5_RGBA
+        VIEW_CLASS_ASTC_6x6_RGBA
+        VIEW_CLASS_ASTC_8x5_RGBA
+        VIEW_CLASS_ASTC_8x6_RGBA
+        VIEW_CLASS_ASTC_8x8_RGBA
+        VIEW_CLASS_ASTC_10x5_RGBA
+        VIEW_CLASS_ASTC_10x6_RGBA
+        VIEW_CLASS_ASTC_10x8_RGBA
+        VIEW_CLASS_ASTC_10x10_RGBA
+        VIEW_CLASS_ASTC_12x10_RGBA
+        VIEW_CLASS_ASTC_12x12_RGBA
+        VIEW_CLASS_ASTC_3x3x3_RGBA
+        VIEW_CLASS_ASTC_4x3x3_RGBA
+        VIEW_CLASS_ASTC_4x4x3_RGBA
+        VIEW_CLASS_ASTC_4x4x4_RGBA
+        VIEW_CLASS_ASTC_5x4x4_RGBA
+        VIEW_CLASS_ASTC_5x5x4_RGBA
+        VIEW_CLASS_ASTC_5x5x5_RGBA
+        VIEW_CLASS_ASTC_6x5x5_RGBA
+        VIEW_CLASS_ASTC_6x6x5_RGBA
+        VIEW_CLASS_ASTC_6x6x6_RGBA
+    (The VIEW_CLASS_* tokens used as compatibility class names in table
+    8.X.2 are the same tokens returned by the VIEW_COMPATIBILITY_CLASS query
+    in ARB_internalformat_query2. In this extension they are simply a
+    labelling mechanism and serve no functional purpose in the API, so their
+    numeric values are not specified.)
+
+Additions to the OpenGL ES 3.1 Specification
+
+    Modify section 5.3, "Propagating Changes to Objects"
+
+    Add to the paragraph starting "When <T> is a texture, the contents ..."
+    on p. 44:
+
+    When <T> is a texture, the contents of <T> are construed to include the
+    contents of the data store of <T>, even if <T>'s data store was modified
+    via a different view of the data store.
+
+
+    Modify subsection 8.9, "Texture Parameters"
+
+    Add the following to the end of the paragraph on p. 171 starting
+    "In the remainder of chapter 8, denote by lod_min...":
+
+    If the texture was created with TextureViewEXT, then the
+    TEXTURE_BASE_LEVEL and TEXTURE_MAX_LEVEL parameters are interpreted
+    relative to the view and not relative to the original data store.
+
+
+    Modify section 8.10.2, "Texture Parameter Queries"
+
+    Add to the list of legal <pname>s in the description of GetTexParameter
+    on p. 172:
+
+    ... <pname> must be IMAGE_FORMAT_COMPATIBILITY_TYPE,
+    TEXTURE_IMMUTABLE_FORMAT, TEXTURE_IMMUTABLE_LEVELS,
+    TEXTURE_VIEW_MIN_LEVEL_EXT, TEXTURE_VIEW_NUM_LEVELS_EXT,
+    TEXTURE_VIEW_MIN_LAYER_EXT, TEXTURE_VIEW_NUM_LAYERS_EXT, or one of the
+    symbolic values in table 8.20.
+
+
+    Add a new subsection 8.16view following section 8.16, "Texture Completeness"
+
+    8.16view Texture Views
+
+    A texture can be created which references the data store of another
+    texture and interprets the data with a different format, and/or selects
+    a subset of the levels and/or layers of the other texture. The data
+    store for such a texture is shared with the data store of the original
+    texture. Updating the shared data store using the original texture
+    affects texture values read using the new texture, and vice versa. A
+    texture data store remains in existence until all textures that
+    reference it are deleted.
+
+    The command:
+
+        void TextureViewEXT(uint texture, enum target, uint origtexture,
+                         enum internalformat,
+                         uint minlevel, uint numlevels,
+                         uint minlayer, uint numlayers);
+
+    initializes the texture named <texture> to the target specified by
+    <target>. <texture>'s data store is inherited from the texture named
+    <origtexture>, but elements of the data store are interpreted according
+    to the internal format specified by <internalformat>. Additionally, if the
+    original texture is an array or has multiple mipmap levels, the parameters
+    <minlayer>, <numlayers>, <minlevel>, and <numlevels> control which of those
+    slices and levels are considered part of the texture.
+
+    The <minlevel> and <minlayer> parameters are relative to the view of the
+    original texture. If <numlayers> or <numlevels> extend beyond the
+    original texture, they are clamped to the max extent of the original
+    texture.
+
+    If the command is successful, the texture parameters in <texture> are
+    updated as follows:
+
+     - TEXTURE_IMMUTABLE_FORMAT is set to TRUE.
+
+     - TEXTURE_IMMUTABLE_LEVELS is set to the value of
+       TEXTURE_IMMUTABLE_LEVELS for <origtexture>.
+
+     - TEXTURE_VIEW_MIN_LEVEL_EXT is set to <minlevel> plus the value of
+       TEXTURE_VIEW_MIN_LEVEL_EXT for <origtexture>.
+
+     - TEXTURE_VIEW_MIN_LAYER_EXT is set to <minlayer> plus the value of
+       TEXTURE_VIEW_MIN_LAYER_EXT for <origtexture>.
+
+     - TEXTURE_VIEW_NUM_LEVELS_EXT is set to the lesser of <numlevels> and
+       the value of TEXTURE_VIEW_NUM_LEVELS_EXT for <origtexture> minus
+       <minlevels>.
+
+     - TEXTURE_VIEW_NUM_LAYERS_EXT is set to the lesser of <numlayers> and
+       the value of TEXTURE_VIEW_NUM_LAYERS_EXT for <origtexture> minus
+       <minlayer>.
+
+    The new texture's target must be <compatible> with the target of
+    <origtexture>, as defined by table 8.X.1.
+
+    Numerous constraints on <numlayers> and the texture dimensions depend on
+    <target> and the target of <origtexture>. These constraints are
+    summarized below in the errors section.
+
+        --------------------------------------------------------------------------------------------
+        | Original target             |  Valid new targets                                         |
+        |------------------------------------------------------------------------------------------|
+        | TEXTURE_2D                  |  TEXTURE_2D, TEXTURE_2D_ARRAY                              |
+        |------------------------------------------------------------------------------------------|
+        | TEXTURE_3D                  |  TEXTURE_3D                                                |
+        |------------------------------------------------------------------------------------------|
+        | TEXTURE_CUBE_MAP            |  TEXTURE_CUBE_MAP, TEXTURE_2D, TEXTURE_2D_ARRAY,           |
+        |                             |  TEXTURE_CUBE_MAP_ARRAY_EXT                                |
+        |------------------------------------------------------------------------------------------|
+        | TEXTURE_BUFFER_EXT          |  <none>                                                    |
+        |------------------------------------------------------------------------------------------|
+        | TEXTURE_2D_ARRAY            |  TEXTURE_2D_ARRAY, TEXTURE_2D, TEXTURE_CUBE_MAP,           |
+        |                             |  TEXTURE_CUBE_MAP_ARRAY_EXT                                |
+        |------------------------------------------------------------------------------------------|
+        | TEXTURE_CUBE_MAP_ARRAY      |  TEXTURE_CUBE_MAP_ARRAY_EXT, TEXTURE_2D_ARRAY, TEXTURE_2D, |
+        |                             |  TEXTURE_CUBE_MAP                                          |
+        |------------------------------------------------------------------------------------------|
+        | TEXTURE_2D_MULTISAMPLE      |  TEXTURE_2D_MULTISAMPLE, TEXTURE_2D_MULTISAMPLE_ARRAY      |
+        |------------------------------------------------------------------------------------------|
+        | TEXTURE_2D_MULTISAMPLE_ARRAY|  TEXTURE_2D_MULTISAMPLE, TEXTURE_2D_MULTISAMPLE_ARRAY      |
+        --------------------------------------------------------------------------------------------
+
+        Table 8.X.1: Legal texture targets for TextureViewEXT.
+
+    When <origtexture>'s target is TEXTURE_CUBE_MAP, the layer parameters
+    are interpreted in the same order as if it were a
+    TEXTURE_CUBE_MAP_ARRAY_EXT with 6 layer-faces.
+
+    The two textures' internal formats must be compatible according to Table
+    8.X.2 (Compatible internal formats for TextureViewEXT) if the internal
+    format exists in that table. The internal formats must be identical if
+    not in that table.
+
+    --------------------------------------------------------------------------
+    | Class                      | Internal formats                          |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_128_BITS        | RGBA32F, RGBA32UI, RGBA32I                |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_96_BITS         | RGB32F, RGB32UI, RGB32I                   |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_64_BITS         | RGBA16F, RG32F, RGBA16UI, RG32UI,         |
+    |                            | RGBA16I, RG32I                            |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_48_BITS         | RGB16F, RGB16UI, RGB16I                   |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_32_BITS         | RG16F, R11F_G11F_B10F, R32F,              |
+    |                            | RGB10_A2UI, RGBA8UI, RG16UI, R32UI,       |
+    |                            | RGBA8I, RG16I, R32I, RGB10_A2, RGBA8,     |
+    |                            | RGBA8_SNORM, SRGB8_ALPHA8, RGB9_E5        |
+    -------------------------------------------------------------------------
+    | VIEW_CLASS_24_BITS         | RGB8, RGB8_SNORM, SRGB8, RGB8UI, RGB8I    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_16_BITS         | R16F, RG8UI, R16UI, RG8I, R16I, RG8,      |
+    |                            | RG8_SNORM                                 |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_8_BITS          | R8UI, R8I, R8, R8_SNORM                   |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_RGTC1_RED       | COMPRESSED_RED_RGTC1_EXT,                 |
+    |                            | COMPRESSED_SIGNED_RED_RGTC1_EXT           |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_RGTC2_RG        | COMPRESSED_RG_RGTC2_EXT,                  |
+    |                            | COMPRESSED_SIGNED_RG_RGTC2_EXT            |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_BPTC_UNORM      | COMPRESSED_RGBA_BPTC_UNORM_EXT,           |
+    |                            | COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT      |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_BPTC_FLOAT      | COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT,     |
+    |                            | COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_S3TC_DXT1_RGB   | COMPRESSED_RGB_S3TC_DXT1_EXT,             |
+    |                            | COMPRESSED_SRGB_S3TC_DXT1_EXT             |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_S3TC_DXT1_RGBA  | COMPRESSED_RGBA_S3TC_DXT1_EXT,            |
+    |                            | COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT       |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_S3TC_DXT3_RGBA  | COMPRESSED_RGBA_S3TC_DXT3_EXT,            |
+    |                            | COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT       |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_S3TC_DXT5_RGBA  | COMPRESSED_RGBA_S3TC_DXT5_EXT,            |
+    |                            | COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT       |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_EAC_R11         | COMPRESSED_R11_EAC,                       |
+    |                            | COMPRESSED_SIGNED_R11_EAC                 |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_EAC_RG11        | COMPRESSED_RG11_EAC,                      |
+    |                            | COMPRESSED_SIGNED_RG11_EAC                |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ETC2_RGB        | COMPRESSED_RGB8_ETC2,                     |
+    |                            | COMPRESSED_SRGB8_ETC2                     |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ETC2_RGBA       | COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2, |
+    |                            | COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2 |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ETC2_EAC_RGBA   | COMPRESSED_RGBA8_ETC2_EAC,                |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ETC2_EAC          |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_4x4_RGBA   | COMPRESSED_RGBA_ASTC_4x4_KHR,             |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR      |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_5x4_RGBA   | COMPRESSED_RGBA_ASTC_5x4_KHR,             |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR      |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_5x5_RGBA   | COMPRESSED_RGBA_ASTC_5x5_KHR,             |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR      |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_6x5_RGBA   | COMPRESSED_RGBA_ASTC_6x5_KHR,             |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR      |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_6x6_RGBA   | COMPRESSED_RGBA_ASTC_6x6_KHR,             |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR      |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_8x5_RGBA   | COMPRESSED_RGBA_ASTC_8x5_KHR,             |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR      |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_8x6_RGBA   | COMPRESSED_RGBA_ASTC_8x6_KHR,             |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR      |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_8x8_RGBA   | COMPRESSED_RGBA_ASTC_8x8_KHR,             |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR      |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_10x5_RGBA  | COMPRESSED_RGBA_ASTC_10x5_KHR,            |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR     |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_10x6_RGBA  | COMPRESSED_RGBA_ASTC_10x6_KHR,            |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR     |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_10x8_RGBA  | COMPRESSED_RGBA_ASTC_10x8_KHR,            |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR     |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_10x10_RGBA | COMPRESSED_RGBA_ASTC_10x10_KHR,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_12x10_RGBA | COMPRESSED_RGBA_ASTC_12x10_KHR,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_12x12_RGBA | COMPRESSED_RGBA_ASTC_12x12_KHR,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_3x3x3_RGBA | COMPRESSED_RGBA_ASTC_3x3x3_OES,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_3x3x3_OES    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_4x3x3_RGBA | COMPRESSED_RGBA_ASTC_4x3x3_OES,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_4x3x3_OES    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_4x4x3_RGBA | COMPRESSED_RGBA_ASTC_4x4x3_OES,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_4x4x3_OES    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_4x4x4_RGBA | COMPRESSED_RGBA_ASTC_4x4x4_OES,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_4x4x4_OES    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_5x4x4_RGBA | COMPRESSED_RGBA_ASTC_5x4x4_OES,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_5x4x4_OES    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_5x5x4_RGBA | COMPRESSED_RGBA_ASTC_5x5x4_OES,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_5x5x4_OES    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_5x5x5_RGBA | COMPRESSED_RGBA_ASTC_5x5x5_OES,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_5x5x5_OES    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_6x5x5_RGBA | COMPRESSED_RGBA_ASTC_6x5x5_OES,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_6x5x5_OES    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_6x6x5_RGBA | COMPRESSED_RGBA_ASTC_6x6x5_OES,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_6x6x5_OES    |
+    --------------------------------------------------------------------------
+    | VIEW_CLASS_ASTC_6x6x6_RGBA | COMPRESSED_RGBA_ASTC_6x6x6_OES,           |
+    |                            | COMPRESSED_SRGB8_ALPHA8_ASTC_6x6x6_OES    |
+    --------------------------------------------------------------------------
+
+        Table 8.X.2: Compatible internal formats for TextureViewEXT. Formats
+        in the same entry may be cast to each other.
+
+    If the internal format does not exactly match the internal format of the
+    original texture, the contents of the memory are reinterpreted in the
+    same manner as for image bindings described in section 8.22.
+
+    Texture commands that take a <level> or <layer> parameter, such as
+    TexSubImage2D, interpret that parameter to be relative to the view of
+    the texture. i.e. the mipmap level of the data store that would be
+    updated via TexSubImage2D would be the sum of <level> and the value of
+    TEXTURE_VIEW_MIN_LEVEL_EXT.
+
+
+    Errors
+
+    An INVALID_VALUE error is generated if <texture> is zero.
+
+    An INVALID_OPERATION error is generated by TextureViewEXT if <texture>
+    is not a valid name returned by GenTextures, or if <texture> has already
+    been bound and given a target.
+
+    An INVALID_VALUE error is generated if <origtexture> is not the name of
+    a texture.
+
+    An INVALID_OPERATION error is generated if the value of
+    TEXTURE_IMMUTABLE_FORMAT for <origtexture> is not TRUE.
+
+    An INVALID_OPERATION error is generated if <target> is not compatible
+    with the target of <origtexture>, as defined by table 8.X.1.
+
+    An INVALID_OPERATION error is generated if the internal format of
+    <origtexture> exists in table 8.X.2 and is not compatible with
+    <internalformat>, as described in that table.
+
+    An INVALID_OPERATION error is generated if the internal format of
+    <origtexture> does not exist in table 8.X.2, and is not identical to
+    <internalformat>.
+
+    An INVALID_VALUE error is generated if <minlevel> or <minlayer> are
+    larger than the greatest level or layer, respectively, of <origtexture>.
+
+    An INVALID_VALUE error is generated if <target> is TEXTURE_CUBE_MAP and
+    the clamped <numlayers> is not 6.
+
+    An INVALID_VALUE error is generated if <target> is
+    TEXTURE_CUBE_MAP_ARRAY_EXT and the clamped <numlayers> is not a multiple
+    of 6. In this case <numlayers> counts layer-faces rather than layers.
+
+    An INVALID_VALUE error is generated if <target> is TEXTURE_2D,
+    TEXTURE_3D, or TEXTURE_2D_MULTISAMPLE and <numlayers> does not equal 1.
+
+    An INVALID_OPERATION error is generated if <target> is
+    TEXTURE_CUBE_MAP or TEXTURE_CUBE_MAP_ARRAY_EXT, and the width and height
+    of <origtexture>'s levels are not equal.
+
+    An INVALID_OPERATION error is generated if any dimension of
+    <origtexture> is larger than the maximum supported corresponding
+    dimension of the new target. For example, if <origtexture> has a
+    TEXTURE_2D_ARRAY target and <target> is TEXTURE_CUBE_MAP, its width must
+    be no greater than the value of MAX_CUBE_MAP_TEXTURE_SIZE.
+
+
+    Modify section 8.17, "Immutable-Format Texture Images"
+
+    Modify the third bullet on p. 188, starting "If the command is
+    successful, TEXTURE_IMMUTABLE_FORMAT...":
+
+    If the command is successful, TEXTURE_IMMUTABLE_FORMAT becomes TRUE,
+    TEXTURE_IMMUTABLE_LEVELS and TEXTURE_VIEW_NUM_LEVELS_EXT become
+    <levels>. If the texture target is TEXTURE_2D_ARRAY,
+    TEXTURE_CUBE_MAP_ARRAY, or TEXTURE_2D_MULTISAMPLE_ARRAY then
+    TEXTURE_VIEW_NUM_LAYERS_EXT becomes <depth>. If the texture target is
+    TEXTURE_CUBE_MAP, then TEXTURE_VIEW_NUM_LAYERS_EXT becomes 6. For any
+    other texture target, TEXTURE_VIEW_NUM_LAYERS_EXT becomes 1.
+
+
+    Modify section 8.18, "Texture State"
+
+    Add to the fourth paragraph on the section on p. 191, starting "Next,
+    there are the":
+
+    "... swizzle modes (see section 14.2.1), and four integers describing
+    the texture view base level, number of levels, minimum array layer, and
+    number of layers."
+
+    Add to the following paragraph starting "In the initial state":
+
+    "... and ALPHA, respectively. The values of TEXTURE_VIEW_MIN_LEVEL_EXT,
+    TEXTURE_VIEW_NUM_LEVELS_EXT, TEXTURE_VIEW_MIN_LAYER_EXT,
+    TEXTURE_VIEW_NUM_LAYERS_EXT are each zero."
+
+
+Dependencies on EXT_texture_buffer
+
+    If EXT_texture_buffer is not supported, remove
+    TEXTURE_BUFFER_EXT from the list of targets in table 8.X.1.
+
+Dependencies on EXT_texture_cube_map_array
+
+    If EXT_texture_cube_map_array is not supported, remove all
+    references to TEXTURE_CUBE_MAP_ARRAY_EXT.
+
+Dependencies on EXT_texture_compression_s3tc
+
+    If EXT_texture_compression_s3tc is not supported, remove any
+    references to S3TC compressed texture formats.
+
+Dependencies on EXT_texture_compression_rgtc
+
+    If EXT_texture_compression_rgtc is not supported, remove any
+    references to the RGTC compressed texture formats.
+
+Dependencies on EXT_texture_compression_bptc
+
+    If EXT_texture_compression_bptc is not supported, remove any
+    references to the BPTC compressed texture formats.
+
+Dependencies on KHR_texture_compression_astc_ldr
+
+    If KHR_texture_compression_astc_ldr is not supported, remove any
+    references to the ASTC LDR compressed texture formats.
+
+Dependencies on KHR_texture_compression_astc_hdr
+
+    If KHR_texture_compression_astc_hdr is not supported, remove any
+    references to the ASTC HDR compressed texture formats.
+
+Dependencies on OES_texture_compression_astc
+
+    If OES_texture_compression_astc is not supported, remove any
+    references to the ASTC 3D compressed texture formats.
+
+New State
+
+    Add to table 20.9, Textures (state per texture object)
+
+                                                         Initial
+    Get Value                    Type   Get Command      Value    Description                   Sec.
+    ---------------------------  ----   -----------      -------  ----------------------------- ------
+    TEXTURE_VIEW_MIN_LEVEL_EXT    Z+    GetTexParameter  0        view base texture level       8.16view
+    TEXTURE_VIEW_NUM_LEVELS_EXT   Z+    GetTexParameter  0        view number of texture levels 8.16view
+    TEXTURE_VIEW_MIN_LAYER_EXT    Z+    GetTexParameter  0        view min array layer          8.16view
+    TEXTURE_VIEW_NUM_LAYERS_EXT   Z+    GetTexParameter  0        view number of array layers   8.16view
+
+New Implementation Dependent State
+
+    None.
+
+Examples
+
+    TODO
+
+Issues
+
+    Note: These issues apply specifically to the definition of the
+    EXT_texture_view specification, which is based on the OpenGL
+    extension ARB_texture_view. Resolved issues from ARB_texture_view
+    have been removed, but remain largely applicable to this extension.
+    ARB_texture_view can be found in the OpenGL Registry.
+
+    (1) What functionality was removed from ARB_texture_view?
+
+      - Texture targets TEXTURE_1D_ARRAY and TEXTURE_RECTANGLE.
+      - View classes VIEW_CLASS_RGTC1_RED, VIEW_CLASS_RGTC2_RG,
+        VIEW_CLASS_BPTC_UNORM, and VIEW_CLASS_BPTC_FLOAT, corresponding
+        to GL-only RGTC and BPTC compressed texture formats.
+      - Base and internal formats R16, R16_SNORM, RG16, RG16_SNORM, RGB16,
+        RGB16_SNORM, RGBA16, and RGBA16_SNORM (see bug 11366).
+
+    (2) Should there be ETC2/EAC view classes added corresponding to
+    those texture formats?
+
+    RESOLVED. Yes. These view classes don't exist in OpenGL 4.4 or any GL
+    extension, even though ETC2/EAC compressed formats are part of 4.4.
+    However as these formats are likely to be more important in an
+    OpenGL ES environment and thus support is added.  Support is also
+    included for ASTC and RGTC and BPTC in case those texture formats
+    are also supported.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -------------------------------------------
+      1   10/07/13  Jon Leech Initial version based on ARB_texture_view
+      2   11/12/13  Jon Leech Add dependency on EXT_texture_buffer
+                              and fix enum name.
+      3   11/20/13  Jon Leech Refer to ES 3.1 instead of 3plus.
+      4   11/21/13  dkoch     Add dependency on EXT_texture_cube_map_array
+                              and restore related language.
+      5   12/18/13  dkoch     Add view classes for ETC2/EAC and ASTC formats
+                              Add interactions with RGTC and BPTC extensions.
+                              Resolve issue 3, add issue 5.
+                              Remove ARB_internalformat_query2 interaction.
+                              Added errors section based on GL 4.4.
+      6   03/10/14  Jon Leech Rebase on OpenGL ES 3.1, change extension suffix
+                              to EXT, and remove R{GBA}16{,_SNORM} formats.
+      7   03/26/14  Jon Leech Sync with released ES 3.1 specs. Reflow text.
+      8   04/01/15  dkoch     Update contributors.

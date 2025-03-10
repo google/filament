@@ -1,0 +1,517 @@
+Name
+
+    EXT_packed_pixels
+
+Name Strings
+
+    GL_EXT_packed_pixels
+
+Version
+
+    $Date: 1997/09/22 23:23:58 $ $Revision: 1.21 $
+
+Number
+
+    23
+
+Dependencies
+
+    EXT_abgr affects the definition of this extension
+    EXT_texture3D affects the definition of this extension
+    EXT_subtexture affects the definition of this extension
+    EXT_histogram affects the definition of this extension
+    EXT_convolution affects the definition of this extension
+    SGI_color_table affects the definition of this extension
+    SGIS_texture4D affects the definition of this extension
+    EXT_cmyka affects the definition of this extension
+
+Overview
+
+    This extension provides support for packed pixels in host memory.  A
+    packed pixel is represented entirely by one unsigned byte, one
+    unsigned short, or one unsigned integer.  The fields with the packed
+    pixel are not proper machine types, but the pixel as a whole is.  Thus
+    the pixel storage modes, including PACK_SKIP_PIXELS, PACK_ROW_LENGTH,
+    PACK_SKIP_ROWS, PACK_IMAGE_HEIGHT_EXT, PACK_SKIP_IMAGES_EXT,
+    PACK_SWAP_BYTES, PACK_ALIGNMENT, and their unpacking counterparts all
+    work correctly with packed pixels.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <type> parameter of DrawPixels, ReadPixels, TexImage1D,
+    TexImage2D, GetTexImage, TexImage3DEXT, TexSubImage1DEXT,
+    TexSubImage2DEXT, TexSubImage3DEXT, GetHistogramEXT, GetMinmaxEXT,
+    ConvolutionFilter1DEXT, ConvolutionFilter2DEXT, ConvolutionFilter3DEXT,
+    GetConvolutionFilterEXT, SeparableFilter2DEXT, SeparableFilter3DEXT,
+    GetSeparableFilterEXT, ColorTableSGI, GetColorTableSGI, TexImage4DSGIS,
+    and TexSubImage4DSGIS:
+
+        UNSIGNED_BYTE_3_3_2_EXT         0x8032
+        UNSIGNED_SHORT_4_4_4_4_EXT      0x8033
+        UNSIGNED_SHORT_5_5_5_1_EXT      0x8034
+        UNSIGNED_INT_8_8_8_8_EXT        0x8035
+        UNSIGNED_INT_10_10_10_2_EXT     0x8036
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The five tokens defined by this extension are added to Table 3.4:
+
+        <type> Parameter                Corresponding   Special
+        Token Value                     GL Data Type    Interpretation
+        ----------------                -------------   --------------
+        UNSIGNED_BYTE                   ubyte           No
+        BYTE                            byte            No
+        UNSIGNED_SHORT                  ushort          No
+        SHORT                           short           No
+        UNSIGNED_INT                    uint            No
+        INT                             int             No
+        FLOAT                           float           No
+        BITMAP                          ubyte           Yes
+        UNSIGNED_BYTE_3_3_2_EXT         ubyte           Yes
+        UNSIGNED_SHORT_4_4_4_4_EXT      ushort          Yes
+        UNSIGNED_SHORT_5_5_5_1_EXT      ushort          Yes
+        UNSIGNED_INT_8_8_8_8_EXT        uint            Yes
+        UNSIGNED_INT_10_10_10_2_EXT     uint            Yes
+
+        Table 3.4: DrawPixels and ReadPixels <type> parameter values and the
+        corresponding GL data types.  Refer to table 2.2 for definitions of
+        GL data types.  Special interpretations are described near the end
+        of section 3.6.3.
+
+    [Section 3.6.3 of the GL Specification (Rasterization of Pixel
+    Rectangles) is rewritten as follows:]
+
+    3.6.3 Rasterization of Pixel Rectangles
+
+    The process of drawing pixels encoded in host memory is diagrammed in
+    Figure 3.7.  We describe the stages of this process in the order in which
+    they occur.
+
+    Pixels are drawn using
+
+        void DrawPixels(sizei width,
+                        sizei height,
+                        enum format,
+                        enum type,
+                        void* data);
+
+    <format> is a symbolic constant indicating what the values in memory
+    represent.  <width> and <height> are the width and height, respectively,
+    of the pixel rectangle to be drawn.  <data> is a pointer to the data to
+    be drawn.  These data are represented with one of seven GL data types,
+    specified by <type>.  The correspondence between the thirteen <type>
+    token values and the GL data types they indicate is given in Table 3.4.
+    If the GL is in color index mode and <format> is not one of COLOR_INDEX,
+    STENCIL_INDEX, or DEPTH_COMPONENT, then the error INVALID_OPERATION
+    occurs.  Some additional constraints on the combinations of <format>
+    and <type> values that are accepted are discussed below.
+
+    Unpacking
+
+    Data are taken from host memory as a sequence of signed or unsigned bytes
+    (GL data types byte and ubyte), signed or unsigned short integers (GL data
+    types short and ushort), signed or unsigned integers (GL data types int
+    and uint), or floating-point values (GL data type float).  These elements
+    are grouped into sets of one, two, three, four, or five values, depending
+    on the <format>, to form a group.  Table 3.5 summarizes the format of
+    groups obtained from memory.  It also indicates those formats that yield
+    indices and those that yield components.
+
+                        Target
+        Format Name     Buffer  Element Meaning and Order
+        -----------     ------  -------------------------
+        COLOR_INDEX     Color   Color index
+        STENCIL_INDEX   Stencil Stencil index
+        DEPTH_COMPONENT Depth   Depth component
+        RED             Color   R component
+        GREEN           Color   G component
+        BLUE            Color   B component
+        ALPHA           Color   A component
+        RGB             Color   R, G, B components
+        RGBA            Color   R, G, B, A components
+        ABGR_EXT        Color   A, B, G, R components
+        CMYK_EXT        Color   Cyan, Magenta, Yellow, Black components
+        CMYKA_EXT       Color   Cyan, Magenta, Yellow, Black, A components
+        LUMINANCE       Color   Luminance component
+        LUMINANCE_ALPHA Color   Luminance, A components
+
+        Table 3.5: DrawPixels and ReadPixels formats.  The third column
+        gives a description of and the number and order of elements in a
+        group.
+
+    By default the values of each GL data type are interpreted as they would
+    be specified in the language of the client's GL binding.  If
+    UNPACK_SWAP_BYTES is set to TRUE, however, then the values are
+    interpreted with the bit orderings modified as per the table below.  The
+    modified bit orderings are defined only if the GL data type ubyte has
+    eight bits, and then for each specific GL data type only if that type
+    is represented with 8, 16, or 32 bits.
+
+        Element         Default 
+        Size            Bit Ordering    Modified Bit Ordering
+        -------         ------------    ---------------------
+        8-bit           [7..0]          [7..0]
+        16-bit          [15..0]         [7..0] [15..8]
+        32-bit          [31..0]         [7..0] [15..8] [23..16] [31..24]
+
+        Table: Bit ordering modification of elements when UNPACK_SWAP_BYTES
+        is TRUE.  These reorderings are defined only when GL data type ubyte
+        has 8 bits, and then only for GL data types with 8, 16, or 32 bits.
+
+    The groups in memory are treated as being arranged in a rectangle.  This
+    rectangle consists of a series of rows, with the first element of the
+    first group of the first row pointed to by the pointer passed to
+    DrawPixels.  If the value of UNPACK_ROW_LENGTH is not positive, then the
+    number of groups in a row is <width>; otherwise the number of groups is
+    UNPACK_ROW_LENGTH.  If the first element of the first row is at location
+    p in memory, then the location of the first element of the Nth row is
+
+        p + Nk
+
+    where N is the row number (counting from zero) and k is defined as
+
+             / nl                       s >= a
+        k = <
+             \ a/s * ceiling(snl/a)     s < a
+
+    where n is the number of elements in a group, l is the number of groups
+    in a row, a is the value of UNPACK_ALIGNMENT, and s is the size,
+    in units of GL ubytes, of an element.  If the number of bits per
+    element is not 1, 2, 4, or 8 times the number of bits in a GL ubyte,
+    then k = nl for all values of a.
+
+    There is a mechanism for selecting a sub-rectangle of groups from a
+    larger containing rectangle.  This mechanism relies on three integer
+    parameters: UNPACK_ROW_LENGTH, UNPACK_SKIP_ROWS, and UNPACK_SKIP_PIXELS.
+    Before obtaining the first group from memory, the pointer supplied to
+    DrawPixels is effectively advanced by
+
+        UNPACK_SKIP_PIXELS * n + UNPACK_SKIP_ROWS * k
+
+    elements.  Then <width> groups are obtained from contiguous elements
+    in memory (without advancing the pointer), after which the pointer is
+    advanced by k elements.  <height> sets of <width> groups of values are
+    obtained this way.  See Figure 3.8.
+
+    Calling DrawPixels with a <type> of UNSIGNED_BYTE_3_3_2,
+    UNSIGNED_SHORT_4_4_4_4, UNSIGNED_SHORT_5_5_5_1, UNSIGNED_INT_8_8_8_8,
+    or UNSIGNED_INT_10_10_10_2 is a special case in which all the elements
+    of each group are packed into a single unsigned byte, unsigned short,
+    or unsigned int, depending on the type.  The number of elements per
+    packed pixel is fixed by the type, and must match the number of
+    elements per group indicated by the <format> parameter.  (See the table
+    below.)  The error INVALID_OPERATION is generated if a mismatch occurs.
+
+                                        GL      Number
+        <type> Parameter                Data    of        Matching
+        Token Name                      Type    Elements  Pixel Formats
+        ----------------                ----    --------  -------------
+
+        UNSIGNED_BYTE_3_3_2_EXT         ubyte   3         RGB
+        UNSIGNED_SHORT_4_4_4_4_EXT      ushort  4         RGBA,ABGR_EXT,CMYK_EXT
+        UNSIGNED_SHORT_5_5_5_1_EXT      ushort  4         RGBA,ABGR_EXT,CMYK_EXT
+        UNSIGNED_INT_8_8_8_8_EXT        uint    4         RGBA,ABGR_EXT,CMYK_EXT
+        UNSIGNED_INT_10_10_10_2_EXT     uint    4         RGBA,ABGR_EXT,CMYK_EXT
+
+    Bitfield locations of the first, second, third, and fourth elements
+    of each packed pixel type are illustrated in the diagrams below.  Each
+    bitfield is interpreted as an unsigned integer value.  If the base GL
+    type is supported with more than the minimum precision (e.g. a 9-bit
+    byte) the packed elements are right-justified in the pixel.
+
+
+        UNSIGNED_BYTE_3_3_2_EXT:
+
+              7   6   5   4   3   2   1   0
+            +-----------+-----------+-------+
+            |           |           |       |
+            +-----------+-----------+-------+
+
+               first       second     third
+               element     element    element
+
+
+        UNSIGNED_SHORT_4_4_4_4_EXT:
+
+              15  14  13  12  11  10  9   8   7   6   5   4   3   2   1   0
+            +---------------+---------------+---------------+---------------+
+            |               |               |               |               |
+            +---------------+---------------+---------------+---------------+
+
+                first           second          third           fourth
+                element         element         element         element
+
+
+        UNSIGNED_SHORT_5_5_5_1_EXT:
+
+              15  14  13  12  11  10  9   8   7   6   5   4   3   2   1   0
+            +-------------------+-------------------+-------------------+---+
+            |                   |                   |                   |   |
+            +-------------------+-------------------+-------------------+---+
+
+                first                second             third           fourth
+                element              element            element         element
+
+
+        UNSIGNED_INT_8_8_8_8_EXT:
+
+             31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+            +-----------------------+-----------------------+-----------------------+-----------------------+
+            |                       |                       |                       |                       |
+            +-----------------------+-----------------------+-----------------------+-----------------------+
+
+                     first                   second                  third                   fourth
+                     element                 element                 element                 element
+
+
+        UNSIGNED_INT_10_10_10_2_EXT:
+
+             31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+            +-----------------------------+-----------------------------+-----------------------------+-----+
+            |                             |                             |                             |     |
+            +-----------------------------+-----------------------------+-----------------------------+-----+
+
+                       first                         second                        third               fourth
+                       element                       element                       element             element
+
+
+    The assignment of elements to fields in the packed pixel is as
+    described in the table below:
+
+                        First       Second      Third       Fourth
+        Format          Element     Element     Element     Element
+        ------          -------     -------     -------     -------
+        RGB             red         green       blue
+        RGBA            red         green       blue        alpha
+        ABGR_EXT        alpha       blue        green       red
+        CMYK_EXT        cyan        magenta     yellow      black
+    
+    Byte swapping, if enabled, is performed before the elements are
+    extracted from each pixel.  The above discussions of row length and
+    image extraction are valid for packed pixels, if "group" is substituted
+    for "element" and the number of elements per group is understood to
+    be one.
+
+    Calling DrawPixels with a <type> of BITMAP is a special case in which
+    the data are a series of GL ubyte values.  Each ubyte value specifies
+    8 1-bit elements with its 8 least-significant bits.  The 8 single-bit
+    elements are ordered from most significant to least significant if the
+    value of UNPACK_LSB_FIRST is FALSE; otherwise, the ordering is from
+    least significant to most significant.  The values of bits other than
+    the 8 least significant in each ubyte are not significant.
+
+    The first element of the first row is the first bit (as defined above)
+    of the ubyte pointed to by the pointer passed to DrawPixels.  The first
+    element of the second row is the first bit (again as defined above) of
+    the ubyte at location p+k, where k is computed as
+
+        k = a * ceiling(nl/8a)
+
+    There is a mechanism for selecting a sub-rectangle of elements from
+    a BITMAP image as well.  Before obtaining the first element from memory,
+    the pointer supplied to DrawPixels is effectively advanced by
+
+        UNPACK_SKIP_ROWS * k
+
+    ubytes.  Then UNPACK_SKIP_PIXELS 1-bit elements are ignored, and the
+    subsequent <width> 1-bit elements are obtained, without advancing the
+    ubyte pointer, after which the pointer is advanced by k ubytes.  <height>
+    sets of <width> elements are obtained this way.
+
+    Conversion to floating-point
+
+    This step applies only to groups of components.  It is not performed on
+    indices.  Each element in a group is converted to a floating-point value
+    according to the appropriate formula in Table 2.4 (section 2.12).
+    Unsigned integer bitfields extracted from packed pixels are interpreted
+    using the formula
+
+        f = c / ((2**N)-1)
+
+    where c is the value of the bitfield (interpreted as an unsigned
+    integer), N is the number of bits in the bitfield, and the division is
+    performed in floating point.
+
+    [End of changes to Section 3.6.3]
+
+    If this extension is supported, all commands that accept pixel data
+    also accept packed pixel data.  These commands are DrawPixels,
+    TexImage1D, TexImage2D, TexImage3DEXT, TexSubImage1DEXT,
+    TexSubImage2DEXT, TexSubImage3DEXT, ConvolutionFilter1DEXT,
+    ConvolutionFilter2DEXT, ConvolutionFilter3DEXT, SeparableFilter2DEXT,
+    SeparableFilter3DEXT, ColorTableSGI, TexImage4DSGIS, and
+    TexSubImage4DSGIS.
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    [Make the following changes to Section 4.3.2 (Reading Pixels):]
+
+    Final Conversion
+
+    For an index, if the <type> is not FLOAT, final conversion consists of
+    masking the index with the value given in Table 4.6; if the <type> is
+    FLOAT, then the integer index is converted to a GL float data value.
+    For a component, each component is first clamped to [0,1].  Then,
+    the appropriate conversion formula from Table 4.7 is applied to the
+    component.
+
+        <type> Parameter        Index Mask
+        ----------------        ----------
+        UNSIGNED_BYTE           2**8 - 1
+        BITMAP                  1
+        BYTE                    2**7 - 1
+        UNSIGNED_SHORT          2**16 - 1
+        SHORT                   2**15 - 1
+        UNSIGNED_INT            2**32 - 1
+        INT                     2**31 - 1
+
+        Table 4.6: Index masks used by ReadPixels.  Floating point data
+        are not masked.
+
+        <type>                          GL Data         Component
+        Parameter                       Type            Conversion Formula
+        ---------                       -------         ------------------
+        UNSIGNED_BYTE                   ubyte           c = ((2**8)-1)*f
+        BYTE                            byte            c = (((2**8)-1)*f-1)/2
+        UNSIGNED_SHORT                  ushort          c = ((2**16)-1)*f
+        SHORT                           short           c = (((2**16)-1)*f-1)/2
+        UNSIGNED_INT                    uint            c = ((2**32)-1)*f
+        INT                             int             c = (((2**32)-1)*f-1)/2
+        FLOAT                           float           c = f
+        UNSIGNED_BYTE_3_3_2_EXT         ubyte           c = ((2**N)-1)*f
+        UNSIGNED_SHORT_4_4_4_4_EXT      ushort          c = ((2**N)-1)*f
+        UNSIGNED_SHORT_5_5_5_1_EXT      ushort          c = ((2**N)-1)*f
+        UNSIGNED_INT_8_8_8_8_EXT        uint            c = ((2**N)-1)*f
+        UNSIGNED_INT_10_10_10_2_EXT     uint            c = ((2**N)-1)*f
+
+        Table 4.7: Reversed component conversions - used when component data
+        are being returned to client memory.  Color, normal, and depth
+        components are converted from the internal floating-point
+        representation (f) to a datum of the specified GL data type (c) using
+        the equations in this table.  All arithmetic is done in the internal
+        floating point format.  These conversions apply to component data
+        returned by GL query commands and to components of pixel data returned
+        to client memory.  The equations remain the same even if the
+        implemented ranges of the GL data types are greater than the minimum
+        required ranges.  (Refer to table 2.2.)  Equations with N as the
+        exponent are performed for each bitfield of the packed data type,
+        with N set to the number of bits in the bitfield.
+
+    Placement in Client Memory
+
+    Groups of elements are placed in memory just as they are taken from memory
+    for DrawPixels.  That is, the ith group of the jth row (corresponding to
+    the ith pixel in the jth row) is placed in memory must where the ith group
+    of the jth row would be taken from for DrawPixels.  See Unpacking under
+    section 3.6.3.  The only difference is that the storage mode parameters
+    whose names begin with PACK_ are used instead of those whose names begin
+    with UNPACK_.
+
+    [End of changes to Section 4.3.2]
+
+    If this extension is supported, all commands that return pixel data
+    also return packed pixel data.  These commands are ReadPixels,
+    GetTexImage, GetHistogramEXT, GetMinmaxEXT, GetConvolutionFilterEXT,
+    GetSeparableFilterEXT, and GetColorTableSGI.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+        None
+
+Dependencies on EXT_abgr
+
+    If EXT_abgr is not implemented, then the references to ABGR_EXT in this
+    file are invalid, and should be ignored.
+
+Dependencies on EXT_texture3D
+
+    If EXT_texture3D is not implemented, then the references to
+    TexImage3DEXT in this file are invalid, and should be ignored.
+
+Dependencies on EXT_subtexture
+
+    If EXT_subtexture is not implemented, then the references to
+    TexSubImage1DEXT, TexSubImage2DEXT, and TexSubImage3DEXT in this file
+    are invalid, and should be ignored.
+
+Dependencies on EXT_histogram
+
+    If EXT_histogram is not implemented, then the references to
+    GetHistogramEXT and GetMinmaxEXT in this file are invalid, and should be
+    ignored.
+
+Dependencies on EXT_convolution
+
+    If EXT_convolution is not implemented, then the references to
+    ConvolutionFilter1DEXT, ConvolutionFilter2DEXT, ConvolutionFilter3DEXT,
+    GetConvolutionFilterEXT, SeparableFilter2DEXT, SeparableFilter3DEXT, and
+    GetSeparableFilterEXT in this file are invalid, and should be ignored.
+
+Dependencies on SGI_color_table
+
+    If SGI_color_table is not implemented, then the references to
+    ColorTableSGI and GetColorTableSGI in this file are invalid, and should
+    be ignored.
+
+Dependencies on SGIS_texture4D
+
+    If SGIS_texture4D is not implemented, then the references to
+    TexImage4DSGIS and TexSubImage4DSGIS in this file are invalid, and should
+    be ignored.
+
+Dependencies on EXT_cmyka
+
+    If EXT_cmyka is not implemented, then the references to CMYK_EXT and
+    CMYKA_EXT in this file are invalid, and should be ignored.
+
+Errors
+
+    [For the purpose of this enumeration of errors, GenericPixelFunction
+    represents any OpenGL function that accepts or returns pixel data, using
+    parameters <type> and <format> to define the type and format of that
+    data.  Currently these functions are DrawPixels, ReadPixels, TexImage1D,
+    TexImage2D, GetTexImage, TexImage3DEXT, TexSubImage1DEXT,
+    TexSubImage2DEXT, TexSubImage3DEXT, GetHistogramEXT, GetMinmaxEXT,
+    ConvolutionFilter1DEXT, ConvolutionFilter2DEXT, ConvolutionFilter3DEXT,
+    GetConvolutionFilterEXT, SeparableFilter2DEXT, SeparableFilter3DEXT,
+    GetSeparableFilterEXT, ColorTableSGI, GetColorTableSGI, TexImage4DSGIS,
+    and TexSubImage4DSGIS.]
+
+    INVALID_OPERATION is generated by GenericPixelFunction if its <type>
+    parameter is UNSIGNED_BYTE_3_3_2_EXT and its <format> parameter does not
+    specify three components.  Currently the only 3-component format is RGB.
+
+    INVALID_OPERATION is generated by GenericPixelFunction if its <type>
+    parameter is UNSIGNED_SHORT_4_4_4_4_EXT, UNSIGNED_SHORT_5_5_5_1_EXT,
+    UNSIGNED_INT_8_8_8_8_EXT, or UNSIGNED_INT_10_10_10_2_EXT and its
+    <format> parameter does not specify four components.  Currently the only
+    4-component formats are RGBA, ABGR_EXT, and CMYK_EXT.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

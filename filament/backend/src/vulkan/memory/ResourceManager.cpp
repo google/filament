@@ -27,8 +27,8 @@ uint32_t COUNTER[(size_t) ResourceType::UNDEFINED_TYPE] = {};
 #endif
 }
 
-ResourceManager::ResourceManager(size_t arenaSize, bool disableUseAfterFreeCheck)
-    : mHandleAllocatorImpl("Handles", arenaSize, disableUseAfterFreeCheck) {}
+ResourceManager::ResourceManager(size_t arenaSize, bool disableUseAfterFreeCheck, bool disablePoolHandleTags)
+    : mHandleAllocatorImpl("Handles", arenaSize, disableUseAfterFreeCheck, disablePoolHandleTags) {}
 
 void ResourceManager::gc() noexcept {
     auto destroyAll = [this](GcList& list) {

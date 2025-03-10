@@ -1,0 +1,98 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglGetProcAddress">
+    <info>
+         <copyright>
+             <year>2003-2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglGetProcAddress</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglGetProcAddress</refname>
+        <refpurpose>
+            return a <acronym>GL</acronym> or an <acronym>EGL</acronym>
+            extension function
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>void (* <function>eglGetProcAddress</function></funcdef>
+                <paramdef>char const * <parameter>procname</parameter>))(void</paramdef>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="parameters"><title>Parameters</title>
+        <variablelist>
+            <varlistentry>
+                <term><parameter>procname</parameter></term>
+                <listitem>
+                    <para>
+                        Specifies the name of the function to return.
+                    </para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglGetProcAddress</function> returns the address of
+            the client API or EGL function named by
+            <parameter>procname</parameter>. <parameter>procname</parameter>
+            must be a null-terminated string. The pointer returned should be
+            cast to a function pointer matching the function's definition in
+            the corresponding API or extension specification. A return value
+            of <constant>NULL</constant> indicates that the specific
+            function does not exist for the implementation.
+        </para>
+        <para>
+            A non-<constant>NULL</constant> return value does not guarantee
+            that an extension function is actually supported at runtime. The
+            client must also make a corresponding query, such as
+            <function>glGetString</function>(<constant>GL_EXTENSIONS</constant>)
+            for OpenGL and OpenGL ES extensions;
+            <function>vgGetString</function>(<constant>VG_EXTENSIONS</constant>)
+            for OpenVG extensions;
+            <function>eglQueryString</function>(<parameter>display</parameter>,
+            <constant>EGL_EXTENSIONS</constant>); or query the EGL or client
+            API version for non-extension functions, to determine if a
+            function is supported by EGL or a specific client API context.
+        </para>
+        <para>
+            Client API function pointers returned by
+            <function>eglGetProcAddress</function> are independent of the
+            display and the currently bound client API context, and may be
+            used by any client API context which supports the function.
+        </para>
+        <para>
+            <function>eglGetProcAddress</function> may be queried for all
+            EGL and client API functions supported by the implementation
+            (whether those functions are extensions or not, and whether they
+            are supported by the current client API context or not).
+        </para>
+        <para>
+            For functions that are queryable with
+            <function>eglGetProcAddress</function>, implementations may
+            choose to also export those functions statically from the object
+            libraries implementing those functions. However, portable
+            clients cannot rely on this behavior.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="notes"><title>Notes</title>
+        <para>
+            If the EGL version is not 1.5 or greater, only queries of EGL
+            and client API <emphasis>extension</emphasis> functions will
+            succeed.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <function>glGetString</function>
+            <citerefentry><refentrytitle>eglQueryString</refentrytitle></citerefentry>    </para>
+            <function>vgGetString</function>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

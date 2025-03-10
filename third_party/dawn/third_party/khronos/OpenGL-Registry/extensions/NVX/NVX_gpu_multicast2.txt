@@ -1,0 +1,249 @@
+Name
+
+    NVX_gpu_multicast2
+
+Name Strings
+
+    GL_NVX_gpu_multicast2
+
+Contact
+
+    Joshua Schnarr, NVIDIA Corporation (jschnarr 'at' nvidia.com)
+    Ingo Esser, NVIDIA Corporation (iesser 'at' nvidia.com)
+
+Contributors
+
+    Robert Menzel, NVIDIA
+    Ralf Biermann, NVIDIA
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: July 23, 2019
+    Author Revision: 8
+
+Number
+
+    OpenGL Extension #543
+
+Dependencies
+
+    This extension is written against the OpenGL 4.6 specification
+    (Compatibility Profile), dated October 24, 2016.
+
+    This extension requires NV_gpu_multicast.
+    
+    This extension requires EXT_device_group.
+
+    This extension requires NV_viewport_array.
+    
+    This extension requires NV_clip_space_w_scaling.
+
+    This extension requires NVX_progress_fence.
+
+    
+Overview
+
+    This extension provides additional mechanisms that influence multicast rendering which is
+    simultaneous rendering to multiple GPUs.
+    
+New Procedures and Functions
+
+    uint AsyncCopyImageSubDataNVX(
+        sizei waitSemaphoreCount, const uint *waitSemaphoreArray, const uint64 *waitValueArray,
+        uint srcGpu, GLbitfield dstGpuMask,
+        uint srcName, GLenum srcTarget, int srcLevel, int srcX, int srcY, int srcZ,
+        uint dstName, GLenum dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
+        sizei srcWidth, sizei srcHeight, sizei srcDepth,
+        sizei signalSemaphoreCount, const uint *signalSemaphoreArray, const uint64 *signalValueArray);
+
+    sync AsyncCopyBufferSubDataNVX(
+        sizei waitSemaphoreCount, const uint *waitSemaphoreArray, const uint64 *fenceValueArray,
+        uint readGpu, GLbitfield writeGpuMask,
+        uint readBuffer, uint writeBuffer,
+        GLintptr readOffset, GLintptr writeOffset, sizeiptr size,
+        sizei signalSemaphoreCount, const uint *signalSemaphoreArray, const uint64 *signalValueArray);
+
+    void UploadGpuMaskNVX(bitfield mask);
+        
+    void MulticastViewportArrayvNVX(uint gpu, uint first, sizei count, const float *v);
+
+    void MulticastScissorArrayvNVX(uint gpu, uint first, sizei count, const int *v);
+    
+    void MulticastViewportPositionWScaleNVX(uint gpu, uint index, float xcoeff, float ycoeff);    
+
+    
+New Tokens
+
+    Accepted by the <pname> parameter of GetIntegerv and GetInteger64v:
+
+        UPLOAD_GPU_MASK_NVX                        0x954A
+
+Additions to Chapter 20 (Multicast Rendering) added to the OpenGL 4.5 (Compatibility Profile)
+Specification by NV_gpu_multicast
+
+    Additions to Section 20.1 (Controlling Individual GPUs)
+
+    Texture data uploads using the functions TexImage1D, TexImage2D, TexImage3D, 
+    TexSubImage1D, TexSubImage2D and TexSubImage3D are restricted to a specific set of GPUs with
+
+      void UploadGpuMaskNVX(bitfield mask);
+
+    This command also restricts buffer object data uploads using the functions BufferStorage, 
+    NamedBufferStorage, BufferSubData and NamedBufferSubData to the specified set of GPUs.
+
+    Further this command also restricts buffer object clears using the functions ClearBufferData,
+    ClearNamedBufferData, ClearBufferSubData and ClearNamedBufferSubData.
+    
+    The following errors apply to UploadGpuMaskNVX:
+
+    INVALID_VALUE is generated
+    * if <mask> is zero,
+    * if <mask> is greater than or equal to 2^n, where n is equal to MULTICAST_GPUS_NV
+
+    If the command does not generate an error, UPLOAD_GPU_MASK_NVX is set to <mask>.  
+    
+    The default value of UPLOAD_GPU_MASK_NVX is (2^n)-1.
+
+    If a function restricted by UploadGpuMaskNVX operates on textures or buffer objects
+    with GPU-shared storage type (as opposed to per-GPU storage), UPLOAD_GPU_MASK_NVX is ignored.
+
+    Modify Section 20.2 (Multi-GPU Buffer Storage)
+
+    Append the following paragraphs:
+
+    To initiate a copy of buffer data without waiting for it to complete, use the following command:
+
+    void AsyncCopyBufferSubDataNVX(
+        sizei waitSemaphoreCount, const uint *waitSemaphoreArray, const uint64 *fenceValueArray,
+        uint readGpu, GLbitfield writeGpuMask,
+        uint readBuffer, uint writeBuffer,
+        GLintptr readOffset, GLintptr writeOffset, sizeiptr size,
+        sizei signalSemaphoreCount, const uint *signalSemaphoreArray, const uint64 *signalValueArray);
+
+    This command behaves equivalently to MulticastCopyBufferSubDataNV, except that it may be
+    performed concurrently with commands submitted in the future.
+    Fence semaphore objects created with CreateProgressFenceNVX are used for synchronization of one or 
+    multiple copies. 
+    An array of <waitSemaphoreCount> synchronization objects can be specified in the <waitSemaphoresArray>
+    parameter as a pointer to the array of semaphore objects.
+    The copy will wait for all fence semaphores in the <waitSemaphoreArray> array to be reach or exceed
+    their corresponding fence value in <fenceValueArray> before starting the transfer. 
+    A signal operation for each of the <signalSemaphoreCount> semaphores in <signalSemaphoresArray> is written
+    after the copy with the corresponding fence value in <signalValueArray>.
+    To wait for the copy to complete, use WaitSemaphoreui64NVX or ClientWaitSemaphoreui64NVX to wait
+    for the semaphores in <signalSemaphoreArray> to be signalled with the fence values in <signalValueArray>.
+    
+    Modify Section 20.3.1 (Copying Image Data Between GPUs)
+
+    Insert the following paragraphs above the line starting "To copy pixel values":
+
+    To initiate a copy of texel data without waiting for it to complete, use the following command:
+
+    void AsyncCopyImageSubDataNVX(
+        sizei waitSemaphoreCount, const uint *waitSemaphoreArray, const uint64 *waitValueArray,
+        uint srcGpu, GLbitfield dstGpuMask,
+        uint srcName, GLenum srcTarget, int srcLevel, int srcX, int srcY, int srcZ,
+        uint dstName, GLenum dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
+        sizei srcWidth, sizei srcHeight, sizei srcDepth,
+        sizei signalSemaphoreCount, const uint *signalSemaphoreArray, const uint64 *signalValueArray);
+
+    This command behaves equivalently to MulticastCopyImageSubDataNV, except that it may be
+    performed concurrently with commands submitted in the future. 
+    Fence semaphore objects created with CreateProgressFenceNVX are used for synchronization of one or
+    multiple copies. An array of <waitSemaphoreCount> synchronization objects can be specified in the 
+    <waitSemaphoreArray> parameter as a pointer to the array of semaphore objects.
+    The copy will wait for all fence semaphores in the <waitSemaphoresArray> array to be reach or exceed
+    their corresponding fence value in <fenceValueArray> before starting the transfer. 
+    A signal operation for each of the <signalSemaphoreCount> semaphores in <signalSemaphoreArray> is written
+    after the copy with the corresponding fence value in <signalValueArray>.
+    To wait for the copy to complete, use WaitSemaphoreui64NVX or ClientWaitSemaphoreui64NVX to wait
+    for the semaphores in <signalSemaphoresArray> to be signalled with the fence values in <signalValueArray>.
+
+Additions to Chapter 13 (Fixed-Function Vertex Post-Processing) added to the OpenGL 4.5 (Compatibility Profile)
+
+    Modify Section 13.6 (Coordinate transformations)
+    
+    Viewport transformation parameters for multiple viewports are specified using
+
+        MulticastViewportArrayvNVX(uint gpu, uint first, sizei count, const float * v);
+    
+    where the array of viewport parameters can be controlled for each multicast GPU, respectively.
+    
+    A set of scissor rectangles that are each applied to the corresponding viewport is specified
+    using
+    
+        MulticastScissorArrayvNVX(uint gpu, uint first, sizei count, const int *v);
+    
+    where the rectangle parameters can be controlled for each multicast GPU, respectively.
+    
+    
+    If VIEWPORT_POSITION_W_SCALE_NV is enabled, the w coordinates for each
+    primitive sent to a given viewport will be scaled as a function of
+    its x and y coordinates using the following equation:
+
+        w' = xcoeff * x + ycoeff * y + w;
+
+    The coefficients for "x" and "y" used in the above equation depend on the
+    viewport index and can be controlled for each multicast GPU, respectively, by the command
+
+        MulticastViewportPositionWScaleNVX(uint gpu, uint index, float xcoeff, float ycoeff);
+
+    An error INVALID_VALUE error is generated if <gpu> is greater than or equal to MULTICAST_GPUS_NV. 
+    
+Additions to the OpenGL Shading Language Specification, Version 4.50
+        
+    Including the following line in a shader can be used to enumerate multicast GPUs
+    by using the shader built-in variable gl_DeviceIndex:
+
+        #extension GL_EXT_device_group : enable
+    
+    Each multicast GPU contains a unique device index in the gl_DeviceIndex variable.
+
+Errors
+
+    Relaxation of INVALID_ENUM errors
+    ---------------------------------
+    GetIntegerv and GetInteger64v now accept new tokens as
+    described in the "New Tokens" section.
+    
+New State
+
+    Additions to Table 23.6 Buffer Object State
+                                                   Initial
+    Get Value                   Type  Get Command Value  Description               Sec.  Attribute
+    -------------------------- ------ ----------- -----  -----------------------   ----  ---------
+    UPLOAD_GPU_MASK_NVX          Z+   GetIntegerv   *    Mask of GPUs that         20.1     -
+                                                         restricts buffer data
+                                                         writes
+    * See section 20.1
+
+
+New Implementation Dependent State
+
+    None.
+
+Sample Code
+
+    None.
+
+Issues
+
+    None.
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------------
+     1    09/20/17  jschnarr  initial draft
+     2    02/23/18  rbiermann updated draft with new functions
+     3    05/23/18  rbiermann updated draft with new ViewportArray and AsyncCopy functions
+     4    06/08/18  rbiermann added NVX_progress_fence for synchronization objects
+     5    08/15/18  rbiermann updated draft with gl_deviceIndex
+     6    04/16/19  rbiermann updated draft with UploadGpuMaskNVX
+     7    07/19/19  rbiermann updated draft with modifications of UploadGpuMaskNVX section
+     8    07/23/19  rbiermann updated draft with support of Clear(Named)Buffer(Sub)Data by UploadGpuMaskNVX
+

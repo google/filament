@@ -1,0 +1,444 @@
+Name
+
+    ARB_base_instance
+
+Name Strings
+
+    GL_ARB_base_instance
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Contributors
+
+    Daniel Koch, NVIDIA
+
+Notice
+
+    Copyright (c) 2011-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on 2011/06/20.
+    Approved by the Khronos Promoters on 2011/07/29.
+
+Version
+
+    Last Modified Date:         June 13, 2014
+    Author Revision:            7
+
+Number
+
+    ARB Extension #107
+
+Dependencies
+
+    This extension is written against the OpenGL Specification, Version 4.1
+    (Core Profile).
+
+    OpenGL 3.1 or ARB_draw_instanced is required.
+
+Overview
+
+    This extension allows the offset within buffer objects used for instanced
+    rendering to be specified. This is congruent with the <first> parameter
+    in glDrawArrays and the <basevertex> parameter in glDrawElements. When
+    instanced rendering is performed (for example, through
+    glDrawArraysInstanced), instanced vertex attributes whose vertex attribute
+    divisors are non-zero are fetched from enabled vertex arrays per-instance
+    rather than per-vertex. However, in unextended OpenGL, there is no way to
+    define the offset into those arrays from which the attributes are fetched.
+    This extension adds that offset in the form of a <baseinstance> parameter
+    to several new procedures.
+
+    The <baseinstance> parameter is added to the index of the array element,
+    after division by the vertex attribute divisor. This allows several sets of
+    instanced vertex attribute data to be stored in a single vertex array, and
+    the base offset of that data to be specified for each draw. Further, this
+    extension exposes the <baseinstance> parameter as the final and previously
+    undefined structure member of the draw-indirect data structure.
+
+IP Status
+
+    None.
+
+New Procedures and Functions
+
+        void DrawArraysInstancedBaseInstance(enum mode,
+                                             int first,
+                                             sizei count,
+                                             sizei primcount,
+                                             uint baseinstance);
+
+        void DrawElementsInstancedBaseInstance(enum mode,
+                                               sizei count,
+                                               enum type,
+                                               const void *indices,
+                                               sizei primcount,
+                                               uint baseinstance);
+
+        void DrawElementsInstancedBaseVertexBaseInstance(enum mode,
+                                                         sizei count,
+                                                         enum type,
+                                                         const void *indices,
+                                                         sizei primcount,
+                                                         int basevertex,
+                                                         uint baseinstance);
+
+New Tokens
+
+    None.
+
+Modifications to Chapter 2 of the the OpenGL 4.1 (Core Profile) Specification
+(OpenGL Operation)
+
+    Modification to Section 2.8.3, "Drawing Commands"
+
+    Modify the definition of DrawArraysOneInstance on p.33.
+
+    The command
+
+        void DrawArraysOneInstance(enum mode,
+                                   int first,
+                                   sizei count,
+                                   int instance,
+                                   uint baseinstance);
+
+    does not exist in the GL, but is used to describe functionality in the rest
+    of this section. This command constructs a sequence of geometric primitives
+    by transferring elements <first> through <first> + <count> - 1 of each
+    enabled array to the GL. <mode> specifies what kind of primitives are
+    constructed, as defined in section 2.6.1. If <mode> is not a valid primitive
+    type, an INVALID_ENUM error is generated. If <count> is negative, an
+    INVALID_VALUE error is generated.
+
+    For any vertex attribute whose divisor is non-zero as set by
+    VertexAttribDivisor, the value <baseinstance> is used to determine the element
+    of the enabled instanced attribute arrays that will be transferred for all
+    vertices transferred by this function.
+
+    If an array corresponding to a generic attribute required by a vertex
+    shader is not enabled, then the corresponding element is taken from the
+    current generic attribute state (see section 2.7).
+
+    If an array corresponding to a generic attribute required by a vertex
+    shader is enabled, the corresponding current generic attribute value is
+    unaffected by the execution of DrawArraysOneInstance.
+
+    Specifying <first> < 0 results in undefined behavior. Generating the
+    error INVALID_VALUE is recommended in this case.
+
+    The command
+
+        void DrawArrays( enum mode, int first, sizei count );
+
+    is equivalent to the command sequence
+
+        DrawArraysOneInstance(mode, first, count, 0, 0);
+
+    Replace the description of DrawArraysInstanced with the following (p.35):
+
+    The command
+
+        void DrawArraysInstancedBaseInstance(enum mode,
+                                             int first,
+                                             sizei count,
+                                             sizei primcount,
+                                             uint baseinstance);
+
+    behaves identically to DrawArrays, except that <primcount> instances of the
+    range of elements are executed and the value of <instanceID> advances for
+    each iteration. Those attributes that have divisor N where N is other than
+    zero (as specified by VertexAttribDivisor) advance once every N instances.
+    Additionally, the first element within those instanced vertex attributes
+    is specified in <baseinstance>. Thus, the element transferred from instanced
+    vertex attributes is given by:
+
+        (<instanceID> / <divisor>) + <baseinstance>
+
+    DrawArraysInstancedBaseInstance has the same effect as:
+
+        if (<mode> or <count> is invalid)
+            generate  appropriate  error
+        else {
+            for  (i = 0; i < <primcount>; i++) {
+                instanceID  =  i;
+                DrawArraysOneInstance(<mode>, <first>, <count>, i, <baseinstance>);
+            }
+            instanceID  =  0;
+        }
+
+    The command
+
+            void DrawArraysInstanced(enum mode,
+                                     int first,
+                                     sizei count,
+                                     sizei primcount);
+
+    Is equivalent to calling DrawArraysInstancedBaseInstance with <baseinstance>
+    set to zero.
+
+    Update the definition of DrawArraysIndirect as follows (p.35):
+
+    The command
+
+            void  DrawArraysIndirect(enum mode,
+                                     const void *indirect);
+
+    has the same effect as:
+
+            typedef  struct {
+                uint  count;
+                uint  primCount;
+                uint  first;
+                uint  baseInstance;
+        } DrawArraysIndirectCommand;
+
+        const DrawArraysIndirectCommand  *cmd  =
+            (const DrawArraysIndirectCommand *)indirect;
+
+        DrawArraysInstancedBaseInstance(mode,
+                                        cmd->first,
+                                        cmd->count,
+                                        cmd->primCount,
+                                        cmd->baseInstance);
+
+    Remove the sentence "Results are undefined if reservedMustBeZero is non-
+    zero, but must not lead to GL interruption or termination."
+
+    Update the definition of DrawElementsOneInstance, p.36:
+
+    The command
+
+        void DrawElementsOneInstance(enum mode,
+                                     sizei count,
+                                     enum type,
+                                     const void *indices,
+                                     int instance,
+                                     uint baseinstance);
+
+    does not exist in the GL ... <retain the remainder of the description>
+
+    If an enabled vertex attribute array is instanced (it has a non-zero
+    attribute divisor as specified by VertexAttribDivisor), the element that is
+    transferred to the GL is given by:
+
+        floor(<instance> / <divisor>) + <baseinstance>
+
+    Update the text describing DrawElements:
+
+    The command
+
+        void DrawElements(enum mode,
+                          sizei count,
+                          enum type,
+                          const  void *indices);
+
+    behaves identically to DrawElementsOneInstance with the <instance> and
+    <baseinstance> parameters set to zero; the effect of calling
+
+        DrawElements(mode, count, type, indices);
+
+    is equivalent to the command sequence:
+
+        if (<mode>, <count> or <type> is invalid)
+            generate appropriate error
+        else
+            DrawElementsOneInstance(mode, count, type, indices, 0, 0);
+
+    Replace the description of DrawElementsInstanced with the following (p.37)
+
+    The command
+
+            void DrawElementsInstancedBaseInstance(enum mode,
+                                                   sizei count,
+                                                   enum type,
+                                                   const void *indices,
+                                                   sizei primcount,
+                                                   uint baseinstance);
+
+    behaves identically to DrawElements except that <primcount> instances of the
+    set of elements are executed, the value of instanceID advances between each
+    set, and the instance advances between each set. Instanced attributes
+    are advanced as they do during execution of DrawArraysInstancedBaseInstace,
+    and <baseinstance> has the same effect. It has the same effect as:
+
+        if  (<mode>, <count>, <type> or <primcount> is invalid)
+            generate  appropriate  error
+        else {
+            for (int i = 0; i < <primcount>;  i++) {
+                instanceID  =  i;
+                DrawElementsOneInstance(<mode>,
+                                        <count>,
+                                        <type>,
+                                        <indices>,
+                                        i,
+                                        <baseinstance>);
+            }
+            instanceID  =  0;
+        }
+
+    Add to the list of functions which include DrawElementsBaseVertex,
+    DrawRangeElementsBaseVertex, and DrawElementsInstancedBaseVertex (p.39):
+
+        void DrawElementsInstancedBaseVertexBaseInstance(enum mode,
+                                                         sizei count,
+                                                         enum type,
+                                                         const void *indices,
+                                                         sizei primcount,
+                                                         int basevertex,
+                                                         uint baseinstance);
+
+    Append to the paragraph describing DrawElementsBaseVertex,
+    DrawRangeElementsBaseVertex, and DrawElementsInstancedBaseVertex (p.40):
+
+    For DrawElementsInstancedBaseVertexBaseInstance, <baseinstance> is
+    used to offset the element from which instanced vertex attributes (those
+    with a non-zero divisor as specified by VertexAttribDivisor) are taken.
+
+    Update the definition of DrawElementsIndirect as follows (p.39):
+
+    The command
+
+        void  DrawElementsIndirect(enum mode,
+                                   enum type,
+                                   const void *indirect );
+
+    has the same effect as:
+
+        typedef  struct {
+            uint  count;
+            uint  primCount;
+            uint  firstIndex;
+            int   baseVertex;
+            uint  baseInstance;
+        } DrawElementsIndirectCommand;
+
+        if  (no element array buffer is bound) {
+            generate appropriate error
+        } else {
+            const DrawElementsIndirectCommand  *cmd  =
+                (const DrawElementsIndirectCommand  *)indirect;
+
+            DrawElementsInstancedBaseVertexBaseInstance(
+                                                mode,
+                                                cmd->count,
+                                                type,
+                                                cmd->firstIndex * size-of-type,
+                                                cmd->primCount,
+                                                cmd->baseVertex,
+                                                cmd->baseInstance);
+        }
+
+    Remove the sentence "Results are undefined if reservedMustBeZero is non-
+    zero, but must not lead to GL interruption or termination."
+
+Modifications to Chapter 3 of the the OpenGL 4.1 (Core Profile) Specification
+(Rasterization)
+
+    None.
+
+Modifications to Chapter 4 of the the OpenGL 4.1 (Core Profile) Specification
+(Per-Fragment Operations and the Framebuffer)
+
+    None.
+
+Modifications to Chapter 5 of the the OpenGL 4.1 (Core Profile) Specification
+(Special Functions)
+
+    None.
+
+Modifications to Chapter 6 of the the OpenGL 4.1 (Core Profile) Specification
+(State and State Requests)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Conformance Testing
+
+    TBD.
+
+Issues
+
+    1) Does <baseinstance> offset gl_InstanceID?
+
+    RESOLVED: No. gl_InstanceID always starts from zero and counts up by one
+    for each instance rendered. If the shader author requires the actual value
+    of the instance index, including the base instance, they must pass the
+    base instance as a uniform. In OpenGL, the vertex attribute divisors are
+    not passed implicitly to the shader anyway, so the shader writer will need
+    to take care of this regardless.
+
+    2) Is <baseinstance> per-attribute, or global?
+
+    RESOLVED: It is global. The same base is used for all instanced attribute
+    arrays.
+
+    3) Do we need any more entry points?
+
+    DISCUSSION: Maybe. Technically, we could specify a base vertex to any
+    drawing command and any instanced vertex attributes would be taken from
+    that offset within their respective buffers. OpenGL already has enough
+    entry points. Another possibility is to actually make <baseinstance> OpenGL
+    state. The application would set it before any draw call (even non-
+    instanced ones) and this would affect the base used for any instanced vertex
+    attributes. However, this would introduce performance overhead and would not
+    work well with Draw{Arrays|Elements}Indirect.
+
+    4) DrawElementsInstancedBaseVertexBaseInstance? Really? The length of entry
+    point names is starting to get silly. Can we clean this up?
+
+    RESOLVED: Yes, we can, but not here.
+
+    5) What happens if baseInstance is > 2^31-1 (i.e., negative as a signed
+    integer)?
+
+    Need to check with hardware vendors.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  ----------  --------  -----------------------------------------
+    7     06/13/2014  dkoch     fix <baseinstance> typos in overview.
+    6     01/18/2011  Jon Leech Use floor() in computing element transferred
+                                to the GL to match change in core spec.
+    5     01/10/2011  gsellers  Address bugzilla 7185. Make baseinstance API
+                                parameter unsigned to match structure member.
+                                Add issue 5.
+    4     01/05/2011  Jon Leech Fix typos from Bug 7202.
+    3     11/09/2010  gsellers  Address bugzilla 7011. Elaborate in overview
+                                and issues. Add placeholder for conformance test
+                                plan.
+    2     11/08/2010  gsellers  Did some TODOs. Check in to SVN.
+    1     11/04/2010  gsellers  Initial revision.

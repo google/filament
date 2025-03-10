@@ -1,0 +1,264 @@
+Name
+
+    EXT_texture_swizzle
+
+Name Strings
+
+    GL_EXT_texture_swizzle
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Cass Everitt, Id Software
+    Brian Harris, Id Software
+    Pat Brown, NVIDIA
+    Eric Werness, NVIDIA
+
+Status
+
+    Shipping in October, 2008.
+
+Version
+
+    Last Modified Date: September 9, 2008
+    Author Revision: 1.0
+
+Number
+
+    356
+
+Dependencies
+
+     Written based on the wording of the OpenGL 2.1 specification.
+
+Overview
+
+    Classic OpenGL texture formats conflate texture storage and
+    interpretation, and assume that textures represent color. In 
+    modern applications, a significant quantity of textures don't
+    represent color, but rather data like shadow maps, normal maps,
+    page tables, occlusion data, etc.. For the latter class of data,
+    calling the data "RGBA" is just a convenient mapping of what the
+    data is onto the current model, but isn't an accurate reflection
+    of the reality of the data.
+
+    The existing texture formats provide an almost orthogonal set of
+    data types, sizes, and number of components, but the mappings of 
+    this storage into what the shader or fixed-function pipeline 
+    fetches is very much non-orthogonal. Previous extensions have
+    added some of the most demanded missing formats, but the problem
+    has not been solved once and for all.
+
+    This extension provides a mechanism to swizzle the components 
+    of a texture before they are applied according to the texture
+    environment in fixed-function or as they are returned to the 
+    shader.
+
+IP Status
+
+    No known IP claims.
+
+New Tokens
+
+    Accepted by the <pname> parameters of TexParameteri,
+    TexParameterf, TexParameteriv, TexParameterfv,
+    GetTexParameterfv, and GetTexParameteriv:
+
+    TEXTURE_SWIZZLE_R_EXT               0x8E42
+    TEXTURE_SWIZZLE_G_EXT               0x8E43
+    TEXTURE_SWIZZLE_B_EXT               0x8E44
+    TEXTURE_SWIZZLE_A_EXT               0x8E45
+
+    Accepted by the <pname> parameters of TexParameteriv, 
+    TexParameterfv, GetTexParameterfv, and GetTexParameteriv:
+
+    TEXTURE_SWIZZLE_RGBA_EXT            0x8E46
+
+
+Additions to Chapter 2 of the OpenGL 2.1 Specification (OpenGL Operation)
+
+    Modify Section 2.15.4 (Shader Execution), p. 84:
+
+    Texture Access
+    
+    ...and converts it to a texture source color Cs according to table 
+    3.20 (section 3.8.13), followed by application of the texture swizzle
+    as described in section 3.8.13. A four-component vector (Rs,Gs,Bs,As)
+    is returned to the vertex shader.
+
+Additions to Chapter 3 of the OpenGL 2.1 Specification (Rasterization)
+
+    Modify Section 3.8.4 (Texture Parameters), p. 168:
+
+    (modify table 3.18, p. 169)
+    Name                   Type         Legal Values
+    ----                   ----         ------------
+    TEXTURE_SWIZZLE_R_EXT  enum         RED, GREEN, BLUE, ALPHA, ZERO, ONE
+    TEXTURE_SWIZZLE_G_EXT  enum         RED, GREEN, BLUE, ALPHA, ZERO, ONE
+    TEXTURE_SWIZZLE_B_EXT  enum         RED, GREEN, BLUE, ALPHA, ZERO, ONE
+    TEXTURE_SWIZZLE_A_EXT  enum         RED, GREEN, BLUE, ALPHA, ZERO, ONE
+
+    (append to section 3.8.4, p. 170)
+
+    TEXTURE_SWIZZLE_RGBA_EXT sets the same state as the R, G, B, A 
+    enums in a single call.
+
+    (append to section 3.8.13, p. 184)
+    The values of the texture parameters TEXTURE_SWIZZLE_R_EXT,
+    TEXTURE_SWIZZLE_G_EXT, TEXTURE_SWIZZLE_B_EXT, and 
+    TEXTURE_SWIZZLE_A_EXT, are applied after the swizzling described
+    in Table 3.20 (p. 186). The swizzle parameter 
+    TEXTURE_SWIZZLE_R_EXT affects the first component of Cs as:
+
+    if (TEXTURE_SWIZZLE_R_EXT == RED) {
+        Cs'[0] = Cs[0];
+    } else if (TEXTURE_SWIZZLE_R_EXT == GREEN) {
+        Cs'[0] = Cs[1];
+    } else if (TEXTURE_SWIZZLE_R_EXT == BLUE) {
+        Cs'[0] = Cs[2];
+    } else if (TEXTURE_SWIZZLE_R_EXT == ALPHA) {
+        Cs'[0] = As;
+    } else if (TEXTURE_SWIZZLE_R_EXT == ZERO) {
+        Cs'[0] = 0;
+    } else if (TEXTURE_SWIZZLE_R_EXT == ONE) {
+        Cs'[0] = 1; // float or int depending on texture component type
+    }
+
+    and similarly for Cs'[1], Cs'[2], and As'.
+
+    Modify Section 3.11.2 (Shader Execution), p. 197:
+
+    Texture Access
+    
+    ...and converts it to a texture source color Cs according to table 
+    3.20 (section 3.8.13), followed by application of the texture swizzle
+    as described in section 3.8.13. The GL returns a four-component 
+    vector (Rs,Gs,Bs,As) to the fragment shader...
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+Errors
+
+    The error INVALID_OPERATION is generated if TexParameteri,
+    TexParameterf, TexParameteriv, or TexParameterfv, parameter <pname> 
+    is TEXTURE_SWIZZLE_R_EXT, TEXTURE_SWIZZLE_G_EXT,  
+    TEXTURE_SWIZZLE_B_EXT, or TEXTURE_SWIZZLE_A_EXT, and <param> is not 
+    RED, GREEN, BLUE, ALPHA, ZERO, or ONE.
+
+    The error INVALID_OPERATION is generated if TexParameteriv, or 
+    TexParameterfv, parameter <pname> TEXTURE_SWIZZLE_RGBA_EXT, and 
+    the four consecutive values pointed to by <param> are not all 
+    RED, GREEN, BLUE, ALPHA, ZERO, or ONE.
+
+New State
+
+    Changes to table 6.16, p. 277 (Texture, state per texture object)
+
+                                                   Initial
+    Get Value              Type   Get Command      Value    Description  Sec.      Attribute
+    ---------              ----   -----------      -------  -----------  ----      ---------
+    TEXTURE_SWIZZLE_R_EXT  Z      GetTexParameter  RED      Red          3.8.4     texture
+                                                            component swizzle
+    TEXTURE_SWIZZLE_G_EXT  Z      GetTexParameter  GREEN    Green        3.8.4     texture
+                                                            component swizzle
+    TEXTURE_SWIZZLE_B_EXT  Z      GetTexParameter  BLUE     Blue         3.8.4     texture
+                                                            component swizzle
+    TEXTURE_SWIZZLE_A_EXT  Z      GetTexParameter  ALPHA    Alpha        3.8.4     texture
+                                                            component swizzle
+
+Issues
+
+    1) Why not add more new formats instead?
+
+    RESOLVED: Adding new formats is more implementation burden than
+    one might expect. New formats need to be added to the pixel path,
+    must be considered for FBO support, etc.. This extension avoids 
+    those issues by solely affecting the result of a texture fetch.
+
+    2) What is the demand for this extension?
+
+    RESOLVED: There are several independent demands for this, 
+    including:
+    - OpenGL 3.0 deprecated support for ALPHA, LUMINANCE, 
+      LUMINANCE_ALPHA, and INTENSITY formats. This extension provides
+      a simple porting path for legacy applications that used these
+      formats.
+
+    - There have been specific requests for (1,1,1,a), or "white alpha"
+      formats that allow a "decal" texture to be used in the same shader
+      as an RGBA texture. This can be accomplished with an OpenGL 2.1 
+      ALPHA texture by doing
+
+        TexParameteri(target, TEXTURE_SWIZZLE_R_EXT, ONE);
+        TexParameteri(target, TEXTURE_SWIZZLE_G_EXT, ONE);
+        TexParameteri(target, TEXTURE_SWIZZLE_B_EXT, ONE);
+        // TEXTURE_SWIZZLE_A_EXT is already ALPHA
+      or equivalently
+        GLint swiz[4] = {ONE, ONE, ONE, ALPHA};
+        TexParameteriv(target, TEXTURE_SWIZZLE_RGBA_EXT, swiz);
+
+      or in OpenGL 3.0 "preview" contexts where ALPHA internal formats 
+      are deprecated by using a RED texture:
+        TexParameteri(target, TEXTURE_SWIZZLE_R_EXT, ONE);
+        TexParameteri(target, TEXTURE_SWIZZLE_G_EXT, ONE);
+        TexParameteri(target, TEXTURE_SWIZZLE_B_EXT, ONE);
+        TexParameteri(target, TEXTURE_SWIZZLE_A_EXT, RED);
+      or equivalently
+        GLint swiz[4] = {ONE, ONE, ONE, RED};
+        TexParameteriv(target, TEXTURE_SWIZZLE_RGBA_EXT, swiz);
+
+    - This functionality is available on Sony PlayStation 3 and can
+      simplify porting those applications to OpenGL.
+
+    3) What names should be used for the components, in both the "source"
+       (<param>) and "destination" (<pname>) enums? RGBA? XYZW? 0123?
+
+    RESOLVED: RGBA for both source and destination. 0123 could cause 
+    confusion with ZERO and ONE. RGBA is a natural choice for source,
+    because the spec describes the values returned by textures as "Color"
+    and "Alpha." There's no particular precedent for destination to be 
+    XYZW as this is still part of texture and not the shader, so RGBA 
+    it is.
+
+    4) How does this interact with depth component textures?
+
+    RESOLVED: The swizzle is applied after the DEPTH_TEXTURE_MODE. This 
+    naturally falls out of specifying the swizzle in terms of Table 3.20.
+
+    5) How does this interact with sRGB?
+
+    RESOLVED: The swizzle is applied after sRGB conversion.
+
+    6) How does this interact with NV_register_combiners, 
+       NV_texture_shader, and other old "shading" extensions that
+       predate NV/ARB_fragment_program and define their own "interesting"
+       swizzles?
+
+    RESOLVED: Undefined. Core fixed-function shading (texture_env/combine)
+    are fully supported, but old proprietary "configurable shading" 
+    extensions are not.
+
+    7) How does the swizzle interact with the fixed-function texture 
+       environment referencing the base format?
+
+    RESOLVED: Note that, by virtue of being defined in terms of Table 3.20,
+    the swizzling occurs *before* the texture environment functions 
+    (Table 3.21 and 3.22) are applied. So if you used the first example 
+    under Issue (2) with fixed-function, the primary color would "pass 
+    through" because the ALPHA base format environment function would 
+    still apply. In order to effectively swizzle all four components, an 
+    INTENSITY format would give the desired result with the same storage
+    requirements.
+
+Revision History
+
+    Revision 1, 2008/08/21
+     - Initial draft
+    Revision 2, 2009/01/28
+     - Add edits to fragment/vertex shader sections to clarify that the 
+       swizzle is applied in both.

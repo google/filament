@@ -1,0 +1,651 @@
+Name
+
+    EXT_framebuffer_multisample
+
+Name Strings
+
+    GL_EXT_framebuffer_multisample
+
+Contributors
+
+    Pat Brown
+    Michael Gold
+    Evan Hart
+    Jeff Juliano
+    Jon Leech
+    Bill Licea-Kane
+    Barthold Lichtenbelt
+    Kent Lin
+    Ian Romanick
+    John Rosasco
+    Jeremy Sandmel
+
+Contacts
+
+    Jeff Juliano, NVIDIA Corporation (jjuliano 'at' nvidia.com)
+    Jeremy Sandmel, Apple Computer (jsandmel 'at' apple.com)
+
+Status
+
+    Complete
+    Approved by the ARB "superbuffers" Working Group on November 8, 2005
+
+Version
+
+    Last Modified Date: January 10, 2007
+    Revision: #7
+
+Number
+
+    317
+
+Dependencies
+
+    Requires GL_EXT_framebuffer_object.
+
+    Requires GL_EXT_framebuffer_blit.
+
+    Written based on the wording of the OpenGL 1.5 specification.
+
+Overview
+
+    This extension extends the EXT_framebuffer_object framework to
+    enable multisample rendering.
+
+    The new operation RenderbufferStorageMultisampleEXT() allocates
+    storage for a renderbuffer object that can be used as a multisample
+    buffer.  A multisample render buffer image differs from a
+    single-sample render buffer image in that a multisample image has a
+    number of SAMPLES that is greater than zero.  No method is provided
+    for creating multisample texture images.
+
+    All of the framebuffer-attachable images attached to a framebuffer
+    object must have the same number of SAMPLES or else the framebuffer
+    object is not "framebuffer complete".  If a framebuffer object with
+    multisample attachments is "framebuffer complete", then the
+    framebuffer object behaves as if SAMPLE_BUFFERS is one.
+
+    In traditional multisample rendering, where
+    DRAW_FRAMEBUFFER_BINDING_EXT is zero and SAMPLE_BUFFERS is one, the
+    GL spec states that "the color sample values are resolved to a
+    single, displayable color each time a pixel is updated."  There are,
+    however, several modern hardware implementations that do not
+    actually resolve for each sample update, but instead postpones the
+    resolve operation to a later time and resolve a batch of sample
+    updates at a time.  This is OK as long as the implementation behaves
+    "as if" it had resolved a sample-at-a-time. Unfortunately, however,
+    honoring the "as if" rule can sometimes degrade performance.
+
+    In contrast, when DRAW_FRAMEBUFFER_BINDING_EXT is an
+    application-created framebuffer object, MULTISAMPLE is enabled, and
+    SAMPLE_BUFFERS is one, there is no implicit per-sample-update
+    resolve.  Instead, the application explicitly controls when the
+    resolve operation is performed.  The resolve operation is affected
+    by calling BlitFramebufferEXT (provided by the EXT_framebuffer_blit
+    extension) where the source is a multisample application-created
+    framebuffer object and the destination is a single-sample
+    framebuffer object (either application-created or window-system
+    provided).
+
+    This design for multisample resolve more closely matches current
+    hardware, but still permits implementations which choose to resolve
+    a single sample at a time.  If hardware that implementes the
+    multisample resolution "one sample at a time" exposes
+    EXT_framebuffer_multisample, it could perform the implicit resolve
+    to a driver-managed hidden surface, then read from that surface when
+    the application calls BlitFramebufferEXT.
+
+    Another motivation for granting the application explicit control
+    over the multisample resolve operation has to do with the
+    flexibility afforded by EXT_framebuffer_object.  Previously, a
+    drawable (window or pbuffer) had exclusive access to all of its
+    buffers.  There was no mechanism for sharing a buffer across
+    multiple drawables.  Under EXT_framebuffer_object, however, a
+    mechanism exists for sharing a framebuffer-attachable image across
+    several framebuffer objects, as well as sharing an image between a
+    framebuffer object and a texture.  If we had retained the "implicit"
+    resolve from traditional multisampled rendering, and allowed the
+    creation of "multisample" format renderbuffers, then this type of
+    sharing would have lead to two problematic situations:
+
+      * Two contexts, which shared renderbuffers, might perform
+        competing resolve operations into the same single-sample buffer
+        with ambiguous results.
+
+      * It would have introduced the unfortunate ability to use the
+        single-sample buffer as a texture while MULTISAMPLE is ENABLED.
+
+    By using the BlitFramebufferEXT from EXT_framebuffer_blit as an
+    explicit resolve to serialize access to the multisampled contents
+    and eliminate the implicit per-sample resolve operation, we avoid
+    both of these problems.
+
+Issues
+
+    Breaking from past convention, the issues section has been moved to
+    the end of the document.  It can be found after Examples, before
+    Revision History.
+
+New Procedures and Functions
+
+    void RenderbufferStorageMultisampleEXT(
+            enum target, sizei samples,
+            enum internalformat,
+            sizei width, sizei height);
+
+New Types
+
+    None.
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetRenderbufferParameterivEXT:
+
+        RENDERBUFFER_SAMPLES_EXT            0x8CAB
+
+    Returned by CheckFramebufferStatusEXT:
+
+        FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_EXT  0x8D56
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        MAX_SAMPLES_EXT                     0x8D57
+
+Additions to Chapter 2 of the 1.5 Specification (OpenGL Operation)
+
+Additions to Chapter 3 of the OpenGL 1.5 Specification (Rasterization)
+
+Additions to Chapter 4 of the OpenGL 1.5 Specification (Per-Fragment
+Operations and the Framebuffer)
+
+Add to 4.3.2 (Reading Pixels), right before the subsection titled
+"Obtaining Pixels form the Framebuffer":
+
+    "ReadPixels generates INVALID_OPERATION if READ_FRAMEBUFFER_BINDING
+    (section 4.4) is non-zero, the read framebuffer is framebuffer
+    complete, and the value of SAMPLE_BUFFERS for the read framebuffer
+    is greater than zero."
+
+Modify the following text to section 4.3.3, page 194, that was added to
+the definition of CopyPixels by EXT_framebuffer_blit:
+
+    "Finally, the behavior of several GL operations is specified "as if
+    the arguments were passed to CopyPixels."  These operations include:
+    CopyTex{Sub}Image*, CopyColor{Sub}Table, and CopyConvolutionFilter*.
+    INVALID_FRAMEBUFFER_OPERATION_EXT will be generated if an attempt is
+    made to execute one of these operations, or CopyPixels, while the
+    object bound to READ_FRAMEBUFFER_BINDING_EXT (section 4.4) is not
+    "framebuffer complete" (as defined in section 4.4.4.2).
+    INVALID_OPERATION will be generated if the object bound to
+    READ_FRAMEBUFFER_BINDING_EXT is "framebuffer complete" and the value
+    of SAMPLE_BUFFERS is greater than zero.
+
+    Furthermore, an attempt to execute CopyPixels will generate
+    INVALID_FRAMEBUFFER_OPERATION_EXT while the object bound to
+    DRAW_FRAMEBUFFER_BINDING_EXT (section 4.4) is not "framebuffer
+    complete".
+
+In 4.3.3 (Copying Pixels), add to the section describing BlitFramebuffer
+that was added by EXT_framebuffer_blit.
+
+    "If SAMPLE_BUFFERS for the read framebuffer is greater than zero and
+    SAMPLE_BUFFERS for the draw framebuffer is zero, the samples
+    corresponding to each pixel location in the source are converted to
+    a single sample before being written to the destination.
+
+    If SAMPLE_BUFFERS for the read framebuffer is zero and
+    SAMPLE_BUFFERS for the draw framebuffer is greater than zero, the
+    value of the source sample is replicated in each of the destination
+    samples.
+
+    If SAMPLE_BUFFERS for both the read and draw framebuffers are
+    greater than zero, and the values of SAMPLES for the read and draw
+    framebuffers are identical, the samples are copied without
+    modification from the read framebuffer to the draw framebuffer.
+    Otherwise, no copy is performed and an INVALID_OPERATION error is
+    generated.
+
+    Furthermore, if SAMPLE_BUFFERS for either the read framebuffer or
+    draw framebuffer is greater than zero, no copy is performed and an
+    INVALID_OPERATION error is generated if the dimensions of the source
+    and destination rectangles provided to BlitFramebuffer are not
+    identical, or if the formats of the read and draw framebuffers are
+    not identical."
+
+Modification to 4.4.2.1 (Renderbuffer Objects)
+
+    Add, just above the definition of RenderbufferStorageEXT:
+
+    "The command
+
+        void RenderbufferStorageMultisampleEXT(
+            enum target, sizei samples,
+            enum internalformat,
+            sizei width, sizei height);
+
+    establishes the data storage, format, dimensions, and number of
+    samples of a renderbuffer object's image.  <target> must be
+    RENDERBUFFER_EXT.  <internalformat> must be RGB, RGBA,
+    DEPTH_COMPONENT, STENCIL_INDEX, or one of the internal formats from
+    table 3.16 or table 2.nnn that has a base internal format of RGB,
+    RGBA, DEPTH_COMPONENT, or STENCIL_INDEX.  <width> and <height> are
+    the dimensions in pixels of the renderbuffer.  If either <width> or
+    <height> is greater than MAX_RENDERBUFFER_SIZE_EXT, or if <samples>
+    is greater than MAX_SAMPLES_EXT, then the error INVALID_VALUE is
+    generated. If the GL is unable to create a data store of the
+    requested size, the error OUT_OF_MEMORY is generated.
+
+    Upon success, RenderbufferStorageMultisampleEXT deletes any existing
+    data store for the renderbuffer image and the contents of the data
+    store after calling RenderbufferStorageMultisampleEXT are undefined.
+    RENDERBUFFER_WIDTH_EXT is set to <width>, RENDERBUFFER_HEIGHT_EXT is
+    set to <height>, and RENDERBUFFER_INTERNAL_FORMAT_EXT is set to
+    <internalformat>.
+
+    If <samples> is zero, then RENDERBUFFER_SAMPLES_EXT is set to zero.
+    Otherwise <samples> represents a request for a desired minimum
+    number of samples. Since different implementations may support
+    different sample counts for multisampled rendering, the actual
+    number of samples allocated for the renderbuffer image is
+    implementation dependent.  However, the resulting value for
+    RENDERBUFFER_SAMPLES_EXT is guaranteed to be greater than or equal
+    to <samples> and no more than the next larger sample count supported
+    by the implementation.
+
+    Sized                 Base               S
+    Internal Format       Internal format    Bits
+    ---------------       ---------------    ----
+    STENCIL_INDEX1_EXT    STENCIL_INDEX      1
+    STENCIL_INDEX4_EXT    STENCIL_INDEX      4
+    STENCIL_INDEX8_EXT    STENCIL_INDEX      8
+    STENCIL_INDEX16_EXT   STENCIL_INDEX      16
+    ------------------------------------------------------------------
+    Table 2.nnn Desired component resolution for each sized internal
+    format that can be used only with renderbuffers.
+
+    A GL implementation may vary its allocation of internal component
+    resolution based on any RenderbufferStorage parameter (except
+    target), but the allocation and chosen internal format must not be a
+    function of any other state and cannot be changed once they are
+    established."
+
+    Modify the definiton of RenderbufferStorageEXT as follows:
+
+    "The command
+
+        void RenderbufferStorageEXT(enum target, enum internalformat,
+                                    sizei width, sizei height);
+
+     is equivalent to calling RenderbufferStorageMultisampleEXT with
+     <samples> equal to zero."
+
+Modification to 4.4.4.2 (Framebuffer Completeness)
+
+    Add an entry to the bullet list:
+
+    * The value of RENDERBUFFER_SAMPLES_EXT is the same for all attached
+      images.
+      { FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_EXT }
+
+    Also add a paragraph to the end of the section:
+
+    "The values of SAMPLE_BUFFERS and SAMPLES are derived from the
+    attachments of the currently bound framebuffer object.  If the
+    current DRAW_FRAMEBUFFER_BINDING_EXT is not "framebuffer complete",
+    then both SAMPLE_BUFFERS and SAMPLES are undefined.  Otherwise,
+    SAMPLES is equal to the value of RENDERBUFFER_SAMPLES_EXT for the
+    attached images (which all must have the same value for
+    RENDERBUFFER_SAMPLES_EXT).  Further, SAMPLE_BUFFERS is one if
+    SAMPLES is non-zero.  Otherwise, SAMPLE_BUFFERS is zero.
+
+Additions to Chapter 5 of the OpenGL 1.5 Specification (Special Functions)
+
+    Added to section 5.4, as part of the discussion of which commands
+    are not compiled into display lists:
+
+    "Certain commands, when called while compiling a display list, are
+    not compiled into the display list but are executed immediately.
+    These are: ..., RenderbufferStorageMultisampleEXT..."
+
+Additions to Chapter 6 of the OpenGL 1.5 Specification (State and State
+Requests)
+
+Modification to 6.1.3 (Enumerated Queries):
+
+    In the list of state query functions, modify the definition of
+    GetRenderbufferParameterivEXT as follows:
+
+    "void GetRenderbufferParameterivEXT(enum target, enum pname,
+                                       int* params);
+
+        <target> must be RENDERBUFFER_EXT.  <pname> must be one of the
+        symbolic values in table 8.nnn.
+
+        If the renderbuffer currently bound to <target> is zero, then
+        INVALID_OPERATION is generated.
+
+        Upon successful return from GetRenderbufferParameterivEXT, if
+        <pname> is RENDERBUFFER_WIDTH_EXT, RENDERBUFFER_HEIGHT_EXT,
+        RENDERBUFFER_INTERNAL_FORMAT_EXT, or RENDERBUFFER_SAMPLES_EXT,
+        then <params> will contain the width in pixels, height in
+        pixels, internal format, or number of samples, respectively, of
+        the renderbuffer currently bound to <target>.
+
+        Otherwise, INVALID_ENUM is generated."
+
+GLX Protocol
+
+    RenderbufferStorageMultisampleEXT
+
+        2       24              rendering command length
+        2       4331            rendering command opcode
+        4       ENUM            target
+        4       CARD32          samples
+        4       ENUM            internalformat
+        4       CARD32          width
+        4       CARD32          height
+
+Dependencies on EXT_framebuffer_object
+
+    EXT_framebuffer_object is required.
+    
+Dependencies on EXT_framebuffer_blit    
+
+    EXT_framebuffer_blit is required.  Technically, EXT_framebuffer_blit
+    would not be required to support multisampled rendering, except for
+    the fact that it provides the only method of doing a multisample
+    resovle from a multisample renderbuffer.
+
+Errors
+
+    The error INVALID_OPERATION_EXT is generated if ReadPixels,
+    CopyPixels, CopyTex{Sub}Image*, CopyColor{Sub}Table, or
+    CopyConvolutionFilter* is called while READ_FRAMEBUFFER_BINDING_EXT
+    is non-zero, the read framebuffer is framebuffer complete, and the
+    value of SAMPLE_BUFFERS for the read framebuffer is greater than
+    zero.
+
+    The error OUT_OF_MEMORY is generated when
+    RenderbufferStorageMultisampleEXT cannot create storage of the
+    specified size.
+
+    If both the draw and read framebuffers are framebuffer complete and
+    both have a value of SAMPLE_BUFFERS that is greater than zero, then
+    the error INVALID_OPERATION is generated if BlitFramebufferEXT is
+    called and the values of SAMPLES for the draw and read framebuffers
+    do not match.
+
+    If both the draw and read framebuffers are framebuffer complete and
+    either has a value of SAMPLE_BUFFERS that is greater than zero, then
+    the error INVALID_OPERATION is generated if BlitFramebufferEXT is
+    called and the formats of the draw and read framebuffers are not
+    identical.
+
+    If either the draw or read framebuffer is framebuffer complete and
+    has a value of SAMPLE_BUFFERS that is greater than zero, then the
+    error INVALID_OPERATION is generated if BlitFramebufferEXT is called
+    and the specified source and destination dimensions are not
+    identical.
+
+    If RenderbufferStorageMultisampleEXT is called with a value of
+    <samples> that is greater than MAX_SAMPLES_EXT, then the error
+    INVALID_VALUE is generated.
+
+New State
+
+    (add to table 8.nnn, "Renderbuffers (state per renderbuffer object)")
+
+    Get Value                          Type    Get Command                    Initial Value  Description             Section       Attribute
+    -------------------------------    ------  -------------                  -------------  --------------------    ------------  ---------
+    RENDERBUFFER_SAMPLES_EXT           Z+      GetRenderbufferParameterivEXT  0              number of samples       4.4.2.1       -
+
+
+To the table added by EXT_framebuffer_object called "Framebuffer
+Dependent Values", table 9.nnn, add the following new framebuffer
+dependent state.
+
+    Get Value        Type  Get Command     Minimum Value    Description             Section  Attribute
+    ---------        ----  -----------     -------------    -------------------     -------  ---------
+    MAX_SAMPLES_EXT  Z+    GetIntegerv     1                Maximum number of       4.4.2.1  -
+                                                            samples supported
+                                                            for multisampling
+                                                            
+
+
+Usage Examples
+
+    XXX add examples XXX
+
+Issues
+
+    (1)  Should this be a separate extension or should it be included in
+         a revision of EXT_framebuffer_object?
+
+         RESOLVED, separate extension
+         
+            Resolved by consensus, May 9, 2005
+         
+         This extension requires EXT_framebuffer_object but the reverse
+         is not true.  In addition, the cross framebuffer copy operation
+         that will be used to handle the multisample resolution
+         operation may be generally useful for non-multisampled
+         rendering, but is pretty much required for multisampled
+         rendering to be useful.  Since we don't want
+         EXT_framebuffer_object to require that functionality either, we
+         split EXT_framebuffer_multisample into its own extension.
+         EXT_framebuffer_multisample might include the "cross
+         framebuffer copy" operation or might simply require the
+         presence of that third extension.  See issue (8).
+
+    (2)  What happens when <samples> is zero or one?
+
+         RESOLVED, 0 = single sample, 1 = minimum multisample
+
+            Resolved by consensus, May 9, 2005
+
+         Zero means single sample, as if RenderbufferStorageEXT had been
+         called instead of RenderbufferStorageMultisampleEXT.  One means
+         minimum number of samples supported by implementation.
+
+         There was a question if one should mean the same thing as
+         single-sample (one sample), or if it should mean the minimum
+         supported number of samples for multisample rendering.  The
+         rules for rasterizing in "multisample" mode are different than
+         "non-multisample" mode.  In the end, we decided that some
+         implementations may wish to support a "one-sample" multisample
+         buffer to allow for multipass multisampling where the sample
+         location can be varied either by the implementation or perhaps
+         explicitly by a "multisample location" extension.
+
+    (3)  Is ReadPixels (or CopyPixels or CopyTexImage) permitted when
+         bound to a multisample framebuffer object?
+
+         RESOLVED, no
+         
+             Resolved by consensus, prior to May 9, 2005
+
+         No, those operations will produce INVALID_OPERATION.  To read
+         the contents of a multisample framebuffer, it must first be
+         "downsampled" into a non-multisample destination, then read
+         from there.  For downsample, see EXT_framebuffer_blit.
+
+         The concern is fallback due to out of memory conditions.  Even
+         if no memory is available to allocate a temporary buffer at the
+         time ReadPixels is called, an implementation should be able to
+         make this work by pre-allocating a small tile and doing the
+         downsample in tiles, or by falling back to software to copy a
+         pixel at a time.
+
+    (4)  Does the resolution from <samples> to RENDERBUFFER_SAMPLES_EXT
+         depend on any other parameters to
+         RenderbufferStorageMultisampleEXT, or must a given value of
+         <samples> always resolve to the same number of actual samples?
+
+         RESOLVED, no, further, user must get at least what they asked
+         for, or Storage call fails:
+
+            Resolved by consensus, May 23, 2005
+
+         
+         Given the routine,
+        
+            void RenderbufferStorageMultisampleEXT(
+                    enum target, uint samples,
+                    enum internalformat,
+                    uint width, uint height);
+        
+         If an implementation supports several sample counts (say, 2x,
+         4x, 8x multisample), and the user requests a sample count of
+         <samples>, the implementation must do one of the following:
+         
+            - succeed in giving the user exactly <samples>, or
+
+            - succeed in giving the user a number of samples greater
+              than <samples> but no more than the next highest number of
+              samples supported by the implementation, or
+
+            - fail the request to RenderbufferStorageMultisampleEXT with
+              an OUT_OF_MEMORY error
+
+    (5)  Is an implementation allowed to create single-sample storage
+         when RenderbufferStorageMultisampleEXT is called with <samples>
+         larger than one?
+
+         RESOLVED, no
+
+            Resolved by consensus, May 23, 2005
+            
+            No, by resolution of issue (4) above, the user must get at
+            least what they asked for or higher, which precludes getting
+            a single sampled format if they asked for a multisampled
+            format.
+
+    (6)  Should OUT_OF_MEMORY be generated when
+         RenderbufferStorageMultisampleEXT cannot create storage of the
+         requested size?
+
+         RESOLVED, yes
+
+            Resolved by consensus, May 23, 2005
+    
+         Yes.  Success or failure is determined by <width>, <height>,
+         <internalformat>, and <samples>, and the implementation can
+         always return OUT_OF_MEMORY. Note that while an implementation
+         may give a different internal format with either higher or
+         lower resolution per component than the internal requested, by
+         issue of resolution (4), it must give at least the number of
+         samples requested or it must fail the
+         RenderbufferStorageMultisampleEXT call.
+         
+             Update from June 2006 ARB meeting:
+             
+             The appropriate error for the case where the number of
+             samples is larger than the maximum supported by the
+             implementation is INVALID_VALUE.  To allow an application
+             to know the maximum legal value, we add a GetInteger query
+             MAX_SAMPLES.
+
+    (7)  Is there a query for the maximum size of <samples>?
+
+         RESOLVED, Yes
+
+         There was some discussion about whether it was useful to return
+         a maximum sample count supported by the implementation as a
+         convenenience to the developer so that the developer doesn't
+         need to try increasingly smaller counts until it finds one that
+         succeeds.  Originally this query was ommitted, but later it was
+         added (MAX_SAMPLES_EXT).
+
+    (8)  Does this extension require our new framebuffer-to-framebuffer
+         copy extension, EXT_framebuffer_blit, or is it merely affected
+         by the presence of that extension.
+         
+         RESOLVED, EXT_framebuffer_blit is required.
+         
+         EXT_framebuffer_multisample by itself enable the user to
+         perform multisampled rendering.  However, you can't copy or
+         read from a multisampled renderbuffer using {Read|Copy}Pixels
+         or CopyTex{Sub}Image - as per issue (3).  Consequently, there
+         is no way to actually use the results of multisampled rendering
+         without EXT_framebuffer_blit.  That makes the
+         EXT_framebuffer_multisample extension arguably kind of useless
+         without the EXT_framebuffer_blit.
+         
+         However, the reverse is not true.  The EXT_framebuffer_blit is
+         useful on its own, which is why it is a separate extension from
+         this one.
+         
+         So we decided to state that EXT_framebuffer_multisample
+         requires EXT_framebuffer_blit instead of merely stating that
+         that extension affects this one.
+
+    (9)  Is DrawPixels allowed when the draw framebuffer is multisample?
+
+         RESOLVED, yes
+
+         This is no different than DrawPixels to a multisample window
+         (framebuffer zero).  Note that ReadPixels and CopyPixels are
+         disallowed when the read framebuffer is multisample.
+         
+Revision History
+    #7, Jan 10, 2007: jjuliano
+        - add missing constraint that a multisample blit requires
+          identical formats for the read and draw framebuffers
+        - correct the resolution of issue 7 (MAX_SAMPLES_EXT)
+        - fix typos
+
+    #6c, November 6, 2006: jjuliano
+        - changes from June #6 merged back in
+
+    #6b, October 13, 2006: Jon Leech
+        - added token values for MAX_SAMPLES_EXT and
+          FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_EXT.
+
+    #6a, September 6, 2006: jsandmel
+        - added language describing MAX_SAMPLES query
+        - clarified that RenderbufferStorageMultisampleEXT can fail
+          with INVALID_VALUE if <samples> is greater than MAX_SAMPLES
+
+    #6, June 1, 2006: jjuliano
+        - add missing errors to Errors section
+        - clarify the modifications to 4.3.2 and 4.3.3.
+        - add issue 9 to document that multisample DrawPixels is allowed
+
+    #5, December 22, 2005: Jon Leech
+        - added GLX protocol, assigned enumerant values
+
+    #4, September 28, 2005: jsandmel, jjuliano
+        - moved the multisample languge from GL_EXT_framebuffer_blit to 
+          this spec.
+        - added description of using BlitFramebufferEXT for resolving
+          multisample buffer
+        - added language referring to DRAW_/READ_FRAMEBUFFER_BINDING
+          instead of just FRAMEBUFFER_BINDING.
+        - minor updates to reflect new EXT_framebuffer_blit spec
+          that provides the multisample resolve function
+        - resolve issue (8)
+        - rename framebuffer_object_multisample to
+          framebuffer_multisample
+
+    #3, May 26, 2005: jsandmel
+        - added recent workgroup resolutions
+        - resolved issues (4), (5), (6), (7) based on decisions from the
+          work group on May 9 and 23, 2005
+        - added issue (8), does this extension require our new
+          cross-framebuffer copy extension?
+        - removed MAX_RENDERBUFFER_SAMPLES_EXT enum as per work group
+          decision - issue (7)
+        - changed prototype for RenderbufferStorageMultisampleEXT to use
+          sizei for sample count
+
+    #2, May 16, 2005: jsandmel
+        - revised to account for recent work group meeting decisions
+        - removed erroneous inclusion of GenerateMipmaps as a new
+          function
+        - resolved issue (1), this will be a separate extension
+        - resolved issue (2), zero means non-multisample, one means
+          minimum number of samples
+
+    #1, May 9, 2005: jjuliano
+        - first revision

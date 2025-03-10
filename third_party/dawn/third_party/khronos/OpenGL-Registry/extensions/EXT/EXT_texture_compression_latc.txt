@@ -1,0 +1,790 @@
+Name
+
+    EXT_texture_compression_latc
+
+Name Strings
+
+    GL_EXT_texture_compression_latc
+    GL_NV_texture_compression_latc (legacy)
+
+Contributors
+
+    Mark J. Kilgard, NVIDIA
+    Pat Brown, NVIDIA
+    Yanjun Zhang, S3
+    Attila Barsi, Holografika
+    Daniel Koch, NVIDIA
+     
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Status
+
+    Shipping for GeForce 8 Series (November 2006)
+
+Version
+
+    Last Modified Date:         July 30, 2017
+    Revision: 2
+
+Number
+
+    331
+
+Dependencies
+
+    OpenGL 1.3 or ARB_texture_compression required
+
+    This extension is written against the OpenGL 2.0 (September 7,
+    2004) specification.
+
+    This extension interacts with OpenGL 2.0 and ARB_texture_non_power_of_two.
+
+Overview
+
+    This extension introduces four new block-based texture compression
+    formats suited for unsigned and signed luminance and luminance-alpha
+    textures (hence the name "latc" for Luminance-Alpha Texture
+    Compression).
+
+    These formats are designed to reduce the storage requirements and
+    memory bandwidth required for luminance and luminance-alpha textures
+    by a factor of 2-to-1 over conventional uncompressed luminance and
+    luminance-alpha textures with 8-bit components (GL_LUMINANCE8 and
+    GL_LUMINANCE8_ALPHA8).
+
+    The compressed signed luminance-alpha format is reasonably suited
+    for storing compressed normal maps.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of TexImage2D,
+    CopyTexImage2D, and CompressedTexImage2D and the <format> parameter
+    of CompressedTexSubImage2D:
+
+        COMPRESSED_LUMINANCE_LATC1_EXT                 0x8C70
+        COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT          0x8C71
+        COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT           0x8C72
+        COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT    0x8C73
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+ -- Section 3.8.1, Texture Image Specification
+
+    Add to Table 3.17 (page 155):  Specific compressed internal formats
+
+        Compressed Internal Format                   Base Internal Format
+        -------------------------------------------  --------------------
+        COMPRESSED_LUMINANCE_LATC1_EXT               LUMINANCE
+        COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT        LUMINANCE
+        COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT         LUMINANCE_ALPHA
+        COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT  LUMINANCE_ALPHA
+
+ -- Section 3.8.2, Alternative Texture Image Specification Commands
+
+    Add to the end of the section (page 163):
+
+    "If the internal format of the texture image being modified is
+    COMPRESSED_LUMINANCE_LATC1_EXT, COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT, or
+    COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT, the texture is stored 
+    using one of the two LATC compressed texture image encodings (see
+    appendix).  Such images are easily edited along 4x4 texel boundaries,
+    so the limitations on TexSubImage2D or CopyTexSubImage2D parameters
+    are relaxed.  TexSubImage2D and CopyTexSubImage2D will result in
+    an INVALID_OPERATION error only if one of the following conditions
+    occurs:
+
+        * <width> is not a multiple of four, <width> plus <xoffset> is not
+          equal to TEXTURE_WIDTH, and either <xoffset> or <yoffset> is
+          non-zero;
+
+        * <height> is not a multiple of four, <height> plus <yoffset> is not
+          equal to TEXTURE_HEIGHT, and either <xoffset> or <yoffset> is
+          non-zero; or
+
+        * <xoffset> or <yoffset> is not a multiple of four.
+
+    The contents of any 4x4 block of texels of an LATC compressed texture
+    image that does not intersect the area being modified are preserved
+    during valid TexSubImage2D and CopyTexSubImage2D calls."
+
+ -- Section 3.8.3, Compressed Texture Images
+
+    Add after the 4th paragraph (page 164) at the end of the
+    CompressedTexImage discussion:
+
+    "If <internalformat> is COMPRESSED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT, or
+    COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT, the compressed texture is 
+    stored using one of several LATC compressed texture image formats.
+    The LATC texture compression algorithm supports only 2D images
+    without borders.  CompressedTexImage1D and CompressedTexImage3D
+    produce an INVALID_ENUM error if <internalformat> is an LATC format.
+    CompressedTexImage2D will produce an INVALID_OPERATION error if
+    <border> is non-zero.
+
+    Add to the end of the section (page 166) at the end of the
+    CompressedTexSubImage discussion:
+
+    "If the internal format of the texture image being modified is
+    COMPRESSED_LUMINANCE_LATC1_EXT, COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT, or
+    COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT, the texture is stored
+    using one of the several LATC compressed texture image formats.
+    Since the LATC texture compression algorithm supports only 2D images,
+    CompressedTexSubImage1D and CompressedTexSubImage3D produce an
+    INVALID_ENUM error if <format> is an LATC format.  Since LATC images
+    are easily edited along 4x4 texel boundaries, the limitations on
+    CompressedTexSubImage2D are relaxed.  CompressedTexSubImage2D will
+    result in an INVALID_OPERATION error only if one of the following
+    conditions occurs:
+
+        * <width> is not a multiple of four, and <width> plus <xoffset> is not
+          equal to TEXTURE_WIDTH;
+
+        * <height> is not a multiple of four, and <height> plus <yoffset> is
+          not equal to TEXTURE_HEIGHT; or
+
+        * <xoffset> or <yoffset> is not a multiple of four.
+
+    The contents of any 4x4 block of texels of an LATC compressed texture
+    image that does not intersect the area being modified are preserved
+    during valid TexSubImage2D and CopyTexSubImage2D calls."
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 2.0 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Dependencies on ARB_texture_compression
+
+    If ARB_texture_compression is supported, all the
+    errors and accepted tokens for CompressedTexImage1D,
+    CompressedTexImage2D, CompressedTexImage3D, CompressedTexSubImage1D,
+    CompressedTexSubImage2D, and CompressedTexSubImage3D also apply
+    respectively to the ARB-suffixed CompressedTexImage1DARB,
+    CompressedTexImage2DARB, CompressedTexImage3DARB,
+    CompressedTexSubImage1DARB, CompressedTexSubImage2DARB, and
+    CompressedTexSubImage3DARB.
+
+Dependencies on OpenGL 2.0 or ARB_texture_non_power_of_two
+
+    If OpenGL 2.0 or ARB_texture_non_power_of_two is supported, compressed
+    texture images can have sizes that are neither multiples of four nor small
+    values like one or two.  The original version of this specification didn't
+    allow TexSubImage2D and CompressedTexSubImage2D to update only a portion
+    of such images.  The spec has been updated to allow such edits in the
+    spirit of the resolution of issue (3) of the EXT_texture_compression_s3tc
+    specification.  See the "Implementation Note" section for more details.
+
+Errors
+
+    INVALID_ENUM is generated by CompressedTexImage1D
+    or CompressedTexImage3D if <internalformat> is
+    COMPRESSED_LUMINANCE_LATC1_EXT, COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT, or
+    COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT.
+
+    INVALID_OPERATION is generated by CompressedTexImage2D
+    if <internalformat> is COMPRESSED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT, or
+    COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT and <border> is not
+    equal to zero.
+
+    INVALID_ENUM is generated by CompressedTexSubImage1D
+    or CompressedTexSubImage3D if <format> is
+    COMPRESSED_LUMINANCE_LATC1_EXT, COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT, or
+    COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT.
+
+    INVALID_OPERATION is generated by TexSubImage2D or CopyTexSubImage2D if
+    TEXTURE_INTERNAL_FORMAT is COMPRESSED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT, or
+    COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT and any of the following
+    apply:
+
+        * <width> is not a multiple of four, <width> plus <xoffset> is not
+          equal to TEXTURE_WIDTH, and either <xoffset> or <yoffset> is
+          non-zero;
+
+        * <height> is not a multiple of four, <height> plus <yoffset> is not
+          equal to TEXTURE_HEIGHT, and either <xoffset> or <yoffset> is
+          non-zero; or
+
+        * <xoffset> or <yoffset> is not a multiple of four.
+
+    INVALID_OPERATION is generated by CompressedTexSubImage2D if
+    TEXTURE_INTERNAL_FORMAT is COMPRESSED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT,
+    COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT, or
+    COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT and any of the following
+    apply:
+
+        * <width> is not a multiple of four, and <width> plus <xoffset> is not
+          equal to TEXTURE_WIDTH;
+
+        * <height> is not a multiple of four, and <height> plus <yoffset> is
+          not equal to TEXTURE_HEIGHT; or
+
+        * <xoffset> or <yoffset> is not a multiple of four.
+
+
+    The following restrictions from the ARB_texture_compression
+    specification do not apply to LATC texture formats, since subimage
+    modification is straightforward as long as the subimage is properly
+    aligned.
+
+    DELETE: INVALID_OPERATION is generated by TexSubImage1D, TexSubImage2D,
+    DELETE: TexSubImage3D, CopyTexSubImage1D, CopyTexSubImage2D, or
+    DELETE: CopyTexSubImage3D if the internal format of the texture image is
+    DELETE: compressed and <xoffset>, <yoffset>, or <zoffset> does not equal
+    DELETE: -b, where b is value of TEXTURE_BORDER.
+
+    DELETE: INVALID_VALUE is generated by CompressedTexSubImage1D,
+    DELETE: CompressedTexSubImage2D, or CompressedTexSubImage3D if the
+    DELETE: entire texture image is not being edited:  if <xoffset>,
+    DELETE: <yoffset>, or <zoffset> is greater than -b, <xoffset> + <width> is
+    DELETE: less than w+b, <yoffset> + <height> is less than h+b, or <zoffset>
+    DELETE: + <depth> is less than d+b, where b is the value of
+    DELETE: TEXTURE_BORDER, w is the value of TEXTURE_WIDTH, h is the value of
+    DELETE: TEXTURE_HEIGHT, and d is the value of TEXTURE_DEPTH.
+
+    See also errors in the GL_ARB_texture_compression specification.
+
+New State
+
+    4 new state values are added for the per-texture object
+    GL_TEXTURE_INTERNAL_FORMAT state.
+
+    In the "Textures" state table( page 278), increment the
+    TEXTURE_INTERNAL_FORMAT subscript for Z by 4 in the "Type" row.
+
+    [NOTE: The OpenGL 2.0 specification actually should read "n x Z48*"
+    because of the 6 generic compressed internal formats in table 3.18.]
+
+New Implementation Dependent State
+
+    None
+
+Appendix
+
+    LATC Compressed Texture Image Formats
+
+    Compressed texture images stored using the LATC compressed image
+    encodings are represented as a collection of 4x4 texel blocks,
+    where each block contains 64 or 128 bits of texel data.  The image
+    is encoded as a normal 2D raster image in which each 4x4 block is
+    treated as a single pixel.  If an LATC image has a width or height
+    that is not a multiple of four, the data corresponding to texels 
+    outside the image are irrelevant and undefined.
+
+    When an LATC image with a width of <w>, height of <h>, and block
+    size of <blocksize> (8 or 16 bytes) is decoded, the corresponding
+    image size (in bytes) is:
+    
+        ceil(<w>/4) * ceil(<h>/4) * blocksize.
+
+    When decoding an LATC image, the block containing the texel at offset
+    (<x>, <y>) begins at an offset (in bytes) relative to the base of the
+    image of:
+
+        blocksize * (ceil(<w>/4) * floor(<y>/4) + floor(<x>/4)).
+
+    The data corresponding to a specific texel (<x>, <y>) are extracted
+    from a 4x4 texel block using a relative (x,y) value of
+    
+        (<x> modulo 4, <y> modulo 4).
+
+    There are four distinct LATC image formats:
+
+
+    COMPRESSED_LUMINANCE_LATC1:  Each 4x4 block of texels consists of
+    64 bits of unsigned luminance image data.  
+
+    Each luminance image data block is encoded as a sequence of 8 bytes,
+    called (in order of increasing address):
+
+            lum0, lum1, bits_0, bits_1, bits_2, bits_3, bits_4, bits_5
+
+        The 6 "bits_*" bytes of the block are decoded into a 48-bit bit
+        vector:
+
+            bits   = bits_0 +
+                     256 * (bits_1 +
+                            256 * (bits_2 +
+                                   256 * (bits_3 +
+                                          256 * (bits_4 + 
+                                                 256 * bits_5))))
+        
+        lum0 and lum1 are 8-bit unsigned integers that are unpacked to
+        luminance values LUM0 and LUM1 as though they were pixels with
+        a <format> of LUMINANCE and a type of UNSIGNED_BTYE.
+
+        bits is a 48-bit unsigned integer, from which a three-bit control
+        code is extracted for a texel at location (x,y) in the block
+        using:
+
+            code(x,y) = bits[3*(4*y+x)+2..3*(4*y+x)+0]
+        
+        where bit 47 is the most significant and bit 0 is the least
+        significant bit.
+
+        The luminance value L for a texel at location (x,y) in the block
+        is given by:
+
+            LUM0,              if lum0 > lum1 and code(x,y) == 0
+            LUM1,              if lum0 > lum1 and code(x,y) == 1
+            (6*LUM0+  LUM1)/7, if lum0 > lum1 and code(x,y) == 2
+            (5*LUM0+2*LUM1)/7, if lum0 > lum1 and code(x,y) == 3
+            (4*LUM0+3*LUM1)/7, if lum0 > lum1 and code(x,y) == 4
+            (3*LUM0+4*LUM1)/7, if lum0 > lum1 and code(x,y) == 5
+            (2*LUM0+5*LUM1)/7, if lum0 > lum1 and code(x,y) == 6
+            (  LUM0+6*LUM1)/7, if lum0 > lum1 and code(x,y) == 7
+
+            LUM0,              if lum0 <= lum1 and code(x,y) == 0
+            LUM1,              if lum0 <= lum1 and code(x,y) == 1
+            (4*LUM0+  LUM1)/5, if lum0 <= lum1 and code(x,y) == 2
+            (3*LUM0+2*LUM1)/5, if lum0 <= lum1 and code(x,y) == 3
+            (2*LUM0+3*LUM1)/5, if lum0 <= lum1 and code(x,y) == 4
+            (  LUM0+4*LUM1)/5, if lum0 <= lum1 and code(x,y) == 5
+            MINLUM,            if lum0 <= lum1 and code(x,y) == 6
+            MAXLUM,            if lum0 <= lum1 and code(x,y) == 7
+
+        MINLUM and MAXLUM are 0.0 and 1.0 respectively.
+
+    Since the decoded texel has a luminance format, the resulting RGBA
+    value for the texel is (L,L,L,1).
+
+
+    COMPRESSED_SIGNED_LUMINANCE_LATC1:  Each 4x4 block of texels consists
+    of 64 bits of signed luminance image data.  The luminance values of
+    a texel are extracted in the same way as COMPRESSED_LUMINANCE_LATC1
+    except lum0, lum1, LUM0, LUM1, MINLUM, and MAXLUM are signed values
+    defined as follows:
+
+        lum0 and lum1 are 8-bit signed (two's complement) integers.
+
+               { lum0 / 127.0, lum0 > -128
+        LUM0 = {
+               { -1.0,         lum0 == -128
+
+               { lum1 / 127.0, lum1 > -128
+        LUM1 = {
+               { -1.0,         lum1 == -128
+
+        MINLUM = -1.0
+
+        MAXLUM =  1.0
+
+    CAVEAT for signed lum0 and lum1 values: the expressions "lum0 >
+    lum1" and "lum0 <= lum1" above are considered undefined (read: may
+    vary by implementation) when lum0 equals -127 and lum1 equals -128,
+    This is because if lum0 were remapped to -127 prior to the comparison
+    to reduce the latency of a hardware decompressor, the expressions
+    would reverse their logic.  Encoders for the signed LA formats should
+    avoid encoding blocks where lum0 equals -127 and lum1 equals -128.
+
+
+    COMPRESSED_LUMINANCE_ALPHA_LATC2:  Each 4x4 block of texels consists
+    of 64 bits of compressed unsigned luminance image data followed by
+    64 bits of compressed unsigned alpha image data.
+
+    The first 64 bits of compressed luminance are decoded exactly like
+    COMPRESSED_LUMINANCE_LATC1 above.
+
+    The second 64 bits of compressed alpha are decoded exactly like
+    COMPRESSED_LUMINANCE_LATC1 above except the decoded value L for this
+    second block is considered the resulting alpha value A.
+
+    Since the decoded texel has a luminance-alpha format, the resulting
+    RGBA value for the texel is (L,L,L,A).
+
+
+    COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2:  Each 4x4 block of texels
+    consists of 64 bits of compressed signed luminance image data followed
+    by 64 bits of compressed signed alpha image data.
+
+    The first 64 bits of compressed luminance are decoded exactly like
+    COMPRESSED_SIGNED_LUMINANCE_LATC1 above.
+
+    The second 64 bits of compressed alpha are decoded exactly like
+    COMPRESSED_SIGNED_LUMINANCE_LATC1 above except the decoded value L
+    for this second block is considered the resulting alpha value A.
+
+    Since this image has a luminance-alpha format, the resulting RGBA
+    value is (L,L,L,A).
+
+Issues
+
+    1)  What should these new formats be called?
+
+        RESOLVED: "latc" for Luminance-Alpha Texture Compression.
+
+    2)  How should the uncompressed and filtered texels be returned by
+        texture fetches?
+
+        RESOLVED:  Luminance values show up as they do conventionally as
+        (L,L,L,1) where the luminance value L is replicated in the red,
+        green, and blue components and alpha is forced to 1.  Likewise,
+        luminance-alpha values show up as (L,L,L,A) where A is the alpha
+        value.
+
+        Alternatively, prior extensions such as NV_float_buffer and
+        NV_texture_shader have introduced formats such as GL_FLOAT_R_NV
+        and GL_DSDT_NV where one- and two-component texture formats show
+        up as (X,0,0,1) or (X,Y,0,1) RGBA texels.  Such formats have
+        not proven popular.  In particular, they interact awkwardly with
+        the pixel path and conventional texture environment modes.
+
+        The (X,Y,0,1) convention, particularly with signed components,
+        is nice for normal maps because a normalized vector can be
+        formed by a shader program by computing sqrt(abs(1-X*X-Y*Y))
+        for the Z component.  However, this niceness is mostly conceptual
+        however since the same effect can be accomplished with swizzling
+        as shown in this GLSL code:
+
+            vec2 texLA  = texture2D(samplerLA, gl_TexCoord[0]).xw;
+            vec3 normal = vec3(texLA.x,
+                               texLA.y,
+                               sqrt(abs(1-texLA.x*texLA.x-texLA.y*texLA.y)));
+
+        The most important reason to make these new compressed formats
+        show up identically to conventional luminance and luminance-alpha
+        texels is to allow applications to seamlessly substitute
+        the new compressed formats for existing GL_LUMINANCE and
+        GL_LUMINANCE_ALPHA textures.  Alternative component arrangements
+        would make it more cumbersome for existing applications to switch
+        over luminance and luminance-alpha textures to these compressed
+        formats.
+
+    3)  Should luminance and luminance-alpha compression formats with
+        signed components be introduced when the core specification
+        lacked uncompressed luminance and luminance-alpha texture formats?
+
+        RESOLVED:  Yes, signed luminance and luminance-alpha compression
+        formats should be added.
+
+        Signed luminance-alpha formats are suited for compressed normal
+        maps.  Compressed normal maps may well be the dominant use of
+        this extension.
+
+        Unsigned luminance-alpha formats require an extra "expand normal"
+        operation to convert [0,1] to [-1,+1].  Direct support for signed
+        luminance-alpha formats avoids this step in a shader program.
+
+    4)  Should there be a mix of signed luminance and unsigned alpha or
+        vice versa?
+
+        RESOLVED:  No.
+
+        NV_texture_shader provided an internal format
+        (GL_SIGNED_RGB_UNSIGNED_ALPHA_NV) with mixed signed and unsigned
+        components.  The format saw little usage.  There's no reason to
+        think a GL_SIGNED_LUMINANCE_UNSIGNED_ALPHA format would be any
+        more useful or popular.
+
+    5)  How are signed integer values mapped to floating-point values?
+
+        RESOLVED:  A signed 8-bit two's complement value X is computed to
+        a floating-point value Xf with the formula:
+
+                 { X / 127.0, X > -128
+            Xf = {
+                 { -1.0,      X == -128
+
+        This conversion means -1, 0, and +1 are all exactly representable,
+        however -128 and -127 both map to -1.0.  Mapping -128 to -1.0
+        avoids the numerical awkwardness of have a representable value
+        slightly more negative than -1.0.
+
+        This conversion is intentionally NOT the "byte" conversion listed
+        in Table 2.9 for component conversions.  That conversion says: 
+
+            Xf = (2*X + 1) / 255.0
+
+        The Table 2.9 conversion is incapable of exactly representing
+        zero.
+
+    6)  How will signed components resulting from
+        GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT and
+        GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT texture fetches
+        interact with fragment coloring?
+
+        RESOLVED:  The specification language for this extension is silent
+        about clamping behavior leaving this to the core specification
+        and other extensions.  The clamping or lack of clamping is left
+        to the core specification and other extensions.
+
+        For assembly program extensions supporting texture fetches
+        (ARB_fragment_program, EXT_fragment_program, EXT_vertex_program3,
+        etc.) or the OpenGL Shading Language, these signed formats will
+        appear as expected with unclamped signed components as a result
+        of a texture fetch instruction.
+
+        If ARB_color_buffer_float is supported, its clamping controls
+        will apply.
+
+        NV_texture_shader extension, if supported, adds support for
+        fixed-point textures with signed components and relaxed the
+        fixed-function texture environment clamping appropriately.  If the
+        NV_texture_shader extension is supported, its specified behavior
+        for the texture environment applies where intermediate values
+        are clamped to [-1,1] unless stated otherwise as in the case
+        of explicitly clamped to [0,1] for GL_COMBINE.  or clamping the
+        linear interpolation weight to [0,1] for GL_DECAL and GL_BLEND.
+
+        Otherwise, the conventional core texture environment clamps
+        incoming, intermediate, and output color components to [0,1].
+
+        This implies that the conventional texture environment
+        functionality of unextended OpenGL 1.5 or OpenGL 2.0 without
+        using GLSL (and with none of the extensions referred to above)
+        is unable to make proper use of the signed texture formats added
+        by this extension because the conventional texture environment
+        requires texture source colors to be clamped to [0,1].  Texture
+        filtering of these signed formats would be still signed, but
+        negative values generated post-filtering would be clamped to
+        zero by the core texture environment functionality.  The
+        expectation is clearly that this extension would be co-implemented
+        with one of the previously referred to extensions or used with
+        GLSL for the new signed formats to be useful.
+
+    7)  Should a specific normal map compression format be added?
+
+        RESOLVED:  No.
+
+        It's probably short-sighted to design a format just for normal
+        maps.  Indeed, NV_texture_shader added a GL_SIGNED_HILO_NV
+        format with exactly the kind of "hemisphere remap" useful for
+        normal maps and the format went basically unused.  Instead,
+        this extension provides the mechanism for compressed normal maps
+        based on the more conventional luminance-alpha format.
+
+        The GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT and
+        GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT formats are
+        sufficient for normal maps with additional shader instructions
+        used to generate the 3rd component.
+
+    8)  Should uncompressed signed luminance and luminance-alpha formats
+        be added by this extension?
+
+        RESOLVED:  No, this extension is focused on just adding compressed
+        texture formats.
+
+        The NV_texture_shader extension adds such uncompressed signed
+        texture formats.  A distinct multi-vendor extension for signed
+        fixed-point texture formats could provide all or a subset of
+        the signed fixed-point uncompressed texture formats introduced
+        by NV_texture_shader.
+
+    9)  What compression ratios does this extension provide?
+
+        The LATC1 formats are 8 bytes (64 bits) per 4x4 pixel block.
+        A 4x4 block of GL_LUMINANCE8 data requires 16 bytes (1 byte
+        per texel).  This is a 2-to-1 compression ratio.
+
+        The LATC2 formats are 16 bytes (128 bits) per 4x4 pixel block.
+        A 4x4 block of GL_LUMINANCE8_ALPHA8 data requires 32 bytes
+        (2 bytes per texel).  This is again a 2-to-1 compression ratio.
+
+        In contrast, the comparable compression ratio for the S3TC
+        formats is 4-to-1.
+
+        Arguably, the lower compression ratio allows better compression
+        quality particularly because the LATC formats compress each
+        component separately.
+
+    10) How do these new formats compare with the existing GL_LUMINANCE4,
+        GL_LUMINANCE4_ALPHA4, and GL_LUMINANCE6_ALPHA2 internal formats?
+
+        RESOLVED:  The existing GL_LUMINANCE4, GL_LUMINANCE4_ALPHA4,
+        and GL_LUMINANCE6_ALPHA2 internal formats provide a similar
+        2-to-1 compression ratio but mandate a uniform quantization
+        for all components.  In contrast, this extension provides a
+        compression format with 3-bit quantization over a specifiable
+        min/max range that can vary per 4x4 texel tile.
+
+        Additionally, many OpenGL implementations do not natively support
+        the GL_LUMINANCE4, GL_LUMINANCE4_ALPHA4, and GL_LUMINANCE6_ALPHA2
+        internal formats but rather silently promote these formats
+        to store 8 bits per component, thereby eliminating any
+        storage/bandwidth advantage for these formats.
+
+    11) Does this extension require EXT_texture_compression_s3tc?
+
+        RESOLVED:  No.
+
+        As written, this specification does not rely on wording of the
+        EXT_texture_compression_s3tc extension.  For example, certain
+        discussion added to Sections 3.8.2 and 3.8.3 is quite similar
+        to corresponding EXT_texture_compression_s3tc language.
+
+    12) Should anything be said about the precision of texture filtering
+        for these new formats?
+
+        RESOLVED:  No precision requirements are part of the specification
+        language since OpenGL extensions typically leave precision
+        details to the implementation.
+
+        Realistically, at least 8-bit filtering precision can be expected
+        from implementations (and probably more).
+
+    13) Should these formats be allowed to specify 3D texture images
+        when NV_texture_compression_vtc is supported?
+
+        RESOLVED: The NV_texture_compression_vtc stacks 4x4 blocks into
+        4x4x4 bricks.  It may be more desirable to represent compressed
+        3D textures as simply slices of 4x4 blocks.
+
+        However the NV_texture_compression_vtc extension expects
+        data passed to the glCompressedTexImage commands to be "bricked"
+        rather than blocked slices.
+
+    14) Why is GL_NV_texture_compression_latc also listed in the Name Strings
+        section?
+
+        The very first GeForce 8800 driver shipped with the extension
+        designated as NV before EXT-ization with S3 was agreed.
+        Subsequent NVIDIA drivers will rename the extension to its EXT
+        name only.
+
+    15) Should the the generic formats
+        GL_COMPRESSED_LUMINANCE and GL_COMPRESSED_LUMINANCE_ALPHA
+        correspond to COMPRESSED_LUMINANCE_LATC1_EXT and
+        COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT respecitively when this
+        extension is supported?
+
+        RESOLVED:  Yes.  While no generic compression is strictly
+        required for an implementation and there might exist superior
+        compression schemes for luminance and luminance-alpha textures
+        in the future, an application should reasonably expect that an
+        implementation that supports EXT_texture_compression_latc will
+        also use these formats for the generic compressed luminance and
+        luminance-alpha formats.
+
+        The COMPRESSED_LUMINANCE_LATC1_EXT and
+        COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT are generic enough in their
+        respective luminance and luminance-alpha behavior that these
+        compression formats are acceptable generic compressed formats
+        for luminance and luminance-alpha generic compressed formats.
+
+    16) Should the GL_NUM_COMPRESSED_TEXTURE_FORMATS and
+        GL_COMPRESSED_TEXTURE_FORMATS queries return the LATC formats?
+
+        RESOLVED:  No.
+
+        The OpenGL 2.1 specification says "The only values returned
+        by this query [GL_COMPRESSED_TEXTURE_FORMATS"] are those
+        corresponding to formats suitable for general-purpose usage.
+        The renderer will not enumerate formats with restrictions that
+        need to be specifically understood prior to use."
+
+        Historically, OpenGL implementation have advertised the RGB and
+        RGBA versions of the S3TC extensions compressed format tokens
+        through this mechanism.
+
+        The specification is not sufficiently clear about what "suitable
+        for general-purpose usage" means.  Historically that seems to mean
+        unsigned RGB or unsigned RGBA.  The DXT1 format supporting alpha
+        (GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) is not exposed in the list (at
+        least for NVIDIA drivers) because the alpha is always 1.0 expect
+        when it is 0.0 when RGB is required to be black.  NVIDIA's even
+        limits itself to true linear RGB or RGBA formats, specifically
+        not including EXT_texture_sRGB's sRGB S3TC compressed formats.
+
+        Adding luminance and luminance-alpha texture formats (and
+        certainly signed versions of luminance and luminance-alpha
+        formats!) invites potential comptaibility problems with old
+        applications using this mechanism since old applications are
+        unlikely to expect non-RGB or non-RGBA formats to be advertised
+        through this mechanism.  However no specific misinteractions
+        with old applications is known.
+
+        Applications that seek to use the LATC formats should do so
+        by looking for this extension's name in the string returned by
+        glGetString(GL_EXTENSIONS) rather than
+        what GL_NUM_COMPRESSED_TEXTURE_FORMATS and
+        GL_COMPRESSED_TEXTURE_FORMATS return.
+
+Implementation Note
+
+    This extension allows TexSubImage2D and CompressedTexSubImage2D to perform
+    partial updates to compressed images, but generally requires that the
+    updated area be aligned to 4x4 block boundaries.  If the width or height
+    is not a multiple of four, there will be 4x4 blocks at the edge of the
+    image that contain "extra" texels that are not part of the image.  This
+    spec has an exception allowing edits that partially cover such blocks as
+    long as the edit covers all texels in the block belonging to the image.
+    For example, in a 2D texture of size 70x50, it is legal to update the
+    single partial block covering the four texels from (68,48) to (69,49) by
+    setting (<xoffset>, <yoffset>) to (68,48) and <width> and <height> to 2.
+
+    This specification derived some of its language from the
+    EXT_texture_compression_s3tc specification.  When that extension was
+    originally written, non-bordered textures were required to have widths and
+    heights that were powers of two.  Therefore, the only cases where partial
+    blocks could occur were if the width or height of the texture image was
+    one or two.  The original spec language allowed partial block edits only
+    if the width or height of the region edited was equal to the full texture
+    size.  That language didn't handle cases such as the 70x50 example above.
+
+    This specification was updated in April, 2009 to allow such edits.
+    Multiple OpenGL implementers correctly implemented the original
+    restriction, and partial edits that include partially covered tiles will
+    result in INVALID_OPERATION errors on older drivers.
+
+
+Revision History
+
+    Revision 1.1, April 24, 2007: mjk
+        -  Add caveat about how signed LA decompression happens when
+           lum0 equals -127 and lum1 equals -128.  This caveat matches
+           a decoding allowance in DirectX 10.
+
+    Revision 1.2, January 21, 2008: mjk
+        -  Add issues #15 and #16.
+
+    Revision 1.3, April 14, 2009: pbrown 
+        - Add interaction with non-power-of-two textures from OpenGL 2.0 /
+          ARB_texture_non_power_of_two.  Allow CompressedTexSubImage2D to
+          perform edits that include partial tiles at the edge of the image as
+          long as the specified width/height parameters line up with the edge.
+          Thanks to Emil Persson for finding this issue.
+
+    Revision 2, July 30, 2017: dgkoch
+	- replace references to COMPRESSED_LUMINANCE_LACT1_EXT with references
+          to the correct spelling COMPRESSED_LUMINANCE_LATC1_EXT.

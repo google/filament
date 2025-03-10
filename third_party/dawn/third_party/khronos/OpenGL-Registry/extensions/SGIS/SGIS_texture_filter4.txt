@@ -1,0 +1,352 @@
+Name
+
+    SGIS_texture_filter4
+
+Name Strings
+
+    GL_SGIS_texture_filter4
+
+Version
+
+    $Date: 1997/03/24 18:56:21 $ $Revision: 1.9 $
+
+Number
+
+    7
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension allows 1D and 2D textures to be filtered using an
+    application-defined, four sample per dimension filter.  (In addition to
+    the NEAREST and LINEAR filters defined in the original GL Specification.)
+    Such filtering results in higher image quality.  It is defined only
+    for non-mipmapped filters.  The filter that is specified must be
+    symmetric and separable (in the 2D case).
+
+Issues
+
+    *	What should the default filter function be?
+        -   Implementation dependent.
+
+    *	Should this extension define 2-wide texture borders?  Do we really
+	want to aggrandize this border stuff :-(
+        -   No.
+
+    *	Should this extension define 2D filtering only (and not 1D)?
+        -   No.
+
+    *	A GLU function that accepts Mitchell parameters and a texture
+	target should be defined.
+
+    *	This specification retains a separate filter function description
+	with every texture.  In conjunction with EXT_texture_object, this
+	may result in a lot of filter functions.  Implementations should
+	optimize for the default filter function to save storage cost.
+
+Reasoning
+
+    *	The name is changed from "cubic" to "filter4" because the table
+	allows the specification of filters that are not at all cubic in
+	nature.  A true cubic filter extension would define the filter
+	function as a cubic polynomial.
+
+New Procedures and Functions
+
+    void TexFilterFuncSGIS(enum target,
+			   enum filter,
+			   sizei n,
+			   const float* weights);
+
+    void GetTexFilterFuncSGIS(enum target,
+			      enum filter, 
+			      float* weights);
+
+New Tokens
+
+    Accepted by the <param> parameter of TexParameteri and TexParameterf,
+    and by the <params> parameter of TexParameteriv and TexParameterfv, when
+    their <pname> parameter is TEXTURE_MIN_FILTER or TEXTURE_MAG_FILTER.
+    Also accepted by the <filter> parameters of TexFilterFuncSGIS and
+    GetTexFilterFuncSGIS:
+
+	FILTER4_SGIS
+
+    Accepted by the <pname> parameter of GetTexParameteriv and
+    GetTexParameterfv, when the <target> parameter is TEXTURE_1D or
+    TEXTURE_2D:
+
+	TEXTURE_FILTER4_SIZE_SGIS
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    The additional token value FILTER4_SGIS is accepted as an enumerated
+    value for the texture minification and magnification filters, causing
+    Table 3.7 to be replaced with the table below:
+
+	Name				Type		Legal Values
+	----				----		------------
+	TEXTURE_WRAP_S			integer		CLAMP, REPEAT
+	TEXTURE_WRAP_T			integer		CLAMP, REPEAT
+	TEXTURE_WRAP_R_EXT		integer		CLAMP, REPEAT
+	TEXTURE_MIN_FILTER		integer		NEAREST, LINEAR,
+							NEAREST_MIPMAP_NEAREST,
+							NEAREST_MIPMAP_LINEAR,
+							LINEAR_MIPMAP_NEAREST,
+							LINEAR_MIPMAP_LINEAR,
+							FILTER4_SGIS
+	TEXTURE_MAG_FILTER		integer		NEAREST, LINEAR,
+							FILTER4_SGIS
+	TEXTURE_BORDER_COLOR		4 floats	any 4 values in [0,1]
+
+	Table 3.7: Texture parameters and their values.
+
+    Filter4 filtering is specified by calling TexParameteri, TexParameterf,
+    TexParameteriv, or TexParameterfv with <pname> set to one of
+    TEXTURE_MIN_FILTER or TEXTURE_MAG_FILTER, and <param> or <params> set to
+    FILTER4_SGIS.  Because filter4 filtering is defined only for
+    non-mipmapped textures, there is no difference between its definition
+    for minification and magnification.  First consider the 1-dimensional
+    case.  Let T be a computed texture value (one of R_t, G_t, B_t, or A_t).
+    Let T[i] be the component value of the texel at location i in a
+    1-dimensional texture image.  Then, if the appropriate texture filter
+    mode is FILTER4_SGIS, a 4-texel group is selected:
+
+
+	      /	floor(u - 1/2) mod 2**n,	TEXTURE_WRAP_S is REPEAT
+	i1 = (
+	      \	floor(u - 1/2),			TEXTURE_WRAP_S is CLAMP
+
+
+	      /	(i1 + 1) mod 2**n,		TEXTURE_WRAP_S is REPEAT
+	i2 = (
+	      \	i1 + 1,				TEXTURE_WRAP_S is CLAMP
+
+
+	      /	(i1 + 2) mod 2**n,		TEXTURE_WRAP_S is REPEAT
+	i3 = (
+	      \	i1 + 2,				TEXTURE_WRAP_S is CLAMP
+
+
+	      /	(i1 - 1) mod 2**n,		TEXTURE_WRAP_S is REPEAT
+	i0 = (
+	      \	i1 - 1,				TEXTURE_WRAP_S is CLAMP
+
+
+    Let f(x) be the filter weight function of positive distance x.  Let
+    
+	A = frac(u - 1/2)
+
+    where frac(x) denotes the fractional part of x, and u is the texture
+    image coordinate in the s direction, as illustrated in Figure 3.10 of
+    the GL Specification.  Then the texture value T is found as
+
+	T = f(1+A) * T[i0] +
+	    f(A)   * T[i1] + 
+	    f(1-A) * T[i2] +
+	    f(2-A) * T[i3]
+
+    If any of the selected T[i] in the above equation refer to a border
+    texel with unspecified value, then the border color given by the current
+    setting of TEXTURE_BORDER_COLOR is used instead of the unspecified value.
+
+    For 2-dimensional textures the calculations for i0, i1, i2, i3, and A
+    are identical to the 1-dimensional case.  A 16-texel group is selected,
+    requiring four j values computed as
+
+
+	      /	floor(v - 1/2) mod 2**m,	TEXTURE_WRAP_T is REPEAT
+	j1 = (
+	      \	floor(v - 1/2),			TEXTURE_WRAP_T is CLAMP
+
+
+	      /	(j1 + 1) mod 2**m,		TEXTURE_WRAP_T is REPEAT
+	j2 = (
+	      \	j1 + 1,				TEXTURE_WRAP_T is CLAMP
+
+
+	      /	(j1 + 2) mod 2**m,		TEXTURE_WRAP_T is REPEAT
+	j3 = (
+	      \	j1 + 2,				TEXTURE_WRAP_T is CLAMP
+
+
+	      /	(j1 - 1) mod 2**m,		TEXTURE_WRAP_T is REPEAT
+	j0 = (
+	      \	j1 - 1,				TEXTURE_WRAP_T is CLAMP
+
+
+    Let
+
+	B = frac(v - 1/2)
+
+    where v is the texture image coordinate in the t direction, as
+    illustrated in Figure 3.10 of the GL Specification.  Then the texture
+    value T is found as
+
+	T = f(1+A) * f(1+B) * T[i0,j0] +
+	    f(A)   * f(1+B) * T[i1,j0] + 
+	    f(1-A) * f(1+B) * T[i2,j0] +
+	    f(2-A) * f(1+B) * T[i3,j0] +
+	    f(1+A) * f(B)   * T[i0,j1] +
+	    f(A)   * f(B)   * T[i1,j1] + 
+	    f(1-A) * f(B)   * T[i2,j1] +
+	    f(2-A) * f(B)   * T[i3,j1] +
+	    f(1+A) * f(1-B) * T[i0,j2] +
+	    f(A)   * f(1-B) * T[i1,j2] + 
+	    f(1-A) * f(1-B) * T[i2,j2] +
+	    f(2-A) * f(1-B) * T[i3,j2] +
+	    f(1+A) * f(2-B) * T[i0,j3] +
+	    f(A)   * f(2-B) * T[i1,j3] + 
+	    f(1-A) * f(2-B) * T[i2,j3] +
+	    f(2-A) * f(2-B) * T[i3,j3]
+
+    If any of the selected T[i,j] in the above equation refer to a border
+    texel with unspecified value, then the border color given by the current
+    setting of TEXTURE_BORDER_COLOR is used instead of the unspecified value.
+
+    Filter4 texture filtering is currently undefined for 3-dimensional
+    textures.
+
+    Filter function
+    ---------------
+
+    The default filter function is implementation dependent.  The
+    filter function is specified in table format by calling
+    TexFilterFuncSGIS with <target> set to TEXTURE_1D or TEXTURE_2D,
+    <filter> set to FILTER4_SGIS, and <weights> pointing an array of
+    <n> floating point values.  The value <n> must equal 2**m + 1 for
+    some nonnegative integer value of m.
+
+    The array <weights> contains samples of the filter function f(x),
+    0<=x<=2.  Each element <weights>[i] is the value of
+    f((2*i)/(<n>-1)), 0<=i<=<n>-1.
+    
+    The filter function is stored and used by GL as a set of samples
+    f((2*i)/(Size-1)), 0<=i<=Size-1, where Size is an implementation
+    dependent constant.  If <n> equals Size, the array <weights> is
+    stored directly in GL state.  Otherwise, an implementation
+    dependent resampling method is used to compute the stored samples.
+
+    Size must equal 2**m + 1 for some integer value of m greater than
+    or equal to 4.  The value Size for texture <target> is returned by
+    <params> when GetTexParameteriv or GetTexParameterfv is called
+    with <pname> set to TEXTURE_FILTER4_SIZE_SGIS.
+
+    Minification vs. Magnification
+    ------------------------------
+
+    If the magnification filter is given by FILTER4_SGIS, and the
+    minification filter is given by NEAREST_MIPMAP_NEAREST or
+    LINEAR_MIPMAP_NEAREST , then c = 0.5.  The parameter c is used to
+    determine whether minification or magnification filtering is done,
+    as described in Section 3.8.2 of the GL Specification (Texture
+    Magnification).
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    GetTexFilterFuncSGIS is not included in display lists.
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    The filter weights for the filter4 filter associated with a
+    texture are queried by calling GetTexFilterFuncSGIS with <target>
+    set to the texture target and <filter> set to FILTER4_SGIS.  The
+    Size weight values are returned in the array <weights>, which must
+    have at least Size elements.  The value Size is an implementation
+    dependent constant that is queried by the application by calling
+    GetTexParameteriv or GetTexParameterfv as described above.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    Two new GL commands are added.
+
+    The following rendering command is sent to the server as part of
+    a glXRender request:
+
+        TexFilterFuncSGIS
+            2           16*4n           rendering command length
+            2           2064            rendering command opcode
+            4           ENUM            target
+            4           ENUM            filter
+            4           INT32           n
+            n           LISTofFLOATS    weights
+
+    The remaining command is a non-rendering command and as such, is
+    sent separately (i.e., not as part of a glXRender or glXRenderLarge
+    request), using the glXVendorPrivateWithReply request:
+
+	GetTexFilterFuncSGIS
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           4101            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            filter
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           FLOAT32         params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofFLOAT32   params
+
+        Note that n may be zero, indicating that a GL error occurred. 
+
+Errors
+
+    INVALID_ENUM is generated if TexFilterFuncSGIS or
+    GetTexFilterFuncSGIS parameter <target> is not TEXTURE_1D or
+    TEXTURE_2D.
+
+    INVALID_ENUM is generated if TexFilterFuncSGIS or
+    GetTexFilterFuncSGIS parameter <filter> is not FILTER4_SGIS.
+
+    INVALID_VALUE is generated if TexFilterFuncSGIS parameter <n> does
+    not equal 2**m + 1 for some nonnegative integer value of m.
+
+    INVALID_ENUM is generated if GetTexParameteriv or GetTexParameterfv
+    parameter <pname> is TEXTURE_FILTER4_SIZE_SGIS and parameter
+    <target> is not TEXTURE_1D or TEXTURE_2D.
+
+    INVALID_OPERATION is generated if TexFilterFuncSGIS or
+    GetTexFilterFuncSGIS is executed between execution of Begin and the
+    corresponding execution of End.
+
+New State
+
+    Get Value			Get Command		Type		Value		Attrib
+    ---------			-----------		----		-------		------
+    TEXTURE_FILTER4_FUNC_SGIS	GetTexFilterFuncSGIS	2 x Size x R	see text	texture
+
+New Implementation Dependent State
+								Minimum
+    Get Value			Get Command		Type	Value
+    ---------			-----------		----	-------
+    TEXTURE_FILTER4_SIZE_SGIS	GetTexParameterfv	R	17
