@@ -54,10 +54,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-// We require filament to be built with an API 26 toolchain, before that,
-// AHardwareBuffer support didn't exist.
-#if __ANDROID_API__ < 26
-#error "__ANDROID_API__ must be at least 26"
+// We require filament to be built with an API 19 toolchain, before that, OpenGLES 3.0 didn't exist
+// Actually, OpenGL ES 3.0 was added to API 18, but API 19 is the better target and
+// the minimum for Jetpack at the time of this comment.
+#if __ANDROID_API__ < 21
+#error "__ANDROID_API__ must be at least 21"
 #endif
 
 using namespace utils;
@@ -235,18 +236,22 @@ PlatformEGLAndroid::ExternalImageEGLAndroid::~ExternalImageEGLAndroid() = defaul
 
 Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareBuffer const* buffer,
         bool sRGB) noexcept {
-    auto* const p = new (std::nothrow) ExternalImageEGLAndroid;
-    auto hardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
-    p->aHardwareBuffer = hardwareBuffer;
-    p->sRGB = sRGB;
-    AHardwareBuffer_Desc hardwareBufferDescription = {};
-    AHardwareBuffer_describe(hardwareBuffer, &hardwareBufferDescription);
-    p->height = hardwareBufferDescription.height;
-    p->width = hardwareBufferDescription.width;
-    auto textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
-    p->format = textureFormat;
-    p->usage = mapToFilamentUsage(hardwareBufferDescription.usage, textureFormat);
-    return ExternalImageHandle{ p };
+    if (__builtin_available(android 26, *)) {
+        auto* const p = new (std::nothrow) ExternalImageEGLAndroid;
+        auto hardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
+        p->aHardwareBuffer = hardwareBuffer;
+        p->sRGB = sRGB;
+        AHardwareBuffer_Desc hardwareBufferDescription = {};
+        AHardwareBuffer_describe(hardwareBuffer, &hardwareBufferDescription);
+        p->height = hardwareBufferDescription.height;
+        p->width = hardwareBufferDescription.width;
+        auto textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
+        p->format = textureFormat;
+        p->usage = mapToFilamentUsage(hardwareBufferDescription.usage, textureFormat);
+        return ExternalImageHandle{ p };
+    }
+
+    return Platform::ExternalImageHandle{};
 }
 
 bool PlatformEGLAndroid::setExternalImage(ExternalImageHandleRef externalImage,
