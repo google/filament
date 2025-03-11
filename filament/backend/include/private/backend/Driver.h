@@ -24,6 +24,7 @@
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
 #include <backend/TargetBufferInfo.h>
+#include <backend/AcquiredImage.h>
 
 #include <utils/CString.h>
 #include <utils/compiler.h>
@@ -48,6 +49,7 @@
 namespace filament::backend {
 
 class BufferDescriptor;
+class BufferObjectStreamDescriptor;
 class CallbackHandler;
 class PixelBufferDescriptor;
 class Program;

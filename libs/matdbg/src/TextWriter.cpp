@@ -429,7 +429,10 @@ static bool printShaderInfo(ostream& text, const ChunkContainer& container, Chun
             break;
         case ChunkType::MaterialMetalLibrary:
             text << "Metal precompiled shader libraries:" << endl;
-            break;
+        break;
+        case ChunkType::MaterialWgsl:
+            text << "WGSL precompiled shader libraries:" << endl;
+        break;
         default:
             assert(false && "Invalid shader ChunkType");
             break;
@@ -465,6 +468,9 @@ bool TextWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
         return false;
     }
     if (!printShaderInfo(text, container, ChunkType::MaterialMetalLibrary)) {
+        return false;
+    }
+    if (!printShaderInfo(text, container, ChunkType::MaterialWgsl)) {
         return false;
     }
 

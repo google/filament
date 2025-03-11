@@ -27,6 +27,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <math/mat3.h>
 
 namespace filament::backend {
 
@@ -318,6 +319,13 @@ public:
      */
     virtual void updateTexImage(Stream* UTILS_NONNULL stream,
             int64_t* UTILS_NONNULL timestamp) noexcept;
+
+    /**
+     * Returns the transform matrix of the texture attached to the stream.
+     * @param stream Stream to get the transform matrix from
+     * @param uvTransform Output parameter: Transform matrix of the image bound to the texture. Returns identity if not supported.
+     */
+    virtual math::mat3f getTransformMatrix(Stream* UTILS_NONNULL stream) noexcept;
 
 
     // --------------------------------------------------------------------------------------------

@@ -16,6 +16,8 @@
 
 #include <matdbg/ShaderInfo.h>
 
+#include "CommonWriter.h"
+
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/DictionaryReader.h>
 #include <filaflat/MaterialChunk.h>
@@ -48,10 +50,14 @@ size_t getShaderCount(const ChunkContainer& container, ChunkType type) {
     return shaderCount;
 }
 
-
 bool getShaderInfo(const ChunkContainer& container, ShaderInfo* info, ChunkType chunkType) {
     if (!container.hasChunk(chunkType)) {
         return true;
+    }
+
+    MaterialDomain domain;
+    if (!read(container, ChunkType::MaterialDomain, reinterpret_cast<uint8_t*>(&domain))) {
+        return false;
     }
 
     auto [start, end] = container.getChunkRange(chunkType);
@@ -84,6 +90,12 @@ bool getShaderInfo(const ChunkContainer& container, ShaderInfo* info, ChunkType 
             return false;
         }
 
+        auto stage = ShaderStage(pipelineStageValue);
+        if (domain == MaterialDomain::SURFACE) {
+            variant = stage == ShaderStage::VERTEX ?
+                    Variant::filterVariantVertex(variant) :
+                    Variant::filterVariantFragment(variant);
+        }
         *info++ = {
             .shaderModel = ShaderModel(shaderModelValue),
             .variant = variant,

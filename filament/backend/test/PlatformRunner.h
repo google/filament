@@ -30,7 +30,8 @@ enum class Backend : uint8_t {
     OPENGL = 1,
     VULKAN = 2,
     METAL = 3,
-    NOOP = 4,
+    WEBGPU = 4,
+    NOOP = 5,
 };
 
 struct NativeView {

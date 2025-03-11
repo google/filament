@@ -7,6 +7,17 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.58.1
+
+
+## v1.58.0
+
+- materials: add an optional `transformName` field to sampler material parameters. [⚠️ **New Material Version**]
+
+## v1.57.3
+
+- android: breaking changes to API KTX1Loader::createIndirectLight and KTX1Loader::createSkybox
+
 ## v1.57.2
 
 - Support including PlatformMetal.h in C++ files.

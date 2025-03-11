@@ -25,6 +25,8 @@
 
 #include <utils/compiler.h>
 
+#include <math/mat3.h>
+
 namespace filament {
 
 class FEngine;
@@ -36,8 +38,8 @@ public:
 
     backend::Handle<backend::HwStream> getHandle() const noexcept { return mStreamHandle; }
 
-    void setAcquiredImage(void* image, Callback callback, void* userdata) noexcept;
-    void setAcquiredImage(void* image, backend::CallbackHandler* handler, Callback callback, void* userdata) noexcept;
+    void setAcquiredImage(void* image, Callback callback, void* userdata, math::mat3f const& transform) noexcept;
+    void setAcquiredImage(void* image, backend::CallbackHandler* handler, Callback callback, void* userdata, math::mat3f const& transform) noexcept;
 
     void setDimensions(uint32_t width, uint32_t height) noexcept;
 
