@@ -40,6 +40,7 @@ class ExternalStreamManagerAndroid;
  */
 class PlatformEGLAndroid : public PlatformEGL {
 public:
+
     PlatformEGLAndroid() noexcept;
     ~PlatformEGLAndroid() noexcept override;
 
@@ -77,7 +78,9 @@ protected:
 
     void terminate() noexcept override;
 
-    void beginFrame(int64_t monotonic_clock_ns, int64_t refreshIntervalNs,
+    void beginFrame(
+            int64_t monotonic_clock_ns,
+            int64_t refreshIntervalNs,
             uint32_t frameId) noexcept override;
 
     void preCommit() noexcept override;
@@ -111,7 +114,8 @@ protected:
             ExternalTexture* texture) noexcept;
 
 protected:
-    bool makeCurrent(ContextType type, SwapChain* drawSwapChain,
+    bool makeCurrent(ContextType type,
+            SwapChain* drawSwapChain,
             SwapChain* readSwapChain) noexcept override;
 
 private:
@@ -133,6 +137,6 @@ private:
     bool mAssertNativeWindowIsValid = false;
 };
 
-}// namespace filament::backend
+} // namespace filament::backend
 
-#endif// TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
+#endif // TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
