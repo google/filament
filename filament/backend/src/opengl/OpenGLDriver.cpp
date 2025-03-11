@@ -2086,7 +2086,7 @@ Handle<HwStream> OpenGLDriver::createStreamAcquired() {
 // setAcquiredImage should be called by the user outside of beginFrame / endFrame, and should be
 // called only once per frame. If the user pushes images to the same stream multiple times in a
 // single frame, we emit a warning and honor only the final image, but still invoke all callbacks.
-void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
+void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer, const math::mat3f& transform,
         CallbackHandler* handler, StreamCallback cb, void* userData) {
     GLStream* glstream = handle_cast<GLStream*>(sh);
     assert_invariant(glstream->streamType == StreamType::ACQUIRED);
@@ -2122,7 +2122,7 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
 
             // Bind the stashed EGLImage to its corresponding GL texture as soon as we start
             // making the GL calls for the upcoming frame.
-            driver->queueCommand([this, s, image = s->user_thread.acquired.image, previousImage]() {
+            driver->queueCommand([this, s, image = s->user_thread.acquired.image, previousImage, transform = s->user_thread.transform]() {
 
                 auto& streams = mTexturesWithStreamsAttached;
                 auto pos = std::find_if(streams.begin(), streams.end(),
@@ -2137,6 +2137,7 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
                         t->gl.target = t->externalTexture->target;
                         t->gl.id = t->externalTexture->id;
                         bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+                        s->transform = transform;
                     }
                 }
 
@@ -2167,8 +2168,12 @@ int64_t OpenGLDriver::getStreamTimestamp(Handle<HwStream> sh) {
 
 math::mat3f OpenGLDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
     if (sh) {
-        GLStream* s = handle_cast<GLStream*>(sh);        
-        return mPlatform.getTransformMatrix(s->stream);
+        GLStream* s = handle_cast<GLStream*>(sh);
+        if (s->streamType == StreamType::NATIVE) {
+            return mPlatform.getTransformMatrix(s->stream);
+        } else {
+            return s->transform;
+        }
     }
     return math::mat3f();
 }
