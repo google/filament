@@ -996,7 +996,8 @@ VkSampler VulkanPlatform::createExternalSampler(SamplerYcbcrConversion chroma,
 VkImageView VulkanPlatform::createExternalImageView(SamplerYcbcrConversion chroma,
         uint32_t internalFormat, VkImage image, VkImageSubresourceRange range,
         VkImageViewType viewType, VkComponentMapping swizzle) {
-    return createExternalImageViewImpl(mImpl->mDevice, chroma, internalFormat, image ,range, viewType, swizzle);
+    return createExternalImageViewImpl(mImpl->mDevice, chroma, internalFormat, image, range,
+            viewType, swizzle);
 }
 #undef SWAPCHAIN_RET_FUNC
 

@@ -24,7 +24,6 @@
 
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
-#include <utils/Hash.h>
 #include <utils/PrivateImplementation.h>
 
 #include <tuple>

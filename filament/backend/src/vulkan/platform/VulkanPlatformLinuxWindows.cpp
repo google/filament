@@ -102,10 +102,9 @@ VkSampler VulkanPlatform::createExternalSamplerImpl(VkDevice device,
 }
 
 VkImageView VulkanPlatform::createExternalImageViewImpl(VkDevice device,
-            SamplerYcbcrConversion chroma, uint32_t internalFormat, VkImage image,
-            VkImageSubresourceRange range, VkImageViewType viewType,
-            VkComponentMapping swizzle) {
-                return VK_NULL_HANDLE;
+        SamplerYcbcrConversion chroma, uint32_t internalFormat, VkImage image,
+        VkImageSubresourceRange range, VkImageViewType viewType, VkComponentMapping swizzle) {
+    return VK_NULL_HANDLE;
 }
 
 VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
