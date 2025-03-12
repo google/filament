@@ -284,9 +284,12 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
 
     // Get the EGL client buffer from AHardwareBuffer
     EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID(hardwareBuffer);
-    // Questions around attributes with isSrgbTransfer and protected content
-    EGLint imageAttrs[] = { EGL_IMAGE_PRESERVED_KHR, EGL_TRUE, EGL_NONE, EGL_NONE, EGL_NONE,
-        EGL_NONE, EGL_NONE };
+    EGLint imageAttrs[] = {
+        EGL_IMAGE_PRESERVED_KHR, EGL_TRUE,
+        EGL_NONE, EGL_NONE,
+        EGL_NONE, EGL_NONE,
+        EGL_NONE, EGL_NONE
+    };
     int attrIndex = 2;
     if (eglExternalImage->sRGB) {
         imageAttrs[attrIndex++] = EGL_GL_COLORSPACE;
