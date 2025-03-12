@@ -138,6 +138,7 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
             case ShaderLanguage::ESSL1:
             case ShaderLanguage::ESSL3:
             case ShaderLanguage::SPIRV:
+            case ShaderLanguage::WGSL:
                 break;
         }
 

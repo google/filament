@@ -45,7 +45,7 @@ ShaderModel WebGPUDriver::getShaderModel() const noexcept {
 }
 
 ShaderLanguage WebGPUDriver::getShaderLanguage() const noexcept {
-    return ShaderLanguage::ESSL3;
+    return ShaderLanguage::WGSL;
 }
 
 // explicit instantiation of the Dispatcher

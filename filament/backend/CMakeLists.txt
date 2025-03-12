@@ -233,7 +233,10 @@ if (FILAMENT_SUPPORTS_VULKAN)
     elseif (APPLE OR IOS)
         list(APPEND SRCS src/vulkan/platform/VulkanPlatformApple.mm)
     elseif (ANDROID)
-        list(APPEND SRCS src/vulkan/platform/VulkanPlatformAndroid.cpp)
+        list(APPEND SRCS
+            include/backend/platforms/VulkanPlatformAndroid.h
+            src/vulkan/platform/VulkanPlatformAndroid.cpp
+        )
     endif()
 endif()
 
@@ -458,6 +461,7 @@ if (APPLE OR LINUX)
         test/ShaderGenerator.cpp
         test/TrianglePrimitive.cpp
         test/Arguments.cpp
+        test/Lifetimes.cpp
         test/test_FeedbackLoops.cpp
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp

@@ -45,6 +45,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialEssl1 = charTo64bitNum("MAT_ESS1"),
     MaterialSpirv = charTo64bitNum("MAT_SPIR"),
     MaterialMetal = charTo64bitNum("MAT_METL"),
+    MaterialWgsl = charTo64bitNum("MAT_WGSL"),
     MaterialMetalLibrary = charTo64bitNum("MAT_MLIB"),
     MaterialShaderModels = charTo64bitNum("MAT_SMDL"),
     MaterialBindingUniformInfo = charTo64bitNum("MAT_UFRM"),
