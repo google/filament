@@ -286,9 +286,9 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
     EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID(hardwareBuffer);
     EGLint imageAttrs[] = {
         EGL_IMAGE_PRESERVED_KHR, EGL_TRUE,
-        EGL_NONE, EGL_NONE,
-        EGL_NONE, EGL_NONE,
-        EGL_NONE, EGL_NONE
+        EGL_NONE, EGL_NONE,  // Reserve space
+        EGL_NONE, EGL_NONE,  // Reserve space
+        EGL_NONE             // Ensure the list always ends with EGL_NONE
     };
     int attrIndex = 2;
     if (eglExternalImage->sRGB) {
