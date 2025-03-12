@@ -430,9 +430,9 @@ class FrameGraphTable extends LitElement {
             .map(subresource => subresource.id);
 
         const hasSubresources = subresourceIds.length > 0;
-        const isExpended = this.expandedResourceSet.has(resourceIndex);
+        const isExpanded = this.expandedResourceSet.has(resourceIndex);
         // Show the aggregated resource usage when the subresources are collapsed.
-        const resourceIds = isExpended ? [resource.id]:[resource.id, ...subresourceIds];
+        const resourceIds = isExpanded ? [resource.id]:[resource.id, ...subresourceIds];
 
         const onClickResource = () => this._handleResourceClick(resource.id);
         const selectedStyle = resource.id === this.selectedResourceId ? "selected" : "";
@@ -444,15 +444,15 @@ class FrameGraphTable extends LitElement {
                         ? html`
                             <span class="toggle-icon"
                                   @click="${(e) => { e.stopPropagation(); this._toggleCollapse(resourceIndex); }}">
-                              ${isExpended ? '▼' : '▶'}
+                              ${isExpanded ? '▼' : '▶'}
                             </span>` 
                         : nothing}
                     ${resource.name}
-                    ${hasSubresources && isExpended ? nothing : html`(${subresourceIds.length})`}
+                    ${hasSubresources && isExpanded ? nothing : html`(${subresourceIds.length})`}
                 </th>
                 ${this._renderResourceUsage(allPasses, resourceIds, DEFAULT_COLOR)}
             </tr>
-            ${isExpended ? this._renderSubresourceRows(resources, resource, resourceIndex, allPasses) : nothing}
+            ${isExpanded ? this._renderSubresourceRows(resources, resource, resourceIndex, allPasses) : nothing}
         `;
     }
 
