@@ -332,11 +332,12 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
                 return error(__LINE__, uri);
             }
             JsonWriter writer;
-            if (!writer.writeActiveInfo(package, mServer->mShaderLanguage, record.activeVariants)) {
+            if (!writer.writeActiveInfo(package, mServer->mShaderLanguage,
+                        mServer->mPreferredShaderModel, record.activeVariants)) {
                 return error(__LINE__, uri);
             }
             bool const last = (++index) == mServer->mMaterialRecords.size();
-            mg_printf(conn, "\"%8.8x\": %s %s", pair.first, writer.getJsonString(),
+            mg_printf(conn, "\"%8.8x\": %s%s", pair.first, writer.getJsonString(),
                     last ? "" : ",");
         }
         mg_printf(conn, "}");
@@ -356,6 +357,18 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
         return true;
     }
 
+    auto writeMaterialRecord = [&](JsonWriter* writer, MaterialRecord const* record) {
+        ChunkContainer package(record->package, record->packageSize);
+        if (!package.parse()) {
+            return error(__LINE__, uri);
+        }
+
+        if (!writer->writeMaterialInfo(package)) {
+            return error(__LINE__, uri);
+        }
+        return true;
+    };
+
     if (uri == "/api/materials") {
         std::unique_lock const lock(mServer->mMaterialRecordsMutex);
         mg_printf(conn, kSuccessHeader.data(), "application/json");
@@ -363,17 +376,11 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
         int index = 0;
         for (auto const& record: mServer->mMaterialRecords) {
             bool const last = (++index) == mServer->mMaterialRecords.size();
-
-            ChunkContainer package(record.second.package, record.second.packageSize);
-            if (!package.parse()) {
-                return error(__LINE__, uri);
-            }
-
+            auto const& mat = record.second;
             JsonWriter writer;
-            if (!writer.writeMaterialInfo(package)) {
-                return error(__LINE__, uri);
+            if (!writeMaterialRecord(&writer, &mat)) {
+                return false;
             }
-
             mg_printf(conn, "{ \"matid\": \"%8.8x\", %s } %s", record.first, writer.getJsonString(),
                     last ? "" : ",");
         }
@@ -386,15 +393,9 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
         if (!result) {
             return error(__LINE__, uri);
         }
-
-        ChunkContainer package(result->package, result->packageSize);
-        if (!package.parse()) {
-            return error(__LINE__, uri);
-        }
-
         JsonWriter writer;
-        if (!writer.writeMaterialInfo(package)) {
-            return error(__LINE__, uri);
+        if (!writeMaterialRecord(&writer, result)) {
+            return false;
         }
         mg_printf(conn, kSuccessHeader.data(), "application/json");
         mg_printf(conn, "{ %s }", writer.getJsonString());

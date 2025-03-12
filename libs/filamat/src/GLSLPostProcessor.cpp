@@ -44,6 +44,10 @@
 #include <unordered_map>
 #include <vector>
 
+#ifdef FILAMENT_SUPPORTS_WEBGPU
+#include <tint/tint.h>
+#endif
+
 using namespace glslang;
 using namespace spirv_cross;
 using namespace spvtools;
@@ -514,8 +518,44 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
     }
 }
 
+bool GLSLPostProcessor::spirvToWgsl(const SpirvBlob *spirv, std::string *outWsl) {
+#if FILAMENT_SUPPORTS_WEBGPU
+    //Currently no options we want to use
+    const tint::spirv::reader::Options readerOpts{};
+    tint::wgsl::writer::Options writerOpts{};
+
+    tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
+
+    if (tintRead.Diagnostics().ContainsErrors()) {
+        //TODO remove this if block once combined image sampler conversion works.
+        if (tintRead.Diagnostics().Str().rfind("error: WGSL does not support combined image-samplers") != std::string::npos) {
+            slog.w << "This tint reader error is currently ignored during WebGPU bringup: " << tintRead.Diagnostics().Str() << io::endl;
+        }
+        else {
+            slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
+            return false;
+        }
+    }
+
+    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead,writerOpts);
+    /// An instance of SuccessType that can be used to check a tint Result.
+    tint::SuccessType tintSuccess;
+
+    if (wgslOut != tintSuccess) {
+        slog.e << "Tint writer error: " << wgslOut.Failure().reason.Str() << io::endl;
+        return false;
+    }
+    *outWsl = wgslOut->wgsl;
+    return true;
+#else
+    slog.i << "Trying to emit WGSL without including WebGPU dependencies, please set CMake arg FILAMENT_SUPPORTS_WEBGPU and FILAMENT_SUPPORTS_WEBGPU" << io::endl;
+    return false;
+#endif
+
+}
+
 bool GLSLPostProcessor::process(const std::string& inputShader, Config const& config,
-        std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl) {
+                                std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl, std::string* outputWgsl) {
     using TargetLanguage = MaterialBuilder::TargetLanguage;
 
     if (config.targetLanguage == TargetLanguage::GLSL) {
@@ -530,6 +570,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
             .glslOutput = outputGlsl,
             .spirvOutput = outputSpirv,
             .mslOutput = outputMsl,
+            .wgslOutput = outputWgsl,
     };
 
     switch (config.shaderType) {
@@ -610,13 +651,20 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                             config.shaderType, config.shaderModel, config.hasFramebufferFetch, descriptors,
                             mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
                 }
+                if (internalConfig.wgslOutput) {
+                    if (!spirvToWgsl(internalConfig.spirvOutput, internalConfig.wgslOutput)) {
+                        return false;
+                    }
+                }
             } else {
                 slog.e << "GLSL post-processor invoked with optimization level NONE"
                         << io::endl;
             }
             break;
         case MaterialBuilder::Optimization::PREPROCESSOR:
-            preprocessOptimization(tShader, config, internalConfig);
+            if (!preprocessOptimization(tShader, config, internalConfig)) {
+                return false;
+            }
             break;
         case MaterialBuilder::Optimization::SIZE:
         case MaterialBuilder::Optimization::PERFORMANCE:
@@ -646,7 +694,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     return true;
 }
 
-void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
+bool GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
         GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const {
     using TargetApi = MaterialBuilder::TargetApi;
     assert_invariant(bool(internalConfig.spirvOutput) == (config.targetApi != TargetApi::OPENGL));
@@ -662,6 +710,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 
     if (!ok) {
         slog.e << tShader.getInfoLog() << io::endl;
+        return false;
     }
 
     if (internalConfig.spirvOutput) {
@@ -683,6 +732,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
         bool const linkOk = program.link(msg);
         if (!ok || !linkOk) {
             slog.e << spirvShader.getInfoLog() << io::endl;
+            return false;
         } else {
             SpvOptions options;
             options.generateDebugInfo = mGenerateDebugInfo;
@@ -702,10 +752,17 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
                 config.shaderModel, config.hasFramebufferFetch, descriptors,
                 mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
+    if (internalConfig.wgslOutput) {
+        if (!spirvToWgsl(internalConfig.spirvOutput, internalConfig.wgslOutput)) {
+            return false;
+        }
+    }
+
 
     if (internalConfig.glslOutput) {
         *internalConfig.glslOutput = glsl;
     }
+    return true;
 }
 
 bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
@@ -745,6 +802,11 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
         spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderType, config.shaderModel,
                 config.hasFramebufferFetch, descriptors,
                 mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
+    }
+    if (internalConfig.wgslOutput) {
+        if (!spirvToWgsl(&spirv, internalConfig.wgslOutput)) {
+            return false;
+        }
     }
 
     // Transpile back to GLSL

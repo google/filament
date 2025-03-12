@@ -45,7 +45,7 @@ ShaderModel WebGPUDriver::getShaderModel() const noexcept {
 }
 
 ShaderLanguage WebGPUDriver::getShaderLanguage() const noexcept {
-    return ShaderLanguage::ESSL3;
+    return ShaderLanguage::WGSL;
 }
 
 // explicit instantiation of the Dispatcher
@@ -131,9 +131,11 @@ Handle<HwStream> WebGPUDriver::createStreamAcquired() {
     return {};
 }
 
-void WebGPUDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
-        CallbackHandler* handler, StreamCallback cb, void* userData) {
-}
+void WebGPUDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math::mat3f& transform,
+        CallbackHandler* handler, StreamCallback cb, void* userData) {}
+
+void WebGPUDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh,
+        BufferObjectStreamDescriptor&& streams) {}
 
 void WebGPUDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
 }

@@ -52,6 +52,7 @@ void MaterialUniformInterfaceBlockChunk::flatten(Flattener& f) {
         f.writeUint64(uInfo.size);
         f.writeUint8(static_cast<uint8_t>(uInfo.type));
         f.writeUint8(static_cast<uint8_t>(uInfo.precision));
+        f.writeUint8(static_cast<uint8_t>(uInfo.associatedSampler));
     }
 }
 

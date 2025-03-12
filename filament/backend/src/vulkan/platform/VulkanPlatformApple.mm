@@ -64,12 +64,12 @@ VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
 }
 
 VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
-        void* externalImage, VkDevice device) {
+        ExternalImageHandleRef externalImage, VkDevice device) {
     return {};
 }
 
-VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage,
-        VkDevice device, const VkAllocationCallbacks* allocator,
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageDataImpl(
+        ExternalImageHandleRef externalImage, VkDevice device,
         const ExternalImageMetadata& metadata) {
     return {};
 }

@@ -525,6 +525,11 @@ EShMessages GLSLTools::glslangFlagsFromTargetApi(
                 //        choke on gl_VertexIndex.
                 msg |= (Type)EShMessages::EShMsgVulkanRules;
             }
+            if (targetApi == TargetApi::WEBGPU) {
+                // FIXME: We have to use EShMsgVulkanRules for WEBGPU, otherwise compilation will
+                //        choke on gl_VertexIndex.
+                msg |= (Type)EShMessages::EShMsgVulkanRules;
+            }
             return (EShMessages)msg;
     }
 }
@@ -540,13 +545,13 @@ void GLSLTools::prepareShaderParser(MaterialBuilder::TargetApi targetApi,
                 shader.setEnvInput(EShSourceGlsl, stage, EShClientOpenGL, version);
                 shader.setEnvClient(EShClientOpenGL, EShTargetOpenGL_450);
                 break;
+            case MaterialBuilderBase::TargetApi::WEBGPU:
             case MaterialBuilderBase::TargetApi::VULKAN:
             case MaterialBuilderBase::TargetApi::METAL:
                 shader.setEnvInput(EShSourceGlsl, stage, EShClientVulkan, version);
                 shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_1);
                 break;
             // TODO: Handle webgpu here
-            case MaterialBuilderBase::TargetApi::WEBGPU:
             case MaterialBuilderBase::TargetApi::ALL:
                 // can't happen
                 break;
