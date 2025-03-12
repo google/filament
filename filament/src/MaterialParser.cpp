@@ -62,6 +62,8 @@ constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage co
             return { MaterialEssl1, DictionaryText };
         case ShaderLanguage::MSL:
             return { MaterialMetal, DictionaryText };
+        case ShaderLanguage::WGSL:
+            return { MaterialWgsl, DictionaryText };
         case ShaderLanguage::SPIRV:
             return { MaterialSpirv, DictionarySpirv };
         case ShaderLanguage::METAL_LIBRARY:
@@ -421,6 +423,7 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
         uint64_t fieldSize = 0;
         uint8_t fieldType = 0;
         uint8_t fieldPrecision = 0;
+        uint8_t fieldAssociatedSampler = 0;
 
         if (!unflattener.read(&fieldName)) {
             return false;
@@ -438,8 +441,13 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
+        if (!unflattener.read(&fieldAssociatedSampler)) {
+            return false;
+        }
+
         // a size of 1 means not an array
         builder.add({{{ fieldName.data(), fieldName.size() },
+                      fieldAssociatedSampler,
                       uint32_t(fieldSize == 1 ? 0 : fieldSize),
                       BufferInterfaceBlock::Type(fieldType),
                       BufferInterfaceBlock::Precision(fieldPrecision) }});

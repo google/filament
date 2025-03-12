@@ -984,7 +984,7 @@ Handle<HwStream> MetalDriver::createStreamAcquired() {
     return {};
 }
 
-void MetalDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
+void MetalDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math::mat3f& transform,
         CallbackHandler* handler, StreamCallback cb, void* userData) {
 }
 
@@ -1185,6 +1185,10 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
     ib->buffer.copyIntoBuffer(data.buffer, data.size, byteOffset,
             [&]() { return mHandleAllocator.getHandleTag(ibh.getId()).c_str_safe(); });
     scheduleDestroy(std::move(data));
+}
+
+void MetalDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh, BufferObjectStreamDescriptor&& streams) {
+    // Noop
 }
 
 void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,

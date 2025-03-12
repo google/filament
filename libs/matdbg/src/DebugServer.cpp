@@ -122,8 +122,11 @@ private:
     DebugServer* mServer;
 };
 
-DebugServer::DebugServer(Backend backend, ShaderLanguage shaderLanguage, int port)
-        : mBackend(backend), mShaderLanguage(shaderLanguage) {
+DebugServer::DebugServer(Backend backend, ShaderLanguage shaderLanguage,
+        DbgShaderModel perferredShaderModel, int port)
+    : mBackend(backend),
+      mShaderLanguage(shaderLanguage),
+      mPreferredShaderModel(perferredShaderModel) {
 
     #if !SERVE_FROM_SOURCE_TREE
     ASSET_MAP["/index.html"] = {

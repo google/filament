@@ -137,12 +137,7 @@ FView::~FView() noexcept = default;
 void FView::terminate(FEngine& engine) {
     // Here we would cleanly free resources we've allocated, or we own (currently none).
 
-    while (mActivePickingQueriesList) {
-        FPickingQuery* const pQuery = mActivePickingQueriesList;
-        mActivePickingQueriesList = pQuery->next;
-        pQuery->callback(pQuery->result, pQuery);
-        FPickingQuery::put(pQuery);
-    }
+    clearPickingQueries();
 
     DriverApi& driver = engine.getDriverApi();
     driver.destroyBufferObject(mLightUbh);
@@ -1175,6 +1170,15 @@ void FView::executePickingQueries(DriverApi& driver,
                     }, pQuery
             });
         }
+    }
+}
+
+void FView::clearPickingQueries() noexcept {
+    while (mActivePickingQueriesList) {
+        FPickingQuery* const pQuery = mActivePickingQueriesList;
+        mActivePickingQueriesList = pQuery->next;
+        pQuery->callback(pQuery->result, pQuery);
+        FPickingQuery::put(pQuery);
     }
 }
 

@@ -463,6 +463,8 @@ public:
     void executePickingQueries(backend::DriverApi& driver,
             backend::RenderTargetHandle handle, math::float2 scale) noexcept;
 
+    void clearPickingQueries() noexcept;
+
     void setMaterialGlobal(uint32_t index, math::float4 const& value);
 
     math::float4 getMaterialGlobal(uint32_t index) const;
