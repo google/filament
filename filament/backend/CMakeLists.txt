@@ -233,8 +233,24 @@ if (FILAMENT_SUPPORTS_VULKAN)
     elseif (APPLE OR IOS)
         list(APPEND SRCS src/vulkan/platform/VulkanPlatformApple.mm)
     elseif (ANDROID)
-        list(APPEND SRCS src/vulkan/platform/VulkanPlatformAndroid.cpp)
+        list(APPEND SRCS
+            include/backend/platforms/VulkanPlatformAndroid.h
+            src/vulkan/platform/VulkanPlatformAndroid.cpp
+        )
     endif()
+endif()
+
+if (FILAMENT_SUPPORTS_WEBGPU)
+    list(APPEND SRCS
+            src/webgpu/WebGPUDriver.cpp
+            src/webgpu/WebGPUDriver.h
+            src/webgpu/WebGPUPlatform.cpp
+            src/webgpu/WebGPUPlatform.h
+    )
+endif()
+
+if (ANDROID)
+    list(APPEND SRCS src/BackendUtilsAndroid.cpp)
 endif()
 
 # ==================================================================================================
@@ -339,6 +355,10 @@ if (FILAMENT_SUPPORTS_VULKAN)
     target_link_libraries(${TARGET} PRIVATE SPIRV-Headers)
 endif()
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    target_link_libraries(${TARGET} PRIVATE webgpu_dawn dawncpp_headers)
+endif()
+
 if (FILAMENT_SUPPORTS_METAL)
     target_link_libraries(${TARGET} PUBLIC "-framework Metal -framework CoreVideo")
 endif()
@@ -426,6 +446,10 @@ install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(TARGETS vkshaders ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    install(TARGETS webgpu_dawn ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
+endif()
+
 # ==================================================================================================
 # Test
 # ==================================================================================================
@@ -437,6 +461,7 @@ if (APPLE OR LINUX)
         test/ShaderGenerator.cpp
         test/TrianglePrimitive.cpp
         test/Arguments.cpp
+        test/Lifetimes.cpp
         test/test_FeedbackLoops.cpp
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp

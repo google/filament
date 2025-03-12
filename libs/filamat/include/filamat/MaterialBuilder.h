@@ -80,7 +80,12 @@ public:
         OPENGL      = 0x01u,
         VULKAN      = 0x02u,
         METAL       = 0x04u,
+        WEBGPU        = 0x08u,
+#ifdef FILAMENT_SUPPORTS_WEBGPU
+        ALL         = OPENGL | VULKAN | METAL | WEBGPU
+#else
         ALL         = OPENGL | VULKAN | METAL
+#endif
     };
 
     /*
@@ -163,6 +168,7 @@ inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
         case Backend::OPENGL:  return TargetApi::OPENGL;
         case Backend::VULKAN:  return TargetApi::VULKAN;
         case Backend::METAL:   return TargetApi::METAL;
+        case Backend::WEBGPU:    return TargetApi::WEBGPU;
         case Backend::NOOP:    return TargetApi::OPENGL;
     }
 }
@@ -316,7 +322,8 @@ public:
     MaterialBuilder& parameter(const char* name, SamplerType samplerType,
             SamplerFormat format = SamplerFormat::FLOAT,
             ParameterPrecision precision = ParameterPrecision::DEFAULT,
-            bool multisample = false) noexcept;
+            bool multisample = false,
+            const char* transformName = "") noexcept;
 
     MaterialBuilder& buffer(filament::BufferInterfaceBlock bib) noexcept;
 
@@ -648,8 +655,8 @@ public:
         Parameter() noexcept: parameterType(INVALID) {}
 
         // Sampler
-        Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p, bool ms)
-                : name(paramName), size(1), precision(p), samplerType(t), format(f), parameterType(SAMPLER), multisample(ms) { }
+        Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p, bool ms, const char* tn)
+                : name(paramName), size(1), precision(p), samplerType(t), format(f), parameterType(SAMPLER), multisample(ms), transformName(tn) { }
 
         // Uniform
         Parameter(const char* paramName, UniformType t, size_t typeSize, ParameterPrecision p)
@@ -667,6 +674,7 @@ public:
         SubpassType subpassType;
         SamplerFormat format;
         bool multisample;
+        utils::CString transformName;
         enum {
             INVALID,
             UNIFORM,

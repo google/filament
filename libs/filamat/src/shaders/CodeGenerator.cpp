@@ -173,6 +173,12 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         case TargetApi::METAL:
             out << "#define TARGET_METAL_ENVIRONMENT\n";
             break;
+        // TODO: Handle webgpu here
+        case TargetApi::WEBGPU:
+            //For now, no differences so inherit the same changes.
+            // TODO Define a separte environment, OR relevant checks
+            out << "#define TARGET_VULKAN_ENVIRONMENT\n";
+            break;
         case TargetApi::ALL:
             // invalid should never happen
             break;
@@ -188,6 +194,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     }
 
     if (mTargetApi == TargetApi::VULKAN ||
+        mTargetApi == TargetApi::WEBGPU ||
         mTargetApi == TargetApi::METAL ||
         (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP) ||
         mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
@@ -295,12 +302,22 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL",
             +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL, 1);
 
-    generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
-            +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
+    if (mTargetApi == TargetApi::WEBGPU) {
+        // Note: This is a revived hack for a hack.
+        //
+        // WGSL doesn't support specialization constants as an array length
+        // CONFIG_MAX_INSTANCES is only needed for WebGL, so we can replace it with a constant.
+        // More information at https://github.com/gpuweb/gpuweb/issues/572#issuecomment-649760005
+        out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
+        out << "const int CONFIG_FROXEL_BUFFER_HEIGHT = 2048;\n";
+    } else {
+        generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
+                +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
 
-    // the default of 1024 (16KiB) is needed for 32% of Android devices
-    generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
-            +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
+        // the default of 1024 (16KiB) is needed for 32% of Android devices
+        generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
+                +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
+    }
 
     // directional shadowmap visualization
     generateSpecializationConstant(out, "CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP",
@@ -711,7 +728,10 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
                 // in the GLSL 4.5 / ESSL 3.1 case, the set is not used and binding is unique
                 out << "binding = " << +binding << ", ";
                 break;
-
+            // TODO: Handle webgpu here
+            case TargetApi::WEBGPU:
+                out << "set = " << +set << ", binding = " << +binding << ", ";
+            break;
             case TargetApi::ALL:
                 // nonsensical, shouldn't happen.
                 break;
@@ -798,7 +818,10 @@ io::sstream& CodeGenerator::generateCommonSamplers(utils::io::sstream& out,
                     // GLSL 4.5 / ESSL 3.1 require the 'binding' layout qualifier
                     out << "layout(binding = " << getUniqueSamplerBindingPoint() << ") ";
                     break;
-
+                // TODO: Handle webgpu here
+                case TargetApi::WEBGPU:
+                    out << "layout(binding = " << +info.binding << ", set = " << +set << ") ";
+                break;
                 case TargetApi::ALL:
                     // should not happen
                     break;

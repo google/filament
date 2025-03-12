@@ -144,7 +144,8 @@ enum class Backend : uint8_t {
     OPENGL = 1,   //!< Selects the OpenGL/ES driver (default on Android)
     VULKAN = 2,   //!< Selects the Vulkan driver if the platform supports it (default on Linux/Windows)
     METAL = 3,    //!< Selects the Metal driver if the platform supports it (default on MacOS/iOS).
-    NOOP = 4,     //!< Selects the no-op driver for testing purposes.
+    WEBGPU = 4,   //!< Selects the Webgpu driver if the platform supports webgpu.
+    NOOP = 5,     //!< Selects the no-op driver for testing purposes.
 };
 
 enum class TimerQueryResult : int8_t {
@@ -163,6 +164,8 @@ static constexpr const char* backendToString(Backend backend) {
             return "Vulkan";
         case Backend::METAL:
             return "Metal";
+        case Backend::WEBGPU:
+            return "WebGPU";
         default:
             return "Unknown";
     }
@@ -179,6 +182,7 @@ enum class ShaderLanguage {
     SPIRV = 2,
     MSL = 3,
     METAL_LIBRARY = 4,
+    WGSL = 5,
 };
 
 static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) {
@@ -193,6 +197,8 @@ static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguag
             return "MSL";
         case ShaderLanguage::METAL_LIBRARY:
             return "Metal precompiled library";
+        case ShaderLanguage::WGSL:
+            return "WGSL";
     }
 }
 
@@ -802,6 +808,33 @@ static constexpr bool isStencilFormat(TextureFormat format) noexcept {
         default:
             return false;
     }
+}
+
+inline constexpr bool isColorFormat(TextureFormat format) noexcept {
+    switch (format) {
+        // Standard color formats
+        case TextureFormat::R8:
+        case TextureFormat::RG8:
+        case TextureFormat::RGBA8:
+        case TextureFormat::R16F:
+        case TextureFormat::RG16F:
+        case TextureFormat::RGBA16F:
+        case TextureFormat::R32F:
+        case TextureFormat::RG32F:
+        case TextureFormat::RGBA32F:
+        case TextureFormat::RGB10_A2:
+        case TextureFormat::R11F_G11F_B10F:
+        case TextureFormat::SRGB8:
+        case TextureFormat::SRGB8_A8:
+        case TextureFormat::RGB8:
+        case TextureFormat::RGB565:
+        case TextureFormat::RGB5_A1:
+        case TextureFormat::RGBA4:
+            return true;
+        default:
+            break;
+    }
+    return false;
 }
 
 static constexpr bool isUnsignedIntFormat(TextureFormat format) {
