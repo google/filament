@@ -541,6 +541,7 @@ function build_android {
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
+            ${WEBGPU_ANDROID_GRADLE_OPTION} \
             :filamat-android:assembleDebug
 
         if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
@@ -591,6 +592,7 @@ function build_android {
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
+            ${WEBGPU_ANDROID_GRADLE_OPTION} \
             :filamat-android:assembleRelease
 
         if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
