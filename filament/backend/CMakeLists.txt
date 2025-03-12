@@ -242,11 +242,29 @@ endif()
 
 if (FILAMENT_SUPPORTS_WEBGPU)
     list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatform.h
+            src/webgpu/platform/WebGPUPlatform.cpp
+            src/webgpu/WebGPUConstants.h
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
-            src/webgpu/WebGPUPlatform.cpp
-            src/webgpu/WebGPUPlatform.h
     )
+    if (LINUX OR WIN32)
+        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformLinuxWindows.cpp)
+    elseif (APPLE OR IOS)
+        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformApple.mm)
+    elseif (ANDROID)
+        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformAndroid.cpp)
+    endif()
+
+    if (TNT_DEV)
+        set(FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING_DEFAULT ON)
+    else()
+        set(FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING_DEFAULT OFF)
+    endif()
+
+    option(FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING
+            "Enable immediate_error_handling for the WebGPU backend Dawn implementation"
+            ${FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING_DEFAULT})
 endif()
 
 if (ANDROID)
@@ -431,6 +449,10 @@ target_compile_options(${TARGET} PRIVATE
 
 if (FILAMENT_SUPPORTS_METAL)
     target_compile_definitions(${TARGET} PRIVATE $<$<BOOL:${FILAMENT_METAL_PROFILING}>:FILAMENT_METAL_PROFILING>)
+endif()
+
+if (FILAMENT_SUPPORTS_WEBGPU)
+    target_compile_definitions(${TARGET} PRIVATE $<$<BOOL:${FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING}>:FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING>)
 endif()
 
 target_link_libraries(${TARGET} PRIVATE

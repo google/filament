@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2024 Your Name
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,9 +35,10 @@
 
 #include <cmath>
 #include <iostream>
+#include <fstream>
+#include <vector>
 
-
-#include "generated/resources/resources.h"
+#include "generated/resources/resources.h" // Assuming you have resources.h generated with your filamat
 
 using namespace filament;
 using utils::Entity;
@@ -70,20 +71,16 @@ static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 static void printUsage(char* name) {
     std::string exec_name(utils::Path(name).getName());
     std::string usage(
-            "HELLOTRIANGLE renders a spinning colored triangle\n"
-            "Usage:\n"
-            "    HELLOTRIANGLE [options]\n"
-            "Options:\n"
-            "   --help, -h\n"
-            "       Prints this message\n\n"
-            "   --api, -a\n"
-            "       Specify the backend API: opengl, vulkan, metal, or webgpu\n"
-            "       (note: webgpu is a no-op for now, printing backend\n"
-            "        component info if FILAMENT_BACKEND_DEBUG_FLAG, \n"
-            "        set at build time, includes the \n"
-            "        FWGPU_PRINT_SYSTEM bit flag 0x2)\n"
+        "LOADFILAMAT loads a material from a filamat file and renders a triangle.\n"
+        "Usage:\n"
+        "    LOADFILAMAT [options]\n"
+        "Options:\n"
+        "    --help, -h\n"
+        "        Prints this message\n\n"
+        "    --api, -a\n"
+        "        Specify the backend API: opengl, vulkan, or metal\n"
     );
-    const std::string from("HELLOTRIANGLE");
+    const std::string from("LOADFILAMAT");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
     }
@@ -93,77 +90,104 @@ static void printUsage(char* name) {
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
     static constexpr const char* OPTSTR = "ha:";
     static const struct option OPTIONS[] = {
-            { "help", no_argument,       nullptr, 'h' },
-            { "api",  required_argument, nullptr, 'a' },
-            { nullptr, 0,                nullptr, 0 }
+        { "help", no_argument,    nullptr, 'h' },
+        { "api",  required_argument, nullptr, 'a' },
+        { nullptr, 0,            nullptr, 0 }
     };
     int opt;
     int option_index = 0;
     while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
         std::string arg(optarg ? optarg : "");
         switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                if (arg == "opengl") {
-                    app->config.backend = Engine::Backend::OPENGL;
-                } else if (arg == "vulkan") {
-                    app->config.backend = Engine::Backend::VULKAN;
-                } else if (arg == "metal") {
-                    app->config.backend = Engine::Backend::METAL;
-                } else if (arg == "webgpu") {
-                    app->config.backend = Engine::Backend::WEBGPU;
-                } else {
-                    std::cerr << "Unrecognized backend. Must be "
-                                 "'opengl'|'vulkan'|'metal'|'webgpu'.\n";
-                    exit(1);
-                }
-                break;
+        default:
+        case 'h':
+            printUsage(argv[0]);
+            exit(0);
+        case 'a':
+            if (arg == "opengl") {
+                app->config.backend = Engine::Backend::OPENGL;
+            } else if (arg == "vulkan") {
+                app->config.backend = Engine::Backend::VULKAN;
+            } else if (arg == "metal") {
+                app->config.backend = Engine::Backend::METAL;
+            } else if (arg == "webgpu") {
+                app->config.backend = Engine::Backend::WEBGPU;
+            } else {
+                std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
+                exit(1);
+            }
+            break;
         }
     }
     return optind;
 }
 
+std::vector<uint8_t> readFile(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<uint8_t> buffer(size);
+    file.read(reinterpret_cast<char*>(buffer.data()), size);
+
+    return buffer;
+}
+
 int main(int argc, char** argv) {
     App app{};
-    app.config.title = "hellotriangle";
+    app.config.title = "loadfilamat";
     app.config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_0;
     handleCommandLineArguments(argc, argv, &app);
 
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-        app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
+        app.skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
         scene->setSkybox(app.skybox);
         view->setPostProcessingEnabled(false);
         static_assert(sizeof(Vertex) == 12, "Strange vertex size.");
         app.vb = VertexBuffer::Builder()
-                .vertexCount(3)
-                .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
-                .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
-                .normalized(VertexAttribute::COLOR)
-                .build(*engine);
+            .vertexCount(3)
+            .bufferCount(1)
+            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
+            .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
+            .normalized(VertexAttribute::COLOR)
+            .build(*engine);
         app.vb->setBufferAt(*engine, 0,
-                VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
+            VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
         app.ib = IndexBuffer::Builder()
-                .indexCount(3)
-                .bufferType(IndexBuffer::IndexType::USHORT)
-                .build(*engine);
+            .indexCount(3)
+            .bufferType(IndexBuffer::IndexType::USHORT)
+            .build(*engine);
         app.ib->setBuffer(*engine,
-                IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
-        app.mat = Material::Builder()
+            IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
+
+        // Load the material from the filamat file
+        try {
+            std::vector<uint8_t> materialData = readFile("/Users/juancaldas/Documents/gitFiles/filament/samples/materials/bakedColor.filamat"); // Replace with your file path
+//            std::vector<uint8_t> materialData = readFile("/Users/juancaldas/Documents/gitFiles/filament/samples/materials/texturedLit.filamat"); // BREAKS, which ig its expected
+            app.mat = Material::Builder()
+                .package(materialData.data(), materialData.size())
+                .build(*engine);
+        } catch (const std::runtime_error& e) {
+            std::cerr << "Error loading material: " << e.what() << std::endl;
+            // Handle the error (e.g., use a default material)
+            app.mat = Material::Builder()
                 .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
                 .build(*engine);
+        }
+
         app.renderable = EntityManager::get().create();
         RenderableManager::Builder(1)
-                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-                .material(0, app.mat->getDefaultInstance())
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 3)
-                .culling(false)
-                .receiveShadows(false)
-                .castShadows(false)
-                .build(*engine, app.renderable);
+            .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+            .material(0, app.mat->getDefaultInstance())
+            .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 3)
+            .culling(false)
+            .receiveShadows(false)
+            .castShadows(false)
+            .build(*engine, app.renderable);
         scene->addEntity(app.renderable);
         app.camera = utils::EntityManager::get().create();
         app.cam = engine->createCamera(app.camera);
@@ -184,13 +208,13 @@ int main(int argc, char** argv) {
         constexpr float ZOOM = 1.5f;
         const uint32_t w = view->getViewport().width;
         const uint32_t h = view->getViewport().height;
-        const float aspect = (float) w / h;
+        const float aspect = (float)w / h;
         app.cam->setProjection(Camera::Projection::ORTHO,
             -aspect * ZOOM, aspect * ZOOM,
             -ZOOM, ZOOM, 0, 1);
         auto& tcm = engine->getTransformManager();
         tcm.setTransform(tcm.getInstance(app.renderable),
-                filament::math::mat4f::rotation(now, filament::math::float3{ 0, 0, 1 }));
+            filament::math::mat4f::rotation(now, filament::math::float3{ 0, 0, 1 }));
     });
 
     FilamentApp::get().run(app.config, setup, cleanup);
