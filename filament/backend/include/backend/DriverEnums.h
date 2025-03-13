@@ -262,7 +262,8 @@ struct DescriptorSetLayoutBinding {
         return lhs.type == rhs.type &&
                lhs.flags == rhs.flags &&
                lhs.count == rhs.count &&
-               lhs.stageFlags == rhs.stageFlags;
+               lhs.stageFlags == rhs.stageFlags &&
+               lhs.externalSamplerDataIndex == rhs.externalSamplerDataIndex;
     }
 };
 
