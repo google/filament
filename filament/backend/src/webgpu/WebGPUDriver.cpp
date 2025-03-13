@@ -236,8 +236,16 @@ uint8_t WebGPUDriver::getMaxDrawBuffers() {
     return MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
 }
 
-size_t WebGPUDriver::getMaxUniformBufferSize() {
+size_t WebGPUDriver::getMaxUniformBufferSize(SamplerType) {
     return 16384u;
+}
+
+size_t WebGPUDriver::getMaxTextureSize() {
+    return 2048u;
+}
+
+size_t WebGPUDriver::getMaxArrayTextureLayers() {
+    return 256u;
 }
 
 void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
