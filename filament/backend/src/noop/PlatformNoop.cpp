@@ -20,7 +20,7 @@
 
 namespace filament::backend {
 
-Driver* PlatformNoop::createDriver(void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformNoop::createDriver(const void* sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
     return NoopDriver::create();
 }
 

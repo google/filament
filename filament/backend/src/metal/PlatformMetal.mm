@@ -44,7 +44,7 @@ PlatformMetal::~PlatformMetal() noexcept {
     delete pImpl;
 }
 
-Driver* PlatformMetal::createDriver(void* /*sharedContext*/, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformMetal::createDriver(const void* /*sharedContext*/, const Platform::DriverConfig& driverConfig) noexcept {
     return MetalDriverFactory::create(this, driverConfig);
 }
 

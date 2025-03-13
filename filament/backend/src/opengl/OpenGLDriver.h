@@ -84,7 +84,7 @@ class OpenGLDriver final : public OpenGLDriverBase {
     Dispatcher getDispatcher() const noexcept override;
 
 public:
-    static OpenGLDriver* create(OpenGLPlatform* platform, void* sharedGLContext,
+    static OpenGLDriver* create(OpenGLPlatform* platform, const void* sharedGLContext,
             const Platform::DriverConfig& driverConfig) noexcept;
 
     class DebugMarker {

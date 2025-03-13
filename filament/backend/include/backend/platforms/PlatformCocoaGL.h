@@ -39,7 +39,7 @@ protected:
     // --------------------------------------------------------------------------------------------
     // Platform Interface
 
-    Driver* createDriver(void* sharedContext,
+    Driver* createDriver(const void* sharedContext,
             const DriverConfig& driverConfig) noexcept override;
 
     // Currently returns 0

@@ -28,7 +28,7 @@ class PlatformEGLHeadless : public PlatformEGL {
 public:
     PlatformEGLHeadless() noexcept;
 
-    Driver* createDriver(void* sharedContext,
+    Driver* createDriver(const void* sharedContext,
             const Platform::DriverConfig& driverConfig) noexcept override;
 
 protected:

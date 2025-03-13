@@ -38,7 +38,7 @@ bool PlatformEGLHeadless::isOpenGL() const noexcept {
     return  true;
 }
 
-backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext,
+backend::Driver* PlatformEGLHeadless::createDriver(const void* sharedContext,
         const Platform::DriverConfig& driverConfig) noexcept {
     EGLBoolean bindAPI = eglBindAPI(EGL_OPENGL_API);
     if (UTILS_UNLIKELY(!bindAPI)) {

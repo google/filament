@@ -119,7 +119,7 @@ bool PlatformEGL::isOpenGL() const noexcept {
 
 PlatformEGL::ExternalImageEGL::~ExternalImageEGL() = default;
 
-Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) noexcept {
+Driver* PlatformEGL::createDriver(const void* sharedContext, const DriverConfig& driverConfig) noexcept {
     mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 

@@ -33,7 +33,7 @@ protected:
     // --------------------------------------------------------------------------------------------
     // Platform Interface
 
-    Driver* createDriver(void* sharedGLContext,
+    Driver* createDriver(const void* sharedGLContext,
             const Platform::DriverConfig& driverConfig) noexcept override;
 
     int getOSVersion() const noexcept override;

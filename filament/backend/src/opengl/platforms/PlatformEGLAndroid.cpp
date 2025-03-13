@@ -194,7 +194,7 @@ void backend::PlatformEGLAndroid::preCommit() noexcept {
     PlatformEGL::preCommit();
 }
 
-Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
+Driver* PlatformEGLAndroid::createDriver(const void* sharedContext,
         const Platform::DriverConfig& driverConfig) noexcept {
 
     // the refresh rate default value doesn't matter, we change it later

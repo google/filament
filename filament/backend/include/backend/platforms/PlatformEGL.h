@@ -80,7 +80,7 @@ protected:
      * Initializes EGL, creates the OpenGL context and returns a concrete Driver implementation
      * that supports OpenGL/OpenGL ES.
      */
-    Driver* createDriver(void* sharedContext, const DriverConfig& driverConfig) noexcept override;
+    Driver* createDriver(const void* sharedContext, const DriverConfig& driverConfig) noexcept override;
 
     /**
      * This returns zero. This method can be overridden to return something more useful.

@@ -26,7 +26,7 @@ class Driver;
 
 class OpenGLDriverFactory {
 public:
-    static Driver* create(OpenGLPlatform* platform, void* sharedGLContext,
+    static Driver* create(OpenGLPlatform* platform, const void* sharedGLContext,
             const Platform::DriverConfig& driverConfig) noexcept;
 };
 

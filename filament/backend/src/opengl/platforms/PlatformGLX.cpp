@@ -128,7 +128,7 @@ namespace filament::backend {
 
 using namespace backend;
 
-Driver* PlatformGLX::createDriver(void* const sharedGLContext,
+Driver* PlatformGLX::createDriver(const void* sharedGLContext,
         const DriverConfig& driverConfig) noexcept {
     loadLibraries();
     // Get the display device

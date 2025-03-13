@@ -149,7 +149,7 @@ namespace filament::backend {
 
 Driver* OpenGLDriverFactory::create(
         OpenGLPlatform* const platform,
-        void* const sharedGLContext,
+        const void* sharedGLContext,
         const Platform::DriverConfig& driverConfig) noexcept {
     return OpenGLDriver::create(platform, sharedGLContext, driverConfig);
 }
@@ -160,7 +160,7 @@ using namespace GLUtils;
 
 UTILS_NOINLINE
 OpenGLDriver* OpenGLDriver::create(OpenGLPlatform* const platform,
-        void* const /*sharedGLContext*/, const Platform::DriverConfig& driverConfig) noexcept {
+        const void* /*sharedGLContext*/, const Platform::DriverConfig& driverConfig) noexcept {
     assert_invariant(platform);
     OpenGLPlatform* const ec = platform;
 

@@ -39,7 +39,7 @@ namespace filament::backend {
 OpenGLDriverBase::~OpenGLDriverBase() = default;
 
 Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
-        void* sharedContext, const DriverConfig& driverConfig) {
+        const void* sharedContext, const DriverConfig& driverConfig) {
     return OpenGLDriverFactory::create(platform, sharedContext, driverConfig);
 }
 

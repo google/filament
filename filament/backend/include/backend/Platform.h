@@ -174,7 +174,7 @@ public:
      *
      * @return nullptr on failure, or a pointer to the newly created driver.
      */
-    virtual Driver* UTILS_NULLABLE createDriver(void* UTILS_NULLABLE sharedContext,
+    virtual Driver* UTILS_NULLABLE createDriver(const void* UTILS_NULLABLE sharedContext,
             const DriverConfig& driverConfig) noexcept = 0;
 
     /**

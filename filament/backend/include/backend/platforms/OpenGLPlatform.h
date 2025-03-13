@@ -48,7 +48,7 @@ protected:
      * This is typically called from your implementation of createDriver()
      */
     static Driver* UTILS_NULLABLE createDefaultDriver(OpenGLPlatform* UTILS_NONNULL platform,
-            void* UTILS_NULLABLE sharedContext, const DriverConfig& driverConfig);
+            const void* UTILS_NULLABLE sharedContext, const DriverConfig& driverConfig);
 
     ~OpenGLPlatform() noexcept override;
 

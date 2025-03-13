@@ -54,7 +54,7 @@ protected:
      */
     int getOSVersion() const noexcept override;
 
-    Driver* createDriver(void* sharedContext,
+    Driver* createDriver(const void* sharedContext,
             const Platform::DriverConfig& driverConfig) noexcept override;
 
     /**

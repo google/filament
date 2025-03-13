@@ -46,7 +46,7 @@ public:
     [[nodiscard]] wgpu::Device requestDevice(wgpu::Adapter const& adapter);
 
 protected:
-    [[nodiscard]] Driver* createDriver(void* sharedContext,
+    [[nodiscard]] Driver* createDriver(const void* sharedContext,
             const Platform::DriverConfig& driverConfig) noexcept override;
 
 private:

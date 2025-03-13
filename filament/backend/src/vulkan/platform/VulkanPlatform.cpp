@@ -655,7 +655,7 @@ void VulkanPlatform::terminate() {
 }
 
 // This is the main entry point for context creation.
-Driver* VulkanPlatform::createDriver(void* sharedContext,
+Driver* VulkanPlatform::createDriver(const void* sharedContext,
         Platform::DriverConfig const& driverConfig) noexcept {
     // Load Vulkan entry points.
     FILAMENT_CHECK_POSTCONDITION(bluevk::initialize()) << "BlueVK is unable to load entry points.";
