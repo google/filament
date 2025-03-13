@@ -256,10 +256,12 @@ struct DescriptorSetLayoutBinding {
 
     uint8_t externalSamplerDataIndex = EXTERNAL_SAMPLER_DATA_INDEX_UNUSED;
 
-    friend inline bool operator==(DescriptorSetLayoutBinding const& lhs,
+    friend inline bool operator==(
+            DescriptorSetLayoutBinding const& lhs,
             DescriptorSetLayoutBinding const& rhs) noexcept {
-        return lhs.type == rhs.type && lhs.flags == rhs.flags && lhs.count == rhs.count &&
-               lhs.externalSamplerDataIndex == rhs.externalSamplerDataIndex &&
+        return lhs.type == rhs.type &&
+               lhs.flags == rhs.flags &&
+               lhs.count == rhs.count &&
                lhs.stageFlags == rhs.stageFlags;
     }
 };
@@ -975,7 +977,7 @@ struct SamplerParams {             // NOLINT
     uint8_t padding2                : 8;    //!< reserved. must be 0.
 
     struct Hasher {
-        size_t operator()(const SamplerParams& p) const noexcept {
+        size_t operator()(SamplerParams p) const noexcept {
             // we don't use std::hash<> here, so we don't have to include <functional>
             return *reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&p));
         }
@@ -1074,9 +1076,9 @@ static_assert(sizeof(SamplerYcbcrConversion) == 4);
 
 struct ExternalSamplerDatum {
     ExternalSamplerDatum(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt)
-        :
-        YcbcrConversion(ycbcr), samplerParams(spm), externalFormat(extFmt) {
-    }
+        : YcbcrConversion(ycbcr),
+          samplerParams(spm),
+          externalFormat(extFmt) {}
     bool operator==(ExternalSamplerDatum const& rhs) const {
         return (YcbcrConversion == rhs.YcbcrConversion && samplerParams == rhs.samplerParams &&
                 externalFormat == rhs.externalFormat);
