@@ -127,8 +127,8 @@ static_assert(MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_ATTRIBUTE_COUNT,
 static constexpr size_t CONFIG_UNIFORM_BINDING_COUNT = 9;   // This is guaranteed by OpenGL ES.
 static constexpr size_t CONFIG_SAMPLER_BINDING_COUNT = 4;   // This is guaranteed by OpenGL ES.
 
-static constexpr uint32_t EXTERNAL_SAMPLER_DATA_INDEX_UNUSED =
-        uint32_t(-1);// Case where the descriptor set binding isnt using any external sampler state
+static constexpr uint8_t EXTERNAL_SAMPLER_DATA_INDEX_UNUSED =
+        uint8_t(-1);// Case where the descriptor set binding isnt using any external sampler state
                      // and therefore doesn't have a valid entry.
 
 /**
@@ -254,12 +254,14 @@ struct DescriptorSetLayoutBinding {
     DescriptorFlags flags = DescriptorFlags::NONE;
     uint16_t count = 0;
 
-    uint32_t externalSamplerDataIndex = EXTERNAL_SAMPLER_DATA_INDEX_UNUSED;
+    uint8_t externalSamplerDataIndex = EXTERNAL_SAMPLER_DATA_INDEX_UNUSED;
 
-    friend inline bool operator==(DescriptorSetLayoutBinding const& lhs,
+    friend inline bool operator==(
+            DescriptorSetLayoutBinding const& lhs,
             DescriptorSetLayoutBinding const& rhs) noexcept {
-        return lhs.type == rhs.type && lhs.flags == rhs.flags && lhs.count == rhs.count &&
-               lhs.externalSamplerDataIndex == rhs.externalSamplerDataIndex &&
+        return lhs.type == rhs.type &&
+               lhs.flags == rhs.flags &&
+               lhs.count == rhs.count &&
                lhs.stageFlags == rhs.stageFlags;
     }
 };
@@ -938,6 +940,8 @@ enum class SamplerCompareFunc : uint8_t {
     N           //!< Never. The depth / stencil test always fails.
 };
 
+//! this API is copied from (and only applies to) the Vulkan spec.
+//! These specify YUV to RGB conversions.
 enum class SamplerYcbcrModelConversion : uint8_t {
     RGB_IDENTITY = 0,
     YCBCR_IDENTITY = 1,
@@ -973,7 +977,7 @@ struct SamplerParams {             // NOLINT
     uint8_t padding2                : 8;    //!< reserved. must be 0.
 
     struct Hasher {
-        size_t operator()(const SamplerParams& p) const noexcept {
+        size_t operator()(SamplerParams p) const noexcept {
             // we don't use std::hash<> here, so we don't have to include <functional>
             return *reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&p));
         }
@@ -1070,16 +1074,18 @@ private:
 
 static_assert(sizeof(SamplerYcbcrConversion) == 4);
 
-struct ExternalSamplerKey {
-    ExternalSamplerKey(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt):
-        YcbcrConversion(ycbcr), samplerParams(spm), externalFormat(extFmt) {
-    }
-    bool operator==(ExternalSamplerKey const& rhs) const {
+struct ExternalSamplerDatum {
+    ExternalSamplerDatum(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt)
+        : YcbcrConversion(ycbcr),
+          samplerParams(spm),
+          externalFormat(extFmt) {}
+    bool operator==(ExternalSamplerDatum const& rhs) const {
         return (YcbcrConversion == rhs.YcbcrConversion && samplerParams == rhs.samplerParams &&
                 externalFormat == rhs.externalFormat);
     }
     struct EqualTo {
-        bool operator()(const ExternalSamplerKey& lhs, const ExternalSamplerKey& rhs) const noexcept {
+        bool operator()(const ExternalSamplerDatum& lhs,
+                const ExternalSamplerDatum& rhs) const noexcept {
             return (lhs.YcbcrConversion == rhs.YcbcrConversion &&
                 lhs.samplerParams == rhs.samplerParams &&
                 lhs.externalFormat == rhs.externalFormat);
@@ -1090,12 +1096,11 @@ struct ExternalSamplerKey {
     uint32_t externalFormat;
 };
 // No implicit padding allowed due to it being a hash key.
-static_assert(sizeof(ExternalSamplerKey) == 12);
-using ExternalSamplerHash = utils::hash::MurmurHashFn<ExternalSamplerKey>;
+static_assert(sizeof(ExternalSamplerDatum) == 12);
 
 struct DescriptorSetLayout {
     utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
-    utils::FixedCapacityVector<ExternalSamplerKey> externalSamplerData;
+    utils::FixedCapacityVector<ExternalSamplerDatum> externalSamplerData;
 };
 
 //! blending equation function
