@@ -12,11 +12,11 @@ if (FILAMENT_SUPPORTS_VULKAN)
 endif()
 
 if (FILAMENT_SUPPORTS_WEBGPU)
-    add_library(webgpu_dawn STATIC IMPORTED)
-    set_target_properties(webgpu_dawn PROPERTIES IMPORTED_LOCATION
-            ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libwebgpu_dawn.a)
+    # See third_party/dawn/tnt/CMakeLists.txt and libs/filamat/CMakeLists.txt
+    add_library(tint STATIC IMPORTED)
+    set_target_properties(tint PROPERTIES IMPORTED_LOCATION
+            ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libtint_combined.a)
 endif()
-
 
 add_library(${FILAMAT_FLAVOR} STATIC IMPORTED)
 set_target_properties(${FILAMAT_FLAVOR} PROPERTIES IMPORTED_LOCATION
@@ -57,5 +57,5 @@ target_link_libraries(filamat-jni
         utils
         log
         smol-v
-        $<$<STREQUAL:${FILAMENT_SUPPORTS_WEBGPU},ON>:webgpu_dawn> # for tint
+        $<$<STREQUAL:${FILAMENT_SUPPORTS_WEBGPU},ON>:tint>
 )
