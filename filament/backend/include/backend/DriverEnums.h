@@ -1019,6 +1019,11 @@ private:
 
 static_assert(sizeof(SamplerParams) == 4);
 
+// The limitation to 64-bits max comes from how we store a SamplerParams in our JNI code
+// see android/.../TextureSampler.cpp
+static_assert(sizeof(SamplerParams) <= sizeof(uint64_t),
+        "SamplerParams must be no more than 64 bits");
+
 //! Sampler parameters
 struct SamplerYcbcrConversion {// NOLINT
     SamplerYcbcrModelConversion ycbcrModel : 4;
@@ -1073,6 +1078,9 @@ private:
 };
 
 static_assert(sizeof(SamplerYcbcrConversion) == 4);
+
+static_assert(sizeof(SamplerYcbcrConversion) <= sizeof(uint64_t),
+        "SamplerYcbcrConversion must be no more than 64 bits");
 
 struct ExternalSamplerDatum {
     ExternalSamplerDatum(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt)
