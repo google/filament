@@ -178,6 +178,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
             //For now, no differences so inherit the same changes.
             // TODO Define a separte environment, OR relevant checks
             out << "#define TARGET_VULKAN_ENVIRONMENT\n";
+            out << "#define TARGET_WEBGPU_ENVIRONMENT\n";
             break;
         case TargetApi::ALL:
             // invalid should never happen
