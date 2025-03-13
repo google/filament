@@ -661,7 +661,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 #else
         engineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
 #endif
-
+        // TODO add backend WGSL?
         if (backend == Engine::Backend::VULKAN) {
             #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
                 mFilamentApp->mVulkanPlatform =
@@ -702,7 +702,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
 #if defined(__APPLE__)
         ::prepareNativeWindow(mWindow);
-
+        //TODO Wgsl?
         void* metalLayer = nullptr;
         if (config.backend == filament::Engine::Backend::METAL || config.backend == filament::Engine::Backend::VULKAN) {
             metalLayer = setUpMetalLayer(nativeWindow);
