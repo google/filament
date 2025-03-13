@@ -1049,7 +1049,6 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
 
                 switch (targetApi) {
-                    // TODO: Handle webgpu here
                     case TargetApi::WEBGPU:
                         assert(!spirv.empty());
                         assert(wgsl.length() > 0);
