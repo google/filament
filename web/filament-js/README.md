@@ -8,7 +8,7 @@ See the [web docs](https://github.com/google/filament/tree/main/web/docs) for mo
 
 ## Publishing to npm
 
-See [Versioning.md](https://github.com/google/filament/blob/main/filament/docs/Versioning.md)
+See [Versioning.md](https://github.com/google/filament/blob/main/docs_src/src/notes/versioning.md)
 for a description of Filament's three-tier versioning scheme.
 
 By pushing Filament's WebAssembly build to the npm registry, we can simplify the workflow for web

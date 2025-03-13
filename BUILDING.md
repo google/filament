@@ -372,7 +372,7 @@ export EMSDK=<your chosen home for the emscripten SDK>
 
 The EMSDK variable is required so that the build script can find the Emscripten SDK. The build
 creates a `samples` folder that can be used as the root of a simple static web server. Note that you
-cannot open the HTML directly from the filesystem due to CORS. We recommend using the emrun tool
+cannot open the HTML directly from the filesystem due to Cross-Origin Resource Sharing ([CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)). We recommend using the emrun tool
 to create a quick localhost server:
 
 ```shell

@@ -64,7 +64,7 @@ become ready. In our callback, we simply instantiated the `App` object, since we
 work in its constructor. We also set the app instance into a `Window` property to make it accessible
 from the developer console.
 
-Go ahead and download [triangle.filamat](triangle.filamat) and place it in your project folder.
+Go ahead and download [triangle.filamat](https://github.com/google/filament/blob/main/docs/webgl/triangle.filamat) and place it in your project folder.
 This is a *material package*, which is a binary file that contains shaders and other bits of data
 that define a PBR material. We'll learn more about material packages in the next tutorial.
 
