@@ -576,10 +576,10 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
     assert_invariant(height == metadata.height);
     assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
 
-    VkMemoryPropertyFlags requiredMemoryFlags = any(usage & TextureUsage::UPLOADABLE)
-                                                        ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                                                        : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    uint32_t memoryTypeIndex =
+    VkMemoryPropertyFlags const requiredMemoryFlags = any(usage & TextureUsage::UPLOADABLE)
+                                                              ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                                                              : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    uint32_t const memoryTypeIndex =
             mContext.selectMemoryType(metadata.memoryTypeBits, requiredMemoryFlags);
     FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex != VK_MAX_MEMORY_TYPES)
             << "failed to find a valid memory type for external image memory.";
