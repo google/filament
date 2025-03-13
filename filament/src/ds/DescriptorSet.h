@@ -71,6 +71,11 @@ public:
             backend::Handle<backend::HwTexture> th,
             backend::SamplerParams params) noexcept;
 
+    // sets a sampler descriptor (external)
+    void setExternalSampler(backend::descriptor_binding_t binding,
+            backend::Handle<backend::HwTexture> th, backend::SamplerParams params,
+            backend::SamplerYcbcrConversion conversion, uint32_t internalFormat) noexcept;
+
     // Used for duplicating material
     DescriptorSet duplicate(DescriptorSetLayout const& layout) const noexcept;
 
@@ -94,7 +99,8 @@ private:
             struct {
                 backend::Handle<backend::HwTexture> th;
                 backend::SamplerParams params;
-                uint32_t padding;
+                backend::SamplerYcbcrConversion conversion;
+                uint32_t internalFormat;
             } texture;
         };
     };

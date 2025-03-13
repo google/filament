@@ -235,6 +235,9 @@ public:
 
     void setParameter(std::string_view name,
             backend::Handle<backend::HwTexture> texture, backend::SamplerParams params);
+    void setParameter(std::string_view name, backend::Handle<backend::HwTexture> texture,
+            backend::SamplerParams params, backend::SamplerYcbcrConversion,
+            uint32_t internalFormat);
 
     using MaterialInstance::setParameter;
 

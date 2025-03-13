@@ -143,7 +143,20 @@ void DescriptorSet::setSampler(
     if (mDescriptors[binding].texture.th != th || mDescriptors[binding].texture.params != params) {
         mDirty.set(binding);
     }
-    mDescriptors[binding].texture = { th, params };
+    mDescriptors[binding].texture = { th, params, backend::SamplerYcbcrConversion(), 0 };
+    mValid.set(binding, (bool) th);
+}
+
+// sets a sampler descriptor (external)
+void DescriptorSet::setExternalSampler(backend::descriptor_binding_t binding,
+        backend::Handle<backend::HwTexture> th, backend::SamplerParams params,
+        backend::SamplerYcbcrConversion conversion, uint32_t internalFormat) noexcept {
+    if (mDescriptors[binding].texture.th != th || mDescriptors[binding].texture.params != params ||
+            mDescriptors[binding].texture.conversion != conversion ||
+            mDescriptors[binding].texture.internalFormat != internalFormat) {
+        mDirty.set(binding);
+    }
+    mDescriptors[binding].texture = { th, params, conversion, internalFormat };
     mValid.set(binding, (bool)th);
 }
 

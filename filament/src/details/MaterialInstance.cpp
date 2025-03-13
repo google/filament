@@ -223,6 +223,13 @@ void FMaterialInstance::setParameter(std::string_view const name,
     mDescriptorSet.setSampler(binding, texture, params);
 }
 
+void FMaterialInstance::setParameter(std::string_view name,
+        backend::Handle<backend::HwTexture> texture, backend::SamplerParams params,
+        backend::SamplerYcbcrConversion conversion, uint32_t internalFormat) {
+    auto binding = mMaterial->getSamplerBinding(name);
+    mDescriptorSet.setExternalSampler(binding, texture, params, conversion, internalFormat);
+}
+
 void FMaterialInstance::setParameterImpl(std::string_view const name,
         FTexture const* texture, TextureSampler const& sampler) {
 

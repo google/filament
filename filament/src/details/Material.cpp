@@ -1165,7 +1165,7 @@ void FMaterial::processDescriptorSets(FEngine& engine, Builder const& builder,
             const auto& sampler = builder->mExternalInfos.find(samplerName);
             assert_invariant(sampler != builder->mExternalInfos.end());
 
-            backend::ExternalSamplerKey key{ sampler->second.mChroma, sampler->second.mSampler,
+            backend::ExternalSamplerDatum key{ sampler->second.mChroma, sampler->second.mSampler,
                 sampler->second.mInternalFormat };
             const auto& iter =
                     std::find(externalSamplerData.begin(), externalSamplerData.end(), key);
