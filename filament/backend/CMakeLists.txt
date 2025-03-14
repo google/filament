@@ -495,6 +495,7 @@ if (APPLE OR LINUX)
         test/TrianglePrimitive.cpp
         test/Arguments.cpp
         test/Lifetimes.cpp
+        test/Shader.cpp
         test/test_FeedbackLoops.cpp
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp
