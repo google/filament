@@ -77,7 +77,11 @@ static void printUsage(char* name) {
             "   --help, -h\n"
             "       Prints this message\n\n"
             "   --api, -a\n"
-            "       Specify the backend API: opengl, vulkan, or metal\n"
+            "       Specify the backend API: opengl, vulkan, metal, or webgpu\n"
+            "       (note: webgpu is a no-op for now, printing backend\n"
+            "        component info if FILAMENT_BACKEND_DEBUG_FLAG, \n"
+            "        set at build time, includes the \n"
+            "        FWGPU_PRINT_SYSTEM bit flag 0x2)\n"
     );
     const std::string from("HELLOTRIANGLE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -109,8 +113,11 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                     app->config.backend = Engine::Backend::VULKAN;
                 } else if (arg == "metal") {
                     app->config.backend = Engine::Backend::METAL;
+                } else if (arg == "webgpu") {
+                    app->config.backend = Engine::Backend::WEBGPU;
                 } else {
-                    std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
+                    std::cerr << "Unrecognized backend. Must be "
+                                 "'opengl'|'vulkan'|'metal'|'webgpu'.\n";
                     exit(1);
                 }
                 break;

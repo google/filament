@@ -978,13 +978,13 @@ VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
 }
 
 VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadata(
-        void* externalImage) {
+        ExternalImageHandleRef externalImage) {
     return getExternalImageMetadataImpl(externalImage, mImpl->mDevice);
 }
 
-VulkanPlatform::ImageData VulkanPlatform::createExternalImage(void* externalImage,
-        const ExternalImageMetadata& metadata) {
-    return createExternalImageImpl(externalImage, mImpl->mDevice, metadata);
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageData(
+        ExternalImageHandleRef externalImage, const ExternalImageMetadata& metadata) {
+    return createExternalImageDataImpl(externalImage, mImpl->mDevice, metadata);
 }
 
 VkSampler VulkanPlatform::createExternalSampler(SamplerYcbcrConversion chroma,

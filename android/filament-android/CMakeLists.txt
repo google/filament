@@ -29,10 +29,6 @@ add_library(filaflat STATIC IMPORTED)
 set_target_properties(filaflat PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilaflat.a)
 
-add_library(filamat STATIC IMPORTED)
-set_target_properties(filamat PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilamat.a)
-
 add_library(geometry STATIC IMPORTED)
 set_target_properties(geometry PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgeometry.a)
@@ -59,11 +55,11 @@ add_library(smol-v STATIC IMPORTED)
 set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libsmol-v.a)
 
- if (FILAMENT_ENABLE_FGVIEWER)
-     add_library(fgviewer STATIC IMPORTED)
-     set_target_properties(fgviewer PROPERTIES IMPORTED_LOCATION
-             ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfgviewer.a)
- endif()
+if (FILAMENT_ENABLE_FGVIEWER)
+    add_library(fgviewer STATIC IMPORTED)
+    set_target_properties(fgviewer PROPERTIES IMPORTED_LOCATION
+            ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfgviewer.a)
+endif()
 
 if (FILAMENT_ENABLE_MATDBG)
     add_library(matdbg STATIC IMPORTED)

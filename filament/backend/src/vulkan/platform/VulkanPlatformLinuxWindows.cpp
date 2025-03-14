@@ -85,12 +85,13 @@ using namespace bluevk;
 namespace filament::backend {
 
 VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
-        void* externalImage, VkDevice device) {
+        ExternalImageHandleRef externalImage, VkDevice device) {
     return {};
 }
 
-VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage,
-        VkDevice device, const ExternalImageMetadata& metadata) {
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageDataImpl(
+        ExternalImageHandleRef externalImage, VkDevice device,
+        const ExternalImageMetadata& metadata) {
     return {};
 }
 

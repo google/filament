@@ -17,26 +17,44 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
-#include "private/backend/Driver.h"
+#include <backend/platforms/WebGPUPlatform.h>
+
 #include "DriverBase.h"
+#include "private/backend/Dispatcher.h"
+#include "private/backend/Driver.h"
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 
+#include <webgpu/webgpu_cpp.h>
+
+#include <cstdint>
+
 namespace filament::backend {
 
+/**
+ * WebGPU backend (driver) implementation
+ */
 class WebGPUDriver final : public DriverBase {
-    WebGPUDriver() noexcept;
-    ~WebGPUDriver() noexcept override;
-    Dispatcher getDispatcher() const noexcept final;
-
 public:
-    static Driver* create();
+    ~WebGPUDriver() noexcept override;
+
+    [[nodiscard]] Dispatcher getDispatcher() const noexcept final;
+    [[nodiscard]] static Driver* create(WebGPUPlatform& platform) noexcept;
 
 private:
-    ShaderModel getShaderModel() const noexcept final;
-    ShaderLanguage getShaderLanguage() const noexcept final;
+    explicit WebGPUDriver(WebGPUPlatform& platform) noexcept;
+    [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
+    [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
 
-    uint64_t nextFakeHandle = 1;
+    // the platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
+    // handled in the WebGPUPlatform
+    WebGPUPlatform& mPlatform;
+    wgpu::Surface mSurface = nullptr;
+    wgpu::Adapter mAdapter = nullptr;
+    wgpu::Device mDevice = nullptr;
+    wgpu::Queue mQueue = nullptr;
+    uint64_t mNextFakeHandle = 1;
 
     /*
      * Driver interface
@@ -45,20 +63,19 @@ private:
     template<typename T>
     friend class ConcreteDispatcher;
 
-#define DECL_DRIVER_API(methodName, paramsDecl, params) \
+#define DECL_DRIVER_API(methodName, paramsDecl, params)                                            \
     UTILS_ALWAYS_INLINE inline void methodName(paramsDecl);
 
-#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params) \
+#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)                       \
     RetType methodName(paramsDecl) override;
 
-#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
-    RetType methodName##S() noexcept override { \
-        return RetType((RetType::HandleId)nextFakeHandle++); } \
-    UTILS_ALWAYS_INLINE inline void methodName##R(RetType, paramsDecl) { }
+#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                            \
+    RetType methodName##S() noexcept override;                                                     \
+    UTILS_ALWAYS_INLINE inline void methodName##R(RetType, paramsDecl);
 
 #include "private/backend/DriverAPI.inc"
 };
 
-} // namespace filament
+}// namespace filament::backend
 
-#endif // TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
+#endif// TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H

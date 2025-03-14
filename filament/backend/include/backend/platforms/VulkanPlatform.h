@@ -347,10 +347,10 @@ public:
          */
         uint32_t memoryTypeBits;
     };
-    virtual ExternalImageMetadata getExternalImageMetadata(void* externalImage);
+    virtual ExternalImageMetadata getExternalImageMetadata(ExternalImageHandleRef externalImage);
 
     using ImageData = std::pair<VkImage, VkDeviceMemory>;
-    virtual ImageData createExternalImage(void* externalImage,
+    virtual ImageData createExternalImageData(ExternalImageHandleRef externalImage,
             const ExternalImageMetadata& metadata);
 
     virtual VkSampler createExternalSampler(SamplerYcbcrConversion chroma,
@@ -363,10 +363,12 @@ public:
 
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
-    static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage,
+
+    static ExternalImageMetadata getExternalImageMetadataImpl(ExternalImageHandleRef externalImage,
             VkDevice device);
-    static ImageData createExternalImageImpl(void* externalImage, VkDevice device,
-            const ExternalImageMetadata& metadata);
+
+    static ImageData createExternalImageDataImpl(ExternalImageHandleRef externalImage,
+            VkDevice device, const ExternalImageMetadata& metadata);
     static VkSampler createExternalSamplerImpl(VkDevice device,
             SamplerYcbcrConversion chroma, SamplerParams sampler,
             uint32_t internalFormat);

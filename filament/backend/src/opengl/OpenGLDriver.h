@@ -34,6 +34,7 @@
 #include <backend/Platform.h>
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
+#include <backend/BufferObjectStreamDescriptor.h>
 
 #include "private/backend/Driver.h"
 #include "private/backend/HandleAllocator.h"
@@ -58,6 +59,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <unordered_map>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -159,7 +161,10 @@ public:
             uint8_t cur = 0;
             AcquiredImage acquired;
             AcquiredImage pending;
+            math::mat3f transform;
         } user_thread;
+
+         math::mat3f transform;
     };
 
     struct GLRenderTarget : public HwRenderTarget {
@@ -363,6 +368,8 @@ private:
 
     // the must be accessed from the user thread only
     std::vector<GLStream*> mStreamsWithPendingAcquiredImage;
+
+    std::unordered_map<GLuint, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
 
     void attachStream(GLTexture* t, GLStream* stream) noexcept;
     void detachStream(GLTexture* t) noexcept;
