@@ -11,6 +11,13 @@ if (FILAMENT_SUPPORTS_VULKAN)
     message("Library filamat ignores Vulkan settings")
 endif()
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    # See third_party/dawn/tnt/CMakeLists.txt and libs/filamat/CMakeLists.txt
+    add_library(tint STATIC IMPORTED)
+    set_target_properties(tint PROPERTIES IMPORTED_LOCATION
+            ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libtint_combined.a)
+endif()
+
 add_library(${FILAMAT_FLAVOR} STATIC IMPORTED)
 set_target_properties(${FILAMAT_FLAVOR} PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/lib${FILAMAT_FLAVOR}.a)
@@ -50,4 +57,5 @@ target_link_libraries(filamat-jni
         utils
         log
         smol-v
+        $<$<STREQUAL:${FILAMENT_SUPPORTS_WEBGPU},ON>:tint>
 )

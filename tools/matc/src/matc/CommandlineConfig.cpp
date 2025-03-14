@@ -262,6 +262,8 @@ bool CommandlineConfig::parse() {
                     mTargetApi |= TargetApi::VULKAN;
                 } else if (arg == "metal") {
                     mTargetApi |= TargetApi::METAL;
+                } else if (arg == "webgpu") {
+                    mTargetApi |= TargetApi::WEBGPU;
                 } else if (arg == "all") {
                     mTargetApi |= TargetApi::ALL;
                 } else {

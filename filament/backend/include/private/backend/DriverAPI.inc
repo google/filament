@@ -339,7 +339,7 @@ DECL_DRIVER_API_N(destroyDescriptorSet,         backend::DescriptorSetHandle, ds
 DECL_DRIVER_API_SYNCHRONOUS_0(void, terminate)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::StreamHandle, createStreamNative, void*, stream)
 DECL_DRIVER_API_SYNCHRONOUS_0(backend::StreamHandle, createStreamAcquired)
-DECL_DRIVER_API_SYNCHRONOUS_N(void, setAcquiredImage, backend::StreamHandle, stream, void*, image, backend::CallbackHandler*, handler, backend::StreamCallback, cb, void*, userData)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, setAcquiredImage, backend::StreamHandle, stream, void*, image, const math::mat3f&, transform, backend::CallbackHandler*, handler, backend::StreamCallback, cb, void*, userData)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setStreamDimensions, backend::StreamHandle, stream, uint32_t, width, uint32_t, height)
 DECL_DRIVER_API_SYNCHRONOUS_N(int64_t, getStreamTimestamp, backend::StreamHandle, stream)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, updateStreams, backend::DriverApi*, driver)
@@ -388,6 +388,10 @@ DECL_DRIVER_API_N(updateBufferObject,
         backend::BufferObjectHandle, ibh,
         backend::BufferDescriptor&&, data,
         uint32_t, byteOffset)
+
+DECL_DRIVER_API_N(registerBufferObjectStreams,
+        backend::BufferObjectHandle, ibh,
+        backend::BufferObjectStreamDescriptor&&, streams)
 
 DECL_DRIVER_API_N(updateBufferObjectUnsynchronized,
         backend::BufferObjectHandle, ibh,

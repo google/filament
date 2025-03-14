@@ -346,7 +346,7 @@ class FrameGraphTable extends LitElement {
         super();
         this.frameGraphData = null;
         this.selectedResourceId = -1;
-        this.collapsedResources = new Set();
+        this.expandedResourceSet = new Set();
     }
 
     updated(props) {
@@ -365,11 +365,11 @@ class FrameGraphTable extends LitElement {
     }
 
     _toggleCollapse(resourceIndex) {
-        if (this.collapsedResources.has(resourceIndex)) {
-            this.collapsedResources.delete(resourceIndex);
+        if (this.expandedResourceSet.has(resourceIndex)) {
+            this.expandedResourceSet.delete(resourceIndex);
         }
         else {
-            this.collapsedResources.add(resourceIndex);
+            this.expandedResourceSet.add(resourceIndex);
         }
         this.requestUpdate();
     }
@@ -430,9 +430,9 @@ class FrameGraphTable extends LitElement {
             .map(subresource => subresource.id);
 
         const hasSubresources = subresourceIds.length > 0;
-        const isCollapsed = this.collapsedResources.has(resourceIndex);
+        const isExpanded = this.expandedResourceSet.has(resourceIndex);
         // Show the aggregated resource usage when the subresources are collapsed.
-        const resourceIds = isCollapsed ? [resource.id, ...subresourceIds]:[resource.id];
+        const resourceIds = isExpanded ? [resource.id]:[resource.id, ...subresourceIds];
 
         const onClickResource = () => this._handleResourceClick(resource.id);
         const selectedStyle = resource.id === this.selectedResourceId ? "selected" : "";
@@ -444,15 +444,15 @@ class FrameGraphTable extends LitElement {
                         ? html`
                             <span class="toggle-icon"
                                   @click="${(e) => { e.stopPropagation(); this._toggleCollapse(resourceIndex); }}">
-                              ${isCollapsed ? '▶' : '▼'}
+                              ${isExpanded ? '▼' : '▶'}
                             </span>` 
                         : nothing}
                     ${resource.name}
-                    ${hasSubresources && isCollapsed ? html`(${subresourceIds.length})` : nothing}
+                    ${hasSubresources && isExpanded ? nothing : html`(${subresourceIds.length})`}
                 </th>
                 ${this._renderResourceUsage(allPasses, resourceIds, DEFAULT_COLOR)}
             </tr>
-            ${!isCollapsed ? this._renderSubresourceRows(resources, resource, resourceIndex, allPasses) : nothing}
+            ${isExpanded ? this._renderSubresourceRows(resources, resource, resourceIndex, allPasses) : nothing}
         `;
     }
 

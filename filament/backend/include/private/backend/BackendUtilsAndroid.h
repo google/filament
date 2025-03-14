@@ -14,29 +14,23 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_WEBGPUPLATFORM_H
-#define TNT_FILAMENT_BACKEND_WEBGPUPLATFORM_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILSANDROID_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILSANDROID_H
 
 #include <backend/DriverEnums.h>
-#include <backend/Platform.h>
-
-#include "webgpu/webgpu_cpp.h"
 
 namespace filament::backend {
 
-class WebGPUPlatform
-    final : public Platform {
-public:
+/**
+ * Maps AHardwareBuffer format to TextureFormat.
+ */
+TextureFormat mapToFilamentFormat(unsigned int format, bool isSrgbTransfer) noexcept;
 
-    int getOSVersion() const noexcept final { return 0; }
-
-    ~WebGPUPlatform() noexcept override = default;
-
-protected:
-
-    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept override;
-};
+/**
+ * Maps AHardwareBuffer usage to TextureUsage.
+ */
+TextureUsage mapToFilamentUsage(unsigned int usage, TextureFormat format) noexcept;
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_BACKEND_WEBGPUPLATFORM_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILSANDROID_H
