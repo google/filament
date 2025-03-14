@@ -320,10 +320,14 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
     if (eglImage == EGL_NO_IMAGE_KHR) {
         // Handle error
         slog.e << "Failed to create EGL image" << io::endl;
+        glDeleteTextures(1, &texture->id);
         return false;
     }
 
     // Create and bind the OpenGL texture
+    GLint prevActiveTexture, prevTexture;
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &prevActiveTexture);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &prevTexture);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(texture->target, texture->id);
     GLenum error = glGetError();
@@ -337,8 +341,12 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
     error = glGetError();
     if (error != GL_NO_ERROR) {
         slog.e << "Error after glEGLImageTargetTexture2DOES: " << error << io::endl;
+        glDeleteTextures(1, &texture->id);
+        eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
         return false;
     }
+    glBindTexture(GL_TEXTURE_2D, prevTexture);
+    glActiveTexture(prevActiveTexture);
     return true;
 }
 
