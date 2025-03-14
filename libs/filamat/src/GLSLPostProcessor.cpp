@@ -518,8 +518,13 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
     }
 }
 
-bool GLSLPostProcessor::spirvToWgsl(const SpirvBlob *spirv, std::string *outWsl) {
+bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
 #if FILAMENT_SUPPORTS_WEBGPU
+    // We need to remove dead code for our variant-filter workaround for WebGPU to work
+    // This is especially relevant for removing the push constants that morphing uses when not disabled
+    spv::spirvbin_t remapper(0);
+    remapper.remap(*spirv, spv::spirvbin_base_t::DCE_ALL);
+
     //Currently no options we want to use
     const tint::spirv::reader::Options readerOpts{};
     tint::wgsl::writer::Options writerOpts{};
