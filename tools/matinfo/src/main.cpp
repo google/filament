@@ -50,10 +50,12 @@ struct Config {
     bool printESSL1 = false;
     bool printSPIRV = false;
     bool printMetal = false;
+    bool printWGSL = false;
     bool printDictionaryGLSL = false;
     bool printDictionaryESSL1 = false;
     bool printDictionarySPIRV = false;
     bool printDictionaryMetal = false;
+    bool printDictionaryWGSL = false;
     bool transpile = false;
     bool binary = false;
     bool analyze = false;
@@ -86,6 +88,8 @@ static void printUsage(const char* name) {
             "       Print Metal Shading Language for the nth shader (0 is the first Metal shader)\n\n"
             "   --print-vkglsl=[index], -v\n"
             "       Print the nth Vulkan shader transpiled into GLSL\n\n"
+            "   --print-wgsl=[index], -u\n"
+            "       Print WGSL for the nth shader (0 is the first WebGPU shader)\n\n"
             "   --print-dic-glsl\n"
             "       Print the GLSL dictionary\n\n"
             "   --print-dic-essl1\n"
@@ -94,6 +98,8 @@ static void printUsage(const char* name) {
             "       Print the Metal dictionary\n\n"
             "   --print-dic-vk\n"
             "       Print the Vulkan dictionary\n\n"
+            "   --print-dic-wgsl\n"
+            "       Print the WebGPU dictionary\n\n"
             "   --web-server=[port], -w\n"
             "       Serve a web page at the given port (e.g. 8080)\n\n"
             "   --dump-spirv-binary=[index], -b\n"
@@ -125,7 +131,7 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "hla:g:G:s:v:b:m:b:w:Xxyz";
+    static constexpr const char* OPTSTR = "hla:g:G:s:v:b:m:b:w:u:UXxyz";
     constexpr int DUMP_METAL_LIBRARY_OPTION = 1000;
     static const struct option OPTIONS[] = {
             { "help",               no_argument,       nullptr, 'h' },
@@ -136,9 +142,11 @@ static int handleArguments(int argc, char* argv[], Config* config) {
             { "print-spirv",        required_argument, nullptr, 's' },
             { "print-vkglsl",       required_argument, nullptr, 'v' },
             { "print-metal",        required_argument, nullptr, 'm' },
+            { "print-wgsl",        required_argument, nullptr, 'u' },
             { "print-dic-glsl",     no_argument,       nullptr, 'x' },
             { "print-dic-essl1",    no_argument,       nullptr, 'X' },
             { "print-dic-metal",    no_argument,       nullptr, 'y' },
+            { "print-dic-wgsl",        no_argument, nullptr, 'U' },
             { "print-dic-vk",       no_argument,       nullptr, 'z' },
             { "dump-binary",        required_argument, nullptr, 'b' },  // backwards compatibility
             { "dump-spirv-binary",  required_argument, nullptr, 'b' },
@@ -192,6 +200,10 @@ static int handleArguments(int argc, char* argv[], Config* config) {
                 config->shaderIndex = static_cast<uint64_t>(std::stoi(arg));
                 config->binary = false;
                 break;
+            case 'u':
+                config->printWGSL = true;
+                config->shaderIndex = static_cast<uint64_t>(std::stoi(arg));
+                break;
             case 'w':
                 config->serverPort = std::stoi(arg);
                 break;
@@ -206,6 +218,9 @@ static int handleArguments(int argc, char* argv[], Config* config) {
                 break;
             case 'z':
                 config->printDictionarySPIRV = true;
+                break;
+            case 'U':
+                config->printDictionaryWGSL = true;
                 break;
             case DUMP_METAL_LIBRARY_OPTION:
                 config->printMetal = true;
@@ -441,7 +456,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
         return true;
     }
 
-    if (config.printGLSL || config.printESSL1 || config.printSPIRV || config.printMetal) {
+    if (config.printGLSL || config.printESSL1 || config.printSPIRV || config.printMetal || config.printWGSL) {
         filaflat::ShaderContent content;
         std::vector<ShaderInfo> info;
 
@@ -532,7 +547,6 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
             return true;
         }
-        //TODO Include a printWgsl logic here
         if (config.printMetal) {
             const filament::backend::ShaderLanguage language = config.binary
                     ? filament::backend::ShaderLanguage::METAL_LIBRARY
@@ -570,16 +584,43 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
             return true;
         }
+        if (config.printWGSL) {
+            ShaderExtractor parser(filament::backend::ShaderLanguage::WGSL, data, size);
+            if (!parser.parse()) {
+                return false;
+            }
+
+            size_t shaderCount = getShaderCount(container, filamat::ChunkType::MaterialWgsl);
+            info.resize(shaderCount);
+            if (!getShaderInfo(container, info.data(), filamat::ChunkType::MaterialWgsl)) {
+                std::cerr << "Failed to parse WebGPU chunk." << std::endl;
+                return false;
+            }
+
+            if (config.shaderIndex >= info.size()) {
+                std::cerr << "Shader index out of range." << std::endl;
+                return false;
+            }
+
+            const auto& item = info[config.shaderIndex];
+            parser.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
+
+            // Cast to char* to print as a string rather than hex value.
+            std::cout << (const char*) content.data();
+
+            return true;
+        }
     }
 
     TextWriter writer;
 
-    if (config.printDictionaryGLSL || config.printDictionaryESSL1 || config.printDictionarySPIRV || config.printDictionaryMetal) {
+    if (config.printDictionaryGLSL || config.printDictionaryESSL1 || config.printDictionarySPIRV || config.printDictionaryMetal || config.printDictionaryWGSL) {
         ShaderExtractor parser(
             (config.printDictionaryGLSL ? filament::backend::ShaderLanguage::ESSL3 :
              (config.printDictionaryESSL1 ? filament::backend::ShaderLanguage::ESSL1 :
               (config.printDictionarySPIRV ? filament::backend::ShaderLanguage::SPIRV :
-               filament::backend::ShaderLanguage::MSL))), data, size);
+                (config.printDictionaryMetal ? filament::backend::ShaderLanguage::MSL :
+                filament::backend::ShaderLanguage::WGSL)))), data, size);
 
         if (!parser.parse()) {
             return false;
