@@ -527,11 +527,14 @@ bool GLSLPostProcessor::spirvToWgsl(const SpirvBlob *spirv, std::string *outWsl)
     tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
 
     if (tintRead.Diagnostics().ContainsErrors()) {
-        slog.w << "This tint reader error is currently ignored during WebGPU bringup:" << tintRead.Diagnostics().Str() << io::endl;
-
-        //TODO: We should actually return false here, but for initial debugging
-        // let it slide until combined image sampler is resolved
-        // return false;
+        //TODO remove this if block once combined image sampler conversion works.
+        if (tintRead.Diagnostics().Str().rfind("error: WGSL does not support combined image-samplers") != std::string::npos) {
+            slog.w << "This tint reader error is currently ignored during WebGPU bringup: " << tintRead.Diagnostics().Str() << io::endl;
+        }
+        else {
+            slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
+            return false;
+        }
     }
 
     tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead,writerOpts);
@@ -539,10 +542,8 @@ bool GLSLPostProcessor::spirvToWgsl(const SpirvBlob *spirv, std::string *outWsl)
     tint::SuccessType tintSuccess;
 
     if (wgslOut != tintSuccess) {
-        slog.w << "This tint writer error is currently ignored during WebGPU bringup:" << wgslOut.Failure().reason.Str() << io::endl;
-        //TODO: We should actually return false here, but for initial debugging
-        // let it slide until combined image sampler is resolved
-        // return false;
+        slog.e << "Tint writer error: " << wgslOut.Failure().reason.Str() << io::endl;
+        return false;
     }
     *outWsl = wgslOut->wgsl;
     return true;

@@ -1283,10 +1283,9 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
             mBlitter.blit(VK_FILTER_LINEAR, dst, dstOffsets, src, srcOffsets);
         }
 
-        level++;
         srcw = dstw;
         srch = dsth;
-    } while ((srcw > 1 || srch > 1) && level < t->levels);
+    } while ((srcw > 1 || srch > 1) && ++level < t->levels - 1);
 }
 
 void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,
