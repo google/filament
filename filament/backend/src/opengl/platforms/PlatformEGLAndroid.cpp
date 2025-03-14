@@ -248,12 +248,26 @@ Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareB
         p->height = hardwareBufferDescription.height;
         p->width = hardwareBufferDescription.width;
         auto textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
-        p->format = textureFormat;
         p->usage = mapToFilamentUsage(hardwareBufferDescription.usage, textureFormat);
         return ExternalImageHandle{ p };
     }
 
     return Platform::ExternalImageHandle{};
+}
+
+PlatformEGLAndroid::ExternalImageAndroidMetadata PlatformEGLAndroid::getImageMetadata(
+        ExternalImageHandle externalImage) noexcept {
+    auto const* const eglExternalImage =
+            static_cast<ExternalImageEGLAndroid const*>(externalImage.get());
+    ExternalImageAndroidMetadata metadata = {};
+    if (!eglExternalImage) {
+        return metadata;
+    }
+    metadata.height = eglExternalImage->height;
+    metadata.width = eglExternalImage->width;
+    metadata.format = eglExternalImage->format;
+    metadata.usage = eglExternalImage->usage;
+    return metadata;
 }
 
 bool PlatformEGLAndroid::setExternalImage(ExternalImageHandleRef externalImage,
