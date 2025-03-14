@@ -49,16 +49,14 @@ public:
      */
     ExternalImageHandle createExternalImage(AHardwareBuffer const* buffer, bool sRGB) noexcept;
 
-    struct ExternalImageEGLAndroid : public ExternalImageEGL {
-        AHardwareBuffer* aHardwareBuffer = nullptr;
-        bool sRGB = false;
-        unsigned int width;  // Texture width
-        unsigned int height; // Texture height
+    struct ExternalImageAndroidMetadata {
+        uint32_t width;      // Texture width
+        uint32_t height;     // Texture height
         TextureFormat format;// Texture format
         TextureUsage usage;  // Texture usage flags
-    protected:
-        ~ExternalImageEGLAndroid() override;
     };
+
+    ExternalImageAndroidMetadata getImageMetadata(ExternalImageHandle externalImage) noexcept;
 
 protected:
     // --------------------------------------------------------------------------------------------
@@ -108,6 +106,19 @@ protected:
 
     OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
     void destroyExternalImageTexture(ExternalTexture* texture) noexcept override;
+
+    struct ExternalImageEGLAndroid : public ExternalImageEGL {
+        AHardwareBuffer* aHardwareBuffer = nullptr;
+        uint32_t width;      // Texture width
+        uint32_t height;     // Texture height
+        TextureFormat format;// Texture format
+        TextureUsage usage;  // Texture usage flags
+        bool sRGB = false;
+
+    protected:
+        ~ExternalImageEGLAndroid() override;
+    };
+
     bool setExternalImage(ExternalImageHandleRef externalImage,
             ExternalTexture* texture) noexcept override;
     bool setImage(ExternalImageEGLAndroid const* eglExternalImage,
