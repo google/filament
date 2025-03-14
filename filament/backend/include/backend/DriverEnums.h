@@ -30,7 +30,6 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-#include <utils/Hash.h>
 
 #include <math/vec4.h>
 
