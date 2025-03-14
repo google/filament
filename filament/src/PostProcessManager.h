@@ -401,6 +401,13 @@ public:
             FMaterialInstance const* mi,
             PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept;
 
+    // Sets the necessary spec constants and uniforms common to both colorGrading.mat and
+    // colorGradingAsSubpass.mat.
+    FMaterialInstance* configureColorGradingMaterial(
+            PostProcessMaterial& material, FColorGrading const* colorGrading,
+            ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
+            uint32_t const width, uint32_t const height) noexcept;
+
 private:
     backend::RenderPrimitiveHandle mFullScreenQuadRph;
     backend::VertexBufferInfoHandle mFullScreenQuadVbih;
