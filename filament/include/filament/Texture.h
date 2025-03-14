@@ -106,6 +106,13 @@ public:
     /** @return Whether a combination of texture format, pixel format and type is valid. */
     static bool validatePixelFormatAndType(InternalFormat internalFormat, Format format, Type type) noexcept;
 
+    /** @return the maximum size in texels of a texture of type \p type. At least 2048 for
+     * 2D textures, 256 for 3D textures. */
+    static size_t getMaxTextureSize(Engine& engine, Sampler type) noexcept;
+
+    /** @return the maximum number of layers supported by texture arrays. At least 256. */
+    static size_t getMaxArrayTextureLayers(Engine& engine) noexcept;
+
     /**
      * Options for environment prefiltering into reflection map
      *

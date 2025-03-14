@@ -2460,6 +2460,26 @@ size_t OpenGLDriver::getMaxUniformBufferSize() {
     return mContext.gets.max_uniform_block_size;
 }
 
+size_t OpenGLDriver::getMaxTextureSize(SamplerType target) {
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+        case SamplerType::SAMPLER_2D_ARRAY:
+        case SamplerType::SAMPLER_EXTERNAL:
+            return mContext.gets.max_texture_size;
+        case SamplerType::SAMPLER_CUBEMAP:
+            return mContext.gets.max_cubemap_texture_size;
+        case SamplerType::SAMPLER_3D:
+            return mContext.gets.max_3d_texture_size;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return mContext.gets.max_cubemap_texture_size;
+    }
+    return 0;
+}
+
+size_t OpenGLDriver::getMaxArrayTextureLayers() {
+    return mContext.gets.max_array_texture_layers;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Swap chains
 // ------------------------------------------------------------------------------------------------
