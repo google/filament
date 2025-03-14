@@ -90,7 +90,7 @@ public:
             bool useFramebufferFetch, const DescriptorSets& descriptorSets,
             const ShaderMinifier* minifier);
 
-    static bool spirvToWgsl(const SpirvBlob* spirv, std::string* outWsl);
+    static bool spirvToWgsl(SpirvBlob* spirv, std::string* outWsl);
 
 private:
     struct InternalConfig {
