@@ -554,26 +554,43 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
    texture.inc();
 }
 
-void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th,
-        backend::SamplerType target,  backend::TextureFormat format,
-        uint32_t width, uint32_t height, backend::TextureUsage usage,
+void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::SamplerType target,
+        backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         Platform::ExternalImageHandleRef externalImage) {
     FVK_SYSTRACE_SCOPE();
-
     const auto& metadata = mPlatform->getExternalImageMetadata(externalImage);
     if (metadata.isProtected) {
         usage |= backend::TextureUsage::PROTECTED;
+    }
+
+    VkImageUsageFlags vkUsage = metadata.usage;
+    if (any(usage & TextureUsage::BLIT_SRC)) {
+        vkUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    if (any(usage & (TextureUsage::BLIT_DST & TextureUsage::UPLOADABLE))) {
+        vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
     assert_invariant(width == metadata.width);
     assert_invariant(height == metadata.height);
     assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
 
-    const auto& data = mPlatform->createExternalImageData(externalImage, metadata);
+    VkMemoryPropertyFlags const requiredMemoryFlags = any(usage & TextureUsage::UPLOADABLE)
+                                                              ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                                                              : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    uint32_t const memoryTypeIndex =
+            mContext.selectMemoryType(metadata.memoryTypeBits, requiredMemoryFlags);
+    FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex != VK_MAX_MEMORY_TYPES)
+            << "failed to find a valid memory type for external image memory.";
 
-    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th,
-            mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, data.first, data.second, metadata.format,
-            1, metadata.width, metadata.height, /*depth=*/1, usage, mStagePool);
+    const auto& data =
+            mPlatform->createExternalImageData(externalImage, metadata, memoryTypeIndex, vkUsage);
+
+    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
+            mAllocator, &mResourceManager, &mCommands, data.first, data.second, metadata.format,
+            metadata.samples, metadata.width, metadata.height, metadata.layerCount, usage,
+            mStagePool);
 
     texture.inc();
 }

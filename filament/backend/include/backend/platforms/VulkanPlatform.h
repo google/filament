@@ -318,6 +318,11 @@ public:
         uint32_t layers;
 
         /**
+         * The numbers of samples per texel
+         */
+        VkSampleCountFlagBits samples;
+
+        /**
          * The format of the external image
          */
         VkFormat format;
@@ -351,7 +356,8 @@ public:
 
     using ImageData = std::pair<VkImage, VkDeviceMemory>;
     virtual ImageData createExternalImageData(ExternalImageHandleRef externalImage,
-            const ExternalImageMetadata& metadata);
+            const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex,
+            VkImageUsageFlags usage);
 
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
@@ -360,7 +366,8 @@ private:
             VkDevice device);
 
     static ImageData createExternalImageDataImpl(ExternalImageHandleRef externalImage,
-            VkDevice device, const ExternalImageMetadata& metadata);
+            VkDevice device, const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex,
+            VkImageUsageFlags usage);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
