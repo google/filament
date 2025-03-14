@@ -20,7 +20,6 @@ set(MATERIAL_SRCS
         materials/aiDefaultMat.mat
         materials/bakedColor.mat
         materials/bakedTexture.mat
-        materials/pointSprites.mat
         materials/aoPreview.mat
         materials/arrayTexture.mat
         materials/groundShadow.mat
@@ -41,6 +40,12 @@ set(MATERIAL_SRCS
         materials/sandboxUnlit.mat
         materials/texturedLit.mat
 )
+
+# Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
+# https://github.com/gpuweb/gpuweb/issues/1190
+if (NOT FILAMENT_SUPPORTS_WEBGPU)
+    set(MATERIAL_SRCS ${MATERIAL_SRCS} materials/pointSprites.mat)
+endif ()
 
 if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
@@ -258,7 +263,11 @@ if (NOT ANDROID)
     add_demo(lightbulb)
     add_demo(material_sandbox)
     add_demo(multiple_windows)
-    add_demo(point_sprites)
+    # Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
+    # https://github.com/gpuweb/gpuweb/issues/1190
+    if (NOT FILAMENT_SUPPORTS_WEBGPU)
+        add_demo(point_sprites)
+    endif ()
     add_demo(rendertarget)
     add_demo(sample_cloth)
     add_demo(sample_full_pbr)
