@@ -12,6 +12,11 @@ material {
             precision: medium
         },
         {
+            type : sampler2d,
+            name : lut1d,
+            precision: medium
+        },
+        {
             type : float2,
             name : lutSize
         },
@@ -64,6 +69,16 @@ material {
             type : float4,
             name : viewport,
             precision : high
+        }
+    ],
+    constants : [
+        {
+            type : bool,
+            name : isOneDimensional
+        },
+        {
+            type : bool,
+            name : isLDR
         }
     ],
     variables : [
@@ -154,7 +169,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     }
 
     // Color grading
-    color.rgb  = colorGrade(materialParams_lut, color.rgb);
+    color.rgb = colorGrade(color.rgb);
 
     // output in premultiplied alpha
 #if !POST_PROCESS_OPAQUE
