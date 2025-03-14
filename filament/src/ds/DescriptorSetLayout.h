@@ -68,7 +68,29 @@ public:
         return mUniformBuffers;
     }
 
+    void setImmutableSampler(backend::descriptor_binding_t binding,
+            backend::SamplerYcbcrConversion conversion,
+            backend::SamplerParams params,
+            uint32_t internalFormat) noexcept {
+        auto& sampler = mImmutables[binding];
+        sampler.sampler.conversion = conversion;
+        sampler.sampler.params = params;
+        sampler.sampler.internalFormat = internalFormat;
+    }
+
 private:
+    struct Desc {
+        Desc() noexcept {}
+        union {
+            struct {
+                backend::SamplerYcbcrConversion conversion;
+                backend::SamplerParams params;
+                uint32_t internalFormat;
+            } sampler;
+        };
+    };
+    std::unordered_map<backend::descriptor_binding_t, Desc> mImmutables;
+
     backend::DescriptorSetLayoutHandle mDescriptorSetLayoutHandle;
     utils::bitset64 mSamplers;
     utils::bitset64 mUniformBuffers;
