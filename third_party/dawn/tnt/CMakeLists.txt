@@ -18,6 +18,9 @@ set(TINT_BUILD_CMD_TOOLS OFF)
 
 if (FILAMENT_BUILD_FILAMAT)
     set(TINT_BUILD_SPV_READER ON)
+elseif (ANDROID)
+    # Dawn sets TINT_BUILD_SPV_READER based on Vulkan, which is true for Android
+    set(TINT_BUILD_SPV_READER OFF)
 endif ()
 
 add_subdirectory(../  ${PROJECT_BINARY_DIR}/third_party/dawn)
