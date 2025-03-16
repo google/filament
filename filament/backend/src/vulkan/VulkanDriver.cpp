@@ -1147,6 +1147,16 @@ size_t VulkanDriver::getMaxUniformBufferSize() {
     return 32768;
 }
 
+size_t VulkanDriver::getMaxTextureSize(SamplerType) {
+    // TODO: return the actual size instead of hardcoded value
+    return 2048;
+}
+
+size_t VulkanDriver::getMaxArrayTextureLayers() {
+    // TODO: return the actual size instead of hardcoded value
+    return 256;
+}
+
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
     auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
