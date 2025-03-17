@@ -193,6 +193,49 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask) {
     return mostSignificantBit((sampleCount - 1) & mask);
 }
 
+VkSamplerYcbcrModelConversion getYcbcrModelConversion(
+    SamplerYcbcrModelConversion model) {
+    switch (model) {
+    case SamplerYcbcrModelConversion::RGB_IDENTITY:
+        return VK_SAMPLER_YCBCR_MODEL_CONVERSION_RGB_IDENTITY;
+    case SamplerYcbcrModelConversion::YCBCR_IDENTITY:
+        return VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_IDENTITY;
+    case SamplerYcbcrModelConversion::YCBCR_709:
+        return VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709;
+    case SamplerYcbcrModelConversion::YCBCR_601:
+        return VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_601;
+    case SamplerYcbcrModelConversion::YCBCR_2020:
+        return VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020;
+    default:
+        assert_invariant(false &&
+            "Unknown data type, conversion is not supported.");
+    }
+}
+
+VkSamplerYcbcrRange getYcbcrRange(SamplerYcbcrRange range) {
+    switch (range) {
+    case SamplerYcbcrRange::ITU_FULL:
+        return VK_SAMPLER_YCBCR_RANGE_ITU_FULL;
+    case SamplerYcbcrRange::ITU_NARROW:
+        return VK_SAMPLER_YCBCR_RANGE_ITU_NARROW;
+    default:
+        assert_invariant(false &&
+            "Unknown data type, conversion is not supported.");
+    }
+}
+
+VkChromaLocation getChromaLocation(ChromaLocation loc) {
+    switch (loc) {
+    case ChromaLocation::COSITED_EVEN:
+        return VK_CHROMA_LOCATION_COSITED_EVEN;
+    case ChromaLocation::MIDPOINT:
+        return VK_CHROMA_LOCATION_MIDPOINT;
+    default:
+        assert_invariant(false &&
+            "Unknown data type, conversion is not supported.");
+    }
+}
+
 } // namespace filament::backend::fvkutils
 
 bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b) {

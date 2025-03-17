@@ -588,6 +588,79 @@ VkComponentMapping getSwizzleMap(TextureSwizzle const swizzle[4]) {
     return map;
 }
 
+VkFilter getFilter(SamplerMinFilter filter) {
+    switch (filter) {
+    case SamplerMinFilter::NEAREST:
+        return VK_FILTER_NEAREST;
+    case SamplerMinFilter::LINEAR:
+        return VK_FILTER_LINEAR;
+    case SamplerMinFilter::NEAREST_MIPMAP_NEAREST:
+        return VK_FILTER_NEAREST;
+    case SamplerMinFilter::LINEAR_MIPMAP_NEAREST:
+        return VK_FILTER_LINEAR;
+    case SamplerMinFilter::NEAREST_MIPMAP_LINEAR:
+        return VK_FILTER_NEAREST;
+    case SamplerMinFilter::LINEAR_MIPMAP_LINEAR:
+        return VK_FILTER_LINEAR;
+    }
+}
+
+VkFilter getFilter(SamplerMagFilter filter) {
+    switch (filter) {
+    case SamplerMagFilter::NEAREST:
+        return VK_FILTER_NEAREST;
+    case SamplerMagFilter::LINEAR:
+        return VK_FILTER_LINEAR;
+    }
+}
+
+VkSamplerMipmapMode getMipmapMode(SamplerMinFilter filter) {
+    switch (filter) {
+    case SamplerMinFilter::NEAREST:
+        return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    case SamplerMinFilter::LINEAR:
+        return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    case SamplerMinFilter::NEAREST_MIPMAP_NEAREST:
+        return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    case SamplerMinFilter::LINEAR_MIPMAP_NEAREST:
+        return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    case SamplerMinFilter::NEAREST_MIPMAP_LINEAR:
+        return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    case SamplerMinFilter::LINEAR_MIPMAP_LINEAR:
+        return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    }
+}
+
+VkSamplerAddressMode getWrapMode(SamplerWrapMode mode) {
+    switch (mode) {
+    case SamplerWrapMode::REPEAT:
+        return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    case SamplerWrapMode::CLAMP_TO_EDGE:
+        return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    case SamplerWrapMode::MIRRORED_REPEAT:
+        return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    }
+}
+
+VkBool32 getCompareEnable(SamplerCompareMode mode) {
+    return mode == SamplerCompareMode::NONE ? VK_FALSE : VK_TRUE;
+}
+
+float getMaxLod(SamplerMinFilter filter) {
+    switch (filter) {
+    case SamplerMinFilter::NEAREST:
+    case SamplerMinFilter::LINEAR:
+        // The Vulkan spec recommends a max LOD of 0.25 to "disable" mipmapping.
+        // See "Mapping of OpenGL to Vulkan filter modes" in the VK Spec.
+        return 0.25f;
+    case SamplerMinFilter::NEAREST_MIPMAP_NEAREST:
+    case SamplerMinFilter::LINEAR_MIPMAP_NEAREST:
+    case SamplerMinFilter::NEAREST_MIPMAP_LINEAR:
+    case SamplerMinFilter::LINEAR_MIPMAP_LINEAR:
+        return VK_LOD_CLAMP_NONE;
+    }
+}
+
 VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags) {
     VkShaderStageFlags flags = 0x0;
     if (any(stageFlags & ShaderStageFlags::VERTEX))     flags |= VK_SHADER_STAGE_VERTEX_BIT;

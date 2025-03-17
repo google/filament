@@ -257,7 +257,9 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
             any(tusage & TextureUsage::ALL_ATTACHMENTS) &&
             // Depth resolve cannot use transient attachment because it uses a custom shader.
             // TODO: see VulkanDriver::isDepthStencilResolveSupported() to know when to remove this
-            // restricion.
+            // restriction.
+            // Note that the custom shader does not resolve stencil. We do need to move to vk 1.2
+            // and above to be able to support stencil resolve (along with depth).
             !(any(usage & TextureUsage::DEPTH_ATTACHMENT) && samples > 1);
 
     mState->mIsTransientAttachment = useTransientAttachment;
