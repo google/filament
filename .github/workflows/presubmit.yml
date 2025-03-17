@@ -99,7 +99,8 @@ jobs:
       - uses: ./.github/actions/ubuntu-apt-add-src
       - name: Run script
         run: |
-          source ./build/linux/ci-common.sh && bash test/renderdiff/test.sh
+          echo "Disabled renderdiff due to Mesa -> Currently planned outage: 2025-03-16 -> 2025-03-22"
+#          source ./build/linux/ci-common.sh && bash test/renderdiff/test.sh
       - uses: actions/upload-artifact@v4
         with:
           name: presubmit-renderdiff-result
