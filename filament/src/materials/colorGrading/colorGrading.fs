@@ -7,22 +7,23 @@ vec3 LogC_to_linear(const vec3 x) {
     return c * log2(a * x + b) + d;
 }
 
-vec3 colorGrade3D(const vec3 v) {
-    return textureLod(materialParams_lut, v, 0.0).rgb;
+vec3 colorGrade3D(mediump sampler3D lut, const vec3 v) {
+    return textureLod(lut, v, 0.0).rgb;
 }
 
-vec3 colorGrade1D(const vec3 v) {
+vec3 colorGrade1D(mediump sampler3D lut, const vec3 v) {
     return vec3(
-        textureLod(materialParams_lut1d, vec2(v.r, 0.5), 0.0).r,
-        textureLod(materialParams_lut1d, vec2(v.g, 0.5), 0.0).r,
-        textureLod(materialParams_lut1d, vec2(v.b, 0.5), 0.0).r);
+        textureLod(lut, vec3(v.r, 0.5, 0.5), 0.0).r,
+        textureLod(lut, vec3(v.g, 0.5, 0.5), 0.0).r,
+        textureLod(lut, vec3(v.b, 0.5, 0.5), 0.0).r);
 }
 
-vec3 colorGrade(vec3 v) {
+vec3 colorGrade(mediump sampler3D lut, vec3 v) {
     if (!materialConstants_isLDR) {
         v = LogC_to_linear(v);
     }
     // Remap to sample pixel centers.
     v = materialParams.lutSize.x + v * materialParams.lutSize.y;
-    return materialConstants_isOneDimensional ? colorGrade1D(v) : colorGrade3D(v);
+    return materialConstants_isOneDimensional
+            ? colorGrade1D(lut, v) : colorGrade3D(lut, v);
 }

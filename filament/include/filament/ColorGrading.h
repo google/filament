@@ -155,8 +155,7 @@ public:
          * quality level will use a 32x32x32 10 bit LUT, a high quality will use a 32x32x32 16 bit
          * LUT, and a ultra quality will use a 64x64x64 16 bit LUT.
          *
-         * When color grading can be implemented using a 1D LUT, this setting only affects the
-         * resolution of the LUT, using the same values as in 3D (i.e. 16, 32, 64).
+         * This setting has no effect if generating a 1D LUT.
          *
          * This overrides the values set by format() and dimensions().
          *
@@ -183,8 +182,10 @@ public:
         Builder& format(LutFormat format) noexcept;
 
         /**
-         * When color grading is implemented using a LUT, this sets the dimension of the LUT. This
-         * overrides the value set by quality().
+         * When color grading is implemented using a 3D LUT, this sets the dimension of the LUT.
+         * This overrides the value set by quality().
+         *
+         * This setting has no effect if generating a 1D LUT.
          *
          * The default is 32
          *

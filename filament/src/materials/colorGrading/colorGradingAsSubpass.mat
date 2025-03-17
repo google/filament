@@ -7,11 +7,6 @@ material {
             precision: medium
         },
         {
-            type : sampler2d,
-            name : lut1d,
-            precision: medium
-        },
-        {
             type : float2,
             name : lutSize
         },
@@ -118,7 +113,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     }
 
     // Color grading
-    color.rgb = colorGrade(color.rgb);
+    color.rgb = colorGrade(materialParams_lut, color.rgb);
 
     // output in premultiplied alpha
 #if !POST_PROCESS_OPAQUE
