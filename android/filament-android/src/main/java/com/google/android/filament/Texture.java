@@ -692,6 +692,24 @@ public class Texture {
     }
 
     /**
+     * @param engine {@link Engine}
+     * @param type Texture sampler type
+     * @return The maximum size in texels of a texture of type \p type. At least 2048 for
+     *         2D textures, 256 for 3D textures
+     */
+    public static int getMaxTextureSize(@NonNull Engine engine, Sampler type) {
+        return nGetMaxTextureSize(engine.getNativeObject(), type.ordinal());
+    }
+
+    /**
+     * @param engine {@link Engine}
+     * @return The maximum number of layers supported by texture arrays. At least 256.
+     */
+    public static int getMaxArrayTextureLayers(@NonNull Engine engine) {
+        return nGetMaxArrayTextureLayers(engine.getNativeObject());
+    }
+
+    /**
      * Use <code>Builder</code> to construct a <code>Texture</code> object instance.
      */
     public static class Builder {
@@ -1289,6 +1307,8 @@ public class Texture {
     private static native boolean nIsTextureFormatSupported(long nativeEngine, int internalFormat);
     private static native boolean nIsTextureFormatMipmappable(long nativeEngine, int internalFormat);
     private static native boolean nIsTextureSwizzleSupported(long nativeEngine);
+    private static native int nGetMaxTextureSize(long nativeObject, int ordinal);
+    private static native int nGetMaxArrayTextureLayers(long nativeObject);
 
     private static native boolean nValidatePixelFormatAndType(int internalFormat, int pixelDataFormat,
             int pixelDataType);

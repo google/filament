@@ -1177,6 +1177,16 @@ size_t MetalDriver::getMaxUniformBufferSize() {
     return 256 * 1024 * 1024;   // TODO: return the actual size instead of hardcoding the minspec
 }
 
+size_t MetalDriver::getMaxTextureSize(SamplerType) {
+    // TODO: return the actual size instead of hardcoding the minspec
+    return 2048;
+}
+
+size_t MetalDriver::getMaxArrayTextureLayers() {
+    // TODO: return the actual size instead of hardcoding the minspec
+    return 256;
+}
+
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
         uint32_t byteOffset) {
     FILAMENT_CHECK_PRECONDITION(data.buffer)

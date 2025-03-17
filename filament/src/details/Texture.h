@@ -124,6 +124,10 @@ public:
     static bool validatePixelFormatAndType(backend::TextureFormat internalFormat,
             backend::PixelDataFormat format, backend::PixelDataType type) noexcept;
 
+    static size_t getMaxTextureSize(FEngine& engine, Sampler type) noexcept;
+
+    static size_t getMaxArrayTextureLayers(FEngine& engine) noexcept;
+
     bool textureHandleCanMutate() const noexcept;
     void updateLodRange(uint8_t level) noexcept;
 

@@ -62,6 +62,8 @@ constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage co
             return { MaterialEssl1, DictionaryText };
         case ShaderLanguage::MSL:
             return { MaterialMetal, DictionaryText };
+        case ShaderLanguage::WGSL:
+            return { MaterialWgsl, DictionaryText };
         case ShaderLanguage::SPIRV:
             return { MaterialSpirv, DictionarySpirv };
         case ShaderLanguage::METAL_LIBRARY:

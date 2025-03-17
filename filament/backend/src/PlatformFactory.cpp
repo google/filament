@@ -66,7 +66,7 @@ filament::backend::Platform* createDefaultMetalPlatform();
 
 #include "noop/PlatformNoop.h"
 #if defined(FILAMENT_SUPPORTS_WEBGPU)
-    #include "webgpu/WebGPUPlatform.h"
+    #include "backend/platforms/WebGPUPlatform.h"
 #endif
 
 namespace filament::backend {
