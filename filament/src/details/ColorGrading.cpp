@@ -812,11 +812,11 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                 // Apply OETF
                 v = config.oetf(v);
 
-                *p++ = half{v.r};
+                *p++ = half(v.r);
             }
         } else {
             for (size_t rgb = 0; rgb < config.lutDimension; rgb++) {
-                *p = half{hdrColorAt(rgb, rgb, rgb).r};
+                *p = half(hdrColorAt(rgb, rgb, rgb).r);
             }
         }
     } else {
