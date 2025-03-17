@@ -2649,7 +2649,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
     setConstantParameter(ma, "varianceGamma", taaOptions.varianceGamma);
     if (dirty) {
         ma->invalidate();
-        // TODO: call Material::compile(), we can't si that now because it works only
+        // TODO: call Material::compile(), we can't do that now because it works only
         //       with surface materials
     }
 }
@@ -2676,7 +2676,7 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(
 
     if (dirty) {
         ma->invalidate();
-        // TODO: call Material::compile(), we can't si that now because it works only
+        // TODO: call Material::compile(), we can't do that now because it works only
         //       with surface materials
     }
 
@@ -2693,13 +2693,8 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(
             .wrapR = SamplerWrapMode::CLAMP_TO_EDGE,
             .anisotropyLog2 = 0
     };
-    if (colorGrading->isOneDimensional()) {
-        mi->setParameter("lut1d", colorGrading->getHwHandle(), params);
-        mi->setParameter("lut", mEngine.getZeroTexture(), params);
-    } else {
-        mi->setParameter("lut", colorGrading->getHwHandle(), params);
-        mi->setParameter("lut1d", mEngine.getZeroTexture(), params);
-    }
+
+    mi->setParameter("lut", colorGrading->getHwHandle(), params);
 
     const float lutDimension = float(colorGrading->getDimension());
     mi->setParameter("lutSize", float2{

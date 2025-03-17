@@ -583,7 +583,7 @@ static float3 luminanceScaling(float3 x,
 static std::tuple<TextureFormat, PixelDataFormat, PixelDataType> selectLutTextureParams(
         ColorGrading::LutFormat const lutFormat, const bool isOneDimensional) noexcept {
     if (isOneDimensional) {
-        return { TextureFormat::R8, PixelDataFormat::R, PixelDataType::UBYTE };
+        return { TextureFormat::R16F, PixelDataFormat::R, PixelDataType::HALF };
     }
     // We use RGBA16F for high quality modes instead of RGB16F because RGB16F
     // is not supported everywhere
@@ -660,8 +660,15 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
     DriverApi& driver = engine.getDriverApi();
 
+    // XXX: The following two conditions also only hold true as long as the input and output color
+    // spaces are the same, but we currently don't check that. We must revise these conditions if we
+    // ever handle this case.
+    mIsOneDimensional = !builder->hasAdjustments && !builder->luminanceScaling
+            && builder->toneMapper->isOneDimensional();
+    mIsLDR = mIsOneDimensional && builder->toneMapper->isLDR();
+
     const Config config = {
-            builder->dimension,
+            mIsOneDimensional ? 512u : builder->dimension,
             adaptationTransform(builder->whiteBalance),
             selectColorGradingTransformIn(builder->toneMapping),
             selectColorGradingTransformOut(builder->toneMapping),
@@ -670,14 +677,22 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     };
 
     mDimension = config.lutDimension;
-    mIsOneDimensional = !builder->hasAdjustments && !builder->luminanceScaling
-            && builder->toneMapper->isOneDimensional();
-    mIsLDR = mIsOneDimensional && builder->toneMapper->isLDR();
 
-    size_t lutElementCount = mIsOneDimensional
-            ? config.lutDimension
-            : (config.lutDimension * config.lutDimension * config.lutDimension);
-    size_t elementSize = mIsOneDimensional ? sizeof(uint8_t) : sizeof(half4);
+    uint32_t width;
+    uint32_t height;
+    uint32_t depth;
+    if (mIsOneDimensional) {
+        width = config.lutDimension;
+        height = 1;
+        depth = 1;
+    } else {
+        width = config.lutDimension;
+        height = config.lutDimension;
+        depth = config.lutDimension;
+    }
+
+    size_t lutElementCount = width * height * depth;
+    size_t elementSize = mIsOneDimensional ? sizeof(half) : sizeof(half4);
     void* data = malloc(lutElementCount * elementSize);
 
     auto [textureFormat, format, type] =
@@ -784,17 +799,12 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     //auto now = std::chrono::steady_clock::now();
 
     if (mIsOneDimensional) {
-        uint8_t* UTILS_RESTRICT p = (uint8_t*) data;
-        for (size_t rgb = 0; rgb < config.lutDimension; rgb++) {
-            float s;
-            if (mIsLDR) {
+        half* UTILS_RESTRICT p = (half*) data;
+        if (mIsLDR) {
+            for (size_t rgb = 0; rgb < config.lutDimension; rgb++) {
                 float3 v = float3(rgb) * (1.0f / float(config.lutDimension - 1u));
 
                 v = (*builder->toneMapper)(float3(v));
-
-                // TODO: We should convert to the output color space if we use a working
-                //       color space that's not sRGB
-                // TODO: Allow the user to customize the output color space
 
                 // We need to clamp for the output transfer function
                 v = saturate(v);
@@ -802,11 +812,12 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                 // Apply OETF
                 v = config.oetf(v);
 
-                s = v.r;
-            } else {
-                s = hdrColorAt(rgb, rgb, rgb).r;
+                *p++ = half{v.r};
             }
-            *p++ = uint8_t(std::floor(s * 255.0f + 0.5f));
+        } else {
+            for (size_t rgb = 0; rgb < config.lutDimension; rgb++) {
+                *p = half{hdrColorAt(rgb, rgb, rgb).r};
+            }
         }
     } else {
         // Multithreadedly generate the tone mapping 3D look-up table using 32 jobs
@@ -864,24 +875,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     }
 
     // Create texture.
-    backend::SamplerType target;
-    uint32_t width;
-    uint32_t height;
-    uint32_t depth;
-
-    if (mIsOneDimensional) {
-        target = SamplerType::SAMPLER_2D;
-        width = config.lutDimension;
-        height = 1;
-        depth = 1;
-    } else {
-        target = SamplerType::SAMPLER_3D;
-        width = config.lutDimension;
-        height = config.lutDimension;
-        depth = config.lutDimension;
-    }
-
-    mLutHandle = driver.createTexture(target, 1, textureFormat, 1,
+    mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 1,
             width, height, depth, TextureUsage::DEFAULT);
 
     driver.update3DImage(mLutHandle, 0,
