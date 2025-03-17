@@ -17,11 +17,11 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORMS_WEBGPUPLATFORM_H
 #define TNT_FILAMENT_BACKEND_PLATFORMS_WEBGPUPLATFORM_H
 
-#include <cstdint>
+#include <backend/Platform.h>
 
 #include <webgpu/webgpu_cpp.h>
 
-#include "backend/Platform.h"
+#include <cstdint>
 
 namespace filament::backend {
 
@@ -31,13 +31,6 @@ namespace filament::backend {
  */
 class WebGPUPlatform final : public Platform {
 public:
-
-    struct SurfaceBundle final {
-        wgpu::Surface surface = nullptr;
-        // may or may not be defined based on the platform
-        wgpu::Extent2D fallbackExtent = {.width = 0, .height = 0};
-    };
-
     WebGPUPlatform();
     ~WebGPUPlatform() override = default;
 
@@ -45,11 +38,11 @@ public:
 
     [[nodiscard]] wgpu::Instance& getInstance() noexcept { return mInstance; }
 
-    //either returns a valid surface or panics
-    [[nodiscard]] SurfaceBundle createSurface(void* nativeWindow, uint64_t flags);
-    //either returns a valid adapter or panics
+    // either returns a valid surface or panics
+    [[nodiscard]] wgpu::Surface createSurface(void* nativeWindow, uint64_t flags);
+    // either returns a valid adapter or panics
     [[nodiscard]] wgpu::Adapter requestAdapter(wgpu::Surface const& surface);
-    //either returns a valid device or panics
+    // either returns a valid device or panics
     [[nodiscard]] wgpu::Device requestDevice(wgpu::Adapter const& adapter);
 
 protected:
@@ -57,7 +50,8 @@ protected:
             const Platform::DriverConfig& driverConfig) noexcept override;
 
 private:
-    wgpu::Instance mInstance;  // we may consider having the driver own this in the future
+    // we may consider having the driver own this in the future
+    wgpu::Instance mInstance;
 };
 
 }// namespace filament::backend

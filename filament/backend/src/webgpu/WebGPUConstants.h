@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUCONSTANTS_H
 #define TNT_FILAMENT_BACKEND_WEBGPUCONSTANTS_H
 
-#include <cstdint>
+#include <utils/Log.h>
 
-#include "utils/Log.h"
+#include <cstdint>
 
 // FWGPU is short for Filament WebGPU
 

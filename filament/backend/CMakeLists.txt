@@ -248,8 +248,10 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
     )
-    if (LINUX OR WIN32)
-        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformLinuxWindows.cpp)
+    if (WIN32)
+        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)
+    elseif (LINUX)
+        list(APPEND SRCS src/webgpu/platform/WebGPUPlatformLinux.cpp)
     elseif (APPLE OR IOS)
         list(APPEND SRCS src/webgpu/platform/WebGPUPlatformApple.mm)
     elseif (ANDROID)

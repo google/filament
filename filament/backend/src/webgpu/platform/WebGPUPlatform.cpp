@@ -13,19 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "backend/platforms/WebGPUPlatform.h"
 
-#include <cstdint>
-#include <sstream>
+#include <backend/platforms/WebGPUPlatform.h>
+
+#include "webgpu/WebGPUConstants.h"
+#include "webgpu/WebGPUDriver.h"
+
+#include <backend/Platform.h>
+#include <utils/Panic.h>
+#include <utils/ostream.h>
 
 #include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
 
-#include "backend/Platform.h"
-#include "utils/Panic.h"
-#include "utils/ostream.h"
-#include "webgpu/WebGPUConstants.h"
-#include "webgpu/WebGPUDriver.h"
+#include <cstdint>
+#include <sstream>
+
+/**
+ * WebGPU Backend implementation common across platforms or operating systems (at least for now).
+ * Some of these functions may likely be refactored to platform/OS-specific implementations
+ * over time as needed. The caller of the WebGPUPlatform doesn't need to care which is the case.
+ */
 
 namespace filament::backend {
 
@@ -33,11 +41,10 @@ namespace {
 
 //either returns a valid instance or panics
 [[nodiscard]] wgpu::Instance createInstance() {
-  wgpu::DawnTogglesDescriptor dawnTogglesDescriptor{};
+    wgpu::DawnTogglesDescriptor dawnTogglesDescriptor{};
 #if defined(FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING)
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    FWGPU_LOGI << "setting on toggle enable_immediate_error_handling"
-               << utils::io::endl;
+    FWGPU_LOGI << "setting on toggle enable_immediate_error_handling" << utils::io::endl;
 #endif
     /**
      * Have the un-captured error callback invoked immediately when an error occurs, rather than
@@ -53,7 +60,8 @@ namespace {
         .nextInChain = &dawnTogglesDescriptor,
         .capabilities = {
             .timedWaitAnyEnable = true// TODO consider using pure async instead
-        } };
+        }
+    };
     wgpu::Instance instance = wgpu::CreateInstance(&instanceDescriptor);
     FILAMENT_CHECK_POSTCONDITION(instance != nullptr) << "Unable to create webgpu instance.";
     return instance;
@@ -136,7 +144,7 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
 }
 
 Driver* WebGPUPlatform::createDriver(void* const sharedContext,
-        const Platform::DriverConfig& driverConfig) noexcept {
+        const Platform::DriverConfig& /*driverConfig*/) noexcept {
     if (sharedContext) {
         FWGPU_LOGW << "sharedContext is ignored/unused in the WebGPU backend. A non-null "
                       "sharedContext was provided, but it will be ignored."

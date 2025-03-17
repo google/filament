@@ -17,17 +17,24 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
-#include <cstdint>
+#include <backend/platforms/WebGPUPlatform.h>
+
+#include "DriverBase.h"
+#include "private/backend/Dispatcher.h"
+#include "private/backend/Driver.h"
+#include <backend/DriverEnums.h>
+
+#include <utils/compiler.h>
 
 #include <webgpu/webgpu_cpp.h>
 
-#include "DriverBase.h"
-#include "backend/platforms/WebGPUPlatform.h"
-#include "private/backend/Driver.h"
-#include "utils/compiler.h"
+#include <cstdint>
 
 namespace filament::backend {
 
+/**
+ * WebGPU backend (driver) implementation
+ */
 class WebGPUDriver final : public DriverBase {
 public:
     ~WebGPUDriver() noexcept override;
@@ -40,12 +47,14 @@ private:
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
     [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
 
+    // the platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
+    // handled in the WebGPUPlatform
     WebGPUPlatform& mPlatform;
     wgpu::Surface mSurface = nullptr;
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
     wgpu::Queue mQueue = nullptr;
-    uint64_t nextFakeHandle = 1;
+    uint64_t mNextFakeHandle = 1;
 
     /*
      * Driver interface

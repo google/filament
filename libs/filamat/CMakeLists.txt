@@ -144,6 +144,12 @@ set(FILAMAT_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}filamat${CMAKE_STATIC_LIBRARY
 install(FILES "${FILAMAT_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${FILAMAT_LIB_NAME})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
 
+# Need to install libtint for filamat on Android.
+# See libs/filamat/CMakeLists.txt and android/filamat-android/CMakeLists.txt.
+if (ANDROID)
+   target_link_libraries(${TARGET} libtint_combined)
+endif()
+
 # ==================================================================================================
 # Tests
 # ==================================================================================================

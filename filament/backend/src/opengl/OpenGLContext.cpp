@@ -94,18 +94,22 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     }
     #endif
 
-    OpenGLContext::initExtensions(&ext, state.major, state.minor);
+    initExtensions(&ext, state.major, state.minor);
 
-    OpenGLContext::initProcs(&procs, ext, state.major, state.minor);
+    initProcs(&procs, ext, state.major, state.minor);
 
-    OpenGLContext::initBugs(&bugs, ext, state.major, state.minor,
+    initBugs(&bugs, ext, state.major, state.minor,
             state.vendor, state.renderer, state.version, state.shader);
 
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE,             &gets.max_renderbuffer_size);
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS,           &gets.max_texture_image_units);
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS,  &gets.max_combined_texture_image_units);
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE,                  &gets.max_texture_size);
+    glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE,         &gets.max_cubemap_texture_size);
+    glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE,               &gets.max_3d_texture_size);
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS,          &gets.max_array_texture_layers);
 
-    mFeatureLevel = OpenGLContext::resolveFeatureLevel(state.major, state.minor, ext, gets, bugs);
+    mFeatureLevel = resolveFeatureLevel(state.major, state.minor, ext, gets, bugs);
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
     mShaderModel = ShaderModel::MOBILE;
@@ -177,6 +181,14 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
                     << gets.max_anisotropy << '\n'
             << "GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS = "
                     << gets.max_combined_texture_image_units << '\n'
+            << "GL_MAX_TEXTURE_SIZE = "
+                    << gets.max_texture_size << '\n'
+            << "GL_MAX_CUBE_MAP_TEXTURE_SIZE = "
+                    << gets.max_cubemap_texture_size << '\n'
+            << "GL_MAX_3D_TEXTURE_SIZE = "
+                    << gets.max_3d_texture_size << '\n'
+            << "GL_MAX_ARRAY_TEXTURE_LAYERS = "
+                    << gets.max_array_texture_layers << '\n'
             << "GL_MAX_DRAW_BUFFERS = "
                     << gets.max_draw_buffers << '\n'
             << "GL_MAX_RENDERBUFFER_SIZE = "

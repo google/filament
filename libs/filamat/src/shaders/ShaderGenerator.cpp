@@ -796,8 +796,10 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
 
     cg.generateCommonSamplers(fs, DescriptorSetBindingPoints::PER_MATERIAL, material.sib);
 
-    // subpass
-    CodeGenerator::generatePostProcessSubpass(fs, material.subpass);
+    // Subpasses are not yet in WebGPU, https://github.com/gpuweb/gpuweb/issues/435
+    CodeGenerator::generatePostProcessSubpass(fs, targetApi == MaterialBuilderBase::TargetApi::WEBGPU
+                                                      ? SubpassInfo{}
+                                                      : material.subpass);
 
     CodeGenerator::generatePostProcessCommon(fs, ShaderStage::FRAGMENT);
     CodeGenerator::generatePostProcessGetters(fs, ShaderStage::FRAGMENT);

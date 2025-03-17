@@ -13,29 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "backend/platforms/WebGPUPlatform.h"
 
-#include <cstdint>
+#include <backend/platforms/WebGPUPlatform.h>
+
+#include <utils/Panic.h>
 
 #include <webgpu/webgpu_cpp.h>
 
-#include "utils/Panic.h"
+#include <cstdint>
+
+/**
+ * Android OS specific implementation aspects of the WebGPU backend
+ */
 
 namespace filament::backend {
 
-WebGPUPlatform::SurfaceBundle WebGPUPlatform::createSurface(void* nativeWindow,
-        uint64_t /*flags*/) {
-    WebGPUPlatform::SurfaceBundle surfaceBundle{};
+wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags*/) {
     wgpu::SurfaceSourceAndroidNativeWindow surfaceSourceAndroidWindow{};
     surfaceSourceAndroidWindow.window = nativeWindow;
     wgpu::SurfaceDescriptor surfaceDescriptor{
         .nextInChain = &surfaceSourceAndroidWindow,
         .label = "android_surface"
     };
-    surfaceBundle.surface = mInstance.CreateSurface(&surfaceDescriptor);
-    FILAMENT_CHECK_POSTCONDITION(surfaceBundle.surface != nullptr)
-            << "Unable to create Android-backed surface.";
-    return surfaceBundle;
+    wgpu::Surface surface = mInstance.CreateSurface(&surfaceDescriptor);
+    FILAMENT_CHECK_POSTCONDITION(surface != nullptr) << "Unable to create Android-backed surface.";
+    return surface;
 }
 
 }// namespace filament::backend

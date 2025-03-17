@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "backend/platforms/WebGPUPlatform.h"
 
-#include <cstdint>
+#include <backend/platforms/WebGPUPlatform.h>
+
+#include <utils/Panic.h>
+#include <utils/ostream.h>
 
 #include <webgpu/webgpu_cpp.h>
 
-#include "utils/Panic.h"
-#include "utils/ostream.h"
+#include <cstdint>
 
 // Platform specific includes and defines
 #if defined(__APPLE__)
@@ -39,11 +40,14 @@
     #error Not a supported Apple + WebGPU platform
 #endif
 
+/**
+ * Apple (Mac OS and IOS) specific implementation aspects of the WebGPU backend
+ */
+
 namespace filament::backend {
 
-WebGPUPlatform::SurfaceBundle WebGPUPlatform::createSurface(void* nativeWindow,
-        uint64_t /*flags*/) {
-    WebGPUPlatform::SurfaceBundle surfaceBundle{};
+wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags*/) {
+    wgpu::Surface surface = nullptr;
 #if defined(__APPLE__)
     auto nsView = (__bridge NSView*) nativeWindow;
     FILAMENT_CHECK_POSTCONDITION(nsView) << "Unable to obtain Metal-backed NSView.";
@@ -56,9 +60,8 @@ WebGPUPlatform::SurfaceBundle WebGPUPlatform::createSurface(void* nativeWindow,
         .nextInChain = &surfaceSourceMetalLayer,
         .label = "metal_surface",
     };
-    surfaceBundle.surface = mInstance.CreateSurface(&surfaceDescriptor);
-    FILAMENT_CHECK_POSTCONDITION(surfaceBundle.surface != nullptr)
-            << "Unable to create Metal-backed surface.";
+    surface = mInstance.CreateSurface(&surfaceDescriptor);
+    FILAMENT_CHECK_POSTCONDITION(surface != nullptr) << "Unable to create Metal-backed surface.";
 #elif defined(FILAMENT_IOS)
     CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
     wgpu::SurfaceSourceMetalLayer surfaceSourceMetalLayer{};
@@ -67,13 +70,12 @@ WebGPUPlatform::SurfaceBundle WebGPUPlatform::createSurface(void* nativeWindow,
         .nextInChain = &surfaceSourceMetalLayer,
         .label = "metal_surface",
     };
-    surfaceBundle.surface = mInstance.CreateSurface(&surfaceDescriptor);
-    FILAMENT_CHECK_POSTCONDITION(surfaceBundle.surface != nullptr)
-            << "Unable to create Metal-backed surface.";
+    surface = mInstance.CreateSurface(&surfaceDescriptor);
+    FILAMENT_CHECK_POSTCONDITION(surface != nullptr) << "Unable to create Metal-backed surface.";
 #else
     #error Not a supported Apple + WebGPU platform
 #endif
-    return surfaceBundle;
+    return surface;
 }
 
 }// namespace filament::backend

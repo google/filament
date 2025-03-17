@@ -30,6 +30,9 @@ if [[ "$GITHUB_WORKFLOW" ]]; then
     sudo apt-get install clang-$GITHUB_CLANG_VERSION libc++-$GITHUB_CLANG_VERSION-dev libc++abi-$GITHUB_CLANG_VERSION-dev
     sudo apt-get install mesa-common-dev libxi-dev libxxf86vm-dev
 
+    # For dawn
+    sudo apt-get install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+
     sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-${GITHUB_CLANG_VERSION} 100
     sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${GITHUB_CLANG_VERSION} 100
 fi
