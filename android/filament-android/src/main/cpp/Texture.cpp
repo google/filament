@@ -68,6 +68,21 @@ Java_com_google_android_filament_Texture_nIsTextureSwizzleSupported(JNIEnv*, jcl
     return (jboolean) Texture::isTextureSwizzleSupported(*engine);
 }
 
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Texture_nGetMaxTextureSize(JNIEnv *, jclass,
+        jlong nativeEngine, jint sampler) {
+    Engine *engine = (Engine *) nativeEngine;
+    return Texture::getMaxTextureSize(*engine, (Texture::Sampler)sampler);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Texture_nGetMaxArrayTextureLayers(JNIEnv *, jclass,
+        jlong nativeEngine) {
+    Engine *engine = (Engine *) nativeEngine;
+    return Texture::getMaxArrayTextureLayers(*engine);
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Texture_nValidatePixelFormatAndType(JNIEnv*, jclass,
         jint internalFormat, jint pixelDataFormat, jint pixelDataType) {
