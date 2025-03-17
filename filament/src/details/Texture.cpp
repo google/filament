@@ -164,6 +164,20 @@ Texture* Texture::Builder::build(Engine& engine) {
             (isProtectedTexturesSupported && useProtectedMemory) || !useProtectedMemory)
             << "Texture is PROTECTED but protected textures are not supported";
 
+    size_t const maxTextureDimension = getMaxTextureSize(engine, mImpl->mTarget);
+    size_t const maxTextureDepth = (mImpl->mTarget == Sampler::SAMPLER_2D_ARRAY ||
+                                    mImpl->mTarget == Sampler::SAMPLER_CUBEMAP_ARRAY)
+                                       ? getMaxArrayTextureLayers(engine)
+                                       : maxTextureDimension;
+
+    FILAMENT_CHECK_PRECONDITION(
+            mImpl->mWidth <= maxTextureDimension &&
+            mImpl->mHeight <= maxTextureDimension &&
+            mImpl->mDepth <= maxTextureDepth) << "Texture dimensions out of range: "
+                    << "width= " << mImpl->mWidth << " (>" << maxTextureDimension << ")"
+                    <<", height= " << mImpl->mHeight << " (>" << maxTextureDimension << ")"
+                    << ", depth= " << mImpl->mDepth << " (>" << maxTextureDepth << ")";
+
     const auto validateSamplerType = [&engine = downcast(engine)](SamplerType const sampler) -> bool {
         switch (sampler) {
             case SamplerType::SAMPLER_2D:
@@ -670,6 +684,14 @@ bool FTexture::isProtectedTexturesSupported(FEngine& engine) noexcept {
 
 bool FTexture::isTextureSwizzleSupported(FEngine& engine) noexcept {
     return engine.getDriverApi().isTextureSwizzleSupported();
+}
+
+size_t FTexture::getMaxTextureSize(FEngine& engine, Sampler type) noexcept {
+    return engine.getDriverApi().getMaxTextureSize(type);
+}
+
+size_t FTexture::getMaxArrayTextureLayers(FEngine& engine) noexcept {
+    return engine.getDriverApi().getMaxArrayTextureLayers();
 }
 
 size_t FTexture::computeTextureDataSize(Format const format, Type const type,

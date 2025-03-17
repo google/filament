@@ -983,8 +983,10 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadata(
 }
 
 VulkanPlatform::ImageData VulkanPlatform::createExternalImageData(
-        ExternalImageHandleRef externalImage, const ExternalImageMetadata& metadata) {
-    return createExternalImageDataImpl(externalImage, mImpl->mDevice, metadata);
+        ExternalImageHandleRef externalImage, const ExternalImageMetadata& metadata,
+        uint32_t memoryTypeIndex, VkImageUsageFlags usage) {
+    return createExternalImageDataImpl(externalImage, mImpl->mDevice, metadata, memoryTypeIndex,
+            usage);
 }
 
 VkSampler VulkanPlatform::createExternalSampler(SamplerYcbcrConversion chroma,

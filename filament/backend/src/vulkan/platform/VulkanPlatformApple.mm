@@ -70,7 +70,7 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
 
 VulkanPlatform::ImageData VulkanPlatform::createExternalImageDataImpl(
         ExternalImageHandleRef externalImage, VkDevice device,
-        const ExternalImageMetadata& metadata) {
+        const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex, VkImageUsageFlags usage) {
     return {};
 }
 
