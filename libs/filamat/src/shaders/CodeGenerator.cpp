@@ -192,7 +192,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
             out << "#define FILAMENT_VULKAN_SEMANTICS\n";
             break;
     }
-
+    //Target API is OPENGL?
     if (mTargetApi == TargetApi::VULKAN ||
         mTargetApi == TargetApi::WEBGPU ||
         mTargetApi == TargetApi::METAL ||
@@ -358,7 +358,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
 
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
-
+    // TODO WebGPU doesnt come here, at least on the first pass
     if (material.featureLevel == FeatureLevel::FEATURE_LEVEL_0 &&
             (mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0
                     || mTargetLanguage == TargetLanguage::SPIRV)) {
