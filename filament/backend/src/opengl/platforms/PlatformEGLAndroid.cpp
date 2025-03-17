@@ -335,6 +335,8 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
         slog.e << "Error after glBindTexture: " << error << io::endl;
         glDeleteTextures(1, &texture->id);
         eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
+        glActiveTexture(prevActiveTexture);
+        glBindTexture(GL_TEXTURE_2D, prevTexture);
         return false;
     }
     glEGLImageTargetTexture2DOES(texture->target, static_cast<GLeglImageOES>(eglImage));
@@ -343,10 +345,12 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
         slog.e << "Error after glEGLImageTargetTexture2DOES: " << error << io::endl;
         glDeleteTextures(1, &texture->id);
         eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
+        glActiveTexture(prevActiveTexture);
+        glBindTexture(GL_TEXTURE_2D, prevTexture);
         return false;
     }
-    glBindTexture(GL_TEXTURE_2D, prevTexture);
     glActiveTexture(prevActiveTexture);
+    glBindTexture(GL_TEXTURE_2D, prevTexture);
     return true;
 }
 
