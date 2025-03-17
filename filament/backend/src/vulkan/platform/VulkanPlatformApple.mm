@@ -74,6 +74,19 @@ VulkanPlatform::ImageData VulkanPlatform::createExternalImageDataImpl(
     return {};
 }
 
+VkSampler VulkanPlatform::createExternalSamplerImpl(VkDevice device,
+    SamplerYcbcrConversion chroma,
+    SamplerParams sampler,
+    uint32_t internalFormat) {
+    return VK_NULL_HANDLE;
+}
+
+VkImageView VulkanPlatform::createExternalImageViewImpl(VkDevice device,
+        SamplerYcbcrConversion chroma, uint32_t internalFormat, VkImage image,
+        VkImageSubresourceRange range, VkImageViewType viewType, VkComponentMapping swizzle) {
+    return VK_NULL_HANDLE;
+}
+
 VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
         VkInstance instance, uint64_t flags) noexcept {
     VkSurfaceKHR surface;
