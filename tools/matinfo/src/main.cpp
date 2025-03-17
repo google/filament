@@ -142,15 +142,15 @@ static int handleArguments(int argc, char* argv[], Config* config) {
             { "print-spirv",        required_argument, nullptr, 's' },
             { "print-vkglsl",       required_argument, nullptr, 'v' },
             { "print-metal",        required_argument, nullptr, 'm' },
-            { "print-wgsl",        required_argument, nullptr, 'u' },
+            { "print-wgsl",         required_argument, nullptr, 'u' },
             { "print-dic-glsl",     no_argument,       nullptr, 'x' },
             { "print-dic-essl1",    no_argument,       nullptr, 'X' },
             { "print-dic-metal",    no_argument,       nullptr, 'y' },
-            { "print-dic-wgsl",        no_argument, nullptr, 'U' },
+            { "print-dic-wgsl",     no_argument,       nullptr, 'U' },
             { "print-dic-vk",       no_argument,       nullptr, 'z' },
             { "dump-binary",        required_argument, nullptr, 'b' },  // backwards compatibility
             { "dump-spirv-binary",  required_argument, nullptr, 'b' },
-            { "dump-metal-library",  required_argument, nullptr,  DUMP_METAL_LIBRARY_OPTION },
+            { "dump-metal-library", required_argument, nullptr, DUMP_METAL_LIBRARY_OPTION },
             { "web-server",         required_argument, nullptr, 'w' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
@@ -614,7 +614,8 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
     TextWriter writer;
 
-    if (config.printDictionaryGLSL || config.printDictionaryESSL1 || config.printDictionarySPIRV || config.printDictionaryMetal || config.printDictionaryWGSL) {
+    if (config.printDictionaryGLSL || config.printDictionaryESSL1 || config.printDictionarySPIRV ||
+            config.printDictionaryMetal || config.printDictionaryWGSL) {
         ShaderExtractor parser(
             (config.printDictionaryGLSL ? filament::backend::ShaderLanguage::ESSL3 :
              (config.printDictionaryESSL1 ? filament::backend::ShaderLanguage::ESSL1 :
