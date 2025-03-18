@@ -1,0 +1,26 @@
+;; Tests a diff where the an OpString is used only as parameter of OpExtInst.
+               OpCapability Shader
+               OpExtension "SPV_KHR_non_semantic_info"
+          %1 = OpExtInstImport "GLSL.std.450"
+         %12 = OpExtInstImport "NonSemantic.DebugPrintf"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+         %10 = OpString "unsigned == %u"
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_debug_printf"
+               OpName %main "main"
+               OpName %foo "foo"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+   %uint_127 = OpConstant %uint 127
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+        %foo = OpVariable %_ptr_Function_uint Function
+               OpStore %foo %uint_127
+         %11 = OpLoad %uint %foo
+         %13 = OpExtInst %void %12 1 %10 %11
+               OpReturn
+               OpFunctionEnd

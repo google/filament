@@ -276,6 +276,7 @@ CopyPropagateArrays::GetSourceObjectIfAny(uint32_t result) {
     case spv::Op::OpCompositeConstruct:
       return BuildMemoryObjectFromCompositeConstruct(result_inst);
     case spv::Op::OpCopyObject:
+    case spv::Op::OpCopyLogical:
       return GetSourceObjectIfAny(result_inst->GetSingleWordInOperand(0));
     case spv::Op::OpCompositeInsert:
       return BuildMemoryObjectFromInsert(result_inst);
