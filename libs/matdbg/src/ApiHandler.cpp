@@ -228,8 +228,8 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
             return error(__LINE__, uri);
         }
 
-        FixedCapacityVector<ShaderInfo> info(getShaderCount(package, ChunkType::MaterialMetal));
-        if (!getShaderInfo(package, info.data(), ChunkType::MaterialMetal)) {
+        FixedCapacityVector<ShaderInfo> info(getShaderCount(package, ChunkType::MaterialWgsl));
+        if (!getShaderInfo(package, info.data(), ChunkType::MaterialWgsl)) {
             return error(__LINE__, uri);
         }
 
