@@ -49,14 +49,14 @@ public:
      */
     ExternalImageHandle createExternalImage(AHardwareBuffer const* buffer, bool sRGB) noexcept;
 
-    struct ExternalImageAndroidMetadata {
+    struct ExternalImageDescAndroid {
         uint32_t width;      // Texture width
         uint32_t height;     // Texture height
         TextureFormat format;// Texture format
         TextureUsage usage;  // Texture usage flags
     };
 
-    ExternalImageAndroidMetadata getImageMetadata(ExternalImageHandle externalImage) noexcept;
+    ExternalImageDescAndroid getExternalImageDesc(ExternalImageHandle externalImage) noexcept;
 
 protected:
     // --------------------------------------------------------------------------------------------

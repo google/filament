@@ -234,13 +234,20 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
     return driver;
 }
 
-PlatformEGLAndroid::ExternalImageEGLAndroid::~ExternalImageEGLAndroid() = default;
+PlatformEGLAndroid::ExternalImageEGLAndroid::~ExternalImageEGLAndroid() {
+    if (__builtin_available(android 26, *)) {
+        if (aHardwareBuffer) {
+            AHardwareBuffer_release(aHardwareBuffer);
+        }
+    }
+}
 
 Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareBuffer const* buffer,
         bool sRGB) noexcept {
     if (__builtin_available(android 26, *)) {
         auto* const p = new (std::nothrow) ExternalImageEGLAndroid;
         auto hardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
+        AHardwareBuffer_acquire(hardwareBuffer);
         p->aHardwareBuffer = hardwareBuffer;
         p->sRGB = sRGB;
         AHardwareBuffer_Desc hardwareBufferDescription = {};
@@ -255,11 +262,11 @@ Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareB
     return Platform::ExternalImageHandle{};
 }
 
-PlatformEGLAndroid::ExternalImageAndroidMetadata PlatformEGLAndroid::getImageMetadata(
+PlatformEGLAndroid::ExternalImageDescAndroid PlatformEGLAndroid::getExternalImageDesc(
         ExternalImageHandle externalImage) noexcept {
     auto const* const eglExternalImage =
             static_cast<ExternalImageEGLAndroid const*>(externalImage.get());
-    ExternalImageAndroidMetadata metadata = {};
+    ExternalImageDescAndroid metadata = {};
     if (!eglExternalImage) {
         return metadata;
     }
@@ -331,7 +338,7 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(texture->target, texture->id);
     GLenum error = glGetError();
-    if (error != GL_NO_ERROR) {
+    if (UTILS_UNLIKELY(error != GL_NO_ERROR)) {
         slog.e << "Error after glBindTexture: " << error << io::endl;
         glDeleteTextures(1, &texture->id);
         eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
@@ -341,7 +348,7 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
     }
     glEGLImageTargetTexture2DOES(texture->target, static_cast<GLeglImageOES>(eglImage));
     error = glGetError();
-    if (error != GL_NO_ERROR) {
+    if (UTILS_UNLIKELY(error != GL_NO_ERROR)) {
         slog.e << "Error after glEGLImageTargetTexture2DOES: " << error << io::endl;
         glDeleteTextures(1, &texture->id);
         eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
