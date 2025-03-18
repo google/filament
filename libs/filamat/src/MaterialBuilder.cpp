@@ -179,6 +179,14 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics,
                 effectiveFeatureLevel,
             });
         }
+        if (any(mTargetApi & TargetApi::WEBGPU)) {
+            mCodeGenPermutations.push_back({
+                shaderModel,
+                TargetApi::WEBGPU,
+                TargetLanguage::SPIRV,
+                effectiveFeatureLevel,
+            });
+        }
     }
 }
 
@@ -836,6 +844,7 @@ static void showErrorMessage(const char* materialName, filament::Variant variant
             break;
         case TargetApi::WEBGPU:
             targetApiString = "WebGPU.\n";
+            break;
         case TargetApi::ALL:
             assert(0); // Unreachable.
             break;
@@ -879,6 +888,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     std::vector<TextEntry> essl1Entries;
     std::vector<BinaryEntry> spirvEntries;
     std::vector<TextEntry> metalEntries;
+    std::vector<TextEntry> wgslEntries;
     LineDictionary textDictionary;
     BlobDictionary spirvDictionary;
     // End: must be protected by lock
@@ -907,8 +917,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
         // Metal Shading Language is cross-compiled from Vulkan.
         const bool targetApiNeedsSpirv =
-                (targetApi == TargetApi::VULKAN || targetApi == TargetApi::METAL);
+                (targetApi == TargetApi::VULKAN || targetApi == TargetApi::METAL || targetApi == TargetApi::WEBGPU);
         const bool targetApiNeedsMsl = targetApi == TargetApi::METAL;
+        const bool targetApiNeedsWgsl = targetApi == TargetApi::WEBGPU;
         const bool targetApiNeedsGlsl = targetApi == TargetApi::OPENGL;
 
         // Set when a job fails
@@ -923,21 +934,26 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 // TODO: avoid allocations when not required
                 std::vector<uint32_t> spirv;
                 std::string msl;
+                std::string wgsl;
 
                 std::vector<uint32_t>* pSpirv = targetApiNeedsSpirv ? &spirv : nullptr;
                 std::string* pMsl = targetApiNeedsMsl ? &msl : nullptr;
+                std::string* pWgsl = targetApiNeedsWgsl ? &wgsl : nullptr;
 
                 TextEntry glslEntry{};
                 BinaryEntry spirvEntry{};
                 TextEntry metalEntry{};
+                TextEntry wgslEntry{};
 
                 glslEntry.shaderModel  = params.shaderModel;
                 spirvEntry.shaderModel = params.shaderModel;
                 metalEntry.shaderModel = params.shaderModel;
+                wgslEntry.shaderModel = params.shaderModel;
 
                 glslEntry.variant  = v.variant;
                 spirvEntry.variant = v.variant;
                 metalEntry.variant = v.variant;
+                wgslEntry.variant = v.variant;
 
                 // Generate raw shader code.
                 // The quotes in Google-style line directives cause problems with certain drivers. These
@@ -1006,7 +1022,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     config.glsl.subpassInputToColorLocation.emplace_back(0, 0);
                 }
 
-                bool const ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl);
+                bool const ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl, pWgsl);
                 if (!ok) {
                     showErrorMessage(mMaterialName.c_str_safe(), v.variant, targetApi, v.stage,
                                      featureLevel, shader);
@@ -1033,8 +1049,13 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
 
                 switch (targetApi) {
-                    // TODO: Handle webgpu here
                     case TargetApi::WEBGPU:
+                        assert(!spirv.empty());
+                        assert(wgsl.length() > 0);
+                        wgslEntry.stage = v.stage;
+                        wgslEntry.shader = wgsl;
+                        wgslEntries.push_back(wgslEntry);
+                        break;
                     case TargetApi::ALL:
                         // should never happen
                         break;
@@ -1096,6 +1117,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     std::sort(essl1Entries.begin(), essl1Entries.end(), compare);
     std::sort(spirvEntries.begin(), spirvEntries.end(), compare);
     std::sort(metalEntries.begin(), metalEntries.end(), compare);
+    std::sort(wgslEntries.begin(), wgslEntries.end(), compare);
 
     // Generate the dictionaries.
     for (const auto& s : glslEntries) {
@@ -1109,6 +1131,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         s.dictionaryIndex = spirvDictionary.addBlob(spirv);
     }
     for (const auto& s : metalEntries) {
+        textDictionary.addText(s.shader);
+    }
+    for (const auto& s : wgslEntries) {
         textDictionary.addText(s.shader);
     }
 
@@ -1139,6 +1164,12 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     if (!metalEntries.empty()) {
         container.push<MaterialTextChunk>(std::move(metalEntries),
                 dictionaryChunk.getDictionary(), ChunkType::MaterialMetal);
+    }
+
+    // Emit WGSL chunk (MaterialTextChunk).
+    if (!wgslEntries.empty()) {
+        container.push<MaterialTextChunk>(std::move(wgslEntries),
+                dictionaryChunk.getDictionary(), ChunkType::MaterialWgsl);
     }
 
     return true;

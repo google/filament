@@ -41,6 +41,13 @@ struct MaterialRecord {
     VariantList activeVariants;
 };
 
+// Matches DriverEnums' ShaderModel
+enum class DbgShaderModel {
+    MOBILE  = 1,    //!< Mobile level functionality
+    DESKTOP = 2,    //!< Desktop level functionality
+    MATINFO = 10,   //!< To indicate debug server is running from matinfo
+};
+
 /**
  * Server-side material debugger.
  *
@@ -52,7 +59,8 @@ public:
     static std::string_view const kSuccessHeader;
     static std::string_view const kErrorHeader;
 
-    DebugServer(backend::Backend backend, backend::ShaderLanguage shaderLanguage, int port);
+    DebugServer(backend::Backend backend, backend::ShaderLanguage shaderLanguage,
+            DbgShaderModel perferredShaderModel, int port);
     ~DebugServer();
 
     /**
@@ -85,10 +93,13 @@ public:
     bool isReady() const { return mServer; }
 
 private:
+    // called from ApiHandler
     MaterialRecord const* getRecord(const MaterialKey& key) const;
 
+    // called from ApiHandler
     void updateActiveVariants();
 
+    // called from ApiHandler
     /**
      *  Replaces the entire content of a particular shader variant. The given shader index uses the
      *  same ordering that the variants have within the package.
@@ -96,8 +107,9 @@ private:
     bool handleEditCommand(const MaterialKey& mat, backend::Backend api, int shaderIndex,
             const char* newShaderContent, size_t newShaderLength);
 
-    const backend::Backend mBackend;
-    const backend::ShaderLanguage mShaderLanguage;
+    backend::Backend const mBackend;
+    backend::ShaderLanguage const mShaderLanguage;
+    DbgShaderModel const mPreferredShaderModel;
 
     CivetServer* mServer;
 

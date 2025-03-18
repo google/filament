@@ -403,11 +403,12 @@ void FMaterial::terminate(FEngine& engine) {
                     << "destroying material \"" << this->getName().c_str_safe() << "\" but "
                     << pos->second.size() << " instances still alive.";
         } else {
-            utils::slog.e << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                          << pos->second.size() << " instances still alive.";
+            if (UTILS_UNLIKELY(!pos->second.empty())) {
+                slog.e << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                              << pos->second.size() << " instances still alive." << io::endl;
+            }
         }
     }
-
 
 #if FILAMENT_ENABLE_MATDBG
     // Unregister the material with matdbg.

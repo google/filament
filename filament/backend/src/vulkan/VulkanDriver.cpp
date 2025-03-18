@@ -554,13 +554,45 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
    texture.inc();
 }
 
-void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th,
-        backend::SamplerType target,  backend::TextureFormat format,
-        uint32_t width, uint32_t height, backend::TextureUsage usage,
+void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::SamplerType target,
+        backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         Platform::ExternalImageHandleRef externalImage) {
     FVK_SYSTRACE_SCOPE();
+    const auto& metadata = mPlatform->getExternalImageMetadata(externalImage);
+    if (metadata.isProtected) {
+        usage |= backend::TextureUsage::PROTECTED;
+    }
 
-    // FIXME: implement createTextureExternalImage2R
+    VkImageUsageFlags vkUsage = metadata.usage;
+    if (any(usage & TextureUsage::BLIT_SRC)) {
+        vkUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    if (any(usage & (TextureUsage::BLIT_DST & TextureUsage::UPLOADABLE))) {
+        vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+
+    assert_invariant(width == metadata.width);
+    assert_invariant(height == metadata.height);
+    assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
+
+    VkMemoryPropertyFlags const requiredMemoryFlags = any(usage & TextureUsage::UPLOADABLE)
+                                                              ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                                                              : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    uint32_t const memoryTypeIndex =
+            mContext.selectMemoryType(metadata.memoryTypeBits, requiredMemoryFlags);
+    FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex != VK_MAX_MEMORY_TYPES)
+            << "failed to find a valid memory type for external image memory.";
+
+    const auto& data =
+            mPlatform->createExternalImageData(externalImage, metadata, memoryTypeIndex, vkUsage);
+
+    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
+            mAllocator, &mResourceManager, &mCommands, data.first, data.second, metadata.format,
+            metadata.samples, metadata.width, metadata.height, metadata.layerCount, usage,
+            mStagePool);
+
+    texture.inc();
 }
 
 void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::SamplerType target,
@@ -568,22 +600,7 @@ void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::Sa
         void* externalImage) {
     FVK_SYSTRACE_SCOPE();
 
-    const auto& metadata = mPlatform->getExternalImageMetadata(externalImage);
-    if (metadata.isProtected) {
-        usage |= backend::TextureUsage::PROTECTED;
-    }
-
-    assert_invariant(width == metadata.width);
-    assert_invariant(height == metadata.height);
-    assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
-
-    const auto& data = mPlatform->createExternalImage(externalImage, metadata);
-
-    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
-        mAllocator, &mResourceManager, &mCommands, data.first, data.second, metadata.format,
-        1, metadata.width, metadata.height, /*depth=*/1, usage, mStagePool);
-
-    texture.inc();
+    // not supported in this backend
 }
 
 void VulkanDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
@@ -907,7 +924,7 @@ Handle<HwStream> VulkanDriver::createStreamAcquired() {
     return {};
 }
 
-void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
+void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math::mat3f& transform,
         CallbackHandler* handler, StreamCallback cb, void* userData) {
 }
 
@@ -1130,6 +1147,16 @@ size_t VulkanDriver::getMaxUniformBufferSize() {
     return 32768;
 }
 
+size_t VulkanDriver::getMaxTextureSize(SamplerType) {
+    // TODO: return the actual size instead of hardcoded value
+    return 2048;
+}
+
+size_t VulkanDriver::getMaxArrayTextureLayers() {
+    // TODO: return the actual size instead of hardcoded value
+    return 256;
+}
+
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
     auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
@@ -1146,6 +1173,10 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     ib->buffer.loadFromCpu(commands.buffer(), p.buffer, byteOffset, p.size);
 
     scheduleDestroy(std::move(p));
+}
+
+void VulkanDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh, BufferObjectStreamDescriptor&& streams) {
+    // Noop
 }
 
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
@@ -1262,10 +1293,9 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
             mBlitter.blit(VK_FILTER_LINEAR, dst, dstOffsets, src, srcOffsets);
         }
 
-        level++;
         srcw = dstw;
         srch = dsth;
-    } while ((srcw > 1 || srch > 1) && level < t->levels);
+    } while ((srcw > 1 || srch > 1) && ++level < t->levels - 1);
 }
 
 void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,

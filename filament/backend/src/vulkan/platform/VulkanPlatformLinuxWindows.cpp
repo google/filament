@@ -85,14 +85,27 @@ using namespace bluevk;
 namespace filament::backend {
 
 VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
-        void* externalImage, VkDevice device) {
+        ExternalImageHandleRef externalImage, VkDevice device) {
     return {};
 }
 
-VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage,
-        VkDevice device, const VkAllocationCallbacks* allocator,
-        const ExternalImageMetadata& metadata) {
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageDataImpl(
+        ExternalImageHandleRef externalImage, VkDevice device,
+        const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex, VkImageUsageFlags usage) {
     return {};
+}
+
+VkSampler VulkanPlatform::createExternalSamplerImpl(VkDevice device,
+    SamplerYcbcrConversion chroma,
+    SamplerParams sampler,
+    uint32_t internalFormat) {
+    return VK_NULL_HANDLE;
+}
+
+VkImageView VulkanPlatform::createExternalImageViewImpl(VkDevice device,
+        SamplerYcbcrConversion chroma, uint32_t internalFormat, VkImage image,
+        VkImageSubresourceRange range, VkImageViewType viewType, VkComponentMapping swizzle) {
+    return VK_NULL_HANDLE;
 }
 
 VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {

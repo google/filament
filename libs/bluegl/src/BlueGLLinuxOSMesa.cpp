@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-#include <GL/gl.h>
 #include <dlfcn.h>
 #include <string.h>
+
+#include <osmesa.h>
 
 namespace bluegl {
 
 namespace {
 using ProcAddressFunc = void*(*)(char const* funcName);
 }
+
+// This is to ensure that linking during compilation will not fail even if
+// OSMesaGetProcAddress is not linked.
+__attribute__((weak)) OSMESAproc OSMesaGetProcAddress(char const*);
 
 struct Driver {
     ProcAddressFunc OSMesaGetProcAddress;
@@ -31,7 +36,7 @@ struct Driver {
 
 bool initBinder() {
     constexpr char const* libraryNames[] = {"libOSMesa.so", "libosmesa.so"};
-    for (char const* name : libraryNames) {
+    for (char const* name: libraryNames) {
         g_driver.library = dlopen(name, RTLD_GLOBAL | RTLD_NOW);
         if (g_driver.library) {
             break;
@@ -43,6 +48,10 @@ bool initBinder() {
     } else {
         g_driver.OSMesaGetProcAddress =
                 (ProcAddressFunc) dlsym(g_driver.library, "OSMesaGetProcAddress");
+    }
+
+    if (!g_driver.OSMesaGetProcAddress) {
+        g_driver.OSMesaGetProcAddress = (ProcAddressFunc) OSMesaGetProcAddress;
     }
 
     return g_driver.OSMesaGetProcAddress;

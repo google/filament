@@ -339,7 +339,7 @@ DECL_DRIVER_API_N(destroyDescriptorSet,         backend::DescriptorSetHandle, ds
 DECL_DRIVER_API_SYNCHRONOUS_0(void, terminate)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::StreamHandle, createStreamNative, void*, stream)
 DECL_DRIVER_API_SYNCHRONOUS_0(backend::StreamHandle, createStreamAcquired)
-DECL_DRIVER_API_SYNCHRONOUS_N(void, setAcquiredImage, backend::StreamHandle, stream, void*, image, backend::CallbackHandler*, handler, backend::StreamCallback, cb, void*, userData)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, setAcquiredImage, backend::StreamHandle, stream, void*, image, const math::mat3f&, transform, backend::CallbackHandler*, handler, backend::StreamCallback, cb, void*, userData)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setStreamDimensions, backend::StreamHandle, stream, uint32_t, width, uint32_t, height)
 DECL_DRIVER_API_SYNCHRONOUS_N(int64_t, getStreamTimestamp, backend::StreamHandle, stream)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, updateStreams, backend::DriverApi*, driver)
@@ -362,6 +362,8 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedTexturesSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthClampSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
+DECL_DRIVER_API_SYNCHRONOUS_N(size_t, getMaxTextureSize, backend::SamplerType, target)
+DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxArrayTextureLayers)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage2, backend::Platform::ExternalImageHandleRef, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
@@ -388,6 +390,10 @@ DECL_DRIVER_API_N(updateBufferObject,
         backend::BufferObjectHandle, ibh,
         backend::BufferDescriptor&&, data,
         uint32_t, byteOffset)
+
+DECL_DRIVER_API_N(registerBufferObjectStreams,
+        backend::BufferObjectHandle, ibh,
+        backend::BufferObjectStreamDescriptor&&, streams)
 
 DECL_DRIVER_API_N(updateBufferObjectUnsynchronized,
         backend::BufferObjectHandle, ibh,

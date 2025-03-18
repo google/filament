@@ -154,7 +154,14 @@ public:
 #if FILAMENT_ENABLE_MATDBG
         assert_invariant((size_t)variant.key < VARIANT_COUNT);
         std::unique_lock<utils::Mutex> lock(mActiveProgramsLock);
-        mActivePrograms.set(variant.key);
+        if (getMaterialDomain() == MaterialDomain::SURFACE) {
+            auto vert = Variant::filterVariantVertex(variant);
+            auto frag = Variant::filterVariantFragment(variant);
+            mActivePrograms.set(vert.key);
+            mActivePrograms.set(frag.key);
+        } else {
+            mActivePrograms.set(variant.key);
+        }
         lock.unlock();
 
         if (isSharedVariant(variant)) {

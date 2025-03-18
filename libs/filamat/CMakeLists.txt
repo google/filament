@@ -85,6 +85,10 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET} backend_headers shaders filabridge utils smol-v)
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    target_link_libraries(${TARGET} libtint)
+endif ()
+
 # We are being naughty and accessing private headers here
 # For spirv-tools, we're just following glslang's example
 target_include_directories(${TARGET} PRIVATE ${spirv-tools_SOURCE_DIR}/include)
@@ -139,6 +143,12 @@ combine_static_libs(filamat "${FILAMAT_COMBINED_OUTPUT}" "${FILAMAT_DEPS}")
 set(FILAMAT_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}filamat${CMAKE_STATIC_LIBRARY_SUFFIX})
 install(FILES "${FILAMAT_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${FILAMAT_LIB_NAME})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
+
+# Need to install libtint for filamat on Android.
+# See libs/filamat/CMakeLists.txt and android/filamat-android/CMakeLists.txt.
+if (ANDROID)
+   target_link_libraries(${TARGET} libtint_combined)
+endif()
 
 # ==================================================================================================
 # Tests

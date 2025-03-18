@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_PLATFORMS_VULKANPLATFORM_H
 
 #include <backend/Platform.h>
+#include <backend/DriverEnums.h>
 
 #include <bluevk/BlueVK.h>
 
@@ -318,6 +319,11 @@ public:
         uint32_t layers;
 
         /**
+         * The numbers of samples per texel
+         */
+        VkSampleCountFlagBits samples;
+
+        /**
          * The format of the external image
          */
         VkFormat format;
@@ -347,18 +353,37 @@ public:
          */
         uint32_t memoryTypeBits;
     };
-    virtual ExternalImageMetadata getExternalImageMetadata(void* externalImage);
+    virtual ExternalImageMetadata getExternalImageMetadata(ExternalImageHandleRef externalImage);
 
     using ImageData = std::pair<VkImage, VkDeviceMemory>;
-    virtual ImageData createExternalImage(void* externalImage,
-            const ExternalImageMetadata& metadata);
+    virtual ImageData createExternalImageData(ExternalImageHandleRef externalImage,
+            const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex,
+            VkImageUsageFlags usage);
+
+    virtual VkSampler createExternalSampler(SamplerYcbcrConversion chroma,
+            SamplerParams sampler,
+            uint32_t internalFormat);
+
+    virtual VkImageView createExternalImageView(SamplerYcbcrConversion chroma,
+            uint32_t internalFormat, VkImage image, VkImageSubresourceRange range,
+            VkImageViewType viewType, VkComponentMapping swizzle);
 
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
-    static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage,
+
+    static ExternalImageMetadata getExternalImageMetadataImpl(ExternalImageHandleRef externalImage,
             VkDevice device);
-    static ImageData createExternalImageImpl(void* externalImage, VkDevice device,
-            const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata);
+
+    static ImageData createExternalImageDataImpl(ExternalImageHandleRef externalImage,
+            VkDevice device, const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex,
+            VkImageUsageFlags usage);
+    static VkSampler createExternalSamplerImpl(VkDevice device,
+            SamplerYcbcrConversion chroma, SamplerParams sampler,
+            uint32_t internalFormat);
+    static VkImageView createExternalImageViewImpl(VkDevice device,
+            SamplerYcbcrConversion chroma, uint32_t internalFormat, VkImage image,
+            VkImageSubresourceRange range, VkImageViewType viewType,
+            VkComponentMapping swizzle);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
