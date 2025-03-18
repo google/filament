@@ -246,12 +246,19 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 
     // Determine if we can use the transient usage flag combined with lazily allocated memory.
     const bool useTransientAttachment =
-        // Lazily allocated memory is available.
-        context.isLazilyAllocatedMemorySupported() &&
-        // Usage consists of attachment flags only.
-        none(tusage & ~TextureUsage::ALL_ATTACHMENTS) &&
-        // Usage contains at least one attachment flag.
-        any(tusage & TextureUsage::ALL_ATTACHMENTS);
+            // Lazily allocated memory is available.
+            context.isLazilyAllocatedMemorySupported() &&
+            // Usage consists of attachment flags only.
+            none(tusage & ~TextureUsage::ALL_ATTACHMENTS) &&
+            // Usage contains at least one attachment flag.
+            any(tusage & TextureUsage::ALL_ATTACHMENTS) &&
+            // Depth resolve cannot use transient attachment because it uses a custom shader.
+            // TODO: see VulkanDriver::isDepthStencilResolveSupported() to know when to remove this
+            // restriction.
+            // Note that the custom shader does not resolve stencil. We do need to move to vk 1.2
+            // and above to be able to support stencil resolve (along with depth).
+            !(any(usage & TextureUsage::DEPTH_ATTACHMENT) && samples > 1);
+
     mState->mIsTransientAttachment = useTransientAttachment;
 
     const VkImageUsageFlags transientFlag =
