@@ -1916,7 +1916,7 @@ spv_result_t CheckComponentDecoration(ValidationState_t& vstate,
     if (!vstate.IsIntScalarOrVectorType(type_id) &&
         !vstate.IsFloatScalarOrVectorType(type_id)) {
       return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
-             << vstate.VkErrorID(4924)
+             << vstate.VkErrorID(10583)
              << "Component decoration specified for type "
              << vstate.getIdName(type_id) << " that is not a scalar or vector";
     }
@@ -2083,6 +2083,204 @@ spv_result_t CheckDecorationsFromDecoration(ValidationState_t& vstate) {
   return SPV_SUCCESS;
 }
 
+bool AllowsLayout(ValidationState_t& vstate, const spv::StorageClass sc) {
+  switch (sc) {
+    case spv::StorageClass::StorageBuffer:
+    case spv::StorageClass::Uniform:
+    case spv::StorageClass::PhysicalStorageBuffer:
+    case spv::StorageClass::PushConstant:
+      // Always explicitly laid out.
+      return true;
+    case spv::StorageClass::UniformConstant:
+      return false;
+    case spv::StorageClass::Workgroup:
+      return vstate.HasCapability(
+          spv::Capability::WorkgroupMemoryExplicitLayoutKHR);
+    case spv::StorageClass::Function:
+    case spv::StorageClass::Private:
+      return vstate.version() <= SPV_SPIRV_VERSION_WORD(1, 4);
+    case spv::StorageClass::Input:
+    case spv::StorageClass::Output:
+      // Block is used generally and mesh shaders use Offset.
+      return true;
+    default:
+      // TODO: Some storage classes in ray tracing use explicit layout
+      // decorations, but it is not well documented which. For now treat other
+      // storage classes as allowed to be laid out. See Vulkan internal issue
+      // 4192.
+      return true;
+  }
+}
+
+bool UsesExplicitLayout(ValidationState_t& vstate, uint32_t type_id,
+                        std::unordered_map<uint32_t, bool>& cache) {
+  if (type_id == 0) {
+    return false;
+  }
+
+  if (cache.count(type_id)) {
+    return cache[type_id];
+  }
+
+  bool res = false;
+  const auto type_inst = vstate.FindDef(type_id);
+  if (type_inst->opcode() == spv::Op::OpTypeStruct ||
+      type_inst->opcode() == spv::Op::OpTypeArray ||
+      type_inst->opcode() == spv::Op::OpTypeRuntimeArray ||
+      type_inst->opcode() == spv::Op::OpTypePointer ||
+      type_inst->opcode() == spv::Op::OpTypeUntypedPointerKHR) {
+    const auto& id_decs = vstate.id_decorations();
+    const auto iter = id_decs.find(type_id);
+    if (iter != id_decs.end()) {
+      bool allowLayoutDecorations = false;
+      if (type_inst->opcode() == spv::Op::OpTypePointer) {
+        const auto sc = type_inst->GetOperandAs<spv::StorageClass>(1);
+        allowLayoutDecorations = AllowsLayout(vstate, sc);
+      }
+      if (!allowLayoutDecorations) {
+        res = std::any_of(
+            iter->second.begin(), iter->second.end(), [](const Decoration& d) {
+              return d.dec_type() == spv::Decoration::Block ||
+                     d.dec_type() == spv::Decoration::BufferBlock ||
+                     d.dec_type() == spv::Decoration::Offset ||
+                     d.dec_type() == spv::Decoration::ArrayStride ||
+                     d.dec_type() == spv::Decoration::MatrixStride;
+            });
+      }
+    }
+
+    if (!res) {
+      switch (type_inst->opcode()) {
+        case spv::Op::OpTypeStruct:
+          for (uint32_t i = 1; !res && i < type_inst->operands().size(); i++) {
+            res = UsesExplicitLayout(
+                vstate, type_inst->GetOperandAs<uint32_t>(i), cache);
+          }
+          break;
+        case spv::Op::OpTypeArray:
+        case spv::Op::OpTypeRuntimeArray:
+          res = UsesExplicitLayout(vstate, type_inst->GetOperandAs<uint32_t>(1),
+                                   cache);
+          break;
+        case spv::Op::OpTypePointer: {
+          const auto sc = type_inst->GetOperandAs<spv::StorageClass>(1);
+          if (!AllowsLayout(vstate, sc)) {
+            res = UsesExplicitLayout(
+                vstate, type_inst->GetOperandAs<uint32_t>(2), cache);
+          }
+        }
+        default:
+          break;
+      }
+    }
+  }
+
+  cache[type_id] = res;
+  return res;
+}
+
+spv_result_t CheckInvalidVulkanExplicitLayout(ValidationState_t& vstate) {
+  if (!spvIsVulkanEnv(vstate.context()->target_env)) {
+    return SPV_SUCCESS;
+  }
+
+  std::unordered_map<uint32_t, bool> cache;
+  for (const auto& inst : vstate.ordered_instructions()) {
+    const auto type_id = inst.type_id();
+    const auto type_inst = vstate.FindDef(type_id);
+    uint32_t fail_id = 0;
+    // Variables are the main place to check for improper decorations, but some
+    // untyped pointer instructions must also be checked since those types may
+    // never be instantiated by a variable. Unlike verifying a valid layout,
+    // physical storage buffer does not need checked here since it is always
+    // explicitly laid out.
+    switch (inst.opcode()) {
+      case spv::Op::OpVariable:
+      case spv::Op::OpUntypedVariableKHR: {
+        const auto sc = inst.GetOperandAs<spv::StorageClass>(2);
+        auto check_id = type_id;
+        if (inst.opcode() == spv::Op::OpUntypedVariableKHR) {
+          if (inst.operands().size() > 3) {
+            check_id = inst.GetOperandAs<uint32_t>(3);
+          }
+        }
+        if (!AllowsLayout(vstate, sc) &&
+            UsesExplicitLayout(vstate, check_id, cache)) {
+          fail_id = check_id;
+        }
+        break;
+      }
+      case spv::Op::OpUntypedAccessChainKHR:
+      case spv::Op::OpUntypedInBoundsAccessChainKHR:
+      case spv::Op::OpUntypedPtrAccessChainKHR:
+      case spv::Op::OpUntypedInBoundsPtrAccessChainKHR: {
+        // Check both the base type and return type. The return type may have an
+        // invalid array stride.
+        const auto sc = type_inst->GetOperandAs<spv::StorageClass>(1);
+        const auto base_type_id = inst.GetOperandAs<uint32_t>(2);
+        if (!AllowsLayout(vstate, sc)) {
+          if (UsesExplicitLayout(vstate, base_type_id, cache)) {
+            fail_id = base_type_id;
+          } else if (UsesExplicitLayout(vstate, type_id, cache)) {
+            fail_id = type_id;
+          }
+        }
+        break;
+      }
+      case spv::Op::OpUntypedArrayLengthKHR: {
+        // Check the data type.
+        const auto ptr_ty_id =
+            vstate.FindDef(inst.GetOperandAs<uint32_t>(3))->type_id();
+        const auto ptr_ty = vstate.FindDef(ptr_ty_id);
+        const auto sc = ptr_ty->GetOperandAs<spv::StorageClass>(1);
+        const auto base_type_id = inst.GetOperandAs<uint32_t>(2);
+        if (!AllowsLayout(vstate, sc) &&
+            UsesExplicitLayout(vstate, base_type_id, cache)) {
+          fail_id = base_type_id;
+        }
+        break;
+      }
+      case spv::Op::OpLoad: {
+        const auto ptr_id = inst.GetOperandAs<uint32_t>(2);
+        const auto ptr_type = vstate.FindDef(vstate.FindDef(ptr_id)->type_id());
+        if (ptr_type->opcode() == spv::Op::OpTypeUntypedPointerKHR) {
+          // For untyped pointers check the return type for an invalid layout.
+          const auto sc = ptr_type->GetOperandAs<spv::StorageClass>(1);
+          if (!AllowsLayout(vstate, sc) &&
+              UsesExplicitLayout(vstate, type_id, cache)) {
+            fail_id = type_id;
+          }
+        }
+        break;
+      }
+      case spv::Op::OpStore: {
+        const auto ptr_id = inst.GetOperandAs<uint32_t>(1);
+        const auto ptr_type = vstate.FindDef(vstate.FindDef(ptr_id)->type_id());
+        if (ptr_type->opcode() == spv::Op::OpTypeUntypedPointerKHR) {
+          // For untyped pointers, check the type of the data operand for an
+          // invalid layout.
+          const auto sc = ptr_type->GetOperandAs<spv::StorageClass>(1);
+          const auto data_type_id = vstate.GetOperandTypeId(&inst, 2);
+          if (!AllowsLayout(vstate, sc) &&
+              UsesExplicitLayout(vstate, data_type_id, cache)) {
+            fail_id = inst.GetOperandAs<uint32_t>(2);
+          }
+        }
+        break;
+      }
+      default:
+        break;
+    }
+    if (fail_id != 0) {
+      return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
+             << "Invalid explicit layout decorations on type for operand "
+             << vstate.getIdName(fail_id);
+    }
+  }
+
+  return SPV_SUCCESS;
+}
+
 }  // namespace
 
 spv_result_t ValidateDecorations(ValidationState_t& vstate) {
@@ -2094,6 +2292,7 @@ spv_result_t ValidateDecorations(ValidationState_t& vstate) {
   if (auto error = CheckVulkanMemoryModelDeprecatedDecorations(vstate))
     return error;
   if (auto error = CheckDecorationsFromDecoration(vstate)) return error;
+  if (auto error = CheckInvalidVulkanExplicitLayout(vstate)) return error;
   return SPV_SUCCESS;
 }
 

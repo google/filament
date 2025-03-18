@@ -1423,16 +1423,6 @@ INSTANTIATE_TEST_SUITE_P(
                           "to be used only with Fragment execution model"))));
 
 INSTANTIATE_TEST_SUITE_P(
-    SampleMaskWrongStorageClass,
-    ValidateVulkanCombineBuiltInExecutionModelDataTypeResult,
-    Combine(Values("SampleMask"), Values("Fragment"), Values("Workgroup"),
-            Values("%u32arr2"), Values("VUID-SampleMask-SampleMask-04358"),
-            Values(TestResult(
-                SPV_ERROR_INVALID_DATA,
-                "Vulkan spec allows BuiltIn SampleMask to be only used for "
-                "variables with Input or Output storage class"))));
-
-INSTANTIATE_TEST_SUITE_P(
     SampleMaskNotArray,
     ValidateVulkanCombineBuiltInExecutionModelDataTypeResult,
     Combine(Values("SampleMask"), Values("Fragment"), Values("Input"),

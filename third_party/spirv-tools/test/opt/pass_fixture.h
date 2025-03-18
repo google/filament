@@ -35,6 +35,26 @@
 namespace spvtools {
 namespace opt {
 
+inline std::ostream& operator<<(std::ostream& os,
+                                const effcee::Result::Status ers) {
+  switch (ers) {
+    case effcee::Result::Status::Ok:
+      return os << "effcee::Result::Status::Ok";
+    case effcee::Result::Status::Fail:
+      return os << "effcee::Result::Status::Fail";
+    case effcee::Result::Status::BadOption:
+      return os << "effcee::Result::Status::BadOption";
+    case effcee::Result::Status::NoRules:
+      return os << "effcee::Result::Status::NoRules";
+    case effcee::Result::Status::BadRule:
+      return os << "effcee::Result::Status::BadRule";
+    default:
+      break;
+  }
+  return os << "(invalid effcee::Result::Status " << static_cast<unsigned>(ers)
+            << ")";
+}
+
 // Template class for testing passes. It contains some handy utility methods for
 // running passes and checking results.
 //

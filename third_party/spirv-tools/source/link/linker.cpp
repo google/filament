@@ -676,8 +676,10 @@ spv_result_t RemoveLinkageSpecificInstructions(
       if (inst->opcode() == spv::Op::OpDecorate &&
           spv::Decoration(inst->GetSingleWordOperand(1u)) ==
               spv::Decoration::LinkageAttributes &&
-          spv::LinkageType(inst->GetSingleWordOperand(3u)) ==
-              spv::LinkageType::Export) {
+          (spv::LinkageType(inst->GetSingleWordOperand(3u)) ==
+               spv::LinkageType::Export ||
+           spv::LinkageType(inst->GetSingleWordOperand(3u)) ==
+               spv::LinkageType::LinkOnceODR)) {
         linked_context->KillInst(&*inst);
       }
     }

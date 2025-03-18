@@ -535,6 +535,7 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
         //TODO remove this if block once combined image sampler conversion works.
         if (tintRead.Diagnostics().Str().rfind("error: WGSL does not support combined image-samplers") != std::string::npos) {
             slog.w << "This tint reader error is currently ignored during WebGPU bringup: " << tintRead.Diagnostics().Str() << io::endl;
+            return false;
         }
         else {
             slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
@@ -918,6 +919,10 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
         optimizer->RegisterPass(CreateSimplificationPass());
         optimizer->RegisterPass(CreateRedundancyEliminationPass());
         optimizer->RegisterPass(CreateAggressiveDCEPass());
+    }
+    if (config.targetApi == MaterialBuilder::TargetApi::WEBGPU) {
+        optimizer->RegisterPass(CreateSplitCombinedImageSamplerPass());
+        optimizer->RegisterPass(CreateResolveBindingConflictsPass());
     }
 
     return optimizer;
