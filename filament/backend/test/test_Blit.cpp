@@ -19,6 +19,7 @@
 #include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "Shader.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
 #include <utils/Hash.h>
@@ -40,47 +41,13 @@ using namespace filament::backend;
 using namespace filament::math;
 using namespace utils;
 
-struct MaterialParams {
-    float4 color;
-    float4 scale;
-};
-
 class BlitTest : public BackendTest {
 public:
     BlitTest() : mCleanup(getDriverApi()) {}
 
 protected:
-    Shader createShader();
-
     Cleanup mCleanup;
 };
-
-static const char* const triangleVs = R"(#version 450 core
-layout(location = 0) in vec4 mesh_position;
-layout(binding = 0, set = 1) uniform Params { highp vec4 color; highp vec4 scale; } params;
-void main() {
-    gl_Position = vec4((mesh_position.xy + 0.5) * params.scale.xy, params.scale.z, 1.0);
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
-    gl_Position.y = -gl_Position.y;
-#endif
-})";
-
-static const char* const triangleFs = R"(#version 450 core
-precision mediump int; precision highp float;
-layout(location = 0) out vec4 fragColor;
-layout(binding = 0, set = 1) uniform Params { highp vec4 color; highp vec4 scale; } params;
-void main() {
-    fragColor = params.color;
-})";
-
-Shader BlitTest::createShader() {
-    return Shader(getDriverApi(), mCleanup, ShaderConfig{
-            .vertexShader = triangleVs,
-            .fragmentShader = triangleFs,
-            .uniformNames = { "Params" },
-    });
-}
 
 static uint32_t toUintColor(float4 color) {
     color = saturate(color);
@@ -313,7 +280,11 @@ TEST_F(BlitTest, ColorResolve) {
     constexpr auto kColorTexFormat = TextureFormat::RGBA8;
     constexpr int kSampleCount = 4;
 
-    Shader shader = createShader();
+    Shader shader = SharedShaders::makeShader(api, mCleanup, ShaderRequest{
+            .mVertexType = VertexShaderType::Simple,
+            .mFragmentType = FragmentShaderType::SolidColored,
+            .mUniformType = ShaderUniformType::Simple,
+    });
 
     // Create a VertexBuffer, IndexBuffer, and RenderPrimitive.
     TrianglePrimitive const triangle(api);
@@ -356,14 +327,15 @@ TEST_F(BlitTest, ColorResolve) {
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
     state.rasterState.culling = CullingMode::NONE;
 
-    auto ubuffer = mCleanup.add(api.createBufferObject(sizeof(MaterialParams),
+    auto ubuffer = mCleanup.add(api.createBufferObject(sizeof(SimpleMaterialParams),
             BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
     // Draw red triangle into srcRenderTarget.
-    shader.uploadUniform(api, ubuffer, MaterialParams{
-            .color = float4(1, 0, 0, 1),
-            .scale = float4(1, 1, 0.5, 0),
+    shader.uploadUniform(api, ubuffer, SimpleMaterialParams{
+        .color = float4(1, 0, 0, 1),
+        .scaleMinusOne = float4(0, 0, -0.5, 0),
+        .offset = float4(0.5, 0.5, 0, 0),
     });
-    shader.bindUniform<MaterialParams>(api, ubuffer);
+    shader.bindUniform<SimpleMaterialParams>(api, ubuffer);
 
     // FIXME: on Metal this triangle is not drawn. Can't understand why.
     {

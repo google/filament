@@ -506,6 +506,7 @@ if (APPLE OR LINUX)
         test/ImageExpectations.cpp
         test/Lifetimes.cpp
         test/Shader.cpp
+        test/SharedShaders.cpp
         test/test_FeedbackLoops.cpp
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp

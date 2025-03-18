@@ -18,14 +18,22 @@
 #define TNT_SHADER_H
 
 #include "Lifetimes.h"
+#include "private/filament/SamplerInterfaceBlock.h"
 
 namespace test {
+
+struct UniformConfig {
+    utils::CString name;
+    // If not specified this will be DescriptorType::UNIFORM_BUFFER
+    std::optional<filament::backend::DescriptorType> type;
+    std::optional<filament::SamplerInterfaceBlock::SamplerInfo> samplerInfo;
+};
 
 // All describing a shader that should be created.
 struct ShaderConfig {
     std::string vertexShader;
     std::string fragmentShader;
-    std::vector<utils::CString> uniformNames;
+    std::vector<UniformConfig> uniforms;
 };
 
 // All values describing a uniform.
@@ -35,6 +43,7 @@ struct ResolvedUniformBindingConfig {
     uint32_t byteOffset;
     filament::backend::descriptor_set_t set;
     filament::backend::descriptor_binding_t binding;
+    std::optional<filament::backend::DescriptorSetHandle> descriptorSet;
 };
 
 // An equivalent to ResolvedUniformBindingConfig with all fields optional.
@@ -46,6 +55,7 @@ struct UniformBindingConfig {
     std::optional<uint32_t> byteOffset;
     std::optional<filament::backend::descriptor_set_t> set;
     std::optional<filament::backend::descriptor_binding_t> binding;
+    std::optional<filament::backend::DescriptorSetHandle> descriptorSet;
 
     template<typename UniformType>
     ResolvedUniformBindingConfig resolve();
@@ -79,12 +89,14 @@ public:
 
     filament::backend::ProgramHandle getProgram() const;
     filament::backend::DescriptorSetLayoutHandle getDescriptorSetLayout() const;
-    filament::backend::DescriptorSetHandle getDescriptorSet() const;
+
+    filament::backend::DescriptorSetHandle createDescriptorSet(
+            filament::backend::DriverApi& api) const;
 
 protected:
+    Cleanup& mCleanup;
     filament::backend::ProgramHandle mProgram;
     filament::backend::DescriptorSetLayoutHandle mDescriptorSetLayout;
-    filament::backend::DescriptorSetHandle mDescriptorSet;
 };
 
 template<typename UniformType>
@@ -95,7 +107,8 @@ ResolvedUniformBindingConfig UniformBindingConfig::resolve() {
             .bufferSize = bufferSize.value_or(resolvedDataSize),
             .byteOffset = byteOffset.value_or(0),
             .set = set.value_or(1),
-            .binding = binding.value_or(0)
+            .binding = binding.value_or(0),
+            .descriptorSet = descriptorSet
     };
 }
 
@@ -120,9 +133,16 @@ void Shader::bindUniform(filament::backend::DriverApi& api,
         UniformBindingConfig config) const {
     auto resolvedConfig = config.resolve<UniformType>();
 
-    api.updateDescriptorSetBuffer(getDescriptorSet(), resolvedConfig.binding, hwBuffer, 0,
+    filament::backend::DescriptorSetHandle descriptorSet;
+    if (resolvedConfig.descriptorSet.has_value()) {
+        descriptorSet = *resolvedConfig.descriptorSet;
+    } else {
+        descriptorSet = createDescriptorSet(api);
+    }
+
+    api.updateDescriptorSetBuffer(descriptorSet, resolvedConfig.binding, hwBuffer, 0,
             resolvedConfig.bufferSize);
-    api.bindDescriptorSet(getDescriptorSet(), resolvedConfig.set, {});
+    api.bindDescriptorSet(descriptorSet, resolvedConfig.set, {});
 }
 
 template<typename UniformType>
