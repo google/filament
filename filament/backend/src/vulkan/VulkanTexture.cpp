@@ -55,63 +55,61 @@ VkComponentMapping composeSwizzle(VkComponentMapping const& prev, VkComponentMap
         VK_COMPONENT_SWIZZLE_A,
     };
 
-    auto const compose = [](VkComponentSwizzle out, VkComponentMapping const& prev,
-                                 uint8_t channelIndex) {
-        // We need to first change all identities to its equivalent channel.
-        if (out == VK_COMPONENT_SWIZZLE_IDENTITY) {
-            out = IDENTITY[channelIndex];
+    auto const compose = [](VkComponentMapping const& prev,
+                                 VkComponentMapping const& next) -> VkComponentMapping {
+        VkComponentSwizzle vals[4] = { next.r, next.g, next.b, next.a };
+        for (auto& out: vals) {
+            switch (out) {
+                case VK_COMPONENT_SWIZZLE_R:
+                    out = prev.r;
+                    break;
+                case VK_COMPONENT_SWIZZLE_G:
+                    out = prev.g;
+                    break;
+                case VK_COMPONENT_SWIZZLE_B:
+                    out = prev.b;
+                    break;
+                case VK_COMPONENT_SWIZZLE_A:
+                    out = prev.a;
+                    break;
+                // Do not modify the value
+                case VK_COMPONENT_SWIZZLE_IDENTITY:
+                case VK_COMPONENT_SWIZZLE_ZERO:
+                case VK_COMPONENT_SWIZZLE_ONE:
+                // Below is not exposed in Vulkan's API, but needs to be there for compilation.
+                case VK_COMPONENT_SWIZZLE_MAX_ENUM:
+                    break;
+            }
         }
-        switch (out) {
-            case VK_COMPONENT_SWIZZLE_R:
-                out = prev.r;
-                break;
-            case VK_COMPONENT_SWIZZLE_G:
-                out = prev.g;
-                break;
-            case VK_COMPONENT_SWIZZLE_B:
-                out = prev.b;
-                break;
-            case VK_COMPONENT_SWIZZLE_A:
-                out = prev.a;
-                break;
-            case VK_COMPONENT_SWIZZLE_IDENTITY:
-            case VK_COMPONENT_SWIZZLE_ZERO:
-            case VK_COMPONENT_SWIZZLE_ONE:
-                return out;
-            // Below is not exposed in Vulkan's API, but needs to be there for compilation.
-            case VK_COMPONENT_SWIZZLE_MAX_ENUM:
-                break;
-        }
-        // If the result correctly corresponds to the identity, just return identity.
-        if (IDENTITY[channelIndex] == out) {
-            return VK_COMPONENT_SWIZZLE_IDENTITY;
-        }
-        return out;
+        return { vals[0], vals[1], vals[2], vals[3] };
     };
 
-    auto const identityToChannel = [](VkComponentSwizzle val, uint8_t channelIndex) {
-        if (val != VK_COMPONENT_SWIZZLE_IDENTITY) {
-            return val;
+    auto const identityToChannel = [](VkComponentMapping const& mapping) -> VkComponentMapping {
+        VkComponentSwizzle vals[4] = { mapping.r, mapping.g, mapping.b, mapping.a };
+        for (uint8_t i = 0; i < 4; i++) {
+            if (vals[i] != VK_COMPONENT_SWIZZLE_IDENTITY) {
+                continue;
+            }
+            vals[i] = IDENTITY[i];
         }
-        return IDENTITY[channelIndex];
+        return { vals[0], vals[1], vals[2], vals[3] };
+    };
+    auto const channelToIdentity = [](VkComponentMapping const& mapping) -> VkComponentMapping {
+        VkComponentSwizzle vals[4] = { mapping.r, mapping.g, mapping.b, mapping.a };
+        for (uint8_t i = 0; i < 4; i++) {
+            if (IDENTITY[i] != vals[i]) {
+                continue;
+            }
+            vals[i] = VK_COMPONENT_SWIZZLE_IDENTITY;
+        }
+        return { vals[0], vals[1], vals[2], vals[3] };
     };
 
     // We make sure all all identities are mapped into respective channels so that actual channel
     // mapping will be passed onto the output.
-    VkComponentMapping const prevExplicit = {
-            identityToChannel(prev.r, 0),
-            identityToChannel(prev.g, 1),
-            identityToChannel(prev.b, 2),
-            identityToChannel(prev.a, 3),
-    };
-
-    // Note that the channel index corresponds to the VkComponentMapping struct layout.
-    return {
-        compose(next.r, prevExplicit, 0),
-        compose(next.g, prevExplicit, 1),
-        compose(next.b, prevExplicit, 2),
-        compose(next.a, prevExplicit, 3),
-    };
+    VkComponentMapping const prevExplicit = identityToChannel(prev);
+    VkComponentMapping const nextExplicit = identityToChannel(next);
+    return channelToIdentity(compose(prevExplicit, nextExplicit));
 }
 
 inline VulkanLayout getDefaultLayoutImpl(TextureUsage usage) {
@@ -152,7 +150,6 @@ SamplerType getSamplerTypeFromDepth(uint32_t const depth) {
 uint8_t getLayerCountFromDepth(uint32_t const depth) {
     return getLayerCount(getSamplerTypeFromDepth(depth), depth);
 }
-
 
 } // anonymous namespace
 
@@ -249,12 +246,19 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 
     // Determine if we can use the transient usage flag combined with lazily allocated memory.
     const bool useTransientAttachment =
-        // Lazily allocated memory is available.
-        context.isLazilyAllocatedMemorySupported() &&
-        // Usage consists of attachment flags only.
-        none(tusage & ~TextureUsage::ALL_ATTACHMENTS) &&
-        // Usage contains at least one attachment flag.
-        any(tusage & TextureUsage::ALL_ATTACHMENTS);
+            // Lazily allocated memory is available.
+            context.isLazilyAllocatedMemorySupported() &&
+            // Usage consists of attachment flags only.
+            none(tusage & ~TextureUsage::ALL_ATTACHMENTS) &&
+            // Usage contains at least one attachment flag.
+            any(tusage & TextureUsage::ALL_ATTACHMENTS) &&
+            // Depth resolve cannot use transient attachment because it uses a custom shader.
+            // TODO: see VulkanDriver::isDepthStencilResolveSupported() to know when to remove this
+            // restriction.
+            // Note that the custom shader does not resolve stencil. We do need to move to vk 1.2
+            // and above to be able to support stencil resolve (along with depth).
+            !(any(usage & TextureUsage::DEPTH_ATTACHMENT) && samples > 1);
+
     mState->mIsTransientAttachment = useTransientAttachment;
 
     const VkImageUsageFlags transientFlag =

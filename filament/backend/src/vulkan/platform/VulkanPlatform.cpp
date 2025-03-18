@@ -989,6 +989,17 @@ VulkanPlatform::ImageData VulkanPlatform::createExternalImageData(
             usage);
 }
 
+VkSampler VulkanPlatform::createExternalSampler(SamplerYcbcrConversion chroma,
+        SamplerParams sampler, uint32_t internalFormat) {
+    return createExternalSamplerImpl(mImpl->mDevice, chroma, sampler, internalFormat);
+}
+
+VkImageView VulkanPlatform::createExternalImageView(SamplerYcbcrConversion chroma,
+        uint32_t internalFormat, VkImage image, VkImageSubresourceRange range,
+        VkImageViewType viewType, VkComponentMapping swizzle) {
+    return createExternalImageViewImpl(mImpl->mDevice, chroma, internalFormat, image, range,
+            viewType, swizzle);
+}
 #undef SWAPCHAIN_RET_FUNC
 
 }// namespace filament::backend
