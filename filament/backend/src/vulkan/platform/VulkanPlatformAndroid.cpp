@@ -22,6 +22,8 @@
 #include "vulkan/VulkanConstants.h"
 
 #include <utils/Panic.h>
+#include "vulkan/utils/Image.h"
+#include "vulkan/utils/Conversion.h"
 
 #include <bluevk/BlueVK.h>
 
@@ -136,7 +138,8 @@ std::pair<VkFormat, VkImageUsageFlags> getVKFormatAndUsage(const AHardwareBuffer
 }
 
 VulkanPlatform::ImageData allocateExternalImage(AHardwareBuffer* buffer, VkDevice device,
-        VulkanPlatform::ExternalImageMetadata const& metadata) {
+        VulkanPlatform::ExternalImageMetadata const& metadata, uint32_t memoryTypeIndex,
+        VkImageUsageFlags usage) {
     VulkanPlatform::ImageData data;
 
     // if external format we need to specifiy it in the allocation
@@ -145,8 +148,8 @@ VulkanPlatform::ImageData allocateExternalImage(AHardwareBuffer* buffer, VkDevic
     const VkExternalFormatANDROID externalFormat = {
         .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
         .pNext = nullptr,
-        .externalFormat = metadata
-                .externalFormat,// pass down the format (external means we don't have it VK defined)
+        // pass down the format (external means we don't have it VK defined)
+        .externalFormat = metadata.externalFormat,
     };
     const VkExternalMemoryImageCreateInfo externalCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
@@ -165,10 +168,8 @@ VulkanPlatform::ImageData allocateExternalImage(AHardwareBuffer* buffer, VkDevic
     };
     imageInfo.mipLevels = 1;
     imageInfo.arrayLayers = metadata.layers;
-    imageInfo.usage = metadata.usage;
-    // In the unprotected case add R/W capabilities
-    if (metadata.isProtected == false)
-        imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    imageInfo.samples = metadata.samples;
+    imageInfo.usage = usage;
 
     VkResult result = vkCreateImage(device, &imageInfo, VKALLOC, &data.first);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
@@ -186,10 +187,12 @@ VulkanPlatform::ImageData allocateExternalImage(AHardwareBuffer* buffer, VkDevic
         .image = data.first,
         .buffer = VK_NULL_HANDLE,
     };
-    VkMemoryAllocateInfo allocInfo = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    VkMemoryAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .pNext = &memoryDedicatedAllocateInfo,
         .allocationSize = metadata.allocationSize,
-        .memoryTypeIndex = metadata.memoryTypeBits};
+        .memoryTypeIndex = memoryTypeIndex,
+    };
     result = vkAllocateMemory(device, &allocInfo, VKALLOC, &data.second);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
             << "vkAllocateMemory failed with error=" << static_cast<int32_t>(result);
@@ -242,10 +245,8 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
         std::tie(metadata.format, metadata.usage) =
                 getVKFormatAndUsage(bufferDesc, fvkExternalImage->sRGB);
     }
-    // In the unprotected case add R/W capabilities
-    if (metadata.isProtected == false) {
-        metadata.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    }
+    
+    metadata.samples = VK_SAMPLE_COUNT_1_BIT;
 
     VkAndroidHardwareBufferFormatPropertiesANDROID formatInfo = {
         .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
@@ -272,14 +273,128 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
 
 VulkanPlatform::ImageData VulkanPlatform::createExternalImageDataImpl(
         ExternalImageHandleRef externalImage, VkDevice device,
-        const ExternalImageMetadata& metadata) {
+        const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex, VkImageUsageFlags usage) {
     auto const* fvkExternalImage =
             static_cast<fvkandroid::ExternalImageVulkanAndroid const*>(externalImage.get());
-    ImageData data = allocateExternalImage(fvkExternalImage->aHardwareBuffer, device, metadata);
+    ImageData data = allocateExternalImage(fvkExternalImage->aHardwareBuffer, device, metadata,
+            memoryTypeIndex, usage);
     VkResult result = vkBindImageMemory(device, data.first, data.second, 0);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkBindImageMemory error=" << static_cast<int32_t>(result);
+        << "vkBindImageMemory error=" << static_cast<int32_t>(result);
     return data;
+}
+
+VkImageView VulkanPlatform::createExternalImageViewImpl(VkDevice device, SamplerYcbcrConversion chroma,
+            uint32_t internalFormat, VkImage image, VkImageSubresourceRange range,
+            VkImageViewType viewType, VkComponentMapping swizzle){
+        VkExternalFormatANDROID externalFormat = {
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
+        .pNext = nullptr,
+        .externalFormat = internalFormat,
+    };
+
+    TextureSwizzle const swizzleArray[] = {chroma.r, chroma.g, chroma.b, chroma.a};
+    VkSamplerYcbcrConversionCreateInfo conversionInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
+        .pNext = &externalFormat,
+        .format = VK_FORMAT_UNDEFINED,
+        .ycbcrModel = fvkutils::getYcbcrModelConversion(chroma.ycbcrModel),
+        .ycbcrRange = fvkutils::getYcbcrRange(chroma.ycbcrRange),
+        .components = fvkutils::getSwizzleMap(swizzleArray),
+        .xChromaOffset = fvkutils::getChromaLocation(chroma.xChromaOffset),
+        .yChromaOffset = fvkutils::getChromaLocation(chroma.yChromaOffset),
+        .chromaFilter = fvkutils::getFilter(chroma.chromaFilter),
+    };
+    VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
+    VkResult result = vkCreateSamplerYcbcrConversion(device, &conversionInfo,
+                                                     nullptr, &conversion);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+        << "Unable to create Ycbcr Conversion."
+        << " error=" << static_cast<int32_t>(result);
+
+    VkSamplerYcbcrConversionInfo samplerYcbcrConversionInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,
+        .pNext = nullptr,
+        .conversion = conversion,
+    };
+
+    VkImageViewCreateInfo viewInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .pNext = &samplerYcbcrConversionInfo,
+        .flags = 0,
+        .image = image,
+        .viewType = viewType,
+        .format = VK_FORMAT_UNDEFINED,
+        .components = swizzle,
+        .subresourceRange = range,
+    };
+    VkImageView imageView;
+    result = vkCreateImageView(device, &viewInfo, VKALLOC, &imageView);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+        << "Unable to create VkImageView."
+        << " error=" << static_cast<int32_t>(result);
+
+    return imageView;
+}
+
+VkSampler VulkanPlatform::createExternalSamplerImpl(
+        VkDevice device, SamplerYcbcrConversion chroma, SamplerParams params,
+        uint32_t internalFormat) {
+    VkExternalFormatANDROID externalFormat = {
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
+        .pNext = nullptr,
+        .externalFormat = internalFormat,
+    };
+
+    TextureSwizzle const swizzleArray[] = {chroma.r, chroma.g, chroma.b, chroma.a};
+    VkSamplerYcbcrConversionCreateInfo conversionInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
+        .pNext = &externalFormat,
+        .format = VK_FORMAT_UNDEFINED,
+        .ycbcrModel = fvkutils::getYcbcrModelConversion(chroma.ycbcrModel),
+        .ycbcrRange = fvkutils::getYcbcrRange(chroma.ycbcrRange),
+        .components = fvkutils::getSwizzleMap(swizzleArray),
+        .xChromaOffset = fvkutils::getChromaLocation(chroma.xChromaOffset),
+        .yChromaOffset = fvkutils::getChromaLocation(chroma.yChromaOffset),
+        .chromaFilter = fvkutils::getFilter(chroma.chromaFilter),
+    };
+    VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
+    VkResult result = vkCreateSamplerYcbcrConversion(device, &conversionInfo,
+                                                     nullptr, &conversion);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+        << "Unable to create Ycbcr Conversion."
+        << " error=" << static_cast<int32_t>(result);
+
+    VkSamplerYcbcrConversionInfo samplerYcbcrConversionInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,
+        .pNext = nullptr,
+        .conversion = conversion,
+    };
+
+    VkSamplerCreateInfo samplerInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .pNext = &samplerYcbcrConversionInfo,
+        .magFilter = fvkutils::getFilter(params.filterMag),
+        .minFilter = fvkutils::getFilter(params.filterMin),
+        .mipmapMode = fvkutils::getMipmapMode(params.filterMin),
+        .addressModeU = fvkutils::getWrapMode(params.wrapS),
+        .addressModeV = fvkutils::getWrapMode(params.wrapT),
+        .addressModeW = fvkutils::getWrapMode(params.wrapR),
+        .anisotropyEnable = params.anisotropyLog2 == 0 ? VK_FALSE : VK_TRUE,
+        .maxAnisotropy = (float)(1u << params.anisotropyLog2),
+        .compareEnable = fvkutils::getCompareEnable(params.compareMode),
+        .compareOp = fvkutils::getCompareOp(params.compareFunc),
+        .minLod = 0.0f,
+        .maxLod = fvkutils::getMaxLod(params.filterMin),
+        .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+        .unnormalizedCoordinates = VK_FALSE,
+    };
+    VkSampler sampler;
+    result = vkCreateSampler(device, &samplerInfo, VKALLOC, &sampler);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+        << "Unable to create sampler."
+        << " error=" << static_cast<int32_t>(result);
+    return sampler;
 }
 
 VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {

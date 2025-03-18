@@ -203,6 +203,10 @@ public:
         GLint max_renderbuffer_size;
         GLint max_samples;
         GLint max_texture_image_units;
+        GLint max_texture_size;
+        GLint max_cubemap_texture_size;
+        GLint max_3d_texture_size;
+        GLint max_array_texture_layers;
         GLint max_transform_feedback_separate_attribs;
         GLint max_uniform_block_size;
         GLint max_uniform_buffer_bindings;
