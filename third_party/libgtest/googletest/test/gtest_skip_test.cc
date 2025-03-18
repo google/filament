@@ -35,7 +35,7 @@
 using ::testing::Test;
 
 TEST(SkipTest, DoesSkip) {
-  GTEST_SKIP();
+  GTEST_SKIP() << "skipping single test";
   EXPECT_EQ(0, 1);
 }
 
@@ -46,10 +46,6 @@ class Fixture : public Test {
   }
 };
 
-TEST_F(Fixture, SkipsOneTest) {
-  EXPECT_EQ(5, 7);
-}
+TEST_F(Fixture, SkipsOneTest) { EXPECT_EQ(5, 7); }
 
-TEST_F(Fixture, SkipsAnotherTest) {
-  EXPECT_EQ(99, 100);
-}
+TEST_F(Fixture, SkipsAnotherTest) { EXPECT_EQ(99, 100); }
