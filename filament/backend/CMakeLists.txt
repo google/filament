@@ -496,6 +496,7 @@ if (APPLE OR LINUX)
         test/Arguments.cpp
         test/Lifetimes.cpp
         test/Shader.cpp
+        test/SharedShaders.cpp
         test/test_FeedbackLoops.cpp
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp
@@ -511,6 +512,7 @@ if (APPLE OR LINUX)
         test/test_Handles.cpp
     )
     set(BACKEND_TEST_LIBS
+        absl::str_format
         backend
         getopt
         gtest
