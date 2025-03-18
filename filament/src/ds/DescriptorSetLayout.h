@@ -27,6 +27,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <unordered_map>
+
 namespace filament {
 
 class HwDescriptorSetLayoutFactory;
@@ -60,22 +62,21 @@ public:
         return mSamplers[binding];
     }
 
+    std::tuple<backend::SamplerYcbcrConversion, backend::SamplerParams, uint32_t>
+    getConstSamplerData(
+            backend::descriptor_binding_t const binding) const noexcept {
+        const auto& iter = mImmutables.find(binding);
+        assert_invariant(iter != mImmutables.end());
+        return std::make_tuple(iter->second.sampler.conversion, iter->second.sampler.params,
+                iter->second.sampler.internalFormat);
+    }
+
     utils::bitset64 getSamplerDescriptors() const noexcept {
         return mSamplers;
     }
 
     utils::bitset64 getUniformBufferDescriptors() const noexcept {
         return mUniformBuffers;
-    }
-
-    void setImmutableSampler(backend::descriptor_binding_t binding,
-            backend::SamplerYcbcrConversion conversion,
-            backend::SamplerParams params,
-            uint32_t internalFormat) noexcept {
-        auto& sampler = mImmutables[binding];
-        sampler.sampler.conversion = conversion;
-        sampler.sampler.params = params;
-        sampler.sampler.internalFormat = internalFormat;
     }
 
 private:

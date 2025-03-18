@@ -40,6 +40,17 @@ DescriptorSetLayout::DescriptorSetLayout(
                 desc.type == backend::DescriptorType::SAMPLER_EXTERNAL);
         mUniformBuffers.set(desc.binding,
                 desc.type == backend::DescriptorType::UNIFORM_BUFFER);
+
+        if (desc.type == backend::DescriptorType::SAMPLER_EXTERNAL) {
+            auto& sampler = mImmutables[desc.binding];
+            assert_invariant(
+                    desc.externalSamplerDataIndex != backend::EXTERNAL_SAMPLER_DATA_INDEX_UNUSED);
+            auto& extSamplerData =
+                    descriptorSetLayout.externalSamplerData[desc.externalSamplerDataIndex];
+            sampler.sampler.conversion = extSamplerData.YcbcrConversion;
+            sampler.sampler.params = extSamplerData.samplerParams;
+            sampler.sampler.internalFormat = extSamplerData.externalFormat;
+        }
     }
 
     mDescriptorSetLayoutHandle = factory.create(driver,

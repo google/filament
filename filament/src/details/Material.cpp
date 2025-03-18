@@ -1176,10 +1176,6 @@ void FMaterial::processDescriptorSets(FEngine& engine, Builder const& builder,
             } else {
                 binding.externalSamplerDataIndex = std::distance(externalSamplerData.begin(), iter);
             }
-
-            // Set the data on the sampler layout (should be immutable for all descriptor sets).
-            mDescriptorSetLayout.setImmutableSampler(binding.binding, key.YcbcrConversion,
-                    key.samplerParams, key.externalFormat);
         }
     }
 

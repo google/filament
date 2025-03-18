@@ -73,6 +73,8 @@ void DescriptorSet::terminate(FEngine::DriverApi& driver) noexcept {
 
 void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
         FEngine::DriverApi& driver) noexcept {
+    mLayout = &layout;
+
     mDirty.clear();
     // if we have a dirty descriptor set,
     // we need to allocate a new one and reset all the descriptors
@@ -139,6 +141,9 @@ void DescriptorSet::setBuffer(
 void DescriptorSet::setSampler(
         backend::descriptor_binding_t const binding,
         backend::Handle<backend::HwTexture> th, backend::SamplerParams const params) noexcept {
+    // TODO: At this point we should ALSO be able to validate that the binding doesn't correspond to
+    // an immutable slot. This information is currently stored into the DescriptorSetLayout
+  
     // TODO: validate it's the right kind of descriptor
     if (mDescriptors[binding].texture.th != th || mDescriptors[binding].texture.params != params) {
         mDirty.set(binding);
@@ -152,6 +157,7 @@ DescriptorSet DescriptorSet::duplicate(DescriptorSetLayout const& layout) const 
     set.mDescriptors = mDescriptors; // Use the vector's assignment operator
     set.mDirty = mDirty;
     set.mValid = mValid;
+    mLayout = &layout;
     return set;
 }
 
