@@ -224,6 +224,17 @@ BUILD_CUSTOM_TARGETS=
 UNAME=$(uname)
 LC_UNAME=$(echo "${UNAME}" | tr '[:upper:]' '[:lower:]')
 
+if [[ "$LC_UNAME" == "linux" ]]; then
+    # On Linux both GCC and Clang are commonly available, but CMake
+    # will default to GCC.
+    # Force use of Clang, and pick the highest-numbered version.
+    CLANG_VER=$(ls -1 /usr/include/clang | fgrep -v . | sort -n | tail -1)
+    export CC=${CC-/usr/bin/clang-$CLANG_VER}
+    export CXX=${CXX-/usr/bin/clang++-$CLANG_VER}
+    export CXXFLAGS=${CXXFLAGS--stdlib=libc++}
+    export COMPILER_OPTION="-DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX -DCMAKE_CXX_FLAGS=$CXXFLAGS"
+fi
+
 # Functions
 
 function build_clean {
@@ -268,6 +279,7 @@ function build_desktop_target {
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
+            ${COMPILER_OPTION} \
             ${EGL_ON_LINUX_OPTION} \
             ${FGVIEWER_OPTION} \
             ${WEBGPU_OPTION} \
