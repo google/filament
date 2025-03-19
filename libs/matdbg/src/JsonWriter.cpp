@@ -232,7 +232,7 @@ size_t JsonWriter::getJsonSize() const {
 }
 
 bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
-        ShaderLanguage shaderLanguage, VariantList activeVariants) {
+        ShaderLanguage shaderLanguage, DbgShaderModel shaderModel, VariantList activeVariants) {
     vector<ShaderInfo> shaders;
     ostringstream json;
     json << "[\"";
@@ -260,7 +260,20 @@ bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
     shaders.resize(getShaderCount(package, chunkType));
     getShaderInfo(package, shaders.data(), chunkType);
 
+    json << "\", \"";
+    switch (shaderModel) {
+        case DbgShaderModel::DESKTOP:
+            json << toString(ShaderModel::DESKTOP);
+            break;
+        case DbgShaderModel::MOBILE:
+            json << toString(ShaderModel::MOBILE);
+            break;
+        case DbgShaderModel::MATINFO:
+            json << "matinfo";
+            break;
+    }
     json << "\"";
+
     for (size_t variant = 0; variant < activeVariants.size(); variant++) {
         if (activeVariants[variant]) {
             json << ", " << variant;

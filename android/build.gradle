@@ -71,10 +71,9 @@ buildscript {
             .gradleProperty("com.google.android.filament.include-webgpu")
             .isPresent()
 
-    // TODO: Uncomment below when fgviewer is ready
-    // def fgviewer = providers
-    //         .gradleProperty("com.google.android.filament.fgviewer")
-    //         .isPresent()
+    def fgviewer = providers
+                 .gradleProperty("com.google.android.filament.fgviewer")
+                 .isPresent()
 
     def matdbg = providers
             .gradleProperty("com.google.android.filament.matdbg")
@@ -131,8 +130,7 @@ buildscript {
         "-DFILAMENT_DIST_DIR=${filamentPath}".toString(),
         "-DFILAMENT_SUPPORTS_VULKAN=${excludeVulkan ? 'OFF' : 'ON'}".toString(),
         "-DFILAMENT_SUPPORTS_WEBGPU=${includeWebGPU ? 'ON' : 'OFF'}".toString(),
-        // TODO: Uncomment below when fgviewer is ready
-        // "-DFILAMENT_ENABLE_FGVIEWER=${fgviewer ? 'ON' : 'OFF'}".toString(),
+        "-DFILAMENT_ENABLE_FGVIEWER=${fgviewer ? 'ON' : 'OFF'}".toString(),
         "-DFILAMENT_ENABLE_MATDBG=${matdbg ? 'ON' : 'OFF'}".toString(),
         "-DFILAMENT_DISABLE_MATOPT=${matnopt ? 'ON' : 'OFF'}".toString()
     ]

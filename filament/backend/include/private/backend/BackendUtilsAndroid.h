@@ -14,25 +14,23 @@
  * limitations under the License.
  */
 
-#ifndef MATDBG_SOURCE_FORMATTER_H
-#define MATDBG_SOURCE_FORMATTER_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILSANDROID_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILSANDROID_H
 
-#include <mutex>
-#include <string>
+#include <backend/DriverEnums.h>
 
-namespace filament::matdbg {
+namespace filament::backend {
 
-class SourceFormatter {
-public:
-    SourceFormatter() = default;
-    ~SourceFormatter() = default;
-    std::string format(char const* source);
+/**
+ * Maps AHardwareBuffer format to TextureFormat.
+ */
+TextureFormat mapToFilamentFormat(unsigned int format, bool isSrgbTransfer) noexcept;
 
-private:
+/**
+ * Maps AHardwareBuffer usage to TextureUsage.
+ */
+TextureUsage mapToFilamentUsage(unsigned int usage, TextureFormat format) noexcept;
 
-    std::once_flag mClangWarningFlag;
-};
+} // namespace filament
 
-} // filament::matdbg
-
-#endif // MATDBG_SOURCE_FORMATTER_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILSANDROID_H

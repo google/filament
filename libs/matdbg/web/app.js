@@ -59,8 +59,8 @@ const FOREGROUND_COLOR = '#fafafa';
 const INACTIVE_COLOR = '#9a9a9a';
 const DARKER_INACTIVE_COLOR = '#6f6f6f';
 const LIGHTER_INACTIVE_COLOR = '#d9d9d9';
-const UNSELECTED_COLOR = '#dfdfdf';
-const BACKGROUND_COLOR = '#5362e5';
+const UNSELECTED_COLOR = '#d0d0d0';
+const BACKGROUND_COLOR = '#6885c5';
 const HOVER_BACKGROUND_COLOR = '#b3c2ff';
 const CODE_VIEWER_BOTTOM_ROW_HEIGHT = 60;
 const REGULAR_FONT_SIZE = 12;
@@ -343,7 +343,7 @@ class MenuSection extends LitElement {
                 color: ${unsafeCSS(UNSELECTED_COLOR)};
             }
             .section-title {
-                font-size: 16px;
+                font-size: 20px;
                 color: ${unsafeCSS(UNSELECTED_COLOR)};
                 cursor: pointer;
             }
@@ -365,6 +365,9 @@ class MenuSection extends LitElement {
                 align-items: center;
                 justify-content: space-between;
             }
+            .expanded-title {
+                color: ${unsafeCSS(FOREGROUND_COLOR)};
+            }
         `;
     }
 
@@ -380,9 +383,10 @@ class MenuSection extends LitElement {
     render() {
         const expandedIcon = this.showing ? '－' : '＋';
         const slot = (() => html`<slot></slot>`)();
+        const epandedTitleClass = this.showing ? 'expanded-title' : '';
         return html`
             <div class="container">
-                <div class="section-title expander" @click="${this._showClick}">
+                <div class="section-title expander ${epandedTitleClass}" @click="${this._showClick}">
                     <span>${this.title}</span> <span>${expandedIcon}</span>
                 </div>
                 <hr />
@@ -460,6 +464,7 @@ class AdvancedOptions extends LitElement {
     static get properties() {
         return {
             currentBackend: {type: String, attribute: 'current-backend'},
+            currentShaderModel: {type: String, attribute: 'current-shader-model'},
             hideInactiveVariants: {type: Boolean, attribute: 'hide-inactive-variants'},
             availableBackends: {type: Array, state: true},
         };
@@ -478,6 +483,7 @@ class AdvancedOptions extends LitElement {
                 flex-direction: column;
                 justify-content: center;
                 align-items: flex-start;
+                margin-bottom: 6px;
             }
             .borderless {
                 border: 1px solid rgba(0,0,0,0);
@@ -570,7 +576,7 @@ class AdvancedOptions extends LitElement {
         return html`
             <div class="option">
                 <div class="option-heading">Current Backend</div>
-                <form action="" id="backend-option-form">
+                <form style="display:flex;flex-wrap:wrap" action="" id="backend-option-form">
                     ${div}
                 </form>
             </div>
@@ -578,6 +584,9 @@ class AdvancedOptions extends LitElement {
     }
 
     _hideInactiveVariantsOption() {
+        if (this.currentShaderModel == 'matinfo') {
+            return null;
+        }
         const onChange = (ev) => {
             this.dispatchEvent(
                 new CustomEvent(
@@ -585,7 +594,7 @@ class AdvancedOptions extends LitElement {
                     {detail: null, bubbles: true, composed: true}));
         }
         return html`
-            <div class="option borderless">
+            <div class="option">
                 <!--<div class="option-heading">Current Backend</div>-->
                 <form action="" id="hide-inactive-variants-form">
                     <input type="checkbox" name="InactiveVariants"
@@ -630,8 +639,8 @@ class MaterialSidePanel extends LitElement {
                 color: white;
                 width: 100%;
                 text-align: center;
-                margin: 0 0 10px 0;
-                font-size: 20px;
+                margin: 0 0 20px 0;
+                font-size: 25px;
             }
             .materials {
                 display: flex;
@@ -675,6 +684,7 @@ class MaterialSidePanel extends LitElement {
             currentBackend: {type: String, attribute: 'current-backend'},
             currentLanguage: {type: String, attribute: 'current-language'},
             hideInactiveVariants: {type: Boolean, attribute: 'hide-inactive-variants'},
+            currentShaderModel: {type: String, attribute: 'current-shader-model'},
 
             database: {type: Object, state: true},
             materials: {type: Array, state: true},
@@ -702,29 +712,19 @@ class MaterialSidePanel extends LitElement {
 
     updated(props) {
         if (props.has('database')) {
-            const items = [];
-
             // Names need not be unique, so we display a numeric suffix for non-unique names.
             // To achieve stable ordering of anonymous materials, we first sort by matid.
-            const labels = new Set();
             const matids = Object.keys(this.database).sort();
-            const duplicatedLabels = {};
-            for (const matid of matids) {
-                const name = this.database[matid].name || kUntitledPlaceholder;
-                if (labels.has(name)) {
-                    duplicatedLabels[name] = 0;
-                } else {
-                    labels.add(name);
-                }
-            }
+            const names = matids.map(matid => (this.database[matid].name || kUntitledPlaceholder));
+            const labelCount  = {};
+            names.forEach(name => labelCount[name] = (labelCount[name] || 0) + 1);
+            const duplicates = names.filter(name => labelCount[name] > 1);
 
             this.materials = matids.map((matid) => {
                 const material = this.database[matid];
                 let name = material.name || kUntitledPlaceholder;
-                if (name in duplicatedLabels) {
-                    const index = duplicatedLabels[name];
-                    duplicatedLabels[name] = index + 1;
-                    name = `${name} (${index})`;
+                if (duplicates.includes(name)) {
+                    name = `${name} (${labelCount[name]--})`;
                 }
                 return {
                     matid: matid,
@@ -784,7 +784,7 @@ class MaterialSidePanel extends LitElement {
             let divClass =
                 'material_variant_language language' +
                    (isLanguageSelected  ? ' selected' : '') +
-                   (!isActive ? ' inactive' : '');
+                   (!isActive && this.currentShaderModel != 'matinfo' ? ' inactive' : '');
             const onClickLanguage = this._handleLanguageClick.bind(this, lang);
             lang = (isLanguageSelected ? '● ' : '') + lang;
             return html`
@@ -796,10 +796,11 @@ class MaterialSidePanel extends LitElement {
         return html`<div class="languages">${languagesDiv}</div>`;
     }
 
-    _buildShaderDiv(showAllShaders) {
+    _buildShaderDiv() {
         if (!this.variants) {
             return null;
         }
+        const isMatinfo = this.currentShaderModel == 'matinfo';
         let variants =
             this.variants
                 .sort((a, b) => {
@@ -808,7 +809,10 @@ class MaterialSidePanel extends LitElement {
                     if (b.active && !a.active) return 1;
                     return 0;
                 })
-                .filter((variant) => (!this.hideInactiveVariants || variant.shader.active))
+                .filter(variant => (!this.hideInactiveVariants || variant.shader.active))
+                .filter(variant => (
+                    isMatinfo || variant.shader.shaderModel == this.currentShaderModel
+                ))
                 .map((variant) => {
                     let divClass = 'material_variant_language';
                     const shaderIndex = +variant.shader.index;
@@ -817,7 +821,7 @@ class MaterialSidePanel extends LitElement {
                     if (isVariantSelected) {
                         divClass += ' selected';
                     }
-                    if (!isActive) {
+                    if (!isActive && !isMatinfo) {
                         divClass += ' inactive';
                     }
                     const onClickVariant = this._handleVariantClick.bind(this, shaderIndex);
@@ -826,11 +830,18 @@ class MaterialSidePanel extends LitElement {
                     if (vstring.length > 0) {
                         vstring = `[${vstring}]`;
                     }
+                    const shaderModelSymbol = {
+                        'desktop': '🄳 ',
+                        'mobile': '🄼 ',
+                    };
+
                     let languagesDiv = isVariantSelected ? this._buildLanguagesDiv(isActive) : null;
-                    const stage = (isVariantSelected ? '● ' : '') + variant.shader.pipelineStage;
+                    const stage =
+                          (isMatinfo ? shaderModelSymbol[variant.shader.shaderModel] : '') +
+                          (variant.shader.pipelineStage.indexOf('vertex') >=0 ? '𝕍ert' : '𝔽rag');
                     return html`
                         <div class="${divClass}" @click="${onClickVariant}">
-                            <div>${stage} ${vstring} </div>
+                            <div>${stage}&nbsp ${vstring} </div>
                         </div>
                         ${languagesDiv ?? nothing}
                     `
@@ -839,6 +850,7 @@ class MaterialSidePanel extends LitElement {
     }
 
     render() {
+        const isMatinfo = this.currentShaderModel == 'matinfo';
         const sections = (title, domain) => {
             const mats = this.materials
                              .filter((m) => m.domain == domain)
@@ -854,14 +866,12 @@ class MaterialSidePanel extends LitElement {
                 const isMaterialSelected = mat.matid === this.currentMaterial;
                 if (isMaterialSelected) {
                     divClass += ' selected';
-                    // If we are looking at an inactive material, show all shaders regardless.
-                    const showAllShaders = !material.active;
-                    shaderDiv = this._buildShaderDiv(showAllShaders);
+                    shaderDiv = this._buildShaderDiv();
                 }
-                if (!material.active) {
+                if (!material.active && !isMatinfo) {
                     divClass += " inactive";
                 }
-                const matName = (isMaterialSelected ? '● ' : '') + mat.name;
+                const matName = mat.name;
                 return html`
                     <div class="${divClass}" @click="${onClick}" data-id="${mat.matid}">
                         ${matName}
@@ -878,6 +888,7 @@ class MaterialSidePanel extends LitElement {
             (() => html`
                 <advanced-options id="advanced-options"
                          current-backend=${this.currentBackend}
+                         current-shader-model=${this.currentShaderModel}
                          ?hide-inactive-variants=${this.hideInactiveVariants}
                 ></advanced-options>
             `)();
@@ -885,7 +896,7 @@ class MaterialSidePanel extends LitElement {
         return html`
             <style>${this.dynamicStyle()}</style>
             <div class="container">
-                <div class="title">matdbg</div>
+                <div class="title">${isMatinfo ? 'matinfo' : 'matdbg'}</div>
                 ${sections("Surface", "surface") ?? nothing}
                 ${sections("Post-processing", "postpro") ?? nothing}
                 <material-info id="material-info"></material-info>
@@ -938,8 +949,7 @@ class MatdbgViewer extends LitElement {
             }
         );
 
-        let materials = await fetchMaterials();
-        this.database = materials;
+        this.database = await fetchMaterials();
 
         // This is the user preferences stored in localStorage
         let hideInactiveVariantsVal = localStorage.getItem('option-hide-inactive-variants');
@@ -979,6 +989,7 @@ class MatdbgViewer extends LitElement {
         this.currentMaterial = null;
         this.currentLanguage = null;
         this.currentBackend = null;
+        this.currentShaderModel = null;
         this.hideInactiveVariants = false;
         this.init();
 
@@ -1049,6 +1060,7 @@ class MatdbgViewer extends LitElement {
             // Each material has a list of variants compiled for it, this index tracks a position in the list.
             currentShaderIndex: {type: Number, state: true},
             currentBackend: {type: String, state: true},
+            currentShaderModel: {type: String, state: true},
             codeViewerExpectedWidth: {type: Number, state: true},
             codeViewerExpectedHeight: {type: Number, state: true},
 
@@ -1070,8 +1082,8 @@ class MatdbgViewer extends LitElement {
                 const activeVariants = this.activeShaders[this.currentMaterial].variants;
                 const materialShaders = material[this.currentBackend];
                 for (let shader in materialShaders) {
-                    let ind = activeVariants.indexOf(+shader);
-                    if (ind >= 0) {
+                    const shaderVariant = materialShaders[shader].variant;
+                    if (activeVariants.indexOf(shaderVariant) >= 0) {
                         this.currentShaderIndex = +shader;
                         break;
                     }
@@ -1095,7 +1107,6 @@ class MatdbgViewer extends LitElement {
                     shader.modified = false;
                     this.database = this.database;
                 }
-
                 // Size of the editor will be adjusted due to the code being loaded, we try to
                 // fit the editor again by calling the resize signal.
                 setTimeout(this._onResize.bind(this), 700);
@@ -1119,22 +1130,29 @@ class MatdbgViewer extends LitElement {
                 }
             }
             if (_validDict(this.activeShaders)) {
-                let backends = {};
+                let setBackend = null;
+                let setShaderModel = null;
                 for (let matid in this.activeShaders) {
                     const backend = this.activeShaders[matid].backend;
-                    if (backend in backends) {
-                        backends[backend] = backends[backend] + 1;
-                    } else {
-                        backends[backend] = 1;
+                    if (!setBackend && backend) {
+                        setBackend = backend;
+                    }
+                    const shaderModel = this.activeShaders[matid].shaderModel;
+                    if (!setShaderModel && shaderModel) {
+                        setShaderModel = shaderModel;
                     }
                 }
-                let backendList = Object.keys(backends);
-                if (backendList.length > 0) {
-                    this.currentBackend = backendList[0];
+                if (this.currentBackend != setBackend) {
+                    this.currentBackend = setBackend;
                 }
-            } else if (!this.currentBackend) {
+                if (this.currentShaderModel != setShaderModel) {
+                    this.currentShaderModel = setShaderModel;
+                }
+
+            } else if (!this.currentBackend || !this.currentShaderModel) {
                 // Make a guess on the backend if one wasn't from activeShaders.
                 this.currentBackend = guessBackend();
+                this.currentShaderModel = 'matinfo';
             }
 
             this._sidepanel.database = this.database;
@@ -1166,6 +1184,7 @@ class MatdbgViewer extends LitElement {
                      current-shader-index="${this.currentShaderIndex}"
                      current-material="${this.currentMaterial}"
                      current-backend="${this.currentBackend}"
+                     current-shader-model="${this.currentShaderModel}"
                      ?hide-inactive-variants="${this.hideInactiveVariants}" >
             </material-sidepanel>
             <code-viewer id="code-viewer"
