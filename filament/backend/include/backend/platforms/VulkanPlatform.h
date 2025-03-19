@@ -368,8 +368,16 @@ public:
             uint32_t internalFormat, VkImage image, VkImageSubresourceRange range,
             VkImageViewType viewType, VkComponentMapping swizzle);
 
+protected:
+    virtual ExtensionSet getSwapchainInstanceExtensions() const;
+
+    using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
+    virtual SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
+            uint64_t flags) const noexcept;
+
 private:
-    static ExtensionSet getSwapchainInstanceExtensions();
+    // Platform dependent helper methods
+    static ExtensionSet getSwapchainInstanceExtensionsImpl();
 
     static ExternalImageMetadata getExternalImageMetadataImpl(ExternalImageHandleRef externalImage,
             VkDevice device);
@@ -386,8 +394,7 @@ private:
             VkComponentMapping swizzle);
 
     // Platform dependent helper methods
-    using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
-    static SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
+    static SurfaceBundle createVkSurfaceKHRImpl(void* nativeWindow, VkInstance instance,
             uint64_t flags) noexcept;
 
     friend struct VulkanPlatformPrivate;

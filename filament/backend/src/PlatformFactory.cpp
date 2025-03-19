@@ -55,7 +55,11 @@
 #endif
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-    #include "backend/platforms/VulkanPlatform.h"
+    #if defined(__ANDROID__)
+        #include "backend/platforms/VulkanPlatformAndroid.h"
+    #else
+        #include "backend/platforms/VulkanPlatform.h"
+    #endif
 #endif
 
 #if defined (FILAMENT_SUPPORTS_METAL)
@@ -104,7 +108,11 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
     }
     if (*backend == Backend::VULKAN) {
         #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-            return new VulkanPlatform();
+            #if defined(__ANDROID__)
+                return new VulkanPlatformAndroid();
+            #else
+                return new VulkanPlatform();
+            #endif
         #else
             return nullptr;
         #endif
