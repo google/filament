@@ -108,7 +108,7 @@ jobs:
 
   validate-wgsl-pipeline:
     name: validate-wgsl-pipeline
-    runs-on: ubuntu-22.04-4core
+    runs-on: macos-14-xlarge
 
     steps:
       - uses: actions/checkout@v4.1.6
