@@ -24,6 +24,7 @@ const LANGUAGE_CHOICES = {
     'essl1': ['essl3', 'essl1'],
     'vulkan': ['glsl', 'spirv'],
     'metal': ['msl'],
+    'webgpu': ['wgsl'],
 };
 
 const DEFAULT_LANGUAGE_FOR_BACKEND = {
@@ -31,6 +32,7 @@ const DEFAULT_LANGUAGE_FOR_BACKEND = {
     'essl1': 'essl1',
     'vulkan': 'glsl',
     'metal': 'msl',
+    'webgpu': 'wgsl',
 };
 
 const BACKENDS = Object.keys(LANGUAGE_CHOICES);
