@@ -386,8 +386,8 @@ TEST_P(SplitCombinedImageSamplerPassTypeCaseTest, Combined_RemapLoad) {
 }
 
 TEST_P(SplitCombinedImageSamplerPassTypeCaseTest,
-       Combined_RemapLoad_RelaxedPrecisionCopied) {
-  // All decorations are copied. In this case, RelaxedPrecision
+       Combined_RemapLoad_RelaxedPrecisionOnVarCopied) {
+  // All decorations on the variable are copied. In this case, RelaxedPrecision
   const std::string kTest = Preamble() +
                             R"(
                OpName %combined "combined"
@@ -412,6 +412,7 @@ TEST_P(SplitCombinedImageSamplerPassTypeCaseTest,
      ; The combined image variable is replaced by an image variable and a sampler variable.
 
      ; CHECK-NOT: %100 = OpVariable
+     ; CHECK-NOT: OpVariable _ptr_UniformConstant_11
      ; CHECK-DAG: %[[sampler_var]] = OpVariable %[[sampler_ptr_ty]] UniformConstant
      ; CHECK-DAG: %[[image_var]] = OpVariable %[[image_ptr_ty]] UniformConstant
      ; CHECK: = OpFunction
@@ -420,6 +421,70 @@ TEST_P(SplitCombinedImageSamplerPassTypeCaseTest,
      ; a combination operation.
      ; CHECK: %[[im:\d+]] = OpLoad %10 %[[image_var]]
      ; CHECK: %[[s:\d+]] = OpLoad %[[sampler_ty]] %[[sampler_var]]
+     ; CHECK: %combined = OpSampledImage %11 %[[im]] %[[s]]
+
+               %bool = OpTypeBool ; location marker
+)" + BasicTypes() +
+                            " %10 = " + GetParam().image_type_decl + R"(
+         %11 = OpTypeSampledImage %10
+%_ptr_UniformConstant_11 = OpTypePointer UniformConstant %11
+
+        %100 = OpVariable %_ptr_UniformConstant_11 UniformConstant
+       %main = OpFunction %void None %voidfn
+     %main_0 = OpLabel
+   %combined = OpLoad %11 %100
+
+     ; Uses of the combined image sampler are preserved.
+     ; CHECK: OpCopyObject %11 %combined
+
+          %7 = OpCopyObject %11 %combined
+               OpReturn
+               OpFunctionEnd
+)";
+  auto [disasm, status] = SinglePassRunAndMatch<SplitCombinedImageSamplerPass>(
+      kTest, /* do_validation= */ true);
+  EXPECT_EQ(status, Pass::Status::SuccessWithChange) << disasm;
+}
+
+TEST_P(SplitCombinedImageSamplerPassTypeCaseTest,
+       Combined_RemapLoad_RelaxedPrecisionOnLoadCopied) {
+  // Copy decorations form an OpLoad that is replaced.
+  const std::string kTest = Preamble() +
+                            R"(
+               OpName %combined "combined"
+               OpDecorate %100 DescriptorSet 0
+               OpDecorate %100 Binding 0
+               OpDecorate %combined RelaxedPrecision
+
+     ; CHECK: OpName
+     ; CHECK-NOT: OpDecorate %100
+     ; CHECK: OpDecorate %[[image_var:\d+]] DescriptorSet 0
+     ; CHECK: OpDecorate %[[sampler_var:\d+]] DescriptorSet 0
+     ; CHECK: OpDecorate %[[image_var]] Binding 0
+     ; CHECK: OpDecorate %[[sampler_var]] Binding 0
+
+     ; This is what we are checking in this test.
+     ; CHECK: OpDecorate %[[im:\d+]] RelaxedPrecision
+     ; CHECK: OpDecorate %[[s:\d+]] RelaxedPrecision
+
+     ; CHECK: %10 = OpTypeImage %
+     ; CHECK: %[[image_ptr_ty:\w+]] = OpTypePointer UniformConstant %10
+     ; CHECK: %[[sampler_ty:\d+]] = OpTypeSampler
+     ; CHECK: %[[sampler_ptr_ty:\w+]] = OpTypePointer UniformConstant %[[sampler_ty]]
+
+     ; The combined image variable is replaced by an image variable and a sampler variable.
+
+     ; CHECK-NOT: %100 = OpVariable
+     ; CHECK-NOT: OpVariable _ptr_UniformConstant_11
+     ; CHECK-DAG: %[[sampler_var]] = OpVariable %[[sampler_ptr_ty]] UniformConstant
+     ; CHECK-DAG: %[[image_var]] = OpVariable %[[image_ptr_ty]] UniformConstant
+     ; CHECK: = OpFunction
+
+     ; The load of the combined image+sampler is replaced by a two loads, then
+     ; a combination operation. The new loads get the same decorations that the
+     ; original load had.
+     ; CHECK: %[[im]] = OpLoad %10 %[[image_var]]
+     ; CHECK: %[[s]] = OpLoad %[[sampler_ty]] %[[sampler_var]]
      ; CHECK: %combined = OpSampledImage %11 %[[im]] %[[s]]
 
                %bool = OpTypeBool ; location marker
