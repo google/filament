@@ -113,6 +113,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4.1.6
       - name: Run build script
-        run: source ./build/linux/ci-common.sh && ./build.sh -W debug test_filamat
+        run: source ./build/linux/ci-common.sh && ./build.sh -W debug test_filamat filament
       - name: Run test
         run: ./out/cmake-debug/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
