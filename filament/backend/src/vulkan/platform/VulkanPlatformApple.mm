@@ -52,7 +52,7 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
+VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl() {
     ExtensionSet const ret = {
     #if defined(__APPLE__)
         VK_MVK_MACOS_SURFACE_EXTENSION_NAME,  // TODO: replace with VK_EXT_metal_surface
@@ -87,7 +87,7 @@ VkImageView VulkanPlatform::createExternalImageViewImpl(VkDevice device,
     return VK_NULL_HANDLE;
 }
 
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
+VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativeWindow,
         VkInstance instance, uint64_t flags) noexcept {
     VkSurfaceKHR surface;
     #if defined(__APPLE__)
