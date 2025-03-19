@@ -73,8 +73,6 @@ void DescriptorSet::terminate(FEngine::DriverApi& driver) noexcept {
 
 void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
         FEngine::DriverApi& driver) noexcept {
-    mLayout = &layout;
-
     mDirty.clear();
     // if we have a dirty descriptor set,
     // we need to allocate a new one and reset all the descriptors
@@ -92,7 +90,16 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
             driver.updateDescriptorSetTexture(dsh, binding,
                     descriptors[binding].texture.th,
                     descriptors[binding].texture.params);
-        } else {
+        } else if (layout.isSamplerExternal(binding)) {
+            auto data = layout.getConstantSamplerData(binding);
+
+            // Not sure what to do here.... Should we validate or should we
+            // let the driver validate?
+            driver.updateDescriptorSetTexture(dsh, binding,
+                    descriptors[binding].texture.th,
+                    descriptors[binding].texture.params);
+        }
+        else  {
             driver.updateDescriptorSetBuffer(dsh, binding,
                     descriptors[binding].buffer.boh,
                     descriptors[binding].buffer.offset,
@@ -157,7 +164,6 @@ DescriptorSet DescriptorSet::duplicate(DescriptorSetLayout const& layout) const 
     set.mDescriptors = mDescriptors; // Use the vector's assignment operator
     set.mDirty = mDirty;
     set.mValid = mValid;
-    mLayout = &layout;
     return set;
 }
 

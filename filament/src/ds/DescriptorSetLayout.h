@@ -62,8 +62,12 @@ public:
         return mSamplers[binding];
     }
 
+    bool isSamplerExternal(backend::descriptor_binding_t const binding) const noexcept {
+        return mSamplerExternals[binding];
+    }
+
     std::tuple<backend::SamplerYcbcrConversion, backend::SamplerParams, uint32_t>
-    getConstSamplerData(
+    getConstantSamplerData(
             backend::descriptor_binding_t const binding) const noexcept {
         const auto& iter = mImmutables.find(binding);
         assert_invariant(iter != mImmutables.end());
@@ -75,13 +79,17 @@ public:
         return mSamplers;
     }
 
+    utils::bitset64 getSamplerExternalDescriptors() const noexcept {
+        return mSamplerExternals;
+    }
+
     utils::bitset64 getUniformBufferDescriptors() const noexcept {
         return mUniformBuffers;
     }
 
 private:
-    struct Desc {
-        Desc() noexcept {}
+    struct Constant {
+        Constant() noexcept {}
         union {
             struct {
                 backend::SamplerYcbcrConversion conversion;
@@ -90,10 +98,11 @@ private:
             } sampler;
         };
     };
-    std::unordered_map<backend::descriptor_binding_t, Desc> mImmutables;
+    std::unordered_map<backend::descriptor_binding_t, Constant> mImmutables;
 
     backend::DescriptorSetLayoutHandle mDescriptorSetLayoutHandle;
     utils::bitset64 mSamplers;
+    utils::bitset64 mSamplerExternals;
     utils::bitset64 mUniformBuffers;
     uint8_t mMaxDescriptorBinding = 0;
 };

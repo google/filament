@@ -103,8 +103,6 @@ private:
     mutable utils::bitset64 mValid;                         //  8
     backend::DescriptorSetHandle mDescriptorSetHandle;      //  4
     mutable bool mSetAfterCommitWarning = false;            //  1
-
-    mutable DescriptorSetLayout const* mLayout; //Validation during data setting phase
 };
 
 } // namespace filament
