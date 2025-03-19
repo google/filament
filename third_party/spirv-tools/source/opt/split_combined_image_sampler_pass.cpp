@@ -358,6 +358,13 @@ spv_result_t SplitCombinedImageSamplerPass::RemapUses(
                                       use.image_part->result_id());
         auto* sampler = builder.AddLoad(PointeeTypeId(use.sampler_part),
                                         use.sampler_part->result_id());
+
+        // Move decorations, such as RelaxedPrecision.
+        auto* deco_mgr = context()->get_decoration_mgr();
+        deco_mgr->CloneDecorations(load->result_id(), image->result_id());
+        deco_mgr->CloneDecorations(load->result_id(), sampler->result_id());
+        deco_mgr->RemoveDecorationsFrom(load->result_id());
+
         // Create a sampled image from the loads of the two parts.
         auto* sampled_image = builder.AddSampledImage(
             load->type_id(), image->result_id(), sampler->result_id());
