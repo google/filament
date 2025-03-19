@@ -35,7 +35,7 @@ protected:
     ~ExternalImageVulkanAndroid() override;
 };
 
-Platform::ExternalImageHandle createExternalImage(AHardwareBuffer const* buffer,
+Platform::ExternalImageHandle UTILS_PUBLIC createExternalImage(AHardwareBuffer const* buffer,
         bool sRGB) noexcept;
 
 } // namespace filament::backend::fvkandroid
