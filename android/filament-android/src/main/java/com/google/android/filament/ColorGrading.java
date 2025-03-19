@@ -46,9 +46,8 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  *
  * <h1>Performance</h1>
  *
- * Creating a new ColorGrading object may be more expensive than other Filament objects as a
- * 3D LUT may need to be generated. The generation of a 3D LUT, if necessary, may happen on
- * the CPU.
+ * Creating a new ColorGrading object may be more expensive than other Filament objects as a LUT may
+ * need to be generated. The generation of this LUT, if necessary, may happen on the CPU.
  *
  * <h1>Ordering</h1>
  *
@@ -160,6 +159,10 @@ public class ColorGrading {
          * quality level will use a 32x32x32 10 bit LUT, a high quality will use a 32x32x32 16 bit
          * LUT, and a ultra quality will use a 64x64x64 16 bit LUT.
          *
+         * This setting has no effect if generating a 1D LUT.
+         *
+         * This overrides the values set by format() and dimensions().
+         *
          * The default quality is {@link QualityLevel#MEDIUM}.
          *
          * @param qualityLevel The desired quality of the color grading process
@@ -175,6 +178,8 @@ public class ColorGrading {
          * When color grading is implemented using a 3D LUT, this sets the texture format of
          * of the LUT. This overrides the value set by quality().
          *
+         * This setting has no effect if generating a 1D LUT.
+         *
          * The default is INTEGER
          *
          * @param format The desired format of the 3D LUT.
@@ -189,6 +194,8 @@ public class ColorGrading {
         /**
          * When color grading is implemented using a 3D LUT, this sets the dimension of the LUT.
          * This overrides the value set by quality().
+         *
+         * This setting has no effect if generating a 1D LUT.
          *
          * The default is 32
          *
@@ -616,4 +623,3 @@ public class ColorGrading {
 
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 }
-
