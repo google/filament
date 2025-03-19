@@ -816,7 +816,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
             }
         } else {
             for (size_t rgb = 0; rgb < config.lutDimension; rgb++) {
-                *p = half(hdrColorAt(rgb, rgb, rgb).r);
+                *p++ = half(hdrColorAt(rgb, rgb, rgb).r);
             }
         }
     } else {
