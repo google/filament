@@ -651,11 +651,11 @@ uint8_t WebGPUDriver::getMaxDrawBuffers() {
     return MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
 }
 
-size_t WebGPUDriver::getMaxUniformBufferSize(SamplerType) {
+size_t WebGPUDriver::getMaxUniformBufferSize() {
     return 16384u;
 }
 
-size_t WebGPUDriver::getMaxTextureSize() {
+size_t WebGPUDriver::getMaxTextureSize(SamplerType target) {
     return 2048u;
 }
 
