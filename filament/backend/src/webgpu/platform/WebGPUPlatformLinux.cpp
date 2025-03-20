@@ -15,6 +15,8 @@
  */
 #include <backend/platforms/WebGPUPlatform.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/Panic.h>
 
 #include <webgpu/webgpu_cpp.h>
@@ -118,7 +120,9 @@ wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t flags) 
         if (useXcb) {
             wgpu::SurfaceSourceXCBWindow surfaceSourceXcb{};
             surfaceSourceXcb.connection = g_x11.connection;
-            surfaceSourceXcb.window = reinterpret_cast<uint32_t>(nativeWindow);
+
+            // TODO: this looks really wrong, please fix!!
+            surfaceSourceXcb.window = *((uint32_t*) nativeWindow);
             wgpu::SurfaceDescriptor surfaceDescriptor{
                 .nextInChain = &surfaceSourceXcb,
                 .label = "linux_xcb_surface"

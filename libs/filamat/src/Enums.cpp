@@ -49,7 +49,8 @@ std::unordered_map<std::string, Property> Enums::mStringToProperty = {
         { "microThickness",      Property::MICRO_THICKNESS },
         { "bentNormal",          Property::BENT_NORMAL },
         { "specularFactor",      Property::SPECULAR_FACTOR },
-        { "specularColorFactor",  Property::SPECULAR_COLOR_FACTOR }
+        { "specularColorFactor", Property::SPECULAR_COLOR_FACTOR },
+        { "shadowStrength",       Property::SHADOW_STRENGTH }
 };
 
 template <>
