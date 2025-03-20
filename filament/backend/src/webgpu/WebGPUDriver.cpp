@@ -258,8 +258,12 @@ Driver* WebGPUDriver::create(WebGPUPlatform& platform) noexcept {
 
 WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform) noexcept
     : mPlatform(platform) {
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+        FWGPU_LOGI << " called driver constructor, configure surface " << utils::io::endl;
+        (void)WebGPUDriver::ConfigureSurface(1024,720);
+
+  #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printInstanceDetails(mPlatform.getInstance());
+
 #endif
 }
 
@@ -827,6 +831,20 @@ void WebGPUDriver::bindDescriptorSet(
 }
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
+}
+wgpu::Surface WebGPUDriver::ConfigureSurface(uint32_t width, uint32_t height){
+    FWGPU_LOGI << "  configuring surface "  <<  width << height << utils::io::endl;
+    //wgpu::SurfaceCapabilities capabilities = mSurface.GetCapabilities(mAdapter);
+
+    wgpu::SurfaceConfiguration surfaceConfig = {};
+    //surfaceConfig.format = capabilities.format[0]
+    surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment;
+    surfaceConfig.width = width;
+    surfaceConfig.height = height;
+    //surfaceConfig.presentMode = capabilities.presentMode[0]
+    //mSurface.Configure(surfaceConfig);
+
+    return mSurface;
 }
 
 } // namespace filament

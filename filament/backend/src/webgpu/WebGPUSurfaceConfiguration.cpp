@@ -17,20 +17,26 @@
 #include "WebGPUSurfaceConfiguration.h"
 #include <backend/platforms/WebGPUPlatform.h>
 #include "WebGPUDriver.h"
+#include "WebGPUConstants.h"
 
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <utils/CString.h>
+#include <utils/ostream.h>
 #include <iostream>
 
 namespace filament::backend {
-    
+WebGPUSurfaceConfiguration::WebGPUSurfaceConfiguration(wgpu::Device device, wgpu::Surface surface, uint32_t width, uint32_t height, wgpu::TextureFormat format)
+:mDevice(device), mSurface(surface), mWidth(width), mHeight(height), mFormat(format) {
+    ConfigureSwapChain();
+}
 
 WebGPUSurfaceConfiguration::~WebGPUSurfaceConfiguration() {
 }
 
 void WebGPUSurfaceConfiguration::ConfigureSwapChain() {
-std::cout<<"Called ConfigureSwapChain"<<std::endl;
+FWGPU_LOGW << "Called ConfigureSwapChain" << utils::io::endl;
 }
 
 }// namespace filament::backend

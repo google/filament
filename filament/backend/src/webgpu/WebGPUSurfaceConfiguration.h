@@ -29,7 +29,7 @@
 namespace filament::backend {
 class WebGPUSurfaceConfiguration {
 public:
-    WebGPUSurfaceConfiguration(wgpu::Device device, wgpu::Surface surface, uint32_t width, uint32_t height, wgpu::TextureFormat);
+    explicit WebGPUSurfaceConfiguration(wgpu::Device device, wgpu::Surface surface, uint32_t width, uint32_t height, wgpu::TextureFormat);
     ~WebGPUSurfaceConfiguration();
 
     void ConfigureSwapChain();
@@ -37,9 +37,9 @@ public:
     void Resize();
 
 private:
+    wgpu::Device mDevice;
     wgpu::Surface mSurface;
     wgpu::Adapter mAdapter;
-    wgpu::Device mDevice;
     uint32_t mWidth;
     uint32_t mHeight;
     wgpu::TextureFormat mFormat;
