@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_VULKANSAMPLERCACHE_H
-#define TNT_FILAMENT_BACKEND_VULKANSAMPLERCACHE_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANYCBCRCONVERSIONCACHE_H
+#define TNT_FILAMENT_BACKEND_VULKANYCBCRCONVERSIONCACHE_H
 
 #include <backend/DriverEnums.h>
 
@@ -26,33 +26,34 @@
 
 namespace filament::backend {
 
-// Simple manager for VkSampler objects.
-class VulkanSamplerCache {
+// Simple manager for VkSamplerYcbcrConversion objects.
+class VulkanYcbcrConversionCache {
 public:
     struct Params {
-        SamplerParams sampler = {};
+        SamplerYcbcrConversion conversion = {};
         uint32_t padding = 0;
-        VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
+        uint64_t externalFormat = 0;
     };
-
     static_assert(sizeof(Params) == 16);
 
-    explicit VulkanSamplerCache(VkDevice device);
-    VkSampler getSampler(Params params) noexcept;
+    explicit VulkanYcbcrConversionCache(VkDevice device);
+    VkSamplerYcbcrConversion getConversion(Params params) noexcept;
     void terminate() noexcept;
+
 private:
     VkDevice mDevice;
 
-    struct SamplerEqualTo {
+    struct ConversionEqualTo {
         bool operator()(Params lhs, Params rhs) const noexcept {
-            SamplerParams::EqualTo equal;
-            return equal(lhs.sampler, rhs.sampler) && lhs.conversion == rhs.conversion;
+            SamplerYcbcrConversion::EqualTo equal;
+            return equal(lhs.conversion, rhs.conversion) &&
+                   lhs.externalFormat == rhs.externalFormat;
         }
     };
-    using SamplerHashFn = utils::hash::MurmurHashFn<Params>;
-    tsl::robin_map<Params, VkSampler, SamplerHashFn, SamplerEqualTo> mCache;
+    using ConversionHashFn = utils::hash::MurmurHashFn<Params>;
+    tsl::robin_map<Params, VkSamplerYcbcrConversion, ConversionHashFn, ConversionEqualTo> mCache;
 };
 
-} // namespace filament::backend
+}// namespace filament::backend
 
-#endif // TNT_FILAMENT_BACKEND_VULKANSAMPLERCACHE_H
+#endif// TNT_FILAMENT_BACKEND_VULKANYCBCRCONVERSIONCACHE_H
