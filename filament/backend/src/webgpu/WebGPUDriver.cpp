@@ -833,16 +833,21 @@ void WebGPUDriver::bindDescriptorSet(
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
 }
 wgpu::Surface WebGPUDriver::ConfigureSurface(uint32_t width, uint32_t height){
-    FWGPU_LOGI << "  configuring surface "  <<  width << height << utils::io::endl;
-    //wgpu::SurfaceCapabilities capabilities = mSurface.GetCapabilities(mAdapter);
-
+    wgpu::SurfaceCapabilities capabilities{};
+//    if(!mSurface.GetCapabilities(mAdapter, &capabilities)){
+//         FWGPU_LOGI << "Failed to get Surface Capabilities " << utils::io::endl;
+//    } else {
+//        //printSurfaceCapabilities(capabilities)
+//    }
     wgpu::SurfaceConfiguration surfaceConfig = {};
-    //surfaceConfig.format = capabilities.format[0]
+    surfaceConfig.device = mDevice;
     surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment;
-    surfaceConfig.width = width;
-    surfaceConfig.height = height;
-    //surfaceConfig.presentMode = capabilities.presentMode[0]
-    //mSurface.Configure(surfaceConfig);
+    surfaceConfig.format = wgpu::TextureFormat::BGRA8UnormSrgb;
+    surfaceConfig.width = 2048;
+    surfaceConfig.height = 1280;
+    surfaceConfig.presentMode = wgpu::PresentMode::Fifo;
+    surfaceConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
+    //mSurface.Configure(&surfaceConfig);
 
     return mSurface;
 }
