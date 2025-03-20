@@ -35,11 +35,21 @@ DescriptorSetLayout::DescriptorSetLayout(
         backend::DescriptorSetLayout descriptorSetLayout) noexcept  {
     for (auto&& desc : descriptorSetLayout.bindings) {
         mMaxDescriptorBinding = std::max(mMaxDescriptorBinding, desc.binding);
-        mSamplers.set(desc.binding,
-                desc.type == backend::DescriptorType::SAMPLER ||
-                desc.type == backend::DescriptorType::SAMPLER_EXTERNAL);
+        mSamplers.set(desc.binding, desc.type == backend::DescriptorType::SAMPLER);
         mUniformBuffers.set(desc.binding,
                 desc.type == backend::DescriptorType::UNIFORM_BUFFER);
+
+        if (desc.type == backend::DescriptorType::SAMPLER_EXTERNAL) {
+            mSamplerExternals.set(desc.binding, true);
+            auto& sampler = mImmutables[desc.binding];
+            assert_invariant(
+                    desc.externalSamplerDataIndex != backend::EXTERNAL_SAMPLER_DATA_INDEX_UNUSED);
+            auto& extSamplerData =
+                    descriptorSetLayout.externalSamplerData[desc.externalSamplerDataIndex];
+            sampler.sampler.conversion = extSamplerData.YcbcrConversion;
+            sampler.sampler.params = extSamplerData.samplerParams;
+            sampler.sampler.internalFormat = extSamplerData.externalFormat;
+        }
     }
 
     mDescriptorSetLayoutHandle = factory.create(driver,
