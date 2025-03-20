@@ -173,10 +173,10 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             include/backend/platforms/VulkanPlatform.h
-            src/vulkan/caching/VulkanDescriptorSetManager.cpp
-            src/vulkan/caching/VulkanDescriptorSetManager.h
-            src/vulkan/caching/VulkanPipelineLayoutCache.cpp
-            src/vulkan/caching/VulkanPipelineLayoutCache.h
+            src/vulkan/VulkanDescriptorSetCache.cpp
+            src/vulkan/VulkanDescriptorSetCache.h
+            src/vulkan/VulkanPipelineLayoutCache.cpp
+            src/vulkan/VulkanPipelineLayoutCache.h
             src/vulkan/memory/ResourceManager.cpp
             src/vulkan/memory/ResourceManager.h
             src/vulkan/memory/ResourcePointer.h

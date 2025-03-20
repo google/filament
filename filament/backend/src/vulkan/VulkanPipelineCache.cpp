@@ -15,15 +15,12 @@
  */
 
 #include "VulkanPipelineCache.h"
-#include "VulkanMemory.h"
-#include "caching/VulkanDescriptorSetManager.h"
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
 #include "VulkanConstants.h"
 #include "VulkanHandles.h"
-#include "VulkanTexture.h"
 #include "vulkan/utils/Conversion.h"
 
 #if defined(__clang__)

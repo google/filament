@@ -17,7 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANPIPELINELAYOUTCACHE_H
 #define TNT_FILAMENT_BACKEND_VULKANPIPELINELAYOUTCACHE_H
 
-#include <vulkan/VulkanHandles.h>
+#include "VulkanHandles.h"
+
 #include <bluevk/BlueVK.h>
 
 #include <utils/Hash.h>
