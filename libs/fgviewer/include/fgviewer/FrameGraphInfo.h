@@ -58,7 +58,7 @@ public:
             utils::CString name;
             utils::CString value;
         };
-        
+
         Resource(ResourceId id, utils::CString name,
                  std::vector<Property> properties);
 
