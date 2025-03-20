@@ -245,6 +245,20 @@ function(add_demo NAME)
     endif()
 endfunction()
 
+function(add_demo_plain NAME)
+    include_directories(${GENERATION_ROOT})
+    add_executable(${NAME} ${NAME}.cpp)
+    target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
+    set_target_properties(${NAME} PROPERTIES FOLDER Samples)
+
+    # This is needed after XCode 15.3
+    if (APPLE)
+        set_target_properties(${NAME} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
+        set_target_properties(${NAME} PROPERTIES INSTALL_RPATH /usr/local/lib)
+    endif()
+endfunction()
+
+
 if (NOT ANDROID)
     add_demo(animation)
     add_demo(depthtesting)
@@ -279,6 +293,9 @@ if (NOT ANDROID)
     add_demo(texturedquad)
     add_demo(vbotest)
     add_demo(viewtest)
+
+    add_demo_plain(spirv_test)
+    target_link_libraries(spirv_test PRIVATE SPIRV-Headers utils)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
