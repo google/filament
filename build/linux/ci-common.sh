@@ -31,7 +31,7 @@ if [[ "$GITHUB_WORKFLOW" ]]; then
     sudo apt-get install mesa-common-dev libxi-dev libxxf86vm-dev
 
     # For dawn
-    sudo apt-get install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+    sudo apt-get install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libx11-xcb-dev
 
     sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-${GITHUB_CLANG_VERSION} 100
     sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${GITHUB_CLANG_VERSION} 100

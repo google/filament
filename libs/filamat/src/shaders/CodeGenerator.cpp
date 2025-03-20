@@ -1218,6 +1218,7 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::BENT_NORMAL:                 return "BENT_NORMAL";
         case Property::SPECULAR_FACTOR:             return "SPECULAR_FACTOR";
         case Property::SPECULAR_COLOR_FACTOR:       return "SPECULAR_COLOR_FACTOR";
+        case Property::SHADOW_STRENGTH:             return "SHADOW_STRENGTH";
     }
 }
 

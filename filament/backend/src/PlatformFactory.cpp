@@ -19,6 +19,11 @@
 #include <utils/Systrace.h>
 #include <utils/debug.h>
 
+// We need to keep this up top for the linux (X11) name collisions.
+#if defined(FILAMENT_SUPPORTS_WEBGPU)
+    #include "backend/platforms/WebGPUPlatform.h"
+#endif
+
 #if defined(__ANDROID__)
     #include <sys/system_properties.h>
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
@@ -73,9 +78,6 @@ filament::backend::Platform* createDefaultMetalPlatform();
 #endif
 
 #include "noop/PlatformNoop.h"
-#if defined(FILAMENT_SUPPORTS_WEBGPU)
-    #include "backend/platforms/WebGPUPlatform.h"
-#endif
 
 namespace filament::backend {
 

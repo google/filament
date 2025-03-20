@@ -47,6 +47,9 @@ vec4 evaluateMaterial(const MaterialInputs material) {
     if (hasDirectionalShadows && cascadeHasVisibleShadows) {
         highp vec4 shadowPosition = getShadowPosition(cascade);
         visibility = shadow(true, sampler0_shadowMap, cascade, shadowPosition, 0.0);
+#if defined(MATERIAL_HAS_SHADOW_STRENGTH)
+        applyShadowStrength(visibility, material.shadowStrength);
+#endif
         // shadow far attenuation
         highp vec3 v = getWorldPosition() - getWorldCameraPosition();
         // (viewFromWorld * v).z == dot(transpose(viewFromWorld), v)
