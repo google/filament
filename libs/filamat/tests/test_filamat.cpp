@@ -778,6 +778,48 @@ TEST_F(MaterialCompiler, Uv0AndUv1) {
     EXPECT_TRUE(result.isValid());
 }
 
+TEST_F(MaterialCompiler, FiveCustomVariables) {
+    filamat::MaterialBuilder builder;
+    builder.variable(MaterialBuilder::Variable::CUSTOM0, "custom0");
+    builder.variable(MaterialBuilder::Variable::CUSTOM1, "custom1");
+    builder.variable(MaterialBuilder::Variable::CUSTOM2, "custom2");
+    builder.variable(MaterialBuilder::Variable::CUSTOM3, "custom3");
+    builder.variable(MaterialBuilder::Variable::CUSTOM4, "custom4");
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, FourCustomVariablesAndColorAttribute) {
+    filamat::MaterialBuilder builder;
+    builder.require(filament::VertexAttribute::COLOR);
+    builder.variable(MaterialBuilder::Variable::CUSTOM0, "custom0");
+    builder.variable(MaterialBuilder::Variable::CUSTOM1, "custom1");
+    builder.variable(MaterialBuilder::Variable::CUSTOM2, "custom2");
+    builder.variable(MaterialBuilder::Variable::CUSTOM3, "custom3");
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, FiveCustomVariablesAndColorAttributeFails) {
+    filamat::MaterialBuilder builder;
+    builder.require(filament::VertexAttribute::COLOR);
+    builder.variable(MaterialBuilder::Variable::CUSTOM0, "custom0");
+    builder.variable(MaterialBuilder::Variable::CUSTOM1, "custom1");
+    builder.variable(MaterialBuilder::Variable::CUSTOM2, "custom2");
+    builder.variable(MaterialBuilder::Variable::CUSTOM3, "custom3");
+    builder.variable(MaterialBuilder::Variable::CUSTOM4, "custom4");
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, CustomVariable4AndColorAttributeFails) {
+    filamat::MaterialBuilder builder;
+    builder.require(filament::VertexAttribute::COLOR);
+    builder.variable(MaterialBuilder::Variable::CUSTOM4, "custom4");
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
+}
+
 TEST_F(MaterialCompiler, Arrays) {
     filamat::MaterialBuilder builder;
 

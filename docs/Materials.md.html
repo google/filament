@@ -13,7 +13,7 @@ This document is part of the [Filament project](https://github.com/google/filame
 ## Authors
 
 - [Romain Guy](https://github.com/romainguy), [@romainguy](https://twitter.com/romainguy)
-- [Mathias Agopian](https://github.com/pixelflinger), [@darthmoosious](https://twitter.com/darthmoosious)
+- [Mathias Agopian](https://github.com/pixelflinger), [@pixelflinger](https://bsky.app/profile/pixelflinger.bsky.social)
 
 # Overview
 
@@ -1273,6 +1273,9 @@ Description
       when selecting any shading model that is not `unlit`. See the shader sections of this document
       for more information on how to access these attributes from the shaders.
 
+!!! Note: Interaction with custom variables
+    When the `color` attribute is specified, only four custom variables are available instead of five.
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
     parameters : [
@@ -1303,7 +1306,7 @@ Type
 :    array of `string`
 
 Value
-:     Up to 4 strings, each must be a valid GLSL identifier.
+:     Up to 5 strings, each must be a valid GLSL identifier.
 
 Description
 :     Defines custom interpolants (or variables) that are output by the material's vertex shader.
@@ -1318,6 +1321,10 @@ Description
       In this case the specified precision is used as-is in both fragment and vertex stages, in
       particular if `default` is specified the default precision is used is the fragment shader
       (`mediump`) and in the vertex shader (`highp`).
+
+!!! Warning: Interaction with required attributes
+    If the `color` attribute is specified in the `required` list, then only four variables can be used
+    instead of five.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {

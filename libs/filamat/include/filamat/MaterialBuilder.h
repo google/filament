@@ -217,12 +217,13 @@ public:
     MaterialBuilder(MaterialBuilder&& rhs) noexcept = default;
     MaterialBuilder& operator=(MaterialBuilder&& rhs) noexcept = default;
 
-    static constexpr size_t MATERIAL_VARIABLES_COUNT = 4;
+    static constexpr size_t MATERIAL_VARIABLES_COUNT = 5;
     enum class Variable : uint8_t {
         CUSTOM0,
         CUSTOM1,
         CUSTOM2,
-        CUSTOM3
+        CUSTOM3,
+        CUSTOM4, // CUSTOM4 is only available if the vertex attribute `color` is not required.
         // when adding more variables, make sure to update MATERIAL_VARIABLES_COUNT
     };
 
