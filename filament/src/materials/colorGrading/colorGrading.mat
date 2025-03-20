@@ -66,6 +66,16 @@ material {
             precision : high
         }
     ],
+    constants : [
+        {
+            type : bool,
+            name : isOneDimensional
+        },
+        {
+            type : bool,
+            name : isLDR
+        }
+    ],
     variables : [
         vertex
     ],
@@ -154,7 +164,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     }
 
     // Color grading
-    color.rgb  = colorGrade(materialParams_lut, color.rgb);
+    color.rgb = colorGrade(materialParams_lut, color.rgb);
 
     // output in premultiplied alpha
 #if !POST_PROCESS_OPAQUE
