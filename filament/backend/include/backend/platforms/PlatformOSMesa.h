@@ -21,7 +21,12 @@
 
 #include "bluegl/BlueGL.h"
 
+#if defined(__linux__)
 #include <osmesa.h>
+#elif defined(__APPLE__)
+#undef GLAPI
+#include <GL/osmesa.h>
+#endif
 
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/DriverEnums.h>
