@@ -39,6 +39,9 @@ void main() {
 #if defined(VARIABLE_CUSTOM3)
     VARIABLE_CUSTOM_AT3 = inputs.VARIABLE_CUSTOM3;
 #endif
+#if defined(VARIABLE_CUSTOM4)
+    VARIABLE_CUSTOM_AT4 = inputs.VARIABLE_CUSTOM4;
+#endif
 
     // some PowerVR drivers crash when gl_Position is written more than once
     gl_Position = inputs.position;
