@@ -23,6 +23,7 @@
 #include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
 #include <backend/DriverEnums.h>
+#include "WebGPUSurfaceConfiguration.h"
 
 #include <utils/compiler.h>
 
@@ -55,6 +56,7 @@ private:
     wgpu::Device mDevice = nullptr;
     wgpu::Queue mQueue = nullptr;
     uint64_t mNextFakeHandle = 1;
+    std::unique_ptr<WGPUSurfaceConfiguration> mSurfaceConfig;
 
     /*
      * Driver interface
