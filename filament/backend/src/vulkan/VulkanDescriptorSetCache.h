@@ -34,7 +34,7 @@
 
 namespace filament::backend {
 
-// Abstraction over the pool and the layout cache.
+// Abstraction over the descriptor set pool.
 class VulkanDescriptorSetCache {
 public:
     static constexpr uint8_t UNIQUE_DESCRIPTOR_SET_COUNT =
@@ -68,12 +68,9 @@ public:
     fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
-    void initVkLayout(fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
-
     void clearHistory();
 
 private:
-    class DescriptorSetLayoutManager;
     class DescriptorInfinitePool;
 
     using DescriptorSetArray =
@@ -81,7 +78,6 @@ private:
 
     VkDevice mDevice;
     fvkmemory::ResourceManager* mResourceManager;
-    std::unique_ptr<DescriptorSetLayoutManager> mLayoutManager;
     std::unique_ptr<DescriptorInfinitePool> mDescriptorPool;
     std::pair<VulkanAttachment, VkDescriptorImageInfo> mInputAttachment;
     DescriptorSetArray mStashedSets = {};

@@ -179,6 +179,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             include/backend/platforms/VulkanPlatform.h
             src/vulkan/VulkanDescriptorSetCache.cpp
             src/vulkan/VulkanDescriptorSetCache.h
+            src/vulkan/VulkanDescriptorSetLayoutCache.cpp
+            src/vulkan/VulkanDescriptorSetLayoutCache.h
             src/vulkan/VulkanPipelineLayoutCache.cpp
             src/vulkan/VulkanPipelineLayoutCache.h
             src/vulkan/memory/ResourceManager.cpp

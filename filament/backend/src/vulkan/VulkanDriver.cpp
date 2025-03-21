@@ -34,7 +34,6 @@
 #include <backend/platforms/VulkanPlatform.h>
 
 #include <utils/CString.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
 #ifndef NDEBUG
@@ -42,8 +41,6 @@
 #endif
 
 using namespace bluevk;
-
-using utils::FixedCapacityVector;
 
 #if defined(__clang__)
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
@@ -218,6 +215,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mSamplerCache(mPlatform->getDevice()),
       mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
       mReadPixels(mPlatform->getDevice()),
+      mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
       mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
       mQueryManager(mPlatform->getDevice()),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
@@ -328,6 +326,7 @@ void VulkanDriver::terminate() {
     mPipelineCache.terminate();
     mFramebufferCache.reset();
     mSamplerCache.terminate();
+    mDescriptorSetLayoutCache.terminate();
     mDescriptorSetCache.terminate();
     mPipelineLayoutCache.terminate();
 
@@ -777,8 +776,7 @@ void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 
 void VulkanDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
         backend::DescriptorSetLayout&& info) {
-    auto layout = resource_ptr<VulkanDescriptorSetLayout>::make(&mResourceManager, dslh, info);
-    mDescriptorSetCache.initVkLayout(layout);
+    auto layout = mDescriptorSetLayoutCache.createLayout(dslh, std::move(info));
     layout.inc();
 }
 
