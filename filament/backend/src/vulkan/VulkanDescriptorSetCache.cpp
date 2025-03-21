@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-#include "VulkanDescriptorSetManager.h"
+#include "VulkanDescriptorSetCache.h"
 
-#include "vulkan/VulkanCommands.h"
-#include "vulkan/VulkanHandles.h"
-#include "vulkan/VulkanConstants.h"
+#include "VulkanCommands.h"
+#include "VulkanHandles.h"
+#include "VulkanConstants.h"
 
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
-#include <math.h>
-
 #include <algorithm>
 #include <memory>
-#include <type_traits>
 #include <vector>
 
 namespace filament::backend {
@@ -36,7 +33,7 @@ namespace {
 
 using BitmaskGroup = VulkanDescriptorSetLayout::Bitmask;
 using DescriptorCount = VulkanDescriptorSetLayout::Count;
-using DescriptorSetLayoutArray = VulkanDescriptorSetManager::DescriptorSetLayoutArray;
+using DescriptorSetLayoutArray = VulkanDescriptorSetCache::DescriptorSetLayoutArray;
 using BitmaskGroupHashFn = utils::hash::MurmurHashFn<BitmaskGroup>;
 struct BitmaskGroupEqual {
     bool operator()(BitmaskGroup const& k1, BitmaskGroup const& k2) const {
@@ -264,7 +261,7 @@ inline VkDescriptorSetLayout createLayout(VkDevice device, BitmaskGroup const& b
 // This is an ever-expanding pool of sets where it
 //    1. Keeps a list of smaller pools of different layout-dimensions.
 //    2. Will add a pool if existing pool are not compatible with the requested layout o runs out.
-class VulkanDescriptorSetManager::DescriptorInfinitePool {
+class VulkanDescriptorSetCache::DescriptorInfinitePool {
 private:
     static constexpr uint16_t EXPECTED_SET_COUNT = 10;
     static constexpr float SET_COUNT_GROWTH_FACTOR = 1.5;
@@ -319,7 +316,7 @@ private:
     std::vector<std::unique_ptr<DescriptorPool>> mPools;
 };
 
-class VulkanDescriptorSetManager::DescriptorSetLayoutManager {
+class VulkanDescriptorSetCache::DescriptorSetLayoutManager {
 public:
     DescriptorSetLayoutManager(VkDevice device)
         : mDevice(device) {}
@@ -345,16 +342,16 @@ private:
             mVkLayouts;
 };
 
-VulkanDescriptorSetManager::VulkanDescriptorSetManager(VkDevice device,
+VulkanDescriptorSetCache::VulkanDescriptorSetCache(VkDevice device,
         fvkmemory::ResourceManager* resourceManager)
     : mDevice(device),
       mResourceManager(resourceManager),
       mLayoutManager(std::make_unique<DescriptorSetLayoutManager>(device)),
       mDescriptorPool(std::make_unique<DescriptorInfinitePool>(device)) {}
 
-VulkanDescriptorSetManager::~VulkanDescriptorSetManager() = default;
+VulkanDescriptorSetCache::~VulkanDescriptorSetCache() = default;
 
-void VulkanDescriptorSetManager::terminate() noexcept{
+void VulkanDescriptorSetCache::terminate() noexcept{
     mLayoutManager.reset();
     mDescriptorPool.reset();
     clearHistory();
@@ -362,18 +359,18 @@ void VulkanDescriptorSetManager::terminate() noexcept{
 
 // bind() is not really binding the set but just stashing until we have all the info
 // (pipelinelayout).
-void VulkanDescriptorSetManager::bind(uint8_t setIndex,
+void VulkanDescriptorSetCache::bind(uint8_t setIndex,
         fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         backend::DescriptorSetOffsetArray&& offsets) {
     set->setOffsets(std::move(offsets));
     mStashedSets[setIndex] = set;
 }
 
-void VulkanDescriptorSetManager::unbind(uint8_t setIndex) {
+void VulkanDescriptorSetCache::unbind(uint8_t setIndex) {
     mStashedSets[setIndex] = {};
 }
 
-void VulkanDescriptorSetManager::commit(VulkanCommandBuffer* commands,
+void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
         VkPipelineLayout pipelineLayout, fvkutils::DescriptorSetMask const& setMask) {
     // setMask indicates the set of descriptor sets the driver wants to bind, curMask is the
     // actual set of sets that *needs* to be bound.
@@ -412,7 +409,7 @@ void VulkanDescriptorSetManager::commit(VulkanCommandBuffer* commands,
     };
 }
 
-void VulkanDescriptorSetManager::updateBuffer(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanBufferObject> bufferObject,
         VkDeviceSize offset, VkDeviceSize size) noexcept {
     VkDescriptorBufferInfo const info = {
@@ -438,7 +435,7 @@ void VulkanDescriptorSetManager::updateBuffer(fvkmemory::resource_ptr<VulkanDesc
     set->acquire(bufferObject);
 }
 
-void VulkanDescriptorSetManager::updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanTexture> texture,
         VkSampler sampler) noexcept {
     VkDescriptorImageInfo info{
@@ -470,13 +467,13 @@ void VulkanDescriptorSetManager::updateSampler(fvkmemory::resource_ptr<VulkanDes
     set->acquire(texture);
 }
 
-void VulkanDescriptorSetManager::updateInputAttachment(
+void VulkanDescriptorSetCache::updateInputAttachment(
         fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         VulkanAttachment const& attachment) noexcept {
     // TOOD: fill-in this region
 }
 
-fvkmemory::resource_ptr<VulkanDescriptorSet> VulkanDescriptorSetManager::createSet(
+fvkmemory::resource_ptr<VulkanDescriptorSet> VulkanDescriptorSetCache::createSet(
         Handle<HwDescriptorSet> handle, fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) {
     auto const vkSet = mDescriptorPool->obtainSet(layout);
     auto const& count = layout->count;
@@ -492,12 +489,12 @@ fvkmemory::resource_ptr<VulkanDescriptorSet> VulkanDescriptorSetManager::createS
             });
 }
 
-void VulkanDescriptorSetManager::initVkLayout(
+void VulkanDescriptorSetCache::initVkLayout(
         fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) {
     layout->setVkLayout(mLayoutManager->getVkLayout(layout->bitmask));
 }
 
-void VulkanDescriptorSetManager::clearHistory() {
+void VulkanDescriptorSetCache::clearHistory() {
     mStashedSets = {};
 }
 
