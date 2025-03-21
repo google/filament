@@ -223,8 +223,8 @@ class FrameGraphSidePanel extends LitElement {
             return html`
                 <menu-section title="${title}">
                     ${this.framegraphs.map(({ fgid, name }) => html`
-                        <div class="framegraph" 
-                            @click="${() => this._handleFrameGraphClick(fgid)}" 
+                        <div class="framegraph"
+                            @click="${() => this._handleFrameGraphClick(fgid)}"
                             data-id="${fgid}">
                             ${fgid === this.selectedFrameGraph ? '● ' : ''}${name}
                         </div>
@@ -440,12 +440,12 @@ class FrameGraphTable extends LitElement {
         return html`
             <tr id="resource-${resourceIndex}">
                 <th class="sticky-col resource ${selectedStyle}" @click="${onClickResource}">
-                    ${hasSubresources 
+                    ${hasSubresources
                         ? html`
                             <span class="toggle-icon"
                                   @click="${(e) => { e.stopPropagation(); this._toggleCollapse(resourceIndex); }}">
                               ${isExpanded ? '▼' : '▶'}
-                            </span>` 
+                            </span>`
                         : nothing}
                     ${resource.name}
                     ${hasSubresources && isExpanded ? nothing : html`(${subresourceIds.length})`}
@@ -592,12 +592,12 @@ class FrameGraphViewer extends LitElement {
         return html`
             <framegraph-sidepanel id="sidepanel"
                 ?connected="${this.connected}"
-                selected-framegraph="${this.selectedFrameGraph}" 
+                selected-framegraph="${this.selectedFrameGraph}"
                 selected-resource="${this.selectedResourceId}">
             </framegraph-sidepanel>
-            <framegraph-table id="table" 
+            <framegraph-table id="table"
                 ?connected="${this.connected}"
-                selected-framegraph="${this.selectedFrameGraph}" 
+                selected-framegraph="${this.selectedFrameGraph}"
                 selected-resource="${this.selectedResourceId}">
             </framegraph-table>
         `;
