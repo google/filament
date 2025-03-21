@@ -31,15 +31,8 @@ namespace filament::backend {
 
 namespace {
 
-using BitmaskGroup = VulkanDescriptorSetLayout::Bitmask;
 using DescriptorCount = VulkanDescriptorSetLayout::Count;
 using DescriptorSetLayoutArray = VulkanDescriptorSetCache::DescriptorSetLayoutArray;
-using BitmaskGroupHashFn = utils::hash::MurmurHashFn<BitmaskGroup>;
-struct BitmaskGroupEqual {
-    bool operator()(BitmaskGroup const& k1, BitmaskGroup const& k2) const {
-        return k1 == k2;
-    }
-};
 
 // We create a pool for each layout as defined by the number of descriptors of each type. For
 // example, a layout of
@@ -196,66 +189,6 @@ struct Equal {
     }
 };
 
-template<typename Bitmask>
-uint32_t createBindings(VkDescriptorSetLayoutBinding* toBind, uint32_t count, VkDescriptorType type,
-        Bitmask const& mask) {
-    Bitmask alreadySeen;
-    mask.forEachSetBit([&](size_t index) {
-        VkShaderStageFlags stages = 0;
-        uint32_t binding = 0;
-        if (index < fvkutils::getFragmentStageShift<Bitmask>()) {
-            binding = (uint32_t) index;
-            stages |= VK_SHADER_STAGE_VERTEX_BIT;
-            auto fragIndex = index + fvkutils::getFragmentStageShift<Bitmask>();
-            if (mask.test(fragIndex)) {
-                stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
-                alreadySeen.set(fragIndex);
-            }
-        } else if (!alreadySeen.test(index)) {
-            // We are in fragment stage bits
-            binding = (uint32_t) (index - fvkutils::getFragmentStageShift<Bitmask>());
-            stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
-        }
-
-        if (stages) {
-            toBind[count++] = {
-                .binding = binding,
-                .descriptorType = type,
-                .descriptorCount = 1,
-                .stageFlags = stages,
-            };
-        }
-    });
-    return count;
-}
-
-inline VkDescriptorSetLayout createLayout(VkDevice device, BitmaskGroup const& bitmaskGroup) {
-    // Note that the following *needs* to be static so that VkDescriptorSetLayoutCreateInfo will not
-    // refer to stack memory.
-    VkDescriptorSetLayoutBinding toBind[VulkanDescriptorSetLayout::MAX_BINDINGS];
-    uint32_t count = 0;
-
-    count = createBindings(toBind, count, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-            bitmaskGroup.dynamicUbo);
-    count = createBindings(toBind, count, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, bitmaskGroup.ubo);
-    count = createBindings(toBind, count, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            bitmaskGroup.sampler);
-    count = createBindings(toBind, count, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
-            bitmaskGroup.inputAttachment);
-
-    assert_invariant(count != 0 && "Need at least one binding for descriptor set layout.");
-    VkDescriptorSetLayoutCreateInfo dlinfo = {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-            .pNext = nullptr,
-            .bindingCount = count,
-            .pBindings = toBind,
-    };
-
-    VkDescriptorSetLayout layout;
-    vkCreateDescriptorSetLayout(device, &dlinfo, VKALLOC, &layout);
-    return layout;
-}
-
 } // anonymous namespace
 
 // This is an ever-expanding pool of sets where it
@@ -316,43 +249,16 @@ private:
     std::vector<std::unique_ptr<DescriptorPool>> mPools;
 };
 
-class VulkanDescriptorSetCache::DescriptorSetLayoutManager {
-public:
-    DescriptorSetLayoutManager(VkDevice device)
-        : mDevice(device) {}
-
-    VkDescriptorSetLayout getVkLayout(VulkanDescriptorSetLayout::Bitmask const& bitmasks) {
-        if (auto itr = mVkLayouts.find(bitmasks); itr != mVkLayouts.end()) {
-            return itr->second;
-        }
-        auto vklayout = createLayout(mDevice, bitmasks);
-        mVkLayouts[bitmasks] = vklayout;
-        return vklayout;
-    }
-
-    ~DescriptorSetLayoutManager() {
-        for (auto& itr: mVkLayouts) {
-            vkDestroyDescriptorSetLayout(mDevice, itr.second, VKALLOC);
-        }
-    }
-
-private:
-    VkDevice mDevice;
-    tsl::robin_map<BitmaskGroup, VkDescriptorSetLayout, BitmaskGroupHashFn, BitmaskGroupEqual>
-            mVkLayouts;
-};
 
 VulkanDescriptorSetCache::VulkanDescriptorSetCache(VkDevice device,
         fvkmemory::ResourceManager* resourceManager)
     : mDevice(device),
       mResourceManager(resourceManager),
-      mLayoutManager(std::make_unique<DescriptorSetLayoutManager>(device)),
       mDescriptorPool(std::make_unique<DescriptorInfinitePool>(device)) {}
 
 VulkanDescriptorSetCache::~VulkanDescriptorSetCache() = default;
 
 void VulkanDescriptorSetCache::terminate() noexcept{
-    mLayoutManager.reset();
     mDescriptorPool.reset();
     clearHistory();
 }
@@ -470,7 +376,7 @@ void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescr
 void VulkanDescriptorSetCache::updateInputAttachment(
         fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         VulkanAttachment const& attachment) noexcept {
-    // TOOD: fill-in this region
+    // TOOD: fill this in.
 }
 
 fvkmemory::resource_ptr<VulkanDescriptorSet> VulkanDescriptorSetCache::createSet(
@@ -487,11 +393,6 @@ fvkmemory::resource_ptr<VulkanDescriptorSet> VulkanDescriptorSetCache::createSet
                     mDescriptorPool->recycle(count, vklayout, vkSet);
                 }
             });
-}
-
-void VulkanDescriptorSetCache::initVkLayout(
-        fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) {
-    layout->setVkLayout(mLayoutManager->getVkLayout(layout->bitmask));
 }
 
 void VulkanDescriptorSetCache::clearHistory() {
