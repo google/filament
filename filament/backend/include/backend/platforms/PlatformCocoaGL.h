@@ -33,7 +33,7 @@ public:
     PlatformCocoaGL();
     ~PlatformCocoaGL() noexcept override;
 
-    ExternalImageHandle createExternalImage(void* cvPixelBuffer) noexcept;
+    ExternalImageHandle UTILS_PUBLIC createExternalImage(void* cvPixelBuffer) noexcept;
 
 protected:
     // --------------------------------------------------------------------------------------------
