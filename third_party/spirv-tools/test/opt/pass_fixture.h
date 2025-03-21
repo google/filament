@@ -278,6 +278,23 @@ class PassTest : public TestT {
     }
   }
 
+  // Returns the disassembly of the current module. This is useful for
+  // debugging.
+  std::unique_ptr<opt::IRContext> AssembleModule(const std::string& text) {
+    return spvtools::BuildModule(env_, consumer_, text, assemble_options_);
+  }
+
+  // Returns the disassembly of the current module. This is useful for
+  // debugging.
+  std::string Disassemble(opt::Module* m) {
+    std::vector<uint32_t> binary;
+    m->ToBinary(&binary, /* skip_nop = */ false);
+    std::string disassembly;
+    SpirvTools tools(env_);
+    tools.Disassemble(binary, &disassembly, disassemble_options_);
+    return disassembly;
+  }
+
   void SetAssembleOptions(uint32_t assemble_options) {
     assemble_options_ = assemble_options;
   }

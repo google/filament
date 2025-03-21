@@ -50,7 +50,7 @@ uint32_t InstructionFolder::UnaryOperate(spv::Op opcode,
       if (s_operand == std::numeric_limits<int32_t>::min()) {
         return s_operand;
       }
-      return -s_operand;
+      return static_cast<uint32_t>(-s_operand);
     }
     case spv::Op::OpNot:
       return ~operand;

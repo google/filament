@@ -509,6 +509,15 @@ spv_result_t checkLayout(uint32_t struct_id, const char* storage_class_str,
     // Check offset.
     if (offset == 0xffffffff)
       return fail(memberIdx) << "is missing an Offset decoration";
+
+    if (opcode == spv::Op::OpTypeRuntimeArray &&
+        ordered_member_idx != member_offsets.size() - 1) {
+      return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(struct_id))
+             << vstate.VkErrorID(4680) << "Structure id " << struct_id
+             << " has a runtime array at offset " << offset
+             << ", but other members at larger offsets";
+    }
+
     if (!scalar_block_layout && relaxed_block_layout &&
         opcode == spv::Op::OpTypeVector) {
       // In relaxed block layout, the vector offset must be aligned to the

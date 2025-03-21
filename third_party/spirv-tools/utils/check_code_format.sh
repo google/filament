@@ -38,6 +38,7 @@ if [ ! -f "$CLANG_FORMAT_DIFF" ]; then
 fi
 
 echo "Comparing "$(git rev-parse HEAD)" against $BASE_BRANCH"
+echo Using $("$CLANG_FORMAT" --version)
 
 FILES_TO_CHECK=$(git diff --name-only ${BASE_BRANCH} | grep -E ".*\.(cpp|cc|c\+\+|cxx|c|h|hpp)$")
 
