@@ -30,6 +30,8 @@ list(APPEND DIFF_TEST_FILES
 "diff_files/different_decorations_vertex_autogen.cpp"
 "diff_files/different_function_parameter_count_autogen.cpp"
 "diff_files/extra_if_block_autogen.cpp"
+"diff_files/function_group_by_full_type_autogen.cpp"
+"diff_files/function_group_by_mapped_id_autogen.cpp"
 "diff_files/index_signedness_autogen.cpp"
 "diff_files/int_vs_uint_constants_autogen.cpp"
 "diff_files/large_functions_large_diffs_autogen.cpp"
@@ -44,5 +46,6 @@ list(APPEND DIFF_TEST_FILES
 "diff_files/spec_constant_composite_autogen.cpp"
 "diff_files/spec_constant_op_autogen.cpp"
 "diff_files/spec_constant_specid_autogen.cpp"
+"diff_files/string_in_ext_inst_autogen.cpp"
 "diff_files/unrelated_shaders_autogen.cpp"
 )

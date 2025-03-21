@@ -2146,6 +2146,86 @@ OpFunctionEnd
   SetTargetEnv(SPV_ENV_UNIVERSAL_1_4);
   SinglePassRunAndMatch<CopyPropagateArrays>(before, true);
 }
+
+TEST_F(CopyPropArrayPassTest, PropCopyLogical) {
+  const std::string before = R"(
+; CHECK: [[v4array_ptr:%\w+]] = OpTypePointer Uniform %14
+; CHECK: [[v4_ptr:%\w+]] = OpTypePointer Uniform %7
+; CHECK: [[ac:%\w+]] = OpAccessChain [[v4array_ptr]] %19 %21 %33
+; CHECK: %47 = OpAccessChain [[v4_ptr]] [[ac]] %37
+      OpCapability Shader
+ %1 = OpExtInstImport "GLSL.std.450"
+      OpMemoryModel Logical GLSL450
+      OpEntryPoint Vertex %4 "main" %19 %30 %32
+      OpSource GLSL 430
+      OpName %4 "main"
+      OpDecorate %14 ArrayStride 16
+      OpDecorate %15 ArrayStride 16
+      OpMemberDecorate %16 0 Offset 0
+      OpMemberDecorate %16 1 Offset 32
+      OpDecorate %17 Block
+      OpMemberDecorate %17 0 Offset 0
+      OpDecorate %19 Binding 0
+      OpDecorate %19 DescriptorSet 0
+      OpDecorate %28 Block
+      OpMemberDecorate %28 0 BuiltIn Position
+      OpMemberDecorate %28 1 BuiltIn PointSize
+      OpMemberDecorate %28 2 BuiltIn ClipDistance
+      OpDecorate %32 Location 0
+ %2 = OpTypeVoid
+ %3 = OpTypeFunction %2
+ %6 = OpTypeFloat 32
+ %7 = OpTypeVector %6 4
+ %8 = OpTypeInt 32 0
+ %9 = OpConstant %8 2
+%10 = OpTypeArray %7 %9
+%11 = OpTypeStruct %10 %10
+%14 = OpTypeArray %7 %9
+%15 = OpTypeArray %7 %9
+%16 = OpTypeStruct %14 %15
+%17 = OpTypeStruct %16
+%18 = OpTypePointer Uniform %17
+%19 = OpVariable %18 Uniform
+%20 = OpTypeInt 32 1
+%21 = OpConstant %20 0
+%22 = OpTypePointer Uniform %16
+%26 = OpConstant %8 1
+%27 = OpTypeArray %6 %26
+%28 = OpTypeStruct %7 %6 %27
+%29 = OpTypePointer Output %28
+%30 = OpVariable %29 Output
+%31 = OpTypePointer Input %7
+%32 = OpVariable %31 Input
+%33 = OpConstant %8 0
+%34 = OpTypePointer Input %6
+%38 = OpTypePointer Function %7
+%41 = OpTypePointer Output %7
+%43 = OpTypePointer Function %10
+ %4 = OpFunction %2 None %3
+ %5 = OpLabel
+%44 = OpVariable %43 Function
+%23 = OpAccessChain %22 %19 %21
+%24 = OpLoad %16 %23
+%25 = OpCopyLogical %11 %24
+%46 = OpCompositeExtract %10 %25 0
+      OpStore %44 %46
+%35 = OpAccessChain %34 %32 %33
+%36 = OpLoad %6 %35
+%37 = OpConvertFToS %20 %36
+%47 = OpAccessChain %38 %44 %37
+%40 = OpLoad %7 %47
+%42 = OpAccessChain %41 %30 %21
+      OpStore %42 %40
+      OpReturn
+      OpFunctionEnd
+)";
+
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_6);
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  SinglePassRunAndMatch<CopyPropagateArrays>(before, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

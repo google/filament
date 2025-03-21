@@ -1401,6 +1401,244 @@ TEST_F(TrimCapabilitiesPassTest,
   EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithChange);
 }
 
+TEST_F(TrimCapabilitiesPassTest,
+       StorageBuffer16BitAccess_RemainsSimplePointer_Vulkan1_0) {
+  // See https://github.com/KhronosGroup/SPIRV-Tools/issues/5354
+  static_assert(spv::Capability::StorageUniformBufferBlock16 ==
+                spv::Capability::StorageBuffer16BitAccess);
+
+  const std::string kTest = R"(
+                      OpCapability Shader
+                      OpCapability Float16
+                      OpCapability StorageBuffer16BitAccess
+
+; CHECK:          OpCapability StorageBuffer16BitAccess
+; CHECK-NOT:      OpExtension "SPV_KHR_16bit_storage"
+
+                      OpMemoryModel Logical GLSL450
+                      OpEntryPoint GLCompute %2 "main"
+                      OpDecorate %struct Block
+              %void = OpTypeVoid
+              %half = OpTypeFloat 16
+            %struct = OpTypeStruct %half
+               %ptr = OpTypePointer StorageBuffer %struct
+                 %1 = OpTypeFunction %void
+                 %2 = OpFunction %void None %1
+                 %3 = OpLabel
+                      OpReturn
+                      OpFunctionEnd
+  )";
+  SetTargetEnv(SPV_ENV_VULKAN_1_0);
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithoutChange);
+}
+
+TEST_F(TrimCapabilitiesPassTest,
+       StorageBuffer16BitAccess_RemainsSimplePointer_Vulkan1_1) {
+  // See https://github.com/KhronosGroup/SPIRV-Tools/issues/5354
+  static_assert(spv::Capability::StorageUniformBufferBlock16 ==
+                spv::Capability::StorageBuffer16BitAccess);
+
+  const std::string kTest = R"(
+                      OpCapability Shader
+                      OpCapability Float16
+                      OpCapability StorageBuffer16BitAccess
+
+; CHECK:          OpCapability StorageBuffer16BitAccess
+; CHECK-NOT:      OpExtension "SPV_KHR_16bit_storage"
+
+                      OpMemoryModel Logical GLSL450
+                      OpEntryPoint GLCompute %2 "main"
+                      OpDecorate %struct Block
+              %void = OpTypeVoid
+              %half = OpTypeFloat 16
+            %struct = OpTypeStruct %half
+               %ptr = OpTypePointer StorageBuffer %struct
+                 %1 = OpTypeFunction %void
+                 %2 = OpFunction %void None %1
+                 %3 = OpLabel
+                      OpReturn
+                      OpFunctionEnd
+  )";
+  SetTargetEnv(SPV_ENV_VULKAN_1_1);
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithoutChange);
+}
+
+TEST_F(
+    TrimCapabilitiesPassTest,
+    StorageBuffer16BitAccess_RemainsSimplePointerUshortPhysicalStorage_Vulkan1_1) {
+  // See https://github.com/KhronosGroup/SPIRV-Tools/issues/5354
+  static_assert(spv::Capability::StorageUniformBufferBlock16 ==
+                spv::Capability::StorageBuffer16BitAccess);
+
+  const std::string kTest = R"(
+                      OpCapability Shader
+                      OpCapability StorageBuffer16BitAccess
+                      OpCapability PhysicalStorageBufferAddresses
+
+; CHECK:          OpCapability StorageBuffer16BitAccess
+; CHECK:          OpCapability PhysicalStorageBufferAddresses
+; CHECK-NOT:      OpExtension "SPV_KHR_16bit_storage"
+; CHECK-NOT:      OpCapability Int16
+
+                      OpMemoryModel Logical GLSL450
+                      OpEntryPoint GLCompute %2 "main"
+                      OpDecorate %struct Block
+              %void = OpTypeVoid
+            %ushort = OpTypeInt 16 0
+            %struct = OpTypeStruct %ushort
+               %ptr = OpTypePointer PhysicalStorageBuffer %struct
+                 %1 = OpTypeFunction %void
+                 %2 = OpFunction %void None %1
+                 %3 = OpLabel
+                      OpReturn
+                      OpFunctionEnd
+  )";
+  SetTargetEnv(SPV_ENV_VULKAN_1_1);
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithoutChange);
+}
+
+TEST_F(
+    TrimCapabilitiesPassTest,
+    StorageBuffer16BitAccess_RemainsSimplePointerUshortStorageBuffer_Vulkan1_1) {
+  // See https://github.com/KhronosGroup/SPIRV-Tools/issues/5354
+  static_assert(spv::Capability::StorageUniformBufferBlock16 ==
+                spv::Capability::StorageBuffer16BitAccess);
+
+  const std::string kTest = R"(
+                      OpCapability Shader
+                      OpCapability StorageBuffer16BitAccess
+
+; CHECK:          OpCapability StorageBuffer16BitAccess
+; CHECK-NOT:      OpExtension "SPV_KHR_16bit_storage"
+; CHECK-NOT:      OpCapability Int16
+
+                      OpMemoryModel Logical GLSL450
+                      OpEntryPoint GLCompute %2 "main"
+                      OpDecorate %struct Block
+              %void = OpTypeVoid
+            %ushort = OpTypeInt 16 0
+            %struct = OpTypeStruct %ushort
+               %ptr = OpTypePointer StorageBuffer %struct
+                 %1 = OpTypeFunction %void
+                 %2 = OpFunction %void None %1
+                 %3 = OpLabel
+                      OpReturn
+                      OpFunctionEnd
+  )";
+  SetTargetEnv(SPV_ENV_VULKAN_1_1);
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithoutChange);
+}
+
+TEST_F(
+    TrimCapabilitiesPassTest,
+    StorageBuffer16BitAccess_RemainsSimplePointerUshortRecordBuffer_Vulkan1_1) {
+  // See https://github.com/KhronosGroup/SPIRV-Tools/issues/5354
+  static_assert(spv::Capability::StorageUniformBufferBlock16 ==
+                spv::Capability::StorageBuffer16BitAccess);
+
+  const std::string kTest = R"(
+                      OpCapability Shader
+                      OpCapability RayTracingKHR
+                      OpCapability StorageBuffer16BitAccess
+                      OpExtension "SPV_KHR_ray_tracing"
+
+; CHECK-NOT:      OpCapability Int16
+; CHECK:          OpCapability RayTracingKHR
+; CHECK:          OpCapability StorageBuffer16BitAccess
+; CHECK:          OpExtension "SPV_KHR_ray_tracing"
+; CHECK-NOT:      OpExtension "SPV_KHR_16bit_storage"
+
+                      OpMemoryModel Logical GLSL450
+                      OpEntryPoint GLCompute %2 "main"
+                      OpDecorate %struct Block
+              %void = OpTypeVoid
+            %ushort = OpTypeInt 16 0
+            %struct = OpTypeStruct %ushort
+               %ptr = OpTypePointer ShaderRecordBufferKHR %struct
+                 %1 = OpTypeFunction %void
+                 %2 = OpFunction %void None %1
+                 %3 = OpLabel
+                      OpReturn
+                      OpFunctionEnd
+  )";
+  SetTargetEnv(SPV_ENV_VULKAN_1_1);
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithoutChange);
+}
+
+TEST_F(TrimCapabilitiesPassTest,
+       StorageBuffer16BitAccess_TrimRecordBuffer_Vulkan1_1) {
+  // See https://github.com/KhronosGroup/SPIRV-Tools/issues/5354
+  static_assert(spv::Capability::StorageUniformBufferBlock16 ==
+                spv::Capability::StorageBuffer16BitAccess);
+
+  const std::string kTest = R"(
+                      OpCapability Shader
+                      OpCapability RayTracingKHR
+                      OpCapability StorageBuffer16BitAccess
+                      OpExtension "SPV_KHR_ray_tracing"
+
+; CHECK-NOT:      OpCapability RayTracingKHR
+; CHECK-NOT:      OpCapability StorageBuffer16BitAccess
+; CHECK-NOT:      OpExtension "SPV_KHR_ray_tracing"
+
+                      OpMemoryModel Logical GLSL450
+                      OpEntryPoint GLCompute %2 "main"
+                      OpDecorate %struct Block
+              %void = OpTypeVoid
+                 %1 = OpTypeFunction %void
+                 %2 = OpFunction %void None %1
+                 %3 = OpLabel
+                      OpReturn
+                      OpFunctionEnd
+  )";
+  SetTargetEnv(SPV_ENV_VULKAN_1_1);
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithChange);
+}
+
+TEST_F(TrimCapabilitiesPassTest,
+       StorageBuffer16BitAccess_RemovedSimplePointer) {
+  // See https://github.com/KhronosGroup/SPIRV-Tools/issues/5354
+  static_assert(spv::Capability::StorageUniformBufferBlock16 ==
+                spv::Capability::StorageBuffer16BitAccess);
+
+  const std::string kTest = R"(
+                      OpCapability Shader
+                      OpCapability Float16
+                      OpCapability StorageBuffer16BitAccess
+                      OpExtension "SPV_KHR_16bit_storage"
+
+; CHECK-NOT:          OpCapability StorageBuffer16BitAccess
+; CHECK-NOT:          OpExtension "SPV_KHR_16bit_storage"
+
+                      OpMemoryModel Logical GLSL450
+                      OpEntryPoint GLCompute %2 "main"
+              %void = OpTypeVoid
+              %half = OpTypeFloat 16
+            %struct = OpTypeStruct %half
+               %ptr = OpTypePointer Function %struct
+                 %1 = OpTypeFunction %void
+                 %2 = OpFunction %void None %1
+                 %3 = OpLabel
+                      OpReturn
+                      OpFunctionEnd
+  )";
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithChange);
+}
+
 TEST_F(TrimCapabilitiesPassTest, FragmentShaderInterlock_RemovedIfNotUsed) {
   const std::string kTest = R"(
                OpCapability Shader

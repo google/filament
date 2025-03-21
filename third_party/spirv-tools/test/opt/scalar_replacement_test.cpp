@@ -27,7 +27,7 @@ using ScalarReplacementPassName = ::testing::Test;
 
 TEST_F(ScalarReplacementPassName, Default) {
   auto srp = ScalarReplacementPass();
-  EXPECT_STREQ(srp.name(), "scalar-replacement=100");
+  EXPECT_STREQ(srp.name(), "scalar-replacement=0");
 }
 
 TEST_F(ScalarReplacementPassName, Large) {

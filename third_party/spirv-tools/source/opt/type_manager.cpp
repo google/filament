@@ -495,6 +495,8 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
       break;
   }
   context()->AddType(std::move(typeInst));
+  // TODO(dneto): This next call to AnalyzeDefUse is redundant becaues
+  // IRContext::AddType already does it.
   context()->AnalyzeDefUse(&*--context()->types_values_end());
   AttachDecorations(id, type);
   return id;
