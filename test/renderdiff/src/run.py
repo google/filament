@@ -46,7 +46,12 @@ def render_test(gltf_viewer, test_config, output_dir,
     for backend in test_config.backends:
       env = None
       if backend == 'opengl' and opengl_lib and os.path.isdir(opengl_lib):
-        env = {'LD_LIBRARY_PATH': opengl_lib}
+        env = {
+          'LD_LIBRARY_PATH': opengl_lib,
+
+           # for macOS
+          'DYLD_LIBRARY_PATH': opengl_lib,
+        }
 
       for model in test.models:
         model_path = test_config.models[model]
