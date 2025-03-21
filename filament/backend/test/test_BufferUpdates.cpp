@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
@@ -90,9 +91,10 @@ TEST_F(BackendTest, VertexBufferUpdate) {
     // executeCommands().
     {
         auto& api = getDriverApi();
+        Cleanup cleanup(api);
 
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = createSwapChain();
+        auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
@@ -103,18 +105,18 @@ TEST_F(BackendTest, VertexBufferUpdate) {
                 vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
         Program p = shaderGen.getProgram(api);
         p.descriptorBindings(1, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
-        auto program = api.createProgram(std::move(p));
+        auto program = cleanup.add(api.createProgram(std::move(p)));
 
-        DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+        DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
                 {{
                          DescriptorType::UNIFORM_BUFFER,
                          ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
                          DescriptorFlags::NONE, 0
-                 }}});
+                 }}}));
 
-        DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+        DescriptorSetHandle descriptorSet = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
 
-        auto defaultRenderTarget = api.createDefaultRenderTarget(0);
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
         // To test large buffers (which exercise a different code path) create an extra large
         // buffer. Only the first 3 vertices will be used.
@@ -138,8 +140,8 @@ TEST_F(BackendTest, VertexBufferUpdate) {
         // Create a uniform buffer.
         // We use STATIC here, even though the buffer is updated, to force the Metal backend to use a
         // GPU buffer, which is more interesting to test.
-        auto ubuffer = api.createBufferObject(sizeof(MaterialParams) + 64,
-                BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+        auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams) + 64,
+                BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
         api.updateDescriptorSetBuffer(descriptorSet, 0, ubuffer, 0, sizeof(MaterialParams) + 64);
         api.bindDescriptorSet(descriptorSet, 1, {});
@@ -202,13 +204,6 @@ TEST_F(BackendTest, VertexBufferUpdate) {
         api.endFrame(0);
 
         api.stopCapture(0);
-
-        api.destroyProgram(program);
-        api.destroySwapChain(swapChain);
-        api.destroyDescriptorSet(descriptorSet);
-        api.destroyDescriptorSetLayout(descriptorSetLayout);
-        api.destroyBufferObject(ubuffer);
-        api.destroyRenderTarget(defaultRenderTarget);
     }
 
     executeCommands();
@@ -218,9 +213,10 @@ TEST_F(BackendTest, VertexBufferUpdate) {
 // buffer object is partially updated.
 TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     auto& api = getDriverApi();
+    Cleanup cleanup(api);
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = createSwapChain();
+    auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
     // Create a program.
@@ -231,32 +227,32 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
             vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
     Program p = shaderGen.getProgram(api);
     p.descriptorBindings(1, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
-    auto program = api.createProgram(std::move(p));
+    auto program = cleanup.add(api.createProgram(std::move(p)));
 
-    DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+    DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
             {{
                      DescriptorType::UNIFORM_BUFFER,
                      ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
                      DescriptorFlags::NONE, 0
-             }}});
+             }}}));
 
-    DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+    DescriptorSetHandle descriptorSet = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
 
 
     // Create a uniform buffer.
     // We use STATIC here, even though the buffer is updated, to force the Metal backend to use a
     // GPU buffer, which is more interesting to test.
-    auto ubuffer = api.createBufferObject(sizeof(MaterialParams) + 64,
-            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+    auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams) + 64,
+            BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
     api.updateDescriptorSetBuffer(descriptorSet, 0, ubuffer, 0, sizeof(MaterialParams) + 64);
     api.bindDescriptorSet(descriptorSet, 1, {});
 
     // Create a render target.
-    auto colorTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT);
-    auto renderTarget = api.createRenderTarget(
-            TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{colorTexture}}, {}, {});
+    auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT));
+    auto renderTarget = cleanup.add(api.createRenderTarget(
+            TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{colorTexture}}, {}, {}));
 
     // Upload uniforms for the first triangle.
     {
@@ -311,14 +307,6 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     api.flush();
     api.commit(swapChain);
     api.endFrame(0);
-
-    api.destroyProgram(program);
-    api.destroySwapChain(swapChain);
-    api.destroyDescriptorSet(descriptorSet);
-    api.destroyDescriptorSetLayout(descriptorSetLayout);
-    api.destroyBufferObject(ubuffer);
-    api.destroyRenderTarget(renderTarget);
-    api.destroyTexture(colorTexture);
 
     // This ensures all driver commands have finished before exiting the test.
     api.finish();

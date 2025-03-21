@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
@@ -66,10 +67,11 @@ using namespace filament::backend;
 // Rendering an external image without setting any data should not crash.
 TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     auto& api = getDriverApi();
+    Cleanup cleanup(api);
 
     TrianglePrimitive triangle(api);
 
-    auto swapChain = createSwapChain();
+    auto swapChain = cleanup.add(createSwapChain());
 
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH, false };
@@ -82,22 +84,22 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     // Create a program that samples a texture.
     Program p = shaderGen.getProgram(api);
     p.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
-    backend::Handle<HwProgram> program = api.createProgram(std::move(p));
-    DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+    backend::Handle<HwProgram> program = cleanup.add(api.createProgram(std::move(p)));
+    DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
             {{
                      DescriptorType::SAMPLER,
                      ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
                      DescriptorFlags::NONE, 0
-             }}});
+             }}}));
 
-    DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+    DescriptorSetHandle descriptorSet = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
 
-    backend::Handle<HwRenderTarget> defaultRenderTarget = api.createDefaultRenderTarget(0);
+    backend::Handle<HwRenderTarget> defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
     // Create a texture that will be backed by an external image.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
     const NativeView& view = getNativeView();
-    backend::Handle<HwTexture> texture = api.createTexture(
+    backend::Handle<HwTexture> texture = cleanup.add(api.createTexture(
                 SamplerType::SAMPLER_EXTERNAL,      // target
                 1,                                  // levels
                 TextureFormat::RGBA8,               // format
@@ -105,7 +107,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
                 view.width,                         // width
                 view.height,                        // height
                 1,                                  // depth
-                usage);                             // usage
+                usage));                             // usage
 
     RenderPassParams params = {};
     fullViewport(params);
@@ -140,15 +142,6 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     api.stopCapture(0);
 
-    // Delete our resources.
-    api.destroyDescriptorSet(descriptorSet);
-    api.destroyDescriptorSetLayout(descriptorSetLayout);
-    api.destroyTexture(texture);
-
-    // Destroy frame resources.
-    api.destroyProgram(program);
-    api.destroyRenderTarget(defaultRenderTarget);
-
     api.finish();
 
     executeCommands();
@@ -156,10 +149,11 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
 TEST_F(BackendTest, RenderExternalImage) {
     auto& api = getDriverApi();
+    Cleanup cleanup(api);
 
     TrianglePrimitive triangle(api);
 
-    auto swapChain = createSwapChain();
+    auto swapChain = cleanup.add(createSwapChain());
 
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH, false };
@@ -172,18 +166,18 @@ TEST_F(BackendTest, RenderExternalImage) {
     // Create a program that samples a texture.
     Program p = shaderGen.getProgram(api);
     p.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
-    auto program = api.createProgram(std::move(p));
+    auto program = cleanup.add(api.createProgram(std::move(p)));
 
-    DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+    DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
             {{
                      DescriptorType::SAMPLER,
                      ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
                      DescriptorFlags::NONE, 0
-             }}});
+             }}}));
 
-    DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+    DescriptorSetHandle descriptorSet = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
 
-    backend::Handle<HwRenderTarget> defaultRenderTarget = api.createDefaultRenderTarget(0);
+    backend::Handle<HwRenderTarget> defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
     // require users to create two Filament textures and have two material parameters
     // add a "plane" parameter to setExternalImage
@@ -227,8 +221,8 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     api.setupExternalImage(pixBuffer);
     backend::Handle<HwTexture> texture =
-            api.createTextureExternalImage(SamplerType::SAMPLER_EXTERNAL,
-                    TextureFormat::RGBA8, 1024, 1024, usage, pixBuffer);
+            cleanup.add(api.createTextureExternalImage(SamplerType::SAMPLER_EXTERNAL,
+                    TextureFormat::RGBA8, 1024, 1024, usage, pixBuffer));
 
     // We're now free to release the buffer.
     CVBufferRelease(pixBuffer);
@@ -268,15 +262,6 @@ TEST_F(BackendTest, RenderExternalImage) {
     api.endFrame(0);
 
     api.stopCapture(0);
-
-    // Delete our resources.
-    api.destroyDescriptorSet(descriptorSet);
-    api.destroyDescriptorSetLayout(descriptorSetLayout);
-    api.destroyTexture(texture);
-
-    // Destroy frame resources.
-    api.destroyProgram(program);
-    api.destroyRenderTarget(defaultRenderTarget);
 
     api.finish();
 
