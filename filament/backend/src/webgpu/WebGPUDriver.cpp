@@ -258,9 +258,6 @@ Driver* WebGPUDriver::create(WebGPUPlatform& platform) noexcept {
 
 WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform) noexcept
     : mPlatform(platform) {
-        FWGPU_LOGI << " called driver constructor, configure surface " << utils::io::endl;
-        (void)WebGPUDriver::ConfigureSurface(1024,720);
-
   #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printInstanceDetails(mPlatform.getInstance());
 
@@ -462,9 +459,27 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     printDeviceDetails(mDevice);
 #endif
     mQueue = mDevice.GetQueue();
-    // TODO configure the surface (maybe before or after creating the swapchain?
-    //                             how do we get the surface extent?)
-    // TODO actually create the swapchain
+
+    // Configure the surface ... Should probably move creation to the Surface call and configuration, resize, headless can live there too, similar to driver?
+    wgpu::SurfaceCapabilities surfaceCapabilities{};
+    if (!mSurface.GetCapabilities(mAdapter, &surfaceCapabilities)) {
+        FWGPU_LOGW << "Failed to get WebGPU surface capabilities" << utils::io::endl;
+    } else {
+        //printSurfaceCapabilitiesDetails(surfaceCapabilities);
+    }
+    wgpu::SurfaceConfiguration surfaceConfig = {};
+    surfaceConfig.device = mDevice;
+    surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment;
+    //TODO: get size from nativeWindow ,or hook into queue to get it from a texture
+    surfaceConfig.width = 2048;
+    surfaceConfig.height = 1280;
+    //Should Probably make sure these formats and modes are ideal?
+    surfaceConfig.format = surfaceCapabilities.formats[0];
+    surfaceConfig.presentMode = surfaceCapabilities.presentModes[0];
+    surfaceConfig.alphaMode = surfaceCapabilities.alphaModes[0];
+    mSurface.Configure(&surfaceConfig);
+    FWGPU_LOGW << "Successfully configured surface" << utils::io::endl;
+
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
                   "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
@@ -831,25 +846,6 @@ void WebGPUDriver::bindDescriptorSet(
 }
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
-}
-wgpu::Surface WebGPUDriver::ConfigureSurface(uint32_t width, uint32_t height){
-    wgpu::SurfaceCapabilities capabilities{};
-//    if(!mSurface.GetCapabilities(mAdapter, &capabilities)){
-//         FWGPU_LOGI << "Failed to get Surface Capabilities " << utils::io::endl;
-//    } else {
-//        //printSurfaceCapabilities(capabilities)
-//    }
-    wgpu::SurfaceConfiguration surfaceConfig = {};
-    surfaceConfig.device = mDevice;
-    surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment;
-    surfaceConfig.format = wgpu::TextureFormat::BGRA8UnormSrgb;
-    surfaceConfig.width = 2048;
-    surfaceConfig.height = 1280;
-    surfaceConfig.presentMode = wgpu::PresentMode::Fifo;
-    surfaceConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
-    //mSurface.Configure(&surfaceConfig);
-
-    return mSurface;
 }
 
 } // namespace filament

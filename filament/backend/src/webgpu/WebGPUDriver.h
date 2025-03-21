@@ -23,7 +23,7 @@
 #include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
 #include <backend/DriverEnums.h>
-#include "WebGPUSurfaceConfiguration.h"
+#include "WebGPUSurface.h"
 
 #include <utils/compiler.h>
 
@@ -49,8 +49,8 @@ private:
     explicit WebGPUDriver(WebGPUPlatform& platform) noexcept;
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
     [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
-    [[nodiscard]] wgpu::Surface ConfigureSurface(uint32_t width, uint32_t height);
-    [[nodiscard]] wgpu::Surface resizeSurface(uint32_t width, uint32_t height);
+    //[[nodiscard]] wgpu::Surface ConfigureSurface(uint32_t width, uint32_t height);
+    //[[nodiscard]] wgpu::Surface resizeSurface(uint32_t width, uint32_t height);
 
 
     // the platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
@@ -61,7 +61,6 @@ private:
     wgpu::Device mDevice = nullptr;
     wgpu::Queue mQueue = nullptr;
     uint64_t mNextFakeHandle = 1;
-    std::unique_ptr<wgpu::SurfaceConfiguration> mSurfaceConfig;
 
     /*
      * Driver interface

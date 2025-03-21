@@ -247,8 +247,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUConstants.h
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
-            src/webgpu/WebGPUSurfaceConfiguration.cpp
-            src/webgpu/WebGPUSurfaceConfiguration.h
+            src/webgpu/WebGPUSurface.cpp
+            src/webgpu/WebGPUSurface.h
     )
     if (WIN32)
         list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)

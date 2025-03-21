@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_WEBGPUSURFACECONFIGURATION_H
-#define TNT_WEBGPUSURFACECONFIGURATION_H
+#ifndef TNT_WEBGPUSURFACE_H
+#define TNT_WEBGPUSURFACE_H
 
 #include <backend/platforms/WebGPUPlatform.h>
 #include "webgpu/WebGPUDriver.h"
@@ -27,25 +27,27 @@
 
 
 namespace filament::backend {
-class WebGPUSurfaceConfiguration {
+class WebGPUSurface {
 public:
-    explicit WebGPUSurfaceConfiguration(wgpu::Device device, wgpu::Surface surface, uint32_t width, uint32_t height, wgpu::TextureFormat);
-    ~WebGPUSurfaceConfiguration();
+    explicit WebGPUSurface(wgpu::Surface surface, wgpu::Device device, wgpu::Adapter adapter, uint32_t width, uint32_t height);
+    ~WebGPUSurface();
 
-    void ConfigureSwapChain();
+    wgpu::Surface ConfigureSurface(wgpu::Surface surface, wgpu::Device device,  wgpu::Adapter adapter, uint32_t width, uint32_t height);
 
-    void Resize();
+    void Resize(uint32_t width, uint32_t height);
 
 private:
-    wgpu::Device mDevice;
     wgpu::Surface mSurface;
+    wgpu::Device mDevice;
     wgpu::Adapter mAdapter;
     uint32_t mWidth;
     uint32_t mHeight;
-    wgpu::TextureFormat mFormat;
+    void *mFormat = nullptr;
+    void *mPresentMode = nullptr;
+    void *mAlphaMode = nullptr;
 
 };
 } // namespace filament::backend
 
 
-#endif //TNT_WEBGPUSURFACECONFIGURATION_H
+#endif //TNT_WEBGPUSURFACE_H
