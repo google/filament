@@ -16,6 +16,11 @@
 
 #include <fgviewer/FrameGraphInfo.h>
 
+#include <utils/CString.h>
+
+#include <unordered_map>
+#include <vector>
+
 namespace filament::fgviewer {
 
 FrameGraphInfo::FrameGraphInfo(utils::CString viewName):

@@ -448,7 +448,7 @@ class FrameGraphTable extends LitElement {
                             </span>`
                         : nothing}
                     ${resource.name}
-                    ${hasSubresources && isExpanded ? nothing : html`(${subresourceIds.length})`}
+                    ${hasSubresources && !isExpanded ? html`(${subresourceIds.length})` : nothing}
                 </th>
                 ${this._renderResourceUsage(allPasses, resourceIds, DEFAULT_COLOR)}
             </tr>
