@@ -17,7 +17,22 @@
 #include <dlfcn.h>
 #include <string.h>
 
+#if defined(__linux__)
+
 #include <osmesa.h>
+
+// This is to ensure that linking during compilation will not fail even if
+// OSMesaGetProcAddress is not linked.
+__attribute__((weak)) OSMESAproc OSMesaGetProcAddress(char const*);
+
+#elif defined(__APPLE__)
+
+#include <GL/osmesa.h>
+
+#endif // __linux__
+
+#if defined(__linux__)
+#endif
 
 namespace bluegl {
 
@@ -25,34 +40,41 @@ namespace {
 using ProcAddressFunc = void*(*)(char const* funcName);
 }
 
-// This is to ensure that linking during compilation will not fail even if
-// OSMesaGetProcAddress is not linked.
-__attribute__((weak)) OSMESAproc OSMesaGetProcAddress(char const*);
-
 struct Driver {
     ProcAddressFunc OSMesaGetProcAddress;
     void* library;
 } g_driver = {nullptr, nullptr};
 
 bool initBinder() {
-    constexpr char const* libraryNames[] = {"libOSMesa.so", "libosmesa.so"};
+    static constexpr char const* libraryNames[] = {
+#if defined(__linux__)
+        "libOSMesa.so",
+        "libosmesa.so",
+#elif defined(__APPLE__)
+        "libOSMesa.dylib",
+#endif
+    };
     for (char const* name: libraryNames) {
         g_driver.library = dlopen(name, RTLD_GLOBAL | RTLD_NOW);
         if (g_driver.library) {
             break;
         }
     }
-    if (!g_driver.library) {
-        // The library has been linked explicitly during compile.
-        g_driver.OSMesaGetProcAddress = (ProcAddressFunc) dlsym(RTLD_LOCAL, "OSMesaGetProcAddress");
-    } else {
+    if (g_driver.library) {
+        // Linking against a libosmesa.so.
         g_driver.OSMesaGetProcAddress =
                 (ProcAddressFunc) dlsym(g_driver.library, "OSMesaGetProcAddress");
     }
-
+#if defined(__linux__)
+    else {
+        // If Filament was built as a dynamic library.
+        g_driver.OSMesaGetProcAddress = (ProcAddressFunc) dlsym(RTLD_LOCAL, "OSMesaGetProcAddress");
+    }
     if (!g_driver.OSMesaGetProcAddress) {
+        // If statically linking OSMesa.
         g_driver.OSMesaGetProcAddress = (ProcAddressFunc) OSMesaGetProcAddress;
     }
+#endif
 
     return g_driver.OSMesaGetProcAddress;
 }

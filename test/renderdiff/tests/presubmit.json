@@ -8,7 +8,8 @@
             "models": ["lucy", "DamagedHelmet"],
             "rendering": {
                 "viewer.cameraFocusDistance": 0,
-                "view.postProcessingEnabled": true
+                "view.postProcessingEnabled": true,
+                "view.dithering": "NONE"
             }
         }
     ],

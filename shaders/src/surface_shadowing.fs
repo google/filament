@@ -511,6 +511,12 @@ int getPointLightFace(const highp vec3 r) {
     }
 }
 
+#if defined(MATERIAL_HAS_SHADOW_STRENGTH)
+void applyShadowStrength(inout float visibility, float strength) {
+    visibility = 1.0 - (1.0 - visibility) * strength;
+}
+#endif
+
 // PCF sampling
 float shadow(const bool DIRECTIONAL,
         const mediump sampler2DArrayShadow shadowMap,
