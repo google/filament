@@ -1057,7 +1057,7 @@ bool VulkanDriver::isDepthStencilBlitSupported(TextureFormat format) {
            formats.end();
 }
 
-bool VulkanDriver::isProtectedTexturesSupported() { return false; }
+bool VulkanDriver::isProtectedTexturesSupported() { return isProtectedContentSupported(); }
 
 bool VulkanDriver::isDepthClampSupported() {
     return mContext.isDepthClampSupported();
