@@ -20,6 +20,9 @@ struct PostProcessVertexInputs {
 #ifdef VARIABLE_CUSTOM3
     vec4 VARIABLE_CUSTOM3;
 #endif
+#ifdef VARIABLE_CUSTOM4
+    vec4 VARIABLE_CUSTOM4;
+#endif
 };
 
 void initPostProcessMaterialVertex(out PostProcessVertexInputs inputs) {
@@ -34,5 +37,8 @@ void initPostProcessMaterialVertex(out PostProcessVertexInputs inputs) {
 #endif
 #ifdef VARIABLE_CUSTOM3
     inputs.VARIABLE_CUSTOM3 = vec4(0.0);
+#endif
+#ifdef VARIABLE_CUSTOM4
+    inputs.VARIABLE_CUSTOM4 = vec4(0.0);
 #endif
 }

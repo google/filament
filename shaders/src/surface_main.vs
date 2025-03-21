@@ -151,6 +151,9 @@ void main() {
 #if defined(VARIABLE_CUSTOM3)
     VARIABLE_CUSTOM_AT3 = material.VARIABLE_CUSTOM3;
 #endif
+#if defined(VARIABLE_CUSTOM4) && !defined(HAS_ATTRIBUTE_COLOR)
+    VARIABLE_CUSTOM_AT4 = material.VARIABLE_CUSTOM4;
+#endif
 
     // The world position can be changed by the user in materialVertex()
     vertex_worldPosition.xyz = material.worldPosition.xyz;
