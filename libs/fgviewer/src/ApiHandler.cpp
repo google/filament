@@ -17,13 +17,21 @@
 
 #include "ApiHandler.h"
 
+#include <__chrono/duration.h>
 #include <fgviewer/DebugServer.h>
 #include <fgviewer/JsonWriter.h>
 
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
+#include <utils/ostream.h>
 
 #include <CivetServer.h>
+
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <mutex>
+#include <string>
 
 namespace filament::fgviewer {
 
