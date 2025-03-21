@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <backend/platforms/VulkanPlatform.h>
+#include <backend/platforms/VulkanPlatformAndroid.h>
 
 #include <backend/DriverEnums.h>
-#include <backend/platforms/VulkanPlatformAndroid.h>
 #include <private/backend/BackendUtilsAndroid.h>
 
 #include "vulkan/VulkanConstants.h"
@@ -157,7 +156,7 @@ VulkanPlatform::ImageData allocateExternalImage(AHardwareBuffer* buffer, VkDevic
         .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID,
     };
 
-    VkImageCreateInfo imageInfo{.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    VkImageCreateInfo imageInfo{ .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
     imageInfo.pNext = &externalCreateInfo;
     imageInfo.format = metadata.format;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -200,14 +199,12 @@ VulkanPlatform::ImageData allocateExternalImage(AHardwareBuffer* buffer, VkDevic
     return data;
 }
 
-} // namespace
+}// namespace
 
-namespace fvkandroid {
+VulkanPlatformAndroid::ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid() = default;
 
-ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid() = default;
-
-Platform::ExternalImageHandle createExternalImage(AHardwareBuffer const* buffer,
-        bool sRGB) noexcept {
+Platform::ExternalImageHandle VulkanPlatformAndroid::createExternalImage(
+        AHardwareBuffer const* buffer, bool sRGB) noexcept {
     if (__builtin_available(android 26, *)) {
         AHardwareBuffer_Desc hardwareBufferDescription = {};
         AHardwareBuffer_describe(buffer, &hardwareBufferDescription);
@@ -226,12 +223,23 @@ Platform::ExternalImageHandle createExternalImage(AHardwareBuffer const* buffer,
     return Platform::ExternalImageHandle{};
 }
 
-} // namespace fvkandroid
-
-VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
-        ExternalImageHandleRef externalImage, VkDevice device) {
+VulkanPlatformAndroid::ExternalImageDescAndroid VulkanPlatformAndroid::getExternalImageDesc(
+        ExternalImageHandleRef externalImage) const noexcept {
     auto const* fvkExternalImage =
-            static_cast<fvkandroid::ExternalImageVulkanAndroid const*>(externalImage.get());
+            static_cast<ExternalImageVulkanAndroid const*>(externalImage.get());
+
+    return {
+        .width = fvkExternalImage->width,
+        .height = fvkExternalImage->height,
+        .format = fvkExternalImage->format,
+        .usage = fvkExternalImage->usage,
+    };
+}
+
+VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::getExternalImageMetadata(
+        ExternalImageHandleRef externalImage) {
+    auto const* fvkExternalImage =
+            static_cast<ExternalImageVulkanAndroid const*>(externalImage.get());
 
     ExternalImageMetadata metadata;
     AHardwareBuffer* buffer = fvkExternalImage->aHardwareBuffer;
@@ -245,7 +253,7 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
         std::tie(metadata.format, metadata.usage) =
                 getVKFormatAndUsage(bufferDesc, fvkExternalImage->sRGB);
     }
-    
+
     metadata.samples = VK_SAMPLE_COUNT_1_BIT;
 
     VkAndroidHardwareBufferFormatPropertiesANDROID formatInfo = {
@@ -256,11 +264,11 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
         .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
         .pNext = &formatInfo,
     };
-    VkResult result = vkGetAndroidHardwareBufferPropertiesANDROID(device, buffer, &properties);
+    VkResult result = vkGetAndroidHardwareBufferPropertiesANDROID(getDevice(), buffer, &properties);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-        << "vkGetAndroidHardwareBufferProperties failed with error="
-        << static_cast<int32_t>(result);
-                            
+            << "vkGetAndroidHardwareBufferProperties failed with error="
+            << static_cast<int32_t>(result);
+
     VkFormat bufferPropertiesFormat = transformVkFormat(formatInfo.format, fvkExternalImage->sRGB);
     FILAMENT_CHECK_POSTCONDITION(metadata.format == bufferPropertiesFormat)
             << "mismatched image format( " << metadata.format << ") and queried format("
@@ -271,14 +279,14 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
     return metadata;
 }
 
-VulkanPlatform::ImageData VulkanPlatform::createExternalImageDataImpl(
-        ExternalImageHandleRef externalImage, VkDevice device,
-        const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex, VkImageUsageFlags usage) {
+VulkanPlatformAndroid::ImageData VulkanPlatformAndroid::createExternalImageData(
+        ExternalImageHandleRef externalImage, const ExternalImageMetadata& metadata,
+        uint32_t memoryTypeIndex, VkImageUsageFlags usage) {
     auto const* fvkExternalImage =
-            static_cast<fvkandroid::ExternalImageVulkanAndroid const*>(externalImage.get());
-    ImageData data = allocateExternalImage(fvkExternalImage->aHardwareBuffer, device, metadata,
+            static_cast<ExternalImageVulkanAndroid const*>(externalImage.get());
+    ImageData data = allocateExternalImage(fvkExternalImage->aHardwareBuffer, getDevice(), metadata,
             memoryTypeIndex, usage);
-    VkResult result = vkBindImageMemory(device, data.first, data.second, 0);
+    VkResult result = vkBindImageMemory(getDevice(), data.first, data.second, 0);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
         << "vkBindImageMemory error=" << static_cast<int32_t>(result);
     return data;
@@ -397,14 +405,14 @@ VkSampler VulkanPlatform::createExternalSamplerImpl(
     return sampler;
 }
 
-VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
+VulkanPlatform::ExtensionSet VulkanPlatformAndroid::getSwapchainInstanceExtensions() const {
     return {
         VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
     };
 }
 
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
-    VkInstance instance, uint64_t flags) noexcept {
+VulkanPlatform::SurfaceBundle VulkanPlatformAndroid::createVkSurfaceKHR(void* nativeWindow,
+        VkInstance instance, uint64_t flags) const noexcept {
     VkSurfaceKHR surface;
     VkExtent2D extent;
 
@@ -416,6 +424,26 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
             vkCreateAndroidSurfaceKHR(instance, &createInfo, VKALLOC, (VkSurfaceKHR*) &surface);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
             << "vkCreateAndroidSurfaceKHR with error=" << static_cast<int32_t>(result);
-    return {surface, extent};
+    return { surface, extent };
 }
+
+// Deprecated platform dependent helper methods
+VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl() { return {}; }
+
+VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
+        ExternalImageHandleRef externalImage, VkDevice device) {
+    return ExternalImageMetadata{};
 }
+
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageDataImpl(
+        ExternalImageHandleRef externalImage, VkDevice device,
+        const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex, VkImageUsageFlags usage) {
+    return ImageData{};
+}
+
+VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativeWindow,
+        VkInstance instance, uint64_t flags) noexcept {
+    return SurfaceBundle{};
+}
+
+}// namespace filament::backend

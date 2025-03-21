@@ -2306,36 +2306,11 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
         const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
         VignetteOptions const& vignetteOptions, uint32_t const width, uint32_t const height) noexcept {
 
-    float4 const vignetteParameters = getVignetteParameters(vignetteOptions, width, height);
-
-    auto const& material = getPostProcessMaterial("colorGradingAsSubpass");
-    FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(mEngine, material);
-
-    mi->setParameter("lut", colorGrading->getHwHandle(), {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR,
-            .wrapS = SamplerWrapMode::CLAMP_TO_EDGE,
-            .wrapT = SamplerWrapMode::CLAMP_TO_EDGE,
-            .wrapR = SamplerWrapMode::CLAMP_TO_EDGE,
-            .anisotropyLog2 = 0
-    });
-    const float lutDimension = float(colorGrading->getDimension());
-    mi->setParameter("lutSize", float2{
-        0.5f / lutDimension, (lutDimension - 1.0f) / lutDimension,
-    });
-
-    const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());
-
-    mi->setParameter("vignette", vignetteParameters);
-    mi->setParameter("vignetteColor", vignetteOptions.color);
-    mi->setParameter("dithering", colorGradingConfig.dithering);
-    mi->setParameter("outputLuminance", colorGradingConfig.outputLuminance);
-    mi->setParameter("temporalNoise", temporalNoise);
+    auto& material = getPostProcessMaterial("colorGradingAsSubpass");
+    FMaterialInstance* const mi =
+            configureColorGradingMaterial(material, colorGrading, colorGradingConfig,
+                    vignetteOptions, width, height);
     mi->commit(driver);
-
-    // load both variants
-    material.getMaterial(mEngine, PostProcessVariant::OPAQUE);
-    material.getMaterial(mEngine, PostProcessVariant::TRANSLUCENT);
 }
 
 void PostProcessManager::colorGradingSubpass(DriverApi& driver,
@@ -2487,22 +2462,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
 
                 auto const& out = resources.getRenderPassInfo();
 
-                auto const& material = getPostProcessMaterial("colorGrading");
+                auto const& input = resources.getDescriptor(data.input);
+                auto const& output = resources.getDescriptor(data.output);
 
-                PostProcessVariant const variant = colorGradingConfig.translucent ?
-                        PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE;
-
+                auto& material = getPostProcessMaterial("colorGrading");
                 FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material, variant);
+                        configureColorGradingMaterial(material, colorGrading, colorGradingConfig,
+                                vignetteOptions, output.width, output.height);
 
-                mi->setParameter("lut", colorGrading->getHwHandle(), {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR
-                });
-                const float lutDimension = float(colorGrading->getDimension());
-                mi->setParameter("lutSize", float2{
-                        0.5f / lutDimension, (lutDimension - 1.0f) / lutDimension,
-                });
                 mi->setParameter("colorBuffer", colorTexture, { /* shader uses texelFetch */ });
                 mi->setParameter("bloomBuffer", bloomTexture, {
                         .filterMag = SamplerMagFilter::LINEAR,
@@ -2534,19 +2501,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                     bloomParameters.y = 1.0f - bloomParameters.x;
                 }
 
-                auto const& input = resources.getDescriptor(data.input);
-                auto const& output = resources.getDescriptor(data.output);
-                float4 const vignetteParameters = getVignetteParameters(
-                        vignetteOptions, output.width, output.height);
-
-                const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());
-
-                mi->setParameter("dithering", colorGradingConfig.dithering);
                 mi->setParameter("bloom", bloomParameters);
-                mi->setParameter("vignette", vignetteParameters);
-                mi->setParameter("vignetteColor", vignetteOptions.color);
-                mi->setParameter("outputLuminance", colorGradingConfig.outputLuminance);
-                mi->setParameter("temporalNoise", temporalNoise);
                 mi->setParameter("viewport", float4{
                         float(vp.left)   / input.width,
                         float(vp.bottom) / input.height,
@@ -2554,7 +2509,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                         float(vp.height) / input.height
                 });
 
-                commitAndRenderFullScreenQuad(driver, out, mi, variant);
+                commitAndRenderFullScreenQuad(driver, out, mi,
+                        colorGradingConfig.translucent
+                        ? PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
             }
     );
 
@@ -2692,9 +2649,68 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
     setConstantParameter(ma, "varianceGamma", taaOptions.varianceGamma);
     if (dirty) {
         ma->invalidate();
-        // TODO: call Material::compile(), we can't si that now because it works only
+        // TODO: call Material::compile(), we can't do that now because it works only
         //       with surface materials
     }
+}
+
+FMaterialInstance* PostProcessManager::configureColorGradingMaterial(
+        PostProcessMaterial& material, FColorGrading const* colorGrading,
+        ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
+        uint32_t const width, uint32_t const height) noexcept {
+    FMaterial* const ma = material.getMaterial(mEngine);
+    bool dirty = false;
+
+    auto setConstantParameter =
+            [&dirty](FMaterial* const material, std::string_view const name, auto value) noexcept {
+        auto id = material->getSpecializationConstantId(name);
+        if (id.has_value()) {
+            if (material->setConstant(id.value(), value)) {
+                dirty = true;
+            }
+        }
+    };
+
+    setConstantParameter(ma, "isOneDimensional", colorGrading->isOneDimensional());
+    setConstantParameter(ma, "isLDR", colorGrading->isLDR());
+
+    if (dirty) {
+        ma->invalidate();
+        // TODO: call Material::compile(), we can't do that now because it works only
+        //       with surface materials
+    }
+
+    PostProcessVariant const variant = colorGradingConfig.translucent ?
+            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE;
+    FMaterialInstance* const mi =
+            PostProcessMaterial::getMaterialInstance(mEngine, material, variant);
+
+    const SamplerParams params = {
+            .filterMag = SamplerMagFilter::LINEAR,
+            .filterMin = SamplerMinFilter::LINEAR,
+            .wrapS = SamplerWrapMode::CLAMP_TO_EDGE,
+            .wrapT = SamplerWrapMode::CLAMP_TO_EDGE,
+            .wrapR = SamplerWrapMode::CLAMP_TO_EDGE,
+            .anisotropyLog2 = 0
+    };
+
+    mi->setParameter("lut", colorGrading->getHwHandle(), params);
+
+    const float lutDimension = float(colorGrading->getDimension());
+    mi->setParameter("lutSize", float2{
+        0.5f / lutDimension, (lutDimension - 1.0f) / lutDimension,
+    });
+
+    const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());
+
+    float4 const vignetteParameters = getVignetteParameters(vignetteOptions, width, height);
+    mi->setParameter("vignette", vignetteParameters);
+    mi->setParameter("vignetteColor", vignetteOptions.color);
+    mi->setParameter("dithering", colorGradingConfig.dithering);
+    mi->setParameter("outputLuminance", colorGradingConfig.outputLuminance);
+    mi->setParameter("temporalNoise", temporalNoise);
+
+    return mi;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,

@@ -42,12 +42,15 @@ public:
     void terminate(FEngine& engine);
 
     backend::TextureHandle getHwHandle() const noexcept { return mLutHandle; }
-
     uint32_t getDimension() const noexcept { return mDimension; }
+    bool isOneDimensional() const noexcept { return mIsOneDimensional; }
+    bool isLDR() const noexcept { return mIsLDR; }
 
 private:
     backend::TextureHandle mLutHandle;
     uint32_t mDimension;
+    bool mIsOneDimensional;
+    bool mIsLDR;
 };
 
 FILAMENT_DOWNCAST(ColorGrading)

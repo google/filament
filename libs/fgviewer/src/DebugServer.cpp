@@ -21,35 +21,44 @@
 
 #include <CivetServer.h>
 
-#include <utils/FixedCapacityVector.h>
-#include <utils/Hash.h>
 #include <utils/Log.h>
+#include <utils/Mutex.h>
+#include <utils/ostream.h>
 
+#include <mutex>
 #include <string>
 #include <string_view>
 
-namespace filament::fgviewer {
 
 // If set to 0, this serves HTML from a resgen resource. Use 1 only during local development, which
 // serves files directly from the source code tree.
 #define SERVE_FROM_SOURCE_TREE 0
 
 #if SERVE_FROM_SOURCE_TREE
+
 namespace {
 std::string const BASE_URL = "libs/fgviewer/web";
 } // anonymous
+
 #else
+
 #include "fgviewer_resources.h"
 #include <unordered_map>
 
 namespace {
+
 struct Asset {
     std::string_view mime;
     std::string_view data;
 };
+
 std::unordered_map<std::string_view, Asset> ASSET_MAP;
+
 } // anonymous
+
 #endif // SERVE_FROM_SOURCE_TREE
+
+namespace filament::fgviewer {
 
 using namespace utils;
 

@@ -1000,6 +1000,15 @@ VkImageView VulkanPlatform::createExternalImageView(SamplerYcbcrConversion chrom
     return createExternalImageViewImpl(mImpl->mDevice, chroma, internalFormat, image, range,
             viewType, swizzle);
 }
+
+ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() const {
+    return getSwapchainInstanceExtensionsImpl();
+}
+
+VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
+        VkInstance instance, uint64_t flags) const noexcept {
+    return createVkSurfaceKHRImpl(nativeWindow, instance, flags);
+}
 #undef SWAPCHAIN_RET_FUNC
 
 }// namespace filament::backend

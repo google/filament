@@ -148,8 +148,8 @@ using namespace utils;
 namespace filament::backend {
 
 Driver* OpenGLDriverFactory::create(
-        OpenGLPlatform* const platform,
-        void* const sharedGLContext,
+        OpenGLPlatform* platform,
+        void* sharedGLContext,
         const Platform::DriverConfig& driverConfig) noexcept {
     return OpenGLDriver::create(platform, sharedGLContext, driverConfig);
 }
@@ -159,10 +159,10 @@ using namespace GLUtils;
 // ------------------------------------------------------------------------------------------------
 
 UTILS_NOINLINE
-OpenGLDriver* OpenGLDriver::create(OpenGLPlatform* const platform,
-        void* const /*sharedGLContext*/, const Platform::DriverConfig& driverConfig) noexcept {
+OpenGLDriver* OpenGLDriver::create(OpenGLPlatform* platform,
+        void* /*sharedGLContext*/, const Platform::DriverConfig& driverConfig) noexcept {
     assert_invariant(platform);
-    OpenGLPlatform* const ec = platform;
+    OpenGLPlatform* ec = platform;
 
 #if 0
     // this is useful for development, but too verbose even for debug builds
@@ -230,7 +230,7 @@ OpenGLDriver* OpenGLDriver::create(OpenGLPlatform* const platform,
     constexpr size_t defaultSize = FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig validConfig{ driverConfig };
     validConfig.handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize);
-    OpenGLDriver* const driver = new(std::nothrow) OpenGLDriver(ec, validConfig);
+    OpenGLDriver* driver = new(std::nothrow) OpenGLDriver(ec, validConfig);
     return driver;
 }
 

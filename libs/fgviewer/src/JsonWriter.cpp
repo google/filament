@@ -14,11 +14,15 @@
  * limitations under the License.
  */
 
-#include <fgviewer/JsonWriter.h>
 #include <fgviewer/FrameGraphInfo.h>
+#include <fgviewer/JsonWriter.h>
 
-#include <iomanip>
+#include <utils/CString.h>
+
+#include <cstddef>
+#include <ostream>
 #include <sstream>
+#include <vector>
 
 namespace filament::fgviewer {
 
