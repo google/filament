@@ -12,7 +12,7 @@
 
 ## Capabilities
 
-fgviewer is a library and web application for real-time visualization of the frame graph in Filament.  
+fgviewer is a library and web application for real-time visualization of the frame graph in Filament.
 It displays active passes and resource usage, providing insights into the rendering pipeline.
 
 ## Setup for Desktop
