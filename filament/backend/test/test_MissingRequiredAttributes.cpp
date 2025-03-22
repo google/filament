@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
@@ -70,18 +71,20 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
+        DriverApi& api = getDriverApi();
+        Cleanup cleanup(api);
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = createSwapChain();
-        getDriverApi().makeCurrent(swapChain, swapChain);
+        auto swapChain = cleanup.add(createSwapChain());
+        api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
         ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(getDriverApi());
-        auto program = getDriverApi().createProgram(std::move(p));
+        Program p = shaderGen.getProgram(api);
+        auto program = cleanup.add(api.createProgram(std::move(p)));
 
-        auto defaultRenderTarget = getDriverApi().createDefaultRenderTarget(0);
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
-        TrianglePrimitive triangle(getDriverApi());
+        TrianglePrimitive triangle(api);
 
         RenderPassParams params = {};
         fullViewport(params);
@@ -97,25 +100,21 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
         state.rasterState.culling = CullingMode::NONE;
 
-        getDriverApi().startCapture(0);
+        api.startCapture(0);
 
-        getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0, 0);
+        api.makeCurrent(swapChain, swapChain);
+        api.beginFrame(0, 0, 0);
 
         // Render a triangle.
-        getDriverApi().beginRenderPass(defaultRenderTarget, params);
-        getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-        getDriverApi().endRenderPass();
+        api.beginRenderPass(defaultRenderTarget, params);
+        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        api.endRenderPass();
 
-        getDriverApi().flush();
-        getDriverApi().commit(swapChain);
-        getDriverApi().endFrame(0);
+        api.flush();
+        api.commit(swapChain);
+        api.endFrame(0);
 
-        getDriverApi().stopCapture(0);
-
-        getDriverApi().destroyProgram(program);
-        getDriverApi().destroySwapChain(swapChain);
-        getDriverApi().destroyRenderTarget(defaultRenderTarget);
+        api.stopCapture(0);
     }
 
     executeCommands();
