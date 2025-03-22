@@ -256,6 +256,7 @@ void WebGPUDriver::terminate() {
 }
 
 void WebGPUDriver::tick(int) {
+    mDevice.Tick();
 }
 
 void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
@@ -342,7 +343,7 @@ Handle<HwSwapChain> WebGPUDriver::createSwapChainHeadlessS() noexcept {
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureS() noexcept {
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
 }
 
 Handle<HwTexture> WebGPUDriver::importTextureS() noexcept {
@@ -370,15 +371,15 @@ Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
 }
 
 Handle<HwBufferObject> WebGPUDriver::createBufferObjectS() noexcept {
-    return Handle<HwBufferObject>((Handle<HwBufferObject>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUBufferObject>();
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createRenderTargetS() noexcept {
-    return Handle<HwRenderTarget>((Handle<HwRenderTarget>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPURenderTarget>();
 }
 
 Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
-    return Handle<HwVertexBuffer>((Handle<HwVertexBuffer>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUVertexBuffer>();
 }
 
 Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
@@ -390,7 +391,7 @@ Handle<HwRenderPrimitive> WebGPUDriver::createRenderPrimitiveS() noexcept {
 }
 
 Handle<HwVertexBufferInfo> WebGPUDriver::createVertexBufferInfoS() noexcept {
-    return Handle<HwVertexBufferInfo>((Handle<HwVertexBufferInfo>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUVertexBufferInfo>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewSwizzleS() noexcept {
@@ -398,7 +399,7 @@ Handle<HwTexture> WebGPUDriver::createTextureViewSwizzleS() noexcept {
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createDefaultRenderTargetS() noexcept {
-    return Handle<HwRenderTarget>((Handle<HwRenderTarget>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPURenderTarget>();
 }
 
 Handle<HwDescriptorSetLayout> WebGPUDriver::createDescriptorSetLayoutS() noexcept {
@@ -498,7 +499,9 @@ void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<
 
 void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {}
 
-void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {}
+void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
+    constructHandle<WGPURenderTarget>(rth);
+}
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
         uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount, MRT color,
@@ -659,6 +662,10 @@ void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> boh) {
 
 void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
+    auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
+    auto* bufferObject = handleCast<WGPUBufferObject>(boh);
+    assert_invariant(index < vertexBuffer->buffers.size());
+    vertexBuffer->setBuffer(bufferObject, index);
 }
 
 void WebGPUDriver::update3DImage(Handle<HwTexture> th,
