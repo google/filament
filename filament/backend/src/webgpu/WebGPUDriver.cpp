@@ -257,7 +257,23 @@ Driver* WebGPUDriver::create(WebGPUPlatform& platform) noexcept {
 }
 
 WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform) noexcept
-    : mPlatform(platform) {
+    : mPlatform(platform), mHandleAllocator(
+                "Handles",
+                300,
+                300,300) {
+
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+    printInstanceDetails(mPlatform.getInstance());
+#endif
+}
+
+WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept
+    : mPlatform(platform),
+    mHandleAllocator(
+                "Handles",
+                driverConfig.handleArenaSize,
+                driverConfig.disableHandleUseAfterFreeCheck,
+                driverConfig.disableHeapHandleTags) {
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printInstanceDetails(mPlatform.getInstance());
 #endif
@@ -385,7 +401,9 @@ Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
 }
 
 Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
-    return Handle<HwIndexBuffer>((Handle<HwIndexBuffer>::HandleId) mNextFakeHandle++);
+    return alloc_handle<HwIndexBuffer>();
+//    return Handle<HwIndexBuffer>((Handle<HwIndexBuffer>::HandleId) mNextFakeHandle++);
+
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
@@ -665,6 +683,13 @@ size_t WebGPUDriver::getMaxArrayTextureLayers() {
 
 void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
+//        FILAMENT_CHECK_PRECONDITION(data.buffer)
+//            << "updateIndexBuffer called with a null buffer.";
+//    auto* ib = handle_cast<HwIndexBuffer>(ibh);
+//    ib->buffer.copyIntoBuffer(data.buffer, data.size, byteOffset,
+//            [&]() { return mHandleAllocator.getHandleTag(ibh.getId()).c_str_safe(); });
+//    scheduleDestroy(std::move(data));
+
     scheduleDestroy(std::move(p));
 }
 

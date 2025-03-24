@@ -22,6 +22,7 @@
 #include "DriverBase.h"
 #include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
+#include "private/backend/HandleAllocator.h"
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
@@ -44,6 +45,7 @@ public:
 
 private:
     explicit WebGPUDriver(WebGPUPlatform& platform) noexcept;
+    WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
     [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
 
@@ -74,6 +76,44 @@ private:
     UTILS_ALWAYS_INLINE inline void methodName##R(RetType, paramsDecl);
 
 #include "private/backend/DriverAPI.inc"
+
+    /*
+     * Memory management
+     */
+
+    HandleAllocatorWGSL mHandleAllocator;
+
+    template<typename D>
+    Handle<D> alloc_handle() {
+        return mHandleAllocator.allocate<D>();
+    }
+
+    template<typename D, typename B, typename ... ARGS>
+    Handle<B> alloc_and_construct_handle(ARGS&& ... args) {
+        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args)...);
+    }
+
+    template<typename D, typename B>
+    D* handle_cast(Handle<B> handle) noexcept {
+        return mHandleAllocator.handle_cast<D*>(handle);
+    }
+
+    template<typename D, typename B>
+    const D* handle_const_cast(const Handle<B>& handle) noexcept {
+        return mHandleAllocator.handle_cast<D*>(handle);
+    }
+
+    template<typename D, typename B, typename ... ARGS>
+    D* construct_handle(Handle<B>& handle, ARGS&& ... args) noexcept {
+        return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
+    }
+
+    template<typename D, typename B>
+    void destruct_handle(Handle<B>& handle) noexcept {
+        auto* p = mHandleAllocator.handle_cast<D*>(handle);
+        mHandleAllocator.deallocate(handle, p);
+    }
+
 };
 
 }// namespace filament::backend
