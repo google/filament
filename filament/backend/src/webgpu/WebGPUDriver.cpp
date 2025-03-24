@@ -22,6 +22,8 @@
 #include "CommandStreamDispatcher.h"
 #include "DriverBase.h"
 #include "private/backend/Dispatcher.h"
+#include "vulkan/VulkanHandles.h"
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
@@ -418,7 +420,8 @@ Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
 
 Handle<HwBufferObject> WebGPUDriver::createBufferObjectS() noexcept {
     FWGPU_LOGW << __FUNCTION__<< "\n";
-    return Handle<HwBufferObject>((Handle<HwBufferObject>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUBufferObject>();
+    // return Handle<HwBufferObject>((Handle<HwBufferObject>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createRenderTargetS() noexcept {
@@ -428,7 +431,7 @@ Handle<HwRenderTarget> WebGPUDriver::createRenderTargetS() noexcept {
 
 Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
     FWGPU_LOGW << __FUNCTION__<< "\n";
-    return Handle<HwVertexBuffer>((Handle<HwVertexBuffer>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUVertexBuffer>();
 }
 
 Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
@@ -773,6 +776,11 @@ void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> boh) {
 
 void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
+    auto* vertexBuffer = handle_cast<WGPUVertexBuffer>(vbh);
+    auto* bufferObject = handle_cast<WGPUBufferObject>(boh);
+    assert_invariant(index < vertexBuffer->mBuffers.size());
+    vertexBuffer->setBuffer(bufferObject, index);
+
     FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 

@@ -90,6 +90,11 @@ private:
         return mHandleAllocator.allocate<D>();
     }
 
+    template<typename D, typename B>
+    D* handle_cast(Handle<B> handle) noexcept {
+        return mHandleAllocator.handle_cast<D*>(handle);
+    }
+
 };
 
 }// namespace filament::backend

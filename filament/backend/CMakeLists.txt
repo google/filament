@@ -253,6 +253,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUConstants.h
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
+            src/webgpu/WebGPUHandles.cpp
+            src/webgpu/WebGPUHandles.h
             src/webgpu/WebGPUSwapchain.cpp
             src/webgpu/WebGPUSwapchain.h
     )
