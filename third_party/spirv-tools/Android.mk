@@ -172,11 +172,13 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/remove_unused_interface_variables_pass.cpp \
 		source/opt/replace_desc_array_access_using_var_index.cpp \
 		source/opt/replace_invalid_opc.cpp \
+		source/opt/resolve_binding_conflicts_pass.cpp \
 		source/opt/scalar_analysis.cpp \
 		source/opt/scalar_analysis_simplification.cpp \
 		source/opt/scalar_replacement_pass.cpp \
 		source/opt/set_spec_constant_default_value_pass.cpp \
 		source/opt/simplification_pass.cpp \
+		source/opt/split_combined_image_sampler_pass.cpp \
 		source/opt/spread_volatile_semantics.cpp \
 		source/opt/ssa_rewrite_pass.cpp \
 		source/opt/strength_reduction_pass.cpp \
