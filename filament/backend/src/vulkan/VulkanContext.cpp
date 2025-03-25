@@ -56,9 +56,9 @@ VkImageView VulkanAttachment::getImageView() {
     assert_invariant(texture);
     VkImageSubresourceRange range = getSubresourceRange();
     if (range.layerCount > 1) {
-        return texture->getMultiviewAttachmentView(range);
+        return texture->getAttachmentView(range, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
     }
-    return texture->getAttachmentView(range);
+    return texture->getAttachmentView(range, VK_IMAGE_VIEW_TYPE_2D);
 }
 
 bool VulkanAttachment::isDepth() const {
@@ -68,11 +68,11 @@ bool VulkanAttachment::isDepth() const {
 VkImageSubresourceRange VulkanAttachment::getSubresourceRange() const {
     assert_invariant(texture);
     return {
-            .aspectMask = texture->getImageAspect(),
-            .baseMipLevel = uint32_t(level),
-            .levelCount = 1,
-            .baseArrayLayer = uint32_t(layer),
-            .layerCount = layerCount,
+        .aspectMask = texture->getImageAspect(),
+        .baseMipLevel = uint32_t(level),
+        .levelCount = 1,
+        .baseArrayLayer = uint32_t(layer),
+        .layerCount = layerCount,
     };
 }
 
