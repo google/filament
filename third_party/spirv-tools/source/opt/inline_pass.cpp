@@ -30,6 +30,8 @@ namespace {
 constexpr int kSpvFunctionCallFunctionId = 2;
 constexpr int kSpvFunctionCallArgumentId = 3;
 constexpr int kSpvReturnValueId = 0;
+constexpr int kSpvDebugDeclareVarInIdx = 3;
+constexpr int kSpvAccessChainBaseInIdx = 0;
 }  // namespace
 
 uint32_t InlinePass::AddPointerToType(uint32_t type_id,
@@ -857,6 +859,69 @@ void InlinePass::InitializeInline() {
 }
 
 InlinePass::InlinePass() {}
+
+void InlinePass::FixDebugDeclares(Function* func) {
+  std::map<uint32_t, Instruction*> access_chains;
+  std::vector<Instruction*> debug_declare_insts;
+
+  func->ForEachInst([&access_chains, &debug_declare_insts](Instruction* inst) {
+    if (inst->opcode() == spv::Op::OpAccessChain) {
+      access_chains[inst->result_id()] = inst;
+    }
+    if (inst->GetCommonDebugOpcode() == CommonDebugInfoDebugDeclare) {
+      debug_declare_insts.push_back(inst);
+    }
+  });
+
+  for (auto& inst : debug_declare_insts) {
+    FixDebugDeclare(inst, access_chains);
+  }
+}
+
+void InlinePass::FixDebugDeclare(
+    Instruction* dbg_declare_inst,
+    const std::map<uint32_t, Instruction*>& access_chains) {
+  do {
+    uint32_t var_id =
+        dbg_declare_inst->GetSingleWordInOperand(kSpvDebugDeclareVarInIdx);
+
+    // The def-use chains are not kept up to date while inlining, so we need to
+    // get the variable by traversing the functions.
+    auto it = access_chains.find(var_id);
+    if (it == access_chains.end()) {
+      return;
+    }
+    Instruction* access_chain = it->second;
+
+    // If the variable id in the debug declare is an access chain, it is
+    // invalid. it needs to be fixed up. The debug declare will be updated so
+    // that its Var operand becomes the base of the access chain. The indexes of
+    // the access chain are prepended before the indexes of the debug declare.
+
+    std::vector<Operand> operands;
+    for (int i = 0; i < kSpvDebugDeclareVarInIdx; i++) {
+      operands.push_back(dbg_declare_inst->GetInOperand(i));
+    }
+
+    uint32_t access_chain_base =
+        access_chain->GetSingleWordInOperand(kSpvAccessChainBaseInIdx);
+    operands.push_back(Operand(SPV_OPERAND_TYPE_ID, {access_chain_base}));
+    operands.push_back(
+        dbg_declare_inst->GetInOperand(kSpvDebugDeclareVarInIdx + 1));
+
+    for (uint32_t i = kSpvAccessChainBaseInIdx + 1;
+         i < access_chain->NumInOperands(); ++i) {
+      operands.push_back(access_chain->GetInOperand(i));
+    }
+
+    for (uint32_t i = kSpvDebugDeclareVarInIdx + 2;
+         i < dbg_declare_inst->NumInOperands(); ++i) {
+      operands.push_back(dbg_declare_inst->GetInOperand(i));
+    }
+
+    dbg_declare_inst->SetInOperands(std::move(operands));
+  } while (true);
+}
 
 }  // namespace opt
 }  // namespace spvtools
