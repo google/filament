@@ -50,7 +50,7 @@ public:
     /**
      * Creates an ExternalImage from a EGLImageKHR
      */
-    ExternalImageHandle createExternalImage(EGLImageKHR eglImage) noexcept;
+    ExternalImageHandle UTILS_PUBLIC createExternalImage(EGLImageKHR eglImage) noexcept;
 
 protected:
     // --------------------------------------------------------------------------------------------

@@ -19,6 +19,11 @@
 #include <utils/Systrace.h>
 #include <utils/debug.h>
 
+// We need to keep this up top for the linux (X11) name collisions.
+#if defined(FILAMENT_SUPPORTS_WEBGPU)
+    #include "backend/platforms/WebGPUPlatform.h"
+#endif
+
 #if defined(__ANDROID__)
     #include <sys/system_properties.h>
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
@@ -30,7 +35,11 @@
     #endif
 #elif defined(__APPLE__)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
-        #include <backend/platforms/PlatformCocoaGL.h>
+        #if defined(FILAMENT_SUPPORTS_OSMESA)
+            #include <backend/platforms/PlatformOSMesa.h>
+        #else
+            #include <backend/platforms/PlatformCocoaGL.h>
+        #endif
     #endif
 #elif defined(__linux__)
     #if defined(FILAMENT_SUPPORTS_X11)
@@ -55,7 +64,11 @@
 #endif
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-    #include "backend/platforms/VulkanPlatform.h"
+    #if defined(__ANDROID__)
+        #include "backend/platforms/VulkanPlatformAndroid.h"
+    #else
+        #include "backend/platforms/VulkanPlatform.h"
+    #endif
 #endif
 
 #if defined (FILAMENT_SUPPORTS_METAL)
@@ -65,9 +78,6 @@ filament::backend::Platform* createDefaultMetalPlatform();
 #endif
 
 #include "noop/PlatformNoop.h"
-#if defined(FILAMENT_SUPPORTS_WEBGPU)
-    #include "backend/platforms/WebGPUPlatform.h"
-#endif
 
 namespace filament::backend {
 
@@ -104,7 +114,11 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
     }
     if (*backend == Backend::VULKAN) {
         #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-            return new VulkanPlatform();
+            #if defined(__ANDROID__)
+                return new VulkanPlatformAndroid();
+            #else
+                return new VulkanPlatform();
+            #endif
         #else
             return nullptr;
         #endif
@@ -132,7 +146,11 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
         #elif defined(FILAMENT_IOS)
             return new PlatformCocoaTouchGL();
         #elif defined(__APPLE__)
-            return new PlatformCocoaGL();
+            #if defined(FILAMENT_SUPPORTS_OSMESA)
+                return new PlatformOSMesa();
+            #else
+                return new PlatformCocoaGL();
+            #endif
         #elif defined(__linux__)
             #if defined(FILAMENT_SUPPORTS_X11)
                 return new PlatformGLX();

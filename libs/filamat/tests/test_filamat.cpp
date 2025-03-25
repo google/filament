@@ -696,6 +696,25 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerBentNormal) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(MaterialCompiler, StaticCodeAnalyzerShadowStrength) {
+    std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.shadowStrength = 0.1;
+        }
+    )");
+
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
+
+    GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[size_t(filamat::MaterialBuilder::Property::SHADOW_STRENGTH)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
     std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
@@ -757,6 +776,48 @@ TEST_F(MaterialCompiler, Uv0AndUv1) {
     builder.require(filament::VertexAttribute::UV1);
     filamat::Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, FiveCustomVariables) {
+    filamat::MaterialBuilder builder;
+    builder.variable(MaterialBuilder::Variable::CUSTOM0, "custom0");
+    builder.variable(MaterialBuilder::Variable::CUSTOM1, "custom1");
+    builder.variable(MaterialBuilder::Variable::CUSTOM2, "custom2");
+    builder.variable(MaterialBuilder::Variable::CUSTOM3, "custom3");
+    builder.variable(MaterialBuilder::Variable::CUSTOM4, "custom4");
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, FourCustomVariablesAndColorAttribute) {
+    filamat::MaterialBuilder builder;
+    builder.require(filament::VertexAttribute::COLOR);
+    builder.variable(MaterialBuilder::Variable::CUSTOM0, "custom0");
+    builder.variable(MaterialBuilder::Variable::CUSTOM1, "custom1");
+    builder.variable(MaterialBuilder::Variable::CUSTOM2, "custom2");
+    builder.variable(MaterialBuilder::Variable::CUSTOM3, "custom3");
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, FiveCustomVariablesAndColorAttributeFails) {
+    filamat::MaterialBuilder builder;
+    builder.require(filament::VertexAttribute::COLOR);
+    builder.variable(MaterialBuilder::Variable::CUSTOM0, "custom0");
+    builder.variable(MaterialBuilder::Variable::CUSTOM1, "custom1");
+    builder.variable(MaterialBuilder::Variable::CUSTOM2, "custom2");
+    builder.variable(MaterialBuilder::Variable::CUSTOM3, "custom3");
+    builder.variable(MaterialBuilder::Variable::CUSTOM4, "custom4");
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, CustomVariable4AndColorAttributeFails) {
+    filamat::MaterialBuilder builder;
+    builder.require(filament::VertexAttribute::COLOR);
+    builder.variable(MaterialBuilder::Variable::CUSTOM4, "custom4");
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, Arrays) {
