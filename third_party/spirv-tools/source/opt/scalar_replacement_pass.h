@@ -33,7 +33,7 @@ namespace opt {
 // Documented in optimizer.hpp
 class ScalarReplacementPass : public MemPass {
  private:
-  static constexpr uint32_t kDefaultLimit = 100;
+  static constexpr uint32_t kDefaultLimit = 0;
 
  public:
   ScalarReplacementPass(uint32_t limit = kDefaultLimit)

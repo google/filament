@@ -1818,6 +1818,68 @@ OpFunctionEnd
       HasSubstr("Memory accesses with PhysicalStorageBuffer must use Aligned"));
 }
 
+TEST_F(ValidateMemory, PSBStoreAlignedZero) {
+  const std::string body = R"(
+OpCapability PhysicalStorageBufferAddresses
+OpCapability Shader
+OpExtension "SPV_EXT_physical_storage_buffer"
+OpMemoryModel PhysicalStorageBuffer64 GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+%uint = OpTypeInt 32 0
+%uint_1 = OpConstant %uint 1
+%ptr = OpTypePointer PhysicalStorageBuffer %uint
+%pptr_f = OpTypePointer Function %ptr
+%void = OpTypeVoid
+%voidfn = OpTypeFunction %void
+%main = OpFunction %void None %voidfn
+%entry = OpLabel
+%val1 = OpVariable %pptr_f Function
+%val2 = OpLoad %ptr %val1
+OpStore %val2 %uint_1 Aligned 0
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Memory accesses Aligned operand value 0 is not a power of two"));
+}
+
+TEST_F(ValidateMemory, PSBStoreAlignedNonPoT) {
+  const std::string body = R"(
+OpCapability PhysicalStorageBufferAddresses
+OpCapability Shader
+OpExtension "SPV_EXT_physical_storage_buffer"
+OpMemoryModel PhysicalStorageBuffer64 GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+%uint = OpTypeInt 32 0
+%uint_1 = OpConstant %uint 1
+%ptr = OpTypePointer PhysicalStorageBuffer %uint
+%pptr_f = OpTypePointer Function %ptr
+%void = OpTypeVoid
+%voidfn = OpTypeFunction %void
+%main = OpFunction %void None %voidfn
+%entry = OpLabel
+%val1 = OpVariable %pptr_f Function
+%val2 = OpLoad %ptr %val1
+OpStore %val2 %uint_1 Aligned 3
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Memory accesses Aligned operand value 3 is not a power of two."));
+}
+
 TEST_F(ValidateMemory, PSBCopyMemoryAlignedSuccess) {
   const std::string body = R"(
 OpCapability PhysicalStorageBufferAddresses
@@ -3883,8 +3945,11 @@ OpMemoryModel Logical GLSL450
 %void = OpTypeVoid
 %bool = OpTypeBool
 %int = OpTypeInt 32 0
+%float = OpTypeFloat 32
 %ptr_int = OpTypePointer Private %int
 %var = OpVariable %ptr_int Private
+%ptr_float = OpTypePointer Private %float
+%var2 = OpVariable %ptr_float Private
 %func_ty = OpTypeFunction %void
 %func = OpFunction %void None %func_ty
 %1 = OpLabel
@@ -3897,7 +3962,7 @@ OpMemoryModel Logical GLSL450
     spirv += " %bool ";
   }
 
-  spirv += R"(%var %ld
+  spirv += R"(%var %var2
 OpReturn
 OpFunctionEnd
 )";
@@ -3906,6 +3971,223 @@ OpFunctionEnd
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("The types of Operand 1 and Operand 2 must match"));
+}
+
+TEST_P(ValidatePointerComparisons, GoodUntypedPointerSameType) {
+  const std::string operation = GetParam();
+
+  std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpCapability VariablePointersStorageBuffer
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%int = OpTypeInt 32 0
+%ptr = OpTypeUntypedPointerKHR StorageBuffer
+%var = OpUntypedVariableKHR %ptr StorageBuffer
+%func_ty = OpTypeFunction %void
+%func = OpFunction %void None %func_ty
+%1 = OpLabel
+%equal = )" + operation;
+
+  if (operation == "OpPtrDiff") {
+    spirv += " %int ";
+  } else {
+    spirv += " %bool ";
+  }
+
+  spirv += R"(%var %var
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+}
+
+TEST_P(ValidatePointerComparisons, GoodUntypedPointerSameStorageClass) {
+  const std::string operation = GetParam();
+
+  std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpCapability VariablePointersStorageBuffer
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%int = OpTypeInt 32 0
+%ptr1 = OpTypeUntypedPointerKHR StorageBuffer
+%var = OpUntypedVariableKHR %ptr1 StorageBuffer
+%ptr2 = OpTypeUntypedPointerKHR StorageBuffer
+%var2 = OpUntypedVariableKHR %ptr2 StorageBuffer
+%func_ty = OpTypeFunction %void
+%func = OpFunction %void None %func_ty
+%1 = OpLabel
+%equal = )" + operation;
+
+  if (operation == "OpPtrDiff") {
+    spirv += " %int ";
+  } else {
+    spirv += " %bool ";
+  }
+
+  spirv += R"(%var %var2
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  if (operation == "OpPtrDiff") {
+    EXPECT_EQ(SPV_ERROR_INVALID_ID,
+              ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("The types of Operand 1 and Operand 2 must match"));
+  } else {
+    EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  }
+}
+
+TEST_P(ValidatePointerComparisons, BadUntypedPointerDiffStorageClass) {
+  const std::string operation = GetParam();
+
+  std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpCapability VariablePointers
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%int = OpTypeInt 32 0
+%ptr1 = OpTypeUntypedPointerKHR StorageBuffer
+%var1 = OpUntypedVariableKHR %ptr1 StorageBuffer
+%ptr2 = OpTypeUntypedPointerKHR Workgroup
+%var2 = OpUntypedVariableKHR %ptr2 Workgroup %int
+%func_ty = OpTypeFunction %void
+%func = OpFunction %void None %func_ty
+%1 = OpLabel
+%equal = )" + operation;
+
+  if (operation == "OpPtrDiff") {
+    spirv += " %int ";
+  } else {
+    spirv += " %bool ";
+  }
+
+  spirv += R"(%var1 %var2
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  if (operation == "OpPtrDiff") {
+    EXPECT_EQ(SPV_ERROR_INVALID_ID,
+              ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("The types of Operand 1 and Operand 2 must match"));
+  } else {
+    EXPECT_EQ(SPV_ERROR_INVALID_ID,
+              ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("Pointer storage classes must match"));
+  }
+}
+
+TEST_P(ValidatePointerComparisons, GoodMixedPointerSameStorageClass) {
+  const std::string operation = GetParam();
+
+  std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpCapability VariablePointersStorageBuffer
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%int = OpTypeInt 32 0
+%ptr1 = OpTypeUntypedPointerKHR StorageBuffer
+%var = OpUntypedVariableKHR %ptr1 StorageBuffer
+%ptr2 = OpTypePointer StorageBuffer %int
+%var2 = OpVariable %ptr2 StorageBuffer
+%func_ty = OpTypeFunction %void
+%func = OpFunction %void None %func_ty
+%1 = OpLabel
+%equal = )" + operation;
+
+  if (operation == "OpPtrDiff") {
+    spirv += " %int ";
+  } else {
+    spirv += " %bool ";
+  }
+
+  spirv += R"(%var %var2
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  if (operation == "OpPtrDiff") {
+    EXPECT_EQ(SPV_ERROR_INVALID_ID,
+              ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("The types of Operand 1 and Operand 2 must match"));
+  } else {
+    EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+  }
+}
+
+TEST_P(ValidatePointerComparisons, BadMixedPointerDiffStorageClass) {
+  const std::string operation = GetParam();
+
+  std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpCapability VariablePointers
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%int = OpTypeInt 32 0
+%ptr1 = OpTypeUntypedPointerKHR StorageBuffer
+%var1 = OpUntypedVariableKHR %ptr1 StorageBuffer
+%ptr2 = OpTypePointer Workgroup %int
+%var2 = OpVariable %ptr2 Workgroup
+%func_ty = OpTypeFunction %void
+%func = OpFunction %void None %func_ty
+%1 = OpLabel
+%equal = )" + operation;
+
+  if (operation == "OpPtrDiff") {
+    spirv += " %int ";
+  } else {
+    spirv += " %bool ";
+  }
+
+  spirv += R"(%var1 %var2
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_4);
+  if (operation == "OpPtrDiff") {
+    EXPECT_EQ(SPV_ERROR_INVALID_ID,
+              ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("The types of Operand 1 and Operand 2 must match"));
+  } else {
+    EXPECT_EQ(SPV_ERROR_INVALID_ID,
+              ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("Pointer storage classes must match"));
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(PointerComparisons, ValidatePointerComparisons,
