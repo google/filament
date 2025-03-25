@@ -32,20 +32,21 @@ public:
     explicit WebGPUSurface(wgpu::Surface surface, wgpu::Device device, wgpu::Adapter adapter, uint32_t width, uint32_t height);
     ~WebGPUSurface();
 
-    wgpu::Surface ConfigureSurface(wgpu::Surface surface, wgpu::Device device,  wgpu::Adapter adapter, uint32_t width, uint32_t height);
+    wgpu::Surface ConfigureSurface(wgpu::Surface surface, wgpu::Device device,  wgpu::Adapter adapter, wgpu::SurfaceConfiguration config);
 
-    void Resize(uint32_t width, uint32_t height);
+    wgpu::Surface Resize(uint32_t width, uint32_t height);
+    wgpu::Surface ChangeFormat(wgpu::TextureFormat format);
+    wgpu::Surface ChangePresentMode(wgpu::PresentMode presentMode);
+    wgpu::Surface ChangeAlphaMode(wgpu::CompositeAlphaMode alphaMode);
 
 private:
     wgpu::Surface mSurface;
     wgpu::Device mDevice;
     wgpu::Adapter mAdapter;
-    uint32_t mWidth;
-    uint32_t mHeight;
-    void *mFormat = nullptr;
-    void *mPresentMode = nullptr;
-    void *mAlphaMode = nullptr;
+    wgpu::SurfaceConfiguration mConfig;
 
+//    uint32_t mWidth;
+//    uint32_t mHeight;
 };
 } // namespace filament::backend
 
