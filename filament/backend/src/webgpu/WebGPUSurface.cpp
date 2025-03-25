@@ -14,120 +14,173 @@
  * limitations under the License.
  */
 
-#include "WebGPUSurface.h"
-#include <backend/platforms/WebGPUPlatform.h>
-#include "WebGPUDriver.h"
-#include "WebGPUConstants.h"
-#include "WebGPUSurface.h"
-#include <backend/platforms/WebGPUPlatform.h>
+#include "webgpu/WebGPUSurface.h"
 
+#include "webgpu/WebGPUConstants.h"
+
+#include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
 
-#include <utils/CString.h>
 #include <utils/ostream.h>
-#include <iostream>
+
+#include <algorithm>
+#include <cstdint>
+#include <sstream>
+
+namespace {
+
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+void printSurfaceCapabilitiesDetails(wgpu::SurfaceCapabilities const& capabilities) {
+    std::stringstream usagesStream{};
+    usagesStream << capabilities.usages;
+    FWGPU_LOGI << "WebGPU surface capabilities:" << utils::io::endl;
+    FWGPU_LOGI << "  surface usages: " << usagesStream.str().data() << utils::io::endl;
+    FWGPU_LOGI << "  surface formats (" << capabilities.formatCount << "):" << utils::io::endl;
+    if (capabilities.formatCount > 0 && capabilities.formats != nullptr) {
+        std::for_each(capabilities.formats, capabilities.formats + capabilities.formatCount,
+                [](wgpu::TextureFormat const format) {
+                    std::stringstream formatStream{};
+                    formatStream << format;
+                    FWGPU_LOGI << "    " << formatStream.str().data() << utils::io::endl;
+                });
+    }
+    FWGPU_LOGI << "  surface present modes (" << capabilities.presentModeCount
+               << "):" << utils::io::endl;
+    if (capabilities.presentModeCount > 0 && capabilities.presentModes != nullptr) {
+        std::for_each(capabilities.presentModes,
+                capabilities.presentModes + capabilities.presentModeCount,
+                [](wgpu::PresentMode const presentMode) {
+                    std::stringstream presentModeStream{};
+                    presentModeStream << presentMode;
+                    FWGPU_LOGI << "    " << presentModeStream.str().data() << utils::io::endl;
+                });
+    }
+    FWGPU_LOGI << "  surface alpha modes (" << capabilities.alphaModeCount
+               << "):" << utils::io::endl;
+    if (capabilities.alphaModeCount > 0 && capabilities.alphaModes != nullptr) {
+        std::for_each(capabilities.alphaModes,
+                capabilities.alphaModes + capabilities.alphaModeCount,
+                [](wgpu::CompositeAlphaMode const alphaMode) {
+                    std::stringstream alphaModeStream{};
+                    alphaModeStream << alphaMode;
+                    FWGPU_LOGI << "    " << alphaModeStream.str().data() << utils::io::endl;
+                });
+    }
+}
+#endif
+
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config) {
+    std::stringstream formatStream{};
+    formatStream << config.format;
+    std::stringstream usageStream{};
+    usageStream << config.usage;
+    std::stringstream alphaModeStream{};
+    alphaModeStream << config.alphaMode;
+    std::stringstream presentModeStream{};
+    presentModeStream << config.presentMode;
+    FWGPU_LOGI << "WebGPU surface configuration:" << utils::io::endl;
+    FWGPU_LOGI << "  surface format: " << formatStream.str() << utils::io::endl;
+    FWGPU_LOGI << "  surface usage: " << usageStream.str() << utils::io::endl;
+    FWGPU_LOGI << "  surface view formats (" << config.viewFormatCount << "):" << utils::io::endl;
+    if (config.viewFormatCount > 0 && config.viewFormats != nullptr) {
+        std::for_each(config.viewFormats, config.viewFormats + config.viewFormatCount,
+                [](wgpu::TextureFormat const viewFormat) {
+                    std::stringstream viewFormatStream{};
+                    viewFormatStream << viewFormat;
+                    FWGPU_LOGI << "    " << viewFormatStream.str().data() << utils::io::endl;
+                });
+    }
+    FWGPU_LOGI << "  surface alpha mode: " << alphaModeStream.str() << utils::io::endl;
+    FWGPU_LOGI << "  surface width: " << config.width << utils::io::endl;
+    FWGPU_LOGI << "  surface height: " << config.height << utils::io::endl;
+    FWGPU_LOGI << "  surface present mode: " << presentModeStream.str() << utils::io::endl;
+}
+#endif
+
+void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device& device,
+        wgpu::SurfaceCapabilities const& capabilities) {
+    config.device = device;
+    config.usage = wgpu::TextureUsage::RenderAttachment;
+    // TODO logic for selecting appropriate color format
+    config.format = capabilities.formats[0];
+    // TODO logic for selecting appropriate present mode
+    config.presentMode = capabilities.presentModes[0];
+    // TODO logic for selecting appropriate alpha mode
+    config.alphaMode = capabilities.alphaModes[0];
+}
+
+}// namespace
 
 namespace filament::backend {
-WebGPUSurface::WebGPUSurface(wgpu::Surface surface, wgpu::Device device, wgpu::Adapter adapter, uint32_t width, uint32_t height)
-: mSurface(surface), mDevice(device), mAdapter(adapter) /* mWidth(width) mHeight(height)*/ {
-    ConfigureSurface(mSurface, mDevice, mAdapter, {});
+
+WebGPUSurface::WebGPUSurface(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device)
+    : mSurface(surface) {
+    wgpu::SurfaceCapabilities capabilities = {};
+    if (!mSurface.GetCapabilities(adapter, &capabilities)) {
+        FWGPU_LOGW << "Failed to get WebGPU surface capabilities" << utils::io::endl;
+    } else {
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+        printSurfaceCapabilitiesDetails(capabilities);
+#endif
+    }
+    initConfig(mConfig, device, capabilities);
 }
 
 WebGPUSurface::~WebGPUSurface() {
-}
-
-wgpu::Surface WebGPUSurface::ConfigureSurface(wgpu::Surface surface, wgpu::Device device,  wgpu::Adapter adapter,  wgpu::SurfaceConfiguration config ) {
-FWGPU_LOGW << "Called ConfigureSurface" << utils::io::endl;
-
-    if(config.device){
-        surface.Configure(&config);
+    if (mConfigured) {
+        mSurface.Unconfigure();
+        mConfigured = false;
     }
-    else {
-        wgpu::SurfaceCapabilities surfaceCapabilities{};
-        surface.GetCapabilities(adapter, &surfaceCapabilities);
-        if (!surface.GetCapabilities(adapter, &surfaceCapabilities)) {
-            FWGPU_LOGW << "Failed to get WebGPU surface capabilities" << utils::io::endl;
-        } else {
-            //printSurfaceCapabilitiesDetails(surfaceCapabilities);
-        }
-        wgpu::SurfaceConfiguration surfaceConfig = {};
-        surfaceConfig.device = device;
-        surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment;
-        //TODO: get size from nativeWindow ,or hook into queue to get it from a texture
-        surfaceConfig.width = 2048;
-        surfaceConfig.height = 1280;
-        //Should Probably make sure these formats and modes are ideal?
-        surfaceConfig.format = surfaceCapabilities.formats[0];
-        surfaceConfig.presentMode = surfaceCapabilities.presentModes[0];
-        surfaceConfig.alphaMode = surfaceCapabilities.alphaModes[0];
-        mConfig = surfaceConfig;
-        surface.Configure(&surfaceConfig);
+}
+
+void WebGPUSurface::resize(uint32_t width, uint32_t height) {
+    FWGPU_LOGD << "Called WebGPUSurface::resize(width=" << width << ", height=" << height << ")"
+               << utils::io::endl;
+    if (width < 1 || height < 1) {
+        // should we panic or do nothing if we get 0s? expected?
+        FWGPU_LOGW << "Non-zero width (" << width << ") and/or height (" << height
+                   << ") requested, which is invalid. Ignoring request to resize."
+                   << utils::io::endl;
+        return;
     }
-    mSurface=surface;
-    return surface;
-}
-
-wgpu::Surface WebGPUSurface::Resize(uint32_t width, uint32_t height) {
-    if (width > 0 && height > 0) {
-        wgpu::SurfaceConfiguration newConfig = {};
-        newConfig.device = mConfig.device;
-        newConfig.usage = mConfig.usage;
-        newConfig.format = mConfig.format;
-        newConfig.presentMode = mConfig.presentMode;
-        newConfig.alphaMode = mConfig.alphaMode;
-        newConfig.width = width;
-        newConfig.height = height;
-        mSurface.Configure(&newConfig);
+    if (mConfig.width == width && mConfig.height == height && mConfigured) {
+        // nothing to do (already configured with this extent)
+        FWGPU_LOGW << "WebGPUSurface::resize(...) called with the same width and height as "
+                      "currently configured. Ignoring request to resize."
+                   << utils::io::endl;
+        return;
     }
-    return mSurface;
+    mConfig.width = width;
+    mConfig.height = height;
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+    printSurfaceConfiguration(mConfig);
+#endif
+    mSurface.Configure(&mConfig);
+    mConfigured = true;
 }
 
-wgpu::Surface WebGPUSurface::ChangeFormat(wgpu::TextureFormat format) {
-    //if (format) {
-        wgpu::SurfaceConfiguration newConfig = {};
-        newConfig.device = mConfig.device;
-        newConfig.usage = mConfig.usage;
-        newConfig.presentMode = mConfig.presentMode;
-        newConfig.alphaMode = mConfig.alphaMode;
-        newConfig.width = mConfig.width;
-        newConfig.height = mConfig.height;
-        newConfig.format = format;
-        mSurface.Configure(&newConfig);
-    //}
-    return mSurface;
+//void WebGPUSurface::setFormat(wgpu::TextureFormat format) {
+//    if (mConfig.format == format && mConfigured) {
+//        // nothing to do (already configured with this extent)
+//        FWGPU_LOGW << "WebGPUSurface::setFormat(...) called with the same format as "
+//                      "currently configured. Ignoring request to reformat."
+//                   << utils::io::endl;
+//        return;
+//    }
+//    mConfig.format = format;
+//    // is this ok for the headless mode?
+//    if (mConfig.width > 0 && mConfig.height > 0) {
+//#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+//        printSurfaceConfiguration(mConfig);
+//#endif
+//        mSurface.Configure(&mConfig);
+//        mConfigured = true;
+//    }
+//}
+
+void WebGPUSurface::GetCurrentTexture(wgpu::SurfaceTexture* texture) {
+    mSurface.GetCurrentTexture(texture);
 }
-
-wgpu::Surface WebGPUSurface::ChangePresentMode(wgpu::PresentMode presentMode) {
-    //if (mode) {
-        wgpu::SurfaceConfiguration newConfig = {};
-        newConfig.device = mConfig.device;
-        newConfig.format = mConfig.format;
-        newConfig.usage = mConfig.usage;
-        newConfig.alphaMode = mConfig.alphaMode;
-        newConfig.width = mConfig.width;
-        newConfig.height = mConfig.height;
-        newConfig.presentMode = presentMode;
-        mSurface.Configure(&newConfig);
-    //}
-    return mSurface;
-}
-
-wgpu::Surface WebGPUSurface::ChangeAlphaMode(wgpu::CompositeAlphaMode alphaMode) {
-    //if (mode) {
-        wgpu::SurfaceConfiguration newConfig = {};
-        newConfig.device = mConfig.device;
-        newConfig.format = mConfig.format;
-        newConfig.usage = mConfig.usage;
-        newConfig.width = mConfig.width;
-        newConfig.height = mConfig.height;
-        newConfig.presentMode = mConfig.presentMode;
-        newConfig.alphaMode = alphaMode;
-        mSurface.Configure(&newConfig);
-    //}
-    return mSurface;
-}
-
-
 
 }// namespace filament::backend
-

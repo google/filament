@@ -14,41 +14,29 @@
  * limitations under the License.
  */
 
-#ifndef TNT_WEBGPUSURFACE_H
-#define TNT_WEBGPUSURFACE_H
-
-#include <backend/platforms/WebGPUPlatform.h>
-#include "webgpu/WebGPUDriver.h"
-
+#ifndef TNT_FILAMENT_BACKEND_WEBGPUSURFACE_H
+#define TNT_FILAMENT_BACKEND_WEBGPUSURFACE_H
 
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
 
-
 namespace filament::backend {
+
 class WebGPUSurface {
 public:
-    explicit WebGPUSurface(wgpu::Surface surface, wgpu::Device device, wgpu::Adapter adapter, uint32_t width, uint32_t height);
+    WebGPUSurface(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device);
     ~WebGPUSurface();
 
-    wgpu::Surface ConfigureSurface(wgpu::Surface surface, wgpu::Device device,  wgpu::Adapter adapter, wgpu::SurfaceConfiguration config);
-
-    wgpu::Surface Resize(uint32_t width, uint32_t height);
-    wgpu::Surface ChangeFormat(wgpu::TextureFormat format);
-    wgpu::Surface ChangePresentMode(wgpu::PresentMode presentMode);
-    wgpu::Surface ChangeAlphaMode(wgpu::CompositeAlphaMode alphaMode);
+    void resize(uint32_t width, uint32_t height);
+    void GetCurrentTexture(wgpu::SurfaceTexture*);
 
 private:
-    wgpu::Surface mSurface;
-    wgpu::Device mDevice;
-    wgpu::Adapter mAdapter;
-    wgpu::SurfaceConfiguration mConfig;
-
-//    uint32_t mWidth;
-//    uint32_t mHeight;
+    wgpu::Surface mSurface = {};
+    wgpu::SurfaceConfiguration mConfig = {};
+    bool mConfigured = false;
 };
+
 } // namespace filament::backend
 
-
-#endif //TNT_WEBGPUSURFACE_H
+#endif //TNT_FILAMENT_BACKEND_WEBGPUSURFACE_H

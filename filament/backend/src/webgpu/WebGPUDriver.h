@@ -17,19 +17,20 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
+#include "webgpu/WebGPUSurface.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
 #include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
 #include <backend/DriverEnums.h>
-#include "WebGPUSurface.h"
 
 #include <utils/compiler.h>
 
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
+#include <memory>
 
 namespace filament::backend {
 
@@ -56,10 +57,11 @@ private:
     // the platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
     // handled in the WebGPUPlatform
     WebGPUPlatform& mPlatform;
-    wgpu::Surface mSurface = nullptr;
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
     wgpu::Queue mQueue = nullptr;
+    // TODO consider moving to handle allocator when ready
+    std::unique_ptr<WebGPUSurface> mSurface = nullptr;
     uint64_t mNextFakeHandle = 1;
 
     /*
