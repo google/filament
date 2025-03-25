@@ -223,6 +223,19 @@ Platform::ExternalImageHandle VulkanPlatformAndroid::createExternalImage(
     return Platform::ExternalImageHandle{};
 }
 
+VulkanPlatformAndroid::ExternalImageDescAndroid VulkanPlatformAndroid::getExternalImageDesc(
+        ExternalImageHandleRef externalImage) const noexcept {
+    auto const* fvkExternalImage =
+            static_cast<ExternalImageVulkanAndroid const*>(externalImage.get());
+
+    return {
+        .width = fvkExternalImage->width,
+        .height = fvkExternalImage->height,
+        .format = fvkExternalImage->format,
+        .usage = fvkExternalImage->usage,
+    };
+}
+
 VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::getExternalImageMetadata(
         ExternalImageHandleRef externalImage) {
     auto const* fvkExternalImage =

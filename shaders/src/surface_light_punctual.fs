@@ -222,6 +222,9 @@ void evaluatePunctualLights(const MaterialInputs material,
                 highp vec4 shadowPosition = getShadowPosition(shadowIndex, light.direction, light.zLight);
                 visibility = shadow(false, sampler0_shadowMap, shadowIndex,
                         shadowPosition, light.zLight);
+#if defined(MATERIAL_HAS_SHADOW_STRENGTH)
+                applyShadowStrength(visibility, material.shadowStrength);
+#endif
             }
             if (light.contactShadows && visibility > 0.0) {
                 if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0) {

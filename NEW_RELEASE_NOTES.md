@@ -8,4 +8,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
-- engine: Generate 1D instead of 3D LUTs for color grading whenever possible.
+- materials: five custom variables (varyings) are now available on the condition that the `color` attribute is not requested (b/404930099). [⚠️ **New Material Version**]
+

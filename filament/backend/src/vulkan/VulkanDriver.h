@@ -27,8 +27,9 @@
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
 #include "VulkanQueryManager.h"
-#include "vulkan/caching/VulkanDescriptorSetManager.h"
-#include "vulkan/caching/VulkanPipelineLayoutCache.h"
+#include "vulkan/VulkanDescriptorSetCache.h"
+#include "vulkan/VulkanDescriptorSetLayoutCache.h"
+#include "vulkan/VulkanPipelineLayoutCache.h"
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Definitions.h"
@@ -137,7 +138,8 @@ private:
     VulkanSamplerCache mSamplerCache;
     VulkanBlitter mBlitter;
     VulkanReadPixels mReadPixels;
-    VulkanDescriptorSetManager mDescriptorSetManager;
+    VulkanDescriptorSetLayoutCache mDescriptorSetLayoutCache;
+    VulkanDescriptorSetCache mDescriptorSetCache;
     VulkanQueryManager mQueryManager;
 
     // This is necessary for us to write to push constants after binding a pipeline.

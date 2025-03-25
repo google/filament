@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETMANAGER_H
-#define TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETMANAGER_H
+#ifndef TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETCACHE_H
+#define TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETCACHE_H
 
-#include "vulkan/VulkanHandles.h"
+#include "VulkanHandles.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Definitions.h"  // For DescriptorSetMask
 
@@ -34,20 +34,16 @@
 
 namespace filament::backend {
 
-// [GDSR]: Great-Descriptor-Set-Refactor: As of 03/20/24, the Filament frontend is planning to
-// introduce descriptor set. This PR will arrive before that change is complete. As such, some of
-// the methods introduced here will be obsolete, and certain logic will be generalized.
-
-// Abstraction over the pool and the layout cache.
-class VulkanDescriptorSetManager {
+// Abstraction over the descriptor set pool.
+class VulkanDescriptorSetCache {
 public:
     static constexpr uint8_t UNIQUE_DESCRIPTOR_SET_COUNT =
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT;
 
     using DescriptorSetLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
 
-    VulkanDescriptorSetManager(VkDevice device, fvkmemory::ResourceManager* resourceManager);
-    ~VulkanDescriptorSetManager();
+    VulkanDescriptorSetCache(VkDevice device, fvkmemory::ResourceManager* resourceManager);
+    ~VulkanDescriptorSetCache();
 
     void terminate() noexcept;
 
@@ -72,12 +68,9 @@ public:
     fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
-    void initVkLayout(fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
-
     void clearHistory();
 
 private:
-    class DescriptorSetLayoutManager;
     class DescriptorInfinitePool;
 
     using DescriptorSetArray =
@@ -85,7 +78,6 @@ private:
 
     VkDevice mDevice;
     fvkmemory::ResourceManager* mResourceManager;
-    std::unique_ptr<DescriptorSetLayoutManager> mLayoutManager;
     std::unique_ptr<DescriptorInfinitePool> mDescriptorPool;
     std::pair<VulkanAttachment, VkDescriptorImageInfo> mInputAttachment;
     DescriptorSetArray mStashedSets = {};
@@ -99,4 +91,4 @@ private:
 
 }// namespace filament::backend
 
-#endif// TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETMANAGER_H
+#endif// TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETCACHE_H

@@ -18,11 +18,19 @@ OUTPUT_DIR="$(pwd)/out/renderdiff_tests"
 RENDERDIFF_TEST_DIR="$(pwd)/test/renderdiff"
 TEST_UTILS_DIR="$(pwd)/test/utils"
 MESA_DIR="$(pwd)/mesa/out/"
-MESA_LIB_DIR="${MESA_DIR}/lib/x86_64-linux-gnu"
+
+os_name=$(uname -s)
+if [[ "$os_name" == "Linux" ]]; then
+    MESA_LIB_DIR="${MESA_DIR}lib/x86_64-linux-gnu"
+elif [[ "$os_name" == "Darwin" ]]; then
+    MESA_LIB_DIR="${MESA_DIR}lib"
+else
+    echo "Unsupported platform for renderdiff tests"
+    exit 1
+fi
 
 function prepare_mesa() {
     if [ ! -d ${MESA_LIB_DIR} ]; then
-        rm -rf mesa
         bash ${TEST_UTILS_DIR}/get_mesa.sh
     fi
 }

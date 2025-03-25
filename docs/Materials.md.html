@@ -13,7 +13,7 @@ This document is part of the [Filament project](https://github.com/google/filame
 ## Authors
 
 - [Romain Guy](https://github.com/romainguy), [@romainguy](https://twitter.com/romainguy)
-- [Mathias Agopian](https://github.com/pixelflinger), [@darthmoosious](https://twitter.com/darthmoosious)
+- [Mathias Agopian](https://github.com/pixelflinger), [@pixelflinger](https://bsky.app/profile/pixelflinger.bsky.social)
 
 # Overview
 
@@ -78,26 +78,27 @@ in table [standardProperties].
         Property        |      Definition
 -----------------------:|:---------------------
 **baseColor**           | Diffuse albedo for non-metallic surfaces, and specular color for metallic surfaces
-**metallic**            | Whether a surface appears to be dielectric (0.0) or conductor (1.0). Often used as a binary value (0 or 1)
 **roughness**           | Perceived smoothness (1.0) or roughness (0.0) of a surface. Smooth surfaces exhibit sharp reflections
+**metallic**            | Whether a surface appears to be dielectric (0.0) or conductor (1.0). Often used as a binary value (0 or 1)
 **reflectance**         | Fresnel reflectance at normal incidence for dielectric surfaces. This directly controls the strength of the reflections
-**sheenColor**          | Strength of the sheen layer
-**sheenRoughness**      | Perceived smoothness or roughness of the sheen layer
+**ambientOcclusion**    | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
 **clearCoat**           | Strength of the clear coat layer
 **clearCoatRoughness**  | Perceived smoothness or roughness of the clear coat layer
+**clearCoatNormal**     | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
 **anisotropy**          | Amount of anisotropy in either the tangent or bitangent direction
 **anisotropyDirection** | Local surface direction in tangent space
-**ambientOcclusion**    | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
-**normal**              | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
-**bentNormal**          | A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality
-**clearCoatNormal**     | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
-**emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
-**postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
-**ior**                 | Index of refraction, either for refractive objects or as an alternative to reflectance
-**transmission**        | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
-**absorption**          | Absorption factor for refractive objects
-**microThickness**      | Thickness of the thin layer of refractive objects
 **thickness**           | Thickness of the solid volume of refractive objects
+**sheenColor**          | Strength of the sheen layer
+**sheenRoughness**      | Perceived smoothness or roughness of the sheen layer
+**emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
+**normal**              | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
+**postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
+**absorption**          | Absorption factor for refractive objects
+**transmission**        | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
+**ior**                 | Index of refraction, either for refractive objects or as an alternative to reflectance
+**microThickness**      | Thickness of the thin layer of refractive objects
+**bentNormal**          | A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality
+**shadowStrength**      | Strength factor between 0 and 1 for all shadows received by this material
 [Table [standardProperties]: Properties of the standard model]
 
 The type and range of each property is described in table [standardPropertiesTypes].
@@ -1272,6 +1273,9 @@ Description
       when selecting any shading model that is not `unlit`. See the shader sections of this document
       for more information on how to access these attributes from the shaders.
 
+!!! Note: Interaction with custom variables
+    When the `color` attribute is specified, only four custom variables are available instead of five.
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
     parameters : [
@@ -1302,7 +1306,7 @@ Type
 :    array of `string`
 
 Value
-:     Up to 4 strings, each must be a valid GLSL identifier.
+:     Up to 5 strings, each must be a valid GLSL identifier.
 
 Description
 :     Defines custom interpolants (or variables) that are output by the material's vertex shader.
@@ -1317,6 +1321,10 @@ Description
       In this case the specified precision is used as-is in both fragment and vertex stages, in
       particular if `default` is specified the default precision is used is the fragment shader
       (`mediump`) and in the vertex shader (`highp`).
+
+!!! Warning: Interaction with required attributes
+    If the `color` attribute is specified in the `required` list, then only four variables can be used
+    instead of five.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
