@@ -66,18 +66,21 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
 
     // The bitmask representation of a set layout.
     struct Bitmask {
-        // TODO: better utiltize the space below and use bitset instead.
         fvkutils::UniformBufferBitmask ubo;         // 8 bytes
         fvkutils::UniformBufferBitmask dynamicUbo;  // 8 bytes
         fvkutils::SamplerBitmask sampler;           // 8 bytes
         fvkutils::InputAttachmentBitmask inputAttachment; // 8 bytes
 
+        // This is a subset of the bitmask.sampler field.
+        fvkutils::SamplerBitmask externalSampler; // 8 bytes
+
         bool operator==(Bitmask const& right) const {
             return ubo == right.ubo && dynamicUbo == right.dynamicUbo && sampler == right.sampler &&
-                   inputAttachment == right.inputAttachment;
+                   inputAttachment == right.inputAttachment &&
+                   externalSampler == right.externalSampler;
         }
     };
-    static_assert(sizeof(Bitmask) == 32);
+    static_assert(sizeof(Bitmask) == 40);
 
     // This is a convenience struct to quickly check layout compatibility in terms of descriptor set
     // pools.
@@ -119,10 +122,16 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
 
     VulkanDescriptorSetLayout(DescriptorSetLayout const& layout);
 
+    // Note that we don't destroy the vklayout. This is done by the layout cache.
     ~VulkanDescriptorSetLayout() = default;
 
-    VkDescriptorSetLayout getVkLayout() const { return mVkLayout; }
-    void setVkLayout(VkDescriptorSetLayout vklayout) { mVkLayout = vklayout; }
+    VkDescriptorSetLayout const& getVkLayout() const noexcept { return mVkLayout; }
+
+    // It is possible to have the layout switch out due to AHardwarebuffer (external image) format
+    // changes.
+    void setVkLayout(VkDescriptorSetLayout vklayout) noexcept { mVkLayout = vklayout; }
+
+    bool hasExternalSamplers() const noexcept { return bitmask.externalSampler.count() > 0; }
 
     Bitmask const bitmask;
     Count const count;
@@ -137,12 +146,11 @@ public:
     // can use to repackage the vk handle.
     using OnRecycle = std::function<void(VulkanDescriptorSet*)>;
 
-    VulkanDescriptorSet(VkDescriptorSet rawSet,
+    VulkanDescriptorSet(
             fvkutils::UniformBufferBitmask const& dynamicUboMask,
             uint8_t uniqueDynamicUboCount,
             OnRecycle&& onRecycleFn)
-        : vkSet(rawSet),
-          dynamicUboMask(dynamicUboMask),
+        : dynamicUboMask(dynamicUboMask),
           uniqueDynamicUboCount(uniqueDynamicUboCount),
           mOnRecycleFn(std::move(onRecycleFn)) {}
 
@@ -151,6 +159,13 @@ public:
             mOnRecycleFn(this);
         }
     }
+
+    VkDescriptorSet const& getVkSet() const noexcept {
+        return mVkSet;
+    }
+
+    // Note that the only case where you'd set it more than once is with external images/samplers.
+    void setVkSet(VkDescriptorSet vkset) noexcept { mVkSet = vkset; }
 
     void setOffsets(backend::DescriptorSetOffsetArray&& offsets) noexcept {
         mOffsets = std::move(offsets);
@@ -163,11 +178,11 @@ public:
     void acquire(fvkmemory::resource_ptr<VulkanTexture> texture);
     void acquire(fvkmemory::resource_ptr<VulkanBufferObject> buffer);
 
-    VkDescriptorSet const vkSet;
     fvkutils::UniformBufferBitmask const dynamicUboMask;
     uint8_t const uniqueDynamicUboCount;
 
 private:
+    VkDescriptorSet mVkSet = VK_NULL_HANDLE;
     backend::DescriptorSetOffsetArray mOffsets;
     std::vector<fvkmemory::resource_ptr<fvkmemory::Resource>> mResources;
     OnRecycle mOnRecycleFn;
