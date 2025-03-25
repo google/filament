@@ -1146,7 +1146,7 @@ size_t VulkanDriver::getMaxUniformBufferSize() {
 
 size_t VulkanDriver::getMaxTextureSize(SamplerType) {
     // TODO: return the actual size instead of hardcoded value
-    return 2048;
+    return 4096;
 }
 
 size_t VulkanDriver::getMaxArrayTextureLayers() {
