@@ -1134,24 +1134,28 @@ math::float2 VulkanDriver::getClipSpaceParams() {
 }
 
 uint8_t VulkanDriver::getMaxDrawBuffers() {
-    return MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
+    return mContext.getPhysicalDeviceLimits().maxColorAttachments;
 }
 
 size_t VulkanDriver::getMaxUniformBufferSize() {
-    // TODO: return the actual size instead of hardcoded value
-    // TODO: devices that return less than 32768 should be rejected. This represents only 3%
-    //       of android devices.
-    return 32768;
+    return mContext.getPhysicalDeviceLimits().maxUniformBufferRange;
 }
 
-size_t VulkanDriver::getMaxTextureSize(SamplerType) {
-    // TODO: return the actual size instead of hardcoded value
-    return 4096;
+size_t VulkanDriver::getMaxTextureSize(SamplerType type) {
+    switch (type) {
+        case SamplerType::SAMPLER_2D:
+            return mContext.getPhysicalDeviceLimits().maxImageDimension2D;
+        case SamplerType::SAMPLER_3D:
+            return mContext.getPhysicalDeviceLimits().maxImageDimension3D;
+        case SamplerType::SAMPLER_CUBEMAP:
+            return mContext.getPhysicalDeviceLimits().maxImageDimensionCube;
+        default:
+            return mContext.getPhysicalDeviceLimits().maxImageDimension1D;
+    }
 }
 
 size_t VulkanDriver::getMaxArrayTextureLayers() {
-    // TODO: return the actual size instead of hardcoded value
-    return 256;
+    return mContext.getPhysicalDeviceLimits().maxImageArrayLayers;
 }
 
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
