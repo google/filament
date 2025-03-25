@@ -48,6 +48,29 @@ bool is_interface_variable(const Instruction* inst, bool is_spv_1_4) {
   }
 }
 
+// Special validation for varibles that are between shader stages
+spv_result_t ValidateInputOutputInterfaceVariables(ValidationState_t& _,
+                                                   const Instruction* var) {
+  auto var_pointer = _.FindDef(var->GetOperandAs<uint32_t>(0));
+  uint32_t pointer_id = var_pointer->GetOperandAs<uint32_t>(2);
+
+  const auto isPhysicalStorageBuffer = [](const Instruction* insn) {
+    return insn->opcode() == spv::Op::OpTypePointer &&
+           insn->GetOperandAs<spv::StorageClass>(1) ==
+               spv::StorageClass::PhysicalStorageBuffer;
+  };
+
+  if (_.ContainsType(pointer_id, isPhysicalStorageBuffer)) {
+    return _.diag(SPV_ERROR_INVALID_ID, var)
+           << _.VkErrorID(9557) << "Input/Output interface variable id <"
+           << var->id()
+           << "> contains a PhysicalStorageBuffer pointer, which is not "
+              "allowed. If you want to interface shader stages with a "
+              "PhysicalStorageBuffer, cast to a uint64 or uvec2 instead.";
+  }
+  return SPV_SUCCESS;
+}
+
 // Checks that \c var is listed as an interface in all the entry points that use
 // it.
 spv_result_t check_interface_variable(ValidationState_t& _,
@@ -107,6 +130,12 @@ spv_result_t check_interface_variable(ValidationState_t& _,
     }
   }
 
+  if (var->GetOperandAs<spv::StorageClass>(2) == spv::StorageClass::Input ||
+      var->GetOperandAs<spv::StorageClass>(2) == spv::StorageClass::Output) {
+    if (auto error = ValidateInputOutputInterfaceVariables(_, var))
+      return error;
+  }
+
   return SPV_SUCCESS;
 }
 
@@ -135,17 +164,20 @@ spv_result_t NumConsumedLocations(ValidationState_t& _, const Instruction* type,
       }
       break;
     case spv::Op::OpTypeMatrix:
-      // Matrices consume locations equal to the underlying vector type for
-      // each column.
-      NumConsumedLocations(_, _.FindDef(type->GetOperandAs<uint32_t>(1)),
-                           num_locations);
+      // Matrices consume locations equivalent to arrays.
+      if (auto error = NumConsumedLocations(
+              _, _.FindDef(type->GetOperandAs<uint32_t>(1)), num_locations)) {
+        return error;
+      }
       *num_locations *= type->GetOperandAs<uint32_t>(2);
       break;
     case spv::Op::OpTypeArray: {
       // Arrays consume locations equal to the underlying type times the number
       // of elements in the vector.
-      NumConsumedLocations(_, _.FindDef(type->GetOperandAs<uint32_t>(1)),
-                           num_locations);
+      if (auto error = NumConsumedLocations(
+              _, _.FindDef(type->GetOperandAs<uint32_t>(1)), num_locations)) {
+        return error;
+      }
       bool is_int = false;
       bool is_const = false;
       uint32_t value = 0;
@@ -215,10 +247,31 @@ uint32_t NumConsumedComponents(ValidationState_t& _, const Instruction* type) {
           NumConsumedComponents(_, _.FindDef(type->GetOperandAs<uint32_t>(1)));
       num_components *= type->GetOperandAs<uint32_t>(2);
       break;
-    case spv::Op::OpTypeArray:
-      // Skip the array.
-      return NumConsumedComponents(_,
-                                   _.FindDef(type->GetOperandAs<uint32_t>(1)));
+    case spv::Op::OpTypeMatrix:
+      // Matrices consume all components of the location.
+      // Round up to next multiple of 4.
+      num_components =
+          NumConsumedComponents(_, _.FindDef(type->GetOperandAs<uint32_t>(1)));
+      num_components *= type->GetOperandAs<uint32_t>(2);
+      num_components = ((num_components + 3) / 4) * 4;
+      break;
+    case spv::Op::OpTypeArray: {
+      // Arrays consume all components of the location.
+      // Round up to next multiple of 4.
+      num_components =
+          NumConsumedComponents(_, _.FindDef(type->GetOperandAs<uint32_t>(1)));
+
+      bool is_int = false;
+      bool is_const = false;
+      uint32_t value = 0;
+      // Attempt to evaluate the number of array elements.
+      std::tie(is_int, is_const, value) =
+          _.EvalInt32IfConst(type->GetOperandAs<uint32_t>(2));
+      if (is_int && is_const) num_components *= value;
+
+      num_components = ((num_components + 3) / 4) * 4;
+      return num_components;
+    }
     case spv::Op::OpTypePointer:
       if (_.addressing_model() ==
               spv::AddressingModel::PhysicalStorageBuffer64 &&
@@ -301,9 +354,10 @@ spv_result_t GetLocationsForVariable(
     }
   }
 
-  // Vulkan 14.1.3: Tessellation control and mesh per-vertex outputs and
-  // tessellation control, evaluation and geometry per-vertex inputs have a
-  // layer of arraying that is not included in interface matching.
+  // Vulkan 15.1.3 (Interface Matching): Tessellation control and mesh
+  // per-vertex outputs and tessellation control, evaluation and geometry
+  // per-vertex inputs have a layer of arraying that is not included in
+  // interface matching.
   bool is_arrayed = false;
   switch (entry_point->GetOperandAs<spv::ExecutionModel>(0)) {
     case spv::ExecutionModel::TessellationControl:
@@ -357,51 +411,33 @@ spv_result_t GetLocationsForVariable(
 
   const std::string storage_class = is_output ? "output" : "input";
   if (has_location) {
-    auto sub_type = type;
-    bool is_int = false;
-    bool is_const = false;
-    uint32_t array_size = 1;
-    // If the variable is still arrayed, mark the locations/components per
-    // index.
-    if (type->opcode() == spv::Op::OpTypeArray) {
-      // Determine the array size if possible and get the element type.
-      std::tie(is_int, is_const, array_size) =
-          _.EvalInt32IfConst(type->GetOperandAs<uint32_t>(2));
-      if (!is_int || !is_const) array_size = 1;
-      auto sub_type_id = type->GetOperandAs<uint32_t>(1);
-      sub_type = _.FindDef(sub_type_id);
+    uint32_t num_locations = 0;
+    if (auto error = NumConsumedLocations(_, type, &num_locations))
+      return error;
+    uint32_t num_components = NumConsumedComponents(_, type);
+
+    uint32_t start = location * 4;
+    uint32_t end = (location + num_locations) * 4;
+    if (num_components % 4 != 0) {
+      start += component;
+      end = start + num_components;
     }
 
-    uint32_t num_locations = 0;
-    if (auto error = NumConsumedLocations(_, sub_type, &num_locations))
-      return error;
-    uint32_t num_components = NumConsumedComponents(_, sub_type);
+    if (kMaxLocations <= start) {
+      // Too many locations, give up.
+      return SPV_SUCCESS;
+    }
 
-    for (uint32_t array_idx = 0; array_idx < array_size; ++array_idx) {
-      uint32_t array_location = location + (num_locations * array_idx);
-      uint32_t start = array_location * 4;
-      if (kMaxLocations <= start) {
-        // Too many locations, give up.
-        break;
-      }
+    auto locs = locations;
+    if (has_index && index == 1) locs = output_index1_locations;
 
-      uint32_t end = (array_location + num_locations) * 4;
-      if (num_components != 0) {
-        start += component;
-        end = array_location * 4 + component + num_components;
-      }
-
-      auto locs = locations;
-      if (has_index && index == 1) locs = output_index1_locations;
-
-      for (uint32_t i = start; i < end; ++i) {
-        if (!locs->insert(i).second) {
-          return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
-                 << (is_output ? _.VkErrorID(8722) : _.VkErrorID(8721))
-                 << "Entry-point has conflicting " << storage_class
-                 << " location assignment at location " << i / 4
-                 << ", component " << i % 4;
-        }
+    for (uint32_t i = start; i < end; ++i) {
+      if (!locs->insert(i).second) {
+        return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
+               << (is_output ? _.VkErrorID(8722) : _.VkErrorID(8721))
+               << "Entry-point has conflicting " << storage_class
+               << " location assignment at location " << i / 4 << ", component "
+               << i % 4;
       }
     }
   } else {
@@ -460,38 +496,19 @@ spv_result_t GetLocationsForVariable(
         continue;
       }
 
-      if (member->opcode() == spv::Op::OpTypeArray && num_components >= 1 &&
-          num_components < 4) {
-        // When an array has an element that takes less than a location in
-        // size, calculate the used locations in a strided manner.
-        for (uint32_t l = location; l < num_locations + location; ++l) {
-          for (uint32_t c = component; c < component + num_components; ++c) {
-            uint32_t check = 4 * l + c;
-            if (!locations->insert(check).second) {
-              return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
-                     << (is_output ? _.VkErrorID(8722) : _.VkErrorID(8721))
-                     << "Entry-point has conflicting " << storage_class
-                     << " location assignment at location " << l
-                     << ", component " << c;
-            }
-          }
-        }
-      } else {
-        // TODO: There is a hole here is the member is an array of 3- or
-        // 4-element vectors of 64-bit types.
-        uint32_t end = (location + num_locations) * 4;
-        if (num_components != 0) {
-          start += component;
-          end = location * 4 + component + num_components;
-        }
-        for (uint32_t l = start; l < end; ++l) {
-          if (!locations->insert(l).second) {
-            return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
-                   << (is_output ? _.VkErrorID(8722) : _.VkErrorID(8721))
-                   << "Entry-point has conflicting " << storage_class
-                   << " location assignment at location " << l / 4
-                   << ", component " << l % 4;
-          }
+      uint32_t end = (location + num_locations) * 4;
+      if (num_components % 4 != 0) {
+        start += component;
+        end = location * 4 + component + num_components;
+      }
+
+      for (uint32_t l = start; l < end; ++l) {
+        if (!locations->insert(l).second) {
+          return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
+                 << (is_output ? _.VkErrorID(8722) : _.VkErrorID(8721))
+                 << "Entry-point has conflicting " << storage_class
+                 << " location assignment at location " << l / 4
+                 << ", component " << l % 4;
         }
       }
     }

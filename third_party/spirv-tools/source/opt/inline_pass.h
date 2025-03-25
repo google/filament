@@ -150,6 +150,12 @@ class InlinePass : public Pass {
   // Initialize state for optimization of |module|
   void InitializeInline();
 
+  // Fixes invalid debug declare functions in `func` that were caused by
+  // inlining. This function cannot be called while in the middle of inlining
+  // because it needs to be able to find the instructions that define an
+  // id.
+  void FixDebugDeclares(Function* func);
+
   // Map from function's result id to function.
   std::unordered_map<uint32_t, Function*> id2function_;
 
@@ -241,6 +247,11 @@ class InlinePass : public Pass {
   // structural dominance.
   void UpdateSingleBlockLoopContinueTarget(
       uint32_t new_id, std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
+
+  // Replaces the `var` operand of `dbg_declare_inst` and updates the indexes
+  // accordingly, if it is the id of an access chain in `access_chains`.
+  void FixDebugDeclare(Instruction* dbg_declare_inst,
+                       const std::map<uint32_t, Instruction*>& access_chains);
 };
 
 }  // namespace opt
