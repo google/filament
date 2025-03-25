@@ -41,11 +41,10 @@ public:
     ~WebGPUDriver() noexcept override;
 
     [[nodiscard]] Dispatcher getDispatcher() const noexcept final;
-    [[nodiscard]] static Driver* create(WebGPUPlatform& platform) noexcept;
+    [[nodiscard]] static Driver* create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
 
 private:
-    explicit WebGPUDriver(WebGPUPlatform& platform) noexcept;
-    WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
+    explicit WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
     [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
 
@@ -84,32 +83,32 @@ private:
     HandleAllocatorWGSL mHandleAllocator;
 
     template<typename D>
-    Handle<D> alloc_handle() {
+    Handle<D> allocHandle() {
         return mHandleAllocator.allocate<D>();
     }
 
     template<typename D, typename B, typename ... ARGS>
-    Handle<B> alloc_and_construct_handle(ARGS&& ... args) {
+    Handle<B> allocAndConstructHandle(ARGS&& ... args) {
         return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args)...);
     }
 
     template<typename D, typename B>
-    D* handle_cast(Handle<B> handle) noexcept {
+    D* handleCast(Handle<B> handle) noexcept {
         return mHandleAllocator.handle_cast<D*>(handle);
     }
 
     template<typename D, typename B>
-    const D* handle_const_cast(const Handle<B>& handle) noexcept {
+    const D* handleConstCast(const Handle<B>& handle) noexcept {
         return mHandleAllocator.handle_cast<D*>(handle);
     }
 
     template<typename D, typename B, typename ... ARGS>
-    D* construct_handle(Handle<B>& handle, ARGS&& ... args) noexcept {
+    D* constructHandle(Handle<B>& handle, ARGS&& ... args) noexcept {
         return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
     }
 
     template<typename D, typename B>
-    void destruct_handle(Handle<B>& handle) noexcept {
+    void destructHandle(Handle<B>& handle) noexcept {
         auto* p = mHandleAllocator.handle_cast<D*>(handle);
         mHandleAllocator.deallocate(handle, p);
     }
