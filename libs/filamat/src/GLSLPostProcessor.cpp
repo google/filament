@@ -517,13 +517,104 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
         MetalArgumentBuffer::destroy(&argBuffer);
     }
 }
+void GLSLPostProcessor::rebindImageSamplerForWGSL(std::vector<uint32_t>& spirv) {
+    constexpr size_t HEADER_SIZE = 5;
+    size_t const dataSize = spirv.size();
+    uint32_t* data = spirv.data();
+
+    struct Descriptor {
+        uint32_t binding = 0xFFFFFFFF;
+        bool fixed = false;
+    };
+
+    std::unordered_map<uint32_t, Descriptor> descriptors;
+    auto getDesc = [&](uint32_t var) -> Descriptor& {
+        using itertype = std::unordered_map<uint32_t, Descriptor>::iterator;
+        itertype itr;
+        if (itr = descriptors.find(var); itr == descriptors.end()) {
+            itr = descriptors.insert({var, {}}).first;
+        }
+        return itr->second;
+    };
+
+    auto pass = [&](uint32_t targetOp, std::function<void(uint32_t)> f) {
+        for (uint32_t cursor = HEADER_SIZE, cursorEnd = dataSize; cursor < cursorEnd;) {
+            uint32_t const firstWord = data[cursor];
+            uint32_t const wordCount = firstWord >> 16;
+            uint32_t const op = firstWord & 0x0000FFFF;
+            if (targetOp == op) {
+                f(cursor+1);
+            }
+            cursor += wordCount;
+        }
+    };
+
+    uint32_t samplerTypeId = 0;
+
+    // First we find the ID used to identify the sampler type and the image type.
+    pass(spv::Op::OpTypeSampler, [&](uint32_t pos) {
+        samplerTypeId = data[pos];
+    });
+
+    // Next we identify all the descriptors and record their set id and binding.
+    pass(spv::Op::OpDecorate, [&](uint32_t pos) {
+        uint32_t const type = data[pos + 1];
+        if (type == spv::Decoration::DecorationBinding) {
+            uint32_t const targetVar = data[pos];
+            uint32_t const binding = data[pos + 2];
+            auto& desc = getDesc(targetVar);
+            desc.binding = binding;
+            // Note these decorations do not need to be written to the output.
+        } else if (type == spv::Decoration::DecorationDescriptorSet) {
+            uint32_t const targetVar = data[pos];
+            uint32_t const set = data[pos + 2];
+            auto& desc = getDesc(targetVar);
+        }
+    });
+
+    // Offset samplers by 2n+1, and everything else by 2n
+    pass(spv::Op::OpLoad, [&](uint32_t pos) {
+        uint32_t const retType = data[pos];
+        uint32_t const targetVar = data[pos + 2];
+        auto& desc = getDesc(targetVar);
+        if (retType == samplerTypeId) {
+            if (!desc.fixed) {
+                //desc.binding = (desc.binding * 2) +1;
+                desc.binding = (desc.binding ) +100;
+
+                desc.fixed = true;
+            }
+        }
+        else {
+            if (!desc.fixed) {
+                //desc.binding *=2;
+               // desc.fixed = true;
+            }
+        }
+    });
+
+    // Write out the offsetted bindings
+    pass(spv::Op::OpDecorate, [&](uint32_t pos) {
+        uint32_t const type = data[pos + 1];
+        if (type == spv::Decoration::DecorationBinding) {
+            uint32_t const targetVar = data[pos];
+            auto const &desc = getDesc(targetVar);
+            data[pos + 2] = desc.binding;
+        }
+    });
+}
 
 bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
 #if FILAMENT_SUPPORTS_WEBGPU
-    // We need to remove dead code for our variant-filter workaround for WebGPU to work
-    // This is especially relevant for removing the push constants that morphing uses when not disabled
-    spv::spirvbin_t remapper(0);
-    remapper.remap(*spirv, spv::spirvbin_base_t::DCE_ALL);
+    //We need to run some opt-passes at all times to transpile to WGSL
+    auto optimizer = createEmptyOptimizer();
+    optimizer->RegisterPass(CreateSplitCombinedImageSamplerPass());
+    optimizer->RegisterPass(CreateResolveBindingConflictsPass());
+    optimizeSpirv(optimizer, *spirv);
+
+    //After splitting the image samplers, we need to remap the bindings to separate them.
+    //TODO: This has issues, so use CreateResolveBindingConflictsPass instead. Mapping is less predictable but short term
+    //rebindImageSamplerForWGSL(*spirv);
 
     //Allow non-uniform derivitives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
     const tint::spirv::reader::Options readerOpts{true};
@@ -532,14 +623,8 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
 
     if (tintRead.Diagnostics().ContainsErrors()) {
-        //TODO remove this if block once combined image sampler conversion works.
-        if (tintRead.Diagnostics().Str().rfind("error: WGSL does not support combined image-samplers") != std::string::npos) {
-            slog.w << "This tint reader error is currently ignored during WebGPU bringup: " << tintRead.Diagnostics().Str() << io::endl;
-        }
-        else {
-            slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
-            return false;
-        }
+        slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
+        return false;
     }
 
     tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead,writerOpts);
@@ -887,10 +972,8 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
     return true;
 }
 
-std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
-        MaterialBuilder::Optimization optimization, Config const& config) {
+std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createEmptyOptimizer() {
     auto optimizer = std::make_shared<spvtools::Optimizer>(SPV_ENV_UNIVERSAL_1_3);
-
     optimizer->SetMessageConsumer([](spv_message_level_t level,
             const char* source, const spv_position_t& position, const char* message) {
         if (!filterSpvOptimizerMessage(level)) {
@@ -899,6 +982,12 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
         slog.e << stringifySpvOptimizerMessage(level, source, position, message)
                 << io::endl;
     });
+    return optimizer;
+}
+
+std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
+        MaterialBuilder::Optimization optimization, Config const& config) {
+    auto optimizer = createEmptyOptimizer();
 
     if (optimization == MaterialBuilder::Optimization::SIZE) {
         // When optimizing for size, we don't run the SPIR-V through any size optimization passes
@@ -923,7 +1012,7 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
     return optimizer;
 }
 
-void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) const {
+void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) {
     if (!optimizer->Run(spirv.data(), spirv.size(), &spirv)) {
         slog.e << "SPIR-V optimizer pass failed" << io::endl;
         return;
