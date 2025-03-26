@@ -688,6 +688,9 @@ public:
     struct {
         struct {
             struct {
+                bool use_1d_lut = false;
+            } color_grading;
+            struct {
                 bool use_shadow_atlas = false;
             } shadows;
             struct {
@@ -719,6 +722,9 @@ public:
             { "backend.opengl.assert_native_window_is_valid",
               "Asserts that the ANativeWindow is valid when rendering starts.",
               &features.backend.opengl.assert_native_window_is_valid, true },
+            { "engine.color_grading.use_1d_lut",
+              "Uses a 1D LUT for color grading.",
+              &features.engine.color_grading.use_1d_lut, false },
             { "engine.shadows.use_shadow_atlas",
               "Uses an array of atlases to store shadow maps.",
               &features.engine.shadows.use_shadow_atlas, false },
