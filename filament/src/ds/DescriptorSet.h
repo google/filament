@@ -94,7 +94,6 @@ private:
             struct {
                 backend::Handle<backend::HwTexture> th;
                 backend::SamplerParams params;
-                uint32_t padding;
             } texture;
         };
     };

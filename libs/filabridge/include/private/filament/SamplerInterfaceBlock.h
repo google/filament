@@ -119,6 +119,7 @@ public:
 
     // information record for sampler of the given name
     SamplerInfo const* getSamplerInfo(std::string_view name) const;
+    SamplerInfo const* getSamplerInfo(Binding binding) const;
 
     bool hasSampler(std::string_view name) const noexcept {
         return mInfoMap.find(name) != mInfoMap.end();

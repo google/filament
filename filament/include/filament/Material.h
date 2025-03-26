@@ -145,6 +145,9 @@ public:
             return constant(name, strlen(name), value);
         }
 
+        Builder& externalImageInfo(const char* UTILS_NONNULL name, uint64_t externalFormat,
+                backend::SamplerParams sampler, backend::SamplerYcbcrConversion chroma) noexcept;
+
         /**
          * Sets the quality of the indirect lights computations. This is only taken into account
          * if this material is lit and in the surface domain. This setting will affect the
