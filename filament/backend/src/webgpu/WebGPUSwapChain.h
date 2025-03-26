@@ -14,19 +14,21 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_WEBGPUSURFACE_H
-#define TNT_FILAMENT_BACKEND_WEBGPUSURFACE_H
+#ifndef TNT_FILAMENT_BACKEND_WEBGPUSWAPCHAIN_H
+#define TNT_FILAMENT_BACKEND_WEBGPUSWAPCHAIN_H
 
 #include <webgpu/webgpu_cpp.h>
+
+#include <backend/Platform.h>
 
 #include <cstdint>
 
 namespace filament::backend {
 
-class WebGPUSurface {
+class WebGPUSwapChain : public Platform::SwapChain {
 public:
-    WebGPUSurface(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device);
-    ~WebGPUSurface();
+    WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device);
+    ~WebGPUSwapChain();
 
     void resize(uint32_t width, uint32_t height);
     void GetCurrentTexture(wgpu::SurfaceTexture*);
@@ -39,4 +41,4 @@ private:
 
 } // namespace filament::backend
 
-#endif //TNT_FILAMENT_BACKEND_WEBGPUSURFACE_H
+#endif //TNT_FILAMENT_BACKEND_WEBGPUSWAPCHAIN_H

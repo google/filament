@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "webgpu/WebGPUSurface.h"
+#include "webgpu/WebGPUSwapChain.h"
 
 #include "webgpu/WebGPUConstants.h"
 
@@ -114,7 +114,7 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device& device,
 
 namespace filament::backend {
 
-WebGPUSurface::WebGPUSurface(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device)
+WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device)
     : mSurface(surface) {
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
@@ -127,15 +127,15 @@ WebGPUSurface::WebGPUSurface(wgpu::Surface&& surface, wgpu::Adapter& adapter, wg
     initConfig(mConfig, device, capabilities);
 }
 
-WebGPUSurface::~WebGPUSurface() {
+WebGPUSwapChain::~WebGPUSwapChain() {
     if (mConfigured) {
         mSurface.Unconfigure();
         mConfigured = false;
     }
 }
 
-void WebGPUSurface::resize(uint32_t width, uint32_t height) {
-    FWGPU_LOGD << "Called WebGPUSurface::resize(width=" << width << ", height=" << height << ")"
+void WebGPUSwapChain::resize(uint32_t width, uint32_t height) {
+    FWGPU_LOGD << "Called WebGPUSwapChain::resize(width=" << width << ", height=" << height << ")"
                << utils::io::endl;
     if (width < 1 || height < 1) {
         // should we panic or do nothing if we get 0s? expected?
@@ -146,7 +146,7 @@ void WebGPUSurface::resize(uint32_t width, uint32_t height) {
     }
     if (mConfig.width == width && mConfig.height == height && mConfigured) {
         // nothing to do (already configured with this extent)
-        FWGPU_LOGW << "WebGPUSurface::resize(...) called with the same width and height as "
+        FWGPU_LOGW << "WebGPUSwapChain::resize(...) called with the same width and height as "
                       "currently configured. Ignoring request to resize."
                    << utils::io::endl;
         return;
@@ -160,10 +160,10 @@ void WebGPUSurface::resize(uint32_t width, uint32_t height) {
     mConfigured = true;
 }
 
-//void WebGPUSurface::setFormat(wgpu::TextureFormat format) {
+//void WebGPUSwapChain::setFormat(wgpu::TextureFormat format) {
 //    if (mConfig.format == format && mConfigured) {
 //        // nothing to do (already configured with this extent)
-//        FWGPU_LOGW << "WebGPUSurface::setFormat(...) called with the same format as "
+//        FWGPU_LOGW << "WebGPUSwapChain::setFormat(...) called with the same format as "
 //                      "currently configured. Ignoring request to reformat."
 //                   << utils::io::endl;
 //        return;
@@ -179,7 +179,7 @@ void WebGPUSurface::resize(uint32_t width, uint32_t height) {
 //    }
 //}
 
-void WebGPUSurface::GetCurrentTexture(wgpu::SurfaceTexture* texture) {
+void WebGPUSwapChain::GetCurrentTexture(wgpu::SurfaceTexture* texture) {
     mSurface.GetCurrentTexture(texture);
 }
 
