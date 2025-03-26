@@ -305,6 +305,13 @@ void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
 void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
+    mSwapChain = nullptr;
+    // TODO:  uncomment below code when webgpu handle allocator is ready.
+    //        https://github.com/google/filament/pull/8566
+//    if (sch) {
+//        HwSwapChain* hwSwapChain = handleCast<HwSwapChain*>(sch);
+//        destruct(sch, hwSwapChain);
+//    }
 }
 
 void WebGPUDriver::destroyStream(Handle<HwStream> sh) {
@@ -320,6 +327,9 @@ void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
+    // TODO:  uncomment below code when webgpu handle allocator is ready.
+    //        https://github.com/google/filament/pull/8566
+    // return allocAndConstructHandle<HwSwapChain>();
     return Handle<HwSwapChain>((Handle<HwSwapChain>::HandleId) mNextFakeHandle++);
 }
 
@@ -405,7 +415,10 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 }
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
-    mSurface = nullptr;
+    // TODO:  uncomment below code when webgpu handle allocator is ready.
+    //        https://github.com/google/filament/pull/8566
+    // HwSwapChain* hwSwapChain = handleCast<HwSwapChain*>(sch);
+    mSwapChain = nullptr;
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
     mAdapter = mPlatform.requestAdapter(surface);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -416,9 +429,9 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     printDeviceDetails(mDevice);
 #endif
     mQueue = mDevice.GetQueue();
-    mSurface = std::make_unique<WebGPUSurface>(std::move(surface), mAdapter, mDevice);
+    mSwapChain = std::make_unique<WebGPUSwapChain>(std::move(surface), mAdapter, mDevice);
     //TODO: get size from nativeWindow ,or hook into queue to get it from a texture
-    mSurface->resize(2048, 1280);
+    mSwapChain->resize(2048, 1280);
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
                   "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
@@ -431,6 +444,9 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
                   "rebuilding Filament with that flag, e.g. ./build.sh -x "
                << FWGPU_PRINT_SYSTEM << " ..." << utils::io::endl;
 #endif
+    // TODO:  uncomment below code when webgpu handle allocator is ready.
+    //        https://github.com/google/filament/pull/8566
+    // hwSwapChain->swapChain = mSwapChain.get();
 }
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
