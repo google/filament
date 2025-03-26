@@ -108,11 +108,6 @@ void VulkanSwapChain::present() {
 
     mCommands->flush();
 
-    // call the image ready wait function
-    if (mExplicitImageReadyWait != nullptr) {
-        mExplicitImageReadyWait(swapChain);
-    }
-
     // We only present if it is not headless. No-op for headless.
     if (!mHeadless) {
         VkSemaphore const finishedDrawing = mCommands->acquireFinishedSignal();
@@ -146,7 +141,6 @@ void VulkanSwapChain::acquire(bool& resized) {
     VulkanPlatform::ImageSyncData imageSyncData;
     VkResult const result = mPlatform->acquire(swapChain, &imageSyncData);
     mCurrentSwapIndex = imageSyncData.imageIndex;
-    mExplicitImageReadyWait = imageSyncData.explicitImageReadyWait;
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
             << "Cannot acquire in swapchain. error=" << static_cast<int32_t>(result);
     if (imageSyncData.imageReadySemaphore != VK_NULL_HANDLE) {

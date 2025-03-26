@@ -49,7 +49,9 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
 
     void present();
 
-    void acquire(bool& reized);
+    // Acquire a new image from the swapchain. If the image is not available it would wait until it
+    // is.
+    void acquire(bool& resized);
 
     fvkmemory::resource_ptr<VulkanTexture> getCurrentColor() const noexcept {
         uint32_t const imageIndex = mCurrentSwapIndex;
@@ -99,7 +101,6 @@ private:
     VkExtent2D mExtent;
     uint32_t mLayerCount;
     uint32_t mCurrentSwapIndex;
-    std::function<void(Platform::SwapChain* handle)> mExplicitImageReadyWait = nullptr;
     bool mAcquired;
     bool mIsFirstRenderPass;
 };
