@@ -212,7 +212,7 @@ template class HandleAllocatorMTL;
 #endif
 
 #if defined (FILAMENT_SUPPORTS_WEBGPU)
-template class HandleAllocatorWGSL;
+template class HandleAllocatorWGPU;
 #endif
 
 } // namespace filament::backend

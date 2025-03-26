@@ -31,6 +31,10 @@
 
 #include <cstdint>
 
+#ifndef FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB
+#    define FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB 8
+#endif
+
 namespace filament::backend {
 
 /**
@@ -80,7 +84,7 @@ private:
      * Memory management
      */
 
-    HandleAllocatorWGSL mHandleAllocator;
+    HandleAllocatorWGPU mHandleAllocator;
 
     template<typename D>
     Handle<D> allocHandle() {
