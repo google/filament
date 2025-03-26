@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <sstream>
 #include <string_view>
 #include <utility>
@@ -185,45 +186,7 @@ void printAdapterDetails(wgpu::Adapter const& adapter) {
 }
 #endif
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-void printSurfaceCapabilitiesDetails(wgpu::SurfaceCapabilities const& capabilities) {
-    std::stringstream usages_stream{};
-    usages_stream << capabilities.usages;
-    FWGPU_LOGI << "WebGPU surface capabilities:" << utils::io::endl;
-    FWGPU_LOGI << "  surface usages: " << usages_stream.str().data() << utils::io::endl;
-    FWGPU_LOGI << "  surface formats (" << capabilities.formatCount << "):" << utils::io::endl;
-    if (capabilities.formatCount > 0 && capabilities.formats != nullptr) {
-        std::for_each(capabilities.formats, capabilities.formats + capabilities.formatCount,
-                [](wgpu::TextureFormat const format) {
-                    std::stringstream format_stream{};
-                    format_stream << format;
-                    FWGPU_LOGI << "    " << format_stream.str().data() << utils::io::endl;
-                });
-    }
-    FWGPU_LOGI << "  surface present modes (" << capabilities.presentModeCount
-               << "):" << utils::io::endl;
-    if (capabilities.presentModeCount > 0 && capabilities.presentModes != nullptr) {
-        std::for_each(capabilities.presentModes,
-                capabilities.presentModes + capabilities.presentModeCount,
-                [](wgpu::PresentMode const presentMode) {
-                    std::stringstream present_mode_stream{};
-                    present_mode_stream << presentMode;
-                    FWGPU_LOGI << "    " << present_mode_stream.str().data() << utils::io::endl;
-                });
-    }
-    FWGPU_LOGI << "  surface alpha modes (" << capabilities.alphaModeCount
-               << "):" << utils::io::endl;
-    if (capabilities.alphaModeCount > 0 && capabilities.alphaModes != nullptr) {
-        std::for_each(capabilities.alphaModes,
-                capabilities.alphaModes + capabilities.alphaModeCount,
-                [](wgpu::CompositeAlphaMode const alphaMode) {
-                    std::stringstream alpha_mode_stream{};
-                    alpha_mode_stream << alphaMode;
-                    FWGPU_LOGI << "    " << alpha_mode_stream.str().data() << utils::io::endl;
-                });
-    }
-}
-#endif
+
 
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printDeviceDetails(wgpu::Device const& device) {
@@ -449,25 +412,20 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 }
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
-    mSurface= mPlatform.createSurface(nativeWindow, flags);
-    mAdapter = mPlatform.requestAdapter(mSurface);
+    mSurface = nullptr;
+    wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
+    mAdapter = mPlatform.requestAdapter(surface);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printAdapterDetails(mAdapter);
-    wgpu::SurfaceCapabilities surfaceCapabilities{};
-    if (!mSurface.GetCapabilities(mAdapter, &surfaceCapabilities)) {
-        FWGPU_LOGW << "Failed to get WebGPU surface capabilities" << utils::io::endl;
-    } else {
-        printSurfaceCapabilitiesDetails(surfaceCapabilities);
-    }
 #endif
     mDevice = mPlatform.requestDevice(mAdapter);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printDeviceDetails(mDevice);
 #endif
     mQueue = mDevice.GetQueue();
-    // TODO configure the surface (maybe before or after creating the swapchain?
-    //                             how do we get the surface extent?)
-    // TODO actually create the swapchain
+    mSurface = std::make_unique<WebGPUSurface>(std::move(surface), mAdapter, mDevice);
+    //TODO: get size from nativeWindow ,or hook into queue to get it from a texture
+    mSurface->resize(2048, 1280);
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
                   "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
