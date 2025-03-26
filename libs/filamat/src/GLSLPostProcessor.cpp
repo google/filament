@@ -525,8 +525,8 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     spv::spirvbin_t remapper(0);
     remapper.remap(*spirv, spv::spirvbin_base_t::DCE_ALL);
 
-    //Currently no options we want to use
-    const tint::spirv::reader::Options readerOpts{};
+    //Allow non-uniform derivitives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
+    const tint::spirv::reader::Options readerOpts{true};
     tint::wgsl::writer::Options writerOpts{};
 
     tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
