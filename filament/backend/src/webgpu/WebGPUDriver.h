@@ -91,34 +91,8 @@ private:
         return mHandleAllocator.allocate<D>();
     }
 
-    template<typename D, typename B, typename ... ARGS>
-    Handle<B> allocAndConstructHandle(ARGS&& ... args) {
-        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args)...);
-    }
-
-    template<typename D, typename B>
-    D* handleCast(Handle<B> handle) noexcept {
-        return mHandleAllocator.handle_cast<D*>(handle);
-    }
-
-    template<typename D, typename B>
-    const D* handleConstCast(const Handle<B>& handle) noexcept {
-        return mHandleAllocator.handle_cast<D*>(handle);
-    }
-
-    template<typename D, typename B, typename ... ARGS>
-    D* constructHandle(Handle<B>& handle, ARGS&& ... args) noexcept {
-        return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
-    }
-
-    template<typename D, typename B>
-    void destructHandle(Handle<B>& handle) noexcept {
-        auto* p = mHandleAllocator.handle_cast<D*>(handle);
-        mHandleAllocator.deallocate(handle, p);
-    }
-
 };
 
 }// namespace filament::backend
 
-#endif// TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
+#endif // TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
