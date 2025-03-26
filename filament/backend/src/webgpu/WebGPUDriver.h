@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
-#include "webgpu/WebGPUSurface.h"
+#include "webgpu/WebGPUSwapChain.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
@@ -46,8 +46,6 @@ class WebGPUDriver final : public DriverBase {
 public:
     ~WebGPUDriver() noexcept override;
 
-
-
     [[nodiscard]] Dispatcher getDispatcher() const noexcept final;
     [[nodiscard]] static Driver* create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
 
@@ -55,9 +53,6 @@ private:
     explicit WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
     [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
-    //[[nodiscard]] wgpu::Surface ConfigureSurface(uint32_t width, uint32_t height);
-    //[[nodiscard]] wgpu::Surface resizeSurface(uint32_t width, uint32_t height);
-
 
     // the platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
     // handled in the WebGPUPlatform
@@ -66,13 +61,12 @@ private:
     wgpu::Device mDevice = nullptr;
     wgpu::Queue mQueue = nullptr;
     // TODO consider moving to handle allocator when ready
-    std::unique_ptr<WebGPUSurface> mSurface = nullptr;
+    std::unique_ptr<WebGPUSwapChain> mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
 
     /*
      * Driver interface
      */
-
     template<typename T>
     friend class ConcreteDispatcher;
 
