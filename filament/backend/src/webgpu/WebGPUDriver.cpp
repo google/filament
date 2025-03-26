@@ -256,16 +256,15 @@ Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverCon
     size_t defaultSize = FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig validConfig {driverConfig};
     validConfig.handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize);
-    return new WebGPUDriver(platform, driverConfig);
+    return new WebGPUDriver(platform, validConfig);
 }
 
 WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept
     : mPlatform(platform),
-    mHandleAllocator(
-                "Handles",
-                driverConfig.handleArenaSize,
-                driverConfig.disableHandleUseAfterFreeCheck,
-                driverConfig.disableHeapHandleTags) {
+      mHandleAllocator("Handles",
+              driverConfig.handleArenaSize,
+              driverConfig.disableHandleUseAfterFreeCheck,
+              driverConfig.disableHeapHandleTags) {
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printInstanceDetails(mPlatform.getInstance());
 #endif
@@ -392,7 +391,6 @@ Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
     return Handle<HwTimerQuery>((Handle<HwTimerQuery>::HandleId) mNextFakeHandle++);
 }
 
-// TODO Update the handles with the appropriate buffers BUG [403577801]
 Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
     return allocHandle<HwIndexBuffer>();
 }
