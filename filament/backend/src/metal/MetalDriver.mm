@@ -1178,8 +1178,12 @@ size_t MetalDriver::getMaxUniformBufferSize() {
 }
 
 size_t MetalDriver::getMaxTextureSize(SamplerType) {
-    // TODO: return the actual size instead of hardcoding the minspec
-    return 2048;
+    if ([mContext->device supportsFamily:MTLGPUFamilyApple3]) {
+        return 16384;
+    } else if ([mContext->device supportsFamily:MTLGPUFamilyApple2]) {
+        return 8192;
+    }
+    return 4086;
 }
 
 size_t MetalDriver::getMaxArrayTextureLayers() {
