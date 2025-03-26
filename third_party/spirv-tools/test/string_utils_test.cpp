@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <string>
-
-#include "gtest/gtest.h"
 #include "source/util/string_utils.h"
+
+#include <string>
+#include <vector>
+
+#include "gmock/gmock.h"
+#include "source/util/small_vector.h"
 #include "spirv-tools/libspirv.h"
 
 namespace spvtools {
@@ -185,6 +188,50 @@ TEST(CardinalToOrdinal, Test) {
   EXPECT_EQ("1224th", CardinalToOrdinal(1224));
   EXPECT_EQ("1225th", CardinalToOrdinal(1225));
 }
+
+using MakeVectorMakeStringRoundTripTest = ::testing::TestWithParam<std::string>;
+
+TEST_P(MakeVectorMakeStringRoundTripTest, ViaStdVector) {
+  const std::string str = GetParam();
+  const auto& vec = MakeVector<std::vector<uint32_t>>(str);
+  // Allow for the terminating null byte that must be present.
+  const auto expected_vec_len = (str.size() + 4) / 4;
+  EXPECT_EQ(vec.size(), expected_vec_len);
+  const std::string back_to_string = MakeString(vec);
+  EXPECT_EQ(str, back_to_string);
+}
+
+TEST_P(MakeVectorMakeStringRoundTripTest, ViaSmallVector1) {
+  const std::string str = GetParam();
+  // Allow for the terminating null byte that must be present.
+  const auto expected_vec_len = (str.size() + 4) / 4;
+  const auto& vec = MakeVector<spvtools::utils::SmallVector<uint32_t, 1>>(str);
+  EXPECT_EQ(vec.size(), expected_vec_len);
+  const std::string back_to_string = MakeString(vec);
+  EXPECT_EQ(str, back_to_string);
+}
+
+TEST_P(MakeVectorMakeStringRoundTripTest, ViaSmallVector100) {
+  const std::string str = GetParam();
+  // Allow for the terminating null byte that must be present.
+  const auto expected_vec_len = (str.size() + 4) / 4;
+  const auto& vec =
+      MakeVector<spvtools::utils::SmallVector<uint32_t, 100>>(str);
+  EXPECT_EQ(vec.size(), expected_vec_len);
+  const std::string back_to_string = MakeString(vec);
+  EXPECT_EQ(str, back_to_string);
+}
+
+INSTANTIATE_TEST_SUITE_P(Examples, MakeVectorMakeStringRoundTripTest,
+                         testing::ValuesIn(std::vector<std::string>{
+                             "",
+                             "a",
+                             "bc",
+                             "def",
+                             "ghij",
+                             "klmno",
+                             "dustclouds disappear without a trace",
+                         }));
 
 }  // namespace
 }  // namespace utils

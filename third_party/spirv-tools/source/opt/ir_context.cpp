@@ -564,6 +564,7 @@ void IRContext::AddCombinatorsForCapability(uint32_t capability) {
          (uint32_t)spv::Op::OpCompositeConstruct,
          (uint32_t)spv::Op::OpCompositeExtract,
          (uint32_t)spv::Op::OpCompositeInsert,
+         (uint32_t)spv::Op::OpCopyLogical,
          (uint32_t)spv::Op::OpCopyObject,
          (uint32_t)spv::Op::OpTranspose,
          (uint32_t)spv::Op::OpSampledImage,

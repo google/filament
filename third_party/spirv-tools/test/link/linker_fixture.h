@@ -155,6 +155,19 @@ class LinkerTest : public ::testing::Test {
     }
   }
 
+  void Match(const std::string& templateBody,
+             const spvtest::Binary& linked_binary) {
+    std::string result;
+    EXPECT_TRUE(
+        tools_.Disassemble(linked_binary, &result, disassemble_options_))
+        << GetErrorMessage();
+    auto match_res = effcee::Match(result, templateBody);
+    EXPECT_EQ(effcee::Result::Status::Ok, match_res.status())
+        << match_res.message() << "\nExpanded from:\n"
+        << templateBody << "\nChecking result:\n"
+        << result;
+  }
+
   // An alternative to ExpandAndCheck, which uses the |templateBody| as the
   // match pattern for the disassembled linked result.
   void ExpandAndMatch(
@@ -165,15 +178,7 @@ class LinkerTest : public ::testing::Test {
     EXPECT_EQ(SPV_SUCCESS, res) << GetErrorMessage() << "\nExpanded from:\n"
                                 << templateBody;
     if (res == SPV_SUCCESS) {
-      std::string result;
-      EXPECT_TRUE(
-          tools_.Disassemble(linked_binary, &result, disassemble_options_))
-          << GetErrorMessage();
-      auto match_res = effcee::Match(result, templateBody);
-      EXPECT_EQ(effcee::Result::Status::Ok, match_res.status())
-          << match_res.message() << "\nExpanded from:\n"
-          << templateBody << "\nChecking result:\n"
-          << result;
+      Match(templateBody, linked_binary);
     }
   }
 

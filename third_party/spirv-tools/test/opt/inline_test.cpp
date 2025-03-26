@@ -4433,10 +4433,6 @@ TEST_F(InlineTest, DecorateReturnVariableWithAliasedPointer) {
                OpMemoryModel PhysicalStorageBuffer64 GLSL450
                OpEntryPoint GLCompute %1 "main"
                OpExecutionMode %1 LocalSize 8 8 1
-               OpDecorate %_ptr_PhysicalStorageBuffer__struct_5 ArrayStride 8
-               OpMemberDecorate %_struct_3 0 Offset 0
-               OpMemberDecorate %_struct_3 1 Offset 8
-               OpDecorate %_ptr_PhysicalStorageBuffer_int ArrayStride 4
                OpMemberDecorate %_struct_5 0 Offset 0
                OpMemberDecorate %_struct_5 1 Offset 4
                OpDecorate %6 Aliased
@@ -4466,6 +4462,86 @@ TEST_F(InlineTest, DecorateReturnVariableWithAliasedPointer) {
          %20 = OpAccessChain %_ptr_PhysicalStorageBuffer_int %6 %int_0
                OpReturnValue %20
                OpFunctionEnd)";
+
+  SetTargetEnv(SPV_ENV_VULKAN_1_2);
+  SinglePassRunAndMatch<InlineExhaustivePass>(text, true);
+}
+
+TEST_F(InlineTest, DebugDeclareWithAccessChain) {
+  const std::string text = R"(
+; CHECK: [[EmptyStruct:%[\w]+]] = OpTypeStruct %float
+; CHECK-DAG: [[Struct:%[\w]+]] = OpTypeStruct [[EmptyStruct]]
+; CHECK-DAG: [[PtrType:%[\w]+]] = OpTypePointer Function [[Struct]]
+; CHECK-DAG: [[EmptyPtrType:%[\w]+]] = OpTypePointer Function [[EmptyStruct]]
+               OpCapability Shader
+               OpExtension "SPV_KHR_non_semantic_info"
+               OpExtension "SPV_KHR_relaxed_extended_instruction"
+          %1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "computeMain"
+               OpExecutionMode %2 LocalSize 1 1 1
+          %3 = OpString "s.hlsl"
+          %4 = OpString "float"
+          %5 = OpString "source"
+          %6 = OpString "a"
+          %7 = OpString "SomeStruct"
+          %8 = OpString "SomeStruct.getA"
+          %9 = OpString ""
+         %10 = OpString "this"
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+    %uint_32 = OpConstant %uint 32
+      %float = OpTypeFloat 32
+       %void = OpTypeVoid
+     %uint_3 = OpConstant %uint 3
+     %uint_1 = OpConstant %uint 1
+     %uint_4 = OpConstant %uint 4
+     %uint_5 = OpConstant %uint 5
+    %uint_11 = OpConstant %uint 11
+     %uint_8 = OpConstant %uint 8
+   %uint_288 = OpConstant %uint 288
+         %25 = OpTypeFunction %void
+ %_struct_26 = OpTypeStruct %float
+ %_struct_27 = OpTypeStruct %_struct_26
+%_ptr_Function__struct_27 = OpTypePointer Function %_struct_27
+%_ptr_Function__struct_26 = OpTypePointer Function %_struct_26
+%_ptr_Function_float = OpTypePointer Function %float
+         %30 = OpTypeFunction %float %_ptr_Function__struct_26 %_ptr_Function_float
+         %31 = OpUndef %float
+         %32 = OpExtInst %void %1 DebugTypeBasic %4 %uint_32 %uint_3 %uint_0
+         %33 = OpExtInst %void %1 DebugSource %3 %5
+         %34 = OpExtInst %void %1 DebugCompilationUnit %uint_1 %uint_4 %33 %uint_5
+         %35 = OpExtInst %void %1 DebugTypeMember %6 %32 %33 %uint_3 %uint_11 %uint_0 %uint_32 %uint_3
+         %36 = OpExtInstWithForwardRefsKHR %void %1 DebugTypeComposite %7 %uint_1 %33 %uint_1 %uint_8 %34 %7 %uint_32 %uint_3 %35 %37
+         %38 = OpExtInst %void %1 DebugTypeFunction %uint_3 %32 %36
+         %37 = OpExtInst %void %1 DebugFunction %8 %38 %33 %uint_4 %uint_5 %36 %9 %uint_3 %uint_4
+         %39 = OpExtInst %void %1 DebugLocalVariable %10 %36 %33 %uint_4 %uint_5 %37 %uint_288 %uint_1
+         %52 = OpExtInst %void %1 DebugLocalVariable %10 %32 %33 %uint_4 %uint_5 %37 %uint_288 %uint_1
+         %40 = OpExtInst %void %1 DebugExpression
+; CHECK: OpFunction %void None
+; CHECK: [[Var:%[\w]+]] = OpVariable [[PtrType]] Function
+; CHECK: OpExtInst %void {{%[\w+]+}} DebugDeclare {{%[\w+]+}} [[Var]] {{%[\w+]+}} %int_0
+; CHECK: OpExtInst %void {{%[\w+]+}} DebugDeclare {{%[\w+]+}} [[Var]] {{%[\w+]+}} %int_0 %int_0
+          %2 = OpFunction %void None %25
+         %41 = OpLabel
+         %42 = OpVariable %_ptr_Function__struct_27 Function
+         %43 = OpAccessChain %_ptr_Function__struct_26 %42 %int_0
+         %49 = OpAccessChain %_ptr_Function_float %43 %int_0
+         %44 = OpFunctionCall %float %45 %43 %49
+               OpReturn
+               OpFunctionEnd
+; CHECK: OpFunction %float None
+         %45 = OpFunction %float None %30
+         %46 = OpFunctionParameter %_ptr_Function__struct_26
+         %50 = OpFunctionParameter %_ptr_Function_float
+         %47 = OpLabel
+         %48 = OpExtInst %void %1 DebugDeclare %39 %46 %40
+         %51 = OpExtInst %void %1 DebugDeclare %52 %50 %40
+               OpReturnValue %31
+               OpFunctionEnd
+)";
 
   SetTargetEnv(SPV_ENV_VULKAN_1_2);
   SinglePassRunAndMatch<InlineExhaustivePass>(text, true);

@@ -388,6 +388,124 @@ OpFunctionEnd
       << "Was expecting the result id of DebugScope to have been changed.";
 }
 
+TEST(Optimizer, CheckDefaultPerformancePassesLargeStructScalarization) {
+  std::string start = R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %4 "main" %46 %48
+OpSource GLSL 430
+OpName %4 "main"
+OpDecorate %44 Block
+OpMemberDecorate %44 0 BuiltIn Position
+OpMemberDecorate %44 1 BuiltIn PointSize
+OpMemberDecorate %44 2 BuiltIn ClipDistance
+OpDecorate %48 Location 0
+%2 = OpTypeVoid
+%3 = OpTypeFunction %2
+%6 = OpTypeFloat 32
+%7 = OpTypeVector %6 4
+%8 = OpTypePointer Function %7
+%9 = OpTypeStruct %7)";
+
+  // add 200 float members to the struct
+  for (int i = 0; i < 200; i++) {
+    start += " %6";
+  }
+
+  start += R"(
+%10 = OpTypeFunction %9 %8
+%14 = OpTypeFunction %6 %9
+%18 = OpTypePointer Function %9
+%20 = OpTypeInt 32 1
+%21 = OpConstant %20 0
+%24 = OpConstant %20 1
+%25 = OpTypeInt 32 0
+%26 = OpConstant %25 1
+%27 = OpTypePointer Function %6
+%43 = OpTypeArray %6 %26
+%44 = OpTypeStruct %7 %6 %43
+%45 = OpTypePointer Output %44
+%46 = OpVariable %45 Output
+%47 = OpTypePointer Input %7
+%48 = OpVariable %47 Input
+%54 = OpTypePointer Output %7
+%4 = OpFunction %2 None %3
+%5 = OpLabel
+%49 = OpVariable %8 Function
+%50 = OpLoad %7 %48
+OpStore %49 %50
+%51 = OpFunctionCall %9 %12 %49
+%52 = OpFunctionCall %6 %16 %51
+%53 = OpCompositeConstruct %7 %52 %52 %52 %52
+%55 = OpAccessChain %54 %46 %21
+OpStore %55 %53
+OpReturn
+OpFunctionEnd
+%12 = OpFunction %9 None %10
+%11 = OpFunctionParameter %8
+%13 = OpLabel
+%19 = OpVariable %18 Function
+%22 = OpLoad %7 %11
+%23 = OpAccessChain %8 %19 %21
+OpStore %23 %22
+%28 = OpAccessChain %27 %11 %26
+%29 = OpLoad %6 %28
+%30 = OpConvertFToS %20 %29
+%31 = OpAccessChain %27 %19 %21 %30
+%32 = OpLoad %6 %31
+%33 = OpAccessChain %27 %19 %24
+OpStore %33 %32
+%34 = OpLoad %9 %19
+OpReturnValue %34
+OpFunctionEnd
+%16 = OpFunction %6 None %14
+%15 = OpFunctionParameter %9
+%17 = OpLabel
+%37 = OpCompositeExtract %6 %15 1
+%38 = OpConvertFToS %20 %37
+%39 = OpCompositeExtract %7 %15 0
+%40 = OpVectorExtractDynamic %6 %39 %38
+OpReturnValue %40
+OpFunctionEnd)";
+
+  std::vector<uint32_t> binary;
+  SpirvTools tools(SPV_ENV_VULKAN_1_3);
+  tools.Assemble(start, &binary,
+                 SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+
+  std::string test_disassembly;
+  std::string default_disassembly;
+
+  {
+    Optimizer opt(SPV_ENV_VULKAN_1_3);
+    opt.RegisterPerformancePasses();
+
+    std::vector<uint32_t> optimized;
+    ASSERT_TRUE(opt.Run(binary.data(), binary.size(), &optimized))
+        << start << "\n";
+
+    tools.Disassemble(optimized.data(), optimized.size(), &default_disassembly,
+                      SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  }
+
+  {
+    // default passes should not benefit from additional scalar replacement
+    Optimizer opt(SPV_ENV_VULKAN_1_3);
+    opt.RegisterPerformancePasses()
+        .RegisterPass(CreateScalarReplacementPass(201))
+        .RegisterPass(CreateAggressiveDCEPass());
+
+    std::vector<uint32_t> optimized;
+    ASSERT_TRUE(opt.Run(binary.data(), binary.size(), &optimized))
+        << start << "\n";
+
+    tools.Disassemble(optimized.data(), optimized.size(), &test_disassembly,
+                      SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  }
+
+  EXPECT_EQ(test_disassembly, default_disassembly);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools
