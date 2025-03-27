@@ -31,9 +31,11 @@ public:
             uint64_t flags);
     ~WebGPUSwapChain();
 
-    void GetCurrentTexture(uint32_t width, uint32_t height, wgpu::SurfaceTexture*);
+    wgpu::TextureView getNextSurfaceTextureView(uint32_t width, uint32_t height);
+    void present();
 
 private:
+    void getCurrentTexture(uint32_t width, uint32_t height, wgpu::SurfaceTexture*);
     wgpu::Surface mSurface = {};
     wgpu::SurfaceConfiguration mConfig = {};
     bool mConfigured = false;

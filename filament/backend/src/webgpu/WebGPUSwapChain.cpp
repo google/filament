@@ -190,7 +190,7 @@ wgpu::CompositeAlphaMode selectAlphaMode(size_t availableAlphaModesCount,
     }
 }
 
-void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device& device,
+void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
         wgpu::SurfaceCapabilities const& capabilities, bool useSRGBColorSpace) {
     config.device = device;
     config.usage = wgpu::TextureUsage::RenderAttachment;
@@ -227,7 +227,7 @@ WebGPUSwapChain::~WebGPUSwapChain() {
     }
 }
 
-void WebGPUSwapChain::GetCurrentTexture(uint32_t width, uint32_t height, wgpu::SurfaceTexture* texture) {
+void WebGPUSwapChain::getCurrentTexture(uint32_t width, uint32_t height, wgpu::SurfaceTexture* texture) {
     if (width < 1 || height < 1) {
         PANIC_LOG("WebGPUSwapChain::GetCurrentTexture: Invalid width and/or height requested.");
         return;
@@ -240,10 +240,35 @@ void WebGPUSwapChain::GetCurrentTexture(uint32_t width, uint32_t height, wgpu::S
 #endif
         mSurface.Configure(&mConfig);
         mConfigured = true;
-        return;
     }
 
     mSurface.GetCurrentTexture(texture);
+}
+
+wgpu::TextureView WebGPUSwapChain::getNextSurfaceTextureView(uint32_t width, uint32_t height) {
+    wgpu::SurfaceTexture surfaceTexture;
+    getCurrentTexture(width, height, &surfaceTexture);
+    if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
+        return nullptr;
+    }
+
+    // Create a view for this surface texture
+    //TODO: review these initiliazations as webgpu pipeline gets mature
+    wgpu::TextureViewDescriptor textureViewDescriptor = {
+        .label = "texture_view",
+        .format = surfaceTexture.texture.GetFormat(),
+        .dimension = wgpu::TextureViewDimension::e2D,
+        .baseMipLevel = 0,
+        .mipLevelCount = 1,
+        .baseArrayLayer = 0,
+        .arrayLayerCount = 1
+    };
+    return surfaceTexture.texture.CreateView(&textureViewDescriptor);
+}
+
+void WebGPUSwapChain::present() {
+    assert_invariant(mSurface);
+    mSurface.Present();
 }
 
 }// namespace filament::backend

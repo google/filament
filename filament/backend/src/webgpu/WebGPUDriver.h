@@ -64,7 +64,11 @@ private:
     // TODO consider moving to handle allocator when ready
     std::unique_ptr<WebGPUSwapChain> mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
-
+    wgpu::CommandEncoder mCommandEncoder = nullptr;
+    wgpu::TextureView mTextureView = nullptr;
+    wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
+    wgpu::CommandBuffer mCommandBuffer = nullptr;
+    WGPURenderTarget* mDefaultRenderTarget = nullptr;
     /*
      * Driver interface
      */
