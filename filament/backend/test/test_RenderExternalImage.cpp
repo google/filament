@@ -17,7 +17,8 @@
 #include "BackendTest.h"
 
 #include "Lifetimes.h"
-#include "ShaderGenerator.h"
+#include "Shader.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
 #include <backend/DriverEnums.h>
@@ -75,24 +76,11 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH, false };
-    filamat::DescriptorSets descriptors;
-    descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
-            samplerInfo } };
-    ShaderGenerator shaderGen(
-            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
-
-    // Create a program that samples a texture.
-    Program p = shaderGen.getProgram(api);
-    p.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
-    backend::Handle<HwProgram> program = cleanup.add(api.createProgram(std::move(p)));
-    DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
-            {{
-                     DescriptorType::SAMPLER,
-                     ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
-                     DescriptorFlags::NONE, 0
-             }}}));
-
-    DescriptorSetHandle descriptorSet = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
+    Shader shader = SharedShaders::makeShader(api, cleanup, ShaderEnvironment{sBackend}, ShaderRequest {
+        .mVertexType = VertexShaderType::Textured,
+        .mFragmentType = FragmentShaderType::Textured,
+        .mUniformType = ShaderUniformType::Sampler
+    });
 
     backend::Handle<HwRenderTarget> defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
@@ -117,8 +105,8 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     params.flags.discardEnd = TargetBufferFlags::NONE;
 
     PipelineState state;
-    state.program = program;
-    state.pipelineLayout.setLayout[1] = { descriptorSetLayout };
+    state.program = shader.getProgram();
+    state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;

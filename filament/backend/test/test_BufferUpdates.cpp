@@ -19,7 +19,6 @@
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
-#include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
 namespace {

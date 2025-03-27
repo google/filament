@@ -36,6 +36,19 @@ struct ShaderText {
 
 std::optional<ShaderText> GetGlslVertexShader(const ShaderEnvironment& environment, VertexShaderType type) {
     switch (type) {
+        case VertexShaderType::Noop: {
+            return ShaderText{R"(
+#version 450 core
+layout(location = 0) in vec4 mesh_position;
+)",R"(
+void main() {
+    gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
+#if defined(TARGET_VULKAN_ENVIRONMENT)
+    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    gl_Position.y = -gl_Position.y;
+#endif
+})"};
+        }
         case VertexShaderType::Simple: {
             return ShaderText{R"(
 #version 450 core
