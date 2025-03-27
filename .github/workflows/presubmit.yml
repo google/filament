@@ -40,7 +40,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-6core'
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -69,7 +69,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-6core'
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -79,7 +79,7 @@ jobs:
 
   validate-docs:
     name: validate-docs
-    runs-on: ubuntu-22.04-4core
+    runs-on: 'ubuntu-24.04-4core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -114,7 +114,7 @@ jobs:
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
-    runs-on: ubuntu-22.04-8core
+    runs-on: 'ubuntu-24.04-8core'
 
     steps:
       - uses: actions/checkout@v4.1.6
