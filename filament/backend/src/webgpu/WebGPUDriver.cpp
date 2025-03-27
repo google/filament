@@ -301,6 +301,7 @@ void WebGPUDriver::terminate() {
 
 void WebGPUDriver::tick(int) {
     FWGPU_LOGW << __FUNCTION__<< "\n";
+    mDevice.Tick();
 }
 
 void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
@@ -336,42 +337,55 @@ void WebGPUDriver::finish(int) {
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroyTexture(Handle<HwTexture> th) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroyProgram(Handle<HwProgram> ph) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroyStream(Handle<HwStream> sh) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
+    FWGPU_LOGW << __FUNCTION__<< "\n";
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
@@ -385,7 +399,8 @@ Handle<HwSwapChain> WebGPUDriver::createSwapChainHeadlessS() noexcept {
 
 Handle<HwTexture> WebGPUDriver::createTextureS() noexcept {
     FWGPU_LOGW << __FUNCTION__<< "\n";
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
+    // return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwTexture> WebGPUDriver::importTextureS() noexcept {
@@ -415,7 +430,8 @@ Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
 
 Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
     FWGPU_LOGW << __FUNCTION__<< "\n";
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
+    // return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwBufferObject> WebGPUDriver::createBufferObjectS() noexcept {
@@ -426,7 +442,8 @@ Handle<HwBufferObject> WebGPUDriver::createBufferObjectS() noexcept {
 
 Handle<HwRenderTarget> WebGPUDriver::createRenderTargetS() noexcept {
     FWGPU_LOGW << __FUNCTION__<< "\n";
-    return Handle<HwRenderTarget>((Handle<HwRenderTarget>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPURenderTarget>();
+    // return Handle<HwRenderTarget>((Handle<HwRenderTarget>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
@@ -451,12 +468,14 @@ Handle<HwVertexBufferInfo> WebGPUDriver::createVertexBufferInfoS() noexcept {
 
 Handle<HwTexture> WebGPUDriver::createTextureViewSwizzleS() noexcept {
     FWGPU_LOGW << __FUNCTION__<< "\n";
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
+    // return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createDefaultRenderTargetS() noexcept {
     FWGPU_LOGW << __FUNCTION__<< "\n";
-    return Handle<HwRenderTarget>((Handle<HwRenderTarget>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPURenderTarget>();
+    // return Handle<HwRenderTarget>((Handle<HwRenderTarget>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwDescriptorSetLayout> WebGPUDriver::createDescriptorSetLayoutS() noexcept {
@@ -550,6 +569,10 @@ void WebGPUDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 void WebGPUDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
         uint8_t baseLevel, uint8_t levelCount) {
     FWGPU_LOGW << __FUNCTION__<< "\n";
+    WGPUTexture const* src = handleCast<WGPUTexture>(srch);
+    (void) src;
+    // textures.insert(
+    //         constructHandle<WGPUTexture>(th, src, baseLevel, levelCount));
 }
 
 void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
@@ -587,6 +610,7 @@ void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
 
 void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
     FWGPU_LOGW << __FUNCTION__<< "\n";
+    constructHandle<WGPURenderTarget>(rth);
 }
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
@@ -776,8 +800,8 @@ void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> boh) {
 
 void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
-    auto* vertexBuffer = handle_cast<WGPUVertexBuffer>(vbh);
-    auto* bufferObject = handle_cast<WGPUBufferObject>(boh);
+    auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
+    auto* bufferObject = handleCast<WGPUBufferObject>(boh);
     assert_invariant(index < vertexBuffer->mBuffers.size());
     vertexBuffer->setBuffer(bufferObject, index);
 

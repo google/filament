@@ -30,14 +30,82 @@ struct WGPUVertexBuffer : public HwVertexBuffer {
     void setBuffer(WGPUBufferObject* bufferObject, uint32_t index);
 
     Handle<WGPUVertexBufferInfo> vbih;
-    utils::FixedCapacityVector<WGPUBuffer> mBuffers;
+    utils::FixedCapacityVector<wgpu::Buffer> mBuffers;
 };
 
+struct WGPUIndexBuffer : public HwIndexBuffer {
+    WGPUIndexBuffer(BufferUsage usage, uint8_t elementSize,
+            uint32_t indexCount);
+
+    wgpu::Buffer buffer;
+};
 struct WGPUBufferObject: HwBufferObject {
     WGPUBufferObject(BufferObjectBinding bindingType, uint32_t byteCount);
 
     WGPUBuffer mBuffer;
     const BufferObjectBinding mBindingType;
 };
+class WGPUTexture : public HwTexture {
+public:
+    WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format,
+            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
+            TextureUsage usage) noexcept;
+
+    // constructors for creating texture views
+    WGPUTexture(WGPUTexture const* src, uint8_t baseLevel,
+            uint8_t levelCount) noexcept;
+
+    wgpu::Texture texture = nullptr;
+};
+
+class WGPURenderTarget : public HwRenderTarget {
+public:
+
+    class Attachment {
+    public:
+
+        friend class WGPURenderTarget;
+
+        Attachment() = default;
+        Attachment(WGPUTexture* gpuTexture, uint8_t level = 0, uint16_t layer = 0) :
+                level(level), layer(layer),
+                texture(gpuTexture->texture),
+                mWGPUTexture(gpuTexture) { }
+
+        uint8_t level = 0;
+        uint16_t layer = 0;
+
+    private:
+        wgpu::Texture texture = nullptr;
+        WGPUTexture* mWGPUTexture = nullptr;
+    };
+
+    WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples,
+            Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]);
+    WGPURenderTarget()
+            : HwRenderTarget(0, 0), defaultRenderTarget(true) {}
+
+    void setUpRenderPassAttachments(wgpu::RenderPassDescriptor* descriptor, const RenderPassParams& params);
+
+    math::uint2 getAttachmentSize() noexcept;
+
+    bool isDefaultRenderTarget() const { return defaultRenderTarget; }
+    uint8_t getSamples() const { return samples; }
+
+    Attachment getDrawColorAttachment(size_t index);
+    Attachment getReadColorAttachment(size_t index);
+
+private:
+
+    static wgpu::LoadOp getLoadAction(const RenderPassParams& params, TargetBufferFlags buffer);
+    static wgpu::LoadOp getStoreAction(const RenderPassParams& params, TargetBufferFlags buffer);
+
+    bool defaultRenderTarget = false;
+    uint8_t samples = 1;
+
+    Attachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
+    math::uint2 attachmentSize = {};
+};
+
 }
 #endif // TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
