@@ -18,7 +18,6 @@
 
 #include "Lifetimes.h"
 #include "Shader.h"
-#include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
 #include <backend/DriverEnums.h>

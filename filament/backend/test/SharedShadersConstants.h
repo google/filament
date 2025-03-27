@@ -45,6 +45,7 @@ struct SimpleWithPaddingMaterialParams {
 };
 
 enum class VertexShaderType : uint8_t {
+    Noop,
     Simple,
     Textured
 };
