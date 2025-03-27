@@ -570,22 +570,13 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             bugs->disable_invalidate_framebuffer = true;
         }
 
-        if (strstr(vendor, "Mesa") ||
-            strstr(vendor, "Mozilla")) {
+        if (strstr(vendor, "Mesa")) {
             // Seen on
             //  [Mesa],
             //  [llvmpipe (LLVM 17.0.6, 256 bits)],
             //  [4.5 (Core Profile) Mesa 24.0.6-1],
             //  [4.50]
-            // or
-            //  [Mozilla],
-            //  [GeForce GTX 980, or similar],
-            //  [OpenGL ES 3.0 (WebGL 2.0)],
-            //  [OpenGL ES GLSL ES 3.00 (WebGL GLSL ES 3.00)]
-            // not known which version are affected.
-            // For Mozilla, the issue seems to be observed regardless of which
-            // renderer it comes with.
-
+            // not known which version are affected
             bugs->rebind_buffer_after_deletion = true;
         }
     } else {
@@ -596,6 +587,19 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             // (that should be regardless of ANGLE, but we should double-check)
             bugs->split_easu = true;
         }
+    }
+
+    if (strstr(vendor, "Mozilla")) {
+        // Seen on
+        //  [Mozilla],
+        //  [GeForce GTX 980, or similar]
+        //    or [ANGLE (NVIDIA, NVIDIA GeForce GTX 980 Direct3D11 vs_5_0 ps_5_0), or similar]
+        //    or anything else,
+        //  [OpenGL ES 3.0 (WebGL 2.0)],
+        //  [OpenGL ES GLSL ES 3.00 (WebGL GLSL ES 3.00)]
+        // For Mozilla, the issue appears to be observed regardless of whether the renderer is
+        // ANGLE or not. (b/376125497)
+        bugs->rebind_buffer_after_deletion = true;
     }
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
