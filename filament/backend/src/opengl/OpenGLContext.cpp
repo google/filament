@@ -566,16 +566,27 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         } else if (strstr(renderer, "AMD") ||
                    strstr(renderer, "ATI")) {
             // AMD/ATI GPU
-        } else if (strstr(vendor, "Mesa")) {
+        } else if (strstr(renderer, "Mozilla")) {
+            bugs->disable_invalidate_framebuffer = true;
+        }
+
+        if (strstr(vendor, "Mesa") ||
+            strstr(vendor, "Mozilla")) {
             // Seen on
             //  [Mesa],
             //  [llvmpipe (LLVM 17.0.6, 256 bits)],
             //  [4.5 (Core Profile) Mesa 24.0.6-1],
             //  [4.50]
-            // not known which version are affected
+            // or
+            //  [Mozilla],
+            //  [GeForce GTX 980, or similar],
+            //  [OpenGL ES 3.0 (WebGL 2.0)],
+            //  [OpenGL ES GLSL ES 3.00 (WebGL GLSL ES 3.00)]
+            // not known which version are affected.
+            // For Mozilla, the issue seems to be observed regardless of which
+            // renderer it comes with.
+
             bugs->rebind_buffer_after_deletion = true;
-        } else if (strstr(renderer, "Mozilla")) {
-            bugs->disable_invalidate_framebuffer = true;
         }
     } else {
         // When running under ANGLE, it's a different set of workaround that we need.
