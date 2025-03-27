@@ -108,7 +108,7 @@ VkImageView VulkanPlatform::createExternalImageViewImpl(VkDevice device,
     return VK_NULL_HANDLE;
 }
 
-VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
+VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl() {
     VulkanPlatform::ExtensionSet const ret = {
 #if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
         VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
@@ -126,7 +126,7 @@ VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
     return ret;
 }
 
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
+VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativeWindow,
         VkInstance instance, uint64_t flags) noexcept {
     VkSurfaceKHR surface;
 

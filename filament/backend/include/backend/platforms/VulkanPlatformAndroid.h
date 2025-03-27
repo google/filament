@@ -17,27 +17,55 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORMS_VULKAN_PLATFORM_ANDROID_H
 #define TNT_FILAMENT_BACKEND_PLATFORMS_VULKAN_PLATFORM_ANDROID_H
 
-#include <backend/Platform.h>
+#include <backend/DriverEnums.h>
+#include <backend/platforms/VulkanPlatform.h>
 
 #include <android/hardware_buffer.h>
 
-namespace filament::backend::fvkandroid {
+namespace filament::backend {
 
-struct ExternalImageVulkanAndroid : public Platform::ExternalImage {
-    AHardwareBuffer* aHardwareBuffer = nullptr;
-    bool sRGB = false;
-    unsigned int width;   // Texture width
-    unsigned int height;  // Texture height
-    TextureFormat format; // Texture format
-    TextureUsage usage;   // Texture usage flags
+class VulkanPlatformAndroid : public VulkanPlatform {
+public:
+    Platform::ExternalImageHandle UTILS_PUBLIC createExternalImage(AHardwareBuffer const* buffer,
+            bool sRGB) noexcept;
+
+    struct UTILS_PUBLIC ExternalImageDescAndroid {
+        uint32_t width;      // Texture width
+        uint32_t height;     // Texture height
+        TextureFormat format;// Texture format
+        TextureUsage usage;  // Texture usage flags
+    };
+
+    ExternalImageDescAndroid UTILS_PUBLIC getExternalImageDesc(
+            ExternalImageHandleRef externalImage) const noexcept;
 
 protected:
-    ~ExternalImageVulkanAndroid() override;
+    struct ExternalImageVulkanAndroid : public Platform::ExternalImage {
+        AHardwareBuffer* aHardwareBuffer = nullptr;
+        bool sRGB = false;
+        unsigned int width;  // Texture width
+        unsigned int height; // Texture height
+        TextureFormat format;// Texture format
+        TextureUsage usage;  // Texture usage flags
+
+    protected:
+        ~ExternalImageVulkanAndroid() override;
+    };
+
+    virtual ExternalImageMetadata getExternalImageMetadata(ExternalImageHandleRef externalImage);
+
+    using ImageData = VulkanPlatform::ImageData;
+    virtual ImageData createExternalImageData(ExternalImageHandleRef externalImage,
+            const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex,
+            VkImageUsageFlags usage);
+
+    virtual ExtensionSet getSwapchainInstanceExtensions() const;
+
+    using SurfaceBundle = VulkanPlatform::SurfaceBundle;
+    virtual SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
+            uint64_t flags) const noexcept;
 };
 
-Platform::ExternalImageHandle createExternalImage(AHardwareBuffer const* buffer,
-        bool sRGB) noexcept;
+}// namespace filament::backend
 
-} // namespace filament::backend::fvkandroid
-
-#endif // TNT_FILAMENT_BACKEND_PLATFORMS_VULKAN_PLATFORM_ANDROID_H
+#endif// TNT_FILAMENT_BACKEND_PLATFORMS_VULKAN_PLATFORM_ANDROID_H

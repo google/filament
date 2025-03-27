@@ -98,6 +98,10 @@ struct MaterialInputs {
     vec3 specularColorFactor;
 #endif
 
+#if defined(MATERIAL_HAS_SHADOW_STRENGTH)
+    float shadowStrength;
+#endif
+
 };
 
 void initMaterial(out MaterialInputs material) {
@@ -195,6 +199,9 @@ void initMaterial(out MaterialInputs material) {
     material.specularColorFactor = vec3(1.0);
 #endif
 
+#if defined(MATERIAL_HAS_SHADOW_STRENGTH)
+    material.shadowStrength = 0.0;
+#endif
 }
 
 #if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)

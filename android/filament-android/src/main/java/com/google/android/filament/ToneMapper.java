@@ -31,8 +31,6 @@ package com.google.android.filament;
  *   <li>DisplayRangeToneMapper</li>
  * </ul>
  * </ul>
- *
- * You can create custom tone mapping operators by subclassing ToneMapper.
  */
 public class ToneMapper {
     private final long mNativeObject;

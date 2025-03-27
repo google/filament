@@ -20,7 +20,7 @@ namespace filament::backend {
 
 using namespace backend;
 
-Driver* PlatformWebGL::createDriver(void* const sharedGLContext,
+Driver* PlatformWebGL::createDriver(void* sharedGLContext,
         const Platform::DriverConfig& driverConfig) noexcept {
     return OpenGLPlatform::createDefaultDriver(this, sharedGLContext, driverConfig);
 }

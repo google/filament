@@ -17,7 +17,6 @@
 #include "VulkanDriver.h"
 
 #include "CommandStreamDispatcher.h"
-#include "DataReshaper.h"
 #include "SystraceProfile.h"
 #include "VulkanAsyncHandles.h"
 #include "VulkanBuffer.h"
@@ -35,7 +34,6 @@
 #include <backend/platforms/VulkanPlatform.h>
 
 #include <utils/CString.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
 #ifndef NDEBUG
@@ -43,8 +41,6 @@
 #endif
 
 using namespace bluevk;
-
-using utils::FixedCapacityVector;
 
 #if defined(__clang__)
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
@@ -219,7 +215,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mSamplerCache(mPlatform->getDevice()),
       mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
       mReadPixels(mPlatform->getDevice()),
-      mDescriptorSetManager(mPlatform->getDevice(), &mResourceManager),
+      mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
+      mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
       mQueryManager(mPlatform->getDevice()),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mStereoscopicType(driverConfig.stereoscopicType) {
@@ -329,7 +326,8 @@ void VulkanDriver::terminate() {
     mPipelineCache.terminate();
     mFramebufferCache.reset();
     mSamplerCache.terminate();
-    mDescriptorSetManager.terminate();
+    mDescriptorSetLayoutCache.terminate();
+    mDescriptorSetCache.terminate();
     mPipelineLayoutCache.terminate();
 
     // Before terminating ResourceManager, we must make sure all of the resource_ptrs have been unset.
@@ -365,7 +363,7 @@ void VulkanDriver::collectGarbage() {
     FVK_SYSTRACE_SCOPE();
     // Command buffers need to be submitted and completed before other resources can be gc'd.
     mCommands.gc();
-    mDescriptorSetManager.clearHistory();
+    mDescriptorSetCache.clearHistory();
     mStagePool.gc();
     mFramebufferCache.gc();
     mPipelineCache.gc();
@@ -408,7 +406,7 @@ void VulkanDriver::updateDescriptorSetBuffer(
     FVK_SYSTRACE_SCOPE();
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto buffer = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
-    mDescriptorSetManager.updateBuffer(set, binding, buffer, offset, size);
+    mDescriptorSetCache.updateBuffer(set, binding, buffer, offset, size);
 }
 
 void VulkanDriver::updateDescriptorSetTexture(
@@ -421,7 +419,7 @@ void VulkanDriver::updateDescriptorSetTexture(
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
     VkSampler const vksampler = mSamplerCache.getSampler(params);
-    mDescriptorSetManager.updateSampler(set, binding, texture, vksampler);
+    mDescriptorSetCache.updateSampler(set, binding, texture, vksampler);
 }
 
 void VulkanDriver::flush(int) {
@@ -778,8 +776,7 @@ void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 
 void VulkanDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
         backend::DescriptorSetLayout&& info) {
-    auto layout = resource_ptr<VulkanDescriptorSetLayout>::make(&mResourceManager, dslh, info);
-    mDescriptorSetManager.initVkLayout(layout);
+    auto layout = mDescriptorSetLayoutCache.createLayout(dslh, std::move(info));
     layout.inc();
 }
 
@@ -788,7 +785,7 @@ void VulkanDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
     FVK_SYSTRACE_SCOPE();
     fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout =
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout>::cast(&mResourceManager, dslh);
-    auto set = mDescriptorSetManager.createSet(dsh, layout);
+    auto set = mDescriptorSetCache.createSet(dsh, layout);
     set.inc();
 }
 
@@ -1060,7 +1057,7 @@ bool VulkanDriver::isDepthStencilBlitSupported(TextureFormat format) {
            formats.end();
 }
 
-bool VulkanDriver::isProtectedTexturesSupported() { return false; }
+bool VulkanDriver::isProtectedTexturesSupported() { return isProtectedContentSupported(); }
 
 bool VulkanDriver::isDepthClampSupported() {
     return mContext.isDepthClampSupported();
@@ -1137,24 +1134,28 @@ math::float2 VulkanDriver::getClipSpaceParams() {
 }
 
 uint8_t VulkanDriver::getMaxDrawBuffers() {
-    return MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
+    return mContext.getPhysicalDeviceLimits().maxColorAttachments;
 }
 
 size_t VulkanDriver::getMaxUniformBufferSize() {
-    // TODO: return the actual size instead of hardcoded value
-    // TODO: devices that return less than 32768 should be rejected. This represents only 3%
-    //       of android devices.
-    return 32768;
+    return mContext.getPhysicalDeviceLimits().maxUniformBufferRange;
 }
 
-size_t VulkanDriver::getMaxTextureSize(SamplerType) {
-    // TODO: return the actual size instead of hardcoded value
-    return 2048;
+size_t VulkanDriver::getMaxTextureSize(SamplerType type) {
+    switch (type) {
+        case SamplerType::SAMPLER_2D:
+            return mContext.getPhysicalDeviceLimits().maxImageDimension2D;
+        case SamplerType::SAMPLER_3D:
+            return mContext.getPhysicalDeviceLimits().maxImageDimension3D;
+        case SamplerType::SAMPLER_CUBEMAP:
+            return mContext.getPhysicalDeviceLimits().maxImageDimensionCube;
+        default:
+            return mContext.getPhysicalDeviceLimits().maxImageDimension1D;
+    }
 }
 
 size_t VulkanDriver::getMaxArrayTextureLayers() {
-    // TODO: return the actual size instead of hardcoded value
-    return 256;
+    return mContext.getPhysicalDeviceLimits().maxImageArrayLayers;
 }
 
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
@@ -1493,7 +1494,7 @@ void VulkanDriver::nextSubpass(int) {
 
     if (mCurrentRenderPass.params.subpassMask & 0x1) {
         VulkanAttachment& subpassInput = renderTarget->getColor0();
-        mDescriptorSetManager.updateInputAttachment({}, subpassInput);
+        mDescriptorSetCache.updateInputAttachment({}, subpassInput);
     }
 }
 
@@ -1820,9 +1821,9 @@ void VulkanDriver::bindDescriptorSet(
         backend::DescriptorSetOffsetArray&& offsets) {
     if (dsh) {
         auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
-        mDescriptorSetManager.bind(setIndex, set, std::move(offsets));
+        mDescriptorSetCache.bind(setIndex, set, std::move(offsets));
     } else {
-        mDescriptorSetManager.unbind(setIndex);
+        mDescriptorSetCache.unbind(setIndex);
     }
 }
 
@@ -1830,7 +1831,7 @@ void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
     FVK_SYSTRACE_SCOPE();
     VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
 
-    mDescriptorSetManager.commit(mCurrentRenderPass.commandBuffer,
+    mDescriptorSetCache.commit(mCurrentRenderPass.commandBuffer,
             mBoundPipeline.pipelineLayout,
             mBoundPipeline.descriptorSetMask);
 

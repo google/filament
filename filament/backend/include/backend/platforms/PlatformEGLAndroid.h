@@ -47,16 +47,16 @@ public:
     /**
      * Creates an ExternalImage from a EGLImageKHR
      */
-    ExternalImageHandle createExternalImage(AHardwareBuffer const* buffer, bool sRGB) noexcept;
+    ExternalImageHandle UTILS_PUBLIC createExternalImage(AHardwareBuffer const* buffer, bool sRGB) noexcept;
 
-    struct ExternalImageDescAndroid {
+    struct UTILS_PUBLIC ExternalImageDescAndroid {
         uint32_t width;      // Texture width
         uint32_t height;     // Texture height
         TextureFormat format;// Texture format
         TextureUsage usage;  // Texture usage flags
     };
 
-    ExternalImageDescAndroid getExternalImageDesc(ExternalImageHandle externalImage) noexcept;
+    ExternalImageDescAndroid UTILS_PUBLIC getExternalImageDesc(ExternalImageHandle externalImage) noexcept;
 
 protected:
     // --------------------------------------------------------------------------------------------
