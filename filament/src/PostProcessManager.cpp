@@ -2341,6 +2341,9 @@ void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomRe
 }
 
 void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
+
+    bindPostProcessDescriptorSet(driver);
+
     FEngine const& engine = mEngine;
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
