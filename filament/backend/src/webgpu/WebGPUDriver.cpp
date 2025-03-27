@@ -423,7 +423,7 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     // TODO:  use webgpu handle allocator from.
     //        https://github.com/google/filament/pull/8566
     // HwSwapChain* hwSwapChain = handleCast<HwSwapChain*>(sch);
-    mSwapChain = nullptr;
+    assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
     mAdapter = mPlatform.requestAdapter(surface);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -500,7 +500,9 @@ void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<
 void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {}
 
 void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
-    constructHandle<WGPURenderTarget>(rth);
+    assert_invariant(!mDefaultRenderTarget);
+    mDefaultRenderTarget = constructHandle<WGPURenderTarget>(rth);
+    assert_invariant(mDefaultRenderTarget);
 }
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
@@ -698,9 +700,52 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 }
 
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
+    wgpu::CommandEncoderDescriptor commandEncoderDescriptor = {
+        .label = "command_encoder"
+    };
+    mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+    assert_invariant(mCommandEncoder);
+
+    mTextureView = mSwapChain->getNextSurfaceTextureView(params.viewport.width, params.viewport.height);
+    assert_invariant(mTextureView);
+
+    // TODO: Remove this code once WebGPU pipeline is implemented
+    static float red = 1.0f;
+    if (red - 0.01 > 0) {
+        red -= 0.01;
+    } else {
+        red = 1.0f;
+    }
+
+    wgpu::RenderPassColorAttachment renderPassColorAttachment = {
+        .view = mTextureView,
+        // TODO: remove this code once WebGPU Pipeline is implemented with render targets, pipeline and buffers.
+        .depthSlice = wgpu::kDepthSliceUndefined,
+        .loadOp = wgpu::LoadOp::Clear,
+        .storeOp = wgpu::StoreOp::Store,
+        .clearValue = wgpu::Color{red, 0 , 0 , 1},
+    };
+
+    wgpu::RenderPassDescriptor renderPassDescriptor = {
+        .colorAttachmentCount = 1,
+        .colorAttachments = &renderPassColorAttachment,
+        .depthStencilAttachment = nullptr,
+        .timestampWrites = nullptr,
+    };
+
+    mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
+    mRenderPassEncoder.SetViewport(params.viewport.left, params.viewport.bottom,
+            params.viewport.width, params.viewport.height, params.depthRange.near, params.depthRange.far);
 }
 
 void WebGPUDriver::endRenderPass(int) {
+    mRenderPassEncoder.End();
+    mRenderPassEncoder = nullptr;
+    wgpu::CommandBufferDescriptor commandBufferDescriptor {
+        .label = "command_buffer",
+    };
+    mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
+    assert_invariant(mCommandBuffer);
 }
 
 void WebGPUDriver::nextSubpass(int) {
@@ -710,6 +755,11 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
+    mCommandEncoder = nullptr;
+    mQueue.Submit(1, &mCommandBuffer);
+    mCommandBuffer = nullptr;
+    mTextureView = nullptr;
+    mSwapChain->present();
 }
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
