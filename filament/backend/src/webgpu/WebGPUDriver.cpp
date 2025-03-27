@@ -262,6 +262,9 @@ void WebGPUDriver::tick(int) {
 
 void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
+    wgpu::CommandEncoderDescriptor commandEncoderDescriptor{};
+    commandEncoderDescriptor.nextInChain = nullptr;
+    mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
 }
 
 void WebGPUDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
@@ -278,6 +281,12 @@ void WebGPUDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void WebGPUDriver::endFrame(uint32_t frameId) {
+    // FWGPU_LOGW << __FUNCTION__<< "\n";
+    mQueue.Submit(1, &mCommandBuffer);
+    mCommandEncoder = nullptr;
+    mCommandBuffer = nullptr;
+    mTextureView = nullptr;
+    mSwapChain->Present();
 }
 
 void WebGPUDriver::flush(int) {
@@ -424,7 +433,7 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     // TODO:  use webgpu handle allocator from.
     //        https://github.com/google/filament/pull/8566
     // HwSwapChain* hwSwapChain = handleCast<HwSwapChain*>(sch);
-    mSwapChain = nullptr;
+    assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
     mAdapter = mPlatform.requestAdapter(surface);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -436,6 +445,28 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 #endif
     mQueue = mDevice.GetQueue();
     mSwapChain = std::make_unique<WebGPUSwapChain>(std::move(surface), mAdapter, mDevice, flags);
+    // TODO configure the surface (maybe before or after creating the swapchain?
+    //                             how do we get the surface extent?)
+    // TODO actually create the swapchain
+    // auto onQueueWorkDone = [](wgpu::QueueWorkDoneStatus status, void* /* pUserData */) {
+        // FWGPU_LOGW << "Queued work finished with status: " << status << std::endl;
+    // };
+    // mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly, [](wgpu::QueueWorkDoneStatus status, void* pUserdata) {
+    //     FWGPU_LOGW << "Queued work finished with status:\n";
+    // }, nullptr /* pUserData */);
+    void* userDataPtr = nullptr;
+    mQueue.OnSubmittedWorkDone(
+        wgpu::CallbackMode::AllowProcessEvents,
+        [](wgpu::QueueWorkDoneStatus status, void* pUserData) {
+            FWGPU_LOGW << "Queued work finished with status: " << static_cast<int>(status) << "\n";
+            if (pUserData == nullptr) {
+                // Expected case
+            } else {
+                FWGPU_LOGW << "Unexpected non-null pUserData received.\n";
+            }
+        },
+        userDataPtr /* pUserData */
+    );
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
                   "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
@@ -474,7 +505,7 @@ void WebGPUDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 
 void WebGPUDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
         uint8_t baseLevel, uint8_t levelCount) {
-    FWGPU_LOGW << __FUNCTION__<< "\n";
+    // FWGPU_LOGW << __FUNCTION__<< "\n";
     WGPUTexture const* src = handleCast<WGPUTexture>(srch);
     (void) src;
     // textures.insert(
@@ -507,7 +538,9 @@ void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<
 void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {}
 
 void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
-    constructHandle<WGPURenderTarget>(rth);
+    assert_invariant(!mDefaultRenderTarget);
+    mDefaultRenderTarget = constructHandle<WGPURenderTarget>(rth);
+    assert_invariant(mDefaultRenderTarget);
 }
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
@@ -706,9 +739,33 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 }
 
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
+    // FWGPU_LOGW << __FUNCTION__<< "\n";
+    mTextureView = mSwapChain->GetNextSurfaceTextureView(params.viewport.width, params.viewport.height);
+    wgpu::RenderPassColorAttachment renderPassColorAttachment = {};
+    renderPassColorAttachment.view = mTextureView;
+    renderPassColorAttachment.resolveTarget = nullptr;
+    renderPassColorAttachment.loadOp = wgpu::LoadOp::Clear;
+    renderPassColorAttachment.storeOp = wgpu::StoreOp::Store;
+    renderPassColorAttachment.clearValue = wgpu::Color{1, 0 , 0 , 1};
+    renderPassColorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+
+    wgpu::RenderPassDescriptor renderPassDescriptor = {};
+    renderPassDescriptor.nextInChain = nullptr;
+    renderPassDescriptor.colorAttachmentCount = 1;
+    renderPassDescriptor.colorAttachments = &renderPassColorAttachment;
+    renderPassDescriptor.depthStencilAttachment = nullptr;
+    renderPassDescriptor.timestampWrites = nullptr;
+
+    mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
+    mRenderPassEncoder.SetViewport((float)params.viewport.left, (float)params.viewport.bottom,
+            (float) params.viewport.width, (float) params.viewport.height, params.depthRange.near, params.depthRange.far);
+            // (float) 1024/*params.viewport.width*/, (float) 640/*params.viewport.height*/, params.depthRange.near, params.depthRange.far);
 }
 
 void WebGPUDriver::endRenderPass(int) {
+    // FWGPU_LOGW << __FUNCTION__<< "\n";
+    mRenderPassEncoder.End();
+    mRenderPassEncoder = nullptr;
 }
 
 void WebGPUDriver::nextSubpass(int) {
@@ -718,6 +775,12 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
+    wgpu::CommandBufferDescriptor commandBufferDescriptor = {};
+    commandBufferDescriptor.nextInChain = nullptr;
+    mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
+
+    // mQueue.Submit(1, &mCommandBuffer);
+    // mCommandBuffer = nullptr;
 }
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
@@ -774,6 +837,8 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    // mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
+
 }
 
 void WebGPUDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,

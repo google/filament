@@ -32,6 +32,8 @@ public:
     ~WebGPUSwapChain();
 
     void GetCurrentTexture(uint32_t width, uint32_t height, wgpu::SurfaceTexture*);
+    wgpu::TextureView GetNextSurfaceTextureView(uint32_t width, uint32_t height);
+    void Present();
 
 private:
     wgpu::Surface mSurface = {};

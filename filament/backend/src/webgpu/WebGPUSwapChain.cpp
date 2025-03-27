@@ -246,4 +246,32 @@ void WebGPUSwapChain::GetCurrentTexture(uint32_t width, uint32_t height, wgpu::S
     mSurface.GetCurrentTexture(texture);
 }
 
+wgpu::TextureView WebGPUSwapChain::GetNextSurfaceTextureView(uint32_t width, uint32_t height) {
+    wgpu::SurfaceTexture surfaceTexture;
+    GetCurrentTexture(width, height, &surfaceTexture);
+    if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::Success) {
+        return nullptr;
+    }
+
+    // Create a view for this surface texture
+    wgpu::TextureViewDescriptor textureViewDescriptor;
+    textureViewDescriptor.nextInChain = nullptr;
+    textureViewDescriptor.label = "Surface texture view";
+    textureViewDescriptor.format = surfaceTexture.texture.GetFormat();
+    textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2D;
+    textureViewDescriptor.baseMipLevel = 0;
+    textureViewDescriptor.mipLevelCount = 1;
+    textureViewDescriptor.baseArrayLayer = 0;
+    textureViewDescriptor.arrayLayerCount = 1;
+    textureViewDescriptor.aspect = wgpu::TextureAspect::All;
+    wgpu::TextureView textureView = surfaceTexture.texture.CreateView(&textureViewDescriptor);
+
+    return textureView;
+}
+
+void WebGPUSwapChain::Present() {
+    assert_invariant(mSurface);
+    mSurface.Present();
+}
+
 }// namespace filament::backend
