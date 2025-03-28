@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
@@ -55,6 +56,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
     constexpr int kSrcRtHeight = 384;
 
     api.startCapture(0);
+    Cleanup cleanup(api);
 
     //    color texture (mip level 1) 512x512           depth texture (mip level 0) 512x512
     // +----------------------------------------+   +------------------------------------------+
@@ -80,21 +82,21 @@ TEST_F(BackendTest, ScissorViewportRegion) {
     // executeCommands().
     {
         // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-        auto swapChain = api.createSwapChainHeadless(256, 256, 0);
+        auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program p = shaderGen.getProgram(api);
-        ProgramHandle program = api.createProgram(std::move(p));
+        ProgramHandle program = cleanup.add(api.createProgram(std::move(p)));
 
         // Create source color and depth textures.
-        Handle<HwTexture> srcTexture = api.createTexture(SamplerType::SAMPLER_2D, kNumLevels,
+        Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, kNumLevels,
                 kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
-                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
-        Handle<HwTexture> depthTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
+                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
+        Handle<HwTexture> depthTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
                 TextureFormat::DEPTH16, 1, 512, 512, 1,
-                TextureUsage::DEPTH_ATTACHMENT);
+                TextureUsage::DEPTH_ATTACHMENT));
 
         // Render into the bottom-left quarter of the texture.
         Viewport srcRect = {
@@ -112,13 +114,13 @@ TEST_F(BackendTest, ScissorViewportRegion) {
 
         // We purposely set the render target width and height to smaller than the texture, to check
         // that this case is handled correctly.
-        Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget(
+        Handle<HwRenderTarget> srcRenderTarget = cleanup.add(api.createRenderTarget(
                 TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcRtHeight, kSrcRtHeight, 1, 0,
-                {srcTexture, kSrcLevel, 0}, {depthTexture, 0, 0}, {});
+                {srcTexture, kSrcLevel, 0}, {depthTexture, 0, 0}, {}));
 
-        Handle<HwRenderTarget> fullRenderTarget = api.createRenderTarget(TargetBufferFlags::COLOR,
+        Handle<HwRenderTarget> fullRenderTarget = cleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR,
                 kSrcTexHeight >> kSrcLevel, kSrcTexWidth >> kSrcLevel, 1, 0,
-                {srcTexture, kSrcLevel, 0}, {}, {});
+                {srcTexture, kSrcLevel, 0}, {}, {}));
 
         TrianglePrimitive triangle(api);
 
@@ -150,11 +152,6 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         api.endFrame(0);
 
         api.stopCapture(0);
-
-        // Cleanup.
-        api.destroyTexture(srcTexture);
-        api.destroySwapChain(swapChain);
-        api.destroyRenderTarget(srcRenderTarget);
     }
 
     // Wait for the ReadPixels result to come back.
@@ -169,23 +166,24 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
     auto& api = getDriverApi();
 
     api.startCapture(0);
+    Cleanup cleanup(api);
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-        auto swapChain = api.createSwapChainHeadless(256, 256, 0);
+        auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program p = shaderGen.getProgram(api);
-        ProgramHandle program = api.createProgram(std::move(p));
+        ProgramHandle program = cleanup.add(api.createProgram(std::move(p)));
 
         // Create a source color textures.
-        Handle<HwTexture> srcTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
+        Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
                 TextureFormat::RGBA8, 1, 512, 512, 1,
-                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
+                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
 
         // Render into the bottom-left quarter of the texture, checking 3 special cases.
         // 1. negative viewport left/bottom
@@ -207,9 +205,9 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         Viewport scissor = {0, 0, (uint32_t)std::numeric_limits<int32_t>::max(),
                 (uint32_t)std::numeric_limits<int32_t>::max()};
 
-        Handle<HwRenderTarget> renderTarget = api.createRenderTarget(
+        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createRenderTarget(
                 TargetBufferFlags::COLOR, 512, 512, 1, 0,
-                {srcTexture, 0, 0}, {}, {});
+                {srcTexture, 0, 0}, {}, {}));
 
         TrianglePrimitive triangle(api);
 
@@ -249,11 +247,6 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         api.endFrame(0);
 
         api.stopCapture(0);
-
-        // Cleanup.
-        api.destroyTexture(srcTexture);
-        api.destroySwapChain(swapChain);
-        api.destroyRenderTarget(renderTarget);
     }
 
     // Wait for the ReadPixels result to come back.

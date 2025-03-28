@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
@@ -129,12 +130,13 @@ static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
 // backend's readPixels does not work correctly with textures that have image data uploaded.
 TEST_F(BackendTest, FeedbackLoops) {
     auto& api = getDriverApi();
+    Cleanup cleanup(api);
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = createSwapChain();
+        auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
@@ -155,10 +157,10 @@ TEST_F(BackendTest, FeedbackLoops) {
                     { "test_tex", DescriptorType::SAMPLER, 0 },
                     { "Params", DescriptorType::UNIFORM_BUFFER, 1 }
             });
-            program = api.createProgram(std::move(prog));
+            program = cleanup.add(api.createProgram(std::move(prog)));
         }
 
-        DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+        DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
                 {{
                          DescriptorType::SAMPLER,
                          ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
@@ -168,27 +170,27 @@ TEST_F(BackendTest, FeedbackLoops) {
                          DescriptorType::UNIFORM_BUFFER,
                          ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 1,
                          DescriptorFlags::NONE, 0
-                 }}});
+                 }}}));
 
 
         TrianglePrimitive const triangle(getDriverApi());
 
         // Create a texture.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-        Handle<HwTexture> const texture = api.createTexture(
-            SamplerType::SAMPLER_2D, kNumLevels, kTexFormat, 1, kTexWidth, kTexHeight, 1, usage);
+        Handle<HwTexture> const texture = cleanup.add(api.createTexture(
+            SamplerType::SAMPLER_2D, kNumLevels, kTexFormat, 1, kTexWidth, kTexHeight, 1, usage));
 
         // Create ubo
-        auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
-                BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+        auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams),
+                BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
         // Create a RenderTarget for each miplevel.
         Handle<HwRenderTarget> renderTargets[kNumLevels];
         for (uint8_t level = 0; level < kNumLevels; level++) {
             slog.i << "Level " << int(level) << ": " <<
                     (kTexWidth >> level) << "x" << (kTexHeight >> level) << io::endl;
-            renderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
-                    kTexWidth >> level, kTexHeight >> level, 1, 0, { texture, level, 0 }, {}, {});
+            renderTargets[level] = cleanup.add(api.createRenderTarget( TargetBufferFlags::COLOR,
+                    kTexWidth >> level, kTexHeight >> level, 1, 0, { texture, level, 0 }, {}, {}));
         }
 
         // Fill the base level of the texture with interesting colors.
@@ -226,12 +228,13 @@ TEST_F(BackendTest, FeedbackLoops) {
             params.flags.discardStart = TargetBufferFlags::ALL;
             state.rasterState.disableBlending();
             for (int targetLevel = 1; targetLevel < kNumLevels; targetLevel++) {
+                Cleanup passCleanup(api);
                 const uint32_t sourceLevel = targetLevel - 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
 
-                auto textureView = api.createTextureView(texture, sourceLevel, 1);
-                DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+                auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
+                DescriptorSetHandle descriptorSet = passCleanup.add(api.createDescriptorSet(descriptorSetLayout));
                 api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
@@ -247,8 +250,6 @@ TEST_F(BackendTest, FeedbackLoops) {
                 api.beginRenderPass(renderTargets[targetLevel], params);
                 api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
                 api.endRenderPass();
-                api.destroyTexture(textureView);
-                api.destroyDescriptorSet(descriptorSet);
             }
 
             // Upsample passes
@@ -256,12 +257,13 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
             state.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
             for (int targetLevel = kNumLevels - 2; targetLevel >= 0; targetLevel--) {
+                Cleanup passCleanup(api);
                 const uint32_t sourceLevel = targetLevel + 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
 
-                auto textureView = api.createTextureView(texture, sourceLevel, 1);
-                DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+                auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
+                DescriptorSetHandle descriptorSet = passCleanup.add(api.createDescriptorSet(descriptorSetLayout));
                 api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
@@ -277,8 +279,6 @@ TEST_F(BackendTest, FeedbackLoops) {
                 api.beginRenderPass(renderTargets[targetLevel], params);
                 api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
                 api.endRenderPass();
-                api.destroyTexture(textureView);
-                api.destroyDescriptorSet(descriptorSet);
             }
 
             // Read back the render target corresponding to the base level.
@@ -295,15 +295,6 @@ TEST_F(BackendTest, FeedbackLoops) {
             api.finish();
             executeCommands();
             getDriver().purge();
-        }
-
-        api.destroyDescriptorSetLayout(descriptorSetLayout);
-        api.destroyProgram(program);
-        api.destroySwapChain(swapChain);
-        api.destroyTexture(texture);
-        api.destroyBufferObject(ubuffer);
-        for (auto rt : renderTargets)  {
-            api.destroyRenderTarget(rt);
         }
     }
 

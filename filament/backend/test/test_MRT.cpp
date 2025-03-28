@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
@@ -60,25 +61,28 @@ using namespace filament;
 using namespace filament::backend;
 
 TEST_F(BackendTest, MRT) {
+    DriverApi& api = getDriverApi();
+    Cleanup cleanup(api);
+
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = createSwapChain();
-        getDriverApi().makeCurrent(swapChain, swapChain);
+        auto swapChain = cleanup.add(createSwapChain());
+        api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
         ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(getDriverApi());
-        auto program = getDriverApi().createProgram(std::move(p));
+        Program p = shaderGen.getProgram(api);
+        auto program = cleanup.add(api.createProgram(std::move(p)));
 
-        TrianglePrimitive triangle(getDriverApi());
+        TrianglePrimitive triangle(api);
 
-        auto defaultRenderTarget = getDriverApi().createDefaultRenderTarget(0);
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
         // Create two Textures.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-        Handle<HwTexture> textureA = getDriverApi().createTexture(
+        Handle<HwTexture> textureA = cleanup.add(api.createTexture(
                     SamplerType::SAMPLER_2D,            // target
                     1,                                  // levels
                     TextureFormat::RGBA8,               // format
@@ -86,8 +90,8 @@ TEST_F(BackendTest, MRT) {
                     512,                                // width
                     512,                                // height
                     1,                                  // depth
-                    usage);                             // usage
-        Handle<HwTexture> textureB = getDriverApi().createTexture(
+                    usage));                             // usage
+        Handle<HwTexture> textureB = cleanup.add(api.createTexture(
                     SamplerType::SAMPLER_2D,            // target
                     1,                                  // levels
                     TextureFormat::RGBA8,               // format
@@ -95,10 +99,10 @@ TEST_F(BackendTest, MRT) {
                     512,                                // width
                     512,                                // height
                     1,                                  // depth
-                    usage);                             // usage
+                    usage));                             // usage
 
         // Create a RenderTarget with two attachments.
-        Handle<HwRenderTarget> renderTarget = getDriverApi().createRenderTarget(
+        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createRenderTarget(
                 TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1,
                 // The width and height must match the width and height of the respective mip
                 // level (at least for OpenGL).
@@ -108,7 +112,7 @@ TEST_F(BackendTest, MRT) {
                 0,                                         // layerCount
                 {{textureA },{textureB }},                 // color
                 {},                                        // depth
-                {});                                       // stencil
+                {}));                                       // stencil
 
         RenderPassParams params = {};
         fullViewport(params);
@@ -124,25 +128,21 @@ TEST_F(BackendTest, MRT) {
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
         state.rasterState.culling = CullingMode::NONE;
 
-        getDriverApi().startCapture(0);
+        api.startCapture(0);
 
-        getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0, 0);
+        api.makeCurrent(swapChain, swapChain);
+        api.beginFrame(0, 0, 0);
 
         // Draw a triangle.
-        getDriverApi().beginRenderPass(renderTarget, params);
-        getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-        getDriverApi().endRenderPass();
+        api.beginRenderPass(renderTarget, params);
+        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        api.endRenderPass();
 
-        getDriverApi().flush();
-        getDriverApi().commit(swapChain);
-        getDriverApi().endFrame(0);
+        api.flush();
+        api.commit(swapChain);
+        api.endFrame(0);
 
-        getDriverApi().stopCapture(0);
-
-        getDriverApi().destroyProgram(program);
-        getDriverApi().destroySwapChain(swapChain);
-        getDriverApi().destroyRenderTarget(defaultRenderTarget);
+        api.stopCapture(0);
     }
 
     executeCommands();

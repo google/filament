@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
@@ -80,20 +81,21 @@ TEST_F(BackendTest, PushConstants) {
     auto& api = getDriverApi();
 
     api.startCapture(0);
+    Cleanup cleanup(api);
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a SwapChain and make it current.
-        auto swapChain = createSwapChain();
+        auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program p = shaderGen.getProgram(api);
-        ProgramHandle program = api.createProgram(std::move(p));
+        ProgramHandle program = cleanup.add(api.createProgram(std::move(p)));
 
-        Handle<HwRenderTarget> renderTarget = api.createDefaultRenderTarget();
+        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createDefaultRenderTarget());
 
         TrianglePrimitive triangle(api);
 
@@ -150,10 +152,6 @@ TEST_F(BackendTest, PushConstants) {
 
         api.commit(swapChain);
         api.endFrame(0);
-
-        // Cleanup.
-        api.destroySwapChain(swapChain);
-        api.destroyRenderTarget(renderTarget);
     }
 
     api.stopCapture(0);

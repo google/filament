@@ -16,9 +16,10 @@
 
 #include "BackendTest.h"
 
+#include "BackendTestUtils.h"
+#include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
-#include "BackendTestUtils.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -295,10 +296,12 @@ TEST_F(BackendTest, UpdateImage2D) {
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     for (const auto& t : testCases) {
+        Cleanup cleanup(api);
+
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = createSwapChain();
+        auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
-        auto defaultRenderTarget = api.createDefaultRenderTarget(0);
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
@@ -315,21 +318,21 @@ TEST_F(BackendTest, UpdateImage2D) {
         Program prog = shaderGen.getProgram(api);
         prog.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
 
-        ProgramHandle const program = api.createProgram(std::move(prog));
+        ProgramHandle const program = cleanup.add(api.createProgram(std::move(prog)));
 
-        DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+        DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
                 {{
                          DescriptorType::SAMPLER,
                          ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
                          DescriptorFlags::NONE, 0
-                 }}});
+                 }}}));
 
-        DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+        DescriptorSetHandle descriptorSet = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
 
         // Create a Texture.
         auto usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
-        Handle<HwTexture> const texture = api.createTexture(SamplerType::SAMPLER_2D, 1,
-                t.textureFormat, 1, 512, 512, 1u, usage);
+        Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
+                t.textureFormat, 1, 512, 512, 1u, usage));
 
         // Upload some pixel data.
         if (t.uploadSubregions) {
@@ -359,13 +362,6 @@ TEST_F(BackendTest, UpdateImage2D) {
 
         api.commit(swapChain);
         api.endFrame(0);
-
-        api.destroyDescriptorSet(descriptorSet);
-        api.destroyDescriptorSetLayout(descriptorSetLayout);
-        api.destroyProgram(program);
-        api.destroySwapChain(swapChain);
-        api.destroyRenderTarget(defaultRenderTarget);
-        api.destroyTexture(texture);
     }
 
     api.finish();
