@@ -436,7 +436,7 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     printDeviceDetails(mDevice);
 #endif
     mQueue = mDevice.GetQueue();
-    mSwapChain = std::make_unique<WebGPUSwapChain>(std::move(surface), mAdapter, mDevice);
+    mSwapChain = std::make_unique<WebGPUSwapChain>(std::move(surface), mAdapter, mDevice, flags);
     //TODO: get size from nativeWindow ,or hook into queue to get it from a texture
     mSwapChain->resize(2048, 1280);
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
