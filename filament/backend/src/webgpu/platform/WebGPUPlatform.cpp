@@ -56,6 +56,12 @@ namespace {
     dawnTogglesDescriptor.enabledToggleCount = 1;
     dawnTogglesDescriptor.enabledToggles = &toggleName;
 #endif
+    const char* validation_env = std::getenv("DAWN_ENABLE_ALL_VALIDATION");
+    if (validation_env && std::string(validation_env) == "1") {
+        FWGPU_LOGW << "Dawn validation is expected to be enabled."<< utils::io::endl;
+    } else {
+        FWGPU_LOGW << "Dawn validation might NOT be enabled."<< utils::io::endl;
+    }
     wgpu::InstanceDescriptor instanceDescriptor{
         .nextInChain = &dawnTogglesDescriptor,
         .capabilities = {
@@ -159,8 +165,8 @@ void WebGPUPlatform::configureSurface(wgpu::Surface& surface, wgpu::Device const
     config.device = device;
     config.usage = wgpu::TextureUsage::RenderAttachment;
     config.format = wgpu::TextureFormat::BGRA8UnormSrgb;
-    config.width = 1024;
-    config.height = 640;
+    config.width = 2048;
+    config.height = 1280;
     config.presentMode = wgpu::PresentMode::Fifo;
     config.alphaMode = wgpu::CompositeAlphaMode::Auto;
 

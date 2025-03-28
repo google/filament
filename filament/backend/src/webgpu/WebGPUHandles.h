@@ -39,12 +39,14 @@ struct WGPUIndexBuffer : public HwIndexBuffer {
 
     wgpu::Buffer buffer;
 };
+
 struct WGPUBufferObject: HwBufferObject {
     WGPUBufferObject(BufferObjectBinding bindingType, uint32_t byteCount);
 
-    WGPUBuffer mBuffer;
+    wgpu::Buffer mBuffer;
     const BufferObjectBinding mBindingType;
 };
+
 class WGPUTexture : public HwTexture {
 public:
     WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format,
