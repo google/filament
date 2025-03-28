@@ -40,7 +40,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: 'ubuntu-24.04-6core'
+    runs-on: 'ubuntu-24.04-16core'
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -69,7 +69,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: 'ubuntu-24.04-6core'
+    runs-on: 'ubuntu-24.04-16core'
 
     steps:
       - uses: actions/checkout@v4.1.6
