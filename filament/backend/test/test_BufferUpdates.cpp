@@ -17,6 +17,7 @@
 #include "BackendTest.h"
 
 #include "Lifetimes.h"
+#include "Shader.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
@@ -79,8 +80,28 @@ struct MaterialParams {
     math::float4 offset;
 };
 static_assert(sizeof(MaterialParams) == 8 * sizeof(float));
+// Uniform config for writing MaterialParams to the shader uniform with 64 bytes of padding.
+const UniformBindingConfig kBindingConfig = {
+        .dataSize = sizeof(MaterialParams),
+        .bufferSize = sizeof(MaterialParams) + 64,
+        .byteOffset = 64
+};
 
-TEST_F(BackendTest, VertexBufferUpdate) {
+class BufferUpdatesTest : public BackendTest {
+public:
+    BufferUpdatesTest() : mCleanup(getDriverApi()) {}
+
+protected:
+    Shader createShader() {
+        return Shader(getDriverApi(), mCleanup, ShaderConfig{
+           vertex, fragment, {"Params"}
+        });
+    }
+
+    Cleanup mCleanup;
+};
+
+TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
     const bool largeBuffers = false;
 
     // If updateIndices is true, then even-numbered triangles will have their indices set to
@@ -97,24 +118,7 @@ TEST_F(BackendTest, VertexBufferUpdate) {
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
-        // Create a program.
-        filamat::DescriptorSets descriptors;
-        descriptors[1] = { { "Params",
-                { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 0 }, {} } };
-        ShaderGenerator shaderGen(
-                vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
-        Program p = shaderGen.getProgram(api);
-        p.descriptorBindings(1, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
-        auto program = cleanup.add(api.createProgram(std::move(p)));
-
-        DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
-                {{
-                         DescriptorType::UNIFORM_BUFFER,
-                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
-                         DescriptorFlags::NONE, 0
-                 }}}));
-
-        DescriptorSetHandle descriptorSet = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
+        Shader shader = createShader();
 
         auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
@@ -130,38 +134,29 @@ TEST_F(BackendTest, VertexBufferUpdate) {
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState state;
-        state.program = program;
-        state.pipelineLayout.setLayout[1] = { descriptorSetLayout };
+        state.program = shader.getProgram();
+        state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
         state.rasterState.culling = CullingMode::NONE;
 
         // Create a uniform buffer.
-        // We use STATIC here, even though the buffer is updated, to force the Metal backend to use a
-        // GPU buffer, which is more interesting to test.
+        // We use STATIC here, even though the buffer is updated, to force the Metal backend to use
+        // a GPU buffer, which is more interesting to test.
         auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams) + 64,
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
-        api.updateDescriptorSetBuffer(descriptorSet, 0, ubuffer, 0, sizeof(MaterialParams) + 64);
-        api.bindDescriptorSet(descriptorSet, 1, {});
+        shader.bindUniform<MaterialParams>(api, ubuffer, kBindingConfig);
 
         api.startCapture(0);
 
-        // Upload uniforms.
-        {
-            MaterialParams params {
-                    .color = { 1.0f, 1.0f, 1.0f, 1.0f },
-                    .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
-            };
-            auto* tmp = new MaterialParams(params);
-            auto cb = [](void* buffer, size_t size, void* user) {
-                auto* sp = (MaterialParams*) buffer;
-                delete sp;
-            };
-            BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
-            api.updateBufferObject(ubuffer, std::move(bd), 64);
-        }
+        // Upload the uniform, but with an offset to accommodate the padding in the shader's
+        // uniform definition.
+        shader.uploadUniform(api, ubuffer, kBindingConfig, MaterialParams{
+                .color = { 1.0f, 1.0f, 1.0f, 1.0f },
+                .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
+        });
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0, 0);
@@ -211,7 +206,7 @@ TEST_F(BackendTest, VertexBufferUpdate) {
 
 // This test renders two triangles in two separate draw calls. Between the draw calls, a uniform
 // buffer object is partially updated.
-TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
+TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -220,24 +215,7 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     api.makeCurrent(swapChain, swapChain);
 
     // Create a program.
-    filamat::DescriptorSets descriptors;
-    descriptors[1] = { { "Params",
-            { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 0 }, {} } };
-    ShaderGenerator shaderGen(
-            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
-    Program p = shaderGen.getProgram(api);
-    p.descriptorBindings(1, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
-    auto program = cleanup.add(api.createProgram(std::move(p)));
-
-    DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
-            {{
-                     DescriptorType::UNIFORM_BUFFER,
-                     ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
-                     DescriptorFlags::NONE, 0
-             }}}));
-
-    DescriptorSetHandle descriptorSet = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
-
+    Shader shader = createShader();
 
     // Create a uniform buffer.
     // We use STATIC here, even though the buffer is updated, to force the Metal backend to use a
@@ -245,8 +223,7 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams) + 64,
             BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
-    api.updateDescriptorSetBuffer(descriptorSet, 0, ubuffer, 0, sizeof(MaterialParams) + 64);
-    api.bindDescriptorSet(descriptorSet, 1, {});
+    shader.bindUniform<MaterialParams>(api, ubuffer, kBindingConfig);
 
     // Create a render target.
     auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
@@ -255,19 +232,12 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
             TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{colorTexture}}, {}, {}));
 
     // Upload uniforms for the first triangle.
-    {
-        MaterialParams params {
+    // Upload the uniform, but with an offset to accommodate the padding in the shader's
+    // uniform definition.
+    shader.uploadUniform(api, ubuffer, kBindingConfig, MaterialParams{
             .color = { 1.0f, 0.0f, 0.5f, 1.0f },
             .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
-        };
-        auto* tmp = new MaterialParams(params);
-        auto cb = [](void* buffer, size_t size, void* user) {
-            auto* sp = (MaterialParams*) buffer;
-            delete sp;
-        };
-        BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
-        api.updateBufferObject(ubuffer, std::move(bd), 64);
-    }
+    });
 
     RenderPassParams params = {};
     params.flags.clear = TargetBufferFlags::COLOR;
@@ -276,29 +246,27 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     params.flags.discardEnd = TargetBufferFlags::NONE;
     params.viewport.height = 512;
     params.viewport.width = 512;
-    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
-            renderTarget, swapChain, program, params);
+    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+            renderTarget, swapChain, shader.getProgram(), params);
 
     // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
     // color.b, color.a, offset.x, and offset.y.
-    {
-        MaterialParams params {
-                .color = { 1.0f, 0.0f, 1.0f, 1.0f },
-                .offset = { 0.5f, 0.5f, 0.0f, 0.0f }
-        };
-        auto* tmp = new MaterialParams(params);
-        auto cb = [](void* buffer, size_t size, void* user) {
-            auto* sp = (MaterialParams*) ((char*)buffer - offsetof(MaterialParams, color.b));
-            delete sp;
-        };
-        BufferDescriptor bd((char*)tmp + offsetof(MaterialParams, color.b), sizeof(float) * 4, cb);
-        api.updateBufferObject(ubuffer, std::move(bd), 64 + offsetof(MaterialParams, color.b));
-    }
+    shader.uploadUniform(api, ubuffer, UniformBindingConfig{
+                    .dataSize = sizeof(std::array<float, 4>),
+                    .bufferSize = kBindingConfig.bufferSize,
+                    .byteOffset = *kBindingConfig.byteOffset + offsetof(MaterialParams, color.b),
+            },
+            std::array<float, 4>{
+                    // color.b, color.a
+                    1.0f, 1.0f,
+                    // offset.x, offset.y
+                    0.5f, 0.5f }
+    );
 
     params.flags.clear = TargetBufferFlags::NONE;
     params.flags.discardStart = TargetBufferFlags::NONE;
-    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
-            renderTarget, swapChain, program, params);
+    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+            renderTarget, swapChain, shader.getProgram(), params);
 
     static const uint32_t expectedHash = 91322442;
     readPixelsAndAssertHash(
