@@ -41,7 +41,7 @@ vec4 evaluateMaterial(const MaterialInputs material) {
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
 #if defined(VARIANT_HAS_SHADOWING)
     float visibility = 1.0;
-    int cascade = getShadowCascade();
+    uint cascade = getShadowCascade();
     bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & ((1 << cascade) << 8));
     bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1);
     if (hasDirectionalShadows && cascadeHasVisibleShadows) {

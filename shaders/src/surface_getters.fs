@@ -129,14 +129,14 @@ bool isDoubleSided() {
 /**
  * Returns the cascade index for this fragment (between 0 and CONFIG_MAX_SHADOW_CASCADES - 1).
  */
-int getShadowCascade() {
+uint getShadowCascade() {
     highp float z = mulMat4x4Float3(getViewFromWorldMatrix(), getWorldPosition()).z;
     ivec4 greaterZ = ivec4(greaterThan(frameUniforms.cascadeSplits, vec4(z)));
-    int cascadeCount = frameUniforms.cascades & 0xF;
+    uint cascadeCount = frameUniforms.cascades & 0xF;
     return clamp(greaterZ.x + greaterZ.y + greaterZ.z + greaterZ.w, 0, cascadeCount - 1);
 }
 
-highp vec4 getCascadeLightSpacePosition(int cascade) {
+highp vec4 getCascadeLightSpacePosition(uint cascade) {
     // For the first cascade, return the interpolated light space position.
     // This branch will be coherent (mostly) for neighboring fragments, and it's worth avoiding
     // the matrix multiply inside computeLightSpacePosition.

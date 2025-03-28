@@ -52,12 +52,12 @@ void evaluateDirectionalLight(const MaterialInputs material,
     if (light.NoL > 0.0) {
         float ssContactShadowOcclusion = 0.0;
 
-        int cascade = getShadowCascade();
+        uint cascade = getShadowCascade();
         bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & ((1 << cascade) << 8));
         bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1);
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
             highp vec4 shadowPosition = getShadowPosition(cascade);
-            visibility = shadow(true, sampler0_shadowMap, cascade, shadowPosition, 0.0);
+            visibility = shadow(true, sampler0_shadowMap, int(cascade), shadowPosition, 0.0);
 #if defined(MATERIAL_HAS_SHADOW_STRENGTH)
             applyShadowStrength(visibility, material.shadowStrength);
 #endif
