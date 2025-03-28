@@ -169,7 +169,7 @@ static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidt
 
 TEST_F(BackendTest, ColorMagnify) {
     auto& api = getDriverApi();
-    Cleanup cleanup(getDriverApi());
+    Cleanup cleanup(api);
     cleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 256;
@@ -238,7 +238,7 @@ TEST_F(BackendTest, ColorMagnify) {
 
 TEST_F(BackendTest, ColorMinify) {
     auto& api = getDriverApi();
-    Cleanup cleanup(getDriverApi());
+    Cleanup cleanup(api);
     cleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 1024;
@@ -299,7 +299,7 @@ TEST_F(BackendTest, ColorMinify) {
 
 TEST_F(BackendTest, ColorResolve) {
     auto& api = getDriverApi();
-    Cleanup cleanup(getDriverApi());
+    Cleanup cleanup(api);
 
     constexpr int kSrcTexWidth = 256;
     constexpr int kSrcTexHeight = 256;
@@ -412,7 +412,7 @@ TEST_F(BackendTest, ColorResolve) {
 
 TEST_F(BackendTest, Blit2DTextureArray) {
     auto& api = getDriverApi();
-    Cleanup cleanup(getDriverApi());
+    Cleanup cleanup(api);
     cleanup.addPostCall([&]() { executeCommands(); });
 
     api.startCapture(0);
@@ -489,7 +489,7 @@ TEST_F(BackendTest, Blit2DTextureArray) {
 
 TEST_F(BackendTest, BlitRegion) {
     auto& api = getDriverApi();
-    Cleanup cleanup(getDriverApi());
+    Cleanup cleanup(api);
     cleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 1024;
@@ -571,7 +571,7 @@ TEST_F(BackendTest, BlitRegion) {
 
 TEST_F(BackendTest, BlitRegionToSwapChain) {
     auto& api = getDriverApi();
-    Cleanup cleanup(getDriverApi());
+    Cleanup cleanup(api);
     cleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 1024;
