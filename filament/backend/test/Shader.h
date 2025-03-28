@@ -47,7 +47,7 @@ struct UniformBindingConfig {
     std::optional<filament::backend::descriptor_set_t> set;
     std::optional<filament::backend::descriptor_binding_t> binding;
 
-    template <typename UniformType>
+    template<typename UniformType>
     ResolvedUniformBindingConfig resolve();
 };
 
@@ -87,46 +87,54 @@ protected:
     filament::backend::DescriptorSetHandle mDescriptorSet;
 };
 
-template <typename UniformType>
+template<typename UniformType>
 ResolvedUniformBindingConfig UniformBindingConfig::resolve() {
     auto resolvedDataSize = dataSize.value_or(sizeof(UniformType));
-    return ResolvedUniformBindingConfig {
-        .dataSize = resolvedDataSize,
-        .bufferSize = bufferSize.value_or(resolvedDataSize),
-        .byteOffset = byteOffset.value_or(0),
-        .set = set.value_or(1),
-        .binding = binding.value_or(0)
+    return ResolvedUniformBindingConfig{
+            .dataSize = resolvedDataSize,
+            .bufferSize = bufferSize.value_or(resolvedDataSize),
+            .byteOffset = byteOffset.value_or(0),
+            .set = set.value_or(1),
+            .binding = binding.value_or(0)
     };
 }
 
-template <typename UniformType>
-void Shader::uploadUniform(filament::backend::DriverApi& api, filament::backend::Handle<filament::backend::HwBufferObject> hwBuffer, UniformBindingConfig config, UniformType uniforms) const {
+template<typename UniformType>
+void Shader::uploadUniform(filament::backend::DriverApi& api,
+        filament::backend::Handle<filament::backend::HwBufferObject> hwBuffer,
+        UniformBindingConfig config, UniformType uniforms) const {
     auto resolvedConfig = config.resolve<UniformType>();
 
     UniformType* tmp = new UniformType(uniforms);
     auto cb = [](void* buffer, size_t size, void* user) {
-        UniformType* sp = (UniformType*) buffer;
+        UniformType* sp = (UniformType*)buffer;
         delete sp;
     };
     filament::backend::BufferDescriptor bd(tmp, resolvedConfig.dataSize, cb);
     api.updateBufferObject(hwBuffer, std::move(bd), resolvedConfig.byteOffset);
 }
 
-template <typename UniformType>
-void Shader::bindUniform(filament::backend::DriverApi& api, filament::backend::Handle<filament::backend::HwBufferObject> hwBuffer, UniformBindingConfig config) const {
+template<typename UniformType>
+void Shader::bindUniform(filament::backend::DriverApi& api,
+        filament::backend::Handle<filament::backend::HwBufferObject> hwBuffer,
+        UniformBindingConfig config) const {
     auto resolvedConfig = config.resolve<UniformType>();
 
-    api.updateDescriptorSetBuffer(getDescriptorSet(), resolvedConfig.binding, hwBuffer, 0, resolvedConfig.bufferSize);
+    api.updateDescriptorSetBuffer(getDescriptorSet(), resolvedConfig.binding, hwBuffer, 0,
+            resolvedConfig.bufferSize);
     api.bindDescriptorSet(getDescriptorSet(), resolvedConfig.set, {});
 }
 
-template <typename UniformType>
-void Shader::uploadUniform(filament::backend::DriverApi& api, filament::backend::Handle<filament::backend::HwBufferObject> hwBuffer, UniformType uniforms) const {
+template<typename UniformType>
+void Shader::uploadUniform(filament::backend::DriverApi& api,
+        filament::backend::Handle<filament::backend::HwBufferObject> hwBuffer,
+        UniformType uniforms) const {
     uploadUniform(api, hwBuffer, UniformBindingConfig{}, uniforms);
 }
 
-template <typename UniformType>
-void Shader::bindUniform(filament::backend::DriverApi& api, filament::backend::Handle<filament::backend::HwBufferObject> hwBuffer) const {
+template<typename UniformType>
+void Shader::bindUniform(filament::backend::DriverApi& api,
+        filament::backend::Handle<filament::backend::HwBufferObject> hwBuffer) const {
     bindUniform<UniformType>(api, hwBuffer, UniformBindingConfig{});
 }
 

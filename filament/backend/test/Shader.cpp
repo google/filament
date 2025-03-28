@@ -35,14 +35,16 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) {
         descriptors[i + 1] = {{ config.uniformNames[i], kLayouts[i], {}}};
     }
     ShaderGenerator shaderGen(
-            std::move(config.vertexShader), std::move(config.fragmentShader), BackendTest::sBackend, BackendTest::sIsMobilePlatform, std::move(descriptors));
+            std::move(config.vertexShader), std::move(config.fragmentShader), BackendTest::sBackend,
+            BackendTest::sIsMobilePlatform, std::move(descriptors));
     Program prog = shaderGen.getProgram(api);
     for (unsigned char i = 0; i < config.uniformNames.size(); ++i) {
         prog.descriptorBindings(1, {{ config.uniformNames[i], DescriptorType::UNIFORM_BUFFER, i }});
     }
     mProgram = cleanup.add(api.createProgram(std::move(prog)));
 
-    mDescriptorSetLayout = cleanup.add(api.createDescriptorSetLayout(DescriptorSetLayout{kLayouts}));
+    mDescriptorSetLayout = cleanup.add(
+            api.createDescriptorSetLayout(DescriptorSetLayout{ kLayouts }));
 
     mDescriptorSet = cleanup.add(api.createDescriptorSet(mDescriptorSetLayout));
 }

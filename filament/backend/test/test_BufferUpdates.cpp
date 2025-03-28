@@ -142,8 +142,8 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         state.rasterState.culling = CullingMode::NONE;
 
         // Create a uniform buffer.
-        // We use STATIC here, even though the buffer is updated, to force the Metal backend to use a
-        // GPU buffer, which is more interesting to test.
+        // We use STATIC here, even though the buffer is updated, to force the Metal backend to use
+        // a GPU buffer, which is more interesting to test.
         auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams) + 64,
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
@@ -251,11 +251,17 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
 
     // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
     // color.b, color.a, offset.x, and offset.y.
-    shader.uploadUniform(api, ubuffer, kBindingConfig,
-    MaterialParams {
-            .color = { 1.0f, 0.0f, 1.0f, 1.0f },
-            .offset = { 0.5f, 0.5f, 0.0f, 0.0f }
-    });
+    shader.uploadUniform(api, ubuffer, UniformBindingConfig{
+                    .dataSize = sizeof(std::array<float, 4>),
+                    .bufferSize = kBindingConfig.bufferSize,
+                    .byteOffset = *kBindingConfig.byteOffset + offsetof(MaterialParams, color.b),
+            },
+            std::array<float, 4>{
+                    // color.b, color.a
+                    1.0f, 1.0f,
+                    // offset.x, offset.y
+                    0.5f, 0.5f }
+    );
 
     params.flags.clear = TargetBufferFlags::NONE;
     params.flags.discardStart = TargetBufferFlags::NONE;
