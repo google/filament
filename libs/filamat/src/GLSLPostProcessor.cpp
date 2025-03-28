@@ -528,6 +528,9 @@ void GLSLPostProcessor::rebindImageSamplerForWGSL(std::vector<uint32_t>& spirv) 
     };
 
     std::unordered_map<uint32_t, Descriptor> descriptors;
+    std::set<uint32_t> unidentifiedLoadTargets;
+    std::vector<uint32_t> bindingTargets;
+
     auto getDesc = [&](uint32_t var) -> Descriptor& {
         using itertype = std::unordered_map<uint32_t, Descriptor>::iterator;
         itertype itr;
@@ -550,56 +553,27 @@ void GLSLPostProcessor::rebindImageSamplerForWGSL(std::vector<uint32_t>& spirv) 
     };
 
     uint32_t samplerTypeId = 0;
-
-    // First we find the ID used to identify the sampler type and the image type.
-    pass(spv::Op::OpTypeSampler, [&](uint32_t pos) {
-        samplerTypeId = data[pos];
-    });
-
-    // Next we identify all the descriptors and record their set id and binding.
-    pass(spv::Op::OpDecorate, [&](uint32_t pos) {
-        uint32_t const type = data[pos + 1];
-        if (type == spv::Decoration::DecorationBinding) {
-            uint32_t const targetVar = data[pos];
-            uint32_t const binding = data[pos + 2];
-            auto& desc = getDesc(targetVar);
-            desc.binding = binding;
-            // Note these decorations do not need to be written to the output.
-        } else if (type == spv::Decoration::DecorationDescriptorSet) {
-            uint32_t const targetVar = data[pos];
-            uint32_t const set = data[pos + 2];
-            auto& desc = getDesc(targetVar);
+    pass(spv::Op::OpName, [&](uint32_t pos) {
+        auto target = data[pos];
+        char* name = (char*)&data[pos+1];
+        std::string_view view(name);
+        if (view.find("_sampler") != std::string_view::npos) {
+            unidentifiedLoadTargets.insert(target);
         }
-    });
+});
 
-    // Offset samplers by 2n+1, and everything else by 2n
-    pass(spv::Op::OpLoad, [&](uint32_t pos) {
-        uint32_t const retType = data[pos];
-        uint32_t const targetVar = data[pos + 2];
-        auto& desc = getDesc(targetVar);
-        if (retType == samplerTypeId) {
-            if (!desc.fixed) {
-                //desc.binding = (desc.binding * 2) +1;
-                desc.binding = (desc.binding ) +100;
-
-                desc.fixed = true;
-            }
-        }
-        else {
-            if (!desc.fixed) {
-                //desc.binding *=2;
-               // desc.fixed = true;
-            }
-        }
-    });
 
     // Write out the offsetted bindings
     pass(spv::Op::OpDecorate, [&](uint32_t pos) {
         uint32_t const type = data[pos + 1];
         if (type == spv::Decoration::DecorationBinding) {
             uint32_t const targetVar = data[pos];
-            auto const &desc = getDesc(targetVar);
-            data[pos + 2] = desc.binding;
+            if (unidentifiedLoadTargets.find(targetVar) != unidentifiedLoadTargets.end()) {
+                data[pos + 2] = data[pos + 2]*2 + 1;
+            }
+            else {
+                data[pos + 2] = data[pos + 2] *2;
+            }
         }
     });
 }
@@ -609,12 +583,13 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     //We need to run some opt-passes at all times to transpile to WGSL
     auto optimizer = createEmptyOptimizer();
     optimizer->RegisterPass(CreateSplitCombinedImageSamplerPass());
-    optimizer->RegisterPass(CreateResolveBindingConflictsPass());
+    //optimizer->RegisterPass(CreateResolveBindingConflictsPass());
+
     optimizeSpirv(optimizer, *spirv);
 
     //After splitting the image samplers, we need to remap the bindings to separate them.
     //TODO: This has issues, so use CreateResolveBindingConflictsPass instead. Mapping is less predictable but short term
-    //rebindImageSamplerForWGSL(*spirv);
+    rebindImageSamplerForWGSL(*spirv);
 
     //Allow non-uniform derivitives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
     const tint::spirv::reader::Options readerOpts{true};
@@ -1081,7 +1056,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
+    RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL | MaterialBuilder::TargetApi::WEBGPU);
     RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreatePrivateToLocalPass());
