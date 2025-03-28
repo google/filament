@@ -18,10 +18,13 @@
 
 #include "webgpu/WebGPUConstants.h"
 
+#include "backend/DriverEnums.h"
+
+#include <utils/Panic.h>
+#include <utils/ostream.h>
+
 #include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
-
-#include <utils/ostream.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -98,23 +101,112 @@ void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config) {
 }
 #endif
 
+wgpu::TextureFormat selectColorFormat(size_t availableFormatsCount,
+        wgpu::TextureFormat const* availableFormats, bool useSRGBColorSpace) {
+    const std::array expectedColorFormats =
+            useSRGBColorSpace ?
+                              std::array{
+                                  wgpu::TextureFormat::RGBA8UnormSrgb,
+                                  wgpu::TextureFormat::BGRA8UnormSrgb }
+                              : std::array{
+                                    wgpu::TextureFormat::RGBA8Unorm,
+                                    wgpu::TextureFormat::BGRA8Unorm };
+    auto const firstFoundColorFormat = std::find_first_of(expectedColorFormats.begin(),
+            expectedColorFormats.end(), availableFormats, availableFormats + availableFormatsCount);
+    FILAMENT_CHECK_POSTCONDITION(firstFoundColorFormat != expectedColorFormats.end())
+            << "Cannot find a suitable WebGPU swapchain "
+            << (useSRGBColorSpace ? "sRGB" : "non-standard (e.g. linear) RGB") << " color format";
+    return *firstFoundColorFormat;
+}
+
+wgpu::PresentMode selectPresentMode(size_t availablePresentModesCount,
+        wgpu::PresentMode const* availablePresentModes) {
+    // Verify that our chosen present mode is supported. In practice all devices support the FIFO
+    // mode, but we check for it anyway for completeness.  (and to avoid validation warnings)
+    const wgpu::PresentMode desiredPresentMode = wgpu::PresentMode::Fifo;
+    FILAMENT_CHECK_POSTCONDITION(
+            std::any_of(availablePresentModes, availablePresentModes + availablePresentModesCount,
+                    [](const wgpu::PresentMode availablePresentMode) {
+                        return availablePresentMode == desiredPresentMode;
+                    }))
+            << "Cannot find a suitable WebGPU swapchain present mode";
+    return desiredPresentMode;
+}
+
+wgpu::CompositeAlphaMode selectAlphaMode(size_t availableAlphaModesCount,
+        wgpu::CompositeAlphaMode const* availableAlphaModes) {
+    bool autoAvailable = false;
+    bool inheritAvailable = false;
+    bool opaqueAvailable = false;
+    bool premultipliedAvailable = false;
+    bool unpremultipliedAvailable = false;
+    std::for_each(availableAlphaModes, availableAlphaModes + availableAlphaModesCount,
+            [&](const wgpu::CompositeAlphaMode alphMode) {
+                switch (alphMode) {
+                    // in practice, the surface capabilities would not list Auto,
+                    // but for completeness and defensive programming we can leverage it
+                    // if it explicitly comes back as available/supported
+                    case wgpu::CompositeAlphaMode::Auto:
+                        autoAvailable = true;
+                        break;
+                    case wgpu::CompositeAlphaMode::Opaque:
+                        opaqueAvailable = true;
+                        break;
+                    case wgpu::CompositeAlphaMode::Premultiplied:
+                        premultipliedAvailable = true;
+                        break;
+                    case wgpu::CompositeAlphaMode::Unpremultiplied:
+                        unpremultipliedAvailable = true;
+                        break;
+                    case wgpu::CompositeAlphaMode::Inherit:
+                        inheritAvailable = true;
+                        break;
+                }
+            });
+    if (autoAvailable || inheritAvailable || opaqueAvailable) {
+        return wgpu::CompositeAlphaMode::Auto;
+    } else if (premultipliedAvailable) {
+        // In practice, we do not expect this to possibly happen, as opaque should be supported,
+        // which we select first. However, if the underlying system actually does not support
+        // opaque we allow it to be tested, but warn that this may not likely work as they expect
+        // (untested territory).
+        // We prefer premultiplied to unpremuliplied until that assumption should be adjusted.
+        FWGPU_LOGW << "Auto, Inherit, & Opaque composite alpha modes not supported. Filament has "
+                      "historically used these. Premultiplied alpha composite mode for "
+                      "transparency is being selected as a fallback, but may not work as expected."
+                   << utils::io::endl;
+        return wgpu::CompositeAlphaMode::Premultiplied;
+    } else {
+        FILAMENT_CHECK_POSTCONDITION(unpremultipliedAvailable)
+                << "No available composite alpha modes? Unknown/unhandled composite alpha mode?";
+        // Again, we don't expect this in practice, but allow if for the same reason as premultiplied.
+        // We prefer premultiplied to unpremuliplied until that assumption should be adjusted.
+        FWGPU_LOGW << "Auto, Inherit, & Opaque composite alpha modes not supported. Filament has "
+                      "historically used these. Unpremultiplied alpha composite mode for "
+                      "transparency is being selected as a fallback "
+                      "(premulitipled is not available either), but may not work as expected."
+                   << utils::io::endl;
+        return wgpu::CompositeAlphaMode::Unpremultiplied;
+    }
+}
+
 void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device& device,
-        wgpu::SurfaceCapabilities const& capabilities) {
+        wgpu::SurfaceCapabilities const& capabilities, bool useSRGBColorSpace) {
     config.device = device;
     config.usage = wgpu::TextureUsage::RenderAttachment;
-    // TODO logic for selecting appropriate color format
-    config.format = capabilities.formats[0];
-    // TODO logic for selecting appropriate present mode
-    config.presentMode = capabilities.presentModes[0];
-    // TODO logic for selecting appropriate alpha mode
-    config.alphaMode = capabilities.alphaModes[0];
+    config.format =
+            selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);
+    config.presentMode =
+            selectPresentMode(capabilities.presentModeCount, capabilities.presentModes);
+    config.alphaMode = selectAlphaMode(capabilities.alphaModeCount, capabilities.alphaModes);
 }
 
 }// namespace
 
 namespace filament::backend {
 
-WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device)
+WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter,
+        wgpu::Device& device, uint64_t flags)
     : mSurface(surface) {
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
@@ -124,7 +216,8 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter
         printSurfaceCapabilitiesDetails(capabilities);
 #endif
     }
-    initConfig(mConfig, device, capabilities);
+    const bool useSRGBColorSpace = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0;
+    initConfig(mConfig, device, capabilities, useSRGBColorSpace);
 }
 
 WebGPUSwapChain::~WebGPUSwapChain() {
