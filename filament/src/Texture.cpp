@@ -108,4 +108,12 @@ bool Texture::validatePixelFormatAndType(InternalFormat internalFormat, Format f
     return FTexture::validatePixelFormatAndType(internalFormat, format, type);
 }
 
+size_t Texture::getMaxTextureSize(Engine& engine, Sampler type) noexcept {
+    return FTexture::getMaxTextureSize(downcast(engine), type);
+
+}
+size_t Texture::getMaxArrayTextureLayers(Engine& engine) noexcept {
+    return FTexture::getMaxArrayTextureLayers(downcast(engine));
+}
+
 } // namespace filament

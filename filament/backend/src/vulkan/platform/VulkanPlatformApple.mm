@@ -52,7 +52,7 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
+VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl() {
     ExtensionSet const ret = {
     #if defined(__APPLE__)
         VK_MVK_MACOS_SURFACE_EXTENSION_NAME,  // TODO: replace with VK_EXT_metal_surface
@@ -64,17 +64,30 @@ VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
 }
 
 VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
-        void* externalImage, VkDevice device) {
+        ExternalImageHandleRef externalImage, VkDevice device) {
     return {};
 }
 
-VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage,
-        VkDevice device, const VkAllocationCallbacks* allocator,
-        const ExternalImageMetadata& metadata) {
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageDataImpl(
+        ExternalImageHandleRef externalImage, VkDevice device,
+        const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex, VkImageUsageFlags usage) {
     return {};
 }
 
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
+VkSampler VulkanPlatform::createExternalSamplerImpl(VkDevice device,
+    SamplerYcbcrConversion chroma,
+    SamplerParams sampler,
+    uint32_t internalFormat) {
+    return VK_NULL_HANDLE;
+}
+
+VkImageView VulkanPlatform::createExternalImageViewImpl(VkDevice device,
+        SamplerYcbcrConversion chroma, uint32_t internalFormat, VkImage image,
+        VkImageSubresourceRange range, VkImageViewType viewType, VkComponentMapping swizzle) {
+    return VK_NULL_HANDLE;
+}
+
+VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativeWindow,
         VkInstance instance, uint64_t flags) noexcept {
     VkSurfaceKHR surface;
     #if defined(__APPLE__)

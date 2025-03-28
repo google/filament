@@ -35,7 +35,6 @@
 
 #include <cmath>
 #include <cstdlib>
-#include <mutex>
 #include <tuple>
 
 namespace filament {
@@ -581,8 +580,11 @@ static float3 luminanceScaling(float3 x,
 // Quality
 //------------------------------------------------------------------------------
 
-static std::tuple<TextureFormat, PixelDataFormat, PixelDataType>
-        selectLutTextureParams(ColorGrading::LutFormat const lutFormat) noexcept {
+static std::tuple<TextureFormat, PixelDataFormat, PixelDataType> selectLutTextureParams(
+        ColorGrading::LutFormat const lutFormat, const bool isOneDimensional) noexcept {
+    if (isOneDimensional) {
+        return { TextureFormat::R16F, PixelDataFormat::R, PixelDataType::HALF };
+    }
     // We use RGBA16F for high quality modes instead of RGB16F because RGB16F
     // is not supported everywhere
     switch (lutFormat) {
@@ -658,27 +660,44 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
     DriverApi& driver = engine.getDriverApi();
 
-    Config c;
-    // This lock protects the data inside Config, which is written to by the Filament thread,
-    // and read from multiple Job threads.
-    Mutex configLock;
-    {
-        std::lock_guard<Mutex> const lock(configLock);
-        c.lutDimension          = builder->dimension;
-        c.adaptationTransform   = adaptationTransform(builder->whiteBalance);
-        c.colorGradingIn        = selectColorGradingTransformIn(builder->toneMapping);
-        c.colorGradingOut       = selectColorGradingTransformOut(builder->toneMapping);
-        c.colorGradingLuminance = selectColorGradingLuminance(builder->toneMapping);
-        c.oetf                  = selectOETF(builder->outputColorSpace);
+    // XXX: The following two conditions also only hold true as long as the input and output color
+    // spaces are the same, but we currently don't check that. We must revise these conditions if we
+    // ever handle this case.
+    mIsOneDimensional = !builder->hasAdjustments && !builder->luminanceScaling
+            && builder->toneMapper->isOneDimensional()
+            && engine.features.engine.color_grading.use_1d_lut;
+    mIsLDR = mIsOneDimensional && builder->toneMapper->isLDR();
+
+    const Config config = {
+            mIsOneDimensional ? 512u : builder->dimension,
+            adaptationTransform(builder->whiteBalance),
+            selectColorGradingTransformIn(builder->toneMapping),
+            selectColorGradingTransformOut(builder->toneMapping),
+            selectColorGradingLuminance(builder->toneMapping),
+            selectOETF(builder->outputColorSpace),
+    };
+
+    mDimension = config.lutDimension;
+
+    uint32_t width;
+    uint32_t height;
+    uint32_t depth;
+    if (mIsOneDimensional) {
+        width = config.lutDimension;
+        height = 1;
+        depth = 1;
+    } else {
+        width = config.lutDimension;
+        height = config.lutDimension;
+        depth = config.lutDimension;
     }
 
-    mDimension = c.lutDimension;
-
-    size_t lutElementCount = c.lutDimension * c.lutDimension * c.lutDimension;
-    size_t elementSize = sizeof(half4);
+    size_t lutElementCount = width * height * depth;
+    size_t elementSize = mIsOneDimensional ? sizeof(half) : sizeof(half4);
     void* data = malloc(lutElementCount * elementSize);
 
-    auto [textureFormat, format, type] = selectLutTextureParams(builder->format);
+    auto [textureFormat, format, type] =
+            selectLutTextureParams(builder->format, mIsOneDimensional);
     assert_invariant(FTexture::isTextureFormatSupported(engine, textureFormat));
     assert_invariant(FTexture::validatePixelFormatAndType(textureFormat, format, type));
 
@@ -688,155 +707,167 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
         converted = malloc(lutElementCount * sizeof(uint32_t));
     }
 
+    auto hdrColorAt = [builder, config](size_t r, size_t g, size_t b) {
+        float3 v = float3{r, g, b} * (1.0f / float(config.lutDimension - 1u));
+
+        // LogC encoding
+        v = LogC_to_linear(v);
+
+        // Kill negative values near 0.0f due to imprecision in the log conversion
+        v = max(v, 0.0f);
+
+        if (builder->hasAdjustments) {
+            // Exposure
+            v = adjustExposure(v, builder->exposure);
+
+            // Purkinje shift ("low-light" vision)
+            v = scotopicAdaptation(v, builder->nightAdaptation);
+        }
+
+        // Move to color grading color space
+        v = config.colorGradingIn * v;
+
+        if (builder->hasAdjustments) {
+            // White balance
+            v = chromaticAdaptation(v, config.adaptationTransform);
+
+            // Kill negative values before the next transforms
+            v = max(v, 0.0f);
+
+            // Channel mixer
+            v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
+
+            // Shadows/mid-tones/highlights
+            v = tonalRanges(v, config.colorGradingLuminance,
+                    builder->shadows, builder->midtones, builder->highlights,
+                    builder->tonalRanges);
+
+            // The adjustments below behave better in log space
+            v = linear_to_LogC(v);
+
+            // ASC CDL
+            v = colorDecisionList(v, builder->slope, builder->offset, builder->power);
+
+            // Contrast in log space
+            v = contrast(v, builder->contrast);
+
+            // Back to linear space
+            v = LogC_to_linear(v);
+
+            // Vibrance in linear space
+            v = vibrance(v, config.colorGradingLuminance, builder->vibrance);
+
+            // Saturation in linear space
+            v = saturation(v, config.colorGradingLuminance, builder->saturation);
+
+            // Kill negative values before curves
+            v = max(v, 0.0f);
+
+            // RGB curves
+            v = curves(v,
+                    builder->shadowGamma, builder->midPoint, builder->highlightScale);
+        }
+
+        // Tone mapping
+        if (builder->luminanceScaling) {
+            v = luminanceScaling(v, *builder->toneMapper, config.colorGradingLuminance);
+        } else {
+            v = (*builder->toneMapper)(v);
+        }
+
+        // Go back to display color space
+        v = config.colorGradingOut * v;
+
+        // Apply gamut mapping
+        if (builder->gamutMapping) {
+            // TODO: This should depend on the output color space
+            v = gamutMapping_sRGB(v);
+        }
+
+        // TODO: We should convert to the output color space if we use a working
+        //       color space that's not sRGB
+        // TODO: Allow the user to customize the output color space
+
+        // We need to clamp for the output transfer function
+        v = saturate(v);
+
+        // Apply OETF
+        v = config.oetf(v);
+
+        return v;
+    };
+
     //auto now = std::chrono::steady_clock::now();
 
-    // Multithreadedly generate the tone mapping 3D look-up table using 32 jobs
-    // Slices are 8 KiB (128 cache lines) apart.
-    // This takes about 3-6ms on Android in Release
-    JobSystem& js = engine.getJobSystem();
-    auto *slices = js.createJob();
-    for (size_t b = 0; b < c.lutDimension; b++) {
-        auto *job = js.createJob(slices,
-                [data, converted, b, &c, &configLock, builder](JobSystem&, JobSystem::Job*) {
-            Config config;
-            {
-                std::lock_guard<Mutex> lock(configLock);
-                config = c;
+    if (mIsOneDimensional) {
+        half* UTILS_RESTRICT p = (half*) data;
+        if (mIsLDR) {
+            for (size_t rgb = 0; rgb < config.lutDimension; rgb++) {
+                float3 v = float3(rgb) * (1.0f / float(config.lutDimension - 1u));
+
+                v = (*builder->toneMapper)(float3(v));
+
+                // We need to clamp for the output transfer function
+                v = saturate(v);
+
+                // Apply OETF
+                v = config.oetf(v);
+
+                *p++ = half(v.r);
             }
-            half4* UTILS_RESTRICT p = (half4*) data + b * config.lutDimension * config.lutDimension;
-            for (size_t g = 0; g < config.lutDimension; g++) {
-                for (size_t r = 0; r < config.lutDimension; r++) {
-                    float3 v = float3{r, g, b} * (1.0f / float(config.lutDimension - 1u));
-
-                    // LogC encoding
-                    v = LogC_to_linear(v);
-
-                    // Kill negative values near 0.0f due to imprecision in the log conversion
-                    v = max(v, 0.0f);
-
-                    if (builder->hasAdjustments) {
-                        // Exposure
-                        v = adjustExposure(v, builder->exposure);
-
-                        // Purkinje shift ("low-light" vision)
-                        v = scotopicAdaptation(v, builder->nightAdaptation);
+        } else {
+            for (size_t rgb = 0; rgb < config.lutDimension; rgb++) {
+                *p++ = half(hdrColorAt(rgb, rgb, rgb).r);
+            }
+        }
+    } else {
+        // Multithreadedly generate the tone mapping 3D look-up table using 32 jobs
+        // Slices are 8 KiB (128 cache lines) apart.
+        // This takes about 3-6ms on Android in Release
+        JobSystem& js = engine.getJobSystem();
+        auto *slices = js.createJob();
+        for (size_t b = 0; b < config.lutDimension; b++) {
+            auto* job = js.createJob(slices,
+                    [data, converted, b, &config, builder, &hdrColorAt](
+                            JobSystem&, JobSystem::Job*) {
+                half4* UTILS_RESTRICT p =
+                        (half4*) data + b * config.lutDimension * config.lutDimension;
+                for (size_t g = 0; g < config.lutDimension; g++) {
+                    for (size_t r = 0; r < config.lutDimension; r++) {
+                        *p++ = half4{hdrColorAt(r, g, b), 0.0f};
                     }
-
-                    // Move to color grading color space
-                    v = c.colorGradingIn * v;
-
-                    if (builder->hasAdjustments) {
-                        // White balance
-                        v = chromaticAdaptation(v, config.adaptationTransform);
-
-                        // Kill negative values before the next transforms
-                        v = max(v, 0.0f);
-
-                        // Channel mixer
-                        v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
-
-                        // Shadows/mid-tones/highlights
-                        v = tonalRanges(v, c.colorGradingLuminance,
-                                builder->shadows, builder->midtones, builder->highlights,
-                                builder->tonalRanges);
-
-                        // The adjustments below behave better in log space
-                        v = linear_to_LogC(v);
-
-                        // ASC CDL
-                        v = colorDecisionList(v, builder->slope, builder->offset, builder->power);
-
-                        // Contrast in log space
-                        v = contrast(v, builder->contrast);
-
-                        // Back to linear space
-                        v = LogC_to_linear(v);
-
-                        // Vibrance in linear space
-                        v = vibrance(v, c.colorGradingLuminance, builder->vibrance);
-
-                        // Saturation in linear space
-                        v = saturation(v, c.colorGradingLuminance, builder->saturation);
-
-                        // Kill negative values before curves
-                        v = max(v, 0.0f);
-
-                        // RGB curves
-                        v = curves(v,
-                                builder->shadowGamma, builder->midPoint, builder->highlightScale);
-                    }
-
-                    // Tone mapping
-                    if (builder->luminanceScaling) {
-                        v = luminanceScaling(v, *builder->toneMapper, c.colorGradingLuminance);
-                    } else {
-                        v = (*builder->toneMapper)(v);
-                    }
-
-                    // Go back to display color space
-                    v = c.colorGradingOut * v;
-
-                    // Apply gamut mapping
-                    if (builder->gamutMapping) {
-                        // TODO: This should depend on the output color space
-                        v = gamutMapping_sRGB(v);
-                    }
-
-                    // TODO: We should convert to the output color space if we use a working
-                    //       color space that's not sRGB
-                    // TODO: Allow the user to customize the output color space
-
-                    // We need to clamp for the output transfer function
-                    v = saturate(v);
-
-                    // Apply OETF
-                    v = c.oetf(v);
-
-                    *p++ = half4{v, 0.0f};
                 }
-            }
 
-            if (converted) {
-                uint32_t* const UTILS_RESTRICT dst = (uint32_t*) converted +
-                        b * config.lutDimension * config.lutDimension;
-                half4* UTILS_RESTRICT src = (half4*) data +
-                        b * config.lutDimension * config.lutDimension;
-                // we use a vectorize width of 8 because, on ARMv8 it allows the compiler to write eight
-                // 32-bits results in one go.
-                const size_t count = (config.lutDimension * config.lutDimension) & ~0x7u; // tell the compiler that we're a multiple of 8
+                if (converted) {
+                    uint32_t* const UTILS_RESTRICT dst = (uint32_t*) converted +
+                            b * config.lutDimension * config.lutDimension;
+                    half4* UTILS_RESTRICT src = (half4*) data +
+                            b * config.lutDimension * config.lutDimension;
+                    // we use a vectorize width of 8 because, on ARMv8 it allows the compiler to
+                    // write eight 32-bits results in one go.
+                    const size_t count = (config.lutDimension * config.lutDimension) & ~0x7u; // tell the compiler that we're a multiple of 8
 #if defined(__clang__)
-                #pragma clang loop vectorize_width(8)
+#pragma clang loop vectorize_width(8)
 #endif
-                for (size_t i = 0; i < count; ++i) {
-                    float4 v{src[i]};
-                    uint32_t pr = uint32_t(std::floor(v.x * 1023.0f + 0.5f));
-                    uint32_t pg = uint32_t(std::floor(v.y * 1023.0f + 0.5f));
-                    uint32_t pb = uint32_t(std::floor(v.z * 1023.0f + 0.5f));
-                    dst[i] = (pb << 20u) | (pg << 10u) | pr;
+                    for (size_t i = 0; i < count; ++i) {
+                        float4 v{src[i]};
+                        uint32_t pr = uint32_t(std::floor(v.x * 1023.0f + 0.5f));
+                        uint32_t pg = uint32_t(std::floor(v.y * 1023.0f + 0.5f));
+                        uint32_t pb = uint32_t(std::floor(v.z * 1023.0f + 0.5f));
+                        dst[i] = (pb << 20u) | (pg << 10u) | pr;
+                    }
                 }
-            }
+            });
+            js.run(job);
+        }
 
-        });
-        js.run(job);
+        // TODO: Should we do a runAndRetain() and defer the wait() + texture creation until
+        //       getHwHandle() is invoked?
+        js.runAndWait(slices);
     }
-
-    // TODO: Should we do a runAndRetain() and defer the wait() + texture creation until
-    //       getHwHandle() is invoked?
-    js.runAndWait(slices);
 
     //std::chrono::duration<float, std::milli> duration = std::chrono::steady_clock::now() - now;
     //slog.d << "LUT generation time: " << duration.count() << " ms" << io::endl;
-
-    mLutHandle = driver.createTexture(
-            SamplerType::SAMPLER_3D,
-            1,
-            textureFormat,
-            1,
-            c.lutDimension,
-            c.lutDimension,
-            c.lutDimension,
-            TextureUsage::DEFAULT
-    );
 
     if (converted) {
         free(data);
@@ -844,14 +875,17 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
         elementSize = sizeof(uint32_t);
     }
 
+    // Create texture.
+    mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 1,
+            width, height, depth, TextureUsage::DEFAULT);
+
     driver.update3DImage(mLutHandle, 0,
             0, 0, 0,
-            c.lutDimension, c.lutDimension, c.lutDimension,
+            width, height, depth,
             PixelBufferDescriptor{
-                    data, lutElementCount * elementSize,format, type,
-                    [](void* buffer, size_t, void*) { free(buffer); }
-            }
-    );
+                data, lutElementCount * elementSize, format, type,
+                        [](void* buffer, size_t, void*) { free(buffer); }
+                        });
 }
 
 FColorGrading::~FColorGrading() noexcept = default;

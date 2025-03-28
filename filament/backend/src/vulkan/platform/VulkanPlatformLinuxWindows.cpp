@@ -85,17 +85,30 @@ using namespace bluevk;
 namespace filament::backend {
 
 VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
-        void* externalImage, VkDevice device) {
+        ExternalImageHandleRef externalImage, VkDevice device) {
     return {};
 }
 
-VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage,
-        VkDevice device, const VkAllocationCallbacks* allocator,
-        const ExternalImageMetadata& metadata) {
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageDataImpl(
+        ExternalImageHandleRef externalImage, VkDevice device,
+        const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex, VkImageUsageFlags usage) {
     return {};
 }
 
-VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
+VkSampler VulkanPlatform::createExternalSamplerImpl(VkDevice device,
+    SamplerYcbcrConversion chroma,
+    SamplerParams sampler,
+    uint32_t internalFormat) {
+    return VK_NULL_HANDLE;
+}
+
+VkImageView VulkanPlatform::createExternalImageViewImpl(VkDevice device,
+        SamplerYcbcrConversion chroma, uint32_t internalFormat, VkImage image,
+        VkImageSubresourceRange range, VkImageViewType viewType, VkComponentMapping swizzle) {
+    return VK_NULL_HANDLE;
+}
+
+VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl() {
     VulkanPlatform::ExtensionSet const ret = {
 #if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
         VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
@@ -113,7 +126,7 @@ VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
     return ret;
 }
 
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
+VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativeWindow,
         VkInstance instance, uint64_t flags) noexcept {
     VkSurfaceKHR surface;
 

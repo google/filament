@@ -32,6 +32,16 @@ material {
             name : vignetteColor
         }
     ],
+    constants : [
+        {
+            type : bool,
+            name : isOneDimensional
+        },
+        {
+            type : bool,
+            name : isLDR
+        }
+    ],
     subpasses : [
         {
             type : subpassInput,
@@ -78,12 +88,17 @@ fragment {
 void dummy(){}
 
 vec4 resolveFragment() {
+#ifdef TARGET_WEBGPU_ENVIRONMENT
+    //WebGPU Can not handle subpasses.
+    return vec4(0,0,0,1);
+#else
 #if POST_PROCESS_OPAQUE
     return vec4(subpassLoad(materialParams_colorBuffer).rgb, 1.0);
 #else
     vec4 color = subpassLoad(materialParams_colorBuffer);
     color.rgb *= 1.0 / (color.a + FLT_EPS);
     return color;
+#endif
 #endif
 }
 
@@ -98,7 +113,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     }
 
     // Color grading
-    color.rgb  = colorGrade(materialParams_lut, color.rgb);
+    color.rgb = colorGrade(materialParams_lut, color.rgb);
 
     // output in premultiplied alpha
 #if !POST_PROCESS_OPAQUE

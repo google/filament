@@ -126,6 +126,10 @@ static_assert(MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_ATTRIBUTE_COUNT,
 static constexpr size_t CONFIG_UNIFORM_BINDING_COUNT = 9;   // This is guaranteed by OpenGL ES.
 static constexpr size_t CONFIG_SAMPLER_BINDING_COUNT = 4;   // This is guaranteed by OpenGL ES.
 
+static constexpr uint8_t EXTERNAL_SAMPLER_DATA_INDEX_UNUSED =
+        uint8_t(-1);// Case where the descriptor set binding isnt using any external sampler state
+                     // and therefore doesn't have a valid entry.
+
 /**
  * Defines the backend's feature levels.
  */
@@ -182,6 +186,7 @@ enum class ShaderLanguage {
     SPIRV = 2,
     MSL = 3,
     METAL_LIBRARY = 4,
+    WGSL = 5,
 };
 
 static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) {
@@ -196,6 +201,8 @@ static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguag
             return "MSL";
         case ShaderLanguage::METAL_LIBRARY:
             return "Metal precompiled library";
+        case ShaderLanguage::WGSL:
+            return "WGSL";
     }
 }
 
@@ -249,20 +256,20 @@ struct DescriptorSetLayoutBinding {
     DescriptorFlags flags = DescriptorFlags::NONE;
     uint16_t count = 0;
 
-    friend inline bool operator==(
-            DescriptorSetLayoutBinding const& lhs,
+    //  TODO: uncomment when needed.  Note that this class is used as hash key.  We need to ensure
+    //  no uninitialized padding bytes.
+    //    uint8_t externalSamplerDataIndex = EXTERNAL_SAMPLER_DATA_INDEX_UNUSED;
+
+    friend inline bool operator==(DescriptorSetLayoutBinding const& lhs,
             DescriptorSetLayoutBinding const& rhs) noexcept {
         return lhs.type == rhs.type &&
                lhs.flags == rhs.flags &&
                lhs.count == rhs.count &&
                lhs.stageFlags == rhs.stageFlags;
+//               lhs.stageFlags == rhs.stageFlags &&
+//               lhs.externalSamplerDataIndex == rhs.externalSamplerDataIndex;
     }
 };
-
-struct DescriptorSetLayout {
-    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
-};
-
 
 /**
  * Bitmask for selecting render buffers
@@ -965,8 +972,28 @@ enum class SamplerCompareFunc : uint8_t {
     N           //!< Never. The depth / stencil test always fails.
 };
 
+//! this API is copied from (and only applies to) the Vulkan spec.
+//! These specify YUV to RGB conversions.
+enum class SamplerYcbcrModelConversion : uint8_t {
+    RGB_IDENTITY = 0,
+    YCBCR_IDENTITY = 1,
+    YCBCR_709 = 2,
+    YCBCR_601 = 3,
+    YCBCR_2020 = 4,
+};
+
+enum class SamplerYcbcrRange : uint8_t {
+    ITU_FULL = 0,
+    ITU_NARROW = 1,
+};
+
+enum class ChromaLocation : uint8_t {
+    COSITED_EVEN = 0,
+    MIDPOINT = 1,
+};
+
 //! Sampler parameters
-struct SamplerParams { // NOLINT
+struct SamplerParams {             // NOLINT
     SamplerMagFilter filterMag      : 1;    //!< magnification filter (NEAREST)
     SamplerMinFilter filterMin      : 3;    //!< minification filter  (NEAREST)
     SamplerWrapMode wrapS           : 2;    //!< s-coordinate wrap mode (CLAMP_TO_EDGE)
@@ -1021,12 +1048,102 @@ private:
         return SamplerParams::LessThan{}(lhs, rhs);
     }
 };
+
 static_assert(sizeof(SamplerParams) == 4);
 
 // The limitation to 64-bits max comes from how we store a SamplerParams in our JNI code
 // see android/.../TextureSampler.cpp
 static_assert(sizeof(SamplerParams) <= sizeof(uint64_t),
         "SamplerParams must be no more than 64 bits");
+
+//! Sampler parameters
+struct SamplerYcbcrConversion {// NOLINT
+    SamplerYcbcrModelConversion ycbcrModel : 4;
+    TextureSwizzle r : 4;
+    TextureSwizzle g : 4;
+    TextureSwizzle b : 4;
+    TextureSwizzle a : 4;
+    SamplerYcbcrRange ycbcrRange : 1;
+    ChromaLocation xChromaOffset : 1;
+    ChromaLocation yChromaOffset : 1;
+    SamplerMagFilter chromaFilter : 1;
+    uint8_t padding;
+
+    struct Hasher {
+        size_t operator()(const SamplerYcbcrConversion p) const noexcept {
+            // we don't use std::hash<> here, so we don't have to include <functional>
+            return *reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&p));
+        }
+    };
+
+    struct EqualTo {
+        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) const noexcept {
+            assert_invariant(lhs.padding == 0);
+            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
+            return *pLhs == *pRhs;
+        }
+    };
+
+    struct LessThan {
+        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) const noexcept {
+            assert_invariant(lhs.padding == 0);
+            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
+            return *pLhs < *pRhs;
+        }
+    };
+
+private:
+    friend inline bool operator == (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
+            noexcept {
+        return SamplerYcbcrConversion::EqualTo{}(lhs, rhs);
+    }
+    friend inline bool operator != (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
+            noexcept {
+        return  !SamplerYcbcrConversion::EqualTo{}(lhs, rhs);
+    }
+    friend inline bool operator < (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
+            noexcept {
+        return SamplerYcbcrConversion::LessThan{}(lhs, rhs);
+    }
+};
+
+static_assert(sizeof(SamplerYcbcrConversion) == 4);
+
+static_assert(sizeof(SamplerYcbcrConversion) <= sizeof(uint64_t),
+        "SamplerYcbcrConversion must be no more than 64 bits");
+
+struct ExternalSamplerDatum {
+    ExternalSamplerDatum(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt)
+        : YcbcrConversion(ycbcr),
+          samplerParams(spm),
+          externalFormat(extFmt) {}
+    bool operator==(ExternalSamplerDatum const& rhs) const {
+        return (YcbcrConversion == rhs.YcbcrConversion && samplerParams == rhs.samplerParams &&
+                externalFormat == rhs.externalFormat);
+    }
+    struct EqualTo {
+        bool operator()(const ExternalSamplerDatum& lhs,
+                const ExternalSamplerDatum& rhs) const noexcept {
+            return (lhs.YcbcrConversion == rhs.YcbcrConversion &&
+                lhs.samplerParams == rhs.samplerParams &&
+                lhs.externalFormat == rhs.externalFormat);
+        }
+    };
+    SamplerYcbcrConversion YcbcrConversion;
+    SamplerParams samplerParams;
+    uint32_t externalFormat;
+};
+// No implicit padding allowed due to it being a hash key.
+static_assert(sizeof(ExternalSamplerDatum) == 12);
+
+struct DescriptorSetLayout {
+    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
+
+//  TODO: uncomment when needed
+//    utils::FixedCapacityVector<ExternalSamplerDatum> externalSamplerData;
+};
 
 //! blending equation function
 enum class BlendEquation : uint8_t {

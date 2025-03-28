@@ -19,6 +19,7 @@
 #include <backend/platforms/PlatformEGL.h>
 #include <backend/platforms/PlatformEGLAndroid.h>
 
+#include <private/backend/BackendUtilsAndroid.h>
 #include <private/backend/VirtualMachineEnv.h>
 
 #include "opengl/GLUtils.h"
@@ -34,6 +35,8 @@
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Log.h>
+#include <utils/compiler.h>
+#include <utils/ostream.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -231,24 +234,131 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
     return driver;
 }
 
-PlatformEGLAndroid::ExternalImageEGLAndroid::~ExternalImageEGLAndroid() = default;
+PlatformEGLAndroid::ExternalImageEGLAndroid::~ExternalImageEGLAndroid() {
+    if (__builtin_available(android 26, *)) {
+        if (aHardwareBuffer) {
+            AHardwareBuffer_release(aHardwareBuffer);
+        }
+    }
+}
 
-Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareBuffer const* buffer, bool sRGB) noexcept {
-    auto* const p = new(std::nothrow) ExternalImageEGLAndroid;
-    p->aHardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
-    p->sRGB = sRGB;
-    return ExternalImageHandle{ p };
+Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareBuffer const* buffer,
+        bool sRGB) noexcept {
+    if (__builtin_available(android 26, *)) {
+        auto* const p = new (std::nothrow) ExternalImageEGLAndroid;
+        auto hardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
+        AHardwareBuffer_acquire(hardwareBuffer);
+        p->aHardwareBuffer = hardwareBuffer;
+        p->sRGB = sRGB;
+        AHardwareBuffer_Desc hardwareBufferDescription = {};
+        AHardwareBuffer_describe(hardwareBuffer, &hardwareBufferDescription);
+        p->height = hardwareBufferDescription.height;
+        p->width = hardwareBufferDescription.width;
+        auto textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
+        p->usage = mapToFilamentUsage(hardwareBufferDescription.usage, textureFormat);
+        return ExternalImageHandle{ p };
+    }
+
+    return Platform::ExternalImageHandle{};
+}
+
+PlatformEGLAndroid::ExternalImageDescAndroid PlatformEGLAndroid::getExternalImageDesc(
+        ExternalImageHandle externalImage) noexcept {
+    auto const* const eglExternalImage =
+            static_cast<ExternalImageEGLAndroid const*>(externalImage.get());
+    ExternalImageDescAndroid metadata = {};
+    if (!eglExternalImage) {
+        return metadata;
+    }
+    metadata.height = eglExternalImage->height;
+    metadata.width = eglExternalImage->width;
+    metadata.format = eglExternalImage->format;
+    metadata.usage = eglExternalImage->usage;
+    return metadata;
 }
 
 bool PlatformEGLAndroid::setExternalImage(ExternalImageHandleRef externalImage,
         UTILS_UNUSED_IN_RELEASE ExternalTexture* texture) noexcept {
-    auto const* const eglExternalImage = static_cast<ExternalImageEGLAndroid const*>(externalImage.get());
+    auto const* const eglExternalImage =
+            static_cast<ExternalImageEGLAndroid const*>(externalImage.get());
     if (eglExternalImage->aHardwareBuffer) {
-        // TODO: implement PlatformEGLAndroid::setExternalImage w/ AHardwareBuffer
-        return true;
+        return PlatformEGLAndroid::setImage(eglExternalImage, texture);
     }
     // not a AHardwareBuffer, fallback to the inherited version
     return PlatformEGL::setExternalImage(externalImage, texture);
+}
+
+OpenGLPlatform::ExternalTexture* PlatformEGLAndroid::createExternalImageTexture() noexcept {
+    ExternalTexture* outTexture = new (std::nothrow) ExternalTexture{};
+    glGenTextures(1, &outTexture->id);
+    return outTexture;
+}
+
+void PlatformEGLAndroid::destroyExternalImageTexture(ExternalTexture* texture) noexcept {
+    glDeleteTextures(1, &texture->id);
+    delete texture;
+}
+
+bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImage,
+        UTILS_UNUSED_IN_RELEASE ExternalTexture* texture) noexcept {
+    AHardwareBuffer* hardwareBuffer = eglExternalImage->aHardwareBuffer;
+
+    // Get the EGL client buffer from AHardwareBuffer
+    EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID(hardwareBuffer);
+    EGLint imageAttrs[] = {
+        EGL_IMAGE_PRESERVED_KHR, EGL_TRUE,
+        EGL_NONE, EGL_NONE,  // Reserve space
+        EGL_NONE, EGL_NONE,  // Reserve space
+        EGL_NONE             // Ensure the list always ends with EGL_NONE
+    };
+    int attrIndex = 2;
+    if (eglExternalImage->sRGB) {
+        imageAttrs[attrIndex++] = EGL_GL_COLORSPACE;
+        imageAttrs[attrIndex++] = EGL_GL_COLORSPACE_SRGB;
+    }
+
+    if (static_cast<bool>(eglExternalImage->usage & TextureUsage::PROTECTED)) {
+        imageAttrs[attrIndex++] = EGL_PROTECTED_CONTENT_EXT;
+        imageAttrs[attrIndex++] = EGL_TRUE;
+    }
+    // Create an EGLImage from the client buffer
+    EGLImageKHR eglImage = eglCreateImageKHR(eglGetCurrentDisplay(), EGL_NO_CONTEXT,
+            EGL_NATIVE_BUFFER_ANDROID, clientBuffer, imageAttrs);
+    if (eglImage == EGL_NO_IMAGE_KHR) {
+        // Handle error
+        slog.e << "Failed to create EGL image" << io::endl;
+        glDeleteTextures(1, &texture->id);
+        return false;
+    }
+
+    // Create and bind the OpenGL texture
+    GLint prevActiveTexture, prevTexture;
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &prevActiveTexture);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &prevTexture);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(texture->target, texture->id);
+    GLenum error = glGetError();
+    if (UTILS_UNLIKELY(error != GL_NO_ERROR)) {
+        slog.e << "Error after glBindTexture: " << error << io::endl;
+        glDeleteTextures(1, &texture->id);
+        eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
+        glActiveTexture(prevActiveTexture);
+        glBindTexture(GL_TEXTURE_2D, prevTexture);
+        return false;
+    }
+    glEGLImageTargetTexture2DOES(texture->target, static_cast<GLeglImageOES>(eglImage));
+    error = glGetError();
+    if (UTILS_UNLIKELY(error != GL_NO_ERROR)) {
+        slog.e << "Error after glEGLImageTargetTexture2DOES: " << error << io::endl;
+        glDeleteTextures(1, &texture->id);
+        eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
+        glActiveTexture(prevActiveTexture);
+        glBindTexture(GL_TEXTURE_2D, prevTexture);
+        return false;
+    }
+    glActiveTexture(prevActiveTexture);
+    glBindTexture(GL_TEXTURE_2D, prevTexture);
+    return true;
 }
 
 void PlatformEGLAndroid::setPresentationTime(int64_t presentationTimeInNanosecond) noexcept {
