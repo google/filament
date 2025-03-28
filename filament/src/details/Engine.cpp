@@ -508,17 +508,6 @@ FEngine::~FEngine() noexcept {
     if (mOwnPlatform) {
         PlatformFactory::destroy(&mPlatform);
     }
-
-    #if FILAMENT_ENABLE_MATDBG
-        if(debug.server) {
-            delete debug.server;
-        } 
-    #endif
-    #if FILAMENT_ENABLE_FGVIEWER 
-        if(debug.fgviewerServer) {
-            delete debug.fgviewerServer;
-        }
-    #endif
 }
 
 void FEngine::shutdown() {
@@ -801,6 +790,17 @@ int FEngine::loop() {
             break;
         }
     }
+
+#if FILAMENT_ENABLE_MATDBG
+    if(debug.server) {
+        delete debug.server;
+    } 
+#endif
+#if FILAMENT_ENABLE_FGVIEWER 
+    if(debug.fgviewerServer) {
+        delete debug.fgviewerServer;
+    }
+#endif
 
     // terminate() is a synchronous API
     getDriverApi().terminate();
