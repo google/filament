@@ -215,6 +215,50 @@ Note that this has some interesting consequences, including:
   that named ID being output.  This may be valid SPIR-V, contrary to the
   presumed intention of the writer.
 
+## OpUnknown
+<a name="op-unknown"></a>
+
+HLSL has a feature that allows users to specify an exact SPIR-V type using [the
+`SpirvType` template](https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md#types).
+This feature allows the user to specify a type opcode that the compiler does
+not know. In this case, it will be unable to generate assembly using the
+correct mnemonic.
+
+In order to represent unknown opcodes in assembly format, the `OpUnknown`
+pseudo-instruction may be used. The syntax is:
+
+```
+OpUnknown(<enumerant>, <WordCount>) <operand 1> ...
+```
+
+`enumerant` is the opcode enumerant, and `WordCount` is the number of words in
+the instruction. These will be assembled into a single word representing the
+opcode. Operands will be parsed according to the alternate parsing mode
+described in [Arbitrary Integers](#op-unknown). Named enumerated values cannot
+be handled by this mode and must be represented using the arbitrary integer
+syntax.
+
+It must be used at the beginning of a new instruction, and if there is a result
+ID it must explicitly be passed in as an operand. This is because the physical
+layout of a SPIR-V instruction may include a result type operand before the
+result ID operand, but it depends on the opcode and cannot be inferred for an
+unknown operand.
+
+For example, a 32-bit signed integer type could be represented like this:
+
+```
+OpUnknown(21, 4) %int_t 32 1
+```
+
+An OpStore instruction could be represented as:
+
+```
+OpUnknown(62, 3) %9 %12
+```
+
+The enumerant and word count must be decimal integers.
+
+
 ## Notes
 
 * Some enumerants cannot be used by name, because the target instruction

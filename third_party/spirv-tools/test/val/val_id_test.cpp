@@ -5764,7 +5764,7 @@ TEST_P(ValidateIdWithMessage,
  %2 = OpFunction %8 None %11
  %4 = OpFunctionParameter %10
 %15 = OpLabel
-%16 = OpLoad %6 %3 Aligned 0
+%16 = OpLoad %6 %3 Aligned 1
 %17 = OpCompositeExtract %5 %16 0
 %18 = OpInBoundsPtrAccessChain %13 %4 %17 %12
       OpStore %18 %14 Aligned 4
@@ -5798,7 +5798,7 @@ TEST_P(ValidateIdWithMessage, OpPtrAccessChainGood) {
  %2 = OpFunction %8 None %12
  %4 = OpFunctionParameter %11
 %17 = OpLabel
-%18 = OpLoad %6 %3 Aligned 0
+%18 = OpLoad %6 %3 Aligned 1
 %19 = OpCompositeExtract %5 %18 0
 %20 = OpBitwiseAnd %5 %19 %13
 %21 = OpPtrAccessChain %15 %4 %20 %14

@@ -1415,7 +1415,12 @@ OpFunctionEnd
 )";
 
   CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
-  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-08722"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Entry-point has conflicting output location "
+                        "assignment at location 0, component 0"));
 }
 
 TEST_F(ValidateInterfacesTest, VulkanLocationsArrayWithComponentBad) {
@@ -1428,7 +1433,7 @@ OpDecorate %11 Location 0
 OpDecorate %18 Component 0
 OpDecorate %18 Location 0
 OpDecorate %28 Component 1
-OpDecorate %28 Location 0
+OpDecorate %28 Location 1
 OpDecorate %36 Location 1
 OpDecorate %40 Component 1
 OpDecorate %40 Location 1
@@ -1543,7 +1548,12 @@ OpFunctionEnd
 )";
 
   CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
-  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-08721"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Entry-point has conflicting input location "
+                        "assignment at location 0, component 0"));
 }
 
 TEST_F(ValidateInterfacesTest, VulkanLocationArrayWithComponent2) {
@@ -1575,7 +1585,80 @@ OpFunctionEnd
 )";
 
   CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-08721"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Entry-point has conflicting input location "
+                        "assignment at location 0, component 0"));
+}
+
+TEST_F(ValidateInterfacesTest, VulkanLocationMatrix2x2DoubleGood) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Float64
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in
+OpExecutionMode %main OriginUpperLeft
+OpDecorate %struct Block
+OpMemberDecorate %struct 0 Location 0
+OpMemberDecorate %struct 1 Location 2
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%float = OpTypeFloat 32
+%double = OpTypeFloat 64
+%int = OpTypeInt 32 0
+%int_2 = OpConstant %int 2
+%double2 = OpTypeVector %double 2
+%mat2x2_double = OpTypeMatrix %double2 2
+%struct = OpTypeStruct %mat2x2_double %int
+%ptr = OpTypePointer Input %struct
+%in = OpVariable %ptr Input
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+}
+
+TEST_F(ValidateInterfacesTest, VulkanLocationMatrix2x2DoubleBad) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Float64
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in
+OpExecutionMode %main OriginUpperLeft
+OpDecorate %struct Block
+OpMemberDecorate %struct 0 Location 0
+OpMemberDecorate %struct 1 Location 1
+OpMemberDecorate %struct 1 Component 3
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%float = OpTypeFloat 32
+%double = OpTypeFloat 64
+%int = OpTypeInt 32 0
+%int_2 = OpConstant %int 2
+%double2 = OpTypeVector %double 2
+%mat2x2_double = OpTypeMatrix %double2 2
+%struct = OpTypeStruct %mat2x2_double %int
+%ptr = OpTypePointer Input %struct
+%in = OpVariable %ptr Input
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-08721"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Entry-point has conflicting input location "
+                        "assignment at location 1, component 3"));
 }
 
 TEST_F(ValidateInterfacesTest, DuplicateInterfaceVariableSuccess) {
@@ -1668,7 +1751,7 @@ TEST_F(ValidateInterfacesTest, InvalidLocationTypePointer) {
               HasSubstr("Invalid type to assign a location"));
 }
 
-TEST_F(ValidateInterfacesTest, ValidLocationTypePhysicalStorageBufferPointer) {
+TEST_F(ValidateInterfacesTest, PhysicalStorageBufferPointer) {
   const std::string text = R"(
 OpCapability Shader
 OpCapability PhysicalStorageBufferAddresses
@@ -1677,10 +1760,10 @@ OpEntryPoint Vertex %main "main" %var
 OpDecorate %var Location 0
 OpDecorate %var RestrictPointer
 %void = OpTypeVoid
-%int = OpTypeInt 32 0
-%ptr = OpTypePointer PhysicalStorageBuffer %int
-%ptr2 = OpTypePointer Input %ptr
-%var = OpVariable %ptr2 Input
+%uint = OpTypeInt 32 0
+%psb_ptr = OpTypePointer PhysicalStorageBuffer %uint
+%in_ptr = OpTypePointer Input %psb_ptr
+%var = OpVariable %in_ptr Input
 %void_fn = OpTypeFunction %void
 %main = OpFunction %void None %void_fn
 %entry = OpLabel
@@ -1688,7 +1771,139 @@ OpReturn
 OpFunctionEnd
 )";
   CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
-  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-Input-09557"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Input/Output interface variable id <2> contains a "
+                        "PhysicalStorageBuffer pointer, which is not allowed"));
+}
+
+TEST_F(ValidateInterfacesTest, PhysicalStorageBufferPointerArray) {
+  const std::string text = R"(
+  OpCapability Shader
+  OpCapability PhysicalStorageBufferAddresses
+  OpMemoryModel PhysicalStorageBuffer64 GLSL450
+  OpEntryPoint Vertex %main "main" %var
+  OpDecorate %var Location 0
+  OpDecorate %var RestrictPointer
+  %void = OpTypeVoid
+  %uint = OpTypeInt 32 0
+  %uint_3 = OpConstant %uint 3
+  %psb_ptr = OpTypePointer PhysicalStorageBuffer %uint
+  %array = OpTypeArray %psb_ptr %uint_3
+  %in_ptr = OpTypePointer Input %array
+  %var = OpVariable %in_ptr Input
+  %void_fn = OpTypeFunction %void
+  %main = OpFunction %void None %void_fn
+  %entry = OpLabel
+  OpReturn
+  OpFunctionEnd
+  )";
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-Input-09557"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Input/Output interface variable id <2> contains a "
+                        "PhysicalStorageBuffer pointer, which is not allowed"));
+}
+TEST_F(ValidateInterfacesTest, PhysicalStorageBufferPointerStruct) {
+  const std::string text = R"(
+  OpCapability Shader
+  OpCapability PhysicalStorageBufferAddresses
+  OpMemoryModel PhysicalStorageBuffer64 GLSL450
+  OpEntryPoint Vertex %main "main" %var
+  OpDecorate %var Location 0
+  OpDecorate %var RestrictPointer
+  %void = OpTypeVoid
+  %int = OpTypeInt 32 1
+  OpTypeForwardPointer %psb_ptr PhysicalStorageBuffer
+  %struct_0 = OpTypeStruct %int %psb_ptr
+  %struct_1 = OpTypeStruct %int %int
+  %psb_ptr = OpTypePointer PhysicalStorageBuffer %struct_1
+  %in_ptr = OpTypePointer Input %struct_0
+  %var = OpVariable %in_ptr Input
+  %void_fn = OpTypeFunction %void
+  %main = OpFunction %void None %void_fn
+  %entry = OpLabel
+  OpReturn
+  OpFunctionEnd
+  )";
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-Input-09557"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Input/Output interface variable id <2> contains a "
+                        "PhysicalStorageBuffer pointer, which is not allowed"));
+}
+
+TEST_F(ValidateInterfacesTest, PhysicalStorageBufferPointerArrayOfStruct) {
+  const std::string text = R"(
+  OpCapability Shader
+  OpCapability PhysicalStorageBufferAddresses
+  OpMemoryModel PhysicalStorageBuffer64 GLSL450
+  OpEntryPoint Vertex %main "main" %var
+  OpDecorate %var Location 0
+  OpDecorate %var RestrictPointer
+  %void = OpTypeVoid
+  %int = OpTypeInt 32 1
+  %uint = OpTypeInt 32 0
+  %uint_3 = OpConstant %uint 3
+  OpTypeForwardPointer %psb_ptr PhysicalStorageBuffer
+  %array_1 = OpTypeArray %psb_ptr %uint_3
+  %struct_0 = OpTypeStruct %int %array_1
+   %struct_1 = OpTypeStruct %int %int
+  %psb_ptr = OpTypePointer PhysicalStorageBuffer %struct_1
+  %array_0 = OpTypeArray %struct_0 %uint_3
+  %in_ptr = OpTypePointer Input %array_0
+  %var = OpVariable %in_ptr Input
+  %void_fn = OpTypeFunction %void
+  %main = OpFunction %void None %void_fn
+  %entry = OpLabel
+  OpReturn
+  OpFunctionEnd
+  )";
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-Input-09557"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Input/Output interface variable id <2> contains a "
+                        "PhysicalStorageBuffer pointer, which is not allowed"));
+}
+
+TEST_F(ValidateInterfacesTest, PhysicalStorageBufferPointerNestedStruct) {
+  const std::string text = R"(
+  OpCapability Shader
+  OpCapability PhysicalStorageBufferAddresses
+  OpMemoryModel PhysicalStorageBuffer64 GLSL450
+  OpEntryPoint Vertex %main "main" %var
+  OpDecorate %var Location 0
+  OpDecorate %var RestrictPointer
+  %void = OpTypeVoid
+  %int = OpTypeInt 32 1
+  OpTypeForwardPointer %psb_ptr PhysicalStorageBuffer
+  %struct_0 = OpTypeStruct %int %psb_ptr
+  %struct_1 = OpTypeStruct %int %int
+  %psb_ptr = OpTypePointer PhysicalStorageBuffer %struct_1
+  %struct_2 = OpTypeStruct %int %struct_0
+  %in_ptr = OpTypePointer Input %struct_2
+  %var = OpVariable %in_ptr Input
+  %void_fn = OpTypeFunction %void
+  %main = OpFunction %void None %void_fn
+  %entry = OpLabel
+  OpReturn
+  OpFunctionEnd
+  )";
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-Input-09557"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Input/Output interface variable id <2> contains a "
+                        "PhysicalStorageBuffer pointer, which is not allowed"));
 }
 
 TEST_F(ValidateInterfacesTest, UntypedVariableInputMissing) {

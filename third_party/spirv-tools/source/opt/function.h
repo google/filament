@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -39,6 +40,7 @@ class Function {
  public:
   using iterator = UptrVectorIterator<BasicBlock>;
   using const_iterator = UptrVectorIterator<BasicBlock, true>;
+  using ParamList = std::vector<std::unique_ptr<Instruction>>;
 
   // Creates a function instance declared by the given OpFunction instruction
   // |def_inst|.
@@ -76,6 +78,23 @@ class Function {
   // Removes a parameter from the function with result id equal to |id|.
   // Does nothing if the function doesn't have such a parameter.
   inline void RemoveParameter(uint32_t id);
+
+  // Rewrites the function parameters by calling a replacer callback.
+  // The replacer takes two parameters: an expiring unique pointer to a current
+  // instruction, and a back-inserter into a new list of unique pointers to
+  // instructions.  The replacer is called for each current parameter, in order.
+  // Not valid to call while also iterating through the parameter list, e.g.
+  // within the ForEachParam method.
+  using RewriteParamFn = std::function<void(
+      std::unique_ptr<Instruction>&&, std::back_insert_iterator<ParamList>&)>;
+  void RewriteParams(RewriteParamFn& replacer) {
+    ParamList new_params;
+    auto appender = std::back_inserter(new_params);
+    for (auto& param : params_) {
+      replacer(std::move(param), appender);
+    }
+    params_ = std::move(new_params);
+  }
 
   // Saves the given function end instruction.
   inline void SetFunctionEnd(std::unique_ptr<Instruction> end_inst);
@@ -197,7 +216,7 @@ class Function {
   // The OpFunction instruction that begins the definition of this function.
   std::unique_ptr<Instruction> def_inst_;
   // All parameters to this function.
-  std::vector<std::unique_ptr<Instruction>> params_;
+  ParamList params_;
   // All debug instructions in this function's header.
   InstructionList debug_insts_in_header_;
   // All basic blocks inside this function in specification order

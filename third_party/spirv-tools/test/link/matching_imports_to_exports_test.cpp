@@ -928,9 +928,16 @@ OpDecorate %1 LinkageAttributes "foo" Import
 %2 = OpTypeFloat 32
 %1 = OpVariable %2 Uniform
 )";
+
+  const std::string matchTemplate = R"(
+; CHECK-NOT: OpDecorate {{.*}} Import
+; CHECK-NOT: OpDecorate {{.*}} LinkOnceODR
+)";
+
   spvtest::Binary linked_binary;
   EXPECT_EQ(SPV_SUCCESS, AssembleAndLink({body1, body2}, &linked_binary))
       << GetErrorMessage();
+  Match(matchTemplate, linked_binary);
 }
 
 TEST_F(MatchingImportsToExports, LinkOnceODRLinkageFunMultiple) {
@@ -961,9 +968,16 @@ OpDecorate %1 LinkageAttributes "foo" Import
 %1 = OpFunction %2 None %3
 OpFunctionEnd
 )";
+
+  const std::string matchTemplate = R"(
+; CHECK-NOT: OpDecorate {{.*}} Import
+; CHECK-NOT: OpDecorate {{.*}} LinkOnceODR
+)";
+
   spvtest::Binary linked_binary;
   EXPECT_EQ(SPV_SUCCESS, AssembleAndLink({body1, body1, body2}, &linked_binary))
       << GetErrorMessage();
+  Match(matchTemplate, linked_binary);
 }
 
 TEST_F(MatchingImportsToExports, LinkOnceODRAndExport) {

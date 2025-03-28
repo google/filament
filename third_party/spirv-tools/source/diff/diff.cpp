@@ -67,7 +67,9 @@ void CompactIds(std::vector<uint32_t>& ids) {
   ids.resize(write_index);
 }
 
-// A mapping between src and dst ids.
+// A mapping from ids in one module to ids in the other.
+//
+// Differ contains two of these, for src->dst and dst->src.
 class IdMap {
  public:
   IdMap(size_t id_bound) { id_map_.resize(id_bound, 0); }
@@ -190,6 +192,7 @@ class SrcDstIdMap {
   IdMap dst_to_src_;
 };
 
+// Mappings from ids to instructions and metadata, for a single module's ids.
 struct IdInstructions {
   IdInstructions(const opt::Module* module)
       : inst_map_(module->IdBound(), nullptr),
@@ -198,6 +201,10 @@ struct IdInstructions {
         forward_pointer_map_(module->IdBound()) {
     // Map ids from all sections to instructions that define them.
     MapIdsToInstruction(module->ext_inst_imports());
+    MapIdsToInstruction(module->debugs1());
+    MapIdsToInstruction(module->debugs2());
+    MapIdsToInstruction(module->debugs3());
+    MapIdsToInstruction(module->ext_inst_debuginfo());
     MapIdsToInstruction(module->types_values());
     for (const opt::Function& function : *module) {
       function.ForEachInst(
@@ -321,6 +328,8 @@ class Differ {
   // Get various properties from an id.  These Helper functions are passed to
   // `GroupIds` and `GroupIdsAndMatch` below (as the `get_group` argument).
   uint32_t GroupIdsHelperGetTypeId(const IdInstructions& id_to, uint32_t id);
+  uint32_t GroupIdsHelperGetFunctionTypeId(const IdInstructions& id_to,
+                                           uint32_t id);
   spv::StorageClass GroupIdsHelperGetTypePointerStorageClass(
       const IdInstructions& id_to, uint32_t id);
   spv::Op GroupIdsHelperGetTypePointerTypeOp(const IdInstructions& id_to,
@@ -883,6 +892,17 @@ uint32_t Differ::GroupIdsHelperGetTypeId(const IdInstructions& id_to,
   return GetInst(id_to, id)->type_id();
 }
 
+// Return an `OpFunction` instruction's full `OpTypeFunction` type,
+// which includes parameter types.
+//
+// `GroupIdsHelperGetTypeId` applied to an `OpFunction` only gets the
+// function's return type, so this is a slightly more precise way to
+// match up functions by signature.
+uint32_t Differ::GroupIdsHelperGetFunctionTypeId(const IdInstructions& id_to,
+                                                 uint32_t id) {
+  return GetInst(id_to, id)->GetSingleWordOperand(3);
+}
+
 spv::StorageClass Differ::GroupIdsHelperGetTypePointerStorageClass(
     const IdInstructions& id_to, uint32_t id) {
   const opt::Instruction* inst = GetInst(id_to, id);
@@ -902,6 +922,24 @@ spv::Op Differ::GroupIdsHelperGetTypePointerTypeOp(const IdInstructions& id_to,
   return type_inst->opcode();
 }
 
+// Group unmatched ids in `ids` according to some characteristic,
+// determined by `get_group`.
+//
+// Using `get_group` to compute some sort of key for each id, set
+// `groups` to map each key to all the ids that have that key.
+//
+// For example, to group ids by name, pass `Differ::GetName` as
+// `get_group`. This will fill `groups` with a map from each name to
+// all the ids with that name.
+//
+// Under the assumption that we're trying to establish new pairings,
+// ids that are already paired are omitted from `groups`.
+//
+// The `is_src` parameter indicates whether `ids` are drawn from the
+// source module or the destination module.
+//
+// The template parameter `T` is the key type, like `std::string` or
+// `uint32_t`.
 template <typename T>
 void Differ::GroupIds(const IdGroup& ids, bool is_src,
                       std::map<T, IdGroup>* groups,
@@ -924,6 +962,10 @@ void Differ::GroupIds(const IdGroup& ids, bool is_src,
   }
 }
 
+// Group `src_ids` and `dst_ids` according to `get_group`, and then use
+// `match_group` to pair up ids in corresponding groups.
+//
+// Don't try to pair ids in groups whose key is `invalid_group_key`.
 template <typename T>
 void Differ::GroupIdsAndMatch(
     const IdGroup& src_ids, const IdGroup& dst_ids, T invalid_group_key,
@@ -2483,7 +2525,7 @@ void Differ::MatchFunctions() {
 
         // If there are multiple functions with the same name, group them by
         // type, and match only if the types match (and are unique).
-        GroupIdsAndMatch<uint32_t>(src_group, dst_group, 0,
+        GroupIdsAndMatchByMappedId(src_group, dst_group,
                                    &Differ::GroupIdsHelperGetTypeId,
                                    [this](const IdGroup& src_group_by_type_id,
                                           const IdGroup& dst_group_by_type_id) {
@@ -2526,9 +2568,19 @@ void Differ::MatchFunctions() {
                              dst_match_result, 0);
   }
 
-  // Best effort match functions with matching type.
-  GroupIdsAndMatch<uint32_t>(
-      src_func_ids, dst_func_ids, 0, &Differ::GroupIdsHelperGetTypeId,
+  // Best effort match functions with matching return and argument types.
+  GroupIdsAndMatchByMappedId(
+      src_func_ids, dst_func_ids, &Differ::GroupIdsHelperGetFunctionTypeId,
+      [this](const IdGroup& src_group_by_func_type_id,
+             const IdGroup& dst_group_by_func_type_id) {
+        BestEffortMatchFunctions(src_group_by_func_type_id,
+                                 dst_group_by_func_type_id, src_func_insts_,
+                                 dst_func_insts_);
+      });
+
+  // Best effort match functions with matching return types.
+  GroupIdsAndMatchByMappedId(
+      src_func_ids, dst_func_ids, &Differ::GroupIdsHelperGetTypeId,
       [this](const IdGroup& src_group_by_type_id,
              const IdGroup& dst_group_by_type_id) {
         BestEffortMatchFunctions(src_group_by_type_id, dst_group_by_type_id,
