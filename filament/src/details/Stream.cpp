@@ -24,6 +24,7 @@
 #include <backend/PixelBufferDescriptor.h>
 
 #include <utils/CString.h>
+#include <utils/StaticString.h>
 #include <utils/Panic.h>
 #include <filament/Stream.h>
 
@@ -63,6 +64,10 @@ Stream::Builder& Stream::Builder::height(uint32_t const height) noexcept {
 
 Stream::Builder& Stream::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
+}
+
+Stream::Builder& Stream::Builder::name(utils::StaticString const& name) noexcept {
+    return BuilderNameMixin::name(name);
 }
 
 Stream* Stream::Builder::build(Engine& engine) {
