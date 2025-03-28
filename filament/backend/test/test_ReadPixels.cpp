@@ -16,9 +16,10 @@
 
 #include "BackendTest.h"
 
+#include "BackendTestUtils.h"
+#include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
-#include "BackendTestUtils.h"
 
 #include <utils/Hash.h>
 
@@ -236,17 +237,20 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
     TestCase const testCases[] = { t0, t2, t3, t4, t5, t6, t7, t8 };
 
+    DriverApi& api = getDriverApi();
+    Cleanup cleanup(api);
+
     // Create programs.
     Handle<HwProgram> programFloat, programUint;
     {
         ShaderGenerator shaderGen(vertex, fragmentFloat, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(getDriverApi());
-        programFloat = getDriverApi().createProgram(std::move(p));
+        Program p = shaderGen.getProgram(api);
+        programFloat = cleanup.add(api.createProgram(std::move(p)));
     }
     {
         ShaderGenerator shaderGen(vertex, fragmentUint, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(getDriverApi());
-        programUint = getDriverApi().createProgram(std::move(p));
+        Program p = shaderGen.getProgram(api);
+        programUint = cleanup.add(api.createProgram(std::move(p)));
     }
 
 
@@ -255,35 +259,35 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         // Create a platform-specific SwapChain and make it current.
         Handle<HwSwapChain> swapChain;
         if (t.useDefaultRT) {
-            swapChain = createSwapChain();
+            swapChain = cleanup.add(createSwapChain());
         } else {
-            swapChain = getDriverApi().createSwapChainHeadless(t.getRenderTargetSize(),
-                    t.getRenderTargetSize(), 0);
+            swapChain = cleanup.add(api.createSwapChainHeadless(t.getRenderTargetSize(),
+                    t.getRenderTargetSize(), 0));
         }
 
-        getDriverApi().makeCurrent(swapChain, swapChain);
+        api.makeCurrent(swapChain, swapChain);
 
         // Create a Texture and RenderTarget to render into.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-        Handle<HwTexture> const texture = getDriverApi().createTexture(SamplerType::SAMPLER_2D,
+        Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
                 t.mipLevels, t.textureFormat, 1, renderTargetBaseSize, renderTargetBaseSize, 1,
-                usage);
+                usage));
 
         Handle<HwRenderTarget> renderTarget;
         if (t.useDefaultRT) {
             // The width and height must match the width and height of the respective mip
             // level (at least for OpenGL).
-            renderTarget = getDriverApi().createDefaultRenderTarget();
+            renderTarget = cleanup.add(api.createDefaultRenderTarget());
         } else {
             // The width and height must match the width and height of the respective mip
             // level (at least for OpenGL).
-            renderTarget = getDriverApi().createRenderTarget(
+            renderTarget = cleanup.add(api.createRenderTarget(
                     TargetBufferFlags::COLOR, t.getRenderTargetSize(),
                     t.getRenderTargetSize(), t.samples, 0, {{ texture, uint8_t(t.mipLevel) }}, {},
-                    {});
+                    {}));
         }
 
-        TrianglePrimitive const triangle(getDriverApi());
+        TrianglePrimitive const triangle(api);
 
         RenderPassParams params = {};
         fullViewport(params);
@@ -294,11 +298,11 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         params.viewport.height = t.getRenderTargetSize();
         params.viewport.width = t.getRenderTargetSize();
 
-        getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0, 0);
+        api.makeCurrent(swapChain, swapChain);
+        api.beginFrame(0, 0, 0);
 
         // Render a white triangle over blue.
-        getDriverApi().beginRenderPass(renderTarget, params);
+        api.beginRenderPass(renderTarget, params);
 
         PipelineState state;
         state.program = programFloat;
@@ -309,21 +313,21 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
         state.rasterState.culling = CullingMode::NONE;
-        getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
 
-        getDriverApi().endRenderPass();
+        api.endRenderPass();
 
         if (t.mipLevel > 0) {
+            Cleanup localCleanup(api);
             // Render red to the first mip level to check that the backend is actually reading the
             // correct mip.
             RenderPassParams p = params;
-            Handle<HwRenderTarget> mipLevelOneRT = getDriverApi().createRenderTarget(
+            Handle<HwRenderTarget> mipLevelOneRT = localCleanup.add(api.createRenderTarget(
                     TargetBufferFlags::COLOR, renderTargetBaseSize, renderTargetBaseSize, 1, 0,
-                    {{ texture }}, {}, {});
+                    {{ texture }}, {}, {}));
             p.clearColor = {1.f, 0.f, 0.f, 1.f};
-            getDriverApi().beginRenderPass(mipLevelOneRT, p);
-            getDriverApi().endRenderPass();
-            getDriverApi().destroyRenderTarget(mipLevelOneRT);
+            api.beginRenderPass(mipLevelOneRT, p);
+            api.endRenderPass();
         }
 
         // Read pixels.
@@ -347,25 +351,18 @@ TEST_F(ReadPixelsTest, ReadPixels) {
                     free(buffer);
                 }, (void*) &t);
 
-        getDriverApi().readPixels(renderTarget, t.readRect.x, t.readRect.y, t.readRect.width,
+        api.readPixels(renderTarget, t.readRect.x, t.readRect.y, t.readRect.width,
                 t.readRect.height, std::move(descriptor));
 
         // Now render red over what was just rendered. This ensures that readPixels captures the
         // state of rendering between render passes.
         params.clearColor = {1.f, 0.f, 0.f, 1.f};
-        getDriverApi().beginRenderPass(renderTarget, params);
-        getDriverApi().endRenderPass();
+        api.beginRenderPass(renderTarget, params);
+        api.endRenderPass();
 
-        getDriverApi().commit(swapChain);
-        getDriverApi().endFrame(0);
-
-        getDriverApi().destroySwapChain(swapChain);
-        getDriverApi().destroyRenderTarget(renderTarget);
-        getDriverApi().destroyTexture(texture);
+        api.commit(swapChain);
+        api.endFrame(0);
     }
-
-    getDriverApi().destroyProgram(programFloat);
-    getDriverApi().destroyProgram(programUint);
 
     // This ensures all driver commands have finished before exiting the test.
     flushAndWait();
@@ -375,18 +372,21 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     const size_t renderTargetSize = 2000;
     const int iterationCount = 100;
 
+    DriverApi& api = getDriverApi();
+    Cleanup cleanup(api);
+
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = getDriverApi().createSwapChainHeadless(renderTargetSize, renderTargetSize, 0);
-    getDriverApi().makeCurrent(swapChain, swapChain);
+    auto swapChain = cleanup.add(api.createSwapChainHeadless(renderTargetSize, renderTargetSize, 0));
+    api.makeCurrent(swapChain, swapChain);
 
     // Create a program.
     ShaderGenerator shaderGen(vertex, fragmentFloat, sBackend, sIsMobilePlatform);
-    Program p = shaderGen.getProgram(getDriverApi());
-    auto program = getDriverApi().createProgram(std::move(p));
+    Program p = shaderGen.getProgram(api);
+    auto program = cleanup.add(api.createProgram(std::move(p)));
 
     // Create a Texture and RenderTarget to render into.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-    Handle<HwTexture> texture = getDriverApi().createTexture(
+    Handle<HwTexture> texture = cleanup.add(api.createTexture(
                 SamplerType::SAMPLER_2D,            // target
                 1,                                  // levels
                 TextureFormat::RGBA8,               // format
@@ -394,9 +394,9 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
                 renderTargetSize,                   // width
                 renderTargetSize,                   // height
                 1,                                  // depth
-                usage);                             // usage
+                usage));                             // usage
 
-    Handle<HwRenderTarget> renderTarget = getDriverApi().createRenderTarget(
+    Handle<HwRenderTarget> renderTarget = cleanup.add(api.createRenderTarget(
             TargetBufferFlags::COLOR,
             renderTargetSize,                          // width
             renderTargetSize,                          // height
@@ -404,9 +404,9 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
             0,                                         // layerCount
             {{ texture }},                             // color
             {},                                        // depth
-            {});                                       // stencil
+            {}));                                       // stencil
 
-    TrianglePrimitive triangle(getDriverApi());
+    TrianglePrimitive triangle(api);
 
     RenderPassParams params = {};
     fullViewport(params);
@@ -433,13 +433,13 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
             printf("Executing test %d / %d\n", iteration, iterationCount);
         }
 
-        getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0, 0);
+        api.makeCurrent(swapChain, swapChain);
+        api.beginFrame(0, 0, 0);
 
         // Render some content, just so we don't read back uninitialized data.
-        getDriverApi().beginRenderPass(renderTarget, params);
-        getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-        getDriverApi().endRenderPass();
+        api.beginRenderPass(renderTarget, params);
+        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        api.endRenderPass();
 
         PixelBufferDescriptor descriptor(buffer, renderTargetSize * renderTargetSize * 4,
                 PixelDataFormat::RGBA, PixelDataType::UBYTE, 1, 0, 0, renderTargetSize,
@@ -448,9 +448,9 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
                     test->readPixelsFinished = true;
                 }, this);
 
-        getDriverApi().readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize, std::move(descriptor));
-        getDriverApi().commit(swapChain);
-        getDriverApi().endFrame(0);
+        api.readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize, std::move(descriptor));
+        api.commit(swapChain);
+        api.endFrame(0);
 
         flushAndWait();
         getDriver().purge();
@@ -460,11 +460,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
     free(buffer);
 
-    getDriverApi().destroyProgram(program);
-    getDriverApi().destroySwapChain(swapChain);
-    getDriverApi().destroyRenderTarget(renderTarget);
-    getDriverApi().destroyTexture(texture);
-    getDriverApi().finish();
+    api.finish();
     executeCommands();
 }
 

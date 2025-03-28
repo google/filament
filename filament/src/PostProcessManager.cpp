@@ -3039,7 +3039,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleSGSR1(FrameGraph& fg, bool sourceHasLuminance,
     DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> const input,
-    filament::Viewport const&, FrameGraphTexture::Descriptor const& outDesc) noexcept {
+    filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc) noexcept {
 
     struct QuadBlitData {
         FrameGraphId<FrameGraphTexture> input;
@@ -3055,7 +3055,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleSGSR1(FrameGraph& fg,
                         .attachments = { .color = { data.output } },
                         .clearFlags = TargetBufferFlags::DEPTH });
             },
-            [this, sourceHasLuminance](FrameGraphResources const& resources,
+            [this, vp, sourceHasLuminance](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
 
@@ -3081,10 +3081,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleSGSR1(FrameGraph& fg,
                 });
 
                 mi->setParameter("viewport", float4{
+                        float(vp.left)   / inputDesc.width,
+                        float(vp.bottom) / inputDesc.height,
+                        float(vp.width)  / inputDesc.width,
+                        float(vp.height) / inputDesc.height
+                });
+
+                mi->setParameter("viewportInfo", float4{
                         1.0f / inputDesc.width,
                         1.0f / inputDesc.height,
                         float(inputDesc.width),
-                        float(inputDesc.height),
+                        float(inputDesc.height)
                 });
 
                 mi->commit(driver);
