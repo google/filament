@@ -433,7 +433,8 @@ Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
 
 Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
     FWGPU_LOGW << __FUNCTION__<< "\n";
-    return Handle<HwIndexBuffer>((Handle<HwIndexBuffer>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUIndexBuffer>();
+//    return Handle<HwIndexBuffer>((Handle<HwIndexBuffer>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
