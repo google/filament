@@ -22,6 +22,8 @@
 
 namespace test {
 
+using namespace filament::backend;
+
 namespace {
 
 // A shader stored in pieces so that uniform declarations can be injected.
@@ -34,40 +36,47 @@ struct ShaderText {
     }
 };
 
-std::optional<ShaderText> GetGlslVertexShader(const ShaderEnvironment& environment, VertexShaderType type) {
+std::optional<ShaderText> GetGlslVertexShader(const ShaderEnvironment& environment,
+        VertexShaderType type) {
     switch (type) {
         case VertexShaderType::Noop: {
-            return ShaderText{R"(
+            return ShaderText{
+                    R"(
 #version 450 core
 layout(location = 0) in vec4 mesh_position;
-)",R"(
+)", R"(
 void main() {
     gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
     // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
 #endif
-})"};
+})" };
         }
         case VertexShaderType::Simple: {
-            return ShaderText{R"(
+            return ShaderText{
+                    R"(
 #version 450 core
 layout(location = 0) in vec4 mesh_position;
-)",R"(
+)", R"(
 void main() {
-    gl_Position = vec4(mesh_position.xy * (params.scaleMinusOne.xy + 1.0) + params.offset.xy, params.scaleMinusOne.z + 1.0, 1.0);
+    gl_Position = vec4(
+            mesh_position.xy * (params.scaleMinusOne.xy + 1.0) + params.offset.xy,
+            params.scaleMinusOne.z + 1.0,
+            1.0);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
     // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
 #endif
-})"};
+})" };
         }
         case VertexShaderType::Textured: {
-            return ShaderText{R"(
+            return ShaderText{
+                    R"(
 #version 450 core
 layout(location = 0) in vec4 mesh_position;
 layout(location = 0) out vec2 uv;
-)",R"(
+)", R"(
 void main() {
     gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
     uv = (mesh_position.xy * 0.5 + 0.5);
@@ -75,37 +84,41 @@ void main() {
     // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
 #endif
-})"};
+})" };
         }
         default:
             return std::nullopt;
     }
 }
 
-std::optional<ShaderText> GetGlslFragmentShader(const ShaderEnvironment& environment, FragmentShaderType type) {
+std::optional<ShaderText> GetGlslFragmentShader(const ShaderEnvironment& environment,
+        FragmentShaderType type) {
     switch (type) {
         case FragmentShaderType::White: {
-            return ShaderText{R"(
+            return ShaderText{
+                    R"(
 #version 450 core
 precision mediump int; precision highp float;
 layout(location = 0) out vec4 fragColor;
 )", R"(
 void main() {
     fragColor = vec4(1.0, 1.0, 1.0, 1.0);
-})"};
+})" };
         }
         case FragmentShaderType::SolidColored: {
-            return ShaderText{R"(
+            return ShaderText{
+                    R"(
 #version 450 core
 precision mediump int; precision highp float;
 layout(location = 0) out vec4 fragColor;
 )", R"(
 void main() {
     fragColor = params.color;
-})"};
+})" };
         }
         case FragmentShaderType::Textured: {
-            return ShaderText{R"(
+            return ShaderText{
+                    R"(
 #version 450 core
 precision mediump int; precision highp float;
 layout(location = 0) out vec4 fragColor;
@@ -115,14 +128,15 @@ layout(location = 0, set = 1) uniform sampler2D test_tex;
 
 void main() {
     fragColor = texture(test_tex, uv);
-})"};
+})" };
         }
         default:
             return std::nullopt;
     }
 }
 
-std::optional<std::string> GetGlslUniform(const ShaderEnvironment& environment, ShaderUniformType type) {
+std::optional<std::string> GetGlslUniform(const ShaderEnvironment& environment,
+        ShaderUniformType type) {
     switch (type) {
         case ShaderUniformType::None: {
             return "";
@@ -150,12 +164,37 @@ layout(binding = 0, set = 1) uniform Params {
 )";
         }
         case ShaderUniformType::Sampler: {
-            return R"(
+            return "";
+            /*return R"(
 layout(location = 0, set = 1) uniform sampler2D backend_test_sib_tex;
-)";
+)";*/
         }
         default:
             return std::nullopt;
+    }
+}
+
+std::vector<UniformConfig> GetUniformConfig(ShaderUniformType type) {
+    switch (type) {
+        case ShaderUniformType::None: {
+            return {};
+        }
+        case ShaderUniformType::Simple: {
+            return {{ "Params" }};
+        }
+        case ShaderUniformType::SimpleWithPadding: {
+            return {{ "Params" }};
+        }
+        case ShaderUniformType::Sampler: {
+            filament::SamplerInterfaceBlock::SamplerInfo samplerInfo{
+                    "backend_test", "test_tex", 0,
+                    SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
+            return {{
+                            "test_tex", DescriptorType::SAMPLER, samplerInfo
+                    }};
+        }
+        default:
+            abort();
     }
 }
 
@@ -176,7 +215,8 @@ ShaderLanguage ShaderEnvironment::getShaderLanguage() const {
     }
 }
 
-Shader SharedShaders::makeShader(filament::backend::DriverApi& api, Cleanup& cleanup, ShaderEnvironment environment,
+Shader SharedShaders::makeShader(filament::backend::DriverApi& api, Cleanup& cleanup,
+        ShaderEnvironment environment,
         ShaderRequest request) {
     std::optional<ShaderText> vertex;
     std::optional<ShaderText> fragment;
@@ -192,14 +232,15 @@ Shader SharedShaders::makeShader(filament::backend::DriverApi& api, Cleanup& cle
         return Shader(
                 api, cleanup, ShaderConfig{
                         vertex->withUniform(*uniform), fragment->withUniform(*uniform),
-                        {{"Params"}} }
+                        GetUniformConfig(request.mUniformType)}
         );
     } else {
         abort();
     }
 }
 
-std::string SharedShaders::getVertexShaderText(ShaderEnvironment environment, VertexShaderType vertex, ShaderUniformType uniform) {
+std::string SharedShaders::getVertexShaderText(ShaderEnvironment environment,
+        VertexShaderType vertex, ShaderUniformType uniform) {
     std::optional<ShaderText> vertexText = GetGlslVertexShader(environment, vertex);
     std::optional<std::string> uniformText = GetGlslUniform(environment, uniform);
     if (!vertexText.has_value() || !uniformText.has_value()) {
@@ -208,7 +249,8 @@ std::string SharedShaders::getVertexShaderText(ShaderEnvironment environment, Ve
     return vertexText->withUniform(*uniformText);
 }
 
-std::string SharedShaders::getFragmentShaderText(ShaderEnvironment environment, FragmentShaderType fragment, ShaderUniformType uniform) {
+std::string SharedShaders::getFragmentShaderText(ShaderEnvironment environment,
+        FragmentShaderType fragment, ShaderUniformType uniform) {
     std::optional<ShaderText> fragmentText = GetGlslFragmentShader(environment, fragment);
     std::optional<std::string> uniformText = GetGlslUniform(environment, uniform);
     if (!fragmentText.has_value() || !uniformText.has_value()) {
