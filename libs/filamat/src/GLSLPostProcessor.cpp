@@ -518,12 +518,25 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
     }
 }
 
-void GLSLPostProcessor::rebindImageSamplerForWGSL(std::vector<uint32_t> &spirv) {
+void GLSLPostProcessor::rebindImageSamplerForWGSL(std::vector<uint32_t>& spirv) {
     constexpr size_t HEADER_SIZE = 5;
     size_t const dataSize = spirv.size();
-    uint32_t *data = spirv.data();
+    uint32_t* data = spirv.data();
 
-    std::set<uint32_t> samplerTargetIDs;
+    struct Descriptor {
+        uint32_t binding = 0xFFFFFFFF;
+        bool fixed = false;
+    };
+
+    std::unordered_map<uint32_t, Descriptor> descriptors;
+    auto getDesc = [&](uint32_t var) -> Descriptor& {
+        using itertype = std::unordered_map<uint32_t, Descriptor>::iterator;
+        itertype itr;
+        if (itr = descriptors.find(var); itr == descriptors.end()) {
+            itr = descriptors.insert({var, {}}).first;
+        }
+        return itr->second;
+    };
 
     auto pass = [&](uint32_t targetOp, std::function<void(uint32_t)> f) {
         for (uint32_t cursor = HEADER_SIZE, cursorEnd = dataSize; cursor < cursorEnd;) {
@@ -531,34 +544,67 @@ void GLSLPostProcessor::rebindImageSamplerForWGSL(std::vector<uint32_t> &spirv) 
             uint32_t const wordCount = firstWord >> 16;
             uint32_t const op = firstWord & 0x0000FFFF;
             if (targetOp == op) {
-                f(cursor + 1);
+                f(cursor+1);
             }
             cursor += wordCount;
         }
     };
 
-    pass(spv::Op::OpName, [&](uint32_t pos) {
-        auto target = data[pos];
-        char *name = (char *) &data[pos + 1];
-        std::string_view view(name);
-        if (view.find("_sampler") != std::string_view::npos) {
-            samplerTargetIDs.insert(target);
-        }
+    uint32_t samplerTypeId = 0;
+
+    // First we find the ID used to identify the sampler type and the image type.
+    pass(spv::Op::OpTypeSampler, [&](uint32_t pos) {
+        samplerTypeId = data[pos];
     });
 
-    // Write out the offset bindings
+    // Next we identify all the descriptors and record their set id and binding.
     pass(spv::Op::OpDecorate, [&](uint32_t pos) {
         uint32_t const type = data[pos + 1];
         if (type == spv::Decoration::DecorationBinding) {
             uint32_t const targetVar = data[pos];
-            if (samplerTargetIDs.find(targetVar) != samplerTargetIDs.end()) {
-                data[pos + 2] = data[pos + 2] * 2 + 1;
-            } else {
-                data[pos + 2] = data[pos + 2] * 2;
+            uint32_t const binding = data[pos + 2];
+            auto& desc = getDesc(targetVar);
+            desc.binding = binding;
+            // Note these decorations do not need to be written to the output.
+        } else if (type == spv::Decoration::DecorationDescriptorSet) {
+            uint32_t const targetVar = data[pos];
+            uint32_t const set = data[pos + 2];
+            auto& desc = getDesc(targetVar);
+        }
+    });
+
+    // Offset samplers by 2n+1, and everything else by 2n
+    pass(spv::Op::OpLoad, [&](uint32_t pos) {
+        uint32_t const retType = data[pos];
+        uint32_t const targetVar = data[pos + 2];
+        auto& desc = getDesc(targetVar);
+        if (retType == samplerTypeId) {
+            if (!desc.fixed) {
+                //desc.binding = (desc.binding * 2) +1;
+                desc.binding = (desc.binding ) +100;
+
+                desc.fixed = true;
+            }
+        }
+        else {
+            if (!desc.fixed) {
+                //desc.binding *=2;
+               // desc.fixed = true;
             }
         }
     });
+
+    // Write out the offsetted bindings
+    pass(spv::Op::OpDecorate, [&](uint32_t pos) {
+        uint32_t const type = data[pos + 1];
+        if (type == spv::Decoration::DecorationBinding) {
+            uint32_t const targetVar = data[pos];
+            auto const &desc = getDesc(targetVar);
+            data[pos + 2] = desc.binding;
+        }
+    });
 }
+
 
 bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
 #if FILAMENT_SUPPORTS_WEBGPU
