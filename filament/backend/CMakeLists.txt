@@ -494,7 +494,9 @@ if (APPLE OR LINUX)
         test/ShaderGenerator.cpp
         test/TrianglePrimitive.cpp
         test/Arguments.cpp
+        test/ImageExpectations.cpp
         test/Lifetimes.cpp
+        test/Shader.cpp
         test/test_FeedbackLoops.cpp
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp
@@ -510,6 +512,7 @@ if (APPLE OR LINUX)
         test/test_Handles.cpp
     )
     set(BACKEND_TEST_LIBS
+        absl::str_format
         backend
         getopt
         gtest
@@ -525,7 +528,7 @@ if (APPLE AND NOT IOS)
     list(APPEND BACKEND_TEST_SRC
          test/test_RenderExternalImage.cpp)
     add_library(backend_test STATIC ${BACKEND_TEST_SRC})
-    target_link_libraries(backend_test PRIVATE ${BACKEND_TEST_LIBS})
+    target_link_libraries(backend_test PUBLIC ${BACKEND_TEST_LIBS})
 
     set(BACKEND_TEST_DEPS
             OSDependent

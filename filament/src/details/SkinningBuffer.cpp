@@ -26,6 +26,7 @@
 #include <math/mat4.h>
 
 #include <utils/CString.h>
+#include <utils/StaticString.h>
 
 #include <string.h>
 #include <stddef.h>
@@ -62,6 +63,10 @@ SkinningBuffer::Builder& SkinningBuffer::Builder::initialize(bool const initiali
 
 SkinningBuffer::Builder& SkinningBuffer::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
+}
+
+SkinningBuffer::Builder& SkinningBuffer::Builder::name(utils::StaticString const& name) noexcept {
+    return BuilderNameMixin::name(name);
 }
 
 SkinningBuffer* SkinningBuffer::Builder::build(Engine& engine) {
