@@ -1020,6 +1020,9 @@ void GLSLPostProcessor::fixupClipDistance(
 // - triggers a segfault with AMD OpenGL drivers on macOS
 // - triggers a crash on some Adreno drivers (b/291140208, b/289401984, b/289393290)
 // However Metal requires this pass in order to correctly generate half-precision MSL
+// CreateMergeReturnPass() also creates issues with Tint conversion related to the
+// bitwise "<<" Operator used in shaders/src/surface_light_directional.fs against
+// a signed integer.
 //
 // CreateSimplificationPass() creates a lot of problems:
 // - Adreno GPU show artifacts after running simplification passes (Vulkan)
@@ -1029,6 +1032,11 @@ void GLSLPostProcessor::fixupClipDistance(
 //   while-if-break, unclear if it helps for anything.
 // However, the simplification passes below are necessary when targeting Metal, otherwise the
 // result is mismatched half / float assignments in MSL.
+
+// CreateInlineExhaustivePass() expects CreateMergeReturnPass() to be run beforehand
+// (Throwing many warnings if this is not the case), but we don't consistently do so for the above
+// reasons. While running it alone may have some value, we will disable it for the new WebGPU backend
+// while minimizing other changes.
 
 
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
@@ -1043,7 +1051,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
-    RegisterPass(CreateInlineExhaustivePass());
+    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateLocalSingleBlockLoadStoreElimPass());
@@ -1087,7 +1095,8 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateInlineExhaustivePass());
+    //  Disable for WebGPU, see comment above registerPerformancePasses()
+    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
     RegisterPass(CreateEliminateDeadFunctionsPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateScalarReplacementPass(0));
