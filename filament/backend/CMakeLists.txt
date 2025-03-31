@@ -306,6 +306,11 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 # add this subproject to the Filament folder
 set_target_properties(${TARGET} PROPERTIES FOLDER Filament)
 
+# we need to export the headers properly for backend.lib on windows
+if (WIN32 AND FILAMENT_SUPPORTS_WEBGPU)
+    target_compile_definitions(${TARGET} PRIVATE "WGPU_IMPLEMENTATION")
+endif()
+
 # ==================================================================================================
 # Expose a header-only target to minimize dependencies.
 # ==================================================================================================
