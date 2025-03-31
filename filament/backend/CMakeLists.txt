@@ -108,8 +108,12 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
         list(APPEND SRCS src/opengl/platforms/PlatformCocoaTouchGL.mm)
         list(APPEND SRCS src/opengl/platforms/CocoaTouchExternalImage.mm)
     elseif (APPLE)
-        list(APPEND SRCS src/opengl/platforms/PlatformCocoaGL.mm)
-        list(APPEND SRCS src/opengl/platforms/CocoaExternalImage.mm)
+        if (FILAMENT_SUPPORTS_OSMESA)
+            list(APPEND SRCS src/opengl/platforms/PlatformOSMesa.cpp)
+        else()
+            list(APPEND SRCS src/opengl/platforms/PlatformCocoaGL.mm)
+            list(APPEND SRCS src/opengl/platforms/CocoaExternalImage.mm)
+        endif()
     elseif (WEBGL)
         list(APPEND SRCS src/opengl/platforms/PlatformWebGL.cpp)
     elseif (LINUX)
@@ -173,10 +177,12 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             include/backend/platforms/VulkanPlatform.h
-            src/vulkan/caching/VulkanDescriptorSetManager.cpp
-            src/vulkan/caching/VulkanDescriptorSetManager.h
-            src/vulkan/caching/VulkanPipelineLayoutCache.cpp
-            src/vulkan/caching/VulkanPipelineLayoutCache.h
+            src/vulkan/VulkanDescriptorSetCache.cpp
+            src/vulkan/VulkanDescriptorSetCache.h
+            src/vulkan/VulkanDescriptorSetLayoutCache.cpp
+            src/vulkan/VulkanDescriptorSetLayoutCache.h
+            src/vulkan/VulkanPipelineLayoutCache.cpp
+            src/vulkan/VulkanPipelineLayoutCache.h
             src/vulkan/memory/ResourceManager.cpp
             src/vulkan/memory/ResourceManager.h
             src/vulkan/memory/ResourcePointer.h
@@ -416,9 +422,12 @@ set(LINUX_LINKER_OPTIMIZATION_FLAGS
         -Wl,--exclude-libs,bluegl
 )
 
-if (LINUX AND FILAMENT_SUPPORTS_OSMESA)
-    set(OSMESA_COMPILE_FLAGS
-        -I${FILAMENT_OSMESA_PATH}/include/GL)
+if (FILAMENT_SUPPORTS_OSMESA)
+    if (LINUX)
+        set(OSMESA_COMPILE_FLAGS -I${FILAMENT_OSMESA_PATH}/include/GL)
+    elseif (APPLE)
+        set(OSMESA_COMPILE_FLAGS -I${FILAMENT_OSMESA_PATH}/include)
+    endif()
 endif()
 
 if (MSVC)
@@ -485,7 +494,9 @@ if (APPLE OR LINUX)
         test/ShaderGenerator.cpp
         test/TrianglePrimitive.cpp
         test/Arguments.cpp
+        test/ImageExpectations.cpp
         test/Lifetimes.cpp
+        test/Shader.cpp
         test/test_FeedbackLoops.cpp
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp
@@ -501,6 +512,7 @@ if (APPLE OR LINUX)
         test/test_Handles.cpp
     )
     set(BACKEND_TEST_LIBS
+        absl::str_format
         backend
         getopt
         gtest
@@ -516,7 +528,7 @@ if (APPLE AND NOT IOS)
     list(APPEND BACKEND_TEST_SRC
          test/test_RenderExternalImage.cpp)
     add_library(backend_test STATIC ${BACKEND_TEST_SRC})
-    target_link_libraries(backend_test PRIVATE ${BACKEND_TEST_LIBS})
+    target_link_libraries(backend_test PUBLIC ${BACKEND_TEST_LIBS})
 
     set(BACKEND_TEST_DEPS
             OSDependent

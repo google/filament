@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.59.0
+
+- materials: five custom variables (varyings) are now available on the condition that the `color` attribute is not requested (b/404930099). [⚠️ **New Material Version**]
+
 ## v1.58.2
 
 - engine: Generate 1D instead of 3D LUTs for color grading whenever possible.

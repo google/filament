@@ -26,6 +26,20 @@ namespace filament::backend {
 
 class VulkanPlatformAndroid : public VulkanPlatform {
 public:
+    Platform::ExternalImageHandle UTILS_PUBLIC createExternalImage(AHardwareBuffer const* buffer,
+            bool sRGB) noexcept;
+
+    struct UTILS_PUBLIC ExternalImageDescAndroid {
+        uint32_t width;      // Texture width
+        uint32_t height;     // Texture height
+        TextureFormat format;// Texture format
+        TextureUsage usage;  // Texture usage flags
+    };
+
+    ExternalImageDescAndroid UTILS_PUBLIC getExternalImageDesc(
+            ExternalImageHandleRef externalImage) const noexcept;
+
+protected:
     struct ExternalImageVulkanAndroid : public Platform::ExternalImage {
         AHardwareBuffer* aHardwareBuffer = nullptr;
         bool sRGB = false;
@@ -38,9 +52,6 @@ public:
         ~ExternalImageVulkanAndroid() override;
     };
 
-    Platform::ExternalImageHandle createExternalImage(AHardwareBuffer const* buffer,
-            bool sRGB) noexcept;
-
     virtual ExternalImageMetadata getExternalImageMetadata(ExternalImageHandleRef externalImage);
 
     using ImageData = VulkanPlatform::ImageData;
@@ -48,7 +59,6 @@ public:
             const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex,
             VkImageUsageFlags usage);
 
-protected:
     virtual ExtensionSet getSwapchainInstanceExtensions() const;
 
     using SurfaceBundle = VulkanPlatform::SurfaceBundle;

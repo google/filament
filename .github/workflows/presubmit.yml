@@ -40,7 +40,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-16core'
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -69,7 +69,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-16core'
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -79,7 +79,7 @@ jobs:
 
   validate-docs:
     name: validate-docs
-    runs-on: ubuntu-22.04-4core
+    runs-on: 'ubuntu-24.04-4core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -92,27 +92,33 @@ jobs:
 
   test-renderdiff:
     name: test-renderdiff
-    runs-on: ubuntu-22.04-4core
-
+    runs-on: macos-14-xlarge
     steps:
       - uses: actions/checkout@v4.1.6
-      - uses: ./.github/actions/ubuntu-apt-add-src
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install python prereqs
+        run: pip install mako setuptools pyyaml
       - name: Run script
         run: |
-          echo "Disabled renderdiff due to Mesa -> Currently planned outage: 2025-03-16 -> 2025-03-22"
-#          source ./build/linux/ci-common.sh && bash test/renderdiff/test.sh
+          bash test/renderdiff/test.sh
       - uses: actions/upload-artifact@v4
         with:
           name: presubmit-renderdiff-result
           path: ./out/renderdiff_tests
 
-  validate-wgsl-pipeline:
-    name: validate-wgsl-pipeline
-    runs-on: ubuntu-22.04-4core
+  validate-wgsl-webgpu:
+    name: validate-wgsl-webgpu
+    runs-on: 'ubuntu-24.04-8core'
 
     steps:
       - uses: actions/checkout@v4.1.6
       - name: Run build script
-        run: source ./build/linux/ci-common.sh && ./build.sh -W debug test_filamat
+        run: source ./build/linux/ci-common.sh && ./build.sh -W debug test_filamat filament
       - name: Run test
         run: ./out/cmake-debug/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*

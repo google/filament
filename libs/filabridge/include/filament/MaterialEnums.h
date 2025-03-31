@@ -28,7 +28,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 58;
+static constexpr size_t MATERIAL_VERSION = 59;
 
 /**
  * Supported shading models
@@ -203,7 +203,7 @@ enum class ReflectionMode : uint8_t {
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
 using AttributeBitset = utils::bitset32;
 
-static constexpr size_t MATERIAL_PROPERTIES_COUNT = 29;
+static constexpr size_t MATERIAL_PROPERTIES_COUNT = 30;
 enum class Property : uint8_t {
     BASE_COLOR,              //!< float4, all shading models
     ROUGHNESS,               //!< float,  lit shading models only
@@ -234,6 +234,7 @@ enum class Property : uint8_t {
     BENT_NORMAL,             //!< float3, all shading models only, except unlit
     SPECULAR_FACTOR,         //!< float, lit shading models only, except subsurface and cloth
     SPECULAR_COLOR_FACTOR,   //!< float3, lit shading models only, except subsurface and cloth
+    SHADOW_STRENGTH,         //!< float, [0, 1] strength of shadows received by this material
 
     // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
 };
