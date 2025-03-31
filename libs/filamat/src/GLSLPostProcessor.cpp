@@ -538,6 +538,8 @@ void GLSLPostProcessor::rebindImageSamplerForWGSL(std::vector<uint32_t> &spirv) 
     };
 
     //Parse through debug name info to determine which bindings are samplers and which are not.
+    // This is possible because the sampler splitting pass outputs sampler and texture pairs of the form:
+    // `uniform sampler2D var_x` => `uniform sampler var_sampler` and `uniform texture2D var_texture`;
     //TODO This works, but may limit what optimizations can be done. Ideally, trace usage to determine binding type.
     pass(spv::Op::OpName, [&](uint32_t pos) {
         auto target = data[pos];
