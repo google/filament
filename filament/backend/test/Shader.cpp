@@ -26,11 +26,10 @@ using namespace filament::backend;
 Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup(cleanup) {
     utils::FixedCapacityVector<DescriptorSetLayoutBinding> kLayouts(config.uniforms.size());
     for (unsigned char i = 0; i < config.uniforms.size(); ++i) {
-        kLayouts[i] =
-                {
-                        config.uniforms[i].type.value_or(DescriptorType::UNIFORM_BUFFER),
-                        ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, i };
-    };
+        kLayouts[i] = {
+                config.uniforms[i].type.value_or(DescriptorType::UNIFORM_BUFFER),
+                ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, i };
+    }
 
     filamat::DescriptorSets descriptors;
     descriptors[1] = filamat::DescriptorSetInfo(config.uniforms.size());

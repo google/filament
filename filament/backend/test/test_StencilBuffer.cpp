@@ -17,42 +17,12 @@
 #include "BackendTest.h"
 
 #include "Lifetimes.h"
-#include "ShaderGenerator.h"
+#include "Shader.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
 using namespace filament;
 using namespace filament::backend;
-
-namespace {
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Shaders
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-std::string vertex (R"(#version 450 core
-
-layout(location = 0) in vec4 mesh_position;
-
-void main() {
-    gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
-    gl_Position.y = -gl_Position.y;
-#endif
-}
-)");
-
-std::string fragment (R"(#version 450 core
-
-layout(location = 0) out vec4 fragColor;
-
-void main() {
-    fragColor = vec4(1.0);
-}
-
-)");
-
-}
 
 namespace test {
 
@@ -77,10 +47,12 @@ public:
         mSwapChain = mCleanup.add(createSwapChain());
         api.makeCurrent(mSwapChain, mSwapChain);
 
-        // Create a program.
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(api);
-        mProgram = mCleanup.add(api.createProgram(std::move(p)));
+        Shader shader = SharedShaders::makeShader(api, mCleanup, ShaderEnvironment{sBackend}, ShaderRequest {
+            .mVertexType = VertexShaderType::Noop,
+            .mFragmentType = FragmentShaderType::White,
+            .mUniformType = ShaderUniformType::None
+        });
+        mProgram = shader.getProgram();
     }
 
     void RunTest(Handle<HwRenderTarget> renderTarget) {
