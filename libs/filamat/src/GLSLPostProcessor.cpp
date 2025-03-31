@@ -579,8 +579,25 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
 
     if (tintRead.Diagnostics().ContainsErrors()) {
+        //We know errors can potentially crop up, and want the ability to ignore them if needed for sample bringup
+#ifndef FILAMENT_WEBGPU_IGNORE_TNT_READ_ERRORS
+        slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
+        spv_context context = spvContextCreate(SPV_ENV_VULKAN_1_1_SPIRV_1_4);
+        spv_text text = nullptr;
+        spv_diagnostic diagnostic = nullptr;
+        spv_result_t result = spvBinaryToText(
+            context,
+            spirv->data(),
+            spirv->size(),
+            SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES | SPV_BINARY_TO_TEXT_OPTION_COLOR,
+            &text,
+            &diagnostic);
+        slog.e << "Beginning SpirV-output dump with ret " << result << "\n\n" << text->str << "\n\nEndSPIRV\n" <<
+                io::endl;
+        spvTextDestroy(text);
         slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
         return false;
+#endif
     }
 
     tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead,writerOpts);
