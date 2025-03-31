@@ -31,9 +31,7 @@ public:
             uint64_t flags);
     ~WebGPUSwapChain();
 
-    void resize(uint32_t width, uint32_t height);
-
-    void GetCurrentTexture(wgpu::SurfaceTexture*);
+    void GetCurrentTexture(uint32_t width, uint32_t height, wgpu::SurfaceTexture*);
 
 private:
     wgpu::Surface mSurface = {};

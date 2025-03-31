@@ -227,52 +227,19 @@ WebGPUSwapChain::~WebGPUSwapChain() {
     }
 }
 
-void WebGPUSwapChain::resize(uint32_t width, uint32_t height) {
-    FWGPU_LOGD << "Called WebGPUSwapChain::resize(width=" << width << ", height=" << height << ")"
-               << utils::io::endl;
+void WebGPUSwapChain::GetCurrentTexture(uint32_t width, uint32_t height, wgpu::SurfaceTexture* texture) {
     if (width < 1 || height < 1) {
-        // should we panic or do nothing if we get 0s? expected?
-        FWGPU_LOGW << "Non-zero width (" << width << ") and/or height (" << height
-                   << ") requested, which is invalid. Ignoring request to resize."
-                   << utils::io::endl;
+        PANIC_LOG("WebGPUSwapChain::GetCurrentTexture: Invalid width and/or height requested.");
         return;
     }
-    if (mConfig.width == width && mConfig.height == height && mConfigured) {
-        // nothing to do (already configured with this extent)
-        FWGPU_LOGW << "WebGPUSwapChain::resize(...) called with the same width and height as "
-                      "currently configured. Ignoring request to resize."
-                   << utils::io::endl;
+    if ( mConfig.width != width || mConfig.height != height || !mConfigured) {
+         mConfig.width = width;
+         mConfig.height = height;
+         mSurface.Configure(&mConfig);
+         mConfigured = true;
         return;
     }
-    mConfig.width = width;
-    mConfig.height = height;
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    printSurfaceConfiguration(mConfig);
-#endif
-    mSurface.Configure(&mConfig);
-    mConfigured = true;
-}
 
-//void WebGPUSwapChain::setFormat(wgpu::TextureFormat format) {
-//    if (mConfig.format == format && mConfigured) {
-//        // nothing to do (already configured with this extent)
-//        FWGPU_LOGW << "WebGPUSwapChain::setFormat(...) called with the same format as "
-//                      "currently configured. Ignoring request to reformat."
-//                   << utils::io::endl;
-//        return;
-//    }
-//    mConfig.format = format;
-//    // is this ok for the headless mode?
-//    if (mConfig.width > 0 && mConfig.height > 0) {
-//#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-//        printSurfaceConfiguration(mConfig);
-//#endif
-//        mSurface.Configure(&mConfig);
-//        mConfigured = true;
-//    }
-//}
-
-void WebGPUSwapChain::GetCurrentTexture(wgpu::SurfaceTexture* texture) {
     mSurface.GetCurrentTexture(texture);
 }
 
