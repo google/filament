@@ -1021,7 +1021,8 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
-    RegisterPass(CreateInlineExhaustivePass());
+    //TODO Do not run inline pass without merge return pass until we sort out issues
+    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateLocalSingleBlockLoadStoreElimPass());
@@ -1065,7 +1066,8 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateInlineExhaustivePass());
+    //TODO Do not run inline pass without merge return pass until we sort out issues
+    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
     RegisterPass(CreateEliminateDeadFunctionsPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateScalarReplacementPass(0));
