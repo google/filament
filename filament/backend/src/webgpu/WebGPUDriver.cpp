@@ -313,7 +313,7 @@ void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 
 void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     mSwapChain = nullptr;
-    // TODO:  uncomment below code when webgpu handle allocator is ready.
+    // TODO:  use webgpu handle allocator from
     //        https://github.com/google/filament/pull/8566
 //    if (sch) {
 //        HwSwapChain* hwSwapChain = handleCast<HwSwapChain*>(sch);
@@ -334,7 +334,7 @@ void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
-    // TODO:  uncomment below code when webgpu handle allocator is ready.
+    // TODO:  use webgpu handle allocator from.
     //        https://github.com/google/filament/pull/8566
     // return allocAndConstructHandle<HwSwapChain>();
     return Handle<HwSwapChain>((Handle<HwSwapChain>::HandleId) mNextFakeHandle++);
@@ -422,7 +422,7 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 }
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
-    // TODO:  uncomment below code when webgpu handle allocator is ready.
+    // TODO:  use webgpu handle allocator from.
     //        https://github.com/google/filament/pull/8566
     // HwSwapChain* hwSwapChain = handleCast<HwSwapChain*>(sch);
     mSwapChain = nullptr;
@@ -437,8 +437,6 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 #endif
     mQueue = mDevice.GetQueue();
     mSwapChain = std::make_unique<WebGPUSwapChain>(std::move(surface), mAdapter, mDevice, flags);
-    //TODO: get size from nativeWindow ,or hook into queue to get it from a texture
-    mSwapChain->resize(2048, 1280);
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
                   "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
@@ -451,7 +449,7 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
                   "rebuilding Filament with that flag, e.g. ./build.sh -x "
                << FWGPU_PRINT_SYSTEM << " ..." << utils::io::endl;
 #endif
-    // TODO:  uncomment below code when webgpu handle allocator is ready.
+    // TODO:  use webgpu handle allocator from.
     //        https://github.com/google/filament/pull/8566
     // hwSwapChain->swapChain = mSwapChain.get();
 }
