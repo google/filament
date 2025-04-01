@@ -35,7 +35,7 @@ namespace {
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::string fragment (R"(#version 450 core
+std::string fragmentTexturedLod (R"(#version 450 core
 
 layout(location = 0) out vec4 fragColor;
 layout(location = 0) in vec2 uv;
@@ -79,7 +79,7 @@ TEST_F(BackendTest, TextureViewLod) {
                                                                    SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
         Shader texturedShader(api, cleanup, ShaderConfig {
            .vertexShader = vertexShader,
-           .fragmentShader = fragment,
+           .fragmentShader = fragmentTexturedLod,
            .uniforms = {{
                "backend_test_sib_tex", DescriptorType::SAMPLER, samplerInfo
            }}

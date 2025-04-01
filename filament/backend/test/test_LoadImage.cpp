@@ -19,6 +19,7 @@
 #include "BackendTestUtils.h"
 #include "Lifetimes.h"
 #include "Shader.h"
+#include "SharedShaders.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -38,19 +39,6 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-std::string vertex (R"(#version 450 core
-
-layout(location = 0) in vec4 mesh_position;
-
-void main() {
-    gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
-    gl_Position.y *= -1.0f;
-#endif
-}
-)");
 
 std::string fragmentTemplate (R"(#version 450 core
 
@@ -116,6 +104,15 @@ namespace test {
 
 template<typename componentType> inline componentType getMaxValue();
 
+class LoadImageTest : public BackendTest {
+public:
+    LoadImageTest() {
+        mVertexShader = SharedShaders::getVertexShaderText(ShaderEnvironment{ sBackend },
+                VertexShaderType::Noop, ShaderUniformType::None);
+    }
+
+    std::string mVertexShader;
+};
 
 
 inline std::string stringReplace(const std::string& find, const std::string& replace,
@@ -213,7 +210,7 @@ static SamplerFormat getSamplerFormat(TextureFormat textureFormat) {
     }
 }
 
-TEST_F(BackendTest, UpdateImage2D) {
+TEST_F(LoadImageTest, UpdateImage2D) {
 
     // All of these test cases should result in the same rendered image, and thus the same hash.
     static const uint32_t expectedHash = 3644679986;
@@ -307,7 +304,7 @@ TEST_F(BackendTest, UpdateImage2D) {
         std::string const fragment = stringReplace("{samplerType}",
                 getSamplerTypeName(t.textureFormat), fragmentTemplate);
         Shader shader(api, cleanup, ShaderConfig{
-           .vertexShader = vertex,
+           .vertexShader = mVertexShader,
            .fragmentShader= fragment,
            .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
         });
@@ -354,7 +351,7 @@ TEST_F(BackendTest, UpdateImage2D) {
     flushAndWait();
 }
 
-TEST_F(BackendTest, UpdateImageSRGB) {
+TEST_F(LoadImageTest, UpdateImageSRGB) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
@@ -373,7 +370,8 @@ TEST_F(BackendTest, UpdateImageSRGB) {
         SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
     std::string const fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentTemplate);
-    Shader shader(api, cleanup, ShaderConfig{.vertexShader = vertex, .fragmentShader = fragment, .uniforms = {{
+    Shader shader(api, cleanup, ShaderConfig{
+        .vertexShader = mVertexShader, .fragmentShader = fragment, .uniforms = {{
             "text_tex", DescriptorType::SAMPLER, samplerInfo
     }}});
 
@@ -430,7 +428,7 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     api.stopCapture();
 }
 
-TEST_F(BackendTest, UpdateImageMipLevel) {
+TEST_F(LoadImageTest, UpdateImageMipLevel) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
@@ -450,7 +448,7 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     std::string const fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentUpdateImageMip);
     Shader shader(api, cleanup, ShaderConfig {
-        .vertexShader = vertex,
+        .vertexShader = mVertexShader,
         .fragmentShader = fragment,
         .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
     });
@@ -492,7 +490,7 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     api.stopCapture();
 }
 
-TEST_F(BackendTest, UpdateImage3D) {
+TEST_F(LoadImageTest, UpdateImage3D) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
@@ -514,7 +512,7 @@ TEST_F(BackendTest, UpdateImage3D) {
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(samplerType), fragmentUpdateImage3DTemplate);
     Shader shader(api, cleanup, ShaderConfig {
-        .vertexShader = vertex,
+        .vertexShader = mVertexShader,
         .fragmentShader = fragment,
         .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
     });

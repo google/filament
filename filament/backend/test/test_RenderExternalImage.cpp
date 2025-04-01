@@ -35,9 +35,6 @@ using namespace filament;
 using namespace filament::backend;
 
 Shader createShader(DriverApi& api, Cleanup& cleanup, Backend backend) {
-    filament::SamplerInterfaceBlock::SamplerInfo samplerInfo{
-            "test", "test_tex", 0,
-            SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH, false };
     return SharedShaders::makeShader(api, cleanup, ShaderEnvironment{ backend },
             ShaderRequest{
                     .mVertexType = VertexShaderType::Textured,

@@ -21,53 +21,6 @@
 #include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
-namespace {
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Shaders
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-std::string vertex(R"(#version 450 core
-
-layout(location = 0) in vec4 mesh_position;
-
-layout(location = 0) out uvec4 indices;
-
-layout(binding = 0, set = 1) uniform Params {
-    highp vec4 padding[4];  // offset of 64 bytes
-
-    highp vec4 color;
-    highp vec4 offset;
-} params;
-
-void main() {
-    gl_Position = vec4(mesh_position.xy + params.offset.xy, 0.0, 1.0);
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
-    gl_Position.y = -gl_Position.y;
-#endif
-}
-)");
-
-std::string fragment(R"(#version 450 core
-
-layout(location = 0) out vec4 fragColor;
-
-layout(binding = 0, set = 1) uniform Params {
-    highp vec4 padding[4];  // offset of 64 bytes
-
-    highp vec4 color;
-    highp vec4 offset;
-} params;
-
-void main() {
-    fragColor = vec4(params.color.rgb, 1.0f);
-}
-
-)");
-
-}
-
 namespace test {
 
 using namespace filament;
