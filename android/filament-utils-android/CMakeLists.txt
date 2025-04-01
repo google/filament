@@ -4,6 +4,8 @@ project(filament-utils-android)
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 set(IMAGEIO_DIR ../../libs/imageio)
 
+set(CMAKE_SYSTEM_VERSION 26)
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gltfio-android ${CMAKE_CURRENT_BINARY_DIR}/gltfio-android)
 
 add_library(camutils STATIC IMPORTED)
@@ -29,6 +31,10 @@ set_target_properties(civetweb PROPERTIES IMPORTED_LOCATION
 add_library(iblprefilter STATIC IMPORTED)
 set_target_properties(iblprefilter PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilament-iblprefilter.a)
+
+add_library(bluevk STATIC IMPORTED)
+set_target_properties(bluevk PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libbluevk.a)
 
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libfilament-utils-jni.map")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
@@ -57,7 +63,8 @@ target_include_directories(filament-utils-jni PRIVATE
         ..
         ../../filament/backend/include
         ${IMAGEIO_DIR}/include
-        ../../libs/utils/include)
+        ../../libs/utils/include
+        ../../libs/bluevk/include)
 
 set_target_properties(filament-utils-jni PROPERTIES LINK_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/libfilament-utils-jni.symbols)
@@ -71,4 +78,6 @@ target_link_libraries(filament-utils-jni
         image
         ktxreader
         viewer
+        bluevk
+        android
 )

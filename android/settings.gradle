@@ -18,5 +18,6 @@ include ':samples:sample-stream-test'
 include ':samples:sample-texture-view'
 include ':samples:sample-textured-object'
 include ':samples:sample-transparent-view'
+include ':samples:sample-external-image'
 
 rootProject.name = 'filament'

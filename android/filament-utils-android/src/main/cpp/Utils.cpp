@@ -14,11 +14,20 @@
  * limitations under the License.
  */
 
+
+#include <android/hardware_buffer.h>
+#include <android/hardware_buffer_jni.h>
 #include <jni.h>
 
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
 #include <filament/Skybox.h>
+
+#include <backend/Platform.h>
+#include <backend/platforms/PlatformEGLAndroid.h>
+#include <backend/platforms/VulkanPlatformAndroid.h>
+
+#include <utils/Log.h>
 
 #include <ktxreader/Ktx1Reader.h>
 
@@ -28,6 +37,8 @@ using namespace filament;
 using namespace filament::math;
 using namespace image;
 using namespace ktxreader;
+
+using namespace filament::backend;
 
 jlong nCreateHDRTexture(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jint internalFormat);
@@ -79,6 +90,37 @@ static jboolean nGetSphericalHarmonics(JNIEnv* env, jclass, jobject javaBuffer, 
     return success ? JNI_TRUE : JNI_FALSE;
 }
 
+static jlong nSetExternalImageOnTexture(JNIEnv* env, jclass, jlong nativeEngine, jlong nativeTexture,
+        jobject hardwareBuffer, jboolean srgb) {
+    utils::slog.e <<"--------- jni nSetExternalImageOnTexture" << utils::io::endl;
+    Engine* engine = (Engine*) nativeEngine;
+    Texture* texture = (Texture*) nativeTexture;
+
+    Platform* platform = engine->getPlatform();
+    AHardwareBuffer* nativeBuffer = nullptr;
+    if (__builtin_available(android 26, *)) {
+        nativeBuffer = AHardwareBuffer_fromHardwareBuffer(env, hardwareBuffer);
+    }
+
+    utils::slog.e <<"--------- jni nSetExternalImageOnTexture buf=" << nativeBuffer << utils::io::endl;    
+
+    if (!nativeBuffer) {
+        return 0;
+    }
+
+    if (engine->getBackend() == Backend::OPENGL) {
+        PlatformEGLAndroid* eglPlatform = (PlatformEGLAndroid*) platform;
+        auto ref = eglPlatform->createExternalImage(nativeBuffer, srgb == JNI_TRUE);
+        texture->setExternalImage(*engine, ref);
+    } else if (engine->getBackend() == Backend::VULKAN) {
+        VulkanPlatformAndroid* vulkanPlatform = (VulkanPlatformAndroid*) platform;
+        auto ref = vulkanPlatform->createExternalImage(nativeBuffer, srgb == JNI_TRUE);
+        texture->setExternalImage(*engine, ref);
+    }
+    return 0;    
+}
+
+
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
     JNIEnv* env;
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
@@ -107,6 +149,15 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
     };
     rc = env->RegisterNatives(hdrloaderClass, hdrMethods, sizeof(hdrMethods) / sizeof(JNINativeMethod));
     if (rc != JNI_OK) return rc;
+
+    jclass loaderClass = env->FindClass("com/google/android/filament/utils/ExternalImage");
+    if (loaderClass == nullptr) return JNI_ERR;
+    static const JNINativeMethod methods[] = {
+        { (char*) "nSetExternalImageOnTexture", (char*) "(JJLandroid/hardware/HardwareBuffer;Z)J",
+            reinterpret_cast<void*>(nSetExternalImageOnTexture) },
+    };
+    rc = env->RegisterNatives(loaderClass, methods, sizeof(methods) / sizeof(JNINativeMethod));
+    if (rc != JNI_OK) return rc;    
 
     return JNI_VERSION_1_6;
 }
