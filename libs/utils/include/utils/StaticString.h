@@ -17,6 +17,8 @@
 #ifndef TNT_UTILS_STATICSTRING_H
 #define TNT_UTILS_STATICSTRING_H
 
+#include <utils/compiler.h>
+
 #include <type_traits>
 #include <string_view>
 
