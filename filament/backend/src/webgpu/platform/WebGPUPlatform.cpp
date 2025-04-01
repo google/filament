@@ -144,13 +144,13 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
 }
 
 Driver* WebGPUPlatform::createDriver(void* sharedContext,
-        const Platform::DriverConfig& /*driverConfig*/) noexcept {
+        const Platform::DriverConfig& driverConfig) noexcept {
     if (sharedContext) {
         FWGPU_LOGW << "sharedContext is ignored/unused in the WebGPU backend. A non-null "
                       "sharedContext was provided, but it will be ignored."
                    << utils::io::endl;
     }
-    return WebGPUDriver::create(*this);
+    return WebGPUDriver::create(*this, driverConfig);
 }
 
 WebGPUPlatform::WebGPUPlatform()

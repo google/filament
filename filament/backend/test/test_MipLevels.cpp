@@ -17,9 +17,10 @@
 
 #include "BackendTest.h"
 
+#include "BackendTestUtils.h"
+#include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
-#include "BackendTestUtils.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -78,12 +79,13 @@ using namespace filament::backend;
 TEST_F(BackendTest, TextureViewLod) {
     auto& api = getDriverApi();
     api.startCapture(0);
+    Cleanup cleanup(api);
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a SwapChain and make it current.
-        auto swapChain = createSwapChain();
+        auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program that draws only white.
@@ -92,7 +94,7 @@ TEST_F(BackendTest, TextureViewLod) {
             ShaderGenerator shaderGen(vertex, whiteFragment, sBackend, sIsMobilePlatform);
             Program p = shaderGen.getProgram(api);
             p.descriptorBindings(0, {{"backend_test_sib_tex", DescriptorType::SAMPLER, 0}});
-            whiteProgram = api.createProgram(std::move(p));
+            whiteProgram = cleanup.add(api.createProgram(std::move(p)));
         }
 
         // Create a program that samples a texture.
@@ -106,19 +108,19 @@ TEST_F(BackendTest, TextureViewLod) {
             ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
             Program p = shaderGen.getProgram(api);
             p.descriptorBindings(0, {{"backend_test_sib_tex", DescriptorType::SAMPLER, 0}});
-            textureProgram = api.createProgram(std::move(p));
+            textureProgram = cleanup.add(api.createProgram(std::move(p)));
         }
 
-        DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+        DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
                 {{
                          DescriptorType::SAMPLER,
                          ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
                          DescriptorFlags::NONE, 0
-                 }}});
+                 }}}));
 
         DescriptorSetHandle descriptorSet[2];
-        descriptorSet[0] = api.createDescriptorSet(descriptorSetLayout);
-        descriptorSet[1] = api.createDescriptorSet(descriptorSetLayout);
+        descriptorSet[0] = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
+        descriptorSet[1] = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
 
         // Create a texture that has 4 mip levels. Each level is a different color.
         // Level 0: 128x128 (red)
@@ -127,9 +129,9 @@ TEST_F(BackendTest, TextureViewLod) {
         // Level 3:   16x16 (yellow)
         const size_t kTextureSize = 128;
         const size_t kMipLevels = 4;
-        Handle<HwTexture> texture = api.createTexture(SamplerType::SAMPLER_2D, kMipLevels,
+        Handle<HwTexture> texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, kMipLevels,
                 TextureFormat::RGBA8, 1, kTextureSize, kTextureSize, 1,
-                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::UPLOADABLE);
+                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::UPLOADABLE));
 
         // Create image data.
         auto pixelFormat = PixelDataFormat::RGBA;
@@ -163,13 +165,13 @@ TEST_F(BackendTest, TextureViewLod) {
         // Level 1:   64x64 (green)             <-- base
         // Level 2:   32x32 (blue)              <--- white triangle rendered
         // Level 3:   16x16 (yellow)            <-- max
-        auto texture13 = api.createTextureView(texture, 1, 3);
+        auto texture13 = cleanup.add(api.createTextureView(texture, 1, 3));
 
         // Render a white triangle into level 2.
         // We specify mip level 2, because minMaxLevels has no effect when rendering into a texture.
-        Handle<HwRenderTarget> renderTarget = api.createRenderTarget(
+        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createRenderTarget(
                 TargetBufferFlags::COLOR, 32, 32, 1, 0,
-                {texture, 2 /* level */, 0 /* layer */}, {}, {});
+                {texture, 2 /* level */, 0 /* layer */}, {}, {}));
         {
             RenderPassParams params = {};
             fullViewport(params);
@@ -185,7 +187,7 @@ TEST_F(BackendTest, TextureViewLod) {
             api.endRenderPass();
         }
 
-        backend::Handle<HwRenderTarget> defaultRenderTarget = api.createDefaultRenderTarget(0);
+        backend::Handle<HwRenderTarget> defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
         RenderPassParams params = {};
         fullViewport(params);
@@ -217,7 +219,7 @@ TEST_F(BackendTest, TextureViewLod) {
         api.endRenderPass();
 
         // Adjust the base mip to 2.
-        auto texture22 = api.createTextureView(texture, 2, 2);
+        auto texture22 = cleanup.add(api.createTextureView(texture, 2, 2));
 
         api.updateDescriptorSetTexture(descriptorSet[1], 0, texture22, {
                 .filterMag = SamplerMagFilter::NEAREST,
@@ -244,18 +246,6 @@ TEST_F(BackendTest, TextureViewLod) {
         api.endFrame(0);
 
         api.stopCapture(0);
-
-        // Cleanup.
-        api.destroySwapChain(swapChain);
-        api.destroyRenderTarget(renderTarget);
-        api.destroyDescriptorSet(descriptorSet[0]);
-        api.destroyDescriptorSet(descriptorSet[1]);
-        api.destroyDescriptorSetLayout(descriptorSetLayout);
-        api.destroyTexture(texture);
-        api.destroyTexture(texture13);
-        api.destroyTexture(texture22);
-        api.destroyProgram(whiteProgram);
-        api.destroyProgram(textureProgram);
     }
 
     api.finish();

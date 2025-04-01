@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -24,9 +25,24 @@
 #include "gtest/gtest.h"
 #include "include/spirv-tools/libspirv.h"
 #include "include/spirv-tools/libspirv.hpp"
+#include "source/opt/pass.h"
 
 namespace spvtools {
 namespace opt {
+
+inline std::ostream& operator<<(std::ostream& os, const Pass::Status ps) {
+  switch (ps) {
+    case Pass::Status::Failure:
+      return os << "Pass::Status::Failure";
+    case Pass::Status::SuccessWithChange:
+      return os << "Pass::Status::SuccessWithChange";
+    case Pass::Status::SuccessWithoutChange:
+      return os << "Pass::Status::SuccessWithoutChange";
+    default:
+      break;
+  }
+  return os << "(invalid Pass::Status " << static_cast<unsigned>(ps) << ")";
+}
 
 struct Message {
   spv_message_level_t level;
