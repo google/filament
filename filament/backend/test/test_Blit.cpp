@@ -280,10 +280,10 @@ TEST_F(BlitTest, ColorResolve) {
     constexpr auto kColorTexFormat = TextureFormat::RGBA8;
     constexpr int kSampleCount = 4;
 
-    Shader shader = SharedShaders::makeShader(api, mCleanup, ShaderEnvironment {sBackend}, ShaderRequest {
-        .mVertexType = VertexShaderType::Simple,
-        .mFragmentType = FragmentShaderType::SolidColored,
-        .mUniformType = ShaderUniformType::Simple,
+    Shader shader = SharedShaders::makeShader(api, mCleanup, ShaderRequest{
+            .mVertexType = VertexShaderType::Simple,
+            .mFragmentType = FragmentShaderType::SolidColored,
+            .mUniformType = ShaderUniformType::Simple,
     });
 
     // Create a VertexBuffer, IndexBuffer, and RenderPrimitive.

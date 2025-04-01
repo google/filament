@@ -34,7 +34,7 @@ namespace test {
 class BasicStencilBufferTest : public BackendTest {
 public:
 
-    Handle<HwSwapChain> mSwapChain;
+    Handle <HwSwapChain> mSwapChain;
     ProgramHandle mProgram;
     Cleanup mCleanup;
 
@@ -47,23 +47,23 @@ public:
         mSwapChain = mCleanup.add(createSwapChain());
         api.makeCurrent(mSwapChain, mSwapChain);
 
-        Shader shader = SharedShaders::makeShader(api, mCleanup, ShaderEnvironment{sBackend}, ShaderRequest {
-            .mVertexType = VertexShaderType::Noop,
-            .mFragmentType = FragmentShaderType::White,
-            .mUniformType = ShaderUniformType::None
+        Shader shader = SharedShaders::makeShader(api, mCleanup, ShaderRequest{
+                .mVertexType = VertexShaderType::Noop,
+                .mFragmentType = FragmentShaderType::White,
+                .mUniformType = ShaderUniformType::None
         });
         mProgram = shader.getProgram();
     }
 
-    void RunTest(Handle<HwRenderTarget> renderTarget) {
+    void RunTest(Handle <HwRenderTarget> renderTarget) {
         auto& api = getDriverApi();
 
         // We'll be using a triangle as geometry.
         TrianglePrimitive smallTriangle(api);
         static filament::math::float2 vertices[3] = {
                 { -0.5, -0.5 },
-                {  0.5, -0.5 },
-                { -0.5,  0.5 }
+                { 0.5,  -0.5 },
+                { -0.5, 0.5 }
         };
         smallTriangle.updateVertices(vertices);
         TrianglePrimitive triangle(api);
@@ -72,7 +72,7 @@ public:
         // Render a small triangle only to the stencil buffer, increasing the stencil buffer to 1.
         RenderPassParams params = {};
         params.flags.clear = TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL;
-        params.viewport = {0, 0, 512, 512};
+        params.viewport = { 0, 0, 512, 512 };
         params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
         params.clearStencil = 0u;
         params.flags.discardStart = TargetBufferFlags::ALL;
@@ -125,7 +125,7 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
             TextureFormat::STENCIL8, 1, 512, 512, 1, TextureUsage::STENCIL_ATTACHMENT));
     auto renderTarget = cleanup.add(api.createRenderTarget(
             TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, 512, 512, 1, 0,
-            {{colorTexture}}, {}, {{stencilTexture}}));
+            {{ colorTexture }}, {}, {{ stencilTexture }}));
 
     RunTest(renderTarget);
 
@@ -143,10 +143,11 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
     auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT));
     auto depthStencilTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::DEPTH24_STENCIL8, 1, 512, 512, 1, TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT));
+            TextureFormat::DEPTH24_STENCIL8, 1, 512, 512, 1,
+            TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT));
     auto renderTarget = cleanup.add(api.createRenderTarget(
             TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, 512, 512, 1, 0,
-            {{colorTexture}}, {depthStencilTexture}, {{depthStencilTexture}}));
+            {{ colorTexture }}, { depthStencilTexture }, {{ depthStencilTexture }}));
 
     RunTest(renderTarget);
 
@@ -166,15 +167,17 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     // Pass 1: Render a triangle into (an auto-created) MSAA color buffer using the stencil test.
     //         Performs an auto-resolve on the color.
     auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
+            TextureFormat::RGBA8, 1, 512, 512, 1,
+            TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
     auto depthStencilTextureMSAA = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::DEPTH24_STENCIL8, 4, 512, 512, 1, TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT));
+            TextureFormat::DEPTH24_STENCIL8, 4, 512, 512, 1,
+            TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT));
     auto renderTarget0 = cleanup.add(api.createRenderTarget(
             TargetBufferFlags::DEPTH_AND_STENCIL, 512, 512, 4, 0,
-            {{}}, {depthStencilTextureMSAA}, {depthStencilTextureMSAA}));
+            {{}}, { depthStencilTextureMSAA }, { depthStencilTextureMSAA }));
     auto renderTarget1 = cleanup.add(api.createRenderTarget(
             TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH_AND_STENCIL, 512, 512, 4, 0,
-            {{colorTexture}}, {depthStencilTextureMSAA}, {depthStencilTextureMSAA}));
+            {{ colorTexture }}, { depthStencilTextureMSAA }, { depthStencilTextureMSAA }));
 
     api.startCapture(0);
 
@@ -182,8 +185,8 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     TrianglePrimitive smallTriangle(api);
     static filament::math::float2 vertices[3] = {
             { -0.5, -0.5 },
-            {  0.5, -0.5 },
-            { -0.5,  0.5 }
+            { 0.5,  -0.5 },
+            { -0.5, 0.5 }
     };
     smallTriangle.updateVertices(vertices);
     TrianglePrimitive triangle(api);
@@ -192,7 +195,7 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     // Render a small triangle only to the stencil buffer, increasing the stencil buffer to 1.
     RenderPassParams params = {};
     params.flags.clear = TargetBufferFlags::STENCIL;
-    params.viewport = {0, 0, 512, 512};
+    params.viewport = { 0, 0, 512, 512 };
     params.clearStencil = 0u;
     params.flags.discardStart = TargetBufferFlags::ALL;
     params.flags.discardEnd = TargetBufferFlags::NONE;

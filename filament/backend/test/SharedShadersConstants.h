@@ -27,7 +27,8 @@ enum class ShaderUniformType : uint8_t {
 struct SimpleMaterialParams {
     filament::math::float4 color;
     // 1.0 will be added to this value before use.
-    // The XY values are used to scale position inputs and the Z value is used to set the output position's Z value.
+    // The XY values are used to scale position inputs and the Z value is used to set the output
+    // position's Z value.
     filament::math::float4 scaleMinusOne;
     // Offset will be applied after scale
     filament::math::float4 offset;
@@ -38,7 +39,8 @@ struct SimpleWithPaddingMaterialParams {
     // So users of this struct will need to add 64 bytes to its size and offset all uniform writes.
     filament::math::float4 color;
     // 1.0 will be added to this value before use.
-    // The XY values are used to scale position inputs and the Z value is used to set the output position's Z value.
+    // The XY values are used to scale position inputs and the Z value is used to set the output
+    // position's Z value.
     filament::math::float4 scaleMinusOne;
     // Offset will be applied after scale
     filament::math::float4 offset;

@@ -30,12 +30,6 @@ enum class ShaderLanguage : uint8_t {
     WGSL
 };
 
-struct ShaderEnvironment {
-    Backend mBackend;
-
-    ShaderLanguage getShaderLanguage() const;
-};
-
 struct ShaderRequest {
     VertexShaderType mVertexType;
     FragmentShaderType mFragmentType;
@@ -44,9 +38,11 @@ struct ShaderRequest {
 
 class SharedShaders {
 public:
-    static Shader makeShader(filament::backend::DriverApi& api, Cleanup& cleanup, ShaderEnvironment environment, ShaderRequest request);
-    static std::string getVertexShaderText(ShaderEnvironment environment, VertexShaderType vertex, ShaderUniformType uniform);
-    static std::string getFragmentShaderText(ShaderEnvironment environment, FragmentShaderType fragment, ShaderUniformType uniform);
+    static Shader makeShader(filament::backend::DriverApi& api, Cleanup& cleanup,
+            ShaderRequest request);
+    static std::string getVertexShaderText(VertexShaderType vertex, ShaderUniformType uniform);
+    static std::string getFragmentShaderText(FragmentShaderType fragment,
+            ShaderUniformType uniform);
 };
 
 } // namespace test

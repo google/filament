@@ -35,12 +35,11 @@ using namespace filament;
 using namespace filament::backend;
 
 Shader createShader(DriverApi& api, Cleanup& cleanup, Backend backend) {
-    return SharedShaders::makeShader(api, cleanup, ShaderEnvironment{ backend },
-            ShaderRequest{
-                    .mVertexType = VertexShaderType::Textured,
-                    .mFragmentType = FragmentShaderType::Textured,
-                    .mUniformType = ShaderUniformType::Sampler
-            });
+    return SharedShaders::makeShader(api, cleanup, ShaderRequest{
+            .mVertexType = VertexShaderType::Textured,
+            .mFragmentType = FragmentShaderType::Textured,
+            .mUniformType = ShaderUniformType::Sampler
+    });
 }
 
 // Rendering an external image without setting any data should not crash.

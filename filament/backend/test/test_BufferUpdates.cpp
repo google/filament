@@ -39,9 +39,7 @@ public:
 
 protected:
     Shader createShader() {
-        return SharedShaders::makeShader(getDriverApi(), mCleanup, ShaderEnvironment{
-                .mBackend = sBackend
-        }, ShaderRequest{
+        return SharedShaders::makeShader(getDriverApi(), mCleanup, ShaderRequest{
                 .mVertexType = VertexShaderType::Simple,
                 .mFragmentType = FragmentShaderType::SolidColored,
                 .mUniformType = ShaderUniformType::SimpleWithPadding

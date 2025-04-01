@@ -36,8 +36,7 @@ struct ShaderText {
     }
 };
 
-std::optional<ShaderText> GetGlslVertexShader(const ShaderEnvironment& environment,
-        VertexShaderType type) {
+std::optional<ShaderText> GetGlslVertexShader(VertexShaderType type) {
     switch (type) {
         case VertexShaderType::Noop: {
             return ShaderText{
@@ -91,8 +90,7 @@ void main() {
     }
 }
 
-std::optional<ShaderText> GetGlslFragmentShader(const ShaderEnvironment& environment,
-        FragmentShaderType type) {
+std::optional<ShaderText> GetGlslFragmentShader(FragmentShaderType type) {
     switch (type) {
         case FragmentShaderType::White: {
             return ShaderText{
@@ -135,8 +133,7 @@ void main() {
     }
 }
 
-std::optional<std::string> GetGlslUniform(const ShaderEnvironment& environment,
-        ShaderUniformType type) {
+std::optional<std::string> GetGlslUniform(ShaderUniformType type) {
     switch (type) {
         case ShaderUniformType::None: {
             return "";
@@ -198,10 +195,8 @@ std::vector<UniformConfig> GetUniformConfig(ShaderUniformType type) {
     }
 }
 
-} // namespace
-
-ShaderLanguage ShaderEnvironment::getShaderLanguage() const {
-    switch (mBackend) {
+ShaderLanguage getShaderLanguage(const Backend& backend) {
+    switch (backend) {
         case Backend::METAL:
             return ShaderLanguage::MSL;
         case Backend::WEBGPU:
@@ -215,19 +210,20 @@ ShaderLanguage ShaderEnvironment::getShaderLanguage() const {
     }
 }
 
+} // namespace
+
 Shader SharedShaders::makeShader(filament::backend::DriverApi& api, Cleanup& cleanup,
-        ShaderEnvironment environment,
         ShaderRequest request) {
     std::optional<ShaderText> vertex;
     std::optional<ShaderText> fragment;
     std::optional<std::string> uniform;
-    if (environment.getShaderLanguage() != ShaderLanguage::GLSL) {
+    if (getShaderLanguage(BackendTest::sBackend) != ShaderLanguage::GLSL) {
         // TODO: If any shaders need backend/shader language specific shaders rather than transpiled
         // versions of the GLSL shader, check environment.
     }
-    vertex = GetGlslVertexShader(environment, request.mVertexType);
-    fragment = GetGlslFragmentShader(environment, request.mFragmentType);
-    uniform = GetGlslUniform(environment, request.mUniformType);
+    vertex = GetGlslVertexShader(request.mVertexType);
+    fragment = GetGlslFragmentShader(request.mFragmentType);
+    uniform = GetGlslUniform(request.mUniformType);
     if (vertex.has_value() && fragment.has_value() && uniform.has_value()) {
         return Shader(
                 api, cleanup, ShaderConfig{
@@ -239,20 +235,19 @@ Shader SharedShaders::makeShader(filament::backend::DriverApi& api, Cleanup& cle
     }
 }
 
-std::string SharedShaders::getVertexShaderText(ShaderEnvironment environment,
-        VertexShaderType vertex, ShaderUniformType uniform) {
-    std::optional<ShaderText> vertexText = GetGlslVertexShader(environment, vertex);
-    std::optional<std::string> uniformText = GetGlslUniform(environment, uniform);
+std::string SharedShaders::getVertexShaderText(VertexShaderType vertex, ShaderUniformType uniform) {
+    std::optional<ShaderText> vertexText = GetGlslVertexShader(vertex);
+    std::optional<std::string> uniformText = GetGlslUniform(uniform);
     if (!vertexText.has_value() || !uniformText.has_value()) {
         abort();
     }
     return vertexText->withUniform(*uniformText);
 }
 
-std::string SharedShaders::getFragmentShaderText(ShaderEnvironment environment,
-        FragmentShaderType fragment, ShaderUniformType uniform) {
-    std::optional<ShaderText> fragmentText = GetGlslFragmentShader(environment, fragment);
-    std::optional<std::string> uniformText = GetGlslUniform(environment, uniform);
+std::string SharedShaders::getFragmentShaderText(FragmentShaderType fragment,
+        ShaderUniformType uniform) {
+    std::optional<ShaderText> fragmentText = GetGlslFragmentShader(fragment);
+    std::optional<std::string> uniformText = GetGlslUniform(uniform);
     if (!fragmentText.has_value() || !uniformText.has_value()) {
         abort();
     }

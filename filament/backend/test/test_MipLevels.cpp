@@ -66,17 +66,18 @@ TEST_F(BackendTest, TextureViewLod) {
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
-        Shader whiteShader = SharedShaders::makeShader(api, cleanup, ShaderEnvironment{sBackend}, ShaderRequest {
+        Shader whiteShader = SharedShaders::makeShader(api, cleanup, ShaderRequest {
             .mVertexType = VertexShaderType::Textured,
             .mFragmentType = FragmentShaderType::White,
             .mUniformType = ShaderUniformType::Sampler
         });
 
         // Create a program that samples a texture.
-        std::string vertexShader = SharedShaders::getVertexShaderText(ShaderEnvironment{ sBackend },
+        std::string vertexShader = SharedShaders::getVertexShaderText(
                 VertexShaderType::Textured, ShaderUniformType::Sampler);
-        filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "backend_test", "sib_tex", 0,
-                                                                   SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
+        filament::SamplerInterfaceBlock::SamplerInfo samplerInfo {
+            "backend_test", "sib_tex", 0,
+            SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
         Shader texturedShader(api, cleanup, ShaderConfig {
            .vertexShader = vertexShader,
            .fragmentShader = fragmentTexturedLod,
@@ -92,9 +93,10 @@ TEST_F(BackendTest, TextureViewLod) {
         // Level 3:   16x16 (yellow)
         const size_t kTextureSize = 128;
         const size_t kMipLevels = 4;
-        Handle<HwTexture> texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, kMipLevels,
-                TextureFormat::RGBA8, 1, kTextureSize, kTextureSize, 1,
-                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::UPLOADABLE));
+        Handle<HwTexture> texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+                kMipLevels, TextureFormat::RGBA8, 1, kTextureSize, kTextureSize, 1,
+                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT
+                | TextureUsage::UPLOADABLE));
 
         // Create image data.
         auto pixelFormat = PixelDataFormat::RGBA;
@@ -150,7 +152,8 @@ TEST_F(BackendTest, TextureViewLod) {
             api.endRenderPass();
         }
 
-        backend::Handle<HwRenderTarget> defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+        backend::Handle<HwRenderTarget> defaultRenderTarget =
+                cleanup.add(api.createDefaultRenderTarget(0));
 
         RenderPassParams params = {};
         fullViewport(params);

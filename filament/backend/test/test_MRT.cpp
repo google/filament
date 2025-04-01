@@ -58,10 +58,10 @@ TEST_F(BackendTest, MRT) {
         api.makeCurrent(swapChain, swapChain);
 
         Shader shader(api, cleanup, ShaderConfig{
-                .vertexShader = SharedShaders::getVertexShaderText(ShaderEnvironment{ sBackend },
-                        VertexShaderType::Noop, ShaderUniformType::None),
-           .fragmentShader = fragment,
-           .uniforms = {}
+                .vertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
+                        ShaderUniformType::None),
+                .fragmentShader = fragment,
+                .uniforms = {}
         });
 
         TrianglePrimitive triangle(api);

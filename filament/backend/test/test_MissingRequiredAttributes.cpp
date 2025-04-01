@@ -27,7 +27,7 @@ namespace {
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::string vertex (R"(#version 450 core
+std::string vertex(R"(#version 450 core
 
 layout(location = 0) in vec4 mesh_position;
 
@@ -70,8 +70,9 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
 
         // Create a program.
         Shader shader(api, cleanup, ShaderConfig{
-            .vertexShader = vertex,
-            .fragmentShader = SharedShaders::getFragmentShaderText(ShaderEnvironment{sBackend}, FragmentShaderType::White, ShaderUniformType::None),
+                .vertexShader = vertex,
+                .fragmentShader = SharedShaders::getFragmentShaderText(FragmentShaderType::White,
+                        ShaderUniformType::None),
         });
 
         auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
@@ -81,7 +82,7 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
         RenderPassParams params = {};
         fullViewport(params);
         params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = {0.f, 1.f, 0.f, 1.f};
+        params.clearColor = { 0.f, 1.f, 0.f, 1.f };
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
 

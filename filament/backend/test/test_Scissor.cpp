@@ -69,7 +69,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
         api.makeCurrent(swapChain, swapChain);
 
-        Shader shader = SharedShaders::makeShader(api, cleanup, ShaderEnvironment{sBackend}, ShaderRequest{
+        Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{
             .mVertexType = VertexShaderType::Noop,
             .mFragmentType = FragmentShaderType::White,
             .mUniformType = ShaderUniformType::None,
@@ -160,7 +160,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
         api.makeCurrent(swapChain, swapChain);
 
-        Shader shader = SharedShaders::makeShader(api, cleanup, ShaderEnvironment{sBackend}, ShaderRequest{
+        Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{
                 .mVertexType = VertexShaderType::Noop,
                 .mFragmentType = FragmentShaderType::White,
                 .mUniformType = ShaderUniformType::None,

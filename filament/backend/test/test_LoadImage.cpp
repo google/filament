@@ -107,8 +107,8 @@ template<typename componentType> inline componentType getMaxValue();
 class LoadImageTest : public BackendTest {
 public:
     LoadImageTest() {
-        mVertexShader = SharedShaders::getVertexShaderText(ShaderEnvironment{ sBackend },
-                VertexShaderType::Noop, ShaderUniformType::None);
+        mVertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
+                ShaderUniformType::None);
     }
 
     std::string mVertexShader;
