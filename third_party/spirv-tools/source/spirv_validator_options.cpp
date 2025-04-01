@@ -131,6 +131,11 @@ void spvValidatorOptionsSetAllowOffsetTextureOperand(
   options->allow_offset_texture_operand = val;
 }
 
+void spvValidatorOptionsSetAllowVulkan32BitBitwise(
+    spv_validator_options options, bool val) {
+  options->allow_vulkan_32_bit_bitwise = val;
+}
+
 void spvValidatorOptionsSetFriendlyNames(spv_validator_options options,
                                          bool val) {
   options->use_friendly_names = val;

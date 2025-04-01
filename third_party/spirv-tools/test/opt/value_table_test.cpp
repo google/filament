@@ -25,7 +25,16 @@ namespace {
 
 using ::testing::HasSubstr;
 using ::testing::MatchesRegex;
-using ValueTableTest = PassTest<::testing::Test>;
+
+struct ValueTableTest : public PassTest<::testing::Test> {
+  virtual void SetUp() override {
+    SetTargetEnv(SPV_ENV_UNIVERSAL_1_2);
+    SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+    SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES |
+                          SPV_BINARY_TO_TEXT_OPTION_INDENT |
+                          SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  }
+};
 
 TEST_F(ValueTableTest, SameInstructionSameValue) {
   const std::string text = R"(
@@ -724,7 +733,145 @@ TEST_F(ValueTableTest, RedundantSampledImageLoad) {
   ValueNumberTable vtable(context.get());
   Instruction* load1 = context->get_def_use_mgr()->GetDef(17);
   Instruction* load2 = context->get_def_use_mgr()->GetDef(18);
+  // Considered the same because the underlying memory is read-only
   EXPECT_EQ(vtable.GetValueNumber(load1), vtable.GetValueNumber(load2));
+}
+
+TEST_F(ValueTableTest, ImageRead_ConsideredDifferent) {
+  // Image reads are considered different because they can be read-write storage
+  // image.
+  const std::string text = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginLowerLeft
+               OpName %main "main"
+               OpName %var "s"
+               OpDecorate %var DescriptorSet 0
+               OpDecorate %var Binding 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+     %v2zero = OpConstantNull %v2int
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+    %v4float = OpTypeVector %float 4
+       %i_ty = OpTypeImage %float 2D 0 0 0 2 Rgba32f
+   %ptr_s_ty = OpTypePointer UniformConstant %i_ty
+        %var = OpVariable %ptr_s_ty UniformConstant
+       %main = OpFunction %void None %6
+         %15 = OpLabel
+         %16 = OpLoad %i_ty %var
+        %100 = OpImageRead %v4float %16 %v2zero
+        %101 = OpImageRead %v4float %16 %v2zero
+               OpReturn
+               OpFunctionEnd
+  )";
+  auto context = AssembleModule(text);
+  ValueNumberTable vtable(context.get());
+  Instruction* read1 = context->get_def_use_mgr()->GetDef(100);
+  Instruction* read2 = context->get_def_use_mgr()->GetDef(101);
+  ASSERT_NE(read1, nullptr);
+  ASSERT_NE(read2, nullptr);
+  EXPECT_NE(vtable.GetValueNumber(read1), vtable.GetValueNumber(read2));
+}
+
+TEST_F(ValueTableTest, LoadSampler_ConsideredDifferent) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginLowerLeft
+               OpName %main "main"
+               OpName %var "var"
+               OpDecorate %var DescriptorSet 0
+               OpDecorate %var Binding 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+       %s_ty = OpTypeSampler
+   %ptr_s_ty = OpTypePointer UniformConstant %s_ty
+        %var = OpVariable %ptr_s_ty UniformConstant
+       %main = OpFunction %void None %6
+         %15 = OpLabel
+        %100 = OpLoad %s_ty %var
+        %101 = OpLoad %s_ty %var
+               OpReturn
+               OpFunctionEnd
+  )";
+  auto context = AssembleModule(text);
+  ValueNumberTable vtable(context.get());
+  Instruction* load1 = context->get_def_use_mgr()->GetDef(100);
+  Instruction* load2 = context->get_def_use_mgr()->GetDef(101);
+  ASSERT_NE(load1, nullptr) << Disassemble(context->module());
+  ASSERT_NE(load2, nullptr);
+  EXPECT_NE(vtable.GetValueNumber(load1), vtable.GetValueNumber(load2));
+}
+
+TEST_F(ValueTableTest, LoadImage_ConsideredDifferent) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginLowerLeft
+               OpName %main "main"
+               OpName %var "var"
+               OpDecorate %var DescriptorSet 0
+               OpDecorate %var Binding 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %i_ty = OpTypeImage %float 2D 0 0 0 1 Unknown
+   %ptr_i_ty = OpTypePointer UniformConstant %i_ty
+        %var = OpVariable %ptr_i_ty UniformConstant
+       %main = OpFunction %void None %6
+         %15 = OpLabel
+        %100 = OpLoad %i_ty %var
+        %101 = OpLoad %i_ty %var
+               OpReturn
+               OpFunctionEnd
+  )";
+  auto context = AssembleModule(text);
+  ValueNumberTable vtable(context.get());
+  Instruction* load1 = context->get_def_use_mgr()->GetDef(100);
+  Instruction* load2 = context->get_def_use_mgr()->GetDef(101);
+  ASSERT_NE(load1, nullptr);
+  ASSERT_NE(load2, nullptr);
+  EXPECT_NE(vtable.GetValueNumber(load1), vtable.GetValueNumber(load2));
+}
+
+TEST_F(ValueTableTest, LoadSampledImage_ConsideredDifferent) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginLowerLeft
+               OpName %main "main"
+               OpName %var "var"
+               OpDecorate %var DescriptorSet 0
+               OpDecorate %var Binding 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+       %s_ty = OpTypeSampler
+      %float = OpTypeFloat 32
+       %i_ty = OpTypeImage %float 2D 0 0 0 1 Unknown
+      %si_ty = OpTypeSampledImage %i_ty
+  %ptr_si_ty = OpTypePointer UniformConstant %si_ty
+        %var = OpVariable %ptr_si_ty UniformConstant
+       %main = OpFunction %void None %6
+         %15 = OpLabel
+        %100 = OpLoad %si_ty %var
+        %101 = OpLoad %si_ty %var
+               OpReturn
+               OpFunctionEnd
+  )";
+  auto context = AssembleModule(text);
+  ValueNumberTable vtable(context.get());
+  Instruction* load1 = context->get_def_use_mgr()->GetDef(100);
+  Instruction* load2 = context->get_def_use_mgr()->GetDef(101);
+  ASSERT_NE(load1, nullptr);
+  ASSERT_NE(load2, nullptr);
+  EXPECT_NE(vtable.GetValueNumber(load1), vtable.GetValueNumber(load2));
 }
 
 TEST_F(ValueTableTest, DifferentDebugLocalVariableSameValue) {

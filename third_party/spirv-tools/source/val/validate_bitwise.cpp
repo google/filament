@@ -30,14 +30,14 @@ spv_result_t ValidateBaseType(ValidationState_t& _, const Instruction* inst,
 
   if (!_.IsIntScalarType(base_type) && !_.IsIntVectorType(base_type)) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << _.VkErrorID(4781)
            << "Expected int scalar or vector type for Base operand: "
            << spvOpcodeString(opcode);
   }
 
   // Vulkan has a restriction to 32 bit for base
   if (spvIsVulkanEnv(_.context()->target_env)) {
-    if (_.GetBitWidth(base_type) != 32) {
+    if (_.GetBitWidth(base_type) != 32 &&
+        !_.options()->allow_vulkan_32_bit_bitwise) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << _.VkErrorID(4781)
              << "Expected 32-bit int type for Base operand: "
