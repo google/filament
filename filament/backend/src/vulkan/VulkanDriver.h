@@ -27,6 +27,7 @@
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
 #include "VulkanQueryManager.h"
+#include "VulkanYcbcrConversionCache.h"
 #include "vulkan/VulkanDescriptorSetCache.h"
 #include "vulkan/VulkanDescriptorSetLayoutCache.h"
 #include "vulkan/VulkanPipelineLayoutCache.h"
@@ -135,6 +136,7 @@ private:
     VulkanPipelineCache mPipelineCache;
     VulkanStagePool mStagePool;
     VulkanFboCache mFramebufferCache;
+    VulkanYcbcrConversionCache mYcbcrConversionCache;
     VulkanSamplerCache mSamplerCache;
     VulkanBlitter mBlitter;
     VulkanReadPixels mReadPixels;

@@ -361,8 +361,7 @@ public:
             VkImageUsageFlags usage);
 
     virtual VkSampler createExternalSampler(SamplerYcbcrConversion chroma,
-            SamplerParams sampler,
-            uint32_t internalFormat);
+            SamplerParams sampler, uint32_t internalFormat);
 
     virtual VkImageView createExternalImageView(SamplerYcbcrConversion chroma,
             uint32_t internalFormat, VkImage image, VkImageSubresourceRange range,

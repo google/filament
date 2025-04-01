@@ -295,9 +295,8 @@ VulkanPlatformAndroid::ImageData VulkanPlatformAndroid::createExternalImageData(
 VkImageView VulkanPlatform::createExternalImageViewImpl(VkDevice device, SamplerYcbcrConversion chroma,
             uint32_t internalFormat, VkImage image, VkImageSubresourceRange range,
             VkImageViewType viewType, VkComponentMapping swizzle){
-        VkExternalFormatANDROID externalFormat = {
+    VkExternalFormatANDROID externalFormat = {
         .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
-        .pNext = nullptr,
         .externalFormat = internalFormat,
     };
 
@@ -322,7 +321,6 @@ VkImageView VulkanPlatform::createExternalImageViewImpl(VkDevice device, Sampler
 
     VkSamplerYcbcrConversionInfo samplerYcbcrConversionInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,
-        .pNext = nullptr,
         .conversion = conversion,
     };
 
@@ -350,7 +348,6 @@ VkSampler VulkanPlatform::createExternalSamplerImpl(
         uint32_t internalFormat) {
     VkExternalFormatANDROID externalFormat = {
         .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
-        .pNext = nullptr,
         .externalFormat = internalFormat,
     };
 
