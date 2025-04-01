@@ -736,10 +736,6 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     chainStruct(&context.mPhysicalDeviceFeatures, &queryProtectedMemoryFeatures);
     chainStruct(&context.mPhysicalDeviceProperties, &protectedMemoryProperties);
 
-    // We know we need to allocate the protected version of the VK objects
-    context.mProtectedMemorySupported =
-            static_cast<bool>(queryProtectedMemoryFeatures.protectedMemory);
-
     // Initialize the following fields: physicalDeviceProperties, memoryProperties,
     // physicalDeviceFeatures, graphicsQueueFamilyIndex.
     vkGetPhysicalDeviceProperties2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties);
@@ -758,6 +754,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     if (mImpl->mGraphicsQueueIndex == INVALID_VK_INDEX) {
         mImpl->mGraphicsQueueIndex = 0;
     }
+
+    // We know we need to allocate the protected version of the VK objects
+    context.mProtectedMemorySupported =
+            static_cast<bool>(queryProtectedMemoryFeatures.protectedMemory);
 
     if (context.mProtectedMemorySupported) {
         mImpl->mProtectedGraphicsQueueFamilyIndex = identifyGraphicsQueueFamilyIndex(

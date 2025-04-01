@@ -118,6 +118,9 @@ spv_result_t getWord(spv_text text, spv_position position, std::string* word) {
           break;
         case ' ':
         case ';':
+        case ',':
+        case '(':
+        case ')':
         case '\t':
         case '\n':
         case '\r':

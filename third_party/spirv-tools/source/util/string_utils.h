@@ -17,12 +17,11 @@
 
 #include <assert.h>
 
+#include <cstdint>
 #include <cstring>
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include "source/util/string_utils.h"
 
 namespace spvtools {
 namespace utils {
@@ -48,8 +47,9 @@ std::pair<std::string, std::string> SplitFlagArgs(const std::string& flag);
 
 // Encodes a string as a sequence of words, using the SPIR-V encoding, appending
 // to an existing vector.
-inline void AppendToVector(const std::string& input,
-                           std::vector<uint32_t>* result) {
+template <class VectorType = std::vector<uint32_t>>
+inline void AppendToVector(const std::string& input, VectorType* result) {
+  static_assert(std::is_same<uint32_t, typename VectorType::value_type>::value);
   uint32_t word = 0;
   size_t num_bytes = input.size();
   // SPIR-V strings are null-terminated.  The byte_index == num_bytes
@@ -70,8 +70,10 @@ inline void AppendToVector(const std::string& input,
 }
 
 // Encodes a string as a sequence of words, using the SPIR-V encoding.
-inline std::vector<uint32_t> MakeVector(const std::string& input) {
-  std::vector<uint32_t> result;
+template <class VectorType = std::vector<uint32_t>>
+inline VectorType MakeVector(const std::string& input) {
+  static_assert(std::is_same<uint32_t, typename VectorType::value_type>::value);
+  VectorType result;
   AppendToVector(input, &result);
   return result;
 }

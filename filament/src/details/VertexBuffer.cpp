@@ -30,6 +30,7 @@
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/StaticString.h>
 #include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/ostream.h>
@@ -150,6 +151,10 @@ VertexBuffer::Builder& VertexBuffer::Builder::advancedSkinning(bool const enable
 
 VertexBuffer::Builder& VertexBuffer::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
+}
+
+VertexBuffer::Builder& VertexBuffer::Builder::name(utils::StaticString const& name) noexcept {
+    return BuilderNameMixin::name(name);
 }
 
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {

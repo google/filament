@@ -43,6 +43,7 @@ namespace utils {
 template <class T, size_t small_size>
 class SmallVector {
  public:
+  using value_type = T;
   using iterator = T*;
   using const_iterator = const T*;
 

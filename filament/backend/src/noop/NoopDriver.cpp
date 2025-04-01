@@ -241,7 +241,9 @@ size_t NoopDriver::getMaxUniformBufferSize() {
 }
 
 size_t NoopDriver::getMaxTextureSize(SamplerType target) {
-    return 2048u;
+    // NoopDriver is being actively used for other purposes.  This needs to be resolved before we
+    // can change it to 2048. b/406832484
+    return 16384u;
 }
 
 size_t NoopDriver::getMaxArrayTextureLayers() {

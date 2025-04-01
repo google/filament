@@ -12,7 +12,7 @@ jobs:
     name: build-android
     # We intentially use a larger runner here to enable larger disk space
     # (standard linux runner will fail on disk space and faster build time).
-    runs-on: ubuntu-22.04-32core
+    runs-on: 'ubuntu-24.04-32core'
 
     steps:
       - uses: actions/checkout@v4.1.6

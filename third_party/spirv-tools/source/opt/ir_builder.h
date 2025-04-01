@@ -15,6 +15,7 @@
 #ifndef SOURCE_OPT_IR_BUILDER_H_
 #define SOURCE_OPT_IR_BUILDER_H_
 
+#include <cassert>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -480,8 +481,11 @@ class InstructionBuilder {
     return AddInstruction(std::move(select));
   }
 
-  Instruction* AddAccessChain(uint32_t type_id, uint32_t base_ptr_id,
-                              std::vector<uint32_t> ids) {
+  Instruction* AddOpcodeAccessChain(spv::Op opcode, uint32_t type_id,
+                                    uint32_t base_ptr_id,
+                                    const std::vector<uint32_t>& ids) {
+    assert(opcode == spv::Op::OpAccessChain ||
+           opcode == spv::Op::OpInBoundsAccessChain);
     std::vector<Operand> operands;
     operands.push_back({SPV_OPERAND_TYPE_ID, {base_ptr_id}});
 
@@ -490,10 +494,20 @@ class InstructionBuilder {
     }
 
     // TODO(1841): Handle id overflow.
-    std::unique_ptr<Instruction> new_inst(
-        new Instruction(GetContext(), spv::Op::OpAccessChain, type_id,
-                        GetContext()->TakeNextId(), operands));
+    std::unique_ptr<Instruction> new_inst(new Instruction(
+        GetContext(), opcode, type_id, GetContext()->TakeNextId(), operands));
     return AddInstruction(std::move(new_inst));
+  }
+
+  Instruction* AddAccessChain(uint32_t type_id, uint32_t base_ptr_id,
+                              const std::vector<uint32_t>& ids) {
+    return AddOpcodeAccessChain(spv::Op::OpAccessChain, type_id, base_ptr_id,
+                                ids);
+  }
+  Instruction* AddInBoundsAccessChain(uint32_t type_id, uint32_t base_ptr_id,
+                                      const std::vector<uint32_t>& ids) {
+    return AddOpcodeAccessChain(spv::Op::OpInBoundsAccessChain, type_id,
+                                base_ptr_id, ids);
   }
 
   Instruction* AddLoad(uint32_t type_id, uint32_t base_ptr_id,
@@ -514,9 +528,19 @@ class InstructionBuilder {
     return AddInstruction(std::move(new_inst));
   }
 
+  Instruction* AddCopyObject(uint32_t type_id, uint32_t value_id) {
+    std::vector<Operand> operands{{SPV_OPERAND_TYPE_ID, {value_id}}};
+
+    // TODO(1841): Handle id overflow.
+    std::unique_ptr<Instruction> new_inst(
+        new Instruction(GetContext(), spv::Op::OpCopyObject, type_id,
+                        GetContext()->TakeNextId(), operands));
+    return AddInstruction(std::move(new_inst));
+  }
+
   Instruction* AddVariable(uint32_t type_id, uint32_t storage_class) {
     std::vector<Operand> operands;
-    operands.push_back({SPV_OPERAND_TYPE_ID, {storage_class}});
+    operands.push_back({SPV_OPERAND_TYPE_STORAGE_CLASS, {storage_class}});
     std::unique_ptr<Instruction> new_inst(
         new Instruction(GetContext(), spv::Op::OpVariable, type_id,
                         GetContext()->TakeNextId(), operands));
@@ -572,6 +596,26 @@ class InstructionBuilder {
     return AddInstruction(std::move(new_inst));
   }
 
+  Instruction* AddDecoration(uint32_t target_id, spv::Decoration d,
+                             const std::vector<uint32_t>& literals) {
+    std::vector<Operand> operands;
+    operands.push_back({SPV_OPERAND_TYPE_ID, {target_id}});
+    operands.push_back({SPV_OPERAND_TYPE_DECORATION, {uint32_t(d)}});
+    for (uint32_t literal : literals) {
+      operands.push_back({SPV_OPERAND_TYPE_LITERAL_INTEGER, {literal}});
+    }
+
+    std::unique_ptr<Instruction> new_inst(
+        new Instruction(GetContext(), spv::Op::OpDecorate, 0, 0, operands));
+    // Decorations are annotation instructions.  Add it via the IR context,
+    // so the decoration manager will be updated.
+    // Decorations don't belong to basic blocks, so there is no need
+    // to update the instruction to block mapping.
+    Instruction* result = new_inst.get();
+    GetContext()->AddAnnotationInst(std::move(new_inst));
+    return result;
+  }
+
   Instruction* AddNaryExtendedInstruction(
       uint32_t result_type, uint32_t set, uint32_t instruction,
       const std::vector<uint32_t>& ext_operands) {
@@ -590,6 +634,23 @@ class InstructionBuilder {
 
     std::unique_ptr<Instruction> new_inst(new Instruction(
         GetContext(), spv::Op::OpExtInst, result_type, result_id, operands));
+    return AddInstruction(std::move(new_inst));
+  }
+
+  Instruction* AddSampledImage(uint32_t sampled_image_type_id,
+                               uint32_t image_id, uint32_t sampler_id) {
+    std::vector<Operand> operands;
+    operands.push_back({SPV_OPERAND_TYPE_ID, {image_id}});
+    operands.push_back({SPV_OPERAND_TYPE_ID, {sampler_id}});
+
+    uint32_t result_id = GetContext()->TakeNextId();
+    if (result_id == 0) {
+      return nullptr;
+    }
+
+    std::unique_ptr<Instruction> new_inst(
+        new Instruction(GetContext(), spv::Op::OpSampledImage,
+                        sampled_image_type_id, result_id, operands));
     return AddInstruction(std::move(new_inst));
   }
 

@@ -1,0 +1,25 @@
+;; Use functions' `OpFunctionType` to group before grouping by return type only.
+                 OpCapability Shader
+                 OpCapability Linkage
+                 OpMemoryModel Logical GLSL450
+         %bool = OpTypeBool
+          %int = OpTypeInt 32 1
+        %int_0 = OpConstantNull %int
+
+       %fn_int = OpTypeFunction %bool %int
+   %fn_int_int = OpTypeFunction %bool %int %int
+
+            %g = OpFunction %bool None %fn_int_int
+          %gp1 = OpFunctionParameter %int
+          %gp2 = OpFunctionParameter %int
+   %g_prologue = OpLabel
+           %gr = OpIEqual %bool %gp1 %int_0
+                 OpReturnValue %gr
+                 OpFunctionEnd
+
+            %f = OpFunction %bool None %fn_int
+          %fp1 = OpFunctionParameter %int
+   %f_prologue = OpLabel
+           %fr = OpIEqual %bool %fp1 %int_0
+                 OpReturnValue %fr
+                 OpFunctionEnd

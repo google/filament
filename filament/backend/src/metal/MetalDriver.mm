@@ -1177,9 +1177,17 @@ size_t MetalDriver::getMaxUniformBufferSize() {
     return 256 * 1024 * 1024;   // TODO: return the actual size instead of hardcoding the minspec
 }
 
-size_t MetalDriver::getMaxTextureSize(SamplerType) {
-    // TODO: return the actual size instead of hardcoding the minspec
-    return 2048;
+size_t MetalDriver::getMaxTextureSize(SamplerType type) {
+    if (type == SamplerType::SAMPLER_3D) {
+        return 2048;
+    }
+    if (mContext->highestSupportedGpuFamily.apple >= 3 ||
+            mContext->highestSupportedGpuFamily.mac >= 2) {
+        return 16384;
+    } else if (mContext->highestSupportedGpuFamily.apple >= 2) {
+        return 8192;
+    }
+    return 4096;
 }
 
 size_t MetalDriver::getMaxArrayTextureLayers() {

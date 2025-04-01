@@ -66,8 +66,7 @@ spv_result_t ValidateMemorySemantics(ValidationState_t& _,
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << spvOpcodeString(opcode)
            << ": Memory Semantics can have at most one of the following "
-              "bits "
-              "set: Acquire, Release, AcquireRelease or "
+              "bits set: Acquire, Release, AcquireRelease or "
               "SequentiallyConsistent";
   }
 
@@ -176,10 +175,8 @@ spv_result_t ValidateMemorySemantics(ValidationState_t& _,
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << _.VkErrorID(4732) << spvOpcodeString(opcode)
              << ": Vulkan specification requires Memory Semantics to have "
-                "one "
-                "of the following bits set: Acquire, Release, "
-                "AcquireRelease "
-                "or SequentiallyConsistent";
+                "one of the following bits set: Acquire, Release, "
+                "AcquireRelease or SequentiallyConsistent";
     } else if (opcode != spv::Op::OpMemoryBarrier &&
                num_memory_order_set_bits) {
       // should leave only atomics and control barriers for Vulkan env
@@ -203,11 +200,20 @@ spv_result_t ValidateMemorySemantics(ValidationState_t& _,
                 "storage class";
     }
 
-    if (opcode == spv::Op::OpControlBarrier && value && !includes_storage_class) {
-      return _.diag(SPV_ERROR_INVALID_DATA, inst)
-             << _.VkErrorID(4650) << spvOpcodeString(opcode)
-             << ": expected Memory Semantics to include a Vulkan-supported "
-                "storage class if Memory Semantics is not None";
+    if (opcode == spv::Op::OpControlBarrier && value) {
+      if (!num_memory_order_set_bits) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << _.VkErrorID(10609) << spvOpcodeString(opcode)
+               << ": Vulkan specification requires non-zero Memory Semantics "
+                  "to have one of the following bits set: Acquire, Release, "
+                  "AcquireRelease or SequentiallyConsistent";
+      }
+      if (!includes_storage_class) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << _.VkErrorID(4650) << spvOpcodeString(opcode)
+               << ": expected Memory Semantics to include a Vulkan-supported "
+                  "storage class if Memory Semantics is not None";
+      }
     }
   }
 

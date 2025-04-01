@@ -88,7 +88,12 @@ void minLeftMaxRight(inout vec4 a, inout vec4 b, inout vec4 c, inout vec4 d, ino
 
 // - we can't use a function because offset must be a constant expression
 // - we can't use line continuation because that's not supported on desktop
+#ifdef TARGET_WEBGPU_ENVIRONMENT
+//WebGPU can not handle texelFetchOffset without an error about "ConstOffset is only permitted...".
+#define makeSample(ij, o) vec4(texelFetch(materialParams_dof, ij+o, 0).rgb, texelFetch(materialParams_alpha, ij+o, 0).r)
+#else
 #define makeSample(ij, o) vec4(texelFetchOffset(materialParams_dof, ij, 0, o).rgb, texelFetchOffset(materialParams_alpha, ij, 0, o).r)
+#endif
 
 vec4 median(ivec2 ij) {
     vec4 v[9];

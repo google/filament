@@ -664,7 +664,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     // spaces are the same, but we currently don't check that. We must revise these conditions if we
     // ever handle this case.
     mIsOneDimensional = !builder->hasAdjustments && !builder->luminanceScaling
-            && builder->toneMapper->isOneDimensional();
+            && builder->toneMapper->isOneDimensional()
+            && engine.features.engine.color_grading.use_1d_lut;
     mIsLDR = mIsOneDimensional && builder->toneMapper->isLDR();
 
     const Config config = {

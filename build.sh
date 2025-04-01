@@ -200,8 +200,9 @@ WEBGPU_ANDROID_GRADLE_OPTION=""
 EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=OFF"
 
 MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
-FGVIEWER_OPTION="-DFILAMENT_ENABLE_FGVIEWER=OFF"
 MATDBG_GRADLE_OPTION=""
+FGVIEWER_OPTION="-DFILAMENT_ENABLE_FGVIEWER=OFF"
+FGVIEWER_GRADLE_OPTION=""
 
 MATOPT_OPTION=""
 MATOPT_GRADLE_OPTION=""
@@ -533,6 +534,7 @@ function build_android {
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
+            ${FGVIEWER_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
             :filament-android:assembleDebug \
             :gltfio-android:assembleDebug \
@@ -584,6 +586,7 @@ function build_android {
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
+            ${FGVIEWER_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease \

@@ -320,8 +320,8 @@ public:
         // a glFinish. So we must delay the destruction until we know the GPU is finished.
         bool delay_fbo_destruction;
 
-        // Mesa sometimes clears the generic buffer binding when *another* buffer is destroyed,
-        // if that other buffer is bound on an *indexed* buffer binding.
+        // Mesa and Mozilla(web) sometimes clear the generic buffer binding when *another* buffer
+        // is destroyed, if that other buffer is bound on an *indexed* buffer binding.
         bool rebind_buffer_after_deletion;
 
         // Force feature level 0. Typically used for low end ES3 devices with significant driver

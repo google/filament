@@ -10,6 +10,11 @@ material {
             type : float4,
             name : viewport,
             precision: high
+        },
+        {
+            type : float4,
+            name : viewportInfo,
+            precision: high
         }
     ],
     variables : [
@@ -22,8 +27,8 @@ material {
 
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.normalizedUV = uvToRenderTargetUV(postProcess.normalizedUV);
-        postProcess.vertex.xy = postProcess.normalizedUV;
+        postProcess.vertex.xy = materialParams.viewport.xy + postProcess.normalizedUV * materialParams.viewport.zw;
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.vertex.xy);
     }
 }
 
@@ -38,7 +43,7 @@ fragment {
     #define gather textureGather
 #else
     vec4 gather(const mediump sampler2D color, highp vec2 p, const int comp) {
-        highp ivec2 i = ivec2(p * materialParams.viewport.zw - 0.5);
+        highp ivec2 i = ivec2(p * materialParams.viewportInfo.zw - 0.5);
         vec4 d;
         d[0] = texelFetchOffset(color, i, 0, ivec2(0, 1))[comp];
         d[1] = texelFetchOffset(color, i, 0, ivec2(1, 1))[comp];
@@ -74,7 +79,7 @@ fragment {
 #include "sgsr1_shader_mobile.fs"
 
     void postProcess(inout PostProcessInputs postProcess) {
-        highp vec4 vp[1] = vec4[1]( materialParams.viewport );
+        highp vec4 vp[1] = vec4[1]( materialParams.viewportInfo );
         postProcess.color = sgsr(materialParams_color, variable_vertex.xy, vp);
     }
 }

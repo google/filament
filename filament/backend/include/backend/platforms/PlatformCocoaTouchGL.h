@@ -32,7 +32,7 @@ public:
     PlatformCocoaTouchGL();
     ~PlatformCocoaTouchGL() noexcept override;
 
-    ExternalImageHandle createExternalImage(void* cvPixelBuffer) noexcept;
+    ExternalImageHandle UTILS_PUBLIC createExternalImage(void* cvPixelBuffer) noexcept;
 
     // --------------------------------------------------------------------------------------------
     // Platform Interface

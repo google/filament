@@ -36,6 +36,7 @@
 #ifndef FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB
 #    define FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB 8
 #endif
+
 namespace filament::backend {
 
 /**
@@ -86,7 +87,9 @@ private:
     UTILS_ALWAYS_INLINE inline void methodName##R(RetType, paramsDecl);
 
 #include "private/backend/DriverAPI.inc"
-    // Memory management
+    /*
+     * Memory management
+     */
 
     HandleAllocatorWGPU mHandleAllocator;
 
@@ -108,4 +111,4 @@ private:
 
 }// namespace filament::backend
 
-#endif// TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
+#endif // TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H

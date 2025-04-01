@@ -256,16 +256,18 @@ struct DescriptorSetLayoutBinding {
     DescriptorFlags flags = DescriptorFlags::NONE;
     uint16_t count = 0;
 
-    uint8_t externalSamplerDataIndex = EXTERNAL_SAMPLER_DATA_INDEX_UNUSED;
+    //  TODO: uncomment when needed.  Note that this class is used as hash key.  We need to ensure
+    //  no uninitialized padding bytes.
+    //    uint8_t externalSamplerDataIndex = EXTERNAL_SAMPLER_DATA_INDEX_UNUSED;
 
-    friend inline bool operator==(
-            DescriptorSetLayoutBinding const& lhs,
+    friend inline bool operator==(DescriptorSetLayoutBinding const& lhs,
             DescriptorSetLayoutBinding const& rhs) noexcept {
         return lhs.type == rhs.type &&
                lhs.flags == rhs.flags &&
                lhs.count == rhs.count &&
-               lhs.stageFlags == rhs.stageFlags &&
-               lhs.externalSamplerDataIndex == rhs.externalSamplerDataIndex;
+               lhs.stageFlags == rhs.stageFlags;
+//               lhs.stageFlags == rhs.stageFlags &&
+//               lhs.externalSamplerDataIndex == rhs.externalSamplerDataIndex;
     }
 };
 
@@ -1138,7 +1140,9 @@ static_assert(sizeof(ExternalSamplerDatum) == 12);
 
 struct DescriptorSetLayout {
     utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
-    utils::FixedCapacityVector<ExternalSamplerDatum> externalSamplerData;
+
+//  TODO: uncomment when needed
+//    utils::FixedCapacityVector<ExternalSamplerDatum> externalSamplerData;
 };
 
 //! blending equation function

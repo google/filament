@@ -252,6 +252,7 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
         case Variable::CUSTOM1:
         case Variable::CUSTOM2:
         case Variable::CUSTOM3:
+        case Variable::CUSTOM4:
             assert(size_t(v) < MATERIAL_VARIABLES_COUNT);
             mVariables[size_t(v)] = { CString(name), Precision::DEFAULT, false };
             break;
@@ -266,6 +267,7 @@ MaterialBuilder& MaterialBuilder::variable(Variable v,
         case Variable::CUSTOM1:
         case Variable::CUSTOM2:
         case Variable::CUSTOM3:
+        case Variable::CUSTOM4:
             assert(size_t(v) < MATERIAL_VARIABLES_COUNT);
             mVariables[size_t(v)] = { CString(name), precision, true };
             break;
@@ -1252,6 +1254,15 @@ error:
     if (mMaterialDomain == MaterialDomain::POST_PROCESS && mOutputs.empty()) {
         output(VariableQualifier::OUT,
                 OutputTarget::COLOR, Precision::DEFAULT, OutputType::FLOAT4, "color");
+    }
+
+    if (mMaterialDomain == MaterialDomain::SURFACE) {
+        if (mRequiredAttributes[VertexAttribute::COLOR] &&
+            !mVariables[int(Variable::CUSTOM4)].name.empty()) {
+            // both the color attribute and the custom4 variable are present, that's not supported
+            slog.e << "Error: when the 'color' attribute is required 'Variable::CUSTOM4' is not supported." << io::endl;
+            goto error;
+        }
     }
 
     // TODO: maybe check MaterialDomain::COMPUTE has outputs

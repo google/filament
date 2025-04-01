@@ -241,6 +241,37 @@ Handler_OpTypePointer_StorageUniformBufferBlock16(
              : std::nullopt;
 }
 
+static std::optional<spv::Capability>
+Handler_OpTypePointer_StorageBuffer16BitAccess(const Instruction* instruction) {
+  assert(instruction->opcode() == spv::Op::OpTypePointer &&
+         "This handler only support OpTypePointer opcodes.");
+
+  // Requires StorageBuffer, ShaderRecordBufferKHR or PhysicalStorageBuffer
+  // storage classes.
+  spv::StorageClass storage_class = spv::StorageClass(
+      instruction->GetSingleWordInOperand(kOpTypePointerStorageClassIndex));
+  if (storage_class != spv::StorageClass::StorageBuffer &&
+      storage_class != spv::StorageClass::ShaderRecordBufferKHR &&
+      storage_class != spv::StorageClass::PhysicalStorageBuffer) {
+    return std::nullopt;
+  }
+
+  const auto* decoration_mgr = instruction->context()->get_decoration_mgr();
+  const bool matchesCondition =
+      AnyTypeOf(instruction, [decoration_mgr](const Instruction* item) {
+        if (!decoration_mgr->HasDecoration(item->result_id(),
+                                           spv::Decoration::Block)) {
+          return false;
+        }
+
+        return AnyTypeOf(item, is16bitType);
+      });
+
+  return matchesCondition
+             ? std::optional(spv::Capability::StorageBuffer16BitAccess)
+             : std::nullopt;
+}
+
 static std::optional<spv::Capability> Handler_OpTypePointer_StorageUniform16(
     const Instruction* instruction) {
   assert(instruction->opcode() == spv::Op::OpTypePointer &&
@@ -388,7 +419,7 @@ Handler_OpImageSparseRead_StorageImageReadWithoutFormat(
 }
 
 // Opcode of interest to determine capabilities requirements.
-constexpr std::array<std::pair<spv::Op, OpcodeHandler>, 13> kOpcodeHandlers{{
+constexpr std::array<std::pair<spv::Op, OpcodeHandler>, 14> kOpcodeHandlers{{
     // clang-format off
     {spv::Op::OpImageRead,         Handler_OpImageRead_StorageImageReadWithoutFormat},
     {spv::Op::OpImageWrite,        Handler_OpImageWrite_StorageImageWriteWithoutFormat},
@@ -403,6 +434,7 @@ constexpr std::array<std::pair<spv::Op, OpcodeHandler>, 13> kOpcodeHandlers{{
     {spv::Op::OpTypePointer,       Handler_OpTypePointer_StorageUniform16},
     {spv::Op::OpTypePointer,       Handler_OpTypePointer_StorageUniform16},
     {spv::Op::OpTypePointer,       Handler_OpTypePointer_StorageUniformBufferBlock16},
+    {spv::Op::OpTypePointer,       Handler_OpTypePointer_StorageBuffer16BitAccess},
     // clang-format on
 }};
 

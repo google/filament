@@ -94,10 +94,12 @@ add_spvtools_unittest(TARGET opt
        relax_float_ops_test.cpp
        replace_desc_array_access_using_var_index_test.cpp
        replace_invalid_opc_test.cpp
+       resolve_binding_conflicts_pass_test.cpp
        scalar_analysis.cpp
        scalar_replacement_test.cpp
        set_spec_const_default_value_test.cpp
        simplification_test.cpp
+       split_combined_image_sampler_pass_test.cpp
        spread_volatile_semantics_test.cpp
        strength_reduction_test.cpp
        strip_debug_info_test.cpp

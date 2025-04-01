@@ -20,6 +20,9 @@ struct MaterialVertexInputs {
 #ifdef VARIABLE_CUSTOM3
     vec4 VARIABLE_CUSTOM3;
 #endif
+#if defined(VARIABLE_CUSTOM4) && !defined(HAS_ATTRIBUTE_COLOR)
+    vec4 VARIABLE_CUSTOM4;
+#endif
 #ifdef HAS_ATTRIBUTE_TANGENTS
     vec3 worldNormal;
 #endif
@@ -74,6 +77,9 @@ void initMaterialVertex(out MaterialVertexInputs material) {
 #endif
 #ifdef VARIABLE_CUSTOM3
     material.VARIABLE_CUSTOM3 = vec4(0.0);
+#endif
+#if defined(VARIABLE_CUSTOM4) && !defined(HAS_ATTRIBUTE_COLOR)
+    material.VARIABLE_CUSTOM4 = vec4(0.0);
 #endif
     material.worldPosition = computeWorldPosition();
 #ifdef VERTEX_DOMAIN_DEVICE
