@@ -18,12 +18,12 @@
 #define TNT_FILAMENT_BACKEND_VULKANSWAPCHAIN_IMPL_H
 
 #include "vulkan/VulkanContext.h"
+#include "vulkan/VulkanConstants.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
 #include <bluevk/BlueVK.h>
 
-#include <tuple>
 #include <unordered_map>
 
 using namespace bluevk;

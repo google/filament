@@ -17,7 +17,6 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 #define TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 
-#include "VulkanConstants.h"
 #include "vulkan/utils/Image.h"
 #include "vulkan/utils/Definitions.h"
 
@@ -29,8 +28,6 @@
 #include <utils/Slice.h>
 
 #include <bluevk/BlueVK.h>
-
-#include <memory>
 
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaPool)
