@@ -21,6 +21,8 @@
 
 #include "FilamentAPI-impl.h"
 
+#include <utils/StaticString.h>
+
 #include <math/mat3.h>
 #include <math/vec3.h>
 
@@ -52,6 +54,10 @@ InstanceBuffer::Builder& InstanceBuffer::Builder::localTransforms(
 
 InstanceBuffer::Builder& InstanceBuffer::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
+}
+
+InstanceBuffer::Builder& InstanceBuffer::Builder::name(utils::StaticString const& name) noexcept {
+    return BuilderNameMixin::name(name);
 }
 
 InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {

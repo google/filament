@@ -201,6 +201,7 @@ cc_library(
     deps = [
         ":spirv_tools_internal",
         "@spirv_headers//:spirv_common_headers",
+        "@spirv_headers//:spirv_c_headers",
     ],
 )
 
