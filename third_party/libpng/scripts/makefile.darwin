@@ -1,5 +1,5 @@
 # makefile for libpng on Darwin / macOS
-# Copyright (C) 2020-2022 Cosmin Truta
+# Copyright (C) 2014, 2018-2025 Cosmin Truta
 # Copyright (C) 2002, 2004, 2006, 2008, 2010-2014 Glenn Randers-Pehrson
 # Copyright (C) 2001 Christoph Pfisterer
 # derived from makefile.linux:
@@ -9,10 +9,6 @@
 # This code is released under the libpng license.
 # For conditions of distribution and use, see the disclaimer
 # and license in png.h
-
-# Where the zlib library and include files are located
-ZLIBLIB=/usr/lib
-ZLIBINC=/usr/include
 
 # Library name:
 LIBNAME=libpng16
@@ -24,19 +20,28 @@ LIBSOMAJ=$(LIBNAME).$(PNGMAJ).dylib
 
 # Utilities:
 CC=cc
-AR_RC=ar rc
+AR=ar
 RANLIB=ranlib
-MKDIR_P=mkdir -p
 LN_SF=ln -sf
 CP=cp
 RM_F=rm -f
 
-NOHWOPT=-DPNG_ARM_NEON_OPT=0 -DPNG_MIPS_MSA_OPT=0 \
-        -DPNG_POWERPC_VSX_OPT=0 -DPNG_INTEL_SSE_OPT=0
-DEFS=$(NOHWOPT)
-CPPFLAGS=-I$(ZLIBINC) $(DEFS)
-CFLAGS=-O3 -funroll-loops -Wall -Wextra -Wundef
-LDFLAGS=-L. -L$(ZLIBLIB) -lpng16 -lz
+# Compiler and linker flags
+NOHWOPT = -DPNG_ARM_NEON_OPT=0 -DPNG_MIPS_MSA_OPT=0 \
+          -DPNG_POWERPC_VSX_OPT=0 -DPNG_INTEL_SSE_OPT=0
+STDC = -pedantic-errors
+WARN = -Wall -Wextra -Wundef
+WARNMORE = -Wcast-align -Wconversion -Wshadow -Wpointer-arith -Wwrite-strings \
+           -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes
+LOCAL_CPPFLAGS = $(NOHWOPT)
+CPPFLAGS = # -DPNG_DEBUG=5
+ALL_CPPFLAGS = $(LOCAL_CPPFLAGS) $(CPPFLAGS)
+LOCAL_CFLAGS = $(STDC) $(WARN) # $(WARNMORE)
+CFLAGS = -O3 -funroll-loops # -g
+ALL_CFLAGS = $(LOCAL_CFLAGS) $(CFLAGS)
+ARFLAGS = rc
+LDFLAGS = -L. -lpng16 -lz # -g
+LDFLAGS_A = libpng.a -lz -lm # -g
 
 # Pre-built configuration
 # See scripts/pnglibconf.mak for more options
@@ -52,18 +57,18 @@ OBJSDLL = $(OBJS:.o=.pic.o)
 .SUFFIXES:      .c .o .pic.o
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(ALL_CPPFLAGS) $(ALL_CFLAGS) -o $@ $*.c
 
 .c.pic.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -fno-common -o $@ $*.c
+	$(CC) -c $(ALL_CPPFLAGS) $(ALL_CFLAGS) -fno-common -o $@ $*.c
 
-all: libpng.a $(LIBSO) pngtest
+all: libpng.a $(LIBSO) pngtest pngtest-static
 
 pnglibconf.h: $(PNGLIBCONF_H_PREBUILT)
 	$(CP) $(PNGLIBCONF_H_PREBUILT) $@
 
 libpng.a: $(OBJS)
-	$(AR_RC) $@ $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
 
 $(LIBSO): $(LIBSOMAJ)
@@ -71,15 +76,25 @@ $(LIBSO): $(LIBSOMAJ)
 
 $(LIBSOMAJ): $(OBJSDLL)
 	$(CC) -dynamiclib \
-	 -current_version 16 -compatibility_version 16 \
-	 -o $(LIBSOMAJ) \
-	 $(OBJSDLL) -L$(ZLIBLIB) -lz
+	      -current_version 16 -compatibility_version 16 \
+	      -o $(LIBSOMAJ) \
+	      $(OBJSDLL) -lz
 
 pngtest: pngtest.o $(LIBSO)
 	$(CC) -o pngtest $(CFLAGS) pngtest.o $(LDFLAGS)
 
-test: pngtest
+pngtest-static: pngtest.o libpng.a
+	$(CC) -o pngtest-static $(CFLAGS) pngtest.o $(LDFLAGS_A)
+
+test: pngtest pngtest-static
+	@echo ""
+	@echo "   Running pngtest dynamically linked with $(LIBSO):"
+	@echo ""
 	./pngtest
+	@echo ""
+	@echo "   Running pngtest statically linked with libpng.a:"
+	@echo ""
+	./pngtest-static
 
 install:
 	@echo "The $@ target is no longer supported by this makefile."
@@ -94,8 +109,9 @@ install-shared:
 	@false
 
 clean:
-	$(RM_F) *.o libpng.a pngtest pngout.png
+	$(RM_F) $(OBJS) $(OBJSDLL) libpng.a
 	$(RM_F) $(LIBNAME).*dylib pnglibconf.h
+	$(RM_F) pngtest*.o pngtest pngtest-static pngout.png
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

@@ -1,7 +1,7 @@
 # makefile for libpng on Solaris 9 (beta) with Forte cc
 # Updated by Chad Schrock for Solaris 9
 # Contributed by William L. Sebok, based on makefile.linux
-# Copyright (C) 2020-2022 Cosmin Truta
+# Copyright (C) 2018-2025 Cosmin Truta
 # Copyright (C) 2002, 2006, 2008, 2010-2014 Glenn Randers-Pehrson
 # Copyright (C) 1998-2001 Greg Roelofs
 # Copyright (C) 1996-1997 Andreas Dilger
@@ -19,11 +19,9 @@ LIBSO=$(LIBNAME).so
 LIBSOMAJ=$(LIBNAME).so.$(PNGMAJ)
 
 # Utilities:
-# gcc 2.95 doesn't work.
 CC=cc
-AR_RC=ar rc
+AR=ar
 RANLIB=echo
-MKDIR_P=mkdir -p
 LN_SF=ln -f -s
 CP=cp
 RM_F=/bin/rm -f
@@ -41,6 +39,7 @@ ZLIBINC=/usr/include
 
 CPPFLAGS=-I$(ZLIBINC) # -DPNG_DEBUG=5
 CFLAGS=-O3
+ARFLAGS=rc
 LDFLAGS=-L. -R. -L$(ZLIBLIB) -R$(ZLIBLIB) -lpng16 -lz -lm
 
 # Pre-built configuration
@@ -56,7 +55,7 @@ OBJSDLL = $(OBJS:.o=.pic.o)
 .SUFFIXES:      .c .o .pic.o
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $*.c
 
 .c.pic.o:
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -KPIC -o $@ $*.c
@@ -67,7 +66,7 @@ pnglibconf.h: $(PNGLIBCONF_H_PREBUILT)
 	$(CP) $(PNGLIBCONF_H_PREBUILT) $@
 
 libpng.a: $(OBJS)
-	$(AR_RC) $@ $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
 
 $(LIBSO): $(LIBSOMAJ)

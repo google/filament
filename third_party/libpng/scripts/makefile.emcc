@@ -1,5 +1,5 @@
 # makefile for libpng using emscripten
-# Copyright (C) 2000, 2014, 2019-2022 Cosmin Truta
+# Copyright (C) 2000, 2014, 2019-2025 Cosmin Truta
 # Copyright (C) 2021 Kirk Roerig
 # Copyright (C) 2008, 2014 Glenn Randers-Pehrson
 # Copyright (C) 1995 Guy Eric Schalnat, Group 42, Inc.
@@ -15,13 +15,22 @@ ZLIBLIB = ../zlib
 # Compiler, linker, lib and other tools
 CC = emcc
 LD = $(CC)
-AR_RC = emar rcs
+AR = emar
 RANLIB = emranlib
 CP = cp
 RM_F = rm -f
 
+STDC = -pedantic-errors # -std=c99
+WARN = -Wall -Wextra -Wundef
+WARNMORE = -Wcast-align -Wconversion -Wshadow -Wpointer-arith -Wwrite-strings \
+           -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes
+LOCAL_CPPFLAGS =
 CPPFLAGS = -I$(ZLIBINC) # -DPNG_DEBUG=5
-CFLAGS = -O2 -Wall -Wextra -Wundef
+ALL_CPPFLAGS = $(LOCAL_CPPFLAGS) $(CPPFLAGS)
+LOCAL_CFLAGS = $(STDC) $(WARN) # $(WARNMORE)
+CFLAGS = -O2
+ALL_CFLAGS = $(LOCAL_CFLAGS) $(CFLAGS)
+ARFLAGS = rc
 LDFLAGS = -L$(ZLIBLIB)
 PNGTEST_LDFLAGS = --preload-file=pngtest.png
 LIBS = -lz -lm
@@ -42,7 +51,7 @@ pnglibconf.h: $(PNGLIBCONF_H_PREBUILT)
 	$(CP) $(PNGLIBCONF_H_PREBUILT) $@
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(ALL_CPPFLAGS) $(ALL_CFLAGS) -o $@ $*.c
 
 static: libpng.a pngtest
 
@@ -51,7 +60,7 @@ shared:
 	@false
 
 libpng.a: $(OBJS)
-	$(AR_RC) $@ $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
 
 test: pngtest

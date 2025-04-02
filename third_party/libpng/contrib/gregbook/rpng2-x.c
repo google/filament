@@ -27,7 +27,7 @@
     - 1.11:  added -usleep option for demos; fixed command-line parsing bug
     - 1.12:  added -pause option for demos and testing
     - 1.20:  added runtime MMX-enabling/disabling and new -mmx* options
-    - 1.21:  fixed some small X memory leaks (thanks to François Petitjean)
+    - 1.21:  fixed some small X memory leaks (thanks to FranÃ§ois Petitjean)
     - 1.22:  fixed XFreeGC() crash bug (thanks to Patrick Welche)
     - 1.23:  added -bgpat 0 mode (std white/gray checkerboard, 8x8 squares)
     - 1.30:  added -loop option for -bgpat (ifdef FEATURE_LOOP); fixed bpp =

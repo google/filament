@@ -1,9 +1,9 @@
 #! /bin/sh
 # test-driver - basic testsuite driver script.
 
-scriptversion=2018-03-07.03; # UTC
+scriptversion=2024-06-19.01; # UTC
 
-# Copyright (C) 2011-2021 Free Software Foundation, Inc.
+# Copyright (C) 2011-2024 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -44,11 +44,16 @@ print_usage ()
 Usage:
   test-driver --test-name NAME --log-file PATH --trs-file PATH
               [--expect-failure {yes|no}] [--color-tests {yes|no}]
+              [--collect-skipped-logs {yes|no}]
               [--enable-hard-errors {yes|no}] [--]
               TEST-SCRIPT [TEST-SCRIPT-ARGUMENTS]
 
 The '--test-name', '--log-file' and '--trs-file' options are mandatory.
 See the GNU Automake documentation for information.
+
+Report bugs to <bug-automake@gnu.org>.
+GNU Automake home page: <https://www.gnu.org/software/automake/>.
+General help using GNU software: <https://www.gnu.org/gethelp/>.
 END
 }
 
@@ -57,15 +62,17 @@ log_file=  # Where to save the output of the test script.
 trs_file=  # Where to save the metadata of the test run.
 expect_failure=no
 color_tests=no
+collect_skipped_logs=yes
 enable_hard_errors=yes
 while test $# -gt 0; do
   case $1 in
   --help) print_usage; exit $?;;
-  --version) echo "test-driver $scriptversion"; exit $?;;
+  --version) echo "test-driver (GNU Automake) $scriptversion"; exit $?;;
   --test-name) test_name=$2; shift;;
   --log-file) log_file=$2; shift;;
   --trs-file) trs_file=$2; shift;;
   --color-tests) color_tests=$2; shift;;
+  --collect-skipped-logs) collect_skipped_logs=$2; shift;;
   --expect-failure) expect_failure=$2; shift;;
   --enable-hard-errors) enable_hard_errors=$2; shift;;
   --) shift; break;;
@@ -121,7 +128,7 @@ fi
 case $tweaked_estatus:$expect_failure in
   0:yes) col=$red res=XPASS recheck=yes gcopy=yes;;
   0:*)   col=$grn res=PASS  recheck=no  gcopy=no;;
-  77:*)  col=$blu res=SKIP  recheck=no  gcopy=yes;;
+  77:*)  col=$blu res=SKIP  recheck=no  gcopy=$collect_skipped_logs;;
   99:*)  col=$mgn res=ERROR recheck=yes gcopy=yes;;
   *:yes) col=$lgn res=XFAIL recheck=no  gcopy=yes;;
   *:*)   col=$red res=FAIL  recheck=yes gcopy=yes;;
