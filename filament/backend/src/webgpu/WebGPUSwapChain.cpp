@@ -232,11 +232,14 @@ void WebGPUSwapChain::GetCurrentTexture(uint32_t width, uint32_t height, wgpu::S
         PANIC_LOG("WebGPUSwapChain::GetCurrentTexture: Invalid width and/or height requested.");
         return;
     }
-    if ( mConfig.width != width || mConfig.height != height || !mConfigured) {
-         mConfig.width = width;
-         mConfig.height = height;
-         mSurface.Configure(&mConfig);
-         mConfigured = true;
+    if (mConfig.width != width || mConfig.height != height || !mConfigured) {
+        mConfig.width = width;
+        mConfig.height = height;
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+        printSurfaceConfiguration(mConfig);
+#endif
+        mSurface.Configure(&mConfig);
+        mConfigured = true;
         return;
     }
 
