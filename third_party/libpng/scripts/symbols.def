@@ -253,3 +253,13 @@ EXPORTS
  png_set_eXIf @247
  png_get_eXIf_1 @248
  png_set_eXIf_1 @249
+ png_get_cICP @250
+ png_set_cICP @251
+ png_get_cLLI @252
+ png_get_cLLI_fixed @253
+ png_set_cLLI @254
+ png_set_cLLI_fixed @255
+ png_get_mDCV @256
+ png_get_mDCV_fixed @257
+ png_set_mDCV @258
+ png_set_mDCV_fixed @259

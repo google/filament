@@ -1,5 +1,5 @@
 # makefile for libpng
-# Copyright (C) 2020-2022 Cosmin Truta
+# Copyright (C) 2018-2025 Cosmin Truta
 # Copyright (C) 2007-2009, 2014 Glenn Randers-Pehrson
 # Copyright (C) 1995 Guy Eric Schalnat, Group 42, Inc.
 #
@@ -26,7 +26,7 @@ CLEANFILES+=	pngtest.o pngtest pnglibconf.h
 PNGLIBCONF_H_PREBUILT= scripts/pnglibconf.h.prebuilt
 
 .c.o:
-	${CC} -c ${CPPFLAGS} ${CFLAGS} -o $@ $<
+	${CC} -c ${CPPFLAGS} ${CFLAGS} -o $@ $*.c
 
 pnglibconf.h:	${PNGLIBCONF_H_PREBUILT}
 	cp ${PNGLIBCONF_H_PREBUILT} $@

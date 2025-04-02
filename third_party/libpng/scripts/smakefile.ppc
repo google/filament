@@ -11,13 +11,12 @@ CFLAGS   = NOSTKCHK NOSINT OPTIMIZE OPTGO OPTPEEP OPTINLOCAL OPTINL IDIR /zlib \
            OPTLOOP OPTRDEP=8 OPTDEP=8 OPTCOMP=8
 LIBNAME  = libpng.a
 AR       = ppc-amigaos-ar
-AR_FLAGS = cr
+ARFLAGS  = cr
 RANLIB   = ppc-amigaos-ranlib
 LDFLAGS  = -r -o
 LDLIBS   =  ../zlib/libzip.a LIB:scppc.a
 LN       = ppc-amigaos-ld
 RM       = delete quiet
-MKDIR    = makedir
 
 OBJS = png.o pngerror.o pngget.o pngmem.o pngpread.o \
        pngread.o pngrio.o pngrtran.o pngrutil.o pngset.o \
@@ -26,7 +25,7 @@ OBJS = png.o pngerror.o pngget.o pngmem.o pngpread.o \
 all: $(LIBNAME) pngtest
 
 $(LIBNAME): $(OBJS)
-            $(AR) $(AR_FLAGS) $@ $(OBJS)
+            $(AR) $(ARFLAGS) $@ $(OBJS)
             $(RANLIB) $@
 
 pngtest: pngtest.o $(LIBNAME)

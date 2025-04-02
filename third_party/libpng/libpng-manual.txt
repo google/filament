@@ -1,6 +1,6 @@
 libpng-manual.txt - A description on how to use and modify libpng
 
- Copyright (c) 2018-2022 Cosmin Truta
+ Copyright (c) 2018-2025 Cosmin Truta
  Copyright (c) 1998-2018 Glenn Randers-Pehrson
 
  This document is released under the libpng license.
@@ -9,9 +9,9 @@ libpng-manual.txt - A description on how to use and modify libpng
 
  Based on:
 
- libpng version 1.6.36, December 2018, through 1.6.39 - November 2022
+ libpng version 1.6.36, December 2018, through 1.6.47 - February 2025
  Updated and distributed by Cosmin Truta
- Copyright (c) 2018-2022 Cosmin Truta
+ Copyright (c) 2018-2025 Cosmin Truta
 
  libpng versions 0.97, January 1998, through 1.6.35 - July 2018
  Updated and distributed by Glenn Randers-Pehrson
@@ -357,7 +357,7 @@ Customizing libpng.
        return ERROR;
     }
 
-    is_png = !png_sig_cmp(header, 0, number);
+    is_png = (png_sig_cmp(header, 0, number) == 0);
     if (!is_png)
     {
        return NOT_PNG;
@@ -385,8 +385,7 @@ create the structure, so your application should check for that.
 
     if (!info_ptr)
     {
-       png_destroy_read_struct(&png_ptr,
-           (png_infopp)NULL, (png_infopp)NULL);
+       png_destroy_read_struct(&png_ptr, NULL, NULL);
        return ERROR;
     }
 
@@ -419,14 +418,13 @@ free any memory.
 
     if (setjmp(png_jmpbuf(png_ptr)))
     {
-       png_destroy_read_struct(&png_ptr, &info_ptr,
-           &end_info);
+       png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
        fclose(fp);
        return ERROR;
     }
 
-Pass (png_infopp)NULL instead of &end_info if you didn't create
-an end_info structure.
+Pass NULL instead of &end_info if you didn't create an end_info
+structure.
 
 If you would rather avoid the complexity of setjmp/longjmp issues,
 you can compile libpng with PNG_NO_SETJMP, in which case
@@ -496,7 +494,7 @@ You can set up a callback function to handle any unknown chunks in the
 input stream. You must supply the function
 
     read_chunk_callback(png_structp png_ptr,
-         png_unknown_chunkp chunk);
+         png_unknown_chunkp chunk)
     {
        /* The unknown chunk structure contains your
           chunk data, along with similar data for any other
@@ -547,9 +545,9 @@ a progress meter or the like.  It's demonstrated in pngtest.c.
 You must supply a function
 
     void read_row_callback(png_structp png_ptr,
-       png_uint_32 row, int pass);
+       png_uint_32 row, int pass)
     {
-      /* put your code here */
+       /* put your code here */
     }
 
 (You can give it another name that you like instead of "read_row_callback")
@@ -1180,22 +1178,22 @@ where row_pointers is an array of pointers to the pixel data for each row:
 If you know your image size and pixel size ahead of time, you can allocate
 row_pointers prior to calling png_read_png() with
 
-   if (height > PNG_UINT_32_MAX/(sizeof (png_byte)))
-      png_error (png_ptr,
+   if (height > PNG_UINT_32_MAX / (sizeof (png_bytep)))
+      png_error(png_ptr,
           "Image is too tall to process in memory");
 
-   if (width > PNG_UINT_32_MAX/pixel_size)
-      png_error (png_ptr,
+   if (width > PNG_UINT_32_MAX / pixel_size)
+      png_error(png_ptr,
           "Image is too wide to process in memory");
 
    row_pointers = png_malloc(png_ptr,
        height*(sizeof (png_bytep)));
 
-   for (int i=0; i<height, i++)
-      row_pointers[i]=NULL;  /* security precaution */
+   for (int i = 0; i < height, i++)
+      row_pointers[i] = NULL;  /* security precaution */
 
-   for (int i=0; i<height, i++)
-      row_pointers[i]=png_malloc(png_ptr,
+   for (int i = 0; i < height, i++)
+      row_pointers[i] = png_malloc(png_ptr,
           width*pixel_size);
 
    png_set_rows(png_ptr, info_ptr, &row_pointers);
@@ -1205,14 +1203,14 @@ row_pointers[i] to point into the proper places in your block, but first
 be sure that your platform is able to allocate such a large buffer:
 
    /* Guard against integer overflow */
-   if (height > PNG_SIZE_MAX/(width*pixel_size)) {
-        png_error(png_ptr,"image_data buffer would be too large");
-   }
+   if (height > PNG_SIZE_MAX/(width*pixel_size))
+      png_error(png_ptr, "image_data buffer would be too large");
 
-   png_bytep buffer=png_malloc(png_ptr,height*width*pixel_size);
+   png_bytep buffer = png_malloc(png_ptr,
+      height*width*pixel_size);
 
-   for (int i=0; i<height, i++)
-      row_pointers[i]=buffer+i*width*pixel_size;
+   for (int i = 0; i < height, i++)
+      row_pointers[i] = buffer + i*width*pixel_size;
 
    png_set_rows(png_ptr, info_ptr, &row_pointers);
 
@@ -1465,25 +1463,24 @@ png_set_rgb_to_gray()).
                      non-paletted images (PNG_INFO_tRNS)
 
     png_get_eXIf_1(png_ptr, info_ptr, &num_exif, &exif);
-                     (PNG_INFO_eXIf)
 
     exif           - Exif profile (array of png_byte)
+                     (PNG_INFO_eXIf)
 
     png_get_hIST(png_ptr, info_ptr, &hist);
-                     (PNG_INFO_hIST)
 
     hist           - histogram of palette (array of
-                     png_uint_16)
+                     png_uint_16) (PNG_INFO_hIST)
 
     png_get_tIME(png_ptr, info_ptr, &mod_time);
 
     mod_time       - time image was last modified
-                    (PNG_VALID_tIME)
+                     (PNG_INFO_tIME)
 
     png_get_bKGD(png_ptr, info_ptr, &background);
 
     background     - background color (of type
-                     png_color_16p) (PNG_VALID_bKGD)
+                     png_color_16p) (PNG_INFO_bKGD)
                      valid 16-bit red, green and blue
                      values, regardless of color_type
 
@@ -1743,13 +1740,13 @@ grayscale images with bit depths of 2 or 4 or if there is a multiple-image
 viewing application that wishes to treat all images in the same way.
 
     if (color_type == PNG_COLOR_TYPE_PALETTE)
-        png_set_palette_to_rgb(png_ptr);
+       png_set_palette_to_rgb(png_ptr);
 
-    if (png_get_valid(png_ptr, info_ptr,
-        PNG_INFO_tRNS)) png_set_tRNS_to_alpha(png_ptr);
+    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
+       png_set_tRNS_to_alpha(png_ptr);
 
-    if (color_type == PNG_COLOR_TYPE_GRAY &&
-        bit_depth < 8) png_set_expand_gray_1_2_4_to_8(png_ptr);
+    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+       png_set_expand_gray_1_2_4_to_8(png_ptr);
 
 The first two functions are actually aliases for png_set_expand(), added
 in libpng version 1.0.4, with the function names expanded to improve code
@@ -1764,18 +1761,20 @@ png_set_expand(); however, the resultant channels have 16 bits rather than 8.
 Use this when the output color or gray channels are made linear to avoid fairly
 severe accuracy loss.
 
-   if (bit_depth < 16)
-      png_set_expand_16(png_ptr);
+    if (bit_depth < 16)
+       png_set_expand_16(png_ptr);
 
 PNG can have files with 16 bits per channel.  If you only can handle
 8 bits per channel, this will strip the pixels down to 8-bit.
 
     if (bit_depth == 16)
+    {
 #if PNG_LIBPNG_VER >= 10504
        png_set_scale_16(png_ptr);
 #else
        png_set_strip_16(png_ptr);
 #endif
+    }
 
 (The more accurate "png_set_scale_16()" API became available in libpng version
 1.5.4).
@@ -1901,7 +1900,7 @@ Note that png_set_filler() does not change the color type.  If you want
 to do that, you can add a true alpha channel with
 
     if (color_type == PNG_COLOR_TYPE_RGB ||
-       color_type == PNG_COLOR_TYPE_GRAY)
+        color_type == PNG_COLOR_TYPE_GRAY)
        png_set_add_alpha(png_ptr, filler, PNG_FILLER_AFTER);
 
 where "filler" contains the alpha value to assign to each pixel.
@@ -1926,7 +1925,7 @@ with alpha.
     if (color_type == PNG_COLOR_TYPE_RGB ||
         color_type == PNG_COLOR_TYPE_RGB_ALPHA)
        png_set_rgb_to_gray(png_ptr, error_action,
-          double red_weight, double green_weight);
+          (double)red_weight, (double)green_weight);
 
     error_action = 1: silently do the conversion
 
@@ -1949,8 +1948,8 @@ In the corresponding fixed point API the red_weight and green_weight values are
 simply scaled by 100,000:
 
     png_set_rgb_to_gray(png_ptr, error_action,
-       png_fixed_point red_weight,
-       png_fixed_point green_weight);
+       (png_fixed_point)red_weight,
+       (png_fixed_point)green_weight);
 
 If you have set error_action = 1 or 2, you can
 later check whether the image really was gray, after processing
@@ -2186,9 +2185,8 @@ do your own check for number_of_rows*width*pixel_size if you are using
 a multiple-row buffer:
 
    /* Guard against integer overflow */
-   if (number_of_rows > PNG_SIZE_MAX/(width*pixel_size)) {
-        png_error(png_ptr,"image_data buffer would be too large");
-   }
+   if (number_of_rows > PNG_SIZE_MAX/(width*pixel_size))
+      png_error(png_ptr, "image_data buffer would be too large");
 
 Remember: Before you call png_read_update_info(), the png_get_*()
 functions return the values corresponding to the original PNG image.
@@ -2408,12 +2406,11 @@ separate.
 
     if (!end_info)
     {
-       png_destroy_read_struct(&png_ptr, &info_ptr,
-           (png_infopp)NULL);
+       png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
        return ERROR;
     }
 
-   png_read_end(png_ptr, end_info);
+    png_read_end(png_ptr, end_info);
 
 If you are not interested, you should still call png_read_end()
 but you can pass NULL, avoiding the need to create an end_info structure.
@@ -2421,7 +2418,7 @@ If you do this, libpng will not process any chunks after IDAT other than
 skipping over them and perhaps (depending on whether you have called
 png_set_crc_action) checking their CRCs while looking for the IEND chunk.
 
-   png_read_end(png_ptr, (png_infop)NULL);
+   png_read_end(png_ptr, NULL);
 
 If you don't call png_read_end(), then your file pointer will be
 left pointing to the first chunk after the last IDAT, which is probably
@@ -2430,13 +2427,11 @@ the PNG datastream.
 
 When you are done, you can free all memory allocated by libpng like this:
 
-   png_destroy_read_struct(&png_ptr, &info_ptr,
-       &end_info);
+   png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 
 or, if you didn't create an end_info structure,
 
-   png_destroy_read_struct(&png_ptr, &info_ptr,
-       (png_infopp)NULL);
+   png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
 It is also possible to individually free the info_ptr members that
 point to libpng-allocated storage with the following function:
@@ -2556,15 +2551,13 @@ png_infop info_ptr;
 
     if (!info_ptr)
     {
-       png_destroy_read_struct(&png_ptr,
-          (png_infopp)NULL, (png_infopp)NULL);
+       png_destroy_read_struct(&png_ptr, NULL, NULL);
        return ERROR;
     }
 
     if (setjmp(png_jmpbuf(png_ptr)))
     {
-       png_destroy_read_struct(&png_ptr, &info_ptr,
-          (png_infopp)NULL);
+       png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
        return ERROR;
     }
 
@@ -2597,8 +2590,7 @@ png_infop info_ptr;
  {
     if (setjmp(png_jmpbuf(png_ptr)))
     {
-       png_destroy_read_struct(&png_ptr, &info_ptr,
-           (png_infopp)NULL);
+       png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
        return ERROR;
     }
 
@@ -2763,8 +2755,7 @@ both "png_ptr"; you can call them anything you like, such as
     png_infop info_ptr = png_create_info_struct(png_ptr);
     if (!info_ptr)
     {
-       png_destroy_write_struct(&png_ptr,
-           (png_infopp)NULL);
+       png_destroy_write_struct(&png_ptr, NULL);
        return ERROR;
     }
 
@@ -2790,7 +2781,7 @@ section below for more information on the libpng error handling.
 
     if (setjmp(png_jmpbuf(png_ptr)))
     {
-    png_destroy_write_struct(&png_ptr, &info_ptr);
+       png_destroy_write_struct(&png_ptr, &info_ptr);
        fclose(fp);
        return ERROR;
     }
@@ -2844,9 +2835,9 @@ a progress meter or the like.  It's demonstrated in pngtest.c.
 You must supply a function
 
     void write_row_callback(png_structp png_ptr, png_uint_32 row,
-       int pass);
+       int pass)
     {
-      /* put your code here */
+       /* put your code here */
     }
 
 (You can give it another name that you like instead of "write_row_callback")
@@ -3116,8 +3107,8 @@ width, height, bit_depth, and color_type must be the same in each call.
 
     png_set_eXIf_1(png_ptr, info_ptr, num_exif, exif);
 
-    exif           - Exif profile (array of
-                     png_byte) (PNG_INFO_eXIf)
+    exif           - Exif profile (array of png_byte)
+                     (PNG_INFO_eXIf)
 
     png_set_hIST(png_ptr, info_ptr, hist);
 
@@ -3127,12 +3118,12 @@ width, height, bit_depth, and color_type must be the same in each call.
     png_set_tIME(png_ptr, info_ptr, mod_time);
 
     mod_time       - time image was last modified
-                     (PNG_VALID_tIME)
+                     (PNG_INFO_tIME)
 
     png_set_bKGD(png_ptr, info_ptr, background);
 
     background     - background color (of type
-                     png_color_16p) (PNG_VALID_bKGD)
+                     png_color_16p) (PNG_INFO_bKGD)
 
     png_set_text(png_ptr, info_ptr, text_ptr, num_text);
 
@@ -4218,7 +4209,7 @@ png_create_read_struct_2() or png_create_write_struct_2() to register your
 own functions as described above.  These functions also provide a void
 pointer that can be retrieved via
 
-    mem_ptr=png_get_mem_ptr(png_ptr);
+    mem_ptr = png_get_mem_ptr(png_ptr);
 
 Your replacement memory functions must have prototypes as follows:
 
@@ -4515,7 +4506,7 @@ When PNG_DEBUG is defined but is zero, the macros aren't defined, but you
 can still use PNG_DEBUG to control your own debugging:
 
    #ifdef PNG_DEBUG
-       fprintf(stderr, ...
+       fprintf(stderr, ...);
    #endif
 
 When PNG_DEBUG = 1, the macros are defined, but only png_debug statements
@@ -4692,7 +4683,7 @@ deprecated since libpng-1.0.16 and libpng-1.2.6.
 The function
     png_check_sig(sig, num)
 was replaced with
-    !png_sig_cmp(sig, 0, num)
+    png_sig_cmp(sig, 0, num) == 0
 It has been deprecated since libpng-0.90.
 
 The function
@@ -4756,8 +4747,8 @@ png_get_mmx_bitdepth_threshold(), png_get_mmx_rowbytes_threshold(),
 png_set_asm_flags(), and png_mmx_supported()
 
 We removed the obsolete png_check_sig(), png_memcpy_check(), and
-png_memset_check() functions.  Instead use !png_sig_cmp(), memcpy(),
-and memset(), respectively.
+png_memset_check() functions.  Instead use png_sig_cmp() == 0,
+memcpy(), and memset(), respectively.
 
 The function png_set_gray_1_2_4_to_8() was removed. It has been
 deprecated since libpng-1.0.18 and 1.2.9, when it was replaced with
@@ -5182,7 +5173,7 @@ a pre-existing bug where the per-chunk 'keep' setting is ignored, and makes
 it possible to skip IDAT chunks in the sequential reader.
 
 The machine-generated configure files are no longer included in branches
-libpng16 and later of the GIT repository.  They continue to be included
+libpng17 and later of the GIT repository.  They continue to be included
 in the tarball releases, however.
 
 Libpng-1.6.0 through 1.6.2 used the CMF bytes at the beginning of the IDAT
@@ -5239,7 +5230,7 @@ changed, and is unaffected by conditional compilation macros.  It is the
 best choice for use in configure scripts for detecting the presence of any
 libpng version since 0.88.  In an autoconf "configure.in" you could use
 
-    AC_CHECK_LIB(png, png_get_io_ptr, ...
+    AC_CHECK_LIB(png, png_get_io_ptr, ...)
 
 XV. Source code repository
 
@@ -5248,12 +5239,12 @@ control.  The git repository was built from old libpng-x.y.z.tar.gz files
 going back to version 0.70.  You can access the git repository (read only)
 at
 
-    https://github.com/glennrp/libpng or
+    https://github.com/pnggroup/libpng or
     https://git.code.sf.net/p/libpng/code.git
 
 or you can browse it with a web browser at
 
-    https://github.com/glennrp/libpng or
+    https://github.com/pnggroup/libpng or
     https://sourceforge.net/p/libpng/code/ci/libpng16/tree/
 
 Patches can be sent to png-mng-implement at lists.sourceforge.net or
@@ -5263,7 +5254,7 @@ uploaded to the libpng bug tracker at
 
 or as a "pull request" to
 
-    https://github.com/glennrp/libpng/pulls
+    https://github.com/pnggroup/libpng/pulls
 
 We also accept patches built from the tar or zip distributions, and
 simple verbal descriptions of bug fixes, reported either to the

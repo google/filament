@@ -1,0 +1,21 @@
+# nolimits.dfa
+#  Build time configuration of libpng
+#
+# Author: John Bowler
+# Copyright: (c) John Bowler, 2025
+#
+# Usage rights:
+#  To the extent possible under law, the author has waived all copyright and
+#  related or neighboring rights to this work.  This work is published from:
+#  United States.
+#
+# Build libpng without any limits and without run-time settable limits.  Turning
+# USER_LIMITS off reduces libpng code size by allowing compile-time elimination
+# of some checking code.
+#
+option USER_LIMITS off
+
+@# define PNG_USER_WIDTH_MAX PNG_UINT_31_MAX
+@# define PNG_USER_HEIGHT_MAX PNG_UINT_31_MAX
+@# define PNG_USER_CHUNK_CACHE_MAX 0
+@# define PNG_USER_CHUNK_MALLOC_MAX 0

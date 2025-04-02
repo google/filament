@@ -1,5 +1,5 @@
 # makefile for libpng
-# Copyright (C) 2020-2022 Cosmin Truta
+# Copyright (C) 2015, 2018-2025 Cosmin Truta
 # Copyright (C) 2002, 2006, 2014 Glenn Randers-Pehrson
 # Copyright (C) 1995 Guy Eric Schalnat, Group 42, Inc.
 #
@@ -16,19 +16,19 @@ ZLIBINC=../zlib
 CC = cc
 CPP = $(CC) -E
 LD = $(CC)
-AR_RC = ar rc
+AR = ar
 RANLIB = ranlib
-MKDIR_P = mkdir
 MV_F = mv -f
 RM_F = rm -f
 AWK = awk
 
 NOHWOPT = -DPNG_ARM_NEON_OPT=0 -DPNG_MIPS_MSA_OPT=0 \
-	-DPNG_POWERPC_VSX_OPT=0 -DPNG_INTEL_SSE_OPT=0
+          -DPNG_POWERPC_VSX_OPT=0 -DPNG_INTEL_SSE_OPT=0
 DFNFLAGS = # DFNFLAGS contains -D options to use in the libpng build
 DFA_EXTRA = # extra files that can be used to control configuration
 CPPFLAGS = -I$(ZLIBINC) $(NOHWOPT) # -DPNG_DEBUG=5
 CFLAGS = -O # -g
+ARFLAGS = rc
 LDFLAGS = -L$(ZLIBLIB) # -g
 LIBS = -lz -lm
 
@@ -41,7 +41,7 @@ OBJS = png.o pngerror.o pngget.o pngmem.o pngpread.o \
        pngtrans.o pngwio.o pngwrite.o pngwtran.o pngwutil.o
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $*.c
 
 all: libpng.a pngtest
 
@@ -66,7 +66,7 @@ pnglibconf.dfn: scripts/pnglibconf.dfa scripts/options.awk pngconf.h pngusr.dfa 
 	$(MV_F) pnglibconf.tmp $@
 
 libpng.a: $(OBJS)
-	$(AR_RC) $@ $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
 
 pngtest: pngtest.o libpng.a

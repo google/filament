@@ -1,5 +1,5 @@
 # makefile for libpng on HP-UX using GCC with the HP ANSI/C linker.
-# Copyright (C) 2020-2022 Cosmin Truta
+# Copyright (C) 2018-2025 Cosmin Truta
 # Copyright (C) 2002, 2006-2008, 2010-2014 Glenn Randers-Pehrson
 # Copyright (C) 2001, Laurent faillie
 # Copyright (C) 1998, 1999 Greg Roelofs
@@ -19,10 +19,9 @@ LIBSOMAJ=$(LIBNAME).sl.$(PNGMAJ)
 
 # Utilities:
 CC=gcc
-LD=ld
-AR_RC=ar rc
+AR=ar
 RANLIB=ranlib
-MKDIR_P=mkdir -p
+LD=ld
 LN_SF=ln -sf
 CP=cp
 RM_F=/bin/rm -f
@@ -38,12 +37,9 @@ ZLIBINC=/opt/zlib/include
 #   LDSHARED=ld -b
 #   SHAREDLIB=libz.sl
 
-WARNMORE=-Wwrite-strings -Wpointer-arith -Wshadow \
-	-Wmissing-declarations -Wtraditional -Wcast-align \
-	-Wstrict-prototypes -Wmissing-prototypes # -Wconversion
-
 CPPFLAGS=-I$(ZLIBINC) # -DPNG_DEBUG=5
-CFLAGS=-O3 -funroll-loops -Wall -Wextra -Wundef # $(WARNMORE) -g
+CFLAGS=-O3 -funroll-loops # -g
+ARFLAGS=rc
 #LDFLAGS=-L. -Wl,-rpath,. -L$(ZLIBLIB) -Wl,-rpath,$(ZLIBLIB) -lpng16 -lz -lm # -g
 LDFLAGS=-L. -L$(ZLIBLIB) -lpng16 -lz -lm # -g
 
@@ -56,7 +52,7 @@ OBJSDLL = $(OBJS:.o=.pic.o)
 .SUFFIXES:      .c .o .pic.o
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $*.c
 
 .c.pic.o:
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -fPIC -o $@ $*.c
@@ -64,7 +60,7 @@ OBJSDLL = $(OBJS:.o=.pic.o)
 all: libpng.a $(LIBSO) pngtest
 
 libpng.a: $(OBJS)
-	$(AR_RC) $@ $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
 
 $(LIBSO): $(LIBSOMAJ)

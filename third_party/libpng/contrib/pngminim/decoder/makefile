@@ -54,7 +54,7 @@ ZOBJS  = adler32$(O) crc32$(O) \
 PNGSRCS=png$(C) pngerror$(C) pngget$(C) pngmem$(C) \
 	pngread$(C) pngrio$(C) pngrtran$(C) pngrutil$(C) \
 	pngset$(C) pngtrans$(C)
-	
+
 # Standard headers
 PNGH   =png.h pngconf.h pngdebug.h pnginfo.h pngpriv.h pngstruct.h
 
