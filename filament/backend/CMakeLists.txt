@@ -233,6 +233,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanReadPixels.h
             src/vulkan/VulkanTexture.cpp
             src/vulkan/VulkanTexture.h
+            src/vulkan/VulkanYcbcrConversionCache.cpp
+            src/vulkan/VulkanYcbcrConversionCache.h
     )
     if (LINUX OR WIN32)
         list(APPEND SRCS src/vulkan/platform/VulkanPlatformLinuxWindows.cpp)

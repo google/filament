@@ -24,13 +24,6 @@
 
 namespace filament::backend {
 
-class VulkanBuffer;
-class VulkanFboCache;
-class VulkanPipelineCache;
-class VulkanSamplerCache;
-
-struct VulkanProgram;
-
 class VulkanBlitter {
 public:
     VulkanBlitter(VkPhysicalDevice physicalDevice, VulkanCommands* commands) noexcept;
