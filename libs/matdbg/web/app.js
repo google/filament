@@ -14,7 +14,7 @@
 * limitations under the License.
 */
 
-import { LitElement, html, css, unsafeCSS, nothing } from "https://unpkg.com/lit@2.8.0?module";
+import { LitElement, html, css, unsafeCSS, nothing } from "https://cdn.jsdelivr.net/gh/lit/dist@3/all/lit-all.min.js";
 
 const kUntitledPlaceholder = "untitled";
 
@@ -24,6 +24,7 @@ const LANGUAGE_CHOICES = {
     'essl1': ['essl3', 'essl1'],
     'vulkan': ['glsl', 'spirv'],
     'metal': ['msl'],
+    'webgpu': ['wgsl'],
 };
 
 const DEFAULT_LANGUAGE_FOR_BACKEND = {
@@ -31,6 +32,7 @@ const DEFAULT_LANGUAGE_FOR_BACKEND = {
     'essl1': 'essl1',
     'vulkan': 'glsl',
     'metal': 'msl',
+    'webgpu': 'wgsl',
 };
 
 const BACKENDS = Object.keys(LANGUAGE_CHOICES);
@@ -1075,6 +1077,7 @@ class MatdbgViewer extends LitElement {
                 this.currentLanguage = DEFAULT_LANGUAGE_FOR_BACKEND[this.currentBackend];
             }
         }
+
         if (props.has('currentMaterial')) {
             // Try to find a default shader index
             if ((this.currentMaterial in this.activeShaders) && this.currentBackend) {

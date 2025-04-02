@@ -107,6 +107,12 @@ private:
         return mHandleAllocator.handle_cast<D*>(handle);
     }
 
+    template<typename D, typename B>
+    void destructHandle(Handle<B>& handle) noexcept {
+        auto* p = mHandleAllocator.handle_cast<D*>(handle);
+        mHandleAllocator.deallocate(handle, p);
+    }
+
 };
 
 }// namespace filament::backend

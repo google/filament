@@ -39,6 +39,9 @@ async function fetchShaderCode(matid, backend, language, index) {
         case "metal":
             query = `type=${language}&metalindex=${index}`;
             break;
+        case "webgpu":
+            query = `type=${language}&wgslindex=${index}`;
+            break;
     }
     return await _fetchText(`api/shader?matid=${matid}&${query}`);
 }
@@ -88,6 +91,7 @@ function rebuildMaterial(materialId, backend, shaderIndex, editedText) {
             break;
         case "vulkan": api = 2; break;
         case "metal":  api = 3; break;
+        case "webgpu": api = 4; break;
     }
     return new Promise((ok, fail) => {
         const req = new XMLHttpRequest();
@@ -135,7 +139,7 @@ async function statusLoop(isConnected, onStatus) {
 // not have a running backend.
 function guessBackend() {
     const AGENTS_TO_BACKEND = [
-        ['Mac OS', 'metal'],
+        ['Mac OS', 'webgpu'],
         ['Windows', 'opengl'],
         ['Linux', 'vulkan'],
     ];

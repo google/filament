@@ -28,7 +28,8 @@ namespace filament::backend {
     };
 
     struct WGPUVertexBuffer : public HwVertexBuffer {
-        WGPUVertexBuffer(uint32_t vextexCount, uint32_t bufferCount, Handle<WGPUVertexBufferInfo> vbih);
+        WGPUVertexBuffer(wgpu::Device const &device, uint32_t vextexCount, uint32_t bufferCount,
+                         Handle<WGPUVertexBufferInfo> vbih);
 
         void setBuffer(WGPUBufferObject *bufferObject, uint32_t index);
 
@@ -37,7 +38,7 @@ namespace filament::backend {
     };
 
     struct WGPUIndexBuffer : public HwIndexBuffer {
-        WGPUIndexBuffer(wgpu::Device const &device, BufferUsage usage, uint8_t elementSize,
+        WGPUIndexBuffer(wgpu::Device const &device, uint8_t elementSize,
                         uint32_t indexCount);
 
         wgpu::Buffer buffer;
