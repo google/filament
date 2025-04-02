@@ -1,4 +1,3 @@
-
 /* sym.c - define format of libpng.sym
  *
  * Copyright (c) 2011-2014 Glenn Randers-Pehrson

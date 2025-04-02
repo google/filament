@@ -21,7 +21,7 @@
     - 1.10:  added support for non-default visuals; fixed X pixel-conversion
     - 1.11:  added extra set of parentheses to png_jmpbuf() macro; fixed
               command-line parsing bug
-    - 1.12:  fixed some small X memory leaks (thanks to François Petitjean)
+    - 1.12:  fixed some small X memory leaks (thanks to FranÃ§ois Petitjean)
     - 1.13:  fixed XFreeGC() crash bug (thanks to Patrick Welche)
     - 1.14:  added support for X resources (thanks to Gerhard Niklasch)
     - 2.00:  dual-licensed (added GNU GPL)

@@ -1,0 +1,94 @@
+# https://pypi.org/project/cmakelang
+# https://github.com/cheshirekow/cmake_format
+
+# ----------------------
+# Options for formatting
+# ----------------------
+
+# How wide to allow formatted cmake files
+# TODO: Reflow the CMake files to allow setting the maximum line width to 100.
+line_width: 255
+
+# How many spaces to tab for indent
+tab_size: 2
+
+# If true, lines are indented using tab characters (utf-8 0x09) instead of
+# <tab_size> space characters (utf-8 0x20). In cases where the layout would
+# require a fractional tab character, the behavior of the fractional
+# indentation is governed by <fractional_tab_policy>
+use_tabchars: false
+
+# If <use_tabchars> is True, then the value of this variable indicates how
+# fractional indentions are handled during whitespace replacement. If set to
+# 'use-space', fractional indentation is left as spaces (utf-8 0x20). If set
+# to `round-up` fractional indentation is replaced with a single tab character
+# (utf-8 0x09) effectively shifting the column to the next tabstop
+fractional_tab_policy: "use-space"
+
+# Enable comment markup parsing and reflow
+enable_markup: false
+
+# -------------------
+# Options for linting
+# -------------------
+
+# Lint codes to disable
+disabled_codes: [
+  # TODO:
+  # Reconcile the CMake variable names with the patterns below, then
+  # re-enable the "invalid variable name XXX" messages.
+  "C0103",
+
+  # A custom command with one output doesn't really need a comment because
+  # the default "generating XXX" is a good message already.
+  "C0113",
+]
+
+# Regular expression pattern describing valid function names
+function_pattern: "[0-9a-z_]+"
+
+# Regular expression pattern describing valid macro names
+macro_pattern: "[0-9A-Z_]+"
+
+# Regular expression pattern describing valid names for variables with global
+# (cache) scope
+global_var_pattern: "[A-Z][0-9A-Z_]+"
+
+# Regular expression pattern describing valid names for variables with global
+# scope (but internal semantic)
+internal_var_pattern: "_[A-Z][0-9A-Z_]+"
+
+# Regular expression pattern describing valid names for variables with local
+# scope
+local_var_pattern: "[a-z][a-z0-9_]+"
+
+# Regular expression pattern describing valid names for privatedirectory
+# variables
+private_var_pattern: "_[0-9a-z_]+"
+
+# Regular expression pattern describing valid names for public directory
+# variables
+public_var_pattern: "[A-Z][0-9A-Z_]+"
+
+# Regular expression pattern describing valid names for function/macro
+# arguments and loop variables.
+argument_var_pattern: "[a-z][a-z0-9_]+"
+
+# Regular expression pattern describing valid names for keywords used in
+# functions or macros
+keyword_pattern: "[A-Z][0-9A-Z_]+"
+
+# In the heuristic for C0201, how many conditionals to match within a loop in
+# before considering the loop a parser
+max_conditionals_custom_parser: 2
+
+# Require at least this many newlines between statements
+min_statement_spacing: 1
+
+# Require no more than this many newlines between statements
+max_statement_spacing: 2
+max_returns: 6
+max_branches: 12
+max_arguments: 5
+max_localvars: 15
+max_statements: 50

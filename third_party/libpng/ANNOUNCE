@@ -1,4 +1,4 @@
-libpng 1.6.39 - November 20, 2022
+libpng 1.6.47 - February 18, 2025
 =================================
 
 This is a public release of libpng, intended for use in production code.
@@ -9,13 +9,13 @@ Files available for download
 
 Source files with LF line endings (for Unix/Linux):
 
- * libpng-1.6.39.tar.xz (LZMA-compressed, recommended)
- * libpng-1.6.39.tar.gz
+ * libpng-1.6.47.tar.xz (LZMA-compressed, recommended)
+ * libpng-1.6.47.tar.gz (deflate-compressed)
 
 Source files with CRLF line endings (for Windows):
 
- * lpng1639.7z (LZMA-compressed, recommended)
- * lpng1639.zip
+ * lpng1647.7z (LZMA-compressed, recommended)
+ * lpng1647.zip (deflate-compressed)
 
 Other information:
 
@@ -25,19 +25,19 @@ Other information:
  * TRADEMARK.md
 
 
-Changes from version 1.6.38 to version 1.6.39
+Changes from version 1.6.46 to version 1.6.47
 ---------------------------------------------
 
- * Changed the error handler of oversized chunks (i.e. larger than
-   PNG_USER_CHUNK_MALLOC_MAX) from png_chunk_error to png_benign_error.
- * Fixed a buffer overflow error in contrib/tools/pngfix.
- * Fixed a memory leak (CVE-2019-6129) in contrib/tools/pngcp.
- * Disabled the ARM Neon optimizations by default in the CMake file,
-   following the default behavior of the configure script.
- * Allowed configure.ac to work with the trunk version of autoconf.
- * Removed the support for "install" targets from the legacy makefiles;
-   removed the obsolete makefile.cegcc.
- * Cleaned up the code and updated the internal documentation.
+ * Modified the behaviour of colorspace chunks in order to adhere
+   to the new precedence rules formulated in the latest draft of
+   the PNG Specification.
+   (Contributed by John Bowler)
+ * Fixed a latent bug in `png_write_iCCP`.
+   This would have been a read-beyond-end-of-malloc vulnerability,
+   introduced early in the libpng-1.6.0 development, yet (fortunately!)
+   it was inaccessible before the above-mentioned modification of the
+   colorspace precedence rules, due to pre-existing colorspace checks.
+   (Reported by Bob Friesenhahn; fixed by John Bowler)
 
 
 Send comments/corrections/commendations to png-mng-implement at lists.sf.net.

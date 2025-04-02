@@ -1,0 +1,29 @@
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = unset
+indent_size = unset
+indent_style = space
+insert_final_newline = true
+max_doc_length = 79
+max_line_length = 79
+trim_trailing_whitespace = true
+
+[*.[ch]]
+indent_size = 2
+indent_style = space
+
+[CMakeLists.txt]
+indent_size = 4
+indent_style = space
+max_doc_length = 79
+max_line_length = 99
+
+[{Makefile,makevms.com}]
+indent_size = unset
+indent_style = unset
+max_doc_length = 79
+max_line_length = 99

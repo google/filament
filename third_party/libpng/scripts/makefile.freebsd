@@ -1,5 +1,5 @@
 # makefile for libpng under FreeBSD
-# Copyright (C) 2020-2022 Cosmin Truta
+# Copyright (C) 2018-2025 Cosmin Truta
 # Copyright (C) 2014 Glenn Randers-Pehrson and Andrey A. Chernov
 # Copyright (C) 2002, 2007, 2009 Glenn Randers-Pehrson and Andrey A. Chernov
 #
@@ -35,7 +35,7 @@ SRCS=	png.c pngerror.c pngget.c pngmem.c pngpread.c \
 	pngtrans.c pngwio.c pngwrite.c pngwtran.c pngwutil.c
 
 .c.o:
-	${CC} -c ${CPPFLAGS} ${CFLAGS} -o $@ $<
+	${CC} -c ${CPPFLAGS} ${CFLAGS} -o $@ $*.c
 
 pnglibconf.h:	${PNGLIBCONF_H_PREBUILT}
 	cp ${PNGLIBCONF_H_PREBUILT} $@

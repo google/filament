@@ -3,19 +3,19 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
-/* Define to 1 if you have the `feenableexcept' function. */
+/* Define to 1 if you have the 'feenableexcept' function. */
 #undef HAVE_FEENABLEEXCEPT
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the `m' library (-lm). */
+/* Define to 1 if you have the 'm' library (-lm). */
 #undef HAVE_LIBM
 
-/* Define to 1 if you have the `z' library (-lz). */
+/* Define to 1 if you have the 'z' library (-lz). */
 #undef HAVE_LIBZ
 
-/* Define to 1 if you have the `pow' function. */
+/* Define to 1 if you have the 'pow' function. */
 #undef HAVE_POW
 
 /* Define to 1 if you have the <stdint.h> header file. */
@@ -78,6 +78,18 @@
 /* Enable Intel SSE optimizations */
 #undef PNG_INTEL_SSE_OPT
 
+/* Enable LOONGARCH LSX optimizations */
+#undef PNG_LOONGARCH_LSX_OPT
+
+/* Turn on MIPS MMI optimizations at run-time */
+#undef PNG_MIPS_MMI_API_SUPPORTED
+
+/* Check for MIPS MMI support at run-time */
+#undef PNG_MIPS_MMI_CHECK_SUPPORTED
+
+/* Enable MIPS MMI optimizations */
+#undef PNG_MIPS_MMI_OPT
+
 /* Turn on MIPS MSA optimizations at run-time */
 #undef PNG_MIPS_MSA_API_SUPPORTED
 
@@ -96,12 +108,12 @@
 /* Enable POWERPC VSX optimizations */
 #undef PNG_POWERPC_VSX_OPT
 
-/* Define to 1 if all of the C90 standard headers exist (not just the ones
+/* Define to 1 if all of the C89 standard headers exist (not just the ones
    required in a freestanding environment). This macro is provided for
    backward compatibility; new code need not use it. */
 #undef STDC_HEADERS
 
-/* Define to 1 if your <sys/time.h> declares `struct tm'. */
+/* Define to 1 if your <sys/time.h> declares 'struct tm'. */
 #undef TM_IN_SYS_TIME
 
 /* Version number of package */

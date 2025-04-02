@@ -1,6 +1,6 @@
 # makefile for libpng on Solaris 2.x with cc
 # Contributed by William L. Sebok, based on makefile.linux
-# Copyright (C) 2020-2022 Cosmin Truta
+# Copyright (C) 2018-2025 Cosmin Truta
 # Copyright (C) 2002, 2006, 2010-2014 Glenn Randers-Pehrson
 # Copyright (C) 1998 Greg Roelofs
 # Copyright (C) 1996, 1997 Andreas Dilger
@@ -19,9 +19,8 @@ LIBSOMAJ=$(LIBNAME).so.$(PNGMAJ)
 
 # Utilities:
 CC=cc
-AR_RC=ar rc
+AR=ar
 RANLIB=echo
-MKDIR_P=mkdir -p
 LN_SF=ln -f -s
 RM_F=/bin/rm -f
 
@@ -37,12 +36,10 @@ SUN_LD_FLAGS=-fast -xtarget=ultra -xarch=v9
 ZLIBLIB=/usr/lib
 ZLIBINC=/usr/include
 
-WARNMORE=-Wwrite-strings -Wpointer-arith -Wshadow \
-	-Wmissing-declarations -Wtraditional -Wcast-align \
-	-Wstrict-prototypes -Wmissing-prototypes # -Wconversion
 CPPFLAGS=-I$(ZLIBINC) # -DPNG_DEBUG=5
-CFLAGS= $(SUN_CC_FLAGS) # $(WARNMORE) -g
-LDFLAGS=-L. -R. $(SUN_LD_FLAGS) -L$(ZLIBLIB) -R$(ZLIBLIB) -lpng16 -lz -lm
+CFLAGS=$(SUN_CC_FLAGS) # -g
+ARFLAGS=rc
+LDFLAGS=-L. -R. $(SUN_LD_FLAGS) -L$(ZLIBLIB) -R$(ZLIBLIB) -lpng16 -lz -lm # -g
 
 OBJS = png.o pngerror.o pngget.o pngmem.o pngpread.o \
        pngread.o pngrio.o pngrtran.o pngrutil.o pngset.o \
@@ -53,7 +50,7 @@ OBJSDLL = $(OBJS:.o=.pic.o)
 .SUFFIXES:      .c .o .pic.o
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $*.c
 
 .c.pic.o:
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -KPIC -o $@ $*.c
@@ -65,7 +62,7 @@ DELETE = $(RM_F)
 DFNFLAGS = $(DEFS) $(CPPFLAGS)
 
 libpng.a: $(OBJS)
-	$(AR_RC) $@ $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
 
 $(LIBSO): $(LIBSOMAJ)

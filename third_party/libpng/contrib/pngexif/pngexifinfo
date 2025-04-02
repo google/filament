@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+my_python="$(command -v python3 || command -v python)" || {
+    echo >&2 "error: program not found: Python interpreter"
+    exit 127
+}
+my_python_flags="-BES"
+
+exec "$my_python" "$my_python_flags" "$(dirname "$0")/pngexifinfo.py" "$@"
