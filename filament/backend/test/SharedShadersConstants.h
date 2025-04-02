@@ -17,6 +17,8 @@
 #ifndef TNT_SHAREDSHADERSCONSTANTS_H
 #define TNT_SHAREDSHADERSCONSTANTS_H
 
+#include "math/mathfwd.h"
+
 enum class ShaderUniformType : uint8_t {
     None,
     Simple,

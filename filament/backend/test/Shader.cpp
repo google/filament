@@ -31,10 +31,14 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup
                 ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, i };
     }
 
+    // This assumes that the uniforms will all be in a single descriptor set at index 1.
+    // If there are shaders with uniforms in other sets then ShaderConfig will need to be expanded
+    // to accommodate that.
+    size_t kDescriptorSetIndex = 1;
     filamat::DescriptorSets descriptors;
-    descriptors[1] = filamat::DescriptorSetInfo(config.uniforms.size());
+    descriptors[kDescriptorSetIndex] = filamat::DescriptorSetInfo(config.uniforms.size());
     for (unsigned char i = 0; i < config.uniforms.size(); ++i) {
-        descriptors[1][i] = {
+        descriptors[kDescriptorSetIndex][i] = {
                 config.uniforms[i].name, kLayouts[i], config.uniforms[i].samplerInfo };
     }
     ShaderGenerator shaderGen(

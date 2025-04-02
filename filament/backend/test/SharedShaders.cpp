@@ -121,9 +121,7 @@ void main() {
 precision mediump int; precision highp float;
 layout(location = 0) out vec4 fragColor;
 layout(location = 0) in vec2 uv;
-
-layout(location = 0, set = 1) uniform sampler2D test_tex;
-
+)", R"(
 void main() {
     fragColor = texture(test_tex, uv);
 })" };
@@ -161,10 +159,9 @@ layout(binding = 0, set = 1) uniform Params {
 )";
         }
         case ShaderUniformType::Sampler: {
-            return "";
-            /*return R"(
-layout(location = 0, set = 1) uniform sampler2D backend_test_sib_tex;
-)";*/
+            return R"(
+layout(location = 0, set = 1) uniform sampler2D test_tex;
+)";
         }
         default:
             return std::nullopt;
@@ -230,9 +227,8 @@ Shader SharedShaders::makeShader(filament::backend::DriverApi& api, Cleanup& cle
                         vertex->withUniform(*uniform), fragment->withUniform(*uniform),
                         GetUniformConfig(request.mUniformType)}
         );
-    } else {
-        abort();
     }
+    abort();
 }
 
 std::string SharedShaders::getVertexShaderText(VertexShaderType vertex, ShaderUniformType uniform) {
