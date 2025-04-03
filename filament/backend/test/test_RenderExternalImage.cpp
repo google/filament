@@ -84,14 +84,12 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
     state.rasterState.culling = CullingMode::NONE;
 
-    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-
     api.startCapture(0);
     api.makeCurrent(swapChain, swapChain);
     api.beginFrame(0, 0, 0);
 
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
-    api.bindDescriptorSet(descriptorSet, 1, {});
+    shader.updateTextureUniform(api,
+            TextureBindingConfig{ .textureHandle = texture, .alsoBindToSet = 1 });
 
     // Render a triangle.
     api.beginRenderPass(defaultRenderTarget, params);

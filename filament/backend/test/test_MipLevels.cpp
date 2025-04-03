@@ -171,11 +171,12 @@ TEST_F(BackendTest, TextureViewLod) {
         state.rasterState.culling = CullingMode::NONE;
 
         DescriptorSetHandle descriptorSet13 = texturedShader.createDescriptorSet(api);
-        api.updateDescriptorSetTexture(descriptorSet13, 0, texture13, {
-                .filterMag = SamplerMagFilter::NEAREST,
-                .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-
-        api.bindDescriptorSet(descriptorSet13, 0, {});
+        texturedShader.updateTextureUniform(api,
+                TextureBindingConfig{ .textureHandle = texture13,
+                        .descriptorSet = descriptorSet13,
+                        .samplerParams = SamplerParams{ .filterMag = SamplerMagFilter::NEAREST,
+                                .filterMin = SamplerMinFilter::NEAREST },
+                        .alsoBindToSet = 0 });
 
         // Render a triangle to the screen, sampling from mip level 1.
         // Because the min level is 1, the result color should be the white triangle drawn in the
@@ -189,11 +190,12 @@ TEST_F(BackendTest, TextureViewLod) {
         auto texture22 = cleanup.add(api.createTextureView(texture, 2, 2));
 
         DescriptorSetHandle descriptorSet22 = texturedShader.createDescriptorSet(api);
-        api.updateDescriptorSetTexture(descriptorSet22, 0, texture22, {
-                .filterMag = SamplerMagFilter::NEAREST,
-                .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-
-        api.bindDescriptorSet(descriptorSet22, 0, {});
+        texturedShader.updateTextureUniform(api,
+                TextureBindingConfig{ .textureHandle = texture22,
+                        .descriptorSet = descriptorSet22,
+                        .samplerParams = SamplerParams{ .filterMag = SamplerMagFilter::NEAREST,
+                                .filterMin = SamplerMinFilter::NEAREST },
+                        .alsoBindToSet = 0 });
 
         // Render a second, smaller, triangle, again sampling from mip level 1.
         // This triangle should be yellow striped.
