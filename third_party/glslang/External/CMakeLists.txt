@@ -1,4 +1,4 @@
-# Copyright (C) 2020 The Khronos Group Inc.
+# Copyright (C) 2020-2025 The Khronos Group Inc.
 #
 # All rights reserved.
 #
@@ -42,7 +42,7 @@ if(GLSLANG_TESTS)
         # global CRT settings on Windows.
         if(WIN32)
             set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-        endif(WIN32)
+        endif()
         # EXCLUDE_FROM_ALL keeps the install target from installing GTEST files.
         add_subdirectory(googletest EXCLUDE_FROM_ALL)
         set(GTEST_TARGETS

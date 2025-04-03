@@ -45,4 +45,4 @@ docker run --rm -i \
   --env SCRIPT_DIR="${SCRIPT_DIR}" \
   --env BUILD_SHARED_LIBS="${BUILD_SHARED_LIBS:-0}" \
   --entrypoint "${SCRIPT_DIR}/build-docker.sh" \
-  "gcr.io/shaderc-build/radial-build:latest"
+  us-east4-docker.pkg.dev/shaderc-build/radial-docker/ubuntu-24.04-amd64/cpp-builder
