@@ -4,6 +4,7 @@
 compile_commands.json
 /build*/
 /buildtools/
+/external/abseil_cpp/
 /external/googletest
 /external/SPIRV-Headers
 /external/spirv-headers
@@ -22,6 +23,7 @@ bazel-out
 bazel-spirv-tools
 bazel-SPIRV-Tools
 bazel-testlogs
+MODULE.bazel.lock
 
 # Vim
 [._]*.s[a-w][a-z]

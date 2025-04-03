@@ -3543,6 +3543,98 @@ TEST_F(TrimCapabilitiesPassTest,
   EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithoutChange);
 }
 
+TEST_F(TrimCapabilitiesPassTest, QuadControlKHR_RemoveIfNotUsed) {
+  const std::string kTest = R"(
+               OpCapability Shader
+               OpCapability QuadControlKHR
+; CHECK-NOT:   OpCapability QuadControlKHR
+               OpExtension "SPV_KHR_quad_control"
+; CHECK-NOT:   OpExtension "SPV_KHR_quad_control"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %out_var_SV_Target
+               OpExecutionMode %main OriginUpperLeft
+               OpSource HLSL 660
+               OpName %out_var_SV_Target "out.var.SV_Target"
+               OpName %main "main"
+               OpDecorate %out_var_SV_Target Location 0
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+%out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+       %main = OpFunction %void None %7
+          %8 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithChange);
+}
+
+TEST_F(TrimCapabilitiesPassTest, QuadControlKHR_RemainsWithQuadAny) {
+  const std::string kTest = R"(
+               OpCapability Shader
+               OpCapability QuadControlKHR
+; CHECK:       OpCapability QuadControlKHR
+               OpExtension "SPV_KHR_quad_control"
+; CHECK:       OpExtension "SPV_KHR_quad_control"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %out_var_SV_Target
+               OpExecutionMode %main OriginUpperLeft
+               OpSource HLSL 660
+               OpName %out_var_SV_Target "out.var.SV_Target"
+               OpName %main "main"
+               OpDecorate %out_var_SV_Target Location 0
+       %bool = OpTypeBool
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+%out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+       %main = OpFunction %void None %7
+          %8 = OpLabel
+       %true = OpConstantTrue %bool
+         %10 = OpGroupNonUniformQuadAnyKHR %bool %true
+               OpReturn
+               OpFunctionEnd
+  )";
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithoutChange);
+}
+
+TEST_F(TrimCapabilitiesPassTest, PhysicalStorageBuffer_RecursiveTypes) {
+  const std::string kTest = R"(
+               OpCapability Shader
+               OpCapability PhysicalStorageBufferAddresses
+; CHECK:       OpCapability PhysicalStorageBufferAddresses
+               OpExtension "SPV_KHR_physical_storage_buffer"
+; CHECK:       OpExtension "SPV_KHR_physical_storage_buffer"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint Fragment %1 "main"
+               OpExecutionMode %1 OriginUpperLeft
+               OpSource HLSL 600
+               OpMemberDecorate %_struct_2 0 Offset 0
+               OpMemberDecorate %_struct_2 1 Offset 16
+               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer__struct_2 PhysicalStorageBuffer
+        %int = OpTypeInt 32 1
+  %_struct_2 = OpTypeStruct %int %_ptr_PhysicalStorageBuffer__struct_2
+%_ptr_PhysicalStorageBuffer__struct_2 = OpTypePointer PhysicalStorageBuffer %_struct_2
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+          %1 = OpFunction %void None %6
+          %7 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+  const auto result =
+      SinglePassRunAndMatch<TrimCapabilitiesPass>(kTest, /* skip_nop= */ false);
+  EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithoutChange);
+}
+
 INSTANTIATE_TEST_SUITE_P(
     TrimCapabilitiesPassTestSubgroupClustered_Unsigned_I,
     TrimCapabilitiesPassTestSubgroupClustered_Unsigned,

@@ -378,9 +378,10 @@ OpCapability Shader
 OpCapability Float16
 OpCapability Int16
 OpCapability CooperativeMatrixKHR
+OpCapability VulkanMemoryModelKHR
 OpExtension "SPV_KHR_cooperative_matrix"
 OpExtension "SPV_KHR_vulkan_memory_model"
-OpMemoryModel Logical GLSL450
+OpMemoryModel Logical VulkanKHR
 OpEntryPoint GLCompute %main "main"
 OpExecutionModeId %main LocalSizeId %u32_16 %u32_16 %u32_16
 %void = OpTypeVoid
@@ -411,9 +412,10 @@ OpCapability Shader
 OpCapability Float16
 OpCapability Int16
 OpCapability CooperativeMatrixKHR
+OpCapability VulkanMemoryModelKHR
 OpExtension "SPV_KHR_cooperative_matrix"
 OpExtension "SPV_KHR_vulkan_memory_model"
-OpMemoryModel Logical GLSL450
+OpMemoryModel Logical VulkanKHR
 OpEntryPoint GLCompute %main "main"
 OpExecutionModeId %main LocalSizeId %u32_16 %u32_8 %u32_16
 %void = OpTypeVoid

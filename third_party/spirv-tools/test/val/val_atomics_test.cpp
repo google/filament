@@ -2559,8 +2559,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  CompileSuccessfully(spirv);
-  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
 TEST_F(ValidateAtomics, CompareExchangeVolatileMismatch) {
@@ -2587,8 +2587,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  CompileSuccessfully(spirv);
-  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Volatile mask setting must match for Equal and "
                         "Unequal memory semantics"));
@@ -2621,8 +2621,8 @@ OpFunctionEnd
 )";
 
   // This is ok because we cannot evaluate the spec constant defaults.
-  CompileSuccessfully(spirv);
-  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
 TEST_F(ValidateAtomics, VolatileRequiresVulkanMemoryModel) {
