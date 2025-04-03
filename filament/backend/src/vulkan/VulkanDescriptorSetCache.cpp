@@ -260,7 +260,6 @@ VulkanDescriptorSetCache::~VulkanDescriptorSetCache() = default;
 
 void VulkanDescriptorSetCache::terminate() noexcept{
     mDescriptorPool.reset();
-    clearHistory();
 }
 
 // bind() is not really binding the set but just stashing until we have all the info
@@ -330,7 +329,6 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
     }
     VkWriteDescriptorSet const descriptorWrite = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .pNext = nullptr,
         .dstSet = set->vkSet,
         .dstBinding = binding,
         .descriptorCount = 1,
@@ -346,20 +344,19 @@ void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescr
         VkSampler sampler) noexcept {
     VkDescriptorImageInfo info{
         .sampler = sampler,
+        .imageLayout = fvkutils::getVkLayout(texture->getDefaultLayout()),
     };
-    VkImageSubresourceRange const range = texture->getPrimaryViewRange();
+    VkImageSubresourceRange range = texture->getPrimaryViewRange();
     VkImageViewType const expectedType = texture->getViewType();
     if (any(texture->usage & TextureUsage::DEPTH_ATTACHMENT) &&
             expectedType == VK_IMAGE_VIEW_TYPE_2D) {
         // If the sampler is part of a mipmapped depth texture, where one of the level *can* be
-        // an attachment, then the sampler for this texture has the same view properties as a
-        // view for an attachment. Therefore, we can use getAttachmentView to get a
-        // corresponding VkImageView.
-        info.imageView = texture->getAttachmentView(range);
-    } else {
-        info.imageView = texture->getViewForType(range, expectedType);
+        // an attachment, then the range for this view has exactly one level and one layer.
+        range.levelCount = 1;
+        range.layerCount = 1;
     }
-    info.imageLayout = fvkutils::getVkLayout(texture->getDefaultLayout());
+    info.imageView = texture->getView(range);
+
     VkWriteDescriptorSet const descriptorWrite = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .pNext = nullptr,
@@ -395,7 +392,7 @@ fvkmemory::resource_ptr<VulkanDescriptorSet> VulkanDescriptorSetCache::createSet
             });
 }
 
-void VulkanDescriptorSetCache::clearHistory() {
+void VulkanDescriptorSetCache::gc() {
     mStashedSets = {};
 }
 
