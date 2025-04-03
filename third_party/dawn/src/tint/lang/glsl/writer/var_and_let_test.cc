@@ -331,11 +331,10 @@ void main() {
 
 TEST_F(GlslWriterTest, VarHandleStorageTexture) {
     b.Append(b.ir.root_block, [&] {
-        auto* v =
-            b.Var("v", ty.ptr(core::AddressSpace::kHandle,
-                              ty.Get<core::type::StorageTexture>(core::type::TextureDimension::k2d,
-                                                                 core::TexelFormat::kR32Float,
-                                                                 core::Access::kWrite, ty.f32())));
+        auto* v = b.Var(
+            "v", ty.ptr(core::AddressSpace::kHandle,
+                        ty.storage_texture(core::type::TextureDimension::k2d,
+                                           core::TexelFormat::kR32Float, core::Access::kWrite)));
         v->SetBindingPoint(0, 1);
     });
 

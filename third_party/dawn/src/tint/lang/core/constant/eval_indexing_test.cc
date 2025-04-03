@@ -319,6 +319,30 @@ TEST_F(ConstEvalTest, RuntimeArray_vec3_f32_Index_OOB_Low) {
     EXPECT_EQ(r()->error(), "12:34 error: index -2 out of bounds");
 }
 
+TEST_F(ConstEvalTest, BindingArray_Index_OOB_Low) {
+    GlobalVar(
+        "a", Binding(0_a), Group(0_a),
+        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+    auto* acc = IndexAccessor("a", Expr(Source{{12, 34}}, -1_i));
+    auto* call = Call("textureDimensions", acc);
+    WrapInFunction(call);
+
+    EXPECT_FALSE(r()->Resolve()) << r()->error();
+    EXPECT_EQ(r()->error(), "12:34 error: index -1 out of bounds [0..3]");
+}
+
+TEST_F(ConstEvalTest, BindingArray_Index_OOB_High) {
+    GlobalVar(
+        "a", Binding(0_a), Group(0_a),
+        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+    auto* acc = IndexAccessor("a", Expr(Source{{12, 34}}, 4_i));
+    auto* call = Call("textureDimensions", acc);
+    WrapInFunction(call);
+
+    EXPECT_FALSE(r()->Resolve()) << r()->error();
+    EXPECT_EQ(r()->error(), "12:34 error: index 4 out of bounds [0..3]");
+}
+
 TEST_F(ConstEvalTest, ChainedIndex) {
     auto* arr_expr = Call<array<mat2x3<f32>, 2>>(           //
         Call<mat2x3<f32>>(Call<vec3<f32>>(1_f, 2_f, 3_f),   //

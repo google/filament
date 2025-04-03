@@ -25,8 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <vulkan/vulkan.h>
 #include <vector>
+
+// This must be included instead of vulkan.h so that we can wrap it with vulkan_platform.h.
+#include "dawn/common/vulkan_platform.h"
 
 #include "dawn/tests/unittests/validation/ValidationTest.h"
 #include "dawn/utils/WGPUHelpers.h"

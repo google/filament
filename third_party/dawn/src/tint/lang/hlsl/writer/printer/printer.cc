@@ -117,7 +117,7 @@
 #include "src/tint/utils/strconv/float_to_string.h"
 #include "src/tint/utils/text/string.h"
 #include "src/tint/utils/text/string_stream.h"
-#include "src/tint/utils/text_generator.h"
+#include "src/tint/utils/text_generator/text_generator.h"
 
 using namespace tint::core::fluent_types;  // NOLINT
 
@@ -531,16 +531,16 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitCallStmt(const core::ir::Call* c) {
-        if (!c->Result(0)->IsUsed()) {
+        if (!c->Result()->IsUsed()) {
             auto out = Line();
-            EmitValue(out, c->Result(0));
+            EmitValue(out, c->Result());
             out << ";";
         }
     }
 
     void EmitGlobalVar(const core::ir::Var* var) {
         Switch(
-            var->Result(0)->Type(),  //
+            var->Result()->Type(),  //
             [&](const hlsl::type::ByteAddressBuffer* buf) { EmitStorageVariable(var, buf); },
             [&](const core::type::Pointer* ptr) {
                 auto space = ptr->AddressSpace();
@@ -588,18 +588,18 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitUniformVariable(const core::ir::Var* var) {
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         TINT_ASSERT(ptr);
 
         auto bp = var->BindingPoint();
         TINT_ASSERT(bp.has_value());
 
-        Line() << "cbuffer cbuffer_" << NameOf(var->Result(0)) << RegisterAndSpace('b', bp.value())
+        Line() << "cbuffer cbuffer_" << NameOf(var->Result()) << RegisterAndSpace('b', bp.value())
                << " {";
         {
             const ScopedIndent si(this);
             auto out = Line();
-            EmitTypeAndName(out, var->Result(0)->Type(), NameOf(var->Result(0)));
+            EmitTypeAndName(out, var->Result()->Type(), NameOf(var->Result()));
             out << ";";
         }
         Line() << "};";
@@ -607,7 +607,7 @@ class Printer : public tint::TextGenerator {
 
     void EmitStorageVariable(const core::ir::Var* var, const hlsl::type::ByteAddressBuffer* buf) {
         auto out = Line();
-        EmitTypeAndName(out, var->Result(0)->Type(), NameOf(var->Result(0)));
+        EmitTypeAndName(out, var->Result()->Type(), NameOf(var->Result()));
 
         auto bp = var->BindingPoint();
         TINT_ASSERT(bp.has_value());
@@ -617,7 +617,7 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitHandleVariable(const core::ir::Var* var) {
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         TINT_ASSERT(ptr);
 
         char register_space = ' ';
@@ -639,17 +639,17 @@ class Printer : public tint::TextGenerator {
         TINT_ASSERT(bp.has_value());
 
         auto out = Line();
-        EmitTypeAndName(out, var->Result(0)->Type(), NameOf(var->Result(0)));
+        EmitTypeAndName(out, var->Result()->Type(), NameOf(var->Result()));
         out << RegisterAndSpace(register_space, bp.value()) << ";";
     }
 
     void EmitVar(StringStream& out, const core::ir::Var* var) {
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         TINT_ASSERT(ptr);
 
         auto space = ptr->AddressSpace();
 
-        EmitTypeAndName(out, var->Result(0)->Type(), NameOf(var->Result(0)));
+        EmitTypeAndName(out, var->Result()->Type(), NameOf(var->Result()));
 
         if (var->Initializer()) {
             out << " = ";
@@ -670,7 +670,7 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitLet(const core::ir::Let* l, LetType type) {
-        TINT_ASSERT(!l->Result(0)->Type()->Is<core::type::Pointer>());
+        TINT_ASSERT(!l->Result()->Type()->Is<core::type::Pointer>());
 
         auto out = Line();
 
@@ -680,7 +680,7 @@ class Printer : public tint::TextGenerator {
 
         // TODO(dsinclair): Investigate using `const` here as well, the AST printer doesn't emit
         //                  const with a let, but we should be able to.
-        EmitTypeAndName(out, l->Result(0)->Type(), NameOf(l->Result(0)));
+        EmitTypeAndName(out, l->Result()->Type(), NameOf(l->Result()));
         out << " = ";
         EmitValue(out, l->Value());
         out << ";";
@@ -715,14 +715,14 @@ class Printer : public tint::TextGenerator {
                     [&](const core::ir::CoreBinary* b) { EmitBinary(out, b); },                //
                     [&](const core::ir::CoreBuiltinCall* c) { EmitCoreBuiltinCall(out, c); },  //
                     [&](const core::ir::CoreUnary* u) { EmitUnary(out, u); },                  //
-                    [&](const core::ir::Let* l) { out << NameOf(l->Result(0)); },              //
+                    [&](const core::ir::Let* l) { out << NameOf(l->Result()); },               //
                     [&](const core::ir::Load* l) { EmitLoad(out, l); },                        //
                     [&](const core::ir::LoadVectorElement* l) {
                         EmitLoadVectorElement(out, l);
-                    },                                                                 //
-                    [&](const core::ir::UserCall* c) { EmitUserCall(out, c); },        //
-                    [&](const core::ir::Swizzle* s) { EmitSwizzle(out, s); },          //
-                    [&](const core::ir::Var* var) { out << NameOf(var->Result(0)); },  //
+                    },                                                                //
+                    [&](const core::ir::UserCall* c) { EmitUserCall(out, c); },       //
+                    [&](const core::ir::Swizzle* s) { EmitSwizzle(out, s); },         //
+                    [&](const core::ir::Var* var) { out << NameOf(var->Result()); },  //
 
                     [&](const hlsl::ir::BuiltinCall* c) { EmitHlslBuiltinCall(out, c); },  //
                     [&](const hlsl::ir::Ternary* t) { EmitTernary(out, t); },
@@ -792,7 +792,7 @@ class Printer : public tint::TextGenerator {
         }
 
         if (c->Func() == hlsl::BuiltinFn::kConvert) {
-            EmitType(out, c->Result(0)->Type());
+            EmitType(out, c->Result()->Type());
             out << "(";
             EmitValue(out, c->Operand(0));
             out << ")";
@@ -822,7 +822,7 @@ class Printer : public tint::TextGenerator {
 
     /// Emit a convert instruction
     void EmitConvert(StringStream& out, const core::ir::Convert* c) {
-        EmitType(out, c->Result(0)->Type());
+        EmitType(out, c->Result()->Type());
         out << "(";
         EmitValue(out, c->Operand(0));
         out << ")";
@@ -842,7 +842,7 @@ class Printer : public tint::TextGenerator {
         };
 
         Switch(
-            c->Result(0)->Type(),
+            c->Result()->Type(),
             [&](const core::type::Array*) {
                 out << "{";
                 emit_args();
@@ -854,13 +854,13 @@ class Printer : public tint::TextGenerator {
                 out << "}";
             },
             [&](const core::type::Vector* vec) {
-                EmitType(out, c->Result(0)->Type());
+                EmitType(out, c->Result()->Type());
                 out << "(";  // For the type constructor
 
                 // Swizzle single value if it's not already the right type
                 // (typically a single scalar value).
                 const bool swizzle_value =
-                    (c->Args().Length() == 1) && (c->Args()[0]->Type() != c->Result(0)->Type());
+                    (c->Args().Length() == 1) && (c->Args()[0]->Type() != c->Result()->Type());
                 if (swizzle_value) {
                     out << "(";
                 }
@@ -874,7 +874,7 @@ class Printer : public tint::TextGenerator {
                 out << ")";
             },
             [&](Default) {
-                EmitType(out, c->Result(0)->Type());
+                EmitType(out, c->Result()->Type());
                 out << "(";
                 emit_args();
                 out << ")";

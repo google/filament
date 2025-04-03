@@ -28,9 +28,10 @@
 #ifndef SRC_TINT_LANG_SPIRV_READER_PARSER_PARSER_H_
 #define SRC_TINT_LANG_SPIRV_READER_PARSER_PARSER_H_
 
-#include <vector>
+#include <cstdint>
 
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/containers/slice.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations
 namespace tint::core::ir {

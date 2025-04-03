@@ -22,8 +22,8 @@
 #include "winres.h"
 
 // All set through CMake
-#define VER_FILE_VERSION 1, 4, 307, 0
-#define VER_FILE_DESCRIPTION_STR "1.4.307.Dev Build"
+#define VER_FILE_VERSION 1, 4, 311, 0
+#define VER_FILE_DESCRIPTION_STR "1.4.311.Dev Build"
 #define VER_FILE_VERSION_STR "Vulkan Loader - Dev Build"
 #define VER_COPYRIGHT_STR "Copyright (C) 2015-2025"
 

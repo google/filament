@@ -34,6 +34,7 @@
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/CommandBuffer.h"
 #include "dawn/native/opengl/DeviceGL.h"
+#include "dawn/native/opengl/UtilsGL.h"
 
 namespace dawn::native::opengl {
 
@@ -43,7 +44,13 @@ namespace dawn::native::opengl {
 ResultOrError<Ref<Buffer>> Buffer::CreateInternalBuffer(Device* device,
                                                         const BufferDescriptor* descriptor,
                                                         bool shouldLazyClear) {
-    Ref<Buffer> buffer = AcquireRef(new Buffer(device, Unpack(descriptor), shouldLazyClear));
+    Ref<Buffer> buffer;
+    DAWN_TRY_ASSIGN(buffer, Buffer::Create(device, Unpack(descriptor)));
+
+    if (!shouldLazyClear) {
+        buffer->SetInitialized(true);
+    }
+
     if (descriptor->mappedAtCreation) {
         DAWN_TRY(buffer->MapAtCreationInternal());
     }
@@ -51,37 +58,41 @@ ResultOrError<Ref<Buffer>> Buffer::CreateInternalBuffer(Device* device,
     return std::move(buffer);
 }
 
-Buffer::Buffer(Device* device, const UnpackedPtr<BufferDescriptor>& descriptor)
-    : BufferBase(device, descriptor) {
+// static
+ResultOrError<Ref<Buffer>> Buffer::Create(Device* device,
+                                          const UnpackedPtr<BufferDescriptor>& descriptor) {
     const OpenGLFunctions& gl = device->GetGL();
-    // Allocate at least 4 bytes so clamped accesses are always in bounds.
-    // Align with 4 byte to avoid out-of-bounds access issue in compute emulation for 2 byte
-    // element.
-    mAllocatedSize = Align(std::max(GetSize(), uint64_t(4u)), uint64_t(4u));
 
-    gl.GenBuffers(1, &mBuffer);
-    gl.BindBuffer(GL_ARRAY_BUFFER, mBuffer);
+    GLuint handle = 0;
+    DAWN_GL_TRY(gl, GenBuffers(1, &handle));
+    Ref<Buffer> buffer = AcquireRef(new Buffer(device, descriptor, handle));
+
+    DAWN_GL_TRY(gl, BindBuffer(GL_ARRAY_BUFFER, handle));
 
     // The buffers with mappedAtCreation == true will be initialized in
     // BufferBase::MapAtCreation().
     if (device->IsToggleEnabled(Toggle::NonzeroClearResourcesOnCreationForTesting) &&
         !descriptor->mappedAtCreation) {
-        std::vector<uint8_t> clearValues(mAllocatedSize, 1u);
-        gl.BufferData(GL_ARRAY_BUFFER, mAllocatedSize, clearValues.data(), GL_STATIC_DRAW);
+        std::vector<uint8_t> clearValues(buffer->mAllocatedSize, 1u);
+        DAWN_GL_TRY_ALWAYS_CHECK(gl, BufferData(GL_ARRAY_BUFFER, buffer->mAllocatedSize,
+                                                clearValues.data(), GL_STATIC_DRAW));
     } else {
         // Buffers start uninitialized if you pass nullptr to glBufferData.
-        gl.BufferData(GL_ARRAY_BUFFER, mAllocatedSize, nullptr, GL_STATIC_DRAW);
+        DAWN_GL_TRY_ALWAYS_CHECK(
+            gl, BufferData(GL_ARRAY_BUFFER, buffer->mAllocatedSize, nullptr, GL_STATIC_DRAW));
     }
-    TrackUsage();
+
+    buffer->TrackUsage();
+
+    return std::move(buffer);
 }
 
-Buffer::Buffer(Device* device,
-               const UnpackedPtr<BufferDescriptor>& descriptor,
-               bool shouldLazyClear)
-    : Buffer(device, descriptor) {
-    if (!shouldLazyClear) {
-        SetInitialized(true);
-    }
+Buffer::Buffer(Device* device, const UnpackedPtr<BufferDescriptor>& descriptor, GLuint handle)
+    : BufferBase(device, descriptor), mBuffer(handle) {
+    // Allocate at least 4 bytes so clamped accesses are always in bounds.
+    // Align with 4 byte to avoid out-of-bounds access issue in compute emulation for 2 byte
+    // element.
+    mAllocatedSize = Align(std::max(GetSize(), uint64_t(4u)), uint64_t(4u));
 }
 
 Buffer::~Buffer() = default;
@@ -90,44 +101,71 @@ GLuint Buffer::GetHandle() const {
     return mBuffer;
 }
 
-bool Buffer::EnsureDataInitialized() {
+MaybeError Buffer::EnsureDataInitialized(bool* outDidDataInitialization) {
     if (!NeedsInitialization()) {
-        return false;
+        if (outDidDataInitialization) {
+            *outDidDataInitialization = false;
+        }
+        return {};
     }
 
-    InitializeToZero();
-    return true;
+    DAWN_TRY(InitializeToZero());
+    if (outDidDataInitialization) {
+        *outDidDataInitialization = true;
+    }
+    return {};
 }
 
-bool Buffer::EnsureDataInitializedAsDestination(uint64_t offset, uint64_t size) {
+MaybeError Buffer::EnsureDataInitializedAsDestination(uint64_t offset,
+                                                      uint64_t size,
+                                                      bool* outDidDataInitialization) {
     if (!NeedsInitialization()) {
-        return false;
+        if (outDidDataInitialization) {
+            *outDidDataInitialization = false;
+        }
+        return {};
     }
 
     if (IsFullBufferRange(offset, size)) {
         SetInitialized(true);
-        return false;
+        if (outDidDataInitialization) {
+            *outDidDataInitialization = false;
+        }
+        return {};
     }
 
-    InitializeToZero();
-    return true;
+    DAWN_TRY(InitializeToZero());
+    if (outDidDataInitialization) {
+        *outDidDataInitialization = true;
+    }
+    return {};
 }
 
-bool Buffer::EnsureDataInitializedAsDestination(const CopyTextureToBufferCmd* copy) {
+MaybeError Buffer::EnsureDataInitializedAsDestination(const CopyTextureToBufferCmd* copy,
+                                                      bool* outDidDataInitialization) {
     if (!NeedsInitialization()) {
-        return false;
+        if (outDidDataInitialization) {
+            *outDidDataInitialization = false;
+        }
+        return {};
     }
 
     if (IsFullBufferOverwrittenInTextureToBufferCopy(copy)) {
         SetInitialized(true);
-        return false;
+        if (outDidDataInitialization) {
+            *outDidDataInitialization = false;
+        }
+        return {};
     }
 
-    InitializeToZero();
-    return true;
+    DAWN_TRY(InitializeToZero());
+    if (outDidDataInitialization) {
+        *outDidDataInitialization = true;
+    }
+    return {};
 }
 
-void Buffer::InitializeToZero() {
+MaybeError Buffer::InitializeToZero() {
     DAWN_ASSERT(NeedsInitialization());
 
     const uint64_t size = GetAllocatedSize();
@@ -135,12 +173,13 @@ void Buffer::InitializeToZero() {
     const OpenGLFunctions& gl = device->GetGL();
 
     const std::vector<uint8_t> clearValues(size, 0u);
-    gl.BindBuffer(GL_ARRAY_BUFFER, mBuffer);
-    gl.BufferSubData(GL_ARRAY_BUFFER, 0, size, clearValues.data());
+    DAWN_GL_TRY(gl, BindBuffer(GL_ARRAY_BUFFER, mBuffer));
+    DAWN_GL_TRY(gl, BufferSubData(GL_ARRAY_BUFFER, 0, size, clearValues.data()));
     device->IncrementLazyClearCountForTesting();
 
     TrackUsage();
     SetInitialized(true);
+    return {};
 }
 
 bool Buffer::IsCPUWritableAtCreation() const {
@@ -151,8 +190,9 @@ bool Buffer::IsCPUWritableAtCreation() const {
 
 MaybeError Buffer::MapAtCreationImpl() {
     const OpenGLFunctions& gl = ToBackend(GetDevice())->GetGL();
-    gl.BindBuffer(GL_ARRAY_BUFFER, mBuffer);
-    mMappedData = gl.MapBufferRange(GL_ARRAY_BUFFER, 0, GetSize(), GL_MAP_WRITE_BIT);
+    DAWN_GL_TRY(gl, BindBuffer(GL_ARRAY_BUFFER, mBuffer));
+    mMappedData = DAWN_GL_TRY_ALWAYS_CHECK(
+        gl, MapBufferRange(GL_ARRAY_BUFFER, 0, GetSize(), GL_MAP_WRITE_BIT));
     return {};
 }
 
@@ -168,18 +208,20 @@ MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) 
         size = 4;
     }
 
-    EnsureDataInitialized();
+    DAWN_TRY(EnsureDataInitialized());
 
     // This does GPU->CPU synchronization, we could require a high
     // version of OpenGL that would let us map the buffer unsynchronized.
-    gl.BindBuffer(GL_ARRAY_BUFFER, mBuffer);
+    DAWN_GL_TRY(gl, BindBuffer(GL_ARRAY_BUFFER, mBuffer));
     void* mappedData = nullptr;
     if (mode & wgpu::MapMode::Read) {
-        mappedData = gl.MapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_READ_BIT);
+        mappedData = DAWN_GL_TRY_ALWAYS_CHECK(
+            gl, MapBufferRange(GL_ARRAY_BUFFER, offset, size, GL_MAP_READ_BIT));
     } else {
         DAWN_ASSERT(mode & wgpu::MapMode::Write);
-        mappedData = gl.MapBufferRange(GL_ARRAY_BUFFER, offset, size,
-                                       GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
+        mappedData = DAWN_GL_TRY_ALWAYS_CHECK(
+            gl, MapBufferRange(GL_ARRAY_BUFFER, offset, size,
+                               GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT));
     }
 
     // The frontend asks that the pointer returned by GetMappedPointer is from the start of
@@ -196,8 +238,8 @@ void* Buffer::GetMappedPointer() {
 void Buffer::UnmapImpl() {
     const OpenGLFunctions& gl = ToBackend(GetDevice())->GetGL();
 
-    gl.BindBuffer(GL_ARRAY_BUFFER, mBuffer);
-    gl.UnmapBuffer(GL_ARRAY_BUFFER);
+    DAWN_GL_TRY_IGNORE_ERRORS(gl, BindBuffer(GL_ARRAY_BUFFER, mBuffer));
+    DAWN_GL_TRY_IGNORE_ERRORS(gl, UnmapBuffer(GL_ARRAY_BUFFER));
     mMappedData = nullptr;
 }
 
@@ -205,7 +247,7 @@ void Buffer::DestroyImpl() {
     const OpenGLFunctions& gl = ToBackend(GetDevice())->GetGL();
 
     BufferBase::DestroyImpl();
-    gl.DeleteBuffers(1, &mBuffer);
+    DAWN_GL_TRY_IGNORE_ERRORS(gl, DeleteBuffers(1, &mBuffer));
     mBuffer = 0;
 }
 

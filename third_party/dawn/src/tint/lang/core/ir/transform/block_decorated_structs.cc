@@ -27,8 +27,6 @@
 
 #include "src/tint/lang/core/ir/transform/block_decorated_structs.h"
 
-#include <utility>
-
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
@@ -56,7 +54,7 @@ void Run(Module& ir) {
         if (!var) {
             continue;
         }
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         if (!ptr || !core::IsHostShareable(ptr->AddressSpace())) {
             continue;
         }
@@ -65,7 +63,7 @@ void Run(Module& ir) {
 
     // Now process the buffer variables.
     for (auto* var : buffer_variables) {
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         auto* store_ty = ptr->StoreType();
 
         if (auto* str = store_ty->As<core::type::Struct>()) {
@@ -107,10 +105,10 @@ void Run(Module& ir) {
         // Replace uses of the old variable.
         // The structure has been wrapped, so replace all uses of the old variable with a member
         // accessor on the new variable.
-        var->Result(0)->ReplaceAllUsesWith([&](Usage use) -> Value* {
-            auto* access = builder.Access(var->Result(0)->Type(), new_var, 0_u);
+        var->Result()->ReplaceAllUsesWith([&](Usage use) -> Value* {
+            auto* access = builder.Access(var->Result()->Type(), new_var, 0_u);
             access->InsertBefore(use.instruction);
-            return access->Result(0);
+            return access->Result();
         });
 
         var->Destroy();

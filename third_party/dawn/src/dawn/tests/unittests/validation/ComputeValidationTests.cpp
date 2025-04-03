@@ -109,31 +109,31 @@ TEST_F(ComputeDispatchValidationTest, PerDimensionDispatchSizeLimits_SmallestVal
 
 // Check that the largest allowed dispatch is OK.
 TEST_F(ComputeDispatchValidationTest, PerDimensionDispatchSizeLimits_LargestValid) {
-    const uint32_t max = GetSupportedLimits().limits.maxComputeWorkgroupsPerDimension;
+    const uint32_t max = GetSupportedLimits().maxComputeWorkgroupsPerDimension;
     TestDispatch(max, max, max);
 }
 
 // Check that exceeding the maximum on the X dimension results in validation failure.
 TEST_F(ComputeDispatchValidationTest, PerDimensionDispatchSizeLimits_InvalidX) {
-    const uint32_t max = GetSupportedLimits().limits.maxComputeWorkgroupsPerDimension;
+    const uint32_t max = GetSupportedLimits().maxComputeWorkgroupsPerDimension;
     ASSERT_DEVICE_ERROR(TestDispatch(max + 1, 1, 1));
 }
 
 // Check that exceeding the maximum on the Y dimension results in validation failure.
 TEST_F(ComputeDispatchValidationTest, PerDimensionDispatchSizeLimits_InvalidY) {
-    const uint32_t max = GetSupportedLimits().limits.maxComputeWorkgroupsPerDimension;
+    const uint32_t max = GetSupportedLimits().maxComputeWorkgroupsPerDimension;
     ASSERT_DEVICE_ERROR(TestDispatch(1, max + 1, 1));
 }
 
 // Check that exceeding the maximum on the Z dimension results in validation failure.
 TEST_F(ComputeDispatchValidationTest, PerDimensionDispatchSizeLimits_InvalidZ) {
-    const uint32_t max = GetSupportedLimits().limits.maxComputeWorkgroupsPerDimension;
+    const uint32_t max = GetSupportedLimits().maxComputeWorkgroupsPerDimension;
     ASSERT_DEVICE_ERROR(TestDispatch(1, 1, max + 1));
 }
 
 // Check that exceeding the maximum on all dimensions results in validation failure.
 TEST_F(ComputeDispatchValidationTest, PerDimensionDispatchSizeLimits_InvalidAll) {
-    const uint32_t max = GetSupportedLimits().limits.maxComputeWorkgroupsPerDimension;
+    const uint32_t max = GetSupportedLimits().maxComputeWorkgroupsPerDimension;
     ASSERT_DEVICE_ERROR(TestDispatch(max + 1, max + 1, max + 1));
 }
 

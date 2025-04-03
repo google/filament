@@ -624,7 +624,7 @@ MaybeError CommandBufferStateTracker::CheckMissingAspects(ValidationAspects aspe
             BindGroupLayoutBase* currentBGL = mBindgroups[i]->GetFrontendLayout();
 
             DAWN_INVALID_IF(
-                requiredBGL->GetPipelineCompatibilityToken() != PipelineCompatibilityToken(0) &&
+                requiredBGL->GetPipelineCompatibilityToken() != kExplicitPCT &&
                     currentBGL->GetPipelineCompatibilityToken() !=
                         requiredBGL->GetPipelineCompatibilityToken(),
                 "The current pipeline (%s) was created with a default layout, and is not "
@@ -635,8 +635,8 @@ MaybeError CommandBufferStateTracker::CheckMissingAspects(ValidationAspects aspe
                 mLastPipeline, mBindgroups[i], i, currentBGL, i);
 
             DAWN_INVALID_IF(
-                requiredBGL->GetPipelineCompatibilityToken() == PipelineCompatibilityToken(0) &&
-                    currentBGL->GetPipelineCompatibilityToken() != PipelineCompatibilityToken(0),
+                requiredBGL->GetPipelineCompatibilityToken() == kExplicitPCT &&
+                    currentBGL->GetPipelineCompatibilityToken() != kExplicitPCT,
                 "%s set at group index %u uses a %s which was created as part of the default "
                 "layout "
                 "for a different pipeline than the current one (%s), and as a result is not "

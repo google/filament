@@ -118,7 +118,7 @@ TEST_F(SpirvParserTest, FragmentShader_DepthReplacing) {
 )",
               R"(
 $B1: {  # root
-  %1:ptr<__out, f32, read_write> = var @builtin(frag_depth)
+  %1:ptr<__out, f32, read_write> = var undef @builtin(frag_depth)
 }
 
 %main = @fragment func():void {

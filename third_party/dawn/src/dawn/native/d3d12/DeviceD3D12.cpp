@@ -299,19 +299,18 @@ MaybeError Device::CreateZeroBuffer() {
     CommandRecordingContext* commandContext =
         ToBackend(GetQueue())->GetPendingCommandContext(QueueBase::SubmitMode::Passive);
 
-    DynamicUploader* uploader = GetDynamicUploader();
-    UploadHandle uploadHandle;
-    DAWN_TRY_ASSIGN(uploadHandle,
-                    uploader->Allocate(kZeroBufferSize, GetQueue()->GetPendingCommandSerial(),
-                                       kCopyBufferToBufferOffsetAlignment));
+    return GetDynamicUploader()->WithUploadReservation(
+        kZeroBufferSize, kCopyBufferToBufferOffsetAlignment,
+        [&](UploadReservation reservation) -> MaybeError {
+            memset(reservation.mappedPointer, 0u, kZeroBufferSize);
 
-    memset(uploadHandle.mappedBuffer, 0u, kZeroBufferSize);
+            CopyFromStagingToBufferHelper(commandContext, reservation.buffer.Get(),
+                                          reservation.offsetInBuffer, mZeroBuffer.Get(), 0,
+                                          kZeroBufferSize);
 
-    CopyFromStagingToBufferHelper(commandContext, uploadHandle.stagingBuffer.Get(),
-                                  uploadHandle.startOffset, mZeroBuffer.Get(), 0, kZeroBufferSize);
-
-    mZeroBuffer->SetInitialized(true);
-    return {};
+            mZeroBuffer->SetInitialized(true);
+            return {};
+        });
 }
 
 MaybeError Device::ClearBufferToZero(CommandRecordingContext* commandContext,
@@ -494,6 +493,7 @@ MaybeError Device::CopyFromStagingToBufferImpl(BufferBase* source,
         ToBackend(GetQueue())->GetPendingCommandContext(QueueBase::SubmitMode::Passive);
 
     Buffer* dstBuffer = ToBackend(destination);
+    DAWN_TRY(dstBuffer->SynchronizeBufferBeforeUse());
 
     [[maybe_unused]] bool cleared;
     DAWN_TRY_ASSIGN(cleared, dstBuffer->EnsureDataInitializedAsDestination(

@@ -73,7 +73,7 @@ class IRToProgramTest : public core::ir::IRTestHelper {
         }
         auto* var = b.Var(name, mod.Types().ref(SPACE, val->Type(), ACCESS));
         var->SetInitializer(val);
-        mod.SetName(var->Result(0), name);
+        mod.SetName(var->Result(), name);
         return var;
     }
 

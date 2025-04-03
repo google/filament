@@ -90,14 +90,15 @@
         <id value="37"  vendor="heroseh" tool="Hero C Compiler" comment="https://github.com/heroseh/hcc"/>
         <id value="38"  vendor="Meta" tool="SparkSL" comment="Contact Dunfan Lu, dunfanlu@meta.com, https://sparkar.facebook.com/ar-studio/learn/sparksl/sparksl-overview"/>
         <id value="39"  vendor="SirLynix" tool="Nazara ShaderLang Compiler" comment="Contact Jérôme Leclercq, https://github.com/NazaraEngine/ShaderLang"/>
-        <id value="40"  vendor="NVIDIA" tool="Slang Compiler" comment="Contact Theresa Foley, tfoley@nvidia.com, https://github.com/shader-slang/slang/"/>
+        <id value="40"  vendor="Khronos" tool="Slang Compiler" comment="https://shader-slang.org"/>
         <id value="41"  vendor="Zig Software Foundation" tool="Zig Compiler" comment="Contact Robin Voetter, https://github.com/Snektron"/>
         <id value="42"  vendor="Rendong Liang" tool="spq" comment="Contact Rendong Liang, admin@penguinliong.moe, https://github.com/PENGUINLIONG/spq-rs"/>
         <id value="43"  vendor="LLVM" tool="LLVM SPIR-V Backend" comment="Contact Michal Paszkowski, michal.paszkowski@intel.com, https://github.com/llvm/llvm-project/tree/main/llvm/lib/Target/SPIRV"/>
         <id value="44"  vendor="Robert Konrad" tool="Kongruent" comment="Contact Robert Konrad, https://github.com/Kode/Kongruent"/>
         <id value="45"  vendor="Kitsunebi Games" tool="Nuvk SPIR-V Emitter and DLSL compiler" comment="Contact Luna Nielsen, luna@foxgirls.gay, https://github.com/Inochi2D/nuvk"/>
         <id value="46"  vendor="Nintendo" comment="Contact Steve Urquhart, steve.urquhart@ntd.nintendo.com"/>
-        <unused start="47" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
+        <id value="47"  vendor="ARM" comment="Contact Christopher Gautier, christopher.gautier@arm.com"/>
+        <unused start="48" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
     </ids>
 
     <!-- SECTION: SPIR-V Opcodes and Enumerants -->

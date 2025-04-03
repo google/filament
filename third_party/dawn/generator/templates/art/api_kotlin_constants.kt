@@ -34,6 +34,13 @@ public object Constants {
 
     {% for constant in by_category['constant'] %}
         public val {{ as_ktName(constant.name.SNAKE_CASE() ) }}:{{ ' ' }}
-            {{- kotlin_declaration(constant) }} = {{ constant.value }}
+        {{- kotlin_declaration(constant) }} =
+        {%- if constant.value == 'NAN' %}
+            {% if constant.type.name.get() == 'float' -%}   {{ ' ' }}Float.NaN
+            {% elif constant.type.name.get() == 'double' %} {{ ' ' }}Double.NaN
+            {% else %} {{ assert(false) }}
+            {% endif %}
+        {%- else %} {{ constant.value }}
+        {% endif %}
     {% endfor %}
 }

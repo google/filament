@@ -56,7 +56,7 @@ struct State {
             if (auto* construct = inst->As<core::ir::Construct>()) {
                 // A vector constructor with a single scalar argument needs to be modified to
                 // replicate the argument N times.
-                auto* vec = construct->Result(0)->Type()->As<core::type::Vector>();
+                auto* vec = construct->Result()->Type()->As<core::type::Vector>();
                 if (vec &&  //
                     construct->Args().Length() == 1 &&
                     construct->Args()[0]->Type()->Is<core::type::Scalar>()) {
@@ -67,7 +67,7 @@ struct State {
             } else if (auto* binary = inst->As<core::ir::CoreBinary>()) {
                 // A binary instruction that mixes vector and scalar operands needs to have the
                 // scalar operand replaced with an explicit vector constructor.
-                if (binary->Result(0)->Type()->Is<core::type::Vector>()) {
+                if (binary->Result()->Type()->Is<core::type::Vector>()) {
                     if (binary->LHS()->Type()->Is<core::type::Scalar>() ||
                         binary->RHS()->Type()->Is<core::type::Scalar>()) {
                         ExpandBinary(binary);
@@ -77,7 +77,7 @@ struct State {
                 // A mix builtin call that mixes vector and scalar operands needs to have the scalar
                 // operand replaced with an explicit vector constructor.
                 if (builtin->Func() == core::BuiltinFn::kMix) {
-                    if (builtin->Result(0)->Type()->Is<core::type::Vector>()) {
+                    if (builtin->Result()->Type()->Is<core::type::Vector>()) {
                         if (builtin->Args()[2]->Type()->Is<core::type::Scalar>()) {
                             ExpandOperand(builtin,
                                           core::ir::CoreBuiltinCall::kArgsOperandOffset + 2);
@@ -91,20 +91,20 @@ struct State {
     /// Helper to expand a scalar operand of an instruction by replacing it with an explicitly
     /// constructed vector that matches the result type.
     void ExpandOperand(core::ir::Instruction* inst, size_t operand_idx) {
-        auto* vec = inst->Result(0)->Type()->As<core::type::Vector>();
+        auto* vec = inst->Result()->Type()->As<core::type::Vector>();
 
         Vector<core::ir::Value*, 4> args;
         args.Resize(vec->Width(), inst->Operands()[operand_idx]);
 
         auto* construct = b.Construct(vec, std::move(args));
         construct->InsertBefore(inst);
-        inst->SetOperand(operand_idx, construct->Result(0));
+        inst->SetOperand(operand_idx, construct->Result());
     }
 
     /// Replace scalar operands to binary instructions that produce vectors.
     /// @param binary the binary instruction to modify
     void ExpandBinary(core::ir::Binary* binary) {
-        auto* result_ty = binary->Result(0)->Type();
+        auto* result_ty = binary->Result()->Type();
         if (result_ty->IsFloatVector() && binary->Op() == core::BinaryOp::kMultiply) {
             // Use OpVectorTimesScalar for floating point multiply.
             auto* vts = b.CallWithResult<spirv::ir::BuiltinCall>(
@@ -117,7 +117,7 @@ struct State {
                 vts->AppendArg(binary->RHS());
             }
             if (auto name = ir.NameOf(binary)) {
-                ir.SetName(vts->Result(0), name);
+                ir.SetName(vts->Result(), name);
             }
             binary->ReplaceWith(vts);
             binary->Destroy();

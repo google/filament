@@ -439,7 +439,7 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
     // import's constraint.
     memoryRequirements.memoryTypeBits &= fdProperties.memoryTypeBits;
     int memoryTypeIndex = device->GetResourceMemoryAllocator()->FindBestTypeIndex(
-        memoryRequirements, MemoryKind::Opaque);
+        memoryRequirements, MemoryKind::DeviceLocal);
     DAWN_INVALID_IF(memoryTypeIndex == -1, "Unable to find an appropriate memory type for import.");
 
     SystemHandle memoryFD;
@@ -669,7 +669,7 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
         VkMemoryRequirements memoryRequirements;
         memoryRequirements.memoryTypeBits = bufferProperties.memoryTypeBits;
         int memoryTypeIndex = device->GetResourceMemoryAllocator()->FindBestTypeIndex(
-            memoryRequirements, MemoryKind::Opaque);
+            memoryRequirements, MemoryKind::DeviceLocal);
         DAWN_INVALID_IF(memoryTypeIndex == -1,
                         "Unable to find an appropriate memory type for import.");
 

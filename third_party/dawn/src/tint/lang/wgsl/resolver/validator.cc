@@ -37,6 +37,7 @@
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/type/abstract_numeric.h"
 #include "src/tint/lang/core/type/atomic.h"
+#include "src/tint/lang/core/type/binding_array.h"
 #include "src/tint/lang/core/type/depth_multisampled_texture.h"
 #include "src/tint/lang/core/type/depth_texture.h"
 #include "src/tint/lang/core/type/input_attachment.h"
@@ -180,6 +181,8 @@ Validator::Validator(
                             wgsl::DiagnosticSeverity::kError);
     diagnostic_filters_.Set(wgsl::CoreDiagnosticRule::kSubgroupUniformity,
                             wgsl::DiagnosticSeverity::kError);
+    diagnostic_filters_.Set(wgsl::ChromiumDiagnosticRule::kSubgroupMatrixUniformity,
+                            wgsl::DiagnosticSeverity::kError);
     diagnostic_filters_.Set(wgsl::ChromiumDiagnosticRule::kUnreachableCode,
                             wgsl::DiagnosticSeverity::kWarning);
 }
@@ -224,6 +227,7 @@ bool Validator::IsFixedFootprint(const core::type::Type* type) const {
         [&](const core::type::Vector*) { return true; },  //
         [&](const core::type::Matrix*) { return true; },  //
         [&](const core::type::Atomic*) { return true; },
+        [&](const core::type::SubgroupMatrix*) { return true; },
         [&](const sem::Array* arr) {
             return !arr->Count()->Is<core::type::RuntimeArrayCount>() &&
                    IsFixedFootprint(arr->ElemType());
@@ -262,7 +266,8 @@ bool Validator::IsHostShareable(const core::type::Type* type) const {
 
 // https://gpuweb.github.io/gpuweb/wgsl.html#storable-types
 bool Validator::IsStorable(const core::type::Type* type) const {
-    return IsPlain(type) || type->IsAnyOf<core::type::Texture, core::type::Sampler>();
+    return IsPlain(type) ||
+           type->IsAnyOf<core::type::BindingArray, core::type::Texture, core::type::Sampler>();
 }
 
 const ast::Statement* Validator::ClosestContinuing(bool stop_at_loop,
@@ -362,11 +367,9 @@ bool Validator::Pointer(const ast::TemplatedIdentifier* a, const core::type::Poi
     }
 
     if (s->AddressSpace() != core::AddressSpace::kHandle) {
-        if (s->StoreType()->Is<core::type::Texture>()) {
-            AddError(a->source) << "pointer can not be formed to a texture";
-            return false;
-        } else if (s->StoreType()->Is<core::type::Sampler>()) {
-            AddError(a->source) << "pointer can not be formed to a sampler";
+        if (s->StoreType()->IsHandle()) {
+            AddError(a->source) << "pointer can not be formed to handle type "
+                                << sem_.TypeNameOf(s->StoreType());
             return false;
         }
     }
@@ -497,6 +500,26 @@ bool Validator::InputAttachmentIndexAttribute(const ast::InputAttachmentIndexAtt
         AddNote(attr->source) << style::Attribute("@input_attachment_index")
                               << " must only be applied to declarations of "
                               << style::Type("input_attachment") << " type";
+        return false;
+    }
+
+    return true;
+}
+
+bool Validator::BindingArray(const core::type::BindingArray* t, const Source& source) const {
+    if (allowed_features_.features.count(wgsl::LanguageFeature::kSizedBindingArray) == 0) {
+        AddError(source) << "use of " << style::Type("binding_array") << " requires the "
+                         << style::Code("sized_binding_array")
+                         << "language feature, which is not allowed in the current environment";
+        return false;
+    }
+    if (!t->Count()->Is<core::type::ConstantArrayCount>()) {
+        AddError(source) << "binding_array count must be a constant expression";
+        return false;
+    }
+
+    if (!t->ElemType()->Is<core::type::SampledTexture>()) {
+        AddError(source) << "binding_array element type must be a sampled texture type";
         return false;
     }
 
@@ -981,8 +1004,7 @@ bool Validator::Parameter(const sem::Variable* var) const {
             AddError(decl->type->source) << "type of function parameter must be constructible";
             return false;
         }
-    } else if (!var->Type()
-                    ->IsAnyOf<core::type::Texture, core::type::Sampler, core::type::Pointer>()) {
+    } else if (!var->Type()->Is<core::type::Pointer>() && !var->Type()->IsHandle()) {
         AddError(decl->source) << "type of function parameter cannot be "
                                << sem_.TypeNameOf(var->Type());
         return false;
@@ -2024,6 +2046,12 @@ bool Validator::WorkgroupUniformLoad(const sem::Call* call) const {
         return false;
     }
 
+    if (!ty->IsConstructible()) {
+        AddError(arg->Declaration()->source)
+            << "workgroupUniformLoad must be called with an argument whose type is constructible";
+        return false;
+    }
+
     return true;
 }
 
@@ -2157,7 +2185,7 @@ bool Validator::FunctionCall(const sem::Call* call, sem::Statement* current_stat
     auto name = sym.Name();
 
     if (!current_statement) {  // Function call at module-scope.
-        AddError(decl->source) << "functions cannot be called at module-scope";
+        AddError(decl->source) << "user-declared functions cannot be called at module-scope";
         return false;
     }
 
@@ -2453,6 +2481,18 @@ bool Validator::PipelineStages(VectorRef<sem::Function*> entry_points) const {
         return true;
     };
 
+    auto check_no_subgroup_matrix = [&](const sem::Function* func,
+                                        const sem::Function* entry_point) {
+        if (auto matrix_use = func->DirectlyUsedSubgroupMatrix()) {
+            auto stage = entry_point->Declaration()->PipelineStage();
+            AddError(*(matrix_use.value()))
+                << "subgroup matrix type cannot be used in " << stage << " pipeline stage";
+            backtrace(func, entry_point);
+            return false;
+        }
+        return true;
+    };
+
     auto check_func = [&](const sem::Function* func, const sem::Function* entry_point) {
         if (!check_var_uses(func, entry_point)) {
             return false;
@@ -2462,6 +2502,11 @@ bool Validator::PipelineStages(VectorRef<sem::Function*> entry_points) const {
         }
         if (entry_point->Declaration()->PipelineStage() != ast::PipelineStage::kFragment) {
             if (!check_no_discards(func, entry_point)) {
+                return false;
+            }
+        }
+        if (entry_point->Declaration()->PipelineStage() != ast::PipelineStage::kCompute) {
+            if (!check_no_subgroup_matrix(func, entry_point)) {
                 return false;
             }
         }

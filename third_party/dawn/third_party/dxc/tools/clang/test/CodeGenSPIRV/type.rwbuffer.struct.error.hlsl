@@ -5,12 +5,13 @@ struct S {
   float b;
 };
 
-// CHECK: error: cannot instantiate RWBuffer with struct type 'S'
+// CHECK: error: elements of typed buffers and textures must be scalars or vectors
 RWBuffer<S> MyRWBuffer;
 
-// CHECK: error: cannot instantiate RasterizerOrderedBuffer with struct type 'S'
+// CHECK: error: elements of typed buffers and textures must be scalars or vectors
 RasterizerOrderedBuffer<S> MyROVBuffer;
 
 float4 main() : A {
   return 1.0;
 }
+

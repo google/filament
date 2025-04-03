@@ -2004,22 +2004,27 @@ TEST_F(ResolverTest, Function_EntryPoints_StageAttribute) {
     EXPECT_EQ(func_a_sem->Parameters().Length(), 0u);
     EXPECT_EQ(func_c_sem->Parameters().Length(), 0u);
 
-    const auto& b_eps = func_b_sem->AncestorEntryPoints();
+    const auto& b_eps = func_b_sem->CallGraphEntryPoints();
     ASSERT_EQ(2u, b_eps.Length());
     EXPECT_EQ(Symbols().Register("ep_1"), b_eps[0]->Declaration()->name->symbol);
     EXPECT_EQ(Symbols().Register("ep_2"), b_eps[1]->Declaration()->name->symbol);
 
-    const auto& a_eps = func_a_sem->AncestorEntryPoints();
+    const auto& a_eps = func_a_sem->CallGraphEntryPoints();
     ASSERT_EQ(1u, a_eps.Length());
     EXPECT_EQ(Symbols().Register("ep_1"), a_eps[0]->Declaration()->name->symbol);
 
-    const auto& c_eps = func_c_sem->AncestorEntryPoints();
+    const auto& c_eps = func_c_sem->CallGraphEntryPoints();
     ASSERT_EQ(2u, c_eps.Length());
     EXPECT_EQ(Symbols().Register("ep_1"), c_eps[0]->Declaration()->name->symbol);
     EXPECT_EQ(Symbols().Register("ep_2"), c_eps[1]->Declaration()->name->symbol);
 
-    EXPECT_TRUE(ep_1_sem->AncestorEntryPoints().IsEmpty());
-    EXPECT_TRUE(ep_2_sem->AncestorEntryPoints().IsEmpty());
+    const auto& ep_1_eps = ep_1_sem->CallGraphEntryPoints();
+    ASSERT_EQ(1u, ep_1_eps.Length());
+    EXPECT_EQ(Symbols().Register("ep_1"), ep_1_eps[0]->Declaration()->name->symbol);
+
+    const auto& ep_2_eps = ep_2_sem->CallGraphEntryPoints();
+    ASSERT_EQ(1u, ep_2_eps.Length());
+    EXPECT_EQ(Symbols().Register("ep_2"), ep_2_eps[0]->Declaration()->name->symbol);
 }
 
 // Check for linear-time traversal of functions reachable from entry points.
@@ -2128,230 +2133,6 @@ TEST_F(ResolverTest, UnaryOp_Negation) {
     EXPECT_THAT(r()->error(), HasSubstr("error: no matching overload for 'operator - (u32)"));
 }
 
-TEST_F(ResolverTest, TextureSampler_TextureSample) {
-    GlobalVar("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), Group(1_a),
-              Binding(1_a));
-    GlobalVar("s", ty.sampler(core::type::SamplerKind::kSampler), Group(1_a), Binding(2_a));
-
-    auto* call = Call("textureSample", "t", "s", Call<vec2<f32>>(1_f, 2_f));
-    const ast::Function* f =
-        Func("test_function", tint::Empty, ty.void_(), Vector{Assign(Phony(), call)},
-             Vector{Stage(ast::PipelineStage::kFragment)});
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-
-    const sem::Function* sf = Sem().Get(f);
-    auto pairs = sf->TextureSamplerPairs();
-    ASSERT_EQ(pairs.Length(), 1u);
-    EXPECT_TRUE(pairs[0].first != nullptr);
-    EXPECT_TRUE(pairs[0].second != nullptr);
-}
-
-TEST_F(ResolverTest, TextureSampler_TextureSampleInFunction) {
-    GlobalVar("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), Group(1_a),
-              Binding(1_a));
-    GlobalVar("s", ty.sampler(core::type::SamplerKind::kSampler), Group(1_a), Binding(2_a));
-
-    auto* inner_call = Assign(Phony(), Call("textureSample", "t", "s", Call<vec2<f32>>(1_f, 2_f)));
-    const ast::Function* inner_func =
-        Func("inner_func", tint::Empty, ty.void_(), Vector{inner_call});
-    auto* outer_call = CallStmt(Call("inner_func"));
-    const ast::Function* outer_func =
-        Func("outer_func", tint::Empty, ty.void_(), Vector{outer_call},
-             Vector{Stage(ast::PipelineStage::kFragment)});
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-
-    auto inner_pairs = Sem().Get(inner_func)->TextureSamplerPairs();
-    ASSERT_EQ(inner_pairs.Length(), 1u);
-    EXPECT_TRUE(inner_pairs[0].first != nullptr);
-    EXPECT_TRUE(inner_pairs[0].second != nullptr);
-
-    auto outer_pairs = Sem().Get(outer_func)->TextureSamplerPairs();
-    ASSERT_EQ(outer_pairs.Length(), 1u);
-    EXPECT_TRUE(outer_pairs[0].first != nullptr);
-    EXPECT_TRUE(outer_pairs[0].second != nullptr);
-}
-
-TEST_F(ResolverTest, TextureSampler_TextureSampleFunctionDiamondSameVariables) {
-    GlobalVar("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), Group(1_a),
-              Binding(1_a));
-    GlobalVar("s", ty.sampler(core::type::SamplerKind::kSampler), Group(1_a), Binding(2_a));
-
-    auto* inner_call_1 =
-        Assign(Phony(), Call("textureSample", "t", "s", Call<vec2<f32>>(1_f, 2_f)));
-    const ast::Function* inner_func_1 =
-        Func("inner_func_1", tint::Empty, ty.void_(), Vector{inner_call_1});
-    auto* inner_call_2 =
-        Assign(Phony(), Call("textureSample", "t", "s", Call<vec2<f32>>(3_f, 4_f)));
-    const ast::Function* inner_func_2 =
-        Func("inner_func_2", tint::Empty, ty.void_(), Vector{inner_call_2});
-    auto* outer_call_1 = CallStmt(Call("inner_func_1"));
-    auto* outer_call_2 = CallStmt(Call("inner_func_2"));
-    const ast::Function* outer_func =
-        Func("outer_func", tint::Empty, ty.void_(), Vector{outer_call_1, outer_call_2},
-             Vector{Stage(ast::PipelineStage::kFragment)});
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-
-    auto inner_pairs_1 = Sem().Get(inner_func_1)->TextureSamplerPairs();
-    ASSERT_EQ(inner_pairs_1.Length(), 1u);
-    EXPECT_TRUE(inner_pairs_1[0].first != nullptr);
-    EXPECT_TRUE(inner_pairs_1[0].second != nullptr);
-
-    auto inner_pairs_2 = Sem().Get(inner_func_2)->TextureSamplerPairs();
-    ASSERT_EQ(inner_pairs_1.Length(), 1u);
-    EXPECT_TRUE(inner_pairs_2[0].first != nullptr);
-    EXPECT_TRUE(inner_pairs_2[0].second != nullptr);
-
-    auto outer_pairs = Sem().Get(outer_func)->TextureSamplerPairs();
-    ASSERT_EQ(outer_pairs.Length(), 1u);
-    EXPECT_TRUE(outer_pairs[0].first != nullptr);
-    EXPECT_TRUE(outer_pairs[0].second != nullptr);
-}
-
-TEST_F(ResolverTest, TextureSampler_TextureSampleFunctionDiamondDifferentVariables) {
-    GlobalVar("t1", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), Group(1_a),
-              Binding(1_a));
-    GlobalVar("t2", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), Group(1_a),
-              Binding(2_a));
-    GlobalVar("s", ty.sampler(core::type::SamplerKind::kSampler), Group(1_a), Binding(3_a));
-
-    auto* inner_call_1 =
-        Assign(Phony(), Call("textureSample", "t1", "s", Call<vec2<f32>>(1_f, 2_f)));
-    const ast::Function* inner_func_1 =
-        Func("inner_func_1", tint::Empty, ty.void_(), Vector{inner_call_1});
-    auto* inner_call_2 =
-        Assign(Phony(), Call("textureSample", "t2", "s", Call<vec2<f32>>(3_f, 4_f)));
-    const ast::Function* inner_func_2 =
-        Func("inner_func_2", tint::Empty, ty.void_(), Vector{inner_call_2});
-    auto* outer_call_1 = CallStmt(Call("inner_func_1"));
-    auto* outer_call_2 = CallStmt(Call("inner_func_2"));
-    const ast::Function* outer_func =
-        Func("outer_func", tint::Empty, ty.void_(), Vector{outer_call_1, outer_call_2},
-             Vector{Stage(ast::PipelineStage::kFragment)});
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-
-    auto inner_pairs_1 = Sem().Get(inner_func_1)->TextureSamplerPairs();
-    ASSERT_EQ(inner_pairs_1.Length(), 1u);
-    EXPECT_TRUE(inner_pairs_1[0].first != nullptr);
-    EXPECT_TRUE(inner_pairs_1[0].second != nullptr);
-
-    auto inner_pairs_2 = Sem().Get(inner_func_2)->TextureSamplerPairs();
-    ASSERT_EQ(inner_pairs_2.Length(), 1u);
-    EXPECT_TRUE(inner_pairs_2[0].first != nullptr);
-    EXPECT_TRUE(inner_pairs_2[0].second != nullptr);
-
-    auto outer_pairs = Sem().Get(outer_func)->TextureSamplerPairs();
-    ASSERT_EQ(outer_pairs.Length(), 2u);
-    EXPECT_TRUE(outer_pairs[0].first == inner_pairs_1[0].first);
-    EXPECT_TRUE(outer_pairs[0].second == inner_pairs_1[0].second);
-    EXPECT_TRUE(outer_pairs[1].first == inner_pairs_2[0].first);
-    EXPECT_TRUE(outer_pairs[1].second == inner_pairs_2[0].second);
-}
-
-TEST_F(ResolverTest, TextureSampler_TextureSampleInFunctionPassedAsArguments) {
-    GlobalVar("gt", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), Group(1_a),
-              Binding(1_a));
-    GlobalVar("gs", ty.sampler(core::type::SamplerKind::kSampler), Group(1_a), Binding(2_a));
-
-    auto* inner_coords = Param("coords", ty.vec2<f32>());
-    auto* inner_t = Param("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
-    auto* inner_s = Param("s", ty.sampler(core::type::SamplerKind::kSampler));
-    auto* inner_call = Assign(Phony(), Call("textureSample", inner_t, inner_s, inner_coords));
-    const ast::Function* inner_func =
-        Func("inner_func", Vector{inner_coords, inner_t, inner_s}, ty.void_(), Vector{inner_call});
-
-    auto* middle_coords = Param("coords", ty.vec2<f32>());
-    auto* middle_s = Param("s", ty.sampler(core::type::SamplerKind::kSampler));
-    auto* middle_t = Param("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
-    auto* middle_call = CallStmt(Call("inner_func", middle_coords, "t", "s"));
-    const ast::Function* middle_func = Func(
-        "middle_func", Vector{middle_coords, middle_s, middle_t}, ty.void_(), Vector{middle_call});
-
-    auto* outer_call = CallStmt(Call("middle_func", Call<vec2<f32>>(1_f, 2_f), "gs", "gt"));
-    const ast::Function* outer_func =
-        Func("outer_func", tint::Empty, ty.void_(), Vector{outer_call},
-             Vector{Stage(ast::PipelineStage::kFragment)});
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-
-    auto inner_pairs = Sem().Get(inner_func)->TextureSamplerPairs();
-    ASSERT_EQ(inner_pairs.Length(), 1u);
-    auto* inner_pair_texture = As<sem::Parameter>(inner_pairs[0].first);
-    ASSERT_NE(inner_pair_texture, nullptr);
-    EXPECT_EQ(inner_pair_texture->Index(), 1u);
-    auto* inner_pair_sampler = As<sem::Parameter>(inner_pairs[0].second);
-    ASSERT_NE(inner_pair_sampler, nullptr);
-    EXPECT_EQ(inner_pair_sampler->Index(), 2u);
-
-    auto middle_pairs = Sem().Get(middle_func)->TextureSamplerPairs();
-    ASSERT_EQ(middle_pairs.Length(), 1u);
-    auto* middle_pair_texture = As<sem::Parameter>(middle_pairs[0].first);
-    ASSERT_NE(middle_pair_texture, nullptr);
-    EXPECT_EQ(middle_pair_texture->Index(), 2u);
-    auto* middle_pair_sampler = As<sem::Parameter>(middle_pairs[0].second);
-    ASSERT_NE(middle_pair_sampler, nullptr);
-    EXPECT_EQ(middle_pair_sampler->Index(), 1u);
-
-    auto outer_pairs = Sem().Get(outer_func)->TextureSamplerPairs();
-    ASSERT_EQ(outer_pairs.Length(), 1u);
-    EXPECT_TRUE(outer_pairs[0].first != nullptr);
-    EXPECT_TRUE(outer_pairs[0].second != nullptr);
-}
-
-TEST_F(ResolverTest, TextureSampler_UnusedTextureSampleInFunctionPassedAsArguments) {
-    GlobalVar("gt", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), Group(1_a),
-              Binding(1_a));
-    GlobalVar("gs", ty.sampler(core::type::SamplerKind::kSampler), Group(1_a), Binding(2_a));
-
-    auto* inner_coords = Param("coords", ty.vec2<f32>());
-    auto* inner_t = Param("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
-    auto* inner_s = Param("s", ty.sampler(core::type::SamplerKind::kSampler));
-    const ast::Function* inner_func =
-        Func("inner_func", Vector{inner_coords, inner_t, inner_s}, ty.void_(), Empty);
-
-    auto* middle_coords = Param("coords", ty.vec2<f32>());
-    auto* middle_s = Param("s", ty.sampler(core::type::SamplerKind::kSampler));
-    auto* middle_t = Param("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
-    auto* middle_call = CallStmt(Call("inner_func", middle_coords, "t", "s"));
-    const ast::Function* middle_func = Func(
-        "middle_func", Vector{middle_coords, middle_s, middle_t}, ty.void_(), Vector{middle_call});
-
-    auto* outer_call = CallStmt(Call("middle_func", Call<vec2<f32>>(1_f, 2_f), "gs", "gt"));
-    const ast::Function* outer_func =
-        Func("outer_func", tint::Empty, ty.void_(), Vector{outer_call},
-             Vector{Stage(ast::PipelineStage::kFragment)});
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-
-    auto inner_pairs = Sem().Get(inner_func)->TextureSamplerPairs();
-    ASSERT_EQ(inner_pairs.Length(), 0u);
-
-    auto middle_pairs = Sem().Get(middle_func)->TextureSamplerPairs();
-    ASSERT_EQ(middle_pairs.Length(), 0u);
-
-    auto outer_pairs = Sem().Get(outer_func)->TextureSamplerPairs();
-    ASSERT_EQ(outer_pairs.Length(), 0u);
-}
-
-TEST_F(ResolverTest, TextureSampler_TextureDimensions) {
-    GlobalVar("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), Group(1_a),
-              Binding(2_a));
-
-    auto* call = Call("textureDimensions", "t");
-    const ast::Function* f = WrapInFunction(call);
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-
-    const sem::Function* sf = Sem().Get(f);
-    auto pairs = sf->TextureSamplerPairs();
-    ASSERT_EQ(pairs.Length(), 1u);
-    EXPECT_TRUE(pairs[0].first != nullptr);
-    EXPECT_TRUE(pairs[0].second == nullptr);
-}
-
 TEST_F(ResolverTest, TextureSampler_Bug1715) {  // crbug.com/tint/1715
     // @binding(0) @group(0) var s: sampler;
     // @binding(1) @group(0) var t: texture_2d<f32>;
@@ -2393,7 +2174,7 @@ TEST_F(ResolverTest, TextureSampler_Bug1715) {  // crbug.com/tint/1715
          });
 
     ASSERT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "error: pointer can not be formed to a sampler");
+    EXPECT_EQ(r()->error(), "error: pointer can not be formed to handle type sampler");
 }
 
 TEST_F(ResolverTest, ModuleDependencyOrderedDeclarations) {
@@ -2727,7 +2508,8 @@ TEST_F(ResolverTest, PointerToHandleTextureParameter) {
          ty.void_(), {});
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to a texture");
+    EXPECT_EQ(r()->error(),
+              "12:34 error: pointer can not be formed to handle type texture_1d<f32>");
 }
 
 TEST_F(ResolverTest, PointerToHandleTextureReturn) {
@@ -2737,7 +2519,8 @@ TEST_F(ResolverTest, PointerToHandleTextureReturn) {
          {});
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to a texture");
+    EXPECT_EQ(r()->error(),
+              "12:34 error: pointer can not be formed to handle type texture_1d<f32>");
 }
 
 TEST_F(ResolverTest, PointerToHandleSamplerParameter) {
@@ -2749,7 +2532,7 @@ TEST_F(ResolverTest, PointerToHandleSamplerParameter) {
          ty.void_(), {});
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to a sampler");
+    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to handle type sampler");
 }
 
 TEST_F(ResolverTest, PointerToHandleTextureParameterAlias) {
@@ -2763,7 +2546,8 @@ TEST_F(ResolverTest, PointerToHandleTextureParameterAlias) {
          ty.void_(), {});
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to a texture");
+    EXPECT_EQ(r()->error(),
+              "12:34 error: pointer can not be formed to handle type texture_1d<f32>");
 }
 
 TEST_F(ResolverTest, PointerToHandleSamplerParameterAlias) {
@@ -2776,7 +2560,7 @@ TEST_F(ResolverTest, PointerToHandleSamplerParameterAlias) {
          ty.void_(), {});
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to a sampler");
+    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to handle type sampler");
 }
 
 TEST_F(ResolverTest, PointerToHandleTextureVar) {
@@ -2786,7 +2570,8 @@ TEST_F(ResolverTest, PointerToHandleTextureVar) {
               core::AddressSpace::kPrivate, Group(0_a), Binding(0_a));
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to a texture");
+    EXPECT_EQ(r()->error(),
+              "12:34 error: pointer can not be formed to handle type texture_1d<f32>");
 }
 
 TEST_F(ResolverTest, PointerToHandleSamplerVar) {
@@ -2795,7 +2580,7 @@ TEST_F(ResolverTest, PointerToHandleSamplerVar) {
               Group(0_a), core::AddressSpace::kPrivate, Binding(0_a));
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to a sampler");
+    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to handle type sampler");
 }
 
 TEST_F(ResolverTest, PointerToHandleTextureVarAlias) {
@@ -2805,7 +2590,8 @@ TEST_F(ResolverTest, PointerToHandleTextureVarAlias) {
     GlobalVar("s", ty.Of(my_ty), core::AddressSpace::kPrivate, Group(0_a), Binding(0_a));
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to a texture");
+    EXPECT_EQ(r()->error(),
+              "12:34 error: pointer can not be formed to handle type texture_1d<f32>");
 }
 
 TEST_F(ResolverTest, PointerToHandleSamplerVarAlias) {
@@ -2815,7 +2601,7 @@ TEST_F(ResolverTest, PointerToHandleSamplerVarAlias) {
     GlobalVar("s", ty.Of(my_ty), Group(0_a), core::AddressSpace::kPrivate, Binding(0_a));
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to a sampler");
+    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to handle type sampler");
 }
 
 TEST_F(ResolverTest, PointerToHandleTextureAlias) {
@@ -2824,7 +2610,8 @@ TEST_F(ResolverTest, PointerToHandleTextureAlias) {
                            ty.sampled_texture(core::type::TextureDimension::k1d, ty.f32())));
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to a texture");
+    EXPECT_EQ(r()->error(),
+              "12:34 error: pointer can not be formed to handle type texture_1d<f32>");
 }
 
 TEST_F(ResolverTest, PointerToHandleSamplerAlias) {
@@ -2832,7 +2619,7 @@ TEST_F(ResolverTest, PointerToHandleSamplerAlias) {
           ty.ptr<private_>(Source{{12, 34}}, ty.sampler(core::type::SamplerKind::kSampler)));
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to a sampler");
+    EXPECT_EQ(r()->error(), "12:34 error: pointer can not be formed to handle type sampler");
 }
 
 }  // namespace

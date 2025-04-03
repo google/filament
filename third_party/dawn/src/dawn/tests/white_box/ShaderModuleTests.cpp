@@ -171,7 +171,7 @@ TEST_P(ShaderModuleTests, CachedShader) {
     auto scopedUseTintProgram = shaderModule->UseTintProgram();
 
     // UseTintProgram() should increase the external ref count
-    EXPECT_TRUE(shaderModule->GetTintProgramForTesting());
+    EXPECT_TRUE(shaderModule->GetNullableTintProgramForTesting());
     EXPECT_EQ(shaderModule->GetTintProgramRecreateCountForTesting(), 0);
     EXPECT_EQ(shaderModule->GetExternalRefCountForTesting(), 2ull);
 
@@ -179,13 +179,14 @@ TEST_P(ShaderModuleTests, CachedShader) {
     module = {};
 
     // The mTintProgram should be alive.
-    EXPECT_TRUE(shaderModule->GetTintProgramForTesting());
+    EXPECT_TRUE(shaderModule->GetNullableTintProgramForTesting());
     EXPECT_EQ(shaderModule->GetTintProgramRecreateCountForTesting(), 0);
     EXPECT_EQ(shaderModule->GetExternalRefCountForTesting(), 1ull);
 
     // Drop the scopedUseTintProgram
     scopedUseTintProgram = nullptr;
-    EXPECT_FALSE(shaderModule->GetTintProgramForTesting());
+    // The mTintProgram should be released.
+    EXPECT_FALSE(shaderModule->GetNullableTintProgramForTesting());
     EXPECT_EQ(shaderModule->GetTintProgramRecreateCountForTesting(), 0);
     EXPECT_EQ(shaderModule->GetExternalRefCountForTesting(), 0ull);
 
@@ -195,14 +196,22 @@ TEST_P(ShaderModuleTests, CachedShader) {
     // The module should be from the cache.
     EXPECT_EQ(shaderModule.Get(), FromAPI(module.Get()));
 
-    // The mTintProgram should be null.
-    EXPECT_FALSE(shaderModule->GetTintProgramForTesting());
+    // The mTintProgram should be null, as it should be lazily recreated when calling
+    // GetTintProgram().
+    EXPECT_FALSE(shaderModule->GetNullableTintProgramForTesting());
     EXPECT_EQ(shaderModule->GetExternalRefCountForTesting(), 1ull);
     EXPECT_EQ(shaderModule->GetTintProgramRecreateCountForTesting(), 0);
 
-    // Call UseTintProgram() should re-create mTintProgram.
+    // Calling UseTintProgram() should add the ref count but not recreate mTintProgram, as it should
+    // be lazily recreated when calling GetTintProgram.
     scopedUseTintProgram = shaderModule->UseTintProgram();
-    EXPECT_TRUE(shaderModule->GetTintProgramForTesting());
+    EXPECT_FALSE(shaderModule->GetNullableTintProgramForTesting());
+    EXPECT_EQ(shaderModule->GetExternalRefCountForTesting(), 2ull);
+    EXPECT_EQ(shaderModule->GetTintProgramRecreateCountForTesting(), 0);
+
+    // Calling GetTintProgram() should recreate the mTintProgram.
+    EXPECT_TRUE(shaderModule->GetTintProgram());
+    EXPECT_TRUE(shaderModule->GetNullableTintProgramForTesting());
     EXPECT_EQ(shaderModule->GetExternalRefCountForTesting(), 2ull);
     EXPECT_EQ(shaderModule->GetTintProgramRecreateCountForTesting(), 1);
 }
@@ -216,11 +225,11 @@ TEST_P(ShaderModuleTests, CreateRenderPipeline) {
 
     Ref<ShaderModuleBase> vsShaderModule(FromAPI(vsModule.Get()));
     EXPECT_TRUE(vsShaderModule.Get());
-    EXPECT_TRUE(vsShaderModule->GetTintProgramForTesting());
+    EXPECT_TRUE(vsShaderModule->GetNullableTintProgramForTesting());
 
     Ref<ShaderModuleBase> fsShaderModule(FromAPI(fsModule.Get()));
     EXPECT_TRUE(fsShaderModule.Get());
-    EXPECT_TRUE(fsShaderModule->GetTintProgramForTesting());
+    EXPECT_TRUE(fsShaderModule->GetNullableTintProgramForTesting());
 
     EXPECT_EQ(vsShaderModule->GetExternalRefCountForTesting(), 1ull);
     EXPECT_EQ(fsShaderModule->GetExternalRefCountForTesting(), 1ull);
@@ -234,8 +243,8 @@ TEST_P(ShaderModuleTests, CreateRenderPipeline) {
     EXPECT_EQ(fsShaderModule->GetExternalRefCountForTesting(), 0ull);
 
     // mTintProgram should be released already.
-    EXPECT_FALSE(vsShaderModule->GetTintProgramForTesting());
-    EXPECT_FALSE(fsShaderModule->GetTintProgramForTesting());
+    EXPECT_FALSE(vsShaderModule->GetNullableTintProgramForTesting());
+    EXPECT_FALSE(fsShaderModule->GetNullableTintProgramForTesting());
 
     vsModule = utils::CreateShaderModule(device, kVertexShader);
     fsModule = utils::CreateShaderModule(device, kFragmentShader);
@@ -253,8 +262,8 @@ TEST_P(ShaderModuleTests, CreateRenderPipeline) {
     EXPECT_EQ(fsShaderModule->GetExternalRefCountForTesting(), 1ull);
 
     // mTintProgram should be released already.
-    EXPECT_FALSE(vsShaderModule->GetTintProgramForTesting());
-    EXPECT_FALSE(fsShaderModule->GetTintProgramForTesting());
+    EXPECT_FALSE(vsShaderModule->GetNullableTintProgramForTesting());
+    EXPECT_FALSE(fsShaderModule->GetNullableTintProgramForTesting());
 }
 
 // Check mTintProgram in ShaderModule is released after async creation of a RenderPipeline is done.
@@ -265,11 +274,11 @@ TEST_P(ShaderModuleTests, CreateRenderPipelineAsync) {
 
     Ref<ShaderModuleBase> vsShaderModule(FromAPI(vsModule.Get()));
     EXPECT_TRUE(vsShaderModule.Get());
-    EXPECT_TRUE(vsShaderModule->GetTintProgramForTesting());
+    EXPECT_TRUE(vsShaderModule->GetNullableTintProgramForTesting());
 
     Ref<ShaderModuleBase> fsShaderModule(FromAPI(fsModule.Get()));
     EXPECT_TRUE(fsShaderModule.Get());
-    EXPECT_TRUE(fsShaderModule->GetTintProgramForTesting());
+    EXPECT_TRUE(fsShaderModule->GetNullableTintProgramForTesting());
 
     if (!SupportsCreatePipelineAsync()) {
         EXPECT_EQ(vsShaderModule->GetExternalRefCountForTesting(), 1ull);
@@ -309,8 +318,8 @@ TEST_P(ShaderModuleTests, CreateRenderPipelineAsync) {
     EXPECT_EQ(fsShaderModule->GetExternalRefCountForTesting(), 0ull);
 
     // mTintProgram should be released already.
-    EXPECT_FALSE(vsShaderModule->GetTintProgramForTesting());
-    EXPECT_FALSE(fsShaderModule->GetTintProgramForTesting());
+    EXPECT_FALSE(vsShaderModule->GetNullableTintProgramForTesting());
+    EXPECT_FALSE(fsShaderModule->GetNullableTintProgramForTesting());
 }
 
 // Check mTintProgram in ShaderModule is released after creation of a ComputePipeline is done.
@@ -321,7 +330,7 @@ TEST_P(ShaderModuleTests, CreateComputePipeline) {
 
     Ref<ShaderModuleBase> shaderModule(FromAPI(module.Get()));
     EXPECT_TRUE(shaderModule.Get());
-    EXPECT_TRUE(shaderModule->GetTintProgramForTesting());
+    EXPECT_TRUE(shaderModule->GetNullableTintProgramForTesting());
 
     EXPECT_EQ(shaderModule->GetExternalRefCountForTesting(), 1ull);
 
@@ -333,7 +342,7 @@ TEST_P(ShaderModuleTests, CreateComputePipeline) {
     EXPECT_EQ(shaderModule->GetExternalRefCountForTesting(), 0ull);
 
     // mTintProgram should be released already.
-    EXPECT_FALSE(shaderModule->GetTintProgramForTesting());
+    EXPECT_FALSE(shaderModule->GetNullableTintProgramForTesting());
 
     // Create a pipeline with the same shader source code
     module = utils::CreateShaderModule(device, kComputeShader);
@@ -347,7 +356,7 @@ TEST_P(ShaderModuleTests, CreateComputePipeline) {
     EXPECT_EQ(shaderModule->GetExternalRefCountForTesting(), 1ull);
 
     // mTintProgram should be released already.
-    EXPECT_FALSE(shaderModule->GetTintProgramForTesting());
+    EXPECT_FALSE(shaderModule->GetNullableTintProgramForTesting());
 }
 
 // Check mTintProgram in ShaderModule is released after async creation of a ComputePipeline is done.
@@ -357,7 +366,7 @@ TEST_P(ShaderModuleTests, CreateComputePipelineAsync) {
 
     Ref<ShaderModuleBase> shaderModule(FromAPI(module.Get()));
     EXPECT_TRUE(shaderModule.Get());
-    EXPECT_TRUE(shaderModule->GetTintProgramForTesting());
+    EXPECT_TRUE(shaderModule->GetNullableTintProgramForTesting());
 
     EXPECT_LE(shaderModule->GetExternalRefCountForTesting(), 2ull);
     EXPECT_NE(shaderModule->GetExternalRefCountForTesting(), 0ull);
@@ -386,7 +395,7 @@ TEST_P(ShaderModuleTests, CreateComputePipelineAsync) {
     EXPECT_EQ(shaderModule->GetExternalRefCountForTesting(), 0ull);
 
     // mTintProgram should be released already.
-    EXPECT_FALSE(shaderModule->GetTintProgramForTesting());
+    EXPECT_FALSE(shaderModule->GetNullableTintProgramForTesting());
 }
 
 DAWN_INSTANTIATE_TEST(ShaderModuleTests,

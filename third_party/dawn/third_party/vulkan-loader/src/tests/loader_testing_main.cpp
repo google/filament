@@ -55,18 +55,6 @@ int main(int argc, char** argv) {
     _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
 #endif
 
-    // clean up folders from old test
-    fs::delete_folder(std::filesystem::path(FRAMEWORK_BUILD_DIRECTORY) / "null_dir");
-    fs::delete_folder(std::filesystem::path(FRAMEWORK_BUILD_DIRECTORY) / "icd_manifests");
-    fs::delete_folder(std::filesystem::path(FRAMEWORK_BUILD_DIRECTORY) / "icd_env_vars_manifests");
-    fs::delete_folder(std::filesystem::path(FRAMEWORK_BUILD_DIRECTORY) / "explicit_layer_manifests");
-    fs::delete_folder(std::filesystem::path(FRAMEWORK_BUILD_DIRECTORY) / "explicit_env_var_layer_folder");
-    fs::delete_folder(std::filesystem::path(FRAMEWORK_BUILD_DIRECTORY) / "explicit_add_env_var_layer_folder");
-    fs::delete_folder(std::filesystem::path(FRAMEWORK_BUILD_DIRECTORY) / "implicit_layer_manifests");
-    fs::delete_folder(std::filesystem::path(FRAMEWORK_BUILD_DIRECTORY) / "override_layer_manifests");
-    fs::delete_folder(std::filesystem::path(FRAMEWORK_BUILD_DIRECTORY) / "app_package_manifests");
-    fs::delete_folder(std::filesystem::path(FRAMEWORK_BUILD_DIRECTORY) / "macos_bundle");
-
     // make sure the tests don't find these env-vars if they were set on the system
     EnvVarWrapper vk_icd_filenames_env_var{"VK_ICD_FILENAMES"};
     EnvVarWrapper vk_driver_files_env_var{"VK_DRIVER_FILES"};

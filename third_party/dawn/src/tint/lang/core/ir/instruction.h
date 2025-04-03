@@ -85,6 +85,10 @@ class Instruction : public Castable<Instruction> {
     /// @param operands the new operands of the instruction
     virtual void SetOperands(VectorRef<ir::Value*> operands) = 0;
 
+    /// Replaces the results of the instruction with a single result
+    /// @param result the new result of the instruction
+    virtual void SetResult(ir::InstructionResult* result) = 0;
+
     /// Replaces the results of the instruction
     /// @param results the new results of the instruction
     virtual void SetResults(VectorRef<ir::InstructionResult*> results) = 0;
@@ -172,6 +176,22 @@ class Instruction : public Castable<Instruction> {
     const InstructionResult* Result(size_t idx) const {
         auto res = Results();
         return idx < res.Length() ? res[idx] : nullptr;
+    }
+
+    /// @returns the instruction result
+    /// @note must only be called on instructions with exactly one result
+    InstructionResult* Result() {
+        auto res = Results();
+        TINT_ASSERT(res.Length() == 1u);
+        return res[0];
+    }
+
+    /// @returns the instruction result
+    /// @note must only be called on instructions with exactly one result
+    const InstructionResult* Result() const {
+        auto res = Results();
+        TINT_ASSERT(res.Length() == 1u);
+        return res[0];
     }
 
     /// Pointer to the next instruction in the list

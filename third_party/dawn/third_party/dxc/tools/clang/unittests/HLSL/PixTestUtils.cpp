@@ -397,7 +397,7 @@ CComPtr<IDxcBlob> Compile(dxc::DxcDllSupport &dllSupport, const char *hlsl,
       CheckOperationSucceeded(pResult, &pProgram);
 
       CComPtr<IDxcLibrary> pLib;
-      VERIFY_SUCCEEDED(m_dllSupport.CreateInstance(CLSID_DxcLibrary, &pLib));
+      VERIFY_SUCCEEDED(dllSupport.CreateInstance(CLSID_DxcLibrary, &pLib));
       const hlsl::DxilContainerHeader *pContainer = hlsl::IsDxilContainerLike(
           pProgram->GetBufferPointer(), pProgram->GetBufferSize());
       VERIFY_IS_NOT_NULL(pContainer);

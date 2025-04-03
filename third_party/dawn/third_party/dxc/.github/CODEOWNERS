@@ -1,1 +1,2 @@
-* @microsoft/hlsl-release
+# Uncomment the next line in release branches after ask-mode begins
+# * @microsoft/hlsl-release

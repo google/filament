@@ -83,9 +83,9 @@ TEST_F(IR_ReferencedModuleVarsTest, DirectUse) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<workgroup, u32, read_write> = var
-  %b:ptr<workgroup, u32, read_write> = var
-  %c:ptr<workgroup, u32, read_write> = var
+  %a:ptr<workgroup, u32, read_write> = var undef
+  %b:ptr<workgroup, u32, read_write> = var undef
+  %c:ptr<workgroup, u32, read_write> = var undef
 }
 
 %foo = func():void {
@@ -121,11 +121,11 @@ TEST_F(IR_ReferencedModuleVarsTest, DirectUse_DeclarationOrder) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<workgroup, u32, read_write> = var
-  %b:ptr<workgroup, u32, read_write> = var
-  %c:ptr<workgroup, u32, read_write> = var
-  %d:ptr<workgroup, u32, read_write> = var
-  %e:ptr<workgroup, u32, read_write> = var
+  %a:ptr<workgroup, u32, read_write> = var undef
+  %b:ptr<workgroup, u32, read_write> = var undef
+  %c:ptr<workgroup, u32, read_write> = var undef
+  %d:ptr<workgroup, u32, read_write> = var undef
+  %e:ptr<workgroup, u32, read_write> = var undef
 }
 
 %foo = func():void {
@@ -171,9 +171,9 @@ TEST_F(IR_ReferencedModuleVarsTest, DirectUse_MultipleFunctions) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<workgroup, u32, read_write> = var
-  %b:ptr<workgroup, u32, read_write> = var
-  %c:ptr<workgroup, u32, read_write> = var
+  %a:ptr<workgroup, u32, read_write> = var undef
+  %b:ptr<workgroup, u32, read_write> = var undef
+  %c:ptr<workgroup, u32, read_write> = var undef
 }
 
 %foo = func():void {
@@ -238,10 +238,10 @@ TEST_F(IR_ReferencedModuleVarsTest, DirectUse_NestedInControlFlow) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<workgroup, u32, read_write> = var
-  %b:ptr<workgroup, u32, read_write> = var
-  %c:ptr<workgroup, u32, read_write> = var
-  %c_1:ptr<workgroup, u32, read_write> = var  # %c_1: 'c'
+  %a:ptr<workgroup, u32, read_write> = var undef
+  %b:ptr<workgroup, u32, read_write> = var undef
+  %c:ptr<workgroup, u32, read_write> = var undef
+  %c_1:ptr<workgroup, u32, read_write> = var undef  # %c_1: 'c'
 }
 
 %foo = func():void {
@@ -308,9 +308,9 @@ TEST_F(IR_ReferencedModuleVarsTest, IndirectUse) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<workgroup, u32, read_write> = var
-  %b:ptr<workgroup, u32, read_write> = var
-  %c:ptr<workgroup, u32, read_write> = var
+  %a:ptr<workgroup, u32, read_write> = var undef
+  %b:ptr<workgroup, u32, read_write> = var undef
+  %c:ptr<workgroup, u32, read_write> = var undef
 }
 
 %bar = func():void {
@@ -354,12 +354,12 @@ TEST_F(IR_ReferencedModuleVarsTest, NoFunctionVars) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<workgroup, u32, read_write> = var
+  %a:ptr<workgroup, u32, read_write> = var undef
 }
 
 %foo = func():void {
   $B2: {
-    %b:ptr<function, u32, read_write> = var
+    %b:ptr<function, u32, read_write> = var undef
     %4:u32 = load %a
     %5:u32 = load %b
     ret
@@ -391,11 +391,11 @@ TEST_F(IR_ReferencedModuleVarsTest, Predicate) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<workgroup, u32, read_write> = var
-  %b:ptr<private, u32, read_write> = var
-  %c:ptr<workgroup, u32, read_write> = var
-  %d:ptr<private, u32, read_write> = var
-  %e:ptr<workgroup, u32, read_write> = var
+  %a:ptr<workgroup, u32, read_write> = var undef
+  %b:ptr<private, u32, read_write> = var undef
+  %c:ptr<workgroup, u32, read_write> = var undef
+  %d:ptr<private, u32, read_write> = var undef
+  %e:ptr<workgroup, u32, read_write> = var undef
 }
 
 %foo = func():void {
@@ -412,7 +412,7 @@ $B1: {  # root
     EXPECT_EQ(src, Disassemble());
 
     ReferencedModuleVars<Module> vars(mod, [](const Var* var) {
-        auto* view = var->Result(0)->Type()->As<type::MemoryView>();
+        auto* view = var->Result()->Type()->As<type::MemoryView>();
         return view->AddressSpace() == AddressSpace::kPrivate;
     });
     EXPECT_THAT(vars.TransitiveReferences(foo), ElementsAre(var_b, var_d));

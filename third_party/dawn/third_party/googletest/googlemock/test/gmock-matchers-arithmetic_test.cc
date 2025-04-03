@@ -31,9 +31,15 @@
 //
 // This file tests some commonly used argument matchers.
 
+#include <cmath>
 #include <limits>
+#include <memory>
+#include <ostream>
+#include <string>
 
+#include "gmock/gmock.h"
 #include "test/gmock-matchers_test.h"
+#include "gtest/gtest.h"
 
 // Silence warning C4244: 'initializing': conversion from 'int' to 'short',
 // possible loss of data and C4100, unreferenced local parameter
@@ -393,6 +399,188 @@ TEST(NanSensitiveDoubleNearTest, CanDescribeSelfWithNaNs) {
   EXPECT_EQ("are an almost-equal pair", Describe(m));
 }
 
+// Tests that DistanceFrom() can describe itself properly.
+TEST(DistanceFrom, CanDescribeSelf) {
+  Matcher<double> m = DistanceFrom(1.5, Lt(0.1));
+  EXPECT_EQ(Describe(m), "is < 0.1 away from 1.5");
+
+  m = DistanceFrom(2.5, Gt(0.2));
+  EXPECT_EQ(Describe(m), "is > 0.2 away from 2.5");
+}
+
+// Tests that DistanceFrom() can explain match failure.
+TEST(DistanceFrom, CanExplainMatchFailure) {
+  Matcher<double> m = DistanceFrom(1.5, Lt(0.1));
+  EXPECT_EQ(Explain(m, 2.0), "which is 0.5 away from 1.5");
+}
+
+// Tests that DistanceFrom() matches a double that is within the given range of
+// the given value.
+TEST(DistanceFrom, MatchesDoubleWithinRange) {
+  const Matcher<double> m = DistanceFrom(0.5, Le(0.1));
+  EXPECT_TRUE(m.Matches(0.45));
+  EXPECT_TRUE(m.Matches(0.5));
+  EXPECT_TRUE(m.Matches(0.55));
+  EXPECT_FALSE(m.Matches(0.39));
+  EXPECT_FALSE(m.Matches(0.61));
+}
+
+// Tests that DistanceFrom() matches a double reference that is within the given
+// range of the given value.
+TEST(DistanceFrom, MatchesDoubleRefWithinRange) {
+  const Matcher<const double&> m = DistanceFrom(0.5, Le(0.1));
+  EXPECT_TRUE(m.Matches(0.45));
+  EXPECT_TRUE(m.Matches(0.5));
+  EXPECT_TRUE(m.Matches(0.55));
+  EXPECT_FALSE(m.Matches(0.39));
+  EXPECT_FALSE(m.Matches(0.61));
+}
+
+// Tests that DistanceFrom() can be implicitly converted to a matcher depending
+// on the type of the argument.
+TEST(DistanceFrom, CanBeImplicitlyConvertedToMatcher) {
+  EXPECT_THAT(0.58, DistanceFrom(0.5, Le(0.1)));
+  EXPECT_THAT(0.2, Not(DistanceFrom(0.5, Le(0.1))));
+
+  EXPECT_THAT(0.58f, DistanceFrom(0.5f, Le(0.1f)));
+  EXPECT_THAT(0.7f, Not(DistanceFrom(0.5f, Le(0.1f))));
+}
+
+// Tests that DistanceFrom() can be used on compatible types (i.e. not
+// everything has to be of the same type).
+TEST(DistanceFrom, CanBeUsedOnCompatibleTypes) {
+  EXPECT_THAT(0.58, DistanceFrom(0.5, Le(0.1f)));
+  EXPECT_THAT(0.2, Not(DistanceFrom(0.5, Le(0.1f))));
+
+  EXPECT_THAT(0.58, DistanceFrom(0.5f, Le(0.1)));
+  EXPECT_THAT(0.2, Not(DistanceFrom(0.5f, Le(0.1))));
+
+  EXPECT_THAT(0.58, DistanceFrom(0.5f, Le(0.1f)));
+  EXPECT_THAT(0.2, Not(DistanceFrom(0.5f, Le(0.1f))));
+
+  EXPECT_THAT(0.58f, DistanceFrom(0.5, Le(0.1)));
+  EXPECT_THAT(0.2f, Not(DistanceFrom(0.5, Le(0.1))));
+
+  EXPECT_THAT(0.58f, DistanceFrom(0.5, Le(0.1f)));
+  EXPECT_THAT(0.2f, Not(DistanceFrom(0.5, Le(0.1f))));
+
+  EXPECT_THAT(0.58f, DistanceFrom(0.5f, Le(0.1)));
+  EXPECT_THAT(0.2f, Not(DistanceFrom(0.5f, Le(0.1))));
+}
+
+// A 2-dimensional point. For testing using DistanceFrom() with a custom type
+// that doesn't have a built-in distance function.
+class Point {
+ public:
+  Point(double x, double y) : x_(x), y_(y) {}
+  double x() const { return x_; }
+  double y() const { return y_; }
+
+ private:
+  double x_;
+  double y_;
+};
+
+// Returns the distance between two points.
+double PointDistance(const Point& lhs, const Point& rhs) {
+  return std::sqrt(std::pow(lhs.x() - rhs.x(), 2) +
+                   std::pow(lhs.y() - rhs.y(), 2));
+}
+
+// Tests that DistanceFrom() can be used on a type with a custom distance
+// function.
+TEST(DistanceFrom, CanBeUsedOnTypeWithCustomDistanceFunction) {
+  const Matcher<Point> m =
+      DistanceFrom(Point(0.5, 0.5), PointDistance, Le(0.1));
+  EXPECT_THAT(Point(0.45, 0.45), m);
+  EXPECT_THAT(Point(0.2, 0.45), Not(m));
+}
+
+// A wrapper around a double value. For testing using DistanceFrom() with a
+// custom type that has neither a built-in distance function nor a built-in
+// distance comparator.
+class Double {
+ public:
+  explicit Double(double value) : value_(value) {}
+  Double(const Double& other) = default;
+  double value() const { return value_; }
+
+  // Defines how to print a Double value. We don't use the AbslStringify API
+  // because googletest doesn't require absl yet.
+  friend void PrintTo(const Double& value, std::ostream* os) {
+    *os << "Double(" << value.value() << ")";
+  }
+
+ private:
+  double value_;
+};
+
+// Returns the distance between two Double values.
+Double DoubleDistance(Double lhs, Double rhs) {
+  return Double(std::abs(lhs.value() - rhs.value()));
+}
+
+MATCHER_P(DoubleLe, rhs, (negation ? "is > " : "is <= ") + PrintToString(rhs)) {
+  return arg.value() <= rhs.value();
+}
+
+// Tests that DistanceFrom() can describe itself properly for a type with a
+// custom printer.
+TEST(DistanceFrom, CanDescribeWithCustomPrinter) {
+  const Matcher<Double> m =
+      DistanceFrom(Double(0.5), DoubleDistance, DoubleLe(Double(0.1)));
+  EXPECT_EQ(Describe(m), "is <= Double(0.1) away from Double(0.5)");
+  EXPECT_EQ(DescribeNegation(m), "is > Double(0.1) away from Double(0.5)");
+}
+
+// Tests that DistanceFrom() can be used with a custom distance function and
+// comparator.
+TEST(DistanceFrom, CanCustomizeDistanceAndComparator) {
+  const Matcher<Double> m =
+      DistanceFrom(Double(0.5), DoubleDistance, DoubleLe(Double(0.1)));
+  EXPECT_TRUE(m.Matches(Double(0.45)));
+  EXPECT_TRUE(m.Matches(Double(0.5)));
+  EXPECT_FALSE(m.Matches(Double(0.39)));
+  EXPECT_FALSE(m.Matches(Double(0.61)));
+}
+
+// For testing using DistanceFrom() with a type that supports both - and abs.
+class Float {
+ public:
+  explicit Float(float value) : value_(value) {}
+  Float(const Float& other) = default;
+  float value() const { return value_; }
+
+ private:
+  float value_ = 0.0f;
+};
+
+// Returns the difference between two Float values. This must be defined in the
+// same namespace as Float.
+Float operator-(const Float& lhs, const Float& rhs) {
+  return Float(lhs.value() - rhs.value());
+}
+
+// Returns the absolute value of a Float value. This must be defined in the
+// same namespace as Float.
+Float abs(Float value) { return Float(std::abs(value.value())); }
+
+// Returns true if and only if the first Float value is less than the second
+// Float value. This must be defined in the same namespace as Float.
+bool operator<(const Float& lhs, const Float& rhs) {
+  return lhs.value() < rhs.value();
+}
+
+// Tests that DistanceFrom() can be used with a type that supports both - and
+// abs.
+TEST(DistanceFrom, CanBeUsedWithTypeThatSupportsBothMinusAndAbs) {
+  const Matcher<Float> m = DistanceFrom(Float(0.5f), Lt(Float(0.1f)));
+  EXPECT_TRUE(m.Matches(Float(0.45f)));
+  EXPECT_TRUE(m.Matches(Float(0.55f)));
+  EXPECT_FALSE(m.Matches(Float(0.39f)));
+  EXPECT_FALSE(m.Matches(Float(0.61f)));
+}
+
 // Tests that Not(m) matches any value that doesn't match m.
 TEST(NotTest, NegatesMatcher) {
   Matcher<int> m;
@@ -556,10 +744,9 @@ TEST_P(AllOfTestP, ExplainsResult) {
   Matcher<int> m;
 
   // Successful match.  Both matchers need to explain.  The second
-  // matcher doesn't give an explanation, so only the first matcher's
-  // explanation is printed.
+  // matcher doesn't give an explanation, so the matcher description is used.
   m = AllOf(GreaterThan(10), Lt(30));
-  EXPECT_EQ("which is 15 more than 10", Explain(m, 25));
+  EXPECT_EQ("which is 15 more than 10, and is < 30", Explain(m, 25));
 
   // Successful match.  Both matchers need to explain.
   m = AllOf(GreaterThan(10), GreaterThan(20));
@@ -569,8 +756,9 @@ TEST_P(AllOfTestP, ExplainsResult) {
   // Successful match.  All matchers need to explain.  The second
   // matcher doesn't given an explanation.
   m = AllOf(GreaterThan(10), Lt(30), GreaterThan(20));
-  EXPECT_EQ("which is 15 more than 10, and which is 5 more than 20",
-            Explain(m, 25));
+  EXPECT_EQ(
+      "which is 15 more than 10, and is < 30, and which is 5 more than 20",
+      Explain(m, 25));
 
   // Successful match.  All matchers need to explain.
   m = AllOf(GreaterThan(10), GreaterThan(20), GreaterThan(30));
@@ -585,10 +773,10 @@ TEST_P(AllOfTestP, ExplainsResult) {
   EXPECT_EQ("which is 5 less than 10", Explain(m, 5));
 
   // Failed match.  The second matcher, which failed, needs to
-  // explain.  Since it doesn't given an explanation, nothing is
+  // explain.  Since it doesn't given an explanation, the matcher text is
   // printed.
   m = AllOf(GreaterThan(10), Lt(30));
-  EXPECT_EQ("", Explain(m, 40));
+  EXPECT_EQ("which doesn't match (is < 30)", Explain(m, 40));
 
   // Failed match.  The second matcher, which failed, needs to
   // explain.
@@ -771,45 +959,43 @@ TEST(AnyOfTest, AnyOfMatcherSafelyCastsMonomorphicMatchers) {
 TEST_P(AnyOfTestP, ExplainsResult) {
   Matcher<int> m;
 
-  // Failed match.  Both matchers need to explain.  The second
-  // matcher doesn't give an explanation, so only the first matcher's
-  // explanation is printed.
+  // Failed match. The second matcher have no explanation (description is used).
   m = AnyOf(GreaterThan(10), Lt(0));
-  EXPECT_EQ("which is 5 less than 10", Explain(m, 5));
+  EXPECT_EQ("which is 5 less than 10, and isn't < 0", Explain(m, 5));
 
-  // Failed match.  Both matchers need to explain.
+  // Failed match. Both matchers have explanations.
   m = AnyOf(GreaterThan(10), GreaterThan(20));
   EXPECT_EQ("which is 5 less than 10, and which is 15 less than 20",
             Explain(m, 5));
 
-  // Failed match.  All matchers need to explain.  The second
-  // matcher doesn't given an explanation.
+  // Failed match. The middle matcher have no explanation.
   m = AnyOf(GreaterThan(10), Gt(20), GreaterThan(30));
-  EXPECT_EQ("which is 5 less than 10, and which is 25 less than 30",
-            Explain(m, 5));
+  EXPECT_EQ(
+      "which is 5 less than 10, and isn't > 20, and which is 25 less than 30",
+      Explain(m, 5));
 
-  // Failed match.  All matchers need to explain.
+  // Failed match. All three matchers have explanations.
   m = AnyOf(GreaterThan(10), GreaterThan(20), GreaterThan(30));
   EXPECT_EQ(
       "which is 5 less than 10, and which is 15 less than 20, "
       "and which is 25 less than 30",
       Explain(m, 5));
 
-  // Successful match.  The first matcher, which succeeded, needs to
-  // explain.
+  // Successful match. The first macher succeeded and has explanation.
   m = AnyOf(GreaterThan(10), GreaterThan(20));
   EXPECT_EQ("which is 5 more than 10", Explain(m, 15));
 
-  // Successful match.  The second matcher, which succeeded, needs to
-  // explain.  Since it doesn't given an explanation, nothing is
-  // printed.
-  m = AnyOf(GreaterThan(10), Lt(30));
-  EXPECT_EQ("", Explain(m, 0));
-
-  // Successful match.  The second matcher, which succeeded, needs to
-  // explain.
+  // Successful match. The second matcher succeeded and has explanation.
   m = AnyOf(GreaterThan(30), GreaterThan(20));
   EXPECT_EQ("which is 5 more than 20", Explain(m, 25));
+
+  // Successful match. The first matcher succeeded and has no explanation.
+  m = AnyOf(Gt(10), Lt(20));
+  EXPECT_EQ("which matches (is > 10)", Explain(m, 15));
+
+  // Successful match. The second matcher succeeded and has no explanation.
+  m = AnyOf(Gt(30), Gt(20));
+  EXPECT_EQ("which matches (is > 20)", Explain(m, 25));
 }
 
 // The following predicate function and predicate functor are for
@@ -952,7 +1138,7 @@ TEST(AllArgsTest, WorksForNonTuple) {
 
 class AllArgsHelper {
  public:
-  AllArgsHelper() {}
+  AllArgsHelper() = default;
 
   MOCK_METHOD2(Helper, int(char x, int y));
 
@@ -973,7 +1159,7 @@ TEST(AllArgsTest, WorksInWithClause) {
 
 class OptionalMatchersHelper {
  public:
-  OptionalMatchersHelper() {}
+  OptionalMatchersHelper() = default;
 
   MOCK_METHOD0(NoArgs, int());
 

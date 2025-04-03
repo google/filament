@@ -100,8 +100,8 @@ class ApiObjectList {
 
     template <typename F>
     void ForEach(F fn) const {
-        mObjects.Use([&fn](const auto lockedObjects) {
-            for (const auto* node = lockedObjects->head(); node != lockedObjects->end();
+        mObjects.Use([&fn](auto lockedObjects) {
+            for (auto* node = lockedObjects->head(); node != lockedObjects->end();
                  node = node->next()) {
                 fn(node->value());
             }

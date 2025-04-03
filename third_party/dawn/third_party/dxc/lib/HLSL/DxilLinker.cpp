@@ -1255,6 +1255,12 @@ void DxilLinkJob::RunPreparePass(Module &M) {
   // For static global handle.
   PM.add(createLowerStaticGlobalIntoAlloca());
 
+  // Change dynamic indexing vector to array where vectors aren't
+  // supported, but might be there from the initial compile.
+  if (!pSM->IsSM69Plus())
+    PM.add(
+        createDynamicIndexingVectorToArrayPass(false /* ReplaceAllVector */));
+
   // Remove MultiDimArray from function call arg.
   PM.add(createMultiDimArrayToOneDimArrayPass());
 

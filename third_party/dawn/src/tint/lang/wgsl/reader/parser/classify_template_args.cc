@@ -32,8 +32,6 @@
 #include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/ice/ice.h"
 
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
-
 namespace tint::wgsl::reader {
 
 namespace {
@@ -43,22 +41,25 @@ namespace {
 /// @param tokens the vector of tokens
 /// @param idx the index of the token to (maybe) split
 void MaybeSplit(std::vector<Token>& tokens, size_t idx) {
-    Token* token = &tokens[idx];
-    switch (token->type()) {
+    auto* cur = &tokens[idx];
+    auto* next = &tokens[idx + 1];
+    TINT_ASSERT(cur);
+    TINT_ASSERT(next);
+    switch (cur->type()) {
         case Token::Type::kShiftRight:  //  '>>'
-            TINT_ASSERT(token[1].type() == Token::Type::kPlaceholder);
-            token[0].SetType(Token::Type::kGreaterThan);
-            token[1].SetType(Token::Type::kGreaterThan);
+            TINT_ASSERT(next->type() == Token::Type::kPlaceholder);
+            cur->SetType(Token::Type::kGreaterThan);
+            next->SetType(Token::Type::kGreaterThan);
             break;
         case Token::Type::kGreaterThanEqual:  //  '>='
-            TINT_ASSERT(token[1].type() == Token::Type::kPlaceholder);
-            token[0].SetType(Token::Type::kGreaterThan);
-            token[1].SetType(Token::Type::kEqual);
+            TINT_ASSERT(next->type() == Token::Type::kPlaceholder);
+            cur->SetType(Token::Type::kGreaterThan);
+            next->SetType(Token::Type::kEqual);
             break;
         case Token::Type::kShiftRightEqual:  // '>>='
-            TINT_ASSERT(token[1].type() == Token::Type::kPlaceholder);
-            token[0].SetType(Token::Type::kGreaterThan);
-            token[1].SetType(Token::Type::kGreaterThanEqual);
+            TINT_ASSERT(next->type() == Token::Type::kPlaceholder);
+            cur->SetType(Token::Type::kGreaterThan);
+            next->SetType(Token::Type::kGreaterThanEqual);
             break;
         default:
             break;
@@ -154,5 +155,3 @@ void ClassifyTemplateArguments(std::vector<Token>& tokens) {
 }
 
 }  // namespace tint::wgsl::reader
-
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);

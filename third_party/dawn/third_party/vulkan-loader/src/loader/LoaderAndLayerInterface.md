@@ -15,5 +15,5 @@
 
 This document has been renamed to
 [LoaderInterfaceArchitecture.md](../docs/LoaderInterfaceArchitecture.md) and can be
-found in the top-level docs folder of the Loader GitHb repo.
+found in the top-level docs folder of the Loader GitHub repo.
 Please refer to that document going forward.

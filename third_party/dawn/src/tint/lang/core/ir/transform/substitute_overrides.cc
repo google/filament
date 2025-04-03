@@ -27,14 +27,27 @@
 
 #include "src/tint/lang/core/ir/transform/substitute_overrides.h"
 
+#include <cstdint>
 #include <functional>
+#include <utility>
 
+#include "src/tint/lang/core/binary_op.h"
+#include "src/tint/lang/core/fluent_types.h"
+#include "src/tint/lang/core/ir/binary.h"
 #include "src/tint/lang/core/ir/builder.h"
+#include "src/tint/lang/core/ir/const_param_validator.h"
+#include "src/tint/lang/core/ir/constexpr_if.h"
+#include "src/tint/lang/core/ir/construct.h"
 #include "src/tint/lang/core/ir/evaluator.h"
+#include "src/tint/lang/core/ir/instruction.h"
+#include "src/tint/lang/core/ir/instruction_result.h"
+#include "src/tint/lang/core/ir/override.h"
+#include "src/tint/lang/core/ir/terminator.h"
+#include "src/tint/lang/core/ir/traverse.h"
 #include "src/tint/lang/core/ir/type/array_count.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/ir/value.h"
-#include "src/tint/utils/result/result.h"
+#include "src/utils/numeric.h"
 
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
@@ -56,44 +69,72 @@ struct State {
     /// The type manager.
     core::type::Manager& ty{ir.Types()};
 
-    /// Map of override id to value
-    Hashmap<OverrideId, Constant*, 8> override_id_to_value_{};
-
     /// Process the module.
-    Result<SuccessType> Process() {
+    diag::Result<SuccessType> Process() {
         Vector<Instruction*, 8> to_remove;
         Vector<Constant*, 8> values_to_propagate;
         Vector<core::ir::Var*, 4> vars_with_value_array_count;
+        Vector<core::ir::Override*, 16> override_complex_init;
 
         // Note, we don't `Destroy` the overrides when we substitute them. We need them to stay
         // alive because the `workgroup_size` and `array` usages aren't in the `Usages` list so
         // haven't been replaced yet.
-
-        // Find all overrides in the root block and replace them
         for (auto* inst : *ir.root_block) {
+            if (auto* var = inst->As<core::ir::Var>()) {
+                if (auto* ary = var->Result()->Type()->UnwrapPtr()->As<core::type::Array>()) {
+                    if (ary->Count()->Is<core::ir::type::ValueArrayCount>()) {
+                        vars_with_value_array_count.Push(var);
+                    }
+                }
+            } else {
+                // Gather all the non-var instructions which we'll remove
+                to_remove.Push(inst);
+            }
+
             auto* override = inst->As<core::ir::Override>();
             if (!override) {
-                if (auto* var = inst->As<core::ir::Var>()) {
-                    if (auto* ary = var->Result(0)->Type()->UnwrapPtr()->As<core::type::Array>()) {
-                        if (ary->Count()->Is<core::ir::type::ValueArrayCount>()) {
-                            vars_with_value_array_count.Push(var);
-                        }
-                    }
-                } else {
-                    // Gather all the non-var instructions which we'll remove
-                    to_remove.Push(inst);
-                }
                 continue;
             }
 
-            // Check if the user provided an override for the given ID.
-            auto iter = cfg.map.find(override->OverrideId());
-            if (iter != cfg.map.end()) {
-                auto* replacement = CreateConstant(override->Result(0)->Type(), iter->second);
-                ReplaceOverride(override, replacement);
-                values_to_propagate.Push(replacement);
-                to_remove.Push(override);
-                continue;
+            // Check if the user provided an override for the given ID. In the case of Dawn, all
+            // overrides end up having an ID, so they will all be able to be queried here. If the
+            // code came through the SPIR-V reader, and overrides are being applied on the top of
+            // that IR tree, an OverrideId may not be set, but that also means in SPIR-V the
+            // override could not be set anyway, so it can't have an override value applied.
+            if (override->OverrideId().has_value()) {
+                auto iter = cfg.map.find(override->OverrideId().value());
+                if (iter != cfg.map.end()) {
+                    bool substitution_representation_valid = tint::Switch(
+                        override->Result()->Type(),  //
+                        [&](const core::type::Bool*) { return true; },
+                        [&](const core::type::I32*) {
+                            return dawn::IsDoubleValueRepresentable<int32_t>(iter->second);
+                        },
+                        [&](const core::type::U32*) {
+                            return dawn::IsDoubleValueRepresentable<uint32_t>(iter->second);
+                        },
+                        [&](const core::type::F32*) {
+                            return dawn::IsDoubleValueRepresentable<float>(iter->second);
+                        },
+                        [&](const core::type::F16*) {
+                            return dawn::IsDoubleValueRepresentableAsF16(iter->second);
+                        },
+                        TINT_ICE_ON_NO_MATCH);
+
+                    if (!substitution_representation_valid) {
+                        diag::Diagnostic error{};
+                        error.severity = diag::Severity::Error;
+                        error.source = ir.SourceOf(override);
+                        error << "Pipeline overridable constant " << iter->first.value
+                              << " with value (" << iter->second
+                              << ")  is not representable in type ("
+                              << override->Result()->Type()->FriendlyName() << ")";
+                        return diag::Failure(error);
+                    }
+
+                    auto* replacement = CreateConstant(override->Result()->Type(), iter->second);
+                    override->SetInitializer(replacement);
+                }
             }
 
             if (override->Initializer() == nullptr) {
@@ -101,28 +142,32 @@ struct State {
                 error.severity = diag::Severity::Error;
                 error.source = ir.SourceOf(override);
                 error << "Initializer not provided for override, and override not overridden.";
-
-                return Failure(error);
+                return diag::Failure(error);
             }
 
-            core::ir::Constant* replacement = override->Initializer()->As<core::ir::Constant>();
-            if (replacement) {
-                // Remove the initializer such that we don't find the override as a usage when we
-                // try to propagate the replacement.
-                override->SetInitializer(nullptr);
+            if (auto* replacement = override->Initializer()->As<core::ir::Constant>()) {
+                override->Result()->ReplaceAllUsesWith(replacement);
+                values_to_propagate.Push(replacement);
             } else {
-                auto r = eval::Eval(b, override->Initializer());
-                if (r != Success) {
-                    return r.Failure();
-                }
-                replacement = r.Get();
+                // This override might depend on ConstExperIf block compile time evaluation.
+                override_complex_init.Push(override);
             }
-            ReplaceOverride(override, replacement);
-            values_to_propagate.Push(replacement);
-            to_remove.Push(override);
         }
 
-        // Find any workgroup_sizes to replace
+        // When `overrides` are evaluated, only the `override` is checked, and any instructions back
+        // up the block. This means, if we have a `constexpr-if` we may hit an override in the part
+        // of the `constexpr-if` which should be ignored (because we had a `false && a_override / 0`
+        // or something similar). If we evaluate `a_override` before we evaluate the `constexpr-if`
+        // that represents the `&&` then we'll produce an incorrect compile error. Instead evaluate
+        // the `constexpr-if` constructs early to remove them all and remove any blocks which should
+        // not be evaluated.
+        auto res = EvalConstExprIf();
+        if (res != Success) {
+            return res;
+        }
+
+        // Workgroup size MUST be evaluated prior to 'propagate' because workgroup size parameters
+        // are not proper usages.
         for (auto func : ir.functions) {
             if (!func->IsCompute()) {
                 continue;
@@ -133,15 +178,8 @@ struct State {
 
             std::array<ir::Value*, 3> new_wg{};
             for (size_t i = 0; i < 3; ++i) {
-                auto* val = wgs.value()[i];
-
-                if (val->Is<core::ir::Constant>()) {
-                    new_wg[i] = val;
-                    continue;
-                }
-
-                auto new_value = CalculateOverride(val);
-                if (!new_value.Get()) {
+                auto new_value = CalculateOverride(wgs.value()[i]);
+                if (new_value != Success) {
                     return new_value.Failure();
                 }
                 new_wg[i] = new_value.Get();
@@ -149,9 +187,10 @@ struct State {
             func->SetWorkgroupSize(new_wg);
         }
 
-        // Replace array types using overrides
+        // Replace array types MUST be evaluate prior to 'propagate' because array count values are
+        // not proper usages.
         for (auto var : vars_with_value_array_count) {
-            auto* old_ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+            auto* old_ptr = var->Result()->Type()->As<core::type::Pointer>();
             TINT_ASSERT(old_ptr);
 
             auto* old_ty = old_ptr->UnwrapPtr()->As<core::type::Array>();
@@ -159,8 +198,19 @@ struct State {
             TINT_ASSERT(cnt);
 
             auto new_value = CalculateOverride(cnt->value);
-            if (!new_value.Get()) {
+            if (new_value != Success) {
                 return new_value.Failure();
+            }
+
+            // Pipeline creation error for zero or negative sized array. This is important as we do
+            // not check constant evaluation access against zero size.
+            int64_t cnt_size_check = new_value.Get()->Value()->ValueAs<AInt>();
+            if (cnt_size_check < 1) {
+                diag::Diagnostic error{};
+                error.severity = diag::Severity::Error;
+                error.source = ir.SourceOf(cnt->value);
+                error << "array count (" << cnt_size_check << ") must be greater than 0";
+                return diag::Failure(error);
             }
 
             uint32_t num_elements = new_value.Get()->Value()->ValueAs<uint32_t>();
@@ -170,7 +220,7 @@ struct State {
                                                      old_ty->Stride(), old_ty->ImplicitStride());
 
             auto* new_ptr = ty.ptr(old_ptr->AddressSpace(), new_ty, old_ptr->Access());
-            var->Result(0)->SetType(new_ptr);
+            var->Result()->SetType(new_ptr);
 
             // The `Var` type needs to propagate to certain usages.
             Vector<core::ir::Instruction*, 2> to_replace;
@@ -178,44 +228,90 @@ struct State {
 
             while (!to_replace.IsEmpty()) {
                 auto* inst = to_replace.Pop();
-
-                for (auto usage : inst->Result(0)->UsagesUnsorted()) {
+                for (auto usage : inst->Result()->UsagesUnsorted()) {
                     if (!usage->instruction->Is<core::ir::Let>()) {
                         continue;
                     }
 
-                    usage->instruction->Result(0)->SetType(new_ptr);
+                    usage->instruction->Result()->SetType(new_ptr);
                     to_replace.Push(usage->instruction);
                 }
             }
         }
 
-        // Remove any non-var instruction in the root block
-        for (auto* inst : to_remove) {
-            inst->Destroy();
+        for (auto* override : override_complex_init) {
+            auto res_const = CalculateOverride(override->Result());
+            if (res_const != Success) {
+                return res_const.Failure();
+            }
+            override->Result()->ReplaceAllUsesWith(res_const.Get());
+            values_to_propagate.Push(res_const.Get());
         }
 
-        {
-            // Propagate any replaced override instructions up their instruction chains
-            auto res = Propagate(values_to_propagate);
-            if (res != Success) {
-                return res;
+        // Propagate any replaced override instructions up their instruction chains
+        res = Propagate(values_to_propagate);
+        if (res != Success) {
+            return res;
+        }
+
+        // Remove any non-var instruction in the root block
+        for (auto* inst : to_remove) {
+            // Some instructions can be destroyed by 'Propagate' or 'EvalConstExprIf'. This is
+            // normal.
+            if (inst->Alive()) {
+                inst->Destroy();
             }
         }
 
         return Success;
     }
 
-    Result<core::ir::Constant*> CalculateOverride(core::ir::Value* val) {
-        auto* count_value = val->As<core::ir::InstructionResult>();
-        TINT_ASSERT(count_value);
+    diag::Result<SuccessType> EvalConstExprIf() {
+        Vector<core::ir::ConstExprIf*, 32> ordered_constexpr_if;
+        core::ir::Traverse(ir.root_block, [&ordered_constexpr_if](ConstExprIf* inst) {
+            ordered_constexpr_if.Push(inst);
+        });
 
-        if (auto* override = count_value->Instruction()->As<core::ir::Override>()) {
-            auto replacement = override_id_to_value_.Get(override->OverrideId());
-            TINT_ASSERT(replacement);
-            return *replacement;
+        for (auto func : ir.functions) {
+            core::ir::Traverse(func->Block(), [&ordered_constexpr_if](ConstExprIf* inst) {
+                ordered_constexpr_if.Push(inst);
+            });
         }
-        auto r = eval::Eval(b, count_value);
+
+        for (auto* constexpr_if : ordered_constexpr_if) {
+            // This very code can end up destroying other ConstExprIf instructions.
+            if (!constexpr_if->Alive()) {
+                continue;
+            }
+
+            auto res = eval::Eval(b, constexpr_if->Condition());
+            if (res != Success) {
+                return res.Failure();
+            }
+
+            TINT_ASSERT(res.Get());
+            auto* inline_block =
+                res.Get()->Value()->ValueAs<bool>() ? constexpr_if->True() : constexpr_if->False();
+            TINT_ASSERT(inline_block->Terminator());
+            for (;;) {
+                auto block_inst = *inline_block->begin();
+                if (block_inst->Is<core::ir::Terminator>()) {
+                    break;
+                }
+                block_inst->Remove();
+                block_inst->InsertBefore(constexpr_if);
+            }
+            // There will only be one arg since the return (of ConstExprIf) is a single
+            // boolean.
+            constexpr_if->Result()->ReplaceAllUsesWith(inline_block->Terminator()->Args()[0]);
+            constexpr_if->Destroy();
+        }
+
+        return Success;
+    }
+
+    diag::Result<core::ir::Constant*> CalculateOverride(core::ir::Value* val) {
+        auto r = eval::Eval(b, val);
         if (r != Success) {
             return r.Failure();
         }
@@ -225,12 +321,7 @@ struct State {
         return r;
     }
 
-    void ReplaceOverride(core::ir::Override* override, core::ir::Constant* replacement) {
-        override_id_to_value_.Add(override->OverrideId(), replacement);
-        override->Result(0)->ReplaceAllUsesWith(replacement);
-    }
-
-    Result<SuccessType> Propagate(Vector<core::ir::Constant*, 8>& values_to_propagate) {
+    diag::Result<SuccessType> Propagate(Vector<core::ir::Constant*, 8>& values_to_propagate) {
         while (!values_to_propagate.IsEmpty()) {
             auto* value = values_to_propagate.Pop();
             for (auto usage : value->UsagesSorted()) {
@@ -256,7 +347,7 @@ struct State {
                     continue;
                 }
 
-                usage.instruction->Result(0)->ReplaceAllUsesWith(replacement);
+                usage.instruction->Result()->ReplaceAllUsesWith(replacement);
                 values_to_propagate.Push(replacement);
                 usage.instruction->Destroy();
             }
@@ -276,6 +367,7 @@ struct State {
             [&](core::ir::CoreBuiltinCall*) { return true; },  //
             [&](core::ir::CoreUnary*) { return true; },        //
             [&](core::ir::Swizzle*) { return true; },          //
+            [&](core::ir::Override*) { return true; },         //
             [&](Default) { return false; });
     }
 
@@ -296,12 +388,23 @@ struct State {
 SubstituteOverridesConfig::SubstituteOverridesConfig() = default;
 
 Result<SuccessType> SubstituteOverrides(Module& ir, const SubstituteOverridesConfig& cfg) {
-    auto result =
-        ValidateAndDumpIfNeeded(ir, "core.SubstituteOverrides", kSubstituteOverridesCapabilities);
-    if (result != Success) {
-        return result;
+    {
+        auto result = ValidateAndDumpIfNeeded(ir, "core.SubstituteOverrides",
+                                              kSubstituteOverridesCapabilities);
+        if (result != Success) {
+            return result.Failure();
+        }
     }
-    return State{ir, cfg}.Process();
+    {
+        auto result = State{ir, cfg}.Process();
+        if (result != Success) {
+            return Failure{result.Failure().reason.Str()};
+        }
+    }
+
+    // TODO(crbug.com/382300469): This function should take in a constant module but it does not due
+    // to missing constant functions.
+    return tint::core::ir::ValidateConstParam(ir);
 }
 
 }  // namespace tint::core::ir::transform

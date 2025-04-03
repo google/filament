@@ -29,6 +29,7 @@
 
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/type/atomic.h"
+#include "src/tint/lang/core/type/binding_array.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 #include "src/tint/lang/wgsl/sem/array.h"
 
@@ -111,6 +112,14 @@ TEST_F(ValidatorIsStorableTest, ArraySizedOfStorable) {
 TEST_F(ValidatorIsStorableTest, ArrayUnsizedOfStorable) {
     auto* arr = create<sem::Array>(create<core::type::I32>(),
                                    create<core::type::RuntimeArrayCount>(), 4u, 4u, 4u, 4u);
+    EXPECT_TRUE(v()->IsStorable(arr));
+}
+
+TEST_F(ValidatorIsStorableTest, BindingArray) {
+    auto* arr = create<core::type::BindingArray>(
+        create<core::type::SampledTexture>(core::type::TextureDimension::k2d,
+                                           create<core::type::F32>()),
+        create<core::type::ConstantArrayCount>(4u));
     EXPECT_TRUE(v()->IsStorable(arr));
 }
 

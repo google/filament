@@ -291,6 +291,8 @@ class Stream<std::vector<T>> {
         using SizeT = decltype(std::declval<std::vector<T>>().size());
         SizeT size;
         DAWN_TRY(StreamOut(s, &size));
+        DAWN_INVALID_IF(size >= v->max_size(),
+                        "Trying to reserve a vector of size larger than max_size");
         *v = {};
         v->reserve(size);
         for (SizeT i = 0; i < size; ++i) {

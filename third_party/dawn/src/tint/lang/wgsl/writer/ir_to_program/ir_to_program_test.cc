@@ -319,6 +319,598 @@ fn f(@builtin(front_facing) v : bool, @builtin(sample_index) v_1 : u32, @builtin
 )");
 }
 
+TEST_F(IRToProgramTest, EnumWords) {
+    auto* fn = b.Function("f", ty.void_(), core::ir::Function::PipelineStage::kFragment);
+
+    b.Append(fn->Block(), [&] {
+        Var("read", true);
+        Var("write", true);
+        Var("read_write", true);
+        Var("function", true);
+        Var("private", true);
+        Var("workgroup", true);
+        Var("uniform", true);
+        Var("storage", true);
+        Var("rgba8unorm", true);
+        Var("rgba8snorm", true);
+        Var("rgba8uint", true);
+        Var("rgba8sint", true);
+        Var("rgba16uint", true);
+        Var("rgba16sint", true);
+        Var("rgba16float", true);
+        Var("r32uint", true);
+        Var("r32sint", true);
+        Var("r32float", true);
+        Var("rg32uint", true);
+        Var("rg32sint", true);
+        Var("rg32float", true);
+        Var("rgba32uint", true);
+        Var("rgba32sint", true);
+        Var("rgba32float", true);
+        Var("bgra8unorm", true);
+        b.Return(fn);
+    });
+
+    EXPECT_WGSL(R"(
+@fragment
+fn f() {
+  var v : bool = true;
+  var v_1 : bool = true;
+  var v_2 : bool = true;
+  var v_3 : bool = true;
+  var v_4 : bool = true;
+  var v_5 : bool = true;
+  var v_6 : bool = true;
+  var v_7 : bool = true;
+  var v_8 : bool = true;
+  var v_9 : bool = true;
+  var v_10 : bool = true;
+  var v_11 : bool = true;
+  var v_12 : bool = true;
+  var v_13 : bool = true;
+  var v_14 : bool = true;
+  var v_15 : bool = true;
+  var v_16 : bool = true;
+  var v_17 : bool = true;
+  var v_18 : bool = true;
+  var v_19 : bool = true;
+  var v_20 : bool = true;
+  var v_21 : bool = true;
+  var v_22 : bool = true;
+  var v_23 : bool = true;
+  var v_24 : bool = true;
+}
+)");
+}
+
+TEST_F(IRToProgramTest, TypeWords) {
+    auto* fn = b.Function("f", ty.void_(), core::ir::Function::PipelineStage::kFragment);
+
+    b.Append(fn->Block(), [&] {
+        Var("bool", true);
+        Var("void", true);
+        Var("i32", true);
+        Var("u32", true);
+        Var("f32", true);
+        Var("f16", true);
+        Var("vec", true);
+        Var("vec2", true);
+        Var("vec3", true);
+        Var("vec4", true);
+        Var("vec2f", true);
+        Var("vec3f", true);
+        Var("vec4f", true);
+        Var("vec2h", true);
+        Var("vec3h", true);
+        Var("vec4h", true);
+        Var("vec2i", true);
+        Var("vec3i", true);
+        Var("vec4i", true);
+        Var("vec2u", true);
+        Var("vec3u", true);
+        Var("vec4u", true);
+        Var("mat2x2", true);
+        Var("mat2x3", true);
+        Var("mat2x4", true);
+        Var("mat3x2", true);
+        Var("mat3x3", true);
+        Var("mat3x4", true);
+        Var("mat4x2", true);
+        Var("mat4x3", true);
+        Var("mat4x4", true);
+        Var("mat2x2f", true);
+        Var("mat2x3f", true);
+        Var("mat2x4f", true);
+        Var("mat3x2f", true);
+        Var("mat3x3f", true);
+        Var("mat3x4f", true);
+        Var("mat4x2f", true);
+        Var("mat4x3f", true);
+        Var("mat4x4f", true);
+        Var("mat2x2h", true);
+        Var("mat2x3h", true);
+        Var("mat2x4h", true);
+        Var("mat3x2h", true);
+        Var("mat3x3h", true);
+        Var("mat3x4h", true);
+        Var("mat4x2h", true);
+        Var("mat4x3h", true);
+        Var("mat4x4h", true);
+        Var("atomic", true);
+        Var("array", true);
+        Var("ptr", true);
+        Var("texture_1d", true);
+        Var("texture_2d", true);
+        Var("texture_2d_array", true);
+        Var("texture_3d", true);
+        Var("texture_cube", true);
+        Var("texture_cube_array", true);
+        Var("texture_multisampled_2d", true);
+        Var("texture_depth_multisampled_2d", true);
+        Var("texture_external", true);
+        Var("texture_storage_1d", true);
+        Var("texture_storage_2d", true);
+        Var("texture_storage_2d_array", true);
+        Var("texture_storage_3d", true);
+        Var("texture_depth_2d", true);
+        Var("texture_depth_2d_array", true);
+        Var("texture_depth_cube", true);
+        Var("texture_depth_cube_array", true);
+        Var("sampler", true);
+        Var("sampler_comparison", true);
+        b.Return(fn);
+    });
+
+    EXPECT_WGSL(R"(
+@fragment
+fn f() {
+  var v : bool = true;
+  var v_1 : bool = true;
+  var v_2 : bool = true;
+  var v_3 : bool = true;
+  var v_4 : bool = true;
+  var v_5 : bool = true;
+  var v_6 : bool = true;
+  var v_7 : bool = true;
+  var v_8 : bool = true;
+  var v_9 : bool = true;
+  var v_10 : bool = true;
+  var v_11 : bool = true;
+  var v_12 : bool = true;
+  var v_13 : bool = true;
+  var v_14 : bool = true;
+  var v_15 : bool = true;
+  var v_16 : bool = true;
+  var v_17 : bool = true;
+  var v_18 : bool = true;
+  var v_19 : bool = true;
+  var v_20 : bool = true;
+  var v_21 : bool = true;
+  var v_22 : bool = true;
+  var v_23 : bool = true;
+  var v_24 : bool = true;
+  var v_25 : bool = true;
+  var v_26 : bool = true;
+  var v_27 : bool = true;
+  var v_28 : bool = true;
+  var v_29 : bool = true;
+  var v_30 : bool = true;
+  var v_31 : bool = true;
+  var v_32 : bool = true;
+  var v_33 : bool = true;
+  var v_34 : bool = true;
+  var v_35 : bool = true;
+  var v_36 : bool = true;
+  var v_37 : bool = true;
+  var v_38 : bool = true;
+  var v_39 : bool = true;
+  var v_40 : bool = true;
+  var v_41 : bool = true;
+  var v_42 : bool = true;
+  var v_43 : bool = true;
+  var v_44 : bool = true;
+  var v_45 : bool = true;
+  var v_46 : bool = true;
+  var v_47 : bool = true;
+  var v_48 : bool = true;
+  var v_49 : bool = true;
+  var v_50 : bool = true;
+  var v_51 : bool = true;
+  var v_52 : bool = true;
+  var v_53 : bool = true;
+  var v_54 : bool = true;
+  var v_55 : bool = true;
+  var v_56 : bool = true;
+  var v_57 : bool = true;
+  var v_58 : bool = true;
+  var v_59 : bool = true;
+  var v_60 : bool = true;
+  var v_61 : bool = true;
+  var v_62 : bool = true;
+  var v_63 : bool = true;
+  var v_64 : bool = true;
+  var v_65 : bool = true;
+  var v_66 : bool = true;
+  var v_67 : bool = true;
+  var v_68 : bool = true;
+  var v_69 : bool = true;
+  var v_70 : bool = true;
+}
+)");
+}
+
+TEST_F(IRToProgramTest, Keywords) {
+    auto* fn = b.Function("f", ty.void_(), core::ir::Function::PipelineStage::kFragment);
+
+    b.Append(fn->Block(), [&] {
+        Var("alias", true);
+        Var("break", true);
+        Var("case", true);
+        Var("const", true);
+        Var("const_assert", true);
+        Var("continue", true);
+        Var("continuing", true);
+        Var("default", true);
+        Var("diagnostic", true);
+        Var("discard", true);
+        Var("else", true);
+        Var("enable", true);
+        Var("false", true);
+        Var("fn", true);
+        Var("for", true);
+        Var("if", true);
+        Var("let", true);
+        Var("loop", true);
+        Var("override", true);
+        Var("requires", true);
+        Var("return", true);
+        Var("struct", true);
+        Var("switch", true);
+        Var("true", true);
+        Var("var", true);
+        Var("while", true);
+        b.Return(fn);
+    });
+
+    EXPECT_WGSL(R"(
+@fragment
+fn f() {
+  var v : bool = true;
+  var v_1 : bool = true;
+  var v_2 : bool = true;
+  var v_3 : bool = true;
+  var v_4 : bool = true;
+  var v_5 : bool = true;
+  var v_6 : bool = true;
+  var v_7 : bool = true;
+  var v_8 : bool = true;
+  var v_9 : bool = true;
+  var v_10 : bool = true;
+  var v_11 : bool = true;
+  var v_12 : bool = true;
+  var v_13 : bool = true;
+  var v_14 : bool = true;
+  var v_15 : bool = true;
+  var v_16 : bool = true;
+  var v_17 : bool = true;
+  var v_18 : bool = true;
+  var v_19 : bool = true;
+  var v_20 : bool = true;
+  var v_21 : bool = true;
+  var v_22 : bool = true;
+  var v_23 : bool = true;
+  var v_24 : bool = true;
+  var v_25 : bool = true;
+}
+)");
+}
+
+TEST_F(IRToProgramTest, ReservedWords) {
+    auto* fn = b.Function("f", ty.void_(), core::ir::Function::PipelineStage::kFragment);
+
+    b.Append(fn->Block(), [&] {
+        Var("NULL", true);
+        Var("Self", true);
+        Var("abstract", true);
+        Var("active", true);
+        Var("alignas", true);
+        Var("alignof", true);
+        Var("as", true);
+        Var("asm", true);
+        Var("asm_fragment", true);
+        Var("async", true);
+        Var("attribute", true);
+        Var("auto", true);
+        Var("await", true);
+        Var("become", true);
+        Var("cast", true);
+        Var("catch", true);
+        Var("class", true);
+        Var("co_await", true);
+        Var("co_return", true);
+        Var("co_yield", true);
+        Var("coherent", true);
+        Var("column_major", true);
+        Var("common", true);
+        Var("compile", true);
+        Var("compile_fragment", true);
+        Var("concept", true);
+        Var("const_cast", true);
+        Var("consteval", true);
+        Var("constexpr", true);
+        Var("constinit", true);
+        Var("crate", true);
+        Var("debugger", true);
+        Var("decltype", true);
+        Var("delete", true);
+        Var("demote", true);
+        Var("demote_to_helper", true);
+        Var("do", true);
+        Var("dynamic_cast", true);
+        Var("enum", true);
+        Var("explicit", true);
+        Var("export", true);
+        Var("extends", true);
+        Var("extern", true);
+        Var("external", true);
+        Var("fallthrough", true);
+        Var("filter", true);
+        Var("final", true);
+        Var("finally", true);
+        Var("friend", true);
+        Var("from", true);
+        Var("fxgroup", true);
+        Var("get", true);
+        Var("goto", true);
+        Var("groupshared", true);
+        Var("highp", true);
+        Var("impl", true);
+        Var("implements", true);
+        Var("import", true);
+        Var("inline", true);
+        Var("instanceof", true);
+        Var("interface", true);
+        Var("layout", true);
+        Var("lowp", true);
+        Var("macro", true);
+        Var("macro_rules", true);
+        Var("match", true);
+        Var("mediump", true);
+        Var("meta", true);
+        Var("mod", true);
+        Var("module", true);
+        Var("move", true);
+        Var("mut", true);
+        Var("mutable", true);
+        Var("namespace", true);
+        Var("new", true);
+        Var("nil", true);
+        Var("noexcept", true);
+        Var("noinline", true);
+        Var("nointerpolation", true);
+        Var("non_coherent", true);
+        Var("noncoherent", true);
+        Var("noperspective", true);
+        Var("null", true);
+        Var("nullptr", true);
+        Var("of", true);
+        Var("operator", true);
+        Var("package", true);
+        Var("packoffset", true);
+        Var("partition", true);
+        Var("pass", true);
+        Var("patch", true);
+        Var("pixelfragment", true);
+        Var("precise", true);
+        Var("precision", true);
+        Var("premerge", true);
+        Var("priv", true);
+        Var("protected", true);
+        Var("pub", true);
+        Var("public", true);
+        Var("readonly", true);
+        Var("ref", true);
+        Var("regardless", true);
+        Var("register", true);
+        Var("reinterpret_cast", true);
+        Var("require", true);
+        Var("resource", true);
+        Var("restrict", true);
+        Var("self", true);
+        Var("set", true);
+        Var("shared", true);
+        Var("sizeof", true);
+        Var("smooth", true);
+        Var("snorm", true);
+        Var("static", true);
+        Var("static_assert", true);
+        Var("static_cast", true);
+        Var("std", true);
+        Var("subroutine", true);
+        Var("super", true);
+        Var("target", true);
+        Var("template", true);
+        Var("this", true);
+        Var("thread_local", true);
+        Var("throw", true);
+        Var("trait", true);
+        Var("try", true);
+        Var("type", true);
+        Var("typedef", true);
+        Var("typeid", true);
+        Var("typename", true);
+        Var("typeof", true);
+        Var("union", true);
+        Var("unless", true);
+        Var("unorm", true);
+        Var("unsafe", true);
+        Var("unsized", true);
+        Var("use", true);
+        Var("using", true);
+        Var("varying", true);
+        Var("virtual", true);
+        Var("volatile", true);
+        Var("wgsl", true);
+        Var("where", true);
+        Var("with", true);
+        Var("writeonly", true);
+        Var("yield", true);
+        b.Return(fn);
+    });
+
+    EXPECT_WGSL(R"(
+@fragment
+fn f() {
+  var v : bool = true;
+  var v_1 : bool = true;
+  var v_2 : bool = true;
+  var v_3 : bool = true;
+  var v_4 : bool = true;
+  var v_5 : bool = true;
+  var v_6 : bool = true;
+  var v_7 : bool = true;
+  var v_8 : bool = true;
+  var v_9 : bool = true;
+  var v_10 : bool = true;
+  var v_11 : bool = true;
+  var v_12 : bool = true;
+  var v_13 : bool = true;
+  var v_14 : bool = true;
+  var v_15 : bool = true;
+  var v_16 : bool = true;
+  var v_17 : bool = true;
+  var v_18 : bool = true;
+  var v_19 : bool = true;
+  var v_20 : bool = true;
+  var v_21 : bool = true;
+  var v_22 : bool = true;
+  var v_23 : bool = true;
+  var v_24 : bool = true;
+  var v_25 : bool = true;
+  var v_26 : bool = true;
+  var v_27 : bool = true;
+  var v_28 : bool = true;
+  var v_29 : bool = true;
+  var v_30 : bool = true;
+  var v_31 : bool = true;
+  var v_32 : bool = true;
+  var v_33 : bool = true;
+  var v_34 : bool = true;
+  var v_35 : bool = true;
+  var v_36 : bool = true;
+  var v_37 : bool = true;
+  var v_38 : bool = true;
+  var v_39 : bool = true;
+  var v_40 : bool = true;
+  var v_41 : bool = true;
+  var v_42 : bool = true;
+  var v_43 : bool = true;
+  var v_44 : bool = true;
+  var v_45 : bool = true;
+  var v_46 : bool = true;
+  var v_47 : bool = true;
+  var v_48 : bool = true;
+  var v_49 : bool = true;
+  var v_50 : bool = true;
+  var v_51 : bool = true;
+  var v_52 : bool = true;
+  var v_53 : bool = true;
+  var v_54 : bool = true;
+  var v_55 : bool = true;
+  var v_56 : bool = true;
+  var v_57 : bool = true;
+  var v_58 : bool = true;
+  var v_59 : bool = true;
+  var v_60 : bool = true;
+  var v_61 : bool = true;
+  var v_62 : bool = true;
+  var v_63 : bool = true;
+  var v_64 : bool = true;
+  var v_65 : bool = true;
+  var v_66 : bool = true;
+  var v_67 : bool = true;
+  var v_68 : bool = true;
+  var v_69 : bool = true;
+  var v_70 : bool = true;
+  var v_71 : bool = true;
+  var v_72 : bool = true;
+  var v_73 : bool = true;
+  var v_74 : bool = true;
+  var v_75 : bool = true;
+  var v_76 : bool = true;
+  var v_77 : bool = true;
+  var v_78 : bool = true;
+  var v_79 : bool = true;
+  var v_80 : bool = true;
+  var v_81 : bool = true;
+  var v_82 : bool = true;
+  var v_83 : bool = true;
+  var v_84 : bool = true;
+  var v_85 : bool = true;
+  var v_86 : bool = true;
+  var v_87 : bool = true;
+  var v_88 : bool = true;
+  var v_89 : bool = true;
+  var v_90 : bool = true;
+  var v_91 : bool = true;
+  var v_92 : bool = true;
+  var v_93 : bool = true;
+  var v_94 : bool = true;
+  var v_95 : bool = true;
+  var v_96 : bool = true;
+  var v_97 : bool = true;
+  var v_98 : bool = true;
+  var v_99 : bool = true;
+  var v_100 : bool = true;
+  var v_101 : bool = true;
+  var v_102 : bool = true;
+  var v_103 : bool = true;
+  var v_104 : bool = true;
+  var v_105 : bool = true;
+  var v_106 : bool = true;
+  var v_107 : bool = true;
+  var v_108 : bool = true;
+  var v_109 : bool = true;
+  var v_110 : bool = true;
+  var v_111 : bool = true;
+  var v_112 : bool = true;
+  var v_113 : bool = true;
+  var v_114 : bool = true;
+  var v_115 : bool = true;
+  var v_116 : bool = true;
+  var v_117 : bool = true;
+  var v_118 : bool = true;
+  var v_119 : bool = true;
+  var v_120 : bool = true;
+  var v_121 : bool = true;
+  var v_122 : bool = true;
+  var v_123 : bool = true;
+  var v_124 : bool = true;
+  var v_125 : bool = true;
+  var v_126 : bool = true;
+  var v_127 : bool = true;
+  var v_128 : bool = true;
+  var v_129 : bool = true;
+  var v_130 : bool = true;
+  var v_131 : bool = true;
+  var v_132 : bool = true;
+  var v_133 : bool = true;
+  var v_134 : bool = true;
+  var v_135 : bool = true;
+  var v_136 : bool = true;
+  var v_137 : bool = true;
+  var v_138 : bool = true;
+  var v_139 : bool = true;
+  var v_140 : bool = true;
+  var v_141 : bool = true;
+  var v_142 : bool = true;
+  var v_143 : bool = true;
+  var v_144 : bool = true;
+  var v_145 : bool = true;
+}
+)");
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Unary ops
 ////////////////////////////////////////////////////////////////////////////////
@@ -991,7 +1583,7 @@ TEST_F(IRToProgramTest, ShortCircuit_And_2) {
 
     b.Append(fn->Block(), [&] {
         auto* if_ = b.If(pa);
-        if_->SetResults(b.InstructionResult(ty.bool_()));
+        if_->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(if_->True(), [&] { b.ExitIf(if_, pb); });
         b.Append(if_->False(), [&] { b.ExitIf(if_, false); });
 
@@ -1014,12 +1606,12 @@ TEST_F(IRToProgramTest, ShortCircuit_And_3_ab_c) {
 
     b.Append(fn->Block(), [&] {
         auto* if1 = b.If(pa);
-        if1->SetResults(b.InstructionResult(ty.bool_()));
+        if1->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(if1->True(), [&] { b.ExitIf(if1, pb); });
         b.Append(if1->False(), [&] { b.ExitIf(if1, false); });
 
         auto* if2 = b.If(if1);
-        if2->SetResults(b.InstructionResult(ty.bool_()));
+        if2->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(if2->True(), [&] { b.ExitIf(if2, pc); });
         b.Append(if2->False(), [&] { b.ExitIf(if2, false); });
 
@@ -1042,10 +1634,10 @@ TEST_F(IRToProgramTest, ShortCircuit_And_3_a_bc) {
 
     b.Append(fn->Block(), [&] {
         auto* if1 = b.If(pa);
-        if1->SetResults(b.InstructionResult(ty.bool_()));
+        if1->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(if1->True(), [&] {
             auto* if2 = b.If(pb);
-            if2->SetResults(b.InstructionResult(ty.bool_()));
+            if2->SetResult(b.InstructionResult(ty.bool_()));
             b.Append(if2->True(), [&] { b.ExitIf(if2, pc); });
             b.Append(if2->False(), [&] { b.ExitIf(if2, false); });
 
@@ -1070,7 +1662,7 @@ TEST_F(IRToProgramTest, ShortCircuit_Or_2) {
 
     b.Append(fn->Block(), [&] {
         auto* if_ = b.If(pa);
-        if_->SetResults(b.InstructionResult(ty.bool_()));
+        if_->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(if_->True(), [&] { b.ExitIf(if_, true); });
         b.Append(if_->False(), [&] { b.ExitIf(if_, pb); });
 
@@ -1093,12 +1685,12 @@ TEST_F(IRToProgramTest, ShortCircuit_Or_3_ab_c) {
 
     b.Append(fn->Block(), [&] {
         auto* if1 = b.If(pa);
-        if1->SetResults(b.InstructionResult(ty.bool_()));
+        if1->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(if1->True(), [&] { b.ExitIf(if1, true); });
         b.Append(if1->False(), [&] { b.ExitIf(if1, pb); });
 
         auto* if2 = b.If(if1);
-        if2->SetResults(b.InstructionResult(ty.bool_()));
+        if2->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(if2->True(), [&] { b.ExitIf(if2, true); });
         b.Append(if2->False(), [&] { b.ExitIf(if2, pc); });
 
@@ -1121,11 +1713,11 @@ TEST_F(IRToProgramTest, ShortCircuit_Or_3_a_bc) {
 
     b.Append(fn->Block(), [&] {
         auto* if1 = b.If(pa);
-        if1->SetResults(b.InstructionResult(ty.bool_()));
+        if1->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(if1->True(), [&] { b.ExitIf(if1, true); });
         b.Append(if1->False(), [&] {
             auto* if2 = b.If(pb);
-            if2->SetResults(b.InstructionResult(ty.bool_()));
+            if2->SetResult(b.InstructionResult(ty.bool_()));
             b.Append(if2->True(), [&] { b.ExitIf(if2, true); });
             b.Append(if2->False(), [&] { b.ExitIf(if2, pc); });
 
@@ -1156,15 +1748,15 @@ TEST_F(IRToProgramTest, ShortCircuit_Mixed) {
 
     b.Append(fn->Block(), [&] {
         auto* if1 = b.If(pa);
-        if1->SetResults(b.InstructionResult(ty.bool_()));
+        if1->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(if1->True(), [&] { b.ExitIf(if1, true); });
         b.Append(if1->False(), [&] { b.ExitIf(if1, b.Call(ty.bool_(), fn_b)); });
 
         auto* if2 = b.If(if1);
-        if2->SetResults(b.InstructionResult(ty.bool_()));
+        if2->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(if2->True(), [&] {
             auto* if3 = b.If(pc);
-            if3->SetResults(b.InstructionResult(ty.bool_()));
+            if3->SetResult(b.InstructionResult(ty.bool_()));
             b.Append(if3->True(), [&] { b.ExitIf(if3, true); });
             b.Append(if3->False(), [&] { b.ExitIf(if3, b.Call(ty.bool_(), fn_d)); });
 
@@ -2218,7 +2810,7 @@ fn f() {
 
 TEST_F(IRToProgramTest, For_IncInInit_Cmp) {
     // %b1 = block {  # root
-    //   %i:ptr<storage, u32, read_write> = var @binding_point(0, 0)
+    //   %i:ptr<storage, u32, read_write> = var undef @binding_point(0, 0)
     // }
     //
     // %f = func():void -> %b2 {
@@ -2690,13 +3282,94 @@ fn f(v : S) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Override Construct
+////////////////////////////////////////////////////////////////////////////////
+TEST_F(IRToProgramTest, Override_NoId) {
+    core::ir::Override* o;
+    b.Append(b.ir.root_block, [&] { o = b.Override("o", false); });
+
+    auto* fn = b.Function("f", ty.bool_());
+    b.Append(fn->Block(), [&] { b.Return(fn, o); });
+
+    EXPECT_WGSL(R"(
+override o : bool = false;
+
+fn f() -> bool {
+  return o;
+}
+)");
+}
+
+TEST_F(IRToProgramTest, Override_Id) {
+    core::ir::Override* o;
+    b.Append(b.ir.root_block, [&] { o = b.Override("o", true); });
+    o->SetOverrideId(OverrideId{10});
+
+    auto* fn = b.Function("f", ty.bool_());
+    b.Append(fn->Block(), [&] { b.Return(fn, o); });
+
+    EXPECT_WGSL(R"(
+@id(10) override o : bool = true;
+
+fn f() -> bool {
+  return o;
+}
+)");
+}
+
+TEST_F(IRToProgramTest, Override_NoInit) {
+    core::ir::Override* o;
+    b.Append(b.ir.root_block, [&] { o = b.Override("o", ty.i32()); });
+    o->SetOverrideId(OverrideId{10});
+
+    auto* fn = b.Function("f", ty.i32());
+    b.Append(fn->Block(), [&] { b.Return(fn, o); });
+
+    EXPECT_WGSL(R"(
+@id(10) override o : i32;
+
+fn f() -> i32 {
+  return o;
+}
+)");
+}
+
+TEST_F(IRToProgramTest, Override_BinaryInitializer) {
+    core::ir::Override* o;
+    b.Append(b.ir.root_block, [&] {
+        auto* lhs = b.Override("lhs", 42_u);
+        lhs->SetOverrideId(OverrideId{10});
+
+        auto* rhs = b.Override("rhs", ty.u32());
+        rhs->SetOverrideId(OverrideId{20});
+
+        o = b.Override("o", b.Add<u32>(lhs, rhs));
+    });
+
+    auto* fn = b.Function("f", ty.u32());
+    b.Append(fn->Block(), [&] { b.Return(fn, o); });
+
+    EXPECT_WGSL(R"(
+@id(10) override lhs : u32 = 42u;
+
+@id(20) override rhs : u32;
+
+override o : u32 = (lhs + rhs);
+
+fn f() -> u32 {
+  return o;
+}
+)");
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // chromium_internal_graphite
 ////////////////////////////////////////////////////////////////////////////////
 TEST_F(IRToProgramTest, Enable_ChromiumInternalGraphite_SubgroupBallot) {
     b.Append(b.ir.root_block, [&] {
-        auto t = b.Var("T", ty.ref<core::AddressSpace::kHandle>(ty.Get<core::type::StorageTexture>(
+        auto t = b.Var("T", ty.ref<core::AddressSpace::kHandle>(ty.storage_texture(
                                 core::type::TextureDimension::k2d, core::TexelFormat::kR8Unorm,
-                                core::Access::kRead, ty.f32())));
+                                core::Access::kRead)));
         t->SetBindingPoint(0, 0);
     });
 

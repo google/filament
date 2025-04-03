@@ -625,7 +625,7 @@ TEST_P(RenderPassLoadOpTests, LoadOpClearWithBig32BitIntegralValuesOnMultipleCol
             expectedDataForRGBA32Float)}};
 
     for (const TestCase& testCase : kTestCases) {
-        if (testCase.size() > GetSupportedLimits().limits.maxColorAttachments) {
+        if (testCase.size() > GetSupportedLimits().maxColorAttachments) {
             continue;
         }
         std::vector<wgpu::Texture> textures;

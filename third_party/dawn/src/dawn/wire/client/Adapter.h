@@ -45,9 +45,9 @@ class Adapter final : public ObjectWithEventsBase {
 
     ObjectType GetObjectType() const override;
 
-    WGPUStatus GetLimits(WGPUSupportedLimits* limits) const;
+    WGPUStatus GetLimits(WGPULimits* limits) const;
     bool HasFeature(WGPUFeatureName feature) const;
-    void SetLimits(const WGPUSupportedLimits* limits);
+    void SetLimits(const WGPULimits* limits);
     void SetFeatures(const WGPUFeatureName* features, uint32_t featuresCount);
     void SetInfo(const WGPUAdapterInfo* info);
     WGPUStatus GetInfo(WGPUAdapterInfo* info) const;
@@ -78,6 +78,7 @@ class Adapter final : public ObjectWithEventsBase {
         4u,   // subgroupMinSize
         128u  // subgroupMaxSize
     };
+    std::vector<WGPUSubgroupMatrixConfig> mSubgroupMatrixConfigs;
 };
 
 }  // namespace dawn::wire::client

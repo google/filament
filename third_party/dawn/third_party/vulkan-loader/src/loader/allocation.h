@@ -30,6 +30,9 @@
 
 #include "loader_common.h"
 
+// The loader always aligns memory allocations to the largest unit size which is the size of a uint64_t
+#define loader_aligned_size(x) ((((x) + sizeof(uint64_t) - 1) / sizeof(uint64_t)) * sizeof(uint64_t))
+
 void *loader_instance_heap_alloc(const struct loader_instance *instance, size_t size, VkSystemAllocationScope allocation_scope);
 void *loader_instance_heap_calloc(const struct loader_instance *instance, size_t size, VkSystemAllocationScope allocation_scope);
 void loader_instance_heap_free(const struct loader_instance *instance, void *pMemory);

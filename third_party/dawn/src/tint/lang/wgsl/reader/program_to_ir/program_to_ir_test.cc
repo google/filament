@@ -724,7 +724,7 @@ TEST_F(IR_FromProgramTest, For) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %i:ptr<function, i32, read_write> = var
+        %i:ptr<function, i32, read_write> = var undef
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -773,7 +773,7 @@ TEST_F(IR_FromProgramTest, For_Init_NoCondOrContinuing) {
   $B1: {
     loop [i: $B2, b: $B3] {  # loop_1
       $B2: {  # initializer
-        %i:ptr<function, i32, read_write> = var
+        %i:ptr<function, i32, read_write> = var undef
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1195,7 +1195,7 @@ TEST_F(IR_FromProgramTest, OverrideNoInitializer) {
     EXPECT_EQ(m.SourceOf(override).range.begin, loc);
 
     EXPECT_EQ(core::ir::Disassembler(m).Plain(), R"($B1: {  # root
-  %a:i32 = override @id(0)
+  %a:i32 = override undef @id(0)
 }
 
 )");
@@ -1218,7 +1218,7 @@ TEST_F(IR_FromProgramTest, OverrideWithConstantInitializer) {
     EXPECT_FLOAT_EQ(1.0f, init->Value()->ValueAs<float>());
 
     EXPECT_EQ(core::ir::Disassembler(m).Plain(), R"($B1: {  # root
-  %a:f32 = override, 1.0f @id(0)
+  %a:f32 = override 1.0f @id(0)
 }
 
 )");
@@ -1241,9 +1241,112 @@ TEST_F(IR_FromProgramTest, OverrideWithAddInitializer) {
     EXPECT_EQ(3u, init->Value()->ValueAs<uint32_t>());
 
     EXPECT_EQ(core::ir::Disassembler(m).Plain(), R"($B1: {  # root
-  %a:u32 = override, 3u @id(0)
+  %a:u32 = override 3u @id(0)
 }
 
+)");
+}
+
+TEST_F(IR_FromProgramTest, OverrideWithShortCircuitExpression) {
+    auto* o0 = Override(Source{{1, 2}}, "a", ty.u32());
+    auto* o1 = Override(Source{{2, 3}}, "b", ty.bool_());
+    Override("c", LogicalAnd(o1, Equal(Div(1_u, o0), 0_u)));
+
+    auto res = Build();
+    ASSERT_EQ(res, Success);
+
+    auto m = res.Move();
+
+    EXPECT_EQ(core::ir::Disassembler(m).Plain(), R"($B1: {  # root
+  %a:u32 = override undef @id(0)
+  %b:bool = override undef @id(1)
+  %3:bool = constexpr_if %b [t: $B2, f: $B3] {  # constexpr_if_1
+    $B2: {  # true
+      %4:u32 = div 1u, %a
+      %5:bool = eq %4, 0u
+      exit_if %5  # constexpr_if_1
+    }
+    $B3: {  # false
+      exit_if false  # constexpr_if_1
+    }
+  }
+  %c:bool = override %3 @id(2)
+}
+
+)");
+}
+
+TEST_F(IR_FromProgramTest, OverrideShortCircuitStatementInFunction) {
+    auto* o0 = Override(Source{{1, 2}}, "a", ty.u32());
+    auto* o1 = Override(Source{{2, 3}}, "b", ty.bool_());
+    auto* logical = LogicalAnd(o1, Equal(Div(1_u, o0), 0_u));
+    WrapInFunction(logical);
+
+    auto res = Build();
+    ASSERT_EQ(res, Success);
+
+    auto m = res.Move();
+
+    ASSERT_EQ(1u, m.functions.Length());
+
+    EXPECT_EQ(core::ir::Disassembler(m).Plain(), R"($B1: {  # root
+  %a:u32 = override undef @id(0)
+  %b:bool = override undef @id(1)
+}
+
+%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %4:bool = constexpr_if %b [t: $B3, f: $B4] {  # constexpr_if_1
+      $B3: {  # true
+        %5:u32 = div 1u, %a
+        %6:bool = eq %5, 0u
+        exit_if %6  # constexpr_if_1
+      }
+      $B4: {  # false
+        exit_if false  # constexpr_if_1
+      }
+    }
+    %tint_symbol:bool = let %4
+    ret
+  }
+}
+)");
+}
+
+TEST_F(IR_FromProgramTest, NonOverrideShortCircuitStatementInFunction) {
+    auto* o0 = Override(Source{{1, 2}}, "a", ty.u32());
+    auto* o1 = Decl(Let("x", Expr(true)));
+    auto* logical = LogicalAnd(o1->variable, Equal(Div(1_u, o0), 0_u));
+    WrapInFunction(o1, logical);
+
+    auto res = Build();
+    ASSERT_EQ(res, Success);
+
+    auto m = res.Move();
+
+    ASSERT_EQ(1u, m.functions.Length());
+
+    EXPECT_EQ(core::ir::Disassembler(m).Plain(), R"($B1: {  # root
+  %a:u32 = override undef @id(0)
+}
+
+%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %x:bool = let true
+    %4:bool = if %x [t: $B3, f: $B4] {  # if_1
+      $B3: {  # true
+        %5:u32 = div 1u, %a
+        %6:bool = eq %5, 0u
+        exit_if %6  # if_1
+      }
+      $B4: {  # false
+        exit_if false  # if_1
+      }
+    }
+    %tint_symbol:bool = let %4
+    ret
+  }
+}
 )");
 }
 
@@ -1256,9 +1359,9 @@ TEST_F(IR_FromProgramTest, OverrideWithOverrideAddInitializer) {
 
     auto m = res.Move();
     EXPECT_EQ(core::ir::Disassembler(m).Plain(), R"($B1: {  # root
-  %z:u32 = override @id(0)
+  %z:u32 = override undef @id(0)
   %2:u32 = add %z, 2u
-  %a:u32 = override, %2 @id(1)
+  %a:u32 = override %2 @id(1)
 }
 
 )");
@@ -1278,13 +1381,59 @@ fn a() {
 
     auto m = res.Move();
     EXPECT_EQ(core::ir::Disassembler(m).Plain(), R"($B1: {  # root
-  %x:i32 = override, 1i @id(0)
-  %arr:ptr<workgroup, array<u32, %x>, read_write> = var
+  %x:i32 = override 1i @id(0)
+  %arr:ptr<workgroup, array<u32, %x>, read_write> = var undef
 }
 
 %a = func():void {
   $B2: {
     %y:ptr<workgroup, array<u32, %x>, read_write> = let %arr
+    ret
+  }
+}
+)");
+}
+
+TEST_F(IR_FromProgramTest, OverrideWithPhony) {
+    auto* src = R"(
+override cond : bool;
+override zero_i32 = 0i;
+override one_f32 = 1.0f;
+override thirty_one = 31u;
+override foo = cond && (one_f32 / 0) == 0;
+
+@compute @workgroup_size(1)
+fn main() {
+  _ = cond;
+_ = foo;
+}
+)";
+    auto res = Build(src);
+    ASSERT_EQ(res, Success);
+
+    auto m = res.Move();
+    EXPECT_EQ(core::ir::Disassembler(m).Plain(), R"($B1: {  # root
+  %cond:bool = override undef @id(0)
+  %zero_i32:i32 = override 0i @id(1)
+  %one_f32:f32 = override 1.0f @id(2)
+  %thirty_one:u32 = override 31u @id(3)
+  %5:bool = constexpr_if %cond [t: $B2, f: $B3] {  # constexpr_if_1
+    $B2: {  # true
+      %6:f32 = div %one_f32, 0.0f
+      %7:bool = eq %6, 0.0f
+      exit_if %7  # constexpr_if_1
+    }
+    $B3: {  # false
+      exit_if false  # constexpr_if_1
+    }
+  }
+  %foo:bool = override %5 @id(4)
+}
+
+%main = @compute @workgroup_size(1i, 1i, 1i) func():void {
+  $B4: {
+    %10:bool = let %cond
+    %11:bool = let %foo
     ret
   }
 }

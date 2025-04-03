@@ -1109,6 +1109,9 @@ enum class Capability : unsigned {
     ShaderClockKHR = 5055,
     ShaderEnqueueAMDX = 5067,
     QuadControlKHR = 5087,
+    BFloat16TypeKHR = 5116,
+    BFloat16DotProductKHR = 5117,
+    BFloat16CooperativeMatrixKHR = 5118,
     SampleMaskOverrideCoverageNV = 5249,
     GeometryShaderPassthroughNV = 5251,
     ShaderViewportIndexLayerEXT = 5254,
@@ -1257,6 +1260,7 @@ enum class Capability : unsigned {
     ArithmeticFenceEXT = 6144,
     FPGAClusterAttributesV2INTEL = 6150,
     FPGAKernelAttributesv2INTEL = 6161,
+    TaskSequenceINTEL = 6162,
     FPMaxErrorINTEL = 6169,
     FPGALatencyControlINTEL = 6171,
     FPGAArgumentInterfacesINTEL = 6174,
@@ -1267,7 +1271,9 @@ enum class Capability : unsigned {
     Subgroup2DBlockTransformINTEL = 6229,
     Subgroup2DBlockTransposeINTEL = 6230,
     SubgroupMatrixMultiplyAccumulateINTEL = 6236,
+    TernaryBitwiseFunctionINTEL = 6241,
     GroupUniformArithmeticKHR = 6400,
+    TensorFloat32RoundingINTEL = 6425,
     MaskedGatherScatterINTEL = 6427,
     CacheControlsINTEL = 6441,
     RegisterLimitsINTEL = 6460,
@@ -1532,6 +1538,7 @@ enum class RawAccessChainOperandsMask : unsigned {
 };
 
 enum class FPEncoding : unsigned {
+    BFloat16KHR = 0,
     Max = 0x7fffffff,
 };
 
@@ -2344,6 +2351,11 @@ enum class Op : unsigned {
     OpControlBarrierArriveINTEL = 6142,
     OpControlBarrierWaitINTEL = 6143,
     OpArithmeticFenceEXT = 6145,
+    OpTaskSequenceCreateINTEL = 6163,
+    OpTaskSequenceAsyncINTEL = 6164,
+    OpTaskSequenceGetINTEL = 6165,
+    OpTaskSequenceReleaseINTEL = 6166,
+    OpTypeTaskSequenceINTEL = 6199,
     OpSubgroupBlockPrefetchINTEL = 6221,
     OpSubgroup2DBlockLoadINTEL = 6231,
     OpSubgroup2DBlockLoadTransformINTEL = 6232,
@@ -2351,6 +2363,7 @@ enum class Op : unsigned {
     OpSubgroup2DBlockPrefetchINTEL = 6234,
     OpSubgroup2DBlockStoreINTEL = 6235,
     OpSubgroupMatrixMultiplyAccumulateINTEL = 6237,
+    OpBitwiseFunctionINTEL = 6242,
     OpGroupIMulKHR = 6401,
     OpGroupFMulKHR = 6402,
     OpGroupBitwiseAndKHR = 6403,
@@ -2359,6 +2372,7 @@ enum class Op : unsigned {
     OpGroupLogicalAndKHR = 6406,
     OpGroupLogicalOrKHR = 6407,
     OpGroupLogicalXorKHR = 6408,
+    OpRoundFToTF32INTEL = 6426,
     OpMaskedGatherINTEL = 6428,
     OpMaskedScatterINTEL = 6429,
     Max = 0x7fffffff,
@@ -3142,6 +3156,11 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpControlBarrierArriveINTEL: *hasResult = false; *hasResultType = false; break;
     case Op::OpControlBarrierWaitINTEL: *hasResult = false; *hasResultType = false; break;
     case Op::OpArithmeticFenceEXT: *hasResult = true; *hasResultType = true; break;
+    case Op::OpTaskSequenceCreateINTEL: *hasResult = true; *hasResultType = true; break;
+    case Op::OpTaskSequenceAsyncINTEL: *hasResult = false; *hasResultType = false; break;
+    case Op::OpTaskSequenceGetINTEL: *hasResult = true; *hasResultType = true; break;
+    case Op::OpTaskSequenceReleaseINTEL: *hasResult = false; *hasResultType = false; break;
+    case Op::OpTypeTaskSequenceINTEL: *hasResult = true; *hasResultType = false; break;
     case Op::OpSubgroupBlockPrefetchINTEL: *hasResult = false; *hasResultType = false; break;
     case Op::OpSubgroup2DBlockLoadINTEL: *hasResult = false; *hasResultType = false; break;
     case Op::OpSubgroup2DBlockLoadTransformINTEL: *hasResult = false; *hasResultType = false; break;
@@ -3149,6 +3168,7 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpSubgroup2DBlockPrefetchINTEL: *hasResult = false; *hasResultType = false; break;
     case Op::OpSubgroup2DBlockStoreINTEL: *hasResult = false; *hasResultType = false; break;
     case Op::OpSubgroupMatrixMultiplyAccumulateINTEL: *hasResult = true; *hasResultType = true; break;
+    case Op::OpBitwiseFunctionINTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpGroupIMulKHR: *hasResult = true; *hasResultType = true; break;
     case Op::OpGroupFMulKHR: *hasResult = true; *hasResultType = true; break;
     case Op::OpGroupBitwiseAndKHR: *hasResult = true; *hasResultType = true; break;
@@ -3157,6 +3177,7 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpGroupLogicalAndKHR: *hasResult = true; *hasResultType = true; break;
     case Op::OpGroupLogicalOrKHR: *hasResult = true; *hasResultType = true; break;
     case Op::OpGroupLogicalXorKHR: *hasResult = true; *hasResultType = true; break;
+    case Op::OpRoundFToTF32INTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpMaskedGatherINTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpMaskedScatterINTEL: *hasResult = false; *hasResultType = false; break;
     }
@@ -3965,6 +3986,9 @@ inline const char* CapabilityToString(Capability value) {
     case Capability::ShaderClockKHR: return "ShaderClockKHR";
     case Capability::ShaderEnqueueAMDX: return "ShaderEnqueueAMDX";
     case Capability::QuadControlKHR: return "QuadControlKHR";
+    case Capability::BFloat16TypeKHR: return "BFloat16TypeKHR";
+    case Capability::BFloat16DotProductKHR: return "BFloat16DotProductKHR";
+    case Capability::BFloat16CooperativeMatrixKHR: return "BFloat16CooperativeMatrixKHR";
     case Capability::SampleMaskOverrideCoverageNV: return "SampleMaskOverrideCoverageNV";
     case Capability::GeometryShaderPassthroughNV: return "GeometryShaderPassthroughNV";
     case Capability::ShaderViewportIndexLayerEXT: return "ShaderViewportIndexLayerEXT";
@@ -4087,6 +4111,7 @@ inline const char* CapabilityToString(Capability value) {
     case Capability::ArithmeticFenceEXT: return "ArithmeticFenceEXT";
     case Capability::FPGAClusterAttributesV2INTEL: return "FPGAClusterAttributesV2INTEL";
     case Capability::FPGAKernelAttributesv2INTEL: return "FPGAKernelAttributesv2INTEL";
+    case Capability::TaskSequenceINTEL: return "TaskSequenceINTEL";
     case Capability::FPMaxErrorINTEL: return "FPMaxErrorINTEL";
     case Capability::FPGALatencyControlINTEL: return "FPGALatencyControlINTEL";
     case Capability::FPGAArgumentInterfacesINTEL: return "FPGAArgumentInterfacesINTEL";
@@ -4097,7 +4122,9 @@ inline const char* CapabilityToString(Capability value) {
     case Capability::Subgroup2DBlockTransformINTEL: return "Subgroup2DBlockTransformINTEL";
     case Capability::Subgroup2DBlockTransposeINTEL: return "Subgroup2DBlockTransposeINTEL";
     case Capability::SubgroupMatrixMultiplyAccumulateINTEL: return "SubgroupMatrixMultiplyAccumulateINTEL";
+    case Capability::TernaryBitwiseFunctionINTEL: return "TernaryBitwiseFunctionINTEL";
     case Capability::GroupUniformArithmeticKHR: return "GroupUniformArithmeticKHR";
+    case Capability::TensorFloat32RoundingINTEL: return "TensorFloat32RoundingINTEL";
     case Capability::MaskedGatherScatterINTEL: return "MaskedGatherScatterINTEL";
     case Capability::CacheControlsINTEL: return "CacheControlsINTEL";
     case Capability::RegisterLimitsINTEL: return "RegisterLimitsINTEL";
@@ -4255,6 +4282,7 @@ inline const char* NamedMaximumNumberOfRegistersToString(NamedMaximumNumberOfReg
 
 inline const char* FPEncodingToString(FPEncoding value) {
     switch (value) {
+    case FPEncoding::BFloat16KHR: return "BFloat16KHR";
     default: return "Unknown";
     }
 }
@@ -5062,6 +5090,11 @@ inline const char* OpToString(Op value) {
     case Op::OpControlBarrierArriveINTEL: return "OpControlBarrierArriveINTEL";
     case Op::OpControlBarrierWaitINTEL: return "OpControlBarrierWaitINTEL";
     case Op::OpArithmeticFenceEXT: return "OpArithmeticFenceEXT";
+    case Op::OpTaskSequenceCreateINTEL: return "OpTaskSequenceCreateINTEL";
+    case Op::OpTaskSequenceAsyncINTEL: return "OpTaskSequenceAsyncINTEL";
+    case Op::OpTaskSequenceGetINTEL: return "OpTaskSequenceGetINTEL";
+    case Op::OpTaskSequenceReleaseINTEL: return "OpTaskSequenceReleaseINTEL";
+    case Op::OpTypeTaskSequenceINTEL: return "OpTypeTaskSequenceINTEL";
     case Op::OpSubgroupBlockPrefetchINTEL: return "OpSubgroupBlockPrefetchINTEL";
     case Op::OpSubgroup2DBlockLoadINTEL: return "OpSubgroup2DBlockLoadINTEL";
     case Op::OpSubgroup2DBlockLoadTransformINTEL: return "OpSubgroup2DBlockLoadTransformINTEL";
@@ -5069,6 +5102,7 @@ inline const char* OpToString(Op value) {
     case Op::OpSubgroup2DBlockPrefetchINTEL: return "OpSubgroup2DBlockPrefetchINTEL";
     case Op::OpSubgroup2DBlockStoreINTEL: return "OpSubgroup2DBlockStoreINTEL";
     case Op::OpSubgroupMatrixMultiplyAccumulateINTEL: return "OpSubgroupMatrixMultiplyAccumulateINTEL";
+    case Op::OpBitwiseFunctionINTEL: return "OpBitwiseFunctionINTEL";
     case Op::OpGroupIMulKHR: return "OpGroupIMulKHR";
     case Op::OpGroupFMulKHR: return "OpGroupFMulKHR";
     case Op::OpGroupBitwiseAndKHR: return "OpGroupBitwiseAndKHR";
@@ -5077,6 +5111,7 @@ inline const char* OpToString(Op value) {
     case Op::OpGroupLogicalAndKHR: return "OpGroupLogicalAndKHR";
     case Op::OpGroupLogicalOrKHR: return "OpGroupLogicalOrKHR";
     case Op::OpGroupLogicalXorKHR: return "OpGroupLogicalXorKHR";
+    case Op::OpRoundFToTF32INTEL: return "OpRoundFToTF32INTEL";
     case Op::OpMaskedGatherINTEL: return "OpMaskedGatherINTEL";
     case Op::OpMaskedScatterINTEL: return "OpMaskedScatterINTEL";
     default: return "Unknown";

@@ -67,6 +67,7 @@ ResultOrError<ResourceMemoryAllocation> BuddyMemoryAllocator::Allocate(uint64_t 
         return std::move(invalidAllocation);
     }
 
+    uint64_t originalAllocationSize = allocationSize;
     // Round allocation size to nearest power-of-two.
     allocationSize = NextPowerOfTwo(allocationSize);
 
@@ -93,6 +94,7 @@ ResultOrError<ResourceMemoryAllocation> BuddyMemoryAllocator::Allocate(uint64_t 
 
     AllocationInfo info;
     info.mBlockOffset = blockOffset;
+    info.mRequestedSize = originalAllocationSize;
     info.mMethod = AllocationMethod::kSubAllocated;
 
     // Allocation offset is always local to the memory.

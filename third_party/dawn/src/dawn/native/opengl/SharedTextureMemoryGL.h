@@ -37,7 +37,7 @@ class Device;
 
 class SharedTextureMemory : public SharedTextureMemoryBase {
   public:
-    virtual GLuint GenerateGLTexture() = 0;
+    virtual ResultOrError<GLuint> GenerateGLTexture() = 0;
 
   protected:
     SharedTextureMemory(Device* device,

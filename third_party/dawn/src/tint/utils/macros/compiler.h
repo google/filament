@@ -83,10 +83,6 @@
     TINT_REQUIRE_SEMICOLON
 // clang-format on
 
-#if defined(__SANITIZE_ADDRESS__)
-#define TINT_ASAN_ENABLED
-#endif
-
 #elif defined(__clang__)
 ////////////////////////////////////////////////////////////////////////////////
 // Clang
@@ -170,10 +166,6 @@
     TINT_REQUIRE_SEMICOLON
 // clang-format on
 
-#if __has_feature(address_sanitizer)
-#define TINT_ASAN_ENABLED
-#endif
-
 #elif defined(__GNUC__)
 ////////////////////////////////////////////////////////////////////////////////
 // GCC
@@ -244,10 +236,6 @@
     _Pragma("GCC diagnostic pop")            \
     TINT_REQUIRE_SEMICOLON
 // clang-format on
-
-#if defined(__SANITIZE_ADDRESS__)
-#define TINT_ASAN_ENABLED
-#endif
 
 #else
 ////////////////////////////////////////////////////////////////////////////////

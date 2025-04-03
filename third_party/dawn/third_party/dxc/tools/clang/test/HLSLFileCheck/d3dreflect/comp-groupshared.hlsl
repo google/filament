@@ -7,7 +7,7 @@
 // CHECK:  RecordTable (stride = {{[0-9]+}} bytes) ResourceTable[2] = {
 // CHECK:    <0:RuntimeDataResourceInfo> = {
 // CHECK:      Class: SRV
-// CHECK:      Kind: TypedBuffer
+// CHECK:      Kind: StructuredBuffer
 // CHECK:      ID: 0
 // CHECK:      Space: 0
 // CHECK:      LowerBound: 1
@@ -33,7 +33,7 @@
 // CHECK:      Resources: <0:RecordArrayRef<RuntimeDataResourceInfo>[2]>  = {
 // CHECK:        [0]: <0:RuntimeDataResourceInfo> = {
 // CHECK:          Class: SRV
-// CHECK:          Kind: TypedBuffer
+// CHECK:          Kind: StructuredBuffer
 // CHECK:          ID: 0
 // CHECK:          Space: 0
 // CHECK:          LowerBound: 1
@@ -85,20 +85,20 @@
 // CHECK:      Shader Version: Compute 6.5
 // CHECK:      Creator: <nullptr>
 // CHECK:      Flags: 0
-// CHECK:      ConstantBuffers: 0
+// CHECK:      ConstantBuffers: 1
 // CHECK:      BoundResources: 2
 // CHECK:      FunctionParameterCount: 0
 // CHECK:      HasReturn: FALSE
 // CHECK:    Bound Resources:
 // CHECK:      D3D12_SHADER_INPUT_BIND_DESC: Name: inputs
-// CHECK:        Type: D3D_SIT_TEXTURE
+// CHECK:        Type: D3D_SIT_STRUCTURED
 // CHECK:        uID: 0
 // CHECK:        BindCount: 1
 // CHECK:        BindPoint: 1
 // CHECK:        Space: 0
-// CHECK:        ReturnType: D3D_RETURN_TYPE_SINT
+// CHECK:        ReturnType: D3D_RETURN_TYPE_MIXED
 // CHECK:        Dimension: D3D_SRV_DIMENSION_BUFFER
-// CHECK:        NumSamples (or stride): 4294967295
+// CHECK:        NumSamples (or stride): 16
 // CHECK:        uFlags: 0
 // CHECK:      D3D12_SHADER_INPUT_BIND_DESC: Name: g_Intensities
 // CHECK:        Type: D3D_SIT_UAV_RWTYPED
@@ -116,7 +116,7 @@ struct Foo {
     int d[2];
 };
 
-Buffer<Foo> inputs : register(t1);
+StructuredBuffer<Foo> inputs : register(t1);
 RWBuffer< int > g_Intensities : register(u1);
 
 groupshared Foo sharedData;

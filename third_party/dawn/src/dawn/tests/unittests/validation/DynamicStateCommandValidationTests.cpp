@@ -59,6 +59,9 @@ class SetViewportTest : public ValidationTest {
 
     static constexpr uint32_t kWidth = 5;
     static constexpr uint32_t kHeight = 3;
+
+    static constexpr int32_t kMaxViewportSize = 8192;  // maxTextureDimension2D default
+    static constexpr int32_t kMaxViewportBounds = kMaxViewportSize * 2;
 };
 
 // Test to check basic use of SetViewport
@@ -76,6 +79,16 @@ TEST_F(SetViewportTest, ViewportParameterNaN) {
     TestViewportCall(false, 0.0, 0.0, 1.0, 1.0, 0.0, NAN);
 }
 
+// Test to check that Infinity in viewport parameters is not allowed
+TEST_F(SetViewportTest, ViewportParameterInf) {
+    TestViewportCall(false, INFINITY, 0.0, 1.0, 1.0, 0.0, 1.0);
+    TestViewportCall(false, 0.0, INFINITY, 1.0, 1.0, 0.0, 1.0);
+    TestViewportCall(false, 0.0, 0.0, INFINITY, 1.0, 0.0, 1.0);
+    TestViewportCall(false, 0.0, 0.0, 1.0, INFINITY, 0.0, 1.0);
+    TestViewportCall(false, 0.0, 0.0, 1.0, 1.0, INFINITY, 1.0);
+    TestViewportCall(false, 0.0, 0.0, 1.0, 1.0, 0.0, INFINITY);
+}
+
 // Test to check that an empty viewport is allowed.
 TEST_F(SetViewportTest, EmptyViewport) {
     // Width of viewport is zero.
@@ -88,37 +101,65 @@ TEST_F(SetViewportTest, EmptyViewport) {
     TestViewportCall(true, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
 }
 
-// Test to check that viewport larger than the framebuffer is disallowed
-TEST_F(SetViewportTest, ViewportLargerThanFramebuffer) {
+// Test to check that viewport larger than the framebuffer is allowed
+TEST_F(SetViewportTest, ViewportLargerThanLimit) {
     // Control case: width and height are set to the render target size.
     TestViewportCall(true, 0.0, 0.0, kWidth, kHeight, 0.0, 1.0);
 
     // Width is larger than the rendertarget's width
-    TestViewportCall(false, 0.0, 0.0, kWidth + 1.0, kHeight, 0.0, 1.0);
-    TestViewportCall(false, 0.0, 0.0, nextafter(float{kWidth}, 1000.0f), kHeight, 0.0, 1.0);
+    TestViewportCall(true, 0.0, 0.0, kWidth + 1.0, kHeight, 0.0, 1.0);
+    TestViewportCall(true, 0.0, 0.0, nextafter(float{kWidth}, INFINITY), kHeight, 0.0, 1.0);
 
     // Height is larger than the rendertarget's height
-    TestViewportCall(false, 0.0, 0.0, kWidth, kHeight + 1.0, 0.0, 1.0);
-    TestViewportCall(false, 0.0, 0.0, kWidth, nextafter(float{kHeight}, 1000.0f), 0.0, 1.0);
+    TestViewportCall(true, 0.0, 0.0, kWidth, kHeight + 1.0, 0.0, 1.0);
+    TestViewportCall(true, 0.0, 0.0, kWidth, nextafter(float{kHeight}, INFINITY), 0.0, 1.0);
 
-    // x + width is larger than the rendertarget's width
-    TestViewportCall(false, 2.0, 0.0, kWidth - 1.0, kHeight, 0.0, 1.0);
-    TestViewportCall(false, 1.0, 0.0, nextafter(float{kWidth - 1.0}, 1000.0f), kHeight, 0.0, 1.0);
+    // Width and Height are the max viewport size
+    TestViewportCall(true, 0.0, 0.0, kMaxViewportSize, kHeight, 0.0, 1.0);
+    TestViewportCall(true, 0.0, 0.0, kWidth, kMaxViewportSize, 0.0, 1.0);
+    TestViewportCall(true, 0.0, 0.0, kMaxViewportSize, kMaxViewportSize, 0.0, 1.0);
 
-    // Height is larger than the rendertarget's height
-    TestViewportCall(false, 0.0, 2.0, kWidth, kHeight - 1.0, 0.0, 1.0);
-    TestViewportCall(false, 0.0, 1.0, kWidth, nextafter(float{kHeight - 1.0}, 1000.0f), 0.0, 1.0);
+    // Width is larger than the max viewport size
+    TestViewportCall(false, 0.0, 0.0, kMaxViewportSize + 1.0, kMaxViewportSize, 0.0, 1.0);
+    TestViewportCall(false, 0.0, 0.0, nextafter(float{kMaxViewportSize}, INFINITY),
+                     kMaxViewportSize, 0.0, 1.0);
+
+    // Height is larger than the max viewport size
+    TestViewportCall(false, 0.0, 0.0, kMaxViewportSize, kMaxViewportSize + 1.0, 0.0, 1.0);
+    TestViewportCall(false, 0.0, 0.0, kMaxViewportSize,
+                     nextafter(float{kMaxViewportSize}, INFINITY), 0.0, 1.0);
+
+    // x + width is larger than the max viewport bounds
+    TestViewportCall(false, kMaxViewportSize + nextafter(float{kMaxViewportSize}, INFINITY), 0.0,
+                     kMaxViewportSize - 1.0, kMaxViewportSize, 0.0, 1.0);
+    TestViewportCall(false, kMaxViewportSize + 1.0, 0.0,
+                     nextafter(float{kMaxViewportSize - 1.0}, INFINITY), kMaxViewportSize, 0.0,
+                     1.0);
+
+    // y + height is larger than the max viewport bounds
+    TestViewportCall(false, 0.0, kMaxViewportSize + nextafter(float{kMaxViewportSize}, INFINITY),
+                     kMaxViewportSize, kMaxViewportSize - 1.0, 0.0, 1.0);
+    TestViewportCall(false, 0.0, kMaxViewportSize + 1.0, kMaxViewportSize,
+                     nextafter(float{kMaxViewportSize - 1.0}, INFINITY), 0.0, 1.0);
 }
 
-// Test to check that negative x in viewport is disallowed
+// Test to check that negative x in viewport is allowed within the bounds
 TEST_F(SetViewportTest, NegativeXYWidthHeight) {
     // Control case: everything set to 0 is allowed.
     TestViewportCall(true, +0.0, +0.0, +0.0, +0.0, 0.0, 1.0);
     TestViewportCall(true, -0.0, -0.0, -0.0, -0.0, 0.0, 1.0);
 
-    // Nonzero negative values are disallowed
-    TestViewportCall(false, -1.0, 0.0, 1.0, 1.0, 0.0, 1.0);
-    TestViewportCall(false, 0.0, -1.0, 1.0, 1.0, 0.0, 1.0);
+    // Negative offsets are allowed up to the minimum viewport bounds
+    TestViewportCall(true, -1.0, 0.0, 1.0, 1.0, 0.0, 1.0);
+    TestViewportCall(true, 0.0, -1.0, 1.0, 1.0, 0.0, 1.0);
+
+    TestViewportCall(true, -kMaxViewportBounds, 0.0, 1.0, 1.0, 0.0, 1.0);
+    TestViewportCall(true, 0.0, -kMaxViewportBounds, 1.0, 1.0, 0.0, 1.0);
+
+    TestViewportCall(false, -kMaxViewportBounds - 1.0, 0.0, 1.0, 1.0, 0.0, 1.0);
+    TestViewportCall(false, 0.0, -kMaxViewportBounds - 1.0, 1.0, 1.0, 0.0, 1.0);
+
+    // Negative width and height is disallowed.
     TestViewportCall(false, 0.0, 0.0, -1.0, 1.0, 0.0, 1.0);
     TestViewportCall(false, 0.0, 0.0, 1.0, -1.0, 0.0, 1.0);
 }
@@ -130,7 +171,7 @@ TEST_F(SetViewportTest, MinDepthOutOfRange) {
 
     // MinDepth is 2 or 1 + epsilon
     TestViewportCall(false, 0.0, 0.0, 1.0, 1.0, 2.0, 1.0);
-    TestViewportCall(false, 0.0, 0.0, 1.0, 1.0, nextafter(1.0f, 1000.0f), 1.0);
+    TestViewportCall(false, 0.0, 0.0, 1.0, 1.0, nextafter(1.0f, INFINITY), 1.0);
 }
 
 // Test to check that minDepth out of range [0, 1] is disallowed
@@ -140,7 +181,7 @@ TEST_F(SetViewportTest, MaxDepthOutOfRange) {
 
     // MaxDepth is 2 or 1 + epsilon
     TestViewportCall(false, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0);
-    TestViewportCall(false, 0.0, 0.0, 1.0, 1.0, 1.0, nextafter(1.0f, 1000.0f));
+    TestViewportCall(false, 0.0, 0.0, 1.0, 1.0, 1.0, nextafter(1.0f, INFINITY));
 }
 
 // Test to check that minDepth equal or greater than maxDepth is disallowed
@@ -215,34 +256,49 @@ TEST_F(SetScissorTest, ScissorLargerThanFramebuffer) {
     TestScissorCall(false, 0, std::numeric_limits<uint32_t>::max(), kWidth, kHeight);
 }
 
-class SetBlendConstantTest : public ValidationTest {};
+class SetBlendConstantTest : public ValidationTest {
+  protected:
+    void TestBlendConstantCall(bool success, const wgpu::Color color) {
+        PlaceholderRenderPass renderPass(device);
+
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        {
+            wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+            pass.SetBlendConstant(&color);
+            pass.End();
+        }
+
+        if (success) {
+            encoder.Finish();
+        } else {
+            ASSERT_DEVICE_ERROR(encoder.Finish());
+        }
+    }
+};
 
 // Test to check basic use of SetBlendConstantTest
 TEST_F(SetBlendConstantTest, Success) {
-    PlaceholderRenderPass renderPass(device);
+    constexpr wgpu::Color kTransparentBlack{0.0f, 0.0f, 0.0f, 0.0f};
+    constexpr wgpu::Color kAnyColorValue{-1.0f, 42.0f, -0.0f, 0.0f};
 
-    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
-    {
-        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
-        constexpr wgpu::Color kTransparentBlack{0.0f, 0.0f, 0.0f, 0.0f};
-        pass.SetBlendConstant(&kTransparentBlack);
-        pass.End();
-    }
-    encoder.Finish();
+    TestBlendConstantCall(true, kTransparentBlack);
+    TestBlendConstantCall(true, kAnyColorValue);
 }
 
-// Test that SetBlendConstant allows any value, large, small or negative
-TEST_F(SetBlendConstantTest, AnyValueAllowed) {
-    PlaceholderRenderPass renderPass(device);
+// Test that SetBlendConstant does not allow NaN.
+TEST_F(SetBlendConstantTest, NaN) {
+    TestBlendConstantCall(false, {NAN, 0.0f, 0.0f, 0.0f});
+    TestBlendConstantCall(false, {0.0f, NAN, 0.0f, 0.0f});
+    TestBlendConstantCall(false, {0.0f, 0.0f, NAN, 0.0f});
+    TestBlendConstantCall(false, {0.0f, 0.0f, 0.0f, NAN});
+}
 
-    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
-    {
-        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
-        constexpr wgpu::Color kAnyColorValue{-1.0f, 42.0f, -0.0f, 0.0f};
-        pass.SetBlendConstant(&kAnyColorValue);
-        pass.End();
-    }
-    encoder.Finish();
+// Test that SetBlendConstant does not allow Infinity.
+TEST_F(SetBlendConstantTest, Infinity) {
+    TestBlendConstantCall(false, {INFINITY, 0.0f, 0.0f, 0.0f});
+    TestBlendConstantCall(false, {0.0f, INFINITY, 0.0f, 0.0f});
+    TestBlendConstantCall(false, {0.0f, 0.0f, INFINITY, 0.0f});
+    TestBlendConstantCall(false, {0.0f, 0.0f, 0.0f, INFINITY});
 }
 
 class SetStencilReferenceTest : public ValidationTest {};

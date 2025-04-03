@@ -155,7 +155,7 @@ TEST_P(WirePopErrorScopeCallbackTests, DisconnectBeforeServerReply) {
     FlushClient();
     FlushFutures();
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::PopErrorScopeStatus::InstanceDropped,
+        EXPECT_CALL(mockCb, Call(wgpu::PopErrorScopeStatus::CallbackCancelled,
                                  wgpu::ErrorType::NoError, EmptySizedString()))
             .Times(1);
 
@@ -181,7 +181,7 @@ TEST_P(WirePopErrorScopeCallbackTests, DisconnectAfterServerReply) {
     FlushClient();
     FlushFutures();
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::PopErrorScopeStatus::InstanceDropped,
+        EXPECT_CALL(mockCb, Call(wgpu::PopErrorScopeStatus::CallbackCancelled,
                                  wgpu::ErrorType::Validation, EmptySizedString()))
             .Times(1);
 
@@ -194,7 +194,7 @@ TEST_P(WirePopErrorScopeCallbackTests, EmptyStack) {
     PopErrorScope();
 
     EXPECT_CALL(api, OnDevicePopErrorScope(apiDevice, _)).WillOnce(InvokeWithoutArgs([&] {
-        api.CallDevicePopErrorScopeCallback(apiDevice, WGPUPopErrorScopeStatus_Success,
+        api.CallDevicePopErrorScopeCallback(apiDevice, WGPUPopErrorScopeStatus_Error,
                                             WGPUErrorType_NoError,
                                             ToOutputStringView("No error scopes to pop"));
     }));
@@ -202,7 +202,7 @@ TEST_P(WirePopErrorScopeCallbackTests, EmptyStack) {
     FlushClient();
     FlushFutures();
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::PopErrorScopeStatus::Success, wgpu::ErrorType::NoError,
+        EXPECT_CALL(mockCb, Call(wgpu::PopErrorScopeStatus::Error, wgpu::ErrorType::NoError,
                                  SizedString("No error scopes to pop")))
             .Times(1);
 

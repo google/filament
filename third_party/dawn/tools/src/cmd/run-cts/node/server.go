@@ -126,6 +126,9 @@ func (c *cmd) runServer(
 		if c.flags.enforceDefaultLimits {
 			args = append(args, "--enforce-default-limits")
 		}
+		if c.flags.blockAllFeatures {
+			args = append(args, "--block-all-features")
+		}
 		if c.flags.debugCTS {
 			args = append(args, "--debug")
 		}

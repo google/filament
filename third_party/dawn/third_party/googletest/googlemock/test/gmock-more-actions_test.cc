@@ -33,10 +33,14 @@
 
 #include "gmock/gmock-more-actions.h"
 
+#include <algorithm>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <tuple>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest-spi.h"
@@ -55,6 +59,7 @@ using testing::Invoke;
 using testing::ReturnArg;
 using testing::ReturnPointee;
 using testing::SaveArg;
+using testing::SaveArgByMove;
 using testing::SaveArgPointee;
 using testing::SetArgReferee;
 using testing::Unused;
@@ -79,6 +84,16 @@ bool ReferencesGlobalDouble(const double& x) { return &x == &g_double; }
 
 struct UnaryFunctor {
   int operator()(bool x) { return x ? 1 : -1; }
+};
+
+struct UnaryMoveOnlyFunctor : UnaryFunctor {
+  UnaryMoveOnlyFunctor() = default;
+  UnaryMoveOnlyFunctor(const UnaryMoveOnlyFunctor&) = delete;
+  UnaryMoveOnlyFunctor(UnaryMoveOnlyFunctor&&) = default;
+};
+
+struct OneShotUnaryFunctor {
+  int operator()(bool x) && { return x ? 1 : -1; }
 };
 
 const char* Binary(const char* input, short n) { return input + n; }  // NOLINT
@@ -478,6 +493,34 @@ TEST(SaveArgActionTest, WorksForCompatibleType) {
   EXPECT_EQ('a', result);
 }
 
+struct MoveOnly {
+  explicit MoveOnly(int v) : i(v) {}
+  MoveOnly(MoveOnly&& o) {
+    i = o.i;
+    o.i = -1;
+  }
+  MoveOnly& operator=(MoveOnly&& o) {
+    i = o.i;
+    o.i = -1;
+    return *this;
+  }
+  int i;
+};
+
+TEST(SaveArgByMoveActionTest, WorksForSameType) {
+  MoveOnly result{0};
+  const Action<void(MoveOnly v)> a1 = SaveArgByMove<0>(&result);
+  a1.Perform(std::make_tuple(MoveOnly{5}));
+  EXPECT_EQ(5, result.i);
+}
+
+TEST(SaveArgByMoveActionTest, WorksForCompatibleType) {
+  MoveOnly result{0};
+  const Action<void(bool, MoveOnly)> a1 = SaveArgByMove<1>(&result);
+  a1.Perform(std::make_tuple(true, MoveOnly{7}));
+  EXPECT_EQ(7, result.i);
+}
+
 TEST(SaveArgPointeeActionTest, WorksForSameType) {
   int result = 0;
   const int value = 5;
@@ -673,7 +716,7 @@ TEST(SetArrayArgumentTest, SetsTheNthArrayWithIteratorArgument) {
   Action<MyFunction> a = SetArrayArgument<1>(letters.begin(), letters.end());
 
   std::string s;
-  a.Perform(std::make_tuple(true, back_inserter(s)));
+  a.Perform(std::make_tuple(true, std::back_inserter(s)));
   EXPECT_EQ(letters, s);
 }
 
@@ -694,10 +737,22 @@ TEST(InvokeArgumentTest, Function0) {
   EXPECT_EQ(1, a.Perform(std::make_tuple(2, &Nullary)));
 }
 
-// Tests using InvokeArgument with a unary function.
+// Tests using InvokeArgument with a unary functor.
 TEST(InvokeArgumentTest, Functor1) {
   Action<int(UnaryFunctor)> a = InvokeArgument<0>(true);  // NOLINT
   EXPECT_EQ(1, a.Perform(std::make_tuple(UnaryFunctor())));
+}
+
+// Tests using InvokeArgument with a unary move-only functor.
+TEST(InvokeArgumentTest, Functor1MoveOnly) {
+  Action<int(UnaryMoveOnlyFunctor)> a = InvokeArgument<0>(true);  // NOLINT
+  EXPECT_EQ(1, a.Perform(std::make_tuple(UnaryMoveOnlyFunctor())));
+}
+
+// Tests using InvokeArgument with a one-shot unary functor.
+TEST(InvokeArgumentTest, OneShotFunctor1) {
+  Action<int(OneShotUnaryFunctor)> a = InvokeArgument<0>(true);  // NOLINT
+  EXPECT_EQ(1, a.Perform(std::make_tuple(OneShotUnaryFunctor())));
 }
 
 // Tests using InvokeArgument with a 5-ary function.
@@ -730,34 +785,34 @@ TEST(InvokeArgumentTest, Functor6) {
 
 // Tests using InvokeArgument with a 7-ary function.
 TEST(InvokeArgumentTest, Function7) {
-  Action<std::string(std::string(*)(const char*, const char*, const char*,
-                                    const char*, const char*, const char*,
-                                    const char*))>
+  Action<std::string(std::string (*)(const char*, const char*, const char*,
+                                     const char*, const char*, const char*,
+                                     const char*))>
       a = InvokeArgument<0>("1", "2", "3", "4", "5", "6", "7");
   EXPECT_EQ("1234567", a.Perform(std::make_tuple(&Concat7)));
 }
 
 // Tests using InvokeArgument with a 8-ary function.
 TEST(InvokeArgumentTest, Function8) {
-  Action<std::string(std::string(*)(const char*, const char*, const char*,
-                                    const char*, const char*, const char*,
-                                    const char*, const char*))>
+  Action<std::string(std::string (*)(const char*, const char*, const char*,
+                                     const char*, const char*, const char*,
+                                     const char*, const char*))>
       a = InvokeArgument<0>("1", "2", "3", "4", "5", "6", "7", "8");
   EXPECT_EQ("12345678", a.Perform(std::make_tuple(&Concat8)));
 }
 
 // Tests using InvokeArgument with a 9-ary function.
 TEST(InvokeArgumentTest, Function9) {
-  Action<std::string(std::string(*)(const char*, const char*, const char*,
-                                    const char*, const char*, const char*,
-                                    const char*, const char*, const char*))>
+  Action<std::string(std::string (*)(const char*, const char*, const char*,
+                                     const char*, const char*, const char*,
+                                     const char*, const char*, const char*))>
       a = InvokeArgument<0>("1", "2", "3", "4", "5", "6", "7", "8", "9");
   EXPECT_EQ("123456789", a.Perform(std::make_tuple(&Concat9)));
 }
 
 // Tests using InvokeArgument with a 10-ary function.
 TEST(InvokeArgumentTest, Function10) {
-  Action<std::string(std::string(*)(
+  Action<std::string(std::string (*)(
       const char*, const char*, const char*, const char*, const char*,
       const char*, const char*, const char*, const char*, const char*))>
       a = InvokeArgument<0>("1", "2", "3", "4", "5", "6", "7", "8", "9", "0");
@@ -800,6 +855,22 @@ TEST(InvokeArgumentTest, ByExplicitConstReferenceFunction) {
   double x = 0;
   a = InvokeArgument<0>(ByRef(x));  // This calls ByRef() on a non-const.
   EXPECT_FALSE(a.Perform(std::make_tuple(&ReferencesGlobalDouble)));
+}
+
+TEST(InvokeArgumentTest, MoveOnlyType) {
+  struct Marker {};
+  struct {
+    // Method takes a unique_ptr (to a type we don't care about), and an
+    // invocable type.
+    MOCK_METHOD(bool, MockMethod,
+                (std::unique_ptr<Marker>, std::function<int()>), ());
+  } mock;
+
+  ON_CALL(mock, MockMethod(_, _)).WillByDefault(InvokeArgument<1>());
+
+  // This compiles, but is a little opaque as a workaround:
+  ON_CALL(mock, MockMethod(_, _))
+      .WillByDefault(WithArg<1>(InvokeArgument<0>()));
 }
 
 // Tests DoAll(a1, a2).

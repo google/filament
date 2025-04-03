@@ -46,6 +46,7 @@
 #include "propagateNoContraction.h"
 
 #include <cfloat>
+#include <limits>
 #include <utility>
 #include <tuple>
 

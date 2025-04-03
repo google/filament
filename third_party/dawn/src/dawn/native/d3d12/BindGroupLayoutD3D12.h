@@ -57,7 +57,9 @@ class BindGroupLayout final : public BindGroupLayoutInternalBase {
 
     ResultOrError<Ref<BindGroup>> AllocateBindGroup(Device* device,
                                                     const BindGroupDescriptor* descriptor);
-    void DeallocateBindGroup(BindGroup* bindGroup, CPUDescriptorHeapAllocation* viewAllocation);
+    void DeallocateBindGroup(BindGroup* bindGroup);
+    void DeallocateDescriptor(CPUDescriptorHeapAllocation* viewAllocation);
+    void ReduceMemoryUsage() override;
 
     // The offset (in descriptor count) into the corresponding descriptor heap. Not valid for
     // dynamic binding indexes.
@@ -70,6 +72,8 @@ class BindGroupLayout final : public BindGroupLayoutInternalBase {
     // Counts of descriptors in the descriptor tables.
     uint32_t GetCbvUavSrvDescriptorCount() const;
     uint32_t GetSamplerDescriptorCount() const;
+
+    uint32_t GetViewSizeIncrement() const;
 
     const std::vector<D3D12_DESCRIPTOR_RANGE1>& GetCbvUavSrvDescriptorRanges() const;
     const std::vector<D3D12_DESCRIPTOR_RANGE1>& GetSamplerDescriptorRanges() const;
@@ -92,6 +96,7 @@ class BindGroupLayout final : public BindGroupLayoutInternalBase {
 
     uint32_t mCbvUavSrvDescriptorCount;
     uint32_t mSamplerDescriptorCount;
+    uint32_t mViewSizeIncrement;
 
     std::vector<D3D12_DESCRIPTOR_RANGE1> mCbvUavSrvDescriptorRanges;
     std::vector<D3D12_DESCRIPTOR_RANGE1> mSamplerDescriptorRanges;

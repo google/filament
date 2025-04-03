@@ -121,7 +121,22 @@ class Array : public Castable<Array, Type> {
     /// @returns a clone of this type
     Array* Clone(CloneContext& ctx) const override;
 
-  private:
+  protected:
+    /// Constructor for subclasses
+    /// @param hash the immutable hash for the node
+    /// @param element the array element type
+    /// @param count the number of elements in the array.
+    /// @param align the byte alignment of the array
+    /// @param size the byte size of the array.
+    /// @param stride the number of bytes from the start of one element of the array to the start of
+    /// the next element
+    Array(size_t hash,
+          Type const* element,
+          const ArrayCount* count,
+          uint32_t align,
+          uint32_t size,
+          uint32_t stride);
+
     Type const* const element_;
     const ArrayCount* count_;
     const uint32_t align_;

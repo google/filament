@@ -862,7 +862,7 @@ __modf_result_f32 = struct @align(4) {
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:ptr<function, tint_symbol_2, read_write> = var
+    %2:ptr<function, tint_symbol_2, read_write> = var undef
     %3:__modf_result_f32 = modf 50.0f
     %4:f32 = access %3, 0u
     %5:f32 = access %3, 1u
@@ -957,7 +957,7 @@ __frexp_result_f32 = struct @align(4) {
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:ptr<function, tint_symbol_2, read_write> = var
+    %2:ptr<function, tint_symbol_2, read_write> = var undef
     %3:__frexp_result_f32 = frexp 50.0f
     %4:f32 = access %3, 0u
     %5:i32 = access %3, 1u

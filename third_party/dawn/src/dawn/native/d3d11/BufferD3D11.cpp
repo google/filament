@@ -41,6 +41,7 @@
 #include "dawn/native/DynamicUploader.h"
 #include "dawn/native/d3d/D3DError.h"
 #include "dawn/native/d3d11/DeviceD3D11.h"
+#include "dawn/native/d3d11/PhysicalDeviceD3D11.h"
 #include "dawn/native/d3d11/QueueD3D11.h"
 #include "dawn/native/d3d11/UtilsD3D11.h"
 #include "dawn/platform/DawnPlatform.h"
@@ -51,6 +52,9 @@ namespace dawn::native::d3d11 {
 class ScopedCommandRecordingContext;
 
 namespace {
+
+// Max size for a CPU buffer.
+constexpr uint64_t kMaxCPUUploadBufferSize = 64 * 1024;
 
 constexpr wgpu::BufferUsage kCopyUsages =
     wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst | kInternalCopySrcBuffer;
@@ -136,14 +140,21 @@ size_t D3D11BufferSizeAlignment(wgpu::BufferUsage usage) {
         return sizeof(float) * 4 * 16;
     }
 
-    if (usage &
-        (wgpu::BufferUsage::Storage | kInternalStorageBuffer | wgpu::BufferUsage::CopyDst)) {
+    if (usage & (wgpu::BufferUsage::Storage | kInternalStorageBuffer | kReadOnlyStorageBuffer |
+                 wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::CopySrc)) {
         // Unordered access buffers must be 4-byte aligned.
         // We also align 4 bytes for CopyDst buffer since it would be used in T2B compute shader.
         // And that shader needs to write 4-byte chunks.
+        // Similarly, we need to align 4 bytes for CopySrc buffer since it would be used in B2T
+        // shader that reads 4 byte chunks.
         return sizeof(uint32_t);
     }
     return 1;
+}
+
+bool CanUseCPUUploadBuffer(const Device* device, wgpu::BufferUsage usage, size_t bufferSize) {
+    return IsUpload(usage) && bufferSize <= kMaxCPUUploadBufferSize &&
+           !device->IsToggleEnabled(Toggle::D3D11DisableCPUUploadBuffers);
 }
 
 constexpr size_t kConstantBufferUpdateAlignment = 16;
@@ -347,22 +358,57 @@ class StagingBuffer final : public Buffer {
     ComPtr<ID3D11Buffer> mD3d11Buffer;
 };
 
+bool CanAddStorageUsageToBufferWithoutSideEffects(const Device* device,
+                                                  wgpu::BufferUsage storageUsage,
+                                                  wgpu::BufferUsage originalUsage,
+                                                  size_t bufferSize) {
+    // Don't support uniform buffers being used as storage buffer. Because D3D11 constant buffers
+    // cannot be bound to SRV or UAV. Allowing them to be used as storage buffer would require some
+    // workarounds including extra copies so it's better we prefer to not do that.
+    if (originalUsage & wgpu::BufferUsage::Uniform) {
+        return false;
+    }
+
+    // If buffer is small, we prefer CPU buffer for uploading so don't allow adding storage usage.
+    if (CanUseCPUUploadBuffer(device, originalUsage, bufferSize)) {
+        return false;
+    }
+
+    const bool requiresUAV = storageUsage & (wgpu::BufferUsage::Storage | kInternalStorageBuffer);
+    // Check supports for writeable storage usage:
+    if (requiresUAV) {
+        // D3D11 mappable buffers cannot be used as UAV natively. So avoid that.
+        return !(originalUsage & kMappableBufferUsages);
+    }
+
+    // Read-only storage buffer cannot be mapped for read natively. Avoid that.
+    DAWN_ASSERT(storageUsage == kReadOnlyStorageBuffer);
+    return !(originalUsage & wgpu::BufferUsage::MapRead);
+}
+
 // static
 ResultOrError<Ref<Buffer>> Buffer::Create(Device* device,
                                           const UnpackedPtr<BufferDescriptor>& descriptor,
                                           const ScopedCommandRecordingContext* commandContext,
                                           bool allowUploadBufferEmulation) {
+    const auto actualUsage =
+        ComputeInternalBufferUsages(device, descriptor->usage, descriptor->size);
     bool useUploadBuffer = allowUploadBufferEmulation;
-    useUploadBuffer &= IsUpload(descriptor->usage);
-    constexpr uint64_t kMaxUploadBufferSize = 4 * 1024 * 1024;
-    useUploadBuffer &= descriptor->size <= kMaxUploadBufferSize;
+    useUploadBuffer &= CanUseCPUUploadBuffer(device, actualUsage, descriptor->size);
     Ref<Buffer> buffer;
     if (useUploadBuffer) {
         buffer = AcquireRef(new UploadBuffer(device, descriptor));
-    } else if (IsStaging(descriptor->usage)) {
+    } else if (IsStaging(actualUsage)) {
         buffer = AcquireRef(new StagingBuffer(device, descriptor));
     } else {
-        buffer = AcquireRef(new GPUUsableBuffer(device, descriptor));
+        const auto& devInfo = ToBackend(device->GetPhysicalDevice())->GetDeviceInfo();
+        // Use D3D11_MAP_WRITE_NO_OVERWRITE when possible to guarantee driver that we don't
+        // overwrite data in use by GPU. MapAsync() already ensures that any GPU commands using this
+        // buffer already finish. In return driver won't try to stall CPU for mapping access.
+        D3D11_MAP mapWriteMode = devInfo.supportsMapNoOverwriteDynamicBuffers
+                                     ? D3D11_MAP_WRITE_NO_OVERWRITE
+                                     : D3D11_MAP_WRITE;
+        buffer = AcquireRef(new GPUUsableBuffer(device, descriptor, mapWriteMode));
     }
     DAWN_TRY(buffer->Initialize(descriptor->mappedAtCreation, commandContext));
     return buffer;
@@ -775,10 +821,12 @@ class GPUUsableBuffer::Storage : public RefCounted, NonCopyable {
 
 // GPUUsableBuffer
 GPUUsableBuffer::GPUUsableBuffer(DeviceBase* device,
-                                 const UnpackedPtr<BufferDescriptor>& descriptor)
+                                 const UnpackedPtr<BufferDescriptor>& descriptor,
+                                 D3D11_MAP mapWriteMode)
     : Buffer(device,
              descriptor,
-             /*internalMappableFlags=*/descriptor->usage & kMappableBufferUsages) {}
+             /*internalMappableFlags=*/descriptor->usage & kMappableBufferUsages),
+      mD3DMapWriteMode(mapWriteMode) {}
 
 GPUUsableBuffer::~GPUUsableBuffer() = default;
 
@@ -1071,10 +1119,7 @@ MaybeError GPUUsableBuffer::MapInternal(const ScopedCommandRecordingContext* com
     Storage* storage;
     if (mode == wgpu::MapMode::Write) {
         DAWN_ASSERT(!mCPUWritableStorage->IsStaging());
-        // Use D3D11_MAP_WRITE_NO_OVERWRITE to guarantee driver that we don't overwrite data in
-        // use by GPU. MapAsync() already ensures that any GPU commands using this buffer
-        // already finish. In return driver won't try to stall CPU for mapping access.
-        mapType = D3D11_MAP_WRITE_NO_OVERWRITE;
+        mapType = mD3DMapWriteMode;
         storage = mCPUWritableStorage;
     } else {
         // Always map buffer with D3D11_MAP_READ_WRITE if possible even for mapping
@@ -1193,9 +1238,10 @@ ID3D11Buffer* GPUUsableBuffer::GetD3D11NonConstantBufferForTesting() {
 ResultOrError<ComPtr<ID3D11ShaderResourceView>>
 GPUUsableBuffer::CreateD3D11ShaderResourceViewFromD3DBuffer(ID3D11Buffer* d3d11Buffer,
                                                             uint64_t offset,
-                                                            uint64_t size) {
+                                                            uint64_t originalSize) {
+    uint64_t size = Align(originalSize, 4);
     DAWN_ASSERT(IsAligned(offset, 4u));
-    DAWN_ASSERT(IsAligned(size, 4u));
+    DAWN_ASSERT(size <= GetAllocatedSize());
     UINT firstElement = static_cast<UINT>(offset / 4);
     UINT numElements = static_cast<UINT>(size / 4);
 
@@ -1217,9 +1263,10 @@ GPUUsableBuffer::CreateD3D11ShaderResourceViewFromD3DBuffer(ID3D11Buffer* d3d11B
 ResultOrError<ComPtr<ID3D11UnorderedAccessView1>>
 GPUUsableBuffer::CreateD3D11UnorderedAccessViewFromD3DBuffer(ID3D11Buffer* d3d11Buffer,
                                                              uint64_t offset,
-                                                             uint64_t size) {
+                                                             uint64_t originalSize) {
+    uint64_t size = Align(originalSize, 4);
     DAWN_ASSERT(IsAligned(offset, 4u));
-    DAWN_ASSERT(IsAligned(size, 4u));
+    DAWN_ASSERT(size <= GetAllocatedSize());
 
     UINT firstElement = static_cast<UINT>(offset / 4);
     UINT numElements = static_cast<UINT>(size / 4);
@@ -1233,7 +1280,7 @@ GPUUsableBuffer::CreateD3D11UnorderedAccessViewFromD3DBuffer(ID3D11Buffer* d3d11
 
     ComPtr<ID3D11UnorderedAccessView1> uav;
     DAWN_TRY(CheckHRESULT(ToBackend(GetDevice())
-                              ->GetD3D11Device5()
+                              ->GetD3D11Device3()
                               ->CreateUnorderedAccessView1(d3d11Buffer, &desc, &uav),
                           "UnorderedAccessView creation"));
 
@@ -1515,14 +1562,14 @@ MaybeError GPUUsableBuffer::PredicatedClear(
     absl::InlinedVector<uint8_t, sizeof(uint64_t)> clearData(size, clearValue);
 
     // The update will *NOT* be performed if the predicate's data is false.
-    commandContext->GetD3D11DeviceContext4()->SetPredication(predicate, false);
+    commandContext->GetD3D11DeviceContext3()->SetPredication(predicate, false);
     commandContext->UpdateSubresource1(gpuWritableStorage->GetD3D11Buffer(),
                                        /*DstSubresource=*/0,
                                        /*pDstBox=*/&box, clearData.data(),
                                        /*SrcRowPitch=*/0,
                                        /*SrcDepthPitch=*/0,
                                        /*CopyFlags=*/0);
-    commandContext->GetD3D11DeviceContext4()->SetPredication(nullptr, false);
+    commandContext->GetD3D11DeviceContext3()->SetPredication(nullptr, false);
 
     IncrStorageRevAndMakeLatest(commandContext, gpuWritableStorage);
 

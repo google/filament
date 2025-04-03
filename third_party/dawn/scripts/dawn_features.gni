@@ -58,6 +58,9 @@ declare_args() {
   # DXC requires SM6.0+ which is blocklisted on x86.
   # See crbug.com/tint/1753.
   dawn_use_built_dxc = is_win && target_cpu != "x86"
+
+  # Whether to build Dawn's NodeJS bindings
+  dawn_build_node_bindings = false
 }
 
 declare_args() {

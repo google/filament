@@ -45,6 +45,10 @@ if (tint_build_unittests || tint_build_benchmarks) {
 
 libtint_source_set("type") {
   sources = [
+    "explicit_layout_array.cc",
+    "explicit_layout_array.h",
+    "image.cc",
+    "image.h",
     "sampled_image.cc",
     "sampled_image.h",
   ]
@@ -56,12 +60,10 @@ libtint_source_set("type") {
     "${tint_src_dir}/lang/core/type",
     "${tint_src_dir}/utils",
     "${tint_src_dir}/utils/containers",
-    "${tint_src_dir}/utils/diagnostic",
     "${tint_src_dir}/utils/ice",
     "${tint_src_dir}/utils/macros",
     "${tint_src_dir}/utils/math",
     "${tint_src_dir}/utils/memory",
-    "${tint_src_dir}/utils/result",
     "${tint_src_dir}/utils/rtti",
     "${tint_src_dir}/utils/symbol",
     "${tint_src_dir}/utils/text",
@@ -69,23 +71,37 @@ libtint_source_set("type") {
 }
 if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {
-    sources = [ "sampled_image_test.cc" ]
+    sources = [
+      "explicit_layout_array_test.cc",
+      "image_test.cc",
+      "sampled_image_test.cc",
+    ]
     deps = [
       "${dawn_root}/src/utils:utils",
       "${tint_src_dir}:gmock_and_gtest",
+      "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
       "${tint_src_dir}/lang/core/ir",
       "${tint_src_dir}/lang/core/type",
+      "${tint_src_dir}/lang/core/type:unittests",
       "${tint_src_dir}/lang/spirv/type",
+      "${tint_src_dir}/lang/wgsl",
+      "${tint_src_dir}/lang/wgsl/ast",
+      "${tint_src_dir}/lang/wgsl/common",
+      "${tint_src_dir}/lang/wgsl/features",
+      "${tint_src_dir}/lang/wgsl/program",
+      "${tint_src_dir}/lang/wgsl/resolver",
+      "${tint_src_dir}/lang/wgsl/sem",
+      "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/diagnostic",
       "${tint_src_dir}/utils/ice",
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
-      "${tint_src_dir}/utils/result",
       "${tint_src_dir}/utils/rtti",
+      "${tint_src_dir}/utils/symbol",
       "${tint_src_dir}/utils/text",
     ]
   }

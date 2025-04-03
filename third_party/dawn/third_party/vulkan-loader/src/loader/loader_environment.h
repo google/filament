@@ -37,7 +37,7 @@ void loader_free_getenv(char *val, const struct loader_instance *inst);
 
 #if defined(WIN32) || COMMON_UNIX_PLATFORMS
 
-bool is_high_integrity();
+bool is_high_integrity(void);
 
 char *loader_secure_getenv(const char *name, const struct loader_instance *inst);
 

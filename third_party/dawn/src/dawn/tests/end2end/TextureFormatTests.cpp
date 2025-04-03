@@ -902,7 +902,7 @@ TEST_P(TextureFormatTest, RGB10A2Unorm) {
 
 // Test the RG11B10Ufloat format
 TEST_P(TextureFormatTest, RG11B10Ufloat) {
-    // TODO(crbug.com/388318201): sampling test also requires format to be color-renderable
+    // sampling test also requires format to be color-renderable
     DAWN_SUPPRESS_TEST_IF(!IsRG11B10UfloatRenderableSupported());
     // TODO(crbug.com/388318201): expected: 0xf87e0000, actual: 0xfffff800
     DAWN_SUPPRESS_TEST_IF(IsD3D11());

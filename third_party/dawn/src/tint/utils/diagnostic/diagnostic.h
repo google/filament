@@ -35,6 +35,7 @@
 
 #include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/diagnostic/source.h"
+#include "src/tint/utils/result.h"
 #include "src/tint/utils/rtti/traits.h"
 #include "src/tint/utils/text/styled_text.h"
 
@@ -219,6 +220,39 @@ class List {
     Vector<Diagnostic, 0> entries_;
     size_t error_count_ = 0;
 };
+
+/// The default Result error type.
+struct Failure {
+    /// Constructor with no diagnostics
+    Failure();
+
+    /// Constructor with a single diagnostic
+    /// @param err the single error diagnostic
+    explicit Failure(std::string_view err);
+
+    /// Constructor with a single diagnostic
+    /// @param diagnostic the failure diagnostic
+    explicit Failure(diag::Diagnostic diagnostic);
+
+    /// Constructor with a list of diagnostics
+    /// @param diagnostics the failure diagnostics
+    explicit Failure(diag::List diagnostics);
+
+    /// The diagnostics explaining the failure reason
+    diag::List reason;
+};
+
+template <typename SUCCESS_TYPE>
+using Result = ::tint::Result<SUCCESS_TYPE, diag::Failure>;
+
+/// Write the Failure to the given stream
+/// @param out the output stream
+/// @param failure the Failure
+/// @returns the output stream
+template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+auto& operator<<(STREAM& out, const Failure& failure) {
+    return out << failure.reason.Str();
+}
 
 /// Write the diagnostic list to the given stream
 /// @param out the output stream

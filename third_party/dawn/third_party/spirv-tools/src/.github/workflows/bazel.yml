@@ -24,14 +24,14 @@ jobs:
       - name: Download dependencies
         run: python3 utils/git-sync-deps
       - name: Mount Bazel cache
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ~/.bazel/cache
           key: bazel-cache-${{ runner.os }}
       - name: Build All
         run: bazel --output_user_root=~/.bazel/cache build //...
       - name: Test All
-        run: bazel --output_user_root=~/.bazel/cache test //...
+        run: bazel --output_user_root=~/.bazel/cache test --test_output=errors //...
 
   # iOS is 10x expensive to run on GitHub machines, so only run if we know something else passed
   # The steps are unfortunately duplicated because github actions requires 2 jobs for a dependency
@@ -47,11 +47,11 @@ jobs:
       - name: Download dependencies
         run: python3 utils/git-sync-deps
       - name: Mount Bazel cache
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ~/.bazel/cache
           key: bazel-cache-${{ runner.os }}
       - name: Build All
         run: bazel --output_user_root=~/.bazel/cache build //...
       - name: Test All
-        run: bazel --output_user_root=~/.bazel/cache test //...
+        run: bazel --output_user_root=~/.bazel/cache test --test_output=errors //...

@@ -61,7 +61,7 @@ class MonitoredQueue final : public Queue {
     ~MonitoredQueue() override = default;
 };
 
-class UnmonitoredQueue final : public Queue {
+class SystemEventQueue final : public Queue {
   public:
     using Queue::Queue;
     MaybeError Initialize();
@@ -71,7 +71,7 @@ class UnmonitoredQueue final : public Queue {
     void SetEventOnCompletion(ExecutionSerial serial, HANDLE event) override;
 
   private:
-    ~UnmonitoredQueue() override = default;
+    ~SystemEventQueue() override = default;
 
     struct SerialEventReceiverPair {
         ExecutionSerial serial;
@@ -83,11 +83,12 @@ class UnmonitoredQueue final : public Queue {
 
 ResultOrError<Ref<Queue>> Queue::Create(Device* device, const QueueDescriptor* descriptor) {
     const auto& deviceInfo = ToBackend(device->GetPhysicalDevice())->GetDeviceInfo();
-    if (device->IsToggleEnabled(Toggle::D3D11UseUnmonitoredFence)) {
-        Ref<UnmonitoredQueue> unmonitoredQueue =
-            AcquireRef(new UnmonitoredQueue(device, descriptor));
-        DAWN_TRY(unmonitoredQueue->Initialize());
-        return unmonitoredQueue;
+    if (device->IsToggleEnabled(Toggle::D3D11UseUnmonitoredFence) ||
+        device->IsToggleEnabled(Toggle::D3D11DisableFence)) {
+        Ref<SystemEventQueue> systemEventQueue =
+            AcquireRef(new SystemEventQueue(device, descriptor));
+        DAWN_TRY(systemEventQueue->Initialize());
+        return systemEventQueue;
     } else if (deviceInfo.supportsMonitoredFence) {
         Ref<MonitoredQueue> monitoredQueue = AcquireRef(new MonitoredQueue(device, descriptor));
         DAWN_TRY(monitoredQueue->Initialize());
@@ -99,7 +100,16 @@ ResultOrError<Ref<Queue>> Queue::Create(Device* device, const QueueDescriptor* d
 }
 
 MaybeError Queue::Initialize(bool isMonitored) {
+    if (!GetDevice()->IsToggleEnabled(Toggle::D3D11DisableFence)) {
+        DAWN_TRY(InitializeD3DFence(isMonitored));
+    }
+
+    return {};
+}
+
+MaybeError Queue::InitializeD3DFence(bool isMonitored) {
     const auto& deviceInfo = ToBackend(GetDevice()->GetPhysicalDevice())->GetDeviceInfo();
+
     // Create the fence.
     D3D11_FENCE_FLAG flags = D3D11_FENCE_FLAG_SHARED;
     if (!isMonitored) {
@@ -162,6 +172,10 @@ void Queue::DestroyImpl() {
 
 ResultOrError<Ref<d3d::SharedFence>> Queue::GetOrCreateSharedFence() {
     if (mSharedFence == nullptr) {
+        if (!mFence) {
+            DAWN_ASSERT(GetDevice()->IsToggleEnabled(Toggle::D3D11DisableFence));
+            return Ref<d3d::SharedFence>{};
+        }
         DAWN_ASSERT(!IsAlive());
         return SharedFence::Create(ToBackend(GetDevice()), "Internal shared DXGI fence", mFence);
     }
@@ -279,6 +293,10 @@ bool Queue::HasPendingCommands() const {
 void Queue::ForceEventualFlushOfCommands() {}
 
 MaybeError Queue::WaitForIdleForDestruction() {
+    if (!mPendingCommands->IsValid()) {
+        return {};
+    }
+
     DAWN_TRY(NextSerial());
     // Wait for all in-flight commands to finish executing
     DAWN_TRY_ASSIGN(std::ignore, WaitForQueueSerial(GetLastSubmittedCommandSerial(),
@@ -286,7 +304,7 @@ MaybeError Queue::WaitForIdleForDestruction() {
     return CheckPassedSerials();
 }
 
-// MonitoredQueuer:
+// MonitoredQueue:
 MaybeError MonitoredQueue::Initialize() {
     return Queue::Initialize(/*isMonitored=*/true);
 }
@@ -296,12 +314,16 @@ MaybeError MonitoredQueue::NextSerial() {
 
     DAWN_TRY(commandContext.FlushBuffersForSyncingWithCPU());
 
+    const uint64_t submitSerial = uint64_t(GetPendingCommandSerial());
+
+    {
+        TRACE_EVENT1(GetDevice()->GetPlatform(), General, "D3D11Device::SignalFence", "serial",
+                     submitSerial);
+        DAWN_TRY(CheckHRESULT(commandContext.Signal(mFence.Get(), submitSerial),
+                              "D3D11 command queue signal fence"));
+    }
+
     IncrementLastSubmittedCommandSerial();
-    TRACE_EVENT1(GetDevice()->GetPlatform(), General, "D3D11Device::SignalFence", "serial",
-                 uint64_t(GetLastSubmittedCommandSerial()));
-    DAWN_TRY(
-        CheckHRESULT(commandContext.Signal(mFence.Get(), uint64_t(GetLastSubmittedCommandSerial())),
-                     "D3D11 command queue signal fence"));
 
     return {};
 }
@@ -333,34 +355,37 @@ void MonitoredQueue::SetEventOnCompletion(ExecutionSerial serial, HANDLE event) 
     mFence->SetEventOnCompletion(static_cast<uint64_t>(serial), event);
 }
 
-// UnmonitoredQueuer:
-MaybeError UnmonitoredQueue::Initialize() {
+// SystemEventQueue:
+MaybeError SystemEventQueue::Initialize() {
     return Queue::Initialize(/*isMonitored=*/false);
 }
 
-MaybeError UnmonitoredQueue::NextSerial() {
+MaybeError SystemEventQueue::NextSerial() {
     auto commandContext = GetScopedPendingCommandContext(SubmitMode::Passive);
 
     DAWN_TRY(commandContext.FlushBuffersForSyncingWithCPU());
 
-    IncrementLastSubmittedCommandSerial();
-    ExecutionSerial lastSubmittedSerial = GetLastSubmittedCommandSerial();
+    const ExecutionSerial submitSerial = GetPendingCommandSerial();
     if (commandContext->AcquireNeedsFence()) {
+        DAWN_ASSERT(mFence);
+
         TRACE_EVENT1(GetDevice()->GetPlatform(), General, "D3D11Device::SignalFence", "serial",
-                     uint64_t(lastSubmittedSerial));
-        DAWN_TRY(CheckHRESULT(commandContext.Signal(mFence.Get(), uint64_t(lastSubmittedSerial)),
+                     uint64_t(submitSerial));
+        DAWN_TRY(CheckHRESULT(commandContext.Signal(mFence.Get(), uint64_t(submitSerial)),
                               "D3D11 command queue signal fence"));
     }
 
     SystemEventReceiver receiver;
     DAWN_TRY_ASSIGN(receiver, GetSystemEventReceiver());
     commandContext.Flush1(D3D11_CONTEXT_TYPE_ALL, receiver.GetPrimitive().Get());
-    mPendingEvents->push_back({lastSubmittedSerial, std::move(receiver)});
+    mPendingEvents->push_back({submitSerial, std::move(receiver)});
+
+    IncrementLastSubmittedCommandSerial();
 
     return {};
 }
 
-ResultOrError<ExecutionSerial> UnmonitoredQueue::CheckAndUpdateCompletedSerials() {
+ResultOrError<ExecutionSerial> SystemEventQueue::CheckAndUpdateCompletedSerials() {
     ExecutionSerial completedSerial;
     std::vector<SystemEventReceiver> returnedReceivers;
     DAWN_TRY_ASSIGN(
@@ -416,7 +441,7 @@ ResultOrError<ExecutionSerial> UnmonitoredQueue::CheckAndUpdateCompletedSerials(
     return completedSerial;
 }
 
-ResultOrError<bool> UnmonitoredQueue::WaitForQueueSerial(ExecutionSerial serial,
+ResultOrError<bool> SystemEventQueue::WaitForQueueSerial(ExecutionSerial serial,
                                                          Nanoseconds timeout) {
     ExecutionSerial completedSerial = GetCompletedCommandSerial();
     if (serial <= completedSerial) {
@@ -467,7 +492,7 @@ ResultOrError<bool> UnmonitoredQueue::WaitForQueueSerial(ExecutionSerial serial,
     return didComplete;
 }
 
-void UnmonitoredQueue::SetEventOnCompletion(ExecutionSerial serial, HANDLE event) {
+void SystemEventQueue::SetEventOnCompletion(ExecutionSerial serial, HANDLE event) {
     DAWN_UNREACHABLE();
 }
 

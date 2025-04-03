@@ -333,10 +333,12 @@ TEST(TransformationSetMemoryOperandsMaskTest, Spirv14OrHigher) {
           %3 = OpTypeFunction %2
           %6 = OpTypeFloat 32
           %7 = OpTypeStruct %6 %6 %6
+      %1001 = OpTypeStruct %6 %6 %6
           %8 = OpTypeInt 32 0
           %9 = OpConstant %8 12
          %10 = OpTypeArray %7 %9
-         %11 = OpTypePointer Private %10
+     %1002 = OpTypeArray %1001 %9
+         %11 = OpTypePointer Private %1002
          %12 = OpVariable %11 Private
          %15 = OpTypeStruct %10 %7
          %16 = OpTypePointer Uniform %15
@@ -344,26 +346,32 @@ TEST(TransformationSetMemoryOperandsMaskTest, Spirv14OrHigher) {
          %18 = OpTypeInt 32 1
          %19 = OpConstant %18 0
          %20 = OpTypePointer Uniform %10
-         %24 = OpTypePointer Private %7
+         %24 = OpTypePointer Private %1001
          %27 = OpTypePointer Private %6
          %30 = OpConstant %18 1
-        %132 = OpTypePointer Function %10
+        %132 = OpTypePointer Function %1002
         %135 = OpTypePointer Uniform %7
-        %145 = OpTypePointer Function %7
+        %145 = OpTypePointer Function %1001
           %4 = OpFunction %2 None %3
           %5 = OpLabel
         %133 = OpVariable %132 Function
          %21 = OpAccessChain %20 %17 %19
-               OpCopyMemory %12 %21 Aligned 16 Nontemporal|Aligned 16
+    %1003 = OpLoad %10 %21 Nontemporal|Aligned 16
+       %1004 = OpCopyLogical %1002 %1003
+               OpStore %12 %1004 Aligned 16
                OpCopyMemory %133 %12 Volatile
                OpCopyMemory %133 %12
                OpCopyMemory %133 %12
         %136 = OpAccessChain %135 %17 %30
         %138 = OpAccessChain %24 %12 %19
-               OpCopyMemory %138 %136 None Aligned 16
-               OpCopyMemory %138 %136 Aligned 16
+   %1005 = OpLoad %7 %136 Aligned 16
+      %1006 = OpCopyLogical %1001 %1005
+               OpStore %138 %1006
+  %1007 = OpLoad %7 %136
+      %1008 = OpCopyLogical %1001 %1007
+               OpStore %138 %1008 Aligned 16
         %146 = OpAccessChain %145 %133 %30
-        %147 = OpLoad %7 %146 Volatile|Nontemporal|Aligned 16
+        %147 = OpLoad %1001 %146 Volatile|Nontemporal|Aligned 16
         %148 = OpAccessChain %24 %12 %19
                OpStore %148 %147 Nontemporal
                OpReturn
@@ -382,14 +390,14 @@ TEST(TransformationSetMemoryOperandsMaskTest, Spirv14OrHigher) {
         MakeUnique<FactManager>(context.get()), validator_options);
     {
       TransformationSetMemoryOperandsMask transformation(
-          MakeInstructionDescriptor(21, spv::Op::OpCopyMemory, 0),
+          MakeInstructionDescriptor(21, spv::Op::OpLoad, 0),
           (uint32_t)spv::MemoryAccessMask::Aligned |
               (uint32_t)spv::MemoryAccessMask::Volatile,
-          1);
+          0);
       // Bad: cannot remove aligned
       ASSERT_FALSE(TransformationSetMemoryOperandsMask(
-                       MakeInstructionDescriptor(21, spv::Op::OpCopyMemory, 0),
-                       (uint32_t)spv::MemoryAccessMask::Volatile, 1)
+                       MakeInstructionDescriptor(21, spv::Op::OpLoad, 0),
+                       (uint32_t)spv::MemoryAccessMask::Volatile, 0)
                        .IsApplicable(context.get(), transformation_context));
       ASSERT_TRUE(
           transformation.IsApplicable(context.get(), transformation_context));
@@ -399,13 +407,13 @@ TEST(TransformationSetMemoryOperandsMaskTest, Spirv14OrHigher) {
 
     {
       TransformationSetMemoryOperandsMask transformation(
-          MakeInstructionDescriptor(21, spv::Op::OpCopyMemory, 1),
+          MakeInstructionDescriptor(21, spv::Op::OpCopyMemory, 0),
           (uint32_t)spv::MemoryAccessMask::Nontemporal |
               (uint32_t)spv::MemoryAccessMask::Volatile,
           1);
       // Bad: cannot remove volatile
       ASSERT_FALSE(TransformationSetMemoryOperandsMask(
-                       MakeInstructionDescriptor(21, spv::Op::OpCopyMemory, 1),
+                       MakeInstructionDescriptor(21, spv::Op::OpCopyMemory, 0),
                        (uint32_t)spv::MemoryAccessMask::Nontemporal, 0)
                        .IsApplicable(context.get(), transformation_context));
       ASSERT_TRUE(
@@ -417,7 +425,7 @@ TEST(TransformationSetMemoryOperandsMaskTest, Spirv14OrHigher) {
     {
       // Creates the first operand.
       TransformationSetMemoryOperandsMask transformation(
-          MakeInstructionDescriptor(21, spv::Op::OpCopyMemory, 2),
+          MakeInstructionDescriptor(21, spv::Op::OpCopyMemory, 1),
           (uint32_t)spv::MemoryAccessMask::Nontemporal |
               (uint32_t)spv::MemoryAccessMask::Volatile,
           0);
@@ -430,7 +438,7 @@ TEST(TransformationSetMemoryOperandsMaskTest, Spirv14OrHigher) {
     {
       // Creates both operands.
       TransformationSetMemoryOperandsMask transformation(
-          MakeInstructionDescriptor(21, spv::Op::OpCopyMemory, 3),
+          MakeInstructionDescriptor(21, spv::Op::OpCopyMemory, 2),
           (uint32_t)spv::MemoryAccessMask::Nontemporal |
               (uint32_t)spv::MemoryAccessMask::Volatile,
           1);
@@ -442,13 +450,13 @@ TEST(TransformationSetMemoryOperandsMaskTest, Spirv14OrHigher) {
 
     {
       TransformationSetMemoryOperandsMask transformation(
-          MakeInstructionDescriptor(138, spv::Op::OpCopyMemory, 0),
+          MakeInstructionDescriptor(138, spv::Op::OpLoad, 0),
           (uint32_t)spv::MemoryAccessMask::Aligned |
               (uint32_t)spv::MemoryAccessMask::Nontemporal,
-          1);
+          0);
       // Bad: the first mask is None, so Aligned cannot be added to it.
       ASSERT_FALSE(TransformationSetMemoryOperandsMask(
-                       MakeInstructionDescriptor(138, spv::Op::OpCopyMemory, 0),
+                       MakeInstructionDescriptor(138, spv::Op::OpStore, 0),
                        (uint32_t)spv::MemoryAccessMask::Aligned |
                            (uint32_t)spv::MemoryAccessMask::Nontemporal,
                        0)
@@ -461,8 +469,8 @@ TEST(TransformationSetMemoryOperandsMaskTest, Spirv14OrHigher) {
 
     {
       TransformationSetMemoryOperandsMask transformation(
-          MakeInstructionDescriptor(138, spv::Op::OpCopyMemory, 1),
-          (uint32_t)spv::MemoryAccessMask::Volatile, 1);
+          MakeInstructionDescriptor(138, spv::Op::OpLoad, 1),
+          (uint32_t)spv::MemoryAccessMask::Volatile, 0);
       ASSERT_TRUE(
           transformation.IsApplicable(context.get(), transformation_context));
       ApplyAndCheckFreshIds(transformation, context.get(),
@@ -522,10 +530,12 @@ TEST(TransformationSetMemoryOperandsMaskTest, Spirv14OrHigher) {
             %3 = OpTypeFunction %2
             %6 = OpTypeFloat 32
             %7 = OpTypeStruct %6 %6 %6
+         %1001 = OpTypeStruct %6 %6 %6
             %8 = OpTypeInt 32 0
             %9 = OpConstant %8 12
            %10 = OpTypeArray %7 %9
-           %11 = OpTypePointer Private %10
+         %1002 = OpTypeArray %1001 %9
+           %11 = OpTypePointer Private %1002
            %12 = OpVariable %11 Private
            %15 = OpTypeStruct %10 %7
            %16 = OpTypePointer Uniform %15
@@ -533,26 +543,32 @@ TEST(TransformationSetMemoryOperandsMaskTest, Spirv14OrHigher) {
            %18 = OpTypeInt 32 1
            %19 = OpConstant %18 0
            %20 = OpTypePointer Uniform %10
-           %24 = OpTypePointer Private %7
+           %24 = OpTypePointer Private %1001
            %27 = OpTypePointer Private %6
            %30 = OpConstant %18 1
-          %132 = OpTypePointer Function %10
+          %132 = OpTypePointer Function %1002
           %135 = OpTypePointer Uniform %7
-          %145 = OpTypePointer Function %7
+          %145 = OpTypePointer Function %1001
             %4 = OpFunction %2 None %3
             %5 = OpLabel
           %133 = OpVariable %132 Function
            %21 = OpAccessChain %20 %17 %19
-                 OpCopyMemory %12 %21 Aligned 16 Aligned|Volatile 16
+         %1003 = OpLoad %10 %21 Aligned|Volatile 16
+         %1004 = OpCopyLogical %1002 %1003
+                 OpStore %12 %1004 Aligned 16
                  OpCopyMemory %133 %12 Volatile Nontemporal|Volatile
                  OpCopyMemory %133 %12 Nontemporal|Volatile
                  OpCopyMemory %133 %12 None Nontemporal|Volatile
           %136 = OpAccessChain %135 %17 %30
           %138 = OpAccessChain %24 %12 %19
-                 OpCopyMemory %138 %136 None Aligned|Nontemporal 16
-                 OpCopyMemory %138 %136 Aligned 16 Volatile
+         %1005 = OpLoad %7 %136 Aligned|Nontemporal 16
+         %1006 = OpCopyLogical %1001 %1005
+                 OpStore %138 %1006
+         %1007 = OpLoad %7 %136 Volatile
+         %1008 = OpCopyLogical %1001 %1007
+                 OpStore %138 %1008 Aligned 16
           %146 = OpAccessChain %145 %133 %30
-          %147 = OpLoad %7 %146 Volatile|Aligned 16
+          %147 = OpLoad %1001 %146 Volatile|Aligned 16
           %148 = OpAccessChain %24 %12 %19
                  OpStore %148 %147 None
                  OpReturn

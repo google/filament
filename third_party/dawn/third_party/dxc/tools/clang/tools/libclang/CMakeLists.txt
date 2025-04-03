@@ -119,6 +119,7 @@ if(MSVC)
   # Each functions is exported as "dllexport" in include/clang-c.
   # KB835326
   set(LLVM_EXPORTED_SYMBOL_FILE)
+  add_compile_options(/bigobj)
 endif()
 
 # HLSL Change Starts

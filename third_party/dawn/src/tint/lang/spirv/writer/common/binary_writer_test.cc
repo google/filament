@@ -28,8 +28,6 @@
 #include "src/tint/lang/spirv/writer/common/binary_writer.h"
 #include "gtest/gtest.h"
 
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
-
 namespace tint::spirv::writer {
 namespace {
 
@@ -58,7 +56,7 @@ TEST_F(SpirvWriterBinaryWriterTest, Float) {
     auto res = bw.Result();
     ASSERT_EQ(res.size(), 2u);
     float f;
-    memcpy(&f, res.data() + 1, 4);
+    memcpy(&f, &res[1], 4);
     EXPECT_EQ(f, 2.4f);
 }
 
@@ -84,7 +82,15 @@ TEST_F(SpirvWriterBinaryWriterTest, String) {
     auto res = bw.Result();
     ASSERT_EQ(res.size(), 4u);
 
-    uint8_t* v = reinterpret_cast<uint8_t*>(res.data() + 1);
+    auto v = std::vector<uint8_t>();
+    for (size_t idx = 1; idx < res.size(); idx++) {
+        uint32_t* res_u32 = &res[idx];
+        v.push_back(*res_u32 & 0xff);
+        v.push_back(*res_u32 >> 8 & 0xff);
+        v.push_back(*res_u32 >> 16 & 0xff);
+        v.push_back(*res_u32 >> 24 & 0xff);
+    }
+
     EXPECT_EQ(v[0], 'm');
     EXPECT_EQ(v[1], 'y');
     EXPECT_EQ(v[2], '_');
@@ -109,7 +115,15 @@ TEST_F(SpirvWriterBinaryWriterTest, String_Multiple4Length) {
     auto res = bw.Result();
     ASSERT_EQ(res.size(), 4u);
 
-    uint8_t* v = reinterpret_cast<uint8_t*>(res.data() + 1);
+    auto v = std::vector<uint8_t>();
+    for (size_t idx = 1; idx < res.size(); idx++) {
+        uint32_t* res_u32 = &res[idx];
+        v.push_back(*res_u32 & 0xff);
+        v.push_back(*res_u32 >> 8 & 0xff);
+        v.push_back(*res_u32 >> 16 & 0xff);
+        v.push_back(*res_u32 >> 24 & 0xff);
+    }
+
     EXPECT_EQ(v[0], 'm');
     EXPECT_EQ(v[1], 'y');
     EXPECT_EQ(v[2], 's');
@@ -140,5 +154,3 @@ TEST_F(SpirvWriterBinaryWriterTest, TestInstructionWriter) {
 
 }  // namespace
 }  // namespace tint::spirv::writer
-
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);

@@ -302,11 +302,12 @@ public:
               llvm::Optional<uint32_t> offset_ = llvm::None,
               llvm::Optional<uint32_t> matrixStride_ = llvm::None,
               llvm::Optional<bool> isRowMajor_ = llvm::None,
-              bool relaxedPrecision = false, bool precise = false)
+              bool relaxedPrecision = false, bool precise = false,
+              llvm::Optional<AttrVec> attributes = llvm::None)
         : type(type_), fieldIndex(fieldIndex_), name(name_), offset(offset_),
           sizeInBytes(llvm::None), matrixStride(matrixStride_),
           isRowMajor(isRowMajor_), isRelaxedPrecision(relaxedPrecision),
-          isPrecise(precise) {
+          isPrecise(precise), bitfield(llvm::None), attributes(attributes) {
       // A StructType may not contain any hybrid types.
       assert(!isa<HybridType>(type_));
     }
@@ -335,6 +336,8 @@ public:
     bool isPrecise;
     // Information about the bitfield (if applicable).
     llvm::Optional<BitfieldInfo> bitfield;
+    // Other attributes applied to the field.
+    llvm::Optional<AttrVec> attributes;
   };
 
   StructType(
@@ -489,10 +492,11 @@ public:
               hlsl::ConstantPacking *packOffset = nullptr,
               const hlsl::RegisterAssignment *regC = nullptr,
               bool precise = false,
-              llvm::Optional<BitfieldInfo> bitfield = llvm::None)
+              llvm::Optional<BitfieldInfo> bitfield = llvm::None,
+              llvm::Optional<AttrVec> attributes = llvm::None)
         : astType(astType_), name(name_), vkOffsetAttr(offset),
           packOffsetAttr(packOffset), registerC(regC), isPrecise(precise),
-          bitfield(std::move(bitfield)) {}
+          bitfield(std::move(bitfield)), attributes(std::move(attributes)) {}
 
     // The field's type.
     QualType astType;
@@ -509,6 +513,8 @@ public:
     // Whether this field is a bitfield or not. If set to false, bitfield width
     // value is undefined.
     llvm::Optional<BitfieldInfo> bitfield;
+    // Other attributes applied to the field.
+    llvm::Optional<AttrVec> attributes;
   };
 
   HybridStructType(

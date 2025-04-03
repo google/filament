@@ -319,7 +319,7 @@ TEST_F(TextureValidationTest, MipLevelCount) {
 
     // Mip level equal to the maximum for a 2D texture is allowed
     {
-        uint32_t maxTextureDimension2D = GetSupportedLimits().limits.maxTextureDimension2D;
+        uint32_t maxTextureDimension2D = GetSupportedLimits().maxTextureDimension2D;
         wgpu::TextureDescriptor descriptor = defaultDescriptor;
         descriptor.size.width = maxTextureDimension2D;
         descriptor.size.height = maxTextureDimension2D;
@@ -330,7 +330,7 @@ TEST_F(TextureValidationTest, MipLevelCount) {
 
     // Mip level exceeding the maximum for a 2D texture not allowed
     {
-        uint32_t maxTextureDimension2D = GetSupportedLimits().limits.maxTextureDimension2D;
+        uint32_t maxTextureDimension2D = GetSupportedLimits().maxTextureDimension2D;
         wgpu::TextureDescriptor descriptor = defaultDescriptor;
         descriptor.size.width = maxTextureDimension2D;
         descriptor.size.height = maxTextureDimension2D;
@@ -359,7 +359,7 @@ TEST_F(TextureValidationTest, MipLevelCount) {
 // Test the validation of array layer count
 TEST_F(TextureValidationTest, ArrayLayerCount) {
     wgpu::TextureDescriptor defaultDescriptor = CreateDefaultTextureDescriptor();
-    wgpu::Limits supportedLimits = GetSupportedLimits().limits;
+    wgpu::Limits supportedLimits = GetSupportedLimits();
 
     // Array layer count exceeding maxTextureArrayLayers is not allowed for 2D texture
     {
@@ -386,7 +386,7 @@ TEST_F(TextureValidationTest, ArrayLayerCount) {
 
 // Test the validation of 1D texture size
 TEST_F(TextureValidationTest, 1DTextureSize) {
-    wgpu::Limits supportedLimits = GetSupportedLimits().limits;
+    wgpu::Limits supportedLimits = GetSupportedLimits();
 
     wgpu::TextureDescriptor defaultDescriptor;
     defaultDescriptor.size = {4, 1, 1};
@@ -432,7 +432,7 @@ TEST_F(TextureValidationTest, 1DTextureSize) {
 // Test the validation of 2D texture size
 TEST_F(TextureValidationTest, 2DTextureSize) {
     wgpu::TextureDescriptor defaultDescriptor = CreateDefaultTextureDescriptor();
-    wgpu::Limits supportedLimits = GetSupportedLimits().limits;
+    wgpu::Limits supportedLimits = GetSupportedLimits();
 
     // Out-of-bound texture dimension is not allowed
     {
@@ -482,7 +482,7 @@ TEST_F(TextureValidationTest, 3DTextureSize) {
     wgpu::TextureDescriptor defaultDescriptor = CreateDefaultTextureDescriptor();
     defaultDescriptor.dimension = wgpu::TextureDimension::e3D;
     defaultDescriptor.usage = wgpu::TextureUsage::TextureBinding;
-    wgpu::Limits supportedLimits = GetSupportedLimits().limits;
+    wgpu::Limits supportedLimits = GetSupportedLimits();
 
     // Out-of-bound texture dimension is not allowed
     {
@@ -995,7 +995,11 @@ static void CheckTextureMatchesDescriptor(const wgpu::Texture& tex,
     EXPECT_EQ(desc.size.depthOrArrayLayers, tex.GetDepthOrArrayLayers());
     EXPECT_EQ(desc.mipLevelCount, tex.GetMipLevelCount());
     EXPECT_EQ(desc.sampleCount, tex.GetSampleCount());
-    EXPECT_EQ(desc.dimension, tex.GetDimension());
+    if (desc.dimension == wgpu::TextureDimension::Undefined) {
+        EXPECT_EQ(wgpu::TextureDimension::e2D, tex.GetDimension());
+    } else {
+        EXPECT_EQ(desc.dimension, tex.GetDimension());
+    }
     EXPECT_EQ(desc.usage, tex.GetUsage());
     EXPECT_EQ(desc.format, tex.GetFormat());
 }

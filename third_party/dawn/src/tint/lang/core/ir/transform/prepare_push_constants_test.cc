@@ -27,8 +27,6 @@
 
 #include "src/tint/lang/core/ir/transform/prepare_push_constants.h"
 
-#include <utility>
-
 #include "src/tint/lang/core/ir/transform/helper_test.h"
 
 namespace tint::core::ir::transform {
@@ -60,7 +58,7 @@ TEST_F(IR_PreparePushConstantsTests, NoModify_NoInternalConstants) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<private, i32, read_write> = var
+  %v:ptr<private, i32, read_write> = var undef
 }
 
 )";
@@ -89,7 +87,7 @@ TEST_F(IR_PreparePushConstantsTests, NoModify_UserConstant_NoInternalConstants) 
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<push_constant, i32, read> = var
+  %v:ptr<push_constant, i32, read> = var undef
 }
 
 %foo = func():i32 {
@@ -119,7 +117,7 @@ TEST_F(IR_PreparePushConstantsTests, NoUserConstant_OneInternalConstant) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<private, i32, read_write> = var
+  %v:ptr<private, i32, read_write> = var undef
 }
 
 )";
@@ -131,8 +129,8 @@ tint_push_constant_struct = struct @align(4), @block {
 }
 
 $B1: {  # root
-  %v:ptr<private, i32, read_write> = var
-  %tint_push_constants:ptr<push_constant, tint_push_constant_struct, read> = var
+  %v:ptr<private, i32, read_write> = var undef
+  %tint_push_constants:ptr<push_constant, tint_push_constant_struct, read> = var undef
 }
 
 )";
@@ -154,7 +152,7 @@ TEST_F(IR_PreparePushConstantsTests, NoUserConstant_MultipleInternalConstants) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<private, i32, read_write> = var
+  %v:ptr<private, i32, read_write> = var undef
 }
 
 )";
@@ -168,8 +166,8 @@ tint_push_constant_struct = struct @align(16), @block {
 }
 
 $B1: {  # root
-  %v:ptr<private, i32, read_write> = var
-  %tint_push_constants:ptr<push_constant, tint_push_constant_struct, read> = var
+  %v:ptr<private, i32, read_write> = var undef
+  %tint_push_constants:ptr<push_constant, tint_push_constant_struct, read> = var undef
 }
 
 )";
@@ -200,7 +198,7 @@ TEST_F(IR_PreparePushConstantsTests, UserConstant_MultipleInternalConstants) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<push_constant, i32, read> = var
+  %v:ptr<push_constant, i32, read> = var undef
 }
 
 %foo = func():i32 {
@@ -221,7 +219,7 @@ tint_push_constant_struct = struct @align(16), @block {
 }
 
 $B1: {  # root
-  %tint_push_constants:ptr<push_constant, tint_push_constant_struct, read> = var
+  %tint_push_constants:ptr<push_constant, tint_push_constant_struct, read> = var undef
 }
 
 %foo = func():i32 {

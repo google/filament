@@ -28,11 +28,8 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_MULTIPLANAR_EXTERNAL_TEXTURE_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_MULTIPLANAR_EXTERNAL_TEXTURE_H_
 
-#include <string>
-
-#include "src/tint/api/common/binding_point.h"
 #include "src/tint/lang/core/common/multiplanar_options.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

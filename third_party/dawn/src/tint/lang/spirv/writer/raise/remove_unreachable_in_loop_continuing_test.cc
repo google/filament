@@ -395,14 +395,14 @@ TEST_F(SpirvWriter_RemoveUnreachableInLoopContinuingTest,
     b.Append(func->Block(), [&] {
         auto* outer_result = b.InstructionResult(ty.i32());
         auto* outer_loop = b.Loop();
-        outer_loop->SetResults(Vector{outer_result});
+        outer_loop->SetResult(outer_result);
         b.Append(outer_loop->Body(), [&] {
             b.Continue(outer_loop);
 
             b.Append(outer_loop->Continuing(), [&] {
                 auto* inner_result = b.InstructionResult(ty.i32());
                 auto* inner_loop = b.Loop();
-                inner_loop->SetResults(Vector{inner_result});
+                inner_loop->SetResult(inner_result);
                 b.Append(inner_loop->Body(), [&] {
                     auto* ifelse = b.If(true);
                     b.Append(ifelse->True(), [&] {  //

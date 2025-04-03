@@ -41,6 +41,7 @@ class BindGroupMock : private null::BindGroupDataHolder, public BindGroupBase {
     BindGroupMock(DeviceMock* device, const BindGroupDescriptor* descriptor);
     ~BindGroupMock() override;
 
+    MOCK_METHOD(MaybeError, InitializeImpl, (), (override));
     MOCK_METHOD(void, DestroyImpl, (), (override));
 };
 

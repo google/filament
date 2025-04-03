@@ -32,16 +32,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"dawn.googlesource.com/dawn/tools/src/match"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 )
 
 // Glob returns all the paths that match the given filepath glob
-func Glob(str string) ([]string, error) {
+func Glob(str string, fsReader oswrapper.FilesystemReader) ([]string, error) {
 	abs, err := filepath.Abs(str)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func Glob(str string) ([]string, error) {
 			}
 			files, err := Scan(root, Config{Paths: searchRules{
 				func(path string, cond bool) bool { return test(path) },
-			}})
+			}}, fsReader)
 			if err != nil {
 				return nil, err
 			}
@@ -71,7 +71,7 @@ func Glob(str string) ([]string, error) {
 		}
 	}
 	// No wildcard found. Does the file exist at 'str'?
-	if s, err := os.Stat(str); err == nil && !s.IsDir() {
+	if s, err := fsReader.Stat(str); err == nil && !s.IsDir() {
 		return []string{str}, nil
 	}
 	return []string{}, nil
@@ -79,9 +79,9 @@ func Glob(str string) ([]string, error) {
 
 // Scan walks all files and subdirectories from root, returning those
 // that Config.shouldExamine() returns true for.
-func Scan(root string, cfg Config) ([]string, error) {
+func Scan(root string, cfg Config, fsReader oswrapper.FilesystemReader) ([]string, error) {
 	files := []string{}
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := fsReader.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -142,8 +142,8 @@ type Config struct {
 }
 
 // LoadConfig loads a config file at path.
-func LoadConfig(path string) (Config, error) {
-	cfgBody, err := ioutil.ReadFile(path)
+func LoadConfig(path string, fsReader oswrapper.FilesystemReader) (Config, error) {
+	cfgBody, err := fsReader.ReadFile(path)
 	if err != nil {
 		return Config{}, err
 	}

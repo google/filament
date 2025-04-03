@@ -177,7 +177,7 @@ if (dawn_emscripten_dir != "") {
     sources = get_target_outputs(":emdawnwebgpu_headers_gen") +
               [ "../../third_party/emdawnwebgpu/webgpu.cpp" ]
     inputs = [
-      # FIXME: Changing these files still doesn't cause a relink. Why?
+      # TODO(crbug.com/371024051): Changing these files doesn't seem to trigger a relink. Why?
       "../../third_party/emdawnwebgpu/library_webgpu.js",
     ]
   }

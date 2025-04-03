@@ -52,40 +52,44 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kAtomicAnd:
         case BuiltinFn::kAtomicCompareExchange:
         case BuiltinFn::kAtomicExchange:
-        case BuiltinFn::kAtomicIadd:
-        case BuiltinFn::kAtomicIsub:
+        case BuiltinFn::kAtomicIAdd:
+        case BuiltinFn::kAtomicISub:
         case BuiltinFn::kAtomicOr:
-        case BuiltinFn::kAtomicSmax:
-        case BuiltinFn::kAtomicSmin:
+        case BuiltinFn::kAtomicSMax:
+        case BuiltinFn::kAtomicSMin:
         case BuiltinFn::kAtomicStore:
-        case BuiltinFn::kAtomicUmax:
-        case BuiltinFn::kAtomicUmin:
+        case BuiltinFn::kAtomicUMax:
+        case BuiltinFn::kAtomicUMin:
         case BuiltinFn::kAtomicXor:
+        case BuiltinFn::kAtomicIIncrement:
+        case BuiltinFn::kAtomicIDecrement:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad, core::ir::Instruction::Access::kStore};
 
         case BuiltinFn::kArrayLength:
         case BuiltinFn::kDot:
         case BuiltinFn::kImageQuerySize:
         case BuiltinFn::kImageQuerySizeLod:
+        case BuiltinFn::kImageQueryLevels:
+        case BuiltinFn::kImageQuerySamples:
         case BuiltinFn::kMatrixTimesMatrix:
         case BuiltinFn::kMatrixTimesScalar:
         case BuiltinFn::kMatrixTimesVector:
         case BuiltinFn::kSelect:
         case BuiltinFn::kVectorTimesMatrix:
         case BuiltinFn::kVectorTimesScalar:
-        case BuiltinFn::kSdot:
-        case BuiltinFn::kUdot:
+        case BuiltinFn::kSDot:
+        case BuiltinFn::kUDot:
         case BuiltinFn::kNone:
         case BuiltinFn::kNormalize:
         case BuiltinFn::kInverse:
         case BuiltinFn::kSign:
         case BuiltinFn::kAbs:
-        case BuiltinFn::kSmax:
-        case BuiltinFn::kSmin:
-        case BuiltinFn::kSclamp:
-        case BuiltinFn::kUmax:
-        case BuiltinFn::kUmin:
-        case BuiltinFn::kUclamp:
+        case BuiltinFn::kSMax:
+        case BuiltinFn::kSMin:
+        case BuiltinFn::kSClamp:
+        case BuiltinFn::kUMax:
+        case BuiltinFn::kUMin:
+        case BuiltinFn::kUClamp:
         case BuiltinFn::kFindILsb:
         case BuiltinFn::kFindSMsb:
         case BuiltinFn::kFindUMsb:
@@ -94,6 +98,38 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kFaceForward:
         case BuiltinFn::kLdexp:
         case BuiltinFn::kCooperativeMatrixMulAdd:
+        case BuiltinFn::kBitCount:
+        case BuiltinFn::kBitFieldInsert:
+        case BuiltinFn::kBitFieldSExtract:
+        case BuiltinFn::kBitFieldUExtract:
+        case BuiltinFn::kAdd:
+        case BuiltinFn::kSub:
+        case BuiltinFn::kMul:
+        case BuiltinFn::kSDiv:
+        case BuiltinFn::kSMod:
+        case BuiltinFn::kConvertFToS:
+        case BuiltinFn::kConvertSToF:
+        case BuiltinFn::kConvertUToF:
+        case BuiltinFn::kBitwiseAnd:
+        case BuiltinFn::kBitwiseOr:
+        case BuiltinFn::kBitwiseXor:
+        case BuiltinFn::kEqual:
+        case BuiltinFn::kNotEqual:
+        case BuiltinFn::kSGreaterThan:
+        case BuiltinFn::kSGreaterThanEqual:
+        case BuiltinFn::kSLessThan:
+        case BuiltinFn::kSLessThanEqual:
+        case BuiltinFn::kUGreaterThan:
+        case BuiltinFn::kUGreaterThanEqual:
+        case BuiltinFn::kULessThan:
+        case BuiltinFn::kULessThanEqual:
+        case BuiltinFn::kShiftLeftLogical:
+        case BuiltinFn::kShiftRightLogical:
+        case BuiltinFn::kShiftRightArithmetic:
+        case BuiltinFn::kNot:
+        case BuiltinFn::kSNegate:
+        case BuiltinFn::kFMod:
+        case BuiltinFn::kOuterProduct:
             break;
     }
     return core::ir::Instruction::Accesses{};

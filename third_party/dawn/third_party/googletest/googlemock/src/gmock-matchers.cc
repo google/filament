@@ -53,7 +53,7 @@ GTEST_API_ std::string FormatMatcherDescription(
     bool negation, const char* matcher_name,
     const std::vector<const char*>& param_names, const Strings& param_values) {
   std::string result = ConvertIdentifierNameToWords(matcher_name);
-  if (param_values.size() >= 1) {
+  if (!param_values.empty()) {
     result += " " + JoinAsKeyValueTuple(param_names, param_values);
   }
   return negation ? "not (" + result + ")" : result;
@@ -120,7 +120,7 @@ GTEST_API_ std::string FormatMatcherDescription(
 //   [1] Cormen, et al (2001). "Section 26.2: The Ford-Fulkerson method".
 //       "Introduction to Algorithms (Second ed.)", pp. 651-664.
 //   [2] "Ford-Fulkerson algorithm", Wikipedia,
-//       'http://en.wikipedia.org/wiki/Ford%E2%80%93Fulkerson_algorithm'
+//       'https://en.wikipedia.org/wiki/Ford%E2%80%93Fulkerson_algorithm'
 class MaxBipartiteMatchState {
  public:
   explicit MaxBipartiteMatchState(const MatchMatrix& graph)
@@ -236,9 +236,8 @@ static void LogElementMatcherPairVec(const ElementMatcherPairs& pairs,
   os << "{";
   const char* sep = "";
   for (Iter it = pairs.begin(); it != pairs.end(); ++it) {
-    os << sep << "\n  ("
-       << "element #" << it->first << ", "
-       << "matcher #" << it->second << ")";
+    os << sep << "\n  (" << "element #" << it->first << ", " << "matcher #"
+       << it->second << ")";
     sep = ",";
   }
   os << "\n}";
@@ -374,20 +373,20 @@ bool UnorderedElementsAreMatcherImplBase::VerifyMatchMatrix(
     return true;
   }
 
-  if (match_flags() == UnorderedMatcherRequire::ExactMatch) {
-    if (matrix.LhsSize() != matrix.RhsSize()) {
-      // The element count doesn't match.  If the container is empty,
-      // there's no need to explain anything as Google Mock already
-      // prints the empty container. Otherwise we just need to show
-      // how many elements there actually are.
-      if (matrix.LhsSize() != 0 && listener->IsInterested()) {
-        *listener << "which has " << Elements(matrix.LhsSize());
-      }
-      return false;
+  const bool is_exact_match_with_size_discrepency =
+      match_flags() == UnorderedMatcherRequire::ExactMatch &&
+      matrix.LhsSize() != matrix.RhsSize();
+  if (is_exact_match_with_size_discrepency) {
+    // The element count doesn't match.  If the container is empty,
+    // there's no need to explain anything as Google Mock already
+    // prints the empty container. Otherwise we just need to show
+    // how many elements there actually are.
+    if (matrix.LhsSize() != 0 && listener->IsInterested()) {
+      *listener << "which has " << Elements(matrix.LhsSize()) << "\n";
     }
   }
 
-  bool result = true;
+  bool result = !is_exact_match_with_size_discrepency;
   ::std::vector<char> element_matched(matrix.LhsSize(), 0);
   ::std::vector<char> matcher_matched(matrix.RhsSize(), 0);
 

@@ -80,7 +80,7 @@ struct State {
             if (!var) {
                 continue;
             }
-            auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+            auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
             if (!AddressSpaceNeedsPacking(ptr->AddressSpace())) {
                 continue;
             }
@@ -89,8 +89,8 @@ struct State {
             auto* packed_store_type = RewriteType(ptr->StoreType());
             if (packed_store_type != ptr->StoreType()) {
                 auto* new_ptr = ty.ptr(ptr->AddressSpace(), packed_store_type, ptr->Access());
-                var->Result(0)->SetType(new_ptr);
-                var->Result(0)->ForEachUseSorted([&](core::ir::Usage use) {  //
+                var->Result()->SetType(new_ptr);
+                var->Result()->ForEachUseSorted([&](core::ir::Usage use) {  //
                     UpdateUsage(use, ptr->StoreType(), packed_store_type);
                 });
             }
@@ -288,17 +288,17 @@ struct State {
             },
             [&](core::ir::Let* let) {
                 // Propagate the packed pointer through the `let` and update its usages.
-                auto* unpacked_result_type = let->Result(0)->Type();
+                auto* unpacked_result_type = let->Result()->Type();
                 auto* packed_result_type = RewriteType(unpacked_result_type);
-                let->Result(0)->SetType(packed_result_type);
-                let->Result(0)->ForEachUseSorted([&](core::ir::Usage let_use) {  //
+                let->Result()->SetType(packed_result_type);
+                let->Result()->ForEachUseSorted([&](core::ir::Usage let_use) {  //
                     UpdateUsage(let_use, unpacked_result_type, packed_result_type);
                 });
             },
             [&](core::ir::Load* load) {
                 b.InsertAfter(load, [&] {
                     auto* result = LoadPackedToUnpacked(unpacked_type->UnwrapPtr(), load->From());
-                    load->Result(0)->ReplaceAllUsesWith(result);
+                    load->Result()->ReplaceAllUsesWith(result);
                 });
                 load->Destroy();
             },
@@ -322,7 +322,7 @@ struct State {
     /// @param access the access instruction
     /// @param unpacked_type the unpacked store type of the source pointer
     void UpdateAccessUsage(core::ir::Access* access, const core::type::Type* unpacked_type) {
-        auto* unpacked_result_type = access->Result(0)->Type();
+        auto* unpacked_result_type = access->Result()->Type();
         auto* packed_result_type = RewriteType(unpacked_result_type);
 
         // Rebuild the indices of the access instruction.
@@ -353,8 +353,8 @@ struct State {
 
         // Replace the access instruction's indices and update its usages.
         access->SetOperands(std::move(operands));
-        access->Result(0)->SetType(packed_result_type);
-        access->Result(0)->ForEachUseSorted([&](core::ir::Usage access_use) {  //
+        access->Result()->SetType(packed_result_type);
+        access->Result()->ForEachUseSorted([&](core::ir::Usage access_use) {  //
             UpdateUsage(access_use, unpacked_result_type, packed_result_type);
         });
     }
@@ -372,13 +372,13 @@ struct State {
         auto* packed_type = RewriteType(unpacked_type);
         if (unpacked_type == packed_type) {
             // There is no packed type inside `from`, so we can just load it directly.
-            return b.Load(from)->Result(0);
+            return b.Load(from)->Result();
         }
 
         return tint::Switch(
             unpacked_type,
             [&](const core::type::Array* arr) {
-                return b.Call(LoadPackedArrayHelper(arr, packed_ptr), from)->Result(0);
+                return b.Call(LoadPackedArrayHelper(arr, packed_ptr), from)->Result();
             },
             [&](const core::type::Matrix* mat) {
                 // Matrices are rewritten as arrays of structures, so pull the packed vectors out
@@ -388,22 +388,22 @@ struct State {
                 Vector<core::ir::Value*, 4> columns;
                 for (uint32_t col = 0; col < mat->Columns(); col++) {
                     auto* packed_col =
-                        b.Access(packed_col_type, packed_matrix, u32(col), u32(0))->Result(0);
+                        b.Access(packed_col_type, packed_matrix, u32(col), u32(0))->Result();
                     auto* unpacked_col = b.Call<msl::ir::BuiltinCall>(
                         mat->ColumnType(), msl::BuiltinFn::kConvert, packed_col);
-                    columns.Push(unpacked_col->Result(0));
+                    columns.Push(unpacked_col->Result());
                 }
-                return b.Construct(unpacked_type, std::move(columns))->Result(0);
+                return b.Construct(unpacked_type, std::move(columns))->Result();
             },
             [&](const core::type::Struct* str) {
-                return b.Call(LoadPackedStructHelper(str, packed_ptr), from)->Result(0);
+                return b.Call(LoadPackedStructHelper(str, packed_ptr), from)->Result();
             },
             [&](const core::type::Vector*) {
                 // Load the packed vector and convert it to the unpacked equivalent.
                 return b
                     .Call<msl::ir::BuiltinCall>(unpacked_type, msl::BuiltinFn::kConvert,
                                                 b.Load(from))
-                    ->Result(0);
+                    ->Result();
             },
             TINT_ICE_ON_NO_MATCH);
     }
@@ -440,7 +440,7 @@ struct State {
                         // load from the first member of that structure.
                         packed_el_ptr->AddIndex(b.Constant(u32(0)));
                     }
-                    return LoadPackedToUnpacked(unpacked_el_type, packed_el_ptr->Result(0));
+                    return LoadPackedToUnpacked(unpacked_el_type, packed_el_ptr->Result());
                 };
 
                 // Array elements that are packed vectors are wrapped in structures, so pull the
@@ -493,10 +493,10 @@ struct State {
                                         packed_ptr_type->Access()),
                                  from, u32(member->Index()));
                     auto* unpacked_member =
-                        LoadPackedToUnpacked(unpacked_member_type, packed_member_ptr->Result(0));
+                        LoadPackedToUnpacked(unpacked_member_type, packed_member_ptr->Result());
                     members.Push(unpacked_member);
                 }
-                b.Return(func, b.Construct(unpacked_str, std::move(members))->Result(0));
+                b.Return(func, b.Construct(unpacked_str, std::move(members))->Result());
             });
 
             return func;
@@ -522,7 +522,7 @@ struct State {
         tint::Switch(
             unpacked_type,
             [&](const core::type::Array* arr) {
-                b.Call(StorePackedArrayHelper(arr, packed_ptr), to, value)->Result(0);
+                b.Call(StorePackedArrayHelper(arr, packed_ptr), to, value)->Result();
             },
             [&](const core::type::Matrix* mat) {
                 // Matrices are rewritten as arrays of structures, so store the packed vectors to
@@ -533,17 +533,17 @@ struct State {
                 for (uint32_t col = 0; col < mat->Columns(); col++) {
                     auto* packed_col_ptr = b.Access(packed_col_ptr_type, to, u32(col), u32(0));
                     auto* unpacked_col_val = b.Access(mat->ColumnType(), value, u32(col));
-                    StoreUnpackedToPacked(packed_col_ptr->Result(0), unpacked_col_val->Result(0));
+                    StoreUnpackedToPacked(packed_col_ptr->Result(), unpacked_col_val->Result());
                 }
             },
             [&](const core::type::Struct* str) {
-                b.Call(StorePackedStructHelper(str, packed_ptr), to, value)->Result(0);
+                b.Call(StorePackedStructHelper(str, packed_ptr), to, value)->Result();
             },
             [&](const core::type::Vector*) {  //
                 // Convert the vector to the packed equivalent and store it.
                 b.Store(to,
                         b.Call<msl::ir::BuiltinCall>(packed_type, msl::BuiltinFn::kConvert, value)
-                            ->Result(0));
+                            ->Result());
             },
             TINT_ICE_ON_NO_MATCH);
     }
@@ -581,7 +581,7 @@ struct State {
                         // store to the first member of that structure.
                         packed_el_ptr->AddIndex(b.Constant(u32(0)));
                     }
-                    StoreUnpackedToPacked(packed_el_ptr->Result(0), unpacked_el->Result(0));
+                    StoreUnpackedToPacked(packed_el_ptr->Result(), unpacked_el->Result());
                 };
 
                 // Store to each element of the array in a loop. If the element count is below a
@@ -622,12 +622,12 @@ struct State {
                     auto* unpacked_member_type = member->Type();
                     auto* packed_member_type = RewriteType(unpacked_member_type);
                     auto* unpacked_member =
-                        b.Access(unpacked_member_type, value, u32(member->Index()))->Result(0);
+                        b.Access(unpacked_member_type, value, u32(member->Index()))->Result();
                     auto* packed_member_ptr =
                         b.Access(ty.ptr(packed_ptr_type->AddressSpace(), packed_member_type,
                                         packed_ptr_type->Access()),
                                  to, u32(member->Index()));
-                    StoreUnpackedToPacked(packed_member_ptr->Result(0), unpacked_member);
+                    StoreUnpackedToPacked(packed_member_ptr->Result(), unpacked_member);
                 }
                 b.Return(func);
             });

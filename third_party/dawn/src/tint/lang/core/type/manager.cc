@@ -43,6 +43,7 @@
 #include "src/tint/lang/core/type/matrix.h"
 #include "src/tint/lang/core/type/pointer.h"
 #include "src/tint/lang/core/type/reference.h"
+#include "src/tint/lang/core/type/sampled_texture.h"
 #include "src/tint/lang/core/type/storage_texture.h"
 #include "src/tint/lang/core/type/type.h"
 #include "src/tint/lang/core/type/u32.h"
@@ -153,11 +154,30 @@ const core::type::Vector* Manager::vec4(const core::type::Type* inner) {
     return vec(inner, 4);
 }
 
+const core::type::SampledTexture* Manager::sampled_texture(TextureDimension dim,
+                                                           const core::type::Type* type) {
+    return Get<core::type::SampledTexture>(dim, type);
+}
+
+const core::type::MultisampledTexture* Manager::multisampled_texture(TextureDimension dim,
+                                                                     const core::type::Type* type) {
+    return Get<core::type::MultisampledTexture>(dim, type);
+}
+
 const core::type::StorageTexture* Manager::storage_texture(TextureDimension dim,
                                                            core::TexelFormat format,
                                                            core::Access access) {
     const auto* subtype = StorageTexture::SubtypeFor(format, *this);
     return Get<core::type::StorageTexture>(dim, format, access, subtype);
+}
+
+const core::type::DepthTexture* Manager::depth_texture(TextureDimension dim) {
+    return Get<core::type::DepthTexture>(dim);
+}
+
+const core::type::DepthMultisampledTexture* Manager::depth_multisampled_texture(
+    TextureDimension dim) {
+    return Get<core::type::DepthMultisampledTexture>(dim);
 }
 
 const core::type::Matrix* Manager::mat(const core::type::Type* inner,
@@ -249,7 +269,7 @@ const core::type::Array* Manager::runtime_array(const core::type::Type* elem_ty,
 
 const core::type::BindingArray* Manager::binding_array(const core::type::Type* elem_ty,
                                                        uint32_t count) {
-    return Get<core::type::BindingArray>(elem_ty, count);
+    return Get<core::type::BindingArray>(elem_ty, Get<ConstantArrayCount>(count));
 }
 
 const core::type::Pointer* Manager::ptr(core::AddressSpace address_space,
@@ -267,7 +287,8 @@ const core::type::Reference* Manager::ref(core::AddressSpace address_space,
 }
 
 core::type::Struct* Manager::Struct(Symbol name, VectorRef<const StructMember*> members) {
-    if (auto* existing = Find<type::Struct>(name); DAWN_UNLIKELY(existing)) {
+    if (auto* existing = Find<type::Struct>(name, /* is_wgsl_internal */ false);
+        DAWN_UNLIKELY(existing)) {
         TINT_ICE() << "attempting to construct two structs named " << name.NameView();
     }
 
@@ -280,8 +301,10 @@ core::type::Struct* Manager::Struct(Symbol name, VectorRef<const StructMember*> 
                                    tint::RoundUp(max_align, size), size);
 }
 
-core::type::Struct* Manager::Struct(Symbol name, VectorRef<StructMemberDesc> md) {
-    if (auto* existing = Find<type::Struct>(name); DAWN_UNLIKELY(existing)) {
+core::type::Struct* Manager::Struct(Symbol name,
+                                    bool is_wgsl_internal,
+                                    VectorRef<StructMemberDesc> md) {
+    if (auto* existing = Find<type::Struct>(name, is_wgsl_internal); DAWN_UNLIKELY(existing)) {
         TINT_ICE() << "attempting to construct two structs named " << name.NameView();
     }
 
@@ -298,7 +321,8 @@ core::type::Struct* Manager::Struct(Symbol name, VectorRef<StructMemberDesc> md)
         max_align = std::max(max_align, align);
     }
     return Get<core::type::Struct>(name, std::move(members), max_align,
-                                   tint::RoundUp(max_align, current_size), current_size);
+                                   tint::RoundUp(max_align, current_size), current_size,
+                                   is_wgsl_internal);
 }
 
 }  // namespace tint::core::type

@@ -28,7 +28,7 @@
 #ifndef SRC_TINT_LANG_HLSL_WRITER_RAISE_REPLACE_NON_INDEXABLE_MAT_VEC_STORES_H_
 #define SRC_TINT_LANG_HLSL_WRITER_RAISE_REPLACE_NON_INDEXABLE_MAT_VEC_STORES_H_
 
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

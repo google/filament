@@ -73,36 +73,6 @@ void Function::AddTransitivelyReferencedGlobal(const sem::GlobalVariable* global
     }
 }
 
-Function::VariableBindings Function::TransitivelyReferencedUniformVariables() const {
-    VariableBindings ret;
-
-    for (auto* global : TransitivelyReferencedGlobals()) {
-        if (global->AddressSpace() != core::AddressSpace::kUniform) {
-            continue;
-        }
-
-        if (auto bp = global->Attributes().binding_point) {
-            ret.push_back({global, *bp});
-        }
-    }
-    return ret;
-}
-
-Function::VariableBindings Function::TransitivelyReferencedStorageBufferVariables() const {
-    VariableBindings ret;
-
-    for (auto* global : TransitivelyReferencedGlobals()) {
-        if (global->AddressSpace() != core::AddressSpace::kStorage) {
-            continue;
-        }
-
-        if (auto bp = global->Attributes().binding_point) {
-            ret.push_back({global, *bp});
-        }
-    }
-    return ret;
-}
-
 std::vector<std::pair<const Variable*, const ast::BuiltinAttribute*>>
 Function::TransitivelyReferencedBuiltinVariables() const {
     std::vector<std::pair<const Variable*, const ast::BuiltinAttribute*>> ret;
@@ -118,87 +88,13 @@ Function::TransitivelyReferencedBuiltinVariables() const {
     return ret;
 }
 
-Function::VariableBindings Function::TransitivelyReferencedSamplerVariables() const {
-    return TransitivelyReferencedSamplerVariablesImpl(core::type::SamplerKind::kSampler);
-}
-
-Function::VariableBindings Function::TransitivelyReferencedComparisonSamplerVariables() const {
-    return TransitivelyReferencedSamplerVariablesImpl(core::type::SamplerKind::kComparisonSampler);
-}
-
-Function::VariableBindings Function::TransitivelyReferencedSampledTextureVariables() const {
-    return TransitivelyReferencedSampledTextureVariablesImpl(false);
-}
-
-Function::VariableBindings Function::TransitivelyReferencedMultisampledTextureVariables() const {
-    return TransitivelyReferencedSampledTextureVariablesImpl(true);
-}
-
-Function::VariableBindings Function::TransitivelyReferencedVariablesOfType(
-    const tint::TypeInfo* type) const {
-    VariableBindings ret;
-    for (auto* global : TransitivelyReferencedGlobals()) {
-        auto* unwrapped_type = global->Type()->UnwrapRef();
-        if (unwrapped_type->TypeInfo().Is(type)) {
-            if (auto bp = global->Attributes().binding_point) {
-                ret.push_back({global, *bp});
-            }
-        }
-    }
-    return ret;
-}
-
-bool Function::HasAncestorEntryPoint(Symbol symbol) const {
-    for (const auto* point : ancestor_entry_points_) {
+bool Function::HasCallGraphEntryPoint(Symbol symbol) const {
+    for (const auto* point : call_graph_entry_points_) {
         if (point->Declaration()->name->symbol == symbol) {
             return true;
         }
     }
     return false;
-}
-
-Function::VariableBindings Function::TransitivelyReferencedSamplerVariablesImpl(
-    core::type::SamplerKind kind) const {
-    VariableBindings ret;
-
-    for (auto* global : TransitivelyReferencedGlobals()) {
-        auto* unwrapped_type = global->Type()->UnwrapRef();
-        auto* sampler = unwrapped_type->As<core::type::Sampler>();
-        if (sampler == nullptr || sampler->Kind() != kind) {
-            continue;
-        }
-
-        if (auto bp = global->Attributes().binding_point) {
-            ret.push_back({global, *bp});
-        }
-    }
-    return ret;
-}
-
-Function::VariableBindings Function::TransitivelyReferencedSampledTextureVariablesImpl(
-    bool multisampled) const {
-    VariableBindings ret;
-
-    for (auto* global : TransitivelyReferencedGlobals()) {
-        auto* unwrapped_type = global->Type()->UnwrapRef();
-        auto* texture = unwrapped_type->As<core::type::Texture>();
-        if (texture == nullptr) {
-            continue;
-        }
-
-        auto is_multisampled = texture->Is<core::type::MultisampledTexture>();
-        auto is_sampled = texture->Is<core::type::SampledTexture>();
-
-        if ((multisampled && !is_multisampled) || (!multisampled && !is_sampled)) {
-            continue;
-        }
-
-        if (auto bp = global->Attributes().binding_point) {
-            ret.push_back({global, *bp});
-        }
-    }
-
-    return ret;
 }
 
 void Function::SetDiagnosticSeverity(wgsl::DiagnosticRule rule, wgsl::DiagnosticSeverity severity) {

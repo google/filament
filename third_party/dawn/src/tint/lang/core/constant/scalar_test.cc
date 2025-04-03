@@ -27,16 +27,18 @@
 
 #include "src/tint/lang/core/constant/scalar.h"
 
-#include "src/tint/lang/core/constant/helper_test.h"
+#include "gtest/gtest.h"
+#include "src/tint/lang/core/type/i32.h"
 
 namespace tint::core::constant {
 namespace {
 
 using namespace tint::core::number_suffixes;  // NOLINT
 
-using ConstantTest_Scalar = TestHelper;
+using ConstantTest_Scalar = testing::Test;
 
 TEST_F(ConstantTest_Scalar, AllZero) {
+    Manager constants;
     auto* i0 = constants.Get(0_i);
     auto* iPos1 = constants.Get(1_i);
     auto* iNeg1 = constants.Get(-1_i);
@@ -97,6 +99,7 @@ TEST_F(ConstantTest_Scalar, AllZero) {
 }
 
 TEST_F(ConstantTest_Scalar, AnyZero) {
+    Manager constants;
     auto* i0 = constants.Get(0_i);
     auto* iPos1 = constants.Get(1_i);
     auto* iNeg1 = constants.Get(-1_i);
@@ -157,6 +160,7 @@ TEST_F(ConstantTest_Scalar, AnyZero) {
 }
 
 TEST_F(ConstantTest_Scalar, ValueOf) {
+    Manager constants;
     auto* i1 = constants.Get(1_i);
     auto* u1 = constants.Get(1_u);
     auto* f1 = constants.Get(1_f);
@@ -177,10 +181,11 @@ TEST_F(ConstantTest_Scalar, ValueOf) {
 }
 
 TEST_F(ConstantTest_Scalar, Clone) {
+    Manager constants;
     auto* val = constants.Get(12_i);
 
-    constant::Manager mgr;
-    constant::CloneContext ctx{core::type::CloneContext{{nullptr}, {nullptr, &mgr.types}}, mgr};
+    Manager mgr;
+    CloneContext ctx{core::type::CloneContext{{nullptr}, {nullptr, &mgr.types}}, mgr};
 
     auto* r = val->Clone(ctx);
     ASSERT_NE(r, nullptr);

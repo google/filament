@@ -427,6 +427,8 @@ public:
   // Dxil version.
   void EmitDxilVersion(unsigned Major, unsigned Minor);
   void LoadDxilVersion(unsigned &Major, unsigned &Minor);
+  static bool LoadDxilVersion(const llvm::Module *pModule, unsigned &Major,
+                              unsigned &Minor);
 
   // Validator version.
   void EmitValidatorVersion(unsigned Major, unsigned Minor);

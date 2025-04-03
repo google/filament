@@ -111,7 +111,7 @@ class SpirvWriterTestHelperBase : public BASE {
     bool Generate(Options options = {}) {
         auto result = writer::Generate(mod, options);
         if (result != Success) {
-            err_ = result.Failure().reason.Str();
+            err_ = result.Failure().reason;
             return false;
         }
 

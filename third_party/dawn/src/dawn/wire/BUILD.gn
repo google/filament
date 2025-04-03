@@ -72,6 +72,7 @@ group("abseil") {
     public_deps = [
       "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_map",
       "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_set",
+      "${dawn_root}/third_party/gn/abseil-cpp:span",
     ]
   }
 }
@@ -113,6 +114,8 @@ dawn_component("wire") {
     "client/Client.h",
     "client/ClientDoers.cpp",
     "client/ClientInlineMemoryTransferService.cpp",
+    "client/ComputePassEncoder.cpp",
+    "client/ComputePassEncoder.h",
     "client/Device.cpp",
     "client/Device.h",
     "client/EventManager.cpp",
@@ -129,6 +132,10 @@ dawn_component("wire") {
     "client/QuerySet.h",
     "client/Queue.cpp",
     "client/Queue.h",
+    "client/RenderBundleEncoder.cpp",
+    "client/RenderBundleEncoder.h",
+    "client/RenderPassEncoder.cpp",
+    "client/RenderPassEncoder.h",
     "client/ShaderModule.cpp",
     "client/ShaderModule.h",
     "client/Surface.cpp",
@@ -143,6 +150,7 @@ dawn_component("wire") {
     "server/ServerDevice.cpp",
     "server/ServerInlineMemoryTransferService.cpp",
     "server/ServerInstance.cpp",
+    "server/ServerProgrammableEncoder.cpp",
     "server/ServerQueue.cpp",
     "server/ServerShaderModule.cpp",
     "server/ServerSurface.cpp",

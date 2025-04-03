@@ -413,15 +413,23 @@ TEST(format_utils, vkuFindMultiplaneExtentDivisors) {
 }
 
 TEST(format_utils, vkuFormatIsDepthStencilWithColorSizeCompatible) {
+    EXPECT_FALSE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16,
+                                                                VK_FORMAT_D16_UNORM, VK_IMAGE_ASPECT_DEPTH_BIT));
     EXPECT_FALSE(
-        vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16, VK_FORMAT_D16_UNORM));
-    EXPECT_FALSE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_D16_UNORM, VK_FORMAT_R16_SFLOAT));
-    EXPECT_FALSE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R8_UINT, VK_FORMAT_D16_UNORM_S8_UINT));
-    EXPECT_FALSE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R16_UNORM, VK_FORMAT_S8_UINT));
+        vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_D16_UNORM, VK_FORMAT_R16_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT));
+    EXPECT_FALSE(
+        vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R8_UINT, VK_FORMAT_D16_UNORM_S8_UINT, VK_IMAGE_ASPECT_DEPTH_BIT));
+    EXPECT_FALSE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R16_UNORM, VK_FORMAT_S8_UINT, VK_IMAGE_ASPECT_DEPTH_BIT));
 
-    EXPECT_TRUE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R16_SFLOAT, VK_FORMAT_D16_UNORM));
-    EXPECT_TRUE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R16_UNORM, VK_FORMAT_D16_UNORM_S8_UINT));
-    EXPECT_TRUE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R8_UINT, VK_FORMAT_S8_UINT));
+    EXPECT_TRUE(
+        vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R16_SFLOAT, VK_FORMAT_D16_UNORM, VK_IMAGE_ASPECT_DEPTH_BIT));
+    EXPECT_TRUE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R8_UINT, VK_FORMAT_D16_UNORM_S8_UINT,
+                                                               VK_IMAGE_ASPECT_STENCIL_BIT));
+    EXPECT_TRUE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R16_UNORM, VK_FORMAT_D16_UNORM_S8_UINT,
+                                                               VK_IMAGE_ASPECT_DEPTH_BIT));
+    EXPECT_TRUE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R16_UNORM, VK_FORMAT_D16_UNORM_S8_UINT,
+                                                               VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT));
+    EXPECT_TRUE(vkuFormatIsDepthStencilWithColorSizeCompatible(VK_FORMAT_R8_UINT, VK_FORMAT_S8_UINT, VK_IMAGE_ASPECT_STENCIL_BIT));
 }
 
 TEST(format_utils, vkuFormatComponentCount) {

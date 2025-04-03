@@ -140,7 +140,24 @@ spv_result_t ValidateTypeVector(ValidationState_t& _, const Instruction* inst) {
   const auto component_index = 1;
   const auto component_id = inst->GetOperandAs<uint32_t>(component_index);
   const auto component_type = _.FindDef(component_id);
-  if (!component_type || !spvOpcodeIsScalarType(component_type->opcode())) {
+  if (component_type) {
+    bool isPointer = component_type->opcode() == spv::Op::OpTypePointer;
+    bool isScalar = spvOpcodeIsScalarType(component_type->opcode());
+
+    if (_.HasCapability(spv::Capability::MaskedGatherScatterINTEL) &&
+        !isPointer && !isScalar) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "Invalid OpTypeVector Component Type<id> "
+             << _.getIdName(component_id)
+             << ": Expected a scalar or pointer type when using the "
+                "SPV_INTEL_masked_gather_scatter extension.";
+    } else if (!_.HasCapability(spv::Capability::MaskedGatherScatterINTEL) &&
+               !isScalar) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "OpTypeVector Component Type <id> " << _.getIdName(component_id)
+             << " is not a scalar type.";
+    }
+  } else {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
            << "OpTypeVector Component Type <id> " << _.getIdName(component_id)
            << " is not a scalar type.";

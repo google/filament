@@ -30,7 +30,7 @@
 
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/reflection.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {
@@ -70,7 +70,7 @@ struct DirectVariableAccessOptions {
 ///
 /// @param module the module to transform
 /// @param options the options
-/// @returns error diagnostics on failure
+/// @returns error on failure
 Result<SuccessType> DirectVariableAccess(Module& module,
                                          const DirectVariableAccessOptions& options);
 

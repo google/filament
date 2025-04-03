@@ -72,6 +72,9 @@ std::string_view ToString(CoreDiagnosticRule value) {
 /// @returns the parsed enum, or ChromiumDiagnosticRule::kUndefined if the string could not be
 /// parsed.
 ChromiumDiagnosticRule ParseChromiumDiagnosticRule(std::string_view str) {
+    if (str == "subgroup_matrix_uniformity") {
+        return ChromiumDiagnosticRule::kSubgroupMatrixUniformity;
+    }
     if (str == "unreachable_code") {
         return ChromiumDiagnosticRule::kUnreachableCode;
     }
@@ -82,6 +85,8 @@ std::string_view ToString(ChromiumDiagnosticRule value) {
     switch (value) {
         case ChromiumDiagnosticRule::kUndefined:
             return "undefined";
+        case ChromiumDiagnosticRule::kSubgroupMatrixUniformity:
+            return "subgroup_matrix_uniformity";
         case ChromiumDiagnosticRule::kUnreachableCode:
             return "unreachable_code";
     }

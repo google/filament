@@ -109,6 +109,15 @@ MaybeError ValidateBufferBinding(const DeviceBase* device,
             requiredUsage = kInternalStorageBuffer;
             requiredBindingAlignment = device->GetLimits().v1.minStorageBufferOffsetAlignment;
             break;
+        case kInternalReadOnlyStorageBufferBinding:
+            // This is needed for for some workarounds that read a buffer in shaders. The buffer
+            // only needs kReadOnlyStorageBuffer usage in this case. Unlike the standard
+            // wgpu::BufferBindingType::ReadOnlyStorage which requires the read-write Storage usage.
+            // On some backends such as D3D11, using only kReadOnlyStorageBuffer usage could avoid
+            // extra allocations.
+            requiredUsage = kReadOnlyStorageBuffer;
+            requiredBindingAlignment = device->GetLimits().v1.minStorageBufferOffsetAlignment;
+            break;
         case wgpu::BufferBindingType::BindingNotUsed:
         case wgpu::BufferBindingType::Undefined:
             DAWN_UNREACHABLE();
@@ -135,18 +144,19 @@ MaybeError ValidateBufferBinding(const DeviceBase* device,
                             "Binding size (%u) of %s is larger than the maximum uniform buffer "
                             "binding size (%u).%s",
                             bindingSize, entry.buffer, maxUniformBufferBindingSize,
-                            DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter(),
+                            DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter()->GetLimits().v1,
                                                         maxUniformBufferBindingSize, bindingSize));
             break;
         case wgpu::BufferBindingType::Storage:
         case wgpu::BufferBindingType::ReadOnlyStorage:
         case kInternalStorageBufferBinding:
+        case kInternalReadOnlyStorageBufferBinding:
             maxStorageBufferBindingSize = device->GetLimits().v1.maxStorageBufferBindingSize;
             DAWN_INVALID_IF(bindingSize > maxStorageBufferBindingSize,
                             "Binding size (%u) of %s is larger than the maximum storage buffer "
                             "binding size (%u).%s",
                             bindingSize, entry.buffer, maxStorageBufferBindingSize,
-                            DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter(),
+                            DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter()->GetLimits().v1,
                                                         maxStorageBufferBindingSize, bindingSize));
             break;
         case wgpu::BufferBindingType::BindingNotUsed:
@@ -240,6 +250,38 @@ MaybeError ValidateSampledTextureBinding(DeviceBase* device,
 
         DAWN_TRY(ValidateCompatibilityModeTextureViewArrayLayer(device, view, texture));
     }
+
+    return {};
+}
+
+MaybeError ValidateTextureViewBindingUsedAsExternalTexture(DeviceBase* device,
+                                                           const BindGroupEntry& entry) {
+    // TODO(crbug.com/398752857): Error message should include that entry is neither an
+    // ExternalTexture nor a TextureView when the layout contains an ExternalTexture entry.
+    DAWN_TRY(ValidateTextureBindGroupEntry(device, entry));
+
+    TextureViewBase* view = entry.textureView;
+    TextureBase* texture = view->GetTexture();
+    wgpu::TextureFormat format = view->GetFormat().format;
+
+    DAWN_INVALID_IF(
+        format != wgpu::TextureFormat::RGBA8Unorm && format != wgpu::TextureFormat::BGRA8Unorm &&
+            format != wgpu::TextureFormat::RGBA16Float,
+        "%s format (%s) is not %s, %s, or %s.", view, format, wgpu::TextureFormat::RGBA8Unorm,
+        wgpu::TextureFormat::BGRA8Unorm, wgpu::TextureFormat::RGBA16Float);
+
+    DAWN_INVALID_IF((view->GetUsage() & wgpu::TextureUsage::TextureBinding) == 0,
+                    "%s usage (%s) doesn't include the required usage (%s)", view, view->GetUsage(),
+                    wgpu::TextureUsage::TextureBinding);
+
+    DAWN_INVALID_IF(view->GetDimension() != wgpu::TextureViewDimension::e2D,
+                    "%s dimension (%s) is not 2D.", view, view->GetDimension());
+
+    DAWN_INVALID_IF(view->GetLevelCount() > 1, "%s mip level count (%u) is not 1.", view,
+                    view->GetLevelCount());
+
+    DAWN_INVALID_IF(texture->GetSampleCount() != 1, "%s sample count (%u) is not 1.", texture,
+                    texture->GetSampleCount());
 
     return {};
 }
@@ -449,29 +491,38 @@ MaybeError ValidateBindGroupDescriptor(DeviceBase* device,
 
         bindingsSet.set(bindingIndex);
 
+        const BindingInfo& bindingInfo = layout->GetBindingInfo(bindingIndex);
+
         // Below this block we validate entries based on the bind group layout, in which
         // external textures have been expanded into their underlying contents. For this reason
         // we must identify external texture binding entries by checking the bind group entry
         // itself.
-        // TODO(dawn:1293): Store external textures in
+        // TODO(42240282): Store external textures in
         // BindGroupLayoutBase::BindingDataPointers::bindings so checking external textures can
         // be moved in the switch below.
-        UnpackedPtr<BindGroupEntry> unpacked;
-        DAWN_TRY_ASSIGN(unpacked, ValidateAndUnpack(&entry));
-        if (auto* externalTextureBindingEntry = unpacked.Get<ExternalTextureBindingEntry>()) {
-            DAWN_TRY(
-                ValidateExternalTextureBinding(device, entry, externalTextureBindingEntry,
-                                               layout->GetExternalTextureBindingExpansionMap()));
-            continue;
-        } else {
-            DAWN_INVALID_IF(
-                layout->GetExternalTextureBindingExpansionMap().count(BindingNumber(entry.binding)),
-                "entries[%u] is not an ExternalTexture when the layout contains an "
-                "ExternalTexture entry.",
+        if (layout->GetExternalTextureBindingExpansionMap().count(BindingNumber(entry.binding))) {
+            UnpackedPtr<BindGroupEntry> unpacked;
+            DAWN_TRY_ASSIGN(unpacked, ValidateAndUnpack(&entry));
+            if (auto* externalTextureBindingEntry = unpacked.Get<ExternalTextureBindingEntry>()) {
+                DAWN_TRY(ValidateExternalTextureBinding(
+                    device, entry, externalTextureBindingEntry,
+                    layout->GetExternalTextureBindingExpansionMap()));
+                continue;
+            }
+            // TODO(crbug.com/398752857): Make this controlled by a toggle before shipping.
+            if (device->IsToggleEnabled(Toggle::AllowUnsafeAPIs)) {
+                DAWN_TRY_CONTEXT(ValidateTextureViewBindingUsedAsExternalTexture(device, entry),
+                                 "validating entries[%u] as a TextureView."
+                                 "\nExpected entry layout: %s",
+                                 i, layout);
+                continue;
+            }
+            return DAWN_VALIDATION_ERROR(
+                "entries[%u] not an ExternalTexture when the layout contains an ExternalTexture "
+                "entry.",
                 i);
         }
-
-        const BindingInfo& bindingInfo = layout->GetBindingInfo(bindingIndex);
+        DAWN_INVALID_IF(entry.nextInChain != nullptr, "nextInChain must be nullptr.");
 
         // Perform binding-type specific validation.
         DAWN_TRY(MatchVariant(
@@ -546,6 +597,10 @@ BindGroupBase::BindGroupBase(DeviceBase* device,
     : ApiObjectBase(device, descriptor->label),
       mLayout(descriptor->layout),
       mBindingData(GetLayout()->ComputeBindingDataPointers(bindingDataStart)) {
+    GetObjectTrackingList()->Track(this);
+}
+
+MaybeError BindGroupBase::Initialize(const BindGroupDescriptor* descriptor) {
     BindGroupLayoutInternalBase* layout = GetLayout();
 
     for (BindingIndex i{0}; i < layout->GetBindingCount(); ++i) {
@@ -575,8 +630,39 @@ BindGroupBase::BindGroupBase(DeviceBase* device,
         }
 
         if (entry->textureView != nullptr) {
-            DAWN_ASSERT(mBindingData.bindings[bindingIndex] == nullptr);
-            mBindingData.bindings[bindingIndex] = entry->textureView;
+            // TODO(42240282): Store external textures in
+            // BindGroupLayoutBase::BindingDataPointers::bindings so that we can have a MatchVariant
+            // that contains the ExternalTextureInfo.
+            ExternalTextureBindingExpansionMap expansions =
+                layout->GetExternalTextureBindingExpansionMap();
+            ExternalTextureBindingExpansionMap::iterator it =
+                expansions.find(BindingNumber(entry->binding));
+
+            if (it == expansions.end()) {
+                DAWN_ASSERT(mBindingData.bindings[bindingIndex] == nullptr);
+                mBindingData.bindings[bindingIndex] = entry->textureView;
+            } else {
+                // If this is for a texture view that is used as an external texture, we need to
+                // also provide placeholder for the second plane and a parameter buffer.
+                BindingIndex plane0BindingIndex = layout->GetBindingIndex(it->second.plane0);
+                BindingIndex plane1BindingIndex = layout->GetBindingIndex(it->second.plane1);
+                BindingIndex paramsBindingIndex = layout->GetBindingIndex(it->second.params);
+
+                DAWN_ASSERT(mBindingData.bindings[plane0BindingIndex] == nullptr);
+                mBindingData.bindings[plane0BindingIndex] = entry->textureView;
+
+                DAWN_ASSERT(mBindingData.bindings[plane1BindingIndex] == nullptr);
+                DAWN_TRY_ASSIGN(mBindingData.bindings[plane1BindingIndex],
+                                GetDevice()->GetOrCreatePlaceholderTextureViewForExternalTexture());
+
+                DAWN_ASSERT(mBindingData.bindings[paramsBindingIndex] == nullptr);
+                Ref<BufferBase> paramsBuffer;
+                DAWN_TRY_ASSIGN(paramsBuffer,
+                                MakeParamsBufferForSimpleView(GetDevice(), entry->textureView));
+                mBindingData.bindings[paramsBindingIndex] = paramsBuffer;
+                mBindingData.bufferData[paramsBindingIndex].offset = 0;
+                mBindingData.bufferData[paramsBindingIndex].size = paramsBuffer->GetSize();
+            }
             continue;
         }
 
@@ -630,7 +716,9 @@ BindGroupBase::BindGroupBase(DeviceBase* device,
                                                     mBindingData.bufferData[bindingIndex].size;
                                             });
 
-    GetObjectTrackingList()->Track(this);
+    DAWN_TRY(InitializeImpl());
+
+    return {};
 }
 
 BindGroupBase::~BindGroupBase() = default;
@@ -644,20 +732,19 @@ void BindGroupBase::DestroyImpl() {
     }
 }
 
-void BindGroupBase::DeleteThis() {
-    // Add another ref to the layout so that if this is the last ref, the layout
-    // is destroyed after the bind group. The bind group is slab-allocated inside
-    // memory owned by the layout (except for the null backend).
-    Ref<BindGroupLayoutBase> layout = mLayout;
-    ApiObjectBase::DeleteThis();
-}
-
 BindGroupBase::BindGroupBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label)
     : ApiObjectBase(device, tag, label), mBindingData() {}
 
 // static
 Ref<BindGroupBase> BindGroupBase::MakeError(DeviceBase* device, StringView label) {
-    return AcquireRef(new BindGroupBase(device, ObjectBase::kError, label));
+    class ErrorBindGroupBase final : public BindGroupBase {
+      public:
+        explicit ErrorBindGroupBase(DeviceBase* device, StringView label)
+            : BindGroupBase(device, ObjectBase::kError, label) {}
+
+        MaybeError InitializeImpl() override { DAWN_UNREACHABLE(); }
+    };
+    return AcquireRef(new ErrorBindGroupBase(device, label));
 }
 
 ObjectType BindGroupBase::GetType() const {

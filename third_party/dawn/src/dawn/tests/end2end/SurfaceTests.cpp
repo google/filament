@@ -47,12 +47,10 @@ struct GLFWindowDestroyer {
 
 class SurfaceTests : public DawnTest {
   protected:
-    wgpu::RequiredLimits GetRequiredLimits(const wgpu::SupportedLimits& supported) override {
+    wgpu::Limits GetRequiredLimits(const wgpu::Limits& supported) override {
         // Just copy all the limits, though all we really care about is
         // maxStorageBuffersInFragmentStage
-        wgpu::RequiredLimits required = {};
-        required.limits = supported.limits;
-        return required;
+        return supported;
     }
 
   public:
@@ -223,7 +221,7 @@ TEST_P(SurfaceTests, Basic) {
     // Get texture
     wgpu::SurfaceTexture surfaceTexture;
     surface.GetCurrentTexture(&surfaceTexture);
-    ASSERT_EQ(surfaceTexture.status, wgpu::SurfaceGetCurrentTextureStatus::Success);
+    ASSERT_EQ(surfaceTexture.status, wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal);
     ClearTexture(surfaceTexture.texture, {1.0, 0.0, 0.0, 1.0});
 
     // Present
@@ -478,7 +476,7 @@ TEST_P(SurfaceTests, GetAfterUnconfigure) {
     EXPECT_EQ(surfaceTexture.status, wgpu::SurfaceGetCurrentTextureStatus::Error);
 }
 
-// Getting current texture after losing the device
+// Getting current texture after losing the device should appear as if we got a texture.
 TEST_P(SurfaceTests, GetAfterDeviceLoss) {
     wgpu::Surface surface = CreateTestSurface();
     wgpu::SurfaceConfiguration config = GetPreferredConfiguration(surface);
@@ -488,7 +486,7 @@ TEST_P(SurfaceTests, GetAfterDeviceLoss) {
 
     wgpu::SurfaceTexture surfaceTexture;
     surface.GetCurrentTexture(&surfaceTexture);
-    EXPECT_EQ(surfaceTexture.status, wgpu::SurfaceGetCurrentTextureStatus::DeviceLost);
+    EXPECT_EQ(surfaceTexture.status, wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal);
 }
 
 // Presenting without configuring fails
@@ -625,7 +623,7 @@ TEST_P(SurfaceTests, CopyTo) {
 
 // Test using the surface as a storage texture when supported.
 TEST_P(SurfaceTests, Storage) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().limits.maxStorageBuffersInFragmentStage < 1);
+    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
     wgpu::Surface surface = CreateTestSurface();
     wgpu::SurfaceCapabilities caps;
     surface.GetCapabilities(adapter, &caps);

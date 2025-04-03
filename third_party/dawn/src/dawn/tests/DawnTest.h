@@ -616,12 +616,12 @@ class DawnTestBase {
     // code path to handle the situation when not all features are supported.
     virtual std::vector<wgpu::FeatureName> GetRequiredFeatures();
 
-    virtual wgpu::RequiredLimits GetRequiredLimits(const wgpu::SupportedLimits&);
+    virtual wgpu::Limits GetRequiredLimits(const wgpu::Limits&);
 
     const TestAdapterProperties& GetAdapterProperties() const;
 
-    wgpu::SupportedLimits GetAdapterLimits();
-    wgpu::SupportedLimits GetSupportedLimits();
+    wgpu::Limits GetAdapterLimits();
+    wgpu::Limits GetSupportedLimits();
 
     uint64_t GetDeprecationWarningCountForTesting() const;
 

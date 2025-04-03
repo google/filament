@@ -853,6 +853,12 @@ bool CapabilityVisitor::visit(SpirvModule *, Visitor::Phase phase) {
       });
 
   addExtensionAndCapabilitiesIfEnabled(
+      Extension::KHR_compute_shader_derivatives,
+      {
+          spv::Capability::ComputeDerivativeGroupQuadsKHR,
+          spv::Capability::ComputeDerivativeGroupLinearKHR,
+      });
+  addExtensionAndCapabilitiesIfEnabled(
       Extension::NV_compute_shader_derivatives,
       {
           spv::Capability::ComputeDerivativeGroupQuadsNV,

@@ -49,7 +49,7 @@ class RenderPipeline final : public RenderPipelineBase, public PipelineGL {
     GLenum GetGLPrimitiveTopology() const;
     VertexAttributeMask GetAttributesUsingVertexBuffer(VertexBufferSlot slot) const;
 
-    void ApplyNow(PersistentPipelineState& persistentPipelineState);
+    MaybeError ApplyNow(PersistentPipelineState& persistentPipelineState);
 
     MaybeError InitializeImpl() override;
 
@@ -58,10 +58,10 @@ class RenderPipeline final : public RenderPipelineBase, public PipelineGL {
     ~RenderPipeline() override;
     void DestroyImpl() override;
 
-    void CreateVAOForVertexState();
+    MaybeError CreateVAOForVertexState();
 
-    void ApplyDepthStencilState(const OpenGLFunctions& gl,
-                                PersistentPipelineState* persistentPipelineState);
+    MaybeError ApplyDepthStencilState(const OpenGLFunctions& gl,
+                                      PersistentPipelineState* persistentPipelineState);
 
     // TODO(yunchao.he@intel.com): vao need to be deduplicated between pipelines.
     GLuint mVertexArrayObject;

@@ -71,7 +71,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -123,7 +123,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -144,7 +144,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -202,7 +202,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -229,7 +229,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -289,7 +289,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -314,7 +314,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -364,7 +364,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -386,7 +386,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -434,7 +434,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -456,7 +456,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -538,7 +538,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -568,7 +568,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -629,7 +629,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -659,7 +659,7 @@ MyStruct = struct @align(16) {
 }
 
 $B1: {  # root
-  %buffer:ptr<uniform, MyStruct, read> = var @binding_point(0, 0)
+  %buffer:ptr<uniform, MyStruct, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {

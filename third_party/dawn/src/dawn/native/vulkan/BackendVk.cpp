@@ -31,6 +31,7 @@
 #include <string>
 #include <utility>
 
+#include "dawn/common/Assert.h"
 #include "dawn/common/BitSetIterator.h"
 #include "dawn/common/Log.h"
 #include "dawn/common/SystemUtils.h"
@@ -129,7 +130,7 @@ constexpr SkippedMessage kSkippedMessages[] = {
     {"SYNC-HAZARD-WRITE-AFTER-READ",
      "Submitted access info (submitted_usage: SYNC_CLEAR_TRANSFER_WRITE, command: vkCmdFillBuffer"},
 
-    // http://crbug.com/dawn/1916
+    // https://issues.chromium.org/issues/41479545
     {"SYNC-HAZARD-WRITE-AFTER-WRITE",
      "Access info (usage: SYNC_COPY_TRANSFER_WRITE, prior_usage: SYNC_COPY_TRANSFER_WRITE, "
      "write_barriers: 0, command: vkCmdCopyBufferToImage"},
@@ -174,64 +175,11 @@ constexpr SkippedMessage kSkippedMessages[] = {
     // crbug.com/324282958
     {"NVIDIA", "vkBindImageMemory: memoryTypeIndex"},
 
-    // https://crbug.com/381887313
-    {"VUID-VkPipelineLayoutCreateInfo-descriptorType-03022",
-     "exceeds device maxPerStageDescriptorUpdateAfterBindSamplers limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-descriptorType-03023",
-     "exceeds device maxPerStageDescriptorUpdateAfterBindUniformBuffers limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-descriptorType-03024",
-     "exceeds device maxPerStageDescriptorUpdateAfterBindStorageBuffers limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-descriptorType-03025",
-     "exceeds device maxPerStageDescriptorUpdateAfterBindSampledImages limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-descriptorType-03026",
-     "exceeds device maxPerStageDescriptorUpdateAfterBindStorageImages limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-descriptorType-03027",
-     "exceeds device maxPerStageDescriptorUpdateAfterBindInputAttachments limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-pSetLayouts-03036",
-     "exceeds device maxDescriptorSetUpdateAfterBindSamplers limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-pSetLayouts-03037",
-     "exceeds device maxDescriptorSetUpdateAfterBindUniformBuffers limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-pSetLayouts-03038",
-     "exceeds device maxDescriptorSetUpdateAfterBindUniformBuffersDynamic limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-pSetLayouts-03039",
-     "exceeds device maxDescriptorSetUpdateAfterBindStorageBuffers limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-pSetLayouts-03040",
-     "exceeds device maxDescriptorSetUpdateAfterBindStorageBuffersDynamic limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-pSetLayouts-03041",
-     "exceeds device maxDescriptorSetUpdateAfterBindSampledImages limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-pSetLayouts-03042",
-     "exceeds device maxDescriptorSetUpdateAfterBindStorageImages limit (0)"},
-    {"VUID-VkPipelineLayoutCreateInfo-pSetLayouts-03043",
-     "exceeds device maxDescriptorSetUpdateAfterBindInputAttachments limit (0)"},
+    // https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/9537
     {"VUID-vkCmdCopyBufferToImage-pRegions-00173",
      "Detected overlap between source and dest regions in memory"},
     {"VUID-vkCmdCopyImageToBuffer-pRegions-00184",
      "Detected overlap between source and dest regions in memory"},
-
-    // crbug.com/383121397
-    {"VUID-VkShaderModuleCreateInfo-pCode-08740",
-     "SPIR-V Capability GroupNonUniform was declared, but"},
-    {"VUID-VkShaderModuleCreateInfo-pCode-08740",
-     "SPIR-V Capability GroupNonUniformArithmetic was declared, but"},
-    {"VUID-VkShaderModuleCreateInfo-pCode-08740",
-     "SPIR-V Capability GroupNonUniformBallot was declared, but"},
-    {"VUID-VkShaderModuleCreateInfo-pCode-08740",
-     "SPIR-V Capability GroupNonUniformQuad was declared, but"},
-    {"VUID-VkShaderModuleCreateInfo-pCode-08740",
-     "SPIR-V Capability GroupNonUniformShuffle was declared, but"},
-    {"VUID-VkShaderModuleCreateInfo-pCode-08740",
-     "SPIR-V Capability GroupNonUniformShuffleRelative was declared, but"},
-    {"VUID-VkShaderModuleCreateInfo-pCode-08740",
-     "SPIR-V Capability GroupNonUniformVote was declared, but"},
-
-    // crbug.com/385090855
-    {"VUID-RuntimeSpirv-None-06343",
-     "Group operations with subgroup scope must not be used if the shader stage is not in "
-     "subgroupSupportedStages"},
-
-    // crbug.com/392541999
-    {"UNASSIGNED-vkAllocateMemory-maxMemoryAllocationSize",
-     "is larger than maxMemoryAllocationSize (0)"},
 };
 
 namespace dawn::native::vulkan {
@@ -299,7 +247,7 @@ void LogCallbackData(LogSeverity severity,
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
 OnDebugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                     VkDebugUtilsMessageTypeFlagsEXT /* messageTypes */,
+                     VkDebugUtilsMessageTypeFlagsEXT messageTypes,
                      const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
                      void* pUserData) {
     if (!ShouldReportDebugMessage(pCallbackData->pMessageIdName, pCallbackData->pMessage)) {
@@ -331,10 +279,12 @@ OnDebugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         }
     }
 
-    // We get to this line if no device was associated with the message. Crash so that the failure
-    // is loud and makes tests fail in Debug.
+    // We get to this line if no device was associated with the message. If the message is a backend
+    // validation error then crash as there should have been a debug label on the object. The
+    // driver can also produce errors even with backend validation disabled so those errors are
+    // just logged.
     LogCallbackData(LogSeverity::Error, pCallbackData);
-    DAWN_ASSERT(false);
+    DAWN_ASSERT(!(messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT));
 
     return VK_FALSE;
 }

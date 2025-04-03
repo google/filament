@@ -37,10 +37,13 @@
 #include "dawn/common/Constants.h"
 #include "dawn/common/ityp_bitset.h"
 #include "dawn/common/ityp_span.h"
+#include "dawn/native/ComputePipeline.h"
 #include "dawn/native/Device.h"
 #include "dawn/native/ImmediateConstantsLayout.h"
 #include "dawn/native/IntegerTypes.h"
 #include "dawn/native/Pipeline.h"
+#include "dawn/native/RenderPipeline.h"
+#include "partition_alloc/pointers/raw_ptr_exclusion.h"
 
 namespace dawn::native {
 
@@ -68,27 +71,32 @@ struct ImmediateDataContent {
     alignas(T) unsigned char mData[sizeof(T)] = {0};
 };
 
-template <typename T>
+template <typename T, typename PipelineType>
 class UserImmediateConstantsTrackerBase {
   public:
     UserImmediateConstantsTrackerBase() {}
 
     // Setters
-    void SetImmediateData(uint32_t immediateDataRangeOffset, uint32_t* values, uint32_t count) {
-        uint32_t* destData = mContent.template Get<uint32_t>(offsetof(T, userConstants) +
-                                                             immediateDataRangeOffset *
-                                                                 kImmediateConstantElementByteSize);
-        size_t dataSize = count * kImmediateConstantElementByteSize;
-        if (memcmp(destData, values, dataSize) != 0) {
-            memcpy(destData, values, dataSize);
+    void SetImmediateData(uint32_t offset, uint8_t* values, uint32_t size) {
+        uint8_t* destData = mContent.template Get<uint8_t>(offsetof(T, userConstants) + offset);
+        if (memcmp(destData, values, size) != 0) {
+            memcpy(destData, values, size);
             mDirty |= GetImmediateConstantBlockBits(offsetof(T, userConstants),
                                                     sizeof(UserImmediateConstants));
         }
     }
 
-    // Getters
-    const ImmediateConstantMask& GetPipelineMask() const { return mPipelineMask; }
+    // TODO(crbug.com/366291600): Support immediate data compatible.
+    void OnSetPipeline(PipelineType* pipeline) {
+        if (mLastPipeline == pipeline) {
+            return;
+        }
 
+        mDirty = pipeline->GetImmediateMask();
+        mLastPipeline = pipeline;
+    }
+
+    // Getters
     const ImmediateConstantMask& GetDirtyBits() const { return mDirty; }
 
     const ImmediateDataContent<T>& GetContent() const { return mContent; }
@@ -108,14 +116,13 @@ class UserImmediateConstantsTrackerBase {
 
     ImmediateDataContent<T> mContent;
     ImmediateConstantMask mDirty = ImmediateConstantMask(0);
-    ImmediateConstantMask mPipelineMask = ImmediateConstantMask(0);
+    RAW_PTR_EXCLUSION PipelineType* mLastPipeline = nullptr;
 };
 
 class RenderImmediateConstantsTrackerBase
-    : public UserImmediateConstantsTrackerBase<RenderImmediateConstants> {
+    : public UserImmediateConstantsTrackerBase<RenderImmediateConstants, RenderPipelineBase> {
   public:
-    RenderImmediateConstantsTrackerBase();
-    void OnPipelineChange(PipelineBase* pipeline);
+    RenderImmediateConstantsTrackerBase() = default;
     void SetClampFragDepth(float minClampFragDepth, float maxClampFragDepth);
     void SetFirstIndexOffset(uint32_t firstVertex, uint32_t firstInstance);
     void SetFirstVertex(uint32_t firstVertex);
@@ -123,10 +130,9 @@ class RenderImmediateConstantsTrackerBase
 };
 
 class ComputeImmediateConstantsTrackerBase
-    : public UserImmediateConstantsTrackerBase<ComputeImmediateConstants> {
+    : public UserImmediateConstantsTrackerBase<ComputeImmediateConstants, ComputePipelineBase> {
   public:
-    ComputeImmediateConstantsTrackerBase();
-    void OnPipelineChange(PipelineBase* pipeline);
+    ComputeImmediateConstantsTrackerBase() = default;
     void SetNumWorkgroups(uint32_t numWorkgroupX, uint32_t numWorkgroupY, uint32_t numWorkgroupZ);
 };
 

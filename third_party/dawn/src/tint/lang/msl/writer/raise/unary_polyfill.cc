@@ -27,8 +27,6 @@
 
 #include "src/tint/lang/msl/writer/raise/unary_polyfill.h"
 
-#include <utility>
-
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/validator.h"
 
@@ -72,14 +70,14 @@ struct State {
     /// @param unary the unary instruction
     void SignedIntegerNegation(core::ir::Unary* unary) {
         // Replace `-x` with `as_type<int>((~as_type<uint>(x)) + 1)`.
-        auto* signed_type = unary->Result(0)->Type();
+        auto* signed_type = unary->Result()->Type();
         auto* unsigned_type = ty.MatchWidth(ty.u32(), signed_type);
         b.InsertBefore(unary, [&] {
             auto* unsigned_value = b.Bitcast(unsigned_type, unary->Val());
             auto* complement = b.Complement(unsigned_type, unsigned_value);
             auto* plus_one = b.Add(unsigned_type, complement, b.MatchWidth(u32(1), unsigned_type));
             auto* result = b.Bitcast(signed_type, plus_one);
-            unary->Result(0)->ReplaceAllUsesWith(result->Result(0));
+            unary->Result()->ReplaceAllUsesWith(result->Result());
         });
         unary->Destroy();
     }

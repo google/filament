@@ -8002,8 +8002,10 @@ TEST_F(AggressiveDCETest, StoringAPointer) {
   const std::string text = R"(
                OpCapability CooperativeMatrixKHR
                OpCapability Shader
+               OpCapability VulkanMemoryModelKHR
                OpExtension "SPV_KHR_cooperative_matrix"
-               OpMemoryModel Logical GLSL450
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpMemoryModel Logical VulkanKHR
                OpEntryPoint GLCompute %1 "main" %2
                OpExecutionMode %1 LocalSize 64 1 1
                OpSource HLSL 600
@@ -8295,6 +8297,185 @@ OpFunctionEnd
   EXPECT_THAT(
       output,
       HasSubstr("OpSource HLSL 600 %5 \"#define UBER_TYPE(x) x ## Type"));
+}
+
+TEST_F(AggressiveDCETest, EliminateCopyLogical) {
+  const std::string before = R"(
+; CHECK: [[float32:%\w+]] = OpTypeFloat 32
+; CHECK: [[v4float:%\w+]] = OpTypeVector [[float32]] 4
+; CHECK-NOT: %10 = OpTypeArray [[v4float]] %9
+; CHECK-NOT: %11 = OpTypeStruct %10 %10
+; CHECK-NOT: %22 = OpTypePointer Uniform %16
+; CHECK-NOT: %38 = OpTypePointer Function [[v4float]]
+; CHECK-NOT: %43 = OpTypePointer Function %10
+; CHECK-NOT: %44 = OpVariable %42 Function
+; CHECK-NOT: %23 = OpAccessChain %22 %19 %21
+; CHECK-NOT: %24 = OpLoad %16 %23
+; CHECK-NOT: %25 = OpCopyLogical %11 %24
+; CHECK-NOT: %46 = OpCompositeExtract %10 %25 0
+; CHECK-NOT:       OpStore %44 %46
+      OpCapability Shader
+ %1 = OpExtInstImport "GLSL.std.450"
+      OpMemoryModel Logical GLSL450
+      OpEntryPoint Vertex %4 "main" %19 %30 %32
+      OpSource GLSL 430
+      OpName %4 "main"
+      OpDecorate %14 ArrayStride 16
+      OpDecorate %15 ArrayStride 16
+      OpMemberDecorate %16 0 Offset 0
+      OpMemberDecorate %16 1 Offset 32
+      OpDecorate %17 Block
+      OpMemberDecorate %17 0 Offset 0
+      OpDecorate %19 Binding 0
+      OpDecorate %19 DescriptorSet 0
+      OpDecorate %28 Block
+      OpMemberDecorate %28 0 BuiltIn Position
+      OpMemberDecorate %28 1 BuiltIn PointSize
+      OpMemberDecorate %28 2 BuiltIn ClipDistance
+      OpDecorate %32 Location 0
+ %2 = OpTypeVoid
+ %3 = OpTypeFunction %2
+ %6 = OpTypeFloat 32
+ %7 = OpTypeVector %6 4
+ %8 = OpTypeInt 32 0
+ %9 = OpConstant %8 2
+%10 = OpTypeArray %7 %9
+%11 = OpTypeStruct %10 %10
+%14 = OpTypeArray %7 %9
+%15 = OpTypeArray %7 %9
+%16 = OpTypeStruct %14 %15
+%17 = OpTypeStruct %16
+%18 = OpTypePointer Uniform %17
+%19 = OpVariable %18 Uniform
+%20 = OpTypeInt 32 1
+%21 = OpConstant %20 0
+%22 = OpTypePointer Uniform %16
+%26 = OpConstant %8 1
+%27 = OpTypeArray %6 %26
+%28 = OpTypeStruct %7 %6 %27
+%29 = OpTypePointer Output %28
+%30 = OpVariable %29 Output
+%31 = OpTypePointer Input %7
+%32 = OpVariable %31 Input
+%33 = OpConstant %8 0
+%34 = OpTypePointer Input %6
+%38 = OpTypePointer Function %7
+%41 = OpTypePointer Output %7
+%43 = OpTypePointer Function %10
+%48 = OpTypePointer Uniform %14
+%49 = OpTypePointer Uniform %7
+ %4 = OpFunction %2 None %3
+ %5 = OpLabel
+%44 = OpVariable %43 Function
+%23 = OpAccessChain %22 %19 %21
+%24 = OpLoad %16 %23
+%25 = OpCopyLogical %11 %24
+%46 = OpCompositeExtract %10 %25 0
+%50 = OpAccessChain %48 %19 %21 %33
+      OpStore %44 %46
+%35 = OpAccessChain %34 %32 %33
+%36 = OpLoad %6 %35
+%37 = OpConvertFToS %20 %36
+%47 = OpAccessChain %49 %50 %37
+%40 = OpLoad %7 %47
+%42 = OpAccessChain %41 %30 %21
+      OpStore %42 %40
+      OpReturn
+      OpFunctionEnd
+)";
+
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_6);
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  SinglePassRunAndMatch<AggressiveDCEPass>(before, true);
+}
+
+TEST_F(AggressiveDCETest, KeepCopyLogical) {
+  const std::string before = R"(
+; CHECK: OpCopyLogical
+      OpCapability Shader
+ %1 = OpExtInstImport "GLSL.std.450"
+      OpMemoryModel Logical GLSL450
+      OpEntryPoint GLCompute %4 "main" %15 %23 %38
+      OpExecutionMode %4 LocalSize 32 32 1
+      OpSource GLSL 430
+      OpName %4 "main"
+      OpDecorate %10 ArrayStride 16
+      OpDecorate %11 ArrayStride 16
+      OpMemberDecorate %12 0 Offset 0
+      OpMemberDecorate %12 1 Offset 2048
+      OpDecorate %13 Block
+      OpMemberDecorate %13 0 NonReadable
+      OpMemberDecorate %13 0 Offset 0
+      OpDecorate %15 NonReadable
+      OpDecorate %15 Binding 1
+      OpDecorate %15 DescriptorSet 0
+      OpDecorate %18 ArrayStride 16
+      OpDecorate %19 ArrayStride 16
+      OpMemberDecorate %20 0 Offset 0
+      OpMemberDecorate %20 1 Offset 2048
+      OpDecorate %21 Block
+      OpMemberDecorate %21 0 NonWritable
+      OpMemberDecorate %21 0 Offset 0
+      OpDecorate %23 NonWritable
+      OpDecorate %23 Binding 0
+      OpDecorate %23 DescriptorSet 0
+      OpDecorate %30 ArrayStride 16
+      OpDecorate %31 ArrayStride 16
+      OpMemberDecorate %32 0 Offset 0
+      OpMemberDecorate %32 1 Offset 2048
+      OpDecorate %34 ArrayStride 4096
+      OpMemberDecorate %35 0 Offset 0
+      OpDecorate %36 Block
+      OpMemberDecorate %36 0 Offset 0
+      OpDecorate %38 Binding 0
+      OpDecorate %38 DescriptorSet 0
+ %2 = OpTypeVoid
+ %3 = OpTypeFunction %2
+ %6 = OpTypeFloat 32
+ %7 = OpTypeVector %6 4
+ %8 = OpTypeInt 32 0
+ %9 = OpConstant %8 128
+%10 = OpTypeArray %7 %9
+%11 = OpTypeArray %7 %9
+%12 = OpTypeStruct %10 %11
+%13 = OpTypeStruct %12
+%14 = OpTypePointer StorageBuffer %13
+%15 = OpVariable %14 StorageBuffer
+%16 = OpTypeInt 32 1
+%17 = OpConstant %16 0
+%18 = OpTypeArray %7 %9
+%19 = OpTypeArray %7 %9
+%20 = OpTypeStruct %18 %19
+%21 = OpTypeStruct %20
+%22 = OpTypePointer StorageBuffer %21
+%23 = OpVariable %22 StorageBuffer
+%24 = OpTypePointer StorageBuffer %20
+%27 = OpTypePointer StorageBuffer %12
+%30 = OpTypeArray %7 %9
+%31 = OpTypeArray %7 %9
+%32 = OpTypeStruct %30 %31
+%33 = OpConstant %8 8
+%34 = OpTypeArray %32 %33
+%35 = OpTypeStruct %34
+%36 = OpTypeStruct %35
+%37 = OpTypePointer Uniform %36
+%38 = OpVariable %37 Uniform
+ %4 = OpFunction %2 None %3
+ %5 = OpLabel
+%25 = OpAccessChain %24 %23 %17
+%26 = OpLoad %20 %25
+%28 = OpAccessChain %27 %15 %17
+%29 = OpCopyLogical %12 %26
+      OpStore %28 %29
+      OpReturn
+      OpFunctionEnd
+)";
+
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_6);
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  SinglePassRunAndMatch<AggressiveDCEPass>(before, true);
 }
 
 }  // namespace

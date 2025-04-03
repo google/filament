@@ -44,6 +44,7 @@ class BindGroupLayout final : public BindGroupLayoutInternalBase {
 
     Ref<BindGroup> AllocateBindGroup(Device* device, const BindGroupDescriptor* descriptor);
     void DeallocateBindGroup(BindGroup* bindGroup);
+    void ReduceMemoryUsage() override;
 
   private:
     BindGroupLayout(Device* device, const BindGroupLayoutDescriptor* descriptor);

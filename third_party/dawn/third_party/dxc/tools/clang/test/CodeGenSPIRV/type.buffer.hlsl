@@ -81,20 +81,6 @@ RWBuffer<uint4> uint4rwbuf;
 RWBuffer<float3> float3rwbuf;
 RWBuffer<float4> float4rwbuf;
 
-struct S {
-    float a;
-    float b;
-};
-
-struct T {
-    float1 a;
-    float2 b;
-};
-
-Buffer<S> sBuf;
-
-Buffer<T> tBuf;
-
 // CHECK: %intbuf = OpVariable %_ptr_UniformConstant_type_buffer_image UniformConstant
 // CHECK: %uintbuf = OpVariable %_ptr_UniformConstant_type_buffer_image_0 UniformConstant
 // CHECK: %floatbuf = OpVariable %_ptr_UniformConstant_type_buffer_image_1 UniformConstant
@@ -119,7 +105,5 @@ Buffer<T> tBuf;
 // CHECK: %uint4rwbuf = OpVariable %_ptr_UniformConstant_type_buffer_image_20 UniformConstant
 // CHECK: %float3rwbuf = OpVariable %_ptr_UniformConstant_type_buffer_image_21 UniformConstant
 // CHECK: %float4rwbuf = OpVariable %_ptr_UniformConstant_type_buffer_image_22 UniformConstant
-// CHECK:   %sBuf = OpVariable %_ptr_UniformConstant_type_buffer_image_7 UniformConstant
-// CHECK:   %tBuf = OpVariable %_ptr_UniformConstant_type_buffer_image_15 UniformConstant
 
 void main() {}

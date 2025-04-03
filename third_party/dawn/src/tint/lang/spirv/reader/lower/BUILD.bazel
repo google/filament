@@ -39,12 +39,14 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 cc_library(
   name = "lower",
   srcs = [
+    "atomics.cc",
     "builtins.cc",
     "lower.cc",
     "shader_io.cc",
     "vector_element_pointer.cc",
   ],
   hdrs = [
+    "atomics.h",
     "builtins.h",
     "lower.h",
     "shader_io.h",
@@ -56,6 +58,7 @@ cc_library(
     "//src/tint/lang/core/constant",
     "//src/tint/lang/core/intrinsic",
     "//src/tint/lang/core/ir",
+    "//src/tint/lang/core/ir/transform",
     "//src/tint/lang/core/type",
     "//src/tint/lang/spirv",
     "//src/tint/lang/spirv/intrinsic",
@@ -67,7 +70,6 @@ cc_library(
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/tint/utils/memory",
-    "//src/tint/utils/result",
     "//src/tint/utils/rtti",
     "//src/tint/utils/symbol",
     "//src/tint/utils/text",
@@ -80,6 +82,7 @@ cc_library(
   name = "test",
   alwayslink = True,
   srcs = [
+    "atomics_test.cc",
     "builtins_test.cc",
     "shader_io_test.cc",
     "vector_element_pointer_test.cc",
@@ -103,7 +106,6 @@ cc_library(
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/tint/utils/memory",
-    "//src/tint/utils/result",
     "//src/tint/utils/rtti",
     "//src/tint/utils/symbol",
     "//src/tint/utils/text",

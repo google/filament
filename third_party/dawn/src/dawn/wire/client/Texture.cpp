@@ -27,17 +27,34 @@
 
 #include "dawn/wire/client/Texture.h"
 
+#include <utility>
+
 #include "dawn/wire/client/Client.h"
 #include "dawn/wire/client/Device.h"
 
 namespace dawn::wire::client {
+
+// static
+WGPUTexture Texture::CreateError(Device* device, const WGPUTextureDescriptor* descriptor) {
+    Client* client = device->GetClient();
+    Ref<Texture> texture = client->Make<Texture>(descriptor);
+
+    DeviceCreateErrorTextureCmd cmd;
+    cmd.self = ToAPI(device);
+    cmd.descriptor = descriptor;
+    cmd.result = texture->GetWireHandle();
+    client->SerializeCommand(cmd);
+
+    return ReturnToAPI(std::move(texture));
+}
 
 Texture::Texture(const ObjectBaseParams& params, const WGPUTextureDescriptor* descriptor)
     : ObjectBase(params),
       mSize(descriptor->size),
       mMipLevelCount(descriptor->mipLevelCount),
       mSampleCount(descriptor->sampleCount),
-      mDimension(descriptor->dimension),
+      mDimension(descriptor->dimension == WGPUTextureDimension_Undefined ? WGPUTextureDimension_2D
+                                                                         : descriptor->dimension),
       mFormat(descriptor->format),
       mUsage(static_cast<WGPUTextureUsage>(descriptor->usage)) {}
 

@@ -86,7 +86,7 @@ class MslWriterTestHelperBase : public BASE {
         [[maybe_unused]] validate::MslVersion msl_version = validate::MslVersion::kMsl_2_3) {
         auto result = writer::Generate(mod, options);
         if (result != Success) {
-            err_ = result.Failure().reason.Str();
+            err_ = result.Failure().reason;
             return false;
         }
         output_ = result.Get();
@@ -101,7 +101,7 @@ class MslWriterTestHelperBase : public BASE {
                [[maybe_unused]] validate::MslVersion msl_version = validate::MslVersion::kMsl_2_3) {
         auto result = writer::Print(mod, options);
         if (result != Success) {
-            err_ = result.Failure().reason.Str();
+            err_ = result.Failure().reason;
             return false;
         }
         output_ = result.Get();

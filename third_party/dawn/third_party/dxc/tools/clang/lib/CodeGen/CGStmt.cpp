@@ -525,6 +525,10 @@ void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {
 
 // HLSL Change Begins.
 void CodeGenFunction::EmitDiscardStmt(const DiscardStmt &S) {
+  // Skip unreachable discard.
+  if (!HaveInsertPoint())
+    return;
+
   CGM.getHLSLRuntime().EmitHLSLDiscard(*this);
 }
 // HLSL Change Ends.

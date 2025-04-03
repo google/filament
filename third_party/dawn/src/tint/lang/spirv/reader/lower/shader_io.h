@@ -28,7 +28,7 @@
 #ifndef SRC_TINT_LANG_SPIRV_READER_LOWER_SHADER_IO_H_
 #define SRC_TINT_LANG_SPIRV_READER_LOWER_SHADER_IO_H_
 
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

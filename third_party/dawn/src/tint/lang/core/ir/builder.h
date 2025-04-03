@@ -37,6 +37,7 @@
 #include "src/tint/lang/core/ir/block_param.h"
 #include "src/tint/lang/core/ir/break_if.h"
 #include "src/tint/lang/core/ir/constant.h"
+#include "src/tint/lang/core/ir/constexpr_if.h"
 #include "src/tint/lang/core/ir/construct.h"
 #include "src/tint/lang/core/ir/continue.h"
 #include "src/tint/lang/core/ir/convert.h"
@@ -314,6 +315,15 @@ class Builder {
     ir::If* If(T&& condition) {
         auto* cond_val = Value(std::forward<T>(condition));
         return Append(ir.CreateInstruction<ir::If>(cond_val, Block(), Block()));
+    }
+
+    /// Creates an const expression if instruction
+    /// @param condition the const expression if condition
+    /// @returns the instruction
+    template <typename T>
+    ir::ConstExprIf* ConstExprIf(T&& condition) {
+        auto* cond_val = Value(std::forward<T>(condition));
+        return Append(ir.CreateInstruction<ir::ConstExprIf>(cond_val, Block(), Block()));
     }
 
     /// Creates a loop instruction
@@ -1206,6 +1216,21 @@ class Builder {
                                              Values(std::forward<ARGS>(args)...));
     }
 
+    /// Creates a core builtin call instruction with explicit parameters
+    /// @param type the return type of the call
+    /// @param func the builtin function to call
+    /// @param explicit_params the explicit parameters
+    /// @param args the call arguments
+    /// @returns the instruction
+    template <typename... ARGS>
+    ir::CoreBuiltinCall* CallExplicit(const core::type::Type* type,
+                                      core::BuiltinFn func,
+                                      VectorRef<const core::type::Type*> explicit_params,
+                                      ARGS&&... args) {
+        return CallExplicitWithResult<core::ir::CoreBuiltinCall>(
+            InstructionResult(type), func, explicit_params, Values(std::forward<ARGS>(args)...));
+    }
+
     /// Creates a builtin call instruction
     /// @param type the return type of the call
     /// @param func the builtin function to call
@@ -1277,7 +1302,7 @@ class Builder {
     /// @param val the value to be converted
     /// @returns either result of the conversion or original value
     ir::Value* InsertConvertIfNeeded(const core::type::Type* to, ir::Value* val) {
-        return val->Type()->Equals(*to) ? val : Convert(to, val)->Result(0);
+        return val->Type()->Equals(*to) ? val : Convert(to, val)->Result();
     }
 
     /// Creates a value constructor instruction with an existing instruction result
@@ -1412,7 +1437,7 @@ class Builder {
         }
         auto* var = Var(name, ir.Types().ptr(SPACE, val->Type(), ACCESS));
         var->SetInitializer(val);
-        ir.SetName(var->Result(0), name);
+        ir.SetName(var->Result(), name);
         return var;
     }
 
@@ -1466,7 +1491,7 @@ class Builder {
             return nullptr;
         }
         auto* let = Append(ir.CreateInstruction<ir::Let>(InstructionResult(val->Type()), val));
-        ir.SetName(let->Result(0), name);
+        ir.SetName(let->Result(), name);
         return let;
     }
 
@@ -1848,7 +1873,7 @@ class Builder {
         }
         auto* override = Append(ir.CreateInstruction<ir::Override>(InstructionResult(val->Type())));
         override->SetInitializer(val);
-        ir.SetName(override->Result(0), name);
+        ir.SetName(override->Result(), name);
         return override;
     }
 
@@ -1869,7 +1894,7 @@ class Builder {
         }
         auto* override = Append(ir.CreateInstruction<ir::Override>(InstructionResult(val->Type())));
         override->SetInitializer(val);
-        ir.SetName(override->Result(0), name);
+        ir.SetName(override->Result(), name);
         ir.SetSource(override, src);
         return override;
     }
@@ -1888,7 +1913,7 @@ class Builder {
     /// @returns the instruction
     ir::Override* Override(Source src, std::string_view name, const core::type::Type* type) {
         auto* override = ir.CreateInstruction<ir::Override>(InstructionResult(type));
-        ir.SetName(override->Result(0), name);
+        ir.SetName(override->Result(), name);
         ir.SetSource(override, src);
         Append(override);
         return override;

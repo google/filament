@@ -32,6 +32,7 @@
 #include <utility>
 
 #include "spirv-tools/libspirv.hpp"
+#include "src/tint/utils/diagnostic/diagnostic.h"
 
 namespace tint::spirv::validate {
 
@@ -90,7 +91,8 @@ Result<SuccessType> Validate(Slice<const uint32_t> spirv, spv_target_env target_
         diag.source.file = file.get();
         diag.owned_file = file;
     }
-    return Failure{diag::List{std::move(diags)}};
+    auto list = diag::List(diags);
+    return Failure{list.Str()};
 }
 
 }  // namespace tint::spirv::validate

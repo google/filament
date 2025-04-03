@@ -361,8 +361,8 @@ void [[]] DispatchMesh(in uint threadGroupCountX, in uint threadGroupCountY, in 
 // Return true if the current lane is a helper lane
 bool [[ro]] IsHelperLane();
 
-// HL Op for allocating ray query object that default constructor uses
-uint [[hidden]] AllocateRayQuery(in uint flags);
+// HL Op for allocating ray query object
+uint [[hidden]] AllocateRayQuery(in uint flags, in uint rayqueryflags);
 
 resource [[hidden]] CreateResourceFromHeap(in uint index);
 
@@ -1087,6 +1087,17 @@ float<3> [[ro]] CommittedObjectRayDirection();
 uint [[ro]] CandidateInstanceContributionToHitGroupIndex();
 uint [[ro]] CommittedInstanceContributionToHitGroupIndex();
 
+} namespace
+
+// Shader Execution Reordering
+namespace DxHitObjectMethods {
+    DxHitObject [[static,class_prefix,min_sm=6.9]] MakeNop();
+} namespace
+
+namespace DxIntrinsics {
+void [[min_sm=6.9]] MaybeReorderThread(in DxHitObject HitObject);
+void [[min_sm=6.9]] MaybeReorderThread(in uint CoherenceHint, in uint NumCoherenceHintBitsFromLSB);
+void [[min_sm=6.9]] MaybeReorderThread(in DxHitObject HitObject, in uint CoherenceHint, in uint NumCoherenceHintBitsFromLSB);
 } namespace
 
 // Work Graphs objects and methods

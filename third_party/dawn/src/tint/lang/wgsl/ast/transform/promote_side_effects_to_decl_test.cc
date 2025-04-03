@@ -3787,6 +3787,7 @@ TEST_F(PromoteSideEffectsToDeclTest, Call_ReadOnlyArgAndSE) {
     auto* src = R"(
 @group(1) @binding(1) var tex: texture_2d_array<u32>;
 @group(1) @binding(2) var samp: sampler;
+@group(1) @binding(2) var arr: binding_array<texture_2d<f32>, 3>;
 
 fn get_uv() -> vec2<f32> {
   return vec2<f32>(1.0, 2.0);
@@ -3794,6 +3795,7 @@ fn get_uv() -> vec2<f32> {
 
 fn f() {
   let r = textureGather(1, tex, samp, get_uv(), 1);
+  let p = textureGather(1, arr[0], samp, get_uv());
 }
 )";
 
@@ -3802,6 +3804,8 @@ fn f() {
 
 @group(1) @binding(2) var samp : sampler;
 
+@group(1) @binding(2) var arr : binding_array<texture_2d<f32>, 3>;
+
 fn get_uv() -> vec2<f32> {
   return vec2<f32>(1.0, 2.0);
 }
@@ -3809,6 +3813,8 @@ fn get_uv() -> vec2<f32> {
 fn f() {
   let tint_symbol : vec2<f32> = get_uv();
   let r = textureGather(1, tex, samp, tint_symbol, 1);
+  let tint_symbol_1 : vec2<f32> = get_uv();
+  let p = textureGather(1, arr[0], samp, tint_symbol_1);
 }
 )";
 
@@ -4129,10 +4135,11 @@ fn f() {
     EXPECT_EQ(expect, str(got));
 }
 
-TEST_F(PromoteSideEffectsToDeclTest, TextureSamplerParameter) {
+TEST_F(PromoteSideEffectsToDeclTest, HandleParameter) {
     auto* src = R"(
 @group(0) @binding(0) var T : texture_2d<f32>;
 @group(0) @binding(1) var S : sampler;
+@group(0) @binding(2) var A : binding_array<texture_2d<f32>, 3>;
 
 var<private> P : vec2<f32>;
 fn side_effects() -> vec2<f32> {
@@ -4140,12 +4147,13 @@ fn side_effects() -> vec2<f32> {
   return P;
 }
 
-fn f(t : texture_2d<f32>, s : sampler) -> vec4<f32> {
-  return textureSample(t, s, side_effects());
+fn f(t : texture_2d<f32>, s : sampler, a: binding_array<texture_2d<f32>, 3>) {
+  let p = textureSample(t, s, side_effects());
+  let r = textureSample(a[0], s, side_effects());
 }
 
-fn m() -> vec4<f32>{
-  return f(T, S);
+fn m() {
+  f(T, S, A);
 }
 )";
 
@@ -4154,6 +4162,8 @@ fn m() -> vec4<f32>{
 
 @group(0) @binding(1) var S : sampler;
 
+@group(0) @binding(2) var A : binding_array<texture_2d<f32>, 3>;
+
 var<private> P : vec2<f32>;
 
 fn side_effects() -> vec2<f32> {
@@ -4161,13 +4171,15 @@ fn side_effects() -> vec2<f32> {
   return P;
 }
 
-fn f(t : texture_2d<f32>, s : sampler) -> vec4<f32> {
+fn f(t : texture_2d<f32>, s : sampler, a : binding_array<texture_2d<f32>, 3>) {
   let tint_symbol : vec2<f32> = side_effects();
-  return textureSample(t, s, tint_symbol);
+  let p = textureSample(t, s, tint_symbol);
+  let tint_symbol_1 : vec2<f32> = side_effects();
+  let r = textureSample(a[0], s, tint_symbol_1);
 }
 
-fn m() -> vec4<f32> {
-  return f(T, S);
+fn m() {
+  f(T, S, A);
 }
 )";
 

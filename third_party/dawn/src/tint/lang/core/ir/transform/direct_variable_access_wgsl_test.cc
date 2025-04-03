@@ -73,18 +73,18 @@ class DirectVariableAccessTest : public TransformTestBase<testing::Test> {
 
         auto module = wgsl::reader::ProgramToIR(program_in);
         if (module != Success) {
-            return "ProgramToIR() failed:\n" + module.Failure().reason.Str();
+            return "ProgramToIR() failed:\n" + module.Failure().reason;
         }
 
         auto res = DirectVariableAccess(module.Get(), transform_options);
         if (res != Success) {
-            return "DirectVariableAccess failed:\n" + res.Failure().reason.Str();
+            return "DirectVariableAccess failed:\n" + res.Failure().reason;
         }
 
         auto pre_raise = ir::Disassembler(module.Get()).Plain();
 
         if (auto raise = wgsl::writer::Raise(module.Get()); raise != Success) {
-            return "wgsl::writer::Raise failed:\n" + res.Failure().reason.Str();
+            return "wgsl::writer::Raise failed:\n" + res.Failure().reason;
         }
 
         auto program_out = wgsl::writer::IRToProgram(module.Get(), program_options);
@@ -97,7 +97,7 @@ class DirectVariableAccessTest : public TransformTestBase<testing::Test> {
 
         auto output = wgsl::writer::Generate(program_out, wgsl::writer::Options{});
         if (output != Success) {
-            return "wgsl::writer::IRToProgram() failed: \n" + output.Failure().reason.Str() +
+            return "wgsl::writer::IRToProgram() failed: \n" + output.Failure().reason +
                    "\n\nIR:\n" + ir::Disassembler(module.Get()).Plain();
         }
 

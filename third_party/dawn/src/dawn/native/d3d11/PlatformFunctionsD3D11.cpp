@@ -46,7 +46,7 @@ MaybeError PlatformFunctions::LoadD3D11() {
     d3d11CreateDevice = &D3D11CreateDevice;
 #else
     std::string error;
-    if (!mD3D11Lib.Open("d3d11.dll", &error) ||
+    if (!mD3D11Lib.OpenSystemLibrary(L"d3d11.dll", &error) ||
         !mD3D11Lib.GetProc(&d3d11CreateDevice, "D3D11CreateDevice", &error)) {
         return DAWN_INTERNAL_ERROR(error.c_str());
     }

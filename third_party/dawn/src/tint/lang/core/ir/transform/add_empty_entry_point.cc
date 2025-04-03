@@ -27,10 +27,7 @@
 
 #include "src/tint/lang/core/ir/transform/add_empty_entry_point.h"
 
-#include <utility>
-
 #include "src/tint/lang/core/ir/builder.h"
-#include "src/tint/lang/core/ir/constant.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
 

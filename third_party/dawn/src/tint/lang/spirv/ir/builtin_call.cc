@@ -47,7 +47,7 @@ BuiltinCall::BuiltinCall(Id id,
 BuiltinCall::~BuiltinCall() = default;
 
 BuiltinCall* BuiltinCall::Clone(core::ir::CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     auto new_args = ctx.Clone<BuiltinCall::kDefaultNumOperands>(Args());
     auto new_explicit = ExplicitTemplateParams();
 

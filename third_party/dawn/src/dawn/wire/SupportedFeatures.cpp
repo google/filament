@@ -41,6 +41,8 @@ bool IsFeatureSupported(WGPUFeatureName feature) {
         case WGPUFeatureName_BufferMapExtendedUsages:
         case WGPUFeatureName_DawnFormatCapabilities:
         case WGPUFeatureName_DawnDrmFormatCapabilities:
+        case WGPUFeatureName_TextureCompressionBCSliced3D:
+        case WGPUFeatureName_TextureCompressionASTCSliced3D:
             return false;
         // NOTE: SharedTextureMemory/SharedFence are not actually intended
         // for usage over the wire (and are not exposed over the wire as
@@ -59,6 +61,7 @@ bool IsFeatureSupported(WGPUFeatureName feature) {
         case WGPUFeatureName_SharedTextureMemoryIOSurface:
         case WGPUFeatureName_SharedTextureMemoryEGLImage:
         case WGPUFeatureName_SharedFenceVkSemaphoreOpaqueFD:
+        case WGPUFeatureName_SharedFenceEGLSync:
         case WGPUFeatureName_SharedFenceSyncFD:
         case WGPUFeatureName_SharedFenceVkSemaphoreZirconHandle:
         case WGPUFeatureName_SharedFenceDXGISharedHandle:
@@ -114,6 +117,8 @@ bool IsFeatureSupported(WGPUFeatureName feature) {
         case WGPUFeatureName_ChromiumExperimentalImmediateData:
         case WGPUFeatureName_DawnTexelCopyBufferRowAlignment:
         case WGPUFeatureName_FlexibleTextureViews:
+        case WGPUFeatureName_ChromiumExperimentalSubgroupMatrix:
+        case WGPUFeatureName_CoreFeaturesAndLimits:
             return true;
     }
 

@@ -5,6 +5,8 @@ spv.ext.RayGenShader.rgen
 
                               Capability RayTraversalPrimitiveCullingKHR
                               Capability RayTracingKHR
+                              Capability RayTracingOpacityMicromapEXT
+                              Extension  "SPV_EXT_opacity_micromap"
                               Extension  "SPV_KHR_ray_tracing"
                1:             ExtInstImport  "GLSL.std.450"
                               MemoryModel Logical GLSL450

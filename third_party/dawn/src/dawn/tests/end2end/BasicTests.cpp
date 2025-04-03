@@ -82,7 +82,7 @@ TEST_P(BasicTests, GetInstanceCapabilities) {
     EXPECT_EQ(instanceCapabilities.timedWaitAnyMaxCount, kTimedWaitAnyMaxCountDefault);
     EXPECT_EQ(instanceCapabilities.nextInChain, nullptr);
 
-    wgpu::ChainedStruct chained{};
+    wgpu::ChainedStructOut chained{};
     instanceCapabilities.nextInChain = &chained;
     status = wgpu::GetInstanceCapabilities(&instanceCapabilities);
     EXPECT_EQ(status, wgpu::Status::Error);

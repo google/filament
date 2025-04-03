@@ -118,10 +118,15 @@ bool ASTPrinter::Generate() {
         Line();
     }
     // Generate global declarations in the order they appear in the module.
+    bool has_declaration = false;
     for (auto* decl : program_.AST().GlobalDeclarations()) {
         if (decl->IsAnyOf<ast::DiagnosticDirective, ast::Enable, ast::Requires>()) {
             continue;
         }
+        if (has_declaration) {
+            Line();
+        }
+        has_declaration = true;
         Switch(
             decl,  //
             [&](const ast::TypeDecl* td) { return EmitTypeDecl(td); },
@@ -129,9 +134,6 @@ bool ASTPrinter::Generate() {
             [&](const ast::Variable* var) { return EmitVariable(Line(), var); },
             [&](const ast::ConstAssert* ca) { return EmitConstAssert(ca); },  //
             TINT_ICE_ON_NO_MATCH);
-        if (decl != program_.AST().GlobalDeclarations().Back()) {
-            Line();
-        }
     }
 
     return !diagnostics_.ContainsErrors();

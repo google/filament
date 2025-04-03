@@ -36,6 +36,7 @@ import (
 	"dawn.googlesource.com/dawn/tools/src/cmd/gen/build"
 	"dawn.googlesource.com/dawn/tools/src/cmd/gen/common"
 	"dawn.googlesource.com/dawn/tools/src/cmd/gen/templates"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/subcmd"
 
 	// Register sub-commands
@@ -45,6 +46,7 @@ import (
 func main() {
 	ctx := context.Background()
 	cfg := &common.Config{}
+	cfg.OsWrapper = oswrapper.GetRealOSWrapper()
 	cfg.RegisterFlags()
 
 	if err := subcmd.Run(ctx, cfg, common.Commands()...); err != nil {

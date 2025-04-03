@@ -65,7 +65,7 @@ Bindings GenerateBindings(const core::ir::Module& module) {
                 group_to_next_binding_number.Add(bp->group, bp->binding + 1);
             }
 
-            auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+            auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
 
             // Store up the external textures, we'll add them in the next step
             if (ptr->StoreType()->Is<core::type::ExternalTexture>()) {

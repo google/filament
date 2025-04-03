@@ -52,6 +52,10 @@ MaybeError PhysicalDeviceBase::Initialize() {
     DAWN_TRY_CONTEXT(InitializeImpl(), "initializing adapter (backend=%s)", mBackend);
     InitializeVendorArchitectureImpl();
 
+    if (SupportsFeatureLevel(wgpu::FeatureLevel::Core, nullptr)) {
+        EnableFeature(Feature::CoreFeaturesAndLimits);
+    }
+
     EnableFeature(Feature::DawnNative);
     EnableFeature(Feature::DawnInternalUsages);
     EnableFeature(Feature::ImplicitDeviceSynchronization);
@@ -64,7 +68,7 @@ MaybeError PhysicalDeviceBase::Initialize() {
         "backend=%s type=%s)",
         mName, mDriverDescription, mVendorId, mDeviceId, mBackend, mAdapterType);
 
-    NormalizeLimits(&mLimits.v1);
+    NormalizeLimits(&mLimits);
 
     return {};
 }

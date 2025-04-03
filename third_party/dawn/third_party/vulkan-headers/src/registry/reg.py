@@ -801,7 +801,7 @@ class Registry:
                             if enum.get('alias'):
                                 format_name = enum.get('alias')
                             if format_name in format_condition:
-                                format_condition[format_name] += "," + featureInfo.name
+                                format_condition[format_name] += f",{featureInfo.name}"
                             else:
                                 format_condition[format_name] = featureInfo.name
                         elif groupName == "VkPipelineStageFlagBits2":
@@ -810,7 +810,7 @@ class Registry:
                                 stage_flag = enum.get('alias')
                             featureName = elem.get('depends') if elem.get('depends') is not None else featureInfo.name
                             if stage_flag in sync_pipeline_stage_condition:
-                                sync_pipeline_stage_condition[stage_flag] += "," + featureName
+                                sync_pipeline_stage_condition[stage_flag] += f",{featureName}"
                             else:
                                 sync_pipeline_stage_condition[stage_flag] = featureName
                         elif groupName == "VkAccessFlagBits2":
@@ -819,7 +819,7 @@ class Registry:
                                 access_flag = enum.get('alias')
                             featureName = elem.get('depends') if elem.get('depends') is not None else featureInfo.name
                             if access_flag in sync_access_condition:
-                                sync_access_condition[access_flag] += "," + featureName
+                                sync_access_condition[access_flag] += f",{featureName}"
                             else:
                                 sync_access_condition[access_flag] = featureName
 
@@ -991,7 +991,7 @@ class Registry:
                     # Look up the Info with matching groupName
                     if groupName in self.groupdict:
                         gi = self.groupdict[groupName]
-                        gienum = gi.elem.find("enum[@name='" + enumname + "']")
+                        gienum = gi.elem.find(f"enum[@name='{enumname}']")
                         if gienum is not None:
                             # Remove copy of this enum from the group
                             gi.elem.remove(gienum)
@@ -1207,7 +1207,7 @@ class Registry:
                                 self.gen.featureDictionary[featurename][typecat][required_key][typeextends] = []
                             self.gen.featureDictionary[featurename][typecat][required_key][typeextends].append(typename)
                         else:
-                            self.gen.logMsg('warn', 'fillFeatureDictionary: NOT filling for {}'.format(typename))
+                            self.gen.logMsg('warn', f'fillFeatureDictionary: NOT filling for {typename}')
 
 
                 for enumElem in require.findall('enum'):
@@ -1224,7 +1224,7 @@ class Registry:
                             self.gen.featureDictionary[featurename]['enumconstant'][required_key][enumextends] = []
                         self.gen.featureDictionary[featurename]['enumconstant'][required_key][enumextends].append(enumname)
                     else:
-                        self.gen.logMsg('warn', 'fillFeatureDictionary: NOT filling for {}'.format(typename))
+                        self.gen.logMsg('warn', f'fillFeatureDictionary: NOT filling for {typename}')
 
                 for cmdElem in require.findall('command'):
                     # Remove aliases in the same extension/feature; these are always added as a correction. Do not need the original to be visible.
@@ -1234,7 +1234,7 @@ class Registry:
                             self.gen.featureDictionary[featurename]['command'][required_key] = []
                         self.gen.featureDictionary[featurename]['command'][required_key].append(cmdElem.get('name'))
                     else:
-                        self.gen.logMsg('warn', 'fillFeatureDictionary: NOT filling for {}'.format(typename))
+                        self.gen.logMsg('warn', f'fillFeatureDictionary: NOT filling for {typename}')
 
     def requireFeatures(self, interface, featurename, api, profile):
         """Process `<require>` tags for a `<version>` or `<extension>`.

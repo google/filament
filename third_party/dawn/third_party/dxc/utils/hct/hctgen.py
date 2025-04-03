@@ -2,6 +2,7 @@
 import argparse
 from hctdb_instrhelp import *
 from hctdb import *
+import json
 import sys
 import os
 import CodeTags
@@ -28,6 +29,7 @@ parser.add_argument(
         "DxilCounters",
         "DxilMetadata",
         "RDAT_LibraryTypes",
+        "HlslIntrinsicOpcodes",
     ],
 )
 parser.add_argument("--output", required=True)
@@ -231,6 +233,14 @@ def writeDxilPIXPasses(args):
     out.write("\n")
     return 0
 
+
+def writeHlslIntrinsicOpcodes(args):
+    out = openOutput(args)
+    # get_db_hlsl() initializes the hlsl intrinsic database and opcode_data.
+    get_db_hlsl()
+    json.dump(get_hlsl_opcode_data(), out, indent=2)
+    out.write("\n")
+    return 0
 
 args = parser.parse_args()
 if args.force_lf and args.force_crlf:

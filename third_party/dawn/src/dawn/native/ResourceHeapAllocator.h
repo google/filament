@@ -35,7 +35,7 @@
 
 namespace dawn::native {
 
-// Interface for backend allocators that create memory heaps resoruces can be suballocated in.
+// Interface for backend allocators that create memory heaps resources can be suballocated in.
 class ResourceHeapAllocator {
   public:
     virtual ~ResourceHeapAllocator() = default;

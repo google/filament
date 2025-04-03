@@ -76,7 +76,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, Access_Component_NoUse) {
     auto* src = R"(
 %foo = func():void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %3:ptr<function, u32, read_write> = access %vec, 2u
     ret
   }
@@ -87,7 +87,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, Access_Component_NoUse) {
     auto* expect = R"(
 %foo = func():void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     ret
   }
 }
@@ -110,7 +110,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, Load) {
     auto* src = R"(
 %foo = func():u32 {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %3:ptr<function, u32, read_write> = access %vec, 2u
     %4:u32 = load %3
     ret %4
@@ -122,7 +122,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, Load) {
     auto* expect = R"(
 %foo = func():u32 {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %3:u32 = load_vector_element %vec, 2u
     ret %3
   }
@@ -146,7 +146,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, Store) {
     auto* src = R"(
 %foo = func():void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %3:ptr<function, u32, read_write> = access %vec, 2u
     store %3, 42u
     ret
@@ -158,7 +158,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, Store) {
     auto* expect = R"(
 %foo = func():void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     store_vector_element %vec, 2u, 42u
     ret
   }
@@ -185,12 +185,12 @@ TEST_F(SpirvReader_VectorElementPointerTest, Store_DynamicIndex) {
 
     auto* src = R"(
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
   $B2: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %4:u32 = load %dyn_index
     %5:ptr<function, u32, read_write> = access %vec, %4
     store %5, 42u
@@ -202,12 +202,12 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
   $B2: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %4:u32 = load %dyn_index
     store_vector_element %vec, %4, 42u
     ret
@@ -234,7 +234,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, MultipleUses) {
     auto* src = R"(
 %foo = func():void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %3:ptr<function, u32, read_write> = access %vec, 2u
     %4:u32 = load %3
     %5:u32 = add %4, 1u
@@ -248,7 +248,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, MultipleUses) {
     auto* expect = R"(
 %foo = func():void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %3:u32 = load_vector_element %vec, 2u
     %4:u32 = add %3, 1u
     store_vector_element %vec, 2u, %4
@@ -274,7 +274,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, ViaMatrix) {
     auto* src = R"(
 %foo = func():void {
   $B1: {
-    %mat:ptr<function, mat4x4<f32>, read_write> = var
+    %mat:ptr<function, mat4x4<f32>, read_write> = var undef
     %3:ptr<function, f32, read_write> = access %mat, 1u, 2u
     store %3, 42.0f
     ret
@@ -286,7 +286,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, ViaMatrix) {
     auto* expect = R"(
 %foo = func():void {
   $B1: {
-    %mat:ptr<function, mat4x4<f32>, read_write> = var
+    %mat:ptr<function, mat4x4<f32>, read_write> = var undef
     %3:ptr<function, vec4<f32>, read_write> = access %mat, 1u
     store_vector_element %3, 2u, 42.0f
     ret
@@ -311,7 +311,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, ViaArray) {
     auto* src = R"(
 %foo = func():void {
   $B1: {
-    %arr:ptr<function, array<vec4<f32>, 4>, read_write> = var
+    %arr:ptr<function, array<vec4<f32>, 4>, read_write> = var undef
     %3:ptr<function, f32, read_write> = access %arr, 1u, 2u
     store %3, 42.0f
     ret
@@ -323,7 +323,7 @@ TEST_F(SpirvReader_VectorElementPointerTest, ViaArray) {
     auto* expect = R"(
 %foo = func():void {
   $B1: {
-    %arr:ptr<function, array<vec4<f32>, 4>, read_write> = var
+    %arr:ptr<function, array<vec4<f32>, 4>, read_write> = var undef
     %3:ptr<function, vec4<f32>, read_write> = access %arr, 1u
     store_vector_element %3, 2u, 42.0f
     ret
@@ -351,12 +351,12 @@ TEST_F(SpirvReader_VectorElementPointerTest, ViaArray_DynamicIndex) {
 
     auto* src = R"(
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
   $B2: {
-    %arr:ptr<function, array<vec4<f32>, 4>, read_write> = var
+    %arr:ptr<function, array<vec4<f32>, 4>, read_write> = var undef
     %4:u32 = load %dyn_index
     %5:ptr<function, f32, read_write> = access %arr, %4, 2u
     store %5, 42.0f
@@ -368,12 +368,12 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
   $B2: {
-    %arr:ptr<function, array<vec4<f32>, 4>, read_write> = var
+    %arr:ptr<function, array<vec4<f32>, 4>, read_write> = var undef
     %4:u32 = load %dyn_index
     %5:ptr<function, vec4<f32>, read_write> = access %arr, %4
     store_vector_element %5, 2u, 42.0f
@@ -408,7 +408,7 @@ str = struct @align(16) {
 
 %foo = func():void {
   $B1: {
-    %str:ptr<function, str, read_write> = var
+    %str:ptr<function, str, read_write> = var undef
     %3:ptr<function, f32, read_write> = access %str, 0u, 2u
     store %3, 42.0f
     ret
@@ -424,7 +424,7 @@ str = struct @align(16) {
 
 %foo = func():void {
   $B1: {
-    %str:ptr<function, str, read_write> = var
+    %str:ptr<function, str, read_write> = var undef
     %3:ptr<function, vec4<f32>, read_write> = access %str, 0u
     store_vector_element %3, 2u, 42.0f
     ret
@@ -460,7 +460,7 @@ str = struct @align(16) {
 
 %foo = func():void {
   $B1: {
-    %arr:ptr<function, array<str, 4>, read_write> = var
+    %arr:ptr<function, array<str, 4>, read_write> = var undef
     %3:ptr<function, f32, read_write> = access %arr, 1u, 0u, 3u, 2u, 1u
     store %3, 42.0f
     ret
@@ -476,7 +476,7 @@ str = struct @align(16) {
 
 %foo = func():void {
   $B1: {
-    %arr:ptr<function, array<str, 4>, read_write> = var
+    %arr:ptr<function, array<str, 4>, read_write> = var undef
     %3:ptr<function, vec4<f32>, read_write> = access %arr, 1u, 0u, 3u, 2u
     store_vector_element %3, 1u, 42.0f
     ret
