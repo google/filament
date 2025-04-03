@@ -182,7 +182,7 @@ namespace {
         std::cout << "  " << basename(name) << " [--version | -V]" << std::endl;
         std::cout << "  " << basename(name) << " [--help | -?]" << std::endl;
 
-        exit(5);
+        exit(0);
     }
 
     // grind through each SPIR in turn

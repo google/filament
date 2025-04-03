@@ -5,11 +5,16 @@ To update glslang use the following steps:
 
 ```
 cd third_party
-curl -L https://github.com/KhronosGroup/glslang/archive/8a6b381c9afbfaf9fff851582539fab15ea480c0.zip > main.zip
-unzip main.zip
-rsync -r glslang-8a6b381c9afbfaf9fff851582539fab15ea480c0/ glslang/ --delete
-rm -r main.zip glslang-8a6b381c9afbfaf9fff851582539fab15ea480c0
-rm -rf glslang/Test/
+mkdir glslang_copy && cd glslang_copy
+git init
+git fetch --depth=1 https://github.com/KhronosGroup/glslang.git e57f993cff981c8c3ffd38967e030f04d13781a9
+git reset --hard FETCH_HEAD
+find . -name .git -type d -print0 | xargs -0 rm -r
+rm -rf Test
+cp -r ../glslang/tnt .
+cd ..
+rm -rf glslang
+mv glslang_copy glslang
 git checkout main glslang/tnt glslang/glslang/tnt glslang/SPIRV/tnt
 git restore glslang/LICENSE
 git add glslang
