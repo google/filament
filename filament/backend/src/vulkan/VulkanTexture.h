@@ -40,8 +40,7 @@ struct VulkanTextureState : public fvkmemory::Resource {
     VulkanTextureState(VulkanStagePool& stagePool, VulkanCommands* commands, VmaAllocator allocator,
             VkDevice device, VkImage image, VkDeviceMemory deviceMemory, VkFormat format,
             VkImageViewType viewType, uint8_t levels, uint8_t layerCount,
-            VkSamplerYcbcrConversion ycbcrConversion, bool isExternalFormat,
-            VkImageUsageFlags usage, bool isProtected);
+            VkSamplerYcbcrConversion ycbcrConversion, VkImageUsageFlags usage, bool isProtected);
 
     ~VulkanTextureState();
 
@@ -86,10 +85,9 @@ private:
     // conversion matrix per-frame.
     struct Ycbcr {
         VkSamplerYcbcrConversion conversion;
-        bool isExternalFormat;
 
         bool operator==(Ycbcr const& other) const {
-            return conversion == other.conversion && isExternalFormat == other.isExternalFormat;
+            return conversion == other.conversion;
         }
 
         bool operator!=(Ycbcr const& other) const {
@@ -209,7 +207,7 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
     // This is used in the case of external images and external samplers. AHB might update the
     // conversion per-frame. This implies that we need to invalidate the view cache when that
     // happens.
-    void setYcbcrConversion(VkSamplerYcbcrConversion conversion, bool isExternal);
+    void setYcbcrConversion(VkSamplerYcbcrConversion conversion);
 
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
     void print() const;

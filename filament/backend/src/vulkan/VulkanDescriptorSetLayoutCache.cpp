@@ -127,6 +127,7 @@ void VulkanDescriptorSetLayoutCache::terminate() noexcept {
 
 VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::getVkLayout(
         VulkanDescriptorSetLayout::Bitmask const& bitmasks,
+        fvkutils::SamplerBitmask externalSamplers,
         utils::FixedCapacityVector<VkSampler> immutableSamplers) {
     LayoutKey key = {
         .bitmask = bitmasks,
@@ -141,7 +142,7 @@ VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::getVkLayout(
     count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
             bitmasks.dynamicUbo);
     count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, bitmasks.ubo);
-    count += appendSamplerBindings(&toBind[count], bitmasks.sampler, bitmasks.externalSampler,
+    count += appendSamplerBindings(&toBind[count], bitmasks.sampler, externalSamplers,
             immutableSamplers);
     count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
             bitmasks.inputAttachment);
@@ -160,9 +161,9 @@ VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::getVkLayout(
 
 fvkmemory::resource_ptr<VulkanDescriptorSetLayout> VulkanDescriptorSetLayoutCache::createLayout(
         Handle<HwDescriptorSetLayout> handle, backend::DescriptorSetLayout&& info) {
+    BitmaskGroup maskGroup = VulkanDescriptorSetLayout::Bitmask::fromLayoutDescription(info);
     auto layout = fvkmemory::resource_ptr<VulkanDescriptorSetLayout>::make(mResourceManager, handle,
-            info);
-    layout->setVkLayout(getVkLayout(layout->bitmask));
+            std::move(info), getVkLayout(maskGroup, maskGroup.externalSampler));
     return layout;
 }
 
