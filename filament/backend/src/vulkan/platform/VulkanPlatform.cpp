@@ -212,6 +212,8 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
         VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
         VK_ANDROID_EXTERNAL_MEMORY_ANDROID_HARDWARE_BUFFER_EXTENSION_NAME,
         VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME,
+        // This is needed for external images.  See VulkanPlatformAndroid
+        VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME,
 #endif
         // MoltenVk is the only non-conformant implementation we're interested in.
 #if defined(__APPLE__)
@@ -991,30 +993,6 @@ uint32_t VulkanPlatform::getProtectedGraphicsQueueIndex() const noexcept {
 
 VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
     return mImpl->mProtectedGraphicsQueue;
-}
-
-VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadata(
-        ExternalImageHandleRef externalImage) {
-    return getExternalImageMetadataImpl(externalImage, mImpl->mDevice);
-}
-
-VulkanPlatform::ImageData VulkanPlatform::createExternalImageData(
-        ExternalImageHandleRef externalImage, const ExternalImageMetadata& metadata,
-        uint32_t memoryTypeIndex, VkImageUsageFlags usage) {
-    return createExternalImageDataImpl(externalImage, mImpl->mDevice, metadata, memoryTypeIndex,
-            usage);
-}
-
-VkSampler VulkanPlatform::createExternalSampler(SamplerYcbcrConversion chroma,
-        SamplerParams sampler, uint32_t internalFormat) {
-    return createExternalSamplerImpl(mImpl->mDevice, chroma, sampler, internalFormat);
-}
-
-VkImageView VulkanPlatform::createExternalImageView(SamplerYcbcrConversion chroma,
-        uint32_t internalFormat, VkImage image, VkImageSubresourceRange range,
-        VkImageViewType viewType, VkComponentMapping swizzle) {
-    return createExternalImageViewImpl(mImpl->mDevice, chroma, internalFormat, image, range,
-            viewType, swizzle);
 }
 
 ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() const {
