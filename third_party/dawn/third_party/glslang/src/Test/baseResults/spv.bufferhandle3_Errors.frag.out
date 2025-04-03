@@ -1,6 +1,0 @@
-spv.bufferhandle3_Errors.frag
-ERROR: 0:18: 'in' : cannot contain any structs with buffer_reference. If you want to interface shader stages with a buffer_reference cast to a uint64 or uvec2 instead.
-ERROR: 1 compilation errors.  No code generated.
-
-
-SPIR-V is not generated for failed compile or link

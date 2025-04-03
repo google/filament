@@ -1,9 +1,0 @@
-spv.ext.ShaderTileImage.wronglayout.frag
-ERROR: 0:7: 'binding' : requires uniform or buffer storage qualifier 
-ERROR: 0:7: 'set' : cannot be used with tileImageEXT 
-ERROR: 0:7: 'tileImageEXT' : can only be used with an explicit location 
-ERROR: 0:7: 'input_attachment_index' : can only be used with a subpass 
-ERROR: 4 compilation errors.  No code generated.
-
-
-SPIR-V is not generated for failed compile or link

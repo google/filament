@@ -1,1 +1,0 @@
-vert.spv: ../Test/hlsl.include.vert ../Test/./inc1/bar.h ../Test/./inc1/foo.h ../Test/bar.h ../Test/inc2/bar.h ../Test/inc2/foo.h ../Test/parent.h
