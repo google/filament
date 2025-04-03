@@ -339,16 +339,14 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
                 defaultRenderTarget, swapChain, shader.getProgram());
 
-        readPixelsAndAssertHash(t.name, 512, 512, defaultRenderTarget, expectedHash);
+        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+                ScreenshotParams(512, 512, t.name, expectedHash));
 
         api.commit(swapChain);
         api.endFrame(0);
     }
 
-    api.finish();
     api.stopCapture();
-
-    flushAndWait();
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
@@ -372,7 +370,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
             getSamplerTypeName(textureFormat), fragmentTemplate);
     Shader shader(api, cleanup, ShaderConfig{
         .vertexShader = mVertexShader, .fragmentShader = fragment, .uniforms = {{
-            "text_tex", DescriptorType::SAMPLER, samplerInfo
+            "test_tex", DescriptorType::SAMPLER, samplerInfo
     }}});
 
     // Create a texture.
@@ -416,15 +414,12 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
             defaultRenderTarget, swapChain, shader.getProgram());
 
-    static const uint32_t expectedHash = 359858623;
-    readPixelsAndAssertHash("UpdateImageSRGB", 512, 512, defaultRenderTarget, expectedHash);
+    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+            ScreenshotParams(512, 512, "UpdateImageSRGB", 359858623));
 
-    api.flush();
     api.commit(swapChain);
     api.endFrame(0);
 
-    // This ensures all driver commands have finished before exiting the test.
-    api.finish();
     api.stopCapture();
 }
 
@@ -478,15 +473,12 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
             defaultRenderTarget, swapChain, shader.getProgram());
 
-    static const uint32_t expectedHash = 3644679986;
-    readPixelsAndAssertHash("UpdateImageMipLevel", 512, 512, defaultRenderTarget, expectedHash);
+    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+            ScreenshotParams(512, 512, "UpdateImageMipLevel", 3644679986));
 
-    api.flush();
     api.commit(swapChain);
     api.endFrame(0);
 
-    // This ensures all driver commands have finished before exiting the test.
-    api.finish();
     api.stopCapture();
 }
 
@@ -538,29 +530,24 @@ TEST_F(LoadImageTest, UpdateImage3D) {
 
     api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 4, std::move(descriptor));
 
-    api.beginFrame(0, 0, 0);
+    {
+        RenderFrame frame(api);
 
-    // Update samplers.
-    DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
+        // Update samplers.
+        DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture,
+                { .filterMag = SamplerMagFilter::LINEAR,
+                    .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
 
-    api.bindDescriptorSet(descriptorSet, 1, {});
+        api.bindDescriptorSet(descriptorSet, 1, {});
 
-    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
-            defaultRenderTarget, swapChain, shader.getProgram());
+        renderTriangle({ { DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() } },
+                defaultRenderTarget, swapChain, shader.getProgram());
 
-    static const uint32_t expectedHash = 3644679986;
-    readPixelsAndAssertHash("UpdateImage3D", 512, 512, defaultRenderTarget, expectedHash);
+        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+                ScreenshotParams(512, 512, "UpdateImage3D", 3644679986));
+    }
 
-    api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    // This ensures all driver commands have finished before exiting the test.
-    api.finish();
     api.stopCapture();
 }
 
