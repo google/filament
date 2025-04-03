@@ -329,12 +329,14 @@ TEST_F(LoadImageTest, UpdateImage2D) {
                     checkerboardPixelBuffer(t.pixelFormat, t.pixelType, 512, t.bufferPadding));
         }
 
+        // Each loop needs its own descriptor set.
         DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
-        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-                .filterMag = SamplerMagFilter::NEAREST,
-                .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-
-        api.bindDescriptorSet(descriptorSet, 1, {});
+        shader.updateTextureUniform(api,
+                TextureBindingConfig{ .textureHandle = texture,
+                    .descriptorSet = descriptorSet,
+                    .samplerParams = SamplerParams{ .filterMag = SamplerMagFilter::NEAREST,
+                        .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST },
+                    .alsoBindToSet = 1 });
 
         renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
                 defaultRenderTarget, swapChain, shader.getProgram());
@@ -405,13 +407,11 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     api.beginFrame(0, 0, 0);
 
     // Update samplers.
-    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
-
-    api.bindDescriptorSet(descriptorSet, 1, {});
+    shader.updateTextureUniform(api,
+            TextureBindingConfig{ .textureHandle = texture,
+                    .samplerParams = SamplerParams{ .filterMag = SamplerMagFilter::LINEAR,
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST },
+                    .alsoBindToSet = 1 });
 
     renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
             defaultRenderTarget, swapChain, shader.getProgram());
@@ -467,13 +467,11 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     api.beginFrame(0, 0, 0);
 
     // Update samplers.
-    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
-
-    api.bindDescriptorSet(descriptorSet, 1, {});
+    shader.updateTextureUniform(api,
+            TextureBindingConfig{ .textureHandle = texture,
+                    .samplerParams = SamplerParams{ .filterMag = SamplerMagFilter::LINEAR,
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST },
+                    .alsoBindToSet = 1 });
 
     renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
             defaultRenderTarget, swapChain, shader.getProgram());
@@ -541,13 +539,11 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     api.beginFrame(0, 0, 0);
 
     // Update samplers.
-    DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
-
-    api.bindDescriptorSet(descriptorSet, 1, {});
+    shader.updateTextureUniform(api,
+            TextureBindingConfig{ .textureHandle = texture,
+                .samplerParams = SamplerParams{ .filterMag = SamplerMagFilter::LINEAR,
+                    .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST },
+                .alsoBindToSet = 1 });
 
     renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
             defaultRenderTarget, swapChain, shader.getProgram());

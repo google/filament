@@ -23,6 +23,14 @@ namespace test {
 
 using namespace filament::backend;
 
+filament::backend::descriptor_binding_t TextureBindingConfig::getBinding() const {
+    return binding.value_or(0);
+}
+
+filament::backend::SamplerParams TextureBindingConfig::getParams() const {
+    return samplerParams.value_or(SamplerParams{});
+}
+
 Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup(cleanup) {
     utils::FixedCapacityVector<DescriptorSetLayoutBinding> kLayouts(config.uniforms.size());
     for (unsigned char i = 0; i < config.uniforms.size(); ++i) {
@@ -57,6 +65,19 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup
 
     mDescriptorSetLayout = cleanup.add(
             api.createDescriptorSetLayout(DescriptorSetLayout{ kLayouts }));
+
+    mDefaultDescriptorSet = createDescriptorSet(api);
+}
+
+void Shader::updateTextureUniform(filament::backend::DriverApi& api,
+        TextureBindingConfig config) const {
+    DescriptorSetHandle descriptorSet = config.descriptorSet.value_or(mDefaultDescriptorSet);
+    api.updateDescriptorSetTexture(descriptorSet, config.getBinding(), config.textureHandle,
+            config.getParams());
+
+    if (config.alsoBindToSet.has_value()) {
+        api.bindDescriptorSet(descriptorSet, *config.alsoBindToSet, {});
+    }
 }
 
 filament::backend::DescriptorSetHandle Shader::createDescriptorSet(DriverApi& api) const {

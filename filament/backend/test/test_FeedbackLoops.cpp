@@ -198,12 +198,14 @@ TEST_F(BackendTest, FeedbackLoops) {
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
 
+                // Each pass needs its own descriptor set.
                 auto descriptorSet = shader.createDescriptorSet(api);
                 auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
-                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                });
+                shader.updateTextureUniform(api,
+                        TextureBindingConfig{ .textureHandle = textureView,
+                            .descriptorSet = descriptorSet,
+                            .samplerParams = SamplerParams{ .filterMag = SamplerMagFilter::LINEAR,
+                                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST } });
 
                 UniformBindingConfig uniformBinding{
                     .binding = 1,
