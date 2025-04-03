@@ -22,7 +22,6 @@
 #include "CommandStreamDispatcher.h"
 #include "DriverBase.h"
 #include "private/backend/Dispatcher.h"
-#include "vulkan/VulkanHandles.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -36,7 +35,7 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <cstdint>
+
 #include <sstream>
 #include <string_view>
 #include <utility>
@@ -474,7 +473,7 @@ Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
 
 Handle<HwRenderPrimitive> WebGPUDriver::createRenderPrimitiveS() noexcept {
     FWGPU_LOGW << __FUNCTION__ << "\n";
-    return Handle<HwRenderPrimitive>((Handle<HwRenderPrimitive>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPURenderPrimitive>();
 }
 
 Handle<HwVertexBufferInfo> WebGPUDriver::createVertexBufferInfoS() noexcept {

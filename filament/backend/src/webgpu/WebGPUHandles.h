@@ -51,6 +51,16 @@ namespace filament::backend {
         const BufferObjectBinding mBindingType;
     };
 
+    struct WGPURenderPrimitive : public HwRenderPrimitive {
+        WGPURenderPrimitive();
+        void setBuffers(WGPUVertexBufferInfo const* const vbi,
+                WGPUVertexBuffer* vertexBuffer, WGPUIndexBuffer* indexBuffer);
+
+        WGPUVertexBuffer* vertexBuffer = nullptr;
+        WGPUIndexBuffer* indexBuffer = nullptr;
+};
+
+
     class WGPUTexture : public HwTexture {
     public:
         WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format,

@@ -23,7 +23,7 @@ namespace filament::backend {
               vbih(vbih),
               mBuffers(MAX_VERTEX_BUFFER_COUNT) {
         wgpu::BufferDescriptor descriptor{
-                .label = "WGPUIndexBuffer",
+                .label = "WGPUVertexBuffer",
                 .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex,
                 .size = vextexCount * bufferCount,
                 .mappedAtCreation = false};
