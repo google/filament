@@ -70,19 +70,24 @@ struct VulkanRenderPass {
 // context are stored in VulkanPlatform.
 struct VulkanContext {
 public:
-    inline uint32_t selectMemoryType(uint32_t flags, VkFlags reqs) const {
-        if ((reqs & VK_MEMORY_PROPERTY_PROTECTED_BIT) != 0) {
-            assert_invariant(isProtectedMemorySupported() == true);
-        }
+    static uint32_t selectMemoryType(VkPhysicalDeviceMemoryProperties const& memoryProperties,
+            uint32_t flags, VkFlags reqs) {
         for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
             if (flags & 1) {
-                if ((mMemoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {
+                if ((memoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {
                     return i;
                 }
             }
             flags >>= 1;
         }
         return (uint32_t) VK_MAX_MEMORY_TYPES;
+    }
+
+    inline uint32_t selectMemoryType(uint32_t flags, VkFlags reqs) const {
+        if ((reqs & VK_MEMORY_PROPERTY_PROTECTED_BIT) != 0) {
+            assert_invariant(isProtectedMemorySupported());
+        }
+        return selectMemoryType(mMemoryProperties, flags, reqs);
     }
 
     inline fvkutils::VkFormatList const& getAttachmentDepthStencilFormats() const {
@@ -118,7 +123,7 @@ public:
     }
 
     inline bool isMultiviewEnabled() const noexcept {
-        return mMultiviewEnabled;
+        return mPhysicalDeviceVk11Features.multiview == VK_TRUE;
     }
 
     inline bool isClipDistanceSupported() const noexcept {
@@ -142,6 +147,9 @@ private:
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
     };
+    VkPhysicalDeviceVulkan11Features mPhysicalDeviceVk11Features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+    };
     VkPhysicalDeviceFeatures2 mPhysicalDeviceFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
     };
@@ -154,7 +162,6 @@ private:
     };
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
-    bool mMultiviewEnabled = false;
     bool mLazilyAllocatedMemorySupported = false;
     bool mProtectedMemorySupported = false;
 
