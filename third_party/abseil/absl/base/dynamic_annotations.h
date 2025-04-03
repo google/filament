@@ -58,6 +58,9 @@
 #include <sanitizer/hwasan_interface.h>
 #endif
 
+// TODO(rogeeff): Remove after the backward compatibility period.
+#include "absl/base/internal/dynamic_annotations.h"  // IWYU pragma: export
+
 // -------------------------------------------------------------------------
 // Decide which features are enabled.
 
