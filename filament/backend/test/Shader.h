@@ -61,6 +61,18 @@ struct UniformBindingConfig {
     ResolvedUniformBindingConfig resolve();
 };
 
+struct TextureBindingConfig {
+    filament::backend::TextureHandle textureHandle;
+    std::optional<filament::backend::DescriptorSetHandle> descriptorSet;
+    std::optional<filament::backend::descriptor_binding_t> binding;
+    std::optional<filament::backend::SamplerParams> samplerParams;
+    // If present then the call to update the texture will also bind the descriptor set.
+    std::optional<filament::backend::descriptor_set_t> alsoBindToSet;
+
+    filament::backend::descriptor_binding_t getBinding() const;
+    filament::backend::SamplerParams getParams() const;
+};
+
 class Shader {
 public:
     // All graphics resources have their lifetime controlled by the Cleanup and not this object.
@@ -86,17 +98,20 @@ public:
     void bindUniform(filament::backend::DriverApi& api,
             filament::backend::Handle<filament::backend::HwBufferObject> hwBuffer,
             UniformBindingConfig config) const;
-
-    filament::backend::ProgramHandle getProgram() const;
-    filament::backend::DescriptorSetLayoutHandle getDescriptorSetLayout() const;
+    void updateTextureUniform(filament::backend::DriverApi& api, TextureBindingConfig config) const;
 
     filament::backend::DescriptorSetHandle createDescriptorSet(
             filament::backend::DriverApi& api) const;
+
+    filament::backend::ProgramHandle getProgram() const;
+    filament::backend::DescriptorSetLayoutHandle getDescriptorSetLayout() const;
 
 protected:
     Cleanup& mCleanup;
     filament::backend::ProgramHandle mProgram;
     filament::backend::DescriptorSetLayoutHandle mDescriptorSetLayout;
+    // Used whenever the caller doesn't provide a descriptor set.
+    filament::backend::DescriptorSetHandle mDefaultDescriptorSet;
 };
 
 template<typename UniformType>
@@ -133,12 +148,8 @@ void Shader::bindUniform(filament::backend::DriverApi& api,
         UniformBindingConfig config) const {
     auto resolvedConfig = config.resolve<UniformType>();
 
-    filament::backend::DescriptorSetHandle descriptorSet;
-    if (resolvedConfig.descriptorSet.has_value()) {
-        descriptorSet = *resolvedConfig.descriptorSet;
-    } else {
-        descriptorSet = createDescriptorSet(api);
-    }
+    filament::backend::DescriptorSetHandle descriptorSet =
+            resolvedConfig.descriptorSet.value_or(mDefaultDescriptorSet);
 
     api.updateDescriptorSetBuffer(descriptorSet, resolvedConfig.binding, hwBuffer, 0,
             resolvedConfig.bufferSize);
