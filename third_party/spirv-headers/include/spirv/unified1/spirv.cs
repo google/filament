@@ -1142,6 +1142,9 @@ namespace Spv
             ShaderClockKHR = 5055,
             ShaderEnqueueAMDX = 5067,
             QuadControlKHR = 5087,
+            BFloat16TypeKHR = 5116,
+            BFloat16DotProductKHR = 5117,
+            BFloat16CooperativeMatrixKHR = 5118,
             SampleMaskOverrideCoverageNV = 5249,
             GeometryShaderPassthroughNV = 5251,
             ShaderViewportIndexLayerEXT = 5254,
@@ -1290,6 +1293,7 @@ namespace Spv
             ArithmeticFenceEXT = 6144,
             FPGAClusterAttributesV2INTEL = 6150,
             FPGAKernelAttributesv2INTEL = 6161,
+            TaskSequenceINTEL = 6162,
             FPMaxErrorINTEL = 6169,
             FPGALatencyControlINTEL = 6171,
             FPGAArgumentInterfacesINTEL = 6174,
@@ -1300,7 +1304,9 @@ namespace Spv
             Subgroup2DBlockTransformINTEL = 6229,
             Subgroup2DBlockTransposeINTEL = 6230,
             SubgroupMatrixMultiplyAccumulateINTEL = 6236,
+            TernaryBitwiseFunctionINTEL = 6241,
             GroupUniformArithmeticKHR = 6400,
+            TensorFloat32RoundingINTEL = 6425,
             MaskedGatherScatterINTEL = 6427,
             CacheControlsINTEL = 6441,
             RegisterLimitsINTEL = 6460,
@@ -1596,6 +1602,7 @@ namespace Spv
 
         public enum FPEncoding
         {
+            BFloat16KHR = 0,
             Max = 0x7fffffff,
         }
 
@@ -2411,6 +2418,11 @@ namespace Spv
             OpControlBarrierArriveINTEL = 6142,
             OpControlBarrierWaitINTEL = 6143,
             OpArithmeticFenceEXT = 6145,
+            OpTaskSequenceCreateINTEL = 6163,
+            OpTaskSequenceAsyncINTEL = 6164,
+            OpTaskSequenceGetINTEL = 6165,
+            OpTaskSequenceReleaseINTEL = 6166,
+            OpTypeTaskSequenceINTEL = 6199,
             OpSubgroupBlockPrefetchINTEL = 6221,
             OpSubgroup2DBlockLoadINTEL = 6231,
             OpSubgroup2DBlockLoadTransformINTEL = 6232,
@@ -2418,6 +2430,7 @@ namespace Spv
             OpSubgroup2DBlockPrefetchINTEL = 6234,
             OpSubgroup2DBlockStoreINTEL = 6235,
             OpSubgroupMatrixMultiplyAccumulateINTEL = 6237,
+            OpBitwiseFunctionINTEL = 6242,
             OpGroupIMulKHR = 6401,
             OpGroupFMulKHR = 6402,
             OpGroupBitwiseAndKHR = 6403,
@@ -2426,6 +2439,7 @@ namespace Spv
             OpGroupLogicalAndKHR = 6406,
             OpGroupLogicalOrKHR = 6407,
             OpGroupLogicalXorKHR = 6408,
+            OpRoundFToTF32INTEL = 6426,
             OpMaskedGatherINTEL = 6428,
             OpMaskedScatterINTEL = 6429,
             Max = 0x7fffffff,
