@@ -1428,8 +1428,9 @@ OpReturn
 OpFunctionEnd
 )";
 
-  CompileSuccessfully(text);
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Memory Semantics Volatile can only be used with "
                         "atomic instructions"));
@@ -1455,8 +1456,9 @@ OpReturn
 OpFunctionEnd
 )";
 
-  CompileSuccessfully(text);
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Memory Semantics Volatile can only be used with "
                         "atomic instructions"));
@@ -1484,8 +1486,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  CompileSuccessfully(text);
-  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
 TEST_F(ValidateBarriers, CooperativeMatrixNonConstantSemantics) {
@@ -1510,8 +1512,9 @@ OpReturn
 OpFunctionEnd
 )";
 
-  CompileSuccessfully(text);
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Memory Semantics must be a constant instruction when "
                         "CooperativeMatrixNV capability is present"));

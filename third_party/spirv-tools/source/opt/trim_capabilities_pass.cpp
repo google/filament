@@ -61,12 +61,18 @@ constexpr uint32_t kOpExtInstImportNameInIndex = 0;
 template <class UnaryPredicate>
 static void DFSWhile(const Instruction* instruction, UnaryPredicate condition) {
   std::stack<uint32_t> instructions_to_visit;
+  std::unordered_set<uint32_t> visited_instructions;
   instructions_to_visit.push(instruction->result_id());
   const auto* def_use_mgr = instruction->context()->get_def_use_mgr();
 
   while (!instructions_to_visit.empty()) {
     const Instruction* item = def_use_mgr->GetDef(instructions_to_visit.top());
     instructions_to_visit.pop();
+
+    // Forward references can be allowed, meaning we can have cycles
+    // between ID uses. Need to keep track of this.
+    if (visited_instructions.count(item->result_id())) continue;
+    visited_instructions.insert(item->result_id());
 
     if (!condition(item)) {
       continue;
