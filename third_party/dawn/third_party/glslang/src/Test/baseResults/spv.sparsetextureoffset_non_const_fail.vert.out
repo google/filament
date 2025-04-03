@@ -1,9 +1,0 @@
-spv.sparsetextureoffset_non_const_fail.vert
-ERROR: 0:26: 'texel offset' : argument must be compile-time constant 
-ERROR: 0:27: 'texel offset' : argument must be compile-time constant 
-ERROR: 0:28: 'texel offset' : argument must be compile-time constant 
-ERROR: 0:29: 'texel offset' : argument must be compile-time constant 
-ERROR: 4 compilation errors.  No code generated.
-
-
-SPIR-V is not generated for failed compile or link

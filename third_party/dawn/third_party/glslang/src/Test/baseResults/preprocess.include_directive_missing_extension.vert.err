@@ -1,7 +1,0 @@
-ERROR: 0:3: '#include' : required extension not requested: Possible extensions include:
-GL_GOOGLE_include_directive
-GL_ARB_shading_language_include
-ERROR: 0:3: '#include' : Could not process include directive for header name: bar.h
-ERROR: 2 compilation errors.  No code generated.
-
-
