@@ -214,6 +214,17 @@ bool LowerTypeVisitor::visitInstruction(SpirvInstruction *instr) {
                                                  arrayType->getStride());
             instr->setResultType(resultType);
           }
+        } else if (const auto *runtimeArrayType =
+                       dyn_cast<RuntimeArrayType>(resultType)) {
+          if (const auto *imageType =
+                  dyn_cast<ImageType>(runtimeArrayType->getElementType())) {
+            auto newImgType = spvContext.getImageType(
+                imageType,
+                vkImgFeatures.format.value_or(spv::ImageFormat::Unknown));
+            resultType = spvContext.getRuntimeArrayType(
+                newImgType, runtimeArrayType->getStride());
+            instr->setResultType(resultType);
+          }
         }
       }
     }
@@ -823,26 +834,6 @@ LowerTypeVisitor::lowerResourceType(QualType type, SpirvLayoutRule rule,
 
   // TODO: avoid string comparison once hlsl::IsHLSLResouceType() does that.
 
-  // Vulkan does not yet support true 16-bit float texture objexts.
-  if (name == "Buffer" || name == "RWBuffer" || name == "Texture1D" ||
-      name == "Texture2D" || name == "Texture3D" || name == "TextureCube" ||
-      name == "Texture1DArray" || name == "Texture2DArray" ||
-      name == "Texture2DMS" || name == "Texture2DMSArray" ||
-      name == "TextureCubeArray" || name == "RWTexture1D" ||
-      name == "RWTexture2D" || name == "RWTexture3D" ||
-      name == "RWTexture1DArray" || name == "RWTexture2DArray") {
-    const auto sampledType = hlsl::GetHLSLResourceResultType(type);
-    const auto loweredType =
-        lowerType(getElementType(astContext, sampledType), rule,
-                  /*isRowMajor*/ llvm::None, srcLoc);
-    if (const auto *floatType = dyn_cast<FloatType>(loweredType)) {
-      if (floatType->getBitwidth() == 16) {
-        emitError("16-bit texture types not yet supported with -spirv", srcLoc);
-        return nullptr;
-      }
-    }
-  }
-
   { // Texture types
     spv::Dim dim = {};
     bool isArray = {};
@@ -1021,17 +1012,6 @@ LowerTypeVisitor::lowerResourceType(QualType type, SpirvLayoutRule rule,
   if (name == "Buffer" || name == "RWBuffer" ||
       name == "RasterizerOrderedBuffer") {
     const auto sampledType = hlsl::GetHLSLResourceResultType(type);
-    if (sampledType->isStructureType() &&
-        (name.startswith("RW") || name.startswith("RasterizerOrdered"))) {
-      // Note: actually fxc supports RWBuffer over struct types. However, the
-      // struct member must fit into a 4-component vector and writing to a
-      // RWBuffer element must write all components. This is a feature that
-      // are rarely used by developers. We just emit an error saying not
-      // supported for now.
-      emitError("cannot instantiate %0 with struct type %1", srcLoc)
-          << name << sampledType;
-      return 0;
-    }
     const auto format = translateSampledTypeToImageFormat(sampledType, srcLoc);
     return spvContext.getImageType(
         lowerType(getElementType(astContext, sampledType), rule,
@@ -1105,8 +1085,10 @@ LowerTypeVisitor::lowerStructFields(const RecordDecl *decl,
           field->getBitWidthValue(field->getASTContext());
     }
 
+    llvm::Optional<AttrVec> attributes;
     if (field->hasAttrs()) {
-      for (auto &attr : field->getAttrs()) {
+      attributes.emplace();
+      for (auto attr : field->getAttrs()) {
         if (auto capAttr = dyn_cast<VKCapabilityExtAttr>(attr)) {
           spvBuilder.requireCapability(
               static_cast<spv::Capability>(capAttr->getCapability()),
@@ -1114,6 +1096,8 @@ LowerTypeVisitor::lowerStructFields(const RecordDecl *decl,
         } else if (auto extAttr = dyn_cast<VKExtensionExtAttr>(attr)) {
           spvBuilder.requireExtension(extAttr->getName(),
                                       extAttr->getLocation());
+        } else {
+          attributes->push_back(attr);
         }
       }
     }
@@ -1124,7 +1108,8 @@ LowerTypeVisitor::lowerStructFields(const RecordDecl *decl,
         /*packoffset*/ getPackOffset(field),
         /*RegisterAssignment*/ nullptr,
         /*isPrecise*/ field->hasAttr<HLSLPreciseAttr>(),
-        /*bitfield*/ bitfieldInfo));
+        /*bitfield*/ bitfieldInfo,
+        /* attributes */ attributes));
   }
 
   return populateLayoutInformation(fields, rule);
@@ -1210,6 +1195,7 @@ LowerTypeVisitor::lowerField(const HybridStructType::FieldInfo *field,
     loweredField.isPrecise = true;
   }
   loweredField.bitfield = field->bitfield;
+  loweredField.attributes = field->attributes;
 
   // We only need layout information for structures with non-void layout rule.
   if (rule == SpirvLayoutRule::Void) {

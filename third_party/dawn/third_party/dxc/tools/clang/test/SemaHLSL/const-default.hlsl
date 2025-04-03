@@ -33,7 +33,11 @@ class MyClass {
 ConstantBuffer<MyClass> g_const_buffer2;
 TextureBuffer<MyClass> g_texture_buffer2;
 
+// expected-note@+2 {{forward declaration of 'FWDDeclStruct'}}
+// expected-note@+1 {{forward declaration of 'FWDDeclStruct'}}
 struct FWDDeclStruct;
+// expected-note@+2 {{forward declaration of 'FWDDeclClass'}}
+// expected-note@+1 {{forward declaration of 'FWDDeclClass'}}
 class FWDDeclClass;
 
 // Ensure forward declared struct/class fails as expected

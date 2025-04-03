@@ -44,8 +44,8 @@ Int8T4Packed::Int8T4Packed()
     : Base(static_cast<size_t>(Hash(tint::TypeCode::Of<Int8T4Packed>().bits)),
            core::type::Flags{}) {}
 
-bool Int8T4Packed::Equals([[maybe_unused]] const UniqueNode& other) const {
-    return true;
+bool Int8T4Packed::Equals(const UniqueNode& other) const {
+    return other.Is<Int8T4Packed>();
 }
 
 std::string Int8T4Packed::FriendlyName() const {

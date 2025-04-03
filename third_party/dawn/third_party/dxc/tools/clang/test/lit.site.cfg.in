@@ -22,6 +22,7 @@ config.enable_backtrace = "@ENABLE_BACKTRACES@"
 config.host_arch = "@HOST_ARCH@"
 config.spirv = "@ENABLE_SPIRV_CODEGEN@" =="ON"
 config.hlsl_headers_dir = "@HLSL_HEADERS_DIR@" # HLSL change
+config.metal = "@ENABLE_METAL_CODEGEN@".upper() == "ON" # HLSL change
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

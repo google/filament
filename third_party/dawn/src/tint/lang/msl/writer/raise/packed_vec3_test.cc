@@ -51,7 +51,7 @@ TEST_F(MslWriter_PackedVec3Test, NoModify_PrivateVar) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<private, vec3<u32>, read_write> = var
+  %v:ptr<private, vec3<u32>, read_write> = var undef
 }
 
 %foo = func():vec3<u32> {
@@ -82,7 +82,7 @@ TEST_F(MslWriter_PackedVec3Test, NoModify_Vec2) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<uniform, vec2<u32>, read> = var @binding_point(0, 0)
+  %v:ptr<uniform, vec2<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec2<u32> {
@@ -113,7 +113,7 @@ TEST_F(MslWriter_PackedVec3Test, NoModify_Mat3x2) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<uniform, mat3x2<f32>, read> = var @binding_point(0, 0)
+  %v:ptr<uniform, mat3x2<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():mat3x2<f32> {
@@ -144,7 +144,7 @@ TEST_F(MslWriter_PackedVec3Test, NoModify_ArrayOfVec4) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<uniform, array<vec4<u32>, 3>, read> = var @binding_point(0, 0)
+  %v:ptr<uniform, array<vec4<u32>, 3>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<vec4<u32>, 3> {
@@ -174,7 +174,7 @@ TEST_F(MslWriter_PackedVec3Test, WorkgroupVar_Vec3) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<workgroup, vec3<u32>, read_write> = var
+  %v:ptr<workgroup, vec3<u32>, read_write> = var undef
 }
 
 %foo = func():vec3<u32> {
@@ -188,7 +188,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %v:ptr<workgroup, __packed_vec3<u32>, read_write> = var
+  %v:ptr<workgroup, __packed_vec3<u32>, read_write> = var undef
 }
 
 %foo = func():vec3<u32> {
@@ -217,7 +217,7 @@ TEST_F(MslWriter_PackedVec3Test, UniformVar_Vec3) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<uniform, vec3<u32>, read> = var @binding_point(0, 0)
+  %v:ptr<uniform, vec3<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec3<u32> {
@@ -231,7 +231,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %v:ptr<uniform, __packed_vec3<u32>, read> = var @binding_point(0, 0)
+  %v:ptr<uniform, __packed_vec3<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec3<u32> {
@@ -260,7 +260,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Vec3_LoadVector) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, vec3<u32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, vec3<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec3<u32> {
@@ -274,7 +274,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %v:ptr<storage, __packed_vec3<u32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, __packed_vec3<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec3<u32> {
@@ -305,7 +305,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Vec3_LoadElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, vec3<u32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, vec3<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -321,7 +321,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %v:ptr<storage, __packed_vec3<u32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, __packed_vec3<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -354,7 +354,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Vec3_StoreVector) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, vec3<u32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, vec3<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:vec3<u32>):void {
@@ -368,7 +368,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %v:ptr<storage, __packed_vec3<u32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, __packed_vec3<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:vec3<u32>):void {
@@ -402,7 +402,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Vec3_StoreElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, vec3<u32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, vec3<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:u32):void {
@@ -418,7 +418,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %v:ptr<storage, __packed_vec3<u32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, __packed_vec3<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:u32):void {
@@ -448,7 +448,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Mat4x3_LoadMatrix) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, mat4x3<f32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, mat4x3<f32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():mat4x3<f32> {
@@ -466,7 +466,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():mat4x3<f32> {
@@ -508,7 +508,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Mat4x3_LoadColumn) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, mat4x3<f32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, mat4x3<f32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec3<f32> {
@@ -536,7 +536,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec3<f32> {
@@ -582,7 +582,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Mat4x3_LoadElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, mat4x3<f32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, mat4x3<f32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():f32 {
@@ -610,7 +610,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():f32 {
@@ -651,7 +651,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Mat4x3_StoreMatrix) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, mat4x3<f32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, mat4x3<f32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:mat4x3<f32>):void {
@@ -669,7 +669,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:mat4x3<f32>):void {
@@ -718,7 +718,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Mat4x3_StoreColumn) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, mat4x3<f32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, mat4x3<f32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:vec3<f32>):void {
@@ -743,7 +743,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:vec3<f32>):void {
@@ -788,7 +788,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Mat4x3_StoreElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, mat4x3<f32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, mat4x3<f32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:f32):void {
@@ -813,7 +813,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:f32):void {
@@ -848,7 +848,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Mat2x3_F16_LoadMatrix) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, mat2x3<f16>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, mat2x3<f16>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():mat2x3<f16> {
@@ -866,7 +866,7 @@ tint_packed_vec3_f16_array_element = struct @align(8) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f16_array_element, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f16_array_element, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():mat2x3<f16> {
@@ -899,7 +899,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Array_LoadArray) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<vec3<f32>, 2> {
@@ -917,7 +917,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<vec3<f32>, 2> {
@@ -957,7 +957,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Array_LoadArray_LargeCount) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<vec3<f32>, 1024>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<vec3<f32>, 1024>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<vec3<f32>, 1024> {
@@ -975,7 +975,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 1024>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 1024>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<vec3<f32>, 1024> {
@@ -986,7 +986,7 @@ $B1: {  # root
 }
 %tint_load_array_packed_vec3 = func(%from:ptr<storage, array<tint_packed_vec3_f32_array_element, 1024>, read_write>):array<vec3<f32>, 1024> {
   $B3: {
-    %6:ptr<function, array<vec3<f32>, 1024>, read_write> = var
+    %6:ptr<function, array<vec3<f32>, 1024>, read_write> = var undef
     loop [i: $B4, b: $B5, c: $B6] {  # loop_1
       $B4: {  # initializer
         next_iteration 0u  # -> $B5
@@ -1035,7 +1035,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Array_LoadVector) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec3<f32> {
@@ -1057,7 +1057,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec3<f32> {
@@ -1093,7 +1093,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Array_LoadElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():f32 {
@@ -1115,7 +1115,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():f32 {
@@ -1150,7 +1150,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Array_StoreArray) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:array<vec3<f32>, 2>):void {
@@ -1168,7 +1168,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:array<vec3<f32>, 2>):void {
@@ -1212,7 +1212,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Array_StoreArray_LargeCount) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<vec3<f32>, 1024>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<vec3<f32>, 1024>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:array<vec3<f32>, 1024>):void {
@@ -1230,7 +1230,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 1024>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 1024>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:array<vec3<f32>, 1024>):void {
@@ -1289,7 +1289,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Array_StoreVector) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:vec3<f32>):void {
@@ -1310,7 +1310,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:vec3<f32>):void {
@@ -1347,7 +1347,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Array_StoreElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<vec3<f32>, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:f32):void {
@@ -1368,7 +1368,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:f32):void {
@@ -1399,7 +1399,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_Array_F16_LoadArray) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<vec3<f16>, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<vec3<f16>, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<vec3<f16>, 2> {
@@ -1417,7 +1417,7 @@ tint_packed_vec3_f16_array_element = struct @align(8) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f16_array_element, 2>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f16_array_element, 2>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<vec3<f16>, 2> {
@@ -1457,7 +1457,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_NestedArray_LoadOuter) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<array<vec3<f32>, 2>, 3>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<array<vec3<f32>, 2>, 3>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<array<vec3<f32>, 2>, 3> {
@@ -1475,7 +1475,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 3>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 3>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<array<vec3<f32>, 2>, 3> {
@@ -1527,7 +1527,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_NestedArray_LoadOuter_LargeCount) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<array<vec3<f32>, 2>, 1024>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<array<vec3<f32>, 2>, 1024>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<array<vec3<f32>, 2>, 1024> {
@@ -1545,7 +1545,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 1024>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 1024>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<array<vec3<f32>, 2>, 1024> {
@@ -1556,7 +1556,7 @@ $B1: {  # root
 }
 %tint_load_array_packed_vec3 = func(%from:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 1024>, read_write>):array<array<vec3<f32>, 2>, 1024> {
   $B3: {
-    %6:ptr<function, array<array<vec3<f32>, 2>, 1024>, read_write> = var
+    %6:ptr<function, array<array<vec3<f32>, 2>, 1024>, read_write> = var undef
     loop [i: $B4, b: $B5, c: $B6] {  # loop_1
       $B4: {  # initializer
         next_iteration 0u  # -> $B5
@@ -1614,7 +1614,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_NestedArray_LoadInner) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<array<vec3<f32>, 2>, 3>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<array<vec3<f32>, 2>, 3>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<vec3<f32>, 2> {
@@ -1633,7 +1633,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 3>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 3>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():array<vec3<f32>, 2> {
@@ -1677,7 +1677,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_NestedArray_StoreOuter) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<array<vec3<f32>, 2>, 3>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<array<vec3<f32>, 2>, 3>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:array<array<vec3<f32>, 2>, 3>):void {
@@ -1695,7 +1695,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 3>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 3>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:array<array<vec3<f32>, 2>, 3>):void {
@@ -1753,7 +1753,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_NestedArray_StoreOuter_LargeCount) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<array<vec3<f32>, 2>, 1024>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<array<vec3<f32>, 2>, 1024>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:array<array<vec3<f32>, 2>, 1024>):void {
@@ -1771,7 +1771,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 1024>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 1024>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:array<array<vec3<f32>, 2>, 1024>):void {
@@ -1840,7 +1840,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_RuntimeArray_LoadVector) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<vec3<f32>>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<vec3<f32>>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec3<f32> {
@@ -1862,7 +1862,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec3<f32> {
@@ -1909,7 +1909,7 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():S {
@@ -1939,7 +1939,7 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S_packed_vec3, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S_packed_vec3, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():S {
@@ -2017,7 +2017,7 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -2052,7 +2052,7 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S_packed_vec3, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S_packed_vec3, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -2123,7 +2123,7 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:S):void {
@@ -2153,7 +2153,7 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S_packed_vec3, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S_packed_vec3, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:S):void {
@@ -2242,7 +2242,7 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:vec3<f32>):void {
@@ -2277,7 +2277,7 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S_packed_vec3, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S_packed_vec3, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:vec3<f32>):void {
@@ -2334,7 +2334,7 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():S {
@@ -2372,7 +2372,7 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S_packed_vec3, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S_packed_vec3, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():S {
@@ -2470,7 +2470,7 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -2521,7 +2521,7 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S_packed_vec3, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S_packed_vec3, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -2608,7 +2608,7 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:S):void {
@@ -2646,7 +2646,7 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S_packed_vec3, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S_packed_vec3, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%value:S):void {
@@ -2756,7 +2756,7 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S, read_write> = var undef @binding_point(0, 0)
 }
 
 )";
@@ -2786,7 +2786,7 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, S_packed_vec3, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, S_packed_vec3, read_write> = var undef @binding_point(0, 0)
 }
 
 )";
@@ -2826,7 +2826,7 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<S, 16>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<S, 16>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -2862,7 +2862,7 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<S_packed_vec3, 16>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<S_packed_vec3, 16>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -2882,7 +2882,7 @@ $B1: {  # root
 }
 %tint_load_array_packed_vec3 = func(%from:ptr<storage, array<S_packed_vec3, 16>, read_write>):array<S, 16> {
   $B3: {
-    %15:ptr<function, array<S, 16>, read_write> = var
+    %15:ptr<function, array<S, 16>, read_write> = var undef
     loop [i: $B4, b: $B5, c: $B6] {  # loop_1
       $B4: {  # initializer
         next_iteration 0u  # -> $B5
@@ -2922,7 +2922,7 @@ $B1: {  # root
 }
 %tint_load_array_packed_vec3_1 = func(%from_2:ptr<storage, array<array<tint_packed_vec3_f32_array_element, 2>, 11>, read_write>):array<mat2x3<f32>, 11> {  # %from_2: 'from'
   $B9: {
-    %33:ptr<function, array<mat2x3<f32>, 11>, read_write> = var
+    %33:ptr<function, array<mat2x3<f32>, 11>, read_write> = var undef
     loop [i: $B10, b: $B11, c: $B12] {  # loop_2
       $B10: {  # initializer
         next_iteration 0u  # -> $B11
@@ -3049,7 +3049,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_PointerInLet) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, mat4x3<f32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, mat4x3<f32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -3073,7 +3073,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -3127,7 +3127,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_PointerInFunctionParameter) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, mat4x3<f32>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, mat4x3<f32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %bar = func(%mat:ptr<storage, mat4x3<f32>, read_write>, %col:ptr<storage, vec3<f32>, read_write>):void {
@@ -3157,7 +3157,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write> = var undef @binding_point(0, 0)
 }
 
 %bar = func(%mat:ptr<storage, array<tint_packed_vec3_f32_array_element, 4>, read_write>, %col:ptr<storage, __packed_vec3<f32>, read_write>):void {
@@ -3200,7 +3200,7 @@ TEST_F(MslWriter_PackedVec3Test, StorageVar_ArrayLengthBuiltinCall) {
 
     auto* src = R"(
 $B1: {  # root
-  %v:ptr<storage, array<vec3<f32>>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<vec3<f32>>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -3218,7 +3218,7 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<storage, array<tint_packed_vec3_f32_array_element>, read_write> = var @binding_point(0, 0)
+  %v:ptr<storage, array<tint_packed_vec3_f32_array_element>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -3254,9 +3254,9 @@ TEST_F(MslWriter_PackedVec3Test, MultipleAddressSpaces_LoadArray) {
 
     auto* src = R"(
 $B1: {  # root
-  %u:ptr<uniform, array<vec3<f32>, 2>, read> = var @binding_point(0, 0)
-  %s:ptr<storage, array<vec3<f32>, 2>, read_write> = var @binding_point(0, 1)
-  %w:ptr<workgroup, array<vec3<f32>, 2>, read_write> = var
+  %u:ptr<uniform, array<vec3<f32>, 2>, read> = var undef @binding_point(0, 0)
+  %s:ptr<storage, array<vec3<f32>, 2>, read_write> = var undef @binding_point(0, 1)
+  %w:ptr<workgroup, array<vec3<f32>, 2>, read_write> = var undef
 }
 
 %foo = func():void {
@@ -3279,9 +3279,9 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %u:ptr<uniform, array<tint_packed_vec3_f32_array_element, 2>, read> = var @binding_point(0, 0)
-  %s:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var @binding_point(0, 1)
-  %w:ptr<workgroup, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var
+  %u:ptr<uniform, array<tint_packed_vec3_f32_array_element, 2>, read> = var undef @binding_point(0, 0)
+  %s:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var undef @binding_point(0, 1)
+  %w:ptr<workgroup, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var undef
 }
 
 %foo = func():void {
@@ -3354,8 +3354,8 @@ TEST_F(MslWriter_PackedVec3Test, MultipleAddressSpaces_StoreArray) {
 
     auto* src = R"(
 $B1: {  # root
-  %s:ptr<storage, array<vec3<f32>, 2>, read_write> = var @binding_point(0, 0)
-  %w:ptr<workgroup, array<vec3<f32>, 2>, read_write> = var
+  %s:ptr<storage, array<vec3<f32>, 2>, read_write> = var undef @binding_point(0, 0)
+  %w:ptr<workgroup, array<vec3<f32>, 2>, read_write> = var undef
 }
 
 %foo = func():void {
@@ -3374,8 +3374,8 @@ tint_packed_vec3_f32_array_element = struct @align(16) {
 }
 
 $B1: {  # root
-  %s:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var @binding_point(0, 0)
-  %w:ptr<workgroup, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var
+  %s:ptr<storage, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var undef @binding_point(0, 0)
+  %w:ptr<workgroup, array<tint_packed_vec3_f32_array_element, 2>, read_write> = var undef
 }
 
 %foo = func():void {
@@ -3448,9 +3448,9 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %u:ptr<uniform, S, read> = var @binding_point(0, 0)
-  %s:ptr<storage, S, read_write> = var @binding_point(0, 1)
-  %w:ptr<workgroup, S, read_write> = var
+  %u:ptr<uniform, S, read> = var undef @binding_point(0, 0)
+  %s:ptr<storage, S, read_write> = var undef @binding_point(0, 1)
+  %w:ptr<workgroup, S, read_write> = var undef
 }
 
 %foo = func():void {
@@ -3479,9 +3479,9 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %u:ptr<uniform, S_packed_vec3, read> = var @binding_point(0, 0)
-  %s:ptr<storage, S_packed_vec3, read_write> = var @binding_point(0, 1)
-  %w:ptr<workgroup, S_packed_vec3, read_write> = var
+  %u:ptr<uniform, S_packed_vec3, read> = var undef @binding_point(0, 0)
+  %s:ptr<storage, S_packed_vec3, read_write> = var undef @binding_point(0, 1)
+  %w:ptr<workgroup, S_packed_vec3, read_write> = var undef
 }
 
 %foo = func():void {
@@ -3561,8 +3561,8 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %s:ptr<storage, S, read_write> = var @binding_point(0, 0)
-  %w:ptr<workgroup, S, read_write> = var
+  %s:ptr<storage, S, read_write> = var undef @binding_point(0, 0)
+  %w:ptr<workgroup, S, read_write> = var undef
 }
 
 %foo = func():void {
@@ -3587,8 +3587,8 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %s:ptr<storage, S_packed_vec3, read_write> = var @binding_point(0, 0)
-  %w:ptr<workgroup, S_packed_vec3, read_write> = var
+  %s:ptr<storage, S_packed_vec3, read_write> = var undef @binding_point(0, 0)
+  %w:ptr<workgroup, S_packed_vec3, read_write> = var undef
 }
 
 %foo = func():void {
@@ -3652,7 +3652,7 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<workgroup, S, read_write> = var
+  %v:ptr<workgroup, S, read_write> = var undef
 }
 
 %foo = func():u32 {
@@ -3677,7 +3677,7 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<workgroup, S_packed_vec3, read_write> = var
+  %v:ptr<workgroup, S_packed_vec3, read_write> = var undef
 }
 
 %foo = func():u32 {
@@ -3717,7 +3717,7 @@ S = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<workgroup, S, read_write> = var
+  %v:ptr<workgroup, S, read_write> = var undef
 }
 
 %foo = func():u32 {
@@ -3743,7 +3743,7 @@ S_packed_vec3 = struct @align(16) {
 }
 
 $B1: {  # root
-  %v:ptr<workgroup, S_packed_vec3, read_write> = var
+  %v:ptr<workgroup, S_packed_vec3, read_write> = var undef
 }
 
 %foo = func():u32 {

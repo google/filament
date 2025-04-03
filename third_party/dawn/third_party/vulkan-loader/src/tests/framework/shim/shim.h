@@ -29,6 +29,7 @@
 
 #include "test_util.h"
 
+#include <unordered_map>
 #include <unordered_set>
 #include <stdlib.h>
 
@@ -135,10 +136,12 @@ struct FrameworkEnvironment;  // forward declaration
 // defined in the .cpp wont be found by the rest of the application
 struct PlatformShim {
     PlatformShim() { fputs_stderr_log.reserve(65536); }
-    PlatformShim(std::vector<fs::FolderManager>* folders) : folders(folders) { fputs_stderr_log.reserve(65536); }
+    PlatformShim(GetFoldersFunc get_folders_by_name_function) : get_folders_by_name_function(get_folders_by_name_function) {
+        fputs_stderr_log.reserve(65536);
+    }
 
     // Used to get info about which drivers & layers have been added to folders
-    std::vector<fs::FolderManager>* folders;
+    GetFoldersFunc get_folders_by_name_function;
 
     // Captures the output to stderr from fputs & fputc - aka the output of loader_log()
     std::string fputs_stderr_log;
@@ -214,6 +217,8 @@ struct PlatformShim {
 
     std::filesystem::path query_default_redirect_path(ManifestCategory category);
 
+    void set_app_package_path(std::filesystem::path const& path);
+
     std::unordered_map<std::string, std::filesystem::path> redirection_map;
     std::unordered_map<std::string, std::filesystem::path> dlopen_redirection_map;
     std::unordered_set<std::string> known_path_set;
@@ -233,17 +238,14 @@ struct PlatformShim {
 std::vector<std::string> parse_env_var_list(std::string const& var);
 std::string category_path_name(ManifestCategory category);
 
-std::vector<std::filesystem::path> get_folder_contents(std::vector<fs::FolderManager>* folders,
-                                                       std::filesystem::path folder_name) noexcept;
-
 extern "C" {
 // dynamically link on windows and macos
 #if defined(WIN32) || defined(__APPLE__)
-using PFN_get_platform_shim = PlatformShim* (*)(std::vector<fs::FolderManager>* folders);
+using PFN_get_platform_shim = PlatformShim* (*)(GetFoldersFunc get_folders_by_name_function);
 #define GET_PLATFORM_SHIM_STR "get_platform_shim"
 
 #elif defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__GNU__) || defined(__QNX__)
 // statically link on linux
-PlatformShim* get_platform_shim(std::vector<fs::FolderManager>* folders);
+PlatformShim* get_platform_shim(GetFoldersFunc get_folders_by_name_function);
 #endif
 }

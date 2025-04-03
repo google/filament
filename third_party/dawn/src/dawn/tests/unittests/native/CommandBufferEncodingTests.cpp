@@ -32,6 +32,7 @@
 #include "dawn/native/Commands.h"
 #include "dawn/native/ComputePassEncoder.h"
 #include "dawn/tests/DawnNativeTest.h"
+#include "dawn/utils/TestUtils.h"
 #include "dawn/utils/WGPUHelpers.h"
 
 namespace dawn::native {
@@ -319,6 +320,92 @@ TEST_F(CommandBufferEncodingTests, StateNotLeakedAfterRestore) {
 
     // Expect no pipeline
     EXPECT_FALSE(stateTracker->HasPipeline());
+}
+
+// Regression test for crbug.com/405316877.
+// Make sure a zero size no-op copy would not cause dereferencing to a dangling pointer,
+// if the buffer is destroyed immediately after the encoding.
+TEST_F(CommandBufferEncodingTests, DanglingDestroyedBufferPointerB2T) {
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    {
+        wgpu::Buffer buffer;
+        {
+            wgpu::BufferDescriptor descriptor = {};
+            descriptor.size = 1024;
+            descriptor.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst;
+            buffer = device.CreateBuffer(&descriptor);
+        }
+
+        constexpr wgpu::Extent3D kTextureSize = {4, 4, 1};
+        wgpu::Texture texture;
+        {
+            wgpu::TextureDescriptor descriptor;
+            descriptor.size = kTextureSize;
+            descriptor.format = wgpu::TextureFormat::RGBA8Unorm;
+            descriptor.usage = wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::CopySrc;
+            texture = device.CreateTexture(&descriptor);
+        }
+
+        wgpu::TexelCopyBufferInfo texelCopyBufferInfo = utils::CreateTexelCopyBufferInfo(
+            buffer, 0, kTextureBytesPerRowAlignment, kTextureSize.height);
+        wgpu::TexelCopyTextureInfo texelCopyTextureInfo =
+            utils::CreateTexelCopyTextureInfo(texture, 0, {0, 0, 0});
+        constexpr wgpu::Extent3D kCopySize = {0, 0, 0};
+        encoder.CopyBufferToTexture(&texelCopyBufferInfo, &texelCopyTextureInfo, &kCopySize);
+
+        // Destroy and release the buffer immediately.
+        buffer.Destroy();
+    }
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+
+    device.PushErrorScope(wgpu::ErrorFilter::Validation);
+    device.GetQueue().Submit(1, &commands);
+    device.PopErrorScope(wgpu::CallbackMode::AllowProcessEvents,
+                         [](wgpu::PopErrorScopeStatus, wgpu::ErrorType, wgpu::StringView) {});
+}
+
+// Regression test for crbug.com/405316877.
+// Make sure a zero size no-op copy would not cause dereferencing to a dangling pointer,
+// if the buffer is destroyed immediately after the encoding.
+TEST_F(CommandBufferEncodingTests, DanglingDestroyedBufferPointerT2B) {
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    {
+        wgpu::Buffer buffer;
+        {
+            wgpu::BufferDescriptor descriptor = {};
+            descriptor.size = 1024;
+            descriptor.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst;
+            buffer = device.CreateBuffer(&descriptor);
+        }
+
+        constexpr wgpu::Extent3D kTextureSize = {4, 4, 1};
+        wgpu::Texture texture;
+        {
+            wgpu::TextureDescriptor descriptor;
+            descriptor.size = kTextureSize;
+            descriptor.format = wgpu::TextureFormat::RGBA8Unorm;
+            descriptor.usage = wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::CopySrc;
+            texture = device.CreateTexture(&descriptor);
+        }
+
+        wgpu::TexelCopyBufferInfo texelCopyBufferInfo = utils::CreateTexelCopyBufferInfo(
+            buffer, 0, kTextureBytesPerRowAlignment, kTextureSize.height);
+        wgpu::TexelCopyTextureInfo texelCopyTextureInfo =
+            utils::CreateTexelCopyTextureInfo(texture, 0, {0, 0, 0});
+        constexpr wgpu::Extent3D kCopySize = {0, 0, 0};
+        encoder.CopyTextureToBuffer(&texelCopyTextureInfo, &texelCopyBufferInfo, &kCopySize);
+
+        // Destroy and release the buffer immediately.
+        buffer.Destroy();
+    }
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+
+    device.PushErrorScope(wgpu::ErrorFilter::Validation);
+    device.GetQueue().Submit(1, &commands);
+    device.PopErrorScope(wgpu::CallbackMode::AllowProcessEvents,
+                         [](wgpu::PopErrorScopeStatus, wgpu::ErrorType, wgpu::StringView) {});
 }
 
 }  // anonymous namespace

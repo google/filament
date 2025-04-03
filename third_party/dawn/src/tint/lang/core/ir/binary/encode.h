@@ -29,10 +29,9 @@
 #define SRC_TINT_LANG_CORE_IR_BINARY_ENCODE_H_
 
 #include <memory>
-#include <string>
 
 #include "src/tint/utils/containers/vector.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations
 namespace tint::core::ir {

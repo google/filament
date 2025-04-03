@@ -34,7 +34,6 @@
 #include "src/tint/lang/core/common/multiplanar_options.h"
 #include "src/tint/lang/glsl/writer/common/options.h"
 #include "src/tint/utils/diagnostic/diagnostic.h"
-#include "src/tint/utils/result/result.h"
 
 namespace tint::glsl::writer {
 /// The remapper data
@@ -42,7 +41,7 @@ using RemapperData = std::unordered_map<BindingPoint, BindingPoint>;
 
 /// @param options the options
 /// @returns success or failure
-Result<SuccessType> ValidateBindingOptions(const Options& options);
+diag::Result<SuccessType> ValidateBindingOptions(const Options& options);
 
 /// Populates data from the writer options for the remapper and external texture.
 /// @param options the writer options

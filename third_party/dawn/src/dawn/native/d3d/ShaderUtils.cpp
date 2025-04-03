@@ -168,15 +168,16 @@ ResultOrError<ComPtr<IDxcBlob>> CompileShaderDXC(const d3d::D3DBytecodeCompilati
     DAWN_TRY(CheckHRESULT(result->GetStatus(&hr), "DXC get status"));
 
     if (FAILED(hr)) {
+        const char* hrAsString = HRESULTAsString(hr);
         ComPtr<IDxcBlobEncoding> errors;
         DAWN_TRY(CheckHRESULT(result->GetErrorBuffer(&errors), "DXC get error buffer"));
 
         if (dumpShaders) {
-            return DAWN_VALIDATION_ERROR("DXC compile failed with: %s\n/* Generated HLSL: */\n%s\n",
-                                         static_cast<char*>(errors->GetBufferPointer()),
-                                         hlslSource.c_str());
+            return DAWN_VALIDATION_ERROR(
+                "DXC compile failed with error: %s msg: %s\n/* Generated HLSL: */\n%s\n",
+                hrAsString, static_cast<char*>(errors->GetBufferPointer()), hlslSource.c_str());
         }
-        return DAWN_VALIDATION_ERROR("DXC compile failed.");
+        return DAWN_VALIDATION_ERROR("DXC compile failed with error: %s.", hrAsString);
     }
 
     ComPtr<IDxcBlob> compiledShader;
@@ -195,11 +196,16 @@ ResultOrError<ComPtr<ID3DBlob>> CompileShaderFXC(const d3d::D3DBytecodeCompilati
                                entryPointName.c_str(), r.fxcShaderProfile.data(), r.compileFlags, 0,
                                &compiledShader, &errors);
 
-    if (dumpShaders) {
-        DAWN_INVALID_IF(FAILED(result), "FXC compile failed with: %s\n/* Generated HLSL: */\n%s\n",
-                        static_cast<char*>(errors->GetBufferPointer()), hlslSource.c_str());
-    } else {
-        DAWN_INVALID_IF(FAILED(result), "FXC compile failed.");
+    if (FAILED(result)) {
+        const char* resultAsString = HRESULTAsString(result);
+        if (dumpShaders) {
+            std::string errorMsg = errors ? static_cast<char*>(errors->GetBufferPointer()) : "";
+            return DAWN_VALIDATION_ERROR(
+                "FXC compile failed with error: %s msg: %s\n/* Generated HLSL: */\n%s\n",
+                resultAsString, errorMsg, hlslSource.c_str());
+        }
+
+        return DAWN_VALIDATION_ERROR("FXC compile failed with error: %s.", resultAsString);
     }
 
     return std::move(compiledShader);
@@ -235,7 +241,7 @@ MaybeError TranslateToHLSL(d3d::HlslCompilationRequest r,
             r.firstIndexOffsetShaderRegister, r.firstIndexOffsetRegisterSpace);
     }
 
-    if (r.substituteOverrideConfig) {
+    if (!r.useTintIR && r.substituteOverrideConfig) {
         // This needs to run after SingleEntryPoint transform which removes unused overrides for
         // current entry point.
         transformManager.Add<tint::ast::transform::SubstituteOverride>();
@@ -245,7 +251,7 @@ MaybeError TranslateToHLSL(d3d::HlslCompilationRequest r,
 
     tint::Program transformedProgram;
     tint::ast::transform::DataMap transformOutputs;
-    {
+    if (!r.useTintIR) {
         TRACE_EVENT0(tracePlatform.UnsafeGetValue(), General, "RunTransforms");
         DAWN_TRY_ASSIGN(transformedProgram,
                         RunTransforms(&transformManager, r.inputProgram, transformInputs,
@@ -267,9 +273,28 @@ MaybeError TranslateToHLSL(d3d::HlslCompilationRequest r,
     tint::Result<tint::hlsl::writer::Output> result;
     if (r.useTintIR) {
         // Convert the AST program to an IR module.
-        auto ir = tint::wgsl::reader::ProgramToLoweredIR(transformedProgram);
+        auto ir = tint::wgsl::reader::ProgramToLoweredIR(*r.inputProgram);
         DAWN_INVALID_IF(ir != tint::Success, "An error occurred while generating Tint IR\n%s",
-                        ir.Failure().reason.Str());
+                        ir.Failure().reason);
+
+        auto singleEntryPointResult =
+            tint::core::ir::transform::SingleEntryPoint(ir.Get(), r.entryPointName);
+        DAWN_INVALID_IF(singleEntryPointResult != tint::Success,
+                        "Pipeline single entry point (IR) failed:\n%s",
+                        singleEntryPointResult.Failure().reason);
+
+        if (r.substituteOverrideConfig) {
+            // this needs to run after SingleEntryPoint transform which removes unused
+            // overrides for the current entry point.
+            tint::core::ir::transform::SubstituteOverridesConfig cfg;
+            cfg.map = r.substituteOverrideConfig->map;
+            auto substituteOverridesResult =
+                tint::core::ir::transform::SubstituteOverrides(ir.Get(), cfg);
+
+            DAWN_INVALID_IF(substituteOverridesResult != tint::Success,
+                            "Pipeline override substitution (IR) failed:\n%s",
+                            substituteOverridesResult.Failure().reason);
+        }
 
         result = tint::hlsl::writer::Generate(ir.Get(), r.tintOptions);
 
@@ -281,22 +306,24 @@ MaybeError TranslateToHLSL(d3d::HlslCompilationRequest r,
             DAWN_TRY_ASSIGN(
                 _, ValidateComputeStageWorkgroupSize(
                        result->workgroup_info.x, result->workgroup_info.y, result->workgroup_info.z,
-                       result->workgroup_info.storage_size, r.limits, r.adapter.UnsafeGetValue()));
+                       result->workgroup_info.storage_size, /* usesSubgroupMatrix */ false,
+                       r.maxSubgroupSize, r.limits, r.adapterSupportedLimits.UnsafeGetValue()));
         }
     } else {
         // Validate workgroup size after program runs transforms.
         if (r.stage == SingleShaderStage::Compute) {
             Extent3D _;
             DAWN_TRY_ASSIGN(
-                _, ValidateComputeStageWorkgroupSize(transformedProgram, kRemappedEntryPointName,
-                                                     r.limits, r.adapter.UnsafeGetValue()));
+                _, ValidateComputeStageWorkgroupSize(
+                       transformedProgram, kRemappedEntryPointName, /* usesSubgroupMatrix */ false,
+                       r.maxSubgroupSize, r.limits, r.adapterSupportedLimits.UnsafeGetValue()));
         }
 
         result = tint::hlsl::writer::Generate(transformedProgram, r.tintOptions);
     }
 
     DAWN_INVALID_IF(result != tint::Success, "An error occurred while generating HLSL:\n%s",
-                    result.Failure().reason.Str());
+                    result.Failure().reason);
 
     if (r.useTintIR && r.stage == SingleShaderStage::Vertex) {
         usesVertexIndex = result->has_vertex_index;

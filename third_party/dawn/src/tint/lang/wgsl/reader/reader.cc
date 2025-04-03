@@ -54,7 +54,7 @@ Result<core::ir::Module> WgslToIR(const Source::File* file, const Options& optio
     return ProgramToLoweredIR(program);
 }
 
-tint::Result<core::ir::Module> ProgramToLoweredIR(const Program& program) {
+Result<core::ir::Module> ProgramToLoweredIR(const Program& program) {
     auto ir = ProgramToIR(program);
     if (ir != Success) {
         return ir.Failure();

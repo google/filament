@@ -46,7 +46,7 @@ TEST_F(IR_AccessTest, SetsUsage) {
     auto* idx = b.Constant(u32(1));
     auto* a = b.Access(ty.i32(), var, idx);
 
-    EXPECT_THAT(var->Result(0)->UsagesUnsorted(), testing::UnorderedElementsAre(Usage{a, 0u}));
+    EXPECT_THAT(var->Result()->UsagesUnsorted(), testing::UnorderedElementsAre(Usage{a, 0u}));
     EXPECT_THAT(idx->UsagesUnsorted(), testing::UnorderedElementsAre(Usage{a, 1u}));
 }
 
@@ -58,8 +58,8 @@ TEST_F(IR_AccessTest, Result) {
 
     EXPECT_EQ(a->Results().Length(), 1u);
 
-    EXPECT_TRUE(a->Result(0)->Is<InstructionResult>());
-    EXPECT_EQ(a, a->Result(0)->Instruction());
+    EXPECT_TRUE(a->Result()->Is<InstructionResult>());
+    EXPECT_EQ(a, a->Result()->Instruction());
 }
 
 TEST_F(IR_AccessDeathTest, Fail_NullType) {
@@ -85,8 +85,8 @@ TEST_F(IR_AccessTest, Clone) {
 
     EXPECT_NE(a, new_a);
 
-    EXPECT_NE(a->Result(0), new_a->Result(0));
-    EXPECT_EQ(type, new_a->Result(0)->Type());
+    EXPECT_NE(a->Result(), new_a->Result());
+    EXPECT_EQ(type, new_a->Result()->Type());
 
     EXPECT_NE(nullptr, new_a->Object());
     EXPECT_EQ(a->Object(), new_a->Object());

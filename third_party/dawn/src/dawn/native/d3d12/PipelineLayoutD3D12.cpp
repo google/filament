@@ -64,6 +64,7 @@ D3D12_ROOT_PARAMETER_TYPE RootParameterType(wgpu::BufferBindingType type) {
         case kInternalStorageBufferBinding:
             return D3D12_ROOT_PARAMETER_TYPE_UAV;
         case wgpu::BufferBindingType::ReadOnlyStorage:
+        case kInternalReadOnlyStorageBufferBinding:
             return D3D12_ROOT_PARAMETER_TYPE_SRV;
         case wgpu::BufferBindingType::BindingNotUsed:
         case wgpu::BufferBindingType::Undefined:

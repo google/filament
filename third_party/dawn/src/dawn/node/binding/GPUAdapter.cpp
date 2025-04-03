@@ -98,8 +98,7 @@ interop::Interface<interop::GPUSupportedFeatures> GPUAdapter::getFeatures(Napi::
 }
 
 interop::Interface<interop::GPUSupportedLimits> GPUAdapter::getLimits(Napi::Env env) {
-    wgpu::SupportedLimits limits{};
-    wgpu::DawnExperimentalSubgroupLimits subgroupLimits{};
+    wgpu::Limits limits{};
     wgpu::DawnExperimentalImmediateDataLimits immediateDataLimits{};
 
     auto InsertInChain = [&](wgpu::ChainedStructOut* node) {
@@ -108,11 +107,6 @@ interop::Interface<interop::GPUSupportedLimits> GPUAdapter::getLimits(Napi::Env 
     };
 
     wgpu::ChainedStructOut** limitsListTail = &limits.nextInChain;
-    // Query the subgroup limits only if subgroups feature is available on the adapter.
-    if (adapter_.HasFeature(FeatureName::Subgroups)) {
-        InsertInChain(&subgroupLimits);
-    }
-
     // Query the immediate data limits only if ChromiumExperimentalImmediateData feature
     // is available on adapter.
     if (adapter_.HasFeature(FeatureName::ChromiumExperimentalImmediateData)) {
@@ -128,31 +122,15 @@ interop::Interface<interop::GPUSupportedLimits> GPUAdapter::getLimits(Napi::Env 
 
 interop::Interface<interop::GPUAdapterInfo> GPUAdapter::getInfo(Napi::Env env) {
     wgpu::AdapterInfo info = {};
+
+    wgpu::AdapterPropertiesSubgroupMatrixConfigs subgroupMatrixConfigs;
+    if (adapter_.HasFeature(FeatureName::ChromiumExperimentalSubgroupMatrix)) {
+        info.nextInChain = &subgroupMatrixConfigs;
+    }
+
     adapter_.GetInfo(&info);
 
     return interop::GPUAdapterInfo::Create<GPUAdapterInfo>(env, info);
-}
-
-bool GPUAdapter::getIsFallbackAdapter(Napi::Env) {
-    wgpu::AdapterInfo adapterInfo = {};
-    adapter_.GetInfo(&adapterInfo);
-    return adapterInfo.adapterType == wgpu::AdapterType::CPU;
-}
-
-bool GPUAdapter::getIsCompatibilityMode(Napi::Env) {
-    wgpu::AdapterInfo adapterInfo = {};
-    adapter_.GetInfo(&adapterInfo);
-    return adapterInfo.compatibilityMode;
-}
-
-std::string GPUAdapter::getFeatureLevel(Napi::Env) {
-    wgpu::AdapterInfo adapterInfo = {};
-    // TODO(crbug.com/382291443): Report feature level from wgpu::Adapter.
-    adapter_.GetInfo(&adapterInfo);
-    if (adapterInfo.compatibilityMode) {
-        return "compatibility";
-    }
-    return "core";
 }
 
 namespace {
@@ -204,6 +182,7 @@ interop::Promise<interop::Interface<interop::GPUDevice>> GPUAdapter::requestDevi
         // requiredFeatures is a "sequence<GPUFeatureName>" so a Javascript exception should be
         // thrown if one of the strings isn't one of the known features.
         if (!conv(feature, required)) {
+            Napi::TypeError::New(env, "Unknown GPUFeatureName.").ThrowAsJavaScriptException();
             return {env, interop::kUnusedPromise};
         }
 
@@ -217,13 +196,13 @@ interop::Promise<interop::Interface<interop::GPUDevice>> GPUAdapter::requestDevi
         env, PROMISE_INFO, async_);
     auto promise = ctx->promise;
 
-    wgpu::RequiredLimits limits;
+    wgpu::Limits limits;
 #define COPY_LIMIT(LIMIT)                                                                        \
     if (descriptor.requiredLimits.count(#LIMIT)) {                                               \
         auto jsLimitVariant = descriptor.requiredLimits[#LIMIT];                                 \
         if (!std::holds_alternative<interop::UndefinedType>(jsLimitVariant)) {                   \
             using DawnLimitType = decltype(WGPULimits::LIMIT);                                   \
-            DawnLimitType* dawnLimit = &limits.limits.LIMIT;                                     \
+            DawnLimitType* dawnLimit = &limits.LIMIT;                                            \
             uint64_t jsLimit = std::get<interop::GPUSize64>(jsLimitVariant);                     \
             if (jsLimit > std::numeric_limits<DawnLimitType>::max() - 1) {                       \
                 promise.Reject(                                                                  \
@@ -237,9 +216,11 @@ interop::Promise<interop::Interface<interop::GPUDevice>> GPUAdapter::requestDevi
     FOR_EACH_LIMIT(COPY_LIMIT)
 #undef COPY_LIMIT
 
-    for (auto [key, _] : descriptor.requiredLimits) {
-        promise.Reject(binding::Errors::OperationError(env, "Unknown limit \"" + key + "\""));
-        return promise;
+    for (auto [key, limit] : descriptor.requiredLimits) {
+        if (!std::holds_alternative<interop::UndefinedType>(limit)) {
+            promise.Reject(binding::Errors::OperationError(env, "Unknown limit \"" + key + "\""));
+            return promise;
+        }
     }
 
     desc.requiredFeatureCount = requiredFeatures.size();
@@ -258,7 +239,7 @@ interop::Promise<interop::Interface<interop::GPUDevice>> GPUAdapter::requestDevi
             auto r = interop::GPUDeviceLostReason::kDestroyed;
             switch (reason) {
                 case wgpu::DeviceLostReason::Destroyed:
-                case wgpu::DeviceLostReason::InstanceDropped:
+                case wgpu::DeviceLostReason::CallbackCancelled:
                     r = interop::GPUDeviceLostReason::kDestroyed;
                     break;
                 case wgpu::DeviceLostReason::FailedCreation:

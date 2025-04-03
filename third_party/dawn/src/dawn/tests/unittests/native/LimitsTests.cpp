@@ -80,8 +80,8 @@ TEST(Limits, ReifyDefaultLimits_PopulatesDefault_Compat) {
     Limits reified = ReifyDefaultLimits(limits, wgpu::FeatureLevel::Compatibility);
     EXPECT_EQ(reified.maxTextureDimension1D, 4096u);
     EXPECT_EQ(reified.maxStorageBufferBindingSize, 134217728ul);
-    EXPECT_EQ(reified.maxStorageBuffersInFragmentStage, 0u);
-    EXPECT_EQ(reified.maxStorageTexturesInFragmentStage, 0u);
+    EXPECT_EQ(reified.maxStorageBuffersInFragmentStage, 4u);
+    EXPECT_EQ(reified.maxStorageTexturesInFragmentStage, 4u);
     EXPECT_EQ(reified.maxStorageBuffersInVertexStage, 0u);
     EXPECT_EQ(reified.maxStorageTexturesInVertexStage, 0u);
 }
@@ -109,7 +109,7 @@ TEST(Limits, ValidateLimits) {
     // Test supported == required is valid.
     {
         Limits required = defaults;
-        EXPECT_TRUE(ValidateLimits(featureLevel, defaults, required).IsSuccess());
+        EXPECT_TRUE(ValidateLimits(defaults, required).IsSuccess());
     }
 
     // Test supported == required is valid, when they are not default.
@@ -118,20 +118,20 @@ TEST(Limits, ValidateLimits) {
         Limits required = defaults;
         supported.maxBindGroups += 1;
         required.maxBindGroups += 1;
-        EXPECT_TRUE(ValidateLimits(featureLevel, supported, required).IsSuccess());
+        EXPECT_TRUE(ValidateLimits(supported, required).IsSuccess());
     }
 
     // Test that default-initialized (all undefined) is valid.
     {
         Limits required = {};
-        EXPECT_TRUE(ValidateLimits(featureLevel, defaults, required).IsSuccess());
+        EXPECT_TRUE(ValidateLimits(defaults, required).IsSuccess());
     }
 
     // Test that better than supported is invalid for "maximum" limits.
     {
         Limits required = {};
         required.maxTextureDimension3D = defaults.maxTextureDimension3D + 1;
-        MaybeError err = ValidateLimits(featureLevel, defaults, required);
+        MaybeError err = ValidateLimits(defaults, required);
         EXPECT_TRUE(err.IsError());
         err.AcquireError();
     }
@@ -140,14 +140,14 @@ TEST(Limits, ValidateLimits) {
     {
         Limits required = {};
         required.maxComputeWorkgroupSizeX = defaults.maxComputeWorkgroupSizeX - 1;
-        EXPECT_TRUE(ValidateLimits(featureLevel, defaults, required).IsSuccess());
+        EXPECT_TRUE(ValidateLimits(defaults, required).IsSuccess());
     }
 
     // Test that better than min is invalid for "alignment" limits.
     {
         Limits required = {};
         required.minUniformBufferOffsetAlignment = defaults.minUniformBufferOffsetAlignment / 2;
-        MaybeError err = ValidateLimits(featureLevel, defaults, required);
+        MaybeError err = ValidateLimits(defaults, required);
         EXPECT_TRUE(err.IsError());
         err.AcquireError();
     }
@@ -156,143 +156,14 @@ TEST(Limits, ValidateLimits) {
     {
         Limits required = {};
         required.minStorageBufferOffsetAlignment = defaults.minStorageBufferOffsetAlignment * 2;
-        EXPECT_TRUE(ValidateLimits(featureLevel, defaults, required).IsSuccess());
+        EXPECT_TRUE(ValidateLimits(defaults, required).IsSuccess());
     }
 
     // Test that worse than min and not a power of two is invalid for "alignment" limits.
     {
         Limits required = {};
         required.minStorageBufferOffsetAlignment = defaults.minStorageBufferOffsetAlignment * 3;
-        MaybeError err = ValidateLimits(featureLevel, defaults, required);
-        EXPECT_TRUE(err.IsError());
-        err.AcquireError();
-    }
-}
-
-// Test that maxStorage(Buffers|Textures)In(Fragment/Vertex)Stage
-// must be less than the requested dependent maxStorage(Buffers|Textures)PerShaderStage
-TEST(Limits, PerStageDependentLimitsRequested) {
-    const wgpu::FeatureLevel featureLevel = wgpu::FeatureLevel::Core;
-    // Start with the default for supported.
-    Limits defaults;
-    GetDefaultLimits(&defaults, featureLevel);
-
-    // Test at least one works.
-    {
-        Limits required = {};
-        required.maxStorageBuffersInFragmentStage = 2;
-        required.maxStorageBuffersPerShaderStage = 2;
-        EXPECT_TRUE(ValidateLimits(featureLevel, defaults, required).IsSuccess());
-    }
-
-    // Test maxStorageBuffersInFragmentStage fails if greater than
-    // requested maxStorageBuffersPerShaderStage
-    {
-        Limits required = {};
-        required.maxStorageBuffersInFragmentStage = 2;
-        required.maxStorageBuffersPerShaderStage = 1;
-        MaybeError err = ValidateLimits(featureLevel, defaults, required);
-        EXPECT_TRUE(err.IsError());
-        err.AcquireError();
-    }
-
-    // Test maxStorageBuffersInVertexStage fails if greater than
-    // requested maxStorageBuffersPerShaderStage
-    {
-        Limits required = {};
-        required.maxStorageBuffersInVertexStage = 2;
-        required.maxStorageBuffersPerShaderStage = 1;
-        MaybeError err = ValidateLimits(featureLevel, defaults, required);
-        EXPECT_TRUE(err.IsError());
-        err.AcquireError();
-    }
-
-    // Test maxStorageTexturesInFragmentStage fails if greater than
-    // requested maxStorageTexturesPerShaderStage
-    {
-        Limits required = {};
-        required.maxStorageTexturesInFragmentStage = 2;
-        required.maxStorageTexturesPerShaderStage = 1;
-        MaybeError err = ValidateLimits(featureLevel, defaults, required);
-        EXPECT_TRUE(err.IsError());
-        err.AcquireError();
-    }
-
-    // Test maxStorageTexturesInVertexStage fails if greater than requested
-    // maxStorageTexturesPerShaderStage
-    {
-        Limits required = {};
-        required.maxStorageTexturesInVertexStage = 2;
-        required.maxStorageTexturesPerShaderStage = 1;
-        MaybeError err = ValidateLimits(featureLevel, defaults, required);
-        EXPECT_TRUE(err.IsError());
-        err.AcquireError();
-    }
-}
-
-// Test that maxStorage(Buffers|Textures)In(Fragment/Vertex)Stage
-// must be less than the default dependent maxStorage(Buffers|Textures)PerShaderStage
-// if the dependent limit is not requested.
-TEST(Limits, PerStageDependentLimitsDefault) {
-    const wgpu::FeatureLevel featureLevel = wgpu::FeatureLevel::Core;
-    // Start with the default for supported.
-    Limits supported;
-    GetDefaultLimits(&supported, featureLevel);
-
-    const uint32_t kLimit = 100;
-
-    // set the supported higher than the default
-    supported.maxStorageBuffersInFragmentStage = kLimit;
-    supported.maxStorageBuffersInVertexStage = kLimit;
-    supported.maxStorageBuffersPerShaderStage = kLimit;
-    supported.maxStorageTexturesInFragmentStage = kLimit;
-    supported.maxStorageTexturesInVertexStage = kLimit;
-    supported.maxStorageTexturesPerShaderStage = kLimit;
-
-    // Check at least one works when limits match.
-    {
-        Limits required = {};
-        required.maxStorageBuffersInFragmentStage = kLimit;
-        required.maxStorageBuffersPerShaderStage = kLimit;
-        EXPECT_TRUE(ValidateLimits(featureLevel, supported, required).IsSuccess());
-    }
-
-    // Test maxStorageBuffersInFragmentStage fails if greater than
-    // requested maxStorageBuffersPerShaderStage
-    {
-        Limits required = {};
-        required.maxStorageBuffersInFragmentStage = kLimit;
-        MaybeError err = ValidateLimits(featureLevel, supported, required);
-        EXPECT_TRUE(err.IsError());
-        err.AcquireError();
-    }
-
-    // Test maxStorageBuffersInVertexStage fails if greater than
-    // requested maxStorageBuffersPerShaderStage
-    {
-        Limits required = {};
-        required.maxStorageBuffersInVertexStage = kLimit;
-        MaybeError err = ValidateLimits(featureLevel, supported, required);
-        EXPECT_TRUE(err.IsError());
-        err.AcquireError();
-    }
-
-    // Test maxStorageTexturesInFragmentStage fails if greater than
-    // requested maxStorageTexturesPerShaderStage
-    {
-        Limits required = {};
-        required.maxStorageTexturesInFragmentStage = kLimit;
-        MaybeError err = ValidateLimits(featureLevel, supported, required);
-        EXPECT_TRUE(err.IsError());
-        err.AcquireError();
-    }
-
-    // Test maxStorageTexturesInVertexStage fails if greater than requested
-    // maxStorageTexturesPerShaderStage
-    {
-        Limits required = {};
-        required.maxStorageTexturesInVertexStage = kLimit;
-        MaybeError err = ValidateLimits(featureLevel, supported, required);
+        MaybeError err = ValidateLimits(defaults, required);
         EXPECT_TRUE(err.IsError());
         err.AcquireError();
     }
@@ -339,58 +210,61 @@ TEST(Limits, ApplyLimitTiers) {
     // Test that applying tiers to limits that are exactly
     // equal to a tier returns the same values.
     {
-        Limits limits = limitsStorageBufferBindingSizeTier2;
-        EXPECT_EQ(ApplyLimitTiers(limits), limits);
+        CombinedLimits combinedLimits = {};
+        combinedLimits.v1 = limitsStorageBufferBindingSizeTier2;
+        EXPECT_EQ(ApplyLimitTiers(combinedLimits).v1, combinedLimits.v1);
 
-        limits = limitsStorageBufferBindingSizeTier3;
-        EXPECT_EQ(ApplyLimitTiers(limits), limits);
+        combinedLimits.v1 = limitsStorageBufferBindingSizeTier3;
+        EXPECT_EQ(ApplyLimitTiers(combinedLimits).v1, combinedLimits.v1);
     }
 
     // Test all limits slightly worse than tier 3.
     {
-        Limits limits = limitsStorageBufferBindingSizeTier3;
-        limits.maxStorageBufferBindingSize -= 1;
-        EXPECT_EQ(ApplyLimitTiers(limits), limitsStorageBufferBindingSizeTier2);
+        CombinedLimits combinedLimits = {};
+        combinedLimits.v1 = limitsStorageBufferBindingSizeTier3;
+        combinedLimits.v1.maxStorageBufferBindingSize -= 1;
+        EXPECT_EQ(ApplyLimitTiers(combinedLimits).v1, limitsStorageBufferBindingSizeTier2);
     }
 
     // Test that limits may match one tier exactly and be degraded in another tier.
     // Degrading to one tier does not affect the other tier.
     {
-        Limits limits = limitsComputeWorkgroupStorageSizeTier3;
+        CombinedLimits combinedLimits = {};
+        combinedLimits.v1 = limitsComputeWorkgroupStorageSizeTier3;
         // Set tier 3 and change one limit to be insufficent.
-        SetLimitsStorageBufferBindingSizeTier3(&limits);
-        limits.maxStorageBufferBindingSize -= 1;
+        SetLimitsStorageBufferBindingSizeTier3(&(combinedLimits.v1));
+        combinedLimits.v1.maxStorageBufferBindingSize -= 1;
 
-        Limits tiered = ApplyLimitTiers(limits);
+        CombinedLimits tiered = ApplyLimitTiers(combinedLimits);
 
         // Check that |tiered| has the limits of memorySize tier 2
-        Limits tieredWithMemorySizeTier2 = tiered;
-        SetLimitsStorageBufferBindingSizeTier2(&tieredWithMemorySizeTier2);
-        EXPECT_EQ(tiered, tieredWithMemorySizeTier2);
+        CombinedLimits tieredWithMemorySizeTier2 = tiered;
+        SetLimitsStorageBufferBindingSizeTier2(&(tieredWithMemorySizeTier2.v1));
+        EXPECT_EQ(tiered.v1, tieredWithMemorySizeTier2.v1);
 
         // Check that |tiered| has the limits of bindingSpace tier 3
-        Limits tieredWithBindingSpaceTier3 = tiered;
-        SetLimitsComputeWorkgroupStorageSizeTier3(&tieredWithBindingSpaceTier3);
-        EXPECT_EQ(tiered, tieredWithBindingSpaceTier3);
+        CombinedLimits tieredWithBindingSpaceTier3 = tiered;
+        SetLimitsComputeWorkgroupStorageSizeTier3(&(tieredWithBindingSpaceTier3.v1));
+        EXPECT_EQ(tiered.v1, tieredWithBindingSpaceTier3.v1);
     }
 
     // Test that limits may be simultaneously degraded in two tiers independently.
     {
-        Limits limits;
-        GetDefaultLimits(&limits, wgpu::FeatureLevel::Core);
-        SetLimitsComputeWorkgroupStorageSizeTier3(&limits);
-        SetLimitsStorageBufferBindingSizeTier3(&limits);
-        limits.maxComputeWorkgroupStorageSize =
+        CombinedLimits limits = {};
+        GetDefaultLimits(&(limits.v1), wgpu::FeatureLevel::Core);
+        SetLimitsComputeWorkgroupStorageSizeTier3(&(limits.v1));
+        SetLimitsStorageBufferBindingSizeTier3(&(limits.v1));
+        limits.v1.maxComputeWorkgroupStorageSize =
             limitsComputeWorkgroupStorageSizeTier1.maxComputeWorkgroupStorageSize + 1;
-        limits.maxStorageBufferBindingSize =
+        limits.v1.maxStorageBufferBindingSize =
             limitsStorageBufferBindingSizeTier2.maxStorageBufferBindingSize + 1;
 
-        Limits tiered = ApplyLimitTiers(limits);
+        CombinedLimits tiered = ApplyLimitTiers(limits);
 
-        Limits expected = tiered;
-        SetLimitsComputeWorkgroupStorageSizeTier1(&expected);
-        SetLimitsStorageBufferBindingSizeTier2(&expected);
-        EXPECT_EQ(tiered, expected);
+        CombinedLimits expected = tiered;
+        SetLimitsComputeWorkgroupStorageSizeTier1(&(expected.v1));
+        SetLimitsStorageBufferBindingSizeTier2(&(expected.v1));
+        EXPECT_EQ(tiered.v1, expected.v1);
     }
 }
 
@@ -425,13 +299,14 @@ TEST(Limits, TieredMaxStorageBufferBindingSizeNoLargerThanMaxBufferSize) {
     for (uint64_t reportedMaxStorageBufferBindingSizes :
          possibleReportedMaxStorageBufferBindingSizes) {
         for (uint64_t reportedMaxBufferSizes : possibleReportedMaxBufferSizes) {
-            Limits limits = defaults;
-            limits.maxStorageBufferBindingSize = reportedMaxStorageBufferBindingSizes;
-            limits.maxBufferSize = reportedMaxBufferSizes;
+            CombinedLimits limits = {};
+            limits.v1 = defaults;
+            limits.v1.maxStorageBufferBindingSize = reportedMaxStorageBufferBindingSizes;
+            limits.v1.maxBufferSize = reportedMaxBufferSizes;
 
-            Limits tiered = ApplyLimitTiers(limits);
+            CombinedLimits tiered = ApplyLimitTiers(limits);
 
-            EXPECT_LE(tiered.maxStorageBufferBindingSize, tiered.maxBufferSize);
+            EXPECT_LE(tiered.v1.maxStorageBufferBindingSize, tiered.v1.maxBufferSize);
         }
     }
 }
@@ -463,13 +338,14 @@ TEST(Limits, TieredMaxUniformBufferBindingSizeNoLargerThanMaxBufferSize) {
     for (uint64_t reportedMaxUniformBufferBindingSizes :
          possibleReportedMaxUniformBufferBindingSizes) {
         for (uint64_t reportedMaxBufferSizes : possibleReportedMaxBufferSizes) {
-            Limits limits = defaults;
-            limits.maxUniformBufferBindingSize = reportedMaxUniformBufferBindingSizes;
-            limits.maxBufferSize = reportedMaxBufferSizes;
+            CombinedLimits limits = {};
+            limits.v1 = defaults;
+            limits.v1.maxUniformBufferBindingSize = reportedMaxUniformBufferBindingSizes;
+            limits.v1.maxBufferSize = reportedMaxBufferSizes;
 
-            Limits tiered = ApplyLimitTiers(limits);
+            CombinedLimits tiered = ApplyLimitTiers(limits);
 
-            EXPECT_LE(tiered.maxUniformBufferBindingSize, tiered.maxBufferSize);
+            EXPECT_LE(tiered.v1.maxUniformBufferBindingSize, tiered.v1.maxBufferSize);
         }
     }
 }
@@ -482,32 +358,37 @@ TEST(Limits, NormalizeLimits) {
 
     // Test specific limit values are clamped to internal Dawn constants.
     {
-        Limits limits = defaults;
-        limits.maxVertexBufferArrayStride = kMaxVertexBufferArrayStride + 1;
-        limits.maxColorAttachments = uint32_t(kMaxColorAttachments) + 1;
-        limits.maxBindGroups = kMaxBindGroups + 1;
-        limits.maxBindGroupsPlusVertexBuffers = kMaxBindGroupsPlusVertexBuffers + 1;
-        limits.maxVertexAttributes = uint32_t(kMaxVertexAttributes) + 1;
-        limits.maxVertexBuffers = uint32_t(kMaxVertexBuffers) + 1;
-        limits.maxSampledTexturesPerShaderStage = kMaxSampledTexturesPerShaderStage + 1;
-        limits.maxSamplersPerShaderStage = kMaxSamplersPerShaderStage + 1;
-        limits.maxStorageBuffersPerShaderStage = kMaxStorageBuffersPerShaderStage + 1;
-        limits.maxStorageTexturesPerShaderStage = kMaxStorageTexturesPerShaderStage + 1;
-        limits.maxUniformBuffersPerShaderStage = kMaxUniformBuffersPerShaderStage + 1;
+        CombinedLimits limits = {};
+        limits.v1 = defaults;
+        limits.v1.maxVertexBufferArrayStride = kMaxVertexBufferArrayStride + 1;
+        limits.v1.maxColorAttachments = uint32_t(kMaxColorAttachments) + 1;
+        limits.v1.maxBindGroups = kMaxBindGroups + 1;
+        limits.v1.maxBindGroupsPlusVertexBuffers = kMaxBindGroupsPlusVertexBuffers + 1;
+        limits.v1.maxVertexAttributes = uint32_t(kMaxVertexAttributes) + 1;
+        limits.v1.maxVertexBuffers = uint32_t(kMaxVertexBuffers) + 1;
+        limits.v1.maxSampledTexturesPerShaderStage = kMaxSampledTexturesPerShaderStage + 1;
+        limits.v1.maxSamplersPerShaderStage = kMaxSamplersPerShaderStage + 1;
+        limits.v1.maxStorageBuffersPerShaderStage = kMaxStorageBuffersPerShaderStage + 1;
+        limits.v1.maxStorageTexturesPerShaderStage = kMaxStorageTexturesPerShaderStage + 1;
+        limits.v1.maxUniformBuffersPerShaderStage = kMaxUniformBuffersPerShaderStage + 1;
+        limits.experimentalImmediateDataLimits.maxImmediateDataRangeByteSize =
+            kMaxImmediateDataBytes + 1;
 
         NormalizeLimits(&limits);
 
-        EXPECT_EQ(limits.maxVertexBufferArrayStride, kMaxVertexBufferArrayStride);
-        EXPECT_EQ(limits.maxColorAttachments, uint32_t(kMaxColorAttachments));
-        EXPECT_EQ(limits.maxBindGroups, kMaxBindGroups);
-        EXPECT_EQ(limits.maxBindGroupsPlusVertexBuffers, kMaxBindGroupsPlusVertexBuffers);
-        EXPECT_EQ(limits.maxVertexAttributes, uint32_t(kMaxVertexAttributes));
-        EXPECT_EQ(limits.maxVertexBuffers, uint32_t(kMaxVertexBuffers));
-        EXPECT_EQ(limits.maxSampledTexturesPerShaderStage, kMaxSampledTexturesPerShaderStage);
-        EXPECT_EQ(limits.maxSamplersPerShaderStage, kMaxSamplersPerShaderStage);
-        EXPECT_EQ(limits.maxStorageBuffersPerShaderStage, kMaxStorageBuffersPerShaderStage);
-        EXPECT_EQ(limits.maxStorageTexturesPerShaderStage, kMaxStorageTexturesPerShaderStage);
-        EXPECT_EQ(limits.maxUniformBuffersPerShaderStage, kMaxUniformBuffersPerShaderStage);
+        EXPECT_EQ(limits.v1.maxVertexBufferArrayStride, kMaxVertexBufferArrayStride);
+        EXPECT_EQ(limits.v1.maxColorAttachments, uint32_t(kMaxColorAttachments));
+        EXPECT_EQ(limits.v1.maxBindGroups, kMaxBindGroups);
+        EXPECT_EQ(limits.v1.maxBindGroupsPlusVertexBuffers, kMaxBindGroupsPlusVertexBuffers);
+        EXPECT_EQ(limits.v1.maxVertexAttributes, uint32_t(kMaxVertexAttributes));
+        EXPECT_EQ(limits.v1.maxVertexBuffers, uint32_t(kMaxVertexBuffers));
+        EXPECT_EQ(limits.v1.maxSampledTexturesPerShaderStage, kMaxSampledTexturesPerShaderStage);
+        EXPECT_EQ(limits.v1.maxSamplersPerShaderStage, kMaxSamplersPerShaderStage);
+        EXPECT_EQ(limits.v1.maxStorageBuffersPerShaderStage, kMaxStorageBuffersPerShaderStage);
+        EXPECT_EQ(limits.v1.maxStorageTexturesPerShaderStage, kMaxStorageTexturesPerShaderStage);
+        EXPECT_EQ(limits.v1.maxUniformBuffersPerShaderStage, kMaxUniformBuffersPerShaderStage);
+        EXPECT_EQ(limits.experimentalImmediateDataLimits.maxImmediateDataRangeByteSize,
+                  kMaxImmediateDataBytes);
     }
 
     // Test maxStorageBufferBindingSize is clamped to maxBufferSize.
@@ -515,53 +396,57 @@ TEST(Limits, NormalizeLimits) {
     {
         constexpr uint64_t reportedMaxBufferSize = 2147483648;
         constexpr uint64_t reportedMaxStorageBufferBindingSize = reportedMaxBufferSize;
-        Limits limits = defaults;
-        limits.maxStorageBufferBindingSize = reportedMaxStorageBufferBindingSize;
-        limits.maxBufferSize = reportedMaxBufferSize;
+        CombinedLimits limits = {};
+        limits.v1 = defaults;
+        limits.v1.maxStorageBufferBindingSize = reportedMaxStorageBufferBindingSize;
+        limits.v1.maxBufferSize = reportedMaxBufferSize;
 
         NormalizeLimits(&limits);
 
-        EXPECT_EQ(limits.maxBufferSize, reportedMaxBufferSize);
-        EXPECT_EQ(limits.maxStorageBufferBindingSize, reportedMaxStorageBufferBindingSize);
+        EXPECT_EQ(limits.v1.maxBufferSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxStorageBufferBindingSize, reportedMaxStorageBufferBindingSize);
     }
     {
         constexpr uint64_t reportedMaxBufferSize = 2147483648;
         constexpr uint64_t reportedMaxStorageBufferBindingSize = reportedMaxBufferSize - 1;
-        Limits limits = defaults;
-        limits.maxStorageBufferBindingSize = reportedMaxStorageBufferBindingSize;
-        limits.maxBufferSize = reportedMaxBufferSize;
+        CombinedLimits limits = {};
+        limits.v1 = defaults;
+        limits.v1.maxStorageBufferBindingSize = reportedMaxStorageBufferBindingSize;
+        limits.v1.maxBufferSize = reportedMaxBufferSize;
 
         NormalizeLimits(&limits);
 
-        EXPECT_EQ(limits.maxBufferSize, reportedMaxBufferSize);
-        EXPECT_EQ(limits.maxStorageBufferBindingSize, reportedMaxStorageBufferBindingSize);
+        EXPECT_EQ(limits.v1.maxBufferSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxStorageBufferBindingSize, reportedMaxStorageBufferBindingSize);
     }
     // maxStorageBufferBindingSize is equal to maxBufferSize+1, expect clamping to maxBufferSize
     {
         constexpr uint64_t reportedMaxBufferSize = 2147483648;
         constexpr uint64_t reportedMaxStorageBufferBindingSize = reportedMaxBufferSize + 1;
-        Limits limits = defaults;
-        limits.maxStorageBufferBindingSize = reportedMaxStorageBufferBindingSize;
-        limits.maxBufferSize = reportedMaxBufferSize;
+        CombinedLimits limits = {};
+        limits.v1 = defaults;
+        limits.v1.maxStorageBufferBindingSize = reportedMaxStorageBufferBindingSize;
+        limits.v1.maxBufferSize = reportedMaxBufferSize;
 
         NormalizeLimits(&limits);
 
-        EXPECT_EQ(limits.maxBufferSize, reportedMaxBufferSize);
-        EXPECT_EQ(limits.maxStorageBufferBindingSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxBufferSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxStorageBufferBindingSize, reportedMaxBufferSize);
     }
     // maxStorageBufferBindingSize is much larger than maxBufferSize, expect clamping to
     // maxBufferSize
     {
         constexpr uint64_t reportedMaxBufferSize = 2147483648;
         constexpr uint64_t reportedMaxStorageBufferBindingSize = 4294967295;
-        Limits limits = defaults;
-        limits.maxStorageBufferBindingSize = reportedMaxStorageBufferBindingSize;
-        limits.maxBufferSize = reportedMaxBufferSize;
+        CombinedLimits limits = {};
+        limits.v1 = defaults;
+        limits.v1.maxStorageBufferBindingSize = reportedMaxStorageBufferBindingSize;
+        limits.v1.maxBufferSize = reportedMaxBufferSize;
 
         NormalizeLimits(&limits);
 
-        EXPECT_EQ(limits.maxBufferSize, reportedMaxBufferSize);
-        EXPECT_EQ(limits.maxStorageBufferBindingSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxBufferSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxStorageBufferBindingSize, reportedMaxBufferSize);
     }
 
     // Test maxUniformBufferBindingSize is clamped to maxBufferSize.
@@ -569,53 +454,184 @@ TEST(Limits, NormalizeLimits) {
     {
         constexpr uint64_t reportedMaxBufferSize = 2147483648;
         constexpr uint64_t reportedMaxUniformBufferBindingSize = reportedMaxBufferSize - 1;
-        Limits limits = defaults;
-        limits.maxUniformBufferBindingSize = reportedMaxUniformBufferBindingSize;
-        limits.maxBufferSize = reportedMaxBufferSize;
+        CombinedLimits limits = {};
+        limits.v1 = defaults;
+        limits.v1.maxUniformBufferBindingSize = reportedMaxUniformBufferBindingSize;
+        limits.v1.maxBufferSize = reportedMaxBufferSize;
 
         NormalizeLimits(&limits);
 
-        EXPECT_EQ(limits.maxBufferSize, reportedMaxBufferSize);
-        EXPECT_EQ(limits.maxUniformBufferBindingSize, reportedMaxUniformBufferBindingSize);
+        EXPECT_EQ(limits.v1.maxBufferSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxUniformBufferBindingSize, reportedMaxUniformBufferBindingSize);
     }
     {
         constexpr uint64_t reportedMaxBufferSize = 2147483648;
         constexpr uint64_t reportedMaxUniformBufferBindingSize = reportedMaxBufferSize;
-        Limits limits = defaults;
-        limits.maxUniformBufferBindingSize = reportedMaxUniformBufferBindingSize;
-        limits.maxBufferSize = reportedMaxBufferSize;
+        CombinedLimits limits = {};
+        limits.v1 = defaults;
+        limits.v1.maxUniformBufferBindingSize = reportedMaxUniformBufferBindingSize;
+        limits.v1.maxBufferSize = reportedMaxBufferSize;
 
         NormalizeLimits(&limits);
 
-        EXPECT_EQ(limits.maxBufferSize, reportedMaxBufferSize);
-        EXPECT_EQ(limits.maxUniformBufferBindingSize, reportedMaxUniformBufferBindingSize);
+        EXPECT_EQ(limits.v1.maxBufferSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxUniformBufferBindingSize, reportedMaxUniformBufferBindingSize);
     }
     // maxUniformBufferBindingSize is larger than maxBufferSize, expect clamping to maxBufferSize
     {
         constexpr uint64_t reportedMaxBufferSize = 2147483648;
         constexpr uint64_t reportedMaxUniformBufferBindingSize = reportedMaxBufferSize + 1;
-        Limits limits = defaults;
-        limits.maxUniformBufferBindingSize = reportedMaxUniformBufferBindingSize;
-        limits.maxBufferSize = reportedMaxBufferSize;
+        CombinedLimits limits = {};
+        limits.v1 = defaults;
+        limits.v1.maxUniformBufferBindingSize = reportedMaxUniformBufferBindingSize;
+        limits.v1.maxBufferSize = reportedMaxBufferSize;
 
         NormalizeLimits(&limits);
 
-        EXPECT_EQ(limits.maxBufferSize, reportedMaxBufferSize);
-        EXPECT_EQ(limits.maxUniformBufferBindingSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxBufferSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxUniformBufferBindingSize, reportedMaxBufferSize);
     }
     // maxUniformBufferBindingSize is much larger than maxBufferSize, expect clamping to
     // maxBufferSize
     {
         constexpr uint64_t reportedMaxBufferSize = 2147483648;
         constexpr uint64_t reportedMaxUniformBufferBindingSize = 4294967295;
-        Limits limits = defaults;
-        limits.maxUniformBufferBindingSize = reportedMaxUniformBufferBindingSize;
-        limits.maxBufferSize = reportedMaxBufferSize;
+        CombinedLimits limits = {};
+        limits.v1 = defaults;
+        limits.v1.maxUniformBufferBindingSize = reportedMaxUniformBufferBindingSize;
+        limits.v1.maxBufferSize = reportedMaxBufferSize;
 
         NormalizeLimits(&limits);
 
-        EXPECT_EQ(limits.maxBufferSize, reportedMaxBufferSize);
-        EXPECT_EQ(limits.maxUniformBufferBindingSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxBufferSize, reportedMaxBufferSize);
+        EXPECT_EQ(limits.v1.maxUniformBufferBindingSize, reportedMaxBufferSize);
+    }
+}
+
+// Test |FixupDeviceLimits| works fix up the limits
+TEST(Limits, FixupDeviceLimits) {
+    // Test maxXXXInStage is raised to maxXXXPerStage in core
+    {
+        Limits limits;
+        limits.maxStorageBuffersInFragmentStage = 1;
+        limits.maxStorageBuffersInVertexStage = 2;
+        limits.maxStorageBuffersPerShaderStage = 3;
+
+        limits.maxStorageTexturesInFragmentStage = 4;
+        limits.maxStorageTexturesInVertexStage = 5;
+        limits.maxStorageTexturesPerShaderStage = 6;
+
+        EnforceLimitSpecInvariants(&limits, wgpu::FeatureLevel::Core);
+
+        EXPECT_EQ(limits.maxStorageBuffersInFragmentStage, 3u);
+        EXPECT_EQ(limits.maxStorageBuffersInVertexStage, 3u);
+        EXPECT_EQ(limits.maxStorageBuffersPerShaderStage, 3u);
+
+        EXPECT_EQ(limits.maxStorageTexturesInFragmentStage, 6u);
+        EXPECT_EQ(limits.maxStorageTexturesInVertexStage, 6u);
+        EXPECT_EQ(limits.maxStorageTexturesPerShaderStage, 6u);
+    }
+
+    // Test maxXXXInStage are not raised to maxXXXPerStage in compat
+    {
+        Limits limits;
+        limits.maxStorageBuffersInFragmentStage = 1;
+        limits.maxStorageBuffersInVertexStage = 2;
+        limits.maxStorageBuffersPerShaderStage = 3;
+
+        limits.maxStorageTexturesInFragmentStage = 4;
+        limits.maxStorageTexturesInVertexStage = 5;
+        limits.maxStorageTexturesPerShaderStage = 6;
+
+        EnforceLimitSpecInvariants(&limits, wgpu::FeatureLevel::Compatibility);
+
+        EXPECT_EQ(limits.maxStorageBuffersInFragmentStage, 1u);
+        EXPECT_EQ(limits.maxStorageBuffersInVertexStage, 2u);
+        EXPECT_EQ(limits.maxStorageBuffersPerShaderStage, 3u);
+
+        EXPECT_EQ(limits.maxStorageTexturesInFragmentStage, 4u);
+        EXPECT_EQ(limits.maxStorageTexturesInVertexStage, 5u);
+        EXPECT_EQ(limits.maxStorageTexturesPerShaderStage, 6u);
+    }
+
+    // Test maxXXXPerStage is raised to maxXXXInStage in core
+    {
+        Limits limits;
+        limits.maxStorageBuffersInFragmentStage = 3;
+        limits.maxStorageBuffersInVertexStage = 2;
+        limits.maxStorageBuffersPerShaderStage = 1;
+
+        limits.maxStorageTexturesInFragmentStage = 6;
+        limits.maxStorageTexturesInVertexStage = 5;
+        limits.maxStorageTexturesPerShaderStage = 4;
+
+        EnforceLimitSpecInvariants(&limits, wgpu::FeatureLevel::Core);
+
+        EXPECT_EQ(limits.maxStorageBuffersInFragmentStage, 3u);
+        EXPECT_EQ(limits.maxStorageBuffersInVertexStage, 3u);
+        EXPECT_EQ(limits.maxStorageBuffersPerShaderStage, 3u);
+
+        EXPECT_EQ(limits.maxStorageTexturesInFragmentStage, 6u);
+        EXPECT_EQ(limits.maxStorageTexturesInVertexStage, 6u);
+        EXPECT_EQ(limits.maxStorageTexturesPerShaderStage, 6u);
+
+        limits.maxStorageBuffersInFragmentStage = 2;
+        limits.maxStorageBuffersInVertexStage = 3;
+        limits.maxStorageBuffersPerShaderStage = 1;
+
+        limits.maxStorageTexturesInFragmentStage = 5;
+        limits.maxStorageTexturesInVertexStage = 6;
+        limits.maxStorageTexturesPerShaderStage = 4;
+
+        EnforceLimitSpecInvariants(&limits, wgpu::FeatureLevel::Core);
+
+        EXPECT_EQ(limits.maxStorageBuffersInFragmentStage, 3u);
+        EXPECT_EQ(limits.maxStorageBuffersInVertexStage, 3u);
+        EXPECT_EQ(limits.maxStorageBuffersPerShaderStage, 3u);
+
+        EXPECT_EQ(limits.maxStorageTexturesInFragmentStage, 6u);
+        EXPECT_EQ(limits.maxStorageTexturesInVertexStage, 6u);
+        EXPECT_EQ(limits.maxStorageTexturesPerShaderStage, 6u);
+    }
+
+    // Test maxXXXPerStage is raised to maxXXXInStage compat
+    {
+        Limits limits;
+        limits.maxStorageBuffersInFragmentStage = 3;
+        limits.maxStorageBuffersInVertexStage = 2;
+        limits.maxStorageBuffersPerShaderStage = 1;
+
+        limits.maxStorageTexturesInFragmentStage = 6;
+        limits.maxStorageTexturesInVertexStage = 5;
+        limits.maxStorageTexturesPerShaderStage = 4;
+
+        EnforceLimitSpecInvariants(&limits, wgpu::FeatureLevel::Compatibility);
+
+        EXPECT_EQ(limits.maxStorageBuffersInFragmentStage, 3u);
+        EXPECT_EQ(limits.maxStorageBuffersInVertexStage, 2u);
+        EXPECT_EQ(limits.maxStorageBuffersPerShaderStage, 3u);
+
+        EXPECT_EQ(limits.maxStorageTexturesInFragmentStage, 6u);
+        EXPECT_EQ(limits.maxStorageTexturesInVertexStage, 5u);
+        EXPECT_EQ(limits.maxStorageTexturesPerShaderStage, 6u);
+
+        limits.maxStorageBuffersInFragmentStage = 2;
+        limits.maxStorageBuffersInVertexStage = 3;
+        limits.maxStorageBuffersPerShaderStage = 1;
+
+        limits.maxStorageTexturesInFragmentStage = 5;
+        limits.maxStorageTexturesInVertexStage = 6;
+        limits.maxStorageTexturesPerShaderStage = 4;
+
+        EnforceLimitSpecInvariants(&limits, wgpu::FeatureLevel::Compatibility);
+
+        EXPECT_EQ(limits.maxStorageBuffersInFragmentStage, 2u);
+        EXPECT_EQ(limits.maxStorageBuffersInVertexStage, 3u);
+        EXPECT_EQ(limits.maxStorageBuffersPerShaderStage, 3u);
+
+        EXPECT_EQ(limits.maxStorageTexturesInFragmentStage, 5u);
+        EXPECT_EQ(limits.maxStorageTexturesInVertexStage, 6u);
+        EXPECT_EQ(limits.maxStorageTexturesPerShaderStage, 6u);
     }
 }
 

@@ -58,12 +58,15 @@ class Queue : public d3d::Queue {
                                wgpu::MapMode mode,
                                ExecutionSerial readySerial);
 
+    const Ref<SharedFence>& GetSharedFence() const { return mSharedFence; }
+
   protected:
     using d3d::Queue::Queue;
 
     ~Queue() override = default;
 
     MaybeError Initialize(bool isMonitored);
+    MaybeError InitializeD3DFence(bool isMonitored);
 
     MaybeError SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) override;
     MaybeError WriteBufferImpl(BufferBase* buffer,

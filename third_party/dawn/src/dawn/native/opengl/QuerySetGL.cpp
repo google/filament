@@ -27,24 +27,35 @@
 
 #include "dawn/native/opengl/QuerySetGL.h"
 
+#include <utility>
+
 #include "dawn/native/opengl/DeviceGL.h"
+#include "dawn/native/opengl/UtilsGL.h"
 
 namespace dawn::native::opengl {
 
-QuerySet::QuerySet(Device* device, const QuerySetDescriptor* descriptor)
-    : QuerySetBase(device, descriptor), mQueries(descriptor->count) {
-    if (mQueries.size() > 0) {
+// static
+ResultOrError<Ref<QuerySet>> QuerySet::Create(Device* device,
+                                              const QuerySetDescriptor* descriptor) {
+    Ref<QuerySet> querySet = AcquireRef(new QuerySet(device, descriptor));
+
+    if (querySet->mQueries.size() > 0) {
         const OpenGLFunctions& gl = device->GetGL();
-        gl.GenQueries(descriptor->count, mQueries.data());
+        DAWN_GL_TRY(gl, GenQueries(descriptor->count, querySet->mQueries.data()));
     }
+
+    return std::move(querySet);
 }
+
+QuerySet::QuerySet(Device* device, const QuerySetDescriptor* descriptor)
+    : QuerySetBase(device, descriptor), mQueries(descriptor->count) {}
 
 QuerySet::~QuerySet() = default;
 
 void QuerySet::DestroyImpl() {
     const OpenGLFunctions& gl = ToBackend(GetDevice())->GetGL();
     if (mQueries.size() > 0) {
-        gl.DeleteQueries(mQueries.size(), mQueries.data());
+        DAWN_GL_TRY_IGNORE_ERRORS(gl, DeleteQueries(mQueries.size(), mQueries.data()));
     }
     QuerySetBase::DestroyImpl();
 }

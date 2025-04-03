@@ -27,9 +27,6 @@
 
 #include "src/tint/utils/reflection.h"
 
-#include <memory>
-#include <string>
-
 #include "src/tint/utils/math/math.h"
 #include "src/tint/utils/text/string_stream.h"
 
@@ -39,9 +36,7 @@ Result<SuccessType> CheckAllFieldsReflected(VectorRef<ReflectedFieldInfo> fields
                                             std::string_view class_name,
                                             size_t class_size,
                                             size_t class_align,
-                                            bool class_is_castable,
-                                            std::string_view reflect_file,
-                                            uint32_t reflect_line) {
+                                            bool class_is_castable) {
     size_t calculated_offset = class_is_castable ? sizeof(CastableBase) : 0;
     for (auto& field : fields) {
         calculated_offset = RoundUp(field.align, calculated_offset);
@@ -51,13 +46,7 @@ Result<SuccessType> CheckAllFieldsReflected(VectorRef<ReflectedFieldInfo> fields
                 << "'.\n"
                    "Expected field offset of "
                 << calculated_offset << " bytes, but field was at " << field.offset << " bytes";
-            diag::Diagnostic err;
-            err.message = msg.str();
-            err.owned_file = std::make_shared<Source::File>(std::string(reflect_file), "");
-            err.source.file = err.owned_file.get();
-            err.source.range.begin.line = reflect_line;
-            err.source.range.end.line = reflect_line;
-            return Failure{std::move(err)};
+            return Failure{msg.str()};
         }
         calculated_offset += field.size;
     }
@@ -68,13 +57,7 @@ Result<SuccessType> CheckAllFieldsReflected(VectorRef<ReflectedFieldInfo> fields
             << ", ...) missing fields at end of class\n"
                "Expected class size of "
             << calculated_offset << " bytes, but class is " << class_size << " bytes";
-        diag::Diagnostic err;
-        err.message = msg.str();
-        err.owned_file = std::make_shared<Source::File>(std::string(reflect_file), "");
-        err.source.file = err.owned_file.get();
-        err.source.range.begin.line = reflect_line;
-        err.source.range.end.line = reflect_line;
-        return Failure{std::move(err)};
+        return Failure{msg.str()};
     }
     return Success;
 }

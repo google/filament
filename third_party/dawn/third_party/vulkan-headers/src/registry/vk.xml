@@ -179,7 +179,7 @@ branch of the member gitlab server.
 #define <name>VKSC_API_VERSION_1_0</name> <type>VK_MAKE_API_VERSION</type>(VKSC_API_VARIANT, 1, 0, 0)// Patch version should always be set to 0</type>
 
         <type api="vulkan" category="define">// Version of this file
-#define <name>VK_HEADER_VERSION</name> 307</type>
+#define <name>VK_HEADER_VERSION</name> 311</type>
         <type api="vulkan" category="define" requires="VK_HEADER_VERSION">// Complete version of this file
 #define <name>VK_HEADER_VERSION_COMPLETE</name> <type>VK_MAKE_API_VERSION</type>(0, 1, 4, VK_HEADER_VERSION)</type>
         <type api="vulkansc" category="define">// Version of this file
@@ -1983,11 +1983,11 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member><type>VkBool32</type>               <name>inheritedQueries</name><comment>Queries may be inherited from primary to secondary command buffers</comment></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceSparseProperties" returnedonly="true">
-            <member limittype="bitmask"><type>VkBool32</type>           <name>residencyStandard2DBlockShape</name><comment>Sparse resources support: GPU will access all 2D (single sample) sparse resources using the standard sparse image block shapes (based on pixel format)</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>           <name>residencyStandard2DMultisampleBlockShape</name><comment>Sparse resources support: GPU will access all 2D (multisample) sparse resources using the standard sparse image block shapes (based on pixel format)</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>           <name>residencyStandard3DBlockShape</name><comment>Sparse resources support: GPU will access all 3D sparse resources using the standard sparse image block shapes (based on pixel format)</comment></member>
-            <member limittype="not"><type>VkBool32</type>           <name>residencyAlignedMipSize</name><comment>Sparse resources support: Images with mip level dimensions that are NOT a multiple of the sparse image block dimensions will be placed in the mip tail</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>           <name>residencyNonResidentStrict</name><comment>Sparse resources support: GPU can consistently access non-resident regions of a resource, all reads return as if data is 0, writes are discarded</comment></member>
+            <member limittype="max"><type>VkBool32</type>             <name>residencyStandard2DBlockShape</name><comment>Sparse resources support: GPU will access all 2D (single sample) sparse resources using the standard sparse image block shapes (based on pixel format)</comment></member>
+            <member limittype="max"><type>VkBool32</type>             <name>residencyStandard2DMultisampleBlockShape</name><comment>Sparse resources support: GPU will access all 2D (multisample) sparse resources using the standard sparse image block shapes (based on pixel format)</comment></member>
+            <member limittype="max"><type>VkBool32</type>             <name>residencyStandard3DBlockShape</name><comment>Sparse resources support: GPU will access all 3D sparse resources using the standard sparse image block shapes (based on pixel format)</comment></member>
+            <member limittype="min"><type>VkBool32</type>             <name>residencyAlignedMipSize</name><comment>Sparse resources support: Images with mip level dimensions that are NOT a multiple of the sparse image block dimensions will be placed in the mip tail</comment></member>
+            <member limittype="max"><type>VkBool32</type>             <name>residencyNonResidentStrict</name><comment>Sparse resources support: GPU can consistently access non-resident regions of a resource, all reads return as if data is 0, writes are discarded</comment></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceLimits" returnedonly="true">
                 <comment>resource maximum sizes</comment>
@@ -2090,7 +2090,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="bitmask" optional="true"><type>VkSampleCountFlags</type>     <name>sampledImageStencilSampleCounts</name><comment>supported stencil sample counts for a sampled image</comment></member>
             <member limittype="bitmask" optional="true"><type>VkSampleCountFlags</type>     <name>storageImageSampleCounts</name><comment>supported sample counts for a storage image</comment></member>
             <member limittype="max"><type>uint32_t</type>               <name>maxSampleMaskWords</name><comment>max number of sample mask words</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>           <name>timestampComputeAndGraphics</name><comment>timestamps on graphics and compute queues</comment></member>
+            <member limittype="max"><type>VkBool32</type>               <name>timestampComputeAndGraphics</name><comment>timestamps on graphics and compute queues</comment></member>
             <member limittype="min,mul"><type>float</type>              <name>timestampPeriod</name><comment>number of nanoseconds it takes for timestamp query value to increment by 1</comment></member>
             <member limittype="max"><type>uint32_t</type>               <name>maxClipDistances</name><comment>max number of clip distances</comment></member>
             <member limittype="max"><type>uint32_t</type>               <name>maxCullDistances</name><comment>max number of cull distances</comment></member>
@@ -2100,8 +2100,8 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="range"><type>float</type>                <name>lineWidthRange</name>[2]<comment>range (min,max) of supported line widths</comment></member>
             <member limittype="min,mul"><type>float</type>              <name>pointSizeGranularity</name><comment>granularity of supported point sizes</comment></member>
             <member limittype="min,mul"><type>float</type>              <name>lineWidthGranularity</name><comment>granularity of supported line widths</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>           <name>strictLines</name><comment>line rasterization follows preferred rules</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>           <name>standardSampleLocations</name><comment>supports standard sample locations for all supported sample counts</comment></member>
+            <member limittype="max"><type>VkBool32</type>               <name>strictLines</name><comment>line rasterization follows preferred rules</comment></member>
+            <member limittype="max"><type>VkBool32</type>               <name>standardSampleLocations</name><comment>supports standard sample locations for all supported sample counts</comment></member>
             <member limittype="min,pot"><type>VkDeviceSize</type>       <name>optimalBufferCopyOffsetAlignment</name><comment>optimal offset of buffer copies</comment></member>
             <member limittype="min,pot"><type>VkDeviceSize</type>       <name>optimalBufferCopyRowPitchAlignment</name><comment>optimal pitch of buffer copies</comment></member>
             <member limittype="min,pot"><type>VkDeviceSize</type>       <name>nonCoherentAtomSize</name><comment>minimum size and alignment for non-coherent host-mapped device memory access</comment></member>
@@ -3580,7 +3580,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <type category="struct" name="VkPhysicalDeviceMultiviewPerViewAttributesPropertiesNVX" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PER_VIEW_ATTRIBUTES_PROPERTIES_NVX"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                            <name>pNext</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>perViewPositionAllComponents</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>perViewPositionAllComponents</name></member>
         </type>
         <type category="struct" name="VkInputAttachmentAspectReference">
             <member><type>uint32_t</type>                        <name>subpass</name></member>
@@ -3661,7 +3661,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="max,pot" noautovalidity="true"><type>uint32_t</type>                     <name>subgroupSize</name><comment>The size of a subgroup for this queue.</comment></member>
             <member limittype="bitmask" noautovalidity="true"><type>VkShaderStageFlags</type>            <name>supportedStages</name><comment>Bitfield of what shader stages support subgroup operations</comment></member>
             <member limittype="bitmask" noautovalidity="true"><type>VkSubgroupFeatureFlags</type>        <name>supportedOperations</name><comment>Bitfield of what subgroup operations are supported.</comment></member>
-            <member limittype="bitmask" noautovalidity="true"><type>VkBool32</type> <name>quadOperationsInAllStages</name><comment>Flag to specify whether quad operations are available in all stages.</comment></member>
+            <member limittype="max" noautovalidity="true"><type>VkBool32</type>                 <name>quadOperationsInAllStages</name><comment>Flag to specify whether quad operations are available in all stages.</comment></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceShaderSubgroupExtendedTypesFeatures" structextends="VkPhysicalDeviceFeatures2,VkDeviceCreateInfo">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SUBGROUP_EXTENDED_TYPES_FEATURES"><type>VkStructureType</type> <name>sType</name></member>
@@ -3837,8 +3837,8 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <type category="struct" name="VkPhysicalDeviceSamplerFilterMinmaxProperties" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_FILTER_MINMAX_PROPERTIES"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                  <name>pNext</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>filterMinmaxSingleComponentFormats</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>filterMinmaxImageComponentMapping</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>filterMinmaxSingleComponentFormats</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>filterMinmaxImageComponentMapping</name></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT" alias="VkPhysicalDeviceSamplerFilterMinmaxProperties"/>
         <type category="struct" name="VkSampleLocationEXT">
@@ -3882,7 +3882,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="max"><type>VkExtent2D</type>                       <name>maxSampleLocationGridSize</name></member>
             <member limittype="range"><type>float</type>                            <name>sampleLocationCoordinateRange</name>[2]</member>
             <member limittype="bits"><type>uint32_t</type>                         <name>sampleLocationSubPixelBits</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>variableSampleLocations</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>variableSampleLocations</name></member>
         </type>
         <type category="struct" name="VkMultisamplePropertiesEXT" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_MULTISAMPLE_PROPERTIES_EXT"><type>VkStructureType</type> <name>sType</name></member>
@@ -3909,11 +3909,11 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_PROPERTIES_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                            <name>pNext</name></member>
             <member limittype="max"><type>uint32_t</type>                         <name>advancedBlendMaxColorAttachments</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>advancedBlendIndependentBlend</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>advancedBlendNonPremultipliedSrcColor</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>advancedBlendNonPremultipliedDstColor</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>advancedBlendCorrelatedOverlap</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>advancedBlendAllOperations</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>advancedBlendIndependentBlend</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>advancedBlendNonPremultipliedSrcColor</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>advancedBlendNonPremultipliedDstColor</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>advancedBlendCorrelatedOverlap</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>advancedBlendAllOperations</name></member>
         </type>
         <type category="struct" name="VkPipelineColorBlendAdvancedStateCreateInfoEXT" structextends="VkPipelineColorBlendStateCreateInfo">
             <member values="VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_ADVANCED_STATE_CREATE_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
@@ -4008,12 +4008,12 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <type category="struct" name="VkPhysicalDeviceMaintenance5Properties" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_PROPERTIES"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                            <name>pNext</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                     <name>earlyFragmentMultisampleCoverageAfterSampleCounting</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                     <name>earlyFragmentSampleMaskTestBeforeSampleCounting</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                     <name>depthStencilSwizzleOneSupport</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                     <name>polygonModePointSize</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                     <name>nonStrictSinglePixelWideLinesUseParallelogram</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                     <name>nonStrictWideLinesUseParallelogram</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>earlyFragmentMultisampleCoverageAfterSampleCounting</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>earlyFragmentSampleMaskTestBeforeSampleCounting</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>depthStencilSwizzleOneSupport</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>polygonModePointSize</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>nonStrictSinglePixelWideLinesUseParallelogram</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>nonStrictWideLinesUseParallelogram</name></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceMaintenance5PropertiesKHR" alias="VkPhysicalDeviceMaintenance5Properties"/>
         <type category="struct" name="VkPhysicalDeviceMaintenance6Features" structextends="VkPhysicalDeviceFeatures2,VkDeviceCreateInfo">
@@ -4027,7 +4027,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true"><type>void</type>*                            <name>pNext</name></member>
             <member><type>VkBool32</type>                                         <name>blockTexelViewCompatibleMultipleLayers</name></member>
             <member limittype="max"><type>uint32_t</type>                         <name>maxCombinedImageSamplerDescriptorCount</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                     <name>fragmentShadingRateClampCombinerInputs</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>fragmentShadingRateClampCombinerInputs</name></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceMaintenance6PropertiesKHR" alias="VkPhysicalDeviceMaintenance6Properties"/>
         <type category="struct" name="VkPhysicalDeviceMaintenance7FeaturesKHR" structextends="VkPhysicalDeviceFeatures2,VkDeviceCreateInfo">
@@ -4106,21 +4106,21 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true"><type>void</type>*                            <name>pNext</name></member>
             <member limittype="exact"><type>VkShaderFloatControlsIndependence</type> <name>denormBehaviorIndependence</name></member>
             <member limittype="exact"><type>VkShaderFloatControlsIndependence</type> <name>roundingModeIndependence</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderSignedZeroInfNanPreserveFloat16</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderSignedZeroInfNanPreserveFloat32</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderSignedZeroInfNanPreserveFloat64</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderDenormPreserveFloat16</name><comment>An implementation can preserve  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderDenormPreserveFloat32</name><comment>An implementation can preserve  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderDenormPreserveFloat64</name><comment>An implementation can preserve  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderDenormFlushToZeroFloat16</name><comment>An implementation can flush to zero  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderDenormFlushToZeroFloat32</name><comment>An implementation can flush to zero  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderDenormFlushToZeroFloat64</name><comment>An implementation can flush to zero  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderRoundingModeRTEFloat16</name><comment>An implementation can support RTE</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderRoundingModeRTEFloat32</name><comment>An implementation can support RTE</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderRoundingModeRTEFloat64</name><comment>An implementation can support RTE</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderRoundingModeRTZFloat16</name><comment>An implementation can support RTZ</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderRoundingModeRTZFloat32</name><comment>An implementation can support RTZ</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                         <name>shaderRoundingModeRTZFloat64</name><comment>An implementation can support RTZ</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderSignedZeroInfNanPreserveFloat16</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderSignedZeroInfNanPreserveFloat32</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderSignedZeroInfNanPreserveFloat64</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderDenormPreserveFloat16</name><comment>An implementation can preserve  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderDenormPreserveFloat32</name><comment>An implementation can preserve  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderDenormPreserveFloat64</name><comment>An implementation can preserve  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderDenormFlushToZeroFloat16</name><comment>An implementation can flush to zero  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderDenormFlushToZeroFloat32</name><comment>An implementation can flush to zero  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderDenormFlushToZeroFloat64</name><comment>An implementation can flush to zero  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderRoundingModeRTEFloat16</name><comment>An implementation can support RTE</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderRoundingModeRTEFloat32</name><comment>An implementation can support RTE</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderRoundingModeRTEFloat64</name><comment>An implementation can support RTE</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderRoundingModeRTZFloat16</name><comment>An implementation can support RTZ</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderRoundingModeRTZFloat32</name><comment>An implementation can support RTZ</comment></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>shaderRoundingModeRTZFloat64</name><comment>An implementation can support RTZ</comment></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceFloatControlsPropertiesKHR"              alias="VkPhysicalDeviceFloatControlsProperties"/>
         <type category="struct" name="VkPhysicalDeviceHostQueryResetFeatures" structextends="VkPhysicalDeviceFeatures2,VkDeviceCreateInfo">
@@ -4280,12 +4280,12 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="exact"><type>float</type>                 <name>primitiveOverestimationSize</name><comment>The size in pixels the primitive is enlarged at each edge during conservative rasterization</comment></member>
             <member limittype="max"><type>float</type>                      <name>maxExtraPrimitiveOverestimationSize</name><comment>The maximum additional overestimation the client can specify in the pipeline state</comment></member>
             <member limittype="min,mul"><type>float</type>                   <name>extraPrimitiveOverestimationSizeGranularity</name><comment>The granularity of extra overestimation sizes the implementations supports between 0 and maxExtraOverestimationSize</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>primitiveUnderestimation</name><comment>true if the implementation supports conservative rasterization underestimation mode</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>conservativePointAndLineRasterization</name><comment>true if conservative rasterization also applies to points and lines</comment></member>
+            <member limittype="max"><type>VkBool32</type>                <name>primitiveUnderestimation</name><comment>true if the implementation supports conservative rasterization underestimation mode</comment></member>
+            <member limittype="max"><type>VkBool32</type>                <name>conservativePointAndLineRasterization</name><comment>true if conservative rasterization also applies to points and lines</comment></member>
             <member limittype="exact"><type>VkBool32</type>              <name>degenerateTrianglesRasterized</name><comment>true if degenerate triangles (those with zero area after snap) are rasterized</comment></member>
             <member limittype="exact"><type>VkBool32</type>              <name>degenerateLinesRasterized</name><comment>true if degenerate lines (those with zero length after snap) are rasterized</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>fullyCoveredFragmentShaderInputVariable</name><comment>true if the implementation supports the FullyCoveredEXT SPIR-V builtin fragment shader input variable</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>conservativeRasterizationPostDepthCoverage</name><comment>true if the implementation supports both conservative rasterization and post depth coverage sample coverage mask</comment></member>
+            <member limittype="max"><type>VkBool32</type>                <name>fullyCoveredFragmentShaderInputVariable</name><comment>true if the implementation supports the FullyCoveredEXT SPIR-V builtin fragment shader input variable</comment></member>
+            <member limittype="max"><type>VkBool32</type>                <name>conservativeRasterizationPostDepthCoverage</name><comment>true if the implementation supports both conservative rasterization and post depth coverage sample coverage mask</comment></member>
         </type>
         <type category="struct" name="VkCalibratedTimestampInfoKHR">
             <member values="VK_STRUCTURE_TYPE_CALIBRATED_TIMESTAMP_INFO_KHR"><type>VkStructureType</type> <name>sType</name></member>
@@ -4353,13 +4353,13 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                            <name>pNext</name></member>
             <member limittype="max"><type>uint32_t</type>               <name>maxUpdateAfterBindDescriptorsInAllPools</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>shaderUniformBufferArrayNonUniformIndexingNative</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>shaderSampledImageArrayNonUniformIndexingNative</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>shaderStorageBufferArrayNonUniformIndexingNative</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>shaderStorageImageArrayNonUniformIndexingNative</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>shaderInputAttachmentArrayNonUniformIndexingNative</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>robustBufferAccessUpdateAfterBind</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>quadDivergentImplicitLod</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>shaderUniformBufferArrayNonUniformIndexingNative</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>shaderSampledImageArrayNonUniformIndexingNative</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>shaderStorageBufferArrayNonUniformIndexingNative</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>shaderStorageImageArrayNonUniformIndexingNative</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>shaderInputAttachmentArrayNonUniformIndexingNative</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>robustBufferAccessUpdateAfterBind</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>quadDivergentImplicitLod</name></member>
             <member limittype="max"><type>uint32_t</type>               <name>maxPerStageDescriptorUpdateAfterBindSamplers</name></member>
             <member limittype="max"><type>uint32_t</type>               <name>maxPerStageDescriptorUpdateAfterBindUniformBuffers</name></member>
             <member limittype="max"><type>uint32_t</type>               <name>maxPerStageDescriptorUpdateAfterBindStorageBuffers</name></member>
@@ -4679,8 +4679,8 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true"><type>void</type>*                                <name>pNext</name></member>
             <member limittype="bitmask"><type>VkResolveModeFlags</type>                   <name>supportedDepthResolveModes</name><comment>supported depth resolve modes</comment></member>
             <member limittype="bitmask"><type>VkResolveModeFlags</type>                   <name>supportedStencilResolveModes</name><comment>supported stencil resolve modes</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                             <name>independentResolveNone</name><comment>depth and stencil resolve modes can be set independently if one of them is none</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                             <name>independentResolve</name><comment>depth and stencil resolve modes can be set independently</comment></member>
+            <member limittype="max"><type>VkBool32</type>                             <name>independentResolveNone</name><comment>depth and stencil resolve modes can be set independently if one of them is none</comment></member>
+            <member limittype="max"><type>VkBool32</type>                             <name>independentResolve</name><comment>depth and stencil resolve modes can be set independently</comment></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceDepthStencilResolvePropertiesKHR"        alias="VkPhysicalDeviceDepthStencilResolveProperties"/>
         <type category="struct" name="VkSubpassDescriptionDepthStencilResolve" structextends="VkSubpassDescription2">
@@ -4716,10 +4716,10 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="max"><type>uint32_t</type>               <name>maxTransformFeedbackStreamDataSize</name></member>
             <member limittype="max"><type>uint32_t</type>               <name>maxTransformFeedbackBufferDataSize</name></member>
             <member limittype="max"><type>uint32_t</type>               <name>maxTransformFeedbackBufferDataStride</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>transformFeedbackQueries</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>transformFeedbackStreamsLinesTriangles</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>transformFeedbackRasterizationStreamSelect</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>transformFeedbackDraw</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>transformFeedbackQueries</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>transformFeedbackStreamsLinesTriangles</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>transformFeedbackRasterizationStreamSelect</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>transformFeedbackDraw</name></member>
         </type>
         <type category="struct" name="VkPipelineRasterizationStateStreamCreateInfoEXT" structextends="VkPipelineRasterizationStateCreateInfo">
             <member values="VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_STREAM_CREATE_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
@@ -5192,17 +5192,18 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true"><type>void</type>*                            <name>pNext</name></member>
             <member><type>VkBool32</type>                         <name>fragmentDensityMapDeferred</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM" structextends="VkPhysicalDeviceFeatures2,VkDeviceCreateInfo">
-            <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_FEATURES_QCOM"><type>VkStructureType</type> <name>sType</name></member>
+        <type category="struct" name="VkPhysicalDeviceFragmentDensityMapOffsetFeaturesEXT" structextends="VkPhysicalDeviceFeatures2,VkDeviceCreateInfo">
+            <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_FEATURES_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*            <name>pNext</name></member>
             <member><type>VkBool32</type>                         <name>fragmentDensityMapOffset</name></member>
         </type>
+	<type category="struct" name="VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM" alias="VkPhysicalDeviceFragmentDensityMapOffsetFeaturesEXT"/>
         <type category="struct" name="VkPhysicalDeviceFragmentDensityMapPropertiesEXT" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_PROPERTIES_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                            <name>pNext</name></member>
             <member limittype="min"><type>VkExtent2D</type>                       <name>minFragmentDensityTexelSize</name></member>
             <member limittype="max"><type>VkExtent2D</type>                       <name>maxFragmentDensityTexelSize</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                     <name>fragmentDensityInvocations</name></member>
+            <member limittype="max"><type>VkBool32</type>                         <name>fragmentDensityInvocations</name></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceFragmentDensityMap2PropertiesEXT" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_2_PROPERTIES_EXT"><type>VkStructureType</type> <name>sType</name></member>
@@ -5212,22 +5213,24 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="max"><type>uint32_t</type>                       <name>maxSubsampledArrayLayers</name></member>
             <member limittype="max"><type>uint32_t</type>                       <name>maxDescriptorSetSubsampledSamplers</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
-            <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_PROPERTIES_QCOM"><type>VkStructureType</type> <name>sType</name></member>
+        <type category="struct" name="VkPhysicalDeviceFragmentDensityMapOffsetPropertiesEXT" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
+            <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_PROPERTIES_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                            <name>pNext</name></member>
             <member limittype="min,mul"><type>VkExtent2D</type>                       <name>fragmentDensityOffsetGranularity</name></member>
         </type>
+	<type category="struct" name="VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM" alias="VkPhysicalDeviceFragmentDensityMapOffsetPropertiesEXT"/>
         <type category="struct" name="VkRenderPassFragmentDensityMapCreateInfoEXT" structextends="VkRenderPassCreateInfo,VkRenderPassCreateInfo2">
             <member values="VK_STRUCTURE_TYPE_RENDER_PASS_FRAGMENT_DENSITY_MAP_CREATE_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true">const <type>void</type>*                      <name>pNext</name></member>
             <member><type>VkAttachmentReference</type>            <name>fragmentDensityMapAttachment</name></member>
         </type>
-        <type category="struct" name="VkSubpassFragmentDensityMapOffsetEndInfoQCOM" structextends="VkSubpassEndInfo">
-            <member values="VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM"><type>VkStructureType</type> <name>sType</name></member>
+        <type category="struct" name="VkRenderPassFragmentDensityMapOffsetEndInfoEXT" structextends="VkSubpassEndInfo,VkRenderingEndInfoEXT">
+            <member values="VK_STRUCTURE_TYPE_RENDER_PASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true">const <type>void</type>*                        <name>pNext</name></member>
             <member optional="true"><type>uint32_t</type>                           <name>fragmentDensityOffsetCount</name></member>
             <member len="fragmentDensityOffsetCount">const <type>VkOffset2D</type>* <name>pFragmentDensityOffsets</name></member>
         </type>
+	<type category="struct" name="VkSubpassFragmentDensityMapOffsetEndInfoQCOM" alias="VkRenderPassFragmentDensityMapOffsetEndInfoEXT"/>
         <type category="struct" name="VkPhysicalDeviceScalarBlockLayoutFeatures" structextends="VkPhysicalDeviceFeatures2,VkDeviceCreateInfo">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                               <name>pNext</name></member>
@@ -5458,7 +5461,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <type category="struct" name="VkPhysicalDevicePerformanceQueryPropertiesKHR" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PERFORMANCE_QUERY_PROPERTIES_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>* <name>pNext</name></member>
-            <member limittype="bitmask" noautovalidity="true"><type>VkBool32</type> <name>allowCommandBufferQueryCopies</name><comment>Flag to specify whether performance queries are allowed to be used in vkCmdCopyQueryPoolResults</comment></member>
+            <member limittype="max" noautovalidity="true"><type>VkBool32</type> <name>allowCommandBufferQueryCopies</name><comment>Flag to specify whether performance queries are allowed to be used in vkCmdCopyQueryPoolResults</comment></member>
         </type>
         <type category="struct" name="VkPerformanceCounterKHR" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PERFORMANCE_COUNTER_KHR"><type>VkStructureType</type> <name>sType</name></member>
@@ -5820,7 +5823,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="max,pot" noautovalidity="true"><type>uint32_t</type>                      <name>subgroupSize</name><comment>The size of a subgroup for this queue.</comment></member>
             <member limittype="bitmask" noautovalidity="true"><type>VkShaderStageFlags</type>            <name>subgroupSupportedStages</name><comment>Bitfield of what shader stages support subgroup operations</comment></member>
             <member limittype="bitmask" noautovalidity="true"><type>VkSubgroupFeatureFlags</type>        <name>subgroupSupportedOperations</name><comment>Bitfield of what subgroup operations are supported.</comment></member>
-            <member limittype="bitmask" noautovalidity="true"><type>VkBool32</type>                      <name>subgroupQuadOperationsInAllStages</name><comment>Flag to specify whether quad operations are available in all stages.</comment></member>
+            <member limittype="max" noautovalidity="true"><type>VkBool32</type>                          <name>subgroupQuadOperationsInAllStages</name><comment>Flag to specify whether quad operations are available in all stages.</comment></member>
             <member limittype="exact"><type>VkPointClippingBehavior</type>     <name>pointClippingBehavior</name></member>
             <member limittype="max"><type>uint32_t</type>                         <name>maxMultiviewViewCount</name><comment>max number of views in a subpass</comment></member>
             <member limittype="max"><type>uint32_t</type>                         <name>maxMultiviewInstanceIndex</name><comment>max instance index for a draw in a multiview subpass</comment></member>
@@ -5888,29 +5891,29 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="noauto"><type>VkConformanceVersion</type>             <name>conformanceVersion</name></member>
             <member limittype="exact"><type>VkShaderFloatControlsIndependence</type> <name>denormBehaviorIndependence</name></member>
             <member limittype="exact"><type>VkShaderFloatControlsIndependence</type> <name>roundingModeIndependence</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderSignedZeroInfNanPreserveFloat16</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderSignedZeroInfNanPreserveFloat32</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderSignedZeroInfNanPreserveFloat64</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderDenormPreserveFloat16</name><comment>An implementation can preserve  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderDenormPreserveFloat32</name><comment>An implementation can preserve  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderDenormPreserveFloat64</name><comment>An implementation can preserve  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderDenormFlushToZeroFloat16</name><comment>An implementation can flush to zero  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderDenormFlushToZeroFloat32</name><comment>An implementation can flush to zero  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderDenormFlushToZeroFloat64</name><comment>An implementation can flush to zero  denormals</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderRoundingModeRTEFloat16</name><comment>An implementation can support RTE</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderRoundingModeRTEFloat32</name><comment>An implementation can support RTE</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderRoundingModeRTEFloat64</name><comment>An implementation can support RTE</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderRoundingModeRTZFloat16</name><comment>An implementation can support RTZ</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderRoundingModeRTZFloat32</name><comment>An implementation can support RTZ</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderRoundingModeRTZFloat64</name><comment>An implementation can support RTZ</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderSignedZeroInfNanPreserveFloat16</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderSignedZeroInfNanPreserveFloat32</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderSignedZeroInfNanPreserveFloat64</name><comment>An implementation can preserve signed zero, nan, inf</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderDenormPreserveFloat16</name><comment>An implementation can preserve  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderDenormPreserveFloat32</name><comment>An implementation can preserve  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderDenormPreserveFloat64</name><comment>An implementation can preserve  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderDenormFlushToZeroFloat16</name><comment>An implementation can flush to zero  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderDenormFlushToZeroFloat32</name><comment>An implementation can flush to zero  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderDenormFlushToZeroFloat64</name><comment>An implementation can flush to zero  denormals</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderRoundingModeRTEFloat16</name><comment>An implementation can support RTE</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderRoundingModeRTEFloat32</name><comment>An implementation can support RTE</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderRoundingModeRTEFloat64</name><comment>An implementation can support RTE</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderRoundingModeRTZFloat16</name><comment>An implementation can support RTZ</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderRoundingModeRTZFloat32</name><comment>An implementation can support RTZ</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderRoundingModeRTZFloat64</name><comment>An implementation can support RTZ</comment></member>
             <member limittype="max"><type>uint32_t</type>                            <name>maxUpdateAfterBindDescriptorsInAllPools</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderUniformBufferArrayNonUniformIndexingNative</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderSampledImageArrayNonUniformIndexingNative</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderStorageBufferArrayNonUniformIndexingNative</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderStorageImageArrayNonUniformIndexingNative</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>shaderInputAttachmentArrayNonUniformIndexingNative</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>robustBufferAccessUpdateAfterBind</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>quadDivergentImplicitLod</name></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderUniformBufferArrayNonUniformIndexingNative</name></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderSampledImageArrayNonUniformIndexingNative</name></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderStorageBufferArrayNonUniformIndexingNative</name></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderStorageImageArrayNonUniformIndexingNative</name></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>shaderInputAttachmentArrayNonUniformIndexingNative</name></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>robustBufferAccessUpdateAfterBind</name></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>quadDivergentImplicitLod</name></member>
             <member limittype="max"><type>uint32_t</type>                            <name>maxPerStageDescriptorUpdateAfterBindSamplers</name></member>
             <member limittype="max"><type>uint32_t</type>                            <name>maxPerStageDescriptorUpdateAfterBindUniformBuffers</name></member>
             <member limittype="max"><type>uint32_t</type>                            <name>maxPerStageDescriptorUpdateAfterBindStorageBuffers</name></member>
@@ -5928,10 +5931,10 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="max"><type>uint32_t</type>                            <name>maxDescriptorSetUpdateAfterBindInputAttachments</name></member>
             <member limittype="bitmask"><type>VkResolveModeFlags</type>              <name>supportedDepthResolveModes</name><comment>supported depth resolve modes</comment></member>
             <member limittype="bitmask"><type>VkResolveModeFlags</type>              <name>supportedStencilResolveModes</name><comment>supported stencil resolve modes</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>independentResolveNone</name><comment>depth and stencil resolve modes can be set independently if one of them is none</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>independentResolve</name><comment>depth and stencil resolve modes can be set independently</comment></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>filterMinmaxSingleComponentFormats</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                        <name>filterMinmaxImageComponentMapping</name></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>independentResolveNone</name><comment>depth and stencil resolve modes can be set independently if one of them is none</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>independentResolve</name><comment>depth and stencil resolve modes can be set independently</comment></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>filterMinmaxSingleComponentFormats</name></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>filterMinmaxImageComponentMapping</name></member>
             <member limittype="max"><type>uint64_t</type>                            <name>maxTimelineSemaphoreValueDifference</name></member>
             <member limittype="bitmask" optional="true"><type>VkSampleCountFlags</type> <name>framebufferIntegerColorSampleCounts</name></member>
         </type>
@@ -5967,36 +5970,36 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="max"><type>uint32_t</type>                       <name>maxDescriptorSetInlineUniformBlocks</name></member>
             <member limittype="max"><type>uint32_t</type>                       <name>maxDescriptorSetUpdateAfterBindInlineUniformBlocks</name></member>
             <member limittype="max"><type>uint32_t</type>                       <name>maxInlineUniformTotalSize</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct8BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct8BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct8BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct4x8BitPackedUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct4x8BitPackedSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct4x8BitPackedMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct16BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct16BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct16BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct32BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct32BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct32BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct64BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct64BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProduct64BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating8BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating8BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating8BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating4x8BitPackedUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating4x8BitPackedSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating4x8BitPackedMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating16BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating16BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating16BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating32BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating32BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating32BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating64BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating64BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                   <name>integerDotProductAccumulatingSaturating64BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct8BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct8BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct8BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct4x8BitPackedUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct4x8BitPackedSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct4x8BitPackedMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct16BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct16BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct16BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct32BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct32BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct32BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct64BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct64BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProduct64BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating8BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating8BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating8BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating4x8BitPackedUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating4x8BitPackedSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating4x8BitPackedMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating16BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating16BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating16BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating32BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating32BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating32BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating64BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating64BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>integerDotProductAccumulatingSaturating64BitMixedSignednessAccelerated</name></member>
             <member limittype="min,pot"><type>VkDeviceSize</type>               <name>storageTexelBufferOffsetAlignmentBytes</name></member>
             <member limittype="exact"><type>VkBool32</type>                     <name>storageTexelBufferOffsetSingleTexelAlignment</name></member>
             <member limittype="min,pot"><type>VkDeviceSize</type>               <name>uniformTexelBufferOffsetAlignmentBytes</name></member>
@@ -6035,17 +6038,17 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="max"><type>uint32_t</type>                                                   <name>maxVertexAttribDivisor</name><comment>max value of vertex attribute divisor</comment></member>
             <member limittype="max"><type>VkBool32</type>                                                   <name>supportsNonZeroFirstInstance</name></member>
             <member limittype="max"><type>uint32_t</type>                                                   <name>maxPushDescriptors</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                                               <name>dynamicRenderingLocalReadDepthStencilAttachments</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                                               <name>dynamicRenderingLocalReadMultisampledAttachments</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                                               <name>earlyFragmentMultisampleCoverageAfterSampleCounting</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                                               <name>earlyFragmentSampleMaskTestBeforeSampleCounting</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                                               <name>depthStencilSwizzleOneSupport</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                                               <name>polygonModePointSize</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                                               <name>nonStrictSinglePixelWideLinesUseParallelogram</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                                               <name>nonStrictWideLinesUseParallelogram</name></member>
+            <member limittype="max"><type>VkBool32</type>                                                   <name>dynamicRenderingLocalReadDepthStencilAttachments</name></member>
+            <member limittype="max"><type>VkBool32</type>                                                   <name>dynamicRenderingLocalReadMultisampledAttachments</name></member>
+            <member limittype="max"><type>VkBool32</type>                                                   <name>earlyFragmentMultisampleCoverageAfterSampleCounting</name></member>
+            <member limittype="max"><type>VkBool32</type>                                                   <name>earlyFragmentSampleMaskTestBeforeSampleCounting</name></member>
+            <member limittype="max"><type>VkBool32</type>                                                   <name>depthStencilSwizzleOneSupport</name></member>
+            <member limittype="max"><type>VkBool32</type>                                                   <name>polygonModePointSize</name></member>
+            <member limittype="max"><type>VkBool32</type>                                                   <name>nonStrictSinglePixelWideLinesUseParallelogram</name></member>
+            <member limittype="max"><type>VkBool32</type>                                                   <name>nonStrictWideLinesUseParallelogram</name></member>
             <member><type>VkBool32</type>                                                                   <name>blockTexelViewCompatibleMultipleLayers</name></member>
             <member limittype="max"><type>uint32_t</type>                                                   <name>maxCombinedImageSamplerDescriptorCount</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                                               <name>fragmentShadingRateClampCombinerInputs</name></member>
+            <member limittype="max"><type>VkBool32</type>                                                   <name>fragmentShadingRateClampCombinerInputs</name></member>
             <member limittype="exact"><type>VkPipelineRobustnessBufferBehavior</type>                       <name>defaultRobustnessStorageBuffers</name></member>
             <member limittype="exact"><type>VkPipelineRobustnessBufferBehavior</type>                       <name>defaultRobustnessUniformBuffers</name></member>
             <member limittype="exact"><type>VkPipelineRobustnessBufferBehavior</type>                       <name>defaultRobustnessVertexInputs</name></member>
@@ -6055,7 +6058,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true" limittype="noauto"><type>uint32_t</type>                                <name>copyDstLayoutCount</name></member>
             <member optional="true" limittype="noauto" len="copyDstLayoutCount"><type>VkImageLayout</type>* <name>pCopyDstLayouts</name></member>
             <member optional="true" limittype="noauto"><type>uint8_t</type>                                 <name>optimalTilingLayoutUUID</name>[<enum>VK_UUID_SIZE</enum>]</member>
-            <member limittype="bitmask"><type>VkBool32</type>                                               <name>identicalMemoryTypeRequirements</name></member>
+            <member limittype="max"><type>VkBool32</type>                                                   <name>identicalMemoryTypeRequirements</name></member>
         </type>
         <type category="struct" name="VkPipelineCompilerControlCreateInfoAMD" structextends="VkGraphicsPipelineCreateInfo,VkComputePipelineCreateInfo,VkExecutionGraphPipelineCreateInfoAMDX">
             <member values="VK_STRUCTURE_TYPE_PIPELINE_COMPILER_CONTROL_CREATE_INFO_AMD"><type>VkStructureType</type>   <name>sType</name></member>
@@ -6154,7 +6157,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member><type>VkBool32</type>                              <name>arrayOfPointers</name></member>
             <member noautovalidity="true"><type>VkDeviceOrHostAddressConstKHR</type>         <name>data</name></member>
         </type>
-        <type category="struct" name="VkAccelerationStructureGeometryLinearSweptSpheresDataNV">
+        <type category="struct" name="VkAccelerationStructureGeometryLinearSweptSpheresDataNV" structextends="VkAccelerationStructureGeometryKHR">
             <member values="VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_LINEAR_SWEPT_SPHERES_DATA_NV"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true">const <type>void</type>*                         <name>pNext</name></member>
             <member><type>VkFormat</type>                                            <name>vertexFormat</name></member>
@@ -6169,7 +6172,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member><type>VkRayTracingLssIndexingModeNV</type>                       <name>indexingMode</name></member>
             <member><type>VkRayTracingLssPrimitiveEndCapsModeNV</type>               <name>endCapsMode</name></member>
         </type>
-        <type category="struct" name="VkAccelerationStructureGeometrySpheresDataNV">
+        <type category="struct" name="VkAccelerationStructureGeometrySpheresDataNV" structextends="VkAccelerationStructureGeometryKHR">
             <member values="VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_SPHERES_DATA_NV"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true">const <type>void</type>*                         <name>pNext</name></member>
             <member><type>VkFormat</type>                                            <name>vertexFormat</name></member>
@@ -6347,10 +6350,10 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member><type>VkBool32</type>                     <name>extendedDynamicState3RepresentativeFragmentTestEnable</name></member>
             <member><type>VkBool32</type>                     <name>extendedDynamicState3ShadingRateImageEnable</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceExtendedDynamicState3PropertiesEXT" structextends="VkPhysicalDeviceProperties2">
+        <type category="struct" name="VkPhysicalDeviceExtendedDynamicState3PropertiesEXT" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_PROPERTIES_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*        <name>pNext</name></member>
-            <member limittype="bitmask"><type>VkBool32</type> <name>dynamicPrimitiveTopologyUnrestricted</name></member>
+            <member limittype="max"><type>VkBool32</type>     <name>dynamicPrimitiveTopologyUnrestricted</name></member>
         </type>
         <type category="struct" name="VkColorBlendEquationEXT">
             <member><type>VkBlendFactor</type>               <name>srcColorBlendFactor</name></member>
@@ -6522,7 +6525,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member><type>VkBool32</type>                           <name>triangleFans</name></member>
             <member><type>VkBool32</type>                           <name>vertexAttributeAccessBeyondStride</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDevicePortabilitySubsetPropertiesKHR" structextends="VkPhysicalDeviceProperties2">
+        <type category="struct" name="VkPhysicalDevicePortabilitySubsetPropertiesKHR" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_PROPERTIES_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*        <name>pNext</name></member>
             <member limittype="min,pot"><type>uint32_t</type>  <name>minVertexInputBindingStrideAlignment</name></member>
@@ -6691,20 +6694,20 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="min"><type>VkExtent2D</type>             <name>minFragmentShadingRateAttachmentTexelSize</name></member>
             <member limittype="max"><type>VkExtent2D</type>             <name>maxFragmentShadingRateAttachmentTexelSize</name></member>
             <member limittype="max,pot"><type>uint32_t</type>                <name>maxFragmentShadingRateAttachmentTexelSizeAspectRatio</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>primitiveFragmentShadingRateWithMultipleViewports</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>layeredShadingRateAttachments</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>fragmentShadingRateNonTrivialCombinerOps</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>primitiveFragmentShadingRateWithMultipleViewports</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>layeredShadingRateAttachments</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>fragmentShadingRateNonTrivialCombinerOps</name></member>
             <member limittype="max"><type>VkExtent2D</type>             <name>maxFragmentSize</name></member>
             <member limittype="max,pot"><type>uint32_t</type>                <name>maxFragmentSizeAspectRatio</name></member>
             <member limittype="max"><type>uint32_t</type>                   <name>maxFragmentShadingRateCoverageSamples</name></member>
             <member limittype="max"><type>VkSampleCountFlagBits</type>  <name>maxFragmentShadingRateRasterizationSamples</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>fragmentShadingRateWithShaderDepthStencilWrites</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>fragmentShadingRateWithSampleMask</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>fragmentShadingRateWithShaderSampleMask</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>fragmentShadingRateWithConservativeRasterization</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>fragmentShadingRateWithFragmentShaderInterlock</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>fragmentShadingRateWithCustomSampleLocations</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>               <name>fragmentShadingRateStrictMultiplyCombiner</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>fragmentShadingRateWithShaderDepthStencilWrites</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>fragmentShadingRateWithSampleMask</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>fragmentShadingRateWithShaderSampleMask</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>fragmentShadingRateWithConservativeRasterization</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>fragmentShadingRateWithFragmentShaderInterlock</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>fragmentShadingRateWithCustomSampleLocations</name></member>
+            <member limittype="max"><type>VkBool32</type>               <name>fragmentShadingRateStrictMultiplyCombiner</name></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceFragmentShadingRateKHR" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_KHR"><type>VkStructureType</type> <name>sType</name></member>
@@ -6725,7 +6728,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member><type>VkBool32</type>                           <name>supersampleFragmentShadingRates</name></member>
             <member><type>VkBool32</type>                           <name>noInvocationFragmentShadingRates</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceFragmentShadingRateEnumsPropertiesNV" structextends="VkPhysicalDeviceProperties2">
+        <type category="struct" name="VkPhysicalDeviceFragmentShadingRateEnumsPropertiesNV" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_ENUMS_PROPERTIES_NV"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                              <name>pNext</name></member>
             <member limittype="max"><type>VkSampleCountFlagBits</type>              <name>maxFragmentShadingRateInvocationCount</name></member>
@@ -6765,7 +6768,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true" noautovalidity="true"><type>void</type>*     <name>pNext</name></member>
             <member><type>VkBool32</type>                                        <name>legacyVertexAttributes</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceLegacyVertexAttributesPropertiesEXT" structextends="VkPhysicalDeviceProperties2">
+        <type category="struct" name="VkPhysicalDeviceLegacyVertexAttributesPropertiesEXT" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LEGACY_VERTEX_ATTRIBUTES_PROPERTIES_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true" noautovalidity="true"><type>void</type>*     <name>pNext</name></member>
             <member><type>VkBool32</type>                                        <name>nativeUnalignedPerformance</name></member>
@@ -7039,7 +7042,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member><type>VkDeviceSize</type>                           <name>size</name></member>
         </type>
         <type category="struct" name="VkBufferMemoryBarrier2KHR" alias="VkBufferMemoryBarrier2"/>
-        <type category="struct" name="VkMemoryBarrierAccessFlags3KHR" structextends="VkMemoryBarrier2,VkBufferMemoryBarrier2,VkImageMemoryBarrier2">
+        <type category="struct" name="VkMemoryBarrierAccessFlags3KHR" structextends="VkSubpassDependency2,VkBufferMemoryBarrier2,VkImageMemoryBarrier2">
             <member values="VK_STRUCTURE_TYPE_MEMORY_BARRIER_ACCESS_FLAGS_3_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true">const <type>void</type>*                                                  <name>pNext</name></member>
             <member optional="true"><type>VkAccessFlags3KHR</type>         <name>srcAccessMask3</name></member>
@@ -7116,7 +7119,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true" limittype="noauto"><type>uint32_t</type>                                  <name>copyDstLayoutCount</name></member>
             <member optional="true" limittype="noauto" len="copyDstLayoutCount"><type>VkImageLayout</type>*   <name>pCopyDstLayouts</name></member>
             <member optional="true" limittype="noauto"><type>uint8_t</type>                                   <name>optimalTilingLayoutUUID</name>[<enum>VK_UUID_SIZE</enum>]</member>
-            <member limittype="bitmask"><type>VkBool32</type>                                                 <name>identicalMemoryTypeRequirements</name></member>
+            <member limittype="max"><type>VkBool32</type>                                                     <name>identicalMemoryTypeRequirements</name></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceHostImageCopyPropertiesEXT" alias="VkPhysicalDeviceHostImageCopyProperties"/>
         <type category="struct" name="VkMemoryToImageCopy">
@@ -7198,14 +7201,14 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <type category="struct" name="VkPhysicalDeviceVulkanSC10Properties" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_SC_1_0_PROPERTIES"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*          <name>pNext</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>   <name>deviceNoDynamicHostAllocations</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>   <name>deviceDestroyFreesMemory</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>   <name>commandPoolMultipleCommandBuffersRecording</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>   <name>commandPoolResetCommandBuffer</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>   <name>commandBufferSimultaneousUse</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>   <name>secondaryCommandBufferNullOrImagelessFramebuffer</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>   <name>recycleDescriptorSetMemory</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>   <name>recyclePipelineMemory</name></member>
+            <member limittype="max"><type>VkBool32</type>       <name>deviceNoDynamicHostAllocations</name></member>
+            <member limittype="max"><type>VkBool32</type>       <name>deviceDestroyFreesMemory</name></member>
+            <member limittype="max"><type>VkBool32</type>       <name>commandPoolMultipleCommandBuffersRecording</name></member>
+            <member limittype="max"><type>VkBool32</type>       <name>commandPoolResetCommandBuffer</name></member>
+            <member limittype="max"><type>VkBool32</type>       <name>commandBufferSimultaneousUse</name></member>
+            <member limittype="max"><type>VkBool32</type>       <name>secondaryCommandBufferNullOrImagelessFramebuffer</name></member>
+            <member limittype="max"><type>VkBool32</type>       <name>recycleDescriptorSetMemory</name></member>
+            <member limittype="max"><type>VkBool32</type>       <name>recyclePipelineMemory</name></member>
             <member limittype="max"><type>uint32_t</type>       <name>maxRenderPassSubpasses</name></member>
             <member limittype="max"><type>uint32_t</type>       <name>maxRenderPassDependencies</name></member>
             <member limittype="max"><type>uint32_t</type>       <name>maxSubpassInputAttachments</name></member>
@@ -7781,11 +7784,11 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="max"><type>uint32_t</type>              <name>maxBPictureL0ReferenceCount</name></member>
             <member limittype="max"><type>uint32_t</type>              <name>maxL1ReferenceCount</name></member>
             <member limittype="max"><type>uint32_t</type>              <name>maxTemporalLayerCount</name></member>
-            <member limittype="not"><type>VkBool32</type>              <name>expectDyadicTemporalLayerPattern</name></member>
+            <member limittype="min"><type>VkBool32</type>              <name>expectDyadicTemporalLayerPattern</name></member>
             <member limittype="min"><type>int32_t</type>               <name>minQp</name></member>
             <member limittype="max"><type>int32_t</type>               <name>maxQp</name></member>
-            <member limittype="not"><type>VkBool32</type>              <name>prefersGopRemainingFrames</name></member>
-            <member limittype="not"><type>VkBool32</type>              <name>requiresGopRemainingFrames</name></member>
+            <member limittype="min"><type>VkBool32</type>              <name>prefersGopRemainingFrames</name></member>
+            <member limittype="min"><type>VkBool32</type>              <name>requiresGopRemainingFrames</name></member>
             <member limittype="bitmask" noautovalidity="true"><type>VkVideoEncodeH264StdFlagsKHR</type> <name>stdSyntaxFlags</name></member>
         </type>
         <type category="struct" name="VkVideoEncodeH264QualityLevelPropertiesKHR" returnedonly="true" structextends="VkVideoEncodeQualityLevelPropertiesKHR">
@@ -7914,11 +7917,11 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="max"><type>uint32_t</type>              <name>maxBPictureL0ReferenceCount</name></member>
             <member limittype="max"><type>uint32_t</type>              <name>maxL1ReferenceCount</name></member>
             <member limittype="max"><type>uint32_t</type>              <name>maxSubLayerCount</name></member>
-            <member limittype="not"><type>VkBool32</type>              <name>expectDyadicTemporalSubLayerPattern</name></member>
+            <member limittype="min"><type>VkBool32</type>              <name>expectDyadicTemporalSubLayerPattern</name></member>
             <member limittype="min"><type>int32_t</type>               <name>minQp</name></member>
             <member limittype="max"><type>int32_t</type>               <name>maxQp</name></member>
-            <member limittype="not"><type>VkBool32</type>              <name>prefersGopRemainingFrames</name></member>
-            <member limittype="not"><type>VkBool32</type>              <name>requiresGopRemainingFrames</name></member>
+            <member limittype="min"><type>VkBool32</type>              <name>prefersGopRemainingFrames</name></member>
+            <member limittype="min"><type>VkBool32</type>              <name>requiresGopRemainingFrames</name></member>
             <member limittype="bitmask" noautovalidity="true"><type>VkVideoEncodeH265StdFlagsKHR</type> <name>stdSyntaxFlags</name></member>
         </type>
         <type category="struct" name="VkVideoEncodeH265QualityLevelPropertiesKHR" returnedonly="true" structextends="VkVideoEncodeQualityLevelPropertiesKHR">
@@ -8062,8 +8065,8 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member limittype="max"><type>uint32_t</type>              <name>maxOperatingPoints</name></member>
             <member limittype="min"><type>uint32_t</type>              <name>minQIndex</name></member>
             <member limittype="max"><type>uint32_t</type>              <name>maxQIndex</name></member>
-            <member limittype="not"><type>VkBool32</type>              <name>prefersGopRemainingFrames</name></member>
-            <member limittype="not"><type>VkBool32</type>              <name>requiresGopRemainingFrames</name></member>
+            <member limittype="min"><type>VkBool32</type>              <name>prefersGopRemainingFrames</name></member>
+            <member limittype="min"><type>VkBool32</type>              <name>requiresGopRemainingFrames</name></member>
             <member limittype="bitmask" noautovalidity="true"><type>VkVideoEncodeAV1StdFlagsKHR</type> <name>stdSyntaxFlags</name></member>
         </type>
         <type category="struct" name="VkVideoEncodeAV1QualityLevelPropertiesKHR" returnedonly="true" structextends="VkVideoEncodeQualityLevelPropertiesKHR">
@@ -8194,8 +8197,8 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <type category="struct" name="VkPhysicalDeviceProvokingVertexPropertiesEXT" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROVOKING_VERTEX_PROPERTIES_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                               <name>pNext</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                            <name>provokingVertexModePerPipeline</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                            <name>transformFeedbackPreservesTriangleFanProvokingVertex</name></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>provokingVertexModePerPipeline</name></member>
+            <member limittype="max"><type>VkBool32</type>                            <name>transformFeedbackPreservesTriangleFanProvokingVertex</name></member>
         </type>
         <type category="struct" name="VkPipelineRasterizationProvokingVertexStateCreateInfoEXT" structextends="VkPipelineRasterizationStateCreateInfo">
             <member values="VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_PROVOKING_VERTEX_STATE_CREATE_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
@@ -8361,43 +8364,43 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <type category="struct" name="VkPhysicalDeviceShaderIntegerDotProductProperties" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_INTEGER_DOT_PRODUCT_PROPERTIES"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*               <name>pNext</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct8BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct8BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct8BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct4x8BitPackedUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct4x8BitPackedSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct4x8BitPackedMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct16BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct16BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct16BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct32BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct32BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct32BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct64BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct64BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProduct64BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating8BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating8BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating8BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating4x8BitPackedUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating4x8BitPackedSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating4x8BitPackedMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating16BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating16BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating16BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating32BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating32BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating32BitMixedSignednessAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating64BitUnsignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating64BitSignedAccelerated</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>        <name>integerDotProductAccumulatingSaturating64BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct8BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct8BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct8BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct4x8BitPackedUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct4x8BitPackedSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct4x8BitPackedMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct16BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct16BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct16BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct32BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct32BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct32BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct64BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct64BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProduct64BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating8BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating8BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating8BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating4x8BitPackedUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating4x8BitPackedSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating4x8BitPackedMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating16BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating16BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating16BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating32BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating32BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating32BitMixedSignednessAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating64BitUnsignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating64BitSignedAccelerated</name></member>
+            <member limittype="max"><type>VkBool32</type>          <name>integerDotProductAccumulatingSaturating64BitMixedSignednessAccelerated</name></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceShaderIntegerDotProductPropertiesKHR" alias="VkPhysicalDeviceShaderIntegerDotProductProperties"/>
         <type category="struct" name="VkPhysicalDeviceDrmPropertiesEXT" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>* <name>pNext</name></member>
-            <member limittype="bitmask"><type>VkBool32</type> <name>hasPrimary</name></member>
-            <member limittype="bitmask"><type>VkBool32</type> <name>hasRender</name></member>
+            <member limittype="max"><type>VkBool32</type>   <name>hasPrimary</name></member>
+            <member limittype="max"><type>VkBool32</type>   <name>hasRender</name></member>
             <member limittype="noauto"><type>int64_t</type> <name>primaryMajor</name></member>
             <member limittype="noauto"><type>int64_t</type> <name>primaryMinor</name></member>
             <member limittype="noauto"><type>int64_t</type> <name>renderMajor</name></member>
@@ -8411,7 +8414,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <type category="struct" name="VkPhysicalDeviceFragmentShaderBarycentricPropertiesKHR" returnedonly="true" structextends="VkPhysicalDeviceProperties2">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_PROPERTIES_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*  <name>pNext</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>              <name>triStripVertexOrderIndependentOfProvokingVertex</name></member>
+            <member limittype="max"><type>VkBool32</type>                <name>triStripVertexOrderIndependentOfProvokingVertex</name></member>
         </type>
         <type category="struct" name="VkPhysicalDeviceRayTracingMotionBlurFeaturesNV" structextends="VkPhysicalDeviceFeatures2,VkDeviceCreateInfo">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MOTION_BLUR_FEATURES_NV"><type>VkStructureType</type> <name>sType</name></member>
@@ -8663,6 +8666,10 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true">const <type>VkRenderingAttachmentInfo</type>*                           <name>pStencilAttachment</name></member>
         </type>
         <type category="struct" name="VkRenderingInfoKHR" alias="VkRenderingInfo"/>
+        <type category="struct" name="VkRenderingEndInfoEXT">
+            <member values="VK_STRUCTURE_TYPE_RENDERING_END_INFO_EXT"><type>VkStructureType</type>          <name>sType</name></member>
+            <member optional="true">const <type>void</type>*                                                <name>pNext</name></member>
+        </type>
         <type category="struct" name="VkRenderingAttachmentInfo">
             <member values="VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO"><type>VkStructureType</type>       <name>sType</name></member>
             <member optional="true">const <type>void</type>*                                                <name>pNext</name></member>
@@ -8760,7 +8767,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true">const <type>void</type>*  <name>pNext</name></member>
             <member><type>VkBool32</type>                     <name>disableInternalCache</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDevicePipelineBinaryPropertiesKHR" structextends="VkPhysicalDeviceProperties2">
+        <type category="struct" name="VkPhysicalDevicePipelineBinaryPropertiesKHR" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_BINARY_PROPERTIES_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*        <name>pNext</name></member>
             <member><type>VkBool32</type>                     <name>pipelineBinaryInternalCache</name></member>
@@ -8769,11 +8776,11 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member><type>VkBool32</type>                     <name>pipelineBinaryPrecompiledInternalCache</name></member>
             <member><type>VkBool32</type>                     <name>pipelineBinaryCompressedData</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceGraphicsPipelineLibraryPropertiesEXT" structextends="VkPhysicalDeviceProperties2">
+        <type category="struct" name="VkPhysicalDeviceGraphicsPipelineLibraryPropertiesEXT" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GRAPHICS_PIPELINE_LIBRARY_PROPERTIES_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*        <name>pNext</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                     <name>graphicsPipelineLibraryFastLinking</name></member>
-            <member limittype="bitmask"><type>VkBool32</type>                     <name>graphicsPipelineLibraryIndependentInterpolationDecoration</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>graphicsPipelineLibraryFastLinking</name></member>
+            <member limittype="max"><type>VkBool32</type>                       <name>graphicsPipelineLibraryIndependentInterpolationDecoration</name></member>
         </type>
         <type category="struct" name="VkGraphicsPipelineLibraryCreateInfoEXT" structextends="VkGraphicsPipelineCreateInfo">
             <member values="VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_LIBRARY_CREATE_INFO_EXT"><type>VkStructureType</type> <name>sType</name></member>
@@ -8804,7 +8811,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member><type>VkBool32</type>                                        <name>nestedCommandBufferRendering</name></member>
             <member><type>VkBool32</type>                                        <name>nestedCommandBufferSimultaneousUse</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceNestedCommandBufferPropertiesEXT" structextends="VkPhysicalDeviceProperties2">
+        <type category="struct" name="VkPhysicalDeviceNestedCommandBufferPropertiesEXT" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NESTED_COMMAND_BUFFER_PROPERTIES_EXT"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                           <name>pNext</name></member>
             <member limittype="max"><type>uint32_t</type>                        <name>maxCommandBufferNestingLevel</name></member>
@@ -9623,7 +9630,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true"><type>void</type>*                               <name>pNext</name></member>
             <member limittype="bitmask"><type>VkShaderStageFlags</type>              <name>cooperativeMatrixSupportedStages</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceShaderEnqueuePropertiesAMDX" structextends="VkPhysicalDeviceProperties2">
+        <type category="struct" name="VkPhysicalDeviceShaderEnqueuePropertiesAMDX" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ENQUEUE_PROPERTIES_AMDX"><type>VkStructureType</type> <name>sType</name></member>
             <member noautovalidity="true"  optional="true"><type>void</type>*               <name>pNext</name></member>
             <member limittype="max"><type>uint32_t</type>                                   <name>maxExecutionGraphDepth</name></member>
@@ -9828,7 +9835,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <type category="struct" name="VkPhysicalDeviceExternalFormatResolvePropertiesANDROID" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
           <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_FORMAT_RESOLVE_PROPERTIES_ANDROID"><type>VkStructureType</type> <name>sType</name></member>
           <member optional="true"><type>void</type>*        <name>pNext</name></member>
-          <member limittype="not"><type>VkBool32</type>  <name>nullColorAttachmentWithExternalFormatResolve</name></member>
+          <member limittype="min"><type>VkBool32</type>     <name>nullColorAttachmentWithExternalFormatResolve</name></member>
           <member limittype="noauto"><type>VkChromaLocation</type>  <name>externalFormatResolveChromaOffsetX</name></member>
           <member limittype="noauto"><type>VkChromaLocation</type>  <name>externalFormatResolveChromaOffsetY</name></member>
         </type>
@@ -9922,7 +9929,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true"><type>void</type>*            <name>pNext</name></member>
             <member><type>VkBool32</type>                         <name>schedulingControls</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceSchedulingControlsPropertiesARM" structextends="VkPhysicalDeviceProperties2">
+        <type category="struct" name="VkPhysicalDeviceSchedulingControlsPropertiesARM" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCHEDULING_CONTROLS_PROPERTIES_ARM"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                       <name>pNext</name></member>
             <member><type>VkPhysicalDeviceSchedulingControlsFlagsARM</type>  <name>schedulingControlsFlags</name></member>
@@ -10038,6 +10045,13 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true">const <type>void</type>*  <name>pNext</name></member>
             <member noautovalidity="true"><type>void</type>*  <name>pPlacedAddress</name></member>
         </type>
+        <type category="struct" name="VkPhysicalDeviceShaderBfloat16FeaturesKHR" structextends="VkPhysicalDeviceFeatures2,VkDeviceCreateInfo">
+            <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_BFLOAT16_FEATURES_KHR"><type>VkStructureType</type> <name>sType</name></member>
+            <member optional="true"><type>void</type>*                           <name>pNext</name></member>
+            <member><type>VkBool32</type>                                        <name>shaderBFloat16Type</name></member>
+            <member><type>VkBool32</type>                                        <name>shaderBFloat16DotProduct</name></member>
+            <member><type>VkBool32</type>                                        <name>shaderBFloat16CooperativeMatrix</name></member>
+        </type>
         <type category="struct" name="VkPhysicalDeviceRawAccessChainsFeaturesNV" structextends="VkPhysicalDeviceFeatures2,VkDeviceCreateInfo">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAW_ACCESS_CHAINS_FEATURES_NV"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                           <name>pNext</name></member>
@@ -10053,7 +10067,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member optional="true"><type>void</type>*                           <name>pNext</name></member>
             <member><type>VkBool32</type>                                        <name>imageAlignmentControl</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceImageAlignmentControlPropertiesMESA" structextends="VkPhysicalDeviceProperties2">
+        <type category="struct" name="VkPhysicalDeviceImageAlignmentControlPropertiesMESA" structextends="VkPhysicalDeviceProperties2" returnedonly="true">
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_ALIGNMENT_CONTROL_PROPERTIES_MESA"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                           <name>pNext</name></member>
             <member limittype="bitmask"><type>uint32_t</type>                    <name>supportedImageAlignmentMask</name></member>
@@ -10144,9 +10158,9 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COOPERATIVE_VECTOR_PROPERTIES_NV"><type>VkStructureType</type> <name>sType</name></member>
             <member optional="true"><type>void</type>*                               <name>pNext</name></member>
             <member limittype="bitmask"><type>VkShaderStageFlags</type>              <name>cooperativeVectorSupportedStages</name></member>
-            <member><type>VkBool32</type>                                            <name>cooperativeVectorTrainingFloat16Accumulation</name></member>
-            <member><type>VkBool32</type>                                            <name>cooperativeVectorTrainingFloat32Accumulation</name></member>
-            <member><type>uint32_t</type>                                            <name>maxCooperativeVectorComponents</name></member>
+            <member limittype="exact"><type>VkBool32</type>                          <name>cooperativeVectorTrainingFloat16Accumulation</name></member>
+            <member limittype="exact"><type>VkBool32</type>                          <name>cooperativeVectorTrainingFloat32Accumulation</name></member>
+            <member limittype="max"><type>uint32_t</type>                            <name>maxCooperativeVectorComponents</name></member>
         </type>
         <type category="struct" name="VkConvertCooperativeVectorMatrixInfoNV">
             <member values="VK_STRUCTURE_TYPE_CONVERT_COOPERATIVE_VECTOR_MATRIX_INFO_NV"><type>VkStructureType</type> <name>sType</name></member>
@@ -10163,6 +10177,17 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <member><type>size_t</type>                                              <name>srcStride</name></member>
             <member><type>VkCooperativeVectorMatrixLayoutNV</type>                   <name>dstLayout</name></member>
             <member><type>size_t</type>                                              <name>dstStride</name></member>
+        </type>
+        <type category="struct" name="VkSetPresentConfigNV" structextends="VkPresentInfoKHR">
+            <member values="VK_STRUCTURE_TYPE_SET_PRESENT_CONFIG_NV"><type>VkStructureType</type> <name>sType</name></member>
+            <member optional="true">const <type>void</type>*      <name>pNext</name></member>
+            <member><type>uint32_t</type>                         <name>numFramesPerBatch</name></member>
+            <member><type>uint32_t</type>                         <name>presentConfigFeedback</name></member>
+        </type>
+        <type category="struct" name="VkPhysicalDevicePresentMeteringFeaturesNV" structextends="VkPhysicalDeviceFeatures2,VkDeviceCreateInfo">
+            <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_METERING_FEATURES_NV"><type>VkStructureType</type> <name>sType</name></member>
+            <member optional="true"><type>void</type>*                           <name>pNext</name></member>
+            <member><type>VkBool32</type>                                        <name>presentMetering</name></member>
         </type>
     </types>
 
@@ -16252,8 +16277,14 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <proto><type>void</type> <name>vkCmdEndRendering</name></proto>
             <param externsync="true"><type>VkCommandBuffer</type>                   <name>commandBuffer</name></param>
         </command>
+        <command queues="graphics" renderpass="inside" cmdbufferlevel="primary,secondary" tasks="action,state">
+            <proto><type>void</type> <name>vkCmdEndRendering2EXT</name></proto>
+            <param externsync="true"><type>VkCommandBuffer</type>                   <name>commandBuffer</name></param>
+            <param optional="true">const <type>VkRenderingEndInfoEXT</type>*        <name>pRenderingEndInfo</name></param>
+        </command>
 
         <command name="vkCmdEndRenderingKHR" alias="vkCmdEndRendering"/>
+
         <command>
             <proto><type>void</type> <name>vkGetDescriptorSetLayoutHostMappingInfoVALVE</name></proto>
             <param><type>VkDevice</type> <name>device</name></param>
@@ -18437,10 +18468,10 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <type name="VkDescriptorUpdateTemplateEntry"/>
             <type name="VkDescriptorUpdateTemplateCreateInfo"/>
             <enum name="VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET"/>
-	    <enum name="VK_STRUCTURE_TYPE_PUSH_DESCRIPTOR_SET_WITH_TEMPLATE_INFO"/>
-	    <type name="VkPushDescriptorSetWithTemplateInfo"/>
-	    <command name="vkCmdPushDescriptorSetWithTemplate"/>
-	    <command name="vkCmdPushDescriptorSetWithTemplate2"/>
+            <enum name="VK_STRUCTURE_TYPE_PUSH_DESCRIPTOR_SET_WITH_TEMPLATE_INFO"/>
+            <type name="VkPushDescriptorSetWithTemplateInfo"/>
+            <command name="vkCmdPushDescriptorSetWithTemplate"/>
+            <command name="vkCmdPushDescriptorSetWithTemplate2"/>
 
             <!-- Sparse resources are unsupported -->
             <enum name="VK_QUEUE_SPARSE_BINDING_BIT"/>
@@ -19821,7 +19852,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <command name="vkReleaseDisplayEXT"/>
             </require>
         </extension>
-        <extension name="VK_EXT_acquire_xlib_display" number="90" type="instance" depends="VK_EXT_direct_mode_display" author="NV" contact="James Jones @cubanismo" platform="xlib_xrandr" supported="vulkan" nofeatures="true">
+        <extension name="VK_EXT_acquire_xlib_display" number="90" type="instance" depends="VK_EXT_direct_mode_display" author="NV" contact="James Jones @cubanismo" platform="xlib_xrandr" supported="vulkan" ratified="vulkan" nofeatures="true">
             <require>
                 <enum value="1"                                             name="VK_EXT_ACQUIRE_XLIB_DISPLAY_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_acquire_xlib_display&quot;"       name="VK_EXT_ACQUIRE_XLIB_DISPLAY_EXTENSION_NAME"/>
@@ -20518,10 +20549,17 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum value="&quot;VK_EXT_shader_stencil_export&quot;"      name="VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME"/>
             </require>
         </extension>
-        <extension name="VK_AMD_extension_142" number="142" author="AMD" contact="Mais Alnasser @malnasse" supported="disabled">
+        <extension name="VK_KHR_shader_bfloat16" number="142" type="device" depends="VK_KHR_get_physical_device_properties2,VK_VERSION_1_1" author="KHR" contact="Tobias Hector @tobski" supported="vulkan" ratified="vulkan">
             <require>
-                <enum value="0"                                             name="VK_AMD_EXTENSION_142_SPEC_VERSION"/>
-                <enum value="&quot;VK_AMD_extension_142&quot;"              name="VK_AMD_EXTENSION_142_EXTENSION_NAME"/>
+                <enum value="1"                                             name="VK_KHR_SHADER_BFLOAT16_SPEC_VERSION"/>
+                <enum value="&quot;VK_KHR_shader_bfloat16&quot;"            name="VK_KHR_SHADER_BFLOAT16_EXTENSION_NAME"/>
+                <enum offset="0" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_BFLOAT16_FEATURES_KHR"/>
+                <type                                                       name="VkPhysicalDeviceShaderBfloat16FeaturesKHR"/>
+                <feature name="shaderBFloat16Type" struct="VkPhysicalDeviceShaderBfloat16FeaturesKHR"/>
+                <feature name="shaderBFloat16CooperativeMatrix,shaderBFloat16DotProduct" struct="VkPhysicalDeviceShaderBfloat16FeaturesKHR"/>
+            </require>
+            <require depends="VK_KHR_cooperative_matrix">
+                <enum offset="0" extends="VkComponentTypeKHR"               name="VK_COMPONENT_TYPE_BFLOAT16_KHR"/>
             </require>
         </extension>
         <extension name="VK_AMD_extension_143" number="143" author="AMD" contact="Mais Alnasser @malnasse" supported="disabled">
@@ -20760,7 +20798,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <feature name="descriptorIndexing" struct="VkPhysicalDeviceVulkan12Features"/>
             </require>
         </extension>
-        <extension name="VK_KHR_ray_tracing_pipeline" number="348" type="device" depends="VK_KHR_spirv_1_4+VK_KHR_acceleration_structure" author="KHR" contact="Daniel Koch @dgkoch" supported="vulkan" sortorder="1" ratified="vulkan">
+        <extension name="VK_KHR_ray_tracing_pipeline" number="348" type="device" depends="(VK_KHR_spirv_1_4,VK_VERSION_1_2)+VK_KHR_acceleration_structure" author="KHR" contact="Daniel Koch @dgkoch" supported="vulkan" sortorder="1" ratified="vulkan">
             <require>
                 <enum value="1"                                             name="VK_KHR_RAY_TRACING_PIPELINE_SPEC_VERSION"/>
                 <enum value="&quot;VK_KHR_ray_tracing_pipeline&quot;"       name="VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME"/>
@@ -20811,7 +20849,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <feature name="rayTraversalPrimitiveCulling" struct="VkPhysicalDeviceRayTracingPipelineFeaturesKHR"/>
             </require>
         </extension>
-        <extension name="VK_KHR_ray_query" number="349" type="device" depends="VK_KHR_spirv_1_4+VK_KHR_acceleration_structure" author="KHR" contact="Daniel Koch @dgkoch" supported="vulkan" sortorder="1" ratified="vulkan">
+        <extension name="VK_KHR_ray_query" number="349" type="device" depends="(VK_KHR_spirv_1_4,VK_VERSION_1_2)+VK_KHR_acceleration_structure" author="KHR" contact="Daniel Koch @dgkoch" supported="vulkan" sortorder="1" ratified="vulkan">
             <require>
                 <enum value="1"                                             name="VK_KHR_RAY_QUERY_SPEC_VERSION"/>
                 <enum value="&quot;VK_KHR_ray_query&quot;"                  name="VK_KHR_RAY_QUERY_EXTENSION_NAME"/>
@@ -21790,7 +21828,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum value="&quot;VK_GOOGLE_extension_217&quot;"           name="VK_GOOGLE_EXTENSION_217_EXTENSION_NAME"/>
             </require>
         </extension>
-        <extension name="VK_EXT_metal_surface" number="218" type="instance" depends="VK_KHR_surface" platform="metal" supported="vulkan" author="EXT" contact="Dzmitry Malyshau @kvark" nofeatures="true">
+        <extension name="VK_EXT_metal_surface" number="218" type="instance" depends="VK_KHR_surface" platform="metal" supported="vulkan" ratified="vulkan" author="EXT" contact="Dzmitry Malyshau @kvark" nofeatures="true">
             <require>
                 <enum value="1"                                             name="VK_EXT_METAL_SURFACE_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_metal_surface&quot;"              name="VK_EXT_METAL_SURFACE_EXTENSION_NAME"/>
@@ -21998,7 +22036,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <feature name="shaderImageInt64Atomics" struct="VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT"/>
             </require>
         </extension>
-        <extension name="VK_KHR_shader_quad_control" number="236" type="device" depends="VK_VERSION_1_1+VK_KHR_vulkan_memory_model+VK_KHR_shader_maximal_reconvergence" author="KHR" contact="Tobias Hector @tobski" supported="vulkan" ratified="vulkan">
+        <extension name="VK_KHR_shader_quad_control" number="236" type="device" depends="((VK_VERSION_1_1+VK_KHR_vulkan_memory_model),VK_VERSION_1_2)+VK_KHR_shader_maximal_reconvergence" author="KHR" contact="Tobias Hector @tobski" supported="vulkan" ratified="vulkan">
             <require>
                 <enum value="1"                                             name="VK_KHR_SHADER_QUAD_CONTROL_SPEC_VERSION"/>
                 <enum value="&quot;VK_KHR_shader_quad_control&quot;"          name="VK_KHR_SHADER_QUAD_CONTROL_EXTENSION_NAME"/>
@@ -22132,7 +22170,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <type name="VkImageStencilUsageCreateInfoEXT"/>
             </require>
         </extension>
-        <extension name="VK_EXT_validation_features" number="248" type="instance" author="LUNARG" contact="Karl Schultz @karl-lunarg" specialuse="debugging" supported="vulkan,vulkansc" deprecatedby="VK_EXT_layer_settings" nofeatures="true">
+        <extension name="VK_EXT_validation_features" number="248" type="instance" author="LUNARG" contact="Karl Schultz @karl-lunarg" specialuse="debugging" supported="vulkan,vulkansc" ratified="vulkan" deprecatedby="VK_EXT_layer_settings" nofeatures="true">
             <require>
                 <enum value="6"                                             name="VK_EXT_VALIDATION_FEATURES_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_validation_features&quot;"        name="VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME"/>
@@ -22542,7 +22580,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <feature name="shaderImageFloat32AtomicMinMax" struct="VkPhysicalDeviceShaderAtomicFloat2FeaturesEXT"/>
             </require>
         </extension>
-        <extension name="VK_EXT_surface_maintenance1" number="275" type="instance" depends="VK_KHR_surface+VK_KHR_get_surface_capabilities2" author="EXT" contact="Shahbaz Youssefi @syoussefi" supported="vulkan" nofeatures="true">
+        <extension name="VK_EXT_surface_maintenance1" number="275" type="instance" depends="VK_KHR_surface+VK_KHR_get_surface_capabilities2" author="EXT" contact="Shahbaz Youssefi @syoussefi" supported="vulkan" ratified="vulkan" nofeatures="true">
             <require>
                 <enum value="1"                                             name="VK_EXT_SURFACE_MAINTENANCE_1_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_surface_maintenance1&quot;"       name="VK_EXT_SURFACE_MAINTENANCE_1_EXTENSION_NAME"/>
@@ -22558,7 +22596,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <type name="VkSurfacePresentModeCompatibilityEXT"/>
             </require>
         </extension>
-        <extension name="VK_EXT_swapchain_maintenance1" number="276" type="device" depends="VK_KHR_swapchain+VK_EXT_surface_maintenance1+(VK_KHR_get_physical_device_properties2,VK_VERSION_1_1)" author="EXT" contact="Shahbaz Youssefi @syoussefi" supported="vulkan">
+        <extension name="VK_EXT_swapchain_maintenance1" number="276" type="device" depends="VK_KHR_swapchain+VK_EXT_surface_maintenance1+(VK_KHR_get_physical_device_properties2,VK_VERSION_1_1)" author="EXT" contact="Shahbaz Youssefi @syoussefi" supported="vulkan" ratified="vulkan">
             <require>
                 <enum value="1"                                             name="VK_EXT_SWAPCHAIN_MAINTENANCE_1_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_swapchain_maintenance1&quot;"     name="VK_EXT_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME"/>
@@ -22605,9 +22643,9 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum offset="6" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_GENERATED_COMMANDS_MEMORY_REQUIREMENTS_INFO_NV"/>
                 <enum offset="7" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEVICE_GENERATED_COMMANDS_FEATURES_NV"/>
                 <enum bitpos="18" extends="VkPipelineCreateFlagBits"        name="VK_PIPELINE_CREATE_INDIRECT_BINDABLE_BIT_NV"/>
-                <enum bitpos="17" extends="VkPipelineStageFlagBits"         name="VK_PIPELINE_STAGE_COMMAND_PREPROCESS_BIT_NV"/>
-                <enum bitpos="17" extends="VkAccessFlagBits"                name="VK_ACCESS_COMMAND_PREPROCESS_READ_BIT_NV"/>
-                <enum bitpos="18" extends="VkAccessFlagBits"                name="VK_ACCESS_COMMAND_PREPROCESS_WRITE_BIT_NV"/>
+                <enum extends="VkPipelineStageFlagBits"                     name="VK_PIPELINE_STAGE_COMMAND_PREPROCESS_BIT_NV" alias="VK_PIPELINE_STAGE_COMMAND_PREPROCESS_BIT_EXT"/>
+                <enum extends="VkAccessFlagBits"                            name="VK_ACCESS_COMMAND_PREPROCESS_READ_BIT_NV" alias="VK_ACCESS_COMMAND_PREPROCESS_READ_BIT_EXT"/>
+                <enum extends="VkAccessFlagBits"                            name="VK_ACCESS_COMMAND_PREPROCESS_WRITE_BIT_NV" alias="VK_ACCESS_COMMAND_PREPROCESS_WRITE_BIT_EXT"/>
                 <enum offset="0" extends="VkObjectType"                     name="VK_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NV"/>
                 <type name="VkPhysicalDeviceDeviceGeneratedCommandsPropertiesNV"/>
                 <type name="VkPhysicalDeviceDeviceGeneratedCommandsFeaturesNV"/>
@@ -23020,17 +23058,17 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum value="&quot;VK_QCOM_extension_307&quot;"             name="VK_QCOM_EXTENSION_307_EXTENSION_NAME"/>
             </require>
         </extension>
-        <extension name="VK_NV_cuda_kernel_launch" number="308" type="device" author="NV" contact="Tristan Lorach @tlorach" supported="vulkan" provisional="true">
+        <extension name="VK_NV_cuda_kernel_launch" number="308" type="device" author="NV" contact="Tristan Lorach @tlorach" supported="vulkan" provisional="true" platform="provisional">
             <require>
                 <enum value="2"                                             name="VK_NV_CUDA_KERNEL_LAUNCH_SPEC_VERSION"/>
                 <enum value="&quot;VK_NV_cuda_kernel_launch&quot;"          name="VK_NV_CUDA_KERNEL_LAUNCH_EXTENSION_NAME"/>
-                <enum offset="0" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_CUDA_MODULE_CREATE_INFO_NV"/>
-                <enum offset="1" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_CUDA_FUNCTION_CREATE_INFO_NV"/>
-                <enum offset="2" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_CUDA_LAUNCH_INFO_NV"/>
-                <enum offset="3" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUDA_KERNEL_LAUNCH_FEATURES_NV"/>
-                <enum offset="4" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUDA_KERNEL_LAUNCH_PROPERTIES_NV"/>
-                <enum offset="0" extends="VkObjectType"                     name="VK_OBJECT_TYPE_CUDA_MODULE_NV"/>
-                <enum offset="1" extends="VkObjectType"                     name="VK_OBJECT_TYPE_CUDA_FUNCTION_NV"/>
+                <enum offset="0" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_CUDA_MODULE_CREATE_INFO_NV" protect="VK_ENABLE_BETA_EXTENSIONS"/>
+                <enum offset="1" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_CUDA_FUNCTION_CREATE_INFO_NV" protect="VK_ENABLE_BETA_EXTENSIONS"/>
+                <enum offset="2" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_CUDA_LAUNCH_INFO_NV" protect="VK_ENABLE_BETA_EXTENSIONS"/>
+                <enum offset="3" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUDA_KERNEL_LAUNCH_FEATURES_NV" protect="VK_ENABLE_BETA_EXTENSIONS"/>
+                <enum offset="4" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUDA_KERNEL_LAUNCH_PROPERTIES_NV" protect="VK_ENABLE_BETA_EXTENSIONS"/>
+                <enum offset="0" extends="VkObjectType"                     name="VK_OBJECT_TYPE_CUDA_MODULE_NV" protect="VK_ENABLE_BETA_EXTENSIONS"/>
+                <enum offset="1" extends="VkObjectType"                     name="VK_OBJECT_TYPE_CUDA_FUNCTION_NV" protect="VK_ENABLE_BETA_EXTENSIONS"/>
                 <type name="VkCudaModuleNV"/>
                 <type name="VkCudaFunctionNV"/>
                 <type name="VkCudaModuleCreateInfoNV"/>
@@ -23232,14 +23270,14 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum bitpos="20" extends="VkAccessFlagBits2"               name="VK_ACCESS_2_CONDITIONAL_RENDERING_READ_BIT_EXT" comment="read access flag for reading conditional rendering predicate"/>
             </require>
             <require depends="VK_NV_device_generated_commands">
-                <enum bitpos="17" extends="VkPipelineStageFlagBits2"        name="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_NV"/>
-                <enum bitpos="17" extends="VkAccessFlagBits2"               name="VK_ACCESS_2_COMMAND_PREPROCESS_READ_BIT_NV"/>
-                <enum bitpos="18" extends="VkAccessFlagBits2"               name="VK_ACCESS_2_COMMAND_PREPROCESS_WRITE_BIT_NV"/>
+                <enum extends="VkPipelineStageFlagBits2"                    name="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_NV" alias="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_EXT"/>
+                <enum extends="VkAccessFlagBits2"                           name="VK_ACCESS_2_COMMAND_PREPROCESS_READ_BIT_NV" alias="VK_ACCESS_2_COMMAND_PREPROCESS_READ_BIT_EXT"/>
+                <enum extends="VkAccessFlagBits2"                           name="VK_ACCESS_2_COMMAND_PREPROCESS_WRITE_BIT_NV" alias="VK_ACCESS_2_COMMAND_PREPROCESS_WRITE_BIT_EXT"/>
             </require>
-            <require depends="VK_EXT_device_generated_commands" api="vulkan" comment="Remove 'api' attribute once gitlab #4074 is fixed">
-                <enum extends="VkPipelineStageFlagBits2"                    name="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_EXT" alias="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_NV"/>
-                <enum extends="VkAccessFlagBits2"                           name="VK_ACCESS_2_COMMAND_PREPROCESS_READ_BIT_EXT" alias="VK_ACCESS_2_COMMAND_PREPROCESS_READ_BIT_NV"/>
-                <enum extends="VkAccessFlagBits2"                           name="VK_ACCESS_2_COMMAND_PREPROCESS_WRITE_BIT_EXT" alias="VK_ACCESS_2_COMMAND_PREPROCESS_WRITE_BIT_NV"/>
+            <require depends="VK_EXT_device_generated_commands">
+                <enum bitpos="17" extends="VkPipelineStageFlagBits2"        name="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_EXT"/>
+                <enum bitpos="17" extends="VkAccessFlagBits2"               name="VK_ACCESS_2_COMMAND_PREPROCESS_READ_BIT_EXT"/>
+                <enum bitpos="18" extends="VkAccessFlagBits2"               name="VK_ACCESS_2_COMMAND_PREPROCESS_WRITE_BIT_EXT"/>
             </require>
             <require depends="VK_KHR_fragment_shading_rate">
                 <enum bitpos="22" extends="VkPipelineStageFlagBits2"        name="VK_PIPELINE_STAGE_2_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR"/>
@@ -23467,7 +23505,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <feature name="rayTracingMotionBlur" struct="VkPhysicalDeviceRayTracingMotionBlurFeaturesNV"/>
             </require>
         </extension>
-        <extension name="VK_EXT_mesh_shader" number="329" type="device" depends="VK_KHR_spirv_1_4" author="EXT" sortorder="1" contact="Christoph Kubisch @pixeljetstream" supported="vulkan">
+        <extension name="VK_EXT_mesh_shader" number="329" type="device" depends="VK_KHR_spirv_1_4,VK_VERSION_1_2" author="EXT" sortorder="1" contact="Christoph Kubisch @pixeljetstream" supported="vulkan">
             <require>
                 <enum value="1"                                         name="VK_EXT_MESH_SHADER_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_mesh_shader&quot;"            name="VK_EXT_MESH_SHADER_EXTENSION_NAME"/>
@@ -23719,7 +23757,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <command name="vkGetWinrtDisplayNV"/>
             </require>
         </extension>
-        <extension name="VK_EXT_directfb_surface" number="347" type="instance" depends="VK_KHR_surface" platform="directfb" supported="vulkan" author="EXT" contact="Nicolas Caramelli @caramelli" nofeatures="true">
+        <extension name="VK_EXT_directfb_surface" number="347" type="instance" depends="VK_KHR_surface" platform="directfb" supported="vulkan" ratified="vulkan" author="EXT" contact="Nicolas Caramelli @caramelli" nofeatures="true">
             <require>
                 <enum value="1"                                             name="VK_EXT_DIRECTFB_SURFACE_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_directfb_surface&quot;"           name="VK_EXT_DIRECTFB_SURFACE_EXTENSION_NAME"/>
@@ -24647,14 +24685,14 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <feature name="renderPassStriped" struct="VkPhysicalDeviceRenderPassStripedFeaturesARM"/>
             </require>
         </extension>
-        <extension name="VK_QCOM_fragment_density_map_offset" number="426" type="device" depends="(VK_KHR_get_physical_device_properties2,VK_VERSION_1_1)+VK_EXT_fragment_density_map" author="QCOM" contact="Matthew Netsch @mnetsch" supported="vulkan">
+        <extension name="VK_QCOM_fragment_density_map_offset" number="426" type="device" depends="(VK_KHR_get_physical_device_properties2,VK_VERSION_1_1)+VK_EXT_fragment_density_map" author="QCOM" contact="Matthew Netsch @mnetsch" supported="vulkan" promotedto="VK_EXT_fragment_density_map_offset">
             <require>
-                <enum value="2"                                               name="VK_QCOM_FRAGMENT_DENSITY_MAP_OFFSET_SPEC_VERSION"/>
+                <enum value="3"                                               name="VK_QCOM_FRAGMENT_DENSITY_MAP_OFFSET_SPEC_VERSION"/>
                 <enum value="&quot;VK_QCOM_fragment_density_map_offset&quot;" name="VK_QCOM_FRAGMENT_DENSITY_MAP_OFFSET_EXTENSION_NAME"/>
-                <enum offset="0"  extends="VkStructureType"                   name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_FEATURES_QCOM"/>
-                <enum offset="1"  extends="VkStructureType"                   name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_PROPERTIES_QCOM"/>
-                <enum offset="2"  extends="VkStructureType"                   name="VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM"/>
-                <enum bitpos="15" extends="VkImageCreateFlagBits"             name="VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM"/>
+                <enum extends="VkStructureType"                               name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_FEATURES_QCOM" alias="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_FEATURES_EXT"/>
+                <enum extends="VkStructureType"                               name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_PROPERTIES_QCOM" alias="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_PROPERTIES_EXT"/>
+                <enum extends="VkStructureType"                               name="VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM" alias="VK_STRUCTURE_TYPE_RENDER_PASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_EXT"/>
+                <enum extends="VkImageCreateFlagBits"                         name="VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM" alias="VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_EXT"/>
                 <type name="VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM"/>
                 <type name="VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM"/>
                 <type name="VkSubpassFragmentDensityMapOffsetEndInfoQCOM"/>
@@ -25105,6 +25143,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum value="0"                                         name="VK_EXT_EXTENSION_461_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_extension_461&quot;"          name="VK_EXT_EXTENSION_461_EXTENSION_NAME"/>
                 <enum bitpos="39" extends="VkFormatFeatureFlagBits2"    name="VK_FORMAT_FEATURE_2_RESERVED_39_BIT_EXT"/>
+                <enum bitpos="43" extends="VkFormatFeatureFlagBits2"    name="VK_FORMAT_FEATURE_2_RESERVED_43_BIT_EXT"/>
                 <enum bitpos="23" extends="VkImageUsageFlagBits"        name="VK_IMAGE_USAGE_RESERVED_23_BIT_EXT"/>
             </require>
         </extension>
@@ -25603,7 +25642,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <command name="vkCmdSetDepthClampRangeEXT"/>
             </require>
         </extension>
-        <extension name="VK_KHR_pipeline_binary" number="484" author="KHR" contact="Stu Smith @stu-s" depends="VK_KHR_maintenance5" type="device" supported="vulkan" ratified="vulkan">
+        <extension name="VK_KHR_pipeline_binary" number="484" author="KHR" contact="Stu Smith @stu-s" depends="VK_KHR_maintenance5,VK_VERSION_1_4" type="device" supported="vulkan" ratified="vulkan">
             <require>
                 <enum value="1"                                         name="VK_KHR_PIPELINE_BINARY_SPEC_VERSION"/>
                 <enum value="&quot;VK_KHR_pipeline_binary&quot;"      name="VK_KHR_PIPELINE_BINARY_EXTENSION_NAME"/>
@@ -25708,7 +25747,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <feature name="sciSyncFence,sciSyncSemaphore2" struct="VkPhysicalDeviceExternalSciSync2FeaturesNV"/>
                 <feature name="sciSyncImport,sciSyncExport" struct="VkPhysicalDeviceExternalSciSync2FeaturesNV"/>
             </require>
-            <require comment="functionality re-used unmodified from VK_NV_external_sci_sync">
+            <require comment="functionality reused unmodified from VK_NV_external_sci_sync">
                 <enum extnumber="374" offset="0" extends="VkStructureType"   name="VK_STRUCTURE_TYPE_IMPORT_FENCE_SCI_SYNC_INFO_NV"/>
                 <enum extnumber="374" offset="1" extends="VkStructureType"   name="VK_STRUCTURE_TYPE_EXPORT_FENCE_SCI_SYNC_INFO_NV"/>
                 <enum extnumber="374" offset="2" extends="VkStructureType"   name="VK_STRUCTURE_TYPE_FENCE_GET_SCI_SYNC_INFO_NV"/>
@@ -25788,7 +25827,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum value="&quot;VK_NV_extension_494&quot;"           name="VK_NV_EXTENSION_494_EXTENSION_NAME"/>
             </require>
         </extension>
-        <extension name="VK_EXT_mutable_descriptor_type" number="495" type="device" supported="vulkan" ratified="vulkan" author="EXT" contact="Joshua Ashton @Joshua-Ashton,Hans-Kristian Arntzen @HansKristian-Work" specialuse="d3demulation" depends="VK_KHR_maintenance3">
+        <extension name="VK_EXT_mutable_descriptor_type" number="495" type="device" supported="vulkan" ratified="vulkan" author="EXT" contact="Joshua Ashton @Joshua-Ashton,Hans-Kristian Arntzen @HansKristian-Work" specialuse="d3demulation" depends="VK_KHR_maintenance3,VK_VERSION_1_1">
             <require>
                 <enum value="1"                                                name="VK_EXT_MUTABLE_DESCRIPTOR_TYPE_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_mutable_descriptor_type&quot;"       name="VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME"/>
@@ -25877,11 +25916,11 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum value="&quot;VK_NV_extension_504&quot;"               name="VK_NV_EXTENSION_504_EXTENSION_NAME"/>
             </require>
         </extension>
-        <extension name="VK_EXT_extension_505" number="505" author="EXT" contact="Jamie Madill @jmadill" type="device" supported="disabled">
+        <extension name="VK_EXT_extension_505" number="505" author="EXT" contact="Shahbaz Youssefi @syoussefi" type="device" supported="disabled">
             <require>
                 <enum value="0"                                             name="VK_EXT_EXTENSION_505_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_extension_505&quot;"              name="VK_EXT_EXTENSION_505_EXTENSION_NAME"/>
-                <enum bitpos="5"  extends="VkRenderingFlagBits"             name="VK_RENDERING_EXTENSION_505_BIT_EXT"/>
+                <enum bitpos="2"  extends="VkDeviceQueueCreateFlagBits"     name="VK_DEVICE_QUEUE_CREATE_RESERVED_2_BIT_EXT"/>
             </require>
         </extension>
         <extension name="VK_NV_low_latency2" number="506" author="NV" depends="VK_VERSION_1_2,VK_KHR_timeline_semaphore" contact="Charles Hansen @cshansen" type="device" supported="vulkan" nofeatures="true">
@@ -25965,7 +26004,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <feature name="multiviewPerViewRenderAreas" struct="VkPhysicalDeviceMultiviewPerViewRenderAreasFeaturesQCOM"/>
             </require>
         </extension>
-        <extension name="VK_KHR_compute_shader_derivatives" number="512" type="device" depends="VK_KHR_get_physical_device_properties2" author="KHR" contact="Jean-Noe Morissette @MagicPoncho" supported="vulkan" ratified="vulkan">
+        <extension name="VK_KHR_compute_shader_derivatives" number="512" type="device" depends="VK_KHR_get_physical_device_properties2,VK_VERSION_1_1" author="KHR" contact="Jean-Noe Morissette @MagicPoncho" supported="vulkan" ratified="vulkan">
             <require>
                 <enum value="1"                                         name="VK_KHR_COMPUTE_SHADER_DERIVATIVES_SPEC_VERSION"/>
                 <enum value="&quot;VK_KHR_compute_shader_derivatives&quot;" name="VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME"/>
@@ -26419,9 +26458,10 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum bitpos="2"  extends="VkVideoEncodeFlagBitsKHR"        name="VK_VIDEO_ENCODE_RESERVED_2_BIT_KHR"/>
                 <enum bitpos="10" extends="VkVideoEncodeH264CapabilityFlagBitsKHR" name="VK_VIDEO_ENCODE_H264_CAPABILITY_RESERVED_10_BIT_KHR"/>
                 <enum bitpos="11" extends="VkVideoEncodeH265CapabilityFlagBitsKHR" name="VK_VIDEO_ENCODE_H265_CAPABILITY_RESERVED_11_BIT_KHR"/>
+                <enum bitpos="5"  extends="VkVideoEncodeAV1CapabilityFlagBitsKHR" name="VK_VIDEO_ENCODE_AV1_CAPABILITY_RESERVED_5_BIT_KHR"/>
             </require>
         </extension>
-        <extension name="VK_KHR_video_encode_quantization_map" number="554" type="device" depends="VK_KHR_video_encode_queue+VK_KHR_format_feature_flags2" author="KHR" contact="Ahmed Abdelkhalek @aabdelkh" supported="vulkan" ratified="vulkan">
+        <extension name="VK_KHR_video_encode_quantization_map" number="554" type="device" depends="VK_KHR_video_encode_queue+(VK_KHR_format_feature_flags2,VK_VERSION_1_3)" author="KHR" contact="Ahmed Abdelkhalek @aabdelkh" supported="vulkan" ratified="vulkan">
             <require>
                 <enum value="2"                                                 name="VK_KHR_VIDEO_ENCODE_QUANTIZATION_MAP_SPEC_VERSION"/>
                 <enum value="&quot;VK_KHR_video_encode_quantization_map&quot;"  name="VK_KHR_VIDEO_ENCODE_QUANTIZATION_MAP_EXTENSION_NAME"/>
@@ -26677,7 +26717,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum value="&quot;VK_NV_extension_572&quot;"               name="VK_NV_EXTENSION_572_EXTENSION_NAME"/>
             </require>
         </extension>
-        <extension name="VK_EXT_device_generated_commands" number="573" author="EXT" type="device" depends="VK_KHR_buffer_device_address+VK_KHR_maintenance5" contact="Mike Blumenkrantz @zmike" supported="vulkan" ratified="vulkan">
+        <extension name="VK_EXT_device_generated_commands" number="573" author="EXT" type="device" depends="((VK_KHR_buffer_device_address,VK_VERSION_1_2)+VK_KHR_maintenance5),VK_VERSION_1_3" contact="Mike Blumenkrantz @zmike" supported="vulkan" ratified="vulkan">
             <require>
                 <enum value="1"                                                     name="VK_EXT_DEVICE_GENERATED_COMMANDS_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_device_generated_commands&quot;"          name="VK_EXT_DEVICE_GENERATED_COMMANDS_EXTENSION_NAME"/>
@@ -26704,9 +26744,9 @@ typedef void* <name>MTLSharedEvent_id</name>;
 
                 <enum bitpos="38" extends="VkPipelineCreateFlagBits2"       name="VK_PIPELINE_CREATE_2_INDIRECT_BINDABLE_BIT_EXT"/>
 
-                <enum extends="VkPipelineStageFlagBits"         name="VK_PIPELINE_STAGE_COMMAND_PREPROCESS_BIT_EXT"  alias="VK_PIPELINE_STAGE_COMMAND_PREPROCESS_BIT_NV"/>
-                <enum extends="VkAccessFlagBits"                name="VK_ACCESS_COMMAND_PREPROCESS_READ_BIT_EXT"     alias="VK_ACCESS_COMMAND_PREPROCESS_READ_BIT_NV"/>
-                <enum extends="VkAccessFlagBits"                name="VK_ACCESS_COMMAND_PREPROCESS_WRITE_BIT_EXT"    alias="VK_ACCESS_COMMAND_PREPROCESS_WRITE_BIT_NV"/>
+                <enum bitpos="17" extends="VkPipelineStageFlagBits"         name="VK_PIPELINE_STAGE_COMMAND_PREPROCESS_BIT_EXT"/>
+                <enum bitpos="17" extends="VkAccessFlagBits"                name="VK_ACCESS_COMMAND_PREPROCESS_READ_BIT_EXT"/>
+                <enum bitpos="18" extends="VkAccessFlagBits"                name="VK_ACCESS_COMMAND_PREPROCESS_WRITE_BIT_EXT"/>
 
                 <type name="VkPhysicalDeviceDeviceGeneratedCommandsFeaturesEXT"/>
                 <type name="VkPhysicalDeviceDeviceGeneratedCommandsPropertiesEXT"/>
@@ -26766,7 +26806,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum value="1"                                             name="VK_KHR_MAINTENANCE_8_SPEC_VERSION"/>
                 <enum value="&quot;VK_KHR_maintenance8&quot;"               name="VK_KHR_MAINTENANCE_8_EXTENSION_NAME"/>
                 <enum offset="0" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_8_FEATURES_KHR"/>
-		<enum bitpos="3" extends="VkPipelineCacheCreateFlagBits"    name="VK_PIPELINE_CACHE_CREATE_INTERNALLY_SYNCHRONIZED_MERGE_BIT_KHR"/>
+                <enum bitpos="3" extends="VkPipelineCacheCreateFlagBits"    name="VK_PIPELINE_CACHE_CREATE_INTERNALLY_SYNCHRONIZED_MERGE_BIT_KHR"/>
                 <enum offset="2" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_MEMORY_BARRIER_ACCESS_FLAGS_3_KHR"/>
                 <type name="VkPhysicalDeviceMaintenance8FeaturesKHR"/>
                 <enum bitpos="5" extends="VkDependencyFlagBits" name="VK_DEPENDENCY_QUEUE_FAMILY_OWNERSHIP_TRANSFER_USE_ALL_STAGES_BIT_KHR"/>
@@ -26863,7 +26903,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum bitpos="4" extends="VkDependencyFlagBits"             name="VK_DEPENDENCY_EXTENSION_586_BIT_IMG"/>
             </require>
         </extension>
-        <extension name="VK_KHR_video_maintenance2" number="587" author="KHR" contact="Daniel Rakos @aqnuep" type="device" depends="VK_KHR_video_decode_queue,VK_KHR_video_encode_queue" supported="vulkan" ratified="vulkan">
+        <extension name="VK_KHR_video_maintenance2" number="587" author="KHR" contact="Daniel Rakos @aqnuep" type="device" depends="VK_KHR_video_queue" supported="vulkan" ratified="vulkan">
             <require>
                 <enum value="1"                                             name="VK_KHR_VIDEO_MAINTENANCE_2_SPEC_VERSION"/>
                 <enum value="&quot;VK_KHR_video_maintenance2&quot;"         name="VK_KHR_VIDEO_MAINTENANCE_2_EXTENSION_NAME"/>
@@ -26996,7 +27036,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum value="&quot;VK_EXT_extension_602&quot;"          name="VK_EXT_EXTENSION_602_EXTENSION_NAME"/>
             </require>
         </extension>
-        <extension name="VK_EXT_external_memory_metal" number="603" type="device" depends="VK_KHR_external_memory,VK_VERSION_1_1" author="EXT" contact="Aitor Camacho Larrondo @aitor-lunarg" platform="metal" supported="vulkan" nofeatures="true">
+        <extension name="VK_EXT_external_memory_metal" number="603" type="device" depends="VK_KHR_external_memory,VK_VERSION_1_1" author="EXT" contact="Aitor Camacho Larrondo @aitor-lunarg" platform="metal" supported="vulkan" ratified="vulkan" nofeatures="true">
             <require>
                 <enum value="1"                                                name="VK_EXT_EXTERNAL_MEMORY_METAL_SPEC_VERSION"/>
                 <enum value="&quot;VK_EXT_external_memory_metal&quot;"         name="VK_EXT_EXTERNAL_MEMORY_METAL_EXTENSION_NAME"/>
@@ -27068,10 +27108,13 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum value="&quot;VK_NV_extension_611&quot;"               name="VK_NV_EXTENSION_611_EXTENSION_NAME"/>
             </require>
         </extension>
-        <extension name="VK_EXT_extension_612" number="612" author="EXT" contact="Hans-Kristian Arntzen @HansKristian-Work" supported="disabled">
+        <extension name="VK_VALVE_extension_612" number="612" author="EXT" contact="Mike Blumenkrantz @zmike" supported="disabled">
             <require>
-                <enum value="0"                                             name="VK_EXT_EXTENSION_612_SPEC_VERSION"/>
-                <enum value="&quot;VK_EXT_extension_612&quot;"              name="VK_EXT_EXTENSION_612_EXTENSION_NAME"/>
+                <enum value="0"                                             name="VK_VALVE_EXTENSION_612_SPEC_VERSION"/>
+                <enum value="&quot;VK_VALVE_extension_612&quot;"            name="VK_VALVE_EXTENSION_612_EXTENSION_NAME"/>
+                <enum bitpos="2" extends="VkRenderPassCreateFlagBits"       name="VK_RENDER_PASS_CREATE_RESERVED_2_BIT_VALVE"/>
+                <enum bitpos="5" extends="VkRenderingFlagBits"              name="VK_RENDERING_RESERVED_5_BIT_VALVE"/>
+                <enum bitpos="40" extends="VkPipelineCreateFlagBits2"       name="VK_PIPELINE_CREATE_2_RESERVED_40_BIT_VALVE"/>
             </require>
         </extension>
         <extension name="VK_KHR_extension_613" number="613" author="KHR" contact="Piers Daniell @pdaniell-nv" supported="disabled">
@@ -27080,16 +27123,68 @@ typedef void* <name>MTLSharedEvent_id</name>;
                 <enum value="&quot;VK_KHR_extension_613&quot;"              name="VK_KHR_EXTENSION_613_EXTENSION_NAME"/>
             </require>
         </extension>
-        <extension name="VK_NV_extension_614" number="614" author="NV" contact="Charles Hansen @cshansen" supported="disabled">
+        <extension name="VK_NV_present_metering" number="614" type="device" author="NV" contact="Charles Hansen @chansen" supported="vulkan" provisional="true" platform="provisional">
             <require>
-                <enum value="0"                                             name="VK_NV_EXTENSION_614_SPEC_VERSION"/>
-                <enum value="&quot;VK_NV_extension_614&quot;"               name="VK_NV_EXTENSION_614_EXTENSION_NAME"/>
+                <enum value="1"                                             name="VK_NV_PRESENT_METERING_SPEC_VERSION"/>
+                <enum value="&quot;VK_NV_present_metering&quot;"            name="VK_NV_PRESENT_METERING_EXTENSION_NAME"/>
+                <enum offset="0" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_SET_PRESENT_CONFIG_NV" protect="VK_ENABLE_BETA_EXTENSIONS"/>
+                <enum offset="1" extends="VkStructureType"                  name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_METERING_FEATURES_NV" protect="VK_ENABLE_BETA_EXTENSIONS"/>
+                <type name="VkSetPresentConfigNV"/>
+                <type name="VkPhysicalDevicePresentMeteringFeaturesNV"/>
+                <feature name="presentMetering" struct="VkPhysicalDevicePresentMeteringFeaturesNV"/>
             </require>
         </extension>
         <extension name="VK_QCOM_extension_615" number="615" author="QCOM" contact="Matthew Netsch @mnetsch" supported="disabled">
             <require>
                 <enum value="0"                                             name="VK_QCOM_EXTENSION_615_SPEC_VERSION"/>
                 <enum value="&quot;VK_QCOM_extension_615&quot;"             name="VK_QCOM_EXTENSION_615_EXTENSION_NAME"/>
+            </require>
+        </extension>
+        <extension name="VK_EXT_extension_616" number="616" author="EXT" contact="Shahbaz Youssefi @syoussefi" supported="disabled">
+            <require>
+                <enum value="0"                                             name="VK_EXT_EXTENSION_616_SPEC_VERSION"/>
+                <enum value="&quot;VK_EXT_extension_616&quot;"              name="VK_EXT_EXTENSION_616_EXTENSION_NAME"/>
+            </require>
+        </extension>
+        <extension name="VK_EXT_extension_617" number="617" author="EXT" contact="Shahbaz Youssefi @syoussefi" supported="disabled">
+            <require>
+                <enum value="0"                                             name="VK_EXT_EXTENSION_617_SPEC_VERSION"/>
+                <enum value="&quot;VK_EXT_extension_617&quot;"              name="VK_EXT_EXTENSION_617_EXTENSION_NAME"/>
+            </require>
+        </extension>
+        <extension name="VK_EXT_extension_618" number="618" author="EXT" contact="Shahbaz Youssefi @syoussefi" supported="disabled">
+            <require>
+                <enum value="0"                                             name="VK_EXT_EXTENSION_618_SPEC_VERSION"/>
+                <enum value="&quot;VK_EXT_extension_618&quot;"              name="VK_EXT_EXTENSION_618_EXTENSION_NAME"/>
+            </require>
+        </extension>
+        <extension name="VK_EXT_fragment_density_map_offset" number="620" type="device" depends="(VK_KHR_get_physical_device_properties2,VK_VERSION_1_1)+VK_EXT_fragment_density_map+(VK_KHR_create_renderpass2,VK_VERSION_1_2)+(VK_VERSION_1_3,VK_KHR_dynamic_rendering)" author="EXT" contact="Connor Abbott @cwabbott0" supported="vulkan">
+            <require>
+                <enum value="1"                                               name="VK_EXT_FRAGMENT_DENSITY_MAP_OFFSET_SPEC_VERSION"/>
+                <enum value="&quot;VK_EXT_fragment_density_map_offset&quot;"  name="VK_EXT_FRAGMENT_DENSITY_MAP_OFFSET_EXTENSION_NAME"/>
+                <type name="VkRenderingEndInfoEXT"/>
+                <enum offset="0"  extends="VkStructureType" extnumber="426"   name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_FEATURES_EXT"/>
+                <enum offset="1"  extends="VkStructureType" extnumber="426"   name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_PROPERTIES_EXT"/>
+                <enum offset="2"  extends="VkStructureType" extnumber="426"   name="VK_STRUCTURE_TYPE_RENDER_PASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_EXT"/>
+                <enum offset="3"  extends="VkStructureType"                   name="VK_STRUCTURE_TYPE_RENDERING_END_INFO_EXT"/>
+                <enum bitpos="15" extends="VkImageCreateFlagBits"             name="VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_EXT"/>
+                <type name="VkPhysicalDeviceFragmentDensityMapOffsetFeaturesEXT"/>
+                <type name="VkPhysicalDeviceFragmentDensityMapOffsetPropertiesEXT"/>
+                <type name="VkRenderPassFragmentDensityMapOffsetEndInfoEXT"/>
+                <command name="vkCmdEndRendering2EXT"/>
+                <feature name="fragmentDensityMapOffset" struct="VkPhysicalDeviceFragmentDensityMapOffsetFeaturesEXT"/>
+            </require>
+        </extension>
+        <extension name="VK_EXT_extension_621" number="621" author="EXT" contact="Mike Blumenkrantz @zmike" supported="disabled">
+            <require>
+                <enum value="0"                                             name="VK_EXT_EXTENSION_621_SPEC_VERSION"/>
+                <enum value="&quot;VK_EXT_extension_621&quot;"              name="VK_EXT_EXTENSION_621_EXTENSION_NAME"/>
+            </require>
+        </extension>
+        <extension name="VK_EXT_extension_622" number="622" author="EXT" contact="Lina Versace @linyaa" supported="disabled">
+            <require>
+                <enum value="0"                                             name="VK_EXT_EXTENSION_622_SPEC_VERSION"/>
+                <enum value="&quot;VK_EXT_extension_622&quot;"              name="VK_EXT_EXTENSION_622_EXTENSION_NAME"/>
             </require>
         </extension>
     </extensions>
@@ -28661,7 +28756,6 @@ typedef void* <name>MTLSharedEvent_id</name>;
             <enable extension="VK_KHR_fragment_shader_barycentric"/>
         </spirvextension>
         <spirvextension name="SPV_KHR_subgroup_uniform_control_flow">
-            <enable version="VK_VERSION_1_3"/>
             <enable extension="VK_KHR_shader_subgroup_uniform_control_flow"/>
         </spirvextension>
         <spirvextension name="SPV_EXT_shader_atomic_float_min_max">
@@ -28741,6 +28835,9 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <spirvextension name="SPV_KHR_quad_control">
             <enable extension="VK_KHR_shader_quad_control"/>
         </spirvextension>
+        <spirvextension name="SPV_KHR_bfloat16">
+            <enable extension="VK_KHR_shader_bfloat16"/>
+        </spirvextension>
         <spirvextension name="SPV_NV_raw_access_chains">
             <enable extension="VK_NV_raw_access_chains"/>
         </spirvextension>
@@ -28759,10 +28856,13 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <spirvextension name="SPV_NV_tensor_addressing">
             <enable extension="VK_NV_cooperative_matrix2"/>
         </spirvextension>
+        <spirvextension name="SPV_NV_linear_swept_spheres">
+            <enable extension="VK_NV_ray_tracing_linear_swept_spheres"/>
+        </spirvextension>
         <spirvextension name="SPV_NV_cluster_acceleration_structure">
             <enable extension="VK_NV_cluster_acceleration_structure"/>
         </spirvextension>
-	<spirvextension name="SPV_NV_cooperative_vector">
+        <spirvextension name="SPV_NV_cooperative_vector">
             <enable extension="VK_NV_cooperative_vector"/>
         </spirvextension>
     </spirvextensions>
@@ -29277,6 +29377,15 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <spirvcapability name="QuadControlKHR">
             <enable struct="VkPhysicalDeviceShaderQuadControlFeaturesKHR" feature="shaderQuadControl" requires="VK_KHR_shader_quad_control"/>
         </spirvcapability>
+        <spirvcapability name="BFloat16TypeKHR">
+            <enable struct="VkPhysicalDeviceShaderBfloat16FeaturesKHR" feature="shaderBFloat16Type" requires="VK_KHR_shader_bfloat16"/>
+        </spirvcapability>
+        <spirvcapability name="BFloat16DotProductKHR">
+            <enable struct="VkPhysicalDeviceShaderBfloat16FeaturesKHR" feature="shaderBFloat16DotProduct" requires="VK_KHR_shader_bfloat16"/>
+        </spirvcapability>
+        <spirvcapability name="BFloat16CooperativeMatrixKHR">
+            <enable struct="VkPhysicalDeviceShaderBfloat16FeaturesKHR" feature="shaderBFloat16CooperativeMatrix" requires="VK_KHR_shader_bfloat16"/>
+        </spirvcapability>
         <spirvcapability name="RawAccessChainsNV">
             <enable struct="VkPhysicalDeviceRawAccessChainsFeaturesNV" feature="shaderRawAccessChains" requires="VK_NV_raw_access_chains"/>
         </spirvcapability>
@@ -29310,7 +29419,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <spirvcapability name="RayTracingClusterAccelerationStructureNV">
             <enable struct="VkPhysicalDeviceClusterAccelerationStructureFeaturesNV" feature="clusterAccelerationStructure" requires="VK_NV_cluster_acceleration_structure"/>
         </spirvcapability>
-	<spirvcapability name="CooperativeVectorNV">
+        <spirvcapability name="CooperativeVectorNV">
             <enable struct="VkPhysicalDeviceCooperativeVectorFeaturesNV" feature="cooperativeVector" requires="VK_NV_cooperative_vector"/>
         </spirvcapability>
         <spirvcapability name="CooperativeVectorTrainingNV">
@@ -29404,10 +29513,7 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <syncstage name="VK_PIPELINE_STAGE_2_CONDITIONAL_RENDERING_BIT_EXT" alias="VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT">
             <syncsupport queues="graphics,compute"/>
         </syncstage>
-        <syncstage name="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_NV" alias="VK_PIPELINE_STAGE_COMMAND_PREPROCESS_BIT_NV">
-            <syncsupport queues="graphics,compute"/>
-        </syncstage>
-        <syncstage name="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_EXT" alias="VK_PIPELINE_STAGE_COMMAND_PREPROCESS_BIT_NV">
+        <syncstage name="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_EXT" alias="VK_PIPELINE_STAGE_COMMAND_PREPROCESS_BIT_EXT">
             <syncsupport queues="graphics,compute"/>
         </syncstage>
         <syncstage name="VK_PIPELINE_STAGE_2_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR" alias="VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR">
@@ -29547,16 +29653,10 @@ typedef void* <name>MTLSharedEvent_id</name>;
         <syncaccess name="VK_ACCESS_2_CONDITIONAL_RENDERING_READ_BIT_EXT" alias="VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT">
             <syncsupport stage="VK_PIPELINE_STAGE_2_CONDITIONAL_RENDERING_BIT_EXT"/>
         </syncaccess>
-        <syncaccess name="VK_ACCESS_2_COMMAND_PREPROCESS_READ_BIT_NV" alias="VK_ACCESS_COMMAND_PREPROCESS_READ_BIT_NV">
-            <syncsupport stage="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_NV"/>
-        </syncaccess>
-        <syncaccess name="VK_ACCESS_2_COMMAND_PREPROCESS_WRITE_BIT_NV" alias="VK_ACCESS_COMMAND_PREPROCESS_WRITE_BIT_NV">
-            <syncsupport stage="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_NV"/>
-        </syncaccess>
-        <syncaccess name="VK_ACCESS_2_COMMAND_PREPROCESS_READ_BIT_EXT" alias="VK_ACCESS_COMMAND_PREPROCESS_READ_BIT_NV">
+        <syncaccess name="VK_ACCESS_2_COMMAND_PREPROCESS_READ_BIT_EXT" alias="VK_ACCESS_COMMAND_PREPROCESS_READ_BIT_EXT">
             <syncsupport stage="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_EXT"/>
         </syncaccess>
-        <syncaccess name="VK_ACCESS_2_COMMAND_PREPROCESS_WRITE_BIT_EXT" alias="VK_ACCESS_COMMAND_PREPROCESS_WRITE_BIT_NV">
+        <syncaccess name="VK_ACCESS_2_COMMAND_PREPROCESS_WRITE_BIT_EXT" alias="VK_ACCESS_COMMAND_PREPROCESS_WRITE_BIT_EXT">
             <syncsupport stage="VK_PIPELINE_STAGE_2_COMMAND_PREPROCESS_BIT_EXT"/>
         </syncaccess>
         <syncaccess name="VK_ACCESS_2_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR" alias="VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR">

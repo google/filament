@@ -185,7 +185,7 @@ TEST_F(HlslWriterReplaceDefaultOnlySwitchTest, SwitchWithAssignment) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<private, i32, read_write> = var, 0i
+  %a:ptr<private, i32, read_write> = var 0i
 }
 
 %foo = @fragment func():void {
@@ -205,7 +205,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %a:ptr<private, i32, read_write> = var, 0i
+  %a:ptr<private, i32, read_write> = var 0i
 }
 
 %foo = @fragment func():void {
@@ -248,7 +248,7 @@ TEST_F(HlslWriterReplaceDefaultOnlySwitchTest, SwitchWithIfBreak) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<private, i32, read_write> = var, 0i
+  %a:ptr<private, i32, read_write> = var 0i
 }
 
 %foo = @fragment func():void {
@@ -273,7 +273,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %a:ptr<private, i32, read_write> = var, 0i
+  %a:ptr<private, i32, read_write> = var 0i
 }
 
 %foo = @fragment func():void {
@@ -321,7 +321,7 @@ TEST_F(HlslWriterReplaceDefaultOnlySwitchTest, SwitchWithLoopBreak) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<private, i32, read_write> = var, 0i
+  %a:ptr<private, i32, read_write> = var 0i
 }
 
 %foo = @fragment func():void {
@@ -346,7 +346,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %a:ptr<private, i32, read_write> = var, 0i
+  %a:ptr<private, i32, read_write> = var 0i
 }
 
 %foo = @fragment func():void {
@@ -403,7 +403,7 @@ TEST_F(HlslWriterReplaceDefaultOnlySwitchTest, SwitchWithNestedSwitch) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<private, i32, read_write> = var, 0i
+  %a:ptr<private, i32, read_write> = var 0i
 }
 
 %foo = @fragment func():void {
@@ -439,7 +439,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %a:ptr<private, i32, read_write> = var, 0i
+  %a:ptr<private, i32, read_write> = var 0i
 }
 
 %foo = @fragment func():void {

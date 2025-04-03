@@ -340,6 +340,11 @@ ResultOrError<VulkanDeviceInfo> GatherDeviceInfo(const PhysicalDevice& device) {
                               VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES);
         }
 
+        if (info.extensions[DeviceExt::CooperativeMatrix]) {
+            featuresChain.Add(&info.cooperativeMatrixFeatures,
+                              VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COOPERATIVE_MATRIX_FEATURES_KHR);
+        }
+
         // Use vkGetPhysicalDevice{Features,Properties}2 if required to gather information about
         // the extensions. DeviceExt::GetPhysicalDeviceProperties2 is guaranteed to be available
         // because these extensions (transitively) depend on it in `EnsureDependencies`
@@ -348,6 +353,29 @@ ResultOrError<VulkanDeviceInfo> GatherDeviceInfo(const PhysicalDevice& device) {
         info.features = features2.features;
     } else {
         vkFunctions.GetPhysicalDeviceFeatures(vkPhysicalDevice, &info.features);
+    }
+
+    // A Vulkan loader that doesn't know about the VK_KHR_cooperative_matrix could return a null
+    // proc, but still let the device advertise the extension. In that case the extension is
+    // unusable so we disable it.
+    if (vkFunctions.GetPhysicalDeviceCooperativeMatrixPropertiesKHR == nullptr) {
+        info.extensions.reset(DeviceExt::CooperativeMatrix);
+    }
+    if (info.extensions[DeviceExt::CooperativeMatrix]) {
+        uint32_t count = 0;
+        DAWN_TRY(CheckVkSuccess(vkFunctions.GetPhysicalDeviceCooperativeMatrixPropertiesKHR(
+                                    vkPhysicalDevice, &count, nullptr),
+                                "vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR"));
+
+        info.cooperativeMatrixProperties.resize(count);
+        for (auto& properties : info.cooperativeMatrixProperties) {
+            properties.sType = VK_STRUCTURE_TYPE_COOPERATIVE_MATRIX_PROPERTIES_KHR;
+            properties.pNext = nullptr;
+        }
+        DAWN_TRY(
+            CheckVkSuccess(vkFunctions.GetPhysicalDeviceCooperativeMatrixPropertiesKHR(
+                               vkPhysicalDevice, &count, info.cooperativeMatrixProperties.data()),
+                           "vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR"));
     }
 
     // TODO(cwallez@chromium.org): gather info about formats

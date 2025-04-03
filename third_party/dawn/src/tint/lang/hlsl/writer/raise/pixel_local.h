@@ -29,7 +29,7 @@
 #define SRC_TINT_LANG_HLSL_WRITER_RAISE_PIXEL_LOCAL_H_
 
 #include "src/tint/lang/hlsl/writer/common/options.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

@@ -467,6 +467,12 @@ class Validator {
                                        const core::type::Type* type,
                                        const Source& source) const;
 
+    /// Validates a binding array type
+    /// @param t the binding array to validate
+    /// @param source the source of the binding array type
+    /// @returns true on success, false otherwise
+    bool BindingArray(const core::type::BindingArray* t, const Source& source) const;
+
     /// Validates a subgroup matrix type
     /// @param t the subgroup matrix type to validate
     /// @param source the source of the subgroup matrix type

@@ -26,11 +26,11 @@ jobs:
     timeout-minutes: 240
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
       - name: Setup Pages
-        uses: actions/configure-pages@v2
+        uses: actions/configure-pages@v5
       - name: Install dependencies
         run: sudo apt install -y ninja-build
       - name: Configure
@@ -44,7 +44,7 @@ jobs:
       - name: Force artifact permissions
         run: chmod -c -R +rX ${{github.workspace}}/build/report
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ${{github.workspace}}/build/report
         
@@ -60,4 +60,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4

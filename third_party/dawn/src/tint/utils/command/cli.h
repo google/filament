@@ -36,7 +36,7 @@
 #include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/macros/compiler.h"
 #include "src/tint/utils/memory/block_allocator.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 #include "src/tint/utils/strconv/parse_num.h"
 #include "src/tint/utils/text/string.h"
 

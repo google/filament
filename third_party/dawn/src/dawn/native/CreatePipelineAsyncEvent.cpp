@@ -187,7 +187,7 @@ void CreatePipelineAsyncEvent<PipelineType, CreatePipelineAsyncCallbackInfo>::Co
 
     if (completionType == EventCompletionType::Shutdown) {
         if (mCallback) {
-            mCallback(WGPUCreatePipelineAsyncStatus_InstanceDropped, nullptr,
+            mCallback(WGPUCreatePipelineAsyncStatus_CallbackCancelled, nullptr,
                       ToOutputStringView("Instance dropped"), userdata1, userdata2);
         }
         return;

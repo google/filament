@@ -44,6 +44,7 @@ struct UserImmediateConstants {
     uint32_t userImmediateData[kMaxExternalImmediateConstantsPerPipeline];
 };
 
+// 8 bytes of push constant data to be used by the ClampFragDepth Tint transform.
 struct ClampFragDepthArgs {
     float minClampFragDepth;
     float maxClampFragDepth;
@@ -83,6 +84,35 @@ constexpr ImmediateConstantMask GetImmediateConstantBlockBits(size_t byteOffset,
     size_t constantCount = byteSize / kImmediateConstantElementByteSize;
 
     return ((1u << constantCount) - 1u) << firstIndex;
+}
+
+// Returns the offset of the member in the packed immediates of the pipeline.
+// The pointer-to-member is a pointer into the structure containing all the potential immediates.
+// However pipelines don't need all of them and use a compacted layout with immediates
+// in the same order, just some of them skipped. For example the pipeline mask 11001111,
+// representing "userConstants: 4 | trivial_constants: 0 (2 at most)|clamp_frag:2",
+// maps to pipeline immediate constant layout: "userConstants:4 | clamp_frag:2
+template <typename Object, typename Member>
+uint32_t GetImmediateByteOffsetInPipeline(Member Object::*ptr,
+                                          const ImmediateConstantMask& pipelineImmediateMask) {
+    Object obj = {};
+    ptrdiff_t offset = reinterpret_cast<char*>(&(obj.*ptr)) - reinterpret_cast<char*>(&obj);
+
+    const ImmediateConstantMask prefixBits =
+        (1u << (offset / kImmediateConstantElementByteSize)) - 1u;
+
+    return (prefixBits & pipelineImmediateMask).count() * kImmediateConstantElementByteSize;
+}
+
+template <typename Object, typename Member>
+bool HasImmediateConstants(Member Object::*ptr,
+                           const ImmediateConstantMask& pipelineImmediateMask) {
+    Object obj = {};
+    ptrdiff_t offset = reinterpret_cast<char*>(&(obj.*ptr)) - reinterpret_cast<char*>(&obj);
+    size_t size = sizeof(Member);
+
+    return pipelineImmediateMask.to_ulong() &
+           GetImmediateConstantBlockBits(offset, size).to_ulong();
 }
 
 }  // namespace dawn::native

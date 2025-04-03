@@ -77,7 +77,6 @@ tint_target_add_dependencies(tint_lang_wgsl_resolver lib
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
-  tint_utils_result
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -100,6 +99,7 @@ tint_add_target(tint_lang_wgsl_resolver_test test
   lang/wgsl/resolver/atomics_test.cc
   lang/wgsl/resolver/atomics_validation_test.cc
   lang/wgsl/resolver/attribute_validation_test.cc
+  lang/wgsl/resolver/binding_array_test.cc
   lang/wgsl/resolver/bitcast_validation_test.cc
   lang/wgsl/resolver/builtin_enum_test.cc
   lang/wgsl/resolver/builtin_structs_test.cc
@@ -181,7 +181,6 @@ tint_target_add_dependencies(tint_lang_wgsl_resolver_test test
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
-  tint_utils_result
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text

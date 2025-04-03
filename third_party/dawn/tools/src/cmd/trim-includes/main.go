@@ -38,7 +38,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -49,6 +48,7 @@ import (
 
 	"dawn.googlesource.com/dawn/tools/src/fileutils"
 	"dawn.googlesource.com/dawn/tools/src/glob"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 )
 
 var (
@@ -58,7 +58,7 @@ var (
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(oswrapper.GetRealOSWrapper()); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -80,7 +80,7 @@ Usage:
 	os.Exit(1)
 }
 
-func run() error {
+func run(fsReaderWriter oswrapper.FilesystemReaderWriter) error {
 	flag.Parse()
 	args := flag.Args()
 	if len(args) < 1 {
@@ -97,7 +97,7 @@ func run() error {
 		return err
 	}
 
-	cfg, err := glob.LoadConfig("config.cfg")
+	cfg, err := glob.LoadConfig("config.cfg", fsReaderWriter)
 	if err != nil {
 		return err
 	}
@@ -112,13 +112,13 @@ func run() error {
 	}
 
 	fmt.Println("Scanning for files...")
-	paths, err := glob.Scan(fileutils.DawnRoot(), cfg)
+	paths, err := glob.Scan(fileutils.DawnRoot(), cfg, fsReaderWriter)
 	if err != nil {
 		return err
 	}
 
 	fmt.Printf("Loading %v source files...\n", len(paths))
-	files, err := loadFiles(paths)
+	files, err := loadFiles(paths, fsReaderWriter)
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func run() error {
 		for includeIdx, line := range includeLines {
 			fmt.Printf("    [%d/%d]: %v", includeIdx+1, len(includeLines), file.lines[line])
 			enabled[line] = false
-			if err := file.save(enabled); err != nil {
+			if err := file.save(enabled, fsReaderWriter); err != nil {
 				return err
 			}
 			ok, err := tryBuild()
@@ -151,7 +151,7 @@ func run() error {
 				enabled[line] = true
 			}
 		}
-		if err := file.save(enabled); err != nil {
+		if err := file.save(enabled, fsReaderWriter); err != nil {
 			return err
 		}
 		if err := file.format(); err != nil {
@@ -221,7 +221,7 @@ func (f *file) includesLineNumbers() []int {
 
 // Saves the file, omitting the lines with the zero-based line number that are
 // either not in `lines` or have a `false` value.
-func (f *file) save(lines map[int]bool) error {
+func (f *file) save(lines map[int]bool, fsWriter oswrapper.FilesystemWriter) error {
 	content := []string{}
 	for i, l := range f.lines {
 		if lines[i] {
@@ -229,7 +229,7 @@ func (f *file) save(lines map[int]bool) error {
 		}
 	}
 	data := []byte(strings.Join(content, "\n"))
-	return ioutil.WriteFile(f.path, data, 0666)
+	return fsWriter.WriteFile(f.path, data, 0666)
 }
 
 // Runs clang-format on the file
@@ -250,9 +250,11 @@ func (f *file) stage() error {
 	return nil
 }
 
+// TODO(crbug.com/344014313): Add unittests once fileutils.DawnRoot() supports
+// dependency injection.
 // Loads all the files with the given file paths, splitting their content into
 // into lines.
-func loadFiles(paths []string) ([]file, error) {
+func loadFiles(paths []string, fsReader oswrapper.FilesystemReader) ([]file, error) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(paths))
 	files := make([]file, len(paths))
@@ -261,7 +263,7 @@ func loadFiles(paths []string) ([]file, error) {
 		i, path := i, filepath.Join(fileutils.DawnRoot(), path)
 		go func() {
 			defer wg.Done()
-			body, err := ioutil.ReadFile(path)
+			body, err := fsReader.ReadFile(path)
 			if err != nil {
 				errs[i] = fmt.Errorf("Failed to open %v: %w", path, err)
 			} else {

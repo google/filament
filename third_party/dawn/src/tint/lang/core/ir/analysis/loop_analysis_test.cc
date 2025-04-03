@@ -69,7 +69,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanConstant_IncByOne) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -132,7 +132,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_ConstantLessThanIndex_IncByOne) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -195,7 +195,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexGreaterThanConstant_IncByOne) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -260,7 +260,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanParam_IncByOne) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -325,7 +325,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanLet_IncByOne) {
     %end:u32 = let 10u
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -388,7 +388,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanConstant_IncByOne_I32) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, i32, read_write> = var, 0i
+        %idx:ptr<function, i32, read_write> = var 0i
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -451,7 +451,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanConstant_OnePlusIndex) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -514,7 +514,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_IndexLessThanConstant_DecByOne) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -577,7 +577,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_NonZeroInit) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 5u
+        %idx:ptr<function, u32, read_write> = var 5u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -643,7 +643,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_BreakInFalse) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -719,7 +719,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_MultipleLoads) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         %3:u32 = load %idx
         %4:u32 = load %idx
         %5:u32 = add %3, %4
@@ -797,7 +797,7 @@ TEST_F(IR_LoopAnalysisTest, Finite_Bitcasts) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -882,9 +882,9 @@ TEST_F(IR_LoopAnalysisTest, Finite_MultipleVars) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %v1:ptr<function, u32, read_write> = var, 0u
-        %idx:ptr<function, u32, read_write> = var, 0u
-        %v2:ptr<function, u32, read_write> = var, 0u
+        %v1:ptr<function, u32, read_write> = var 0u
+        %idx:ptr<function, u32, read_write> = var 0u
+        %v2:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -967,7 +967,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_MissingInc) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1029,7 +1029,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IncByZero) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1092,7 +1092,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IncByTwo) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1157,7 +1157,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IncByNonConstant) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1221,7 +1221,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_EndBoundIsVar) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1286,7 +1286,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_EndBoundIsLetInBody) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1350,7 +1350,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_OneMinusIndex) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, i32, read_write> = var, 10i
+        %idx:ptr<function, i32, read_write> = var 10i
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1413,7 +1413,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_NotAddOrSub) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1476,7 +1476,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_NonInteger) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, f32, read_write> = var, 0.0f
+        %idx:ptr<function, f32, read_write> = var 0.0f
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1539,7 +1539,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_MissingStore) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1605,7 +1605,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_ContinueBeforeBreak) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1673,7 +1673,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_IncThenDec) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1738,7 +1738,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_AnotherStoreInBody) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1803,7 +1803,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_MultipleStoresInContinuing) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1872,7 +1872,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_ConditionalStore) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -1932,7 +1932,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_ConditionalAdd) {
             auto* load = b.Load(idx);
             auto* inc = b.InstructionResult<u32>();
             auto* cond_add = b.If(false);
-            cond_add->SetResults(Vector{inc});
+            cond_add->SetResult(inc);
             b.Append(cond_add->True(), [&] {  //
                 b.ExitIf(cond_add, b.Add<u32>(load, 1_u));
             });
@@ -1950,7 +1950,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_ConditionalAdd) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -2036,7 +2036,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_PassVarPointerToFunction) {
   $B2: {
     loop [i: $B3, b: $B4, c: $B5] {  # loop_1
       $B3: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B4
       }
       $B4: {  # body
@@ -2116,7 +2116,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_PassVarPointerToFunction_ViaLet) {
   $B2: {
     loop [i: $B3, b: $B4, c: $B5] {  # loop_1
       $B3: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B4
       }
       $B4: {  # body
@@ -2177,7 +2177,7 @@ TEST_F(IR_LoopAnalysisTest, MaybeInfinite_VarOutsideInit) {
     auto* src = R"(
 %func = func():void {
   $B1: {
-    %idx:ptr<function, u32, read_write> = var, 0u
+    %idx:ptr<function, u32, read_write> = var 0u
     loop [b: $B2, c: $B3] {  # loop_1
       $B2: {  # body
         %3:u32 = load %idx
@@ -2307,7 +2307,7 @@ TEST_F(IR_LoopAnalysisTest, MultipleLoops) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -2320,7 +2320,7 @@ TEST_F(IR_LoopAnalysisTest, MultipleLoops) {
         }
         loop [i: $B6, b: $B7, c: $B8] {  # loop_2
           $B6: {  # initializer
-            %idx_1:ptr<function, u32, read_write> = var, 0u  # %idx_1: 'idx'
+            %idx_1:ptr<function, u32, read_write> = var 0u  # %idx_1: 'idx'
             next_iteration  # -> $B7
           }
           $B7: {  # body
@@ -2348,7 +2348,7 @@ TEST_F(IR_LoopAnalysisTest, MultipleLoops) {
     }
     loop [i: $B10, b: $B11, c: $B12] {  # loop_3
       $B10: {  # initializer
-        %idx_2:ptr<function, u32, read_write> = var, 0u  # %idx_2: 'idx'
+        %idx_2:ptr<function, u32, read_write> = var 0u  # %idx_2: 'idx'
         next_iteration  # -> $B11
       }
       $B11: {  # body
@@ -2361,7 +2361,7 @@ TEST_F(IR_LoopAnalysisTest, MultipleLoops) {
         }
         loop [i: $B14, b: $B15, c: $B16] {  # loop_4
           $B14: {  # initializer
-            %idx_3:ptr<function, u32, read_write> = var, 0u  # %idx_3: 'idx'
+            %idx_3:ptr<function, u32, read_write> = var 0u  # %idx_3: 'idx'
             next_iteration  # -> $B15
           }
           $B15: {  # body

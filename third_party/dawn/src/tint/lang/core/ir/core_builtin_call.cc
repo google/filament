@@ -50,7 +50,7 @@ CoreBuiltinCall::CoreBuiltinCall(Id id,
 CoreBuiltinCall::~CoreBuiltinCall() = default;
 
 CoreBuiltinCall* CoreBuiltinCall::Clone(CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     auto args = ctx.Remap<CoreBuiltinCall::kDefaultNumOperands>(Args());
     return ctx.ir.CreateInstruction<CoreBuiltinCall>(new_result, func_, args);
 }

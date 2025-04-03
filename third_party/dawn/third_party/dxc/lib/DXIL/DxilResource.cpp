@@ -30,18 +30,7 @@ DxilResource::DxilResource()
 
 CompType DxilResource::GetCompType() const { return m_CompType; }
 
-void DxilResource::SetCompType(const CompType CT) {
-  // Translate packed types to u32
-  switch (CT.GetKind()) {
-  case CompType::Kind::PackedS8x32:
-  case CompType::Kind::PackedU8x32:
-    m_CompType = CompType::getU32();
-    break;
-  default:
-    m_CompType = CT;
-    break;
-  }
-}
+void DxilResource::SetCompType(const CompType CT) { m_CompType = CT; }
 
 Type *DxilResource::GetRetType() const {
   Type *Ty = GetHLSLType()->getPointerElementType();

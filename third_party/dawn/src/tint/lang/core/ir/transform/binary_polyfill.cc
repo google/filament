@@ -71,7 +71,7 @@ struct State {
                     case BinaryOp::kDivide:
                     case BinaryOp::kModulo:
                         if (config.int_div_mod &&
-                            binary->Result(0)->Type()->IsIntegerScalarOrVector()) {
+                            binary->Result()->Type()->IsIntegerScalarOrVector()) {
                             worklist.Push(binary);
                         }
                         break;
@@ -108,7 +108,7 @@ struct State {
     /// divide-by-zero and signed integer overflow.
     /// @param binary the binary instruction
     void IntDivMod(ir::CoreBinary* binary) {
-        auto* result_ty = binary->Result(0)->Type();
+        auto* result_ty = binary->Result()->Type();
         bool is_div = binary->Op() == BinaryOp::kDivide;
         bool is_signed = result_ty->IsSignedIntegerScalarOrVector();
 
@@ -155,7 +155,7 @@ struct State {
 
                 if (binary->Op() == BinaryOp::kDivide) {
                     // Perform the divide with the modified RHS.
-                    b.Return(func, b.Divide(result_ty, lhs, rhs_or_one)->Result(0));
+                    b.Return(func, b.Divide(result_ty, lhs, rhs_or_one)->Result());
                 } else if (binary->Op() == BinaryOp::kModulo) {
                     // Calculate the modulo manually, as modulo with negative operands is undefined
                     // behavior for many backends:
@@ -163,7 +163,7 @@ struct State {
                     auto* whole = b.Divide(result_ty, lhs, rhs_or_one);
                     auto* remainder =
                         b.Subtract(result_ty, lhs, b.Multiply(result_ty, whole, rhs_or_one));
-                    b.Return(func, remainder->Result(0));
+                    b.Return(func, remainder->Result());
                 }
             });
             return func;
@@ -172,7 +172,7 @@ struct State {
         /// Helper to splat a value to match the vector width of the result type if necessary.
         auto maybe_splat = [&](ir::Value* value) -> ir::Value* {
             if (value->Type()->Is<type::Scalar>() && result_ty->Is<core::type::Vector>()) {
-                return b.Construct(result_ty, value)->Result(0);
+                return b.Construct(result_ty, value)->Result();
             }
             return value;
         };
@@ -194,7 +194,7 @@ struct State {
         auto mask = u32(lhs->Type()->DeepestElement()->Size() * 8 - 1);
         auto* masked = b.And(rhs->Type(), rhs, b.MatchWidth(mask, rhs->Type()));
         masked->InsertBefore(binary);
-        binary->SetOperand(ir::CoreBinary::kRhsOperandOffset, masked->Result(0));
+        binary->SetOperand(ir::CoreBinary::kRhsOperandOffset, masked->Result());
     }
 };
 

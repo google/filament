@@ -31,7 +31,6 @@
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 #include "src/tint/lang/core/ir/validator.h"
-#include "src/tint/utils/result/result.h"
 
 using namespace tint::core::fluent_types;  // NOLINT
 
@@ -51,7 +50,7 @@ TEST_F(IR_MslBinaryTest, Clone) {
 
     EXPECT_NE(inst, c);
 
-    EXPECT_EQ(mod.Types().i8(), c->Result(0)->Type());
+    EXPECT_EQ(mod.Types().i8(), c->Result()->Type());
     EXPECT_EQ(core::BinaryOp::kAdd, c->Op());
 
     auto new_lhs = c->LHS()->As<core::ir::Constant>()->Value();
@@ -75,7 +74,7 @@ TEST_F(IR_MslBinaryTest, MatchOverloadFromDialect) {
     core::ir::Capabilities caps;
     caps.Add(core::ir::Capability::kAllow8BitIntegers);
     auto res = core::ir::Validate(mod, caps);
-    EXPECT_EQ(res, Success) << res.Failure().reason.Str();
+    EXPECT_EQ(res, Success) << res.Failure();
 }
 
 TEST_F(IR_MslBinaryTest, DoesNotMatchOverloadFromCore) {
@@ -89,7 +88,7 @@ TEST_F(IR_MslBinaryTest, DoesNotMatchOverloadFromCore) {
 
     auto res = core::ir::Validate(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
+    EXPECT_EQ(res.Failure().reason,
               R"(:3:5 error: binary: no matching overload for 'operator + (i32, i32)'
 
 1 candidate operator:

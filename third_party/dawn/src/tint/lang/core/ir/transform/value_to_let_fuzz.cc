@@ -51,7 +51,11 @@ Result<SuccessType> ValueToLetFuzzer(Module& module,
         return Failure{"Cannot run module"};
     }
 
-    return ValueToLet(module, config);
+    auto res = ValueToLet(module, config);
+    if (res != Success) {
+        return Failure{res.Failure().reason};
+    }
+    return Success;
 }
 
 }  // namespace

@@ -52,6 +52,17 @@ TEST_F(SpirvWriterTest, ModuleHeader_VulkanMemoryModel) {
     EXPECT_INST("OpMemoryModel Logical Vulkan");
 }
 
+TEST_F(SpirvWriterTest, CanGenerate_SubgroupMatrixRequiresVulkanMemoryModel) {
+    mod.root_block->Append(b.Var(ty.ptr<private_>(ty.subgroup_matrix_result(ty.f32(), 8, 8))));
+
+    Options options;
+    options.use_vulkan_memory_model = false;
+    auto result = CanGenerate(mod, options);
+    ASSERT_NE(result, Success);
+    EXPECT_THAT(result.Failure().reason,
+                testing::HasSubstr("using subgroup matrices requires the Vulkan Memory Model"));
+}
+
 TEST_F(SpirvWriterTest, Unreachable) {
     auto* func = b.Function("foo", ty.void_());
     b.Append(func->Block(), [&] {
@@ -172,8 +183,6 @@ TEST_F(SpirvWriterTest, StripAllNames) {
 
                ; Annotations
                OpDecorate %gl_LocalInvocationIndex BuiltIn LocalInvocationIndex
-               OpMemberDecorate %_struct_11 0 Offset 0
-               OpMemberDecorate %_struct_11 1 Offset 16
 
                ; Types, variables and constants
        %uint = OpTypeInt 32 0

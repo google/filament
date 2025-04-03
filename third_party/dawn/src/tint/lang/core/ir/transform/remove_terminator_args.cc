@@ -27,8 +27,6 @@
 
 #include "src/tint/lang/core/ir/transform/remove_terminator_args.h"
 
-#include <utility>
-
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
@@ -150,7 +148,7 @@ struct State {
             // Replace the original result with a load from the variable that we created above.
             auto* load = b.Load(var);
             load->InsertBefore(block->Front());
-            param->ReplaceAllUsesWith(load->Result(0));
+            param->ReplaceAllUsesWith(load->Result());
         }
 
         // Remove the arguments from the branches and the parameters from the block.

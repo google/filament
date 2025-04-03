@@ -51,13 +51,13 @@ TEST_F(SamplerValidationTest, InvalidLOD) {
     {
         wgpu::SamplerDescriptor samplerDesc;
         samplerDesc.lodMaxClamp = INFINITY;
-        device.CreateSampler(&samplerDesc);
+        ASSERT_DEVICE_ERROR(device.CreateSampler(&samplerDesc));
     }
     {
         wgpu::SamplerDescriptor samplerDesc;
         samplerDesc.lodMaxClamp = INFINITY;
         samplerDesc.lodMinClamp = INFINITY;
-        device.CreateSampler(&samplerDesc);
+        ASSERT_DEVICE_ERROR(device.CreateSampler(&samplerDesc));
     }
 }
 

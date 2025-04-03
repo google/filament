@@ -536,7 +536,7 @@ TEST_F(SpirvWriterTest, Function_ShaderIO_DualSourceBlend) {
                OpDecorate %main_loc0_idx0_Output Index 0
                OpDecorate %main_loc0_idx1_Output Location 0
                OpDecorate %main_loc0_idx1_Output Index 1
-    )");
+)");
     EXPECT_INST(R"(
 %main_loc0_idx0_Output = OpVariable %_ptr_Output_float Output   ; Location 0, Index 0
 %main_loc0_idx1_Output = OpVariable %_ptr_Output_float Output   ; Location 0, Index 1

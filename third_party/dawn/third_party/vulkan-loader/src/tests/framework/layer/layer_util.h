@@ -30,11 +30,11 @@
 #include "test_util.h"
 
 struct LayerDefinition {
-    BUILDER_VALUE(LayerDefinition, std::string, layerName, {})
-    BUILDER_VALUE(LayerDefinition, uint32_t, specVersion, VK_API_VERSION_1_0)
-    BUILDER_VALUE(LayerDefinition, uint32_t, implementationVersion, VK_API_VERSION_1_0)
-    BUILDER_VALUE(LayerDefinition, std::string, description, {})
-    BUILDER_VECTOR(LayerDefinition, Extension, extensions, extension)
+    BUILDER_VALUE(std::string, layerName)
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, specVersion, VK_API_VERSION_1_0)
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, implementationVersion, VK_API_VERSION_1_0)
+    BUILDER_VALUE(std::string, description)
+    BUILDER_VECTOR(Extension, extensions, extension)
 
     VkLayerProperties get() const noexcept {
         VkLayerProperties props{};

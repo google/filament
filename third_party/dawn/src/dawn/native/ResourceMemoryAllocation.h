@@ -59,6 +59,9 @@ struct AllocationInfo {
     uint64_t mBlockOffset = 0;
 
     AllocationMethod mMethod = AllocationMethod::kInvalid;
+
+    // Represents the requested memory allocation size (without padding) by the allocator.
+    uint64_t mRequestedSize = 0;
 };
 
 // Handle into a resource heap pool.

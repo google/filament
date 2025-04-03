@@ -521,9 +521,8 @@
         GMOCK_INTERNAL_DECL_##value_params)                                    \
         GMOCK_PP_IF(GMOCK_PP_IS_EMPTY(GMOCK_INTERNAL_COUNT_##value_params),    \
                     = default;                                                 \
-                    ,                                                          \
-                    : impl_(std::make_shared<gmock_Impl>(                      \
-                        GMOCK_INTERNAL_LIST_##value_params)){})                \
+                    , : impl_(std::make_shared<gmock_Impl>(                    \
+                          GMOCK_INTERNAL_LIST_##value_params)){})              \
             GMOCK_ACTION_CLASS_(name, value_params)(const GMOCK_ACTION_CLASS_( \
                 name, value_params) &) noexcept GMOCK_INTERNAL_DEFN_COPY_      \
         ##value_params                                                         \
@@ -551,10 +550,10 @@
   };                                                                           \
   template <GMOCK_INTERNAL_DECL_##template_params                              \
                 GMOCK_INTERNAL_DECL_TYPE_##value_params>                       \
-  GMOCK_ACTION_CLASS_(                                                         \
+  [[nodiscard]] GMOCK_ACTION_CLASS_(                                           \
       name, value_params)<GMOCK_INTERNAL_LIST_##template_params                \
                               GMOCK_INTERNAL_LIST_TYPE_##value_params>         \
-      name(GMOCK_INTERNAL_DECL_##value_params) GTEST_MUST_USE_RESULT_;         \
+      name(GMOCK_INTERNAL_DECL_##value_params);                                \
   template <GMOCK_INTERNAL_DECL_##template_params                              \
                 GMOCK_INTERNAL_DECL_TYPE_##value_params>                       \
   inline GMOCK_ACTION_CLASS_(                                                  \
@@ -592,21 +591,23 @@ namespace internal {
 // Overloads for other custom-callables are provided in the
 // internal/custom/gmock-generated-actions.h header.
 template <typename F, typename... Args>
-auto InvokeArgument(F f, Args... args) -> decltype(f(args...)) {
-  return f(args...);
+auto InvokeArgument(F &&f,
+                    Args... args) -> decltype(std::forward<F>(f)(args...)) {
+  return std::forward<F>(f)(args...);
 }
 
 template <std::size_t index, typename... Params>
 struct InvokeArgumentAction {
   template <typename... Args,
             typename = typename std::enable_if<(index < sizeof...(Args))>::type>
-  auto operator()(Args &&...args) const -> decltype(internal::InvokeArgument(
-      std::get<index>(std::forward_as_tuple(std::forward<Args>(args)...)),
-      std::declval<const Params &>()...)) {
+  auto operator()(Args &&...args) const
+      -> decltype(internal::InvokeArgument(
+          std::get<index>(std::forward_as_tuple(std::forward<Args>(args)...)),
+          std::declval<const Params &>()...)) {
     internal::FlatTuple<Args &&...> args_tuple(FlatTupleConstructTag{},
                                                std::forward<Args>(args)...);
     return params.Apply([&](const Params &...unpacked_params) {
-      auto &&callable = args_tuple.template Get<index>();
+      auto &&callable = std::move(args_tuple.template Get<index>());
       return internal::InvokeArgument(
           std::forward<decltype(callable)>(callable), unpacked_params...);
     });

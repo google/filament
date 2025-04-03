@@ -48,9 +48,9 @@ TEST_F(GlslWriterTest, Loop) {
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
   {
-    uvec2 tint_loop_idx = uvec2(0u);
+    uvec2 tint_loop_idx = uvec2(4294967295u);
     while(true) {
-      if (all(equal(tint_loop_idx, uvec2(4294967295u)))) {
+      if (all(equal(tint_loop_idx, uvec2(0u)))) {
         break;
       }
       break;
@@ -75,16 +75,16 @@ TEST_F(GlslWriterTest, LoopContinueAndBreakIf) {
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
   {
-    uvec2 tint_loop_idx = uvec2(0u);
+    uvec2 tint_loop_idx = uvec2(4294967295u);
     while(true) {
-      if (all(equal(tint_loop_idx, uvec2(4294967295u)))) {
+      if (all(equal(tint_loop_idx, uvec2(0u)))) {
         break;
       }
       {
-        uint tint_low_inc = (tint_loop_idx.x + 1u);
+        uint tint_low_inc = (tint_loop_idx.x - 1u);
         tint_loop_idx.x = tint_low_inc;
-        uint tint_carry = uint((tint_low_inc == 0u));
-        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        uint tint_carry = uint((tint_low_inc == 4294967295u));
+        tint_loop_idx.y = (tint_loop_idx.y - tint_carry);
         if (true) { break; }
       }
       continue;
@@ -113,17 +113,17 @@ TEST_F(GlslWriterTest, LoopBodyVarInContinue) {
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
   {
-    uvec2 tint_loop_idx = uvec2(0u);
+    uvec2 tint_loop_idx = uvec2(4294967295u);
     while(true) {
-      if (all(equal(tint_loop_idx, uvec2(4294967295u)))) {
+      if (all(equal(tint_loop_idx, uvec2(0u)))) {
         break;
       }
       bool v = true;
       {
-        uint tint_low_inc = (tint_loop_idx.x + 1u);
+        uint tint_low_inc = (tint_loop_idx.x - 1u);
         tint_loop_idx.x = tint_low_inc;
-        uint tint_carry = uint((tint_low_inc == 0u));
-        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        uint tint_carry = uint((tint_low_inc == 4294967295u));
+        tint_loop_idx.y = (tint_loop_idx.y - tint_carry);
         if (v) { break; }
       }
       continue;
@@ -153,17 +153,17 @@ TEST_F(GlslWriterTest, LoopInitializer) {
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
   {
-    uvec2 tint_loop_idx = uvec2(0u);
+    uvec2 tint_loop_idx = uvec2(4294967295u);
     bool v = true;
     while(true) {
-      if (all(equal(tint_loop_idx, uvec2(4294967295u)))) {
+      if (all(equal(tint_loop_idx, uvec2(0u)))) {
         break;
       }
       {
-        uint tint_low_inc = (tint_loop_idx.x + 1u);
+        uint tint_low_inc = (tint_loop_idx.x - 1u);
         tint_loop_idx.x = tint_low_inc;
-        uint tint_carry = uint((tint_low_inc == 0u));
-        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        uint tint_carry = uint((tint_low_inc == 4294967295u));
+        tint_loop_idx.y = (tint_loop_idx.y - tint_carry);
         if (v) { break; }
       }
       continue;

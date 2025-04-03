@@ -52,7 +52,7 @@ void Override::SetInitializer(Value* initializer) {
 }
 
 Override* Override::Clone(CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     TINT_ASSERT(new_result);
 
     auto* new_override = ctx.ir.CreateInstruction<Override>(new_result);
@@ -62,7 +62,9 @@ Override* Override::Clone(CloneContext& ctx) {
     if (auto* init = Initializer()) {
         new_override->SetInitializer(ctx.Clone(init));
     }
-    new_override->SetOverrideId(override_id_);
+    if (override_id_.has_value()) {
+        new_override->SetOverrideId(override_id_.value());
+    }
 
     auto name = ctx.ir.NameOf(this);
     if (name.IsValid()) {

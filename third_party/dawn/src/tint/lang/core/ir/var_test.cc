@@ -54,8 +54,8 @@ TEST_F(IR_VarDeathTest, Fail_NullType) {
 TEST_F(IR_VarTest, Results) {
     auto* var = b.Var(ty.ptr<function, f32>());
     EXPECT_EQ(var->Results().Length(), 1u);
-    EXPECT_TRUE(var->Result(0)->Is<InstructionResult>());
-    EXPECT_EQ(var->Result(0)->Instruction(), var);
+    EXPECT_TRUE(var->Result()->Is<InstructionResult>());
+    EXPECT_EQ(var->Result()->Instruction(), var);
 }
 
 TEST_F(IR_VarTest, Initializer_Usage) {
@@ -82,9 +82,9 @@ TEST_F(IR_VarTest, Clone) {
     auto* new_v = clone_ctx.Clone(v);
 
     EXPECT_NE(v, new_v);
-    ASSERT_NE(nullptr, new_v->Result(0));
-    EXPECT_NE(v->Result(0), new_v->Result(0));
-    EXPECT_EQ(new_v->Result(0)->Type(),
+    ASSERT_NE(nullptr, new_v->Result());
+    EXPECT_NE(v->Result(), new_v->Result());
+    EXPECT_EQ(new_v->Result()->Type(),
               mod.Types().ptr(core::AddressSpace::kFunction, mod.Types().f32()));
 
     ASSERT_NE(nullptr, new_v->Initializer());

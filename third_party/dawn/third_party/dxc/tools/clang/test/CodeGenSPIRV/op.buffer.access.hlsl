@@ -28,15 +28,6 @@ RWBuffer<int4> int4buf;
 RWBuffer<uint4> uint4buf;
 RWBuffer<float4> float4buf;
 
-struct S {
-  float  a;
-  float2 b;
-  float1 c;
-};
-
-// CHECK: %type_buffer_image_11 = OpTypeImage %float Buffer 2 0 0 1 Rgba32f
-Buffer<S> sBuf;
-
 void main() {
   int address;
 
@@ -125,28 +116,4 @@ void main() {
 // CHECK-NEXT:                  OpStore %b [[b]]
   float b = float4buf[address][2];
 
-// CHECK:        [[img:%[0-9]+]] = OpLoad %type_buffer_image_11 %sBuf
-// CHECK-NEXT: [[fetch:%[0-9]+]] = OpImageFetch %v4float [[img]] %uint_0 None
-// CHECK-NEXT:   [[s_a:%[0-9]+]] = OpCompositeExtract %float [[fetch]] 0
-// CHECK-NEXT:   [[s_b:%[0-9]+]] = OpVectorShuffle %v2float [[fetch]] [[fetch]] 1 2
-// CHECK-NEXT:   [[s_c:%[0-9]+]] = OpCompositeExtract %float [[fetch]] 3
-// CHECK-NEXT:     [[s:%[0-9]+]] = OpCompositeConstruct %S [[s_a]] [[s_b]] [[s_c]]
-// CHECK-NEXT:                  OpStore %temp_var_S [[s]]
-// CHECK-NEXT:   [[ptr:%[0-9]+]] = OpAccessChain %_ptr_Function_float %temp_var_S %int_0
-// CHECK-NEXT:     [[c:%[0-9]+]] = OpLoad %float [[ptr]]
-// CHECK-NEXT:                  OpStore %c [[c]]
-  float c = sBuf[0].a;
-
-// CHECK:        [[img_0:%[0-9]+]] = OpLoad %type_buffer_image_11 %sBuf
-// CHECK-NEXT: [[fetch_0:%[0-9]+]] = OpImageFetch %v4float [[img_0]] %uint_1 None
-// CHECK-NEXT:   [[s_a_0:%[0-9]+]] = OpCompositeExtract %float [[fetch_0]] 0
-// CHECK-NEXT:   [[s_b_0:%[0-9]+]] = OpVectorShuffle %v2float [[fetch_0]] [[fetch_0]] 1 2
-// CHECK-NEXT:   [[s_c_0:%[0-9]+]] = OpCompositeExtract %float [[fetch_0]] 3
-// CHECK-NEXT:     [[s_0:%[0-9]+]] = OpCompositeConstruct %S [[s_a_0]] [[s_b_0]] [[s_c_0]]
-// CHECK-NEXT:                  OpStore %temp_var_S_0 [[s_0]]
-// CHECK-NEXT:   [[ptr_0:%[0-9]+]] = OpAccessChain %_ptr_Function_v2float %temp_var_S_0 %int_1
-// CHECK-NEXT:   [[val:%[0-9]+]] = OpLoad %v2float [[ptr_0]]
-// CHECK-NEXT:     [[d:%[0-9]+]] = OpCompositeExtract %float [[val]] 1
-// CHECK-NEXT:                  OpStore %d [[d]]
-  float d = sBuf[1].b.y;
 }

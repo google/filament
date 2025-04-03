@@ -42,4 +42,6 @@ Result<SuccessType> RaiseFuzzer(core::ir::Module& ir, const fuzz::ir::Context&) 
 
 TINT_IR_MODULE_FUZZER(tint::wgsl::writer::raise::RaiseFuzzer,
                       tint::core::ir::Capabilities{},
-                      tint::core::ir::Capabilities{tint::core::ir::Capability::kAllowRefTypes});
+                      tint::core::ir::Capabilities{
+                          tint::core::ir::Capability::kAllowRefTypes,
+                          tint::core::ir::Capability::kAllowPhonyInstructions});

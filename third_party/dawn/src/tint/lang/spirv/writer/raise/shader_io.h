@@ -28,12 +28,9 @@
 #ifndef SRC_TINT_LANG_SPIRV_WRITER_RAISE_SHADER_IO_H_
 #define SRC_TINT_LANG_SPIRV_WRITER_RAISE_SHADER_IO_H_
 
-#include <string>
-
 #include "src/tint/lang/core/ir/transform/prepare_push_constants.h"
 #include "src/tint/lang/spirv/writer/common/options.h"
-#include "src/tint/utils/diagnostic/diagnostic.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {
@@ -47,8 +44,6 @@ struct ShaderIOConfig {
     /// push constant layout information
     const core::ir::transform::PushConstantLayout& push_constant_layout;
 
-    /// true if frag_depth builtin outputs should be clamped
-    bool clamp_frag_depth = false;
     /// true if a vertex point size builtin output should be added
     bool emit_vertex_point_size = false;
     /// true if f16 IO types should be replaced with f32 types and converted

@@ -53,6 +53,7 @@ Test/baseResults/spv.430.vert.out
 Test/baseResults/spv.450.tesc.out
 Test/baseResults/spv.8bit-16bit-construction.frag.out
 Test/baseResults/spv.AofA.frag.out
+Test/baseResults/spv.atomicFloat.comp.out
 Test/baseResults/spv.controlFlowAttributes.frag.out
 Test/baseResults/spv.dataOut.frag.out
 Test/baseResults/spv.float16Fetch.frag.out

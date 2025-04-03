@@ -1810,7 +1810,7 @@ fn f(ext_tex : texture_2d<f32>, ext_tex_plane_1 : texture_2d<f32>, ext_tex_param
     EXPECT_EQ(expect, str(got));
 }
 
-// Tests that the the transform handles aliases to external textures
+// Tests that the transform handles aliases to external textures
 TEST_F(MultiplanarExternalTextureTest, ExternalTextureAlias) {
     auto* src = R"(
 alias ET = texture_external;
@@ -1910,7 +1910,7 @@ fn main() {
     EXPECT_EQ(expect, str(got));
 }
 
-// Tests that the the transform handles aliases to external textures
+// Tests that the transform handles aliases to external textures
 TEST_F(MultiplanarExternalTextureTest, ExternalTextureAlias_OutOfOrder) {
     auto* src = R"(
 @fragment

@@ -114,6 +114,8 @@ enum class Toggle {
     UseBlitForFloat16TextureCopy,
     UseBlitForFloat32TextureCopy,
     UseBlitForT2B,
+    UseBlitForB2T,
+    D3D11DisableCPUUploadBuffers,
     UseT2B2TForSRGBTextureCopy,
     D3D12ReplaceAddWithMinusWhenDstFactorIsZeroAndSrcFactorIsDstAlpha,
     D3D12PolyfillReflectVec2F32,
@@ -156,6 +158,7 @@ enum class Toggle {
     VulkanSkipDraw,
 
     D3D11UseUnmonitoredFence,
+    D3D11DisableFence,
     IgnoreImportedAHardwareBufferVulkanImageSize,
 
     EnumCount,

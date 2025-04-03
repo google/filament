@@ -1819,6 +1819,7 @@ VkResult loader_scanned_icd_add(const struct loader_instance *inst, struct loade
         loader_log(inst, VULKAN_LOADER_ERROR_BIT, 0,
                    "loader_scanned_icd_add: ICD %s doesn't support interface version compatible with loader, skip this ICD.",
                    filename);
+        res = VK_ERROR_INCOMPATIBLE_DRIVER;
         goto out;
     }
 
@@ -1836,6 +1837,7 @@ VkResult loader_scanned_icd_add(const struct loader_instance *inst, struct loade
                        "loader_scanned_icd_add: ICD %s reports an interface version of %d but doesn't export "
                        "vk_icdGetInstanceProcAddr, skip this ICD.",
                        filename, interface_vers);
+            res = VK_ERROR_INCOMPATIBLE_DRIVER;
             goto out;
         }
         // Use deprecated interface from version 0
@@ -1845,6 +1847,7 @@ VkResult loader_scanned_icd_add(const struct loader_instance *inst, struct loade
                        "loader_scanned_icd_add: Attempt to retrieve either \'vkGetInstanceProcAddr\' or "
                        "\'vk_icdGetInstanceProcAddr\' from ICD %s failed.",
                        filename);
+            res = VK_ERROR_INCOMPATIBLE_DRIVER;
             goto out;
         } else {
             loader_log(inst, VULKAN_LOADER_WARN_BIT, 0,
@@ -1856,6 +1859,7 @@ VkResult loader_scanned_icd_add(const struct loader_instance *inst, struct loade
         if (NULL == fp_create_inst) {
             loader_log(inst, VULKAN_LOADER_ERROR_BIT, 0,
                        "loader_scanned_icd_add:  Failed querying \'vkCreateInstance\' via dlsym/LoadLibrary for ICD %s", filename);
+            res = VK_ERROR_INCOMPATIBLE_DRIVER;
             goto out;
         }
         fp_get_inst_ext_props = loader_platform_get_proc_address(handle, "vkEnumerateInstanceExtensionProperties");
@@ -1864,6 +1868,7 @@ VkResult loader_scanned_icd_add(const struct loader_instance *inst, struct loade
                        "loader_scanned_icd_add: Could not get \'vkEnumerateInstanceExtensionProperties\' via dlsym/LoadLibrary "
                        "for ICD %s",
                        filename);
+            res = VK_ERROR_INCOMPATIBLE_DRIVER;
             goto out;
         }
     } else {
@@ -1879,6 +1884,7 @@ VkResult loader_scanned_icd_add(const struct loader_instance *inst, struct loade
             loader_log(inst, VULKAN_LOADER_ERROR_BIT, 0,
                        "loader_scanned_icd_add: Could not get \'vkCreateInstance\' via \'vk_icdGetInstanceProcAddr\' for ICD %s",
                        filename);
+            res = VK_ERROR_INCOMPATIBLE_DRIVER;
             goto out;
         }
         fp_get_inst_ext_props =
@@ -1888,6 +1894,7 @@ VkResult loader_scanned_icd_add(const struct loader_instance *inst, struct loade
                        "loader_scanned_icd_add: Could not get \'vkEnumerateInstanceExtensionProperties\' via "
                        "\'vk_icdGetInstanceProcAddr\' for ICD %s",
                        filename);
+            res = VK_ERROR_INCOMPATIBLE_DRIVER;
             goto out;
         }
         // Query "vk_icdGetPhysicalDeviceProcAddr" with vk_icdGetInstanceProcAddr if the library reports interface version 7 or
@@ -1956,6 +1963,11 @@ VkResult loader_scanned_icd_add(const struct loader_instance *inst, struct loade
     icd_tramp_list->count++;
 
 out:
+    if (res != VK_SUCCESS) {
+        if (NULL != handle) {
+            loader_platform_close_library(handle);
+        }
+    }
 
     return res;
 }
@@ -2003,7 +2015,7 @@ void loader_initialize(void) {
 #endif
 }
 
-void loader_release() {
+void loader_release(void) {
     // Guarantee release of the preloaded ICD libraries. This may have already been called in vkDestroyInstance.
     loader_unload_preloaded_icds();
 
@@ -3126,8 +3138,8 @@ VkResult read_data_files_in_search_paths(const struct loader_instance *inst, enu
     char *cur_path_ptr = NULL;
     bool use_first_found_manifest = false;
 #if COMMON_UNIX_PLATFORMS
-    char *relative_location = NULL;  // Only used on unix platforms
-    size_t rel_size = 0;             // unused in windows, dont declare so no compiler warnings are generated
+    const char *relative_location = NULL;  // Only used on unix platforms
+    size_t rel_size = 0;                   // unused in windows, dont declare so no compiler warnings are generated
 #endif
 
 #if defined(_WIN32)

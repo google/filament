@@ -173,16 +173,13 @@ int SampleBase::Run(unsigned int delay) {
 
 #ifndef __EMSCRIPTEN__
     dawnProcSetProcs(&dawn::native::GetProcs());
+#endif  // __EMSCRIPTEN__
 
     // Create the instance with the toggles
     wgpu::InstanceDescriptor instanceDescriptor = {};
     instanceDescriptor.nextInChain = togglesChain;
     instanceDescriptor.capabilities.timedWaitAnyEnable = true;
     sample->instance = wgpu::CreateInstance(&instanceDescriptor);
-#else
-    // Create the instance
-    sample->instance = wgpu::CreateInstance(nullptr);
-#endif  // __EMSCRIPTEN__
 
     // Synchronously create the adapter
     sample->instance.WaitAny(
@@ -217,8 +214,8 @@ int SampleBase::Run(unsigned int delay) {
                 case wgpu::DeviceLostReason::Destroyed:
                     reasonName = "Destroyed";
                     break;
-                case wgpu::DeviceLostReason::InstanceDropped:
-                    reasonName = "InstanceDropped";
+                case wgpu::DeviceLostReason::CallbackCancelled:
+                    reasonName = "CallbackCancelled";
                     break;
                 case wgpu::DeviceLostReason::FailedCreation:
                     reasonName = "FailedCreation";

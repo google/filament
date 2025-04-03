@@ -250,7 +250,7 @@ void main() {
 
 TEST_F(GlslWriterTest, EmitType_Atomic_U32) {
     b.Append(b.ir.root_block, [&] {
-        b.Var("a", ty.ptr(core::AddressSpace::kWorkgroup, ty.atomic<u32>()))->Result(0);
+        b.Var("a", ty.ptr(core::AddressSpace::kWorkgroup, ty.atomic<u32>()))->Result();
     });
     ASSERT_TRUE(Generate()) << err_ << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
@@ -263,7 +263,7 @@ void main() {
 
 TEST_F(GlslWriterTest, EmitType_Atomic_I32) {
     b.Append(b.ir.root_block, [&] {
-        b.Var("a", ty.ptr(core::AddressSpace::kWorkgroup, ty.atomic<i32>()))->Result(0);
+        b.Var("a", ty.ptr(core::AddressSpace::kWorkgroup, ty.atomic<i32>()))->Result();
     });
     ASSERT_TRUE(Generate()) << err_ << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
@@ -574,7 +574,7 @@ TEST_P(GlslWriterSampledTextureESTest, Emit) {
             break;
     }
 
-    auto* t = ty.Get<core::type::SampledTexture>(params.dim, subtype);
+    auto* t = ty.sampled_texture(params.dim, subtype);
     auto* var = b.Var("v", handle, t, core::Access::kReadWrite);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
@@ -628,7 +628,7 @@ TEST_P(GlslWriterSampledTextureNonESTest, Emit) {
             break;
     }
 
-    auto* t = ty.Get<core::type::SampledTexture>(params.dim, subtype);
+    auto* t = ty.sampled_texture(params.dim, subtype);
     auto* var = b.Var("v", handle, t, core::Access::kReadWrite);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
@@ -772,27 +772,23 @@ using GlslWriterStorageTextureESTest = GlslWriterTestWithParam<GlslStorageTextur
 TEST_P(GlslWriterStorageTextureESTest, Emit) {
     auto params = GetParam();
 
-    const core::type::Type* subtype = nullptr;
     core::TexelFormat texel_fmt = core::TexelFormat::kUndefined;
     std::string fmt_str = "";
     switch (params.datatype) {
         case TextureDataType::kF32:
-            subtype = ty.f32();
             texel_fmt = core::TexelFormat::kR32Float;
             fmt_str = "r32f";
             break;
         case TextureDataType::kI32:
-            subtype = ty.i32();
             texel_fmt = core::TexelFormat::kR32Sint;
             fmt_str = "r32i";
             break;
         case TextureDataType::kU32:
-            subtype = ty.u32();
             texel_fmt = core::TexelFormat::kR32Uint;
             fmt_str = "r32ui";
             break;
     }
-    auto s = ty.Get<core::type::StorageTexture>(params.dim, texel_fmt, params.access, subtype);
+    auto s = ty.storage_texture(params.dim, texel_fmt, params.access);
     auto* var = b.Var("v", handle, s, core::Access::kReadWrite);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
@@ -877,27 +873,23 @@ using GlslWriterStorageTextureNonESTest = GlslWriterTestWithParam<GlslStorageTex
 TEST_P(GlslWriterStorageTextureNonESTest, Emit) {
     auto params = GetParam();
 
-    const core::type::Type* subtype = nullptr;
     core::TexelFormat texel_fmt = core::TexelFormat::kUndefined;
     std::string fmt_str = "";
     switch (params.datatype) {
         case TextureDataType::kF32:
-            subtype = ty.f32();
             texel_fmt = core::TexelFormat::kR32Float;
             fmt_str = "r32f";
             break;
         case TextureDataType::kI32:
-            subtype = ty.i32();
             texel_fmt = core::TexelFormat::kR32Sint;
             fmt_str = "r32i";
             break;
         case TextureDataType::kU32:
-            subtype = ty.u32();
             texel_fmt = core::TexelFormat::kR32Uint;
             fmt_str = "r32ui";
             break;
     }
-    auto s = ty.Get<core::type::StorageTexture>(params.dim, texel_fmt, params.access, subtype);
+    auto s = ty.storage_texture(params.dim, texel_fmt, params.access);
     auto* var = b.Var("v", handle, s, core::Access::kReadWrite);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);

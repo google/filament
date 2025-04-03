@@ -131,7 +131,7 @@ MaybeError PlatformFunctions::LoadD3D12() {
     d3d12CreateVersionedRootSignatureDeserializer = &D3D12CreateVersionedRootSignatureDeserializer;
 #else
     std::string error;
-    if (!mD3D12Lib.Open("d3d12.dll", &error) ||
+    if (!mD3D12Lib.OpenSystemLibrary(L"d3d12.dll", &error) ||
         !mD3D12Lib.GetProc(&d3d12CreateDevice, "D3D12CreateDevice", &error) ||
         !mD3D12Lib.GetProc(&d3d12GetDebugInterface, "D3D12GetDebugInterface", &error) ||
         !mD3D12Lib.GetProc(&d3d12SerializeRootSignature, "D3D12SerializeRootSignature", &error) ||
@@ -153,7 +153,7 @@ MaybeError PlatformFunctions::LoadD3D11() {
     d3d11on12CreateDevice = &D3D11On12CreateDevice;
 #else
     std::string error;
-    if (!mD3D11Lib.Open("d3d11.dll", &error) ||
+    if (!mD3D11Lib.OpenSystemLibrary(L"d3d11.dll", &error) ||
         !mD3D11Lib.GetProc(&d3d11on12CreateDevice, "D3D11On12CreateDevice", &error)) {
         return DAWN_INTERNAL_ERROR(error.c_str());
     }

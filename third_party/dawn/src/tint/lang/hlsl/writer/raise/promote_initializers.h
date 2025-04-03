@@ -29,7 +29,7 @@
 #define SRC_TINT_LANG_HLSL_WRITER_RAISE_PROMOTE_INITIALIZERS_H_
 
 #include "src/tint/lang/core/ir/validator.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {
@@ -78,7 +78,7 @@ const core::ir::Capabilities kPromoteInitializersCapabilities{
 /// ```
 ///
 /// @param module the module to transform
-/// @returns error diagnostics on failure
+/// @returns error on failure
 Result<SuccessType> PromoteInitializers(core::ir::Module& module);
 
 }  // namespace tint::hlsl::writer::raise

@@ -28,7 +28,8 @@
 #ifndef SRC_TINT_LANG_CORE_IR_BINARY_DECODE_H_
 #define SRC_TINT_LANG_CORE_IR_BINARY_DECODE_H_
 
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/containers/slice.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations
 namespace tint::core::ir {

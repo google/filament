@@ -76,7 +76,7 @@ TEST_P(ImmediateConstantOffsetTest, ClampFragDepth) {
     expectedImmediateConstantMask |= (1u << 5u);
 
     // Check dirty bits are set correctly.
-    EXPECT_TRUE(FromAPI(MakeTestRenderPipelineWithClampingFragDepth().Get())->GetPipelineMask() ==
+    EXPECT_TRUE(FromAPI(MakeTestRenderPipelineWithClampingFragDepth().Get())->GetImmediateMask() ==
                 expectedImmediateConstantMask);
 }
 

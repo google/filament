@@ -346,6 +346,11 @@ def disable_exception_handling : Flag<["-", "/"], "disable-exception-handling">,
 def skip_serialization : Flag<["-", "/"], "skip-serialization">, Group<hlslcore_Group>, Flags<[CoreOption, HelpHidden]>,
   HelpText<"Return a module interface instead of serialized output">;
 
+def metal : Flag<["-"], "metal">,
+            Group<spirv_Group>,
+            Flags<[CoreOption, DriverOption]>,
+            HelpText<"Generate Metal code">;
+
 // SPIRV Change Starts
 def spirv : Flag<["-"], "spirv">, Group<spirv_Group>, Flags<[CoreOption, DriverOption]>,
   HelpText<"Generate SPIR-V code">;

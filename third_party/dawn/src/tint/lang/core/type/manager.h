@@ -36,7 +36,10 @@
 #include "src/tint/lang/core/number.h"
 #include "src/tint/lang/core/texel_format.h"
 #include "src/tint/lang/core/type/atomic.h"
+#include "src/tint/lang/core/type/depth_multisampled_texture.h"
+#include "src/tint/lang/core/type/depth_texture.h"
 #include "src/tint/lang/core/type/external_texture.h"
+#include "src/tint/lang/core/type/multisampled_texture.h"
 #include "src/tint/lang/core/type/sampler.h"
 #include "src/tint/lang/core/type/struct.h"
 #include "src/tint/lang/core/type/subgroup_matrix.h"
@@ -61,6 +64,7 @@ class Invalid;
 class Matrix;
 class Pointer;
 class Reference;
+class SampledTexture;
 class StorageTexture;
 class U8;
 class U32;
@@ -264,12 +268,32 @@ class Manager final {
     const core::type::Vector* vec4(const core::type::Type* inner);
 
     /// @param dim the dimensionality of the texture
+    /// @param type the data type of the sampled texture
+    /// @returns a sampled texture type with the provided params
+    const core::type::SampledTexture* sampled_texture(TextureDimension dim,
+                                                      const core::type::Type* type);
+
+    /// @param dim the dimensionality of the texture
+    /// @param type the data type of the sampled texture
+    /// @returns a multisampled texture type with the provided params
+    const core::type::MultisampledTexture* multisampled_texture(TextureDimension dim,
+                                                                const core::type::Type* type);
+
+    /// @param dim the dimensionality of the texture
     /// @param format the texel format of the texture
     /// @param access the access control type of the texture
     /// @returns a storage texture type with the provided params
     const core::type::StorageTexture* storage_texture(TextureDimension dim,
                                                       core::TexelFormat format,
                                                       core::Access access);
+
+    /// @param dim the dimensionality of the texture
+    /// @returns a depth texture type with the provided params
+    const core::type::DepthTexture* depth_texture(TextureDimension dim);
+
+    /// @param dim the dimensionality of the texture
+    /// @returns a depth multisampled texture type with the provided params
+    const core::type::DepthMultisampledTexture* depth_multisampled_texture(TextureDimension dim);
 
     /// Return a type with element type `el_ty` that has the same number of vector components as
     /// `match`. If `match` is scalar just return `el_ty`.
@@ -619,7 +643,10 @@ class Manager final {
     /// @param members the list of structure member descriptors
     /// @note a structure must not already exist with the same name
     /// @returns the structure type
-    core::type::Struct* Struct(Symbol name, VectorRef<StructMemberDesc> members);
+    core::type::Struct* Struct(Symbol name, VectorRef<StructMemberDesc> members) {
+        return Struct(name, /* is_wgsl_internal */ false,
+                      tint::Vector<StructMemberDesc, 4>(members));
+    }
 
     /// Create a new structure declaration.
     /// @param name the name of the structure
@@ -628,6 +655,17 @@ class Manager final {
     /// @returns the structure type
     core::type::Struct* Struct(Symbol name, std::initializer_list<StructMemberDesc> members) {
         return Struct(name, tint::Vector<StructMemberDesc, 4>(members));
+    }
+
+    /// Create a new WGSL internal structure declaration.
+    /// @param name the name of the structure
+    /// @param members the list of structure member descriptors
+    /// @note an internal structure must not already exist with the same name
+    /// @returns the structure type
+    core::type::Struct* WgslInternalStruct(Symbol name,
+                                           std::initializer_list<StructMemberDesc> members) {
+        return Struct(name, /* is_wgsl_internal */ true,
+                      tint::Vector<StructMemberDesc, 4>(members));
     }
 
     /// @returns the external texture type
@@ -645,6 +683,16 @@ class Manager final {
     UniqueAllocator<UniqueNode> unique_nodes_;
     /// Non-unique nodes owned by the manager
     BlockAllocator<Node> nodes_;
+
+    /// Create a new structure declaration.
+    /// @param name the name of the structure
+    /// @param is_wgsl_internal `true` if the structure is internally defined in WGSL
+    /// @param members the list of structure member descriptors
+    /// @note a structure must not already exist with the same name
+    /// @returns the structure type
+    core::type::Struct* Struct(Symbol name,
+                               bool is_wgsl_internal,
+                               VectorRef<StructMemberDesc> members);
 };
 
 }  // namespace tint::core::type

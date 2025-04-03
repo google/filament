@@ -69,7 +69,7 @@ tint_benchmarks_source_set("bench") {
 {{- else if $.Kind.IsFuzz -}}
 tint_fuzz_source_set("fuzz") {
 {{- else if $.Kind.IsTestCmd -}}
-test("test_cmd") {
+test("{{$.OutputName}}") {
   testonly = true
 {{- else if $.Kind.IsBenchCmd -}}
 test("bench_cmd") {

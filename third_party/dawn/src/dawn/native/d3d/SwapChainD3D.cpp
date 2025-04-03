@@ -50,7 +50,8 @@ uint32_t PresentModeToBufferCount(wgpu::PresentMode mode) {
             return 2;
         case wgpu::PresentMode::Mailbox:
             return 3;
-        default:
+        case wgpu::PresentMode::FifoRelaxed:
+        case wgpu::PresentMode::Undefined:
             break;
     }
     DAWN_UNREACHABLE();
@@ -63,7 +64,8 @@ uint32_t PresentModeToSwapInterval(wgpu::PresentMode mode) {
             return 0;
         case wgpu::PresentMode::Fifo:
             return 1;
-        default:
+        case wgpu::PresentMode::FifoRelaxed:
+        case wgpu::PresentMode::Undefined:
             break;
     }
     DAWN_UNREACHABLE();
@@ -99,6 +101,17 @@ DXGI_USAGE ToDXGIUsage(DeviceBase* device, wgpu::TextureFormat format, wgpu::Tex
     return dxgiUsage;
 }
 
+#if defined(DAWN_USE_WINDOWS_UI)
+// Interface from microsoft.ui.xaml.media.dxinterop.h
+MIDL_INTERFACE("63aad0b8-7c24-40ff-85a8-640d944cc325")
+IWinUISwapChainPanelNative : public IUnknown {
+  public:
+    virtual HRESULT STDMETHODCALLTYPE SetSwapChain(
+        /* [annotation][in] */
+        _In_ IDXGISwapChain * swapChain) = 0;
+};
+#endif  // defined(DAWN_USE_WINDOWS_UI)
+
 }  // namespace
 
 SwapChain::~SwapChain() = default;
@@ -107,7 +120,11 @@ SwapChain::~SwapChain() = default;
 // nullptr. If it is not nullptr it means that it is the swapchain previously in use on the
 // surface and that we have a chance to reuse it's underlying IDXGISwapChain and "buffers".
 MaybeError SwapChain::Initialize(SwapChainBase* previousSwapChain) {
-    DAWN_ASSERT(GetSurface()->GetType() == Surface::Type::WindowsHWND);
+    Surface::Type surfaceType = GetSurface()->GetType();
+    DAWN_ASSERT(surfaceType == Surface::Type::WindowsHWND ||
+                surfaceType == Surface::Type::WindowsCoreWindow ||
+                surfaceType == Surface::Type::WindowsUWPSwapChainPanel ||
+                surfaceType == Surface::Type::WindowsWinUISwapChainPanel);
 
     // Precompute the configuration parameters we want for the DXGI swapchain.
     mConfig.bufferCount = PresentModeToBufferCount(GetPresentMode());
@@ -222,13 +239,26 @@ MaybeError SwapChain::InitializeSwapChainFromScratch() {
             break;
         }
 #if defined(DAWN_USE_WINDOWS_UI)
-        case Surface::Type::WindowsSwapChainPanel: {
+        case Surface::Type::WindowsUWPSwapChainPanel: {
             DAWN_TRY(CheckHRESULT(
                 factory2->CreateSwapChainForComposition(GetD3DDeviceForCreatingSwapChain(),
                                                         &swapChainDesc, nullptr, &swapChain1),
                 "Creating the IDXGISwapChain1"));
             ComPtr<ISwapChainPanelNative> swapChainPanelNative;
-            DAWN_TRY(CheckHRESULT(GetSurface()->GetSwapChainPanel()->QueryInterface(
+            DAWN_TRY(CheckHRESULT(GetSurface()->GetUWPSwapChainPanel()->QueryInterface(
+                                      IID_PPV_ARGS(&swapChainPanelNative)),
+                                  "Getting ISwapChainPanelNative"));
+            DAWN_TRY(CheckHRESULT(swapChainPanelNative->SetSwapChain(swapChain1.Get()),
+                                  "Setting SwapChain"));
+            break;
+        }
+        case Surface::Type::WindowsWinUISwapChainPanel: {
+            DAWN_TRY(CheckHRESULT(
+                factory2->CreateSwapChainForComposition(GetD3DDeviceForCreatingSwapChain(),
+                                                        &swapChainDesc, nullptr, &swapChain1),
+                "Creating the IDXGISwapChain1"));
+            ComPtr<IWinUISwapChainPanelNative> swapChainPanelNative;
+            DAWN_TRY(CheckHRESULT(GetSurface()->GetWinUISwapChainPanel()->QueryInterface(
                                       IID_PPV_ARGS(&swapChainPanelNative)),
                                   "Getting ISwapChainPanelNative"));
             DAWN_TRY(CheckHRESULT(swapChainPanelNative->SetSwapChain(swapChain1.Get()),

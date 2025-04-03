@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "dxc/DXIL/DxilConstants.h"
+#include "dxc/DXIL/DxilModule.h"
 #include "dxc/DXIL/DxilOperations.h"
 #include "dxc/DXIL/DxilUtil.h"
 #include "dxc/HLSL/HLModule.h"
@@ -180,10 +181,12 @@ bool LowerTypePass::runOnModule(Module &M) {
 namespace {
 class DynamicIndexingVectorToArray : public LowerTypePass {
   bool ReplaceAllVectors;
+  bool SupportsVectors;
 
 public:
   explicit DynamicIndexingVectorToArray(bool ReplaceAll = false)
-      : LowerTypePass(ID), ReplaceAllVectors(ReplaceAll) {}
+      : LowerTypePass(ID), ReplaceAllVectors(ReplaceAll),
+        SupportsVectors(false) {}
   static char ID; // Pass identification, replacement for typeid
   void applyOptions(PassOptions O) override;
   void dumpConfig(raw_ostream &OS) override;
@@ -194,6 +197,7 @@ protected:
   Type *lowerType(Type *Ty) override;
   Constant *lowerInitVal(Constant *InitVal, Type *NewTy) override;
   StringRef getGlobalPrefix() override { return ".v"; }
+  void initialize(Module &M) override;
 
 private:
   bool HasVectorDynamicIndexing(Value *V);
@@ -206,6 +210,18 @@ private:
   void ReplaceStaticIndexingOnVector(Value *V);
   void ReplaceAddrSpaceCast(ConstantExpr *CE, Value *A, IRBuilder<> &Builder);
 };
+
+void DynamicIndexingVectorToArray::initialize(Module &M) {
+  // Set vector support according to available Dxil version.
+  // Use HLModule or metadata for version info.
+  // Otherwise retrieve from dxil module or metadata.
+  unsigned Major = 0, Minor = 0;
+  if (M.HasHLModule())
+    M.GetHLModule().GetShaderModel()->GetDxilVersion(Major, Minor);
+  else
+    dxilutil::LoadDxilVersion(&M, Major, Minor);
+  SupportsVectors = (Major == 1 && Minor >= 9);
+}
 
 void DynamicIndexingVectorToArray::applyOptions(PassOptions O) {
   GetPassOptionBool(O, "ReplaceAllVectors", &ReplaceAllVectors,
@@ -306,9 +322,21 @@ void DynamicIndexingVectorToArray::ReplaceStaticIndexingOnVector(Value *V) {
 }
 
 bool DynamicIndexingVectorToArray::needToLower(Value *V) {
+  bool MustReplaceVector = ReplaceAllVectors;
   Type *Ty = V->getType()->getPointerElementType();
-  if (dyn_cast<VectorType>(Ty)) {
-    if (isa<GlobalVariable>(V) || ReplaceAllVectors) {
+
+  if (ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
+    // Array must be replaced even without dynamic indexing to remove vector
+    // type in dxil.
+    MustReplaceVector = true;
+    Ty = dxilutil::GetArrayEltTy(AT);
+  }
+
+  if (isa<VectorType>(Ty)) {
+    // Only needed for 2+ vectors where native vectors unsupported.
+    if (SupportsVectors && Ty->getVectorNumElements() > 1)
+      return false;
+    if (isa<GlobalVariable>(V) || MustReplaceVector) {
       return true;
     }
     // Don't lower local vector which only static indexing.
@@ -319,12 +347,6 @@ bool DynamicIndexingVectorToArray::needToLower(Value *V) {
       ReplaceStaticIndexingOnVector(V);
       return false;
     }
-  } else if (ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
-    // Array must be replaced even without dynamic indexing to remove vector
-    // type in dxil.
-    // TODO: optimize static array index in later pass.
-    Type *EltTy = dxilutil::GetArrayEltTy(AT);
-    return isa<VectorType>(EltTy);
   }
   return false;
 }

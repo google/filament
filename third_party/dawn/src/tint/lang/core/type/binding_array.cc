@@ -39,7 +39,7 @@ TINT_INSTANTIATE_TYPEINFO(tint::core::type::BindingArray);
 
 namespace tint::core::type {
 
-BindingArray::BindingArray(const Type* element, uint32_t count)
+BindingArray::BindingArray(const Type* element, const ArrayCount* count)
     : Base(Hash(tint::TypeCode::Of<BindingArray>().bits, count), core::type::Flags{}),
       element_(element),
       count_(count) {
@@ -55,16 +55,16 @@ bool BindingArray::Equals(const UniqueNode& other) const {
 
 std::string BindingArray::FriendlyName() const {
     StringStream out;
-    out << "binding_array<" << element_->FriendlyName() << ", " << count_ << ">";
+    out << "binding_array<" << element_->FriendlyName() << ", " << count_->FriendlyName() << ">";
     return out.str();
 }
 
 TypeAndCount BindingArray::Elements([[maybe_unused]] const Type*, [[maybe_unused]] uint32_t) const {
-    return {element_, count_};
+    return {element_, count_->As<ConstantArrayCount>()->value};
 }
 
 const Type* BindingArray::Element(uint32_t index) const {
-    return index < count_ ? element_ : nullptr;
+    return index < count_->As<ConstantArrayCount>()->value ? element_ : nullptr;
 }
 
 BindingArray* BindingArray::Clone(CloneContext& ctx) const {

@@ -282,6 +282,7 @@ source_set("native_mocks_sources") {
 
 dawn_test("dawn_unittests") {
   deps = [
+    ":dawn_test_support",
     ":gmock_and_gtest",
     ":mock_webgpu_gen",
     ":native_mocks_sources",
@@ -353,6 +354,7 @@ dawn_test("dawn_unittests") {
     "unittests/RingBufferAllocatorTests.cpp",
     "unittests/SerialMapTests.cpp",
     "unittests/SerialQueueTests.cpp",
+    "unittests/Sha3Tests.cpp",
     "unittests/SlabAllocatorTests.cpp",
     "unittests/SubresourceStorageTests.cpp",
     "unittests/SystemUtilsTests.cpp",
@@ -629,6 +631,7 @@ source_set("end2end_tests_sources") {
     "end2end/FramebufferFetchTests.cpp",
     "end2end/GpuMemorySynchronizationTests.cpp",
     "end2end/HistogramTests.cpp",
+    "end2end/ImmediateDataTests.cpp",
     "end2end/IndexFormatTests.cpp",
     "end2end/InfiniteLoopTests.cpp",
     "end2end/MaxLimitTests.cpp",
@@ -667,6 +670,7 @@ source_set("end2end_tests_sources") {
     "end2end/ShaderTests.cpp",
     "end2end/ShaderValidationTests.cpp",
     "end2end/StorageTextureTests.cpp",
+    "end2end/SubgroupMatrixTests.cpp",
     "end2end/SubgroupsTests.cpp",
     "end2end/SubresourceRenderAttachmentTests.cpp",
     "end2end/Texture3DTests.cpp",
@@ -729,7 +733,10 @@ source_set("end2end_tests_sources") {
   }
 
   if (dawn_enable_vulkan) {
-    sources += [ "end2end/YCbCrInfoTests.cpp" ]
+    sources += [
+      "end2end/AllocatorMemoryInstrumentationTests.cpp",
+      "end2end/YCbCrInfoTests.cpp",
+    ]
   }
 
   if (dawn_enable_d3d11 || dawn_enable_d3d12 ||
@@ -866,6 +873,7 @@ source_set("white_box_tests_sources") {
 
 dawn_test("dawn_end2end_tests") {
   deps = [
+    ":dawn_test_support",
     ":end2end_tests_sources",
     ":test_infra_sources",
     ":white_box_tests_sources",
@@ -893,6 +901,7 @@ dawn_test("dawn_end2end_tests") {
 
 dawn_test("dawn_perf_tests") {
   deps = [
+    ":dawn_test_support",
     ":test_infra_sources",
     "${dawn_root}/include/dawn:cpp_headers",
     "${dawn_root}/src/dawn:proc",
@@ -931,4 +940,17 @@ dawn_test("dawn_perf_tests") {
   if (dawn_enable_metal) {
     frameworks = [ "IOSurface.framework" ]
   }
+}
+
+###############################################################################
+# Shared Dawn test code
+###############################################################################
+
+source_set("dawn_test_support") {
+  deps = [ "${dawn_root}/src/dawn/common" ]
+
+  sources = [
+    "ChromiumTestCompat.cpp",
+    "ChromiumTestCompat.h",
+  ]
 }

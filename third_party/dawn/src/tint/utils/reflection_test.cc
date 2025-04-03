@@ -137,24 +137,20 @@ TEST(TintCheckAllFieldsReflected, Tests) {
 
     auto missing_first = reflection::detail::CheckAllFieldsReflected<MissingFirst>();
     ASSERT_NE(missing_first, Success);
-    EXPECT_THAT(missing_first.Failure().reason.Str(), testing::HasSubstr("reflection_test.cc"));
-    EXPECT_THAT(missing_first.Failure().reason.Str(),
-                testing::HasSubstr(R"(error: TINT_REFLECT(MissingFirst, ...) field mismatch at 'b'.
+    EXPECT_THAT(missing_first.Failure().reason,
+                testing::HasSubstr(R"(TINT_REFLECT(MissingFirst, ...) field mismatch at 'b'.
 Expected field offset of 0 bytes, but field was at 4 bytes)"));
 
     auto missing_mid = reflection::detail::CheckAllFieldsReflected<MissingMid>();
     ASSERT_NE(missing_mid, Success);
-    EXPECT_THAT(missing_mid.Failure().reason.Str(), testing::HasSubstr("reflection_test.cc"));
-    EXPECT_THAT(missing_mid.Failure().reason.Str(),
-                testing::HasSubstr(R"(error: TINT_REFLECT(MissingMid, ...) field mismatch at 'c'.
+    EXPECT_THAT(missing_mid.Failure().reason,
+                testing::HasSubstr(R"(TINT_REFLECT(MissingMid, ...) field mismatch at 'c'.
 Expected field offset of 4 bytes, but field was at 8 bytes)"));
 
     auto missing_last = reflection::detail::CheckAllFieldsReflected<MissingLast>();
     ASSERT_NE(missing_last, Success);
-    EXPECT_THAT(missing_last.Failure().reason.Str(), testing::HasSubstr("reflection_test.cc"));
-    EXPECT_THAT(
-        missing_last.Failure().reason.Str(),
-        testing::HasSubstr(R"(error: TINT_REFLECT(MissingLast, ...) missing fields at end of class
+    EXPECT_THAT(missing_last.Failure().reason,
+                testing::HasSubstr(R"(TINT_REFLECT(MissingLast, ...) missing fields at end of class
 Expected class size of 8 bytes, but class is 12 bytes)"));
 }
 

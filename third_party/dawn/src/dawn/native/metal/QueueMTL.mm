@@ -138,8 +138,6 @@ MaybeError Queue::SubmitPendingCommandBuffer() {
 
     auto platform = GetDevice()->GetPlatform();
 
-    IncrementLastSubmittedCommandSerial();
-
     // Acquire the pending command buffer, which is retained. It must be released later.
     NSPRef<id<MTLCommandBuffer>> pendingCommands = mCommandContext.AcquireCommands();
 
@@ -164,7 +162,7 @@ MaybeError Queue::SubmitPendingCommandBuffer() {
 
     // Update the completed serial once the completed handler is fired. Make a local copy of
     // mLastSubmittedSerial so it is captured by value.
-    ExecutionSerial pendingSerial = GetLastSubmittedCommandSerial();
+    ExecutionSerial pendingSerial = GetPendingCommandSerial();
     // this ObjC block runs on a different thread
     [*pendingCommands addCompletedHandler:^(id<MTLCommandBuffer>) {
         TRACE_EVENT_ASYNC_END0(platform, GPUWork, "DeviceMTL::SubmitPendingCommandBuffer",
@@ -189,6 +187,7 @@ MaybeError Queue::SubmitPendingCommandBuffer() {
                                   value:static_cast<uint64_t>(pendingSerial)];
 
     [*pendingCommands commit];
+    IncrementLastSubmittedCommandSerial();
 
     return mCommandContext.PrepareNextCommandBuffer(*mCommandQueue);
 }

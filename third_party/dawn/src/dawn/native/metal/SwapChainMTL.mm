@@ -113,9 +113,8 @@ ResultOrError<SwapChainTextureInfo> SwapChain::GetCurrentTextureImpl() {
 
         SwapChainTextureInfo info;
         info.texture = mTexture;
-        info.status = wgpu::SurfaceGetCurrentTextureStatus::Success;
+        info.status = wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal;
         // TODO(dawn:2320): Check for optimality
-        info.suboptimal = false;
         return info;
     }
 }

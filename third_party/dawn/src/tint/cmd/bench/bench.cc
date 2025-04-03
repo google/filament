@@ -52,7 +52,7 @@ Result<ProgramAndFile> GetWgslProgram(std::string name) {
     auto file = std::make_unique<Source::File>(res.Get());
     auto program = wgsl::reader::Parse(file.get());
     if (!program.IsValid()) {
-        return Failure{program.Diagnostics()};
+        return Failure{program.Diagnostics().Str()};
     }
     return ProgramAndFile{std::move(program), std::move(file)};
 }

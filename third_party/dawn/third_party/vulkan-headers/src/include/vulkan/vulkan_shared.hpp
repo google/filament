@@ -315,6 +315,9 @@ namespace VULKAN_HPP_NAMESPACE
 #  if defined( __GNUC__ ) && !defined( __clang__ ) && !defined( __INTEL_COMPILER )
 #    pragma GCC diagnostic push
 #    pragma GCC diagnostic ignored "-Wcast-function-type"
+#  elif defined( __clang__ ) && ( __clang_major__ >= 13 ) && !defined( __INTEL_COMPILER )
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wcast-function-type"
 #  endif
 
     template <typename HandleType>
@@ -459,6 +462,8 @@ namespace VULKAN_HPP_NAMESPACE
 
 #  if defined( __GNUC__ ) && !defined( __clang__ ) && !defined( __INTEL_COMPILER )
 #    pragma GCC diagnostic pop
+#  elif defined( __clang__ ) && ( __clang_major__ >= 13 ) && !defined( __INTEL_COMPILER )
+#    pragma clang diagnostic pop
 #  endif
 
   }  // namespace detail

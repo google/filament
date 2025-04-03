@@ -728,7 +728,7 @@ TEST_F(WireBufferMappingTests, MaxSizeMappableBufferOOMDirectly) {
 }
 
 // Test that registering a callback then wire disconnect calls the callback with
-// InstanceDropped.
+// CallbackCancelled.
 TEST_P(WireBufferMappingTests, MapThenDisconnect) {
     wgpu::MapMode mapMode = GetMapMode();
     MapAsync(mapMode, 0, kBufferSize);
@@ -744,20 +744,20 @@ TEST_P(WireBufferMappingTests, MapThenDisconnect) {
 
     FlushClient();
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::MapAsyncStatus::InstanceDropped, _)).Times(1);
+        EXPECT_CALL(mockCb, Call(wgpu::MapAsyncStatus::CallbackCancelled, _)).Times(1);
 
         GetWireClient()->Disconnect();
     });
 }
 
 // Test that registering a callback after wire disconnect calls the callback with
-// InstanceDropped.
+// CallbackCancelled.
 TEST_P(WireBufferMappingTests, MapAfterDisconnect) {
     wgpu::MapMode mapMode = GetMapMode();
     GetWireClient()->Disconnect();
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::MapAsyncStatus::InstanceDropped, _)).Times(1);
+        EXPECT_CALL(mockCb, Call(wgpu::MapAsyncStatus::CallbackCancelled, _)).Times(1);
 
         MapAsync(mapMode, 0, kBufferSize);
     });
@@ -912,7 +912,7 @@ TEST_P(WireBufferMappingTests, MapInsideCallbackBeforeDisconnect) {
 
     static constexpr size_t kNumRequests = 10;
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::MapAsyncStatus::InstanceDropped, _))
+        EXPECT_CALL(mockCb, Call(wgpu::MapAsyncStatus::CallbackCancelled, _))
             .Times(kNumRequests + 1)
             .WillOnce([&]() {
                 for (size_t i = 0; i < kNumRequests; i++) {

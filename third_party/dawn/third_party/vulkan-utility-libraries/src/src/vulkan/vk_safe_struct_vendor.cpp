@@ -7909,6 +7909,7 @@ void safe_VkDeviceDiagnosticsConfigCreateInfoNV::initialize(const safe_VkDeviceD
     flags = copy_src->flags;
     pNext = SafePnextCopy(copy_src->pNext);
 }
+#ifdef VK_ENABLE_BETA_EXTENSIONS
 
 safe_VkCudaModuleCreateInfoNV::safe_VkCudaModuleCreateInfoNV(const VkCudaModuleCreateInfoNV* in_struct,
                                                              [[maybe_unused]] PNextCopyState* copy_state, bool copy_pnext)
@@ -8272,6 +8273,7 @@ void safe_VkPhysicalDeviceCudaKernelLaunchPropertiesNV::initialize(
     computeCapabilityMajor = copy_src->computeCapabilityMajor;
     pNext = SafePnextCopy(copy_src->pNext);
 }
+#endif  // VK_ENABLE_BETA_EXTENSIONS
 
 safe_VkQueryLowLatencySupportNV::safe_VkQueryLowLatencySupportNV(const VkQueryLowLatencySupportNV* in_struct,
                                                                  [[maybe_unused]] PNextCopyState* copy_state, bool copy_pnext)
@@ -11127,201 +11129,6 @@ void safe_VkRenderPassStripeSubmitInfoARM::initialize(const safe_VkRenderPassStr
         for (uint32_t i = 0; i < stripeSemaphoreInfoCount; ++i) {
             pStripeSemaphoreInfos[i].initialize(&copy_src->pStripeSemaphoreInfos[i]);
         }
-    }
-}
-
-safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM::safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM(
-    const VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM* in_struct, [[maybe_unused]] PNextCopyState* copy_state,
-    bool copy_pnext)
-    : sType(in_struct->sType), fragmentDensityMapOffset(in_struct->fragmentDensityMapOffset) {
-    if (copy_pnext) {
-        pNext = SafePnextCopy(in_struct->pNext, copy_state);
-    }
-}
-
-safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM::safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM()
-    : sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_FEATURES_QCOM),
-      pNext(nullptr),
-      fragmentDensityMapOffset() {}
-
-safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM::safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM(
-    const safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM& copy_src) {
-    sType = copy_src.sType;
-    fragmentDensityMapOffset = copy_src.fragmentDensityMapOffset;
-    pNext = SafePnextCopy(copy_src.pNext);
-}
-
-safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM& safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM::operator=(
-    const safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM& copy_src) {
-    if (&copy_src == this) return *this;
-
-    FreePnextChain(pNext);
-
-    sType = copy_src.sType;
-    fragmentDensityMapOffset = copy_src.fragmentDensityMapOffset;
-    pNext = SafePnextCopy(copy_src.pNext);
-
-    return *this;
-}
-
-safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM::~safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM() {
-    FreePnextChain(pNext);
-}
-
-void safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM::initialize(
-    const VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM* in_struct, [[maybe_unused]] PNextCopyState* copy_state) {
-    FreePnextChain(pNext);
-    sType = in_struct->sType;
-    fragmentDensityMapOffset = in_struct->fragmentDensityMapOffset;
-    pNext = SafePnextCopy(in_struct->pNext, copy_state);
-}
-
-void safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM::initialize(
-    const safe_VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM* copy_src, [[maybe_unused]] PNextCopyState* copy_state) {
-    sType = copy_src->sType;
-    fragmentDensityMapOffset = copy_src->fragmentDensityMapOffset;
-    pNext = SafePnextCopy(copy_src->pNext);
-}
-
-safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM::safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM(
-    const VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM* in_struct, [[maybe_unused]] PNextCopyState* copy_state,
-    bool copy_pnext)
-    : sType(in_struct->sType), fragmentDensityOffsetGranularity(in_struct->fragmentDensityOffsetGranularity) {
-    if (copy_pnext) {
-        pNext = SafePnextCopy(in_struct->pNext, copy_state);
-    }
-}
-
-safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM::safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM()
-    : sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_PROPERTIES_QCOM),
-      pNext(nullptr),
-      fragmentDensityOffsetGranularity() {}
-
-safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM::safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM(
-    const safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM& copy_src) {
-    sType = copy_src.sType;
-    fragmentDensityOffsetGranularity = copy_src.fragmentDensityOffsetGranularity;
-    pNext = SafePnextCopy(copy_src.pNext);
-}
-
-safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM& safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM::operator=(
-    const safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM& copy_src) {
-    if (&copy_src == this) return *this;
-
-    FreePnextChain(pNext);
-
-    sType = copy_src.sType;
-    fragmentDensityOffsetGranularity = copy_src.fragmentDensityOffsetGranularity;
-    pNext = SafePnextCopy(copy_src.pNext);
-
-    return *this;
-}
-
-safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM::~safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM() {
-    FreePnextChain(pNext);
-}
-
-void safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM::initialize(
-    const VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM* in_struct, [[maybe_unused]] PNextCopyState* copy_state) {
-    FreePnextChain(pNext);
-    sType = in_struct->sType;
-    fragmentDensityOffsetGranularity = in_struct->fragmentDensityOffsetGranularity;
-    pNext = SafePnextCopy(in_struct->pNext, copy_state);
-}
-
-void safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM::initialize(
-    const safe_VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM* copy_src, [[maybe_unused]] PNextCopyState* copy_state) {
-    sType = copy_src->sType;
-    fragmentDensityOffsetGranularity = copy_src->fragmentDensityOffsetGranularity;
-    pNext = SafePnextCopy(copy_src->pNext);
-}
-
-safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM::safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM(
-    const VkSubpassFragmentDensityMapOffsetEndInfoQCOM* in_struct, [[maybe_unused]] PNextCopyState* copy_state, bool copy_pnext)
-    : sType(in_struct->sType), fragmentDensityOffsetCount(in_struct->fragmentDensityOffsetCount), pFragmentDensityOffsets(nullptr) {
-    if (copy_pnext) {
-        pNext = SafePnextCopy(in_struct->pNext, copy_state);
-    }
-    if (in_struct->pFragmentDensityOffsets) {
-        pFragmentDensityOffsets = new VkOffset2D[in_struct->fragmentDensityOffsetCount];
-        memcpy((void*)pFragmentDensityOffsets, (void*)in_struct->pFragmentDensityOffsets,
-               sizeof(VkOffset2D) * in_struct->fragmentDensityOffsetCount);
-    }
-}
-
-safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM::safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM()
-    : sType(VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM),
-      pNext(nullptr),
-      fragmentDensityOffsetCount(),
-      pFragmentDensityOffsets(nullptr) {}
-
-safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM::safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM(
-    const safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM& copy_src) {
-    sType = copy_src.sType;
-    fragmentDensityOffsetCount = copy_src.fragmentDensityOffsetCount;
-    pFragmentDensityOffsets = nullptr;
-    pNext = SafePnextCopy(copy_src.pNext);
-
-    if (copy_src.pFragmentDensityOffsets) {
-        pFragmentDensityOffsets = new VkOffset2D[copy_src.fragmentDensityOffsetCount];
-        memcpy((void*)pFragmentDensityOffsets, (void*)copy_src.pFragmentDensityOffsets,
-               sizeof(VkOffset2D) * copy_src.fragmentDensityOffsetCount);
-    }
-}
-
-safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM& safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM::operator=(
-    const safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM& copy_src) {
-    if (&copy_src == this) return *this;
-
-    if (pFragmentDensityOffsets) delete[] pFragmentDensityOffsets;
-    FreePnextChain(pNext);
-
-    sType = copy_src.sType;
-    fragmentDensityOffsetCount = copy_src.fragmentDensityOffsetCount;
-    pFragmentDensityOffsets = nullptr;
-    pNext = SafePnextCopy(copy_src.pNext);
-
-    if (copy_src.pFragmentDensityOffsets) {
-        pFragmentDensityOffsets = new VkOffset2D[copy_src.fragmentDensityOffsetCount];
-        memcpy((void*)pFragmentDensityOffsets, (void*)copy_src.pFragmentDensityOffsets,
-               sizeof(VkOffset2D) * copy_src.fragmentDensityOffsetCount);
-    }
-
-    return *this;
-}
-
-safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM::~safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM() {
-    if (pFragmentDensityOffsets) delete[] pFragmentDensityOffsets;
-    FreePnextChain(pNext);
-}
-
-void safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM::initialize(const VkSubpassFragmentDensityMapOffsetEndInfoQCOM* in_struct,
-                                                                   [[maybe_unused]] PNextCopyState* copy_state) {
-    if (pFragmentDensityOffsets) delete[] pFragmentDensityOffsets;
-    FreePnextChain(pNext);
-    sType = in_struct->sType;
-    fragmentDensityOffsetCount = in_struct->fragmentDensityOffsetCount;
-    pFragmentDensityOffsets = nullptr;
-    pNext = SafePnextCopy(in_struct->pNext, copy_state);
-
-    if (in_struct->pFragmentDensityOffsets) {
-        pFragmentDensityOffsets = new VkOffset2D[in_struct->fragmentDensityOffsetCount];
-        memcpy((void*)pFragmentDensityOffsets, (void*)in_struct->pFragmentDensityOffsets,
-               sizeof(VkOffset2D) * in_struct->fragmentDensityOffsetCount);
-    }
-}
-
-void safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM::initialize(
-    const safe_VkSubpassFragmentDensityMapOffsetEndInfoQCOM* copy_src, [[maybe_unused]] PNextCopyState* copy_state) {
-    sType = copy_src->sType;
-    fragmentDensityOffsetCount = copy_src->fragmentDensityOffsetCount;
-    pFragmentDensityOffsets = nullptr;
-    pNext = SafePnextCopy(copy_src->pNext);
-
-    if (copy_src->pFragmentDensityOffsets) {
-        pFragmentDensityOffsets = new VkOffset2D[copy_src->fragmentDensityOffsetCount];
-        memcpy((void*)pFragmentDensityOffsets, (void*)copy_src->pFragmentDensityOffsets,
-               sizeof(VkOffset2D) * copy_src->fragmentDensityOffsetCount);
     }
 }
 
@@ -17714,6 +17521,106 @@ void safe_VkPhysicalDevicePipelineOpacityMicromapFeaturesARM::initialize(
     pipelineOpacityMicromap = copy_src->pipelineOpacityMicromap;
     pNext = SafePnextCopy(copy_src->pNext);
 }
+#ifdef VK_ENABLE_BETA_EXTENSIONS
+
+safe_VkSetPresentConfigNV::safe_VkSetPresentConfigNV(const VkSetPresentConfigNV* in_struct,
+                                                     [[maybe_unused]] PNextCopyState* copy_state, bool copy_pnext)
+    : sType(in_struct->sType),
+      numFramesPerBatch(in_struct->numFramesPerBatch),
+      presentConfigFeedback(in_struct->presentConfigFeedback) {
+    if (copy_pnext) {
+        pNext = SafePnextCopy(in_struct->pNext, copy_state);
+    }
+}
+
+safe_VkSetPresentConfigNV::safe_VkSetPresentConfigNV()
+    : sType(VK_STRUCTURE_TYPE_SET_PRESENT_CONFIG_NV), pNext(nullptr), numFramesPerBatch(), presentConfigFeedback() {}
+
+safe_VkSetPresentConfigNV::safe_VkSetPresentConfigNV(const safe_VkSetPresentConfigNV& copy_src) {
+    sType = copy_src.sType;
+    numFramesPerBatch = copy_src.numFramesPerBatch;
+    presentConfigFeedback = copy_src.presentConfigFeedback;
+    pNext = SafePnextCopy(copy_src.pNext);
+}
+
+safe_VkSetPresentConfigNV& safe_VkSetPresentConfigNV::operator=(const safe_VkSetPresentConfigNV& copy_src) {
+    if (&copy_src == this) return *this;
+
+    FreePnextChain(pNext);
+
+    sType = copy_src.sType;
+    numFramesPerBatch = copy_src.numFramesPerBatch;
+    presentConfigFeedback = copy_src.presentConfigFeedback;
+    pNext = SafePnextCopy(copy_src.pNext);
+
+    return *this;
+}
+
+safe_VkSetPresentConfigNV::~safe_VkSetPresentConfigNV() { FreePnextChain(pNext); }
+
+void safe_VkSetPresentConfigNV::initialize(const VkSetPresentConfigNV* in_struct, [[maybe_unused]] PNextCopyState* copy_state) {
+    FreePnextChain(pNext);
+    sType = in_struct->sType;
+    numFramesPerBatch = in_struct->numFramesPerBatch;
+    presentConfigFeedback = in_struct->presentConfigFeedback;
+    pNext = SafePnextCopy(in_struct->pNext, copy_state);
+}
+
+void safe_VkSetPresentConfigNV::initialize(const safe_VkSetPresentConfigNV* copy_src, [[maybe_unused]] PNextCopyState* copy_state) {
+    sType = copy_src->sType;
+    numFramesPerBatch = copy_src->numFramesPerBatch;
+    presentConfigFeedback = copy_src->presentConfigFeedback;
+    pNext = SafePnextCopy(copy_src->pNext);
+}
+
+safe_VkPhysicalDevicePresentMeteringFeaturesNV::safe_VkPhysicalDevicePresentMeteringFeaturesNV(
+    const VkPhysicalDevicePresentMeteringFeaturesNV* in_struct, [[maybe_unused]] PNextCopyState* copy_state, bool copy_pnext)
+    : sType(in_struct->sType), presentMetering(in_struct->presentMetering) {
+    if (copy_pnext) {
+        pNext = SafePnextCopy(in_struct->pNext, copy_state);
+    }
+}
+
+safe_VkPhysicalDevicePresentMeteringFeaturesNV::safe_VkPhysicalDevicePresentMeteringFeaturesNV()
+    : sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_METERING_FEATURES_NV), pNext(nullptr), presentMetering() {}
+
+safe_VkPhysicalDevicePresentMeteringFeaturesNV::safe_VkPhysicalDevicePresentMeteringFeaturesNV(
+    const safe_VkPhysicalDevicePresentMeteringFeaturesNV& copy_src) {
+    sType = copy_src.sType;
+    presentMetering = copy_src.presentMetering;
+    pNext = SafePnextCopy(copy_src.pNext);
+}
+
+safe_VkPhysicalDevicePresentMeteringFeaturesNV& safe_VkPhysicalDevicePresentMeteringFeaturesNV::operator=(
+    const safe_VkPhysicalDevicePresentMeteringFeaturesNV& copy_src) {
+    if (&copy_src == this) return *this;
+
+    FreePnextChain(pNext);
+
+    sType = copy_src.sType;
+    presentMetering = copy_src.presentMetering;
+    pNext = SafePnextCopy(copy_src.pNext);
+
+    return *this;
+}
+
+safe_VkPhysicalDevicePresentMeteringFeaturesNV::~safe_VkPhysicalDevicePresentMeteringFeaturesNV() { FreePnextChain(pNext); }
+
+void safe_VkPhysicalDevicePresentMeteringFeaturesNV::initialize(const VkPhysicalDevicePresentMeteringFeaturesNV* in_struct,
+                                                                [[maybe_unused]] PNextCopyState* copy_state) {
+    FreePnextChain(pNext);
+    sType = in_struct->sType;
+    presentMetering = in_struct->presentMetering;
+    pNext = SafePnextCopy(in_struct->pNext, copy_state);
+}
+
+void safe_VkPhysicalDevicePresentMeteringFeaturesNV::initialize(const safe_VkPhysicalDevicePresentMeteringFeaturesNV* copy_src,
+                                                                [[maybe_unused]] PNextCopyState* copy_state) {
+    sType = copy_src->sType;
+    presentMetering = copy_src->presentMetering;
+    pNext = SafePnextCopy(copy_src->pNext);
+}
+#endif  // VK_ENABLE_BETA_EXTENSIONS
 
 }  // namespace vku
 

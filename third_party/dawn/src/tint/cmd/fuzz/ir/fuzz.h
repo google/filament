@@ -38,6 +38,7 @@
 #include "src/tint/utils/bytes/decoder.h"
 #include "src/tint/utils/containers/slice.h"
 #include "src/tint/utils/macros/static_init.h"
+#include "src/tint/utils/result.h"
 
 namespace tint::core::ir {
 class Module;

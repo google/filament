@@ -27,14 +27,13 @@
 
 #include "src/tint/lang/glsl/writer/common/option_helpers.h"
 
-#include <iostream>
 #include <utility>
 
 #include "src/tint/utils/containers/hashmap.h"
 
 namespace tint::glsl::writer {
 
-Result<SuccessType> ValidateBindingOptions(const Options& options) {
+diag::Result<SuccessType> ValidateBindingOptions(const Options& options) {
     diag::List diagnostics;
 
     tint::Hashmap<tint::BindingPoint, binding::BindingInfo, 8> seen_wgsl_bindings{};
@@ -87,25 +86,25 @@ Result<SuccessType> ValidateBindingOptions(const Options& options) {
 
     if (!valid(options.bindings.uniform)) {
         diagnostics.AddNote(Source{}) << "when processing uniform";
-        return Failure{std::move(diagnostics)};
+        return diag::Failure{std::move(diagnostics)};
     }
     if (!valid(options.bindings.storage)) {
         diagnostics.AddNote(Source{}) << "when processing storage";
-        return Failure{std::move(diagnostics)};
+        return diag::Failure{std::move(diagnostics)};
     }
 
     if (!valid(options.bindings.sampler)) {
         diagnostics.AddNote(Source{}) << "when processing sampler";
-        return Failure{std::move(diagnostics)};
+        return diag::Failure{std::move(diagnostics)};
     }
 
     if (!valid(options.bindings.texture)) {
         diagnostics.AddNote(Source{}) << "when processing texture";
-        return Failure{std::move(diagnostics)};
+        return diag::Failure{std::move(diagnostics)};
     }
     if (!valid(options.bindings.storage_texture)) {
         diagnostics.AddNote(Source{}) << "when processing storage_texture";
-        return Failure{std::move(diagnostics)};
+        return diag::Failure{std::move(diagnostics)};
     }
 
     for (const auto& it : options.bindings.external_texture) {
@@ -117,20 +116,20 @@ Result<SuccessType> ValidateBindingOptions(const Options& options) {
         // Validate with the actual source regardless of what the remapper will do
         if (wgsl_seen(src_binding, plane0)) {
             diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return Failure{std::move(diagnostics)};
+            return diag::Failure{std::move(diagnostics)};
         }
 
         if (glsl_seen(plane0, src_binding)) {
             diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return Failure{std::move(diagnostics)};
+            return diag::Failure{std::move(diagnostics)};
         }
         if (glsl_seen(plane1, src_binding)) {
             diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return Failure{std::move(diagnostics)};
+            return diag::Failure{std::move(diagnostics)};
         }
         if (glsl_seen(metadata, src_binding)) {
             diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return Failure{std::move(diagnostics)};
+            return diag::Failure{std::move(diagnostics)};
         }
     }
 

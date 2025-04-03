@@ -112,13 +112,17 @@ inline std::ostream& operator<<(std::ostream& out, Case c) {
 }
 
 static constexpr Case kValidCases[] = {
+    {"subgroup_matrix_uniformity", ChromiumDiagnosticRule::kSubgroupMatrixUniformity},
     {"unreachable_code", ChromiumDiagnosticRule::kUnreachableCode},
 };
 
 static constexpr Case kInvalidCases[] = {
-    {"pqnreachableHHcode", ChromiumDiagnosticRule::kUndefined},
-    {"unrechcbe_cov", ChromiumDiagnosticRule::kUndefined},
-    {"unreachGblecode", ChromiumDiagnosticRule::kUndefined},
+    {"subgroppHp_matriqq_uiformity", ChromiumDiagnosticRule::kUndefined},
+    {"subroup_matrcx_niformit", ChromiumDiagnosticRule::kUndefined},
+    {"subroupGmatrbx_uniformity", ChromiumDiagnosticRule::kUndefined},
+    {"vnriiachable_code", ChromiumDiagnosticRule::kUndefined},
+    {"unreac8ablWW_code", ChromiumDiagnosticRule::kUndefined},
+    {"unreMchablxxcode", ChromiumDiagnosticRule::kUndefined},
 };
 
 using ChromiumDiagnosticRuleParseTest = testing::TestWithParam<Case>;

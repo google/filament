@@ -68,7 +68,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_Increment) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, u32, read_write> = var
+  %v1:ptr<private, u32, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -91,7 +91,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_CompoundAdd) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, u32, read_write> = var
+  %v1:ptr<private, u32, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -138,7 +138,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_Decrement) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, i32, read_write> = var
+  %v1:ptr<private, i32, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -161,7 +161,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_CompoundSubtract) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, u32, read_write> = var
+  %v1:ptr<private, u32, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -208,7 +208,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_CompoundMultiply) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, u32, read_write> = var
+  %v1:ptr<private, u32, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -255,7 +255,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_CompoundDiv) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, u32, read_write> = var
+  %v1:ptr<private, u32, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -302,7 +302,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_CompoundModulo) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, u32, read_write> = var
+  %v1:ptr<private, u32, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -349,7 +349,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_CompoundAnd) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, bool, read_write> = var
+  %v1:ptr<private, bool, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -396,7 +396,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_CompoundOr) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, bool, read_write> = var
+  %v1:ptr<private, bool, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -443,7 +443,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_CompoundXor) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, u32, read_write> = var
+  %v1:ptr<private, u32, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -708,7 +708,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_CompoundShiftLeft) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, u32, read_write> = var
+  %v1:ptr<private, u32, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -755,7 +755,7 @@ TEST_F(ProgramToIRBinaryTest, EmitExpression_Binary_CompoundShiftRight) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %v1:ptr<private, u32, read_write> = var
+  %v1:ptr<private, u32, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {

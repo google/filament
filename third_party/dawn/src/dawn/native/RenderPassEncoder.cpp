@@ -32,6 +32,7 @@
 #include <utility>
 
 #include "dawn/common/Constants.h"
+#include "dawn/native/Adapter.h"
 #include "dawn/native/Buffer.h"
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/CommandEncoder.h"
@@ -42,6 +43,7 @@
 #include "dawn/native/QuerySet.h"
 #include "dawn/native/RenderBundle.h"
 #include "dawn/native/RenderPipeline.h"
+#include "dawn/native/ValidationUtils.h"
 
 namespace dawn::native {
 namespace {
@@ -220,6 +222,9 @@ void RenderPassEncoder::APISetBlendConstant(const Color* color) {
     mEncodingContext->TryEncode(
         this,
         [&](CommandAllocator* allocator) -> MaybeError {
+            if (IsValidationEnabled()) {
+                DAWN_TRY(ValidateColor("color", *color));
+            }
             SetBlendConstantCmd* cmd =
                 allocator->Allocate<SetBlendConstantCmd>(Command::SetBlendConstant);
             cmd->color = *color;
@@ -239,24 +244,45 @@ void RenderPassEncoder::APISetViewport(float x,
         this,
         [&](CommandAllocator* allocator) -> MaybeError {
             if (IsValidationEnabled()) {
-                DAWN_INVALID_IF((isnan(x) || isnan(y) || isnan(width) || isnan(height) ||
-                                 isnan(minDepth) || isnan(maxDepth)),
-                                "A parameter of the viewport (x: %f, y: %f, width: %f, height: %f, "
-                                "minDepth: %f, maxDepth: %f) is NaN.",
-                                x, y, width, height, minDepth, maxDepth);
+                DAWN_TRY(ValidateFloat("x", x));
+                DAWN_TRY(ValidateFloat("y", y));
+                DAWN_TRY(ValidateFloat("width", width));
+                DAWN_TRY(ValidateFloat("height", height));
+                DAWN_TRY(ValidateFloat("minDepth", minDepth));
+                DAWN_TRY(ValidateFloat("maxDepth", maxDepth));
+
+                const CombinedLimits& limits = GetDevice()->GetLimits();
+                uint32_t maxViewportSize = limits.v1.maxTextureDimension2D;
+                float maxViewportBounds = maxViewportSize * 2.0;
 
                 DAWN_INVALID_IF(
-                    x < 0 || y < 0 || width < 0 || height < 0,
-                    "Viewport bounds (x: %f, y: %f, width: %f, height: %f) contains a negative "
-                    "value.",
-                    x, y, width, height);
+                    width < 0 || height < 0,
+                    "Viewport bounds (width: %f, height: %f) contains a negative value.", width,
+                    height);
 
                 DAWN_INVALID_IF(
-                    x + width > mRenderTargetWidth || y + height > mRenderTargetHeight,
-                    "Viewport bounds (x: %f, y: %f, width: %f, height: %f) are not contained "
-                    "in "
-                    "the render target dimensions (%u x %u).",
-                    x, y, width, height, mRenderTargetWidth, mRenderTargetHeight);
+                    width > maxViewportSize, "Viewport width (%f) exceeds the maximum (%u).%s",
+                    width, maxViewportSize,
+                    DAWN_INCREASE_LIMIT_MESSAGE(GetDevice()->GetAdapter()->GetLimits().v1,
+                                                maxTextureDimension2D, width));
+
+                DAWN_INVALID_IF(
+                    height > maxViewportSize,
+                    "Viewport size height (%f) exceeds the maximum (%u).%s", height,
+                    maxViewportSize,
+                    DAWN_INCREASE_LIMIT_MESSAGE(GetDevice()->GetAdapter()->GetLimits().v1,
+                                                maxTextureDimension2D, height));
+
+                DAWN_INVALID_IF(x < -maxViewportBounds || y < -maxViewportBounds,
+                                "Viewport offset (x: %f, y: %f) is less than the minimum "
+                                "supported bounds (%f x %f).",
+                                x, y, -maxViewportBounds, -maxViewportBounds);
+
+                DAWN_INVALID_IF(
+                    x + width > maxViewportBounds - 1 || y + height > maxViewportBounds - 1,
+                    "Viewport bounds (x: %f, y: %f, width: %f, height: %f) exceed "
+                    "the maximum supported bounds (%f x %f).",
+                    x, y, width, height, maxViewportBounds - 1, maxViewportBounds - 1);
 
                 // Check for depths being in [0, 1] and min <= max in 3 checks instead of 5.
                 DAWN_INVALID_IF(minDepth < 0 || minDepth > maxDepth || maxDepth > 1,

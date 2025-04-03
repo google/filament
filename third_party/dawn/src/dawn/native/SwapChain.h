@@ -43,7 +43,6 @@ TextureDescriptor GetSwapChainBaseTextureDescriptor(SwapChainBase* swapChain);
 
 struct SwapChainTextureInfo {
     Ref<TextureBase> texture;
-    wgpu::Bool suboptimal;
     wgpu::SurfaceGetCurrentTextureStatus status;
 };
 

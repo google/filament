@@ -70,7 +70,7 @@ class AdapterCreationTest : public ::testing::TestWithParam<wgpu::CallbackMode> 
                 wgpu::AdapterInfo info;
                 wgpu::Adapter adapter = wgpu::Adapter(nativeAdapter.Get());
                 adapter.GetInfo(&info);
-                if (info.compatibilityMode) {
+                if (!adapter.HasFeature(wgpu::FeatureName::CoreFeaturesAndLimits)) {
                     continue;
                 }
                 swiftShaderAvailable |= gpu_info::IsGoogleSwiftshader(info.vendorID, info.deviceID);
@@ -133,7 +133,7 @@ TEST_P(AdapterCreationTest, DefaultNonCompatAdapter) {
 
     wgpu::AdapterInfo info;
     adapter.GetInfo(&info);
-    EXPECT_FALSE(info.compatibilityMode);
+    EXPECT_TRUE(adapter.HasFeature(wgpu::FeatureName::CoreFeaturesAndLimits));
 }
 
 // Test that passing nullptr for the options gets the default adapter
@@ -236,9 +236,6 @@ TEST_P(AdapterCreationTest, Compatibility) {
     RequestAdapter(instance, &options);
 
     EXPECT_EQ(adapter != nullptr, anyAdapterAvailable);
-    wgpu::AdapterInfo info;
-    adapter.GetInfo(&info);
-    EXPECT_TRUE(info.compatibilityMode);
 }
 
 // Test that GetInstance() returns the correct Instance.
@@ -311,7 +308,6 @@ TEST_P(AdapterCreationTest, InfoMoveAssign) {
     wgpu::AdapterType adapterType = info1.adapterType;
     uint32_t vendorID = info1.vendorID;
     uint32_t deviceID = info1.deviceID;
-    bool compatibilityMode = info1.compatibilityMode;
 
     info2 = std::move(info1);
 
@@ -324,7 +320,6 @@ TEST_P(AdapterCreationTest, InfoMoveAssign) {
     EXPECT_EQ(info2.adapterType, adapterType);
     EXPECT_EQ(info2.vendorID, vendorID);
     EXPECT_EQ(info2.deviceID, deviceID);
-    EXPECT_EQ(info2.compatibilityMode, compatibilityMode);
 
     // Expect info1 to be empty.
     EXPECT_EQ(info1.vendor.data, nullptr);
@@ -339,7 +334,6 @@ TEST_P(AdapterCreationTest, InfoMoveAssign) {
     EXPECT_EQ(info1.adapterType, static_cast<wgpu::AdapterType>(0));
     EXPECT_EQ(info1.vendorID, 0u);
     EXPECT_EQ(info1.deviceID, 0u);
-    EXPECT_EQ(info1.compatibilityMode, false);
 }
 
 // Test move construction of the adapter info.
@@ -367,7 +361,6 @@ TEST_P(AdapterCreationTest, InfoMoveConstruct) {
     wgpu::AdapterType adapterType = info1.adapterType;
     uint32_t vendorID = info1.vendorID;
     uint32_t deviceID = info1.deviceID;
-    bool compatibilityMode = info1.compatibilityMode;
 
     wgpu::AdapterInfo info2(std::move(info1));
 
@@ -380,7 +373,6 @@ TEST_P(AdapterCreationTest, InfoMoveConstruct) {
     EXPECT_EQ(info2.adapterType, adapterType);
     EXPECT_EQ(info2.vendorID, vendorID);
     EXPECT_EQ(info2.deviceID, deviceID);
-    EXPECT_EQ(info2.compatibilityMode, compatibilityMode);
 
     // Expect info1 to be empty.
     EXPECT_EQ(info1.vendor.data, nullptr);
@@ -395,7 +387,6 @@ TEST_P(AdapterCreationTest, InfoMoveConstruct) {
     EXPECT_EQ(info1.adapterType, static_cast<wgpu::AdapterType>(0));
     EXPECT_EQ(info1.vendorID, 0u);
     EXPECT_EQ(info1.deviceID, 0u);
-    EXPECT_EQ(info1.compatibilityMode, false);
 }
 
 // Test that the adapter info can outlive the adapter.

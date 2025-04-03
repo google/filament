@@ -38,16 +38,19 @@ class Device;
 
 class Sampler final : public SamplerBase {
   public:
-    Sampler(Device* device, const SamplerDescriptor* descriptor);
+    static ResultOrError<Ref<Sampler>> Create(Device* device, const SamplerDescriptor* descriptor);
 
     GLuint GetFilteringHandle() const;
     GLuint GetNonFilteringHandle() const;
 
   private:
+    Sampler(Device* device, const SamplerDescriptor* descriptor);
     ~Sampler() override;
     void DestroyImpl() override;
 
-    void SetupGLSampler(GLuint sampler, const SamplerDescriptor* descriptor, bool forceNearest);
+    MaybeError SetupGLSampler(GLuint sampler,
+                              const SamplerDescriptor* descriptor,
+                              bool forceNearest);
 
     GLuint mFilteringHandle;
 

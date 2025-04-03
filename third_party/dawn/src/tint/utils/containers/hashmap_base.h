@@ -468,7 +468,7 @@ class HashmapBase {
         count_ = other.count_;
     }
 
-    /// Moves the the hashmap @p other into this empty hashmap.
+    /// Moves the hashmap @p other into this empty hashmap.
     /// @note This hashmap must be empty before calling
     /// @param other the hashmap to move
     void Move(HashmapBase&& other) {

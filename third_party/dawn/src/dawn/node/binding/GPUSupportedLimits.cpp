@@ -35,166 +35,154 @@ namespace wgpu::binding {
 // wgpu::bindings::GPUSupportedLimits
 ////////////////////////////////////////////////////////////////////////////////
 
-GPUSupportedLimits::GPUSupportedLimits(wgpu::SupportedLimits limits) : limits_(std::move(limits)) {
-    // Unpack the reported limits.
-    for (wgpu::ChainedStructOut* chain = limits_.nextInChain; chain; chain = chain->nextInChain) {
-        if (chain->sType == wgpu::SType::DawnExperimentalSubgroupLimits) {
-            subgroup_limits_ = *static_cast<wgpu::DawnExperimentalSubgroupLimits*>(chain);
-            // Clear to prevent using invalid pointer.
-            subgroup_limits_->nextInChain = nullptr;
-            break;
-        }
-    }
+GPUSupportedLimits::GPUSupportedLimits(wgpu::Limits limits) : limits_(std::move(limits)) {
     // Clear to prevent using invalid pointer.
     limits_.nextInChain = nullptr;
 }
 
 uint32_t GPUSupportedLimits::getMaxTextureDimension1D(Napi::Env) {
-    return limits_.limits.maxTextureDimension1D;
+    return limits_.maxTextureDimension1D;
 }
 
 uint32_t GPUSupportedLimits::getMaxTextureDimension2D(Napi::Env) {
-    return limits_.limits.maxTextureDimension2D;
+    return limits_.maxTextureDimension2D;
 }
 
 uint32_t GPUSupportedLimits::getMaxTextureDimension3D(Napi::Env) {
-    return limits_.limits.maxTextureDimension3D;
+    return limits_.maxTextureDimension3D;
 }
 
 uint32_t GPUSupportedLimits::getMaxTextureArrayLayers(Napi::Env) {
-    return limits_.limits.maxTextureArrayLayers;
+    return limits_.maxTextureArrayLayers;
 }
 
 uint32_t GPUSupportedLimits::getMaxBindGroups(Napi::Env) {
-    return limits_.limits.maxBindGroups;
+    return limits_.maxBindGroups;
 }
 
 uint32_t GPUSupportedLimits::getMaxBindGroupsPlusVertexBuffers(Napi::Env) {
-    return limits_.limits.maxBindGroupsPlusVertexBuffers;
+    return limits_.maxBindGroupsPlusVertexBuffers;
 }
 
 uint32_t GPUSupportedLimits::getMaxBindingsPerBindGroup(Napi::Env) {
-    return limits_.limits.maxBindingsPerBindGroup;
+    return limits_.maxBindingsPerBindGroup;
 }
 
 uint32_t GPUSupportedLimits::getMaxDynamicUniformBuffersPerPipelineLayout(Napi::Env) {
-    return limits_.limits.maxDynamicUniformBuffersPerPipelineLayout;
+    return limits_.maxDynamicUniformBuffersPerPipelineLayout;
 }
 
 uint32_t GPUSupportedLimits::getMaxDynamicStorageBuffersPerPipelineLayout(Napi::Env) {
-    return limits_.limits.maxDynamicStorageBuffersPerPipelineLayout;
+    return limits_.maxDynamicStorageBuffersPerPipelineLayout;
 }
 
 uint32_t GPUSupportedLimits::getMaxSampledTexturesPerShaderStage(Napi::Env) {
-    return limits_.limits.maxSampledTexturesPerShaderStage;
+    return limits_.maxSampledTexturesPerShaderStage;
 }
 
 uint32_t GPUSupportedLimits::getMaxSamplersPerShaderStage(Napi::Env) {
-    return limits_.limits.maxSamplersPerShaderStage;
+    return limits_.maxSamplersPerShaderStage;
 }
 
 uint32_t GPUSupportedLimits::getMaxStorageBuffersPerShaderStage(Napi::Env) {
-    return limits_.limits.maxStorageBuffersPerShaderStage;
+    return limits_.maxStorageBuffersPerShaderStage;
 }
 
 uint32_t GPUSupportedLimits::getMaxStorageTexturesPerShaderStage(Napi::Env) {
-    return limits_.limits.maxStorageTexturesPerShaderStage;
+    return limits_.maxStorageTexturesPerShaderStage;
 }
 
 uint32_t GPUSupportedLimits::getMaxUniformBuffersPerShaderStage(Napi::Env) {
-    return limits_.limits.maxUniformBuffersPerShaderStage;
+    return limits_.maxUniformBuffersPerShaderStage;
 }
 
 uint64_t GPUSupportedLimits::getMaxUniformBufferBindingSize(Napi::Env) {
-    return limits_.limits.maxUniformBufferBindingSize;
+    return limits_.maxUniformBufferBindingSize;
 }
 
 uint64_t GPUSupportedLimits::getMaxStorageBufferBindingSize(Napi::Env) {
-    return limits_.limits.maxStorageBufferBindingSize;
+    return limits_.maxStorageBufferBindingSize;
 }
 
 uint32_t GPUSupportedLimits::getMinUniformBufferOffsetAlignment(Napi::Env) {
-    return limits_.limits.minUniformBufferOffsetAlignment;
+    return limits_.minUniformBufferOffsetAlignment;
 }
 
 uint32_t GPUSupportedLimits::getMinStorageBufferOffsetAlignment(Napi::Env) {
-    return limits_.limits.minStorageBufferOffsetAlignment;
+    return limits_.minStorageBufferOffsetAlignment;
 }
 
 uint32_t GPUSupportedLimits::getMaxVertexBuffers(Napi::Env) {
-    return limits_.limits.maxVertexBuffers;
+    return limits_.maxVertexBuffers;
 }
 
 uint64_t GPUSupportedLimits::getMaxBufferSize(Napi::Env) {
-    return limits_.limits.maxBufferSize;
+    return limits_.maxBufferSize;
 }
 
 uint32_t GPUSupportedLimits::getMaxVertexAttributes(Napi::Env) {
-    return limits_.limits.maxVertexAttributes;
+    return limits_.maxVertexAttributes;
 }
 
 uint32_t GPUSupportedLimits::getMaxVertexBufferArrayStride(Napi::Env) {
-    return limits_.limits.maxVertexBufferArrayStride;
+    return limits_.maxVertexBufferArrayStride;
 }
 
 uint32_t GPUSupportedLimits::getMaxInterStageShaderVariables(Napi::Env) {
-    return limits_.limits.maxInterStageShaderVariables;
+    return limits_.maxInterStageShaderVariables;
 }
 
 uint32_t GPUSupportedLimits::getMaxColorAttachments(Napi::Env) {
-    return limits_.limits.maxColorAttachments;
+    return limits_.maxColorAttachments;
 }
 
 uint32_t GPUSupportedLimits::getMaxColorAttachmentBytesPerSample(Napi::Env) {
-    return limits_.limits.maxColorAttachmentBytesPerSample;
+    return limits_.maxColorAttachmentBytesPerSample;
 }
 
 uint32_t GPUSupportedLimits::getMaxComputeWorkgroupStorageSize(Napi::Env) {
-    return limits_.limits.maxComputeWorkgroupStorageSize;
+    return limits_.maxComputeWorkgroupStorageSize;
 }
 
 uint32_t GPUSupportedLimits::getMaxComputeInvocationsPerWorkgroup(Napi::Env) {
-    return limits_.limits.maxComputeInvocationsPerWorkgroup;
+    return limits_.maxComputeInvocationsPerWorkgroup;
 }
 
 uint32_t GPUSupportedLimits::getMaxComputeWorkgroupSizeX(Napi::Env) {
-    return limits_.limits.maxComputeWorkgroupSizeX;
+    return limits_.maxComputeWorkgroupSizeX;
 }
 
 uint32_t GPUSupportedLimits::getMaxComputeWorkgroupSizeY(Napi::Env) {
-    return limits_.limits.maxComputeWorkgroupSizeY;
+    return limits_.maxComputeWorkgroupSizeY;
 }
 
 uint32_t GPUSupportedLimits::getMaxComputeWorkgroupSizeZ(Napi::Env) {
-    return limits_.limits.maxComputeWorkgroupSizeZ;
+    return limits_.maxComputeWorkgroupSizeZ;
 }
 
 uint32_t GPUSupportedLimits::getMaxComputeWorkgroupsPerDimension(Napi::Env) {
-    return limits_.limits.maxComputeWorkgroupsPerDimension;
+    return limits_.maxComputeWorkgroupsPerDimension;
 }
 
 std::variant<uint32_t, interop::UndefinedType>
 GPUSupportedLimits::getMaxStorageBuffersInFragmentStage(Napi::Env) {
-    return std::variant<uint32_t, interop::UndefinedType>(
-        limits_.limits.maxStorageBuffersInFragmentStage);
+    return std::variant<uint32_t, interop::UndefinedType>(limits_.maxStorageBuffersInFragmentStage);
 }
 
 std::variant<uint32_t, interop::UndefinedType>
 GPUSupportedLimits::getMaxStorageTexturesInFragmentStage(Napi::Env) {
     return std::variant<uint32_t, interop::UndefinedType>(
-        limits_.limits.maxStorageTexturesInFragmentStage);
+        limits_.maxStorageTexturesInFragmentStage);
 }
 
 std::variant<uint32_t, interop::UndefinedType>
 GPUSupportedLimits::getMaxStorageBuffersInVertexStage(Napi::Env) {
-    return std::variant<uint32_t, interop::UndefinedType>(
-        limits_.limits.maxStorageBuffersInVertexStage);
+    return std::variant<uint32_t, interop::UndefinedType>(limits_.maxStorageBuffersInVertexStage);
 }
 
 std::variant<uint32_t, interop::UndefinedType>
 GPUSupportedLimits::getMaxStorageTexturesInVertexStage(Napi::Env) {
-    return std::variant<uint32_t, interop::UndefinedType>(
-        limits_.limits.maxStorageTexturesInVertexStage);
+    return std::variant<uint32_t, interop::UndefinedType>(limits_.maxStorageTexturesInVertexStage);
 }
 
 }  // namespace wgpu::binding

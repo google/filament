@@ -146,6 +146,7 @@ public:
   TEST_METHOD(RootSignatureUpgrade_Annotation)
 
   TEST_METHOD(DxilPIXDXRInvocationsLog_SanityTest)
+  TEST_METHOD(DxilPIXDXRInvocationsLog_EmbeddedRootSigs)
 
   TEST_METHOD(DebugInstrumentation_TextOutput)
   TEST_METHOD(DebugInstrumentation_BlockReport)
@@ -660,7 +661,7 @@ CComPtr<IDxcBlob> PixTest::RunDxilPIXDXRInvocationsLog(IDxcBlob *blob) {
   CComPtr<IDxcBlob> pOptimizedModule;
   CComPtr<IDxcBlobEncoding> pText;
   VERIFY_SUCCEEDED(pOptimizer->RunOptimizer(
-      dxil, Options.data(), Options.size(), &pOptimizedModule, &pText));
+      blob, Options.data(), Options.size(), &pOptimizedModule, &pText));
 
   std::string outputText;
   if (pText->GetBufferSize() != 0) {
@@ -2942,6 +2943,43 @@ void MyMiss(inout MyPayload payload)
 )x";
 
   auto compiledLib = Compile(m_dllSupport, source, L"lib_6_6", {});
+  RunDxilPIXDXRInvocationsLog(compiledLib);
+}
+
+TEST_F(PixTest, DxilPIXDXRInvocationsLog_EmbeddedRootSigs) {
+
+  const char *source = R"x(
+
+GlobalRootSignature grs = {"CBV(b0)"};
+struct MyPayload
+{
+    float4 color;
+};
+
+[shader("raygeneration")]
+void MyRayGen()
+{
+}
+
+[shader("closesthit")]
+void MyClosestHit(inout MyPayload payload, in BuiltInTriangleIntersectionAttributes attr)
+{
+}
+
+[shader("anyhit")]
+void MyAnyHit(inout MyPayload payload, in BuiltInTriangleIntersectionAttributes attr)
+{
+}
+
+[shader("miss")]
+void MyMiss(inout MyPayload payload)
+{
+}
+
+)x";
+
+  auto compiledLib = Compile(m_dllSupport, source, L"lib_6_3",
+                             {L"-Qstrip_reflect"}, L"RootSig");
   RunDxilPIXDXRInvocationsLog(compiledLib);
 }
 

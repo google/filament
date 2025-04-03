@@ -131,22 +131,26 @@ class EnumType(Type):
                 assert prefix == 0
                 prefix = 0x0002_0000
 
-            if 'emscripten' in tags:
-                assert prefix == 0
-                prefix = 0x0004_0000
-
-            if 'dawn' in tags:
-                assert prefix == 0
-                prefix = 0x0005_0000
+            if 'upstream' not in tags:
+                if 'dawn' in tags:
+                    # Dawn-only or Dawn+Emscripten
+                    assert prefix == 0
+                    prefix = 0x0005_0000
+                elif 'emscripten' in tags:
+                    # Emscripten-only
+                    assert prefix == 0
+                    prefix = 0x0004_0000
 
             if prefix == 0 and 'native' in tags:
                 prefix = 0x0001_0000
 
-            if 'deprecated' not in tags:
-                if 'emscripten' in tags:
-                    assert value_name.startswith('emscripten')
+            if 'deprecated' not in tags and 'upstream' not in tags:
+                # Emscripten implements some Dawn extensions, and some upstream things that
+                # aren't in Dawn yet.
+                if 'emscripten' in tags and 'dawn' not in tags:
+                    assert value_name.startswith('emscripten'), name
                 else:
-                    assert not value_name.startswith('emscripten')
+                    assert not value_name.startswith('emscripten'), name
 
             value += prefix
 
@@ -302,12 +306,11 @@ class Record:
 class StructureType(Record, Type):
     def __init__(self, is_enabled, name, json_data):
         tags = json_data.get('tags', [])
-        if 'deprecated' not in tags:
-            if 'emscripten' in tags:
-                if name != 'INTERNAL_HAVE_EMDAWNWEBGPU_HEADER':
-                    assert name.startswith('emscripten')
-            else:
-                assert not name.startswith('emscripten')
+        if tags == ['emscripten']:
+            if name != 'INTERNAL_HAVE_EMDAWNWEBGPU_HEADER':
+                assert name.startswith('emscripten'), name
+        else:
+            assert not name.startswith('emscripten'), name
 
         Record.__init__(self, name)
         json_data_override = {}
@@ -386,6 +389,7 @@ class ConstantDefinition():
     def __init__(self, is_enabled, name, json_data):
         self.type = None
         self.value = json_data['value']
+        self.cpp_value = json_data.get('cpp_value', None)
         self.json_data = json_data
         self.name = Name(name)
 
@@ -519,6 +523,9 @@ def topo_sort_structure(structs):
             if member.type.category == 'structure':
                 max_dependent_depth = max(max_dependent_depth,
                                           compute_depth(member.type) + 1)
+        for extension in struct.extensions:
+            max_dependent_depth = max(max_dependent_depth,
+                                      compute_depth(extension) + 1)
 
         struct.subdag_depth = max_dependent_depth
         struct.visited = True

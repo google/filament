@@ -63,4 +63,7 @@ void main()
     coopMatLoadTensorNV(A, sbuf.s, 1, t, v, decode);
 
     tensorLayoutNV<2, Clamp> tc = createTensorLayoutNV(2, Clamp);
+
+    coopmat<float16_t, gl_ScopeWorkgroup, 64, 32, gl_MatrixUseA> Arr[2];
+    coopMatLoadTensorNV(Arr[1], Buf.x, 0, t);
 }

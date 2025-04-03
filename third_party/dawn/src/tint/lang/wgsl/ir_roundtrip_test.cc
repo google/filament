@@ -76,7 +76,7 @@ class IRToProgramRoundtripTest : public testing::Test {
         result.ir_pre_raise = core::ir::Disassembler(ir_module.Get()).Plain();
 
         if (auto res = tint::wgsl::writer::Raise(ir_module.Get()); res != Success) {
-            result.err = res.Failure().reason.Str();
+            result.err = res.Failure().reason;
             return result;
         }
 

@@ -102,7 +102,7 @@ static void PrintTypeList(StyledText& ss, VectorRef<const core::type::Type*> typ
 /// @param intrinsic_name the name of the intrinsic
 /// @param template_args the template argument types
 /// @param args the argument types
-/// @param earliest_eval_stage the the earliest evaluation stage that the call can be made
+/// @param earliest_eval_stage the earliest evaluation stage that the call can be made
 /// @param member_function `true` if the builtin should be a member function
 /// @param on_no_match an error callback when no intrinsic overloads matched the provided
 ///                    arguments.

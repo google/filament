@@ -2187,7 +2187,7 @@ inline std::ostream& operator<<(std::ostream& out, TextureTestParams data) {
 
 class ResolverBuiltinTest_TextureOperation : public ResolverTestWithParam<TextureTestParams> {
   public:
-    /// Gets an appropriate type for the coords parameter depending the the
+    /// Gets an appropriate type for the coords parameter depending the
     /// dimensionality of the texture being sampled.
     /// @param dim dimensionality of the texture being sampled
     /// @param scalar the scalar type

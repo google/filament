@@ -41,34 +41,24 @@ cc_library(
   srcs = [
     "generation_id.cc",
     "reflection.cc",
-    "socket.cc",
-    "text_generator.cc",
+    "result.cc",
   ],
   hdrs = [
     "generation_id.h",
     "internal_limits.h",
     "reflection.h",
-    "rwmutex.h",
-    "socket.h",
-    "text_generator.h",
+    "result.h",
   ],
   deps = [
     "//src/tint/utils/containers",
-    "//src/tint/utils/diagnostic",
     "//src/tint/utils/ice",
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/tint/utils/memory",
-    "//src/tint/utils/result",
     "//src/tint/utils/rtti",
     "//src/tint/utils/text",
     "//src/utils",
-  ] + select({
-    ":tint_build_is_win": [
-      
-    ],
-    "//conditions:default": [],
-  }),
+  ],
   copts = COPTS,
   visibility = ["//visibility:public"],
 )
@@ -77,27 +67,20 @@ cc_library(
   alwayslink = True,
   srcs = [
     "reflection_test.cc",
+    "result_test.cc",
   ],
   deps = [
     "//src/tint/utils",
     "//src/tint/utils/containers",
-    "//src/tint/utils/diagnostic",
     "//src/tint/utils/ice",
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/tint/utils/memory",
-    "//src/tint/utils/result",
     "//src/tint/utils/rtti",
-    "//src/tint/utils/text",
     "@gtest",
     "//src/utils",
   ],
   copts = COPTS,
   visibility = ["//visibility:public"],
-)
-
-alias(
-  name = "tint_build_is_win",
-  actual = "//src/tint:tint_build_is_win_true",
 )
 

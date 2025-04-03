@@ -65,13 +65,31 @@ typedef struct {
 #endif  // VK_USE_PLATFORM_VI_NN
         VkIcdSurfaceDisplay display_surf;
         VkIcdSurfaceHeadless headless_surf;
+
+        // All of the specific ICD surface structures start with the base structure
+        VkIcdSurfaceBase base;
     };
     uint32_t base_size;            // Size of VkIcdSurfaceBase
     uint32_t platform_size;        // Size of corresponding VkIcdSurfaceXXX
     uint32_t non_platform_offset;  // Start offset to base_size
     uint32_t entire_size;          // Size of entire VkIcdSurface
     uint32_t surface_index;        // This surface's index into each drivers list of created surfaces
+
+    bool callbacks_valid;             // Need to store if a VkAllocationCallbacks pointer was used.
+    VkAllocationCallbacks callbacks;  // Storage for the callbacks
+
+    // The create info parameters captured by the union in VkIcdSurface are insufficient, as they do not
+    // capture every single parameter from the create info (e.g. flags that did not have any flags defined
+    // at the time) and they also cannot capture extension structures, so we are including a separate
+    // pointer that will hold a copy of the original creation structure chain. This chain can only capture
+    // known extension structures and preferably should be auto-generated, but the list of extension
+    // structures is rather limited (there is only a single display surface creation structure extension
+    // at the time of writing).
+    uint8_t *create_info;
+
 } VkIcdSurface;
+
+VkResult wsi_unwrap_icd_surface(struct loader_icd_term *icd_term, VkSurfaceKHR *surface);
 
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance, const char *name, void **addr);
 

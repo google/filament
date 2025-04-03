@@ -1569,8 +1569,12 @@ TEST(TryLoadWrongBinaries, BadExplicit) {
     // Explicit layer not found should generate a VK_ERROR_LAYER_NOT_PRESENT error message.
     inst.CheckCreate(VK_ERROR_LAYER_NOT_PRESENT);
 
-    // Should get an error message for the bad explicit
+// Should get an error message for the bad explicit
+#if defined(WIN32)
+    ASSERT_TRUE(log.find(std::string("Requested layer \"") + std::string(layer_name) + std::string("\" was wrong bit-type!")));
+#else
     ASSERT_TRUE(log.find(std::string("Requested layer \"") + std::string(layer_name) + std::string("\" failed to load!")));
+#endif  // defined(WIN32)
 }
 
 TEST(TryLoadWrongBinaries, BadImplicit) {
@@ -1596,7 +1600,11 @@ TEST(TryLoadWrongBinaries, BadImplicit) {
     inst.CheckCreate();
 
     // Should get an info message for the bad implicit
+#if defined(WIN32)
+    ASSERT_TRUE(log.find(std::string("Requested layer \"") + std::string(layer_name) + std::string("\" was wrong bit-type.")));
+#else
     ASSERT_TRUE(log.find(std::string("Requested layer \"") + std::string(layer_name) + std::string("\" failed to load.")));
+#endif  // defined(WIN32)
 }
 
 TEST(TryLoadWrongBinaries, BadExplicitAndImplicit) {
@@ -1625,10 +1633,13 @@ TEST(TryLoadWrongBinaries, BadExplicitAndImplicit) {
 
     // Explicit layer not found should generate a VK_ERROR_LAYER_NOT_PRESENT error message.
     inst.CheckCreate(VK_ERROR_LAYER_NOT_PRESENT);
-
-    // Apple only throws a wrong library type of error
+#if defined(WIN32)
+    ASSERT_TRUE(log.find(std::string("Requested layer \"") + std::string(layer_name_0) + std::string("\" was wrong bit-type!")));
+    ASSERT_TRUE(log.find(std::string("Requested layer \"") + std::string(layer_name_1) + std::string("\" was wrong bit-type.")));
+#else
     ASSERT_TRUE(log.find(std::string("Requested layer \"") + std::string(layer_name_0) + std::string("\" failed to load!")));
     ASSERT_TRUE(log.find(std::string("Requested layer \"") + std::string(layer_name_1) + std::string("\" failed to load.")));
+#endif  // defined(WIN32)
 }
 
 TEST(TryLoadWrongBinaries, WrongArchDriver) {
@@ -3935,12 +3946,10 @@ TEST(ManifestDiscovery, ValidSymlinkInXDGEnvVar) {
     FrameworkEnvironment env{FrameworkSettings{}.set_enable_default_search_paths(false)};
     env.add_icd(TestICDDetails(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA).set_discovery_type(ManifestDiscoveryType::override_folder))
         .add_physical_device({});
-    auto driver_path = env.get_icd_manifest_path(0);
-    std::string symlink_name = "symlink_to_driver.json";
-    std::filesystem::path symlink_path = env.get_folder(ManifestLocation::driver_env_var).location() / symlink_name;
-    env.get_folder(ManifestLocation::driver_env_var).add_existing_file(symlink_name);
-    int res = symlink(driver_path.c_str(), symlink_path.c_str());
-    ASSERT_EQ(res, 0);
+
+    auto symlink_path =
+        env.get_folder(ManifestLocation::driver_env_var).add_symlink(env.get_icd_manifest_path(0), "symlink_to_driver.json");
+
     EnvVarWrapper xdg_config_dirs_env_var{"XDG_CONFIG_DIRS", symlink_path};
 
     InstWrapper inst{env.vulkan_functions};
@@ -3954,12 +3963,8 @@ TEST(ManifestDiscovery, ValidSymlink) {
     env.add_icd(TestICDDetails(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA).set_discovery_type(ManifestDiscoveryType::override_folder))
         .add_physical_device({});
 
-    auto driver_path = env.get_icd_manifest_path(0);
-    std::string symlink_name = "symlink_to_driver.json";
-    std::filesystem::path symlink_path = env.get_folder(ManifestLocation::driver_env_var).location() / symlink_name;
-    env.get_folder(ManifestLocation::driver_env_var).add_existing_file(symlink_name);
-    int res = symlink(driver_path.c_str(), symlink_path.c_str());
-    ASSERT_EQ(res, 0);
+    auto symlink_path =
+        env.get_folder(ManifestLocation::driver_env_var).add_symlink(env.get_icd_manifest_path(0), "symlink_to_driver.json");
 
     env.platform_shim->set_fake_path(ManifestCategory::icd, env.get_folder(ManifestLocation::driver_env_var).location());
 
@@ -3971,12 +3976,10 @@ TEST(ManifestDiscovery, ValidSymlink) {
 // Check that invalid symlinks do not cause the loader to crash when directly in an XDG env-var
 TEST(ManifestDiscovery, InvalidSymlinkXDGEnvVar) {
     FrameworkEnvironment env{FrameworkSettings{}.set_enable_default_search_paths(false)};
-    std::string symlink_name = "symlink_to_nothing.json";
-    std::filesystem::path symlink_path = env.get_folder(ManifestLocation::driver_env_var).location() / symlink_name;
-    std::filesystem::path invalid_driver_path = env.get_folder(ManifestLocation::driver).location() / "nothing_here.json";
-    int res = symlink(invalid_driver_path.c_str(), symlink_path.c_str());
-    ASSERT_EQ(res, 0);
-    env.get_folder(ManifestLocation::driver_env_var).add_existing_file(symlink_name);
+
+    auto symlink_path =
+        env.get_folder(ManifestLocation::driver)
+            .add_symlink(env.get_folder(ManifestLocation::driver).location() / "nothing_here.json", "symlink_to_nothing.json");
 
     EnvVarWrapper xdg_config_dirs_env_var{symlink_path};
 
@@ -3988,12 +3991,10 @@ TEST(ManifestDiscovery, InvalidSymlinkXDGEnvVar) {
 // Check that invalid symlinks do not cause the loader to crash
 TEST(ManifestDiscovery, InvalidSymlink) {
     FrameworkEnvironment env{FrameworkSettings{}.set_enable_default_search_paths(false)};
-    std::string symlink_name = "symlink_to_nothing.json";
-    std::filesystem::path symlink_path = env.get_folder(ManifestLocation::driver).location() / symlink_name;
-    std::filesystem::path invalid_driver_path = env.get_folder(ManifestLocation::driver_env_var).location() / "nothing_here.json";
-    int res = symlink(invalid_driver_path.c_str(), symlink_path.c_str());
-    ASSERT_EQ(res, 0);
-    env.get_folder(ManifestLocation::driver).add_existing_file(symlink_name);
+
+    auto symlink_path =
+        env.get_folder(ManifestLocation::driver_env_var)
+            .add_symlink(env.get_folder(ManifestLocation::driver).location() / "nothing_here.json", "symlink_to_nothing.json");
 
     env.platform_shim->set_fake_path(ManifestCategory::icd, env.get_folder(ManifestLocation::driver_env_var).location());
 

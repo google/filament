@@ -137,6 +137,62 @@ TEST(SlabAllocatorTests, ReusesFreedMemory) {
     }
 }
 
+// Test DeleteEmptySlabs() when all slabs are empty.
+TEST(SlabAllocatorTests, DeleteAllSlabs) {
+    SlabAllocator<Foo> allocator(5 * sizeof(Foo));
+
+    // Allocate a number of objects.
+    std::set<Foo*> objects;
+    for (int i = 0; i < 11; ++i) {
+        EXPECT_TRUE(objects.insert(allocator.Allocate(i)).second);
+    }
+    EXPECT_EQ(allocator.CountAllocatedSlabsForTesting(), 3u);
+
+    // Deallocate all of the objects.
+    for (Foo* object : objects) {
+        allocator.Deallocate(object);
+    }
+
+    // Allocate and deallocate one slab full of objects so both available and recycled lists are
+    // populated.
+    objects.clear();
+    for (int i = 0; i < 5; ++i) {
+        EXPECT_TRUE(objects.insert(allocator.Allocate(i)).second);
+    }
+    for (Foo* object : objects) {
+        allocator.Deallocate(object);
+    }
+    EXPECT_EQ(allocator.CountAllocatedSlabsForTesting(), 3u);
+
+    allocator.DeleteEmptySlabs();
+    EXPECT_EQ(allocator.CountAllocatedSlabsForTesting(), 0u);
+}
+
+// Test DeleteEmptySlabs() when one slab is empty and one slab has allocations.
+TEST(SlabAllocatorTests, DeleteSomeSlabs) {
+    SlabAllocator<Foo> allocator(5 * sizeof(Foo));
+
+    // Allocate a number of objects.
+    std::set<Foo*> objects;
+    for (int i = 0; i < 6; ++i) {
+        EXPECT_TRUE(objects.insert(allocator.Allocate(i)).second);
+    }
+
+    // Deallocate all of the objects.
+    for (Foo* object : objects) {
+        allocator.Deallocate(object);
+    }
+
+    // Allocate a new object so one slab still has an allocation.
+    Foo* object = allocator.Allocate(6);
+    EXPECT_EQ(allocator.CountAllocatedSlabsForTesting(), 2u);
+
+    allocator.DeleteEmptySlabs();
+    EXPECT_EQ(allocator.CountAllocatedSlabsForTesting(), 1u);
+
+    allocator.Deallocate(object);
+}
+
 // Test many allocations and deallocations. Meant to catch corner cases with partially
 // empty slabs.
 TEST(SlabAllocatorTests, AllocateDeallocateMany) {

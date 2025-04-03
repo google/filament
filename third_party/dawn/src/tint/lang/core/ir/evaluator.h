@@ -31,9 +31,11 @@
 #include "src/tint/lang/core/constant/eval.h"
 #include "src/tint/lang/core/intrinsic/table.h"
 #include "src/tint/lang/core/ir/builder.h"
+#include "src/tint/lang/core/ir/constexpr_if.h"
 #include "src/tint/lang/core/ir/convert.h"
 #include "src/tint/lang/core/ir/core_binary.h"
 #include "src/tint/lang/core/ir/core_unary.h"
+#include "src/tint/lang/core/ir/override.h"
 #include "src/tint/lang/core/ir/swizzle.h"
 #include "src/tint/lang/core/ir/value.h"
 
@@ -51,7 +53,7 @@ class Evaluator {
     /// Evaluate the given `src` expression.
     /// @param src the source expression
     /// @returns the generated constant or a failure result.
-    Result<core::ir::Constant*> Evaluate(core::ir::Value* src);
+    diag::Result<core::ir::Constant*> Evaluate(core::ir::Value* src);
 
   private:
     using EvalResult = Result<const core::constant::Value*>;
@@ -65,9 +67,11 @@ class Evaluator {
     EvalResult EvalConvert(core::ir::Convert* c);
     EvalResult EvalConstruct(core::ir::Construct* c);
     EvalResult EvalSwizzle(core::ir::Swizzle* s);
+    EvalResult EvalOverride(core::ir::Override* o);
     EvalResult EvalUnary(core::ir::CoreUnary* u);
     EvalResult EvalBinary(core::ir::CoreBinary* cb);
     EvalResult EvalCoreBuiltinCall(core::ir::CoreBuiltinCall* c);
+    EvalResult EvalConstExprIf(core::ir::ConstExprIf* c);
 
     ir::Builder& b_;
     diag::List diagnostics_;
@@ -80,13 +84,13 @@ namespace eval {
 /// @param b the builder
 /// @param inst the instruction
 /// @returns the evaluated constant for `inst` or a `Failure` otherwise.
-Result<core::ir::Constant*> Eval(core::ir::Builder& b, core::ir::Instruction* inst);
+diag::Result<core::ir::Constant*> Eval(core::ir::Builder& b, core::ir::Instruction* inst);
 
 /// Evaluate the given `val` with the provided `b`.
 /// @param b the builder
 /// @param val the value
 /// @returns the evaluated constant for `val` or a `Failure` otherwise.
-Result<core::ir::Constant*> Eval(core::ir::Builder& b, core::ir::Value* val);
+diag::Result<core::ir::Constant*> Eval(core::ir::Builder& b, core::ir::Value* val);
 
 }  // namespace eval
 

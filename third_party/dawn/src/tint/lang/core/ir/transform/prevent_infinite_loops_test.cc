@@ -71,7 +71,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, NoModify_SimpleFiniteLoop) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var
+        %idx:ptr<function, u32, read_write> = var undef
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -140,7 +140,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, InfiniteLoop) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var
+        %idx:ptr<function, u32, read_write> = var undef
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -175,13 +175,13 @@ TEST_F(IR_PreventInfiniteLoopsTest, InfiniteLoop) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %tint_loop_idx:ptr<function, vec2<u32>, read_write> = var
-        %idx:ptr<function, u32, read_write> = var
+        %tint_loop_idx:ptr<function, vec2<u32>, read_write> = var vec2<u32>(4294967295u)
+        %idx:ptr<function, u32, read_write> = var undef
         next_iteration  # -> $B3
       }
       $B3: {  # body
         %4:vec2<u32> = load %tint_loop_idx
-        %5:vec2<bool> = eq %4, vec2<u32>(4294967295u)
+        %5:vec2<bool> = eq %4, vec2<u32>(0u)
         %6:bool = all %5
         if %6 [t: $B5] {  # if_1
           $B5: {  # true
@@ -203,12 +203,12 @@ TEST_F(IR_PreventInfiniteLoopsTest, InfiniteLoop) {
       }
       $B4: {  # continuing
         %9:u32 = load_vector_element %tint_loop_idx, 0u
-        %tint_low_inc:u32 = add %9, 1u
+        %tint_low_inc:u32 = sub %9, 1u
         store_vector_element %tint_loop_idx, 0u, %tint_low_inc
-        %11:bool = eq %tint_low_inc, 0u
+        %11:bool = eq %tint_low_inc, 4294967295u
         %tint_carry:u32 = convert %11
         %13:u32 = load_vector_element %tint_loop_idx, 1u
-        %14:u32 = add %13, %tint_carry
+        %14:u32 = sub %13, %tint_carry
         store_vector_element %tint_loop_idx, 1u, %14
         %15:u32 = load %idx
         %16:u32 = add %15, 1u
@@ -271,12 +271,12 @@ TEST_F(IR_PreventInfiniteLoopsTest, EmptyInitializer) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %tint_loop_idx:ptr<function, vec2<u32>, read_write> = var
+        %tint_loop_idx:ptr<function, vec2<u32>, read_write> = var vec2<u32>(4294967295u)
         next_iteration  # -> $B3
       }
       $B3: {  # body
         %3:vec2<u32> = load %tint_loop_idx
-        %4:vec2<bool> = eq %3, vec2<u32>(4294967295u)
+        %4:vec2<bool> = eq %3, vec2<u32>(0u)
         %5:bool = all %4
         if %5 [t: $B5] {  # if_1
           $B5: {  # true
@@ -292,12 +292,12 @@ TEST_F(IR_PreventInfiniteLoopsTest, EmptyInitializer) {
       }
       $B4: {  # continuing
         %6:u32 = load_vector_element %tint_loop_idx, 0u
-        %tint_low_inc:u32 = add %6, 1u
+        %tint_low_inc:u32 = sub %6, 1u
         store_vector_element %tint_loop_idx, 0u, %tint_low_inc
-        %8:bool = eq %tint_low_inc, 0u
+        %8:bool = eq %tint_low_inc, 4294967295u
         %tint_carry:u32 = convert %8
         %10:u32 = load_vector_element %tint_loop_idx, 1u
-        %11:u32 = add %10, %tint_carry
+        %11:u32 = sub %10, %tint_carry
         store_vector_element %tint_loop_idx, 1u, %11
         next_iteration  # -> $B3
       }
@@ -339,7 +339,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, EmptyContinuing) {
   $B1: {
     loop [i: $B2, b: $B3] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var
+        %idx:ptr<function, u32, read_write> = var undef
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -367,13 +367,13 @@ TEST_F(IR_PreventInfiniteLoopsTest, EmptyContinuing) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %tint_loop_idx:ptr<function, vec2<u32>, read_write> = var
-        %idx:ptr<function, u32, read_write> = var
+        %tint_loop_idx:ptr<function, vec2<u32>, read_write> = var vec2<u32>(4294967295u)
+        %idx:ptr<function, u32, read_write> = var undef
         next_iteration  # -> $B3
       }
       $B3: {  # body
         %4:vec2<u32> = load %tint_loop_idx
-        %5:vec2<bool> = eq %4, vec2<u32>(4294967295u)
+        %5:vec2<bool> = eq %4, vec2<u32>(0u)
         %6:bool = all %5
         if %6 [t: $B5] {  # if_1
           $B5: {  # true
@@ -394,12 +394,12 @@ TEST_F(IR_PreventInfiniteLoopsTest, EmptyContinuing) {
       }
       $B4: {  # continuing
         %9:u32 = load_vector_element %tint_loop_idx, 0u
-        %tint_low_inc:u32 = add %9, 1u
+        %tint_low_inc:u32 = sub %9, 1u
         store_vector_element %tint_loop_idx, 0u, %tint_low_inc
-        %11:bool = eq %tint_low_inc, 0u
+        %11:bool = eq %tint_low_inc, 4294967295u
         %tint_carry:u32 = convert %11
         %13:u32 = load_vector_element %tint_loop_idx, 1u
-        %14:u32 = add %13, %tint_carry
+        %14:u32 = sub %13, %tint_carry
         store_vector_element %tint_loop_idx, 1u, %14
         next_iteration  # -> $B3
       }
@@ -506,7 +506,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -519,7 +519,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
         }
         loop [i: $B6, b: $B7, c: $B8] {  # loop_2
           $B6: {  # initializer
-            %idx_1:ptr<function, u32, read_write> = var, 0u  # %idx_1: 'idx'
+            %idx_1:ptr<function, u32, read_write> = var 0u  # %idx_1: 'idx'
             next_iteration  # -> $B7
           }
           $B7: {  # body
@@ -547,7 +547,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
     }
     loop [i: $B10, b: $B11, c: $B12] {  # loop_3
       $B10: {  # initializer
-        %idx_2:ptr<function, u32, read_write> = var, 0u  # %idx_2: 'idx'
+        %idx_2:ptr<function, u32, read_write> = var 0u  # %idx_2: 'idx'
         next_iteration  # -> $B11
       }
       $B11: {  # body
@@ -560,7 +560,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
         }
         loop [i: $B14, b: $B15, c: $B16] {  # loop_4
           $B14: {  # initializer
-            %idx_3:ptr<function, u32, read_write> = var, 0u  # %idx_3: 'idx'
+            %idx_3:ptr<function, u32, read_write> = var 0u  # %idx_3: 'idx'
             next_iteration  # -> $B15
           }
           $B15: {  # body
@@ -597,7 +597,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
   $B1: {
     loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var, 0u
+        %idx:ptr<function, u32, read_write> = var 0u
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -610,13 +610,13 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
         }
         loop [i: $B6, b: $B7, c: $B8] {  # loop_2
           $B6: {  # initializer
-            %tint_loop_idx:ptr<function, vec2<u32>, read_write> = var
-            %idx_1:ptr<function, u32, read_write> = var, 0u  # %idx_1: 'idx'
+            %tint_loop_idx:ptr<function, vec2<u32>, read_write> = var vec2<u32>(4294967295u)
+            %idx_1:ptr<function, u32, read_write> = var 0u  # %idx_1: 'idx'
             next_iteration  # -> $B7
           }
           $B7: {  # body
             %7:vec2<u32> = load %tint_loop_idx
-            %8:vec2<bool> = eq %7, vec2<u32>(4294967295u)
+            %8:vec2<bool> = eq %7, vec2<u32>(0u)
             %9:bool = all %8
             if %9 [t: $B9] {  # if_2
               $B9: {  # true
@@ -634,12 +634,12 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
           }
           $B8: {  # continuing
             %12:u32 = load_vector_element %tint_loop_idx, 0u
-            %tint_low_inc:u32 = add %12, 1u
+            %tint_low_inc:u32 = sub %12, 1u
             store_vector_element %tint_loop_idx, 0u, %tint_low_inc
-            %14:bool = eq %tint_low_inc, 0u
+            %14:bool = eq %tint_low_inc, 4294967295u
             %tint_carry:u32 = convert %14
             %16:u32 = load_vector_element %tint_loop_idx, 1u
-            %17:u32 = add %16, %tint_carry
+            %17:u32 = sub %16, %tint_carry
             store_vector_element %tint_loop_idx, 1u, %17
             next_iteration  # -> $B7
           }
@@ -655,13 +655,13 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
     }
     loop [i: $B11, b: $B12, c: $B13] {  # loop_3
       $B11: {  # initializer
-        %tint_loop_idx_1:ptr<function, vec2<u32>, read_write> = var  # %tint_loop_idx_1: 'tint_loop_idx'
-        %idx_2:ptr<function, u32, read_write> = var, 0u  # %idx_2: 'idx'
+        %tint_loop_idx_1:ptr<function, vec2<u32>, read_write> = var vec2<u32>(4294967295u)  # %tint_loop_idx_1: 'tint_loop_idx'
+        %idx_2:ptr<function, u32, read_write> = var 0u  # %idx_2: 'idx'
         next_iteration  # -> $B12
       }
       $B12: {  # body
         %22:vec2<u32> = load %tint_loop_idx_1
-        %23:vec2<bool> = eq %22, vec2<u32>(4294967295u)
+        %23:vec2<bool> = eq %22, vec2<u32>(0u)
         %24:bool = all %23
         if %24 [t: $B14] {  # if_4
           $B14: {  # true
@@ -677,7 +677,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
         }
         loop [i: $B16, b: $B17, c: $B18] {  # loop_4
           $B16: {  # initializer
-            %idx_3:ptr<function, u32, read_write> = var, 0u  # %idx_3: 'idx'
+            %idx_3:ptr<function, u32, read_write> = var 0u  # %idx_3: 'idx'
             next_iteration  # -> $B17
           }
           $B17: {  # body
@@ -701,12 +701,12 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
       }
       $B13: {  # continuing
         %32:u32 = load_vector_element %tint_loop_idx_1, 0u
-        %tint_low_inc_1:u32 = add %32, 1u
+        %tint_low_inc_1:u32 = sub %32, 1u
         store_vector_element %tint_loop_idx_1, 0u, %tint_low_inc_1
-        %34:bool = eq %tint_low_inc_1, 0u
+        %34:bool = eq %tint_low_inc_1, 4294967295u
         %tint_carry_1:u32 = convert %34
         %36:u32 = load_vector_element %tint_loop_idx_1, 1u
-        %37:u32 = add %36, %tint_carry_1
+        %37:u32 = sub %36, %tint_carry_1
         store_vector_element %tint_loop_idx_1, 1u, %37
         next_iteration  # -> $B12
       }
@@ -760,7 +760,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, LoopResults) {
   $B1: {
     %2:u32, %3:i32, %4:f32, %5:bool = loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %idx:ptr<function, u32, read_write> = var
+        %idx:ptr<function, u32, read_write> = var undef
         next_iteration  # -> $B3
       }
       $B3: {  # body
@@ -795,13 +795,13 @@ TEST_F(IR_PreventInfiniteLoopsTest, LoopResults) {
   $B1: {
     %2:u32, %3:i32, %4:f32, %5:bool = loop [i: $B2, b: $B3, c: $B4] {  # loop_1
       $B2: {  # initializer
-        %tint_loop_idx:ptr<function, vec2<u32>, read_write> = var
-        %idx:ptr<function, u32, read_write> = var
+        %tint_loop_idx:ptr<function, vec2<u32>, read_write> = var vec2<u32>(4294967295u)
+        %idx:ptr<function, u32, read_write> = var undef
         next_iteration  # -> $B3
       }
       $B3: {  # body
         %8:vec2<u32> = load %tint_loop_idx
-        %9:vec2<bool> = eq %8, vec2<u32>(4294967295u)
+        %9:vec2<bool> = eq %8, vec2<u32>(0u)
         %10:bool = all %9
         if %10 [t: $B5] {  # if_1
           $B5: {  # true
@@ -823,12 +823,12 @@ TEST_F(IR_PreventInfiniteLoopsTest, LoopResults) {
       }
       $B4: {  # continuing
         %13:u32 = load_vector_element %tint_loop_idx, 0u
-        %tint_low_inc:u32 = add %13, 1u
+        %tint_low_inc:u32 = sub %13, 1u
         store_vector_element %tint_loop_idx, 0u, %tint_low_inc
-        %15:bool = eq %tint_low_inc, 0u
+        %15:bool = eq %tint_low_inc, 4294967295u
         %tint_carry:u32 = convert %15
         %17:u32 = load_vector_element %tint_loop_idx, 1u
-        %18:u32 = add %17, %tint_carry
+        %18:u32 = sub %17, %tint_carry
         store_vector_element %tint_loop_idx, 1u, %18
         %19:u32 = load %idx
         %20:u32 = add %19, 1u

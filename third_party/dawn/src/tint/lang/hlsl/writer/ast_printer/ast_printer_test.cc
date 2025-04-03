@@ -41,7 +41,7 @@ TEST_F(HlslASTPrinterTest, InvalidProgram) {
     ASSERT_FALSE(program.IsValid());
     auto result = Generate(program, Options{});
     EXPECT_NE(result, Success);
-    EXPECT_EQ(result.Failure().reason.Str(), "error: make the program invalid");
+    EXPECT_EQ(result.Failure().reason, "error: make the program invalid");
 }
 
 TEST_F(HlslASTPrinterTest, UnsupportedExtension) {

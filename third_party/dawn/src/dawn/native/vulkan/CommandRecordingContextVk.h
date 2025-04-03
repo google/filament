@@ -37,7 +37,7 @@
 
 namespace dawn::native::vulkan {
 
-class ImportedTextureBase;
+class Texture;
 
 // Wrapping class that currently associates a command buffer to it's corresponding pool.
 // TODO(dawn:1601) Revisit this structure since it is where the 1:1 mapping is implied.
@@ -67,7 +67,7 @@ struct CommandRecordingContext {
     //  - Acquiring extra semaphores or fences.
     //  - Exporting extra semaphore or fences.
     //  - and more!
-    absl::flat_hash_set<raw_ptr<ImportedTextureBase>> specialSyncTextures;
+    absl::flat_hash_set<raw_ptr<Texture>> specialSyncTextures;
 
     // Mappable buffers which will be eagerly transitioned to usage MapRead or MapWrite after
     // VkSubmit.

@@ -148,7 +148,7 @@ struct State {
         // Call the original function, passing it the inputs and capturing its return value.
         auto inner_call_args = BuildInnerCallArgs(wrapper);
         auto* inner_result = wrapper.Call(ep->ReturnType(), ep, std::move(inner_call_args));
-        SetOutputs(wrapper, inner_result->Result(0));
+        SetOutputs(wrapper, inner_result->Result());
         if (vertex_point_size_index) {
             backend->SetOutput(wrapper, vertex_point_size_index.value(), b.Constant(1_f));
         }
@@ -228,7 +228,7 @@ struct State {
                 for (uint32_t i = 0; i < str->Members().Length(); i++) {
                     construct_args.Push(backend->GetInput(builder, input_idx++));
                 }
-                args.Push(builder.Construct(param->Type(), construct_args)->Result(0));
+                args.Push(builder.Construct(param->Type(), construct_args)->Result());
             } else {
                 args.Push(backend->GetInput(builder, input_idx++));
             }
@@ -244,7 +244,7 @@ struct State {
         if (auto* str = inner_result->Type()->As<core::type::Struct>()) {
             for (auto* member : str->Members()) {
                 Value* from =
-                    builder.Access(member->Type(), inner_result, u32(member->Index()))->Result(0);
+                    builder.Access(member->Type(), inner_result, u32(member->Index()))->Result();
                 backend->SetOutput(builder, member->Index(), from);
             }
         } else if (!inner_result->Type()->Is<core::type::Void>()) {

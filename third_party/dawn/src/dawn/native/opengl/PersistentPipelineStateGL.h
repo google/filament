@@ -28,6 +28,7 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_PERSISTENTPIPELINESTATEGL_H_
 #define SRC_DAWN_NATIVE_OPENGL_PERSISTENTPIPELINESTATEGL_H_
 
+#include "dawn/native/Error.h"
 #include "dawn/native/dawn_platform.h"
 #include "dawn/native/opengl/opengl_platform.h"
 
@@ -37,15 +38,15 @@ struct OpenGLFunctions;
 
 class PersistentPipelineState {
   public:
-    void SetDefaultState(const OpenGLFunctions& gl);
-    void SetStencilFuncsAndMask(const OpenGLFunctions& gl,
-                                GLenum stencilBackCompareFunction,
-                                GLenum stencilFrontCompareFunction,
-                                uint32_t stencilReadMask);
-    void SetStencilReference(const OpenGLFunctions& gl, uint32_t stencilReference);
+    MaybeError SetDefaultState(const OpenGLFunctions& gl);
+    MaybeError SetStencilFuncsAndMask(const OpenGLFunctions& gl,
+                                      GLenum stencilBackCompareFunction,
+                                      GLenum stencilFrontCompareFunction,
+                                      uint32_t stencilReadMask);
+    MaybeError SetStencilReference(const OpenGLFunctions& gl, uint32_t stencilReference);
 
   private:
-    void CallGLStencilFunc(const OpenGLFunctions& gl);
+    MaybeError CallGLStencilFunc(const OpenGLFunctions& gl);
 
     GLenum mStencilBackCompareFunction = GL_ALWAYS;
     GLenum mStencilFrontCompareFunction = GL_ALWAYS;

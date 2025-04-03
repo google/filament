@@ -237,7 +237,7 @@ MaybeError EGLFunctions::LoadDisplayProcs(EGLDisplay display) {
         GET_PROC_WITH_NAME(ClientWaitSyncKHR, "eglClientWaitSyncKHR");
         GET_PROC_WITH_NAME(CreateSyncKHR, "eglCreateSyncKHR");
         GET_PROC_WITH_NAME(DestroySyncKHR, "eglDestroySyncKHR");
-        GET_PROC_WITH_NAME(ClientWaitSyncKHR, "eglClientWaitSyncKHR");
+        GET_PROC_WITH_NAME(GetSyncAttribKHR, "eglGetSyncAttribKHR");
     }
 
     if (HasExt(EGLExt::ReusableSync)) {

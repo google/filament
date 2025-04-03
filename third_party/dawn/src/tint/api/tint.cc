@@ -74,7 +74,7 @@ void Initialize() {
     tint::Program::printer = [](const tint::Program& program) {
         auto result = wgsl::writer::Generate(program, {});
         if (result != Success) {
-            return result.Failure().reason.Str();
+            return result.Failure().reason;
         }
         return result->wgsl;
     };

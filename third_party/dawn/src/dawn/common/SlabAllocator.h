@@ -29,6 +29,7 @@
 #define SRC_DAWN_COMMON_SLABALLOCATOR_H_
 
 #include <cstdint>
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -72,14 +73,22 @@ namespace dawn {
 // free list.
 class SlabAllocatorImpl {
   public:
+    SlabAllocatorImpl(SlabAllocatorImpl&& rhs);
+
+    // Deletes any slabs that have zero allocations.
+    void DeleteEmptySlabs();
+
+    uint32_t CountAllocatedSlabsForTesting() const;
+
+  protected:
     // Allocations host their current index and the index of the next free block.
     // Because this is an index, and not a byte offset, it can be much smaller than a size_t.
     // TODO(crbug.com/dawn/825): Is uint8_t sufficient?
     using Index = uint16_t;
 
-    SlabAllocatorImpl(SlabAllocatorImpl&& rhs);
+    // The maximum value is reserved to indicate the end of the list.
+    static constexpr Index kInvalidIndex = std::numeric_limits<Index>::max();
 
-  protected:
     // This is essentially a singly linked list using indices instead of pointers,
     // so we store the index of "this" in |this->index|.
     struct IndexLinkNode : PlacementAllocated {
@@ -88,6 +97,8 @@ class SlabAllocatorImpl {
         const Index index;  // The index of this block in the slab.
         Index nextIndex;    // The index of the next available block. kInvalidIndex, if none.
     };
+    // The IndexLinkNode destructor is not invoked so it must be trivially destructible.
+    static_assert(std::is_trivially_destructible_v<IndexLinkNode>);
 
     struct Slab : PlacementAllocated {
         // A slab is placement-allocated into an aligned pointer from a separate allocation.
@@ -118,9 +129,6 @@ class SlabAllocatorImpl {
     void Deallocate(void* ptr);
 
   private:
-    // The maximum value is reserved to indicate the end of the list.
-    static Index kInvalidIndex;
-
     // Get the IndexLinkNode |offset| slots away.
     IndexLinkNode* OffsetFrom(IndexLinkNode* node, std::make_signed_t<Index> offset) const;
 

@@ -36,7 +36,7 @@ LimitsAndFeatures::LimitsAndFeatures() = default;
 
 LimitsAndFeatures::~LimitsAndFeatures() = default;
 
-WGPUStatus LimitsAndFeatures::GetLimits(WGPUSupportedLimits* limits) const {
+WGPUStatus LimitsAndFeatures::GetLimits(WGPULimits* limits) const {
     DAWN_ASSERT(limits != nullptr);
     auto* originalNextInChain = limits->nextInChain;
     *limits = mLimits;
@@ -46,13 +46,6 @@ WGPUStatus LimitsAndFeatures::GetLimits(WGPUSupportedLimits* limits) const {
         // Store the WGPUChainedStruct to restore the chain after assignment.
         WGPUChainedStruct originalChainedStruct = *chain;
         switch (chain->sType) {
-            case (WGPUSType_DawnExperimentalSubgroupLimits): {
-                auto* experimentalSubgroupLimits =
-                    reinterpret_cast<WGPUDawnExperimentalSubgroupLimits*>(chain);
-                // This assignment break the next field of WGPUChainedStruct head.
-                *experimentalSubgroupLimits = mExperimentalSubgroupLimits;
-                break;
-            }
             case (WGPUSType_DawnExperimentalImmediateDataLimits): {
                 auto* experimentalImmediateDataLimits =
                     reinterpret_cast<WGPUDawnExperimentalImmediateDataLimits*>(chain);
@@ -104,21 +97,13 @@ void LimitsAndFeatures::ToSupportedFeatures(WGPUSupportedFeatures* supportedFeat
     supportedFeatures->features = features;
 }
 
-void LimitsAndFeatures::SetLimits(const WGPUSupportedLimits* limits) {
+void LimitsAndFeatures::SetLimits(const WGPULimits* limits) {
     DAWN_ASSERT(limits != nullptr);
     mLimits = *limits;
     mLimits.nextInChain = nullptr;
     // Handle other limits that chained after WGPUSupportedLimits
     for (auto* chain = limits->nextInChain; chain; chain = chain->next) {
         switch (chain->sType) {
-            case (WGPUSType_DawnExperimentalSubgroupLimits): {
-                // TODO(crbug.com/354751907) Remove this, as it is now in AdapterInfo.
-                auto* experimentalSubgroupLimits =
-                    reinterpret_cast<WGPUDawnExperimentalSubgroupLimits*>(chain);
-                mExperimentalSubgroupLimits = *experimentalSubgroupLimits;
-                mExperimentalSubgroupLimits.chain.next = nullptr;
-                break;
-            }
             case (WGPUSType_DawnExperimentalImmediateDataLimits): {
                 auto* experimentalImmediateDataLimits =
                     reinterpret_cast<WGPUDawnExperimentalImmediateDataLimits*>(chain);
