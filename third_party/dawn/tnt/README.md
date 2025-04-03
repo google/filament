@@ -18,6 +18,13 @@ cd ..
 rm -rf dawn
 mv dawn_copy dawn
 patch -p2 < dawn/tnt/001-dawn-static-lib.patch.
+# remove redundant 3rd party dependencies with Filament itself
+rm -rf \
+    dawn/third_party/abseil-cpp \
+    dawn/third_party/glslang \
+    dawn/third_party/spirv-cross \
+    dawn/third_party/spirv-headers \
+    dawn/third_party/spirv-tools
 git add dawn
 <may need to add following separately>
 git add add dawn/third_party/dxc/ dawn/third_party/vulkan-loader/src/ dawn/third_party/spirv-tools/src/ dawn/third_party/glslang/
