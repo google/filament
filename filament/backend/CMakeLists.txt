@@ -255,6 +255,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUConstants.h
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
+            src/webgpu/WebGPUSwapChain.cpp
+            src/webgpu/WebGPUSwapChain.h
     )
     if (WIN32)
         list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)

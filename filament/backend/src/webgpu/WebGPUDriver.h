@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
+#include "webgpu/WebGPUSwapChain.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
@@ -30,6 +31,7 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
+#include <memory>
 
 #ifndef FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB
 #    define FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB 8
@@ -55,16 +57,16 @@ private:
     // the platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
     // handled in the WebGPUPlatform
     WebGPUPlatform& mPlatform;
-    wgpu::Surface mSurface = nullptr;
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
     wgpu::Queue mQueue = nullptr;
+    // TODO consider moving to handle allocator when ready
+    std::unique_ptr<WebGPUSwapChain> mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
 
     /*
      * Driver interface
      */
-
     template<typename T>
     friend class ConcreteDispatcher;
 
