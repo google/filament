@@ -68,7 +68,7 @@ public:
     fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
-    void clearHistory();
+    void gc();
 
 private:
     class DescriptorInfinitePool;

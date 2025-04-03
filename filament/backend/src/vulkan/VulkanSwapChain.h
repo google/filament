@@ -83,6 +83,7 @@ private:
     void update();
 
     VulkanPlatform* mPlatform;
+    VulkanContext const& mContext;
     fvkmemory::ResourceManager* mResourceManager;
     VulkanCommands* mCommands;
     VmaAllocator mAllocator;

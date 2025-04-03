@@ -366,7 +366,7 @@ void VulkanDriver::collectGarbage() {
     FVK_SYSTRACE_SCOPE();
     // Command buffers need to be submitted and completed before other resources can be gc'd.
     mCommands.gc();
-    mDescriptorSetCache.clearHistory();
+    mDescriptorSetCache.gc();
     mStagePool.gc();
     mFramebufferCache.gc();
     mPipelineCache.gc();
@@ -594,10 +594,10 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
     std::tie(vkimg, deviceMemory) =
             mPlatform->createExternalImageData(externalImage, metadata, memoryTypeIndex, vkUsage);
 
-    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
-            mAllocator, &mResourceManager, &mCommands, vkimg, deviceMemory, metadata.format,
-            metadata.samples, metadata.width, metadata.height, metadata.layerCount, usage,
-            mStagePool);
+    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mContext,
+            mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimg, deviceMemory,
+            metadata.format, VK_NULL_HANDLE, metadata.samples, metadata.width, metadata.height,
+            metadata.layerCount, usage, mStagePool);
 
     texture.inc();
 }
