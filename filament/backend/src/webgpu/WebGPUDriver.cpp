@@ -117,7 +117,6 @@ void printLimits(wgpu::Limits const& limits) {
     printLimit("maxBufferSize", limits.maxBufferSize);
     printLimit("maxVertexAttributes", limits.maxVertexAttributes);
     printLimit("maxVertexBufferArrayStride", limits.maxVertexBufferArrayStride);
-    printLimit("maxInterStageShaderComponents", limits.maxInterStageShaderComponents);
     printLimit("maxInterStageShaderVariables", limits.maxInterStageShaderVariables);
     printLimit("maxColorAttachments", limits.maxColorAttachments);
     printLimit("maxColorAttachmentBytesPerSample", limits.maxColorAttachmentBytesPerSample);
@@ -159,8 +158,6 @@ void printAdapterDetails(wgpu::Adapter const& adapter) {
         FWGPU_LOGI << "  vendor ID: " << adapterInfo.vendorID << utils::io::endl;
         FWGPU_LOGI << "  subgroup min size: " << adapterInfo.subgroupMinSize << utils::io::endl;
         FWGPU_LOGI << "  subgroup max size: " << adapterInfo.subgroupMaxSize << utils::io::endl;
-        FWGPU_LOGI << "  compatibility mode: " << bool(adapterInfo.compatibilityMode)
-                   << utils::io::endl;
         FWGPU_LOGI << "  power preference: " << powerPreferenceStream.str() << utils::io::endl;
     }
     wgpu::SupportedFeatures supportedFeatures{};
@@ -176,12 +173,12 @@ void printAdapterDetails(wgpu::Adapter const& adapter) {
                     FWGPU_LOGI << "  " << nameStream.str().data() << utils::io::endl;
                 });
     }
-    wgpu::SupportedLimits supportedLimits{};
+    wgpu::Limits supportedLimits{};
     if (!adapter.GetLimits(&supportedLimits)) {
         FWGPU_LOGW << "Failed to get WebGPU adapter supported limits" << utils::io::endl;
     } else {
         FWGPU_LOGI << "WebGPU adapter supported limits:" << utils::io::endl;
-        printLimits(supportedLimits.limits);
+        printLimits(supportedLimits);
     }
 }
 #endif
@@ -203,12 +200,12 @@ void printDeviceDetails(wgpu::Device const& device) {
                     FWGPU_LOGI << "  " << nameStream.str().data() << utils::io::endl;
                 });
     }
-    wgpu::SupportedLimits supportedLimits{};
+    wgpu::Limits supportedLimits{};
     if (!device.GetLimits(&supportedLimits)) {
         FWGPU_LOGW << "Failed to get WebGPU supported device limits" << utils::io::endl;
     } else {
         FWGPU_LOGI << "WebGPU device supported limits:" << utils::io::endl;
-        printLimits(supportedLimits.limits);
+        printLimits(supportedLimits);
     }
 }
 #endif

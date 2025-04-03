@@ -608,7 +608,7 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     tint::SuccessType tintSuccess;
 
     if (wgslOut != tintSuccess) {
-        slog.e << "Tint writer error: " << wgslOut.Failure().reason.Str() << io::endl;
+        slog.e << "Tint writer error: " << wgslOut.Failure().reason << io::endl;
         return false;
     }
     *outWsl = wgslOut->wgsl;
