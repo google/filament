@@ -107,6 +107,7 @@ class TrimCapabilitiesPass : public Pass {
       spv::Capability::StorageUniform16,
       spv::Capability::StorageUniformBufferBlock16,
       spv::Capability::VulkanMemoryModelDeviceScope,
+      spv::Capability::QuadControlKHR,
       // clang-format on
   };
 

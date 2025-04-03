@@ -8002,8 +8002,10 @@ TEST_F(AggressiveDCETest, StoringAPointer) {
   const std::string text = R"(
                OpCapability CooperativeMatrixKHR
                OpCapability Shader
+               OpCapability VulkanMemoryModelKHR
                OpExtension "SPV_KHR_cooperative_matrix"
-               OpMemoryModel Logical GLSL450
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpMemoryModel Logical VulkanKHR
                OpEntryPoint GLCompute %1 "main" %2
                OpExecutionMode %1 LocalSize 64 1 1
                OpSource HLSL 600

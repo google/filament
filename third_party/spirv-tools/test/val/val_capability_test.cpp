@@ -2977,6 +2977,26 @@ TEST_F(ValidateCapability, CapShaderLayerSucceedsInNewSpirvVersion) {
   EXPECT_THAT(getDiagnosticString(), Eq(""));
 }
 
+TEST_F(ValidateCapability,
+       CooperativeMatrixKHRShaderRequiresVulkanMemoryModel) {
+  const auto spirv = R"(
+OpCapability Shader
+OpCapability CooperativeMatrixKHR
+OpCapability Linkage
+OpExtension "SPV_KHR_cooperative_matrix"
+OpMemoryModel Logical GLSL450
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_6);
+  EXPECT_EQ(SPV_ERROR_INVALID_CAPABILITY,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "If the Shader and CooperativeMatrixKHR capabilities are declared, "
+          "the VulkanMemoryModel capability must also be declared"));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools
