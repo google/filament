@@ -27,8 +27,6 @@
 
 #include "src/tint/lang/msl/writer/raise/simd_ballot.h"
 
-#include <utility>
-
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/referenced_module_vars.h"
 #include "src/tint/lang/core/ir/validator.h"

@@ -111,7 +111,7 @@ TEST_F(ProgramToIRCallTest, EmitExpression_Convert) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %i:ptr<private, i32, read_write> = var, 1i
+  %i:ptr<private, i32, read_write> = var 1i
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
@@ -133,7 +133,7 @@ TEST_F(ProgramToIRCallTest, EmitExpression_ConstructEmpty) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %i:ptr<private, vec3<f32>, read_write> = var, vec3<f32>(0.0f)
+  %i:ptr<private, vec3<f32>, read_write> = var vec3<f32>(0.0f)
 }
 
 )");
@@ -148,7 +148,7 @@ TEST_F(ProgramToIRCallTest, EmitExpression_Construct) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %i:ptr<private, f32, read_write> = var, 1.0f
+  %i:ptr<private, f32, read_write> = var 1.0f
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {

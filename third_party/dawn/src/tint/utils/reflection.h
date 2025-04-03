@@ -33,9 +33,10 @@
 #include <type_traits>
 #include <utility>
 
+#include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/macros/foreach.h"
 #include "src/tint/utils/memory/aligned_storage.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 /// Forward declarations
 namespace tint {
@@ -81,18 +82,16 @@ struct ReflectedFieldInfo {
 
 /// @returns Success if the sequential fields of @p fields have the expected offsets, and aligned
 /// sum match the class size @p class_size.
-::tint::Result<SuccessType> CheckAllFieldsReflected(VectorRef<ReflectedFieldInfo> fields,
-                                                    std::string_view class_name,
-                                                    size_t class_size,
-                                                    size_t class_align,
-                                                    bool class_is_castable,
-                                                    std::string_view reflect_file,
-                                                    uint32_t reflect_line);
+Result<SuccessType> CheckAllFieldsReflected(VectorRef<ReflectedFieldInfo> fields,
+                                            std::string_view class_name,
+                                            size_t class_size,
+                                            size_t class_align,
+                                            bool class_is_castable);
 
 /// @returns Success if the TINT_REFLECT() reflected fields of @tparam CLASS match the declaration
 /// order, do not have any gaps, and fully account for the entire size of the class.
 template <typename CLASS>
-::tint::Result<SuccessType> CheckAllFieldsReflected() {
+Result<SuccessType> CheckAllFieldsReflected() {
     static_assert(!std::has_virtual_destructor_v<CLASS> || std::is_base_of_v<CastableBase, CLASS>,
                   "TINT_ASSERT_ALL_FIELDS_REFLECTED() cannot be used on virtual classes, except "
                   "for types using the tint::Castable framework");
@@ -107,8 +106,7 @@ template <typename CLASS>
         fields.Push({name, sizeof(T), alignof(T), offset});
     });
     return CheckAllFieldsReflected(fields, R::Name, sizeof(CLASS), alignof(CLASS),
-                                   std::is_base_of_v<CastableBase, CLASS>, R::ReflectFile,
-                                   R::ReflectLine);
+                                   std::is_base_of_v<CastableBase, CLASS>);
 }
 
 }  // namespace tint::reflection::detail
@@ -183,8 +181,6 @@ void ForeachField(const OBJECT& object, CB&& callback) {
         using Class = CLASS;                                                                  \
         using Fields = std::tuple<TINT_FOREACH(TINT_REFLECT_FIELD_TYPE, __VA_ARGS__) void>;   \
         [[maybe_unused]] static constexpr std::string_view Name = #CLASS;                     \
-        [[maybe_unused]] static constexpr std::string_view ReflectFile = __FILE__;            \
-        [[maybe_unused]] static constexpr uint32_t ReflectLine = __LINE__;                    \
         template <typename OBJECT, typename CB>                                               \
         [[maybe_unused]] static constexpr void ForeachField(OBJECT&& object, CB&& callback) { \
             TINT_FOREACH(TINT_REFLECT_CALLBACK_FIELD, __VA_ARGS__)                            \

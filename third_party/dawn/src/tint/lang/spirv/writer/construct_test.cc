@@ -137,8 +137,8 @@ TEST_F(SpirvWriterTest, Construct_SubgroupMatrix_ZeroValue) {
     auto* func = b.Function("foo", ty.void_());
     b.Append(func->Block(), [&] {
         b.Let("left", b.Construct(ty.subgroup_matrix_left(ty.f32(), 8, 4)));
-        b.Let("right", b.Construct(ty.subgroup_matrix_right(ty.f32(), 4, 8)));
-        b.Let("result", b.Construct(ty.subgroup_matrix_result(ty.f32(), 2, 2)));
+        b.Let("right", b.Construct(ty.subgroup_matrix_right(ty.i32(), 4, 8)));
+        b.Let("result", b.Construct(ty.subgroup_matrix_result(ty.u32(), 2, 2)));
         b.Return(func);
     });
 
@@ -146,11 +146,11 @@ TEST_F(SpirvWriterTest, Construct_SubgroupMatrix_ZeroValue) {
     options.use_vulkan_memory_model = true;
     ASSERT_TRUE(Generate(options)) << Error() << output_;
     EXPECT_INST("%6 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_4 %uint_8 %uint_0");
-    EXPECT_INST("%left = OpConstantNull %6");
-    EXPECT_INST("%14 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_8 %uint_4 %uint_1");
-    EXPECT_INST("%right = OpConstantNull %14");
-    EXPECT_INST("%17 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_2 %uint_2 %uint_2");
-    EXPECT_INST("%result = OpConstantNull %17");
+    EXPECT_INST("%left = OpConstantComposite %6 %float_0");
+    EXPECT_INST("%15 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_8 %uint_4 %uint_1");
+    EXPECT_INST("%right = OpConstantComposite %15 %int_0");
+    EXPECT_INST("%20 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_2 %uint_2 %uint_2");
+    EXPECT_INST("%result = OpConstantComposite %20 %uint_0");
 }
 
 TEST_F(SpirvWriterTest, Construct_SubgroupMatrix_SingleValue) {

@@ -38,7 +38,7 @@
 // Environment variables
 #if COMMON_UNIX_PLATFORMS
 
-bool is_high_integrity() { return geteuid() != getuid() || getegid() != getgid(); }
+bool is_high_integrity(void) { return geteuid() != getuid() || getegid() != getgid(); }
 
 char *loader_getenv(const char *name, const struct loader_instance *inst) {
     if (NULL == name) return NULL;

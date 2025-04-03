@@ -1,5 +1,5 @@
 // RUN: %dxc -T ps_6_0 -E main %s | FileCheck %s
-// CHECK: error: texture resource texel type must be scalar or vector
+// CHECK: error: elements of typed buffers and textures must be scalars or vectors
 struct Struct { float f; };
 Texture2D<Struct> t;
 RWTexture2D<Struct> rwt;

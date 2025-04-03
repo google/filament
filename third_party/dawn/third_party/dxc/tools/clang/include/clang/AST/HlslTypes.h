@@ -348,9 +348,10 @@ void AddHLSLNodeOutputRecordTemplate(
     _Outptr_ clang::ClassTemplateDecl **outputRecordTemplateDecl,
     bool isCompleteType = true);
 
-clang::CXXRecordDecl *DeclareRecordTypeWithHandle(clang::ASTContext &context,
-                                                  llvm::StringRef name,
-                                                  bool isCompleteType = true);
+clang::CXXRecordDecl *
+DeclareRecordTypeWithHandle(clang::ASTContext &context, llvm::StringRef name,
+                            bool isCompleteType = true,
+                            clang::InheritableAttr *Attr = nullptr);
 
 void AddRaytracingConstants(clang::ASTContext &context);
 void AddSamplerFeedbackConstants(clang::ASTContext &context);
@@ -370,24 +371,27 @@ void AddStdIsEqualImplementation(clang::ASTContext &context, clang::Sema &sema);
 clang::CXXRecordDecl *DeclareTemplateTypeWithHandle(
     clang::ASTContext &context, llvm::StringRef name,
     uint8_t templateArgCount = 1,
-    clang::TypeSourceInfo *defaultTypeArgValue = nullptr);
+    clang::TypeSourceInfo *defaultTypeArgValue = nullptr,
+    clang::InheritableAttr *Attr = nullptr);
 
 clang::CXXRecordDecl *DeclareTemplateTypeWithHandleInDeclContext(
     clang::ASTContext &context, clang::DeclContext *declContext,
     llvm::StringRef name, uint8_t templateArgCount,
-    clang::TypeSourceInfo *defaultTypeArgValue);
+    clang::TypeSourceInfo *defaultTypeArgValue,
+    clang::InheritableAttr *Attr = nullptr);
 
 clang::CXXRecordDecl *DeclareUIntTemplatedTypeWithHandle(
     clang::ASTContext &context, llvm::StringRef typeName,
-    llvm::StringRef templateParamName,
-    clang::TagTypeKind tagKind = clang::TagTypeKind::TTK_Class);
+    llvm::StringRef templateParamName, clang::InheritableAttr *Attr = nullptr);
 clang::CXXRecordDecl *DeclareUIntTemplatedTypeWithHandleInDeclContext(
     clang::ASTContext &context, clang::DeclContext *declContext,
     llvm::StringRef typeName, llvm::StringRef templateParamName,
-    clang::TagTypeKind tagKind = clang::TagTypeKind::TTK_Class);
-clang::CXXRecordDecl *DeclareConstantBufferViewType(clang::ASTContext &context,
-                                                    bool bTBuf);
+    clang::InheritableAttr *Attr = nullptr);
+clang::CXXRecordDecl *
+DeclareConstantBufferViewType(clang::ASTContext &context,
+                              clang::InheritableAttr *Attr);
 clang::CXXRecordDecl *DeclareRayQueryType(clang::ASTContext &context);
+clang::CXXRecordDecl *DeclareHitObjectType(clang::NamespaceDecl &NSDecl);
 clang::CXXRecordDecl *DeclareResourceType(clang::ASTContext &context,
                                           bool bSampler);
 
@@ -469,6 +473,7 @@ bool IsHLSLNodeInputType(clang::QualType type);
 bool IsHLSLDynamicResourceType(clang::QualType type);
 bool IsHLSLDynamicSamplerType(clang::QualType type);
 bool IsHLSLNodeType(clang::QualType type);
+bool IsHLSLHitObjectType(clang::QualType type);
 
 bool IsHLSLObjectWithImplicitMemberAccess(clang::QualType type);
 bool IsHLSLObjectWithImplicitROMemberAccess(clang::QualType type);
@@ -542,6 +547,7 @@ clang::CXXMethodDecl *CreateObjectFunctionDeclarationWithParams(
     clang::QualType resultType, llvm::ArrayRef<clang::QualType> paramTypes,
     llvm::ArrayRef<clang::StringRef> paramNames,
     clang::DeclarationName declarationName, bool isConst,
+    clang::StorageClass SC = clang::StorageClass::SC_None,
     bool isTemplateFunction = false);
 
 DXIL::ResourceClass GetResourceClassForType(const clang::ASTContext &context,

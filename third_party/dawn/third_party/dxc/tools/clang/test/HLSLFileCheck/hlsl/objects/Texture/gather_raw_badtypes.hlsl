@@ -8,13 +8,13 @@ Texture2DArray<float16_t> g_texArrf16 : register(t4);
 Texture2DArray<float32_t> g_texArrf32 : register(t5);
 Texture2DArray<float64_t> g_texArrf64 : register(t6);
 
-Texture2D<uint16_t4> g_tex16 : register(t7);
-Texture2D<uint32_t2> g_tex32 : register(t8);
-Texture2D<uint64_t3> g_tex64 : register(t9);
+Texture2D<int16_t4> g_tex16 : register(t7);
+Texture2D<int32_t3> g_tex32 : register(t8);
+Texture2D<int64_t2> g_tex64 : register(t9);
 
-Texture2DArray<uint16_t2> g_texArr16 : register(t10);
+Texture2DArray<uint16_t4> g_texArr16 : register(t10);
 Texture2DArray<uint32_t3> g_texArr32 : register(t11);
-Texture2DArray<uint64_t4> g_texArr64 : register(t12);
+Texture2DArray<uint64_t2> g_texArr64 : register(t12);
 
 SamplerState g_samp : register(s5);
 
@@ -39,29 +39,29 @@ SamplerState g_samp : register(s5);
 //CHECK:  error: cannot GatherRaw from resource containing double
 //CHECK:  error: cannot GatherRaw from resource containing double
 
+//CHECK: error: cannot GatherRaw from resource containing short4
+//CHECK: error: cannot GatherRaw from resource containing short4
+//CHECK: error: cannot GatherRaw from resource containing short4
+
 //CHECK: error: cannot GatherRaw from resource containing ushort4
 //CHECK: error: cannot GatherRaw from resource containing ushort4
 //CHECK: error: cannot GatherRaw from resource containing ushort4
 
-//CHECK: error: cannot GatherRaw from resource containing ushort2
-//CHECK: error: cannot GatherRaw from resource containing ushort2
-//CHECK: error: cannot GatherRaw from resource containing ushort2
-
-//CHECK: error: cannot GatherRaw from resource containing uint2
-//CHECK: error: cannot GatherRaw from resource containing uint2
-//CHECK: error: cannot GatherRaw from resource containing uint2
+//CHECK: error: cannot GatherRaw from resource containing int3
+//CHECK: error: cannot GatherRaw from resource containing int3
+//CHECK: error: cannot GatherRaw from resource containing int3
 
 //CHECK: error: cannot GatherRaw from resource containing uint3
 //CHECK: error: cannot GatherRaw from resource containing uint3
 //CHECK: error: cannot GatherRaw from resource containing uint3
 
-//CHECK: error: cannot GatherRaw from resource containing ulong3
-//CHECK: error: cannot GatherRaw from resource containing ulong3
-//CHECK: error: cannot GatherRaw from resource containing ulong3
+//CHECK: error: cannot GatherRaw from resource containing long2
+//CHECK: error: cannot GatherRaw from resource containing long2
+//CHECK: error: cannot GatherRaw from resource containing long2
 
-//CHECK: error: cannot GatherRaw from resource containing ulong4
-//CHECK: error: cannot GatherRaw from resource containing ulong4
-//CHECK: error: cannot GatherRaw from resource containing ulong4
+//CHECK: error: cannot GatherRaw from resource containing ulong2
+//CHECK: error: cannot GatherRaw from resource containing ulong2
+//CHECK: error: cannot GatherRaw from resource containing ulong2
 
 float4 main(float2 a : A) : SV_Target
 {

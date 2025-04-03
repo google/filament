@@ -126,7 +126,9 @@ enum LEGAL_INTRINSIC_COMPTYPES {
   LICOMPTYPE_GROUP_NODE_OUTPUT_RECORDS = 49,
   LICOMPTYPE_THREAD_NODE_OUTPUT_RECORDS = 50,
 
-  LICOMPTYPE_COUNT = 51
+  LICOMPTYPE_HIT_OBJECT = 51,
+
+  LICOMPTYPE_COUNT = 52
 };
 
 static const BYTE IA_SPECIAL_BASE = 0xf0;
@@ -160,11 +162,17 @@ struct HLSL_INTRINSIC_ARGUMENT {
               // matching input constraints.
 };
 
+// HLSL_INTRINSIC flags
+static const UINT INTRIN_FLAG_READ_ONLY = 1U << 0;
+static const UINT INTRIN_FLAG_READ_NONE = 1U << 1;
+static const UINT INTRIN_FLAG_IS_WAVE = 1U << 2;
+static const UINT INTRIN_FLAG_STATIC_MEMBER = 1U << 3;
+
 struct HLSL_INTRINSIC {
   UINT Op;                 // Intrinsic Op ID
-  BOOL bReadOnly;          // Only read memory
-  BOOL bReadNone;          // Not read memory
-  BOOL bIsWave;            // Is a wave-sensitive op
+  UINT Flags;              // INTRIN_FLAG_* flags
+  UINT MinShaderModel;     // Encoded minimum shader model, 0 = no minimum
+                           // (Major << 4) + (Minor & 0xf)
   INT iOverloadParamIndex; // Parameter decide the overload type, -1 means ret
                            // type
   UINT uNumArgs;           // Count of arguments in pArgs.

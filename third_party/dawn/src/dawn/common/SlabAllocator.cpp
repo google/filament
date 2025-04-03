@@ -29,8 +29,8 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <limits>
 #include <new>
+
 #include "dawn/common/AlignedAlloc.h"
 #include "dawn/common/Assert.h"
 #include "dawn/common/Math.h"
@@ -68,9 +68,6 @@ SlabAllocatorImpl::SentinelSlab::~SentinelSlab() {
 }
 
 // SlabAllocatorImpl
-
-SlabAllocatorImpl::Index SlabAllocatorImpl::kInvalidIndex =
-    std::numeric_limits<SlabAllocatorImpl::Index>::max();
 
 SlabAllocatorImpl::SlabAllocatorImpl(Index blocksPerSlab,
                                      uint32_t objectSize,
@@ -172,6 +169,41 @@ void SlabAllocatorImpl::Slab::Splice() {
     next = nullptr;
 }
 
+void SlabAllocatorImpl::DeleteEmptySlabs() {
+    auto DeleteEmptyFromList = [](const SentinelSlab& sentinel) {
+        for (Slab* current = sentinel.next; current != nullptr;) {
+            if (current->blocksInUse == 0) {
+                Slab* next = current->next;
+
+                // Remove from list and then delete to avoid dangling pointers.
+                current->Splice();
+                char* allocation = current->allocation;
+                current->~Slab();
+                AlignedFree(allocation);
+
+                current = next;
+            } else {
+                current = current->next;
+            }
+        }
+    };
+    DeleteEmptyFromList(mRecycledSlabs);
+    DeleteEmptyFromList(mAvailableSlabs);
+}
+
+uint32_t SlabAllocatorImpl::CountAllocatedSlabsForTesting() const {
+    auto CountSlabs = [](const SentinelSlab& sentinel) {
+        int count = 0;
+        for (Slab* current = sentinel.next; current != nullptr;) {
+            ++count;
+            current = current->next;
+        }
+        return count;
+    };
+
+    return CountSlabs(mAvailableSlabs) + CountSlabs(mRecycledSlabs) + CountSlabs(mFullSlabs);
+}
+
 void* SlabAllocatorImpl::Allocate() {
     if (mAvailableSlabs.next == nullptr) {
         GetNewSlab();
@@ -208,9 +240,6 @@ void SlabAllocatorImpl::Deallocate(void* ptr) {
         slab->Splice();
         mRecycledSlabs.Prepend(slab);
     }
-
-    // TODO(crbug.com/dawn/825): Occasionally prune slabs if |blocksInUse == 0|.
-    // Doing so eagerly hurts performance.
 }
 
 void SlabAllocatorImpl::GetNewSlab() {

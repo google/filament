@@ -28,6 +28,7 @@ SPECIAL_WORDS = set((
     'ASTC',  # VkPhysicalDeviceTextureCompressionASTCHDRFeaturesEXT
     'D3D12',  # VkD3D12FenceSubmitInfoKHR
     'Float16',  # VkPhysicalDeviceShaderFloat16Int8FeaturesKHR
+    'Bfloat16',  # VkPhysicalDeviceShaderBfloat16FeaturesKHR
     'ImagePipe',  # VkImagePipeSurfaceCreateInfoFUCHSIA
     'Int64',  # VkPhysicalDeviceShaderAtomicInt64FeaturesKHR
     'Int8',  # VkPhysicalDeviceShaderFloat16Int8FeaturesKHR
@@ -38,7 +39,7 @@ SPECIAL_WORDS = set((
 ))
 # A regex to match any of the SPECIAL_WORDS
 EXCEPTION_PATTERN = r'(?P<exception>{})'.format(
-    '|'.join('(%s)' % re.escape(w) for w in SPECIAL_WORDS))
+    '|'.join(f'({re.escape(w)})' for w in SPECIAL_WORDS))
 MAIN_RE = re.compile(
     # the negative lookahead is to prevent the all-caps pattern from being too greedy.
     r'({}|([0-9]+)|([A-Z][a-z]+)|([A-Z][A-Z]*(?![a-z])))'.format(EXCEPTION_PATTERN))

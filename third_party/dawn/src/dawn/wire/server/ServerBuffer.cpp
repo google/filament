@@ -140,6 +140,16 @@ WireResult Server::DoDeviceCreateBuffer(Known<WGPUDevice> device,
     }
 
     if (isWriteMode) {
+        if (buffer->handle == nullptr) {
+            DAWN_ASSERT(descriptor->mappedAtCreation);
+            // A null buffer indicates that mapping-at-creation failed inside createBuffer.
+            // - Unmark the buffer as allocated so we will skip freeing it.
+            buffer->state = AllocationState::Reserved;
+            // - Remember the buffer is an error so we will skip subsequent mapping operations.
+            buffer->mapWriteState = BufferMapWriteState::MapError;
+            return WireResult::Success;
+        }
+
         MemoryTransferService::WriteHandle* writeHandle = nullptr;
         // Deserialize metadata produced from the client to create a companion server handle.
         if (!mMemoryTransferService->DeserializeWriteHandle(
@@ -154,9 +164,9 @@ WireResult Server::DoDeviceCreateBuffer(Known<WGPUDevice> device,
         if (descriptor->mappedAtCreation) {
             void* mapping = mProcs.bufferGetMappedRange(buffer->handle, 0, descriptor->size);
             if (mapping == nullptr) {
-                // A zero mapping is used to indicate an allocation error of an error buffer.
-                // This is a valid case and isn't fatal. Remember the buffer is an error so as
-                // to skip subsequent mapping operations.
+                DAWN_ASSERT(descriptor->size % 4 != 0);
+                // GetMappedRange can still fail if the buffer's size isn't aligned.
+                // - Remember the buffer is an error so we will skip subsequent mapping operations.
                 buffer->mapWriteState = BufferMapWriteState::MapError;
                 return WireResult::Success;
             }

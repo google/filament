@@ -399,6 +399,30 @@ TEST_F(LexerTest, Null_InIdentifier_IsError) {
     }
 }
 
+TEST_F(LexerTest, BOM_InFile_IsError) {
+    Source::File file("", std::string{'a', static_cast<char>(0xEF), static_cast<char>(0xBB),
+                                      static_cast<char>(0xBF), 'b'});
+    Lexer l(&file);
+
+    auto list = l.Lex();
+    ASSERT_EQ(2u, list.size());
+
+    {
+        auto& t = list[0];
+        EXPECT_EQ(t.to_str(), "a");
+    }
+
+    {
+        auto& t = list[1];
+        EXPECT_TRUE(t.IsError());
+        EXPECT_EQ(t.source().range.begin.line, 1u);
+        EXPECT_EQ(t.source().range.begin.column, 2u);
+        EXPECT_EQ(t.source().range.end.line, 1u);
+        EXPECT_EQ(t.source().range.end.column, 2u);
+        EXPECT_EQ(t.to_str(), "invalid character (UTF-8 BOM) found");
+    }
+}
+
 struct FloatData {
     const char* input;
     double result;

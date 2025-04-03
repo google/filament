@@ -82,7 +82,6 @@ cc_library(
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/tint/utils/memory",
-    "//src/tint/utils/result",
     "//src/tint/utils/rtti",
     "//src/tint/utils/symbol",
     "//src/tint/utils/text",
@@ -97,6 +96,7 @@ cc_library(
     ":tint_build_spv_reader_or_tint_build_spv_writer": [
       "@spirv_headers//:spirv_cpp11_headers", "@spirv_headers//:spirv_c_headers",
       "@spirv_tools//:spirv_tools_opt",
+      "@spirv_tools",
     ],
     "//conditions:default": [],
   }),
@@ -162,10 +162,10 @@ cc_library(
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/tint/utils/memory",
-    "//src/tint/utils/result",
     "//src/tint/utils/rtti",
     "//src/tint/utils/symbol",
     "//src/tint/utils/text",
+    "//src/tint/utils/text_generator",
     "@gtest",
     "//src/utils",
   ] + select({

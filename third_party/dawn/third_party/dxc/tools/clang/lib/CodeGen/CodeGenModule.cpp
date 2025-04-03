@@ -3376,6 +3376,12 @@ void CodeGenModule::EmitLinkageSpec(const LinkageSpecDecl *LSD) {
 
 /// EmitTopLevelDecl - Emit code for a single top level declaration.
 void CodeGenModule::EmitTopLevelDecl(Decl *D) {
+  llvm::TimeTraceScope TimeScope("CGM::EmitTopLevelDecl", [&] {
+    if (const auto *ND = dyn_cast<NamedDecl>(D))
+      return ND->getName();
+    return StringRef("Unnamed decl");
+  });
+
   // Ignore dependent declarations.
   if (D->getDeclContext() && D->getDeclContext()->isDependentContext())
     return;

@@ -44,32 +44,36 @@ const char* str(BuiltinFn i) {
             return "<none>";
         case BuiltinFn::kArrayLength:
             return "array_length";
-        case BuiltinFn::kAtomicAnd:
-            return "atomic_and";
-        case BuiltinFn::kAtomicCompareExchange:
-            return "atomic_compare_exchange";
-        case BuiltinFn::kAtomicExchange:
-            return "atomic_exchange";
-        case BuiltinFn::kAtomicIadd:
-            return "atomic_iadd";
-        case BuiltinFn::kAtomicIsub:
-            return "atomic_isub";
         case BuiltinFn::kAtomicLoad:
             return "atomic_load";
-        case BuiltinFn::kAtomicOr:
-            return "atomic_or";
-        case BuiltinFn::kAtomicSmax:
-            return "atomic_smax";
-        case BuiltinFn::kAtomicSmin:
-            return "atomic_smin";
         case BuiltinFn::kAtomicStore:
             return "atomic_store";
-        case BuiltinFn::kAtomicUmax:
-            return "atomic_umax";
-        case BuiltinFn::kAtomicUmin:
-            return "atomic_umin";
+        case BuiltinFn::kAtomicExchange:
+            return "atomic_exchange";
+        case BuiltinFn::kAtomicCompareExchange:
+            return "atomic_compare_exchange";
+        case BuiltinFn::kAtomicIAdd:
+            return "atomic_i_add";
+        case BuiltinFn::kAtomicISub:
+            return "atomic_i_sub";
+        case BuiltinFn::kAtomicSMax:
+            return "atomic_s_max";
+        case BuiltinFn::kAtomicSMin:
+            return "atomic_s_min";
+        case BuiltinFn::kAtomicUMax:
+            return "atomic_u_max";
+        case BuiltinFn::kAtomicUMin:
+            return "atomic_u_min";
+        case BuiltinFn::kAtomicAnd:
+            return "atomic_and";
+        case BuiltinFn::kAtomicOr:
+            return "atomic_or";
         case BuiltinFn::kAtomicXor:
             return "atomic_xor";
+        case BuiltinFn::kAtomicIIncrement:
+            return "atomic_i_increment";
+        case BuiltinFn::kAtomicIDecrement:
+            return "atomic_i_decrement";
         case BuiltinFn::kDot:
             return "dot";
         case BuiltinFn::kImageDrefGather:
@@ -82,6 +86,10 @@ const char* str(BuiltinFn i) {
             return "image_query_size";
         case BuiltinFn::kImageQuerySizeLod:
             return "image_query_size_lod";
+        case BuiltinFn::kImageQueryLevels:
+            return "image_query_levels";
+        case BuiltinFn::kImageQuerySamples:
+            return "image_query_samples";
         case BuiltinFn::kImageRead:
             return "image_read";
         case BuiltinFn::kImageSampleImplicitLod:
@@ -116,40 +124,104 @@ const char* str(BuiltinFn i) {
             return "sign";
         case BuiltinFn::kAbs:
             return "abs";
-        case BuiltinFn::kSmax:
-            return "smax";
-        case BuiltinFn::kSmin:
-            return "smin";
-        case BuiltinFn::kSclamp:
-            return "sclamp";
-        case BuiltinFn::kUmax:
-            return "umax";
-        case BuiltinFn::kUmin:
-            return "umin";
-        case BuiltinFn::kUclamp:
-            return "uclamp";
+        case BuiltinFn::kSMax:
+            return "s_max";
+        case BuiltinFn::kSMin:
+            return "s_min";
+        case BuiltinFn::kSClamp:
+            return "s_clamp";
+        case BuiltinFn::kUMax:
+            return "u_max";
+        case BuiltinFn::kUMin:
+            return "u_min";
+        case BuiltinFn::kUClamp:
+            return "u_clamp";
         case BuiltinFn::kFindILsb:
-            return "findILsb";
+            return "find_i_lsb";
         case BuiltinFn::kFindSMsb:
-            return "findSMsb";
+            return "find_s_msb";
         case BuiltinFn::kFindUMsb:
-            return "findUMsb";
+            return "find_u_msb";
         case BuiltinFn::kRefract:
             return "refract";
         case BuiltinFn::kReflect:
             return "reflect";
         case BuiltinFn::kFaceForward:
-            return "faceForward";
+            return "face_forward";
         case BuiltinFn::kLdexp:
             return "ldexp";
         case BuiltinFn::kModf:
             return "modf";
         case BuiltinFn::kFrexp:
             return "frexp";
-        case BuiltinFn::kSdot:
-            return "sdot";
-        case BuiltinFn::kUdot:
-            return "udot";
+        case BuiltinFn::kBitCount:
+            return "bit_count";
+        case BuiltinFn::kBitFieldInsert:
+            return "bit_field_insert";
+        case BuiltinFn::kBitFieldSExtract:
+            return "bit_field_s_extract";
+        case BuiltinFn::kBitFieldUExtract:
+            return "bit_field_u_extract";
+        case BuiltinFn::kAdd:
+            return "add";
+        case BuiltinFn::kSub:
+            return "sub";
+        case BuiltinFn::kMul:
+            return "mul";
+        case BuiltinFn::kSDiv:
+            return "s_div";
+        case BuiltinFn::kSMod:
+            return "s_mod";
+        case BuiltinFn::kSGreaterThan:
+            return "s_greater_than";
+        case BuiltinFn::kSGreaterThanEqual:
+            return "s_greater_than_equal";
+        case BuiltinFn::kSLessThan:
+            return "s_less_than";
+        case BuiltinFn::kSLessThanEqual:
+            return "s_less_than_equal";
+        case BuiltinFn::kUGreaterThan:
+            return "u_greater_than";
+        case BuiltinFn::kUGreaterThanEqual:
+            return "u_greater_than_equal";
+        case BuiltinFn::kULessThan:
+            return "u_less_than";
+        case BuiltinFn::kULessThanEqual:
+            return "u_less_than_equal";
+        case BuiltinFn::kConvertFToS:
+            return "convert_f_to_s";
+        case BuiltinFn::kConvertSToF:
+            return "convert_s_to_f";
+        case BuiltinFn::kConvertUToF:
+            return "convert_u_to_f";
+        case BuiltinFn::kBitwiseAnd:
+            return "bitwise_and";
+        case BuiltinFn::kBitwiseOr:
+            return "bitwise_or";
+        case BuiltinFn::kBitwiseXor:
+            return "bitwise_xor";
+        case BuiltinFn::kEqual:
+            return "equal";
+        case BuiltinFn::kNotEqual:
+            return "not_equal";
+        case BuiltinFn::kShiftLeftLogical:
+            return "shift_left_logical";
+        case BuiltinFn::kShiftRightLogical:
+            return "shift_right_logical";
+        case BuiltinFn::kShiftRightArithmetic:
+            return "shift_right_arithmetic";
+        case BuiltinFn::kNot:
+            return "not";
+        case BuiltinFn::kSNegate:
+            return "s_negate";
+        case BuiltinFn::kFMod:
+            return "f_mod";
+        case BuiltinFn::kOuterProduct:
+            return "outer_product";
+        case BuiltinFn::kSDot:
+            return "s_dot";
+        case BuiltinFn::kUDot:
+            return "u_dot";
         case BuiltinFn::kCooperativeMatrixLoad:
             return "cooperative_matrix_load";
         case BuiltinFn::kCooperativeMatrixStore:
@@ -184,15 +256,17 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kAtomicAnd:
         case BuiltinFn::kAtomicCompareExchange:
         case BuiltinFn::kAtomicExchange:
-        case BuiltinFn::kAtomicIadd:
-        case BuiltinFn::kAtomicIsub:
+        case BuiltinFn::kAtomicIAdd:
+        case BuiltinFn::kAtomicISub:
         case BuiltinFn::kAtomicOr:
-        case BuiltinFn::kAtomicSmax:
-        case BuiltinFn::kAtomicSmin:
+        case BuiltinFn::kAtomicSMax:
+        case BuiltinFn::kAtomicSMin:
         case BuiltinFn::kAtomicStore:
-        case BuiltinFn::kAtomicUmax:
-        case BuiltinFn::kAtomicUmin:
+        case BuiltinFn::kAtomicUMax:
+        case BuiltinFn::kAtomicUMin:
         case BuiltinFn::kAtomicXor:
+        case BuiltinFn::kAtomicIIncrement:
+        case BuiltinFn::kAtomicIDecrement:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad,
                                                    core::ir::Instruction::Access::kStore};
 
@@ -200,25 +274,27 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kDot:
         case BuiltinFn::kImageQuerySize:
         case BuiltinFn::kImageQuerySizeLod:
+        case BuiltinFn::kImageQueryLevels:
+        case BuiltinFn::kImageQuerySamples:
         case BuiltinFn::kMatrixTimesMatrix:
         case BuiltinFn::kMatrixTimesScalar:
         case BuiltinFn::kMatrixTimesVector:
         case BuiltinFn::kSelect:
         case BuiltinFn::kVectorTimesMatrix:
         case BuiltinFn::kVectorTimesScalar:
-        case BuiltinFn::kSdot:
-        case BuiltinFn::kUdot:
+        case BuiltinFn::kSDot:
+        case BuiltinFn::kUDot:
         case BuiltinFn::kNone:
         case BuiltinFn::kNormalize:
         case BuiltinFn::kInverse:
         case BuiltinFn::kSign:
         case BuiltinFn::kAbs:
-        case BuiltinFn::kSmax:
-        case BuiltinFn::kSmin:
-        case BuiltinFn::kSclamp:
-        case BuiltinFn::kUmax:
-        case BuiltinFn::kUmin:
-        case BuiltinFn::kUclamp:
+        case BuiltinFn::kSMax:
+        case BuiltinFn::kSMin:
+        case BuiltinFn::kSClamp:
+        case BuiltinFn::kUMax:
+        case BuiltinFn::kUMin:
+        case BuiltinFn::kUClamp:
         case BuiltinFn::kFindILsb:
         case BuiltinFn::kFindSMsb:
         case BuiltinFn::kFindUMsb:
@@ -227,6 +303,38 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kFaceForward:
         case BuiltinFn::kLdexp:
         case BuiltinFn::kCooperativeMatrixMulAdd:
+        case BuiltinFn::kBitCount:
+        case BuiltinFn::kBitFieldInsert:
+        case BuiltinFn::kBitFieldSExtract:
+        case BuiltinFn::kBitFieldUExtract:
+        case BuiltinFn::kAdd:
+        case BuiltinFn::kSub:
+        case BuiltinFn::kMul:
+        case BuiltinFn::kSDiv:
+        case BuiltinFn::kSMod:
+        case BuiltinFn::kConvertFToS:
+        case BuiltinFn::kConvertSToF:
+        case BuiltinFn::kConvertUToF:
+        case BuiltinFn::kBitwiseAnd:
+        case BuiltinFn::kBitwiseOr:
+        case BuiltinFn::kBitwiseXor:
+        case BuiltinFn::kEqual:
+        case BuiltinFn::kNotEqual:
+        case BuiltinFn::kSGreaterThan:
+        case BuiltinFn::kSGreaterThanEqual:
+        case BuiltinFn::kSLessThan:
+        case BuiltinFn::kSLessThanEqual:
+        case BuiltinFn::kUGreaterThan:
+        case BuiltinFn::kUGreaterThanEqual:
+        case BuiltinFn::kULessThan:
+        case BuiltinFn::kULessThanEqual:
+        case BuiltinFn::kShiftLeftLogical:
+        case BuiltinFn::kShiftRightLogical:
+        case BuiltinFn::kShiftRightArithmetic:
+        case BuiltinFn::kNot:
+        case BuiltinFn::kSNegate:
+        case BuiltinFn::kFMod:
+        case BuiltinFn::kOuterProduct:
             break;
     }
     return core::ir::Instruction::Accesses{};

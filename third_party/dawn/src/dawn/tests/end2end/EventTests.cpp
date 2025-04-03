@@ -419,9 +419,9 @@ TEST_P(EventCompletionTests, WorkDoneDropInstanceBeforeEvent) {
         // the callback to be cleaned up immediately (and should expect it to happen on a future
         // Tick).
         ASSERT_THAT(status, AnyOf(Eq(wgpu::QueueWorkDoneStatus::Success),
-                                  Eq(wgpu::QueueWorkDoneStatus::InstanceDropped)));
+                                  Eq(wgpu::QueueWorkDoneStatus::CallbackCancelled)));
     } else {
-        ASSERT_EQ(status, wgpu::QueueWorkDoneStatus::InstanceDropped);
+        ASSERT_EQ(status, wgpu::QueueWorkDoneStatus::CallbackCancelled);
     }
 }
 
@@ -442,11 +442,11 @@ TEST_P(EventCompletionTests, WorkDoneDropInstanceAfterEvent) {
         // the callback to be cleaned up immediately (and should expect it to happen on a future
         // Tick).
         ASSERT_THAT(status, AnyOf(Eq(wgpu::QueueWorkDoneStatus::Success),
-                                  Eq(wgpu::QueueWorkDoneStatus::InstanceDropped)));
+                                  Eq(wgpu::QueueWorkDoneStatus::CallbackCancelled)));
     } else {
         ASSERT_EQ(status, kStatusUninitialized);
         testInstance = nullptr;  // Drop the last external ref to the instance.
-        ASSERT_EQ(status, wgpu::QueueWorkDoneStatus::InstanceDropped);
+        ASSERT_EQ(status, wgpu::QueueWorkDoneStatus::CallbackCancelled);
     }
 }
 
@@ -457,8 +457,8 @@ TEST_P(EventCompletionTests, WorkDoneDropInstanceAfterEvent) {
 
 DAWN_INSTANTIATE_TEST_P(EventCompletionTests,
                         {D3D11Backend(), D3D11Backend({"d3d11_use_unmonitored_fence"}),
-                         D3D12Backend(), MetalBackend(), VulkanBackend(), OpenGLBackend(),
-                         OpenGLESBackend()},
+                         D3D11Backend({"d3d11_disable_fence"}), D3D12Backend(), MetalBackend(),
+                         VulkanBackend(), OpenGLBackend(), OpenGLESBackend()},
                         {
                             WaitTypeAndCallbackMode::TimedWaitAny_WaitAnyOnly,
                             WaitTypeAndCallbackMode::TimedWaitAny_AllowSpontaneous,
@@ -612,6 +612,7 @@ TEST_P(WaitAnyTests, UnsupportedMixedSources) {
 DAWN_INSTANTIATE_TEST(WaitAnyTests,
                       D3D11Backend(),
                       D3D11Backend({"d3d11_use_unmonitored_fence"}),
+                      D3D11Backend({"d3d11_disable_fence"}),
                       D3D12Backend(),
                       MetalBackend(),
                       VulkanBackend(),
@@ -638,6 +639,7 @@ TEST_P(FutureTests, MixedSourcePolling) {
 DAWN_INSTANTIATE_TEST(FutureTests,
                       D3D11Backend(),
                       D3D11Backend({"d3d11_use_unmonitored_fence"}),
+                      D3D11Backend({"d3d11_disable_fence"}),
                       D3D12Backend(),
                       MetalBackend(),
                       VulkanBackend(),

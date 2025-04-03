@@ -79,6 +79,7 @@ class OwnedCompilationMessages : public NonCopyable {
     MutexProtected<std::optional<CompilationInfo>> mCompilationInfo = std::nullopt;
     std::vector<std::unique_ptr<std::string>> mMessageStrings;
     std::vector<CompilationMessage> mMessages;
+    std::vector<DawnCompilationMessageUtf16> mUtf16;
     std::vector<std::string> mFormattedTintMessages;
 };
 

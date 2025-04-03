@@ -36,9 +36,12 @@
 namespace dawn::native::d3d11 {
 
 // static
-Ref<BindGroup> BindGroup::Create(Device* device, const BindGroupDescriptor* descriptor) {
-    return ToBackend(descriptor->layout->GetInternalBindGroupLayout())
-        ->AllocateBindGroup(device, descriptor);
+ResultOrError<Ref<BindGroup>> BindGroup::Create(Device* device,
+                                                const BindGroupDescriptor* descriptor) {
+    Ref<BindGroup> bindGroup = ToBackend(descriptor->layout->GetInternalBindGroupLayout())
+                                   ->AllocateBindGroup(device, descriptor);
+    DAWN_TRY(bindGroup->Initialize(descriptor));
+    return bindGroup;
 }
 
 BindGroup::BindGroup(Device* device, const BindGroupDescriptor* descriptor)
@@ -46,9 +49,17 @@ BindGroup::BindGroup(Device* device, const BindGroupDescriptor* descriptor)
 
 BindGroup::~BindGroup() = default;
 
-void BindGroup::DestroyImpl() {
-    BindGroupBase::DestroyImpl();
-    ToBackend(GetLayout())->DeallocateBindGroup(this);
+MaybeError BindGroup::InitializeImpl() {
+    return {};
+}
+
+void BindGroup::DeleteThis() {
+    // This function must first run the destructor and then deallocate memory. Take a reference to
+    // the BindGroupLayout+SlabAllocator before running the destructor so this function can access
+    // it afterwards and it's not destroyed prematurely.
+    Ref<BindGroupLayout> layout = ToBackend(GetLayout());
+    BindGroupBase::DeleteThis();
+    layout->DeallocateBindGroup(this);
 }
 
 }  // namespace dawn::native::d3d11

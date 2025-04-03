@@ -978,17 +978,23 @@ SpirvInstruction *SpirvBuilder::createEmulatedBitFieldExtract(
                                    base, leftShiftOffset, loc, range);
 
   //  input: BBBBCCCCCCCCDDDD0000
-  // output: SSSSSSSSSSSSSSSSBBBB
+  // output: SSSSSSSSSSSSSSSSBBBB for signed
+  //         0000000000000000BBBB for unsigned
+  auto rightShiftOp = resultType->isSignedIntegerOrEnumerationType()
+                          ? spv::Op::OpShiftRightArithmetic
+                          : spv::Op::OpShiftRightLogical;
   auto *rightShiftOffset = getConstantInt(
       astContext.UnsignedIntTy, llvm::APInt(32, baseTypeBitwidth - bitCount));
-  auto *rightShift = createBinaryOp(spv::Op::OpShiftRightArithmetic, resultType,
-                                    leftShift, rightShiftOffset, loc, range);
+  auto *rightShift = createBinaryOp(rightShiftOp, resultType, leftShift,
+                                    rightShiftOffset, loc, range);
 
   if (resultType == QualType({})) {
     auto baseType = dyn_cast<IntegerType>(base->getResultType());
     leftShift->setResultType(baseType);
     rightShift->setResultType(baseType);
   }
+
+  rightShift->setRValue(true);
 
   return rightShift;
 }

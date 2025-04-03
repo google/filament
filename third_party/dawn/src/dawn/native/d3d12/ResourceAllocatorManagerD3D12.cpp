@@ -560,6 +560,7 @@ ResultOrError<ResourceHeapAllocation> ResourceAllocatorManager::CreateCommittedR
 
     AllocationInfo info;
     info.mMethod = AllocationMethod::kDirect;
+    info.mRequestedSize = resourceInfo.SizeInBytes;
 
     return ResourceHeapAllocation{info,
                                   /*offset*/ 0, std::move(committedResource), heap,

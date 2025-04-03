@@ -28,13 +28,11 @@
 #ifndef SRC_TINT_LANG_GLSL_WRITER_RAISE_SHADER_IO_H_
 #define SRC_TINT_LANG_GLSL_WRITER_RAISE_SHADER_IO_H_
 
-#include <string>
 #include <unordered_set>
 
 #include "src/tint/lang/core/ir/transform/prepare_push_constants.h"
 #include "src/tint/lang/glsl/writer/common/options.h"
-#include "src/tint/utils/diagnostic/diagnostic.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

@@ -64,13 +64,20 @@ class PlatformFunctions {
     pD3DCompile d3dCompile = nullptr;
     pD3DDisassemble d3dDisassemble = nullptr;
 
+    // Functions from kernelbase.dll
+    using PFN_COMPARE_OBJECT_HANDLES = BOOL(WINAPI*)(HANDLE hFirstObjectHandle,
+                                                     HANDLE hSecondObjectHandle);
+    PFN_COMPARE_OBJECT_HANDLES compareObjectHandles = nullptr;
+
   private:
     MaybeError LoadDXGI();
     MaybeError LoadFXCompiler();
+    MaybeError LoadKernelBase();
     void InitWindowsVersion();
 
     DynamicLib mDXGILib;
     DynamicLib mFXCompilerLib;
+    DynamicLib mKernelBaseLib;
 
     uint64_t mCurrentBuildNumber;
 };

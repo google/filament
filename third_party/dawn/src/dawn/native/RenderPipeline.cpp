@@ -43,6 +43,7 @@
 #include "dawn/native/InternalPipelineStore.h"
 #include "dawn/native/ObjectContentHasher.h"
 #include "dawn/native/ObjectType_autogen.h"
+#include "dawn/native/ValidationUtils.h"
 #include "dawn/native/ValidationUtils_autogen.h"
 
 namespace dawn::native {
@@ -199,8 +200,8 @@ ResultOrError<ShaderModuleEntryPoint> ValidateVertexState(
     DAWN_INVALID_IF(descriptor->bufferCount > maxVertexBuffers,
                     "Vertex buffer count (%u) exceeds the maximum number of vertex buffers (%u).%s",
                     descriptor->bufferCount, maxVertexBuffers,
-                    DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter(), maxVertexBuffers,
-                                                descriptor->bufferCount));
+                    DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter()->GetLimits().v1,
+                                                maxVertexBuffers, descriptor->bufferCount));
 
     ShaderModuleEntryPoint entryPoint;
     DAWN_TRY_ASSIGN_CONTEXT(
@@ -336,10 +337,8 @@ MaybeError ValidateDepthStencilState(const DeviceBase* device,
                     "Depth stencil format (%s) is not depth-stencil renderable.",
                     descriptor->format);
 
-    DAWN_INVALID_IF(
-        std::isnan(descriptor->depthBiasSlopeScale) || std::isnan(descriptor->depthBiasClamp),
-        "Either depthBiasSlopeScale (%f) or depthBiasClamp (%f) is NaN.",
-        descriptor->depthBiasSlopeScale, descriptor->depthBiasClamp);
+    DAWN_TRY(ValidateFloat("depthBiasSlopeScale", descriptor->depthBiasSlopeScale));
+    DAWN_TRY(ValidateFloat("depthBiasClamp", descriptor->depthBiasClamp));
 
     DAWN_INVALID_IF(device->IsCompatibilityMode() && descriptor->depthBiasClamp != 0.0f,
                     "depthBiasClamp (%f) is not zero as required in compatibility mode.",
@@ -661,8 +660,8 @@ ResultOrError<ShaderModuleEntryPoint> ValidateFragmentState(DeviceBase* device,
     DAWN_INVALID_IF(descriptor->targetCount > maxColorAttachments,
                     "Number of targets (%u) exceeds the maximum (%u).%s", descriptor->targetCount,
                     maxColorAttachments,
-                    DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter(), maxColorAttachments,
-                                                descriptor->targetCount));
+                    DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter()->GetLimits().v1,
+                                                maxColorAttachments, descriptor->targetCount));
 
     auto targets =
         ityp::SpanFromUntyped<ColorAttachmentIndex>(descriptor->targets, descriptor->targetCount);
@@ -949,8 +948,7 @@ std::vector<StageAndDescriptor> GetRenderStagesAndSetPlaceholderShader(
 // RenderPipelineBase
 
 RenderPipelineBase::RenderPipelineBase(DeviceBase* device,
-                                       const UnpackedPtr<RenderPipelineDescriptor>& descriptor,
-                                       ImmediateConstantMask requiredInternalImmediateConstants)
+                                       const UnpackedPtr<RenderPipelineDescriptor>& descriptor)
     : PipelineBase(device,
                    descriptor->layout,
                    descriptor->label,

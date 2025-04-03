@@ -44,7 +44,7 @@ TEST_F(ProgramToIRBuiltinTest, EmitExpression_Builtin) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %i:ptr<private, f32, read_write> = var, 1.0f
+  %i:ptr<private, f32, read_write> = var 1.0f
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {

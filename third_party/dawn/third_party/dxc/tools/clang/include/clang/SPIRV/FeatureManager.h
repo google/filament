@@ -59,6 +59,7 @@ enum class Extension {
   KHR_physical_storage_buffer,
   KHR_vulkan_memory_model,
   NV_compute_shader_derivatives,
+  KHR_compute_shader_derivatives,
   KHR_fragment_shader_barycentric,
   KHR_maximal_reconvergence,
   KHR_float_controls,
@@ -131,6 +132,9 @@ public:
   /// Returns true if the target environment is Vulkan 1.3 or above.
   /// Returns false otherwise.
   bool isTargetEnvVulkan1p3OrAbove();
+
+  /// Return true if the target environment is a Vulkan environment.
+  bool isTargetEnvVulkan();
 
   /// Returns the spv_target_env matching the input string if possible.
   /// This functions matches the spv_target_env with the command-line version

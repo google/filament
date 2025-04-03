@@ -63,6 +63,8 @@ class Buffer final : public RefCountedWithExternalCount<ObjectWithEventsBase> {
                         const WGPUBufferMapCallbackInfo& callbackInfo);
     void* GetMappedRange(size_t offset, size_t size);
     const void* GetConstMappedRange(size_t offset, size_t size);
+    WGPUStatus WriteMappedRange(size_t offset, void const* data, size_t size);
+    WGPUStatus ReadMappedRange(size_t offset, void* data, size_t size);
     void Unmap();
 
     void Destroy();

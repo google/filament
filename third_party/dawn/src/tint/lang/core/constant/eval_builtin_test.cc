@@ -27,7 +27,7 @@
 
 #include "src/tint/lang/core/constant/eval_test.h"
 
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 using ::testing::HasSubstr;

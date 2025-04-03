@@ -122,10 +122,9 @@ jobject ToKotlin(JNIEnv* env, const WGPUStringView* s) {
         {%- for structure in chain_children[structure.name.get()] %}
             jobject {{ structure.name.camelCase() }} = nullptr;
         {% endfor %}
-        {% set ChainedStruct = "WGPUChainedStructOut" if structure.extensible == "out" else "WGPUChainedStruct" %}
         //* Walk the chain to find and convert (recursively) all child structures.
         {%- if chain_children[structure.name.get()] %}
-            for (const {{ChainedStruct}}* child = input->nextInChain;
+            for (const WGPUChainedStruct* child = input->nextInChain;
                     child != nullptr; child = child->next) {
                 switch (child->sType) {
                     {% for structure in chain_children[structure.name.get()] %}

@@ -45,6 +45,7 @@
 #include "dawn/native/vulkan/QueueVk.h"
 #include "dawn/native/vulkan/ResourceHeapVk.h"
 #include "dawn/native/vulkan/ResourceMemoryAllocatorVk.h"
+#include "dawn/native/vulkan/SharedFenceVk.h"
 #include "dawn/native/vulkan/UtilsVulkan.h"
 #include "dawn/native/vulkan/VulkanError.h"
 
@@ -1181,45 +1182,49 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* recordingContext,
 
         uint32_t bytesPerRow = Align((largestMipSize.width / blockInfo.width) * blockInfo.byteSize,
                                      device->GetOptimalBytesPerRowAlignment());
-        uint64_t bufferSize = bytesPerRow * (largestMipSize.height / blockInfo.height) *
+        uint64_t uploadSize = bytesPerRow * (largestMipSize.height / blockInfo.height) *
                               largestMipSize.depthOrArrayLayers;
-        DynamicUploader* uploader = device->GetDynamicUploader();
-        UploadHandle uploadHandle;
-        DAWN_TRY_ASSIGN(uploadHandle, uploader->Allocate(
-                                          bufferSize, device->GetQueue()->GetPendingCommandSerial(),
-                                          blockInfo.byteSize));
-        memset(uploadHandle.mappedBuffer, uClearColor, bufferSize);
 
-        std::vector<VkBufferImageCopy> regions;
-        for (uint32_t level = range.baseMipLevel; level < range.baseMipLevel + range.levelCount;
-             ++level) {
-            Extent3D copySize = GetMipLevelSingleSubresourcePhysicalSize(level, range.aspects);
-            imageRange.baseMipLevel = level;
-            for (uint32_t layer = range.baseArrayLayer;
-                 layer < range.baseArrayLayer + range.layerCount; ++layer) {
-                if (clearValue == TextureBase::ClearValue::Zero &&
-                    IsSubresourceContentInitialized(
-                        SubresourceRange::SingleMipAndLayer(level, layer, range.aspects))) {
-                    // Skip lazy clears if already initialized.
-                    continue;
+        DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
+            uploadSize, blockInfo.byteSize, [&](UploadReservation reservation) -> MaybeError {
+                memset(reservation.mappedPointer, uClearColor, uploadSize);
+
+                std::vector<VkBufferImageCopy> regions;
+                for (uint32_t level = range.baseMipLevel;
+                     level < range.baseMipLevel + range.levelCount; ++level) {
+                    Extent3D copySize =
+                        GetMipLevelSingleSubresourcePhysicalSize(level, range.aspects);
+                    imageRange.baseMipLevel = level;
+                    for (uint32_t layer = range.baseArrayLayer;
+                         layer < range.baseArrayLayer + range.layerCount; ++layer) {
+                        if (clearValue == TextureBase::ClearValue::Zero &&
+                            IsSubresourceContentInitialized(
+                                SubresourceRange::SingleMipAndLayer(level, layer, range.aspects))) {
+                            // Skip lazy clears if already initialized.
+                            continue;
+                        }
+
+                        TexelCopyBufferLayout dataLayout;
+                        dataLayout.offset = reservation.offsetInBuffer;
+                        dataLayout.rowsPerImage = copySize.height / blockInfo.height;
+                        dataLayout.bytesPerRow = bytesPerRow;
+                        TextureCopy textureCopy;
+                        textureCopy.aspect = range.aspects;
+                        textureCopy.mipLevel = level;
+                        textureCopy.origin = {0, 0, layer};
+                        textureCopy.texture = this;
+
+                        regions.push_back(
+                            ComputeBufferImageCopyRegion(dataLayout, textureCopy, copySize));
+                    }
                 }
 
-                TexelCopyBufferLayout dataLayout;
-                dataLayout.offset = uploadHandle.startOffset;
-                dataLayout.rowsPerImage = copySize.height / blockInfo.height;
-                dataLayout.bytesPerRow = bytesPerRow;
-                TextureCopy textureCopy;
-                textureCopy.aspect = range.aspects;
-                textureCopy.mipLevel = level;
-                textureCopy.origin = {0, 0, layer};
-                textureCopy.texture = this;
-
-                regions.push_back(ComputeBufferImageCopyRegion(dataLayout, textureCopy, copySize));
-            }
-        }
-        device->fn.CmdCopyBufferToImage(
-            recordingContext->commandBuffer, ToBackend(uploadHandle.stagingBuffer)->GetHandle(),
-            GetHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regions.size(), regions.data());
+                device->fn.CmdCopyBufferToImage(recordingContext->commandBuffer,
+                                                ToBackend(reservation.buffer)->GetHandle(),
+                                                GetHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                                regions.size(), regions.data());
+                return {};
+            }));
     }
 
     if (clearValue == TextureBase::ClearValue::Zero) {
@@ -1264,6 +1269,13 @@ Aspect Texture::GetDisjointVulkanAspects() const {
 void Texture::TweakTransition(CommandRecordingContext* recordingContext,
                               std::vector<VkImageMemoryBarrier>* barriers,
                               size_t transitionBarrierStart) {}
+
+MaybeError Texture::OnBeforeSubmit(CommandRecordingContext*) {
+    DAWN_UNREACHABLE();
+}
+MaybeError Texture::OnAfterSubmit() {
+    DAWN_UNREACHABLE();
+}
 
 //
 // InternalTexture
@@ -1370,7 +1382,7 @@ MaybeError InternalTexture::Initialize(VkImageUsageFlags extraUsages) {
         (GetInternalUsage() & (wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::RenderAttachment));
     auto memoryKind = (GetInternalUsage() & wgpu::TextureUsage::TransientAttachment)
                           ? MemoryKind::LazilyAllocated
-                          : MemoryKind::Opaque;
+                          : MemoryKind::DeviceLocal;
     DAWN_TRY_ASSIGN(mMemoryAllocation, device->GetResourceMemoryAllocator()->Allocate(
                                            requirements, memoryKind, forceDisableSubAllocation));
 
@@ -1460,8 +1472,23 @@ ImportedTextureBase::~ImportedTextureBase() {
         ToBackend(GetDevice())
             ->GetExternalSemaphoreService()
             ->CloseHandle(mExternalSemaphoreHandle);
+        mExternalSemaphoreHandle = kNullExternalSemaphoreHandle;
     }
-    mExternalSemaphoreHandle = kNullExternalSemaphoreHandle;
+}
+
+void ImportedTextureBase::DestroyImpl() {
+    // TODO(crbug.com/dawn/831): DestroyImpl is called from two places.
+    // - It may be called if the texture is explicitly destroyed with APIDestroy.
+    //   This case is NOT thread-safe and needs proper synchronization with other
+    //   simultaneous uses of the texture.
+    // - It may be called when the last ref to the texture is dropped and the texture
+    //   is implicitly destroyed. This case is thread-safe because there are no
+    //   other threads using the texture since there are no other live refs.
+    if (mPendingSemaphore != VK_NULL_HANDLE) {
+        ToBackend(GetDevice())->GetFencedDeleter()->DeleteWhenUnused(mPendingSemaphore);
+        mPendingSemaphore = VK_NULL_HANDLE;
+    }
+    Texture::DestroyImpl();
 }
 
 void ImportedTextureBase::TransitionEagerlyForExport(CommandRecordingContext* recordingContext) {
@@ -1501,15 +1528,6 @@ void ImportedTextureBase::TransitionEagerlyForExport(CommandRecordingContext* re
 
     device->fn.CmdPipelineBarrier(recordingContext->commandBuffer, srcStages, dstStages, 0, 0,
                                   nullptr, 0, nullptr, 1, &barrier);
-}
-
-void ImportedTextureBase::UpdateExternalSemaphoreHandle(ExternalSemaphoreHandle handle) {
-    if (mExternalSemaphoreHandle != kNullExternalSemaphoreHandle) {
-        ToBackend(GetDevice())
-            ->GetExternalSemaphoreService()
-            ->CloseHandle(mExternalSemaphoreHandle);
-    }
-    mExternalSemaphoreHandle = handle;
 }
 
 bool ImportedTextureBase::CanReuseWithoutBarrier(wgpu::TextureUsage lastUsage,
@@ -1651,6 +1669,40 @@ MaybeError ImportedTextureBase::EndAccess(ExternalSemaphoreHandle* handle,
     return {};
 }
 
+MaybeError ImportedTextureBase::OnBeforeSubmit(CommandRecordingContext* context) {
+    // On every submit using an exportable texture, we eagerly prepare for an export. This avoids
+    // the need to schedule an almost empty submit just for exporting later. To export we both need
+    // to transition the resource to export it, and need an exportable semaphore for future
+    // synchronization.
+    TransitionEagerlyForExport(context);
+
+    // Create the external semaphore and add it to be signaled, but only mark it pending: if
+    // anything fails during the submit we still keep the previously signaled exportable semaphore.
+    // Note that VUID-VkSemaphoreGetFdInfoKHR-handleType-01135 requires that only signaled
+    // semaphores be exported, so the export must be done in OnAfterSubmit.
+    auto semaphoreService = ToBackend(GetDevice())->GetExternalSemaphoreService();
+    DAWN_TRY_ASSIGN(mPendingSemaphore, semaphoreService->CreateExportableSemaphore());
+    context->signalSemaphores.push_back(mPendingSemaphore);
+
+    return {};
+}
+
+MaybeError ImportedTextureBase::OnAfterSubmit() {
+    Device* device = ToBackend(GetDevice());
+
+    // The submit succeeded, we can replace the previous external semaphore with the pending one.
+    if (mExternalSemaphoreHandle != kNullExternalSemaphoreHandle) {
+        device->GetExternalSemaphoreService()->CloseHandle(mExternalSemaphoreHandle);
+    }
+
+    DAWN_TRY_ASSIGN(mExternalSemaphoreHandle,
+                    device->GetExternalSemaphoreService()->ExportSemaphore(mPendingSemaphore));
+    ToBackend(GetDevice())->GetFencedDeleter()->DeleteWhenUnused(mPendingSemaphore);
+    mPendingSemaphore = VK_NULL_HANDLE;
+
+    return {};
+}
+
 //
 // ExternalVkImageTexture
 //
@@ -1685,7 +1737,7 @@ void ExternalVkImageTexture::DestroyImpl() {
         mExternalAllocation = VK_NULL_HANDLE;
     }
 
-    Texture::DestroyImpl();
+    ImportedTextureBase::DestroyImpl();
 }
 
 MaybeError ExternalVkImageTexture::Initialize(const ExternalImageDescriptorVk* descriptor,
@@ -1789,8 +1841,11 @@ MaybeError ExternalVkImageTexture::ExportExternalTexture(VkImageLayout desiredLa
     return {};
 }
 
-std::vector<VkSemaphore> ExternalVkImageTexture::AcquireWaitRequirements() {
-    return std::move(mWaitRequirements);
+MaybeError ExternalVkImageTexture::OnBeforeSubmit(CommandRecordingContext* context) {
+    context->waitSemaphores.insert(context->waitSemaphores.end(), mWaitRequirements.begin(),
+                                   mWaitRequirements.end());
+    mWaitRequirements.clear();
+    return ImportedTextureBase::OnBeforeSubmit(context);
 }
 
 //
@@ -1817,7 +1872,7 @@ void SharedTexture::DestroyImpl() {
     //   other threads using the texture since there are no other live refs.
     mSharedTextureMemoryObjects = {};
 
-    Texture::DestroyImpl();
+    ImportedTextureBase::DestroyImpl();
 }
 
 void SharedTexture::Initialize(SharedTextureMemory* memory) {
@@ -1835,6 +1890,27 @@ void SharedTexture::SetPendingAcquire(VkImageLayout pendingAcquireOldLayout,
 
     mPendingAcquireOldLayout = pendingAcquireOldLayout;
     mPendingAcquireNewLayout = pendingAcquireNewLayout;
+}
+
+MaybeError SharedTexture::OnBeforeSubmit(CommandRecordingContext* context) {
+    Device* device = ToBackend(GetDevice());
+    SharedResourceMemoryContents* contents = GetSharedResourceMemoryContents();
+
+    SharedTextureMemoryBase::PendingFenceList fences;
+    contents->AcquirePendingFences(&fences);
+
+    for (const auto& fence : fences) {
+        // All semaphores are binary semaphores.
+        DAWN_ASSERT(fence.signaledValue == 1u);
+        ExternalSemaphoreHandle semaphoreHandle = ToBackend(fence.object)->GetHandle().Get();
+
+        VkSemaphore semaphore;
+        DAWN_TRY_ASSIGN(semaphore,
+                        device->GetExternalSemaphoreService()->ImportSemaphore(semaphoreHandle));
+        context->waitSemaphores.push_back(semaphore);
+    }
+
+    return ImportedTextureBase::OnBeforeSubmit(context);
 }
 
 //
@@ -1874,7 +1950,7 @@ MaybeError TextureView::Initialize(const UnpackedPtr<TextureViewDescriptor>& des
     VkSamplerYcbcrConversionInfo samplerYCbCrInfo = {};
     if (auto* yCbCrVkDescriptor = descriptor.Get<YCbCrVkDescriptor>()) {
         mIsYCbCr = true;
-        mYCbCrVkDescriptor = *yCbCrVkDescriptor;
+        mYCbCrVkDescriptor = yCbCrVkDescriptor->WithTrivialFrontendDefaults();
         mYCbCrVkDescriptor.nextInChain = nullptr;
 
         DAWN_TRY_ASSIGN(mSamplerYCbCrConversion,

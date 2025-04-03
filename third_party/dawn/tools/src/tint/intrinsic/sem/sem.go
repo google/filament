@@ -78,6 +78,7 @@ func New() *Sem {
 type Enum struct {
 	Decl    ast.EnumDecl
 	Name    string
+	NS      string
 	Entries []*EnumEntry
 }
 

@@ -111,6 +111,11 @@ class Module {
     /// @note requires the instruction be a single result instruction.
     void SetName(Instruction* inst, std::string_view name);
 
+    /// @param inst the instruction to set the name of
+    /// @param name the desired name of the value.
+    /// @note requires the instruction be a single result instruction.
+    void SetName(Instruction* inst, Symbol name);
+
     /// @param value the value to name.
     /// @param name the desired name of the value. May be suffixed on collision.
     void SetName(Value* value, std::string_view name);

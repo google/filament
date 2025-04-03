@@ -373,6 +373,7 @@ absl_source_set("hashtablez_sampler") {
     ":core_headers",
     ":exponential_biased",
     ":memory",
+    ":no_destructor",
     ":raw_logging_internal",
     ":sample_recorder",
     ":stacktrace",
@@ -404,6 +405,14 @@ absl_source_set("inlined_vector_internal") {
     ":memory",
     ":span",
     ":type_traits",
+  ]
+}
+
+absl_source_set("no_destructor") {
+  public = [ "${dawn_abseil_dir}/absl/base/no_destructor.h" ]
+  deps = [
+    ":config",
+    ":nullability",
   ]
 }
 

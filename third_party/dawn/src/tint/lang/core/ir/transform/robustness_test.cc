@@ -79,7 +79,7 @@ TEST_P(IR_RobustnessTest, VectorLoad_ConstIndex) {
     auto* src = R"(
 %foo = func():u32 {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %3:u32 = load_vector_element %vec, 5u
     ret %3
   }
@@ -90,7 +90,7 @@ TEST_P(IR_RobustnessTest, VectorLoad_ConstIndex) {
     auto* expect = R"(
 %foo = func():u32 {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %3:u32 = load_vector_element %vec, 3u
     ret %3
   }
@@ -116,7 +116,7 @@ TEST_P(IR_RobustnessTest, VectorLoad_ConstIndexViaLet) {
     auto* src = R"(
 %foo = func():u32 {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %idx:u32 = let 5u
     %4:u32 = load_vector_element %vec, %idx
     ret %4
@@ -128,7 +128,7 @@ TEST_P(IR_RobustnessTest, VectorLoad_ConstIndexViaLet) {
     auto* expect = R"(
 %foo = func():u32 {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %idx:u32 = let 5u
     %4:u32 = min %idx, 3u
     %5:u32 = load_vector_element %vec, %4
@@ -157,7 +157,7 @@ TEST_P(IR_RobustnessTest, VectorLoad_DynamicIndex) {
     auto* src = R"(
 %foo = func(%idx:u32):u32 {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %4:u32 = load_vector_element %vec, %idx
     ret %4
   }
@@ -168,7 +168,7 @@ TEST_P(IR_RobustnessTest, VectorLoad_DynamicIndex) {
     auto* expect = R"(
 %foo = func(%idx:u32):u32 {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %4:u32 = min %idx, 3u
     %5:u32 = load_vector_element %vec, %4
     ret %5
@@ -196,7 +196,7 @@ TEST_P(IR_RobustnessTest, VectorLoad_DynamicIndex_Signed) {
     auto* src = R"(
 %foo = func(%idx:i32):u32 {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %4:u32 = load_vector_element %vec, %idx
     ret %4
   }
@@ -207,7 +207,7 @@ TEST_P(IR_RobustnessTest, VectorLoad_DynamicIndex_Signed) {
     auto* expect = R"(
 %foo = func(%idx:i32):u32 {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %4:u32 = convert %idx
     %5:u32 = min %4, 3u
     %6:u32 = load_vector_element %vec, %5
@@ -234,7 +234,7 @@ TEST_P(IR_RobustnessTest, VectorStore_ConstIndex) {
     auto* src = R"(
 %foo = func():void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     store_vector_element %vec, 5u, 0u
     ret
   }
@@ -245,7 +245,7 @@ TEST_P(IR_RobustnessTest, VectorStore_ConstIndex) {
     auto* expect = R"(
 %foo = func():void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     store_vector_element %vec, 3u, 0u
     ret
   }
@@ -271,7 +271,7 @@ TEST_P(IR_RobustnessTest, VectorStore_ConstIndexViaLet) {
     auto* src = R"(
 %foo = func():void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %idx:u32 = let 5u
     store_vector_element %vec, %idx, 0u
     ret
@@ -283,7 +283,7 @@ TEST_P(IR_RobustnessTest, VectorStore_ConstIndexViaLet) {
     auto* expect = R"(
 %foo = func():void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %idx:u32 = let 5u
     %4:u32 = min %idx, 3u
     store_vector_element %vec, %4, 0u
@@ -312,7 +312,7 @@ TEST_P(IR_RobustnessTest, VectorStore_DynamicIndex) {
     auto* src = R"(
 %foo = func(%idx:u32):void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     store_vector_element %vec, %idx, 0u
     ret
   }
@@ -323,7 +323,7 @@ TEST_P(IR_RobustnessTest, VectorStore_DynamicIndex) {
     auto* expect = R"(
 %foo = func(%idx:u32):void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %4:u32 = min %idx, 3u
     store_vector_element %vec, %4, 0u
     ret
@@ -351,7 +351,7 @@ TEST_P(IR_RobustnessTest, VectorStore_DynamicIndex_Signed) {
     auto* src = R"(
 %foo = func(%idx:i32):void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     store_vector_element %vec, %idx, 0u
     ret
   }
@@ -362,7 +362,7 @@ TEST_P(IR_RobustnessTest, VectorStore_DynamicIndex_Signed) {
     auto* expect = R"(
 %foo = func(%idx:i32):void {
   $B1: {
-    %vec:ptr<function, vec4<u32>, read_write> = var
+    %vec:ptr<function, vec4<u32>, read_write> = var undef
     %4:u32 = convert %idx
     %5:u32 = min %4, 3u
     store_vector_element %vec, %5, 0u
@@ -390,7 +390,7 @@ TEST_P(IR_RobustnessTest, Matrix_ConstIndex) {
     auto* src = R"(
 %foo = func():vec4<f32> {
   $B1: {
-    %mat:ptr<function, mat4x4<f32>, read_write> = var
+    %mat:ptr<function, mat4x4<f32>, read_write> = var undef
     %3:ptr<function, vec4<f32>, read_write> = access %mat, 2u
     %4:vec4<f32> = load %3
     ret %4
@@ -421,7 +421,7 @@ TEST_P(IR_RobustnessTest, Matrix_ConstIndexViaLet) {
     auto* src = R"(
 %foo = func():vec4<f32> {
   $B1: {
-    %mat:ptr<function, mat4x4<f32>, read_write> = var
+    %mat:ptr<function, mat4x4<f32>, read_write> = var undef
     %idx:u32 = let 2u
     %4:ptr<function, vec4<f32>, read_write> = access %mat, %idx
     %5:vec4<f32> = load %4
@@ -434,7 +434,7 @@ TEST_P(IR_RobustnessTest, Matrix_ConstIndexViaLet) {
     auto* expect = R"(
 %foo = func():vec4<f32> {
   $B1: {
-    %mat:ptr<function, mat4x4<f32>, read_write> = var
+    %mat:ptr<function, mat4x4<f32>, read_write> = var undef
     %idx:u32 = let 2u
     %4:u32 = min %idx, 3u
     %5:ptr<function, vec4<f32>, read_write> = access %mat, %4
@@ -465,7 +465,7 @@ TEST_P(IR_RobustnessTest, Matrix_DynamicIndex) {
     auto* src = R"(
 %foo = func(%idx:u32):vec4<f32> {
   $B1: {
-    %mat:ptr<function, mat4x4<f32>, read_write> = var
+    %mat:ptr<function, mat4x4<f32>, read_write> = var undef
     %4:ptr<function, vec4<f32>, read_write> = access %mat, %idx
     %5:vec4<f32> = load %4
     ret %5
@@ -477,7 +477,7 @@ TEST_P(IR_RobustnessTest, Matrix_DynamicIndex) {
     auto* expect = R"(
 %foo = func(%idx:u32):vec4<f32> {
   $B1: {
-    %mat:ptr<function, mat4x4<f32>, read_write> = var
+    %mat:ptr<function, mat4x4<f32>, read_write> = var undef
     %4:u32 = min %idx, 3u
     %5:ptr<function, vec4<f32>, read_write> = access %mat, %4
     %6:vec4<f32> = load %5
@@ -507,7 +507,7 @@ TEST_P(IR_RobustnessTest, Matrix_DynamicIndex_Signed) {
     auto* src = R"(
 %foo = func(%idx:i32):vec4<f32> {
   $B1: {
-    %mat:ptr<function, mat4x4<f32>, read_write> = var
+    %mat:ptr<function, mat4x4<f32>, read_write> = var undef
     %4:ptr<function, vec4<f32>, read_write> = access %mat, %idx
     %5:vec4<f32> = load %4
     ret %5
@@ -519,7 +519,7 @@ TEST_P(IR_RobustnessTest, Matrix_DynamicIndex_Signed) {
     auto* expect = R"(
 %foo = func(%idx:i32):vec4<f32> {
   $B1: {
-    %mat:ptr<function, mat4x4<f32>, read_write> = var
+    %mat:ptr<function, mat4x4<f32>, read_write> = var undef
     %4:u32 = convert %idx
     %5:u32 = min %4, 3u
     %6:ptr<function, vec4<f32>, read_write> = access %mat, %5
@@ -548,7 +548,7 @@ TEST_P(IR_RobustnessTest, Array_ConstSize_ConstIndex) {
     auto* src = R"(
 %foo = func():u32 {
   $B1: {
-    %arr:ptr<function, array<u32, 4>, read_write> = var
+    %arr:ptr<function, array<u32, 4>, read_write> = var undef
     %3:ptr<function, u32, read_write> = access %arr, 2u
     %4:u32 = load %3
     ret %4
@@ -579,7 +579,7 @@ TEST_P(IR_RobustnessTest, Array_ConstSize_ConstIndexViaLet) {
     auto* src = R"(
 %foo = func():u32 {
   $B1: {
-    %arr:ptr<function, array<u32, 4>, read_write> = var
+    %arr:ptr<function, array<u32, 4>, read_write> = var undef
     %idx:u32 = let 2u
     %4:ptr<function, u32, read_write> = access %arr, %idx
     %5:u32 = load %4
@@ -592,7 +592,7 @@ TEST_P(IR_RobustnessTest, Array_ConstSize_ConstIndexViaLet) {
     auto* expect = R"(
 %foo = func():u32 {
   $B1: {
-    %arr:ptr<function, array<u32, 4>, read_write> = var
+    %arr:ptr<function, array<u32, 4>, read_write> = var undef
     %idx:u32 = let 2u
     %4:u32 = min %idx, 3u
     %5:ptr<function, u32, read_write> = access %arr, %4
@@ -623,7 +623,7 @@ TEST_P(IR_RobustnessTest, Array_ConstSize_DynamicIndex) {
     auto* src = R"(
 %foo = func(%idx:u32):u32 {
   $B1: {
-    %arr:ptr<function, array<u32, 4>, read_write> = var
+    %arr:ptr<function, array<u32, 4>, read_write> = var undef
     %4:ptr<function, u32, read_write> = access %arr, %idx
     %5:u32 = load %4
     ret %5
@@ -635,7 +635,7 @@ TEST_P(IR_RobustnessTest, Array_ConstSize_DynamicIndex) {
     auto* expect = R"(
 %foo = func(%idx:u32):u32 {
   $B1: {
-    %arr:ptr<function, array<u32, 4>, read_write> = var
+    %arr:ptr<function, array<u32, 4>, read_write> = var undef
     %4:u32 = min %idx, 3u
     %5:ptr<function, u32, read_write> = access %arr, %4
     %6:u32 = load %5
@@ -665,7 +665,7 @@ TEST_P(IR_RobustnessTest, Array_ConstSize_DynamicIndex_Signed) {
     auto* src = R"(
 %foo = func(%idx:i32):u32 {
   $B1: {
-    %arr:ptr<function, array<u32, 4>, read_write> = var
+    %arr:ptr<function, array<u32, 4>, read_write> = var undef
     %4:ptr<function, u32, read_write> = access %arr, %idx
     %5:u32 = load %4
     ret %5
@@ -677,7 +677,7 @@ TEST_P(IR_RobustnessTest, Array_ConstSize_DynamicIndex_Signed) {
     auto* expect = R"(
 %foo = func(%idx:i32):u32 {
   $B1: {
-    %arr:ptr<function, array<u32, 4>, read_write> = var
+    %arr:ptr<function, array<u32, 4>, read_write> = var undef
     %4:u32 = convert %idx
     %5:u32 = min %4, 3u
     %6:ptr<function, u32, read_write> = access %arr, %5
@@ -712,7 +712,7 @@ TEST_P(IR_RobustnessTest, NestedArrays) {
     auto* src = R"(
 %foo = func(%idx1:u32, %idx2:u32, %idx3:u32, %idx4:u32):u32 {
   $B1: {
-    %arr:ptr<function, array<array<array<array<u32, 4>, 5>, 6>, 7>, read_write> = var
+    %arr:ptr<function, array<array<array<array<u32, 4>, 5>, 6>, 7>, read_write> = var undef
     %7:ptr<function, u32, read_write> = access %arr, %idx1, %idx2, %idx3, %idx4
     %8:u32 = load %7
     ret %8
@@ -724,7 +724,7 @@ TEST_P(IR_RobustnessTest, NestedArrays) {
     auto* expect = R"(
 %foo = func(%idx1:u32, %idx2:u32, %idx3:u32, %idx4:u32):u32 {
   $B1: {
-    %arr:ptr<function, array<array<array<array<u32, 4>, 5>, 6>, 7>, read_write> = var
+    %arr:ptr<function, array<array<array<array<u32, 4>, 5>, 6>, 7>, read_write> = var undef
     %7:u32 = min %idx1, 6u
     %8:u32 = min %idx2, 5u
     %9:u32 = min %idx3, 4u
@@ -768,7 +768,7 @@ structure = struct @align(16) {
 
 %foo = func(%idx1:u32, %idx2:u32, %idx3:u32):vec4<f32> {
   $B1: {
-    %arr:ptr<function, array<structure, 8>, read_write> = var
+    %arr:ptr<function, array<structure, 8>, read_write> = var undef
     %6:ptr<function, vec4<f32>, read_write> = access %arr, %idx1, 0u, %idx2, %idx3
     %7:vec4<f32> = load %6
     ret %7
@@ -784,7 +784,7 @@ structure = struct @align(16) {
 
 %foo = func(%idx1:u32, %idx2:u32, %idx3:u32):vec4<f32> {
   $B1: {
-    %arr:ptr<function, array<structure, 8>, read_write> = var
+    %arr:ptr<function, array<structure, 8>, read_write> = var undef
     %6:u32 = min %idx1, 7u
     %7:u32 = min %idx2, 3u
     %8:u32 = min %idx3, 2u
@@ -820,7 +820,7 @@ TEST_P(IR_RobustnessTest, Private_LoadVectorElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %vec:ptr<private, vec4<u32>, read_write> = var
+  %vec:ptr<private, vec4<u32>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -834,7 +834,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %vec:ptr<private, vec4<u32>, read_write> = var
+  %vec:ptr<private, vec4<u32>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -867,7 +867,7 @@ TEST_P(IR_RobustnessTest, Private_StoreVectorElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %vec:ptr<private, vec4<u32>, read_write> = var
+  %vec:ptr<private, vec4<u32>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):void {
@@ -881,7 +881,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %vec:ptr<private, vec4<u32>, read_write> = var
+  %vec:ptr<private, vec4<u32>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):void {
@@ -915,7 +915,7 @@ TEST_P(IR_RobustnessTest, Private_Access) {
 
     auto* src = R"(
 $B1: {  # root
-  %arr:ptr<private, array<u32, 4>, read_write> = var
+  %arr:ptr<private, array<u32, 4>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -930,7 +930,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %arr:ptr<private, array<u32, 4>, read_write> = var
+  %arr:ptr<private, array<u32, 4>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -964,7 +964,7 @@ TEST_P(IR_RobustnessTest, PushConstant_LoadVectorElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %vec:ptr<push_constant, vec4<u32>, read> = var
+  %vec:ptr<push_constant, vec4<u32>, read> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -978,7 +978,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %vec:ptr<push_constant, vec4<u32>, read> = var
+  %vec:ptr<push_constant, vec4<u32>, read> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1011,7 +1011,7 @@ TEST_P(IR_RobustnessTest, PushConstant_StoreVectorElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %vec:ptr<push_constant, vec4<u32>, read> = var
+  %vec:ptr<push_constant, vec4<u32>, read> = var undef
 }
 
 %foo = func(%idx:u32):void {
@@ -1025,7 +1025,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %vec:ptr<push_constant, vec4<u32>, read> = var
+  %vec:ptr<push_constant, vec4<u32>, read> = var undef
 }
 
 %foo = func(%idx:u32):void {
@@ -1059,7 +1059,7 @@ TEST_P(IR_RobustnessTest, PushConstant_Access) {
 
     auto* src = R"(
 $B1: {  # root
-  %arr:ptr<push_constant, array<u32, 4>, read> = var
+  %arr:ptr<push_constant, array<u32, 4>, read> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1074,7 +1074,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %arr:ptr<push_constant, array<u32, 4>, read> = var
+  %arr:ptr<push_constant, array<u32, 4>, read> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1109,7 +1109,7 @@ TEST_P(IR_BindingVariableRobustnessTest, Storage_LoadVectorElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %vec:ptr<storage, vec4<u32>, read_write> = var @binding_point(0, 0)
+  %vec:ptr<storage, vec4<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1123,7 +1123,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %vec:ptr<storage, vec4<u32>, read_write> = var @binding_point(0, 0)
+  %vec:ptr<storage, vec4<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1160,7 +1160,7 @@ TEST_P(IR_BindingVariableRobustnessTest, Storage_StoreVectorElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %vec:ptr<storage, vec4<u32>, read_write> = var @binding_point(0, 0)
+  %vec:ptr<storage, vec4<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):void {
@@ -1174,7 +1174,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %vec:ptr<storage, vec4<u32>, read_write> = var @binding_point(0, 0)
+  %vec:ptr<storage, vec4<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):void {
@@ -1212,7 +1212,7 @@ TEST_P(IR_BindingVariableRobustnessTest, Storage_Access) {
 
     auto* src = R"(
 $B1: {  # root
-  %arr:ptr<storage, array<u32, 4>, read_write> = var @binding_point(0, 0)
+  %arr:ptr<storage, array<u32, 4>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1227,7 +1227,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %arr:ptr<storage, array<u32, 4>, read_write> = var @binding_point(0, 0)
+  %arr:ptr<storage, array<u32, 4>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1265,7 +1265,7 @@ TEST_P(IR_BindingVariableRobustnessTest, Unifom_LoadVectorElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %vec:ptr<uniform, vec4<u32>, read> = var @binding_point(0, 0)
+  %vec:ptr<uniform, vec4<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1279,7 +1279,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %vec:ptr<uniform, vec4<u32>, read> = var @binding_point(0, 0)
+  %vec:ptr<uniform, vec4<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1316,7 +1316,7 @@ TEST_P(IR_BindingVariableRobustnessTest, Unifom_StoreVectorElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %vec:ptr<uniform, vec4<u32>, read> = var @binding_point(0, 0)
+  %vec:ptr<uniform, vec4<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):void {
@@ -1330,7 +1330,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %vec:ptr<uniform, vec4<u32>, read> = var @binding_point(0, 0)
+  %vec:ptr<uniform, vec4<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):void {
@@ -1368,7 +1368,7 @@ TEST_P(IR_BindingVariableRobustnessTest, Uniform_Access) {
 
     auto* src = R"(
 $B1: {  # root
-  %arr:ptr<uniform, array<u32, 4>, read> = var @binding_point(0, 0)
+  %arr:ptr<uniform, array<u32, 4>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1383,7 +1383,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %arr:ptr<uniform, array<u32, 4>, read> = var @binding_point(0, 0)
+  %arr:ptr<uniform, array<u32, 4>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1420,7 +1420,7 @@ TEST_P(IR_RobustnessTest, Workgroup_LoadVectorElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %vec:ptr<workgroup, vec4<u32>, read_write> = var
+  %vec:ptr<workgroup, vec4<u32>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1434,7 +1434,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %vec:ptr<workgroup, vec4<u32>, read_write> = var
+  %vec:ptr<workgroup, vec4<u32>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1467,7 +1467,7 @@ TEST_P(IR_RobustnessTest, Workgroup_StoreVectorElement) {
 
     auto* src = R"(
 $B1: {  # root
-  %vec:ptr<workgroup, vec4<u32>, read_write> = var
+  %vec:ptr<workgroup, vec4<u32>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):void {
@@ -1481,7 +1481,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %vec:ptr<workgroup, vec4<u32>, read_write> = var
+  %vec:ptr<workgroup, vec4<u32>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):void {
@@ -1515,7 +1515,7 @@ TEST_P(IR_RobustnessTest, Workgroup_Access) {
 
     auto* src = R"(
 $B1: {  # root
-  %arr:ptr<workgroup, array<u32, 4>, read_write> = var
+  %arr:ptr<workgroup, array<u32, 4>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1530,7 +1530,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %arr:ptr<workgroup, array<u32, 4>, read_write> = var
+  %arr:ptr<workgroup, array<u32, 4>, read_write> = var undef
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1694,7 +1694,7 @@ TEST_P(IR_BindingVariableRobustnessTest, RuntimeSizedArray_ConstIndex) {
 
     auto* src = R"(
 $B1: {  # root
-  %arr:ptr<storage, array<u32>, read_write> = var @binding_point(0, 0)
+  %arr:ptr<storage, array<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -1709,7 +1709,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %arr:ptr<storage, array<u32>, read_write> = var @binding_point(0, 0)
+  %arr:ptr<storage, array<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -1750,7 +1750,7 @@ TEST_P(IR_BindingVariableRobustnessTest, RuntimeSizedArray_DynamicIndex) {
 
     auto* src = R"(
 $B1: {  # root
-  %arr:ptr<storage, array<u32>, read_write> = var @binding_point(0, 0)
+  %arr:ptr<storage, array<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1765,7 +1765,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %arr:ptr<storage, array<u32>, read_write> = var @binding_point(0, 0)
+  %arr:ptr<storage, array<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1813,7 +1813,7 @@ structure = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, structure, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, structure, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -1832,7 +1832,7 @@ structure = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, structure, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, structure, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -1883,7 +1883,7 @@ structure = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, structure, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, structure, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1902,7 +1902,7 @@ structure = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, structure, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, structure, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1944,7 +1944,7 @@ TEST_P(IR_BindingVariableRobustnessTest, RuntimeSizedArray_DisableClamping) {
 
     auto* src = R"(
 $B1: {  # root
-  %arr:ptr<storage, array<u32>, read_write> = var @binding_point(0, 0)
+  %arr:ptr<storage, array<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1959,7 +1959,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %arr:ptr<storage, array<u32>, read_write> = var @binding_point(0, 0)
+  %arr:ptr<storage, array<u32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):u32 {
@@ -1989,8 +1989,7 @@ $B1: {  # root
 
 TEST_P(IR_BindingVariableRobustnessTest, TextureDimensions) {
     auto* texture = b.Var(
-        "texture",
-        ty.ptr(handle, ty.Get<type::SampledTexture>(type::TextureDimension::k2d, ty.f32()), read));
+        "texture", ty.ptr(handle, ty.sampled_texture(type::TextureDimension::k2d, ty.f32()), read));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
@@ -2003,7 +2002,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureDimensions) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_2d<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_2d<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func():vec2<u32> {
@@ -2030,8 +2029,7 @@ $B1: {  # root
 
 TEST_P(IR_BindingVariableRobustnessTest, TextureDimensions_WithLevel) {
     auto* texture = b.Var(
-        "texture",
-        ty.ptr(handle, ty.Get<type::SampledTexture>(type::TextureDimension::k2d, ty.f32()), read));
+        "texture", ty.ptr(handle, ty.sampled_texture(type::TextureDimension::k2d, ty.f32()), read));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
@@ -2046,7 +2044,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureDimensions_WithLevel) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_2d<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_2d<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%level:u32):vec2<u32> {
@@ -2061,7 +2059,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_2d<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_2d<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%level:u32):vec2<u32> {
@@ -2085,8 +2083,7 @@ $B1: {  # root
 
 TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled1D) {
     auto* texture = b.Var(
-        "texture",
-        ty.ptr(handle, ty.Get<type::SampledTexture>(type::TextureDimension::k1d, ty.f32()), read));
+        "texture", ty.ptr(handle, ty.sampled_texture(type::TextureDimension::k1d, ty.f32()), read));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
@@ -2118,7 +2115,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled1D) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_1d<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_1d<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:i32, %level:i32):vec4<f32> {
@@ -2140,7 +2137,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_1d<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_1d<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:i32, %level:i32):vec4<f32> {
@@ -2182,8 +2179,7 @@ $B1: {  # root
 
 TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled2D) {
     auto* texture = b.Var(
-        "texture",
-        ty.ptr(handle, ty.Get<type::SampledTexture>(type::TextureDimension::k2d, ty.f32()), read));
+        "texture", ty.ptr(handle, ty.sampled_texture(type::TextureDimension::k2d, ty.f32()), read));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
@@ -2215,7 +2211,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled2D) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_2d<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_2d<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %level:i32):vec4<f32> {
@@ -2237,7 +2233,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_2d<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_2d<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %level:i32):vec4<f32> {
@@ -2278,10 +2274,9 @@ $B1: {  # root
 }
 
 TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled2DArray) {
-    auto* texture = b.Var(
-        "texture",
-        ty.ptr(handle, ty.Get<type::SampledTexture>(type::TextureDimension::k2dArray, ty.f32()),
-               read));
+    auto* texture =
+        b.Var("texture",
+              ty.ptr(handle, ty.sampled_texture(type::TextureDimension::k2dArray, ty.f32()), read));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
@@ -2315,7 +2310,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled2DArray) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_2d_array<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_2d_array<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %layer:i32, %level:i32):vec4<f32> {
@@ -2337,7 +2332,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_2d_array<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_2d_array<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %layer:i32, %level:i32):vec4<f32> {
@@ -2386,8 +2381,7 @@ $B1: {  # root
 
 TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled3D) {
     auto* texture = b.Var(
-        "texture",
-        ty.ptr(handle, ty.Get<type::SampledTexture>(type::TextureDimension::k3d, ty.f32()), read));
+        "texture", ty.ptr(handle, ty.sampled_texture(type::TextureDimension::k3d, ty.f32()), read));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
@@ -2419,7 +2413,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Sampled3D) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_3d<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_3d<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec3<i32>, %level:i32):vec4<f32> {
@@ -2441,7 +2435,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_3d<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_3d<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec3<i32>, %level:i32):vec4<f32> {
@@ -2517,7 +2511,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Multisampled2D) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_multisampled_2d<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_multisampled_2d<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %level:i32):vec4<f32> {
@@ -2539,7 +2533,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_multisampled_2d<f32>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_multisampled_2d<f32>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %level:i32):vec4<f32> {
@@ -2604,7 +2598,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Depth2D) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_depth_2d, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_depth_2d, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %level:i32):f32 {
@@ -2626,7 +2620,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_depth_2d, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_depth_2d, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %level:i32):f32 {
@@ -2703,7 +2697,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Depth2DArray) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_depth_2d_array, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_depth_2d_array, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %layer:i32, %level:i32):f32 {
@@ -2725,7 +2719,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_depth_2d_array, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_depth_2d_array, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %layer:i32, %level:i32):f32 {
@@ -2805,7 +2799,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_DepthMultisampled2D) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_depth_multisampled_2d, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_depth_multisampled_2d, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %index:i32):f32 {
@@ -2827,7 +2821,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_depth_multisampled_2d, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_depth_multisampled_2d, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %index:i32):f32 {
@@ -2889,7 +2883,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_External) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_external, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_external, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>):vec4<f32> {
@@ -2911,7 +2905,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_external, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_external, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>):vec4<f32> {
@@ -2946,12 +2940,9 @@ $B1: {  # root
 
 TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage1D) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture =
-        b.Var("texture",
-              ty.ptr(handle,
-                     ty.Get<type::StorageTexture>(type::TextureDimension::k1d, format, read_write,
-                                                  type::StorageTexture::SubtypeFor(format, ty)),
-                     read));
+    auto* texture = b.Var(
+        "texture",
+        ty.ptr(handle, ty.storage_texture(type::TextureDimension::k1d, format, read_write), read));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
@@ -2979,7 +2970,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage1D) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_storage_1d<rgba8unorm, read_write>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_storage_1d<rgba8unorm, read_write>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:i32):vec4<f32> {
@@ -3001,7 +2992,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_storage_1d<rgba8unorm, read_write>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_storage_1d<rgba8unorm, read_write>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:i32):vec4<f32> {
@@ -3036,12 +3027,9 @@ $B1: {  # root
 
 TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage2D) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture =
-        b.Var("texture",
-              ty.ptr(handle,
-                     ty.Get<type::StorageTexture>(type::TextureDimension::k2d, format, read_write,
-                                                  type::StorageTexture::SubtypeFor(format, ty)),
-                     read));
+    auto* texture = b.Var(
+        "texture",
+        ty.ptr(handle, ty.storage_texture(type::TextureDimension::k2d, format, read_write), read));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
@@ -3069,7 +3057,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage2D) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_storage_2d<rgba8unorm, read_write>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_storage_2d<rgba8unorm, read_write>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>):vec4<f32> {
@@ -3091,7 +3079,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_storage_2d<rgba8unorm, read_write>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_storage_2d<rgba8unorm, read_write>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>):vec4<f32> {
@@ -3128,9 +3116,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage2DArray) {
     auto format = core::TexelFormat::kRgba8Unorm;
     auto* texture = b.Var(
         "texture",
-        ty.ptr(handle,
-               ty.Get<type::StorageTexture>(type::TextureDimension::k2dArray, format, read_write,
-                                            type::StorageTexture::SubtypeFor(format, ty)),
+        ty.ptr(handle, ty.storage_texture(type::TextureDimension::k2dArray, format, read_write),
                read));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
@@ -3163,7 +3149,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage2DArray) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_storage_2d_array<rgba8unorm, read_write>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_storage_2d_array<rgba8unorm, read_write>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %layer:i32):vec4<f32> {
@@ -3185,7 +3171,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_storage_2d_array<rgba8unorm, read_write>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_storage_2d_array<rgba8unorm, read_write>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec2<i32>, %layer:i32):vec4<f32> {
@@ -3227,12 +3213,9 @@ $B1: {  # root
 
 TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage3D) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture =
-        b.Var("texture",
-              ty.ptr(handle,
-                     ty.Get<type::StorageTexture>(type::TextureDimension::k3d, format, read_write,
-                                                  type::StorageTexture::SubtypeFor(format, ty)),
-                     read));
+    auto* texture = b.Var(
+        "texture",
+        ty.ptr(handle, ty.storage_texture(type::TextureDimension::k3d, format, read_write), read));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
@@ -3260,7 +3243,7 @@ TEST_P(IR_BindingVariableRobustnessTest, TextureLoad_Storage3D) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_storage_3d<rgba8unorm, read_write>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_storage_3d<rgba8unorm, read_write>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec3<i32>):vec4<f32> {
@@ -3282,7 +3265,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_storage_3d<rgba8unorm, read_write>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_storage_3d<rgba8unorm, read_write>, read> = var undef @binding_point(0, 0)
 }
 
 %load_signed = func(%coords:vec3<i32>):vec4<f32> {
@@ -3323,10 +3306,7 @@ TEST_P(IR_BindingVariableRobustnessTest, NoModify_TextureStore) {
     auto format = core::TexelFormat::kRgba8Unorm;
     auto* texture =
         b.Var("texture",
-              ty.ptr(handle,
-                     ty.Get<type::StorageTexture>(type::TextureDimension::k2d, format, write,
-                                                  type::StorageTexture::SubtypeFor(format, ty)),
-                     read));
+              ty.ptr(handle, ty.storage_texture(type::TextureDimension::k2d, format, write), read));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
@@ -3342,7 +3322,7 @@ TEST_P(IR_BindingVariableRobustnessTest, NoModify_TextureStore) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_storage_2d<rgba8unorm, write>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_storage_2d<rgba8unorm, write>, read> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%coords:vec2<i32>, %value:vec4<f32>):void {
@@ -3402,10 +3382,10 @@ TEST_P(IR_RobustnessTest, BindingsIgnored_Subset) {
 
     auto* src = R"(
 $B1: {  # root
-  %vec1:ptr<storage, vec4<u32>, read_write> = var @binding_point(1, 2)
-  %vec2:ptr<storage, vec4<u32>, read_write> = var @binding_point(2, 3)
-  %arr1:ptr<storage, array<u32, 4>, read_write> = var @binding_point(4, 5)
-  %arr2:ptr<storage, array<u32, 4>, read_write> = var @binding_point(6, 7)
+  %vec1:ptr<storage, vec4<u32>, read_write> = var undef @binding_point(1, 2)
+  %vec2:ptr<storage, vec4<u32>, read_write> = var undef @binding_point(2, 3)
+  %arr1:ptr<storage, array<u32, 4>, read_write> = var undef @binding_point(4, 5)
+  %arr2:ptr<storage, array<u32, 4>, read_write> = var undef @binding_point(6, 7)
 }
 
 %foo = func(%idx:u32):void {
@@ -3426,10 +3406,10 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %vec1:ptr<storage, vec4<u32>, read_write> = var @binding_point(1, 2)
-  %vec2:ptr<storage, vec4<u32>, read_write> = var @binding_point(2, 3)
-  %arr1:ptr<storage, array<u32, 4>, read_write> = var @binding_point(4, 5)
-  %arr2:ptr<storage, array<u32, 4>, read_write> = var @binding_point(6, 7)
+  %vec1:ptr<storage, vec4<u32>, read_write> = var undef @binding_point(1, 2)
+  %vec2:ptr<storage, vec4<u32>, read_write> = var undef @binding_point(2, 3)
+  %arr1:ptr<storage, array<u32, 4>, read_write> = var undef @binding_point(4, 5)
+  %arr2:ptr<storage, array<u32, 4>, read_write> = var undef @binding_point(6, 7)
 }
 
 %foo = func(%idx:u32):void {
@@ -3477,7 +3457,7 @@ TEST_P(IR_RobustnessTest, BindingsIgnored_ViaLets) {
 
     auto* src = R"(
 $B1: {  # root
-  %arr:ptr<storage, array<u32, 4>, read_write> = var @binding_point(0, 0)
+  %arr:ptr<storage, array<u32, 4>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%idx:u32):void {

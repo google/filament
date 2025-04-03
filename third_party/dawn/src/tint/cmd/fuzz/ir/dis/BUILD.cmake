@@ -68,7 +68,6 @@ tint_target_add_dependencies(tint_cmd_fuzz_ir_dis_cmd cmd
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
-  tint_utils_result
   tint_utils_rtti
   tint_utils_strconv
   tint_utils_symbol

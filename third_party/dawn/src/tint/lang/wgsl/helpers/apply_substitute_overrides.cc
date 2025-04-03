@@ -30,15 +30,15 @@
 #include <memory>
 #include <utility>
 
-#include "src/tint/lang/wgsl/ast/transform/manager.h"
-#include "src/tint/lang/wgsl/ast/transform/substitute_override.h"
+#include "src/tint/lang/core/ir/transform/substitute_overrides.h"
 #include "src/tint/lang/wgsl/inspector/inspector.h"
 #include "src/tint/lang/wgsl/program/program.h"
 
 namespace tint::wgsl {
 
-std::optional<Program> ApplySubstituteOverrides(const Program& program) {
-    ast::transform::SubstituteOverride::Config cfg;
+tint::core::ir::transform::SubstituteOverridesConfig SubstituteOverridesConfig(
+    const Program& program) {
+    tint::core::ir::transform::SubstituteOverridesConfig cfg;
     inspector::Inspector inspector(program);
     auto default_values = inspector.GetOverrideDefaultValues();
     for (const auto& [override_id, scalar] : default_values) {
@@ -49,18 +49,7 @@ std::optional<Program> ApplySubstituteOverrides(const Program& program) {
         }
     }
 
-    if (default_values.empty()) {
-        return std::nullopt;
-    }
-
-    ast::transform::DataMap override_data;
-    override_data.Add<ast::transform::SubstituteOverride::Config>(cfg);
-
-    ast::transform::Manager mgr;
-    mgr.append(std::make_unique<ast::transform::SubstituteOverride>());
-
-    ast::transform::DataMap outputs;
-    return mgr.Run(program, override_data, outputs);
+    return cfg;
 }
 
 }  // namespace tint::wgsl

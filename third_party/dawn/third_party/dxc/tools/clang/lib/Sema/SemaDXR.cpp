@@ -810,6 +810,13 @@ void DiagnoseTraceCall(Sema &S, const VarDecl *Payload,
     return;
   }
 
+  if (containsLongVector(Payload->getType())) {
+    const unsigned PayloadParametersIdx = 10;
+    S.Diag(Payload->getLocation(), diag::err_hlsl_unsupported_long_vector)
+        << PayloadParametersIdx;
+    return;
+  }
+
   CollectNonAccessableFields(PayloadType, CallerStage, {}, {},
                              NonWriteableFields, NonReadableFields);
 

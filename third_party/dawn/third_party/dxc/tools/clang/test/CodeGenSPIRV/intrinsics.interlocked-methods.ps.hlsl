@@ -1,5 +1,5 @@
 // RUN: %dxc -T ps_6_0 -E main -fcgl  %s -spirv | FileCheck %s -check-prefix=CHECK -check-prefix=GLSL450
-// RUN: %dxc -T ps_6_0 -E main -fcgl -fspv-use-vulkan-memory-model %s -spirv | FileCheck %s -check-prefix=CHECK -check-prefix=VULKAN
+// RUN: %dxc -T ps_6_0 -E main -fcgl -fspv-use-vulkan-memory-model -fspv-target-env=vulkan1.1 %s -spirv | FileCheck %s -check-prefix=CHECK -check-prefix=VULKAN
 
 RWTexture1D <int>   g_tTex1di1;
 RWTexture1D <uint>  g_tTex1du1;

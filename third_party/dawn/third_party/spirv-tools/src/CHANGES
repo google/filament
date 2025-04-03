@@ -1,5 +1,40 @@
 Revision history for SPIRV-Tools
 
+v2025.1 2025-02-28
+  - General
+    - diff: Fix crash in OpString matching (#5988)
+    - Add SPV_AMDX_shader_enqueue version 2 support (#5838)
+    - add support for SPV_INTEL_subgroup_matrix_multiply_accumulate (#5928)
+    - update cmake_minimum_required to 3.22.1 (#5925)
+    - Add OpImageSampleFootprintNV to IsAllowedSampledImageOperand (#5914)
+    - assembler: ensure progress when seeking the version string (#5910)
+  - Optimizer
+    - opt: keep all OpSource instructions (#5901)
+    - [opt] Fix bug opt::InstructionBuilder::AddVariable (#6007)
+    - [OPT] Add SPV_KHR_ray_tracing to allow list (#5941)
+    - opt: keep all OpSource instructions (#5901)
+  - Validator
+    - spirv-val: Add AllowVulkan32BitBitwise option (#6001)
+    - Fix untyped pointer comparison validation (#6004)
+    - spirv-val: Update VUIDs for 308 header (#5990)
+    - spirv-val: fix env parsing for vk1.1spv1.4 (#5985)
+    - Add validation for SPV_NV_linear_swept_spheres. (#5975)
+    - Add validation SPV_NV_cluster_acceleration_structure. (#5974)
+    - Improve the instruction diagnostic for some access chain errors (#5978)
+    - Update physical storage buffer validation to match SPIR-V 1.6.5 (#5977)
+    - Validate SPV_NV_cooperative_vector (#5972)
+    - Fix layout checks with untyped pointers (#5970)
+    - spirv-val: Update mislabeled VUIDs (#5964)
+    - More explicit layout validation (#5958)
+    - spirv-val: Add VK_KHR_maintenance8 support (#5951)
+    - Add EXT_mesh_shader validation support (#5640)
+    - spirv-val: Remove OpenCL ivec3 req (#5940)
+    - spirv-val: Validate zero product workgroup size (#5407)
+    - Relax DebugLine validation (#5916)
+  - Linker
+    - linker: remove LinkOnceODR decorations when linking executables (#5979)
+    - fix: handle LinkOnceODR correctly (#5938)
+
 v2024.4 2024-12-04
   - General
     - Add FPEncoding operand type. (#5726)

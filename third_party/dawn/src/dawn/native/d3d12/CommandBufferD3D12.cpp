@@ -519,6 +519,7 @@ class BindGroupStateTracker : public BindGroupTrackerBase<false, uint64_t> {
                 }
                 break;
             case wgpu::BufferBindingType::ReadOnlyStorage:
+            case kInternalReadOnlyStorageBufferBinding:
                 if constexpr (kIsRenderPipeline) {
                     commandList->SetGraphicsRootShaderResourceView(parameterIndex, bufferLocation);
                 } else {
@@ -1183,23 +1184,22 @@ MaybeError CommandBuffer::RecordCommands(CommandRecordingContext* commandContext
                 Buffer* dstBuffer = ToBackend(write->buffer.Get());
                 uint8_t* data = mCommands.NextData<uint8_t>(size);
 
-                UploadHandle uploadHandle;
-                DAWN_TRY_ASSIGN(uploadHandle,
-                                device->GetDynamicUploader()->Allocate(
-                                    size, device->GetQueue()->GetPendingCommandSerial(),
-                                    kCopyBufferToBufferOffsetAlignment));
-                DAWN_ASSERT(uploadHandle.mappedBuffer != nullptr);
-                memcpy(uploadHandle.mappedBuffer, data, size);
+                DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
+                    size, kCopyBufferToBufferOffsetAlignment,
+                    [&](UploadReservation reservation) -> MaybeError {
+                        memcpy(reservation.mappedPointer, data, size);
+                        [[maybe_unused]] bool cleared;
+                        DAWN_TRY_ASSIGN(cleared, dstBuffer->EnsureDataInitializedAsDestination(
+                                                     commandContext, offset, size));
 
-                [[maybe_unused]] bool cleared;
-                DAWN_TRY_ASSIGN(cleared, dstBuffer->EnsureDataInitializedAsDestination(
-                                             commandContext, offset, size));
-
-                dstBuffer->TrackUsageAndTransitionNow(commandContext, wgpu::BufferUsage::CopyDst);
-                commandList->CopyBufferRegion(
-                    dstBuffer->GetD3D12Resource(), offset,
-                    ToBackend(uploadHandle.stagingBuffer)->GetD3D12Resource(),
-                    uploadHandle.startOffset, size);
+                        dstBuffer->TrackUsageAndTransitionNow(commandContext,
+                                                              wgpu::BufferUsage::CopyDst);
+                        commandList->CopyBufferRegion(
+                            dstBuffer->GetD3D12Resource(), offset,
+                            ToBackend(reservation.buffer)->GetD3D12Resource(),
+                            reservation.offsetInBuffer, size);
+                        return {};
+                    }));
                 break;
             }
 
@@ -1344,6 +1344,9 @@ MaybeError CommandBuffer::RecordComputePass(CommandRecordingContext* commandCont
                 RecordWriteTimestampCmd(commandList, cmd->querySet.Get(), cmd->queryIndex);
                 break;
             }
+
+            case Command::SetImmediateData:
+                return DAWN_UNIMPLEMENTED_ERROR("SetImmediateData unimplemented");
 
             default:
                 DAWN_UNREACHABLE();
@@ -1870,6 +1873,9 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* commandConte
                 RecordWriteTimestampCmd(commandList, cmd->querySet.Get(), cmd->queryIndex);
                 break;
             }
+
+            case Command::SetImmediateData:
+                return DAWN_UNIMPLEMENTED_ERROR("SetImmediateData unimplemented");
 
             default: {
                 DAWN_TRY(EncodeRenderBundleCommand(&mCommands, type));

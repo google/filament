@@ -55,7 +55,7 @@ Swizzle::Swizzle(Id id, InstructionResult* result, Value* object, VectorRef<uint
 Swizzle::~Swizzle() = default;
 
 Swizzle* Swizzle::Clone(CloneContext& ctx) {
-    auto* result = ctx.Clone(Result(0));
+    auto* result = ctx.Clone(Result());
     auto* obj = ctx.Remap(Object());
     return ctx.ir.CreateInstruction<Swizzle>(result, obj, indices_);
 }

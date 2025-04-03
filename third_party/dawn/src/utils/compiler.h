@@ -101,6 +101,15 @@
 #define DAWN_UNLIKELY(x) (x)
 #endif
 
+// DAWN_ASAN_ENABLED()
+//
+// Checks whether ASan is enabled.
+#if DAWN_COMPILER_IS(CLANG)
+#define DAWN_ASAN_ENABLED() __has_feature(address_sanitizer)
+#elif DAWN_COMPILER_IS(GCC) || DAWN_COMPILER_IS(MSVC)
+#define DAWN_ASAN_ENABLED() defined(__SANITIZE_ADDRESS__)
+#endif
+
 // DAWN_NO_SANITIZE(instrumentation)
 //
 // Annotate a function or a global variable declaration to specify that a particular instrumentation

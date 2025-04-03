@@ -71,8 +71,9 @@ class BindGroupLayout final : public BindGroupLayoutInternalBase {
 
     ResultOrError<Ref<BindGroup>> AllocateBindGroup(Device* device,
                                                     const BindGroupDescriptor* descriptor);
-    void DeallocateBindGroup(BindGroup* bindGroup,
-                             DescriptorSetAllocation* descriptorSetAllocation);
+    void DeallocateBindGroup(BindGroup* bindGroup);
+    void DeallocateDescriptorSet(DescriptorSetAllocation* descriptorSetAllocation);
+    void ReduceMemoryUsage() override;
 
     // If the client specified that the texture at `textureBinding` should be
     // combined with a static sampler, returns the binding index of the static

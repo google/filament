@@ -293,9 +293,7 @@ class DecomposeSideEffects::CollectHoistsState : public StateBase {
                         }
                         // Don't hoist textures / samplers as they can't be placed into a let, nor
                         // can they have side effects.
-                        if (var_user->Variable()
-                                ->Type()
-                                ->IsAnyOf<core::type::Texture, core::type::Sampler>()) {
+                        if (var_user->Variable()->Type()->IsHandle()) {
                             return false;
                         }
                         return true;

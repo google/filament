@@ -6,7 +6,8 @@ Note: This code is currently WIP. There are a number of [known issues](#known-is
 
 ### System requirements
 
-- [CMake 3.16](https://cmake.org/download/) or greater.
+- [GN](https://gn.googlesource.com/gn/) if using the GN build. This is installed as part of depot_tools (see below).
+- [CMake 3.16](https://cmake.org/download/) or greater, if using the CMake build.
   (Check `cmake_minimum_required` in the [CMakeLists.txt](../../../CMakeLists.txt)
   file in the project root.)
 - [Go 1.18](https://golang.org/dl/) or greater.
@@ -38,7 +39,15 @@ If you don't have the `libx11-xbc-dev` supporting library, then you must use the
 
 ### Build
 
-Currently, the node bindings can only be built with CMake:
+#### With GN
+
+Set `dawn_build_node_bindings = true` in `args.gn` and build the `dawn_node` target:
+```sh
+gn gen out/Default --args='dawn_build_node_bindings=true'
+autoninja -C out/Default dawn_node
+```
+
+#### With CMake
 
 ```sh
 mkdir <build-output-path>
@@ -169,7 +178,7 @@ Dawn needs to be built with clang and the `DAWN_EMIT_COVERAGE` CMake flag.
 
 LLVM is also required, either [built from source](https://github.com/llvm/llvm-project), or downloaded as part of an [LLVM release](https://releases.llvm.org/download.html). Make sure that the subdirectory `llvm/bin` is in your PATH, and that `llvm-cov` and `llvm-profdata` binaries are present.
 
-Optionally, the `LLVM_SOURCE_DIR` CMake flag can also be specified to point the the `./llvm` directory of [an LLVM checkout](https://github.com/llvm/llvm-project), which will build [`turbo-cov`](../../../tools/src/cmd/turbo-cov/README.md) and dramatically speed up the processing of coverage data. If `turbo-cov` is not built, `llvm-cov` will be used instead.
+Optionally, the `LLVM_SOURCE_DIR` CMake flag can also be specified to point the `./llvm` directory of [an LLVM checkout](https://github.com/llvm/llvm-project), which will build [`turbo-cov`](../../../tools/src/cmd/turbo-cov/README.md) and dramatically speed up the processing of coverage data. If `turbo-cov` is not built, `llvm-cov` will be used instead.
 
 It may be helpful to write a bash script like `use.sh` that sets up your build environment, for example:
 

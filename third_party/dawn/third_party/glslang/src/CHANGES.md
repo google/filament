@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## 15.2.0 2024-02-24
+* Fix find_package on Windows when BUILD_SHARED_LIBS=ON
+* Emit error if using in/out with struct pointer
+* Emit SPV_EXT_opacity_micromap if GL extension is present
+* Support GL_NV_linear_swept_spheres
+* Support GLSL_EXT_nontemporal_keyword
+* Support GL_NV_cluster_acceleration_structure
+* Support GL_NV_cooperative_vector
+* Check SparseTextureOffset non-const parameters
+* Support GL_EXT_texture_offset_non_const
+* Revert cross-stage check for missing outputs
+* Support EXT_integer_dot_product
+* Add support for OpTypeRayQueryKHR and OpTypeAccelerationStructureKHR to SPVRemapper
+
 ## 15.1.0 2024-12-13
 * Add Vulkan 1.4 target and client
 * Improve conversion of uniform block to push constant

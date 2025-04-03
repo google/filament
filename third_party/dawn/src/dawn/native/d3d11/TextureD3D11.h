@@ -34,7 +34,7 @@
 #include "dawn/native/Error.h"
 #include "dawn/native/IntegerTypes.h"
 #include "dawn/native/PassResourceUsage.h"
-#include "dawn/native/d3d/TextureD3D.h"
+#include "dawn/native/Texture.h"
 #include "dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native {
@@ -53,7 +53,7 @@ class TextureView;
 class ScopedCommandRecordingContext;
 class SharedTextureMemory;
 
-class Texture final : public d3d::Texture {
+class Texture final : public TextureBase {
   public:
     static ResultOrError<Ref<Texture>> Create(Device* device,
                                               const UnpackedPtr<TextureDescriptor>& descriptor);
@@ -99,7 +99,6 @@ class Texture final : public d3d::Texture {
     static MaybeError Copy(const ScopedCommandRecordingContext* commandContext,
                            CopyTextureToTextureCmd* copy);
 
-    ResultOrError<ExecutionSerial> EndAccess() override;
 
     // As D3D11 SRV doesn't support 'Shader4ComponentMapping' for depth-stencil textures, we can't
     // sample the stencil component directly. As a workaround we create an internal R8Uint texture,
@@ -109,7 +108,7 @@ class Texture final : public d3d::Texture {
         const TextureView* view);
 
   private:
-    using Base = d3d::Texture;
+    using Base = TextureBase;
 
     enum class Kind { Normal, Staging, Interim };
 

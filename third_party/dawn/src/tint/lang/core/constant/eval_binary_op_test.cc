@@ -28,7 +28,7 @@
 #include "src/tint/lang/core/constant/eval_test.h"
 
 #include "src/tint/lang/wgsl/builtin_fn.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 #if TINT_BUILD_WGSL_READER
 #include "src/tint/lang/wgsl/reader/reader.h"

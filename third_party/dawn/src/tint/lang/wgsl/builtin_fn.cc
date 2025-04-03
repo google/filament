@@ -909,6 +909,18 @@ bool IsSubgroup(BuiltinFn f) {
     }
 }
 
+bool IsSubgroupMatrix(BuiltinFn f) {
+    switch (f) {
+        case BuiltinFn::kSubgroupMatrixLoad:
+        case BuiltinFn::kSubgroupMatrixStore:
+        case BuiltinFn::kSubgroupMatrixMultiply:
+        case BuiltinFn::kSubgroupMatrixMultiplyAccumulate:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool IsQuadSwap(BuiltinFn f) {
     switch (f) {
         case BuiltinFn::kQuadSwapX:

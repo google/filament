@@ -60,12 +60,9 @@ void woo() {
 }
 
 template<typename T>
-// expected-note@+1{{zero sized record defined here}}
 struct ForwardDecl; // expected-note{{template is declared here}}
 
 void woot() {
-  // Forward decl fails because forcing completion to check empty size for node object.
-  // expected-error@+1{{record used in GroupNodeInputRecords may not have zero size}}
   GroupNodeInputRecords<ForwardDecl<int> > data; // expected-error{{implicit instantiation of undefined template 'ForwardDecl<int>'}}
   foo(data);
 }

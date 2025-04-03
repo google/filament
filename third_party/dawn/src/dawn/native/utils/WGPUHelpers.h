@@ -51,6 +51,7 @@ ResultOrError<Ref<ShaderModuleBase>> CreateShaderModule(
     const std::vector<tint::wgsl::Extension>& internalExtensions = {});
 
 ResultOrError<Ref<BufferBase>> CreateBufferFromData(DeviceBase* device,
+                                                    std::string_view label,
                                                     wgpu::BufferUsage usage,
                                                     const void* data,
                                                     uint64_t size);
@@ -59,7 +60,15 @@ template <typename T>
 ResultOrError<Ref<BufferBase>> CreateBufferFromData(DeviceBase* device,
                                                     wgpu::BufferUsage usage,
                                                     std::initializer_list<T> data) {
-    return CreateBufferFromData(device, usage, data.begin(), uint32_t(sizeof(T) * data.size()));
+    return CreateBufferFromData(device, "", usage, data.begin(), uint32_t(sizeof(T) * data.size()));
+}
+template <typename T>
+ResultOrError<Ref<BufferBase>> CreateBufferFromData(DeviceBase* device,
+                                                    std::string_view label,
+                                                    wgpu::BufferUsage usage,
+                                                    std::initializer_list<T> data) {
+    return CreateBufferFromData(device, label, usage, data.begin(),
+                                uint32_t(sizeof(T) * data.size()));
 }
 
 ResultOrError<Ref<PipelineLayoutBase>> MakeBasicPipelineLayout(

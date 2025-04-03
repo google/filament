@@ -36,13 +36,11 @@ namespace {
 
 class PipelineLayoutTests : public DawnTest {
   protected:
-    wgpu::RequiredLimits GetRequiredLimits(const wgpu::SupportedLimits& supported) override {
+    wgpu::Limits GetRequiredLimits(const wgpu::Limits& supported) override {
         // TODO(crbug.com/383593270): Enable all the limits.
-        wgpu::RequiredLimits required = {};
-        required.limits.maxStorageBuffersInFragmentStage =
-            supported.limits.maxStorageBuffersInFragmentStage;
-        required.limits.maxStorageBuffersPerShaderStage =
-            supported.limits.maxStorageBuffersPerShaderStage;
+        wgpu::Limits required = {};
+        required.maxStorageBuffersInFragmentStage = supported.maxStorageBuffersInFragmentStage;
+        required.maxStorageBuffersPerShaderStage = supported.maxStorageBuffersPerShaderStage;
         return required;
     }
 };
@@ -52,14 +50,14 @@ class PipelineLayoutTests : public DawnTest {
 // dynamic offset bindings were at max. Test is successful if the pipeline layout is created
 // without error.
 TEST_P(PipelineLayoutTests, DynamicBuffersOverflow) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().limits.maxStorageBuffersInFragmentStage < 1);
+    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
     // Create the first bind group layout which uses max number of dynamic buffers bindings.
     wgpu::BindGroupLayout bglA;
     {
         std::vector<wgpu::BindGroupLayoutEntry> entries;
-        for (uint32_t i = 0;
-             i < GetSupportedLimits().limits.maxDynamicStorageBuffersPerPipelineLayout; i++) {
+        for (uint32_t i = 0; i < GetSupportedLimits().maxDynamicStorageBuffersPerPipelineLayout;
+             i++) {
             wgpu::BindGroupLayoutEntry entry;
             entry.binding = i;
             entry.visibility = wgpu::ShaderStage::Compute;

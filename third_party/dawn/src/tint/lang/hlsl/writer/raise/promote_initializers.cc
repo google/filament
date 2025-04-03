@@ -148,7 +148,7 @@ struct State {
         Vector<core::ir::Value*, 4> new_args = GatherArgs(const_val);
 
         auto* construct = b.Construct(const_val->Type(), new_args);
-        let->SetValue(construct->Result(0));
+        let->SetValue(construct->Result());
 
         // Put the `let` in before the `construct` value that we're based off of
         let->InsertBefore(parent);
@@ -156,7 +156,7 @@ struct State {
         construct->InsertBefore(let);
 
         // Replace the argument in the originating `construct` with the new `let`.
-        parent->SetArg(idx, let->Result(0));
+        parent->SetArg(idx, let->Result());
 
         return {construct};
     }
@@ -183,7 +183,7 @@ struct State {
         // Turn the `constant` into a `construct` call and replace the value of the `let` that
         // was created.
         auto* construct = b.Construct(val->Type(), args);
-        let->SetValue(construct->Result(0));
+        let->SetValue(construct->Result());
         construct->InsertBefore(let);
 
         return {construct};
@@ -211,7 +211,7 @@ struct State {
 
         auto name = b.ir.NameOf(value);
         if (name.IsValid()) {
-            b.ir.SetName(let->Result(0), name);
+            b.ir.SetName(let->Result(), name);
             b.ir.ClearName(value);
         }
         return let;
@@ -230,7 +230,7 @@ struct State {
             values_in_lets.Add(value, let);
         }
 
-        inst->SetOperand(index, let->Result(0));
+        inst->SetOperand(index, let->Result());
         return let;
     }
 };

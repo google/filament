@@ -83,6 +83,7 @@ using CompileVulkanToSpirv14TestNV = GlslangTest<::testing::TestWithParam<std::s
 using CompileUpgradeTextureToSampledTextureAndDropSamplersTest = GlslangTest<::testing::TestWithParam<std::string>>;
 using GlslSpirvDebugInfoTest = GlslangTest<::testing::TestWithParam<std::string>>;
 using GlslNonSemanticShaderDebugInfoTest = GlslangTest<::testing::TestWithParam<std::string>>;
+using GlslNonSemanticShaderDebugInfoSpirv13Test = GlslangTest<::testing::TestWithParam<std::string>>;
 
 // Compiling GLSL to SPIR-V under Vulkan semantics. Expected to successfully
 // generate SPIR-V.
@@ -261,6 +262,13 @@ TEST_P(GlslNonSemanticShaderDebugInfoTest, FromFile)
                             "/baseResults/", false, true, true);
 }
 
+TEST_P(GlslNonSemanticShaderDebugInfoSpirv13Test, FromFile)
+{
+    loadFileCompileAndCheck(GlobalTestSettings.testRoot, GetParam(), Source::GLSL, Semantics::Vulkan,
+                            glslang::EShTargetVulkan_1_1, glslang::EShTargetSpv_1_3, Target::Spv, true, "",
+                            "/baseResults/", false, true, true);
+}
+
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(
     Glsl, CompileVulkanToSpirvTest,
@@ -338,8 +346,6 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.bool.vert",
         "spv.boolInBlock.frag",
         "spv.branch-return.vert",
-        "spv.bufferhandle1.frag",
-        "spv.bufferhandle10.frag",
         "spv.bufferhandle11.frag",
         "spv.bufferhandle12.frag",
         "spv.bufferhandle13.frag",
@@ -350,7 +356,7 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.bufferhandle18.frag",
         "spv.bufferhandle19_Errors.frag",
         "spv.bufferhandle2.frag",
-        "spv.bufferhandle3.frag",
+        "spv.bufferhandle3_Errors.frag",
         "spv.bufferhandle4.frag",
         "spv.bufferhandle5.frag",
         "spv.bufferhandle6.frag",
@@ -367,21 +373,6 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.constConstruct.vert",
         "spv.controlFlowAttributes.frag",
         "spv.conversion.frag",
-        "spv.coopmat.comp",
-        "spv.coopmat_Error.comp",
-        "spv.coopmatKHR.comp",
-        "spv.coopmat_armlayout.comp",
-        "spv.coopmatKHR_arithmetic.comp",
-        "spv.coopmatKHR_arithmeticError.comp",
-        "spv.coopmatKHR_Error.comp",
-        "spv.coopmatKHR_constructor.comp",
-        "spv.coopmatKHR_constructorError.comp",
-        "spv.coopvec.comp",
-        "spv.coopvec2.comp",
-        "spv.coopvecloadstore.comp",
-        "spv.coopvec_Error.comp",
-        "spv.coopvecTraining.comp",
-        "spv.coopvecTraining_Error.comp",
         "spv.dataOut.frag",
         "spv.dataOutIndirect.frag",
         "spv.dataOutIndirect.vert",
@@ -428,7 +419,6 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.int_dot_Error.frag",
         "spv.interpOps.frag",
         "spv.int64.frag",
-        "spv.intcoopmat.comp",
         "spv.intOps.vert",
         "spv.intrinsicsDebugBreak.frag",
         "spv.intrinsicsSpirvByReference.vert",
@@ -436,7 +426,6 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.intrinsicsSpirvDecorateId.comp",
         "spv.intrinsicsSpirvDecorateString.comp",
         "spv.intrinsicsSpirvExecutionMode.frag",
-        "spv.intrinsicsInteractWithCoopMat.comp",
         "spv.intrinsicsSpirvInstruction.vert",
         "spv.intrinsicsSpirvLiteral.vert",
         "spv.intrinsicsSpirvStorageClass.rchit",
@@ -480,8 +469,6 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.prepost.frag",
         "spv.privateVariableTypes.frag",
         "spv.qualifiers.vert",
-        "spv.replicate.comp",
-        "spv.replicatespec.comp",
         "spv.sample.frag",
         "spv.sampleId.frag",
         "spv.samplePosition.frag",
@@ -558,7 +545,6 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.ARMCoreBuiltIns.frag",
         "spv.builtin.PrimitiveShadingRateEXT.vert",
         "spv.builtin.ShadingRateEXT.frag",
-        "spv.atomicAdd.bufferReference.comp",
         "spv.fragmentShaderBarycentric3.frag",
         "spv.fragmentShaderBarycentric4.frag",
         "spv.ext.textureShadowLod.frag",
@@ -570,7 +556,6 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.textureoffset_non_const.vert",
         "spv.sparsetextureoffset_non_const.vert",
         "spv.sparsetextureoffset_non_const_fail.vert",
-        "spv.nontemporalbuffer.frag"
     })),
     FileNameAsCustomTestSuffix
 );
@@ -657,6 +642,32 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.subgroupExtendedTypesVote.comp",
         "spv.subgroupExtendedTypesVoteNeg.comp",
         "spv.vulkan110.storageBuffer.vert",
+
+        // These tests use the Vulkan memory model.
+        "spv.bufferhandle1.frag",
+        "spv.bufferhandle10.frag",
+        "spv.coopmat.comp",
+        "spv.coopmat_Error.comp",
+        "spv.coopmatKHR.comp",
+        "spv.coopmat_armlayout.comp",
+        "spv.coopmatKHR_arithmetic.comp",
+        "spv.coopmatKHR_arithmeticError.comp",
+        "spv.coopmatKHR_Error.comp",
+        "spv.coopmatKHR_constructor.comp",
+        "spv.coopmatKHR_constructorError.comp",
+        "spv.coopvec.comp",
+        "spv.coopvec2.comp",
+        "spv.coopvecloadstore.comp",
+        "spv.coopvec_Error.comp",
+        "spv.coopvecTraining.comp",
+        "spv.coopvecTraining_Error.comp",
+        "spv.intcoopmat.comp",
+        "spv.intrinsicsInteractWithCoopMat.comp",
+        "spv.replicate.comp",
+        "spv.replicatespec.comp",
+        "spv.atomicAdd.bufferReference.comp",
+        "spv.nontemporalbuffer.frag",
+        "spv.atomicFloat.comp",
     })),
     FileNameAsCustomTestSuffix
 );
@@ -819,7 +830,6 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.460.vert",
         "spv.460.comp",
         "spv.atomic.comp",
-        "spv.atomicFloat.comp",
         "spv.atomicFloat_Error.comp",
         "spv.glFragColor.frag",
         "spv.rankShift.comp",
@@ -997,6 +1007,13 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.debuginfo.include.glsl.frag",
         "spv.debuginfo.multiline.glsl.frag",
         "spv.debuginfo.implicit_br.glsl.frag",
+    })),
+    FileNameAsCustomTestSuffix
+);
+
+INSTANTIATE_TEST_SUITE_P(
+    Glsl, GlslNonSemanticShaderDebugInfoSpirv13Test,
+    ::testing::ValuesIn(std::vector<std::string>({
         "spv.debuginfo.coopmatKHR.comp",
     })),
     FileNameAsCustomTestSuffix

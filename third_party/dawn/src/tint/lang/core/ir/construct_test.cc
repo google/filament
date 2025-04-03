@@ -52,8 +52,8 @@ TEST_F(IR_ConstructTest, Result) {
     auto* c = b.Construct(mod.Types().f32(), arg1, arg2);
 
     EXPECT_EQ(c->Results().Length(), 1u);
-    EXPECT_TRUE(c->Result(0)->Is<InstructionResult>());
-    EXPECT_EQ(c, c->Result(0)->Instruction());
+    EXPECT_TRUE(c->Result()->Is<InstructionResult>());
+    EXPECT_EQ(c, c->Result()->Instruction());
 }
 
 TEST_F(IR_ConstructDeathTest, Fail_NullType) {
@@ -74,8 +74,8 @@ TEST_F(IR_ConstructTest, Clone) {
     auto* new_c = clone_ctx.Clone(c);
 
     EXPECT_NE(c, new_c);
-    EXPECT_NE(c->Result(0), new_c->Result(0));
-    EXPECT_EQ(mod.Types().f32(), new_c->Result(0)->Type());
+    EXPECT_NE(c->Result(), new_c->Result());
+    EXPECT_EQ(mod.Types().f32(), new_c->Result()->Type());
 
     auto args = new_c->Args();
     EXPECT_EQ(2u, args.Length());
@@ -91,8 +91,8 @@ TEST_F(IR_ConstructTest, CloneEmpty) {
     auto* c = b.Construct(mod.Types().f32());
 
     auto* new_c = clone_ctx.Clone(c);
-    EXPECT_NE(c->Result(0), new_c->Result(0));
-    EXPECT_EQ(mod.Types().f32(), new_c->Result(0)->Type());
+    EXPECT_NE(c->Result(), new_c->Result());
+    EXPECT_EQ(mod.Types().f32(), new_c->Result()->Type());
     EXPECT_TRUE(new_c->Args().IsEmpty());
 }
 

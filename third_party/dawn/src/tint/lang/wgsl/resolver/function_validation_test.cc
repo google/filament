@@ -452,7 +452,8 @@ TEST_F(ResolverFunctionValidationTest, CannotCallFunctionAtModuleScope) {
     GlobalVar("x", Call(Source{{12, 34}}, "F"), core::AddressSpace::kPrivate);
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), R"(12:34 error: functions cannot be called at module-scope)");
+    EXPECT_EQ(r()->error(),
+              R"(12:34 error: user-declared functions cannot be called at module-scope)");
 }
 
 TEST_F(ResolverFunctionValidationTest, PipelineStage_MustBeUnique_Fail) {

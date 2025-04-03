@@ -197,9 +197,6 @@ std::string LimitsToString(const wgpu::Limits& limits, const std::string& indent
         << "maxVertexBufferArrayStride: " << FormatNumber(limits.maxVertexBufferArrayStride)
         << "\n";
     out << indent
-        << "maxInterStageShaderComponents: " << FormatNumber(limits.maxInterStageShaderComponents)
-        << "\n";
-    out << indent
         << "maxInterStageShaderVariables: " << FormatNumber(limits.maxInterStageShaderVariables)
         << "\n";
     out << indent << "maxColorAttachments: " << FormatNumber(limits.maxColorAttachments) << "\n";
@@ -254,12 +251,12 @@ void DumpAdapterFeatures(const wgpu::Adapter& adapter) {
 }
 
 void DumpAdapterLimits(const wgpu::Adapter& adapter) {
-    wgpu::SupportedLimits adapterLimits;
+    wgpu::Limits adapterLimits;
     if (adapter.GetLimits(&adapterLimits)) {
         std::cout << "\n";
         std::cout << "  Adapter Limits\n";
         std::cout << "  ==============\n";
-        std::cout << LimitsToString(adapterLimits.limits, "    ") << "\n";
+        std::cout << LimitsToString(adapterLimits, "    ") << "\n";
     }
 }
 

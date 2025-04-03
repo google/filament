@@ -40,7 +40,7 @@ namespace dawn {
 
 class SharedTextureMemoryTestBackend {
   public:
-    virtual void SetUp() {}
+    virtual void SetUp(const wgpu::Device& device) {}
     virtual void TearDown() {}
 
     // The name used in gtest parameterization. Names of backends must be unique.

@@ -28,7 +28,7 @@
 #ifndef SRC_TINT_LANG_WGSL_WRITER_RAISE_PTR_TO_REF_H_
 #define SRC_TINT_LANG_WGSL_WRITER_RAISE_PTR_TO_REF_H_
 
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

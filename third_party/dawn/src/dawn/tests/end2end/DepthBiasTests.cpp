@@ -239,44 +239,6 @@ TEST_P(DepthBiasTests, NegativeBiasOnFloatWithClamp) {
                       wgpu::TextureAspect::DepthOnly);
 }
 
-// Test adding positive infinite slope bias to output
-TEST_P(DepthBiasTests, PositiveInfinitySlopeBiasOnFloat) {
-    // NVIDIA GPUs do not clamp values to 1 when using Inf slope bias.
-    DAWN_SUPPRESS_TEST_IF(IsVulkan() && IsNvidia());
-
-    // Draw quad with z from 0 to 0.5 with inf slope bias
-    RunDepthBiasTest(wgpu::TextureFormat::Depth32Float, 0.125, QuadAngle::TiltedX, 0,
-                     std::numeric_limits<float>::infinity(), 0);
-
-    // Value at the center of the pixel + (0.25 slope * Inf slope bias) = 1 (clamped)
-    std::vector<float> expected = {
-        1.0, 1.0,  //
-        1.0, 1.0,  //
-    };
-
-    EXPECT_TEXTURE_EQ(expected.data(), mDepthTexture, {0, 0}, {kRTSize, kRTSize}, 0,
-                      wgpu::TextureAspect::DepthOnly);
-}
-
-// Test adding positive infinite slope bias to output
-TEST_P(DepthBiasTests, NegativeInfinityBiasOnFloat) {
-    // NVIDIA GPUs do not clamp values to 0 when using -Inf slope bias.
-    DAWN_SUPPRESS_TEST_IF(IsVulkan() && IsNvidia());
-
-    // Draw quad with z from 0 to 0.5 with -inf slope bias
-    RunDepthBiasTest(wgpu::TextureFormat::Depth32Float, 0.125, QuadAngle::TiltedX, 0,
-                     -std::numeric_limits<float>::infinity(), 0);
-
-    // Value at the center of the pixel + (0.25 slope * -Inf slope bias) = 0 (clamped)
-    std::vector<float> expected = {
-        0.0, 0.0,  //
-        0.0, 0.0,  //
-    };
-
-    EXPECT_TEXTURE_EQ(expected.data(), mDepthTexture, {0, 0}, {kRTSize, kRTSize}, 0,
-                      wgpu::TextureAspect::DepthOnly);
-}
-
 // Test tiledX quad with no bias
 TEST_P(DepthBiasTests, NoBiasTiltedXOnFloat) {
     // Draw quad with z from 0 to 0.5 with no bias

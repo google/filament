@@ -60,7 +60,7 @@ class AdapterBase : public RefCounted, public WeakRefSupport<AdapterBase> {
 
     // WebGPU API
     InstanceBase* APIGetInstance() const;
-    wgpu::Status APIGetLimits(SupportedLimits* limits) const;
+    wgpu::Status APIGetLimits(Limits* limits) const;
     wgpu::Status APIGetInfo(AdapterInfo* info) const;
     bool APIHasFeature(wgpu::FeatureName feature) const;
     void APIGetFeatures(SupportedFeatures* features) const;
@@ -71,6 +71,9 @@ class AdapterBase : public RefCounted, public WeakRefSupport<AdapterBase> {
     wgpu::Status APIGetFormatCapabilities(wgpu::TextureFormat format,
                                           DawnFormatCapabilities* capabilities);
 
+    // Return the limits for the adapter.
+    const CombinedLimits& GetLimits() const;
+    // Set if the adapter uses tiered limits, may result in a change in the adapter's limits.
     void SetUseTieredLimits(bool useTieredLimits);
 
     // Return the underlying PhysicalDevice.
@@ -80,6 +83,7 @@ class AdapterBase : public RefCounted, public WeakRefSupport<AdapterBase> {
     // Get the actual toggles state of the adapter.
     const TogglesState& GetTogglesState() const;
 
+    // Get the defaulting feature level of the adapter.
     wgpu::FeatureLevel GetFeatureLevel() const;
 
     // Get a human readable label for the adapter (in practice, the physical device name)
@@ -91,10 +95,17 @@ class AdapterBase : public RefCounted, public WeakRefSupport<AdapterBase> {
     ResultOrError<Ref<DeviceBase>> CreateDeviceInternal(const DeviceDescriptor* rawDescriptor,
                                                         Ref<DeviceBase::DeviceLostEvent> lostEvent);
 
+    // Generate the adapter's limits based on current adapter status. Should be called during
+    // AdapterBase creation and when the adapter's limits-related status changes, e.g.
+    // SetUseTieredLimits.
+    void UpdateLimits();
+
     Ref<InstanceBase> mInstance;
     Ref<PhysicalDeviceBase> mPhysicalDevice;
     wgpu::FeatureLevel mFeatureLevel;
     bool mUseTieredLimits = false;
+    // Limits for the adapter, tiered if mUseTieredLimits is set.
+    CombinedLimits mLimits;
 
     // Supported features under adapter toggles.
     FeaturesSet mSupportedFeatures;
@@ -106,7 +117,7 @@ class AdapterBase : public RefCounted, public WeakRefSupport<AdapterBase> {
 };
 
 std::vector<Ref<AdapterBase>> SortAdapters(std::vector<Ref<AdapterBase>> adapters,
-                                           const RequestAdapterOptions* options);
+                                           const UnpackedPtr<RequestAdapterOptions>& options);
 
 }  // namespace dawn::native
 

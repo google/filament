@@ -44,12 +44,12 @@ include(utils/macros/BUILD.cmake)
 include(utils/math/BUILD.cmake)
 include(utils/memory/BUILD.cmake)
 include(utils/protos/BUILD.cmake)
-include(utils/result/BUILD.cmake)
 include(utils/rtti/BUILD.cmake)
 include(utils/strconv/BUILD.cmake)
 include(utils/symbol/BUILD.cmake)
 include(utils/system/BUILD.cmake)
 include(utils/text/BUILD.cmake)
+include(utils/text_generator/BUILD.cmake)
 
 ################################################################################
 # Target:    tint_utils
@@ -61,21 +61,16 @@ tint_add_target(tint_utils lib
   utils/internal_limits.h
   utils/reflection.cc
   utils/reflection.h
-  utils/rwmutex.h
-  utils/socket.cc
-  utils/socket.h
-  utils/text_generator.cc
-  utils/text_generator.h
+  utils/result.cc
+  utils/result.h
 )
 
 tint_target_add_dependencies(tint_utils lib
   tint_utils_containers
-  tint_utils_diagnostic
   tint_utils_ice
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
-  tint_utils_result
   tint_utils_rtti
   tint_utils_text
 )
@@ -84,31 +79,23 @@ tint_target_add_external_dependencies(tint_utils lib
   "src_utils"
 )
 
-if(TINT_BUILD_IS_WIN)
-  tint_target_add_external_dependencies(tint_utils lib
-    "winsock"
-  )
-endif(TINT_BUILD_IS_WIN)
-
 ################################################################################
 # Target:    tint_utils_test
 # Kind:      test
 ################################################################################
 tint_add_target(tint_utils_test test
   utils/reflection_test.cc
+  utils/result_test.cc
 )
 
 tint_target_add_dependencies(tint_utils_test test
   tint_utils
   tint_utils_containers
-  tint_utils_diagnostic
   tint_utils_ice
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
-  tint_utils_result
   tint_utils_rtti
-  tint_utils_text
 )
 
 tint_target_add_external_dependencies(tint_utils_test test

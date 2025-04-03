@@ -90,7 +90,7 @@
 #include "src/tint/utils/macros/scoped_assignment.h"
 #include "src/tint/utils/rtti/switch.h"
 #include "src/tint/utils/text/string.h"
-#include "src/tint/utils/text_generator.h"
+#include "src/tint/utils/text_generator/text_generator.h"
 
 using namespace tint::core::fluent_types;  // NOLINT
 
@@ -226,13 +226,26 @@ class Printer : public tint::TextGenerator {
 
     /// @returns the name of the given value, creating a new unique name if the value is unnamed in
     /// the module.
-    std::string NameOf(const core::ir::Value* value) {
+    std::string NameOf(const core::ir::Value* value, bool add_stage_prefix = false) {
         return names_.GetOrAdd(value, [&] {
             auto sym = ir_.NameOf(value);
+            std::string name;
             if (!sym || ShouldRename(sym.NameView())) {
-                return UniqueIdentifier("v");
+                name = UniqueIdentifier("v");
+            } else {
+                name = sym.Name();
             }
-            return sym.Name();
+
+            if (add_stage_prefix) {
+                // Prefix the name to avoid collisions between different stages in the same
+                // pipeline.
+                if (stage_ == core::ir::Function::PipelineStage::kFragment) {
+                    return "f_" + name;
+                } else if (stage_ == core::ir::Function::PipelineStage::kVertex) {
+                    return "v_" + name;
+                }
+            }
+            return name;
         });
     }
 
@@ -277,7 +290,7 @@ class Printer : public tint::TextGenerator {
     /// that we know to pad the properly when we emit them.
     void FindHostShareableStructs() {
         for (auto inst : *ir_.root_block) {
-            auto* ptr = inst->Result(0)->Type()->As<core::type::Pointer>();
+            auto* ptr = inst->Result()->Type()->As<core::type::Pointer>();
             if (!ptr || !core::IsHostShareable(ptr->AddressSpace())) {
                 continue;
             }
@@ -620,22 +633,22 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitLet(const core::ir::Let* l) {
-        TINT_ASSERT(!l->Result(0)->Type()->Is<core::type::Pointer>());
+        TINT_ASSERT(!l->Result()->Type()->Is<core::type::Pointer>());
 
         auto out = Line();
 
         // TODO(dsinclair): Investigate using `const` here as well, the AST printer doesn't emit
         //                  const with a let, but we should be able to.
-        EmitTypeAndName(out, l->Result(0)->Type(), NameOf(l->Result(0)));
+        EmitTypeAndName(out, l->Result()->Type(), NameOf(l->Result()));
         out << " = ";
         EmitValue(out, l->Value());
         out << ";";
     }
 
     void EmitCallStmt(const core::ir::Call* c) {
-        if (!c->Result(0)->IsUsed()) {
+        if (!c->Result()->IsUsed()) {
             auto out = Line();
-            EmitValue(out, c->Result(0));
+            EmitValue(out, c->Result());
             out << ";";
         }
     }
@@ -968,11 +981,11 @@ class Printer : public tint::TextGenerator {
         out << ";";
     }
 
-    void EmitVar(StringStream& out, const core::ir::Var* var) {
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+    void EmitVar(StringStream& out, const core::ir::Var* var, bool add_stage_prefix = false) {
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         auto space = ptr->AddressSpace();
 
-        EmitTypeAndName(out, var->Result(0)->Type(), NameOf(var->Result(0)));
+        EmitTypeAndName(out, var->Result()->Type(), NameOf(var->Result(), add_stage_prefix));
         if (var->Initializer()) {
             out << " = ";
             EmitValue(out, var->Initializer());
@@ -986,7 +999,7 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitGlobalVar(core::ir::Var* var) {
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         auto space = ptr->AddressSpace();
 
         switch (space) {
@@ -1035,8 +1048,8 @@ class Printer : public tint::TextGenerator {
 
         EmitLayoutBinding(Line(), bp.value(), std::nullopt, {LayoutFormat::kStd430});
 
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
-        EmitVarStruct("buffer", NameOf(var->Result(0)), "ssbo",
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
+        EmitVarStruct("buffer", NameOf(var->Result()), "ssbo",
                       ptr->UnwrapPtr()->As<core::type::Struct>());
     }
 
@@ -1046,8 +1059,8 @@ class Printer : public tint::TextGenerator {
 
         EmitLayoutBinding(Line(), bp.value(), std::nullopt, {LayoutFormat::kStd140});
 
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
-        EmitVarStruct("uniform", NameOf(var->Result(0)), "ubo",
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
+        EmitVarStruct("uniform", NameOf(var->Result()), "ubo",
                       ptr->UnwrapPtr()->As<core::type::Struct>());
     }
 
@@ -1058,7 +1071,7 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitHandleVar(core::ir::Var* var) {
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
 
         // GLSL ignores sampler variables.
         if (ptr->UnwrapPtr()->Is<core::type::Sampler>()) {
@@ -1082,11 +1095,11 @@ class Printer : public tint::TextGenerator {
                 combined_texture_sampler->SamplerBindingPoint()};
             auto itr = options_.bindings.sampler_texture_to_name.find(key);
             if (itr != options_.bindings.sampler_texture_to_name.end()) {
-                names_.Add(var->Result(0), itr->second);
+                names_.Add(var->Result(), itr->second);
             }
         }
 
-        EmitVar(out, var);
+        EmitVar(out, var, true);
     }
 
     void EmitPushConstantVar(core::ir::Var* var) {
@@ -1098,20 +1111,20 @@ class Printer : public tint::TextGenerator {
         auto out = Line();
         EmitLayoutLocation(out, {0}, std::nullopt);
 
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         auto* str = ptr->StoreType()->As<core::type::Struct>();
         TINT_ASSERT(str);
         names_.Add(str, kPushConstantStructName);
         EmitStructType(str);
 
-        names_.Add(var->Result(0), kPushConstantVarName);
-        EmitTypeAndName(out, var->Result(0)->Type(), kPushConstantVarName);
+        names_.Add(var->Result(), kPushConstantVarName);
+        EmitTypeAndName(out, var->Result()->Type(), kPushConstantVarName);
         out << ";";
     }
 
     void EmitIOVar(core::ir::Var* var) {
         auto& attrs = var->Attributes();
-        auto addrspace = var->Result(0)->Type()->As<core::type::Pointer>()->AddressSpace();
+        auto addrspace = var->Result()->Type()->As<core::type::Pointer>()->AddressSpace();
 
         if (attrs.builtin.has_value()) {
             if (options_.version.IsES() &&
@@ -1122,7 +1135,7 @@ class Printer : public tint::TextGenerator {
 
             // Do not emit builtin (gl_) variables, but register the GLSL builtin names so that they
             // are correct at the point of use.
-            names_.Add(var->Result(0), GLSLBuiltinToString(*attrs.builtin, addrspace));
+            names_.Add(var->Result(), GLSLBuiltinToString(*attrs.builtin, addrspace));
             return;
         } else if (attrs.location) {
             // Use a fixed naming scheme for interstage variables so that they match between vertex
@@ -1131,7 +1144,7 @@ class Printer : public tint::TextGenerator {
                  addrspace == core::AddressSpace::kOut) ||
                 (stage_ == core::ir::Function::PipelineStage::kFragment &&
                  addrspace == core::AddressSpace::kIn)) {
-                names_.Add(var->Result(0),
+                names_.Add(var->Result(),
                            "tint_interstage_location" + std::to_string(attrs.location.value()));
             }
         }
@@ -1311,13 +1324,13 @@ class Printer : public tint::TextGenerator {
                     [&](const core::ir::CoreBinary* b) { EmitBinary(out, b); },
                     [&](const core::ir::CoreBuiltinCall* c) { EmitCoreBuiltinCall(out, c); },
                     [&](const core::ir::CoreUnary* u) { EmitUnary(out, u); },
-                    [&](const core::ir::Let* l) { out << NameOf(l->Result(0)); },
+                    [&](const core::ir::Let* l) { out << NameOf(l->Result()); },
                     [&](const core::ir::Load* l) { EmitLoad(out, l); },
                     [&](const core::ir::LoadVectorElement* l) { EmitLoadVectorElement(out, l); },
                     [&](const core::ir::Store* s) { EmitStore(s); },
                     [&](const core::ir::Swizzle* s) { EmitSwizzle(out, s); },  //
                     [&](const core::ir::UserCall* c) { EmitUserCall(out, c); },
-                    [&](const core::ir::Var* var) { out << NameOf(var->Result(0)); },
+                    [&](const core::ir::Var* var) { out << NameOf(var->Result()); },
 
                     [&](const glsl::ir::BuiltinCall* c) { EmitGlslBuiltinCall(out, c); },  //
                     [&](const glsl::ir::MemberBuiltinCall* mbc) {
@@ -1400,7 +1413,7 @@ class Printer : public tint::TextGenerator {
 
     /// Emit a convert instruction
     void EmitConvert(StringStream& out, const core::ir::Convert* c) {
-        EmitType(out, c->Result(0)->Type());
+        EmitType(out, c->Result()->Type());
         out << "(";
         EmitValue(out, c->Operand(0));
         out << ")";
@@ -1409,7 +1422,7 @@ class Printer : public tint::TextGenerator {
     /// Emit a constructor
     void EmitConstruct(StringStream& out, const core::ir::Construct* c) {
         if (c->Args().IsEmpty()) {
-            EmitZeroValue(out, c->Result(0)->Type());
+            EmitZeroValue(out, c->Result()->Type());
             return;
         }
 
@@ -1428,7 +1441,7 @@ class Printer : public tint::TextGenerator {
         };
 
         Switch(
-            c->Result(0)->Type(),
+            c->Result()->Type(),
             [&](const core::type::Struct* struct_ty) {
                 EmitStructType(struct_ty);
                 out << StructName(struct_ty);
@@ -1455,7 +1468,7 @@ class Printer : public tint::TextGenerator {
                 }
             },
             [&](Default) {
-                EmitType(out, c->Result(0)->Type());
+                EmitType(out, c->Result()->Type());
                 emit_args();
             });
     }

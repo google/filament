@@ -42,6 +42,10 @@
 
 namespace dawn::native::d3d12 {
 
+void CommandRecordingContext::AddToSharedBufferList(Buffer* buffer) {
+    mSharedBuffers.insert(buffer);
+}
+
 void CommandRecordingContext::AddToSharedTextureList(Texture* texture) {
     mSharedTextures.insert(texture);
 }
@@ -55,6 +59,10 @@ void CommandRecordingContext::Open(ComPtr<ID3D12GraphicsCommandList> commandList
 MaybeError CommandRecordingContext::ExecuteCommandList(Device* device,
                                                        ID3D12CommandQueue* commandQueue) {
     DAWN_ASSERT(mD3d12CommandList != nullptr);
+
+    for (Buffer* buffer : mSharedBuffers) {
+        DAWN_TRY(buffer->SynchronizeBufferBeforeUse());
+    }
 
     for (Texture* texture : mSharedTextures) {
         DAWN_TRY(texture->SynchronizeTextureBeforeUse(this));
@@ -138,6 +146,7 @@ void CommandRecordingContext::Release() {
 
     mNeedsSubmit = false;
 
+    mSharedBuffers.clear();
     mSharedTextures.clear();
     mHeapsPendingUsage.clear();
     mTempBuffers.clear();

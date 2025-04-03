@@ -149,9 +149,9 @@ TEST_P(WireAdapterTests, RequestDeviceCallbackPointers) {
 
 // Test that RequestDevice forwards the device information to the client.
 TEST_P(WireAdapterTests, RequestDeviceSuccess) {
-    wgpu::SupportedLimits fakeLimits = {};
-    fakeLimits.limits.maxTextureDimension1D = 433;
-    fakeLimits.limits.maxVertexAttributes = 1243;
+    wgpu::Limits fakeLimits = {};
+    fakeLimits.maxTextureDimension1D = 433;
+    fakeLimits.maxVertexAttributes = 1243;
 
     std::initializer_list<WGPUFeatureName> fakeFeaturesList = {
         WGPUFeatureName_Depth32FloatStencil8,
@@ -173,8 +173,8 @@ TEST_P(WireAdapterTests, RequestDeviceSuccess) {
             EXPECT_CALL(api, OnDeviceSetLoggingCallback(apiDevice, _)).Times(1);
 
             EXPECT_CALL(api, DeviceGetLimits(apiDevice, NotNull()))
-                .WillOnce(WithArg<1>(Invoke([&](WGPUSupportedLimits* limits) {
-                    *reinterpret_cast<wgpu::SupportedLimits*>(limits) = fakeLimits;
+                .WillOnce(WithArg<1>(Invoke([&](WGPULimits* limits) {
+                    *reinterpret_cast<wgpu::Limits*>(limits) = fakeLimits;
                     return WGPUStatus_Success;
                 })));
 
@@ -208,11 +208,10 @@ TEST_P(WireAdapterTests, RequestDeviceSuccess) {
                 EXPECT_EQ(adapterInfo.device, kEmptyOutputStringView);
                 EXPECT_EQ(adapterInfo.description, kEmptyOutputStringView);
 
-                wgpu::SupportedLimits limits;
+                wgpu::Limits limits;
                 EXPECT_EQ(device.GetLimits(&limits), wgpu::Status::Success);
-                EXPECT_EQ(limits.limits.maxTextureDimension1D,
-                          fakeLimits.limits.maxTextureDimension1D);
-                EXPECT_EQ(limits.limits.maxVertexAttributes, fakeLimits.limits.maxVertexAttributes);
+                EXPECT_EQ(limits.maxTextureDimension1D, fakeLimits.maxTextureDimension1D);
+                EXPECT_EQ(limits.maxVertexAttributes, fakeLimits.maxVertexAttributes);
 
                 WGPUSupportedFeatures features = {};
                 device.GetFeatures(reinterpret_cast<wgpu::SupportedFeatures*>(&features));
@@ -353,12 +352,52 @@ TEST_P(WireAdapterTests, RequestDeviceWireDisconnectedBeforeCallback) {
     RequestDevice(&desc);
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::RequestDeviceStatus::InstanceDropped, IsNull(),
+        EXPECT_CALL(mockCb, Call(wgpu::RequestDeviceStatus::CallbackCancelled, IsNull(),
                                  NonEmptySizedString()))
             .Times(1);
 
         GetWireClient()->Disconnect();
     });
+}
+
+// Test that a device's wire handle (id and generation) matches between the client and server.
+TEST_P(WireAdapterTests, RequestDeviceWireHandle) {
+    RequestDevice(nullptr);
+
+    // Expect the server to receive the message. Then, mock a fake reply.
+    WGPUDevice apiDevice = api.GetNewDevice();
+    EXPECT_CALL(api, OnAdapterRequestDevice(apiAdapter, NotNull(), _))
+        .WillOnce(InvokeWithoutArgs([&] {
+            // Set on device creation to forward callbacks to the client.
+            EXPECT_CALL(api, OnDeviceSetLoggingCallback(apiDevice, _)).Times(1);
+            EXPECT_CALL(api, DeviceGetLimits(apiDevice, NotNull())).Times(1);
+            EXPECT_CALL(api, DeviceGetFeatures(apiDevice, NotNull())).Times(1);
+            api.CallAdapterRequestDeviceCallback(apiAdapter, WGPURequestDeviceStatus_Success,
+                                                 apiDevice, kEmptyOutputStringView);
+        }));
+    FlushClient();
+    FlushFutures();
+
+    wgpu::Device device;
+    // Expect the callback in the client and the wire handles match.
+    ExpectWireCallbacksWhen([&](auto& mockCb) {
+        EXPECT_CALL(mockCb, Call(wgpu::RequestDeviceStatus::Success, NotNull(), EmptySizedString()))
+            .WillOnce(WithArg<1>(Invoke([&](wgpu::Device result) {
+                device = std::move(result);
+
+                Handle deviceWireHandle = GetWireClient()->GetWireHandle(device.Get());
+                WGPUDevice apiDeviceExpected =
+                    GetWireServer()->GetDevice(deviceWireHandle.id, deviceWireHandle.generation);
+                EXPECT_EQ(apiDevice, apiDeviceExpected);
+            })));
+        FlushCallbacks();
+    });
+
+    device = nullptr;
+    // Cleared when the device is destroyed.
+    EXPECT_CALL(api, OnDeviceSetLoggingCallback(apiDevice, _)).Times(1);
+    EXPECT_CALL(api, DeviceRelease(apiDevice));
+    FlushClient();
 }
 
 }  // anonymous namespace

@@ -45,14 +45,12 @@
 TINT_INSTANTIATE_TYPEINFO(tint::ast::transform::Renamer);
 TINT_INSTANTIATE_TYPEINFO(tint::ast::transform::Renamer::Config);
 
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
-
 namespace tint::ast::transform {
 
 namespace {
 
 // This list is used for a binary search and must be kept in sorted order.
-const char* const kReservedKeywordsGLSL[] = {
+static constexpr std::array<const char*, 358> kReservedKeywordsGLSL = {
     "abs",
     "acos",
     "acosh",
@@ -414,7 +412,7 @@ const char* const kReservedKeywordsGLSL[] = {
 };
 
 // This list is used for a binary search and must be kept in sorted order.
-const char* const kReservedKeywordsHLSL[] = {
+static constexpr std::array<const char*, 570> kReservedKeywordsHLSL = {
     "AddressU",
     "AddressV",
     "AddressW",
@@ -988,7 +986,7 @@ const char* const kReservedKeywordsHLSL[] = {
 };
 
 // This list is used for a binary search and must be kept in sorted order.
-const char* const kReservedKeywordsMSL[] = {
+static constexpr std::array<const char*, 270> kReservedKeywordsMSL = {
     "HUGE_VALF",
     "HUGE_VALH",
     "INFINITY",
@@ -1367,21 +1365,15 @@ Transform::ApplyResult Renamer::Apply(const Program& src, const DataMap& inputs,
         }
         switch (target) {
             case Target::kGlslKeywords:
-                return std::binary_search(kReservedKeywordsGLSL,
-                                          kReservedKeywordsGLSL +
-                                              sizeof(kReservedKeywordsGLSL) / sizeof(const char*),
-                                          name) ||
+                return std::binary_search(kReservedKeywordsGLSL.cbegin(),
+                                          kReservedKeywordsGLSL.cend(), name) ||
                        name.compare(0, 3, "gl_") == 0 || name.find("__") != std::string::npos;
             case Target::kHlslKeywords:
-                return std::binary_search(
-                    kReservedKeywordsHLSL,
-                    kReservedKeywordsHLSL + sizeof(kReservedKeywordsHLSL) / sizeof(const char*),
-                    name);
+                return std::binary_search(kReservedKeywordsHLSL.cbegin(),
+                                          kReservedKeywordsHLSL.cend(), name);
             case Target::kMslKeywords:
-                return std::binary_search(
-                    kReservedKeywordsMSL,
-                    kReservedKeywordsMSL + sizeof(kReservedKeywordsMSL) / sizeof(const char*),
-                    name);
+                return std::binary_search(kReservedKeywordsMSL.cbegin(),
+                                          kReservedKeywordsMSL.cend(), name);
             default:
                 break;
         }
@@ -1427,5 +1419,3 @@ Transform::ApplyResult Renamer::Apply(const Program& src, const DataMap& inputs,
 }
 
 }  // namespace tint::ast::transform
-
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);

@@ -28,6 +28,7 @@
 #ifndef SRC_DAWN_COMMON_MATH_H_
 #define SRC_DAWN_COMMON_MATH_H_
 
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -37,12 +38,16 @@
 #include <type_traits>
 
 #include "dawn/common/Assert.h"
+#include "dawn/common/Platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+
+#if DAWN_COMPILER_IS(MSVC)
+#include <intrin.h>
+#endif
 
 namespace dawn {
 
 // The following are not valid for 0
-uint32_t ScanForward(uint32_t bits);
 uint32_t Log2(uint32_t value);
 uint32_t Log2(uint64_t value);
 bool IsPowerOfTwo(uint64_t n);
@@ -151,6 +156,222 @@ template <typename T1,
 constexpr bool IsSubset(T1 subset, T2 set) {
     T2 bitsAlsoInSet = subset & set;
     return bitsAlsoInSet == subset;
+}
+
+template <typename T>
+constexpr T Max(T a, T b) {
+    return (a > b) ? a : b;
+}
+
+template <typename T, typename... Args>
+constexpr T Max(T first, Args... rest) {
+    return Max(first, Max(rest...));
+}
+
+// The following functions are defined in the header so they may be inlined.
+
+// Count the 1 bits.
+#if DAWN_COMPILER_IS(MSVC) && !DAWN_COMPILER_IS(CLANG)
+#if defined(_M_IX86) || defined(_M_X64)
+namespace priv {
+// Check POPCNT instruction support and cache the result.
+// https://docs.microsoft.com/en-us/cpp/intrinsics/popcnt16-popcnt-popcnt64#remarks
+static const bool kHasPopcnt = [] {
+    int info[4];
+    __cpuid(&info[0], 1);
+    return static_cast<bool>(info[2] & 0x800000);
+}();
+}  // namespace priv
+
+// Polyfills for x86/x64 CPUs without POPCNT.
+// https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+inline uint32_t BitCountPolyfill(uint32_t bits) {
+    bits = bits - ((bits >> 1) & 0x55555555);
+    bits = (bits & 0x33333333) + ((bits >> 2) & 0x33333333);
+    bits = ((bits + (bits >> 4) & 0x0F0F0F0F) * 0x01010101) >> 24;
+    return bits;
+}
+
+inline uint32_t BitCountPolyfill(uint64_t bits) {
+    bits = bits - ((bits >> 1) & 0x5555555555555555ull);
+    bits = (bits & 0x3333333333333333ull) + ((bits >> 2) & 0x3333333333333333ull);
+    bits = ((bits + (bits >> 4) & 0x0F0F0F0F0F0F0F0Full) * 0x0101010101010101ull) >> 56;
+    return static_cast<uint32_t>(bits);
+}
+
+inline uint32_t BitCount(uint32_t bits) {
+    if (priv::kHasPopcnt) {
+        return __popcnt(bits);
+    }
+    return BitCountPolyfill(bits);
+}
+
+inline uint32_t BitCount(uint64_t bits) {
+    if (priv::kHasPopcnt) {
+#if defined(_M_X64)
+        return static_cast<uint32_t>(__popcnt64(bits));
+#else   // x86
+        return __popcnt(static_cast<uint32_t>(bits >> 32)) +
+               __popcnt(static_cast<uint32_t>(bits)));
+#endif  // defined(_M_X64)
+    }
+    return BitCountPolyfill(bits);
+}
+
+#elif defined(_M_ARM) || defined(_M_ARM64)
+
+// MSVC's _CountOneBits* intrinsics are not defined for ARM64, moreover they do not use dedicated
+// NEON instructions.
+
+inline uint32_t BitCount(uint32_t bits) {
+    // cast bits to 8x8 datatype and use VCNT on it
+    const uint8x8_t vsum = vcnt_u8(vcreate_u8(static_cast<uint64_t>(bits)));
+
+    // pairwise sums: 8x8 -> 16x4 -> 32x2
+    return vget_lane_u32(vpaddl_u16(vpaddl_u8(vsum)), 0);
+}
+
+inline uint32_t BitCount(uint64_t bits) {
+    // cast bits to 8x8 datatype and use VCNT on it
+    const uint8x8_t vsum = vcnt_u8(vcreate_u8(bits));
+
+    // pairwise sums: 8x8 -> 16x4 -> 32x2 -> 64x1
+    return vget_lane_u64(vpaddl_u32(vpaddl_u16(vpaddl_u8(vsum))), 0);
+}
+#endif  // defined(_M_IX86) || defined(_M_X64)
+#endif  // DAWN_COMPILER_IS(MSVC) && !DAWN_COMPILER_IS(CLANG)
+
+#if DAWN_PLATFORM_IS(POSIX) || DAWN_COMPILER_IS(CLANG) || DAWN_COMPILER_IS(GCC)
+inline uint32_t BitCount(uint32_t bits) {
+    return __builtin_popcount(bits);
+}
+
+inline uint32_t BitCount(uint64_t bits) {
+    return __builtin_popcountll(bits);
+}
+#endif  // DAWN_PLATFORM_IS(POSIX) || DAWN_COMPILER_IS(CLANG) || DAWN_COMPILER_IS(GCC)
+
+inline uint32_t BitCount(uint8_t bits) {
+    return BitCount(static_cast<uint32_t>(bits));
+}
+
+inline uint32_t BitCount(uint16_t bits) {
+    return BitCount(static_cast<uint32_t>(bits));
+}
+
+#if DAWN_COMPILER_IS(MSVC)
+// Return the index of the least significant bit set. Indexing is such that bit 0 is the least
+// significant bit. Implemented for different bit widths on different platforms.
+inline uint32_t ScanForward(uint32_t bits) {
+    DAWN_ASSERT(bits != 0u);
+    // NOLINTNEXTLINE(runtime/int)
+    unsigned long firstBitIndex = 0ul;
+    uint8_t ret = _BitScanForward(&firstBitIndex, bits);
+    DAWN_ASSERT(ret != 0u);
+    return static_cast<uint32_t>(firstBitIndex);
+}
+
+inline uint32_t ScanForward(uint64_t bits) {
+    DAWN_ASSERT(bits != 0u);
+    // NOLINTNEXTLINE(runtime/int)
+    unsigned long firstBitIndex = 0ul;
+#if DAWN_PLATFORM_IS(64_BIT)
+    uint8_t ret = _BitScanForward64(&firstBitIndex, bits);
+#else
+    uint8_t ret;
+    if (static_cast<uint32_t>(bits) == 0) {
+        ret = _BitScanForward(&firstBitIndex, static_cast<uint32_t>(bits >> 32));
+        firstBitIndex += 32ul;
+    } else {
+        ret = _BitScanForward(&firstBitIndex, static_cast<uint32_t>(bits));
+    }
+#endif  // DAWN_PLATFORM_IS(64_BIT)
+    DAWN_ASSERT(ret != 0u);
+    return firstBitIndex;
+}
+
+// Return the index of the most significant bit set. Indexing is such that bit 0 is the least
+// significant bit.
+inline uint32_t ScanReverse(uint32_t bits) {
+    DAWN_ASSERT(bits != 0u);
+    // NOLINTNEXTLINE(runtime/int)
+    unsigned long lastBitIndex = 0ul;
+    uint8_t ret = _BitScanReverse(&lastBitIndex, bits);
+    DAWN_ASSERT(ret != 0u);
+    return lastBitIndex;
+}
+
+inline uint32_t ScanReverse(uint64_t bits) {
+    DAWN_ASSERT(bits != 0u);
+    // NOLINTNEXTLINE(runtime/int)
+    unsigned long lastBitIndex = 0ul;
+#if DAWN_PLATFORM_IS(64_BIT)
+    uint8_t ret = _BitScanReverse64(&lastBitIndex, bits);
+#else
+    uint8_t ret;
+    if (static_cast<uint32_t>(bits >> 32) == 0) {
+        ret = _BitScanReverse(&lastBitIndex, static_cast<uint32_t>(bits));
+    } else {
+        ret = _BitScanReverse(&lastBitIndex, static_cast<uint32_t>(bits >> 32));
+        lastBitIndex += 32ul;
+    }
+#endif  // DAWN_PLATFORM_IS(64_BIT)
+    DAWN_ASSERT(ret != 0u);
+    return lastBitIndex;
+}
+#else  // DAWN_COMPILER_IS(MSVC)
+
+inline uint32_t ScanForward(uint32_t bits) {
+    DAWN_ASSERT(bits != 0u);
+    return static_cast<uint32_t>(__builtin_ctz(bits));
+}
+
+inline uint32_t ScanForward(uint64_t bits) {
+    DAWN_ASSERT(bits != 0u);
+#if DAWN_PLATFORM_IS(64_BIT)
+    return static_cast<uint32_t>(__builtin_ctzll(bits));
+#else
+    return static_cast<uint32_t>(static_cast<uint32_t>(bits) == 0
+                                     ? __builtin_ctz(static_cast<uint32_t>(bits >> 32)) + 32
+                                     : __builtin_ctz(static_cast<uint32_t>(bits)));
+#endif  // DAWN_PLATFORM_IS(64_BIT)
+}
+
+inline uint32_t ScanReverse(uint32_t bits) {
+    DAWN_ASSERT(bits != 0u);
+    return static_cast<uint32_t>((sizeof(uint32_t) * CHAR_BIT) - 1 - __builtin_clz(bits));
+}
+
+inline uint32_t ScanReverse(uint64_t bits) {
+    DAWN_ASSERT(bits != 0u);
+#if DAWN_PLATFORM_IS(64_BIT)
+    return static_cast<uint32_t>((sizeof(uint64_t) * CHAR_BIT) - 1 - __builtin_clzll(bits));
+#else
+    if (static_cast<uint32_t>(bits >> 32) == 0) {
+        return (sizeof(uint32_t) * CHAR_BIT) - 1 - __builtin_clz(static_cast<uint32_t>(bits));
+    } else {
+        return (sizeof(uint32_t) * CHAR_BIT) - 1 -
+               __builtin_clz(static_cast<uint32_t>(bits >> 32)) + 32;
+    }
+#endif  // DAWN_PLATFORM_IS(64_BIT)
+}
+
+#endif  // !DAWN_COMPILER_IS(MSVC)
+
+inline uint32_t ScanForward(uint8_t bits) {
+    return ScanForward(static_cast<uint32_t>(bits));
+}
+
+inline uint32_t ScanForward(uint16_t bits) {
+    return ScanForward(static_cast<uint32_t>(bits));
+}
+
+inline uint32_t ScanReverse(uint8_t bits) {
+    return ScanReverse(static_cast<uint32_t>(bits));
+}
+
+inline uint32_t ScanReverse(uint16_t bits) {
+    return ScanReverse(static_cast<uint32_t>(bits));
 }
 
 }  // namespace dawn

@@ -8,10 +8,10 @@ except ImportError:
     import platform
     import sys
     if platform.system() == 'Windows':
-        print "Could not find py2exe. Please install then run setup.py py2exe."
+        print("Could not find py2exe. Please install then run setup.py py2exe.")
         raise
     else:
-        print "setup.py only required on Windows."
+        print("setup.py only required on Windows.")
         sys.exit(1)
 
 setup(

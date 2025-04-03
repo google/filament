@@ -45,21 +45,21 @@ namespace {
 void ValidateIR(benchmark::State& state, std::string input_name) {
     auto res = bench::GetWgslProgram(input_name);
     if (res != Success) {
-        state.SkipWithError(res.Failure().reason.Str());
+        state.SkipWithError(res.Failure().reason);
         return;
     }
 
     // Convert the AST program to an IR module.
     auto ir = tint::wgsl::reader::ProgramToLoweredIR(res->program);
     if (ir != Success) {
-        state.SkipWithError(ir.Failure().reason.Str());
+        state.SkipWithError(ir.Failure().reason);
         return;
     }
 
     for (auto _ : state) {
         auto val_res = Validate(ir.Get(), {});
         if (val_res != Success) {
-            state.SkipWithError(val_res.Failure().reason.Str());
+            state.SkipWithError(val_res.Failure().reason);
         }
     }
 }

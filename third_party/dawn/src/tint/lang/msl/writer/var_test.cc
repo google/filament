@@ -256,7 +256,7 @@ TEST_F(MslWriterTest, VarGlobalPrivate) {
 
     auto* foo = b.Function("foo", ty.void_());
     b.Append(foo->Block(), [&] {
-        auto* ld = b.Load(v->Result(0));
+        auto* ld = b.Load(v->Result());
         b.Let("a", ld);
         b.Return(foo);
     });
@@ -292,9 +292,9 @@ TEST_F(MslWriterTest, VarGlobalWorkgroup) {
 
     auto* func = b.Function("foo", ty.void_());
     b.Append(func->Block(), [&] {
-        auto* ld = b.Load(v->Result(0));
+        auto* ld = b.Load(v->Result());
         auto* a = b.Var("a", ty.ptr<core::AddressSpace::kFunction, f32>());
-        a->SetInitializer(ld->Result(0));
+        a->SetInitializer(ld->Result());
         b.Return(func);
     });
 

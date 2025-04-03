@@ -76,7 +76,8 @@ TextureDataCopyLayout GetTextureDataCopyLayoutForTextureAtLevel(
     wgpu::Extent3D textureSizeAtLevel0,
     uint32_t mipmapLevel,
     wgpu::TextureDimension dimension = wgpu::TextureDimension::e2D,
-    uint32_t rowsPerImage = wgpu::kCopyStrideUndefined);
+    uint32_t rowsPerImage = wgpu::kCopyStrideUndefined,
+    uint32_t textureBytesPerRowAlignment = kTextureBytesPerRowAlignment);
 
 uint64_t RequiredBytesInCopy(uint64_t bytesPerRow,
                              uint64_t rowsPerImage,

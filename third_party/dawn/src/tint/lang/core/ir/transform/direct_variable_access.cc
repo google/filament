@@ -345,7 +345,7 @@ struct State {
                         if (size_t array_len = chain.indices.Length(); array_len > 0) {
                             auto* array = ty.array(ty.u32(), static_cast<uint32_t>(array_len));
                             auto* indices = b.Construct(array, std::move(chain.indices));
-                            new_args.Push(indices->Result(0));
+                            new_args.Push(indices->Result());
                         }
                         // Record the parameter shape for the variant's signature.
                         signature.Add(i, chain.shape);
@@ -428,7 +428,7 @@ struct State {
 
                 // Root handle is a module-scope 'var'
                 chain.shape.root = RootModuleScopeVar{var};
-                chain.root_ptr = var->Result(0);
+                chain.root_ptr = var->Result();
             },
             TINT_ICE_ON_NO_MATCH);
 
@@ -474,7 +474,7 @@ struct State {
                                 // Array or matrix access.
                                 // Convert index to u32 if it isn't already.
                                 if (!idx->Type()->Is<type::U32>()) {
-                                    idx = b.Convert(ty.u32(), idx)->Result(0);
+                                    idx = b.Convert(ty.u32(), idx)->Result();
                                 }
 
                                 ops.Push(IndexAccess{});
@@ -493,7 +493,7 @@ struct State {
                                 chain.indices.Push(idx);
                             }
 
-                            TINT_ASSERT(obj_ty == access->Result(0)->Type()->UnwrapPtr());
+                            TINT_ASSERT(obj_ty == access->Result()->Type()->UnwrapPtr());
                             return access->Object();
                         },
                         [&](Var* var) {
@@ -504,9 +504,9 @@ struct State {
                             } else {
                                 // Root pointer is a function-scope 'var'
                                 chain.shape.root =
-                                    RootPtrParameter{var->Result(0)->Type()->As<type::Pointer>()};
+                                    RootPtrParameter{var->Result()->Type()->As<type::Pointer>()};
                             }
-                            chain.root_ptr = var->Result(0);
+                            chain.root_ptr = var->Result();
                             return nullptr;
                         },
                         [&](Let* let) { return let->Value(); },  //
@@ -562,7 +562,7 @@ struct State {
                     root_ptr = root_ptr_param;
                 } else if (auto* global = std::get_if<RootModuleScopeVar>(&shape->root)) {
                     // Root pointer is a module-scope var
-                    root_ptr = global->var->Result(0);
+                    root_ptr = global->var->Result();
                 } else {
                     TINT_ICE() << "unhandled AccessShape root variant";
                 }
@@ -594,13 +594,12 @@ struct State {
                             return b.Constant(u32(m->member->Index()));
                         }
                         auto* access = b.Access(ty.u32(), indices_param, u32(index_index++));
-                        return access->Result(0);
+                        return access->Result();
                     });
 
                     auto* new_ptr = root_ptr;
                     if (!chain.IsEmpty()) {
-                        new_ptr =
-                            b.Access(old_param->Type(), root_ptr, std::move(chain))->Result(0);
+                        new_ptr = b.Access(old_param->Type(), root_ptr, std::move(chain))->Result();
                     }
 
                     // Replace the now removed parameter value with the access instruction
@@ -609,7 +608,7 @@ struct State {
                     auto* load = b.Load(root_ptr);
 
                     // Replace the now removed parameter value with the load instruction
-                    old_param->ReplaceAllUsesWith(load->Result(0));
+                    old_param->ReplaceAllUsesWith(load->Result());
                 }
 
                 old_param->Destroy();

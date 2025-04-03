@@ -1278,23 +1278,21 @@ MaybeError CommandBuffer::FillCommands(CommandRecordingContext* commandContext) 
                 uint8_t* data = mCommands.NextData<uint8_t>(size);
                 Device* device = ToBackend(GetDevice());
 
-                UploadHandle uploadHandle;
-                DAWN_TRY_ASSIGN(uploadHandle,
-                                device->GetDynamicUploader()->Allocate(
-                                    size, device->GetQueue()->GetPendingCommandSerial(),
-                                    kCopyBufferToBufferOffsetAlignment));
-                DAWN_ASSERT(uploadHandle.mappedBuffer != nullptr);
-                memcpy(uploadHandle.mappedBuffer, data, size);
+                DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
+                    size, kCopyBufferToBufferOffsetAlignment,
+                    [&](UploadReservation reservation) -> MaybeError {
+                        memcpy(reservation.mappedPointer, data, size);
+                        dstBuffer->EnsureDataInitializedAsDestination(commandContext, offset, size);
 
-                dstBuffer->EnsureDataInitializedAsDestination(commandContext, offset, size);
-
-                dstBuffer->TrackUsage();
-                [commandContext->EnsureBlit()
-                       copyFromBuffer:ToBackend(uploadHandle.stagingBuffer)->GetMTLBuffer()
-                         sourceOffset:uploadHandle.startOffset
-                             toBuffer:dstBuffer->GetMTLBuffer()
-                    destinationOffset:offset
-                                 size:size];
+                        dstBuffer->TrackUsage();
+                        [commandContext->EnsureBlit()
+                               copyFromBuffer:ToBackend(reservation.buffer)->GetMTLBuffer()
+                                 sourceOffset:reservation.offsetInBuffer
+                                     toBuffer:dstBuffer->GetMTLBuffer()
+                            destinationOffset:offset
+                                         size:size];
+                        return {};
+                    }));
                 break;
             }
 
@@ -1455,6 +1453,9 @@ MaybeError CommandBuffer::EncodeComputePass(CommandRecordingContext* commandCont
 
                 break;
             }
+
+            case Command::SetImmediateData:
+                return DAWN_UNIMPLEMENTED_ERROR("SetImmediateData unimplemented");
 
             default: {
                 DAWN_UNREACHABLE();
@@ -1845,6 +1846,9 @@ MaybeError CommandBuffer::EncodeRenderPass(
 
                 break;
             }
+
+            case Command::SetImmediateData:
+                return DAWN_UNIMPLEMENTED_ERROR("SetImmediateData unimplemented");
 
             default: {
                 EncodeRenderBundleCommand(&mCommands, type);

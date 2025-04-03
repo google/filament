@@ -1534,7 +1534,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -1668,7 +1669,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -2260,7 +2262,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -2408,7 +2411,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -2543,7 +2547,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -2699,7 +2704,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -2838,7 +2844,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -2976,7 +2983,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -3094,7 +3102,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -3111,7 +3120,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -3285,7 +3295,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -3589,7 +3600,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -5055,7 +5067,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -5183,7 +5196,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -5277,7 +5291,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -5494,7 +5509,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -5635,7 +5651,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -5652,7 +5669,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -5671,7 +5689,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_ERROR_INVALID_DATA,
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(
@@ -5693,7 +5712,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_ERROR_INVALID_DATA,
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(getDiagnosticString(),
@@ -5714,7 +5734,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -5733,7 +5754,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_ERROR_INVALID_DATA,
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(getDiagnosticString(),
@@ -5754,7 +5776,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_ERROR_INVALID_DATA,
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(getDiagnosticString(),
@@ -5775,7 +5798,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_ERROR_INVALID_DATA,
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(
@@ -5798,7 +5822,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
@@ -5815,7 +5840,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_ERROR_INVALID_DATA,
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(
@@ -5838,7 +5864,8 @@ OpExtension "SPV_KHR_vulkan_memory_model"
 )";
   CompileSuccessfully(GenerateShaderCode(body, extra, "Fragment", "",
                                          SPV_ENV_UNIVERSAL_1_3, "VulkanKHR")
-                          .c_str());
+                          .c_str(),
+                      SPV_ENV_UNIVERSAL_1_3);
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 

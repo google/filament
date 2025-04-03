@@ -10,14 +10,6 @@ Texture2DArray   <int3>   t6;
 // There is no operator[] for TextureCubeArray in HLSL reference.
 // There is no operator[] for Texture2DMSArray in HLSL reference.
 
-struct S {
-  float  a;
-  float2 b;
-  float1 c;
-};
-
-Texture2D <S> tStruct;
-
 // CHECK:  [[cu12:%[0-9]+]] = OpConstantComposite %v2uint %uint_1 %uint_2
 // CHECK: [[cu123:%[0-9]+]] = OpConstantComposite %v3uint %uint_1 %uint_2 %uint_3
 
@@ -63,15 +55,4 @@ void main() {
 // CHECK-NEXT: OpStore %a6 [[result6]]
   int3   a6 = t6[uint3(1,2,3)];
 
-// CHECK:        [[tex:%[0-9]+]] = OpLoad %type_2d_image_1 %tStruct
-// CHECK-NEXT: [[fetch:%[0-9]+]] = OpImageFetch %v4float [[tex]] {{%[0-9]+}} Lod %uint_0
-// CHECK-NEXT:     [[a:%[0-9]+]] = OpCompositeExtract %float [[fetch]] 0
-// CHECK-NEXT:     [[b:%[0-9]+]] = OpVectorShuffle %v2float [[fetch]] [[fetch]] 1 2
-// CHECK-NEXT:     [[c:%[0-9]+]] = OpCompositeExtract %float [[fetch]] 3
-// CHECK-NEXT:     [[s:%[0-9]+]] = OpCompositeConstruct %S [[a]] [[b]] [[c]]
-// CHECK-NEXT:                  OpStore %temp_var_S [[s]]
-// CHECK-NEXT:   [[ptr:%[0-9]+]] = OpAccessChain %_ptr_Function_float %temp_var_S %int_2
-// CHECK-NEXT:   [[val:%[0-9]+]] = OpLoad %float [[ptr]]
-// CHECK-NEXT:                  OpStore %a7 [[val]]
-  float  a7 = tStruct[uint2(1, 2)].c;
 }

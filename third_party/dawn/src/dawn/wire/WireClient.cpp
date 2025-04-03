@@ -80,6 +80,11 @@ void WireClient::Disconnect() {
     mImpl->Disconnect();
 }
 
+Handle WireClient::GetWireHandle(WGPUDevice device) const {
+    client::Device* wireDevice = client::FromAPI(device);
+    return {wireDevice->GetWireId(), wireDevice->GetWireGeneration()};
+}
+
 namespace client {
 MemoryTransferService::MemoryTransferService() = default;
 

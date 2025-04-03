@@ -40,4 +40,7 @@ Result<SuccessType> ValueToLetFuzzer(core::ir::Module& ir, const fuzz::ir::Conte
 }  // namespace
 }  // namespace tint::wgsl::writer::raise
 
-TINT_IR_MODULE_FUZZER(tint::wgsl::writer::raise::ValueToLetFuzzer, tint::core::ir::Capabilities{});
+TINT_IR_MODULE_FUZZER(tint::wgsl::writer::raise::ValueToLetFuzzer,
+                      tint::core::ir::Capabilities{},
+                      tint::core::ir::Capabilities{
+                          tint::core::ir::Capability::kAllowPhonyInstructions});

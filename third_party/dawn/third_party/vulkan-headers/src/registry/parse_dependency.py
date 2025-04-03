@@ -111,7 +111,7 @@ def push_first(toks):
     exprStack.append(toks[0])
 
 # An identifier (version, feature boolean, or extension name)
-dependencyIdent = Word(alphanums + '_' + ':')
+dependencyIdent = Word(f"{alphanums}_:")
 
 # Infix expression for depends expressions
 dependencyExpr = pp.infixNotation(dependencyIdent,
@@ -288,7 +288,7 @@ def markupTraverse(expr, level = 0, root = True):
        - root - True only on initial call"""
 
     if level > 0:
-        prefix = '{nbsp}{nbsp}' * level * 2 + ' '
+        prefix = f"{'{nbsp}{nbsp}' * level * 2} "
     else:
         prefix = ''
     str = ''
@@ -303,9 +303,9 @@ def markupTraverse(expr, level = 0, root = True):
 
             str = str + markupTraverse(elem, level = nextlevel, root = False)
         elif elem in ('+', ','):
-            str = str + f'{prefix}{opMarkupAsciidoc(elem)} +\n'
+            str = f"{str}{prefix}{opMarkupAsciidoc(elem)} +\n"
         else:
-            str = str + f'{prefix}{leafMarkupAsciidoc(elem)} +\n'
+            str = f"{str}{prefix}{leafMarkupAsciidoc(elem)} +\n"
 
     return str
 

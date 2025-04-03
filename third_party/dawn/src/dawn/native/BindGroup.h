@@ -59,6 +59,8 @@ class BindGroupBase : public ApiObjectBase {
   public:
     static Ref<BindGroupBase> MakeError(DeviceBase* device, StringView label);
 
+    MaybeError Initialize(const BindGroupDescriptor* descriptor);
+
     ObjectType GetType() const override;
 
     BindGroupLayoutBase* GetFrontendLayout();
@@ -96,13 +98,14 @@ class BindGroupBase : public ApiObjectBase {
         static_assert(std::is_base_of<BindGroupBase, Derived>::value);
     }
 
+    virtual MaybeError InitializeImpl() = 0;
+
     void DestroyImpl() override;
 
     ~BindGroupBase() override;
 
   private:
     BindGroupBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label);
-    void DeleteThis() override;
 
     Ref<BindGroupLayoutBase> mLayout;
     BindGroupLayoutInternalBase::BindingDataPointers mBindingData;

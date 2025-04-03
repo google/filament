@@ -51,7 +51,7 @@ ResultOrError<Ref<PipelineLayout>> PipelineLayout::Create(
 }
 
 ResultOrError<Ref<RefCountedVkHandle<VkPipelineLayout>>> PipelineLayout::CreateVkPipelineLayout(
-    uint32_t internalImmediateDataSize) {
+    uint32_t immediateConstantSize) {
     // Compute the array of VkDescriptorSetLayouts that will be chained in the create info.
     BindGroupMask bindGroupMask = GetBindGroupLayoutsMask();
     BindGroupIndex highestBindGroupIndex = GetHighestBitIndexPlusOne(bindGroupMask);
@@ -75,18 +75,11 @@ ResultOrError<Ref<RefCountedVkHandle<VkPipelineLayout>>> PipelineLayout::CreateV
     createInfo.pushConstantRangeCount = 0;
     createInfo.pPushConstantRanges = nullptr;
 
-    // Create pipeline layout without internal immediate data size.
-    uint32_t immediateDataSize = GetImmediateDataRangeByteSize() + internalImmediateDataSize;
     VkPushConstantRange immediateDataRange;
-
-    // createInfo has been initialized based on PipelineLayout attributes.
-    // Create immediateDataRange info based on
-    // Record cache key information now to represent pipelineLayout to exclude future changes
-    // caused by internal immediate data size from pipeline.
-    if (immediateDataSize > 0) {
+    if (immediateConstantSize > 0) {
         immediateDataRange.stageFlags = kImmediateDataRangeShaderStage;
         immediateDataRange.offset = 0;
-        immediateDataRange.size = immediateDataSize;
+        immediateDataRange.size = immediateConstantSize;
         createInfo.pushConstantRangeCount = 1;
         createInfo.pPushConstantRanges = &immediateDataRange;
     }
@@ -124,11 +117,13 @@ MaybeError PipelineLayout::Initialize() {
 }
 
 ResultOrError<Ref<RefCountedVkHandle<VkPipelineLayout>>> PipelineLayout::GetOrCreateVkLayoutObject(
-    uint32_t internalImmediateDataSize) {
+    const ImmediateConstantMask& immediateConstantMask) {
     // Check cache
     Ref<RefCountedVkHandle<VkPipelineLayout>> pipelineLayoutVk;
+    uint32_t immediateConstantSize =
+        immediateConstantMask.count() * kImmediateConstantElementByteSize;
     mVkPipelineLayouts.Use([&](auto vkPipelineLayouts) {
-        auto it = vkPipelineLayouts->find(internalImmediateDataSize);
+        auto it = vkPipelineLayouts->find(immediateConstantSize);
         if (it != vkPipelineLayouts->end()) {
             pipelineLayoutVk = it->second;
         }
@@ -138,10 +133,10 @@ ResultOrError<Ref<RefCountedVkHandle<VkPipelineLayout>>> PipelineLayout::GetOrCr
         return pipelineLayoutVk;
     }
 
-    DAWN_TRY_ASSIGN(pipelineLayoutVk, CreateVkPipelineLayout(internalImmediateDataSize));
+    DAWN_TRY_ASSIGN(pipelineLayoutVk, CreateVkPipelineLayout(immediateConstantSize));
 
     return mVkPipelineLayouts.Use([&](auto vkPipelineLayouts) {
-        return vkPipelineLayouts->insert({internalImmediateDataSize, std::move(pipelineLayoutVk)})
+        return vkPipelineLayouts->insert({immediateConstantSize, std::move(pipelineLayoutVk)})
             .first->second;
     });
 }

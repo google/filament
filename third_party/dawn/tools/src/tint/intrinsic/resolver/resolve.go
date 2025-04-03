@@ -132,9 +132,15 @@ func Resolve(a *ast.AST) (*sem.Sem, error) {
 // The resulting sem.Enum is appended to Sem.Enums, and the enum and all its
 // entries are registered with the global scope.
 func (r *resolver) enum(e ast.EnumDecl) error {
+	NS := "core"
+	if ns := e.Attributes.Take("ns"); ns != nil {
+		NS = ns.Values[0].(string)
+	}
+
 	s := &sem.Enum{
 		Decl: e,
 		Name: e.Name,
+		NS:   NS,
 	}
 
 	// Register the enum
@@ -168,6 +174,10 @@ func (r *resolver) enum(e ast.EnumDecl) error {
 
 	// Sort the enum entries into lexicographic order
 	sort.Slice(s.Entries, func(i, j int) bool { return s.Entries[i].Name < s.Entries[j].Name })
+
+	if len(e.Attributes) != 0 {
+		return fmt.Errorf("%v unknown attribute: %v", e.Attributes[0].Source, e.Attributes[0].Values[0])
+	}
 
 	return nil
 }

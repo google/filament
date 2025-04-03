@@ -240,7 +240,7 @@ class SPIRV_TOOLS_EXPORT Optimizer {
 
  private:
   struct SPIRV_TOOLS_LOCAL Impl;  // Opaque struct for holding internal data.
-  std::unique_ptr<Impl> impl_;  // Unique pointer to internal data.
+  std::unique_ptr<Impl> impl_;    // Unique pointer to internal data.
 };
 
 // Creates a null pass.
@@ -655,7 +655,7 @@ Optimizer::PassToken CreateRedundancyEliminationPass();
 // element if those elements are accessed individually.  The parameter is a
 // limit on the number of members in the composite variable that the pass will
 // consider replacing.
-Optimizer::PassToken CreateScalarReplacementPass(uint32_t size_limit = 100);
+Optimizer::PassToken CreateScalarReplacementPass(uint32_t size_limit = 0);
 
 // Create a private to local pass.
 // This pass looks for variables declared in the private storage class that are
@@ -968,6 +968,60 @@ Optimizer::PassToken CreateInvocationInterlockPlacementPass();
 // Creates a pass to add/remove maximal reconvergence execution mode.
 // This pass either adds or removes maximal reconvergence from all entry points.
 Optimizer::PassToken CreateModifyMaximalReconvergencePass(bool add);
+
+// Creates a pass to split combined image+sampler variables and function
+// parameters into separate image and sampler parts. Binding numbers and
+// other decorations are copied.
+Optimizer::PassToken CreateSplitCombinedImageSamplerPass();
+
+// Creates a pass to remap bindings to avoid conflicts, assuming the module
+// is valid for Vulkan.  A conflict exits when an entry point uses two distinct
+// variables with the same descriptor set and binding.  Vulkan allows one kind
+// of conflict: when one varible is an image (or array of images), and the
+// other is a sampler (or an array of samplers).
+
+// Conflicts are eliminated by incrementing the binding number of the sampler
+// part, and then propagating that increment through variables with
+// higher-numbered bindings until no conflict remains. This handles the case
+// when multiple shaders may share the same resource variables; this can
+// introduce holes in binding slots.
+//
+// Here's an example where shaders Alpha, Beta, Gamma, Delta collectively use
+// resource variables %100, %101, %102, %103, %104 all with the same
+// DescriptorSet and with Bindings as in the following table:
+//
+// Before:
+//
+//   Binding:   0          1        2        3
+//   Alpha:    %100,%101
+//   Beta:     %100       %102
+//   Gamma:               %102     %103
+//   Delta:                        %103     %104
+//
+// The Alpha shader has a conflict where variables %100, %101 have the same
+// descriptor set and binding.  If %100 is a sampler resource variable, then
+// the conflict is resolved by incrementing the binding number on %100 from 0
+// to 1.  But this causes a new confict for shader Beta because it now uses
+// both %100 and %102 with binding number 1.  That conflict is resolved by
+// incrementing the binding number on its variable that originally appeared
+// second (i.e. %102), so %102 gets binding 2. This now produces a conflict
+// for Gamma between %102 and %103 using binding number 2. Since %103 originally
+// appeared second (in the view from Gamma), the algorithm bumps %103 to binding
+// number %103. Now Delta has a conflict between %103 and %104, resulting in
+// %104 getting the next binding number, 4.  The picture afterward is:
+//
+// After:
+//
+//   Binding:   0          1        2        3        4
+//   Alpha:    %101       %100
+//   Beta:                %100     %102
+//   Gamma:                        %102     %103
+//   Delta:                                 %103     %104
+//
+//
+// This pass assumes binding numbers are not applid via decoration groups
+// (OpDecorationGroup).
+Optimizer::PassToken CreateResolveBindingConflictsPass();
 }  // namespace spvtools
 
 #endif  // INCLUDE_SPIRV_TOOLS_OPTIMIZER_HPP_

@@ -49,7 +49,8 @@ class Queue final : public QueueBase {
 
     // Returns a shared fence which represents work done up to lastUsageSerial. It may be a cached
     // fence or newly created.
-    ResultOrError<Ref<SharedFence>> GetOrCreateSharedFence(ExecutionSerial lastUsageSerial);
+    ResultOrError<Ref<SharedFence>> GetOrCreateSharedFence(ExecutionSerial lastUsageSerial,
+                                                           wgpu::SharedFenceType type);
 
   private:
     Queue(Device* device, const QueueDescriptor* descriptor);

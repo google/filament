@@ -53,8 +53,9 @@ func main() {
 	}
 }
 
-// TODO(crbug.com/344014313): Add test coverage once glob.Glob is converted to
-// use dependency injection.
+// TODO(crbug.com/344014313): Split this into multiple helper functions so that
+// it can be unittested. Testing is not currently possible due to the call to
+// exec.LookPath.
 func run(osWrapper oswrapper.OSWrapper) error {
 	flag.Usage = func() {
 		out := flag.CommandLine.Output()
@@ -94,7 +95,7 @@ func run(osWrapper oswrapper.OSWrapper) error {
 		return fmt.Errorf("could not find executable '%v'", args[0])
 	}
 
-	files, err := glob.Glob(fileGlob)
+	files, err := glob.Glob(fileGlob, osWrapper)
 	if err != nil {
 		return err
 	}

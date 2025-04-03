@@ -28,8 +28,6 @@
 #ifndef SRC_DAWN_NATIVE_RENDERPASSENCODER_H_
 #define SRC_DAWN_NATIVE_RENDERPASSENCODER_H_
 
-#include <vector>
-
 #include "dawn/native/Error.h"
 #include "dawn/native/Forward.h"
 #include "dawn/native/RenderEncoderBase.h"

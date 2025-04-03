@@ -61,6 +61,7 @@ type flags struct {
 	debugCTS             bool
 	skipVSCodeInfo       bool
 	enforceDefaultLimits bool
+	blockAllFeatures     bool
 	dawn                 node.Flags
 }
 
@@ -113,6 +114,7 @@ func (c *cmd) RegisterFlags(ctx context.Context, cfg common.Config) ([]string, e
 	flag.BoolVar(&c.flags.debugCTS, "debug-cts", false, "enable CTS debugging option")
 	flag.BoolVar(&c.flags.skipVSCodeInfo, "skip-vs-code-info", false, "skips emitting VS Code information")
 	flag.BoolVar(&c.flags.enforceDefaultLimits, "enforce-default-limits", false, "enforce the default limits (note: powerPreference tests may fail)")
+	flag.BoolVar(&c.flags.blockAllFeatures, "block-all-features", false, "block all features (except 'core-features-and-limits')")
 
 	return []string{"[query]"}, nil
 }

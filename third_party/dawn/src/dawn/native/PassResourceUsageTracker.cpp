@@ -124,6 +124,7 @@ void SyncScopeUsageTracker::AddBindGroup(BindGroupBase* group) {
                         BufferUsedAs(buffer, kInternalStorageBuffer, bindingInfo.visibility);
                         break;
                     case wgpu::BufferBindingType::ReadOnlyStorage:
+                    case kInternalReadOnlyStorageBufferBinding:
                         BufferUsedAs(buffer, kReadOnlyStorageBuffer, bindingInfo.visibility);
                         break;
                     case wgpu::BufferBindingType::BindingNotUsed:

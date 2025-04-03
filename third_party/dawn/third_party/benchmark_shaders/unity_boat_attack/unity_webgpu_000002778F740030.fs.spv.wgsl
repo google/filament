@@ -1856,4 +1856,3 @@ fn main(@location(5) vs_INTERP9_param : vec3f, @location(1) vs_INTERP4_param : v
   main_1();
   return main_out(SV_Target0);
 }
-

@@ -2311,6 +2311,8 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
       return VUID_WRAP(VUID-StandaloneSpirv-None-04644);
     case 4645:
       return VUID_WRAP(VUID-StandaloneSpirv-None-04645);
+    case 10609:
+      return VUID_WRAP(VUID-StandaloneSpirv-OpControlBarrier-10609);
     case 4650:
       return VUID_WRAP(VUID-StandaloneSpirv-OpControlBarrier-04650);
     case 4651:
@@ -2415,8 +2417,6 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
       return VUID_WRAP(VUID-StandaloneSpirv-Component-04922);
     case 4923:
       return VUID_WRAP(VUID-StandaloneSpirv-Component-04923);
-    case 4924:
-      return VUID_WRAP(VUID-StandaloneSpirv-Component-04924);
     case 6201:
       return VUID_WRAP(VUID-StandaloneSpirv-Flat-06201);
     case 6202:
@@ -2525,6 +2525,8 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
       return VUID_WRAP(VUID-StandaloneSpirv-OpEntryPoint-08722);
     case 8973:
       return VUID_WRAP(VUID-StandaloneSpirv-Pointer-08973);
+    case 9557:
+    return VUID_WRAP(VUID-StandaloneSpirv-Input-09557);
     case 9638:
       return VUID_WRAP(VUID-StandaloneSpirv-OpTypeImage-09638);
     case 9658:
@@ -2534,6 +2536,8 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
     case 10213:
       // This use to be a standalone, but maintenance8 will set allow_offset_texture_operand now
       return VUID_WRAP(VUID-RuntimeSpirv-Offset-10213);
+    case 10583:
+      return VUID_WRAP(VUID-StandaloneSpirv-Component-10583);
     default:
       return "";  // unknown id
   }

@@ -29,7 +29,8 @@
 #define SRC_TINT_LANG_SPIRV_VALIDATE_VALIDATE_H_
 
 #include "spirv-tools/libspirv.hpp"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/containers/slice.h"
+#include "src/tint/utils/result.h"
 
 namespace tint::spirv::validate {
 

@@ -94,58 +94,57 @@ struct TestLayer {
     std::filesystem::path manifest_file_path;
     uint32_t manifest_version = VK_MAKE_API_VERSION(0, 1, 1, 2);
 
-    BUILDER_VALUE(TestLayer, bool, is_meta_layer, false)
+    BUILDER_VALUE(bool, is_meta_layer)
 
-    BUILDER_VALUE(TestLayer, uint32_t, api_version, VK_API_VERSION_1_0)
-    BUILDER_VALUE(TestLayer, uint32_t, reported_layer_props, 1)
-    BUILDER_VALUE(TestLayer, uint32_t, reported_extension_props, 0)
-    BUILDER_VALUE(TestLayer, uint32_t, reported_instance_version, VK_API_VERSION_1_0)
-    BUILDER_VALUE(TestLayer, uint32_t, implementation_version, 2)
-    BUILDER_VALUE(TestLayer, uint32_t, min_implementation_version, 0)
-    BUILDER_VALUE(TestLayer, std::string, description, {})
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, api_version, VK_API_VERSION_1_0)
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, reported_layer_props, 1)
+    BUILDER_VALUE(uint32_t, reported_extension_props)
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, reported_instance_version, VK_API_VERSION_1_0)
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, implementation_version, 2)
+    BUILDER_VALUE(uint32_t, min_implementation_version)
+    BUILDER_VALUE(std::string, description)
 
     // Some layers may try to change the API version during instance creation - we should allow testing of such behavior
-    BUILDER_VALUE(TestLayer, uint32_t, alter_api_version, VK_API_VERSION_1_0)
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, alter_api_version, VK_API_VERSION_1_0)
 
-    BUILDER_VECTOR(TestLayer, std::string, alternative_function_names, alternative_function_name)
+    BUILDER_VECTOR(std::string, alternative_function_names, alternative_function_name)
 
-    BUILDER_VECTOR(TestLayer, Extension, instance_extensions, instance_extension)
+    BUILDER_VECTOR(Extension, instance_extensions, instance_extension)
     std::vector<Extension> enabled_instance_extensions;
 
-    BUILDER_VECTOR(TestLayer, Extension, device_extensions, device_extension)
+    BUILDER_VECTOR(Extension, device_extensions, device_extension)
 
-    BUILDER_VALUE(TestLayer, std::string, enable_environment, {});
-    BUILDER_VALUE(TestLayer, std::string, disable_environment, {});
+    BUILDER_VALUE(std::string, enable_environment);
+    BUILDER_VALUE(std::string, disable_environment);
 
     // Modifies the extension list returned by vkEnumerateInstanceExtensionProperties to include what is in this vector
-    BUILDER_VECTOR(TestLayer, Extension, injected_instance_extensions, injected_instance_extension)
+    BUILDER_VECTOR(Extension, injected_instance_extensions, injected_instance_extension)
     // Modifies the extension list returned by  vkEnumerateDeviceExtensionProperties to include what is in this vector
-    BUILDER_VECTOR(TestLayer, Extension, injected_device_extensions, injected_device_extension)
+    BUILDER_VECTOR(Extension, injected_device_extensions, injected_device_extension)
 
-    BUILDER_VECTOR(TestLayer, LayerDefinition, meta_component_layers, meta_component_layer);
+    BUILDER_VECTOR(LayerDefinition, meta_component_layers, meta_component_layer);
 
-    BUILDER_VALUE(TestLayer, bool, intercept_vkEnumerateInstanceExtensionProperties, false)
-    BUILDER_VALUE(TestLayer, bool, intercept_vkEnumerateInstanceLayerProperties, false)
+    BUILDER_VALUE(bool, intercept_vkEnumerateInstanceExtensionProperties)
+    BUILDER_VALUE(bool, intercept_vkEnumerateInstanceLayerProperties)
     // Called in vkCreateInstance after calling down the chain & returning
-    BUILDER_VALUE(TestLayer, std::function<VkResult(TestLayer& layer)>, create_instance_callback, {})
+    BUILDER_VALUE(std::function<VkResult(TestLayer& layer)>, create_instance_callback)
     // Called in vkCreateDevice after calling down the chain & returning
-    BUILDER_VALUE(TestLayer, std::function<VkResult(TestLayer& layer)>, create_device_callback, {})
+    BUILDER_VALUE(std::function<VkResult(TestLayer& layer)>, create_device_callback)
 
     // Physical device modifier test flags and members.  This data is primarily used to test adding, removing and
     // re-ordering physical device data in a layer.
-    BUILDER_VALUE(TestLayer, bool, add_phys_devs, false)
-    BUILDER_VALUE(TestLayer, bool, remove_phys_devs, false)
-    BUILDER_VALUE(TestLayer, bool, reorder_phys_devs, false)
-    BUILDER_VECTOR(TestLayer, VkPhysicalDevice, complete_physical_devices, complete_physical_device)
-    BUILDER_VECTOR(TestLayer, VkPhysicalDevice, removed_physical_devices, removed_physical_device)
-    BUILDER_VECTOR(TestLayer, VkPhysicalDevice, added_physical_devices, added_physical_device)
-    BUILDER_VECTOR(TestLayer, VkPhysicalDeviceGroupProperties, complete_physical_device_groups, complete_physical_device_group)
-    BUILDER_VECTOR(TestLayer, VkPhysicalDeviceGroupProperties, removed_physical_device_groups, removed_physical_device_group)
-    BUILDER_VECTOR(TestLayer, VkPhysicalDeviceGroupProperties, added_physical_device_groups, added_physical_device_group)
+    BUILDER_VALUE(bool, add_phys_devs)
+    BUILDER_VALUE(bool, remove_phys_devs)
+    BUILDER_VALUE(bool, reorder_phys_devs)
+    BUILDER_VECTOR(VkPhysicalDevice, complete_physical_devices, complete_physical_device)
+    BUILDER_VECTOR(VkPhysicalDevice, removed_physical_devices, removed_physical_device)
+    BUILDER_VECTOR(VkPhysicalDevice, added_physical_devices, added_physical_device)
+    BUILDER_VECTOR(VkPhysicalDeviceGroupProperties, complete_physical_device_groups, complete_physical_device_group)
+    BUILDER_VECTOR(VkPhysicalDeviceGroupProperties, removed_physical_device_groups, removed_physical_device_group)
+    BUILDER_VECTOR(VkPhysicalDeviceGroupProperties, added_physical_device_groups, added_physical_device_group)
 
-    BUILDER_VECTOR(TestLayer, VulkanFunction, custom_physical_device_implementation_functions,
-                   custom_physical_device_implementation_function)
-    BUILDER_VECTOR(TestLayer, VulkanFunction, custom_device_implementation_functions, custom_device_implementation_function)
+    BUILDER_VECTOR(VulkanFunction, custom_physical_device_implementation_functions, custom_physical_device_implementation_function)
+    BUILDER_VECTOR(VulkanFunction, custom_device_implementation_functions, custom_device_implementation_function)
 
     // Only need a single map for all 'custom' function - assumes that all function names are distinct, IE there cannot be a
     // physical device and device level function with the same name
@@ -170,10 +169,10 @@ struct TestLayer {
     }
 
     // Allows distinguishing different layers (that use the same binary)
-    BUILDER_VALUE(TestLayer, std::string, make_spurious_log_in_create_instance, "")
-    BUILDER_VALUE(TestLayer, bool, do_spurious_allocations_in_create_instance, false)
+    BUILDER_VALUE(std::string, make_spurious_log_in_create_instance)
+    BUILDER_VALUE(bool, do_spurious_allocations_in_create_instance)
     void* spurious_instance_memory_allocation = nullptr;
-    BUILDER_VALUE(TestLayer, bool, do_spurious_allocations_in_create_device, false)
+    BUILDER_VALUE(bool, do_spurious_allocations_in_create_device)
     struct DeviceMemAlloc {
         void* allocation;
         VkDevice device;
@@ -181,25 +180,25 @@ struct TestLayer {
     std::vector<DeviceMemAlloc> spurious_device_memory_allocations;
 
     // By default query GPDPA from GIPA, don't use value given from pNext
-    BUILDER_VALUE(TestLayer, bool, use_gipa_GetPhysicalDeviceProcAddr, true)
+    BUILDER_VALUE_WITH_DEFAULT(bool, use_gipa_GetPhysicalDeviceProcAddr, true)
 
     // Have a layer query for vkCreateDevice with a NULL instance handle
-    BUILDER_VALUE(TestLayer, bool, buggy_query_of_vkCreateDevice, false)
+    BUILDER_VALUE(bool, buggy_query_of_vkCreateDevice)
 
     // Makes the layer try to create a device using the loader provided function in the layer chain
-    BUILDER_VALUE(TestLayer, bool, call_create_device_while_create_device_is_called, false)
-    BUILDER_VALUE(TestLayer, uint32_t, physical_device_index_to_use_during_create_device, 0)
+    BUILDER_VALUE(bool, call_create_device_while_create_device_is_called)
+    BUILDER_VALUE(uint32_t, physical_device_index_to_use_during_create_device)
 
-    BUILDER_VALUE(TestLayer, bool, check_if_EnumDevExtProps_is_same_as_queried_function, false)
+    BUILDER_VALUE(bool, check_if_EnumDevExtProps_is_same_as_queried_function)
 
     // Clober the data pointed to by pInstance to overwrite the magic value
-    BUILDER_VALUE(TestLayer, bool, clobber_pInstance, false)
+    BUILDER_VALUE(bool, clobber_pInstance)
     // Clober the data pointed to by pDevice to overwrite the magic value
-    BUILDER_VALUE(TestLayer, bool, clobber_pDevice, false)
+    BUILDER_VALUE(bool, clobber_pDevice)
 
-    BUILDER_VALUE(TestLayer, bool, query_vkEnumerateInstanceLayerProperties, false)
-    BUILDER_VALUE(TestLayer, bool, query_vkEnumerateInstanceExtensionProperties, false)
-    BUILDER_VALUE(TestLayer, bool, query_vkEnumerateInstanceVersion, false)
+    BUILDER_VALUE(bool, query_vkEnumerateInstanceLayerProperties)
+    BUILDER_VALUE(bool, query_vkEnumerateInstanceExtensionProperties)
+    BUILDER_VALUE(bool, query_vkEnumerateInstanceVersion)
 
     PFN_vkGetInstanceProcAddr next_vkGetInstanceProcAddr = VK_NULL_HANDLE;
     PFN_GetPhysicalDeviceProcAddr next_GetPhysicalDeviceProcAddr = VK_NULL_HANDLE;

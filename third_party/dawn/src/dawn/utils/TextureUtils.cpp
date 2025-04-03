@@ -199,6 +199,17 @@ bool IsRenderableFormat(const wgpu::Device& device, wgpu::TextureFormat textureF
     }
 }
 
+bool IsSupportedContextFormat(wgpu::TextureFormat textureFormat) {
+    switch (textureFormat) {
+        case wgpu::TextureFormat::RGBA8Unorm:
+        case wgpu::TextureFormat::BGRA8Unorm:
+        case wgpu::TextureFormat::RGBA16Float:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool TextureFormatSupportsMultisampling(const wgpu::Device& device,
                                         wgpu::TextureFormat textureFormat,
                                         bool isCompatibilityMode) {

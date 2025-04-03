@@ -52,7 +52,7 @@ class ProseListFormats(Enum):
             return cls.OR
         if s == 'and':
             return cls.AND
-        raise RuntimeError("Unrecognized string connective: " + s)
+        raise RuntimeError(f"Unrecognized string connective: {s}")
 
     @property
     def connective(self):
@@ -96,11 +96,11 @@ class ConventionsBase(abc.ABC):
 
     def formatVersion(self, name, apivariant, major, minor):
         """Mark up an API version name as a link in the spec."""
-        return '`<<{}>>`'.format(name)
+        return f'`<<{name}>>`'
 
     def formatExtension(self, name):
         """Mark up an extension name as a link in the spec."""
-        return '`<<{}>>`'.format(name)
+        return f'`<<{name}>>`'
 
     def formatSPIRVlink(self, name):
         """Mark up a SPIR-V extension name as an external link in the spec.
@@ -224,7 +224,7 @@ class ConventionsBase(abc.ABC):
 
         my_elts = list(elements)
         if len(my_elts) > 1:
-            my_elts[-1] = '{} {}'.format(fmt.connective, my_elts[-1])
+            my_elts[-1] = f'{fmt.connective} {my_elts[-1]}'
 
         if not comma_for_two_elts and len(my_elts) <= 2:
             prose = ' '.join(my_elts)
@@ -351,7 +351,7 @@ class ConventionsBase(abc.ABC):
         Implemented in terms of api_prefix.
 
         May override."""
-        return self.api_prefix + 'VERSION_'
+        return f"{self.api_prefix}VERSION_"
 
     @property
     def KHR_prefix(self):
@@ -360,7 +360,7 @@ class ConventionsBase(abc.ABC):
         Implemented in terms of api_prefix.
 
         May override."""
-        return self.api_prefix + 'KHR_'
+        return f"{self.api_prefix}KHR_"
 
     @property
     def EXT_prefix(self):
@@ -369,7 +369,7 @@ class ConventionsBase(abc.ABC):
         Implemented in terms of api_prefix.
 
         May override."""
-        return self.api_prefix + 'EXT_'
+        return f"{self.api_prefix}EXT_"
 
     def writeFeature(self, featureName, featureExtraProtect, filename):
         """Return True if OutputGenerator.endFeature should write this feature.
@@ -483,8 +483,7 @@ class ConventionsBase(abc.ABC):
            file.
             - name - extension name"""
 
-        return 'include::{{appendices}}/{}[]'.format(
-                self.extension_file_path(name))
+        return f'include::{{appendices}}/{self.extension_file_path(name)}[]'
 
     @property
     def provisional_extension_warning(self):

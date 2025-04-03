@@ -119,7 +119,7 @@ TEST_F(IR_RemoveContinueInSwitchTest, ContinueInSwitchCase_WithoutBreakIf) {
   $B1: {
     loop [b: $B2] {  # loop_1
       $B2: {  # body
-        %tint_continue:ptr<function, bool, read_write> = var
+        %tint_continue:ptr<function, bool, read_write> = var undef
         switch 42i [c: (default, $B3)] {  # switch_1
           $B3: {  # case
             store %tint_continue, true
@@ -190,7 +190,7 @@ TEST_F(IR_RemoveContinueInSwitchTest, ContinueInSwitchCase_WithBreakIf) {
   $B1: {
     loop [b: $B2, c: $B3] {  # loop_1
       $B2: {  # body
-        %tint_continue:ptr<function, bool, read_write> = var
+        %tint_continue:ptr<function, bool, read_write> = var undef
         switch 42i [c: (default, $B4)] {  # switch_1
           $B4: {  # case
             store %tint_continue, true
@@ -278,7 +278,7 @@ TEST_F(IR_RemoveContinueInSwitchTest, ContinueInMultipleCases) {
   $B1: {
     loop [b: $B2, c: $B3] {  # loop_1
       $B2: {  # body
-        %tint_continue:ptr<function, bool, read_write> = var
+        %tint_continue:ptr<function, bool, read_write> = var undef
         switch 42i [c: (1i, $B4), c: (2i, $B5), c: (default, $B6)] {  # switch_1
           $B4: {  # case
             store %tint_continue, true
@@ -380,7 +380,7 @@ TEST_F(IR_RemoveContinueInSwitchTest, ContinueInMultipleSwitches) {
   $B1: {
     loop [b: $B2, c: $B3] {  # loop_1
       $B2: {  # body
-        %tint_continue:ptr<function, bool, read_write> = var
+        %tint_continue:ptr<function, bool, read_write> = var undef
         switch 42i [c: (default, $B4)] {  # switch_1
           $B4: {  # case
             store %tint_continue, true
@@ -393,7 +393,7 @@ TEST_F(IR_RemoveContinueInSwitchTest, ContinueInMultipleSwitches) {
             continue  # -> $B3
           }
         }
-        %tint_continue_1:ptr<function, bool, read_write> = var  # %tint_continue_1: 'tint_continue'
+        %tint_continue_1:ptr<function, bool, read_write> = var undef  # %tint_continue_1: 'tint_continue'
         switch 43i [c: (default, $B6)] {  # switch_2
           $B6: {  # case
             store %tint_continue_1, true
@@ -406,7 +406,7 @@ TEST_F(IR_RemoveContinueInSwitchTest, ContinueInMultipleSwitches) {
             continue  # -> $B3
           }
         }
-        %tint_continue_2:ptr<function, bool, read_write> = var  # %tint_continue_2: 'tint_continue'
+        %tint_continue_2:ptr<function, bool, read_write> = var undef  # %tint_continue_2: 'tint_continue'
         switch 44i [c: (default, $B8)] {  # switch_3
           $B8: {  # case
             store %tint_continue_2, true
@@ -500,7 +500,7 @@ TEST_F(IR_RemoveContinueInSwitchTest, ContinueInSwitchCaseNestedInsideIf) {
       $B2: {  # body
         if true [t: $B4] {  # if_1
           $B4: {  # true
-            %tint_continue:ptr<function, bool, read_write> = var
+            %tint_continue:ptr<function, bool, read_write> = var undef
             switch 42i [c: (default, $B5)] {  # switch_1
               $B5: {  # case
                 if true [t: $B6] {  # if_2
@@ -592,10 +592,10 @@ TEST_F(IR_RemoveContinueInSwitchTest, ContinueInSwitchInsideAnotherSwitch) {
   $B1: {
     loop [b: $B2, c: $B3] {  # loop_1
       $B2: {  # body
-        %tint_continue:ptr<function, bool, read_write> = var
+        %tint_continue:ptr<function, bool, read_write> = var undef
         switch 42i [c: (default, $B4)] {  # switch_1
           $B4: {  # case
-            %tint_continue_1:ptr<function, bool, read_write> = var  # %tint_continue_1: 'tint_continue'
+            %tint_continue_1:ptr<function, bool, read_write> = var undef  # %tint_continue_1: 'tint_continue'
             switch 42i [c: (default, $B5)] {  # switch_2
               $B5: {  # case
                 store %tint_continue_1, true

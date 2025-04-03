@@ -57,8 +57,6 @@ std::unique_ptr<ErrorData> ErrorData::Create(InternalErrorType type,
 ErrorData::ErrorData(InternalErrorType type, std::string message)
     : mType(type), mMessage(std::move(message)) {}
 
-ErrorData::~ErrorData() = default;
-
 void ErrorData::AppendBacktrace(const char* file, const char* function, int line) {
     BacktraceRecord record;
     record.file = file;

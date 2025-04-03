@@ -818,6 +818,20 @@ bool PerEntryExecutionMode(spv::ExecutionMode mode) {
   }
 }
 
+spv_result_t ValidateCapability(ValidationState_t& _, const Instruction* inst) {
+  auto cap = inst->GetOperandAs<spv::Capability>(0);
+  if (cap == spv::Capability::CooperativeMatrixKHR) {
+    if (_.HasCapability(spv::Capability::Shader) &&
+        !_.HasCapability(spv::Capability::VulkanMemoryModel)) {
+      return _.diag(SPV_ERROR_INVALID_CAPABILITY, inst)
+             << "If the Shader and CooperativeMatrixKHR capabilities are "
+                "declared, the VulkanMemoryModel capability must also be "
+                "declared";
+    }
+  }
+  return SPV_SUCCESS;
+}
+
 }  // namespace
 
 spv_result_t ValidateFloatControls2(ValidationState_t& _) {
@@ -895,6 +909,9 @@ spv_result_t ModeSettingPass(ValidationState_t& _, const Instruction* inst) {
       break;
     case spv::Op::OpMemoryModel:
       if (auto error = ValidateMemoryModel(_, inst)) return error;
+      break;
+    case spv::Op::OpCapability:
+      if (auto error = ValidateCapability(_, inst)) return error;
       break;
     default:
       break;

@@ -15,6 +15,7 @@
 // ext_vector array.
 // CHECK-NEXT: CXXRecordDecl {{0x[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> implicit class matrix definition
 // CHECK-NEXT: FinalAttr {{0x[0-9a-fA-F]+}} <<invalid sloc>> Implicit final
+// CHECK-NEXT: HLSLMatrixAttr {{0x[0-9a-fA-F]+}} <<invalid sloc>> Implicit
 // CHECK-NEXT: FieldDecl {{0x[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> implicit h 'element [row_count] __attribute__((ext_vector_type(col_count)))'
 
 

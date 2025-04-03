@@ -84,8 +84,6 @@ class InstanceBase final : public ErrorSink, public RefCountedWithExternalCount<
     // Otherwise, returns adapters based on the `options`.
     std::vector<Ref<AdapterBase>> EnumerateAdapters(const RequestAdapterOptions* options = nullptr);
 
-    size_t GetPhysicalDeviceCountForTesting() const;
-
     void EmitLog(WGPULoggingType type, const std::string_view message) const;
 
     // Consume an error and log its warning at most once. This is useful for

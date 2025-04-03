@@ -42,14 +42,14 @@ TEST_F(IR_InstructionResultDeathTest, Destroy_HasInstruction) {
         {
             Module mod;
             Builder b{mod};
-            auto* val = b.Add(mod.Types().i32(), 1_i, 2_i)->Result(0);
+            auto* val = b.Add(mod.Types().i32(), 1_i, 2_i)->Result();
             val->Destroy();
         },
         "internal compiler error");
 }
 
 TEST_F(IR_InstructionResultTest, Clone) {
-    auto* val = b.Add(mod.Types().i32(), 1_i, 2_i)->Result(0);
+    auto* val = b.Add(mod.Types().i32(), 1_i, 2_i)->Result();
     auto* new_res = clone_ctx.Clone(val);
 
     EXPECT_NE(val, new_res);

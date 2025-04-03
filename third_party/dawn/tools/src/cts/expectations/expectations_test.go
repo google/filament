@@ -145,6 +145,7 @@ func TestRemoveExpectationsForUnknownTests(t *testing.T) {
 [ android ] * [ Failure ]
 [ mac ] a:* [ Failure ]
 [ linux ] a:b,c:d,e:f=* [ Failure ]
+[ android ] a:*:d* [ Failure ]
 [ linux ] valid_test1 [ Failure ]
 [ linux ] invalid_test [ Failure ]
 [ linux ] valid_test2 [ Failure ]
@@ -181,6 +182,7 @@ func TestRemoveExpectationsForUnknownTests(t *testing.T) {
 [ android ] * [ Failure ]
 [ mac ] a:* [ Failure ]
 [ linux ] a:b,c:d,e:f=* [ Failure ]
+[ android ] a:*:d* [ Failure ]
 [ linux ] valid_test1 [ Failure ]
 [ linux ] valid_test2 [ Failure ]
 
@@ -412,6 +414,69 @@ func TestSortPrioritizeQuery(t *testing.T) {
 	require.Equal(t, expectationsList, expectedList)
 }
 
+func TestIsGlobExpectation(t *testing.T) {
+	tests := []struct {
+		name           string
+		e              Expectation
+		isGlobExpected bool
+	}{
+		{
+			name: "Exact simple",
+			e: Expectation{
+				Query: "foo",
+			},
+			isGlobExpected: false,
+		},
+		{
+			name: "Glob simple match everything",
+			e: Expectation{
+				Query: "*",
+			},
+			isGlobExpected: true,
+		},
+		{
+			name: "Glob simple match some",
+			e: Expectation{
+				Query: "foo*",
+			},
+			isGlobExpected: true,
+		},
+		{
+			name: "Exact with escaped wildcards",
+			e: Expectation{
+				Query: "foo\\*bar\\*",
+			},
+			isGlobExpected: false,
+		},
+		{
+			name: "Exact with only escaped wildcard",
+			e: Expectation{
+				Query: "\\*",
+			},
+			isGlobExpected: false,
+		},
+		{
+			name: "Glob with escaped wildcards",
+			e: Expectation{
+				Query: "foo\\*bar*",
+			},
+			isGlobExpected: true,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			expectedType := EXACT
+			if testCase.isGlobExpected {
+				expectedType = GLOB
+			}
+			require.Equal(t, testCase.e.expectationType, UNDETERMINED)
+			require.Equal(t, testCase.e.IsGlobExpectation(), testCase.isGlobExpected)
+			require.Equal(t, testCase.e.expectationType, expectedType)
+		})
+	}
+}
+
+// Also implicitly tests AppliesToTest.
 func TestAppliesToResult(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -435,6 +500,30 @@ func TestAppliesToResult(t *testing.T) {
 			name: "Wildcard match",
 			e: Expectation{
 				Query: "foo*",
+				Tags:  result.NewTags("android"),
+			},
+			r: result.Result{
+				Query: query.Parse("foobar"),
+				Tags:  result.NewTags("android", "release"),
+			},
+			shouldMatch: true,
+		},
+		{ /////////////////////////////////////////////////////////////////////////
+			name: "Wildcard match mid-string",
+			e: Expectation{
+				Query: "foo*r",
+				Tags:  result.NewTags("android"),
+			},
+			r: result.Result{
+				Query: query.Parse("foobar"),
+				Tags:  result.NewTags("android", "release"),
+			},
+			shouldMatch: true,
+		},
+		{ /////////////////////////////////////////////////////////////////////////
+			name: "Wildcard match multiple wildcards",
+			e: Expectation{
+				Query: "f*o*r",
 				Tags:  result.NewTags("android"),
 			},
 			r: result.Result{

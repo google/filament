@@ -515,6 +515,124 @@ spv_result_t encodeInstructionStartingWithImmediate(
   return SPV_SUCCESS;
 }
 
+/// @brief Translate an instruction started by OpUnknown and the following
+/// operands to binary form
+///
+/// @param[in] grammar the grammar to use for compilation
+/// @param[in, out] context the dynamic compilation info
+/// @param[out] pInst returned binary Opcode
+///
+/// @return result code
+spv_result_t encodeInstructionStartingWithOpUnknown(
+    const spvtools::AssemblyGrammar& grammar,
+    spvtools::AssemblyContext* context, spv_instruction_t* pInst) {
+  spv_position_t nextPosition = {};
+
+  uint16_t opcode;
+  uint16_t wordCount;
+
+  // The '(' character.
+  if (context->advance())
+    return context->diagnostic() << "Expected '(', found end of stream.";
+  if ('(' != context->peek()) {
+    return context->diagnostic() << "'(' expected after OpUnknown but found '"
+                                 << context->peek() << "'.";
+  }
+  context->seekForward(1);
+
+  // The opcode enumerant.
+  if (context->advance())
+    return context->diagnostic()
+           << "Expected opcode enumerant, found end of stream.";
+  std::string opcodeString;
+  spv_result_t error = context->getWord(&opcodeString, &nextPosition);
+  if (error) return context->diagnostic(error) << "Internal Error";
+
+  if (!spvtools::utils::ParseNumber(opcodeString.c_str(), &opcode)) {
+    return context->diagnostic()
+           << "Invalid opcode enumerant: \"" << opcodeString << "\".";
+  }
+
+  context->setPosition(nextPosition);
+
+  // The ',' character.
+  if (context->advance())
+    return context->diagnostic() << "Expected ',', found end of stream.";
+  if (',' != context->peek()) {
+    return context->diagnostic()
+           << "',' expected after opcode enumerant but found '"
+           << context->peek() << "'.";
+  }
+  context->seekForward(1);
+
+  // The number of words.
+  if (context->advance())
+    return context->diagnostic()
+           << "Expected number of words, found end of stream.";
+  std::string wordCountString;
+  error = context->getWord(&wordCountString, &nextPosition);
+  if (error) return context->diagnostic(error) << "Internal Error";
+
+  if (!spvtools::utils::ParseNumber(wordCountString.c_str(), &wordCount)) {
+    return context->diagnostic()
+           << "Invalid number of words: \"" << wordCountString << "\".";
+  }
+
+  if (wordCount == 0) {
+    return context->diagnostic() << "Number of words (which includes the "
+                                    "opcode) must be greater than zero.";
+  }
+
+  context->setPosition(nextPosition);
+
+  // The ')' character.
+  if (context->advance())
+    return context->diagnostic() << "Expected ')', found end of stream.";
+  if (')' != context->peek()) {
+    return context->diagnostic()
+           << "')' expected after number of words but found '"
+           << context->peek() << "'.";
+  }
+  context->seekForward(1);
+
+  pInst->opcode = static_cast<spv::Op>(opcode);
+  context->binaryEncodeU32(spvOpcodeMake(wordCount, pInst->opcode), pInst);
+
+  wordCount--;  // Subtract the opcode from the number of words left to read.
+
+  while (wordCount-- > 0) {
+    if (context->advance() == SPV_END_OF_STREAM) {
+      return context->diagnostic() << "Expected " << wordCount + 1
+                                   << " more operands, found end of stream.";
+    }
+    if (context->isStartOfNewInst()) {
+      std::string invalid;
+      context->getWord(&invalid, &nextPosition);
+      return context->diagnostic()
+             << "Unexpected start of new instruction: \"" << invalid
+             << "\". Expected " << wordCount + 1 << " more operands";
+    }
+
+    std::string operandValue;
+    if ((error = context->getWord(&operandValue, &nextPosition)))
+      return context->diagnostic(error) << "Internal Error";
+
+    if (operandValue == "=")
+      return context->diagnostic() << "OpUnknown not allowed before =.";
+
+    // Needed to pass to spvTextEncodeOpcode(), but it shouldn't ever be
+    // expanded.
+    spv_operand_pattern_t dummyExpectedOperands;
+    error = spvTextEncodeOperand(
+        grammar, context, SPV_OPERAND_TYPE_OPTIONAL_CIV, operandValue.c_str(),
+        pInst, &dummyExpectedOperands);
+    if (error) return error;
+    context->setPosition(nextPosition);
+  }
+
+  return SPV_SUCCESS;
+}
+
 /// @brief Translate single Opcode and operands to binary form
 ///
 /// @param[in] grammar the grammar to use for compilation
@@ -572,6 +690,16 @@ spv_result_t spvTextEncodeOpcode(const spvtools::AssemblyGrammar& grammar,
       return context->diagnostic()
              << "Invalid Opcode prefix '" << opcodeName << "'.";
     }
+  }
+
+  if (opcodeName == "OpUnknown") {
+    if (!result_id.empty()) {
+      return context->diagnostic()
+             << "OpUnknown not allowed in assignment. Use an explicit result "
+                "id operand instead.";
+    }
+    context->setPosition(nextPosition);
+    return encodeInstructionStartingWithOpUnknown(grammar, context, pInst);
   }
 
   // NOTE: The table contains Opcode names without the "Op" prefix.

@@ -680,6 +680,10 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
         EnableFeature(Feature::SubgroupsF16);
     }
 
+    if ([*mDevice supportsFamily:MTLGPUFamilyApple7]) {
+        EnableFeature(Feature::ChromiumExperimentalSubgroupMatrix);
+    }
+
     EnableFeature(Feature::SharedTextureMemoryIOSurface);
 
     EnableFeature(Feature::SharedFenceMTLSharedEvent);
@@ -844,13 +848,11 @@ MaybeError PhysicalDevice::InitializeSupportedLimitsImpl(CombinedLimits* limits)
     // See https://github.com/gpuweb/gpuweb/issues/1962 for more details.
     uint32_t vendorId = GetVendorId();
     if (gpu_info::IsApple(vendorId)) {
-        limits->v1.maxInterStageShaderComponents = mtlLimits.maxFragmentInputComponents;
         limits->v1.maxInterStageShaderVariables =
             std::min(mtlLimits.maxFragmentInputs, mtlLimits.maxFragmentInputComponents / 4);
     } else {
         // On non-Apple macOS each built-in consumes one individual inter-stage shader variable.
         limits->v1.maxInterStageShaderVariables = mtlLimits.maxFragmentInputs - 4;
-        limits->v1.maxInterStageShaderComponents = limits->v1.maxInterStageShaderVariables * 4;
     }
 
     limits->v1.maxComputeWorkgroupStorageSize = mtlLimits.maxTotalThreadgroupMemory;
@@ -874,11 +876,6 @@ MaybeError PhysicalDevice::InitializeSupportedLimitsImpl(CombinedLimits* limits)
     // TODO(crbug.com/dawn/685):
     // - maxBindGroups
     // - maxVertexBufferArrayStride
-
-    // Experimental limits for subgroups
-    // TODO(354751907): Move to AdapterInfo
-    limits->experimentalSubgroupLimits.minSubgroupSize = 4;
-    limits->experimentalSubgroupLimits.maxSubgroupSize = 64;
 
     limits->v1.maxStorageBuffersInFragmentStage = limits->v1.maxStorageBuffersPerShaderStage;
     limits->v1.maxStorageTexturesInFragmentStage = limits->v1.maxStorageTexturesPerShaderStage;
@@ -943,6 +940,25 @@ void PhysicalDevice::PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info) c
             DAWN_UNREACHABLE();
 #endif
         }
+    }
+    if (auto* subgroupMatrixConfigs = info.Get<AdapterPropertiesSubgroupMatrixConfigs>()) {
+        DAWN_ASSERT([*mDevice supportsFamily:MTLGPUFamilyApple7]);
+
+        auto* configs = new SubgroupMatrixConfig[2];
+        subgroupMatrixConfigs->configCount = 2;
+        subgroupMatrixConfigs->configs = configs;
+
+        configs[0].componentType = wgpu::SubgroupMatrixComponentType::F32;
+        configs[0].resultComponentType = wgpu::SubgroupMatrixComponentType::F32;
+        configs[0].M = 8;
+        configs[0].N = 8;
+        configs[0].K = 8;
+
+        configs[1].componentType = wgpu::SubgroupMatrixComponentType::F16;
+        configs[1].resultComponentType = wgpu::SubgroupMatrixComponentType::F16;
+        configs[1].M = 8;
+        configs[1].N = 8;
+        configs[1].K = 8;
     }
 }
 }  // namespace dawn::native::metal

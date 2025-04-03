@@ -39,6 +39,8 @@ namespace {{native_namespace}} {
                 case ObjectType::{{type.name.CamelCase()}}:
                     return "{{type.name.CamelCase()}}";
             {% endfor %}
+                case ObjectType::BindGroupLayoutInternal:
+                    return "BindGroupLayoutInternal";
             default:
                 DAWN_UNREACHABLE();
         }

@@ -13,7 +13,7 @@ struct S {
   float a;
 };
 
-// CHECK: error: cannot instantiate RWBuffer with struct type 'S'
+// CHECK: error: elements of typed buffers and textures must be scalars or vectors
 RWBuffer<S> buff;
 
 [numthreads(1, 1, 1)]

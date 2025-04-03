@@ -61,6 +61,7 @@ message Type {
         TypeSubgroupMatrix subgroup_matrix_left = 16;
         TypeSubgroupMatrix subgroup_matrix_right = 17;
         TypeSubgroupMatrix subgroup_matrix_result = 18;
+        TypeBuiltinStruct builtin_struct = 19;
     }
 }
 
@@ -152,6 +153,27 @@ message TypeSubgroupMatrix {
     uint32 sub_type = 1;  // Module.types
     uint32 rows = 2;
     uint32 columns = 3;
+}
+
+enum TypeBuiltinStruct {
+    AtomicCompareExchangeResultI32 = 0;
+    AtomicCompareExchangeResultU32 = 1;
+    FrexpResultF16 = 2;
+    FrexpResultF32 = 3;
+    FrexpResultVec2F16 = 4;
+    FrexpResultVec2F32 = 5;
+    FrexpResultVec3F16 = 6;
+    FrexpResultVec3F32 = 7;
+    FrexpResultVec4F16 = 8;
+    FrexpResultVec4F32 = 9;
+    ModfResultF16 = 10;
+    ModfResultF32 = 11;
+    ModfResultVec2F16 = 12;
+    ModfResultVec2F32 = 13;
+    ModfResultVec3F16 = 14;
+    ModfResultVec3F32 = 15;
+    ModfResultVec4F16 = 16;
+    ModfResultVec4F32 = 17;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -320,6 +342,7 @@ message InstructionUserCall {}
 
 message InstructionBuiltinCall {
     BuiltinFn builtin = 1;
+    repeated uint32 explicit_template_params = 2;  // Module.types
 }
 
 message InstructionLoad {}

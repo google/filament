@@ -287,6 +287,10 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
      {"Support for importing and exporting MTLSharedEvent used for GPU synchronization.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/shared_fence.md",
       FeatureInfo::FeatureState::Stable}},
+    {Feature::SharedFenceEGLSync,
+     {"Support for importing and exporting EGLSync objects used for GPU synchronization.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/shared_fence.md",
+      FeatureInfo::FeatureState::Stable}},
     {Feature::HostMappedPointer,
      {"Support creation of buffers from host-mapped pointers.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
@@ -372,6 +376,12 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
      {"Supports the \"enable subgroups_f16;\" directive in WGSL (deprecated).",
       "https://github.com/gpuweb/gpuweb/blob/main/proposals/subgroups.md",
       FeatureInfo::FeatureState::Stable}},
+    {Feature::CoreFeaturesAndLimits,
+     {"Lifts all compatibility mode restrictions (features and limits) to core when enabled on a "
+      "device.",
+      "https://github.com/gpuweb/gpuweb/blob/main/proposals/"
+      "compatibility-mode.md#core-features-and-limits-feature",
+      FeatureInfo::FeatureState::Stable}},
     {Feature::MultiDrawIndirect,
      {"Support MultiDrawIndirect and MultiDrawIndexedIndirect. Allows batching multiple indirect "
       "calls with one command",
@@ -395,7 +405,10 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
      {"Remove the texture view restrictions in Compat Mode.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
       "flexible_texture_views.md",
-      FeatureInfo::FeatureState::Stable}}};
+      FeatureInfo::FeatureState::Stable}},
+    {Feature::ChromiumExperimentalSubgroupMatrix,
+     {"Support the \"enable chromium_experimental_subgroup_matrix;\" directive in WGSL.",
+      "https://github.com/gpuweb/gpuweb/issues/4195", FeatureInfo::FeatureState::Experimental}}};
 }  // anonymous namespace
 
 void FeaturesSet::EnableFeature(Feature feature) {

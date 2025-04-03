@@ -70,7 +70,7 @@ struct State {
         for (auto* inst : ir.Instructions()) {
             if (auto* convert = inst->As<ir::Convert>()) {
                 auto* src_ty = convert->Args()[0]->Type();
-                auto* res_ty = convert->Result(0)->Type();
+                auto* res_ty = convert->Result()->Type();
                 if (config.ftoi &&                      //
                     src_ty->IsFloatScalarOrVector() &&  //
                     res_ty->IsIntegerScalarOrVector()) {
@@ -90,7 +90,7 @@ struct State {
     /// result to within the limit of the destination type.
     /// @param convert the conversion instruction
     void ftoi(ir::Convert* convert) {
-        auto* res_ty = convert->Result(0)->Type();
+        auto* res_ty = convert->Result()->Type();
         auto* src_ty = convert->Args()[0]->Type();
         auto* src_el_ty = src_ty->DeepestElement();
 
@@ -175,7 +175,7 @@ struct State {
                 auto* select_high = b.Call(res_ty, core::BuiltinFn::kSelect, limits.high_limit_i,
                                            select_low, high_cond);
 
-                b.Return(func, select_high->Result(0));
+                b.Return(func, select_high->Result());
             });
             return func;
         });

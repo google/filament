@@ -46,7 +46,7 @@ dawn_add_library(
         dawn_public_config
 )
 
-if (${DAWN_ENABLE_EMSCRIPTEN})
+if (EMSCRIPTEN)
   add_library(webgpu_c ALIAS emdawnwebgpu_c)
 else()
   add_library(webgpu_c ALIAS dawn_headers)
@@ -67,13 +67,14 @@ dawn_add_library(
     UTILITY_TARGET dawn_internal_config
     HEADERS
         "${DAWN_INCLUDE_DIR}/webgpu/webgpu_cpp.h"
+        "${DAWN_INCLUDE_DIR}/webgpu/webgpu_cpp_print.h"
         "${DAWN_INCLUDE_DIR}/webgpu/webgpu_enum_class_bitmasks.h"
         ${DAWNCPP_HEADERS_GEN_HEADERS}
     DEPENDS
         dawn::dawn_headers
 )
 
-if (${DAWN_ENABLE_EMSCRIPTEN})
+if (EMSCRIPTEN)
   add_library(webgpu_cpp ALIAS emdawnwebgpu_cpp)
 else()
   add_library(dawncpp ALIAS dawncpp_headers)
@@ -88,7 +89,7 @@ add_subdirectory(partition_alloc)
 add_subdirectory(common)
 add_subdirectory(utils)
 # Only build the rest of Dawn when Emscripten is not the target environment.
-if (NOT ${DAWN_ENABLE_EMSCRIPTEN})
+if (NOT EMSCRIPTEN)
   add_subdirectory(platform)
   add_subdirectory(wire)
   add_subdirectory(native)
@@ -112,7 +113,7 @@ endif()
 #   Only built when not building for Emscripten
 ###############################################################################
 
-if (NOT ${DAWN_ENABLE_EMSCRIPTEN})
+if (NOT EMSCRIPTEN)
   DawnJSONGenerator(
       TARGET "proc"
       PRINT_NAME "Dawn C++ wrapper"

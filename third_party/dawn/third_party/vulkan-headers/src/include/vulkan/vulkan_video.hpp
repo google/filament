@@ -454,6 +454,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH264SpsVuiFlags *>( this );
       }
 
+      operator StdVideoH264SpsVuiFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH264SpsVuiFlags *>( this );
+      }
+
+      operator StdVideoH264SpsVuiFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH264SpsVuiFlags *>( this );
+      }
+
       bool operator==( H264SpsVuiFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( aspect_ratio_info_present_flag == rhs.aspect_ratio_info_present_flag ) && ( overscan_info_present_flag == rhs.overscan_info_present_flag ) &&
@@ -499,6 +509,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH264HrdParameters *>( this );
       }
 
+      operator StdVideoH264HrdParameters const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH264HrdParameters *>( this );
+      }
+
+      operator StdVideoH264HrdParameters *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH264HrdParameters *>( this );
+      }
+
       bool operator==( H264HrdParameters const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( cpb_cnt_minus1 == rhs.cpb_cnt_minus1 ) && ( bit_rate_scale == rhs.bit_rate_scale ) && ( cpb_size_scale == rhs.cpb_size_scale ) &&
@@ -540,6 +560,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH264SequenceParameterSetVui &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH264SequenceParameterSetVui *>( this );
+      }
+
+      operator StdVideoH264SequenceParameterSetVui const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH264SequenceParameterSetVui *>( this );
+      }
+
+      operator StdVideoH264SequenceParameterSetVui *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH264SequenceParameterSetVui *>( this );
       }
 
       bool operator==( H264SequenceParameterSetVui const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -590,6 +620,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH264SpsFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH264SpsFlags *>( this );
+      }
+
+      operator StdVideoH264SpsFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH264SpsFlags *>( this );
+      }
+
+      operator StdVideoH264SpsFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH264SpsFlags *>( this );
       }
 
       bool operator==( H264SpsFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -643,6 +683,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH264ScalingLists *>( this );
       }
 
+      operator StdVideoH264ScalingLists const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH264ScalingLists *>( this );
+      }
+
+      operator StdVideoH264ScalingLists *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH264ScalingLists *>( this );
+      }
+
       bool operator==( H264ScalingLists const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( scaling_list_present_mask == rhs.scaling_list_present_mask ) && ( use_default_scaling_matrix_mask == rhs.use_default_scaling_matrix_mask ) &&
@@ -675,6 +725,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH264SequenceParameterSet &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH264SequenceParameterSet *>( this );
+      }
+
+      operator StdVideoH264SequenceParameterSet const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH264SequenceParameterSet *>( this );
+      }
+
+      operator StdVideoH264SequenceParameterSet *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH264SequenceParameterSet *>( this );
       }
 
       bool operator==( H264SequenceParameterSet const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -743,6 +803,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH264PpsFlags *>( this );
       }
 
+      operator StdVideoH264PpsFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH264PpsFlags *>( this );
+      }
+
+      operator StdVideoH264PpsFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH264PpsFlags *>( this );
+      }
+
       bool operator==( H264PpsFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( transform_8x8_mode_flag == rhs.transform_8x8_mode_flag ) && ( redundant_pic_cnt_present_flag == rhs.redundant_pic_cnt_present_flag ) &&
@@ -780,6 +850,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH264PictureParameterSet &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH264PictureParameterSet *>( this );
+      }
+
+      operator StdVideoH264PictureParameterSet const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH264PictureParameterSet *>( this );
+      }
+
+      operator StdVideoH264PictureParameterSet *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH264PictureParameterSet *>( this );
       }
 
       bool operator==( H264PictureParameterSet const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -828,6 +908,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoDecodeH264PictureInfoFlags *>( this );
       }
 
+      operator StdVideoDecodeH264PictureInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeH264PictureInfoFlags *>( this );
+      }
+
+      operator StdVideoDecodeH264PictureInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeH264PictureInfoFlags *>( this );
+      }
+
       bool operator==( DecodeH264PictureInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( field_pic_flag == rhs.field_pic_flag ) && ( is_intra == rhs.is_intra ) && ( IdrPicFlag == rhs.IdrPicFlag ) &&
@@ -861,6 +951,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoDecodeH264PictureInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoDecodeH264PictureInfo *>( this );
+      }
+
+      operator StdVideoDecodeH264PictureInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeH264PictureInfo *>( this );
+      }
+
+      operator StdVideoDecodeH264PictureInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeH264PictureInfo *>( this );
       }
 
       bool operator==( DecodeH264PictureInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -900,6 +1000,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoDecodeH264ReferenceInfoFlags *>( this );
       }
 
+      operator StdVideoDecodeH264ReferenceInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeH264ReferenceInfoFlags *>( this );
+      }
+
+      operator StdVideoDecodeH264ReferenceInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeH264ReferenceInfoFlags *>( this );
+      }
+
       bool operator==( DecodeH264ReferenceInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( top_field_flag == rhs.top_field_flag ) && ( bottom_field_flag == rhs.bottom_field_flag ) &&
@@ -930,6 +1040,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoDecodeH264ReferenceInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoDecodeH264ReferenceInfo *>( this );
+      }
+
+      operator StdVideoDecodeH264ReferenceInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeH264ReferenceInfo *>( this );
+      }
+
+      operator StdVideoDecodeH264ReferenceInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeH264ReferenceInfo *>( this );
       }
 
       bool operator==( DecodeH264ReferenceInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -965,6 +1085,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeH264WeightTableFlags *>( this );
       }
 
+      operator StdVideoEncodeH264WeightTableFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264WeightTableFlags *>( this );
+      }
+
+      operator StdVideoEncodeH264WeightTableFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264WeightTableFlags *>( this );
+      }
+
       bool operator==( EncodeH264WeightTableFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( luma_weight_l0_flag == rhs.luma_weight_l0_flag ) && ( chroma_weight_l0_flag == rhs.chroma_weight_l0_flag ) &&
@@ -995,6 +1125,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH264WeightTable &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH264WeightTable *>( this );
+      }
+
+      operator StdVideoEncodeH264WeightTable const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264WeightTable *>( this );
+      }
+
+      operator StdVideoEncodeH264WeightTable *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264WeightTable *>( this );
       }
 
       bool operator==( EncodeH264WeightTable const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1039,6 +1179,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeH264SliceHeaderFlags *>( this );
       }
 
+      operator StdVideoEncodeH264SliceHeaderFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264SliceHeaderFlags *>( this );
+      }
+
+      operator StdVideoEncodeH264SliceHeaderFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264SliceHeaderFlags *>( this );
+      }
+
       bool operator==( EncodeH264SliceHeaderFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( direct_spatial_mv_pred_flag == rhs.direct_spatial_mv_pred_flag ) &&
@@ -1068,6 +1218,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH264PictureInfoFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH264PictureInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeH264PictureInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264PictureInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeH264PictureInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264PictureInfoFlags *>( this );
       }
 
       bool operator==( EncodeH264PictureInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1105,6 +1265,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeH264ReferenceInfoFlags *>( this );
       }
 
+      operator StdVideoEncodeH264ReferenceInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264ReferenceInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeH264ReferenceInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264ReferenceInfoFlags *>( this );
+      }
+
       bool operator==( EncodeH264ReferenceInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( used_for_long_term_reference == rhs.used_for_long_term_reference ) && ( reserved == rhs.reserved );
@@ -1132,6 +1302,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH264ReferenceListsInfoFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH264ReferenceListsInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeH264ReferenceListsInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264ReferenceListsInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeH264ReferenceListsInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264ReferenceListsInfoFlags *>( this );
       }
 
       bool operator==( EncodeH264ReferenceListsInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1165,6 +1345,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeH264RefListModEntry *>( this );
       }
 
+      operator StdVideoEncodeH264RefListModEntry const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264RefListModEntry *>( this );
+      }
+
+      operator StdVideoEncodeH264RefListModEntry *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264RefListModEntry *>( this );
+      }
+
       bool operator==( EncodeH264RefListModEntry const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( modification_of_pic_nums_idc == rhs.modification_of_pic_nums_idc ) && ( abs_diff_pic_num_minus1 == rhs.abs_diff_pic_num_minus1 ) &&
@@ -1195,6 +1385,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH264RefPicMarkingEntry &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH264RefPicMarkingEntry *>( this );
+      }
+
+      operator StdVideoEncodeH264RefPicMarkingEntry const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264RefPicMarkingEntry *>( this );
+      }
+
+      operator StdVideoEncodeH264RefPicMarkingEntry *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264RefPicMarkingEntry *>( this );
       }
 
       bool operator==( EncodeH264RefPicMarkingEntry const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1230,6 +1430,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH264ReferenceListsInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH264ReferenceListsInfo *>( this );
+      }
+
+      operator StdVideoEncodeH264ReferenceListsInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264ReferenceListsInfo *>( this );
+      }
+
+      operator StdVideoEncodeH264ReferenceListsInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264ReferenceListsInfo *>( this );
       }
 
       bool operator==( EncodeH264ReferenceListsInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1276,6 +1486,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeH264PictureInfo *>( this );
       }
 
+      operator StdVideoEncodeH264PictureInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264PictureInfo *>( this );
+      }
+
+      operator StdVideoEncodeH264PictureInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264PictureInfo *>( this );
+      }
+
       bool operator==( EncodeH264PictureInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( flags == rhs.flags ) && ( seq_parameter_set_id == rhs.seq_parameter_set_id ) && ( pic_parameter_set_id == rhs.pic_parameter_set_id ) &&
@@ -1316,6 +1536,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeH264ReferenceInfo *>( this );
       }
 
+      operator StdVideoEncodeH264ReferenceInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264ReferenceInfo *>( this );
+      }
+
+      operator StdVideoEncodeH264ReferenceInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264ReferenceInfo *>( this );
+      }
+
       bool operator==( EncodeH264ReferenceInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( flags == rhs.flags ) && ( primary_pic_type == rhs.primary_pic_type ) && ( FrameNum == rhs.FrameNum ) && ( PicOrderCnt == rhs.PicOrderCnt ) &&
@@ -1350,6 +1580,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH264SliceHeader &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH264SliceHeader *>( this );
+      }
+
+      operator StdVideoEncodeH264SliceHeader const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH264SliceHeader *>( this );
+      }
+
+      operator StdVideoEncodeH264SliceHeader *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH264SliceHeader *>( this );
       }
 
       bool operator==( EncodeH264SliceHeader const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1396,6 +1636,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH265DecPicBufMgr *>( this );
       }
 
+      operator StdVideoH265DecPicBufMgr const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265DecPicBufMgr *>( this );
+      }
+
+      operator StdVideoH265DecPicBufMgr *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265DecPicBufMgr *>( this );
+      }
+
       bool operator==( H265DecPicBufMgr const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( max_latency_increase_plus1 == rhs.max_latency_increase_plus1 ) && ( max_dec_pic_buffering_minus1 == rhs.max_dec_pic_buffering_minus1 ) &&
@@ -1425,6 +1675,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH265SubLayerHrdParameters &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH265SubLayerHrdParameters *>( this );
+      }
+
+      operator StdVideoH265SubLayerHrdParameters const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265SubLayerHrdParameters *>( this );
+      }
+
+      operator StdVideoH265SubLayerHrdParameters *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265SubLayerHrdParameters *>( this );
       }
 
       bool operator==( H265SubLayerHrdParameters const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1459,6 +1719,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH265HrdFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH265HrdFlags *>( this );
+      }
+
+      operator StdVideoH265HrdFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265HrdFlags *>( this );
+      }
+
+      operator StdVideoH265HrdFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265HrdFlags *>( this );
       }
 
       bool operator==( H265HrdFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1498,6 +1768,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH265HrdParameters &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH265HrdParameters *>( this );
+      }
+
+      operator StdVideoH265HrdParameters const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265HrdParameters *>( this );
+      }
+
+      operator StdVideoH265HrdParameters *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265HrdParameters *>( this );
       }
 
       bool operator==( H265HrdParameters const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1550,6 +1830,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH265VpsFlags *>( this );
       }
 
+      operator StdVideoH265VpsFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265VpsFlags *>( this );
+      }
+
+      operator StdVideoH265VpsFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265VpsFlags *>( this );
+      }
+
       bool operator==( H265VpsFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( vps_temporal_id_nesting_flag == rhs.vps_temporal_id_nesting_flag ) &&
@@ -1582,6 +1872,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH265ProfileTierLevelFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH265ProfileTierLevelFlags *>( this );
+      }
+
+      operator StdVideoH265ProfileTierLevelFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265ProfileTierLevelFlags *>( this );
+      }
+
+      operator StdVideoH265ProfileTierLevelFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265ProfileTierLevelFlags *>( this );
       }
 
       bool operator==( H265ProfileTierLevelFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1619,6 +1919,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH265ProfileTierLevel *>( this );
       }
 
+      operator StdVideoH265ProfileTierLevel const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265ProfileTierLevel *>( this );
+      }
+
+      operator StdVideoH265ProfileTierLevel *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265ProfileTierLevel *>( this );
+      }
+
       bool operator==( H265ProfileTierLevel const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( flags == rhs.flags ) && ( general_profile_idc == rhs.general_profile_idc ) && ( general_level_idc == rhs.general_level_idc );
@@ -1648,6 +1958,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH265VideoParameterSet &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH265VideoParameterSet *>( this );
+      }
+
+      operator StdVideoH265VideoParameterSet const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265VideoParameterSet *>( this );
+      }
+
+      operator StdVideoH265VideoParameterSet *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265VideoParameterSet *>( this );
       }
 
       bool operator==( H265VideoParameterSet const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1693,6 +2013,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH265ScalingLists *>( this );
       }
 
+      operator StdVideoH265ScalingLists const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265ScalingLists *>( this );
+      }
+
+      operator StdVideoH265ScalingLists *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265ScalingLists *>( this );
+      }
+
       bool operator==( H265ScalingLists const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( ScalingList4x4 == rhs.ScalingList4x4 ) && ( ScalingList8x8 == rhs.ScalingList8x8 ) && ( ScalingList16x16 == rhs.ScalingList16x16 ) &&
@@ -1730,6 +2060,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH265SpsVuiFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH265SpsVuiFlags *>( this );
+      }
+
+      operator StdVideoH265SpsVuiFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265SpsVuiFlags *>( this );
+      }
+
+      operator StdVideoH265SpsVuiFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265SpsVuiFlags *>( this );
       }
 
       bool operator==( H265SpsVuiFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1786,6 +2126,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH265SequenceParameterSetVui &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH265SequenceParameterSetVui *>( this );
+      }
+
+      operator StdVideoH265SequenceParameterSetVui const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265SequenceParameterSetVui *>( this );
+      }
+
+      operator StdVideoH265SequenceParameterSetVui *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265SequenceParameterSetVui *>( this );
       }
 
       bool operator==( H265SequenceParameterSetVui const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1854,6 +2204,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH265PredictorPaletteEntries *>( this );
       }
 
+      operator StdVideoH265PredictorPaletteEntries const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265PredictorPaletteEntries *>( this );
+      }
+
+      operator StdVideoH265PredictorPaletteEntries *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265PredictorPaletteEntries *>( this );
+      }
+
       bool operator==( H265PredictorPaletteEntries const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( PredictorPaletteEntries == rhs.PredictorPaletteEntries );
@@ -1882,6 +2242,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH265SpsFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH265SpsFlags *>( this );
+      }
+
+      operator StdVideoH265SpsFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265SpsFlags *>( this );
+      }
+
+      operator StdVideoH265SpsFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265SpsFlags *>( this );
       }
 
       bool operator==( H265SpsFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -1963,6 +2333,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH265ShortTermRefPicSetFlags *>( this );
       }
 
+      operator StdVideoH265ShortTermRefPicSetFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265ShortTermRefPicSetFlags *>( this );
+      }
+
+      operator StdVideoH265ShortTermRefPicSetFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265ShortTermRefPicSetFlags *>( this );
+      }
+
       bool operator==( H265ShortTermRefPicSetFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( inter_ref_pic_set_prediction_flag == rhs.inter_ref_pic_set_prediction_flag ) && ( delta_rps_sign == rhs.delta_rps_sign );
@@ -1990,6 +2370,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH265ShortTermRefPicSet &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH265ShortTermRefPicSet *>( this );
+      }
+
+      operator StdVideoH265ShortTermRefPicSet const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265ShortTermRefPicSet *>( this );
+      }
+
+      operator StdVideoH265ShortTermRefPicSet *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265ShortTermRefPicSet *>( this );
       }
 
       bool operator==( H265ShortTermRefPicSet const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2038,6 +2428,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH265LongTermRefPicsSps *>( this );
       }
 
+      operator StdVideoH265LongTermRefPicsSps const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265LongTermRefPicsSps *>( this );
+      }
+
+      operator StdVideoH265LongTermRefPicsSps *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265LongTermRefPicsSps *>( this );
+      }
+
       bool operator==( H265LongTermRefPicsSps const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( used_by_curr_pic_lt_sps_flag == rhs.used_by_curr_pic_lt_sps_flag ) && ( lt_ref_pic_poc_lsb_sps == rhs.lt_ref_pic_poc_lsb_sps );
@@ -2065,6 +2465,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH265SequenceParameterSet &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH265SequenceParameterSet *>( this );
+      }
+
+      operator StdVideoH265SequenceParameterSet const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265SequenceParameterSet *>( this );
+      }
+
+      operator StdVideoH265SequenceParameterSet *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265SequenceParameterSet *>( this );
       }
 
       bool operator==( H265SequenceParameterSet const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2158,6 +2568,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoH265PpsFlags *>( this );
       }
 
+      operator StdVideoH265PpsFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265PpsFlags *>( this );
+      }
+
+      operator StdVideoH265PpsFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265PpsFlags *>( this );
+      }
+
       bool operator==( H265PpsFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( dependent_slice_segments_enabled_flag == rhs.dependent_slice_segments_enabled_flag ) &&
@@ -2237,6 +2657,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoH265PictureParameterSet &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoH265PictureParameterSet *>( this );
+      }
+
+      operator StdVideoH265PictureParameterSet const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoH265PictureParameterSet *>( this );
+      }
+
+      operator StdVideoH265PictureParameterSet *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoH265PictureParameterSet *>( this );
       }
 
       bool operator==( H265PictureParameterSet const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2323,6 +2753,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoDecodeH265PictureInfoFlags *>( this );
       }
 
+      operator StdVideoDecodeH265PictureInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeH265PictureInfoFlags *>( this );
+      }
+
+      operator StdVideoDecodeH265PictureInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeH265PictureInfoFlags *>( this );
+      }
+
       bool operator==( DecodeH265PictureInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( IrapPicFlag == rhs.IrapPicFlag ) && ( IdrPicFlag == rhs.IdrPicFlag ) && ( IsReference == rhs.IsReference ) &&
@@ -2353,6 +2793,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoDecodeH265PictureInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoDecodeH265PictureInfo *>( this );
+      }
+
+      operator StdVideoDecodeH265PictureInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeH265PictureInfo *>( this );
+      }
+
+      operator StdVideoDecodeH265PictureInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeH265PictureInfo *>( this );
       }
 
       bool operator==( DecodeH265PictureInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2398,6 +2848,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoDecodeH265ReferenceInfoFlags *>( this );
       }
 
+      operator StdVideoDecodeH265ReferenceInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeH265ReferenceInfoFlags *>( this );
+      }
+
+      operator StdVideoDecodeH265ReferenceInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeH265ReferenceInfoFlags *>( this );
+      }
+
       bool operator==( DecodeH265ReferenceInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( used_for_long_term_reference == rhs.used_for_long_term_reference ) && ( unused_for_reference == rhs.unused_for_reference );
@@ -2425,6 +2885,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoDecodeH265ReferenceInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoDecodeH265ReferenceInfo *>( this );
+      }
+
+      operator StdVideoDecodeH265ReferenceInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeH265ReferenceInfo *>( this );
+      }
+
+      operator StdVideoDecodeH265ReferenceInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeH265ReferenceInfo *>( this );
       }
 
       bool operator==( DecodeH265ReferenceInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2458,6 +2928,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeH265WeightTableFlags *>( this );
       }
 
+      operator StdVideoEncodeH265WeightTableFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH265WeightTableFlags *>( this );
+      }
+
+      operator StdVideoEncodeH265WeightTableFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH265WeightTableFlags *>( this );
+      }
+
       bool operator==( EncodeH265WeightTableFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( luma_weight_l0_flag == rhs.luma_weight_l0_flag ) && ( chroma_weight_l0_flag == rhs.chroma_weight_l0_flag ) &&
@@ -2488,6 +2968,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH265WeightTable &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH265WeightTable *>( this );
+      }
+
+      operator StdVideoEncodeH265WeightTable const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH265WeightTable *>( this );
+      }
+
+      operator StdVideoEncodeH265WeightTable *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH265WeightTable *>( this );
       }
 
       bool operator==( EncodeH265WeightTable const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2531,6 +3021,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH265SliceSegmentHeaderFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH265SliceSegmentHeaderFlags *>( this );
+      }
+
+      operator StdVideoEncodeH265SliceSegmentHeaderFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH265SliceSegmentHeaderFlags *>( this );
+      }
+
+      operator StdVideoEncodeH265SliceSegmentHeaderFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH265SliceSegmentHeaderFlags *>( this );
       }
 
       bool operator==( EncodeH265SliceSegmentHeaderFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2581,6 +3081,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeH265SliceSegmentHeader *>( this );
       }
 
+      operator StdVideoEncodeH265SliceSegmentHeader const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH265SliceSegmentHeader *>( this );
+      }
+
+      operator StdVideoEncodeH265SliceSegmentHeader *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH265SliceSegmentHeader *>( this );
+      }
+
       bool operator==( EncodeH265SliceSegmentHeader const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( flags == rhs.flags ) && ( slice_type == rhs.slice_type ) && ( slice_segment_address == rhs.slice_segment_address ) &&
@@ -2629,6 +3139,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeH265ReferenceListsInfoFlags *>( this );
       }
 
+      operator StdVideoEncodeH265ReferenceListsInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH265ReferenceListsInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeH265ReferenceListsInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH265ReferenceListsInfoFlags *>( this );
+      }
+
       bool operator==( EncodeH265ReferenceListsInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( ref_pic_list_modification_flag_l0 == rhs.ref_pic_list_modification_flag_l0 ) &&
@@ -2658,6 +3178,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH265ReferenceListsInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH265ReferenceListsInfo *>( this );
+      }
+
+      operator StdVideoEncodeH265ReferenceListsInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH265ReferenceListsInfo *>( this );
+      }
+
+      operator StdVideoEncodeH265ReferenceListsInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH265ReferenceListsInfo *>( this );
       }
 
       bool operator==( EncodeH265ReferenceListsInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2694,6 +3224,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH265PictureInfoFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH265PictureInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeH265PictureInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH265PictureInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeH265PictureInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH265PictureInfoFlags *>( this );
       }
 
       bool operator==( EncodeH265PictureInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2738,6 +3278,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeH265LongTermRefPics *>( this );
       }
 
+      operator StdVideoEncodeH265LongTermRefPics const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH265LongTermRefPics *>( this );
+      }
+
+      operator StdVideoEncodeH265LongTermRefPics *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH265LongTermRefPics *>( this );
+      }
+
       bool operator==( EncodeH265LongTermRefPics const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( num_long_term_sps == rhs.num_long_term_sps ) && ( num_long_term_pics == rhs.num_long_term_pics ) && ( lt_idx_sps == rhs.lt_idx_sps ) &&
@@ -2772,6 +3322,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH265PictureInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH265PictureInfo *>( this );
+      }
+
+      operator StdVideoEncodeH265PictureInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH265PictureInfo *>( this );
+      }
+
+      operator StdVideoEncodeH265PictureInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH265PictureInfo *>( this );
       }
 
       bool operator==( EncodeH265PictureInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2817,6 +3377,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeH265ReferenceInfoFlags *>( this );
       }
 
+      operator StdVideoEncodeH265ReferenceInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH265ReferenceInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeH265ReferenceInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH265ReferenceInfoFlags *>( this );
+      }
+
       bool operator==( EncodeH265ReferenceInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( used_for_long_term_reference == rhs.used_for_long_term_reference ) && ( unused_for_reference == rhs.unused_for_reference ) &&
@@ -2846,6 +3416,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeH265ReferenceInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeH265ReferenceInfo *>( this );
+      }
+
+      operator StdVideoEncodeH265ReferenceInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeH265ReferenceInfo *>( this );
+      }
+
+      operator StdVideoEncodeH265ReferenceInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeH265ReferenceInfo *>( this );
       }
 
       bool operator==( EncodeH265ReferenceInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2881,6 +3461,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoAV1ColorConfigFlags *>( this );
       }
 
+      operator StdVideoAV1ColorConfigFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1ColorConfigFlags *>( this );
+      }
+
+      operator StdVideoAV1ColorConfigFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1ColorConfigFlags *>( this );
+      }
+
       bool operator==( AV1ColorConfigFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( mono_chrome == rhs.mono_chrome ) && ( color_range == rhs.color_range ) && ( separate_uv_delta_q == rhs.separate_uv_delta_q ) &&
@@ -2912,6 +3502,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoAV1ColorConfig &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoAV1ColorConfig *>( this );
+      }
+
+      operator StdVideoAV1ColorConfig const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1ColorConfig *>( this );
+      }
+
+      operator StdVideoAV1ColorConfig *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1ColorConfig *>( this );
       }
 
       bool operator==( AV1ColorConfig const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -2956,6 +3556,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoAV1TimingInfoFlags *>( this );
       }
 
+      operator StdVideoAV1TimingInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1TimingInfoFlags *>( this );
+      }
+
+      operator StdVideoAV1TimingInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1TimingInfoFlags *>( this );
+      }
+
       bool operator==( AV1TimingInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( equal_picture_interval == rhs.equal_picture_interval ) && ( reserved == rhs.reserved );
@@ -2983,6 +3593,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoAV1TimingInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoAV1TimingInfo *>( this );
+      }
+
+      operator StdVideoAV1TimingInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1TimingInfo *>( this );
+      }
+
+      operator StdVideoAV1TimingInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1TimingInfo *>( this );
       }
 
       bool operator==( AV1TimingInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -3017,6 +3637,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoAV1LoopFilterFlags *>( this );
       }
 
+      operator StdVideoAV1LoopFilterFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1LoopFilterFlags *>( this );
+      }
+
+      operator StdVideoAV1LoopFilterFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1LoopFilterFlags *>( this );
+      }
+
       bool operator==( AV1LoopFilterFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( loop_filter_delta_enabled == rhs.loop_filter_delta_enabled ) && ( loop_filter_delta_update == rhs.loop_filter_delta_update ) &&
@@ -3046,6 +3676,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoAV1LoopFilter &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoAV1LoopFilter *>( this );
+      }
+
+      operator StdVideoAV1LoopFilter const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1LoopFilter *>( this );
+      }
+
+      operator StdVideoAV1LoopFilter *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1LoopFilter *>( this );
       }
 
       bool operator==( AV1LoopFilter const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -3084,6 +3724,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoAV1QuantizationFlags *>( this );
       }
 
+      operator StdVideoAV1QuantizationFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1QuantizationFlags *>( this );
+      }
+
+      operator StdVideoAV1QuantizationFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1QuantizationFlags *>( this );
+      }
+
       bool operator==( AV1QuantizationFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( using_qmatrix == rhs.using_qmatrix ) && ( diff_uv_delta == rhs.diff_uv_delta ) && ( reserved == rhs.reserved );
@@ -3112,6 +3762,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoAV1Quantization &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoAV1Quantization *>( this );
+      }
+
+      operator StdVideoAV1Quantization const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1Quantization *>( this );
+      }
+
+      operator StdVideoAV1Quantization *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1Quantization *>( this );
       }
 
       bool operator==( AV1Quantization const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -3153,6 +3813,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoAV1Segmentation *>( this );
       }
 
+      operator StdVideoAV1Segmentation const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1Segmentation *>( this );
+      }
+
+      operator StdVideoAV1Segmentation *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1Segmentation *>( this );
+      }
+
       bool operator==( AV1Segmentation const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( FeatureEnabled == rhs.FeatureEnabled ) && ( FeatureData == rhs.FeatureData );
@@ -3182,6 +3852,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoAV1TileInfoFlags *>( this );
       }
 
+      operator StdVideoAV1TileInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1TileInfoFlags *>( this );
+      }
+
+      operator StdVideoAV1TileInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1TileInfoFlags *>( this );
+      }
+
       bool operator==( AV1TileInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( uniform_tile_spacing_flag == rhs.uniform_tile_spacing_flag ) && ( reserved == rhs.reserved );
@@ -3209,6 +3889,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoAV1TileInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoAV1TileInfo *>( this );
+      }
+
+      operator StdVideoAV1TileInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1TileInfo *>( this );
+      }
+
+      operator StdVideoAV1TileInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1TileInfo *>( this );
       }
 
       bool operator==( AV1TileInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -3251,6 +3941,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoAV1CDEF *>( this );
       }
 
+      operator StdVideoAV1CDEF const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1CDEF *>( this );
+      }
+
+      operator StdVideoAV1CDEF *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1CDEF *>( this );
+      }
+
       bool operator==( AV1CDEF const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( cdef_damping_minus_3 == rhs.cdef_damping_minus_3 ) && ( cdef_bits == rhs.cdef_bits ) && ( cdef_y_pri_strength == rhs.cdef_y_pri_strength ) &&
@@ -3286,6 +3986,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoAV1LoopRestoration *>( this );
       }
 
+      operator StdVideoAV1LoopRestoration const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1LoopRestoration *>( this );
+      }
+
+      operator StdVideoAV1LoopRestoration *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1LoopRestoration *>( this );
+      }
+
       bool operator==( AV1LoopRestoration const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( FrameRestorationType == rhs.FrameRestorationType ) && ( LoopRestorationSize == rhs.LoopRestorationSize );
@@ -3315,6 +4025,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoAV1GlobalMotion *>( this );
       }
 
+      operator StdVideoAV1GlobalMotion const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1GlobalMotion *>( this );
+      }
+
+      operator StdVideoAV1GlobalMotion *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1GlobalMotion *>( this );
+      }
+
       bool operator==( AV1GlobalMotion const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( GmType == rhs.GmType ) && ( gm_params == rhs.gm_params );
@@ -3342,6 +4062,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoAV1FilmGrainFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoAV1FilmGrainFlags *>( this );
+      }
+
+      operator StdVideoAV1FilmGrainFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1FilmGrainFlags *>( this );
+      }
+
+      operator StdVideoAV1FilmGrainFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1FilmGrainFlags *>( this );
       }
 
       bool operator==( AV1FilmGrainFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -3375,6 +4105,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoAV1FilmGrain &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoAV1FilmGrain *>( this );
+      }
+
+      operator StdVideoAV1FilmGrain const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1FilmGrain *>( this );
+      }
+
+      operator StdVideoAV1FilmGrain *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1FilmGrain *>( this );
       }
 
       bool operator==( AV1FilmGrain const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -3437,6 +4177,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoAV1SequenceHeaderFlags *>( this );
       }
 
+      operator StdVideoAV1SequenceHeaderFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1SequenceHeaderFlags *>( this );
+      }
+
+      operator StdVideoAV1SequenceHeaderFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1SequenceHeaderFlags *>( this );
+      }
+
       bool operator==( AV1SequenceHeaderFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( still_picture == rhs.still_picture ) && ( reduced_still_picture_header == rhs.reduced_still_picture_header ) &&
@@ -3493,6 +4243,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoAV1SequenceHeader *>( this );
       }
 
+      operator StdVideoAV1SequenceHeader const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoAV1SequenceHeader *>( this );
+      }
+
+      operator StdVideoAV1SequenceHeader *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoAV1SequenceHeader *>( this );
+      }
+
       bool operator==( AV1SequenceHeader const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( flags == rhs.flags ) && ( seq_profile == rhs.seq_profile ) && ( frame_width_bits_minus_1 == rhs.frame_width_bits_minus_1 ) &&
@@ -3539,6 +4299,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoDecodeAV1PictureInfoFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoDecodeAV1PictureInfoFlags *>( this );
+      }
+
+      operator StdVideoDecodeAV1PictureInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeAV1PictureInfoFlags *>( this );
+      }
+
+      operator StdVideoDecodeAV1PictureInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeAV1PictureInfoFlags *>( this );
       }
 
       bool operator==( DecodeAV1PictureInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -3610,6 +4380,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoDecodeAV1PictureInfo *>( this );
       }
 
+      operator StdVideoDecodeAV1PictureInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeAV1PictureInfo *>( this );
+      }
+
+      operator StdVideoDecodeAV1PictureInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeAV1PictureInfo *>( this );
+      }
+
       bool operator==( DecodeAV1PictureInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( flags == rhs.flags ) && ( frame_type == rhs.frame_type ) && ( current_frame_id == rhs.current_frame_id ) && ( OrderHint == rhs.OrderHint ) &&
@@ -3669,6 +4449,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoDecodeAV1ReferenceInfoFlags *>( this );
       }
 
+      operator StdVideoDecodeAV1ReferenceInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeAV1ReferenceInfoFlags *>( this );
+      }
+
+      operator StdVideoDecodeAV1ReferenceInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeAV1ReferenceInfoFlags *>( this );
+      }
+
       bool operator==( DecodeAV1ReferenceInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( disable_frame_end_update_cdf == rhs.disable_frame_end_update_cdf ) && ( segmentation_enabled == rhs.segmentation_enabled ) &&
@@ -3698,6 +4488,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoDecodeAV1ReferenceInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoDecodeAV1ReferenceInfo *>( this );
+      }
+
+      operator StdVideoDecodeAV1ReferenceInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoDecodeAV1ReferenceInfo *>( this );
+      }
+
+      operator StdVideoDecodeAV1ReferenceInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoDecodeAV1ReferenceInfo *>( this );
       }
 
       bool operator==( DecodeAV1ReferenceInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -3735,6 +4535,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeAV1DecoderModelInfo *>( this );
       }
 
+      operator StdVideoEncodeAV1DecoderModelInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeAV1DecoderModelInfo *>( this );
+      }
+
+      operator StdVideoEncodeAV1DecoderModelInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeAV1DecoderModelInfo *>( this );
+      }
+
       bool operator==( EncodeAV1DecoderModelInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( buffer_delay_length_minus_1 == rhs.buffer_delay_length_minus_1 ) &&
@@ -3770,6 +4580,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeAV1ExtensionHeader *>( this );
       }
 
+      operator StdVideoEncodeAV1ExtensionHeader const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeAV1ExtensionHeader *>( this );
+      }
+
+      operator StdVideoEncodeAV1ExtensionHeader *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeAV1ExtensionHeader *>( this );
+      }
+
       bool operator==( EncodeAV1ExtensionHeader const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( temporal_id == rhs.temporal_id ) && ( spatial_id == rhs.spatial_id );
@@ -3797,6 +4617,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeAV1OperatingPointInfoFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeAV1OperatingPointInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeAV1OperatingPointInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeAV1OperatingPointInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeAV1OperatingPointInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeAV1OperatingPointInfoFlags *>( this );
       }
 
       bool operator==( EncodeAV1OperatingPointInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -3829,6 +4659,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeAV1OperatingPointInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeAV1OperatingPointInfo *>( this );
+      }
+
+      operator StdVideoEncodeAV1OperatingPointInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeAV1OperatingPointInfo *>( this );
+      }
+
+      operator StdVideoEncodeAV1OperatingPointInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeAV1OperatingPointInfo *>( this );
       }
 
       bool operator==( EncodeAV1OperatingPointInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -3865,6 +4705,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeAV1PictureInfoFlags &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeAV1PictureInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeAV1PictureInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeAV1PictureInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeAV1PictureInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeAV1PictureInfoFlags *>( this );
       }
 
       bool operator==( EncodeAV1PictureInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
@@ -3937,6 +4787,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeAV1PictureInfo *>( this );
       }
 
+      operator StdVideoEncodeAV1PictureInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeAV1PictureInfo *>( this );
+      }
+
+      operator StdVideoEncodeAV1PictureInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeAV1PictureInfo *>( this );
+      }
+
       bool operator==( EncodeAV1PictureInfo const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( flags == rhs.flags ) && ( frame_type == rhs.frame_type ) && ( frame_presentation_time == rhs.frame_presentation_time ) &&
@@ -4001,6 +4861,16 @@ namespace VULKAN_HPP_NAMESPACE
         return *reinterpret_cast<StdVideoEncodeAV1ReferenceInfoFlags *>( this );
       }
 
+      operator StdVideoEncodeAV1ReferenceInfoFlags const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeAV1ReferenceInfoFlags *>( this );
+      }
+
+      operator StdVideoEncodeAV1ReferenceInfoFlags *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeAV1ReferenceInfoFlags *>( this );
+      }
+
       bool operator==( EncodeAV1ReferenceInfoFlags const & rhs ) const VULKAN_HPP_NOEXCEPT
       {
         return ( disable_frame_end_update_cdf == rhs.disable_frame_end_update_cdf ) && ( segmentation_enabled == rhs.segmentation_enabled ) &&
@@ -4030,6 +4900,16 @@ namespace VULKAN_HPP_NAMESPACE
       operator StdVideoEncodeAV1ReferenceInfo &() VULKAN_HPP_NOEXCEPT
       {
         return *reinterpret_cast<StdVideoEncodeAV1ReferenceInfo *>( this );
+      }
+
+      operator StdVideoEncodeAV1ReferenceInfo const *() const VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<const StdVideoEncodeAV1ReferenceInfo *>( this );
+      }
+
+      operator StdVideoEncodeAV1ReferenceInfo *() VULKAN_HPP_NOEXCEPT
+      {
+        return reinterpret_cast<StdVideoEncodeAV1ReferenceInfo *>( this );
       }
 
       bool operator==( EncodeAV1ReferenceInfo const & rhs ) const VULKAN_HPP_NOEXCEPT

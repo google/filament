@@ -52,7 +52,9 @@ class BindGroup final : public BindGroupBase, public PlacementAllocated {
   private:
     ~BindGroup() override;
 
+    MaybeError InitializeImpl() override;
     void DestroyImpl() override;
+    void DeleteThis() override;
 
     // Dawn API
     void SetLabelImpl() override;

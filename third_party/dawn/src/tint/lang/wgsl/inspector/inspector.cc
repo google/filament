@@ -27,7 +27,6 @@
 
 #include "src/tint/lang/wgsl/inspector/inspector.h"
 
-#include <algorithm>
 #include <unordered_set>
 #include <utility>
 
@@ -54,6 +53,7 @@
 #include "src/tint/lang/wgsl/ast/call_expression.h"
 #include "src/tint/lang/wgsl/ast/id_attribute.h"
 #include "src/tint/lang/wgsl/ast/identifier.h"
+#include "src/tint/lang/wgsl/ast/identifier_expression.h"
 #include "src/tint/lang/wgsl/ast/input_attachment_index_attribute.h"
 #include "src/tint/lang/wgsl/ast/interpolate_attribute.h"
 #include "src/tint/lang/wgsl/ast/module.h"
@@ -74,17 +74,6 @@ using namespace tint::core::fluent_types;  // NOLINT
 
 namespace tint::inspector {
 namespace {
-
-void AppendResourceBindings(std::vector<ResourceBinding>* dest,
-                            const std::vector<ResourceBinding>& orig) {
-    TINT_ASSERT(dest);
-    if (!dest) {
-        return;
-    }
-
-    dest->reserve(dest->size() + orig.size());
-    dest->insert(dest->end(), orig.begin(), orig.end());
-}
 
 std::tuple<ComponentType, CompositionType> CalculateComponentAndComposition(
     const core::type::Type* type) {
@@ -125,10 +114,133 @@ std::tuple<ComponentType, CompositionType> CalculateComponentAndComposition(
     return {componentType, compositionType};
 }
 
-bool IsTextureBuiltinThatUsesNonComparisonSampler(tint::wgsl::BuiltinFn builtin_fn) {
-    return builtin_fn == wgsl::BuiltinFn::kTextureSample ||
-           builtin_fn == wgsl::BuiltinFn::kTextureSampleLevel ||
-           builtin_fn == wgsl::BuiltinFn::kTextureGather;
+ResourceBinding ConvertBufferToResourceBinding(const tint::sem::GlobalVariable* buffer) {
+    ResourceBinding result;
+    result.bind_group = buffer->Attributes().binding_point->group;
+    result.binding = buffer->Attributes().binding_point->binding;
+    result.variable_name = buffer->Declaration()->name->symbol.Name();
+
+    auto* unwrapped_type = buffer->Type()->UnwrapRef();
+    result.size = unwrapped_type->Size();
+    result.size_no_padding = result.size;
+    if (auto* str = unwrapped_type->As<sem::Struct>()) {
+        result.size_no_padding = str->SizeNoPadding();
+    }
+
+    if (buffer->AddressSpace() == core::AddressSpace::kStorage) {
+        if (buffer->Access() == core::Access::kReadWrite) {
+            result.resource_type = ResourceBinding::ResourceType::kStorageBuffer;
+        } else {
+            TINT_ASSERT(buffer->Access() == core::Access::kRead);
+            result.resource_type = ResourceBinding::ResourceType::kReadOnlyStorageBuffer;
+        }
+    } else {
+        TINT_ASSERT(buffer->AddressSpace() == core::AddressSpace::kUniform);
+        result.resource_type = ResourceBinding::ResourceType::kUniformBuffer;
+    }
+
+    return result;
+}
+
+ResourceBinding ConvertHandleToResourceBinding(const tint::sem::GlobalVariable* handle) {
+    ResourceBinding result;
+    result.bind_group = handle->Attributes().binding_point->group;
+    result.binding = handle->Attributes().binding_point->binding;
+    result.variable_name = handle->Declaration()->name->symbol.Name();
+
+    const core::type::Type* handle_type = handle->Type()->UnwrapRef();
+    Switch(
+        handle_type,
+
+        [&](const core::type::Sampler* sampler) {
+            if (sampler->Kind() == core::type::SamplerKind::kSampler) {
+                result.resource_type = ResourceBinding::ResourceType::kSampler;
+            } else {
+                TINT_ASSERT(sampler->Kind() == core::type::SamplerKind::kComparisonSampler);
+                result.resource_type = ResourceBinding::ResourceType::kComparisonSampler;
+            }
+        },
+
+        [&](const core::type::SampledTexture* tex) {
+            result.resource_type = ResourceBinding::ResourceType::kSampledTexture;
+            result.dim = TypeTextureDimensionToResourceBindingTextureDimension(tex->Dim());
+            result.sampled_kind = BaseTypeToSampledKind(tex->Type());
+        },
+        [&](const core::type::MultisampledTexture* tex) {
+            result.resource_type = ResourceBinding::ResourceType::kMultisampledTexture;
+            result.dim = TypeTextureDimensionToResourceBindingTextureDimension(tex->Dim());
+            result.sampled_kind = BaseTypeToSampledKind(tex->Type());
+        },
+        [&](const core::type::DepthTexture* tex) {
+            result.resource_type = ResourceBinding::ResourceType::kDepthTexture;
+            result.dim = TypeTextureDimensionToResourceBindingTextureDimension(tex->Dim());
+        },
+        [&](const core::type::DepthMultisampledTexture* tex) {
+            result.resource_type = ResourceBinding::ResourceType::kDepthMultisampledTexture;
+            result.dim = TypeTextureDimensionToResourceBindingTextureDimension(tex->Dim());
+        },
+        [&](const core::type::StorageTexture* tex) {
+            switch (tex->Access()) {
+                case core::Access::kWrite:
+                    result.resource_type = ResourceBinding::ResourceType::kWriteOnlyStorageTexture;
+                    break;
+                case core::Access::kReadWrite:
+                    result.resource_type = ResourceBinding::ResourceType::kReadWriteStorageTexture;
+                    break;
+                case core::Access::kRead:
+                    result.resource_type = ResourceBinding::ResourceType::kReadOnlyStorageTexture;
+                    break;
+                case core::Access::kUndefined:
+                    TINT_UNREACHABLE() << "unhandled storage texture access";
+            }
+            result.dim = TypeTextureDimensionToResourceBindingTextureDimension(tex->Dim());
+            result.sampled_kind = BaseTypeToSampledKind(tex->Type());
+            result.image_format = TypeTexelFormatToResourceBindingTexelFormat(tex->TexelFormat());
+        },
+        [&](const core::type::ExternalTexture*) {
+            result.resource_type = ResourceBinding::ResourceType::kExternalTexture;
+            result.dim = ResourceBinding::TextureDimension::k2d;
+        },
+
+        [&](const core::type::InputAttachment* attachment) {
+            result.resource_type = ResourceBinding::ResourceType::kInputAttachment;
+            result.input_attachment_index = handle->Attributes().input_attachment_index.value();
+            result.sampled_kind = BaseTypeToSampledKind(attachment->Type());
+            result.dim = TypeTextureDimensionToResourceBindingTextureDimension(attachment->Dim());
+        },
+
+        TINT_ICE_ON_NO_MATCH);
+
+    return result;
+}
+
+inspector::Override MkOverride(const sem::GlobalVariable* global, OverrideId id) {
+    Override override;
+    override.name = global->Declaration()->name->symbol.Name();
+    override.id = id;
+
+    auto* type = global->Type();
+    TINT_ASSERT(type->Is<core::type::Scalar>());
+    if (type->IsBoolScalarOrVector()) {
+        override.type = Override::Type::kBool;
+    } else if (type->IsFloatScalar()) {
+        if (type->Is<core::type::F16>()) {
+            override.type = Override::Type::kFloat16;
+        } else {
+            override.type = Override::Type::kFloat32;
+        }
+    } else if (type->IsSignedIntegerScalar()) {
+        override.type = Override::Type::kInt32;
+    } else if (type->IsUnsignedIntegerScalar()) {
+        override.type = Override::Type::kUint32;
+    } else {
+        TINT_UNREACHABLE();
+    }
+
+    override.is_initialized = global->Declaration()->initializer;
+    override.is_id_specified =
+        ast::HasAttribute<ast::IdAttribute>(global->Declaration()->attributes);
+    return override;
 }
 
 }  // namespace
@@ -157,6 +269,9 @@ EntryPoint Inspector::GetEntryPoint(const tint::ast::Function* func) {
                 entry_point.workgroup_size = {wgsize[0].value(), wgsize[1].value(),
                                               wgsize[2].value()};
             }
+
+            entry_point.uses_subgroup_matrix = UsesSubgroupMatrix(sem);
+
             break;
         }
         case ast::PipelineStage::kFragment: {
@@ -211,74 +326,17 @@ EntryPoint Inspector::GetEntryPoint(const tint::ast::Function* func) {
     }
 
     for (auto* var : sem->TransitivelyReferencedGlobals()) {
-        auto* decl = var->Declaration();
-
-        auto name = decl->name->symbol.Name();
-
         auto* global = var->As<sem::GlobalVariable>();
         if (auto override_id = global->Attributes().override_id) {
-            Override override;
-            override.name = name;
-            override.id = override_id.value();
-            auto* type = var->Type();
-            TINT_ASSERT(type->Is<core::type::Scalar>());
-            if (type->IsBoolScalarOrVector()) {
-                override.type = Override::Type::kBool;
-            } else if (type->IsFloatScalar()) {
-                if (type->Is<core::type::F16>()) {
-                    override.type = Override::Type::kFloat16;
-                } else {
-                    override.type = Override::Type::kFloat32;
-                }
-            } else if (type->IsSignedIntegerScalar()) {
-                override.type = Override::Type::kInt32;
-            } else if (type->IsUnsignedIntegerScalar()) {
-                override.type = Override::Type::kUint32;
-            } else {
-                TINT_UNREACHABLE();
-            }
-
-            override.is_initialized = global->Declaration()->initializer;
-            override.is_id_specified =
-                ast::HasAttribute<ast::IdAttribute>(global->Declaration()->attributes);
-
-            entry_point.overrides.push_back(override);
+            entry_point.overrides.push_back(MkOverride(global, override_id.value()));
         }
     }
 
-    {
-        auto filter = [](const tint::sem::Call* call,
-                         tint::wgsl::BuiltinFn builtin_fn) -> std::optional<TextureUsageType> {
-            if (builtin_fn == wgsl::BuiltinFn::kTextureLoad) {
-                if (call->Arguments()[0]
-                        ->Type()
-                        ->IsAnyOf<core::type::DepthTexture,
-                                  core::type::DepthMultisampledTexture>()) {
-                    return TextureUsageType::kTextureLoad;
-                }
-            }
-            return {};
-        };
-        entry_point.has_texture_load_with_depth_texture =
-            !GetTextureUsagesForEntryPoint(*func, filter).empty();
-    }
-
-    {
-        auto filter = [](const tint::sem::Call* call,
-                         tint::wgsl::BuiltinFn builtin_fn) -> std::optional<TextureUsageType> {
-            if (IsTextureBuiltinThatUsesNonComparisonSampler(builtin_fn)) {
-                if (call->Arguments()[0]
-                        ->Type()
-                        ->IsAnyOf<core::type::DepthTexture,
-                                  core::type::DepthMultisampledTexture>()) {
-                    return TextureUsageType::kDepthTextureWithNonComparisonSampler;
-                }
-            }
-            return {};
-        };
-        entry_point.has_depth_texture_with_non_comparison_sampler =
-            !GetTextureUsagesForEntryPoint(*func, filter).empty();
-    }
+    const auto& texture_metadata = ComputeTextureMetadata(entry_point.name);
+    entry_point.has_texture_load_with_depth_texture =
+        texture_metadata.has_texture_load_with_depth_texture;
+    entry_point.has_depth_texture_with_non_comparison_sampler =
+        texture_metadata.has_depth_texture_with_non_comparison_sampler;
 
     return entry_point;
 }
@@ -313,7 +371,7 @@ std::map<OverrideId, Scalar> Inspector::GetOverrideDefaultValues() {
             continue;
         }
 
-        // If there are conflicting defintions for an override id, that is invalid
+        // If there are conflicting definitions for an override id, that is invalid
         // WGSL, so the resolver should catch it. Thus here the inspector just
         // assumes all definitions of the override id are the same, so only needs
         // to find the first reference to override id.
@@ -364,377 +422,273 @@ std::vector<ResourceBinding> Inspector::GetResourceBindings(const std::string& e
     }
 
     std::vector<ResourceBinding> result;
-    for (auto fn : {
-             &Inspector::GetUniformBufferResourceBindings,
-             &Inspector::GetStorageBufferResourceBindings,
-             &Inspector::GetReadOnlyStorageBufferResourceBindings,
-             &Inspector::GetSamplerResourceBindings,
-             &Inspector::GetComparisonSamplerResourceBindings,
-             &Inspector::GetSampledTextureResourceBindings,
-             &Inspector::GetMultisampledTextureResourceBindings,
-             &Inspector::GetStorageTextureResourceBindings,
-             &Inspector::GetDepthTextureResourceBindings,
-             &Inspector::GetDepthMultisampledTextureResourceBindings,
-             &Inspector::GetExternalTextureResourceBindings,
-             &Inspector::GetInputAttachmentResourceBindings,
-         }) {
-        AppendResourceBindings(&result, (this->*fn)(entry_point));
-    }
-    return result;
-}
-
-std::vector<ResourceBinding> Inspector::GetUniformBufferResourceBindings(
-    const std::string& entry_point) {
-    auto* func = FindEntryPointByName(entry_point);
-    if (!func) {
-        return {};
-    }
-
-    std::vector<ResourceBinding> result;
-
     auto* func_sem = program_.Sem().Get(func);
-    for (auto& ruv : func_sem->TransitivelyReferencedUniformVariables()) {
-        auto* var = ruv.first;
-        auto binding_info = ruv.second;
+    for (auto& global : func_sem->TransitivelyReferencedGlobals()) {
+        switch (global->AddressSpace()) {
+            // Resources cannot be in these address spaces.
+            case core::AddressSpace::kPrivate:
+            case core::AddressSpace::kFunction:
+            case core::AddressSpace::kWorkgroup:
+            case core::AddressSpace::kPushConstant:
+            case core::AddressSpace::kPixelLocal:
+            case core::AddressSpace::kIn:
+            case core::AddressSpace::kOut:
+            case core::AddressSpace::kUndefined:
+                continue;
 
-        auto* unwrapped_type = var->Type()->UnwrapRef();
-
-        ResourceBinding entry;
-        entry.resource_type = ResourceBinding::ResourceType::kUniformBuffer;
-        entry.bind_group = binding_info.group;
-        entry.binding = binding_info.binding;
-        entry.size = unwrapped_type->Size();
-        entry.size_no_padding = entry.size;
-        if (auto* str = unwrapped_type->As<sem::Struct>()) {
-            entry.size_no_padding = str->SizeNoPadding();
-        } else {
-            entry.size_no_padding = entry.size;
+            case core::AddressSpace::kUniform:
+            case core::AddressSpace::kStorage:
+                result.push_back(ConvertBufferToResourceBinding(global));
+                break;
+            case core::AddressSpace::kHandle:
+                result.push_back(ConvertHandleToResourceBinding(global));
+                break;
         }
-        entry.variable_name = var->Declaration()->name->symbol.Name();
-
-        result.push_back(entry);
     }
 
     return result;
 }
 
-std::vector<ResourceBinding> Inspector::GetStorageBufferResourceBindings(
-    const std::string& entry_point) {
-    return GetStorageBufferResourceBindingsImpl(entry_point, false);
-}
-
-std::vector<ResourceBinding> Inspector::GetReadOnlyStorageBufferResourceBindings(
-    const std::string& entry_point) {
-    return GetStorageBufferResourceBindingsImpl(entry_point, true);
-}
-
-std::vector<ResourceBinding> Inspector::GetSamplerResourceBindings(const std::string& entry_point) {
+std::vector<SamplerTexturePair> Inspector::GetSamplerTextureUses(const std::string& entry_point) {
     auto* func = FindEntryPointByName(entry_point);
     if (!func) {
         return {};
     }
 
-    std::vector<ResourceBinding> result;
-
-    auto* func_sem = program_.Sem().Get(func);
-    for (auto& rs : func_sem->TransitivelyReferencedSamplerVariables()) {
-        auto binding_info = rs.second;
-
-        ResourceBinding entry;
-        entry.resource_type = ResourceBinding::ResourceType::kSampler;
-        entry.bind_group = binding_info.group;
-        entry.binding = binding_info.binding;
-        entry.variable_name = rs.first->Declaration()->name->symbol.Name();
-
-        result.push_back(entry);
-    }
+    const auto& metadata = ComputeTextureMetadata(entry_point);
+    std::vector<SamplerTexturePair> result = {metadata.sampling_pairs.begin(),
+                                              metadata.sampling_pairs.end()};
 
     return result;
 }
 
-std::vector<ResourceBinding> Inspector::GetComparisonSamplerResourceBindings(
-    const std::string& entry_point) {
-    auto* func = FindEntryPointByName(entry_point);
-    if (!func) {
-        return {};
-    }
-
-    std::vector<ResourceBinding> result;
-
-    auto* func_sem = program_.Sem().Get(func);
-    for (auto& rcs : func_sem->TransitivelyReferencedComparisonSamplerVariables()) {
-        auto binding_info = rcs.second;
-
-        ResourceBinding entry;
-        entry.resource_type = ResourceBinding::ResourceType::kComparisonSampler;
-        entry.bind_group = binding_info.group;
-        entry.binding = binding_info.binding;
-        entry.variable_name = rcs.first->Declaration()->name->symbol.Name();
-
-        result.push_back(entry);
-    }
-
-    return result;
-}
-
-std::vector<ResourceBinding> Inspector::GetSampledTextureResourceBindings(
-    const std::string& entry_point) {
-    return GetSampledTextureResourceBindingsImpl(entry_point, false);
-}
-
-std::vector<ResourceBinding> Inspector::GetMultisampledTextureResourceBindings(
-    const std::string& entry_point) {
-    return GetSampledTextureResourceBindingsImpl(entry_point, true);
-}
-
-std::vector<ResourceBinding> Inspector::GetStorageTextureResourceBindings(
-    const std::string& entry_point) {
-    return GetStorageTextureResourceBindingsImpl(entry_point);
-}
-
-std::vector<ResourceBinding> Inspector::GetTextureResourceBindings(
+std::vector<SamplerTexturePair> Inspector::GetSamplerAndNonSamplerTextureUses(
     const std::string& entry_point,
-    const tint::TypeInfo* texture_type,
-    ResourceBinding::ResourceType resource_type) {
+    const BindingPoint& non_sampler_placeholder) {
     auto* func = FindEntryPointByName(entry_point);
     if (!func) {
         return {};
     }
 
-    std::vector<ResourceBinding> result;
-    auto* func_sem = program_.Sem().Get(func);
-    for (auto& ref : func_sem->TransitivelyReferencedVariablesOfType(texture_type)) {
-        auto* var = ref.first;
-        auto binding_info = ref.second;
+    // This function adds texture usages with a fake sampler binding point, only for builtins that
+    // don't use a sampler. Others are returned as usual.
+    std::vector<SamplerTexturePair> result = GetSamplerTextureUses(entry_point);
 
-        ResourceBinding entry;
-        entry.resource_type = resource_type;
-        entry.bind_group = binding_info.group;
-        entry.binding = binding_info.binding;
-        entry.variable_name = var->Declaration()->name->symbol.Name();
-
-        auto* tex = var->Type()->UnwrapRef()->As<core::type::Texture>();
-        entry.dim = TypeTextureDimensionToResourceBindingTextureDimension(tex->Dim());
-
-        result.push_back(entry);
-    }
-
-    return result;
-}
-
-std::vector<ResourceBinding> Inspector::GetDepthTextureResourceBindings(
-    const std::string& entry_point) {
-    return GetTextureResourceBindings(entry_point, &tint::TypeInfo::Of<core::type::DepthTexture>(),
-                                      ResourceBinding::ResourceType::kDepthTexture);
-}
-
-std::vector<ResourceBinding> Inspector::GetDepthMultisampledTextureResourceBindings(
-    const std::string& entry_point) {
-    return GetTextureResourceBindings(entry_point,
-                                      &tint::TypeInfo::Of<core::type::DepthMultisampledTexture>(),
-                                      ResourceBinding::ResourceType::kDepthMultisampledTexture);
-}
-
-std::vector<ResourceBinding> Inspector::GetExternalTextureResourceBindings(
-    const std::string& entry_point) {
-    return GetTextureResourceBindings(entry_point,
-                                      &tint::TypeInfo::Of<core::type::ExternalTexture>(),
-                                      ResourceBinding::ResourceType::kExternalTexture);
-}
-
-std::vector<ResourceBinding> Inspector::GetInputAttachmentResourceBindings(
-    const std::string& entry_point) {
-    auto* func = FindEntryPointByName(entry_point);
-    if (!func) {
-        return {};
-    }
-
-    std::vector<ResourceBinding> result;
-    auto* func_sem = program_.Sem().Get(func);
-    for (auto& ref : func_sem->TransitivelyReferencedVariablesOfType(
-             &tint::TypeInfo::Of<core::type::InputAttachment>())) {
-        auto* var = ref.first;
-        auto binding_info = ref.second;
-
-        ResourceBinding entry;
-        entry.resource_type = ResourceBinding::ResourceType::kInputAttachment;
-        entry.bind_group = binding_info.group;
-        entry.binding = binding_info.binding;
-
-        auto* sem_var = var->As<sem::GlobalVariable>();
-        TINT_ASSERT(sem_var);
-        TINT_ASSERT(sem_var->Attributes().input_attachment_index);
-        entry.input_attachmnt_index = sem_var->Attributes().input_attachment_index.value();
-
-        auto* input_attachment_type = var->Type()->UnwrapRef()->As<core::type::InputAttachment>();
-        auto* base_type = input_attachment_type->Type();
-        entry.sampled_kind = BaseTypeToSampledKind(base_type);
-
-        entry.variable_name = var->Declaration()->name->symbol.Name();
-
-        entry.dim =
-            TypeTextureDimensionToResourceBindingTextureDimension(input_attachment_type->Dim());
-
-        result.push_back(entry);
-    }
-
-    return result;
-}
-
-VectorRef<SamplerTexturePair> Inspector::GetSamplerTextureUses(const std::string& entry_point) {
-    auto* func = FindEntryPointByName(entry_point);
-    if (!func) {
-        return {};
-    }
-
-    GenerateSamplerTargets();
-
-    auto it = sampler_targets_->find(entry_point);
-    if (it == sampler_targets_->end()) {
-        return {};
-    }
-    return it->second;
-}
-
-void Inspector::GenerateSamplerTargets() {
-    // Do not re-generate, since |program_| should not change during the lifetime
-    // of the inspector.
-    if (sampler_targets_ != nullptr) {
-        return;
-    }
-
-    sampler_targets_ =
-        std::make_unique<std::unordered_map<std::string, UniqueVector<SamplerTexturePair, 4>>>();
-
-    auto& sem = program_.Sem();
-
-    for (auto* node : program_.ASTNodes().Objects()) {
-        auto* c = node->As<ast::CallExpression>();
-        if (!c) {
-            continue;
-        }
-
-        auto* call = sem.Get(c)->UnwrapMaterialize()->As<sem::Call>();
-        if (!call) {
-            continue;
-        }
-
-        auto* i = call->Target()->As<sem::BuiltinFn>();
-        if (!i) {
-            continue;
-        }
-
-        const auto& signature = i->Signature();
-        int sampler_index = signature.IndexOf(core::ParameterUsage::kSampler);
-        if (sampler_index == -1) {
-            continue;
-        }
-
-        int texture_index = signature.IndexOf(core::ParameterUsage::kTexture);
-        if (texture_index == -1) {
-            continue;
-        }
-
-        auto* t = c->args[static_cast<size_t>(texture_index)];
-        auto* s = c->args[static_cast<size_t>(sampler_index)];
-
-        GetOriginatingResources(
-            std::array<const ast::Expression*, 2>{t, s}, c,
-            [&](std::array<const sem::GlobalVariable*, 2> globals, const sem::Function* fn) {
-                Vector<const sem::Function*, 4> entry_points;
-                if (fn->Declaration()->IsEntryPoint()) {
-                    entry_points = {fn};
-                } else {
-                    entry_points = fn->AncestorEntryPoints();
-                }
-
-                auto texture_binding_point = *globals[0]->Attributes().binding_point;
-                auto sampler_binding_point = *globals[1]->Attributes().binding_point;
-
-                for (auto* entry_point : entry_points) {
-                    const auto& ep_name = entry_point->Declaration()->name->symbol.Name();
-                    (*sampler_targets_)[ep_name].Add(
-                        {sampler_binding_point, texture_binding_point});
-                }
-            });
-    }
-}
-
-template <size_t N, typename F>
-void Inspector::GetOriginatingResources(std::array<const ast::Expression*, N> exprs,
-                                        const ast::CallExpression* callsite,
-                                        F&& callback) {
-    if (DAWN_UNLIKELY(!program_.IsValid())) {
-        TINT_ICE() << "attempting to get originating resources in invalid program";
-        return;
-    }
-
-    auto& sem = program_.Sem();
-
-    std::array<const sem::GlobalVariable*, N> globals{};
-    std::array<const sem::Parameter*, N> parameters{};
-    UniqueVector<const ast::CallExpression*, 8> callsites;
-
-    for (size_t i = 0; i < N; i++) {
-        const sem::Variable* root_ident = sem.GetVal(exprs[i])->RootIdentifier();
-        if (auto* global = root_ident->As<sem::GlobalVariable>()) {
-            globals[i] = global;
-        } else if (auto* param = root_ident->As<sem::Parameter>()) {
-            auto* func = tint::As<sem::Function>(param->Owner());
-            if (func->CallSites().IsEmpty()) {
-                // One or more of the expressions is a parameter, but this function
-                // is not called. Ignore.
-                return;
-            }
-            for (auto* call : func->CallSites()) {
-                callsites.Add(call->Declaration());
-            }
-            parameters[i] = param;
-        } else {
-            TINT_ICE() << "cannot resolve originating resource with expression type "
-                       << exprs[i]->TypeInfo().name;
-            return;
-        }
-    }
-
-    if (!callsites.IsEmpty()) {
-        for (auto* call_expr : callsites) {
-            // Make a copy of the expressions for this callsite
-            std::array<const ast::Expression*, N> call_exprs = exprs;
-            // Patch all the parameter expressions with their argument
-            for (size_t i = 0; i < N; i++) {
-                if (auto* param = parameters[i]) {
-                    call_exprs[i] = call_expr->args[param->Index()];
-                }
-            }
-            // Now call GetOriginatingResources() with from the callsite
-            GetOriginatingResources(call_exprs, call_expr, callback);
-        }
-    } else {
-        // All the expressions resolved to globals
-        callback(globals, sem.Get(callsite)->Stmt()->Function());
-    }
-}
-
-std::vector<SamplerTexturePair> Inspector::GetSamplerTextureUses(const std::string& entry_point,
-                                                                 const BindingPoint& placeholder) {
-    auto* func = FindEntryPointByName(entry_point);
-    if (!func) {
-        return {};
-    }
-    auto* func_sem = program_.Sem().Get(func);
-
-    std::vector<SamplerTexturePair> new_pairs;
-    for (auto pair : func_sem->TextureSamplerPairs()) {
-        auto* texture = pair.first->As<sem::GlobalVariable>();
-        auto* sampler = pair.second ? pair.second->As<sem::GlobalVariable>() : nullptr;
+    const auto& metadata = ComputeTextureMetadata(entry_point);
+    for (const auto& texture : metadata.textures_used_without_samplers) {
         SamplerTexturePair new_pair;
-        new_pair.sampler_binding_point =
-            sampler ? *sampler->Attributes().binding_point : placeholder;
-        new_pair.texture_binding_point = *texture->Attributes().binding_point;
-        new_pairs.push_back(new_pair);
+        new_pair.sampler_binding_point = non_sampler_placeholder;
+        new_pair.texture_binding_point = texture;
+        result.push_back(new_pair);
     }
-    return new_pairs;
+
+    return result;
+}
+
+std::vector<Inspector::LevelSampleInfo> Inspector::GetTextureQueries(
+    const std::string& entry_point) {
+    auto* func = FindEntryPointByName(entry_point);
+    if (!func) {
+        return {};
+    }
+
+    const auto& metadata = ComputeTextureMetadata(entry_point);
+
+    std::vector<LevelSampleInfo> result;
+    for (const auto& texture : metadata.textures_with_num_levels) {
+        result.push_back({TextureQueryType::kTextureNumLevels, texture.group, texture.binding});
+    }
+    for (const auto& texture : metadata.textures_with_num_samples) {
+        result.push_back({TextureQueryType::kTextureNumSamples, texture.group, texture.binding});
+    }
+
+    return result;
+}
+
+const Inspector::EntryPointTextureMetadata& Inspector::ComputeTextureMetadata(
+    const std::string& entry_point) {
+    auto [entry, inserted] = texture_metadata_.emplace(entry_point, EntryPointTextureMetadata{});
+    auto& metadata = entry->second;
+    if (!inserted) {
+        return metadata;
+    }
+
+    Symbol entry_point_symbol = program_.Symbols().Get(entry_point);
+    auto& sem = program_.Sem();
+
+    using GlobalSet = UniqueVector<const sem::GlobalVariable*, 4>;
+
+    // Stores for each function parameter which globals are statically determined to be used as an
+    // argument to the function call.
+    Hashmap<const sem::Function*, Hashmap<const sem::Parameter*, GlobalSet, 2>, 8>
+        globals_for_handle_parameters;
+    auto AddGlobalsAsParameter = [&](const sem::Function* fn, const sem::Parameter* param,
+                                     const GlobalSet* vars) {
+        auto& globals = globals_for_handle_parameters.GetOrAddZero(fn).GetOrAddZero(param);
+        for (const auto* var : *vars) {
+            globals.Add(var);
+        }
+    };
+
+    // Returns the set of globals for a handle argument. A scratch set is passed in to be used when
+    // the argument directly references a global so that a reference on the stack can be passed.
+    // TODO(343500108): Use std::span when we have C++20
+    auto GetGlobalsForArgument = [&](const sem::Function* fn, const sem::ValueExpression* argument,
+                                     GlobalSet* scratch_global) -> const GlobalSet* {
+        TINT_ASSERT(scratch_global->IsEmpty());
+
+        // Handle parameter can only be identifiers.
+        auto* identifier = argument->RootIdentifier();
+
+        return tint::Switch(
+            identifier,
+            [&](const sem::GlobalVariable* global) {
+                scratch_global->Add(global);
+                return scratch_global;
+            },
+            [&](const sem::Parameter* parameter) {
+                return &*(globals_for_handle_parameters.Get(fn)->Get(parameter));
+            },
+            TINT_ICE_ON_NO_MATCH);
+    };
+
+    // The actual logic to compute the relevant metadata when a builtin call is found. It gets the
+    // set of statically determined globals for the texture and sampler arguments.
+    auto RecordBuiltinCallMetadata = [&](const sem::Call* call, const sem::BuiltinFn* builtin,
+                                         const GlobalSet& textures, const GlobalSet& samplers) {
+        // All builtins with samplers also take a texture.
+        TINT_ASSERT(!textures.IsEmpty());
+
+        // Compute the statically used texture+sampler pairs.
+        for (const auto* sampler : samplers) {
+            auto sampler_binding_point = sampler->Attributes().binding_point.value();
+
+            for (const auto* texture : textures) {
+                auto texture_binding_point = texture->Attributes().binding_point.value();
+                metadata.sampling_pairs.insert({sampler_binding_point, texture_binding_point});
+            }
+        }
+
+        // Also gather uses of non-storage textures that are used without a sampler
+        const auto* texture_type =
+            call->Arguments()[static_cast<size_t>(
+                                  builtin->Signature().IndexOf(core::ParameterUsage::kTexture))]
+                ->Type();
+        if (samplers.IsEmpty() && !texture_type->Is<core::type::StorageTexture>()) {
+            for (const auto* texture : textures) {
+                auto texture_binding_point = texture->Attributes().binding_point.value();
+                metadata.textures_used_without_samplers.insert(texture_binding_point);
+            }
+        }
+
+        bool uses_num_levels = false;
+        switch (builtin->Fn()) {
+            case wgsl::BuiltinFn::kTextureNumLevels:
+                uses_num_levels = true;
+                break;
+
+            case wgsl::BuiltinFn::kTextureDimensions:
+                // When textureDimension takes more than one argument, one of them is a mip level
+                // that will get clamped using textureNumLevels.
+                uses_num_levels = call->Arguments().Length() > 1;
+                break;
+
+            case wgsl::BuiltinFn::kTextureLoad:
+                // textureLoad uses textureNumLevels to clamp the level, unless the texture type
+                // doesn't support mipmapping.
+                uses_num_levels = !texture_type->IsAnyOf<core::type::MultisampledTexture,
+                                                         core::type::DepthMultisampledTexture>();
+                metadata.has_texture_load_with_depth_texture |=
+                    texture_type
+                        ->IsAnyOf<core::type::DepthTexture, core::type::DepthMultisampledTexture>();
+                break;
+
+            case wgsl::BuiltinFn::kTextureSample:
+            case wgsl::BuiltinFn::kTextureSampleLevel:
+            case wgsl::BuiltinFn::kTextureGather:
+                metadata.has_depth_texture_with_non_comparison_sampler |=
+                    texture_type
+                        ->IsAnyOf<core::type::DepthTexture, core::type::DepthMultisampledTexture>();
+                break;
+
+            case wgsl::BuiltinFn::kTextureNumSamples:
+                for (const auto* texture : textures) {
+                    auto texture_binding_point = texture->Attributes().binding_point.value();
+                    metadata.textures_with_num_samples.insert(texture_binding_point);
+                }
+                break;
+
+            default:
+                break;
+        }
+
+        if (uses_num_levels) {
+            for (const auto* texture : textures) {
+                auto texture_binding_point = texture->Attributes().binding_point.value();
+                metadata.textures_with_num_levels.insert(texture_binding_point);
+            }
+        }
+    };
+
+    // Iterate the call graph in reverse topological order such that function callers come before
+    // their callee.
+    auto declarations = sem.Module()->DependencyOrderedDeclarations();
+    for (auto rit = declarations.rbegin(); rit != declarations.rend(); rit++) {
+        auto* fn = sem.Get<sem::Function>(*rit);
+        if (!fn || !fn->HasCallGraphEntryPoint(entry_point_symbol)) {
+            continue;
+        }
+
+        for (auto* call : fn->DirectCalls()) {
+            tint::Switch(
+                call->Target(),
+
+                // Propagate the used globals for handle parameters of function calls.
+                [&](const sem::Function* callee) {
+                    for (size_t i = 0; i < call->Arguments().Length(); i++) {
+                        auto parameter = sem.Get(callee->Declaration()->params[i]);
+                        if (!parameter->Type()->IsHandle()) {
+                            continue;
+                        }
+
+                        // Handle parameter can only be identifiers.
+                        GlobalSet scratch_global;
+                        const auto* globals =
+                            GetGlobalsForArgument(fn, call->Arguments()[i], &scratch_global);
+                        AddGlobalsAsParameter(callee, parameter, globals);
+                    }
+                },
+
+                [&](const sem::BuiltinFn* builtin) {
+                    // Find sampler / texture parameters and skip over builtin calls without any.
+                    const auto& signature = builtin->Signature();
+                    int texture_index = signature.IndexOf(core::ParameterUsage::kTexture);
+                    int sampler_index = signature.IndexOf(core::ParameterUsage::kSampler);
+
+                    if (texture_index == -1) {
+                        return;
+                    }
+
+                    // Compute the set of globals used for the texture/sampler parameter.
+                    // It will either point to a GlobalSet on the stack when a global is used
+                    // directly, or to the contents of globals_for_handle_parameters.
+                    GlobalSet scratch_sampler_global;
+                    const GlobalSet* sampler_globals = &scratch_sampler_global;
+                    if (sampler_index != -1) {
+                        sampler_globals = GetGlobalsForArgument(
+                            fn, call->Arguments()[size_t(sampler_index)], &scratch_sampler_global);
+                    }
+
+                    GlobalSet scratch_texture_global;
+                    const GlobalSet* texture_globals = GetGlobalsForArgument(
+                        fn, call->Arguments()[size_t(texture_index)], &scratch_texture_global);
+
+                    RecordBuiltinCallMetadata(call, builtin, *texture_globals, *sampler_globals);
+                });
+        }
+    }
+
+    return metadata;
 }
 
 std::vector<std::string> Inspector::GetUsedExtensionNames() {
@@ -864,134 +818,6 @@ std::optional<uint32_t> Inspector::GetClipDistancesBuiltinSize(const core::type:
     return std::nullopt;
 }
 
-std::vector<ResourceBinding> Inspector::GetStorageBufferResourceBindingsImpl(
-    const std::string& entry_point,
-    bool read_only) {
-    auto* func = FindEntryPointByName(entry_point);
-    if (!func) {
-        return {};
-    }
-
-    auto* func_sem = program_.Sem().Get(func);
-    std::vector<ResourceBinding> result;
-    for (auto& rsv : func_sem->TransitivelyReferencedStorageBufferVariables()) {
-        auto* var = rsv.first;
-        auto binding_info = rsv.second;
-
-        if (read_only != (var->Access() == core::Access::kRead)) {
-            continue;
-        }
-
-        auto* unwrapped_type = var->Type()->UnwrapRef();
-
-        ResourceBinding entry;
-        entry.resource_type = read_only ? ResourceBinding::ResourceType::kReadOnlyStorageBuffer
-                                        : ResourceBinding::ResourceType::kStorageBuffer;
-        entry.bind_group = binding_info.group;
-        entry.binding = binding_info.binding;
-        entry.size = unwrapped_type->Size();
-        if (auto* str = unwrapped_type->As<sem::Struct>()) {
-            entry.size_no_padding = str->SizeNoPadding();
-        } else {
-            entry.size_no_padding = entry.size;
-        }
-        entry.variable_name = var->Declaration()->name->symbol.Name();
-
-        result.push_back(entry);
-    }
-
-    return result;
-}
-
-std::vector<ResourceBinding> Inspector::GetSampledTextureResourceBindingsImpl(
-    const std::string& entry_point,
-    bool multisampled_only) {
-    auto* func = FindEntryPointByName(entry_point);
-    if (!func) {
-        return {};
-    }
-
-    std::vector<ResourceBinding> result;
-    auto* func_sem = program_.Sem().Get(func);
-    auto referenced_variables = multisampled_only
-                                    ? func_sem->TransitivelyReferencedMultisampledTextureVariables()
-                                    : func_sem->TransitivelyReferencedSampledTextureVariables();
-    for (auto& ref : referenced_variables) {
-        auto* var = ref.first;
-        auto binding_info = ref.second;
-
-        ResourceBinding entry;
-        entry.resource_type = multisampled_only
-                                  ? ResourceBinding::ResourceType::kMultisampledTexture
-                                  : ResourceBinding::ResourceType::kSampledTexture;
-        entry.bind_group = binding_info.group;
-        entry.binding = binding_info.binding;
-        entry.variable_name = var->Declaration()->name->symbol.Name();
-
-        auto* texture_type = var->Type()->UnwrapRef()->As<core::type::Texture>();
-        entry.dim = TypeTextureDimensionToResourceBindingTextureDimension(texture_type->Dim());
-
-        const core::type::Type* base_type = nullptr;
-        if (multisampled_only) {
-            base_type = texture_type->As<core::type::MultisampledTexture>()->Type();
-        } else {
-            base_type = texture_type->As<core::type::SampledTexture>()->Type();
-        }
-        entry.sampled_kind = BaseTypeToSampledKind(base_type);
-
-        result.push_back(entry);
-    }
-
-    return result;
-}
-
-std::vector<ResourceBinding> Inspector::GetStorageTextureResourceBindingsImpl(
-    const std::string& entry_point) {
-    auto* func = FindEntryPointByName(entry_point);
-    if (!func) {
-        return {};
-    }
-
-    auto* func_sem = program_.Sem().Get(func);
-    std::vector<ResourceBinding> result;
-    for (auto& ref :
-         func_sem->TransitivelyReferencedVariablesOfType<core::type::StorageTexture>()) {
-        auto* var = ref.first;
-        auto binding_info = ref.second;
-
-        auto* texture_type = var->Type()->UnwrapRef()->As<core::type::StorageTexture>();
-
-        ResourceBinding entry;
-        switch (texture_type->Access()) {
-            case core::Access::kWrite:
-                entry.resource_type = ResourceBinding::ResourceType::kWriteOnlyStorageTexture;
-                break;
-            case core::Access::kReadWrite:
-                entry.resource_type = ResourceBinding::ResourceType::kReadWriteStorageTexture;
-                break;
-            case core::Access::kRead:
-                entry.resource_type = ResourceBinding::ResourceType::kReadOnlyStorageTexture;
-                break;
-            case core::Access::kUndefined:
-                TINT_UNREACHABLE() << "unhandled storage texture access";
-        }
-        entry.bind_group = binding_info.group;
-        entry.binding = binding_info.binding;
-        entry.variable_name = var->Declaration()->name->symbol.Name();
-
-        entry.dim = TypeTextureDimensionToResourceBindingTextureDimension(texture_type->Dim());
-
-        auto* base_type = texture_type->Type();
-        entry.sampled_kind = BaseTypeToSampledKind(base_type);
-        entry.image_format =
-            TypeTexelFormatToResourceBindingTexelFormat(texture_type->TexelFormat());
-
-        result.push_back(entry);
-    }
-
-    return result;
-}
-
 std::tuple<InterpolationType, InterpolationSampling> Inspector::CalculateInterpolationData(
     VectorRef<const ast::Attribute*> attributes) const {
     auto* interpolation_attribute = ast::GetAttribute<ast::InterpolateAttribute>(attributes);
@@ -1111,174 +937,30 @@ std::vector<PixelLocalMemberType> Inspector::ComputePixelLocalMemberTypes(
     return {};
 }
 
-std::vector<Inspector::LevelSampleInfo> Inspector::GetTextureQueries(const std::string& ep_name) {
-    const auto* ep = FindEntryPointByName(ep_name);
-    if (!ep) {
-        return {};
+bool Inspector::UsesSubgroupMatrix(const sem::Function* func) const {
+    if (func->DirectlyUsedSubgroupMatrix()) {
+        return true;
     }
-
-    auto filter = [&](const tint::sem::Call* call,
-                      tint::wgsl::BuiltinFn builtin_fn) -> std::optional<TextureUsageType> {
-        switch (builtin_fn) {
-            case wgsl::BuiltinFn::kTextureNumLevels: {
-                return TextureUsageType::kTextureNumLevels;
-            }
-            case wgsl::BuiltinFn::kTextureDimensions: {
-                if (call->Declaration()->args.Length() <= 1) {
-                    // When textureDimension only takes a texture as the input,
-                    // it doesn't require calls to textureNumLevels to clamp mip levels.
-                    return {};
-                }
-                return TextureUsageType::kTextureNumLevels;
-            }
-            case wgsl::BuiltinFn::kTextureLoad: {
-                if (call->Arguments()[0]
-                        ->Type()
-                        ->IsAnyOf<core::type::MultisampledTexture,
-                                  core::type::DepthMultisampledTexture>()) {
-                    // When textureLoad takes a multisampled texture as the input,
-                    // it doesn't require to query the mip level.
-                    return {};
-                }
-                return TextureUsageType::kTextureNumLevels;
-            }
-            case wgsl::BuiltinFn::kTextureNumSamples: {
-                return TextureUsageType::kTextureNumSamples;
-            }
-            default:
-                return {};
+    for (auto& call : func->TransitivelyCalledFunctions()) {
+        if (call->DirectlyUsedSubgroupMatrix()) {
+            return true;
         }
-    };
-
-    auto usages = GetTextureUsagesForEntryPoint(*ep, filter);
-
-    auto t = [](const TextureUsageInfo& info) -> LevelSampleInfo {
-        return {
-            info.type == TextureUsageType::kTextureNumSamples ? TextureQueryType::kTextureNumSamples
-                                                              : TextureQueryType::kTextureNumLevels,
-            info.group,
-            info.binding,
-        };
-    };
-
-    std::vector<LevelSampleInfo> res;
-    std::transform(usages.begin(), usages.end(), std::back_inserter(res), t);
-    return res;
+    }
+    return false;
 }
 
-std::vector<Inspector::TextureUsageInfo> Inspector::GetTextureUsagesForEntryPoint(
-    const tint::ast::Function& ep,
-    std::function<std::optional<TextureUsageType>(const tint::sem::Call* call,
-                                                  tint::wgsl::BuiltinFn builtin_fn)> filter) {
-    TINT_ASSERT(ep.IsEntryPoint());
+std::vector<Override> Inspector::Overrides() {
+    std::vector<Override> results;
 
-    std::vector<TextureUsageInfo> res;
-
-    std::unordered_set<BindingPoint> seen = {};
-
-    Hashmap<const sem::Function*, Hashmap<const ast::Parameter*, TextureUsageType, 4>, 8>
-        fn_to_data;
-
-    auto record_function_param = [&fn_to_data](const sem::Function* func,
-                                               const ast::Parameter* param, TextureUsageType type) {
-        fn_to_data.GetOrAddZero(func).Add(param, type);
-    };
-
-    auto save_if_needed = [&res, &seen](const sem::GlobalVariable* global, TextureUsageType type) {
-        auto binding = global->Attributes().binding_point.value();
-        if (seen.insert(binding).second) {
-            res.emplace_back(TextureUsageInfo{type, binding.group, binding.binding});
-        }
-    };
-
-    auto& sem = program_.Sem();
-
-    // This works in dependency order such that we'll see the texture call first and can record
-    // any function parameter information and then as we walk up the function chain we can look
-    // the call data.
-    for (auto* fn_decl : sem.Module()->DependencyOrderedDeclarations()) {
-        auto* fn = sem.Get<sem::Function>(fn_decl);
-        if (!fn) {
+    for (auto* var : program_.AST().GlobalVariables()) {
+        auto* global = program_.Sem().Get<sem::GlobalVariable>(var);
+        if (!global || !global->Declaration()->Is<ast::Override>()) {
             continue;
         }
 
-        // This is an entrypoint, make sure it's the requested entry point
-        if (fn->Declaration()->IsEntryPoint()) {
-            if (fn->Declaration() != &ep) {
-                continue;
-            }
-        } else {
-            // Not an entry point, make sure it was called from the requested entry point
-            if (!fn->HasAncestorEntryPoint(ep.name->symbol)) {
-                continue;
-            }
-        }
-
-        auto queryTextureBuiltin = [&](TextureUsageType type, const sem::Call* builtin_call,
-                                       const sem::Variable* texture_sem = nullptr) {
-            TINT_ASSERT(builtin_call);
-            if (!texture_sem) {
-                auto* texture_expr = builtin_call->Declaration()->args[0];
-                texture_sem = sem.GetVal(texture_expr)->RootIdentifier();
-            }
-            tint::Switch(
-                texture_sem,  //
-                [&](const sem::GlobalVariable* global) { save_if_needed(global, type); },
-                [&](const sem::Parameter* param) {
-                    record_function_param(fn, param->Declaration(), type);
-                },
-                TINT_ICE_ON_NO_MATCH);
-        };
-
-        for (auto* call : fn->DirectCalls()) {
-            // Builtin function call, record the texture information. If the used texture maps
-            // back up to a function parameter just store the type of the call and we'll track the
-            // function callback up in the `sem::Function` branch.
-            tint::Switch(
-                call->Target(),
-                [&](const sem::BuiltinFn* builtin) {
-                    auto type = filter(call, builtin->Fn());
-                    if (type) {
-                        queryTextureBuiltin(*type, call);
-                    }
-                },
-                [&](const sem::Function* func) {
-                    // A function call, check to see if any params needed to be tracked back to a
-                    // global texture.
-
-                    auto param_to_type = fn_to_data.Get(func);
-                    if (!param_to_type) {
-                        return;
-                    }
-                    TINT_ASSERT(call->Arguments().Length() == func->Declaration()->params.Length());
-
-                    for (size_t i = 0; i < call->Arguments().Length(); i++) {
-                        auto param = func->Declaration()->params[i];
-
-                        // Determine if this had a texture we cared about
-                        auto type = param_to_type->Get(param);
-                        if (!type) {
-                            continue;
-                        }
-
-                        auto* arg = call->Arguments()[i];
-                        auto* texture_sem = arg->RootIdentifier();
-
-                        tint::Switch(
-                            texture_sem,
-                            [&](const sem::GlobalVariable* global) {
-                                save_if_needed(global, *type);
-                            },
-                            [&](const sem::Parameter* p) {
-                                record_function_param(fn, p->Declaration(), *type);
-                            },
-                            TINT_ICE_ON_NO_MATCH);
-                    }
-                });
-        }
+        results.push_back(MkOverride(global, global->Attributes().override_id.value()));
     }
-
-    return res;
+    return results;
 }
 
 }  // namespace tint::inspector

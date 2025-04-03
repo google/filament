@@ -39,7 +39,6 @@
 #include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/storage_texture.h"
 #include "src/tint/lang/core/type/struct.h"
-#include "src/tint/utils/diagnostic/source.h"
 
 // These unit tests are used for internal development. CTS validation does a more complete job of
 // testing all expectations for const and override parameters.
@@ -57,7 +56,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainQuantizeF16) {
     b.Append(func->Block(), [&] {
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kQuantizeToF16, 65504_f);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
 
     auto* src = R"(
@@ -79,7 +78,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainQuantizeF16) {
     b.Append(func->Block(), [&] {
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kQuantizeToF16, 65505_f);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
 
     auto* src = R"(
@@ -94,8 +93,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainQuantizeF16) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
-              "5:7 error: value 65505.0 cannot be represented as 'f16'");
+    EXPECT_EQ(res.Failure().reason, "5:7 error: value 65505.0 cannot be represented as 'f16'");
 }
 
 TEST_F(IR_ConstParamValidatorTest, CorrectDomainSubgroupsShuffleXor) {
@@ -104,7 +102,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainSubgroupsShuffleXor) {
         auto* e = b.Let("a", 777_f);
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kSubgroupShuffleXor, e, 127_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
 
     auto* src = R"(
@@ -128,7 +126,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSubgroupsShuffleXor) {
         auto* e = b.Let("a", 777_f);
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kSubgroupShuffleXor, e, 128_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
 
     auto* src = R"(
@@ -144,7 +142,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSubgroupsShuffleXor) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
+    EXPECT_EQ(res.Failure().reason,
               R"(5:7 error: The mask argument of subgroupShuffleXor must be less than 128)");
 }
 
@@ -154,7 +152,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSubgroupsShuffleDown) {
         auto* e = b.Let("a", 777_f);
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kSubgroupShuffleDown, e, 128_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
 
     auto* src = R"(
@@ -170,7 +168,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSubgroupsShuffleDown) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
+    EXPECT_EQ(res.Failure().reason,
               R"(5:7 error: The delta argument of subgroupShuffleDown must be less than 128)");
 }
 
@@ -180,7 +178,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSubgroupsShuffle) {
         auto* e = b.Let("a", 777_f);
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kSubgroupShuffle, e, 128_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
 
     auto* src = R"(
@@ -197,7 +195,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSubgroupsShuffle) {
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(
-        res.Failure().reason.Str(),
+        res.Failure().reason,
         R"(5:7 error: The sourceLaneIndex argument of subgroupShuffle must be less than 128)");
 }
 
@@ -207,7 +205,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSubgroupsShuffle_SignedHigh) {
         auto* e = b.Let("a", 777_f);
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kSubgroupShuffle, e, 128_i);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
 
     auto* src = R"(
@@ -224,7 +222,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSubgroupsShuffle_SignedHigh) {
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(
-        res.Failure().reason.Str(),
+        res.Failure().reason,
         R"(5:7 error: The sourceLaneIndex argument of subgroupShuffle must be less than 128)");
 }
 
@@ -234,7 +232,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSubgroupsShuffle_SignedLow) {
         auto* e = b.Let("a", 777_f);
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kSubgroupShuffle, e, -128_i);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -252,7 +250,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSubgroupsShuffle_SignedLow) {
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(
-        res.Failure().reason.Str(),
+        res.Failure().reason,
         R"(5:7 error: The sourceLaneIndex argument of subgroupShuffle must be greater than or equal to zero)");
 }
 
@@ -262,7 +260,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainkExtractBits) {
         auto* e = b.Let("a", 123_u);
         auto* call_func = b.Call(ty.u32(), core::BuiltinFn::kExtractBits, e, 13_u, 23_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -279,7 +277,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainkExtractBits) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
+    EXPECT_EQ(res.Failure().reason,
               "5:7 error: 'offset' + 'count' must be less than or equal to the bit width of 'e'");
 }
 
@@ -289,7 +287,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainkExtractBits) {
         auto* e = b.Let("a", 123_u);
         auto* call_func = b.Call(ty.u32(), core::BuiltinFn::kExtractBits, e, 13_u, 13_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -314,7 +312,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainkExtractBits_Vec) {
         auto* e = b.Let("a", b.Splat(ty.vec4<i32>(), -3_i));
         auto* call_func = b.Call(ty.vec4<i32>(), core::BuiltinFn::kExtractBits, e, 13_u, 23_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -331,7 +329,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainkExtractBits_Vec) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
+    EXPECT_EQ(res.Failure().reason,
               "5:7 error: 'offset' + 'count' must be less than or equal to the bit width of 'e'");
 }
 
@@ -343,7 +341,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainkInsertBits_Vec) {
         auto* call_func =
             b.Call(ty.vec4<u32>(), core::BuiltinFn::kInsertBits, e, newBits, 13_u, 23_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -361,7 +359,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainkInsertBits_Vec) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
+    EXPECT_EQ(res.Failure().reason,
               "5:7 error: 'offset' + 'count' must be less than or equal to the bit width of 'e'");
 }
 
@@ -372,7 +370,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainkInsertBits) {
         auto* newBits = b.Let("b", 4_u);
         auto* call_func = b.Call(ty.u32(), core::BuiltinFn::kInsertBits, e, newBits, 13_u, 23_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -390,7 +388,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainkInsertBits) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
+    EXPECT_EQ(res.Failure().reason,
               "5:7 error: 'offset' + 'count' must be less than or equal to the bit width of 'e'");
 }
 
@@ -401,7 +399,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainkInsertBits) {
         auto* newBits = b.Let("b", 4_u);
         auto* call_func = b.Call(ty.u32(), core::BuiltinFn::kInsertBits, e, newBits, 7_u, 7_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -427,7 +425,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainClamp) {
         auto* val = b.Let("a", 3_f);
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kClamp, val, 2_f, 1_f);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -444,7 +442,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainClamp) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
+    EXPECT_EQ(res.Failure().reason,
               "5:7 error: clamp called with 'low' (2.0) greater than 'high' (1.0)");
 }
 
@@ -454,7 +452,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainClamp) {
         auto* val = b.Let("a", 3_f);
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kClamp, val, 1_f, 2_f);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -481,7 +479,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainClamp_Vec) {
         auto* high = b.Splat(ty.vec4<f16>(), 2_h);
         auto* call_func = b.Call(ty.vec4(ty.f16()), core::BuiltinFn::kClamp, e, low, high);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -498,7 +496,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainClamp_Vec) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
+    EXPECT_EQ(res.Failure().reason,
               "5:7 error: clamp called with 'low' (4.0) greater than 'high' (2.0)");
 }
 
@@ -508,7 +506,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainSmoothstep) {
         auto* val = b.Let("a", 3_f);
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kSmoothstep, val, 1_f, 2_f);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -533,9 +531,9 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSmoothstep_Vec) {
         auto* e = b.Let("b", b.Splat(ty.vec4<f16>(), 4_h));
         auto* edge0 = b.Splat(ty.vec4<f16>(), 3_h);
         auto* edge1 = b.Splat(ty.vec4<f16>(), 3_h);
-        auto* call_func = b.Call(ty.vec4(ty.f16()), core::BuiltinFn::kSmoothstep, e, edge0, edge1);
+        auto* call_func = b.Call(ty.vec4(ty.f16()), core::BuiltinFn::kSmoothstep, edge0, edge1, e);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -543,7 +541,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSmoothstep_Vec) {
 %foo = func():vec4<f16> {
   $B1: {
     %b:vec4<f16> = let vec4<f16>(4.0h)
-    %3:vec4<f16> = smoothstep %b, vec4<f16>(3.0h), vec4<f16>(3.0h)
+    %3:vec4<f16> = smoothstep vec4<f16>(3.0h), vec4<f16>(3.0h), %b
     ret %3
   }
 }
@@ -552,7 +550,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSmoothstep_Vec) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
+    EXPECT_EQ(res.Failure().reason,
               "5:7 error: smoothstep called with 'low' (3.0) equal to 'high' (3.0)");
 }
 
@@ -563,7 +561,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainLdexp_Vec) {
         auto* e2 = b.Splat(ty.vec4<i32>(), 267_i);
         auto* call_func = b.Call(ty.vec4(ty.f32()), core::BuiltinFn::kLdexp, e1, e2);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -580,7 +578,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainLdexp_Vec) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(), "5:7 error: e2 must be less than or equal to 128");
+    EXPECT_EQ(res.Failure().reason, "5:7 error: e2 must be less than or equal to 128");
 }
 
 TEST_F(IR_ConstParamValidatorTest, CorrectDomainLdexp_Vec) {
@@ -590,7 +588,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainLdexp_Vec) {
         auto* e2 = b.Splat(ty.vec4<i32>(), 10_i);
         auto* call_func = b.Call(ty.vec4(ty.f16()), core::BuiltinFn::kLdexp, e1, e2);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -615,7 +613,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainLdexp) {
         auto* e1 = b.Let("b", 16.0_h);
         auto* call_func = b.Call(ty.f16(), core::BuiltinFn::kLdexp, e1, 17_i);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -632,7 +630,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainLdexp) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(), "5:7 error: e2 must be less than or equal to 16");
+    EXPECT_EQ(res.Failure().reason, "5:7 error: e2 must be less than or equal to 16");
 }
 
 TEST_F(IR_ConstParamValidatorTest, CorrectDomainLdexp) {
@@ -641,7 +639,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainLdexp) {
         auto* e1 = b.Let("b", 16.0_f);
         auto* call_func = b.Call(ty.f32(), core::BuiltinFn::kLdexp, e1, 17_i);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -666,7 +664,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectPack2x16Float) {
         auto* e = b.Splat(ty.vec2<f32>(), 65505_f);
         auto* call_func = b.Call(ty.u32(), core::BuiltinFn::kPack2X16Float, e);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -682,8 +680,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectPack2x16Float) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(),
-              "5:7 error: value 65505.0 cannot be represented as 'f16'");
+    EXPECT_EQ(res.Failure().reason, "5:7 error: value 65505.0 cannot be represented as 'f16'");
 }
 
 TEST_F(IR_ConstParamValidatorTest, CorrectPack2x16Float) {
@@ -692,7 +689,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectPack2x16Float) {
         auto* e = b.Splat(ty.vec2<f32>(), 4.0_f);
         auto* call_func = b.Call(ty.u32(), core::BuiltinFn::kPack2X16Float, e);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -716,7 +713,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainShiftLeft) {
         auto* e1 = b.Let("b", 16_u);
         auto* call_func = b.Binary(core::BinaryOp::kShiftLeft, ty.u32(), e1, 17_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -741,7 +738,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainShiftLeft) {
         auto* e1 = b.Let("b", 16_u);
         auto* call_func = b.Binary(core::BinaryOp::kShiftLeft, ty.u32(), e1, 32_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -759,7 +756,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainShiftLeft) {
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(
-        res.Failure().reason.Str(),
+        res.Failure().reason,
         "5:7 error: shift left value must be less than the bit width of the lhs, which is 32");
 }
 
@@ -770,7 +767,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainShiftRight_Vec) {
         auto* e2 = b.Splat(ty.vec4<u32>(), 33_u);
         auto* call_func = b.Binary(core::BinaryOp::kShiftLeft, ty.vec4(ty.i32()), e1, e2);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -788,7 +785,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainShiftRight_Vec) {
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(
-        res.Failure().reason.Str(),
+        res.Failure().reason,
         "5:7 error: shift left value must be less than the bit width of the lhs, which is 32");
 }
 
@@ -798,7 +795,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainDiv) {
         auto* e1 = b.Let("b", 16_u);
         auto* call_func = b.Binary(core::BinaryOp::kDivide, ty.u32(), e1, 17_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -823,7 +820,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainDiv) {
         auto* e1 = b.Let("b", 16_u);
         auto* call_func = b.Binary(core::BinaryOp::kDivide, ty.u32(), e1, 0_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -840,7 +837,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainDiv) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(), "5:7 error: integer division by zero is invalid");
+    EXPECT_EQ(res.Failure().reason, "5:7 error: integer division by zero is invalid");
 }
 
 TEST_F(IR_ConstParamValidatorTest, IncorrectDomainModulo_Vec) {
@@ -850,7 +847,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainModulo_Vec) {
         auto* e2 = b.Splat(ty.vec4<i32>(), 0_i);
         auto* call_func = b.Binary(core::BinaryOp::kModulo, ty.vec4(ty.i32()), e1, e2);
         b.ir.SetSource(call_func, Source{{5, 7}});
-        b.Return(func, call_func->Result(0));
+        b.Return(func, call_func->Result());
     });
     ASSERT_EQ(ir::Validate(mod), Success);
 
@@ -867,7 +864,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainModulo_Vec) {
 
     auto res = ir::ValidateConstParam(mod);
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(), "5:7 error: integer division by zero is invalid");
+    EXPECT_EQ(res.Failure().reason, "5:7 error: integer division by zero is invalid");
 }
 
 }  // namespace

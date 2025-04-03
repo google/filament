@@ -43,7 +43,7 @@ TEST_F(IR_StoreTest, CreateStore) {
     auto* inst = b.Store(to, 4_i);
 
     ASSERT_TRUE(inst->Is<Store>());
-    ASSERT_EQ(inst->To(), to->Result(0));
+    ASSERT_EQ(inst->To(), to->Result());
 
     ASSERT_TRUE(inst->From()->Is<Constant>());
     auto lhs = inst->From()->As<Constant>()->Value();
@@ -77,7 +77,7 @@ TEST_F(IR_StoreTest, Clone) {
     auto* new_s = clone_ctx.Clone(s);
 
     EXPECT_NE(s, new_s);
-    EXPECT_EQ(new_v->Result(0), new_s->To());
+    EXPECT_EQ(new_v->Result(), new_s->To());
 
     auto new_from = new_s->From()->As<Constant>()->Value();
     ASSERT_TRUE(new_from->Is<core::constant::Scalar<i32>>());

@@ -165,8 +165,9 @@ ResultOrError<Ref<TextureBase>> SharedTextureMemoryBase::CreateTexture(
     DAWN_TRY(GetDevice()->ValidateIsAlive());
     DAWN_TRY(GetDevice()->ValidateObject(this));
 
+    TextureDescriptor reifiedDescriptor = rawDescriptor->WithTrivialFrontendDefaults();
     UnpackedPtr<TextureDescriptor> descriptor;
-    DAWN_TRY_ASSIGN(descriptor, ValidateAndUnpack(rawDescriptor));
+    DAWN_TRY_ASSIGN(descriptor, ValidateAndUnpack(&reifiedDescriptor));
 
     // Validate that there is one 2D, single-sampled subresource
     DAWN_INVALID_IF(descriptor->dimension != wgpu::TextureDimension::e2D,

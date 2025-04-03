@@ -90,7 +90,7 @@ SharedTextureMemoryTestVulkanBackend::ChainBeginState(
 void SharedTextureMemoryNoFeatureTests::SetUp() {
     DAWN_TEST_UNSUPPORTED_IF(UsesWire());
     DawnTestWithParams<SharedTextureMemoryTestParams>::SetUp();
-    GetParam().mBackend->SetUp();
+    GetParam().mBackend->SetUp(device);
 }
 
 std::vector<wgpu::FeatureName> SharedTextureMemoryTests::GetRequiredFeatures() {
@@ -122,14 +122,15 @@ void SharedTextureMemoryTests::SetUp() {
     DAWN_TEST_UNSUPPORTED_IF(
         !SupportsFeatures(GetParam().mBackend->RequiredFeatures(GetAdapter().Get())));
     // TODO(crbug.com/342213634): Crashes on ChromeOS volteer devices.
-    DAWN_SUPPRESS_TEST_IF(IsChromeOS() && IsVulkan() && IsIntel() && IsBackendValidationEnabled());
+    // TODO(crbug.com/407561933): Triggers dawn validation errors
+    DAWN_SUPPRESS_TEST_IF(IsChromeOS() && IsVulkan() && IsIntel());
 
     // Compat cannot create 2D texture view from a 2D array texture.
     DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode() &&
                              !SupportsFeatures({wgpu::FeatureName::FlexibleTextureViews}) &&
                              GetParam().mLayerCount > 1);
 
-    GetParam().mBackend->SetUp();
+    GetParam().mBackend->SetUp(device);
 }
 
 void SharedTextureMemoryNoFeatureTests::TearDown() {
@@ -207,6 +208,19 @@ wgpu::SharedFence SharedTextureMemoryTestBackend::ImportFenceTo(const wgpu::Devi
 
             wgpu::SharedFenceDescriptor fenceDesc;
             fenceDesc.nextInChain = &sharedEventDesc;
+            return importingDevice.ImportSharedFence(&fenceDesc);
+        }
+        case wgpu::SharedFenceType::EGLSync: {
+            wgpu::SharedFenceEGLSyncExportInfo eglSyncInfo;
+            exportInfo.nextInChain = &eglSyncInfo;
+
+            fence.ExportInfo(&exportInfo);
+
+            wgpu::SharedFenceEGLSyncDescriptor eglSyncDesc;
+            eglSyncDesc.sync = eglSyncInfo.sync;
+
+            wgpu::SharedFenceDescriptor fenceDesc;
+            fenceDesc.nextInChain = &eglSyncDesc;
             return importingDevice.ImportSharedFence(&fenceDesc);
         }
         default:
@@ -1903,7 +1917,7 @@ TEST_P(SharedTextureMemoryTests, BeginEndWithoutUse) {
         auto backendEndState = GetParam().mBackend->ChainEndState(&endState);
         memories[0].EndAccess(texture, &endState);
 
-        // Import fences and texture to the the other device.
+        // Import fences and texture to the other device.
         std::vector<wgpu::SharedFence> sharedFences(endState.fenceCount);
         for (size_t i = 0; i < endState.fenceCount; ++i) {
             sharedFences[i] = GetParam().mBackend->ImportFenceTo(devices[1], endState.fences[i]);
@@ -2248,6 +2262,10 @@ TEST_P(SharedTextureMemoryTests, RenderThenDropAllMemoriesThenSample) {
 TEST_P(SharedTextureMemoryTests, RenderThenLoseOrDestroyDeviceBeforeEndAccessThenSample) {
     // Not supported if using the same device. Not possible to lose one without losing the other.
     DAWN_TEST_UNSUPPORTED_IF(GetParam().mBackend->UseSameDevice());
+
+    // This test expects a fence returned from EndAccess, which is not possible if fences are
+    // disabled in D3D11.
+    DAWN_TEST_UNSUPPORTED_IF(IsD3D11() && HasToggleEnabled("d3d11_disable_fence"));
 
     // crbug.com/358166479
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsNvidia() && IsVulkan());
