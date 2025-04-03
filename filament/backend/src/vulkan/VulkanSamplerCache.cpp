@@ -18,6 +18,7 @@
 
 #include "VulkanConstants.h"
 #include "vulkan/utils/Conversion.h"
+#include "vulkan/vulkan_core.h"
 
 #include <utils/Panic.h>
 

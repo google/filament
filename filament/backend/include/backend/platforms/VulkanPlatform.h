@@ -299,6 +299,16 @@ public:
 
     struct ExternalImageMetadata {
         /**
+         * The Filament texture format.
+         */
+        TextureFormat filamentFormat;
+
+        /**
+         * The Filament texture usage.
+         */
+        TextureUsage filamentUsage;
+
+        /**
          * The width of the external image
          */
         uint32_t width;
@@ -307,11 +317,6 @@ public:
          * The height of the external image
          */
         uint32_t height;
-
-        /**
-         * The layerCount of the external image
-         */
-        uint32_t layerCount;
 
         /**
          * The layer count of the external image
@@ -327,11 +332,6 @@ public:
          * The format of the external image
          */
         VkFormat format;
-
-        /**
-         * An external buffer can be protected. This tells you if it is.
-         */
-        bool isProtected;
 
         /**
          * The type of external format (opaque int) if used.
@@ -352,20 +352,44 @@ public:
          * Heap information
          */
         uint32_t memoryTypeBits;
+
+        /**
+         * Ycbcr conversion components
+         */
+        VkComponentMapping ycbcrConversionComponents;
+
+        /**
+         * Ycbcr model
+         */
+        VkSamplerYcbcrModelConversion ycbcrModel;
+
+        /**
+         * Ycbcr range
+         */
+        VkSamplerYcbcrRange ycbcrRange;
+
+        /**
+         * Ycbcr x chroma offset
+         */
+        VkChromaLocation xChromaOffset;
+
+        /**
+         * Ycbcr y chroma offset
+         */
+        VkChromaLocation yChromaOffset;
     };
-    virtual ExternalImageMetadata getExternalImageMetadata(ExternalImageHandleRef externalImage);
+
+
+    // Note that the image metadata might change per-frame, hence we need a method for extracting
+    // it.
+    virtual ExternalImageMetadata extractExternalImageMetadata(ExternalImageHandleRef image) const {
+        return {};
+    }
 
     using ImageData = std::pair<VkImage, VkDeviceMemory>;
-    virtual ImageData createExternalImageData(ExternalImageHandleRef externalImage,
-            const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex,
-            VkImageUsageFlags usage);
-
-    virtual VkSampler createExternalSampler(SamplerYcbcrConversion chroma,
-            SamplerParams sampler, uint32_t internalFormat);
-
-    virtual VkImageView createExternalImageView(SamplerYcbcrConversion chroma,
-            uint32_t internalFormat, VkImage image, VkImageSubresourceRange range,
-            VkImageViewType viewType, VkComponentMapping swizzle);
+    virtual ImageData createVkImageFromExternal(ExternalImageHandleRef image) const {
+        return { VK_NULL_HANDLE, VK_NULL_HANDLE };
+    }
 
 protected:
     virtual ExtensionSet getSwapchainInstanceExtensions() const;
@@ -377,20 +401,6 @@ protected:
 private:
     // Platform dependent helper methods
     static ExtensionSet getSwapchainInstanceExtensionsImpl();
-
-    static ExternalImageMetadata getExternalImageMetadataImpl(ExternalImageHandleRef externalImage,
-            VkDevice device);
-
-    static ImageData createExternalImageDataImpl(ExternalImageHandleRef externalImage,
-            VkDevice device, const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex,
-            VkImageUsageFlags usage);
-    static VkSampler createExternalSamplerImpl(VkDevice device,
-            SamplerYcbcrConversion chroma, SamplerParams sampler,
-            uint32_t internalFormat);
-    static VkImageView createExternalImageViewImpl(VkDevice device,
-            SamplerYcbcrConversion chroma, uint32_t internalFormat, VkImage image,
-            VkImageSubresourceRange range, VkImageViewType viewType,
-            VkComponentMapping swizzle);
 
     // Platform dependent helper methods
     static SurfaceBundle createVkSurfaceKHRImpl(void* nativeWindow, VkInstance instance,

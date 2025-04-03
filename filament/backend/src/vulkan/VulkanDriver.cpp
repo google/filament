@@ -200,9 +200,7 @@ Dispatcher VulkanDriver::getDispatcher() const noexcept {
 VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& context,
         Platform::DriverConfig const& driverConfig) noexcept
     : mPlatform(platform),
-      mResourceManager(
-              driverConfig.handleArenaSize,
-              driverConfig.disableHandleUseAfterFreeCheck,
+      mResourceManager(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck,
               driverConfig.disableHeapHandleTags),
       mAllocator(createAllocator(mPlatform->getInstance(), mPlatform->getPhysicalDevice(),
               mPlatform->getDevice())),
@@ -221,6 +219,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
       mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
       mQueryManager(mPlatform->getDevice()),
+      mExternalImageManager(platform, &mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
+              &mDescriptorSetLayoutCache),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mStereoscopicType(driverConfig.stereoscopicType) {
 
@@ -313,7 +313,7 @@ void VulkanDriver::terminate() {
 
     mCurrentSwapChain = {};
     mDefaultRenderTarget = {};
-    mBoundPipeline = {};
+    mPipelineState = {};
 
     mQueryManager.terminate();
 
@@ -324,6 +324,10 @@ void VulkanDriver::terminate() {
     mStagePool.gc();
 
     mCommands.terminate();
+
+    // Must come before samplerCache, ycbcrConversionCache, descriptorSetCache,
+    // descriptorSetLayoutCache
+    mExternalImageManager.terminate();
 
     mStagePool.terminate();
     mPipelineCache.terminate();
@@ -381,6 +385,10 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_BEGINFRAME);
     // Do nothing.
+
+    if (mAppState.hasExternalSamplers()) {
+        mExternalImageManager.onBeginFrame();
+    }
 }
 
 void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHandler* handler,
@@ -421,12 +429,16 @@ void VulkanDriver::updateDescriptorSetTexture(
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
-    // TODO: YcbcrConversion?
-    VulkanSamplerCache::Params cacheParams = {
-        .sampler = params,
-    };
-    VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
-    mDescriptorSetCache.updateSampler(set, binding, texture, vksampler);
+    if (mExternalImageManager.isExternallySampledTexture(texture)) {
+        mExternalImageManager.bindExternallySampledTexture(set, binding, texture, params);
+        mAppState.hasBoundExternalImages = true;
+    } else {
+        VulkanSamplerCache::Params cacheParams = {
+            .sampler = params,
+        };
+        VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
+        mDescriptorSetCache.updateSampler(set, binding, texture, vksampler);
+    }
 }
 
 void VulkanDriver::flush(int) {
@@ -563,41 +575,35 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         Platform::ExternalImageHandleRef externalImage) {
     FVK_SYSTRACE_SCOPE();
-    auto const& metadata = mPlatform->getExternalImageMetadata(externalImage);
-    if (metadata.isProtected) {
-        usage |= backend::TextureUsage::PROTECTED;
-    }
+    auto const& metadata = mPlatform->extractExternalImageMetadata(externalImage);
 
-    VkImageUsageFlags vkUsage = metadata.usage;
-    if (any(usage & TextureUsage::BLIT_SRC)) {
-        vkUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    }
-
-    if (any(usage & (TextureUsage::BLIT_DST | TextureUsage::UPLOADABLE))) {
-        vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    }
-
-    assert_invariant(width == metadata.width);
-    assert_invariant(height == metadata.height);
-    assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
-
-    VkMemoryPropertyFlags const requiredMemoryFlags = any(usage & TextureUsage::UPLOADABLE)
-                                                              ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                                                              : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    uint32_t const memoryTypeIndex =
-            mContext.selectMemoryType(metadata.memoryTypeBits, requiredMemoryFlags);
-    FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex != VK_MAX_MEMORY_TYPES)
-            << "failed to find a valid memory type for external image memory.";
+    // In theory the following are reasonable expectations, but in practice it's hard for client's
+    // to match up the dimensions of the texture with that of the AHB.
+    // assert_invariant(width == metadata.width);
+    // assert_invariant(height == metadata.height);
+    // assert_invariant(format == metadata.filamentFormat);
+    // assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
 
     VkImage vkimg;
     VkDeviceMemory deviceMemory;
-    std::tie(vkimg, deviceMemory) =
-            mPlatform->createExternalImageData(externalImage, metadata, memoryTypeIndex, vkUsage);
+    std::tie(vkimg, deviceMemory) = mPlatform->createVkImageFromExternal(externalImage);
+
+    VkSamplerYcbcrConversion conversion =
+            mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
 
     auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mContext,
             mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimg, deviceMemory,
-            metadata.format, VK_NULL_HANDLE, metadata.samples, metadata.width, metadata.height,
-            metadata.layerCount, usage, mStagePool);
+            metadata.format, conversion, metadata.samples, metadata.width, metadata.height,
+            metadata.layers, usage, mStagePool);
+
+    if (conversion != VK_NULL_HANDLE) {
+        mExternalImageManager.addExternallySampledTexture(texture, externalImage);
+    }
+
+    // Unlike uploaded textures or swapchains, we need to explicit transition this
+    // texture into the read layout.
+    auto& commands = mCommands.get();
+    texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::READ_ONLY);
 
     texture.inc();
 }
@@ -630,6 +636,8 @@ void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
     }
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
     texture.dec();
+
+    mExternalImageManager.removeExternallySampledTexture(texture);
 }
 
 void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
@@ -798,6 +806,11 @@ void VulkanDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout>::cast(&mResourceManager, dslh);
     auto set = mDescriptorSetCache.createSet(dsh, layout);
     set.inc();
+
+    if (layout->hasExternalSamplers()) {
+        mAppState.hasExternalSamplerLayouts = true;
+        mExternalImageManager.addDescriptorSet(layout, set);
+    }
 }
 
 Handle<HwVertexBufferInfo> VulkanDriver::createVertexBufferInfoS() noexcept {
@@ -917,11 +930,19 @@ void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 void VulkanDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> dslh) {
     auto layout = resource_ptr<VulkanDescriptorSetLayout>::cast(&mResourceManager, dslh);
     layout.dec();
+
+    if (layout->hasExternalSamplers()) {
+        mExternalImageManager.removeDescriptorSetLayout(layout);
+    }
 }
 
 void VulkanDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     set.dec();
+
+    if (mAppState.hasExternalSamplers()) {
+        mExternalImageManager.removeDescriptorSet(set);
+    }
 }
 
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream) {
@@ -1482,7 +1503,6 @@ void VulkanDriver::endRenderPass(int) {
     // pipeline barrier between framebuffer writes and shader reads.
     rt->emitBarriersEndRenderPass(*mCurrentRenderPass.commandBuffer);
 
-    mRenderPassFboInfo = {};
     mCurrentRenderPass.renderTarget = {};
     mCurrentRenderPass.renderPass = VK_NULL_HANDLE;
 
@@ -1542,10 +1562,10 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
 
 void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
-    assert_invariant(mBoundPipeline.program && "Expect a program when writing to push constants");
+    assert_invariant(mPipelineState.program && "Expect a program when writing to push constants");
     assert_invariant(mCurrentRenderPass.commandBuffer && "Should be called within a renderpass");
-    mBoundPipeline.program->writePushConstant(mCurrentRenderPass.commandBuffer->buffer(),
-            mBoundPipeline.pipelineLayout, stage, index, value);
+    mPipelineState.program->writePushConstant(mCurrentRenderPass.commandBuffer->buffer(),
+            mPipelineState.pipelineLayout, stage, index, value);
 }
 
 void VulkanDriver::insertEventMarker(char const* string) {
@@ -1724,6 +1744,27 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
 }
 
 void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
+    // We need to determine whether to delay bindning until draw().
+    mPipelineState.bindInDraw.first = false;
+    if (mAppState.hasExternalSamplers()) {
+        auto& layouts = pipelineState.pipelineLayout.setLayout;
+        auto haveExternalSamplers = [&](auto hwHandle) {
+            if (!hwHandle) {
+                return false;
+            }
+            auto layout =
+                    resource_ptr<VulkanDescriptorSetLayout>::cast(&mResourceManager, hwHandle);
+            return layout->hasExternalSamplers();
+        };
+        if (std::any_of(layouts.begin(), layouts.end(), haveExternalSamplers)) {
+            mPipelineState.bindInDraw = { true, pipelineState };
+            return;
+        }
+    }
+    bindPipelineImpl(pipelineState);
+}
+
+void VulkanDriver::bindPipelineImpl(PipelineState const& pipelineState) {
     FVK_SYSTRACE_SCOPE();
     auto commands = mCurrentRenderPass.commandBuffer;
     auto vbi = resource_ptr<VulkanVertexBufferInfo>::cast(&mResourceManager,
@@ -1792,10 +1833,11 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
 
     constexpr uint8_t descriptorSetMaskTable[4] = {0x1, 0x3, 0x7, 0xF};
 
-    mBoundPipeline = {
+    mPipelineState = {
         .program = program,
         .pipelineLayout = pipelineLayout,
         .descriptorSetMask = fvkutils::DescriptorSetMask(descriptorSetMaskTable[layoutCount]),
+        .bindInDraw = {false, {}},
     };
 
     mPipelineCache.bindLayout(pipelineLayout);
@@ -1842,14 +1884,24 @@ void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
     FVK_SYSTRACE_SCOPE();
     VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
 
+    if (mAppState.hasExternalSamplers()) {
+        auto const& [bindInDraw, pipelineSt] = mPipelineState.bindInDraw;
+        bool const hasUpdated =
+                mExternalImageManager.prepareBindSets(mDescriptorSetCache.getBoundSets());
+        if (bindInDraw || hasUpdated) {
+            bindPipelineImpl(pipelineSt);
+        }
+        mPipelineState.bindInDraw.first = false;
+    }
+
     mDescriptorSetCache.commit(mCurrentRenderPass.commandBuffer,
-            mBoundPipeline.pipelineLayout,
-            mBoundPipeline.descriptorSetMask);
+            mPipelineState.pipelineLayout,
+            mPipelineState.descriptorSetMask);
 
     // Finally, make the actual draw call. TODO: support subranges
-    const uint32_t firstIndex = indexOffset;
-    const int32_t vertexOffset = 0;
-    const uint32_t firstInstId = 0;
+    uint32_t const firstIndex = indexOffset;
+    constexpr int32_t vertexOffset = 0;
+    constexpr uint32_t firstInstId = 0;
 
     vkCmdDrawIndexed(cmdbuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstId);
 }
