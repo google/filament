@@ -18,7 +18,8 @@
 
 #include "BackendTestUtils.h"
 #include "Lifetimes.h"
-#include "ShaderGenerator.h"
+#include "Shader.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
 #include <utils/Hash.h>
@@ -41,19 +42,6 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-std::string vertex (R"(#version 450 core
-
-layout(location = 0) in vec4 mesh_position;
-
-void main() {
-    gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
-    gl_Position.y = -gl_Position.y;
-#endif
-}
-)");
 
 std::string fragmentFloat (R"(#version 450 core
 
@@ -240,19 +228,17 @@ TEST_F(ReadPixelsTest, ReadPixels) {
     DriverApi& api = getDriverApi();
     Cleanup cleanup(api);
 
-    // Create programs.
-    Handle<HwProgram> programFloat, programUint;
-    {
-        ShaderGenerator shaderGen(vertex, fragmentFloat, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(api);
-        programFloat = cleanup.add(api.createProgram(std::move(p)));
-    }
-    {
-        ShaderGenerator shaderGen(vertex, fragmentUint, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(api);
-        programUint = cleanup.add(api.createProgram(std::move(p)));
-    }
-
+    std::string vertexShader = SharedShaders::getVertexShaderText(ShaderEnvironment{sBackend},VertexShaderType::Noop, ShaderUniformType::None);
+    Shader floatShader(api, cleanup, ShaderConfig {
+        .vertexShader = vertexShader,
+        .fragmentShader = fragmentFloat,
+        .uniforms = {}
+    });
+    Shader uintShader(api, cleanup, ShaderConfig {
+            .vertexShader = vertexShader,
+            .fragmentShader = fragmentUint,
+            .uniforms = {}
+    });
 
     for (const auto& t : testCases)
     {
@@ -299,15 +285,15 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         params.viewport.width = t.getRenderTargetSize();
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0, 0);
+        RenderFrame frame (api);
 
         // Render a white triangle over blue.
         api.beginRenderPass(renderTarget, params);
 
         PipelineState state;
-        state.program = programFloat;
+        state.program = floatShader.getProgram();
         if (isUnsignedIntFormat(t.textureFormat)) {
-            state.program = programUint;
+            state.program = uintShader.getProgram();
         }
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
@@ -361,11 +347,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         api.endRenderPass();
 
         api.commit(swapChain);
-        api.endFrame(0);
     }
-
-    // This ensures all driver commands have finished before exiting the test.
-    flushAndWait();
 }
 
 TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
@@ -374,15 +356,17 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
     DriverApi& api = getDriverApi();
     Cleanup cleanup(api);
+    cleanup.addPostCall([&]() { executeCommands(); });
 
     // Create a platform-specific SwapChain and make it current.
     auto swapChain = cleanup.add(api.createSwapChainHeadless(renderTargetSize, renderTargetSize, 0));
     api.makeCurrent(swapChain, swapChain);
 
-    // Create a program.
-    ShaderGenerator shaderGen(vertex, fragmentFloat, sBackend, sIsMobilePlatform);
-    Program p = shaderGen.getProgram(api);
-    auto program = cleanup.add(api.createProgram(std::move(p)));
+    Shader shader = SharedShaders::makeShader(api, cleanup, ShaderEnvironment{sBackend},ShaderRequest {
+        .mVertexType = VertexShaderType::Noop,
+        .mFragmentType = FragmentShaderType::White,
+        .mUniformType = ShaderUniformType::None
+    });
 
     // Create a Texture and RenderTarget to render into.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
@@ -420,7 +404,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     void* buffer = calloc(1, renderTargetSize * renderTargetSize * 4);
 
     PipelineState state;
-    state.program = program;
+    state.program = shader.getProgram();
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -434,23 +418,24 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
         }
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0, 0);
+        {
+            RenderFrame frame(api);
 
-        // Render some content, just so we don't read back uninitialized data.
-        api.beginRenderPass(renderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-        api.endRenderPass();
+            // Render some content, just so we don't read back uninitialized data.
+            api.beginRenderPass(renderTarget, params);
+            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+            api.endRenderPass();
 
-        PixelBufferDescriptor descriptor(buffer, renderTargetSize * renderTargetSize * 4,
-                PixelDataFormat::RGBA, PixelDataType::UBYTE, 1, 0, 0, renderTargetSize,
-                [](void* buffer, size_t size, void* user) {
-                    ReadPixelsTest* test = (ReadPixelsTest*) user;
-                    test->readPixelsFinished = true;
-                }, this);
+            PixelBufferDescriptor descriptor(buffer, renderTargetSize * renderTargetSize * 4,
+                    PixelDataFormat::RGBA, PixelDataType::UBYTE, 1, 0, 0, renderTargetSize,
+                    [](void* buffer, size_t size, void* user) {
+                        ReadPixelsTest* test = (ReadPixelsTest*) user;
+                        test->readPixelsFinished = true;
+                    }, this);
 
-        api.readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize, std::move(descriptor));
-        api.commit(swapChain);
-        api.endFrame(0);
+            api.readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize, std::move(descriptor));
+            api.commit(swapChain);
+        }
 
         flushAndWait();
         getDriver().purge();
@@ -461,7 +446,6 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     free(buffer);
 
     api.finish();
-    executeCommands();
 }
 
 } // namespace test

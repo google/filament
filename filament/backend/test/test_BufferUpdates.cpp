@@ -18,7 +18,7 @@
 
 #include "Lifetimes.h"
 #include "Shader.h"
-#include "ShaderGenerator.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
 namespace {
@@ -27,7 +27,7 @@ namespace {
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::string vertex (R"(#version 450 core
+std::string vertex(R"(#version 450 core
 
 layout(location = 0) in vec4 mesh_position;
 
@@ -49,7 +49,7 @@ void main() {
 }
 )");
 
-std::string fragment (R"(#version 450 core
+std::string fragment(R"(#version 450 core
 
 layout(location = 0) out vec4 fragColor;
 
@@ -73,17 +73,10 @@ namespace test {
 using namespace filament;
 using namespace filament::backend;
 
-// In the shader, these MaterialParams are offset by 64 bytes into the uniform buffer to test buffer
-// updates with offset.
-struct MaterialParams {
-    math::float4 color;
-    math::float4 offset;
-};
-static_assert(sizeof(MaterialParams) == 8 * sizeof(float));
 // Uniform config for writing MaterialParams to the shader uniform with 64 bytes of padding.
 const UniformBindingConfig kBindingConfig = {
-        .dataSize = sizeof(MaterialParams),
-        .bufferSize = sizeof(MaterialParams) + 64,
+        .dataSize = sizeof(SimpleMaterialParams),
+        .bufferSize = sizeof(SimpleMaterialParams) + 64,
         .byteOffset = 64
 };
 
@@ -93,8 +86,12 @@ public:
 
 protected:
     Shader createShader() {
-        return Shader(getDriverApi(), mCleanup, ShaderConfig{
-           vertex, fragment, {"Params"}
+        return SharedShaders::makeShader(getDriverApi(), mCleanup, ShaderEnvironment{
+                .mBackend = sBackend
+        }, ShaderRequest{
+                .mVertexType = VertexShaderType::Simple,
+                .mFragmentType = FragmentShaderType::SolidColored,
+                .mUniformType = ShaderUniformType::SimpleWithPadding
         });
     }
 
@@ -129,7 +126,7 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         RenderPassParams params = {};
         fullViewport(params);
         params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = {0.f, 1.f, 0.f, 1.f};
+        params.clearColor = { 0.f, 1.f, 0.f, 1.f };
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
@@ -144,64 +141,65 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         // Create a uniform buffer.
         // We use STATIC here, even though the buffer is updated, to force the Metal backend to use
         // a GPU buffer, which is more interesting to test.
-        auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams) + 64,
+        auto ubuffer = cleanup.add(api.createBufferObject(sizeof(SimpleMaterialParams) + 64,
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
-        shader.bindUniform<MaterialParams>(api, ubuffer, kBindingConfig);
+        shader.bindUniform<SimpleMaterialParams>(api, ubuffer, kBindingConfig);
 
         api.startCapture(0);
+        cleanup.addPostCall([&]() { api.stopCapture(0); });
 
         // Upload the uniform, but with an offset to accommodate the padding in the shader's
         // uniform definition.
-        shader.uploadUniform(api, ubuffer, kBindingConfig, MaterialParams{
+        shader.uploadUniform(api, ubuffer, kBindingConfig, SimpleMaterialParams{
                 .color = { 1.0f, 1.0f, 1.0f, 1.0f },
+                .scaleMinusOne = { 0.0, 0.0, 0.0, 0.0 },
                 .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
         });
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0, 0);
+        {
+            RenderFrame frame(api);
 
-        // Draw 10 triangles, updating the vertex buffer / index buffer each time.
-        size_t triangleIndex = 0;
-        for (float i = -1.0f; i < 1.0f; i += 0.2f) {
-            const float low = i, high = i + 0.2;
-            const filament::math::float2 v[3] {{low, low}, {high, low}, {low, high}};
-            triangle.updateVertices(v);
+            // Draw 10 triangles, updating the vertex buffer / index buffer each time.
+            size_t triangleIndex = 0;
+            for (float i = -1.0f; i < 1.0f; i += 0.2f) {
+                const float low = i, high = i + 0.2;
+                const filament::math::float2 v[3]{{ low,  low },
+                                                  { high, low },
+                                                  { low,  high }};
+                triangle.updateVertices(v);
 
-            if (updateIndices) {
-                if (triangleIndex % 2 == 0) {
-                    // Upload each index separately, to test offsets.
-                    const TrianglePrimitive::index_type i[3] {0, 1, 2};
-                    triangle.updateIndices(i + 0, 1, 0);
-                    triangle.updateIndices(i + 1, 1, 1);
-                    triangle.updateIndices(i + 2, 1, 2);
-                } else {
-                    // This effectively hides this triangle.
-                    const TrianglePrimitive::index_type i[3] {0, 0, 0};
-                    triangle.updateIndices(i);
+                if (updateIndices) {
+                    if (triangleIndex % 2 == 0) {
+                        // Upload each index separately, to test offsets.
+                        const TrianglePrimitive::index_type i[3]{ 0, 1, 2 };
+                        triangle.updateIndices(i + 0, 1, 0);
+                        triangle.updateIndices(i + 1, 1, 1);
+                        triangle.updateIndices(i + 2, 1, 2);
+                    } else {
+                        // This effectively hides this triangle.
+                        const TrianglePrimitive::index_type i[3]{ 0, 0, 0 };
+                        triangle.updateIndices(i);
+                    }
                 }
+
+                if (triangleIndex > 0) {
+                    params.flags.clear = TargetBufferFlags::NONE;
+                    params.flags.discardStart = TargetBufferFlags::NONE;
+                }
+
+                api.beginRenderPass(defaultRenderTarget, params);
+                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+                api.endRenderPass();
+
+                triangleIndex++;
             }
 
-            if (triangleIndex > 0) {
-                params.flags.clear = TargetBufferFlags::NONE;
-                params.flags.discardStart = TargetBufferFlags::NONE;
-            }
-
-            api.beginRenderPass(defaultRenderTarget, params);
-            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-            api.endRenderPass();
-
-            triangleIndex++;
+            api.flush();
+            api.commit(swapChain);
         }
-
-        api.flush();
-        api.commit(swapChain);
-        api.endFrame(0);
-
-        api.stopCapture(0);
     }
-
-    executeCommands();
 }
 
 // This test renders two triangles in two separate draw calls. Between the draw calls, a uniform
@@ -220,28 +218,29 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     // Create a uniform buffer.
     // We use STATIC here, even though the buffer is updated, to force the Metal backend to use a
     // GPU buffer, which is more interesting to test.
-    auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams) + 64,
+    auto ubuffer = cleanup.add(api.createBufferObject(sizeof(SimpleMaterialParams) + 64,
             BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
-    shader.bindUniform<MaterialParams>(api, ubuffer, kBindingConfig);
+    shader.bindUniform<SimpleMaterialParams>(api, ubuffer, kBindingConfig);
 
     // Create a render target.
     auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT));
     auto renderTarget = cleanup.add(api.createRenderTarget(
-            TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{colorTexture}}, {}, {}));
+            TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{ colorTexture }}, {}, {}));
 
     // Upload uniforms for the first triangle.
     // Upload the uniform, but with an offset to accommodate the padding in the shader's
     // uniform definition.
-    shader.uploadUniform(api, ubuffer, kBindingConfig, MaterialParams{
+    shader.uploadUniform(api, ubuffer, kBindingConfig, SimpleMaterialParams{
             .color = { 1.0f, 0.0f, 0.5f, 1.0f },
+            .scaleMinusOne = { 0.0f, 0.0f, 0.0f, 0.0f },
             .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
     });
 
     RenderPassParams params = {};
     params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = {0.f, 0.f, 1.f, 1.f};
+    params.clearColor = { 0.f, 0.f, 1.f, 1.f };
     params.flags.discardStart = TargetBufferFlags::ALL;
     params.flags.discardEnd = TargetBufferFlags::NONE;
     params.viewport.height = 512;
@@ -250,18 +249,19 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
             renderTarget, swapChain, shader.getProgram(), params);
 
     // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
-    // color.b, color.a, offset.x, and offset.y.
-    shader.uploadUniform(api, ubuffer, UniformBindingConfig{
-                    .dataSize = sizeof(std::array<float, 4>),
-                    .bufferSize = kBindingConfig.bufferSize,
-                    .byteOffset = *kBindingConfig.byteOffset + offsetof(MaterialParams, color.b),
-            },
-            std::array<float, 4>{
-                    // color.b, color.a
-                    1.0f, 1.0f,
-                    // offset.x, offset.y
-                    0.5f, 0.5f }
-    );
+    // color.b, color.a, scaleMinusOne, offset.x, and offset.y.
+    const UniformBindingConfig partialBindingConfig = {
+            //.dataSize = sizeof(std::array<float, 8>),
+            .dataSize = sizeof(float) * 8,
+            .bufferSize = sizeof(SimpleMaterialParams) + 64,
+            .byteOffset = 64 + offsetof(SimpleMaterialParams, color.b)
+    };
+    shader.uploadUniform(api, ubuffer, partialBindingConfig,
+            std::array<float, 8>{
+                    1.0f, 1.0f, // color.b, color.a
+                    0.0f, 0.0f, 0.0f, 0.0f, // scale
+                    0.5f, 0.5f // offset.x, offset.y
+            });
 
     params.flags.clear = TargetBufferFlags::NONE;
     params.flags.discardStart = TargetBufferFlags::NONE;
@@ -273,15 +273,13 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
             "BufferObjectUpdateWithOffset", 512, 512, renderTarget, expectedHash, true);
 
     api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
+    {
+        RenderFrame frame(api);
+        api.commit(swapChain);
+    }
 
     // This ensures all driver commands have finished before exiting the test.
     api.finish();
-
-    executeCommands();
-
-    getDriver().purge();
 }
 
 } // namespace test

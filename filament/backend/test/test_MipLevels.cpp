@@ -19,7 +19,8 @@
 
 #include "BackendTestUtils.h"
 #include "Lifetimes.h"
-#include "ShaderGenerator.h"
+#include "Shader.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
 #include <backend/DriverEnums.h>
@@ -34,17 +35,6 @@ namespace {
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::string vertex (R"(#version 450 core
-
-layout(location = 0) in vec4 mesh_position;
-layout(location = 0) out vec2 uv;
-
-void main() {
-    gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
-    uv = (mesh_position.xy * 0.5 + 0.5);
-}
-)");
-
 std::string fragment (R"(#version 450 core
 
 layout(location = 0) out vec4 fragColor;
@@ -57,18 +47,6 @@ void main() {
 }
 )");
 
-std::string whiteFragment (R"(#version 450 core
-
-layout(location = 0) out vec4 fragColor;
-layout(location = 0) in vec2 uv;
-
-layout(location = 0, set = 1) uniform sampler2D backend_test_sib_tex;
-
-void main() {
-    fragColor = vec4(1.0);
-}
-)");
-
 }
 
 namespace test {
@@ -78,8 +56,9 @@ using namespace filament::backend;
 
 TEST_F(BackendTest, TextureViewLod) {
     auto& api = getDriverApi();
-    api.startCapture(0);
     Cleanup cleanup(api);
+    api.startCapture(0);
+    cleanup.addPostCall([&]() { api.stopCapture(0); });
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
@@ -88,39 +67,24 @@ TEST_F(BackendTest, TextureViewLod) {
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
-        // Create a program that draws only white.
-        Handle<HwProgram> whiteProgram;
-        {
-            ShaderGenerator shaderGen(vertex, whiteFragment, sBackend, sIsMobilePlatform);
-            Program p = shaderGen.getProgram(api);
-            p.descriptorBindings(0, {{"backend_test_sib_tex", DescriptorType::SAMPLER, 0}});
-            whiteProgram = cleanup.add(api.createProgram(std::move(p)));
-        }
+        Shader whiteShader = SharedShaders::makeShader(api, cleanup, ShaderEnvironment{sBackend}, ShaderRequest {
+            .mVertexType = VertexShaderType::Textured,
+            .mFragmentType = FragmentShaderType::White,
+            .mUniformType = ShaderUniformType::Sampler
+        });
 
         // Create a program that samples a texture.
-        Handle<HwProgram> textureProgram;
-        {
-            filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "backend_test", "sib_tex", 0,
-                SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
-            filamat::DescriptorSets descriptors;
-            descriptors[1] = { { "backend_test_sib_tex",
-                    { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 }, samplerInfo } };
-            ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
-            Program p = shaderGen.getProgram(api);
-            p.descriptorBindings(0, {{"backend_test_sib_tex", DescriptorType::SAMPLER, 0}});
-            textureProgram = cleanup.add(api.createProgram(std::move(p)));
-        }
-
-        DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
-                {{
-                         DescriptorType::SAMPLER,
-                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
-                         DescriptorFlags::NONE, 0
-                 }}}));
-
-        DescriptorSetHandle descriptorSet[2];
-        descriptorSet[0] = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
-        descriptorSet[1] = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
+        std::string vertexShader = SharedShaders::getVertexShaderText(ShaderEnvironment{ sBackend },
+                VertexShaderType::Textured, ShaderUniformType::Sampler);
+        filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "backend_test", "sib_tex", 0,
+                                                                   SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
+        Shader texturedShader(api, cleanup, ShaderConfig {
+           .vertexShader = vertexShader,
+           .fragmentShader = fragment,
+           .uniforms = {{
+               "backend_test_sib_tex", DescriptorType::SAMPLER, samplerInfo
+           }}
+        });
 
         // Create a texture that has 4 mip levels. Each level is a different color.
         // Level 0: 128x128 (red)
@@ -158,7 +122,7 @@ TEST_F(BackendTest, TextureViewLod) {
 
         TrianglePrimitive triangle(api);
 
-        api.beginFrame(0, 0, 0);
+        RenderFrame frame(api);
 
         // We set the base mip to 1, and the max mip to 3
         // Level 0: 128x128 (red)
@@ -179,7 +143,7 @@ TEST_F(BackendTest, TextureViewLod) {
             params.flags.discardStart = TargetBufferFlags::NONE;
             params.flags.discardEnd = TargetBufferFlags::NONE;
             PipelineState ps = {};
-            ps.program = whiteProgram;
+            ps.program = whiteShader.getProgram();
             ps.rasterState.colorWrite = true;
             ps.rasterState.depthWrite = false;
             api.beginRenderPass(renderTarget, params);
@@ -197,18 +161,19 @@ TEST_F(BackendTest, TextureViewLod) {
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState state;
-        state.program = textureProgram;
-        state.pipelineLayout.setLayout = { descriptorSetLayout };
+        state.program = texturedShader.getProgram();
+        state.pipelineLayout.setLayout = { texturedShader.getDescriptorSetLayout() };
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = SamplerCompareFunc::A;
         state.rasterState.culling = CullingMode::NONE;
 
-        api.updateDescriptorSetTexture(descriptorSet[0], 0, texture13, {
+        DescriptorSetHandle descriptorSet13 = texturedShader.createDescriptorSet(api);
+        api.updateDescriptorSetTexture(descriptorSet13, 0, texture13, {
                 .filterMag = SamplerMagFilter::NEAREST,
                 .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
 
-        api.bindDescriptorSet(descriptorSet[0], 0, {});
+        api.bindDescriptorSet(descriptorSet13, 0, {});
 
         // Render a triangle to the screen, sampling from mip level 1.
         // Because the min level is 1, the result color should be the white triangle drawn in the
@@ -221,11 +186,12 @@ TEST_F(BackendTest, TextureViewLod) {
         // Adjust the base mip to 2.
         auto texture22 = cleanup.add(api.createTextureView(texture, 2, 2));
 
-        api.updateDescriptorSetTexture(descriptorSet[1], 0, texture22, {
+        DescriptorSetHandle descriptorSet22 = texturedShader.createDescriptorSet(api);
+        api.updateDescriptorSetTexture(descriptorSet22, 0, texture22, {
                 .filterMag = SamplerMagFilter::NEAREST,
                 .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
 
-        api.bindDescriptorSet(descriptorSet[1], 0, {});
+        api.bindDescriptorSet(descriptorSet22, 0, {});
 
         // Render a second, smaller, triangle, again sampling from mip level 1.
         // This triangle should be yellow striped.
@@ -243,15 +209,9 @@ TEST_F(BackendTest, TextureViewLod) {
         api.endRenderPass();
 
         api.commit(swapChain);
-        api.endFrame(0);
-
-        api.stopCapture(0);
     }
 
     api.finish();
-
-    executeCommands();
-    getDriver().purge();
 }
 
 } // namespace test

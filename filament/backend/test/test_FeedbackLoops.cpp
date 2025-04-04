@@ -17,7 +17,7 @@
 #include "BackendTest.h"
 
 #include "Lifetimes.h"
-#include "ShaderGenerator.h"
+#include "Shader.h"
 #include "TrianglePrimitive.h"
 
 #include <backend/DriverEnums.h>
@@ -96,16 +96,6 @@ struct MaterialParams {
     float unused;
 };
 
-static void uploadUniforms(DriverApi& dapi, Handle<HwBufferObject> ubh, MaterialParams params) {
-    MaterialParams* tmp = new MaterialParams(params);
-    auto cb = [](void* buffer, size_t size, void* user) {
-        MaterialParams* sp = (MaterialParams*) buffer;
-        delete sp;
-    };
-    BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
-    dapi.updateBufferObject(ubh, std::move(bd), 0);
-}
-
 static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
     const size_t size = kTexWidth * kTexHeight * 4;
     void* buffer = calloc(1, size);
@@ -140,38 +130,13 @@ TEST_F(BackendTest, FeedbackLoops) {
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
-        ProgramHandle program;
-        {
-            filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
+        filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
                 SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
-            filamat::DescriptorSets descriptors;
-            descriptors[1] = {
-                { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
-                        samplerInfo },
-                { "Params", { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 1 }, {} }
-            };
-            ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform,
-                    std::move(descriptors));
-            Program prog = shaderGen.getProgram(api);
-            prog.descriptorBindings(1, {
-                    { "test_tex", DescriptorType::SAMPLER, 0 },
-                    { "Params", DescriptorType::UNIFORM_BUFFER, 1 }
-            });
-            program = cleanup.add(api.createProgram(std::move(prog)));
-        }
-
-        DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
-                {{
-                         DescriptorType::SAMPLER,
-                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
-                         DescriptorFlags::NONE, 0
-                 },
-                 {
-                         DescriptorType::UNIFORM_BUFFER,
-                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 1,
-                         DescriptorFlags::NONE, 0
-                 }}}));
-
+        Shader shader = Shader(api, cleanup, ShaderConfig {
+            .vertexShader = fullscreenVs,
+            .fragmentShader = fullscreenFs,
+           .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}, {"Params"}}
+        });
 
         TrianglePrimitive const triangle(getDriverApi());
 
@@ -208,7 +173,10 @@ TEST_F(BackendTest, FeedbackLoops) {
         PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
         api.update3DImage(texture, 0, 0, 0, 0, kTexWidth, kTexHeight, 1, std::move(pb));
 
-        for (int frame = 0; frame < kNumFrames; frame++) {
+        for (int frameCount = 0; frameCount < kNumFrames; frameCount++) {
+            Cleanup frameCleanup(api);
+            frameCleanup.addPostCall([&]() { executeCommands(); });
+            frameCleanup.addPostCall([&]() { getDriver().purge(); });
 
             // Prep for rendering.
             RenderPassParams params = {};
@@ -218,83 +186,90 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.colorWrite = true;
             state.rasterState.depthWrite = false;
             state.rasterState.depthFunc = RasterState::DepthFunc::A;
-            state.program = program;
-            state.pipelineLayout.setLayout[1] = { descriptorSetLayout };
+            state.program = shader.getProgram();
+            state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
 
             api.makeCurrent(swapChain, swapChain);
-            api.beginFrame(0, 0, 0);
+            {
+                RenderFrame frame(api);
 
-            // Downsample passes
-            params.flags.discardStart = TargetBufferFlags::ALL;
-            state.rasterState.disableBlending();
-            for (int targetLevel = 1; targetLevel < kNumLevels; targetLevel++) {
-                Cleanup passCleanup(api);
-                const uint32_t sourceLevel = targetLevel - 1;
-                params.viewport.width = kTexWidth >> targetLevel;
-                params.viewport.height = kTexHeight >> targetLevel;
+                // Downsample passes
+                params.flags.discardStart = TargetBufferFlags::ALL;
+                state.rasterState.disableBlending();
+                for (int targetLevel = 1; targetLevel < kNumLevels; targetLevel++) {
+                    Cleanup passCleanup(api);
+                    const uint32_t sourceLevel = targetLevel - 1;
+                    params.viewport.width = kTexWidth >> targetLevel;
+                    params.viewport.height = kTexHeight >> targetLevel;
 
-                auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
-                DescriptorSetHandle descriptorSet = passCleanup.add(api.createDescriptorSet(descriptorSetLayout));
-                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                });
-                api.updateDescriptorSetBuffer(descriptorSet, 1, ubuffer, 0, sizeof(MaterialParams));
-                api.bindDescriptorSet(descriptorSet, 1, {});
+                    auto descriptorSet = shader.createDescriptorSet(api);
+                    auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
+                    api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
+                            .filterMag = SamplerMagFilter::LINEAR,
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                    });
 
-                uploadUniforms(getDriverApi(), ubuffer, {
-                    .fbWidth = float(params.viewport.width),
-                    .fbHeight = float(params.viewport.height),
-                    .sourceLevel = float(sourceLevel),
-                });
-                api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-                api.endRenderPass();
+                    UniformBindingConfig uniformBinding{
+                        .binding = 1,
+                        .descriptorSet = descriptorSet
+                    };
+                    shader.bindUniform<MaterialParams>(api, ubuffer, uniformBinding);
+                    shader.uploadUniform(api, ubuffer, uniformBinding, MaterialParams{
+                        .fbWidth = float(params.viewport.width),
+                        .fbHeight = float(params.viewport.height),
+                        .sourceLevel = float(sourceLevel),
+                    });
+
+                    api.beginRenderPass(renderTargets[targetLevel], params);
+                    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+                    api.endRenderPass();
+                }
+
+                // Upsample passes
+                params.flags.discardStart = TargetBufferFlags::NONE;
+                state.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+                state.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
+                for (int targetLevel = kNumLevels - 2; targetLevel >= 0; targetLevel--) {
+                    Cleanup passCleanup(api);
+                    const uint32_t sourceLevel = targetLevel + 1;
+                    params.viewport.width = kTexWidth >> targetLevel;
+                    params.viewport.height = kTexHeight >> targetLevel;
+
+                    auto descriptorSet = shader.createDescriptorSet(api);
+                    auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
+                    api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
+                            .filterMag = SamplerMagFilter::LINEAR,
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                    });
+
+                    UniformBindingConfig uniformBinding{
+                            .binding = 1,
+                            .descriptorSet = descriptorSet
+                    };
+                    shader.bindUniform<MaterialParams>(api, ubuffer, uniformBinding);
+                    shader.uploadUniform(api, ubuffer, uniformBinding, MaterialParams{
+                            .fbWidth = float(params.viewport.width),
+                            .fbHeight = float(params.viewport.height),
+                            .sourceLevel = float(sourceLevel),
+                    });
+
+                    api.beginRenderPass(renderTargets[targetLevel], params);
+                    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+                    api.endRenderPass();
+                }
+
+                // Read back the render target corresponding to the base level.
+                //
+                // NOTE: Calling glReadPixels on any miplevel other than the base level
+                // seems to be un-reliable on some GPU's.
+                if (frameCount == kNumFrames - 1) {
+                    dumpScreenshot(api, renderTargets[0]);
+                }
+
+                api.flush();
+                api.commit(swapChain);
             }
-
-            // Upsample passes
-            params.flags.discardStart = TargetBufferFlags::NONE;
-            state.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
-            state.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
-            for (int targetLevel = kNumLevels - 2; targetLevel >= 0; targetLevel--) {
-                Cleanup passCleanup(api);
-                const uint32_t sourceLevel = targetLevel + 1;
-                params.viewport.width = kTexWidth >> targetLevel;
-                params.viewport.height = kTexHeight >> targetLevel;
-
-                auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
-                DescriptorSetHandle descriptorSet = passCleanup.add(api.createDescriptorSet(descriptorSetLayout));
-                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                });
-                api.updateDescriptorSetBuffer(descriptorSet, 1, ubuffer, 0, sizeof(MaterialParams));
-                api.bindDescriptorSet(descriptorSet, 1, {});
-
-                uploadUniforms(getDriverApi(), ubuffer, {
-                    .fbWidth = float(params.viewport.width),
-                    .fbHeight = float(params.viewport.height),
-                    .sourceLevel = float(sourceLevel),
-                });
-                api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-                api.endRenderPass();
-            }
-
-            // Read back the render target corresponding to the base level.
-            //
-            // NOTE: Calling glReadPixels on any miplevel other than the base level
-            // seems to be un-reliable on some GPU's.
-            if (frame == kNumFrames - 1) {
-                dumpScreenshot(api, renderTargets[0]);
-            }
-
-            api.flush();
-            api.commit(swapChain);
-            api.endFrame(0);
             api.finish();
-            executeCommands();
-            getDriver().purge();
         }
     }
 
