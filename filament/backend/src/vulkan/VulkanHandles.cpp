@@ -30,6 +30,7 @@
 
 #include <backend/platforms/VulkanPlatform.h>
 
+#include <utils/compiler.h> // UTILS_FALLTHROUGH
 #include <utils/Panic.h>    // ASSERT_POSTCONDITION
 
 using namespace bluevk;
@@ -89,8 +90,9 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
                 }
                 break;
             }
-            // TODO: properly handle external sampler
             case DescriptorType::SAMPLER_EXTERNAL:
+                fromStageFlags(binding.stageFlags, binding.binding, mask.externalSampler);
+                UTILS_FALLTHROUGH;
             case DescriptorType::SAMPLER: {
                 fromStageFlags(binding.stageFlags, binding.binding, mask.sampler);
                 break;

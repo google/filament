@@ -282,18 +282,25 @@ void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
     fvkutils::DescriptorSetMask curMask = setMask;
 
     auto& updateSets = mStashedSets;
-    auto& lastBoundSets = mLastBoundInfo.boundSets;
+    bool const pipelineLayoutIsSame = mLastBoundInfo.pipelineLayout == pipelineLayout;
 
-    setMask.forEachSetBit([&](size_t index) {
-        if (!updateSets[index] || updateSets[index] == lastBoundSets[index]) {
-            curMask.unset(index);
+    if (pipelineLayoutIsSame) {
+        auto& lastBoundSets = mLastBoundInfo.boundSets;
+        setMask.forEachSetBit([&](size_t index) {
+            if (!updateSets[index] || updateSets[index] == lastBoundSets[index]) {
+                curMask.unset(index);
+            }
+        });
+        if (curMask.none() &&
+                mLastBoundInfo.setMask == setMask && mLastBoundInfo.boundSets == updateSets) {
+            return;
         }
-    });
-
-    if (curMask.none() &&
-            (mLastBoundInfo.pipelineLayout == pipelineLayout && mLastBoundInfo.setMask == setMask &&
-                    mLastBoundInfo.boundSets == updateSets)) {
-        return;
+    } else {
+        setMask.forEachSetBit([&](size_t index) {
+            if (!updateSets[index]) {
+                curMask.unset(index);
+            }
+        });
     }
 
     curMask.forEachSetBit([&updateSets, commands, pipelineLayout](size_t index) {
@@ -301,7 +308,7 @@ void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
         auto set = updateSets[index];
         VkCommandBuffer const cmdbuffer = commands->buffer();
         vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, index,
-                1, &set->vkSet, set->uniqueDynamicUboCount, set->getOffsets()->data());
+                1, &set->getVkSet(), set->uniqueDynamicUboCount, set->getOffsets()->data());
         commands->acquire(set);
     });
 
@@ -329,7 +336,7 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
     }
     VkWriteDescriptorSet const descriptorWrite = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = set->vkSet,
+        .dstSet = set->getVkSet(),
         .dstBinding = binding,
         .descriptorCount = 1,
         .descriptorType = type,
@@ -342,10 +349,6 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
 void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanTexture> texture,
         VkSampler sampler) noexcept {
-    VkDescriptorImageInfo info{
-        .sampler = sampler,
-        .imageLayout = fvkutils::getVkLayout(texture->getDefaultLayout()),
-    };
     VkImageSubresourceRange range = texture->getPrimaryViewRange();
     VkImageViewType const expectedType = texture->getViewType();
     if (any(texture->usage & TextureUsage::DEPTH_ATTACHMENT) &&
@@ -355,12 +358,16 @@ void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescr
         range.levelCount = 1;
         range.layerCount = 1;
     }
-    info.imageView = texture->getView(range);
+    VkDescriptorImageInfo info{
+        .sampler = sampler,
+        .imageView = texture->getView(range),
+        .imageLayout = fvkutils::getVkLayout(texture->getDefaultLayout()),
+    };
 
     VkWriteDescriptorSet const descriptorWrite = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .pNext = nullptr,
-        .dstSet = set->vkSet,
+        .dstSet = set->getVkSet(),
         .dstBinding = binding,
         .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -378,10 +385,10 @@ void VulkanDescriptorSetCache::updateInputAttachment(
 
 fvkmemory::resource_ptr<VulkanDescriptorSet> VulkanDescriptorSetCache::createSet(
         Handle<HwDescriptorSet> handle, fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) {
-    auto const vkSet = mDescriptorPool->obtainSet(layout);
+    auto const vkSet = getVkSet(layout);
     auto const& count = layout->count;
     auto const vklayout = layout->getVkLayout();
-    return fvkmemory::resource_ptr<VulkanDescriptorSet>::make(mResourceManager, handle, vkSet,
+    auto set = fvkmemory::resource_ptr<VulkanDescriptorSet>::make(mResourceManager, handle,
             layout->bitmask.dynamicUbo, layout->count.dynamicUbo,
             [vkSet, count, vklayout, this](VulkanDescriptorSet*) {
                 // Note that mDescriptorPool could be gone due to terminate (when the backend shuts
@@ -390,10 +397,20 @@ fvkmemory::resource_ptr<VulkanDescriptorSet> VulkanDescriptorSetCache::createSet
                     mDescriptorPool->recycle(count, vklayout, vkSet);
                 }
             });
+    set->setVkSet(vkSet);
+    return set;
 }
 
-void VulkanDescriptorSetCache::gc() {
-    mStashedSets = {};
+VkDescriptorSet VulkanDescriptorSetCache::getVkSet(
+        fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) {
+    return mDescriptorPool->obtainSet(layout);
 }
+
+void VulkanDescriptorSetCache::manualRecyle(VulkanDescriptorSetLayout::Count const& count,
+        VkDescriptorSetLayout vklayout, VkDescriptorSet vkSet) {
+    mDescriptorPool->recycle(count, vklayout, vkSet);
+}
+
+void VulkanDescriptorSetCache::gc() { mStashedSets = {}; }
 
 } // namespace filament::backend

@@ -31,7 +31,8 @@ class VulkanYcbcrConversionCache {
 public:
     struct Params {
         SamplerYcbcrConversion conversion = {};
-        uint32_t padding = 0;
+        TextureFormat format = {};
+        uint16_t padding = 0;
         uint64_t externalFormat = 0;
     };
     static_assert(sizeof(Params) == 16);

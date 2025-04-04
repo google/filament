@@ -33,8 +33,15 @@ VkSampler VulkanSamplerCache::getSampler(Params params) noexcept {
     if (UTILS_LIKELY(iter != mCache.end())) {
         return iter->second;
     }
+    VkSamplerYcbcrConversionInfo ycbcrConversion = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,
+        .conversion = params.conversion,
+    };
+
     auto const& samplerParams = params.sampler;
-    VkSamplerCreateInfo samplerInfo{ .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+    VkSamplerCreateInfo samplerInfo{
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .pNext = params.conversion != VK_NULL_HANDLE ? &ycbcrConversion : VK_NULL_HANDLE,
         .magFilter = fvkutils::getFilter(samplerParams.filterMag),
         .minFilter = fvkutils::getFilter(samplerParams.filterMin),
         .mipmapMode = fvkutils::getMipmapMode(samplerParams.filterMin),
@@ -48,7 +55,8 @@ VkSampler VulkanSamplerCache::getSampler(Params params) noexcept {
         .minLod = 0.0f,
         .maxLod = fvkutils::getMaxLod(samplerParams.filterMin),
         .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
-        .unnormalizedCoordinates = VK_FALSE };
+        .unnormalizedCoordinates = VK_FALSE,
+    };
     VkSampler sampler;
     VkResult result = vkCreateSampler(mDevice, &samplerInfo, VKALLOC, &sampler);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to create sampler."

@@ -69,6 +69,12 @@ VkSamplerYcbcrModelConversion getYcbcrModelConversion(SamplerYcbcrModelConversio
 VkSamplerYcbcrRange getYcbcrRange(SamplerYcbcrRange range);
 VkChromaLocation getChromaLocation(ChromaLocation loc);
 
+// Ycbcr related functions
+SamplerYcbcrModelConversion getYcbcrModelConversionFilament(VkSamplerYcbcrModelConversion model);
+SamplerYcbcrRange getYcbcrRangeFilament(VkSamplerYcbcrRange range);
+ChromaLocation getChromaLocationFilament(VkChromaLocation loc);
+TextureSwizzle getSwizzleFilament(VkComponentSwizzle c, uint8_t rgbaIndex);
+
 inline VkImageViewType getViewType(SamplerType target) {
     switch (target) {
         case SamplerType::SAMPLER_CUBEMAP:
