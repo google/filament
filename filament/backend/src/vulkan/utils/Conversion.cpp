@@ -668,4 +668,111 @@ VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags) {
     return flags;
 }
 
+VkSamplerYcbcrModelConversion getYcbcrModelConversion(
+    SamplerYcbcrModelConversion model) {
+    switch (model) {
+    case SamplerYcbcrModelConversion::RGB_IDENTITY:
+        return VK_SAMPLER_YCBCR_MODEL_CONVERSION_RGB_IDENTITY;
+    case SamplerYcbcrModelConversion::YCBCR_IDENTITY:
+        return VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_IDENTITY;
+    case SamplerYcbcrModelConversion::YCBCR_709:
+        return VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709;
+    case SamplerYcbcrModelConversion::YCBCR_601:
+        return VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_601;
+    case SamplerYcbcrModelConversion::YCBCR_2020:
+        return VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020;
+    default:
+        assert_invariant(false &&
+            "Unknown data type, conversion is not supported.");
+    }
+}
+
+VkSamplerYcbcrRange getYcbcrRange(SamplerYcbcrRange range) {
+    switch (range) {
+    case SamplerYcbcrRange::ITU_FULL:
+        return VK_SAMPLER_YCBCR_RANGE_ITU_FULL;
+    case SamplerYcbcrRange::ITU_NARROW:
+        return VK_SAMPLER_YCBCR_RANGE_ITU_NARROW;
+    default:
+        assert_invariant(false &&
+            "Unknown data type, conversion is not supported.");
+    }
+}
+
+VkChromaLocation getChromaLocation(ChromaLocation loc) {
+    switch (loc) {
+    case ChromaLocation::COSITED_EVEN:
+        return VK_CHROMA_LOCATION_COSITED_EVEN;
+    case ChromaLocation::MIDPOINT:
+        return VK_CHROMA_LOCATION_MIDPOINT;
+    default:
+        assert_invariant(false &&
+            "Unknown data type, conversion is not supported.");
+    }
+}
+
+SamplerYcbcrModelConversion getYcbcrModelConversionFilament(VkSamplerYcbcrModelConversion model) {
+    switch (model) {
+        case VK_SAMPLER_YCBCR_MODEL_CONVERSION_RGB_IDENTITY:
+            return SamplerYcbcrModelConversion::RGB_IDENTITY;
+        case VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_IDENTITY:
+            return SamplerYcbcrModelConversion::YCBCR_IDENTITY;
+        case VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709:
+            return SamplerYcbcrModelConversion::YCBCR_709;
+        case VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_601:
+            return SamplerYcbcrModelConversion::YCBCR_601;
+        case VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020:
+            return SamplerYcbcrModelConversion::YCBCR_2020;
+        default:
+            assert_invariant(false && "Unknown data type, conversion is not supported.");
+            return {};
+    }
+}
+
+SamplerYcbcrRange getYcbcrRangeFilament(VkSamplerYcbcrRange range) {
+    switch (range) {
+        case VK_SAMPLER_YCBCR_RANGE_ITU_FULL:
+            return SamplerYcbcrRange::ITU_FULL;
+        case VK_SAMPLER_YCBCR_RANGE_ITU_NARROW:
+            return SamplerYcbcrRange::ITU_NARROW;
+        default:
+            assert_invariant(false && "Unknown data type, conversion is not supported.");
+            return {};
+    }
+}
+
+ChromaLocation getChromaLocationFilament(VkChromaLocation loc) {
+    switch (loc) {
+        case VK_CHROMA_LOCATION_COSITED_EVEN:
+            return ChromaLocation::COSITED_EVEN;
+        case VK_CHROMA_LOCATION_MIDPOINT:
+            return ChromaLocation::MIDPOINT;
+        default:
+            assert_invariant(false && "Unknown data type, conversion is not supported.");
+            return {};
+    }
+}
+
+TextureSwizzle getSwizzleFilament(VkComponentSwizzle c, uint8_t rgbaIndex) {
+    switch (c) {
+        case VK_COMPONENT_SWIZZLE_ZERO:
+            return TextureSwizzle::SUBSTITUTE_ZERO;
+        case VK_COMPONENT_SWIZZLE_ONE:
+            return TextureSwizzle::SUBSTITUTE_ONE;
+        case VK_COMPONENT_SWIZZLE_IDENTITY:
+            return (TextureSwizzle) (((uint8_t) TextureSwizzle::CHANNEL_0) + rgbaIndex);
+        case VK_COMPONENT_SWIZZLE_R:
+            return TextureSwizzle::CHANNEL_0;
+        case VK_COMPONENT_SWIZZLE_G:
+            return TextureSwizzle::CHANNEL_1;
+        case VK_COMPONENT_SWIZZLE_B:
+            return TextureSwizzle::CHANNEL_2;
+        case VK_COMPONENT_SWIZZLE_A:
+            return TextureSwizzle::CHANNEL_3;
+        default:
+            assert_invariant(false && "Unknown data type, conversion is not supported.");
+            return {};
+    }
+}
+
 } // namespace filament::backend::fvkutils
