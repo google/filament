@@ -18,15 +18,13 @@
 
 #include "BackendTestUtils.h"
 #include "Lifetimes.h"
-#include "ShaderGenerator.h"
-#include "TrianglePrimitive.h"
+#include "Shader.h"
+#include "SharedShaders.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include "private/filament/SamplerInterfaceBlock.h"
-
-#include <math/half.h>
 
 #include <vector>
 
@@ -41,19 +39,6 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-std::string vertex (R"(#version 450 core
-
-layout(location = 0) in vec4 mesh_position;
-
-void main() {
-    gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
-    gl_Position.y *= -1.0f;
-#endif
-}
-)");
 
 std::string fragmentTemplate (R"(#version 450 core
 
@@ -119,6 +104,15 @@ namespace test {
 
 template<typename componentType> inline componentType getMaxValue();
 
+class LoadImageTest : public BackendTest {
+public:
+    LoadImageTest() {
+        mVertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
+                ShaderUniformType::None);
+    }
+
+    std::string mVertexShader;
+};
 
 
 inline std::string stringReplace(const std::string& find, const std::string& replace,
@@ -216,7 +210,7 @@ static SamplerFormat getSamplerFormat(TextureFormat textureFormat) {
     }
 }
 
-TEST_F(BackendTest, UpdateImage2D) {
+TEST_F(LoadImageTest, UpdateImage2D) {
 
     // All of these test cases should result in the same rendered image, and thus the same hash.
     static const uint32_t expectedHash = 3644679986;
@@ -306,28 +300,14 @@ TEST_F(BackendTest, UpdateImage2D) {
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
             SamplerType::SAMPLER_2D, getSamplerFormat(t.textureFormat), Precision::HIGH, false };
-        filamat::DescriptorSets descriptors;
-        descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
-                samplerInfo } };
 
         std::string const fragment = stringReplace("{samplerType}",
                 getSamplerTypeName(t.textureFormat), fragmentTemplate);
-        ShaderGenerator shaderGen(
-                vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
-
-        Program prog = shaderGen.getProgram(api);
-        prog.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
-
-        ProgramHandle const program = cleanup.add(api.createProgram(std::move(prog)));
-
-        DescriptorSetLayoutHandle descriptorSetLayout = cleanup.add(api.createDescriptorSetLayout({
-                {{
-                         DescriptorType::SAMPLER,
-                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
-                         DescriptorFlags::NONE, 0
-                 }}}));
-
-        DescriptorSetHandle descriptorSet = cleanup.add(api.createDescriptorSet(descriptorSetLayout));
+        Shader shader(api, cleanup, ShaderConfig{
+           .vertexShader = mVertexShader,
+           .fragmentShader= fragment,
+           .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
+        });
 
         // Create a Texture.
         auto usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
@@ -349,14 +329,15 @@ TEST_F(BackendTest, UpdateImage2D) {
                     checkerboardPixelBuffer(t.pixelFormat, t.pixelType, 512, t.bufferPadding));
         }
 
+        DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
         api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
                 .filterMag = SamplerMagFilter::NEAREST,
                 .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
 
         api.bindDescriptorSet(descriptorSet, 1, {});
 
-        renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
-                defaultRenderTarget, swapChain, program);
+        renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+                defaultRenderTarget, swapChain, shader.getProgram());
 
         readPixelsAndAssertHash(t.name, 512, 512, defaultRenderTarget, expectedHash);
 
@@ -370,8 +351,9 @@ TEST_F(BackendTest, UpdateImage2D) {
     flushAndWait();
 }
 
-TEST_F(BackendTest, UpdateImageSRGB) {
+TEST_F(LoadImageTest, UpdateImageSRGB) {
     auto& api = getDriverApi();
+    Cleanup cleanup(api);
     api.startCapture();
 
     PixelDataFormat const pixelFormat = PixelDataFormat::RGBA;
@@ -379,36 +361,23 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     TextureFormat const textureFormat = TextureFormat::SRGB8_A8;
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = createSwapChain();
+    auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = api.createDefaultRenderTarget(0);
+    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
-    filamat::DescriptorSets descriptors;
-    descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
-            samplerInfo } };
-
     std::string const fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentTemplate);
-    ShaderGenerator shaderGen(
-            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
-    Program prog = shaderGen.getProgram(api);
-    prog.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
-    ProgramHandle const program = api.createProgram(std::move(prog));
-    DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
-            {{
-                     DescriptorType::SAMPLER,
-                     ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
-                     DescriptorFlags::NONE, 0
-             }}});
-
-    DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+    Shader shader(api, cleanup, ShaderConfig{
+        .vertexShader = mVertexShader, .fragmentShader = fragment, .uniforms = {{
+            "text_tex", DescriptorType::SAMPLER, samplerInfo
+    }}});
 
     // Create a texture.
-    Handle<HwTexture> const texture = api.createTexture(SamplerType::SAMPLER_2D, 1,
-            textureFormat, 1, 512, 512, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE);
+    Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            textureFormat, 1, 512, 512, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE));
 
     // Create image data.
     size_t components; int bpp;
@@ -436,6 +405,7 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     api.beginFrame(0, 0, 0);
 
     // Update samplers.
+    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
     api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
@@ -443,8 +413,8 @@ TEST_F(BackendTest, UpdateImageSRGB) {
 
     api.bindDescriptorSet(descriptorSet, 1, {});
 
-    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
-            defaultRenderTarget, swapChain, program);
+    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+            defaultRenderTarget, swapChain, shader.getProgram());
 
     static const uint32_t expectedHash = 359858623;
     readPixelsAndAssertHash("UpdateImageSRGB", 512, 512, defaultRenderTarget, expectedHash);
@@ -453,21 +423,14 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     api.commit(swapChain);
     api.endFrame(0);
 
-    api.destroyDescriptorSet(descriptorSet);
-    api.destroyDescriptorSetLayout(descriptorSetLayout);
-    api.destroyProgram(program);
-    api.destroySwapChain(swapChain);
-    api.destroyRenderTarget(defaultRenderTarget);
-
     // This ensures all driver commands have finished before exiting the test.
     api.finish();
     api.stopCapture();
-
-    flushAndWait();
 }
 
-TEST_F(BackendTest, UpdateImageMipLevel) {
+TEST_F(LoadImageTest, UpdateImageMipLevel) {
     auto& api = getDriverApi();
+    Cleanup cleanup(api);
     api.startCapture();
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
@@ -475,38 +438,27 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     TextureFormat textureFormat = TextureFormat::RGBA32F;
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = createSwapChain();
+    auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = api.createDefaultRenderTarget(0);
+    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
-    filamat::DescriptorSets descriptors;
-    descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
-            samplerInfo } };
     std::string const fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentUpdateImageMip);
-    ShaderGenerator shaderGen(
-            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
-    Program prog = shaderGen.getProgram(api);
-    prog.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
-    ProgramHandle const program = api.createProgram(std::move(prog));
-    DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
-            {{
-                     DescriptorType::SAMPLER,
-                     ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
-                     DescriptorFlags::NONE, 0
-             }}});
-
-    DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+    Shader shader(api, cleanup, ShaderConfig {
+        .vertexShader = mVertexShader,
+        .fragmentShader = fragment,
+        .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
+    });
 
     // Create a texture with 3 mip levels.
     // Base level: 1024
     // Level 1:     512     <-- upload data and sample from this level
     // Level 2:     256
-    Handle<HwTexture> texture = api.createTexture(SamplerType::SAMPLER_2D, 3,
-            textureFormat, 1, 1024, 1024, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE);
+    Handle<HwTexture> texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 3,
+            textureFormat, 1, 1024, 1024, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE));
 
     // Create image data.
     PixelBufferDescriptor descriptor = checkerboardPixelBuffer(pixelFormat, pixelType, 512);
@@ -515,6 +467,7 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     api.beginFrame(0, 0, 0);
 
     // Update samplers.
+    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
     api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
@@ -522,8 +475,8 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
 
     api.bindDescriptorSet(descriptorSet, 1, {});
 
-    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
-            defaultRenderTarget, swapChain, program);
+    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+            defaultRenderTarget, swapChain, shader.getProgram());
 
     static const uint32_t expectedHash = 3644679986;
     readPixelsAndAssertHash("UpdateImageMipLevel", 512, 512, defaultRenderTarget, expectedHash);
@@ -532,21 +485,14 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     api.commit(swapChain);
     api.endFrame(0);
 
-    api.destroyDescriptorSet(descriptorSet);
-    api.destroyDescriptorSetLayout(descriptorSetLayout);
-    api.destroyProgram(program);
-    api.destroySwapChain(swapChain);
-    api.destroyRenderTarget(defaultRenderTarget);
-
     // This ensures all driver commands have finished before exiting the test.
     api.finish();
     api.stopCapture();
-
-    flushAndWait();
 }
 
-TEST_F(BackendTest, UpdateImage3D) {
+TEST_F(LoadImageTest, UpdateImage3D) {
     auto& api = getDriverApi();
+    Cleanup cleanup(api);
     api.startCapture();
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
@@ -556,35 +502,24 @@ TEST_F(BackendTest, UpdateImage3D) {
     TextureUsage usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = createSwapChain();
+    auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = api.createDefaultRenderTarget(0);
+    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D_ARRAY, getSamplerFormat(textureFormat), Precision::HIGH, false };
-    filamat::DescriptorSets descriptors;
-    descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
-            samplerInfo } };
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(samplerType), fragmentUpdateImage3DTemplate);
-    ShaderGenerator shaderGen(
-            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
-    Program prog = shaderGen.getProgram(api);
-    prog.descriptorBindings(1, {{ "test_tex", DescriptorType::SAMPLER, 0 }});
-    ProgramHandle const program = api.createProgram(std::move(prog));
-    DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
-            {{
-                     DescriptorType::SAMPLER,
-                     ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
-                     DescriptorFlags::NONE, 0
-             }}});
-
-    DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+    Shader shader(api, cleanup, ShaderConfig {
+        .vertexShader = mVertexShader,
+        .fragmentShader = fragment,
+        .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
+    });
 
     // Create a texture.
-    Handle<HwTexture> texture = api.createTexture(samplerType, 1,
-            textureFormat, 1, 512, 512, 4, usage);
+    Handle<HwTexture> texture = cleanup.add(api.createTexture(samplerType, 1,
+            textureFormat, 1, 512, 512, 4, usage));
 
     // Create image data for all 4 layers.
     size_t components; int bpp;
@@ -606,6 +541,7 @@ TEST_F(BackendTest, UpdateImage3D) {
     api.beginFrame(0, 0, 0);
 
     // Update samplers.
+    DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
     api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
@@ -613,8 +549,8 @@ TEST_F(BackendTest, UpdateImage3D) {
 
     api.bindDescriptorSet(descriptorSet, 1, {});
 
-    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
-            defaultRenderTarget, swapChain, program);
+    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+            defaultRenderTarget, swapChain, shader.getProgram());
 
     static const uint32_t expectedHash = 3644679986;
     readPixelsAndAssertHash("UpdateImage3D", 512, 512, defaultRenderTarget, expectedHash);
@@ -623,17 +559,9 @@ TEST_F(BackendTest, UpdateImage3D) {
     api.commit(swapChain);
     api.endFrame(0);
 
-    api.destroyDescriptorSet(descriptorSet);
-    api.destroyDescriptorSetLayout(descriptorSetLayout);
-    api.destroyProgram(program);
-    api.destroySwapChain(swapChain);
-    api.destroyRenderTarget(defaultRenderTarget);
-
     // This ensures all driver commands have finished before exiting the test.
     api.finish();
     api.stopCapture();
-
-    flushAndWait();
 }
 
 } // namespace test

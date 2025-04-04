@@ -17,7 +17,8 @@
 #include "BackendTest.h"
 
 #include "Lifetimes.h"
-#include "ShaderGenerator.h"
+#include "Shader.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
 namespace {
@@ -25,21 +26,6 @@ namespace {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-std::string vertex (R"(#version 450 core
-
-layout(location = 0) in vec4 mesh_position;
-
-layout(location = 0) out uvec4 indices;
-
-void main() {
-    gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
-    gl_Position.y = -gl_Position.y;
-#endif
-}
-)");
 
 std::string fragment (R"(#version 450 core
 
@@ -71,10 +57,12 @@ TEST_F(BackendTest, MRT) {
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
-        // Create a program.
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(api);
-        auto program = cleanup.add(api.createProgram(std::move(p)));
+        Shader shader(api, cleanup, ShaderConfig{
+                .vertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
+                        ShaderUniformType::None),
+                .fragmentShader = fragment,
+                .uniforms = {}
+        });
 
         TrianglePrimitive triangle(api);
 
@@ -122,7 +110,7 @@ TEST_F(BackendTest, MRT) {
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState state;
-        state.program = program;
+        state.program = shader.getProgram();
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;

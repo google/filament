@@ -23,30 +23,44 @@ namespace test {
 
 using namespace filament::backend;
 
-Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) {
-    utils::FixedCapacityVector<DescriptorSetLayoutBinding> kLayouts(config.uniformNames.size());
-    for (unsigned char i = 0; i < config.uniformNames.size(); ++i) {
-        kLayouts[i] =
-                { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, i };
-    };
+Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup(cleanup) {
+    utils::FixedCapacityVector<DescriptorSetLayoutBinding> kLayouts(config.uniforms.size());
+    for (unsigned char i = 0; i < config.uniforms.size(); ++i) {
+        kLayouts[i] = {
+                config.uniforms[i].type.value_or(DescriptorType::UNIFORM_BUFFER),
+                ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, i };
+    }
 
+    // This assumes that the uniforms will all be in a single descriptor set at index 1.
+    // If there are shaders with uniforms in other sets then ShaderConfig will need to be expanded
+    // to accommodate that.
+    size_t kDescriptorSetIndex = 1;
     filamat::DescriptorSets descriptors;
-    for (unsigned char i = 0; i < config.uniformNames.size(); ++i) {
-        descriptors[i + 1] = {{ config.uniformNames[i], kLayouts[i], {}}};
+    descriptors[kDescriptorSetIndex] = filamat::DescriptorSetInfo(config.uniforms.size());
+    for (unsigned char i = 0; i < config.uniforms.size(); ++i) {
+        descriptors[kDescriptorSetIndex][i] = {
+                config.uniforms[i].name, kLayouts[i], config.uniforms[i].samplerInfo };
     }
     ShaderGenerator shaderGen(
             std::move(config.vertexShader), std::move(config.fragmentShader), BackendTest::sBackend,
             BackendTest::sIsMobilePlatform, std::move(descriptors));
     Program prog = shaderGen.getProgram(api);
-    for (unsigned char i = 0; i < config.uniformNames.size(); ++i) {
-        prog.descriptorBindings(1, {{ config.uniformNames[i], DescriptorType::UNIFORM_BUFFER, i }});
+
+    Program::DescriptorBindingsInfo bindingsInfo(config.uniforms.size());
+    for (unsigned char i = 0; i < config.uniforms.size(); ++i) {
+        bindingsInfo[i] = {
+                config.uniforms[i].name,
+                config.uniforms[i].type.value_or(DescriptorType::UNIFORM_BUFFER), i };
     }
+    prog.descriptorBindings(1, bindingsInfo);
     mProgram = cleanup.add(api.createProgram(std::move(prog)));
 
     mDescriptorSetLayout = cleanup.add(
             api.createDescriptorSetLayout(DescriptorSetLayout{ kLayouts }));
+}
 
-    mDescriptorSet = cleanup.add(api.createDescriptorSet(mDescriptorSetLayout));
+filament::backend::DescriptorSetHandle Shader::createDescriptorSet(DriverApi& api) const {
+    return mCleanup.add(api.createDescriptorSet(mDescriptorSetLayout));
 }
 
 filament::backend::ProgramHandle Shader::getProgram() const {
@@ -55,10 +69,6 @@ filament::backend::ProgramHandle Shader::getProgram() const {
 
 filament::backend::DescriptorSetLayoutHandle Shader::getDescriptorSetLayout() const {
     return mDescriptorSetLayout;
-}
-
-filament::backend::DescriptorSetHandle Shader::getDescriptorSet() const {
-    return mDescriptorSet;
 }
 
 } // namespace test
