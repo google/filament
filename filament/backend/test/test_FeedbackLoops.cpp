@@ -158,7 +158,10 @@ TEST_F(BackendTest, FeedbackLoops) {
         PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
         api.update3DImage(texture, 0, 0, 0, 0, kTexWidth, kTexHeight, 1, std::move(pb));
 
-        for (int frame = 0; frame < kNumFrames; frame++) {
+        for (int frameCount = 0; frameCount < kNumFrames; frameCount++) {
+            Cleanup frameCleanup(api);
+            frameCleanup.addPostCall([&]() { executeCommands(); });
+            frameCleanup.addPostCall([&]() { getDriver().purge(); });
 
             // Prep for rendering.
             PipelineState state = getColorWritePipelineState();
@@ -191,9 +194,9 @@ TEST_F(BackendTest, FeedbackLoops) {
                 };
                 shader.bindUniform<MaterialParams>(api, ubuffer, uniformBinding);
                 shader.uploadUniform(api, ubuffer, uniformBinding, MaterialParams{
-                    .fbWidth = float(params.viewport.width),
-                    .fbHeight = float(params.viewport.height),
-                    .sourceLevel = float(sourceLevel),
+                        .fbWidth = float(params.viewport.width),
+                        .fbHeight = float(params.viewport.height),
+                        .sourceLevel = float(sourceLevel),
                 });
 
                 api.beginRenderPass(renderTargets[targetLevel], params);
@@ -246,7 +249,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             //
             // NOTE: Calling glReadPixels on any miplevel other than the base level
             // seems to be un-reliable on some GPU's.
-            if (frame == kNumFrames - 1) {
+            if (frameCount == kNumFrames - 1) {
                 EXPECT_IMAGE(renderTargets[0],
                         ScreenshotParams(kTexWidth, kTexHeight, "FeedbackLoops", 4192780705));
             }
@@ -255,8 +258,6 @@ TEST_F(BackendTest, FeedbackLoops) {
             api.commit(swapChain);
             api.endFrame(0);
             api.finish();
-            executeCommands();
-            getDriver().purge();
         }
     }
 }

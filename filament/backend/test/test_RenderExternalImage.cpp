@@ -81,31 +81,31 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
 
-    api.startCapture(0);
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0, 0);
+    {
+        Cleanup cleanupCapture(api);
+        api.startCapture(0);
+        cleanup.addPostCall([&]() { api.stopCapture(0); });
+        api.makeCurrent(swapChain, swapChain);
+        {
+            RenderFrame frame(api);
 
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
-    api.bindDescriptorSet(descriptorSet, 0, {});
+            api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
+            api.bindDescriptorSet(descriptorSet, 0, {});
 
-    // Render a triangle.
-    api.beginRenderPass(defaultRenderTarget, params);
-    state.primitiveType = PrimitiveType::TRIANGLES;
-    state.vertexBufferInfo = triangle.getVertexBufferInfo();
-    api.bindPipeline(state);
-    api.bindRenderPrimitive(triangle.getRenderPrimitive());
-    api.draw2(0, 3, 1);
-    api.endRenderPass();
+            // Render a triangle.
+            api.beginRenderPass(defaultRenderTarget, params);
+            state.primitiveType = PrimitiveType::TRIANGLES;
+            state.vertexBufferInfo = triangle.getVertexBufferInfo();
+            api.bindPipeline(state);
+            api.bindRenderPrimitive(triangle.getRenderPrimitive());
+            api.draw2(0, 3, 1);
+            api.endRenderPass();
 
-    api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    api.stopCapture(0);
-
+            api.flush();
+            api.commit(swapChain);
+        }
+    }
     api.finish();
-
-    executeCommands();
 }
 
 TEST_F(BackendTest, RenderExternalImage) {
@@ -180,32 +180,32 @@ TEST_F(BackendTest, RenderExternalImage) {
     RenderPassParams params = getClearColorRenderPass();
     params.viewport = getFullViewport();
 
-    api.startCapture(0);
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0, 0);
+    {
+        Cleanup cleanupCapture(api);
+        api.startCapture(0);
+        cleanup.addPostCall([&]() { api.stopCapture(0); });
+        api.makeCurrent(swapChain, swapChain);
+        {
+            RenderFrame frame(api);
 
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
-    api.bindDescriptorSet(descriptorSet, 0, {});
+            api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
+            api.bindDescriptorSet(descriptorSet, 0, {});
 
-    // Render a triangle.
-    api.beginRenderPass(defaultRenderTarget, params);
-    state.primitiveType = PrimitiveType::TRIANGLES;
-    state.vertexBufferInfo = triangle.getVertexBufferInfo();
-    api.bindPipeline(state);
-    api.bindRenderPrimitive(triangle.getRenderPrimitive());
-    api.draw2(0, 3, 1);
-    api.endRenderPass();
+            // Render a triangle.
+            api.beginRenderPass(defaultRenderTarget, params);
+            state.primitiveType = PrimitiveType::TRIANGLES;
+            state.vertexBufferInfo = triangle.getVertexBufferInfo();
+            api.bindPipeline(state);
+            api.bindRenderPrimitive(triangle.getRenderPrimitive());
+            api.draw2(0, 3, 1);
+            api.endRenderPass();
 
-    api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
-    EXPECT_IMAGE(defaultRenderTarget,
-            ScreenshotParams(screenWidth(), screenHeight(), "RenderExternalImage", 1206264951));
-
-    api.stopCapture(0);
-    api.finish();
-    flushAndWait();
-
+            api.flush();
+            api.commit(swapChain);
+        }
+        EXPECT_IMAGE(defaultRenderTarget,
+                ScreenshotParams(screenWidth(), screenHeight(), "RenderExternalImage", 1206264951));
+    }
 }
 
 } // namespace test
