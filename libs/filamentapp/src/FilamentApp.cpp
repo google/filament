@@ -704,7 +704,13 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         ::prepareNativeWindow(mWindow);
 
         void* metalLayer = nullptr;
+
+#if defined(FILAMENT_SUPPORTS_WEBGPU)
+        if (config.backend == filament::Engine::Backend::METAL || config.backend == filament::Engine::Backend::VULKAN
+            || config.backend == filament::Engine::Backend::WEBGPU) {
+#else
         if (config.backend == filament::Engine::Backend::METAL || config.backend == filament::Engine::Backend::VULKAN) {
+#endif
             metalLayer = setUpMetalLayer(nativeWindow);
             // The swap chain on both native Metal and MoltenVK is a CAMetalLayer.
             nativeSwapChain = metalLayer;
