@@ -90,7 +90,16 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
             driver.updateDescriptorSetTexture(dsh, binding,
                     descriptors[binding].texture.th,
                     descriptors[binding].texture.params);
-        } else {
+        } else if (layout.isSamplerExternal(binding)) {
+            auto data = layout.getConstantSamplerData(binding);
+
+            // Not sure what to do here.... Should we validate or should we
+            // let the driver validate?
+            driver.updateDescriptorSetTexture(dsh, binding,
+                    descriptors[binding].texture.th,
+                    descriptors[binding].texture.params);
+        }
+        else  {
             driver.updateDescriptorSetBuffer(dsh, binding,
                     descriptors[binding].buffer.boh,
                     descriptors[binding].buffer.offset,
@@ -139,12 +148,15 @@ void DescriptorSet::setBuffer(
 void DescriptorSet::setSampler(
         backend::descriptor_binding_t const binding,
         backend::Handle<backend::HwTexture> th, backend::SamplerParams const params) noexcept {
+    // TODO: At this point we should ALSO be able to validate that the binding doesn't correspond to
+    // an immutable slot. This information is currently stored into the DescriptorSetLayout
+  
     // TODO: validate it's the right kind of descriptor
     if (mDescriptors[binding].texture.th != th || mDescriptors[binding].texture.params != params) {
         mDirty.set(binding);
     }
     mDescriptors[binding].texture = { th, params };
-    mValid.set(binding, (bool)th);
+    mValid.set(binding, (bool) th);
 }
 
 DescriptorSet DescriptorSet::duplicate(DescriptorSetLayout const& layout) const noexcept {

@@ -27,6 +27,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <unordered_map>
+
 namespace filament {
 
 class HwDescriptorSetLayoutFactory;
@@ -60,8 +62,25 @@ public:
         return mSamplers[binding];
     }
 
+    bool isSamplerExternal(backend::descriptor_binding_t const binding) const noexcept {
+        return mSamplerExternals[binding];
+    }
+
+    std::tuple<backend::SamplerYcbcrConversion, backend::SamplerParams, uint32_t>
+    getConstantSamplerData(
+            backend::descriptor_binding_t const binding) const noexcept {
+        const auto& iter = mImmutables.find(binding);
+        assert_invariant(iter != mImmutables.end());
+        return std::make_tuple(iter->second.sampler.conversion, iter->second.sampler.params,
+                iter->second.sampler.internalFormat);
+    }
+
     utils::bitset64 getSamplerDescriptors() const noexcept {
         return mSamplers;
+    }
+
+    utils::bitset64 getSamplerExternalDescriptors() const noexcept {
+        return mSamplerExternals;
     }
 
     utils::bitset64 getUniformBufferDescriptors() const noexcept {
@@ -69,8 +88,21 @@ public:
     }
 
 private:
+    struct Constant {
+        Constant() noexcept {}
+        union {
+            struct {
+                backend::SamplerYcbcrConversion conversion;
+                backend::SamplerParams params;
+                uint32_t internalFormat;
+            } sampler;
+        };
+    };
+    std::unordered_map<backend::descriptor_binding_t, Constant> mImmutables;
+
     backend::DescriptorSetLayoutHandle mDescriptorSetLayoutHandle;
     utils::bitset64 mSamplers;
+    utils::bitset64 mSamplerExternals;
     utils::bitset64 mUniformBuffers;
     uint8_t mMaxDescriptorBinding = 0;
 };
