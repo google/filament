@@ -145,7 +145,6 @@ static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidt
 
 TEST_F(BlitTest, ColorMagnify) {
     auto& api = getDriverApi();
-    mCleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 256;
     constexpr int kSrcTexHeight = 256;
@@ -207,7 +206,6 @@ TEST_F(BlitTest, ColorMagnify) {
 
 TEST_F(BlitTest, ColorMinify) {
     auto& api = getDriverApi();
-    mCleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 1024;
     constexpr int kSrcTexHeight = 1024;
@@ -346,7 +344,6 @@ TEST_F(BlitTest, ColorResolve) {
 
 TEST_F(BlitTest, Blit2DTextureArray) {
     auto& api = getDriverApi();
-    mCleanup.addPostCall([&]() { executeCommands(); });
 
     api.startCapture(0);
     mCleanup.addPostCall([&]() { api.stopCapture(0); });
@@ -416,7 +413,6 @@ TEST_F(BlitTest, Blit2DTextureArray) {
 
 TEST_F(BlitTest, BlitRegion) {
     auto& api = getDriverApi();
-    mCleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 1024;
     constexpr int kSrcTexHeight = 1024;
@@ -492,7 +488,6 @@ TEST_F(BlitTest, BlitRegion) {
 TEST_F(BlitTest, BlitRegionToSwapChain) {
     FAIL_IF(Backend::VULKAN, "Crashes due to not finding color attachment");
     auto& api = getDriverApi();
-    mCleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 1024;
     constexpr int kSrcTexHeight = 1024;
@@ -545,13 +540,13 @@ TEST_F(BlitTest, BlitRegionToSwapChain) {
                 dstRect, srcRenderTargets[srcLevel],
                 srcRect, SamplerMagFilter::LINEAR);
 
-        api.commit(swapChain);
-    }
+                api.commit(swapChain);
 
-    // TODO: for some reason, this test has been disabled. It needs to be tested on all
-    // machines.
-    // EXPECT_IMAGE(dstRenderTarget, expectations,
-    //         ScreenshotParams(kDstTexWidth, kDstTexHeight, "BlitRegionToSwapChain", 0x0));
+            // TODO: for some reason, this test has been disabled. It needs to be tested on all
+            // machines.
+            // EXPECT_IMAGE(dstRenderTarget, expectations,
+            //         ScreenshotParams(kDstTexWidth, kDstTexHeight, "BlitRegionToSwapChain", 0x0));
+    }
 }
 
 } // namespace test

@@ -40,8 +40,9 @@ TEST_F(BackendTest, ScissorViewportRegion) {
     constexpr int kSrcRtWidth = 384;
     constexpr int kSrcRtHeight = 384;
 
-    api.startCapture(0);
     Cleanup cleanup(api);
+    api.startCapture(0);
+    cleanup.addPostCall([&]() { api.stopCapture(0); });
 
     //    color texture (mip level 1) 512x512           depth texture (mip level 0) 512x512
     // +----------------------------------------+   +------------------------------------------+
@@ -124,7 +125,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         ps.rasterState.depthWrite = false;
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0, 0);
+        RenderFrame frame(api);
 
         api.beginRenderPass(srcRenderTarget, params);
         api.scissor(scissor);
@@ -135,9 +136,6 @@ TEST_F(BackendTest, ScissorViewportRegion) {
                 ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 0xAB3D1C53));
 
         api.commit(swapChain);
-        api.endFrame(0);
-
-        api.stopCapture(0);
     }
 }
 
@@ -145,12 +143,11 @@ TEST_F(BackendTest, ScissorViewportRegion) {
 TEST_F(BackendTest, ScissorViewportEdgeCases) {
     auto& api = getDriverApi();
 
-    api.startCapture(0);
-    Cleanup cleanup(api);
-
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
+        Cleanup cleanup(api);
+        api.startCapture(0);
         // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
         auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
         api.makeCurrent(swapChain, swapChain);
@@ -206,7 +203,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         ps.rasterState.depthWrite = false;
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0, 0);
+        RenderFrame frame(api);
 
         api.beginRenderPass(renderTarget, params);
         api.scissor(scissor);
@@ -225,9 +222,6 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
                 ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 0x6BF00F31));
 
         api.commit(swapChain);
-        api.endFrame(0);
-
-        api.stopCapture(0);
     }
 }
 

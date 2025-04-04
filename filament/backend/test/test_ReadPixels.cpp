@@ -286,7 +286,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         params.viewport.width = t.getRenderTargetSize();
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0, 0);
+        RenderFrame frame (api);
 
         // Render a white triangle over blue.
         api.beginRenderPass(renderTarget, params);
@@ -348,11 +348,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         api.endRenderPass();
 
         api.commit(swapChain);
-        api.endFrame(0);
     }
-
-    // This ensures all driver commands have finished before exiting the test.
-    flushAndWait();
 }
 
 TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
@@ -361,6 +357,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
     DriverApi& api = getDriverApi();
     Cleanup cleanup(api);
+    cleanup.addPostCall([&]() { executeCommands(); });
 
     // Create a platform-specific SwapChain and make it current.
     auto swapChain = cleanup.add(
@@ -423,24 +420,25 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
         }
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0, 0);
+        {
+            RenderFrame frame(api);
 
-        // Render some content, just so we don't read back uninitialized data.
-        api.beginRenderPass(renderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-        api.endRenderPass();
+            // Render some content, just so we don't read back uninitialized data.
+            api.beginRenderPass(renderTarget, params);
+            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+            api.endRenderPass();
 
-        PixelBufferDescriptor descriptor(buffer, renderTargetSize * renderTargetSize * 4,
-                PixelDataFormat::RGBA, PixelDataType::UBYTE, 1, 0, 0, renderTargetSize,
-                [](void* buffer, size_t size, void* user) {
-                    ReadPixelsTest* test = (ReadPixelsTest*)user;
-                    test->readPixelsFinished = true;
-                }, this);
+            PixelBufferDescriptor descriptor(buffer, renderTargetSize * renderTargetSize * 4,
+                    PixelDataFormat::RGBA, PixelDataType::UBYTE, 1, 0, 0, renderTargetSize,
+                    [](void* buffer, size_t size, void* user) {
+                        ReadPixelsTest* test = (ReadPixelsTest*) user;
+                        test->readPixelsFinished = true;
+                    }, this);
 
-        api.readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize,
-                std::move(descriptor));
-        api.commit(swapChain);
-        api.endFrame(0);
+            api.readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize,
+                    std::move(descriptor));
+            api.commit(swapChain);
+        }
 
         flushAndWait();
         getDriver().purge();
@@ -451,7 +449,6 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     free(buffer);
 
     api.finish();
-    executeCommands();
 }
 
 } // namespace test

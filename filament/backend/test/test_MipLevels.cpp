@@ -56,8 +56,9 @@ using namespace filament::backend;
 
 TEST_F(BackendTest, TextureViewLod) {
     auto& api = getDriverApi();
-    api.startCapture(0);
     Cleanup cleanup(api);
+    api.startCapture(0);
+    cleanup.addPostCall([&]() { api.stopCapture(0); });
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
@@ -123,7 +124,7 @@ TEST_F(BackendTest, TextureViewLod) {
 
         TrianglePrimitive triangle(api);
 
-        api.beginFrame(0, 0, 0);
+        RenderFrame frame(api);
 
         // We set the base mip to 1, and the max mip to 3
         // Level 0: 128x128 (red)
@@ -211,15 +212,9 @@ TEST_F(BackendTest, TextureViewLod) {
         api.endRenderPass();
 
         api.commit(swapChain);
-        api.endFrame(0);
-
-        api.stopCapture(0);
     }
 
     api.finish();
-
-    executeCommands();
-    getDriver().purge();
 }
 
 } // namespace test

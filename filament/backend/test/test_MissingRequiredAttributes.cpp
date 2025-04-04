@@ -59,10 +59,11 @@ using namespace filament::backend;
  * successfully.
  */
 TEST_F(BackendTest, MissingRequiredAttributes) {
+    DriverApi& api = getDriverApi();
+
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
-        DriverApi& api = getDriverApi();
         Cleanup cleanup(api);
         // Create a platform-specific SwapChain and make it current.
         auto swapChain = cleanup.add(createSwapChain());
@@ -94,9 +95,10 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
         state.rasterState.culling = CullingMode::NONE;
 
         api.startCapture(0);
+        cleanup.addPostCall([&]() { api.stopCapture(0); });
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0, 0);
+        RenderFrame frame(api);
 
         // Render a triangle.
         api.beginRenderPass(defaultRenderTarget, params);
@@ -105,12 +107,7 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
 
         api.flush();
         api.commit(swapChain);
-        api.endFrame(0);
-
-        api.stopCapture(0);
     }
-
-    executeCommands();
 }
 
 } // namespace test
