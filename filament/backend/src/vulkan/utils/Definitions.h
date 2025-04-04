@@ -348,6 +348,10 @@ using SamplerBitmask = utils::bitset64;
 // general.
 using InputAttachmentBitmask = utils::bitset64;
 
+constexpr uint8_t MAX_DESCRIPTOR_SET_BITMASK_BITS =
+        std::max(std::max(sizeof(UniformBufferBitmask), sizeof(SamplerBitmask)),
+                sizeof(InputAttachmentBitmask)) * 8;
+
 template<typename Bitmask>
 static constexpr uint8_t getVertexStageShift() noexcept {
     // We assume the bottom half of bits are for vertex stages.
