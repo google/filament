@@ -22,6 +22,7 @@
 #include "CommandStreamDispatcher.h"
 #include "DriverBase.h"
 #include "private/backend/Dispatcher.h"
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
@@ -256,10 +257,15 @@ void WebGPUDriver::terminate() {
 }
 
 void WebGPUDriver::tick(int) {
+    mDevice.Tick();
 }
 
 void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
+    wgpu::CommandEncoderDescriptor commandEncoderDescriptor{};
+    commandEncoderDescriptor.nextInChain = nullptr;
+    commandEncoderDescriptor.label = "webgpu_command_encoder";
+    mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
 }
 
 void WebGPUDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
@@ -276,6 +282,11 @@ void WebGPUDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void WebGPUDriver::endFrame(uint32_t frameId) {
+    mCommandEncoder = nullptr;
+    mQueue.Submit(1, &mCommandBuffer);
+    mCommandBuffer = nullptr;
+    mTextureView = nullptr;
+    mSwapChain->Present();
 }
 
 void WebGPUDriver::flush(int) {
@@ -342,7 +353,7 @@ Handle<HwSwapChain> WebGPUDriver::createSwapChainHeadlessS() noexcept {
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureS() noexcept {
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
 }
 
 Handle<HwTexture> WebGPUDriver::importTextureS() noexcept {
@@ -366,19 +377,19 @@ Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
 }
 
 Handle<HwBufferObject> WebGPUDriver::createBufferObjectS() noexcept {
-    return Handle<HwBufferObject>((Handle<HwBufferObject>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUBufferObject>();
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createRenderTargetS() noexcept {
-    return Handle<HwRenderTarget>((Handle<HwRenderTarget>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPURenderTarget>();
 }
 
 Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
-    return Handle<HwVertexBuffer>((Handle<HwVertexBuffer>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUVertexBuffer>();
 }
 
 Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
@@ -390,15 +401,15 @@ Handle<HwRenderPrimitive> WebGPUDriver::createRenderPrimitiveS() noexcept {
 }
 
 Handle<HwVertexBufferInfo> WebGPUDriver::createVertexBufferInfoS() noexcept {
-    return Handle<HwVertexBufferInfo>((Handle<HwVertexBufferInfo>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUVertexBufferInfo>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewSwizzleS() noexcept {
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createDefaultRenderTargetS() noexcept {
-    return Handle<HwRenderTarget>((Handle<HwRenderTarget>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPURenderTarget>();
 }
 
 Handle<HwDescriptorSetLayout> WebGPUDriver::createDescriptorSetLayoutS() noexcept {
@@ -422,7 +433,7 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     // TODO:  use webgpu handle allocator from.
     //        https://github.com/google/filament/pull/8566
     // HwSwapChain* hwSwapChain = handleCast<HwSwapChain*>(sch);
-    mSwapChain = nullptr;
+    assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
     mAdapter = mPlatform.requestAdapter(surface);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -498,7 +509,11 @@ void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<
 
 void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {}
 
-void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {}
+void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
+    assert_invariant(!mDefaultRenderTarget);
+    mDefaultRenderTarget = constructHandle<WGPURenderTarget>(rth);
+    assert_invariant(mDefaultRenderTarget);
+}
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
         uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount, MRT color,
@@ -659,6 +674,11 @@ void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> boh) {
 
 void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
+    auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
+    auto* bufferObject = handleCast<WGPUBufferObject>(boh);
+    assert_invariant(index < vertexBuffer->mBuffers.size());
+    vertexBuffer->setBuffer(bufferObject, index);
+
 }
 
 void WebGPUDriver::update3DImage(Handle<HwTexture> th,
@@ -691,9 +711,39 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 }
 
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
+    mTextureView = mSwapChain->GetNextSurfaceTextureView(params.viewport.width, params.viewport.height);
+    wgpu::RenderPassColorAttachment renderPassColorAttachment = {};
+    renderPassColorAttachment.view = mTextureView;
+    renderPassColorAttachment.resolveTarget = nullptr;
+
+    // TODO: remove this code once WebGPU Pipeline is implemented with render targets, pipeline and buffers.
+    renderPassColorAttachment.loadOp = wgpu::LoadOp::Clear;
+    renderPassColorAttachment.storeOp = wgpu::StoreOp::Store;
+    static float red = 1.0f;
+    if (red - 0.01 > 0) {
+        red -= 0.01;
+    } else {
+        red = 1.0f;
+    }
+    renderPassColorAttachment.clearValue = wgpu::Color{red, 0 , 0 , 1};
+    renderPassColorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+
+    // TODO: This needs to be updated proper color and depth attachments
+    wgpu::RenderPassDescriptor renderPassDescriptor = {};
+    renderPassDescriptor.nextInChain = nullptr;
+    renderPassDescriptor.colorAttachmentCount = 1;
+    renderPassDescriptor.colorAttachments = &renderPassColorAttachment;
+    renderPassDescriptor.depthStencilAttachment = nullptr;
+    renderPassDescriptor.timestampWrites = nullptr;
+
+    mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
+    mRenderPassEncoder.SetViewport((float)params.viewport.left, (float)params.viewport.bottom,
+            (float) params.viewport.width, (float) params.viewport.height, params.depthRange.near, params.depthRange.far);
 }
 
 void WebGPUDriver::endRenderPass(int) {
+    mRenderPassEncoder.End();
+    mRenderPassEncoder = nullptr;
 }
 
 void WebGPUDriver::nextSubpass(int) {
@@ -703,6 +753,10 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
+    wgpu::CommandBufferDescriptor commandBufferDescriptor = {};
+    commandBufferDescriptor.nextInChain = nullptr;
+    commandBufferDescriptor.label = "webgpu_command_buffer";
+    mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
 }
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,

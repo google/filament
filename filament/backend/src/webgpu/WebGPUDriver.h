@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
+#include "WebGPUHandles.h"
+
 #include "webgpu/WebGPUSwapChain.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -29,6 +31,7 @@
 #include <utils/compiler.h>
 
 #include <webgpu/webgpu_cpp.h>
+
 
 #include <cstdint>
 #include <memory>
@@ -63,7 +66,11 @@ private:
     // TODO consider moving to handle allocator when ready
     std::unique_ptr<WebGPUSwapChain> mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
-
+    wgpu::CommandEncoder mCommandEncoder = nullptr;
+    wgpu::TextureView mTextureView = nullptr;
+    wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
+    wgpu::CommandBuffer mCommandBuffer = nullptr;
+    WGPURenderTarget* mDefaultRenderTarget = nullptr;
     /*
      * Driver interface
      */
@@ -91,6 +98,15 @@ private:
     template<typename D>
     Handle<D> allocHandle() {
         return mHandleAllocator.allocate<D>();
+    }
+
+    template<typename D, typename B, typename ... ARGS>
+    D* constructHandle(Handle<B>& handle, ARGS&& ... args) noexcept {
+        return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
+    }
+    template<typename D, typename B>
+    D* handleCast(Handle<B> handle) noexcept {
+        return mHandleAllocator.handle_cast<D*>(handle);
     }
 
 };
