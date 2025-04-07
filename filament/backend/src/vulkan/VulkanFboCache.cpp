@@ -340,15 +340,24 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey const& config) noexcept
     return renderPass;
 }
 
-void VulkanFboCache::reset() noexcept {
-    for (auto pair : mFramebufferCache) {
+void VulkanFboCache::resetFramebuffers() noexcept {
+    for (const auto& pair: mFramebufferCache) {
         mRenderPassRefCount[pair.first.renderPass]--;
         vkDestroyFramebuffer(mDevice, pair.second.handle, VKALLOC);
     }
     mFramebufferCache.clear();
-    for (auto pair : mRenderPassCache) {
+}
+
+void VulkanFboCache::terminate() noexcept {
+    for (const auto& pair: mFramebufferCache) {
+        mRenderPassRefCount[pair.first.renderPass]--;
+        vkDestroyFramebuffer(mDevice, pair.second.handle, VKALLOC);
+    }
+    mFramebufferCache.clear();
+    for (const auto& pair: mRenderPassCache) {
         vkDestroyRenderPass(mDevice, pair.second.handle, VKALLOC);
     }
+    mRenderPassRefCount.clear();
     mRenderPassCache.clear();
 }
 
