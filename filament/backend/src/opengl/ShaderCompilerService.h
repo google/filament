@@ -84,6 +84,7 @@ public:
     void tick();
 
     // Destroys a valid token and all associated resources. Used to "cancel" a program compilation.
+    // This function is not called if `initialize(token)` is already invoked.
     static void terminate(program_token_t& token);
 
     // stores a user data pointer in the token
@@ -91,6 +92,12 @@ public:
 
     // retrieves the user data pointer stored in the token
     static void* getUserData(const program_token_t& token) noexcept;
+
+    // Issue one callback handle.
+    CallbackManager::Handle issueCallbackHandle() noexcept;
+
+    // Return a callback handle to the callback manager.
+    void submitCallbackHandle(CallbackManager::Handle handle) noexcept;
 
     // call the callback when all active programs are ready
     void notifyWhenAllProgramsAreReady(
@@ -128,26 +135,13 @@ private:
     using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
     std::vector<ContainerType> mRunAtNextTickOps;
 
-    GLuint initialize(ShaderCompilerService::program_token_t& token) noexcept;
+    GLuint initialize(program_token_t& token);
+    void ensureTokenIsReady(program_token_t const& token);
 
-    static void getProgramFromCompilerPool(program_token_t& token) noexcept;
-
-    static void compileShaders(
-            OpenGLContext& context,
-            Program::ShaderSource shadersSource,
-            utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
-            bool multiview, shaders_t& outShaders, shaders_source_t& outShaderSourceCode) noexcept;
-
-    static GLuint linkProgram(OpenGLContext& context, shaders_t const& shaders,
-            utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> const& attributes) noexcept;
-
-    static bool checkProgramStatus(program_token_t const& token) noexcept;
-
-    void runAtNextTick(CompilerPriorityQueue priority,
-            const program_token_t& token, Job job) noexcept;
+    void runAtNextTick(CompilerPriorityQueue priority, program_token_t const& token,
+            Job job) noexcept;
     void executeTickOps() noexcept;
-    bool cancelTickOp(program_token_t token) noexcept;
-    // order of insertion is important
+    bool cancelTickOp(program_token_t const& token) noexcept;
 };
 
 } // namespace filament::backend
