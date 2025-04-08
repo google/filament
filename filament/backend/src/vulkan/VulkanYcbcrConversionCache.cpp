@@ -43,7 +43,7 @@ VkSamplerYcbcrConversion VulkanYcbcrConversionCache::getConversion(
     TextureSwizzle const swizzleArray[] = { chroma.r, chroma.g, chroma.b, chroma.a };
     VkSamplerYcbcrConversionCreateInfo conversionInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
-        .format = VK_FORMAT_UNDEFINED,
+        .format = fvkutils::getVkFormat(params.format),
         .ycbcrModel = fvkutils::getYcbcrModelConversion(chroma.ycbcrModel),
         .ycbcrRange = fvkutils::getYcbcrRange(chroma.ycbcrRange),
         .components = fvkutils::getSwizzleMap(swizzleArray),
@@ -52,6 +52,7 @@ VkSamplerYcbcrConversion VulkanYcbcrConversionCache::getConversion(
         .chromaFilter = fvkutils::getFilter(chroma.chromaFilter),
     };
 
+    // We could put this in the platform class, but that seems like a bit of an overkill
 #if defined(__ANDROID__)
     VkExternalFormatANDROID externalFormat = {
         .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
@@ -59,6 +60,7 @@ VkSamplerYcbcrConversion VulkanYcbcrConversionCache::getConversion(
     };
     if (params.externalFormat) {
         conversionInfo.pNext = &externalFormat;
+        conversionInfo.format = VK_FORMAT_UNDEFINED;
     }
 #endif
 

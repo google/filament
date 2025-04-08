@@ -26,11 +26,10 @@
 #include <backend/TargetBufferInfo.h>
 
 #include <utils/bitset.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <bluevk/BlueVK.h>
 #include <tsl/robin_map.h>
-
-#include <memory>
 
 namespace filament::backend {
 
@@ -41,21 +40,34 @@ public:
 
     void terminate() noexcept;
 
+    // Just a wrapper around getVkLayout()
     fvkmemory::resource_ptr<VulkanDescriptorSetLayout> createLayout(
             Handle<HwDescriptorSetLayout> handle, backend::DescriptorSetLayout&& info);
+
+    // This method is meant to be used with external samplers
+    VkDescriptorSetLayout getVkLayout(VulkanDescriptorSetLayout::Bitmask const& bitmasks,
+            utils::FixedCapacityVector<VkSampler> immutableSamplers = {});
 
 private:
     VkDevice mDevice;
     fvkmemory::ResourceManager* mResourceManager;
 
-    using BitmaskGroup = VulkanDescriptorSetLayout::Bitmask;
-    using BitmaskGroupHashFn = utils::hash::MurmurHashFn<BitmaskGroup>;
-    struct BitmaskGroupEqual {
-        bool operator()(BitmaskGroup const& k1, BitmaskGroup const& k2) const { return k1 == k2; }
+    struct LayoutKey {
+        // this describes the layout using bitset.
+        VulkanDescriptorSetLayout::Bitmask bitmask = {};
+        // number of immutable samplers can be arbitrary; so we hash them into 64-bit.
+        uint64_t immutableSamplerHash = 0;
+    };
+    static_assert(sizeof(LayoutKey) == 48);
+
+    using LayoutKeyHashFn = utils::hash::MurmurHashFn<LayoutKey>;
+    struct LayoutKeyEqual {
+        bool operator()(LayoutKey const& k1, LayoutKey const& k2) const {
+            return k1.bitmask == k2.bitmask && k1.immutableSamplerHash == k2.immutableSamplerHash;
+        }
     };
 
-    tsl::robin_map<BitmaskGroup, VkDescriptorSetLayout, BitmaskGroupHashFn, BitmaskGroupEqual>
-            mVkLayouts;
+    tsl::robin_map<LayoutKey, VkDescriptorSetLayout, LayoutKeyHashFn, LayoutKeyEqual> mVkLayouts;
 };
 
 } // namespace filament::backend
