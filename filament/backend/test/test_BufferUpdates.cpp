@@ -18,72 +18,18 @@
 
 #include "Lifetimes.h"
 #include "Shader.h"
-#include "ShaderGenerator.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
-
-namespace {
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Shaders
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-std::string vertex (R"(#version 450 core
-
-layout(location = 0) in vec4 mesh_position;
-
-layout(location = 0) out uvec4 indices;
-
-layout(binding = 0, set = 1) uniform Params {
-    highp vec4 padding[4];  // offset of 64 bytes
-
-    highp vec4 color;
-    highp vec4 offset;
-} params;
-
-void main() {
-    gl_Position = vec4(mesh_position.xy + params.offset.xy, 0.0, 1.0);
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
-    gl_Position.y = -gl_Position.y;
-#endif
-}
-)");
-
-std::string fragment (R"(#version 450 core
-
-layout(location = 0) out vec4 fragColor;
-
-layout(binding = 0, set = 1) uniform Params {
-    highp vec4 padding[4];  // offset of 64 bytes
-
-    highp vec4 color;
-    highp vec4 offset;
-} params;
-
-void main() {
-    fragColor = vec4(params.color.rgb, 1.0f);
-}
-
-)");
-
-}
 
 namespace test {
 
 using namespace filament;
 using namespace filament::backend;
 
-// In the shader, these MaterialParams are offset by 64 bytes into the uniform buffer to test buffer
-// updates with offset.
-struct MaterialParams {
-    math::float4 color;
-    math::float4 offset;
-};
-static_assert(sizeof(MaterialParams) == 8 * sizeof(float));
 // Uniform config for writing MaterialParams to the shader uniform with 64 bytes of padding.
 const UniformBindingConfig kBindingConfig = {
-        .dataSize = sizeof(MaterialParams),
-        .bufferSize = sizeof(MaterialParams) + 64,
+        .dataSize = sizeof(SimpleMaterialParams),
+        .bufferSize = sizeof(SimpleMaterialParams) + 64,
         .byteOffset = 64
 };
 
@@ -93,8 +39,10 @@ public:
 
 protected:
     Shader createShader() {
-        return Shader(getDriverApi(), mCleanup, ShaderConfig{
-           vertex, fragment, {"Params"}
+        return SharedShaders::makeShader(getDriverApi(), mCleanup, ShaderRequest{
+                .mVertexType = VertexShaderType::Simple,
+                .mFragmentType = FragmentShaderType::SolidColored,
+                .mUniformType = ShaderUniformType::SimpleWithPadding
         });
     }
 
@@ -129,7 +77,7 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         RenderPassParams params = {};
         fullViewport(params);
         params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = {0.f, 1.f, 0.f, 1.f};
+        params.clearColor = { 0.f, 1.f, 0.f, 1.f };
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
@@ -144,17 +92,18 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         // Create a uniform buffer.
         // We use STATIC here, even though the buffer is updated, to force the Metal backend to use
         // a GPU buffer, which is more interesting to test.
-        auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams) + 64,
+        auto ubuffer = cleanup.add(api.createBufferObject(sizeof(SimpleMaterialParams) + 64,
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
-        shader.bindUniform<MaterialParams>(api, ubuffer, kBindingConfig);
+        shader.bindUniform<SimpleMaterialParams>(api, ubuffer, kBindingConfig);
 
         api.startCapture(0);
 
         // Upload the uniform, but with an offset to accommodate the padding in the shader's
         // uniform definition.
-        shader.uploadUniform(api, ubuffer, kBindingConfig, MaterialParams{
+        shader.uploadUniform(api, ubuffer, kBindingConfig, SimpleMaterialParams{
                 .color = { 1.0f, 1.0f, 1.0f, 1.0f },
+                .scaleMinusOne = { 0.0, 0.0, 0.0, 0.0 },
                 .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
         });
 
@@ -165,19 +114,21 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         size_t triangleIndex = 0;
         for (float i = -1.0f; i < 1.0f; i += 0.2f) {
             const float low = i, high = i + 0.2;
-            const filament::math::float2 v[3] {{low, low}, {high, low}, {low, high}};
+            const filament::math::float2 v[3]{{ low,  low },
+                                              { high, low },
+                                              { low,  high }};
             triangle.updateVertices(v);
 
             if (updateIndices) {
                 if (triangleIndex % 2 == 0) {
                     // Upload each index separately, to test offsets.
-                    const TrianglePrimitive::index_type i[3] {0, 1, 2};
+                    const TrianglePrimitive::index_type i[3]{ 0, 1, 2 };
                     triangle.updateIndices(i + 0, 1, 0);
                     triangle.updateIndices(i + 1, 1, 1);
                     triangle.updateIndices(i + 2, 1, 2);
                 } else {
                     // This effectively hides this triangle.
-                    const TrianglePrimitive::index_type i[3] {0, 0, 0};
+                    const TrianglePrimitive::index_type i[3]{ 0, 0, 0 };
                     triangle.updateIndices(i);
                 }
             }
@@ -220,28 +171,29 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     // Create a uniform buffer.
     // We use STATIC here, even though the buffer is updated, to force the Metal backend to use a
     // GPU buffer, which is more interesting to test.
-    auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams) + 64,
+    auto ubuffer = cleanup.add(api.createBufferObject(sizeof(SimpleMaterialParams) + 64,
             BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
-    shader.bindUniform<MaterialParams>(api, ubuffer, kBindingConfig);
+    shader.bindUniform<SimpleMaterialParams>(api, ubuffer, kBindingConfig);
 
     // Create a render target.
     auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT));
     auto renderTarget = cleanup.add(api.createRenderTarget(
-            TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{colorTexture}}, {}, {}));
+            TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{ colorTexture }}, {}, {}));
 
     // Upload uniforms for the first triangle.
     // Upload the uniform, but with an offset to accommodate the padding in the shader's
     // uniform definition.
-    shader.uploadUniform(api, ubuffer, kBindingConfig, MaterialParams{
+    shader.uploadUniform(api, ubuffer, kBindingConfig, SimpleMaterialParams{
             .color = { 1.0f, 0.0f, 0.5f, 1.0f },
+            .scaleMinusOne = { 0.0f, 0.0f, 0.0f, 0.0f },
             .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
     });
 
     RenderPassParams params = {};
     params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = {0.f, 0.f, 1.f, 1.f};
+    params.clearColor = { 0.f, 0.f, 1.f, 1.f };
     params.flags.discardStart = TargetBufferFlags::ALL;
     params.flags.discardEnd = TargetBufferFlags::NONE;
     params.viewport.height = 512;
@@ -250,18 +202,18 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
             renderTarget, swapChain, shader.getProgram(), params);
 
     // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
-    // color.b, color.a, offset.x, and offset.y.
-    shader.uploadUniform(api, ubuffer, UniformBindingConfig{
-                    .dataSize = sizeof(std::array<float, 4>),
-                    .bufferSize = kBindingConfig.bufferSize,
-                    .byteOffset = *kBindingConfig.byteOffset + offsetof(MaterialParams, color.b),
-            },
-            std::array<float, 4>{
-                    // color.b, color.a
-                    1.0f, 1.0f,
-                    // offset.x, offset.y
-                    0.5f, 0.5f }
-    );
+    // color.b, color.a, scaleMinusOne, offset.x, and offset.y.
+    const UniformBindingConfig partialBindingConfig = {
+            .dataSize = sizeof(float) * 8,
+            .bufferSize = sizeof(SimpleMaterialParams) + 64,
+            .byteOffset = 64 + offsetof(SimpleMaterialParams, color.b)
+    };
+    shader.uploadUniform(api, ubuffer, partialBindingConfig,
+            std::array<float, 8>{
+                    1.0f, 1.0f, // color.b, color.a
+                    0.0f, 0.0f, 0.0f, 0.0f, // scale
+                    0.5f, 0.5f // offset.x, offset.y
+            });
 
     params.flags.clear = TargetBufferFlags::NONE;
     params.flags.discardStart = TargetBufferFlags::NONE;

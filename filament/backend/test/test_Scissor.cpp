@@ -17,7 +17,8 @@
 #include "BackendTest.h"
 
 #include "Lifetimes.h"
-#include "ShaderGenerator.h"
+#include "Shader.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
 #include <utils/Hash.h>
@@ -26,23 +27,6 @@ namespace test {
 
 using namespace filament;
 using namespace filament::backend;
-
-static const char* const triangleVs = R"(#version 450 core
-layout(location = 0) in vec4 mesh_position;
-void main() {
-    gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
-    gl_Position.y = -gl_Position.y;
-#endif
-})";
-
-static const char* const triangleFs = R"(#version 450 core
-precision mediump int; precision highp float;
-layout(location = 0) out vec4 fragColor;
-void main() {
-    fragColor = vec4(1.0f);
-})";
 
 TEST_F(BackendTest, ScissorViewportRegion) {
     auto& api = getDriverApi();
@@ -85,10 +69,11 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
         api.makeCurrent(swapChain, swapChain);
 
-        // Create a program.
-        ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(api);
-        ProgramHandle program = cleanup.add(api.createProgram(std::move(p)));
+        Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{
+            .mVertexType = VertexShaderType::Noop,
+            .mFragmentType = FragmentShaderType::White,
+            .mUniformType = ShaderUniformType::None,
+        });
 
         // Create source color and depth textures.
         Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, kNumLevels,
@@ -133,7 +118,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState ps = {};
-        ps.program = program;
+        ps.program = shader.getProgram();
         ps.rasterState.colorWrite = true;
         ps.rasterState.depthWrite = false;
 
@@ -175,10 +160,11 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
         api.makeCurrent(swapChain, swapChain);
 
-        // Create a program.
-        ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(api);
-        ProgramHandle program = cleanup.add(api.createProgram(std::move(p)));
+        Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{
+                .mVertexType = VertexShaderType::Noop,
+                .mFragmentType = FragmentShaderType::White,
+                .mUniformType = ShaderUniformType::None,
+        });
 
         // Create a source color textures.
         Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
@@ -220,7 +206,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState ps = {};
-        ps.program = program;
+        ps.program = shader.getProgram();
         ps.rasterState.colorWrite = true;
         ps.rasterState.depthWrite = false;
 
