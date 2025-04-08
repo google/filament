@@ -349,11 +349,8 @@ void VulkanFboCache::resetFramebuffers() noexcept {
 }
 
 void VulkanFboCache::terminate() noexcept {
-    for (const auto& pair: mFramebufferCache) {
-        mRenderPassRefCount[pair.first.renderPass]--;
-        vkDestroyFramebuffer(mDevice, pair.second.handle, VKALLOC);
-    }
-    mFramebufferCache.clear();
+    resetFramebuffers();
+
     for (const auto& pair: mRenderPassCache) {
         vkDestroyRenderPass(mDevice, pair.second.handle, VKALLOC);
     }
