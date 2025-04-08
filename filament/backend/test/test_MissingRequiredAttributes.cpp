@@ -17,7 +17,8 @@
 #include "BackendTest.h"
 
 #include "Lifetimes.h"
-#include "ShaderGenerator.h"
+#include "Shader.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
 namespace {
@@ -46,16 +47,6 @@ void main() {
 }
 )");
 
-std::string fragment (R"(#version 450 core
-
-layout(location = 0) out vec4 fragColor;
-
-void main() {
-    fragColor = vec4(1.0);
-}
-
-)");
-
 }
 
 namespace test {
@@ -68,19 +59,21 @@ using namespace filament::backend;
  * successfully.
  */
 TEST_F(BackendTest, MissingRequiredAttributes) {
+    DriverApi& api = getDriverApi();
+
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
-        DriverApi& api = getDriverApi();
         Cleanup cleanup(api);
         // Create a platform-specific SwapChain and make it current.
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(api);
-        auto program = cleanup.add(api.createProgram(std::move(p)));
+        Shader shader(api, cleanup, ShaderConfig{
+            .vertexShader = vertex,
+            .fragmentShader = SharedShaders::getFragmentShaderText(ShaderEnvironment{sBackend}, FragmentShaderType::White, ShaderUniformType::None),
+        });
 
         auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
@@ -94,16 +87,17 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState state;
-        state.program = program;
+        state.program = shader.getProgram();
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
         state.rasterState.culling = CullingMode::NONE;
 
         api.startCapture(0);
+        cleanup.addPostCall([&]() { api.stopCapture(0); });
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0, 0);
+        RenderFrame frame(api);
 
         // Render a triangle.
         api.beginRenderPass(defaultRenderTarget, params);
@@ -112,12 +106,7 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
 
         api.flush();
         api.commit(swapChain);
-        api.endFrame(0);
-
-        api.stopCapture(0);
     }
-
-    executeCommands();
 }
 
 } // namespace test
