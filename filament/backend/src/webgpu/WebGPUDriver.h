@@ -102,11 +102,17 @@ private:
     D* constructHandle(Handle<B>& handle, ARGS&& ... args) noexcept {
         return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
     }
+
     template<typename D, typename B>
     D* handleCast(Handle<B> handle) noexcept {
         return mHandleAllocator.handle_cast<D*>(handle);
     }
 
+    template<typename D, typename B>
+    void destructHandle(Handle<B>& handle) noexcept {
+        auto* p = mHandleAllocator.handle_cast<D*>(handle);
+        mHandleAllocator.deallocate(handle, p);
+    }
 };
 
 }// namespace filament::backend

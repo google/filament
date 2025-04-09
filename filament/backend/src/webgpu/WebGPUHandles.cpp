@@ -18,11 +18,31 @@
 
 namespace filament::backend {
 
-WGPUVertexBuffer::WGPUVertexBuffer(uint32_t vextexCount, uint32_t bufferCount,
-        Handle<WGPUVertexBufferInfo> vbih)
-    : HwVertexBuffer(vextexCount),
-      vbih(vbih),
-      buffers(MAX_VERTEX_BUFFER_COUNT) {}
+    WGPUIndexBuffer::WGPUIndexBuffer(wgpu::Device const &device, uint8_t elementSize, uint32_t indexCount) {
+        wgpu::BufferDescriptor descriptor{
+                .label = "WGPUIndexBuffer",
+                .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index,
+                .size = elementSize * indexCount,
+                .mappedAtCreation = false };
+        buffer = device.CreateBuffer(&descriptor);
+    }
+
+    WGPUVertexBuffer::WGPUVertexBuffer(wgpu::Device const &device, uint32_t vextexCount, uint32_t bufferCount,
+                                       Handle<WGPUVertexBufferInfo> vbih)
+            : HwVertexBuffer(vextexCount),
+              vbih(vbih),
+              buffers(MAX_VERTEX_BUFFER_COUNT) {
+        wgpu::BufferDescriptor descriptor {
+                .label = "WGPUVertexBuffer",
+                .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex,
+                .size = vextexCount * bufferCount,
+                .mappedAtCreation = false };
+
+        for (uint32_t i = 0; i < bufferCount; ++i) {
+            buffers[i] = device.CreateBuffer(&descriptor);
+        }
+    }
+
 
 // TODO: Empty function is a place holder for verxtex buffer updates and should be
 // updated for that purpose.

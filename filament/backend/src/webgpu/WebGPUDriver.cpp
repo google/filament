@@ -289,12 +289,21 @@ void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void WebGPUDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
+   if (vbih) {
+        destructHandle<WGPUVertexBufferInfo>(vbih);
+    }
 }
 
 void WebGPUDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
+    if (vbh) {
+        destructHandle<WGPUVertexBuffer>(vbh);
+    }
 }
 
 void WebGPUDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
+    if (ibh) {
+        destructHandle<WGPUIndexBuffer>(ibh);
+    }
 }
 
 void WebGPUDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
@@ -387,7 +396,7 @@ Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
 }
 
 Handle<HwRenderPrimitive> WebGPUDriver::createRenderPrimitiveS() noexcept {
-    return Handle<HwRenderPrimitive>((Handle<HwRenderPrimitive>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPURenderPrimitive>();
 }
 
 Handle<HwVertexBufferInfo> WebGPUDriver::createVertexBufferInfoS() noexcept {

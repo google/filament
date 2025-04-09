@@ -42,20 +42,19 @@ struct WGPUVertexBufferInfo : public HwVertexBufferInfo {
     AttributeArray attributes;
 };
 
-// TODO: Currently WGPUVertexBuffer is not used by WebGPU for useful task.
-// Update the struct when used by WebGPU driver.
 struct WGPUVertexBuffer : public HwVertexBuffer {
-    WGPUVertexBuffer(uint32_t vextexCount, uint32_t bufferCount, Handle<WGPUVertexBufferInfo> vbih);
-    void setBuffer(WGPUBufferObject* bufferObject, uint32_t index);
+    WGPUVertexBuffer(wgpu::Device const &device, uint32_t vextexCount, uint32_t bufferCount,
+                     Handle<WGPUVertexBufferInfo> vbih);
+
+    void setBuffer(WGPUBufferObject *bufferObject, uint32_t index);
 
     Handle<WGPUVertexBufferInfo> vbih;
     utils::FixedCapacityVector<wgpu::Buffer> buffers;
 };
 
-// TODO: Currently WGPUIndexBuffer is not used by WebGPU for useful task.
-// Update the struct when used by WebGPU driver.
 struct WGPUIndexBuffer : public HwIndexBuffer {
-    WGPUIndexBuffer(BufferUsage usage, uint8_t elementSize, uint32_t indexCount);
+    WGPUIndexBuffer(wgpu::Device const &device, uint8_t elementSize,
+                    uint32_t indexCount);
 
     wgpu::Buffer buffer;
 };
@@ -79,6 +78,15 @@ struct WGPUTexture : public HwTexture {
     WGPUTexture(WGPUTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
 
     wgpu::Texture texture = nullptr;
+};
+
+struct WGPURenderPrimitive : public HwRenderPrimitive {
+    WGPURenderPrimitive();
+    void setBuffers(WGPUVertexBufferInfo const* const vbi,
+            WGPUVertexBuffer* vertexBuffer, WGPUIndexBuffer* indexBuffer);
+
+    WGPUVertexBuffer* vertexBuffer = nullptr;
+    WGPUIndexBuffer* indexBuffer = nullptr;
 };
 
 // TODO: Currently WGPURenderTarget is not used by WebGPU for useful task.
