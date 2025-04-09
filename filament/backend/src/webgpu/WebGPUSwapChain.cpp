@@ -191,9 +191,12 @@ wgpu::CompositeAlphaMode selectAlphaMode(size_t availableAlphaModesCount,
 }
 
 void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
-        wgpu::SurfaceCapabilities const& capabilities, bool useSRGBColorSpace) {
+        wgpu::SurfaceCapabilities const& capabilities, wgpu::Extent2D surfaceSize,
+        bool useSRGBColorSpace) {
     config.device = device;
     config.usage = wgpu::TextureUsage::RenderAttachment;
+    config.width = surfaceSize.width;
+    config.height = surfaceSize.height;
     config.format =
             selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);
     config.presentMode =
@@ -205,8 +208,8 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
 
 namespace filament::backend {
 
-WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter,
-        wgpu::Device& device, uint64_t flags)
+WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D surfaceSize,
+        wgpu::Adapter& adapter, wgpu::Device& device, uint64_t flags)
     : mSurface(surface) {
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
@@ -217,7 +220,7 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter
 #endif
     }
     const bool useSRGBColorSpace = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0;
-    initConfig(mConfig, device, capabilities, useSRGBColorSpace);
+    initConfig(mConfig, device, capabilities, surfaceSize, useSRGBColorSpace);
 }
 
 WebGPUSwapChain::~WebGPUSwapChain() {
