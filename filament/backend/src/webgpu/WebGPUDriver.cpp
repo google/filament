@@ -310,13 +310,10 @@ void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
 void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
-    mSwapChain = nullptr;
-    // TODO:  use webgpu handle allocator from
-    //        https://github.com/google/filament/pull/8566
-//    if (sch) {
-//        HwSwapChain* hwSwapChain = handleCast<HwSwapChain*>(sch);
-//        destruct(sch, hwSwapChain);
-//    }
+    if (sch) {
+        destructHandle<WGPUSwapChain>(sch);
+    }
+    mHwSwapChain = nullptr;
 }
 
 void WebGPUDriver::destroyStream(Handle<HwStream> sh) {
@@ -332,10 +329,7 @@ void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
-    // TODO:  use webgpu handle allocator from.
-    //        https://github.com/google/filament/pull/8566
-    // return allocAndConstructHandle<HwSwapChain>();
-    return Handle<HwSwapChain>((Handle<HwSwapChain>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUSwapChain>();
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainHeadlessS() noexcept {
@@ -420,10 +414,7 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 }
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
-    // TODO:  use webgpu handle allocator from.
-    //        https://github.com/google/filament/pull/8566
-    // HwSwapChain* hwSwapChain = handleCast<HwSwapChain*>(sch);
-    assert_invariant(!mSwapChain);
+    assert_invariant(!mHwSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
     mAdapter = mPlatform.requestAdapter(surface);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -434,7 +425,9 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     printDeviceDetails(mDevice);
 #endif
     mQueue = mDevice.GetQueue();
-    mSwapChain = std::make_unique<WebGPUSwapChain>(std::move(surface), mAdapter, mDevice, flags);
+    mHwSwapChain =
+            constructHandle<WGPUSwapChain>(sch, std::move(surface), mAdapter, mDevice, flags);
+    assert_invariant(mHwSwapChain);
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
                   "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
@@ -447,9 +440,6 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
                   "rebuilding Filament with that flag, e.g. ./build.sh -x "
                << FWGPU_PRINT_SYSTEM << " ..." << utils::io::endl;
 #endif
-    // TODO:  use webgpu handle allocator from.
-    //        https://github.com/google/filament/pull/8566
-    // hwSwapChain->swapChain = mSwapChain.get();
 }
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
@@ -705,8 +695,9 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     };
     mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
     assert_invariant(mCommandEncoder);
-
-    mTextureView = mSwapChain->getNextSurfaceTextureView(params.viewport.width, params.viewport.height);
+    assert_invariant(mHwSwapChain && mHwSwapChain->getSwapChain());
+    mTextureView = mHwSwapChain->getSwapChain()->getNextSurfaceTextureView(params.viewport.width,
+            params.viewport.height);
     assert_invariant(mTextureView);
 
     // TODO: Remove this code once WebGPU pipeline is implemented
@@ -759,7 +750,8 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
     mQueue.Submit(1, &mCommandBuffer);
     mCommandBuffer = nullptr;
     mTextureView = nullptr;
-    mSwapChain->present();
+    assert_invariant(mHwSwapChain && mHwSwapChain->getSwapChain());
+    mHwSwapChain->getSwapChain()->present();
 }
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,

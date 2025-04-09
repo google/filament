@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "webgpu/WebGPUSwapChain.h"
+#include "webgpu/WebGPUSwapChainImpl.h"
 
 #include "webgpu/WebGPUConstants.h"
 
@@ -205,7 +205,7 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
 
 namespace filament::backend {
 
-WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter,
+WebGPUSwapChainImpl::WebGPUSwapChainImpl(wgpu::Surface&& surface, wgpu::Adapter& adapter,
         wgpu::Device& device, uint64_t flags)
     : mSurface(surface) {
     wgpu::SurfaceCapabilities capabilities = {};
@@ -220,14 +220,14 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter
     initConfig(mConfig, device, capabilities, useSRGBColorSpace);
 }
 
-WebGPUSwapChain::~WebGPUSwapChain() {
+WebGPUSwapChainImpl::~WebGPUSwapChainImpl() {
     if (mConfigured) {
         mSurface.Unconfigure();
         mConfigured = false;
     }
 }
 
-void WebGPUSwapChain::getCurrentTexture(uint32_t width, uint32_t height, wgpu::SurfaceTexture* texture) {
+void WebGPUSwapChainImpl::getCurrentTexture(uint32_t width, uint32_t height, wgpu::SurfaceTexture* texture) {
     if (width < 1 || height < 1) {
         PANIC_LOG("WebGPUSwapChain::GetCurrentTexture: Invalid width and/or height requested.");
         return;
@@ -245,7 +245,7 @@ void WebGPUSwapChain::getCurrentTexture(uint32_t width, uint32_t height, wgpu::S
     mSurface.GetCurrentTexture(texture);
 }
 
-wgpu::TextureView WebGPUSwapChain::getNextSurfaceTextureView(uint32_t width, uint32_t height) {
+wgpu::TextureView WebGPUSwapChainImpl::getNextSurfaceTextureView(uint32_t width, uint32_t height) {
     wgpu::SurfaceTexture surfaceTexture;
     getCurrentTexture(width, height, &surfaceTexture);
     if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
@@ -266,7 +266,7 @@ wgpu::TextureView WebGPUSwapChain::getNextSurfaceTextureView(uint32_t width, uin
     return surfaceTexture.texture.CreateView(&textureViewDescriptor);
 }
 
-void WebGPUSwapChain::present() {
+void WebGPUSwapChainImpl::present() {
     assert_invariant(mSurface);
     mSurface.Present();
 }
