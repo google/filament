@@ -19,17 +19,18 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include "DriverBase.h"
 #include <backend/Platform.h>
 
 #include <cstdint>
 
 namespace filament::backend {
 
-class WebGPUSwapChainImpl final : public Platform::SwapChain {
+class WebGPUSwapChain final : public Platform::SwapChain, HwSwapChain {
 public:
-    WebGPUSwapChainImpl(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device,
+    WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device,
             uint64_t flags);
-    ~WebGPUSwapChainImpl();
+    ~WebGPUSwapChain();
 
     wgpu::TextureView getNextSurfaceTextureView(uint32_t width, uint32_t height);
     void present();
