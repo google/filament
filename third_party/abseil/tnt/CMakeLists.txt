@@ -1,4 +1,7 @@
-add_subdirectory(../ "${CMAKE_CURRENT_BINARY_DIR}/abseil")
+find_package(absl CONFIG QUIET)
+if(NOT absl_FOUND)
+  add_subdirectory(../ "${CMAKE_CURRENT_BINARY_DIR}/abseil")
+endif()
 
 # To make Abseil easy for clients to link against, we create a dummy target just for installation
 # purposes and combine all of Abseil's libraries into a single, easy to link against static library.
