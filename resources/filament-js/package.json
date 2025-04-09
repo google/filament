@@ -1,0 +1,32 @@
+{
+  "name": "filament",
+  "version": "1.59.0",
+  "description": "Real-time physically based rendering engine",
+  "main": "filament.js",
+  "module": "filament.js",
+  "jsdelivr": "filament.js",
+  "types": "filament.d.ts",
+  "unpkg": "filament.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/google/filament.git"
+  },
+  "dependencies": {
+    "gl-matrix": "^3.2.1"
+  },
+  "files": [
+    "filament.d.ts",
+    "filament.js",
+    "filament.wasm",
+    "filament-viewer.js",
+    "README.md"
+  ],
+  "keywords": [
+    "3d",
+    "android",
+    "wasm",
+    "webgl"
+  ],
+  "author": "Google",
+  "license": "Apache-2.0"
+}
