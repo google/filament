@@ -211,6 +211,7 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
         VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
         VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
         VK_ANDROID_EXTERNAL_MEMORY_ANDROID_HARDWARE_BUFFER_EXTENSION_NAME,
+        VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME,
 #endif
         // MoltenVk is the only non-conformant implementation we're interested in.
 #if defined(__APPLE__)
@@ -326,7 +327,9 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
 }
 
 VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
-        VkPhysicalDeviceFeatures2 const& features, uint32_t graphicsQueueFamilyIndex,
+        VkPhysicalDeviceFeatures2 const& features,
+        VkPhysicalDeviceVulkan11Features const& vk11Features,
+        uint32_t graphicsQueueFamilyIndex,
         uint32_t protectedGraphicsQueueFamilyIndex, ExtensionSet const& deviceExtensions,
         bool requestImageView2DOn3DImage) {
     VkDevice device;
@@ -359,14 +362,28 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
 
     // We could simply enable all supported features, but since that may have performance
     // consequences let's just enable the features we need.
-    VkPhysicalDeviceFeatures enabledFeatures{
+    VkPhysicalDeviceFeatures enabledFeatures = {
         .depthClamp = features.features.depthClamp,
         .samplerAnisotropy = features.features.samplerAnisotropy,
         .textureCompressionETC2 = features.features.textureCompressionETC2,
         .textureCompressionBC = features.features.textureCompressionBC,
         .shaderClipDistance = features.features.shaderClipDistance,
     };
-    deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
+
+    VkPhysicalDeviceFeatures2 enabledFeatures2 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .features = enabledFeatures,
+    };
+    chainStruct(&deviceCreateInfo, &enabledFeatures2);
+
+    VkPhysicalDeviceVulkan11Features enabledVk11Features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .multiview = vk11Features.multiview,
+#if defined(__ANDROID__)
+        .samplerYcbcrConversion = vk11Features.samplerYcbcrConversion,
+#endif
+    };
+    chainStruct(&deviceCreateInfo, &enabledVk11Features);
 
     deviceCreateInfo.enabledExtensionCount = (uint32_t) requestExtensions.size();
     deviceCreateInfo.ppEnabledExtensionNames = requestExtensions.data();
@@ -383,7 +400,7 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
 
     VkPhysicalDeviceMultiviewFeaturesKHR multiview = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR,
-        .multiview = VK_TRUE,
+        .multiview = vk11Features.multiview,
         .multiviewGeometryShader = VK_FALSE,
         .multiviewTessellationShader = VK_FALSE,
     };
@@ -734,6 +751,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_PROPERTIES,
     };
     chainStruct(&context.mPhysicalDeviceFeatures, &queryProtectedMemoryFeatures);
+    chainStruct(&context.mPhysicalDeviceFeatures, &context.mPhysicalDeviceVk11Features);
     chainStruct(&context.mPhysicalDeviceProperties, &protectedMemoryProperties);
 
     // Initialize the following fields: physicalDeviceProperties, memoryProperties,
@@ -795,10 +813,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     }
 
     if (mImpl->mDevice == VK_NULL_HANDLE) {
-        mImpl->mDevice =
-                createLogicalDevice(mImpl->mPhysicalDevice, context.mPhysicalDeviceFeatures,
-                        mImpl->mGraphicsQueueFamilyIndex, mImpl->mProtectedGraphicsQueueFamilyIndex,
-                        deviceExts, requestPortabilitySubsetImageView2DOn3DImage);
+        mImpl->mDevice = createLogicalDevice(mImpl->mPhysicalDevice,
+                context.mPhysicalDeviceFeatures, context.mPhysicalDeviceVk11Features,
+                mImpl->mGraphicsQueueFamilyIndex, mImpl->mProtectedGraphicsQueueFamilyIndex,
+                deviceExts, requestPortabilitySubsetImageView2DOn3DImage);
     }
 
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
@@ -826,12 +844,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     if (!mImpl->mSharedContext) {
         context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-        context.mMultiviewEnabled = setContains(deviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
     } else {
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         context.mDebugUtilsSupported = scontext->debugUtilsSupported;
         context.mDebugMarkersSupported = scontext->debugMarkersSupported;
-        context.mMultiviewEnabled = scontext->multiviewSupported;
     }
 
     // Check the availability of lazily allocated memory

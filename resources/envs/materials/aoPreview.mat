@@ -1,0 +1,32 @@
+material {
+    name : AO_Preview,
+    parameters : [
+        {
+            type : sampler2d,
+            name : luma
+        },
+        {
+            type : bool,
+            name : grayscale
+        }
+    ],
+    requires : [
+        uv0
+    ],
+    shadingModel : unlit,
+    culling : none,
+    depthCulling: false
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        if (materialParams.grayscale) {
+            float L = texture(materialParams_luma, getUV0()).r;
+            material.baseColor.rgb = vec3(L);
+        } else {
+            float3 v = texture(materialParams_luma, getUV0()).rgb;
+            material.baseColor.rgb = v * 0.5 + 0.5;
+        }
+    }
+}
