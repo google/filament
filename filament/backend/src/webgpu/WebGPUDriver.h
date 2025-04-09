@@ -39,6 +39,8 @@
 
 namespace filament::backend {
 
+class WebGPUSwapChain;
+
 /**
  * WebGPU backend (driver) implementation
  */
@@ -60,7 +62,7 @@ private:
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
     wgpu::Queue mQueue = nullptr;
-    WGPUSwapChain* mHwSwapChain = nullptr;
+    WebGPUSwapChain* mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
     wgpu::CommandEncoder mCommandEncoder = nullptr;
     wgpu::TextureView mTextureView = nullptr;
