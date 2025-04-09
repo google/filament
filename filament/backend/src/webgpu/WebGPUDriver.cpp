@@ -415,6 +415,7 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 }
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
+    mNativeWindow = nativeWindow;
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
     mAdapter = mPlatform.requestAdapter(surface);
@@ -426,8 +427,9 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     printDeviceDetails(mDevice);
 #endif
     mQueue = mDevice.GetQueue();
-    mSwapChain =
-            constructHandle<WebGPUSwapChain>(sch, std::move(surface), mAdapter, mDevice, flags);
+    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
+    mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
+            mDevice, flags);
     assert_invariant(mSwapChain);
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
@@ -697,8 +699,9 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
     assert_invariant(mCommandEncoder);
     assert_invariant(mSwapChain);
+    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
     mTextureView =
-            mSwapChain->getNextSurfaceTextureView(params.viewport.width, params.viewport.height);
+            mSwapChain->getNextSurfaceTextureView(surfaceSize.width, surfaceSize.height);
     assert_invariant(mTextureView);
 
     // TODO: Remove this code once WebGPU pipeline is implemented

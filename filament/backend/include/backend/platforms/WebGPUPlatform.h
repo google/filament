@@ -38,6 +38,8 @@ public:
 
     [[nodiscard]] wgpu::Instance& getInstance() noexcept { return mInstance; }
 
+    // gets the size (height and width) of the surface/window
+    [[nodiscard]] wgpu::Extent2D getSurfaceExtent(void* nativeWindow) const;
     // either returns a valid surface or panics
     [[nodiscard]] wgpu::Surface createSurface(void* nativeWindow, uint64_t flags);
     // either returns a valid adapter or panics

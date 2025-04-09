@@ -18,6 +18,7 @@
 
 #include <utils/Panic.h>
 
+#include <android/native_window.h>
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
@@ -27,6 +28,14 @@
  */
 
 namespace filament::backend {
+
+wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
+    ANativeWindow* window = static_cast<ANativeWindow*>(nativeWindow);
+    return wgpu::Extent2D{
+        .width = static_cast<uint32_t>(ANativeWindow_getWidth(window)),
+        .height = static_cast<uint32_t>(ANativeWindow_getHeight(window))
+    };
+}
 
 wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags*/) {
     wgpu::SurfaceSourceAndroidNativeWindow surfaceSourceAndroidWindow{};
