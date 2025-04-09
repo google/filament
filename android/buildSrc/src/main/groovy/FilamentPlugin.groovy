@@ -142,6 +142,12 @@ abstract class MaterialCompiler extends TaskWithBinary {
                 if (!exclude_vulkan) {
                     matcArgs += ['-a', 'vulkan']
                 }
+                def include_webgpu = providers
+                        .gradleProperty("com.google.android.filament.include-webgpu")
+                        .forUseAtConfigurationTime().present
+                if (include_webgpu) {
+                    matcArgs += ['-a', 'webgpu', '--variant-filter=skinning,stereo']
+                }
 
                 def mat_no_opt = providers
                         .gradleProperty("com.google.android.filament.matnopt")

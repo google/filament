@@ -17,7 +17,8 @@
 #include "BackendTest.h"
 
 #include "Lifetimes.h"
-#include "ShaderGenerator.h"
+#include "Shader.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
 namespace {
@@ -26,7 +27,7 @@ namespace {
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::string vertex (R"(#version 450 core
+std::string vertex(R"(#version 450 core
 
 layout(location = 0) in vec4 mesh_position;
 
@@ -44,16 +45,6 @@ void main() {
     indices = mesh_bone_indices;
     weights = mesh_bone_weights;
 }
-)");
-
-std::string fragment (R"(#version 450 core
-
-layout(location = 0) out vec4 fragColor;
-
-void main() {
-    fragColor = vec4(1.0);
-}
-
 )");
 
 }
@@ -78,9 +69,11 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(api);
-        auto program = cleanup.add(api.createProgram(std::move(p)));
+        Shader shader(api, cleanup, ShaderConfig{
+                .vertexShader = vertex,
+                .fragmentShader = SharedShaders::getFragmentShaderText(FragmentShaderType::White,
+                        ShaderUniformType::None),
+        });
 
         auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
@@ -89,12 +82,12 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
         RenderPassParams params = {};
         fullViewport(params);
         params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = {0.f, 1.f, 0.f, 1.f};
+        params.clearColor = { 0.f, 1.f, 0.f, 1.f };
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState state;
-        state.program = program;
+        state.program = shader.getProgram();
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
