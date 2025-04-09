@@ -33,6 +33,15 @@
 
 namespace filament::backend {
 
+wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
+    // Both IOS and MacOS expects CAMetalLayer.
+    CAMetalLayer* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
+    return wgpu::Extent2D{
+        .width = static_cast<uint32_t>(metalLayer.drawableSize.width),
+        .height = static_cast<uint32_t>(metalLayer.drawableSize.height)
+    };
+}
+
 wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags*/) {
     wgpu::Surface surface = nullptr;
     // Both IOS and MacOS expects CAMetalLayer.

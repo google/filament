@@ -62,6 +62,7 @@ private:
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
     wgpu::Queue mQueue = nullptr;
+    void* mNativeWindow = nullptr;
     WebGPUSwapChain* mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
     wgpu::CommandEncoder mCommandEncoder = nullptr;
