@@ -34,6 +34,8 @@ public:
     WebGPUPlatform();
     ~WebGPUPlatform() override = default;
 
+    bool isHeadless() const { return true; }
+
     [[nodiscard]] int getOSVersion() const noexcept final { return 0; }
 
     [[nodiscard]] wgpu::Instance& getInstance() noexcept { return mInstance; }
@@ -42,6 +44,8 @@ public:
     [[nodiscard]] wgpu::Surface createSurface(void* nativeWindow, uint64_t flags);
     // either returns a valid adapter or panics
     [[nodiscard]] wgpu::Adapter requestAdapter(wgpu::Surface const& surface);
+    //returns a valid headless adapter or panics
+    [[nodiscard]] wgpu::Adapter requestHeadlessAdapter();
     // either returns a valid device or panics
     [[nodiscard]] wgpu::Device requestDevice(wgpu::Adapter const& adapter);
 

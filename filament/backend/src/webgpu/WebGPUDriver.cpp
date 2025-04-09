@@ -444,7 +444,22 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 }
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
-        uint32_t height, uint64_t flags) {}
+        uint32_t height, uint64_t flags) {
+     mAdapter = mPlatform.requestHeadlessAdapter();
+     mDevice = mDevice = mPlatform.requestDevice(mAdapter);
+     mQueue = mDevice.GetQueue();
+
+     wgpu::TextureDescriptor textureDesc = {};
+     textureDesc.usage =  wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::RenderAttachment;
+     textureDesc.format = wgpu::TextureFormat::BGRA8Unorm;
+     textureDesc.size = { width, height, 1 };
+     textureDesc.sampleCount = 1;
+     textureDesc.dimension = wgpu::TextureDimension::e2D;
+
+     wgpu::Texture headlessTexture = mDevice.CreateTexture(&textureDesc);
+     wgpu::TextureView renderTarget = headlessTexture.CreateView();
+
+}
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
         uint8_t attributeCount, AttributeArray attributes) {}
