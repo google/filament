@@ -25,11 +25,11 @@
 
 namespace filament::backend {
 
-class WebGPUSwapChain : public Platform::SwapChain {
+class WebGPUSwapChainImpl final : public Platform::SwapChain {
 public:
-    WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device,
+    WebGPUSwapChainImpl(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device,
             uint64_t flags);
-    ~WebGPUSwapChain();
+    ~WebGPUSwapChainImpl();
 
     wgpu::TextureView getNextSurfaceTextureView(uint32_t width, uint32_t height);
     void present();

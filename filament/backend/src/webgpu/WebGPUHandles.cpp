@@ -16,7 +16,16 @@
 
 #include "WebGPUHandles.h"
 
+#include "WebGPUSwapChainImpl.h"
+
+#include <utility>
+
 namespace filament::backend {
+
+WGPUSwapChain::WGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter,
+        wgpu::Device& device, uint64_t flags) {
+    swapChain = new WebGPUSwapChainImpl(std::move(surface), adapter, device, flags);
+}
 
 WGPUVertexBuffer::WGPUVertexBuffer(uint32_t vextexCount, uint32_t bufferCount,
         Handle<WGPUVertexBufferInfo> vbih)
