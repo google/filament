@@ -327,7 +327,7 @@ void VulkanDriver::terminate() {
 
     mStagePool.terminate();
     mPipelineCache.terminate();
-    mFramebufferCache.reset();
+    mFramebufferCache.terminate();
     mSamplerCache.terminate();
     mDescriptorSetLayoutCache.terminate();
     mDescriptorSetCache.terminate();
@@ -1523,7 +1523,7 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     swapChain->acquire(resized);
 
     if (resized) {
-        mFramebufferCache.reset();
+        mFramebufferCache.resetFramebuffers();
     }
 
     if (UTILS_LIKELY(mDefaultRenderTarget)) {
