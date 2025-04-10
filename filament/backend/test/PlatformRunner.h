@@ -34,6 +34,13 @@ enum class Backend : uint8_t {
     NOOP = 5,
 };
 
+
+enum class OperatingSystem: uint8_t {
+    OTHER = 1,
+    LINUX = 2,
+    MACOS = 3,
+};
+
 struct NativeView {
     void* ptr = nullptr;
     size_t width = 0, height = 0;
@@ -51,9 +58,10 @@ NativeView getNativeView();
  * No tests will be run yet.
  *
  * @param backend The backend to run the tests on.
+ * @param operatingSystem The operating system the tests are being run on.
  * @param isMobile True if the platform is a mobile platform (iOS or Android).
  */
-void initTests(Backend backend, bool isMobile, int& argc, char* argv[]);
+void initTests(Backend backend, OperatingSystem operatingSystem, bool isMobile, int& argc, char* argv[]);
 
 /**
  * Test runners should call runTests when they are ready for tests to be run.

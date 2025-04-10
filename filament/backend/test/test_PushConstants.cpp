@@ -18,6 +18,7 @@
 
 #include "Lifetimes.h"
 #include "ShaderGenerator.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 #include <utils/Hash.h>
@@ -78,6 +79,8 @@ void main() {
 })";
 
 TEST_F(BackendTest, PushConstants) {
+    SKIP_IF_OS(OperatingSystem::MACOS);
+
     auto& api = getDriverApi();
 
     api.startCapture(0);

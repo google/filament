@@ -31,9 +31,10 @@ namespace test {
 class BackendTest : public ::testing::Test {
 public:
 
-    static void init(Backend backend, bool isMobilePlatform);
+    static void init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform);
 
     static Backend sBackend;
+    static OperatingSystem sOperatingSystem;
     static bool sIsMobilePlatform;
 
 protected:
@@ -70,6 +71,10 @@ protected:
 
     filament::backend::DriverApi& getDriverApi() { return *commandStream; }
     filament::backend::Driver& getDriver() { return *driver; }
+
+    static bool matchesEnvironment(Backend backend);
+    static bool matchesEnvironment(OperatingSystem operatingSystem);
+    static bool matchesEnvironment(OperatingSystem operatingSystem, Backend backend);
 
 private:
 

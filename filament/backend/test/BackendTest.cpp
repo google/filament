@@ -43,10 +43,12 @@ using namespace image;
 namespace test {
 
 Backend BackendTest::sBackend = Backend::NOOP;
+OperatingSystem BackendTest::sOperatingSystem = OperatingSystem::OTHER;
 bool BackendTest::sIsMobilePlatform = false;
 
-void BackendTest::init(Backend backend, bool isMobilePlatform) {
+void BackendTest::init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform) {
     sBackend = backend;
+    sOperatingSystem = operatingSystem;
     sIsMobilePlatform = isMobilePlatform;
 }
 
@@ -199,6 +201,18 @@ void BackendTest::readPixelsAndAssertHash(const char* testName, size_t width, si
     getDriverApi().readPixels(rt, 0, 0, width, height, std::move(pbd));
 }
 
+bool BackendTest::matchesEnvironment(Backend backend) {
+    return sBackend == backend;
+}
+
+bool BackendTest::matchesEnvironment(OperatingSystem operatingSystem) {
+    return sOperatingSystem == operatingSystem;
+}
+
+bool BackendTest::matchesEnvironment(OperatingSystem operatingSystem, Backend backend) {
+    return matchesEnvironment(operatingSystem) && matchesEnvironment(backend);
+}
+
 class Environment : public ::testing::Environment {
 public:
     virtual void SetUp() override {
@@ -210,8 +224,8 @@ public:
     }
 };
 
-void initTests(Backend backend, bool isMobile, int& argc, char* argv[]) {
-    BackendTest::init(backend, isMobile);
+void initTests(Backend backend, OperatingSystem operatingSystem, bool isMobile, int& argc, char* argv[]) {
+    BackendTest::init(backend, operatingSystem, isMobile);
     ::testing::InitGoogleTest(&argc, argv);
     ::testing::AddGlobalTestEnvironment(new Environment);
 }
