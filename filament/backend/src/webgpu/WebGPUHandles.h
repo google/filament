@@ -82,6 +82,7 @@ struct WGPUTexture : public HwTexture {
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
     WGPURenderPrimitive();
+
     void setBuffers(WGPUVertexBufferInfo const* const vbi,
             WGPUVertexBuffer* vertexBuffer, WGPUIndexBuffer* indexBuffer);
 

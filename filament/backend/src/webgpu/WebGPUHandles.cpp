@@ -35,7 +35,7 @@ WGPUVertexBuffer::WGPUVertexBuffer(wgpu::Device const &device, uint32_t vextexCo
                                    Handle<WGPUVertexBufferInfo> vbih)
         : HwVertexBuffer(vextexCount),
           vbih(vbih),
-          buffers(MAX_VERTEX_BUFFER_COUNT) {
+          buffers(bufferCount) {
     wgpu::BufferDescriptor descriptor {
             .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex,
             .size = vextexCount * bufferCount,
