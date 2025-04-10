@@ -57,6 +57,8 @@ class ShaderCompilerService {
 
 public:
     using program_token_t = std::shared_ptr<OpenGLProgramToken>;
+    using shaders_t = std::array<GLuint, Program::SHADER_TYPE_COUNT>;
+    using shaders_source_t = std::array<utils::CString, Program::SHADER_TYPE_COUNT>;
 
     explicit ShaderCompilerService(OpenGLDriver& driver);
 
@@ -134,22 +136,9 @@ private:
             OpenGLContext& context,
             Program::ShaderSource shadersSource,
             utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
-            bool multiview,
-            std::array<GLuint, Program::SHADER_TYPE_COUNT>& outShaders,
-            std::array<utils::CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept;
+            bool multiview, shaders_t& outShaders, shaders_source_t& outShaderSourceCode) noexcept;
 
-    static void process_GOOGLE_cpp_style_line_directive(OpenGLContext& context,
-            char* source, size_t len) noexcept;
-
-    static void process_OVR_multiview2(OpenGLContext& context, int32_t eyeCount,
-            char* source, size_t len) noexcept;
-
-    static std::string_view process_ARB_shading_language_packing(OpenGLContext& context) noexcept;
-
-    static std::array<std::string_view, 3> splitShaderSource(std::string_view source) noexcept;
-
-    static GLuint linkProgram(OpenGLContext& context,
-            std::array<GLuint, Program::SHADER_TYPE_COUNT> shaders,
+    static GLuint linkProgram(OpenGLContext& context, shaders_t const& shaders,
             utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> const& attributes) noexcept;
 
     static bool checkProgramStatus(program_token_t const& token) noexcept;
