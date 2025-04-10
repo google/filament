@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
 #include "WebGPUHandles.h"
-#include "webgpu/WebGPUSwapChain.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
@@ -61,8 +60,7 @@ private:
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
     wgpu::Queue mQueue = nullptr;
-    // TODO consider moving to handle allocator when ready
-    std::unique_ptr<WebGPUSwapChain> mSwapChain = nullptr;
+    WGPUSwapChain* mHwSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
     wgpu::CommandEncoder mCommandEncoder = nullptr;
     wgpu::TextureView mTextureView = nullptr;
@@ -111,7 +109,7 @@ private:
     template<typename D, typename B>
     void destructHandle(Handle<B>& handle) noexcept {
         auto* p = mHandleAllocator.handle_cast<D*>(handle);
-        mHandleAllocator.deallocate(handle, p);
+        return mHandleAllocator.deallocate(handle, p);
     }
 };
 

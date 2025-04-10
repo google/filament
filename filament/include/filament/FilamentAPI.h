@@ -75,6 +75,14 @@ public:
 
     utils::CString const& getName() const noexcept { return mName; }
 
+    utils::CString const& getNameOrDefault() const noexcept {
+        if (const auto& name = getName(); !name.empty()) {
+            return name;
+        }
+        static const utils::CString sDefaultName = "(none)";
+        return sDefaultName;
+    }
+
 private:
     utils::CString mName;
 };

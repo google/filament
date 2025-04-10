@@ -161,7 +161,13 @@ Texture::Builder& Texture::Builder::name(StaticString const& name) noexcept {
 Texture* Texture::Builder::build(Engine& engine) {
     if (mImpl->mTarget != SamplerType::SAMPLER_EXTERNAL) {
         FILAMENT_CHECK_PRECONDITION(Texture::isTextureFormatSupported(engine, mImpl->mFormat))
-                << "Texture format " << uint16_t(mImpl->mFormat) << " not supported on this platform";
+                << "Texture format " << uint16_t(mImpl->mFormat)
+                << " not supported on this platform, texture name="
+                << getNameOrDefault().c_str_safe();
+
+        FILAMENT_CHECK_PRECONDITION(mImpl->mWidth > 0 && mImpl->mHeight > 0)
+                << "Texture has invalid dimensions: (" << mImpl->mWidth << ", " << mImpl->mHeight
+                << "), texture name=" << getNameOrDefault().c_str_safe();
     }
     const bool isProtectedTexturesSupported =
             downcast(engine).getDriverApi().isProtectedTexturesSupported();

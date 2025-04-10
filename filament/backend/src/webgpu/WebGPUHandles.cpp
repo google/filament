@@ -16,6 +16,10 @@
 
 #include "WebGPUHandles.h"
 
+#include "WebGPUSwapChainImpl.h"
+
+#include <utility>
+
 namespace filament::backend {
 
     WGPUIndexBuffer::WGPUIndexBuffer(wgpu::Device const &device, uint8_t elementSize, uint32_t indexCount) {
@@ -43,6 +47,16 @@ namespace filament::backend {
         }
     }
 
+WGPUSwapChain::WGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter,
+        wgpu::Device& device, uint64_t flags) {
+    swapChain = new WebGPUSwapChainImpl(std::move(surface), adapter, device, flags);
+}
+
+WGPUVertexBuffer::WGPUVertexBuffer(uint32_t vextexCount, uint32_t bufferCount,
+        Handle<WGPUVertexBufferInfo> vbih)
+    : HwVertexBuffer(vextexCount),
+      vbih(vbih),
+      buffers(MAX_VERTEX_BUFFER_COUNT) {}
 
 // TODO: Empty function is a place holder for verxtex buffer updates and should be
 // updated for that purpose.
