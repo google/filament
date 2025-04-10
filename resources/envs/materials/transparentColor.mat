@@ -1,0 +1,20 @@
+material {
+    name : TransparentColor,
+    parameters : [
+        {
+           type : float4,
+           name : color
+        }
+    ],
+    blending : transparent,
+    culling : none,
+    depthCulling : false,
+    shadingModel : unlit
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = materialParams.color;
+    }
+}

@@ -1,0 +1,54 @@
+material {
+    name : Image,
+    parameters : [
+        {
+            type : sampler2d,
+            name : image
+        },
+        {
+            type : mat3,
+            name : transform,
+            precision : high
+        },
+        {
+            type : float3,
+            name : backgroundColor
+        },
+        {
+            type : int,
+            name : showImage
+        }
+    ],
+    variables : [
+        imageUV
+    ],
+    vertexDomain : device,
+    depthWrite : false,
+    shadingModel : unlit,
+    variantFilter : [ skinning, shadowReceiver, vsm ],
+    culling: none
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.imageUV.st = getPosition().st * 0.5 + 0.5;
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        vec4 bg = vec4(materialParams.backgroundColor, 1.0);
+        highp vec2 uv = (materialParams.transform * vec3(saturate(variable_imageUV.st), 1.0)).st;
+        if (materialParams.showImage == 0 || uv.s > 1.0 || uv.s < 0.0 || uv.t < 0.0 || uv.t > 1.0) {
+            material.baseColor = bg;
+        } else {
+            uv.t = 1.0 - uv.t;
+            vec4 color = max(texture(materialParams_image, uv.st), 0.0);
+            color.rgb *= color.a;
+            // Manual, pre-multiplied srcOver with opaque destination optimization
+            material.baseColor.rgb = color.rgb + bg.rgb * (1.0 - color.a);
+        }
+    }
+}
