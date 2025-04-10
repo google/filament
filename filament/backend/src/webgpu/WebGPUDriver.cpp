@@ -286,6 +286,9 @@ void WebGPUDriver::finish(int) {
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+   if (rph) {
+        destructHandle<WGPURenderPrimitive>(rph);
+    }
 }
 
 void WebGPUDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
