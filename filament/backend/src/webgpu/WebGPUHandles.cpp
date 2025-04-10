@@ -141,11 +141,12 @@ WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attribut
 
 WGPUIndexBuffer::WGPUIndexBuffer(wgpu::Device const& device, uint8_t elementSize,
         uint32_t indexCount)
-    : buffer(createIndexBuffer(device, elementSize, indexCount)) {}
+    : buffer(createIndexBuffer(device, elementSize, indexCount)),
+      indexFormat(elementSize == 2 ? wgpu::IndexFormat::Uint16 : wgpu::IndexFormat::Uint32) {}
 
 
 WGPUVertexBuffer::WGPUVertexBuffer(wgpu::Device const &device, uint32_t vextexCount, uint32_t bufferCount,
-                                   Handle<WGPUVertexBufferInfo> vbih)
+                                   Handle<HwVertexBufferInfo> vbih)
         : HwVertexBuffer(vextexCount),
           vbih(vbih),
           buffers(bufferCount) {
@@ -257,4 +258,10 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
     mLayout = device->CreateBindGroupLayout(&layoutDescriptor);
 }
 WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
+
+void WGPURenderPrimitive::setBuffers(WGPUVertexBufferInfo const* const vbi,
+        WGPUVertexBuffer* vertexBuffer, WGPUIndexBuffer* indexBuffer) {
+
+    }
+
 }// namespace filament::backend

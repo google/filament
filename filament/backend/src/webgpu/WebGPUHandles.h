@@ -62,11 +62,11 @@ private:
 
 struct WGPUVertexBuffer : public HwVertexBuffer {
     WGPUVertexBuffer(wgpu::Device const &device, uint32_t vextexCount, uint32_t bufferCount,
-                     Handle<WGPUVertexBufferInfo> vbih);
+                     Handle<HwVertexBufferInfo> vbih);
 
     void setBuffer(WGPUBufferObject *bufferObject, uint32_t index);
 
-    Handle<WGPUVertexBufferInfo> vbih;
+    Handle<HwVertexBufferInfo> vbih;
     utils::FixedCapacityVector<wgpu::Buffer> buffers;
 };
 
@@ -75,6 +75,7 @@ struct WGPUIndexBuffer : public HwIndexBuffer {
                     uint32_t indexCount);
 
     wgpu::Buffer buffer;
+    wgpu::IndexFormat indexFormat;
 };
 
 // TODO: Currently WGPUBufferObject is not used by WebGPU for useful task.

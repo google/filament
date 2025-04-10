@@ -464,13 +464,21 @@ void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
         uint32_t height, uint64_t flags) {}
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
-        uint8_t attributeCount, AttributeArray attributes) {}
+        uint8_t attributeCount, AttributeArray attributes) {
+    constructHandle<WGPUVertexBufferInfo>(vbih, bufferCount, attributeCount, attributes);
+}
 
 void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
-        Handle<HwVertexBufferInfo> vbih) {}
+        Handle<HwVertexBufferInfo> vbih) {
+    auto* vertexBufferInfo = handleCast<WGPUVertexBufferInfo>(vbih);
+    constructHandle<WGPUVertexBuffer>(vbh, mDevice, vertexCount,vertexBufferInfo->bufferCount, vbih);
+}
 
 void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
-        uint32_t indexCount, BufferUsage usage) {}
+        uint32_t indexCount, BufferUsage usage) {
+    auto elementSize = (uint8_t)getElementTypeSize(elementType);
+    constructHandle<WGPUIndexBuffer>(ibh, mDevice, elementSize, indexCount);
+}
 
 void WebGPUDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage) {}
@@ -503,7 +511,18 @@ void WebGPUDriver::importTextureR(Handle<HwTexture> th, intptr_t id, SamplerType
         uint32_t depth, TextureUsage usage) {}
 
 void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<HwVertexBuffer> vbh,
-        Handle<HwIndexBuffer> ibh, PrimitiveType pt) {}
+        Handle<HwIndexBuffer> ibh, PrimitiveType pt) {
+    assert_invariant(mDevice);
+
+    auto* renderPrimitive = handleCast<WGPURenderPrimitive>(rph);
+    auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
+    auto* indexBuffer = handleCast<WGPUIndexBuffer>(ibh);
+    // auto* vertexBufferInfo = handleCast<WGPUVertexBufferInfo>(vertexBuffer->vbih);
+    // renderPrimitive->setBuffers(vertexBufferInfo, vertexBuffer, indexBuffer);
+    renderPrimitive->vertexBuffer = vertexBuffer;
+    renderPrimitive->indexBuffer = indexBuffer;
+    renderPrimitive->type = pt;
+}
 
 void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {}
 
@@ -715,6 +734,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     };
     mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
     assert_invariant(mCommandEncoder);
+
     // TODO: Remove this code once WebGPU pipeline is implemented
     static float red = 1.0f;
     if (red - 0.01 > 0) {
@@ -828,6 +848,70 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
 }
 
 void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+    // VulkanCommandBuffer* commands = mCurrentRenderPass.commandBuffer;
+    // VkCommandBuffer cmdbuffer = commands->buffer();
+    // auto prim = resource_ptr<VulkanRenderPrimitive>::cast(&mResourceManager, rph);
+    auto* renderPrimitive = handleCast<WGPURenderPrimitive>(rph);
+    // commands->acquire(prim);
+
+    // This *must* match the VulkanVertexBufferInfo that was bound in bindPipeline(). But we want
+    // to allow to call this before bindPipeline(), so the validation can only happen in draw()
+    auto vbi = handleCast<WGPUVertexBufferInfo>(renderPrimitive->vertexBuffer->vbih);
+    (void) vbi;
+
+    // mRenderPassEncoder.SetVertexBuffer(uint32_t slot, Buffer const& buffer = nullptr, uint64_t offset = 0, uint64_t size = kWholeSize);
+    mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->buffer, renderPrimitive->indexBuffer->indexFormat);
+
+    // uint32_t const bufferCount = vbi->getAttributeCount();
+    // VkDeviceSize const* offsets = vbi->getOffsets();
+    // VkBuffer const* buffers = prim->vertexBuffer->getVkBuffers();
+    //
+    // // Next bind the vertex buffers and index buffer. One potential performance improvement is to
+    // // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
+    // // it would be rare for a client to make consecutive draw calls with the same render primitive.
+    // vkCmdBindVertexBuffers(cmdbuffer, 0, bufferCount, buffers, offsets);
+    // vkCmdBindIndexBuffer(cmdbuffer, prim->indexBuffer->buffer.getGpuBuffer(), 0,
+    //         prim->indexBuffer->indexType);
+
+
+    // METAL
+    // if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+    //     return;
+    // }
+    // FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
+    //         << "bindRenderPrimitive() without a valid command encoder.";
+    //
+    // // Bind the user vertex buffers.
+    // MetalBuffer* vertexBuffers[MAX_VERTEX_BUFFER_COUNT] = {};
+    // size_t vertexBufferOffsets[MAX_VERTEX_BUFFER_COUNT] = {};
+    // size_t maxBufferIndex = 0;
+    //
+    // MetalRenderPrimitive const* const primitive = handle_cast<MetalRenderPrimitive>(rph);
+    // MetalVertexBufferInfo const* const vbi =
+    //         handle_cast<MetalVertexBufferInfo>(primitive->vertexBuffer->vbih);
+    //
+    // mContext->currentRenderPrimitive = rph;
+    //
+    // auto vb = primitive->vertexBuffer;
+    // for (auto m : vbi->bufferMapping) {
+    //     assert_invariant(
+    //             m.bufferArgumentIndex >= USER_VERTEX_BUFFER_BINDING_START &&
+    //             m.bufferArgumentIndex < USER_VERTEX_BUFFER_BINDING_START + MAX_VERTEX_BUFFER_COUNT);
+    //     size_t const vertexBufferIndex = m.bufferArgumentIndex - USER_VERTEX_BUFFER_BINDING_START;
+    //     vertexBuffers[vertexBufferIndex] = vb->buffers[m.sourceBufferIndex];
+    //     maxBufferIndex = std::max(maxBufferIndex, vertexBufferIndex);
+    // }
+    //
+    // const auto bufferCount = maxBufferIndex + 1;
+    // MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
+    //         USER_VERTEX_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX, vertexBuffers,
+    //         vertexBufferOffsets, bufferCount);
+    //
+    // // Bind the zero buffer, used for missing vertex attributes.
+    // static const char bytes[16] = { 0 };
+    // [mContext->currentRenderPassEncoder setVertexBytes:bytes
+    //                                             length:16
+    //                                            atIndex:ZERO_VERTEX_BUFFER_BINDING];
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
