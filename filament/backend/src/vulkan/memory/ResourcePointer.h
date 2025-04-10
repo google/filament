@@ -132,6 +132,10 @@ public:
         return id() == other.id() && type() == other.type();
     }
 
+    inline bool operator!=(resource_ptr<D> const& other) const {
+        return !((*this) == other);
+    }
+
     inline explicit operator bool() const {
         return bool(mRef);
     }

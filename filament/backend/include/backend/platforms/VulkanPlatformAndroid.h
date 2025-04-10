@@ -26,7 +26,7 @@ namespace filament::backend {
 
 class VulkanPlatformAndroid : public VulkanPlatform {
 public:
-    Platform::ExternalImageHandle UTILS_PUBLIC createExternalImage(AHardwareBuffer const* buffer,
+    ExternalImageHandle UTILS_PUBLIC createExternalImage(AHardwareBuffer const* buffer,
             bool sRGB) noexcept;
 
     struct UTILS_PUBLIC ExternalImageDescAndroid {
@@ -39,31 +39,26 @@ public:
     ExternalImageDescAndroid UTILS_PUBLIC getExternalImageDesc(
             ExternalImageHandleRef externalImage) const noexcept;
 
+    virtual ExternalImageMetadata extractExternalImageMetadata(
+            ExternalImageHandleRef image) const override;
+
+    virtual ImageData createVkImageFromExternal(ExternalImageHandleRef image) const override;
+
 protected:
+    virtual ExtensionSet getSwapchainInstanceExtensions() const override;
+
+    using SurfaceBundle = VulkanPlatform::SurfaceBundle;
+    virtual SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
+            uint64_t flags) const noexcept override;
+
+private:
     struct ExternalImageVulkanAndroid : public Platform::ExternalImage {
         AHardwareBuffer* aHardwareBuffer = nullptr;
         bool sRGB = false;
-        unsigned int width;  // Texture width
-        unsigned int height; // Texture height
-        TextureFormat format;// Texture format
-        TextureUsage usage;  // Texture usage flags
 
     protected:
         ~ExternalImageVulkanAndroid() override;
     };
-
-    virtual ExternalImageMetadata getExternalImageMetadata(ExternalImageHandleRef externalImage);
-
-    using ImageData = VulkanPlatform::ImageData;
-    virtual ImageData createExternalImageData(ExternalImageHandleRef externalImage,
-            const ExternalImageMetadata& metadata, uint32_t memoryTypeIndex,
-            VkImageUsageFlags usage);
-
-    virtual ExtensionSet getSwapchainInstanceExtensions() const;
-
-    using SurfaceBundle = VulkanPlatform::SurfaceBundle;
-    virtual SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
-            uint64_t flags) const noexcept;
 };
 
 }// namespace filament::backend
