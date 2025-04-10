@@ -18,8 +18,6 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 #define TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 
-#include "WebGPUSwapChainImpl.h"
-
 #include "DriverBase.h"
 
 #include <backend/DriverEnums.h>
@@ -32,19 +30,6 @@
 #include <cstdint>
 
 namespace filament::backend {
-
-struct WGPUSwapChain final : public HwSwapChain {
-    WGPUSwapChain() = default;
-    WGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter, wgpu::Device& device,
-            uint64_t flags);
-    ~WGPUSwapChain() {
-        delete getSwapChain();
-    }
-
-    [[nodiscard]] WebGPUSwapChainImpl* getSwapChain() const {
-        return static_cast<WebGPUSwapChainImpl*>(swapChain);
-    }
-};
 
 struct WGPUBufferObject;
 // TODO: Currently WGPUVertexBufferInfo is not used by WebGPU for useful task.

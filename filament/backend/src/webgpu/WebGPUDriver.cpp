@@ -16,6 +16,7 @@
 
 #include "webgpu/WebGPUDriver.h"
 
+#include "WebGPUSwapChain.h"
 #include "webgpu/WebGPUConstants.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -323,9 +324,9 @@ void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 
 void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (sch) {
-        destructHandle<WGPUSwapChain>(sch);
+        destructHandle<WebGPUSwapChain>(sch);
     }
-    mHwSwapChain = nullptr;
+    mSwapChain = nullptr;
 }
 
 void WebGPUDriver::destroyStream(Handle<HwStream> sh) {
@@ -341,7 +342,7 @@ void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
-    return allocHandle<WGPUSwapChain>();
+    return allocHandle<WebGPUSwapChain>();
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainHeadlessS() noexcept {
@@ -426,7 +427,7 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 }
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
-    assert_invariant(!mHwSwapChain);
+    assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
     mAdapter = mPlatform.requestAdapter(surface);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -437,9 +438,9 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     printDeviceDetails(mDevice);
 #endif
     mQueue = mDevice.GetQueue();
-    mHwSwapChain =
-            constructHandle<WGPUSwapChain>(sch, std::move(surface), mAdapter, mDevice, flags);
-    assert_invariant(mHwSwapChain);
+    mSwapChain =
+            constructHandle<WebGPUSwapChain>(sch, std::move(surface), mAdapter, mDevice, flags);
+    assert_invariant(mSwapChain);
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
                   "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
@@ -707,9 +708,9 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     };
     mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
     assert_invariant(mCommandEncoder);
-    assert_invariant(mHwSwapChain && mHwSwapChain->getSwapChain());
-    mTextureView = mHwSwapChain->getSwapChain()->getNextSurfaceTextureView(params.viewport.width,
-            params.viewport.height);
+    assert_invariant(mSwapChain);
+    mTextureView =
+            mSwapChain->getNextSurfaceTextureView(params.viewport.width, params.viewport.height);
     assert_invariant(mTextureView);
 
     // TODO: Remove this code once WebGPU pipeline is implemented
@@ -762,8 +763,8 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
     mQueue.Submit(1, &mCommandBuffer);
     mCommandBuffer = nullptr;
     mTextureView = nullptr;
-    assert_invariant(mHwSwapChain && mHwSwapChain->getSwapChain());
-    mHwSwapChain->getSwapChain()->present();
+    assert_invariant(mSwapChain);
+    mSwapChain->present();
 }
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
