@@ -107,7 +107,7 @@ wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
     #endif
     #if defined(FILAMENT_SUPPORTS_XCB)
         #if defined(FILAMENT_SUPPORTS_XLIB)
-            useXcb = (flags & SWAP_CHAIN_CONFIG_ENABLE_XCB) != 0;
+            useXcb = (SWAP_CHAIN_CONFIG_ENABLE_XCB) != 0;
         #else
             useXcb = true;
         #endif
