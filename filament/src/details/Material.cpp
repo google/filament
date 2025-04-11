@@ -388,7 +388,7 @@ void FMaterial::terminate(FEngine& engine) {
                     << "destroying material \"" << this->getName().c_str_safe() << "\" but "
                     << pos->second.size() << " instances still alive.";
         } else {
-            if (UTILS_UNLIKELY(!pos->second.empty())) {
+            if (UTILS_UNLIKELY(pos->second.empty())) {
                 slog.e << "destroying material \"" << this->getName().c_str_safe() << "\" but "
                               << pos->second.size() << " instances still alive." << io::endl;
             }
