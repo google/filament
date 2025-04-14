@@ -18,13 +18,40 @@
 
 #include <utility>
 
+namespace {
+
+wgpu::Buffer createIndexBuffer(wgpu::Device const& device, uint8_t elementSize, uint32_t indexCount) {
+    wgpu::BufferDescriptor descriptor{ .label = "index_buffer",
+        .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index,
+        .size = elementSize * indexCount,
+        .mappedAtCreation = false };
+    return device.CreateBuffer(&descriptor);
+}
+} // namespace
+
 namespace filament::backend {
 
-WGPUVertexBuffer::WGPUVertexBuffer(uint32_t vextexCount, uint32_t bufferCount,
-        Handle<WGPUVertexBufferInfo> vbih)
-    : HwVertexBuffer(vextexCount),
-      vbih(vbih),
-      buffers(MAX_VERTEX_BUFFER_COUNT) {}
+
+WGPUIndexBuffer::WGPUIndexBuffer(wgpu::Device const& device, uint8_t elementSize,
+        uint32_t indexCount)
+    : buffer(createIndexBuffer(device, elementSize, indexCount)) {}
+
+
+WGPUVertexBuffer::WGPUVertexBuffer(wgpu::Device const &device, uint32_t vextexCount, uint32_t bufferCount,
+                                   Handle<WGPUVertexBufferInfo> vbih)
+        : HwVertexBuffer(vextexCount),
+          vbih(vbih),
+          buffers(bufferCount) {
+    wgpu::BufferDescriptor descriptor {
+            .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex,
+            .size = vextexCount * bufferCount,
+            .mappedAtCreation = false };
+
+    for (uint32_t i = 0; i < bufferCount; ++i) {
+        descriptor.label = ("vertex_buffer_" + std::to_string(i)).c_str();
+        buffers[i] = device.CreateBuffer(&descriptor);
+    }
+}
 
 // TODO: Empty function is a place holder for verxtex buffer updates and should be
 // updated for that purpose.
