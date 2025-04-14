@@ -229,6 +229,14 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfi
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printInstanceDetails(mPlatform.getInstance());
 #endif
+    mAdapter = mPlatform.requestAdapter(nullptr);
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+    printAdapterDetails(mAdapter);
+#endif
+    mDevice = mPlatform.requestDevice(mAdapter);
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+    printDeviceDetails(mDevice);
+#endif
 }
 
 WebGPUDriver::~WebGPUDriver() noexcept = default;
@@ -430,14 +438,7 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     mNativeWindow = nativeWindow;
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
-    mAdapter = mPlatform.requestAdapter(surface);
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    printAdapterDetails(mAdapter);
-#endif
-    mDevice = mPlatform.requestDevice(mAdapter);
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    printDeviceDetails(mDevice);
-#endif
+
     mQueue = mDevice.GetQueue();
     wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
     mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
