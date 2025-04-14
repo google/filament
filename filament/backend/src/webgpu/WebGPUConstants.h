@@ -34,6 +34,9 @@
 // order of calls).
 #define FWGPU_DEBUG_FORCE_LOG_TO_I 0x00000004
 
+// Logs WebGPUDriver calls + details for learning/discovery/troubleshooting/etc.
+#define FWGPU_PRINT_DRIVER_CALLS   0x00000008
+
 // Useful default combinations
 #define FWGPU_DEBUG_EVERYTHING     0xFFFFFFFF
 

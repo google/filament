@@ -42,6 +42,78 @@
 #include <utility>
 #include <variant>
 
+#define GET_MACRO(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, NAME, ...) NAME
+#define FWGPU_PRINT_DRIVER_CALL(...)                                                               \
+    GET_MACRO(_0, ##__VA_ARGS__,                                                                   \
+            FWGPU_PRINT_DRIVER_CALL_10,                                                            \
+            FWGPU_PRINT_DRIVER_CALL_9,                                                             \
+            FWGPU_PRINT_DRIVER_CALL_8,                                                             \
+            FWGPU_PRINT_DRIVER_CALL_7,                                                             \
+            FWGPU_PRINT_DRIVER_CALL_6,                                                             \
+            FWGPU_PRINT_DRIVER_CALL_5,                                                             \
+            FWGPU_PRINT_DRIVER_CALL_4,                                                             \
+            FWGPU_PRINT_DRIVER_CALL_3,                                                             \
+            FWGPU_PRINT_DRIVER_CALL_2,                                                             \
+            FWGPU_PRINT_DRIVER_CALL_1,                                                             \
+            FWGPU_PRINT_DRIVER_CALL_0)(__VA_ARGS__)
+
+#define FWGPU_PRINT_DRIVER_CALL_0()                                                                  \
+    (FWGPU_LOGD << "WebGPUDriver::" << __FUNCTION__ << "()" << utils::io::endl)
+
+#define FWGPU_PRINT_DRIVER_CALL_1(arg1)                                                             \
+    (FWGPU_LOGD << "WebGPUDriver::" << __FUNCTION__ << "(" << #arg1 << "=" << arg1 << ")"          \
+                << utils::io::endl)
+
+#define FWGPU_PRINT_DRIVER_CALL_2(arg1, arg2)                                                      \
+    (FWGPU_LOGD << "WebGPUDriver::" << __FUNCTION__ << "(" << #arg1 << "=" << arg1 << ", "         \
+                << #arg2 << "=" << arg2 << ")" << utils::io::endl)
+
+#define FWGPU_PRINT_DRIVER_CALL_3(arg1, arg2, arg3)                                                \
+    (FWGPU_LOGD << "WebGPUDriver::" << __FUNCTION__ << "(" << #arg1 << "=" << arg1 << ", "         \
+                << #arg2 << "=" << arg2 << ", " << #arg3 << "=" << arg3 << ")" << utils::io::endl)
+
+#define FWGPU_PRINT_DRIVER_CALL_4(arg1, arg2, arg3, arg4)                                          \
+    (FWGPU_LOGD << "WebGPUDriver::" << __FUNCTION__ << "(" << #arg1 << "=" << arg1 << ", "         \
+                << #arg2 << "=" << arg2 << ", " << #arg3 << "=" << arg3 << ", " << #arg4 << "="    \
+                << arg4 << ")" << utils::io::endl)
+
+#define FWGPU_PRINT_DRIVER_CALL_5(arg1, arg2, arg3, arg4, arg5)                                    \
+    (FWGPU_LOGD << "WebGPUDriver::" << __FUNCTION__ << "(" << #arg1 << "=" << arg1 << ", "         \
+                << #arg2 << "=" << arg2 << ", " << #arg3 << "=" << arg3 << ", " << #arg4 << "="    \
+                << arg4 << ", " << #arg5 << "=" << arg5 << ")" << utils::io::endl)
+
+#define FWGPU_PRINT_DRIVER_CALL_6(arg1, arg2, arg3, arg4, arg5, arg6)                              \
+    (FWGPU_LOGD << "WebGPUDriver::" << __FUNCTION__ << "(" << #arg1 << "=" << arg1 << ", "         \
+                << #arg2 << "=" << arg2 << ", " << #arg3 << "=" << arg3 << ", " << #arg4 << "="    \
+                << arg4 << ", " << #arg5 << "=" << arg5 << ", " << #arg6 << "=" << arg6 << ")"        \
+                << utils::io::endl)
+
+#define FWGPU_PRINT_DRIVER_CALL_7(arg1, arg2, arg3, arg4, arg5, arg6, arg7)                        \
+    (FWGPU_LOGD << "WebGPUDriver::" << __FUNCTION__ << "(" << #arg1 << "=" << arg1 << ", "         \
+                << #arg2 << "=" << arg2 << ", " << #arg3 << "=" << arg3 << ", " << #arg4 << "="    \
+                << arg4 << ", " << #arg5 << "=" << arg5 << ", " << #arg6 << "=" << arg6 << ", "    \
+                << #arg7 << "=" << arg7 << ")" << utils::io::endl)
+
+#define FWGPU_PRINT_DRIVER_CALL_8(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)                  \
+    (FWGPU_LOGD << "WebGPUDriver::" << __FUNCTION__ << "(" << #arg1 << "=" << arg1 << ", "         \
+                << #arg2 << "=" << arg2 << ", " << #arg3 << "=" << arg3 << ", " << #arg4 << "="    \
+                << arg4 << ", " << #arg5 << "=" << arg5 << ", " << #arg6 << "=" << arg6 << ", "    \
+                << #arg7 << "=" << arg7 << ", " << #arg8 << "=" << arg8 << ")" << utils::io::endl)
+
+#define FWGPU_PRINT_DRIVER_CALL_9(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)            \
+    (FWGPU_LOGD << "WebGPUDriver::" << __FUNCTION__ << "(" << #arg1 << "=" << arg1 << ", "         \
+                << #arg2 << "=" << arg2 << ", " << #arg3 << "=" << arg3 << ", " << #arg4 << "="    \
+                << arg4 << ", " << #arg5 << "=" << arg5 << ", " << #arg6 << "=" << arg6 << ", "    \
+                << #arg7 << "=" << arg7 << ", " << #arg8 << "=" << arg8 << ", " << #arg9 << "="    \
+                << arg9 << ")" << utils::io::endl)
+
+#define FWGPU_PRINT_DRIVER_CALL_10(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)    \
+    (FWGPU_LOGD << "WebGPUDriver::" << __FUNCTION__ << "(" << #arg1 << "=" << arg1 << ", "         \
+                << #arg2 << "=" << arg2 << ", " << #arg3 << "=" << arg3 << ", " << #arg4 << "="    \
+                << arg4 << ", " << #arg5 << "=" << arg5 << ", " << #arg6 << "=" << arg6 << ", "    \
+                << #arg7 << "=" << arg7 << ", " << #arg8 << "=" << arg8 << ", " << #arg9 << "="    \
+                << arg9 << ", " << #arg10 << "=" << arg10 << ")" << utils::io::endl)
+
 namespace filament::backend {
 
 namespace {
@@ -211,6 +283,33 @@ void printDeviceDetails(wgpu::Device const& device) {
 }
 #endif
 
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+void driverConfigString(filament::backend::Platform::DriverConfig const& config,
+        std::stringstream& s) {
+    std::string_view stereoscopicType;
+    switch (config.stereoscopicType) {
+        case StereoscopicType::NONE:
+            stereoscopicType = "NONE";
+            break;
+        case StereoscopicType::INSTANCED:
+            stereoscopicType = "INSTANCED";
+            break;
+        case StereoscopicType::MULTIVIEW:
+            stereoscopicType = "MULTIVIEW";
+            break;
+    }
+    const auto boolString = [](bool b) { return b ? "true" : "false"; };
+    s << "{" << "handleArenaSize:" << config.handleArenaSize
+      << " metalUploadBufferSizeBytes:" << config.metalUploadBufferSizeBytes
+      << " disableParallelShaderCompile:" << boolString(config.disableParallelShaderCompile)
+      << " disableHandleUseAfterFreeCheck:" << boolString(config.disableHandleUseAfterFreeCheck)
+      << " disableHeapHandleTags:" << boolString(config.disableHeapHandleTags)
+      << " forceGLES2Context:" << boolString(config.forceGLES2Context)
+      << " stereoscopicType:" << stereoscopicType
+      << " assertNativeWindowIsValid: " << boolString(config.assertNativeWindowIsValid) << " }";
+}
+#endif
+
 }// namespace
 
 Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept {
@@ -226,12 +325,21 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfi
               driverConfig.handleArenaSize,
               driverConfig.disableHandleUseAfterFreeCheck,
               driverConfig.disableHeapHandleTags) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    std::stringstream config;
+    driverConfigString(driverConfig, config);
+    FWGPU_PRINT_DRIVER_CALL("platform", config.str());
+#endif
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printInstanceDetails(mPlatform.getInstance());
 #endif
 }
 
-WebGPUDriver::~WebGPUDriver() noexcept = default;
+WebGPUDriver::~WebGPUDriver() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL();
+#endif
+}
 
 Dispatcher WebGPUDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<WebGPUDriver>::make();
@@ -254,14 +362,23 @@ template class ConcreteDispatcher<WebGPUDriver>;
 
 
 void WebGPUDriver::terminate() {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL();
+#endif
 }
 
-void WebGPUDriver::tick(int) {
+void WebGPUDriver::tick(int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(i);
+#endif
     mDevice.Tick();
 }
 
 void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(monotonic_clock_ns, refreshIntervalNs, frameId);
+#endif
 }
 
 void WebGPUDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
@@ -275,54 +392,93 @@ void WebGPUDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
 }
 
 void WebGPUDriver::setPresentationTime(int64_t monotonic_clock_ns) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(monotonic_clock_ns);
+#endif
 }
 
 void WebGPUDriver::endFrame(uint32_t frameId) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(frameId);
+#endif
 }
 
-void WebGPUDriver::flush(int) {
+void WebGPUDriver::flush(int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(i);
+#endif
 }
 
-void WebGPUDriver::finish(int) {
+void WebGPUDriver::finish(int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(i);
+#endif
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(rph);
+#endif
    if (rph) {
         destructHandle<WGPURenderPrimitive>(rph);
     }
 }
 
 void WebGPUDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(vbih);
+#endif
    if (vbih) {
         destructHandle<WGPUVertexBufferInfo>(vbih);
     }
 }
 
 void WebGPUDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(vbh);
+#endif
     if (vbh) {
         destructHandle<WGPUVertexBuffer>(vbh);
     }
 }
 
 void WebGPUDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(ibh);
+#endif
     if (ibh) {
         destructHandle<WGPUIndexBuffer>(ibh);
     }
 }
 
 void WebGPUDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(boh);
+#endif
 }
 
 void WebGPUDriver::destroyTexture(Handle<HwTexture> th) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(th);
+#endif
 }
 
 void WebGPUDriver::destroyProgram(Handle<HwProgram> ph) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(ph);
+#endif
 }
 
 void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(rth);
+#endif
 }
 
 void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(sch);
+#endif
     if (sch) {
         destructHandle<WebGPUSwapChain>(sch);
     }
@@ -330,103 +486,181 @@ void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 }
 
 void WebGPUDriver::destroyStream(Handle<HwStream> sh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(sh);
+#endif
 }
 
 void WebGPUDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(tqh);
+#endif
 }
 
 void WebGPUDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(tqh);
+#endif
 }
 
 void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(tqh);
+#endif
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return allocHandle<WebGPUSwapChain>();
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainHeadlessS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwSwapChain>((Handle<HwSwapChain>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return allocHandle<WGPUTexture>();
 }
 
 Handle<HwTexture> WebGPUDriver::importTextureS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwProgram> WebGPUDriver::createProgramS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwProgram>((Handle<HwProgram>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwFence> WebGPUDriver::createFenceS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwFence>((Handle<HwFence>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwTimerQuery>((Handle<HwTimerQuery>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return allocHandle<HwIndexBuffer>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwBufferObject> WebGPUDriver::createBufferObjectS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return allocHandle<WGPUBufferObject>();
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createRenderTargetS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return allocHandle<WGPURenderTarget>();
 }
 
 Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return allocHandle<WGPUVertexBuffer>();
 }
 
 Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwDescriptorSet>((Handle<HwDescriptorSet>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwRenderPrimitive> WebGPUDriver::createRenderPrimitiveS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return allocHandle<WGPURenderPrimitive>();
 }
 
 Handle<HwVertexBufferInfo> WebGPUDriver::createVertexBufferInfoS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return allocHandle<WGPUVertexBufferInfo>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewSwizzleS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createDefaultRenderTargetS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return allocHandle<WGPURenderTarget>();
 }
 
 Handle<HwDescriptorSetLayout> WebGPUDriver::createDescriptorSetLayoutS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwDescriptorSetLayout>(
             (Handle<HwDescriptorSetLayout>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureExternalImageS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureExternalImage2S() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
 }
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(sch, nativeWindow, flags);
+#endif
     mNativeWindow = nativeWindow;
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
@@ -458,53 +692,112 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 }
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
-        uint32_t height, uint64_t flags) {}
+        uint32_t height, uint64_t flags) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(sch, width, height, flags);
+#endif
+}
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
-        uint8_t attributeCount, AttributeArray attributes) {}
+        uint8_t attributeCount, AttributeArray attributes) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(vbih, bufferCount, attributeCount, attributes);
+#endif
+}
 
 void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
-        Handle<HwVertexBufferInfo> vbih) {}
+        Handle<HwVertexBufferInfo> vbih) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(vbh, vertexCount, vbih);
+#endif
+}
 
 void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
-        uint32_t indexCount, BufferUsage usage) {}
+        uint32_t indexCount, BufferUsage usage) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(ibh, elementType, indexCount, usage);
+#endif
+}
 
 void WebGPUDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
-        BufferObjectBinding bindingType, BufferUsage usage) {}
+        BufferObjectBinding bindingType, BufferUsage usage) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(boh, byteCount, bindingType, usage);
+#endif
+}
 
 void WebGPUDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-        TextureUsage usage) {}
+        TextureUsage usage) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(th, target, levels, format, samples, w, h, depth, usage);
+#endif
+}
 
 void WebGPUDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
-        uint8_t baseLevel, uint8_t levelCount) {}
+        uint8_t baseLevel, uint8_t levelCount) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(th, srch, baseLevel, levelCount);
+#endif
+}
 
 void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
-        backend::TextureSwizzle a) {}
+        backend::TextureSwizzle a) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(th, srch, r, g, b, a);
+#endif
+}
 
 void WebGPUDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::SamplerType target,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
-        Platform::ExternalImageHandleRef externalImage) {}
+        Platform::ExternalImageHandleRef externalImage) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(th, target, format, width, height, usage, externalImage);
+#endif
+}
 
 void WebGPUDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::SamplerType target,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
-        void* externalImage) {}
+        void* externalImage) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(th, target, format, width, height, usage, externalImage);
+#endif
+}
 
 void WebGPUDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
-        void* image, uint32_t plane) {}
+        void* image, uint32_t plane) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(th, format, width, height, usage, image, plane);
+#endif
+}
 
 void WebGPUDriver::importTextureR(Handle<HwTexture> th, intptr_t id, SamplerType target,
         uint8_t levels, TextureFormat format, uint8_t samples, uint32_t w, uint32_t h,
-        uint32_t depth, TextureUsage usage) {}
+        uint32_t depth, TextureUsage usage) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(th, id, target, levels, format, samples, w, h, depth, usage);
+#endif
+}
 
 void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<HwVertexBuffer> vbh,
-        Handle<HwIndexBuffer> ibh, PrimitiveType pt) {}
+        Handle<HwIndexBuffer> ibh, PrimitiveType pt) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(rph, vbh, ibh, pt);
+#endif
+}
 
-void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {}
+void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(ph, program);
+#endif
+}
 
-void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
+void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(rth, i);
+#endif
     assert_invariant(!mDefaultRenderTarget);
     mDefaultRenderTarget = constructHandle<WGPURenderTarget>(rth);
     assert_invariant(mDefaultRenderTarget);
@@ -512,46 +805,95 @@ void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
         uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount, MRT color,
-        TargetBufferInfo depth, TargetBufferInfo stencil) {}
+        TargetBufferInfo depth, TargetBufferInfo stencil) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(rth, targets, width, height, samples, layerCount, color, depth, stencil);
+#endif
+}
 
-void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {}
+void WebGPUDriver::createFenceR(Handle<HwFence> fh, int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(fh, i);
+#endif
+}
 
-void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
+void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(tqh, i);
+#endif
+}
 
 void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
-        backend::DescriptorSetLayout&& info) {}
+        backend::DescriptorSetLayout&& info) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(dslh, info);
+#endif
+}
 
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
-        Handle<HwDescriptorSetLayout> dslh) {}
+        Handle<HwDescriptorSetLayout> dslh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(dsh, dslh);
+#endif
+}
 
 Handle<HwStream> WebGPUDriver::createStreamNative(void* nativeStream) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(nativeStream);
+#endif
     return {};
 }
 
 Handle<HwStream> WebGPUDriver::createStreamAcquired() {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL();
+#endif
     return {};
 }
 
 void WebGPUDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math::mat3f& transform,
-        CallbackHandler* handler, StreamCallback cb, void* userData) {}
+        CallbackHandler* handler, StreamCallback cb, void* userData) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(sh, image, transform, handler, cb, userData);
+#endif
+}
 
 void WebGPUDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh,
-        BufferObjectStreamDescriptor&& streams) {}
+        BufferObjectStreamDescriptor&& streams) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(boh, "streams");
+#endif
+}
 
 void WebGPUDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(sh, width, height);
+#endif
 }
 
 int64_t WebGPUDriver::getStreamTimestamp(Handle<HwStream> sh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(sh);
+#endif
     return 0;
 }
 
 void WebGPUDriver::updateStreams(CommandStream* driver) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(driver);
+#endif
 }
 
 void WebGPUDriver::destroyFence(Handle<HwFence> fh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(fh);
+#endif
 }
 
 FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(fh);
+#endif
     return FenceStatus::CONDITION_SATISFIED;
 }
 
@@ -651,24 +993,39 @@ size_t WebGPUDriver::getMaxArrayTextureLayers() {
 
 void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(ibh, p, byteOffset);
+#endif
     scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(ibh, p, byteOffset);
+#endif
     scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(ibh, p, byteOffset);
+#endif
     scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> boh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(boh);
+#endif
 }
 
 void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(vbh, index, boh);
+#endif
     auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
     auto* bufferObject = handleCast<WGPUBufferObject>(boh);
     assert_invariant(index < vertexBuffer->buffers.size());
@@ -679,32 +1036,57 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& data) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(th, level, xoffset, yoffset, zoffset, width, height, depth, data);
+#endif
     scheduleDestroy(std::move(data));
 }
 
 void WebGPUDriver::setupExternalImage(void* image) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(image);
+#endif
 }
 
 TimerQueryResult WebGPUDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(tqh, elapsedTime);
+#endif
     return TimerQueryResult::ERROR;
 }
 
 void WebGPUDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(image);
+#endif
 }
 
 void WebGPUDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(th, sh);
+#endif
 }
 
-void WebGPUDriver::generateMipmaps(Handle<HwTexture> th) { }
+void WebGPUDriver::generateMipmaps(Handle<HwTexture> th) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(th);
+#endif
+}
 
 void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(priority, handler, callback, user);
+#endif
     if (callback) {
         scheduleCallback(handler, user, callback);
     }
 }
 
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(rth, params);
+#endif
     wgpu::CommandEncoderDescriptor commandEncoderDescriptor = {
         .label = "command_encoder"
     };
@@ -739,7 +1121,10 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             params.viewport.width, params.viewport.height, params.depthRange.near, params.depthRange.far);
 }
 
-void WebGPUDriver::endRenderPass(int) {
+void WebGPUDriver::endRenderPass(int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(i);
+#endif
     mRenderPassEncoder.End();
     mRenderPassEncoder = nullptr;
     wgpu::CommandBufferDescriptor commandBufferDescriptor {
@@ -749,10 +1134,16 @@ void WebGPUDriver::endRenderPass(int) {
     assert_invariant(mCommandBuffer);
 }
 
-void WebGPUDriver::nextSubpass(int) {
+void WebGPUDriver::nextSubpass(int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(i);
+#endif
 }
 
 void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(drawSch, readSch);
+#endif
     ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
             "WebGPU driver does not support distinct draw/read swap chains.");
     auto* swapChain = handleCast<WebGPUSwapChain>(drawSch);
@@ -764,6 +1155,9 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(sch);
+#endif
     mCommandEncoder = nullptr;
     mQueue.Submit(1, &mCommandBuffer);
     mCommandBuffer = nullptr;
@@ -774,31 +1168,55 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(stage, index, value);
+#endif
 }
 
 void WebGPUDriver::insertEventMarker(char const* string) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(string);
+#endif
 }
 
 void WebGPUDriver::pushGroupMarker(char const* string) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(string);
+#endif
 }
 
-void WebGPUDriver::popGroupMarker(int) {
+void WebGPUDriver::popGroupMarker(int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(i);
+#endif
 }
 
-void WebGPUDriver::startCapture(int) {
+void WebGPUDriver::startCapture(int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(i);
+#endif
 }
 
-void WebGPUDriver::stopCapture(int) {
+void WebGPUDriver::stopCapture(int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(i);
+#endif
 }
 
 void WebGPUDriver::readPixels(Handle<HwRenderTarget> src,
         uint32_t x, uint32_t y, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& p) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(src, x, y, width, height, p);
+#endif
     scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::readBufferSubData(backend::BufferObjectHandle boh,
         uint32_t offset, uint32_t size, backend::BufferDescriptor&& p) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(boh, offset, size, p);
+#endif
     scheduleDestroy(std::move(p));
 }
 
@@ -806,33 +1224,58 @@ void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
         Handle<HwRenderTarget> dst, Viewport dstRect,
         Handle<HwRenderTarget> src, Viewport srcRect,
         SamplerMagFilter filter) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(buffers, dst, dstRect, src, srcRect, filter);
+#endif
 }
 
 void WebGPUDriver::resolve(
         Handle<HwTexture> dst, uint8_t srcLevel, uint8_t srcLayer,
         Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(dst, srcLevel, srcLayer, src, dstLevel, dstLayer);
+#endif
 }
 
 void WebGPUDriver::blit(
         Handle<HwTexture> dst, uint8_t srcLevel, uint8_t srcLayer, math::uint2 dstOrigin,
         Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer, math::uint2 srcOrigin,
         math::uint2 size) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(dst, srcLevel, srcLayer, dstOrigin, src, dstLevel, dstLayer, srcOrigin,
+            size);
+#endif
 }
 
 void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(pipelineState);
+#endif
 }
 
 void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(rph);
+#endif
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(indexOffset, indexCount, instanceCount);
+#endif
 }
 
 void WebGPUDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
         uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(pipelineState, rph, indexOffset, indexCount, instanceCount);
+#endif
 }
 
 void WebGPUDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(program, workGroupCount);
+#endif
 }
 
 void WebGPUDriver::scissor(
@@ -840,12 +1283,21 @@ void WebGPUDriver::scissor(
 }
 
 void WebGPUDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(tqh);
+#endif
 }
 
 void WebGPUDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(tqh);
+#endif
 }
 
-void WebGPUDriver::resetState(int) {
+void WebGPUDriver::resetState(int i) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(i);
+#endif
 }
 
 void WebGPUDriver::updateDescriptorSetBuffer(
@@ -854,6 +1306,9 @@ void WebGPUDriver::updateDescriptorSetBuffer(
         backend::BufferObjectHandle boh,
         uint32_t offset,
         uint32_t size) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(dsh, binding, boh, offset, size);
+#endif
 }
 
 void WebGPUDriver::updateDescriptorSetTexture(
@@ -861,15 +1316,24 @@ void WebGPUDriver::updateDescriptorSetTexture(
         backend::descriptor_binding_t binding,
         backend::TextureHandle th,
         SamplerParams params) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(dsh, binding, th, params);
+#endif
 }
 
 void WebGPUDriver::bindDescriptorSet(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+    FWGPU_PRINT_DRIVER_CALL(dsh, set, offsets);
+#endif
 }
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
+#if FWGPU_ENABLED(FWGPU_PRINT_DRIVER_CALLS)
+//    FWGPU_PRINT_DRIVER_CALL(handleId, tag);
+#endif
 }
 
 } // namespace filament
