@@ -18,18 +18,24 @@
 
 #include <utility>
 
-namespace filament::backend {
+namespace {
 
-
-WGPUIndexBuffer::WGPUIndexBuffer(wgpu::Device const& device, uint8_t elementSize,
-        uint32_t indexCount) {
+wgpu::Buffer createIndexBuffer(wgpu::Device const& device, uint8_t elementSize, uint32_t indexCount) {
     wgpu::BufferDescriptor descriptor{ .label = "index_buffer",
         .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index,
         .size = elementSize * indexCount,
         .mappedAtCreation = false };
-
-    buffer = device.CreateBuffer(&descriptor);
+    return device.CreateBuffer(&descriptor);
 }
+} // namespace
+
+namespace filament::backend {
+
+
+WGPUIndexBuffer::WGPUIndexBuffer(wgpu::Device const& device, uint8_t elementSize,
+        uint32_t indexCount)
+    : buffer(createIndexBuffer(device, elementSize, indexCount)) {}
+
 
 WGPUVertexBuffer::WGPUVertexBuffer(wgpu::Device const &device, uint32_t vextexCount, uint32_t bufferCount,
                                    Handle<WGPUVertexBufferInfo> vbih)
