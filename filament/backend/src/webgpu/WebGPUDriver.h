@@ -62,6 +62,7 @@ private:
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
     wgpu::Queue mQueue = nullptr;
+    void* mNativeWindow = nullptr;
     WebGPUSwapChain* mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
     wgpu::CommandEncoder mCommandEncoder = nullptr;
@@ -102,6 +103,7 @@ private:
     D* constructHandle(Handle<B>& handle, ARGS&& ... args) noexcept {
         return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
     }
+
     template<typename D, typename B>
     D* handleCast(Handle<B> handle) noexcept {
         return mHandleAllocator.handle_cast<D*>(handle);
