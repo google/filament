@@ -427,6 +427,7 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 }
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
+    mNativeWindow = nativeWindow;
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
     mAdapter = mPlatform.requestAdapter(surface);
@@ -438,8 +439,9 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     printDeviceDetails(mDevice);
 #endif
     mQueue = mDevice.GetQueue();
-    mSwapChain =
-            constructHandle<WebGPUSwapChain>(sch, std::move(surface), mAdapter, mDevice, flags);
+    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
+    mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
+            mDevice, flags);
     assert_invariant(mSwapChain);
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
@@ -708,11 +710,6 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     };
     mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
     assert_invariant(mCommandEncoder);
-    assert_invariant(mSwapChain);
-    mTextureView =
-            mSwapChain->getNextSurfaceTextureView(params.viewport.width, params.viewport.height);
-    assert_invariant(mTextureView);
-
     // TODO: Remove this code once WebGPU pipeline is implemented
     static float red = 1.0f;
     if (red - 0.01 > 0) {
@@ -720,7 +717,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     } else {
         red = 1.0f;
     }
-
+    assert_invariant(mTextureView);
     wgpu::RenderPassColorAttachment renderPassColorAttachment = {
         .view = mTextureView,
         // TODO: remove this code once WebGPU Pipeline is implemented with render targets, pipeline and buffers.
@@ -756,6 +753,14 @@ void WebGPUDriver::nextSubpass(int) {
 }
 
 void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
+    ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
+            "WebGPU driver does not support distinct draw/read swap chains.");
+    auto* swapChain = handleCast<WebGPUSwapChain>(drawSch);
+    mSwapChain = swapChain;
+    assert_invariant(mSwapChain);
+    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
+    mTextureView = mSwapChain->getCurrentSurfaceTextureView(surfaceSize);
+    assert_invariant(mTextureView);
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {

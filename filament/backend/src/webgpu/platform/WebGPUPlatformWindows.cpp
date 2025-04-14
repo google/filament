@@ -30,6 +30,16 @@
 
 namespace filament::backend {
 
+wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
+    HWND window = static_cast<HWND>(nativeWindow);
+    RECT windowRect;
+    GetWindowRect(window, &windowRect);
+    return wgpu::Extent2D{
+        .width = static_cast<uint32_t>(windowRect.right - windowRect.left),
+        .height = static_cast<uint32_t>(windowRect.bottom - windowRect.top)
+    };
+}
+
 wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags*/) {
     // TODO verify this is necessary for Dawn implementation as well:
     // On (at least) NVIDIA drivers, the Vulkan implementation (specifically the call to

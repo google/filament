@@ -191,9 +191,12 @@ wgpu::CompositeAlphaMode selectAlphaMode(size_t availableAlphaModesCount,
 }
 
 void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
-        wgpu::SurfaceCapabilities const& capabilities, bool useSRGBColorSpace) {
+        wgpu::SurfaceCapabilities const& capabilities, wgpu::Extent2D const& surfaceSize,
+        bool useSRGBColorSpace) {
     config.device = device;
     config.usage = wgpu::TextureUsage::RenderAttachment;
+    config.width = surfaceSize.width;
+    config.height = surfaceSize.height;
     config.format =
             selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);
     config.presentMode =
@@ -205,8 +208,8 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
 
 namespace filament::backend {
 
-WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter,
-        wgpu::Device& device, uint64_t flags)
+WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& surfaceSize,
+        wgpu::Adapter& adapter, wgpu::Device& device, uint64_t flags)
     : mSurface(surface) {
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
@@ -217,43 +220,42 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Adapter& adapter
 #endif
     }
     const bool useSRGBColorSpace = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0;
-    initConfig(mConfig, device, capabilities, useSRGBColorSpace);
+    initConfig(mConfig, device, capabilities, surfaceSize, useSRGBColorSpace);
+    mSurface.Configure(&mConfig);
 }
 
 WebGPUSwapChain::~WebGPUSwapChain() {
-    if (mConfigured) {
-        mSurface.Unconfigure();
-        mConfigured = false;
-    }
+    mSurface.Unconfigure();
 }
 
-void WebGPUSwapChain::getCurrentTexture(uint32_t width, uint32_t height, wgpu::SurfaceTexture* texture) {
-    if (width < 1 || height < 1) {
-        PANIC_LOG("WebGPUSwapChain::GetCurrentTexture: Invalid width and/or height requested.");
-        return;
-    }
-    if (mConfig.width != width || mConfig.height != height || !mConfigured) {
-        mConfig.width = width;
-        mConfig.height = height;
+void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
+    FILAMENT_CHECK_POSTCONDITION(currentSurfaceSize.width > 0 || currentSurfaceSize.height > 0)
+            << "WebGPUSwapChain::setExtent: Invalid width " << currentSurfaceSize.width
+            << " and/or height " << currentSurfaceSize.height << " requested.";
+    if (mConfig.width != currentSurfaceSize.width || mConfig.height != currentSurfaceSize.height) {
+        mConfig.width = currentSurfaceSize.width;
+        mConfig.height = currentSurfaceSize.height;
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
         printSurfaceConfiguration(mConfig);
 #endif
+        FWGPU_LOGD << "Resizing to width " << mConfig.width << " height " << mConfig.height
+                   << utils::io::endl;
+        // TODO we may need to ensure no surface texture is flight when we do this. some
+        //      synchronization may be necessary
         mSurface.Configure(&mConfig);
-        mConfigured = true;
     }
-
-    mSurface.GetCurrentTexture(texture);
 }
 
-wgpu::TextureView WebGPUSwapChain::getNextSurfaceTextureView(uint32_t width, uint32_t height) {
+wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView(
+        wgpu::Extent2D const& currentSurfaceSize) {
+    setExtent(currentSurfaceSize);
     wgpu::SurfaceTexture surfaceTexture;
-    getCurrentTexture(width, height, &surfaceTexture);
+    mSurface.GetCurrentTexture(&surfaceTexture);
     if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
         return nullptr;
     }
-
     // Create a view for this surface texture
-    //TODO: review these initiliazations as webgpu pipeline gets mature
+    // TODO: review these initiliazations as webgpu pipeline gets mature
     wgpu::TextureViewDescriptor textureViewDescriptor = {
         .label = "texture_view",
         .format = surfaceTexture.texture.GetFormat(),
