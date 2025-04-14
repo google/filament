@@ -27,10 +27,117 @@ wgpu::Buffer createIndexBuffer(wgpu::Device const& device, uint8_t elementSize, 
         .mappedAtCreation = false };
     return device.CreateBuffer(&descriptor);
 }
+
+wgpu::VertexFormat getVertexFormat(filament::backend::ElementType type, bool normalized, bool integer) {
+    using ElementType = filament::backend::ElementType;
+    // using VertexFormat = wgpu::VertexFormat;
+    if (normalized) {
+        switch (type) {
+            // Single Component Types
+            case ElementType::BYTE: return wgpu::VertexFormat::Snorm8;
+            case ElementType::UBYTE: return wgpu::VertexFormat::Unorm8;
+            case ElementType::SHORT: return wgpu::VertexFormat::Snorm16;
+            case ElementType::USHORT: return wgpu::VertexFormat::Unorm16;
+            // Two Component Types
+            case ElementType::BYTE2: return wgpu::VertexFormat::Snorm8x2;
+            case ElementType::UBYTE2: return wgpu::VertexFormat::Unorm8x2;
+            case ElementType::SHORT2: return wgpu::VertexFormat::Snorm16x2;
+            case ElementType::USHORT2: return wgpu::VertexFormat::Unorm16x2;
+            // Three Component Types
+            // There is no vertex format type for 3 byte data in webgpu. Use
+            // 4 byte signed normalized type and ignore the last byte.
+            // TODO: This is to be verified.
+            case ElementType::BYTE3: return wgpu::VertexFormat::Snorm8x4;      // NOT MINSPEC
+            case ElementType::UBYTE3: return wgpu::VertexFormat::Unorm8x4;     // NOT MINSPEC
+            case ElementType::SHORT3: return wgpu::VertexFormat::Snorm16x4;  // NOT MINSPEC
+            case ElementType::USHORT3: return wgpu::VertexFormat::Unorm16x4; // NOT MINSPEC
+            // Four Component Types
+            case ElementType::BYTE4: return wgpu::VertexFormat::Snorm8x4;
+            case ElementType::UBYTE4: return wgpu::VertexFormat::Unorm8x4;
+            case ElementType::SHORT4: return wgpu::VertexFormat::Snorm16x4;
+            case ElementType::USHORT4: return wgpu::VertexFormat::Unorm8x4;
+            default:
+                FILAMENT_CHECK_POSTCONDITION(false) << "Normalized format does not exist.";
+                return wgpu::VertexFormat::Float32x3;
+        }
+    }
+    switch (type) {
+        // Single Component Types
+        // There is no direct alternative for SSCALED in webgpu. Convert them to Float32 directly.
+        // This will result in increased memory on the cpu side.
+        // TODO: Is Float16 acceptable instead with some potential accuracy errors?
+        case ElementType::BYTE: return integer ? wgpu::VertexFormat::Sint8 : wgpu::VertexFormat::Float32;
+        case ElementType::UBYTE: return integer ? wgpu::VertexFormat::Uint8 : wgpu::VertexFormat::Float32;
+        case ElementType::SHORT: return integer ? wgpu::VertexFormat::Sint16 : wgpu::VertexFormat::Float32;
+        case ElementType::USHORT: return integer ? wgpu::VertexFormat::Uint16 : wgpu::VertexFormat::Float32;
+        case ElementType::HALF: return wgpu::VertexFormat::Float16;
+        case ElementType::INT: return wgpu::VertexFormat::Sint32;
+        case ElementType::UINT: return wgpu::VertexFormat::Uint32;
+        case ElementType::FLOAT: return wgpu::VertexFormat::Float32;
+        // Two Component Types
+        case ElementType::BYTE2: return integer ? wgpu::VertexFormat::Sint8x2 : wgpu::VertexFormat::Float32x2;
+        case ElementType::UBYTE2: return integer ? wgpu::VertexFormat::Uint8x2 : wgpu::VertexFormat::Float32x2;
+        case ElementType::SHORT2: return integer ? wgpu::VertexFormat::Sint16x2 : wgpu::VertexFormat::Float32x2;
+        case ElementType::USHORT2: return integer ? wgpu::VertexFormat::Uint16x2 : wgpu::VertexFormat::Float32x2;
+        case ElementType::HALF2: return wgpu::VertexFormat::Float16x2;
+        case ElementType::FLOAT2: return wgpu::VertexFormat::Float32x2;
+        // Three Component Types
+        case ElementType::BYTE3: return wgpu::VertexFormat::Sint8x4;      // NOT MINSPEC
+        case ElementType::UBYTE3: return wgpu::VertexFormat::Uint8x4;     // NOT MINSPEC
+        case ElementType::SHORT3: return wgpu::VertexFormat::Sint16x4;  // NOT MINSPEC
+        case ElementType::USHORT3: return wgpu::VertexFormat::Uint16x4; // NOT MINSPEC
+        case ElementType::HALF3: return wgpu::VertexFormat::Float16x4; // NOT MINSPEC
+        case ElementType::FLOAT3: return wgpu::VertexFormat::Float32x3;
+        // Four Component Types
+        case ElementType::BYTE4: return integer ? wgpu::VertexFormat::Sint8x4 : wgpu::VertexFormat::Float32x4;
+        case ElementType::UBYTE4: return integer ? wgpu::VertexFormat::Uint8x4 : wgpu::VertexFormat::Float32x4;
+        case ElementType::SHORT4: return integer ? wgpu::VertexFormat::Sint16x4 : wgpu::VertexFormat::Float32x4;
+        case ElementType::USHORT4: return integer ? wgpu::VertexFormat::Uint16x4 : wgpu::VertexFormat::Float32x4;
+        case ElementType::HALF4: return wgpu::VertexFormat::Float16x4;
+        case ElementType::FLOAT4: return wgpu::VertexFormat::Float32x4;
+    }
+    FILAMENT_CHECK_POSTCONDITION(false) << "Vertex format should always be defined.";
+    return wgpu::VertexFormat::Float32x3;
+}
+
 } // namespace
 
 namespace filament::backend {
 
+WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
+        AttributeArray const& attributes)
+    : HwVertexBufferInfo(bufferCount, attributeCount),
+      mVertexBufferLayout(bufferCount),
+      mAttributes(bufferCount) {
+    for (uint32_t attribIndex = 0; attribIndex < attributes.size(); attribIndex++) {
+        Attribute attrib = attributes[attribIndex];
+        // Ignore the attributes which are not bind to vertex buffers.
+        if (attrib.buffer == Attribute::BUFFER_UNUSED) {
+            continue;
+        }
+
+        assert_invariant(attrib.buffer < bufferCount);
+        bool const isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
+        bool const isNormalized = attrib.flags & Attribute::FLAG_NORMALIZED;
+        wgpu::VertexFormat vertexFormat = getVertexFormat(attrib.type, isNormalized, isInteger);
+
+        mAttributes[attrib.buffer].push_back({
+            .format = vertexFormat,
+            .offset = attrib.offset,
+            .shaderLocation = attribIndex,
+        });
+        mVertexBufferLayout[attrib.buffer] = {
+            .arrayStride = attrib.stride,
+        };
+    }
+
+    for (uint32_t bufferIndex = 0; bufferIndex < bufferCount; bufferIndex++) {
+        mVertexBufferLayout[bufferIndex] = {
+            .attributeCount = mAttributes[bufferIndex].size(),
+            .attributes = mAttributes[bufferIndex].data(),
+        };
+    }
+}
 
 WGPUIndexBuffer::WGPUIndexBuffer(wgpu::Device const& device, uint8_t elementSize,
         uint32_t indexCount)

@@ -24,6 +24,7 @@
 #include <backend/Handle.h>
 
 #include <utils/FixedCapacityVector.h>
+// #include <utils/StructureOfArrays.h>
 
 #include <webgpu/webgpu_cpp.h>
 
@@ -32,14 +33,31 @@
 namespace filament::backend {
 
 struct WGPUBufferObject;
-// TODO: Currently WGPUVertexBufferInfo is not used by WebGPU for useful task.
-// Update the struct when used by WebGPU driver.
+
+// VertexBufferInfo contains layout info for Vertex Buffer based on WebGPU structs. In WebGPU each
+// VertexBufferLayout is associated with a single vertex buffer. So number of mVertexBufferLayout
+// is equal to bufferCount. Each VertexBufferLayout can contain multiple VertexAttribute. Bind index
+// of vertex buffer is implicitly calculated by the position of VertexBufferLayout in an array.
 struct WGPUVertexBufferInfo : public HwVertexBufferInfo {
+
     WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
-            AttributeArray const& attributes)
-        : HwVertexBufferInfo(bufferCount, attributeCount),
-          attributes(attributes) {}
-    AttributeArray attributes;
+            AttributeArray const& attributes);
+    inline  wgpu::VertexBufferLayout const* getVertexBufferLayout() const {
+        return mVertexBufferLayout.data();
+    }
+    inline uint32_t getVertexBufferLayoutSize() const {
+        return mVertexBufferLayout.size();
+    }
+
+    inline wgpu::VertexAttribute const* getVertexAttributeForIndex(uint32_t index) const {
+        return mAttributes[index].data();
+    }
+    inline uint32_t getVertexAttributeSize(uint32_t index) const {
+        return mAttributes[index].size();
+    }
+private:
+    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayout;
+    std::vector<std::vector<wgpu::VertexAttribute>> mAttributes;
 };
 
 struct WGPUVertexBuffer : public HwVertexBuffer {
@@ -59,7 +77,7 @@ struct WGPUIndexBuffer : public HwIndexBuffer {
     wgpu::Buffer buffer;
 };
 
-// TODO: Currently WGPUVertexBufferInfo is not used by WebGPU for useful task.
+// TODO: Currently WGPUBufferObject is not used by WebGPU for useful task.
 // Update the struct when used by WebGPU driver.
 struct WGPUBufferObject : HwBufferObject {
     WGPUBufferObject(BufferObjectBinding bindingType, uint32_t byteCount);
@@ -67,6 +85,7 @@ struct WGPUBufferObject : HwBufferObject {
     wgpu::Buffer buffer;
     const BufferObjectBinding bufferObjectBinding;
 };
+
 class WebGPUDescriptorSetLayout : public HwDescriptorSetLayout {
 public:
     WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const* device);
