@@ -507,8 +507,10 @@ if (APPLE OR LINUX)
         test/Arguments.cpp
         test/ImageExpectations.cpp
         test/Lifetimes.cpp
+        test/PlatformRunner.cpp
         test/Shader.cpp
         test/SharedShaders.cpp
+        test/Skip.cpp
         test/test_FeedbackLoops.cpp
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp
