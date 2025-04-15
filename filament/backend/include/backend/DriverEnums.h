@@ -1139,6 +1139,7 @@ struct ExternalSamplerDatum {
 static_assert(sizeof(ExternalSamplerDatum) == 12);
 
 struct DescriptorSetLayout {
+    std::string label;
     utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
 
 //  TODO: uncomment when needed

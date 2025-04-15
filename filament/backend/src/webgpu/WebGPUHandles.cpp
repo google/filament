@@ -254,7 +254,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
     wgpu::BindGroupLayoutDescriptor layoutDescriptor{
         // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
         // debugging. For now, hack an incrementing value.
-        .label{ "layout_" + std::to_string(++layoutNum) },
+        .label{ "layout_"+ layout.label + std::to_string(++layoutNum) },
         .entryCount = wEntries.size(),
         .entries = wEntries.data()
     };
