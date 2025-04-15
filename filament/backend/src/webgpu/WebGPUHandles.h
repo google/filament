@@ -67,6 +67,18 @@ struct WGPUBufferObject : HwBufferObject {
     wgpu::Buffer buffer;
     const BufferObjectBinding bufferObjectBinding;
 };
+class WebGPUDescriptorSetLayout : public HwDescriptorSetLayout {
+public:
+    WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const* device);
+    ~WebGPUDescriptorSetLayout();
+
+private:
+    // TODO: If this is useful elsewhere, remove it from this class
+    // Convert Filament Shader Stage Flags bitmask to webgpu equivilant
+    static wgpu::ShaderStage filamentStageToWGPUStage(ShaderStageFlags fFlags);
+
+    wgpu::BindGroupLayout mLayout;
+};
 
 // TODO: Currently WGPUTexture is not used by WebGPU for useful task.
 // Update the struct when used by WebGPU driver.
