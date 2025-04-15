@@ -344,6 +344,9 @@ void WebGPUDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void WebGPUDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
+    if (tqh) {
+        destructHandle<WebGPUDescriptorSetLayout>(tqh);
+    }
 }
 
 void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
@@ -418,8 +421,7 @@ Handle<HwRenderTarget> WebGPUDriver::createDefaultRenderTargetS() noexcept {
 }
 
 Handle<HwDescriptorSetLayout> WebGPUDriver::createDescriptorSetLayoutS() noexcept {
-    return Handle<HwDescriptorSetLayout>(
-            (Handle<HwDescriptorSetLayout>::HandleId) mNextFakeHandle++);
+    return allocHandle<WebGPUDescriptorSetLayout>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureExternalImageS() noexcept {
@@ -520,7 +522,9 @@ void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {}
 void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
 
 void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
-        backend::DescriptorSetLayout&& info) {}
+        backend::DescriptorSetLayout&& info) {
+    constructHandle<WebGPUDescriptorSetLayout>(dslh, std::move(info), &mDevice);
+}
 
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
         Handle<HwDescriptorSetLayout> dslh) {}
