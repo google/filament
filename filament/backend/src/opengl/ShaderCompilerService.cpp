@@ -111,8 +111,6 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     mutable utils::Mutex lock;
     mutable utils::Condition cond;
     bool signaled = false;
-
-    bool cached = false;
 };
 
 ShaderCompilerService::OpenGLProgramToken::~OpenGLProgramToken() {
@@ -256,11 +254,14 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                         compileShaders(gl, std::move(program.getShadersSource()),
                                 program.getSpecializationConstants(), program.isMultiview(), token);
                         linkProgram(gl, token);
-                        tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
                         // Now `token->gl.program` must be populated, so we signal the completion
                         // of the linking. We don't need to check the result of the program here
                         // because it'll be done in the engine thread.
                         token->signal();
+                        // We try caching the program blob after sending the signal. This allows us
+                        // to unblock the engine thread as soon as the token is ready while
+                        // performing an expensive caching operation still in the pool.
+                        tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
                     });
             break;
         }
@@ -375,8 +376,11 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
     FILAMENT_CHECK_POSTCONDITION(linked)
             << "OpenGL program " << token->name.c_str_safe() << " failed to link or compile";
 
-    // The program is successfully created. Try caching the program blob.
-    tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
+    // The program is successfully created. Try caching the program blob. In the THREAD_POOL mode,
+    // caching is performed in the pool.
+    if (mMode != Mode::THREAD_POOL) {
+        tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
+    }
 
     GLuint program = token->gl.program;
 
@@ -693,9 +697,6 @@ void ShaderCompilerService::executeTickOps() noexcept {
 
 /* static */ void ShaderCompilerService::tryCachingProgram(OpenGLBlobCache& blobCache,
         OpenGLPlatform& platform, program_token_t const& token) noexcept {
-    if (token->cached) {
-        return;// Already cached
-    }
     if (!token->key || !token->gl.program) {
         return;// Invalid params
     }
@@ -706,7 +707,6 @@ void ShaderCompilerService::executeTickOps() noexcept {
     }
 
     blobCache.insert(platform, token->key, token->gl.program);
-    token->cached = true;
 }
 
 /* static */ void ShaderCompilerService::cleanupProgramAndShaders(
