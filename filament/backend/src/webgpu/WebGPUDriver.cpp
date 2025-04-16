@@ -229,6 +229,14 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfi
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printInstanceDetails(mPlatform.getInstance());
 #endif
+    mAdapter = mPlatform.requestAdapter(nullptr);
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+    printAdapterDetails(mAdapter);
+#endif
+    mDevice = mPlatform.requestDevice(mAdapter);
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+    printDeviceDetails(mDevice);
+#endif
 }
 
 WebGPUDriver::~WebGPUDriver() noexcept = default;
@@ -336,6 +344,9 @@ void WebGPUDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void WebGPUDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
+    if (tqh) {
+        destructHandle<WebGPUDescriptorSetLayout>(tqh);
+    }
 }
 
 void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
@@ -410,8 +421,7 @@ Handle<HwRenderTarget> WebGPUDriver::createDefaultRenderTargetS() noexcept {
 }
 
 Handle<HwDescriptorSetLayout> WebGPUDriver::createDescriptorSetLayoutS() noexcept {
-    return Handle<HwDescriptorSetLayout>(
-            (Handle<HwDescriptorSetLayout>::HandleId) mNextFakeHandle++);
+    return allocHandle<WebGPUDescriptorSetLayout>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureExternalImageS() noexcept {
@@ -430,14 +440,7 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     mNativeWindow = nativeWindow;
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
-    mAdapter = mPlatform.requestAdapter(surface);
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    printAdapterDetails(mAdapter);
-#endif
-    mDevice = mPlatform.requestDevice(mAdapter);
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    printDeviceDetails(mDevice);
-#endif
+
     mQueue = mDevice.GetQueue();
     wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
     mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
@@ -519,7 +522,9 @@ void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {}
 void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
 
 void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
-        backend::DescriptorSetLayout&& info) {}
+        backend::DescriptorSetLayout&& info) {
+    constructHandle<WebGPUDescriptorSetLayout>(dslh, std::move(info), &mDevice);
+}
 
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
         Handle<HwDescriptorSetLayout> dslh) {}

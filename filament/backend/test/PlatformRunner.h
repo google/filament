@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "utils/CString.h"
 
 namespace test {
 
@@ -32,6 +33,15 @@ enum class Backend : uint8_t {
     METAL = 3,
     WEBGPU = 4,
     NOOP = 5,
+};
+
+enum class OperatingSystem: uint8_t {
+    OTHER = 1,
+    // Also represents android phones.
+    LINUX = 2,
+    // Also represents iOS phones.
+    APPLE = 3,
+    // TODO: When tests support windows add it here.
 };
 
 struct NativeView {
@@ -51,9 +61,10 @@ NativeView getNativeView();
  * No tests will be run yet.
  *
  * @param backend The backend to run the tests on.
+ * @param operatingSystem The operating system the tests are being run on.
  * @param isMobile True if the platform is a mobile platform (iOS or Android).
  */
-void initTests(Backend backend, bool isMobile, int& argc, char* argv[]);
+void initTests(Backend backend, OperatingSystem operatingSystem, bool isMobile, int& argc, char* argv[]);
 
 /**
  * Test runners should call runTests when they are ready for tests to be run.
@@ -68,6 +79,6 @@ int runTests();
  */
 Backend parseArgumentsForBackend(int argc, char* argv[]);
 
-}
+} // namespace test
 
 #endif
