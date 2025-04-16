@@ -69,7 +69,7 @@ struct WGPUBufferObject : HwBufferObject {
 };
 class WebGPUDescriptorSetLayout : public HwDescriptorSetLayout {
 public:
-    WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const* device);
+    WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const& device);
     ~WebGPUDescriptorSetLayout();
 
 private:

@@ -76,13 +76,12 @@ wgpu::ShaderStage WebGPUDescriptorSetLayout::filamentStageToWGPUStage(ShaderStag
 }
 
 WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout,
-        wgpu::Device const* device) {
-    assert_invariant(device->Get());
+        wgpu::Device const& device) {
+    assert_invariant(device);
 
     // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
     // debugging. For now, hack an incrementing value.
     static int layoutNum = 0;
-
 
     uint samplerCount =
             std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
@@ -147,7 +146,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         .entries = wEntries.data()
     };
     // TODO Do we need to defer this until we have more info on textures and samplers??
-    mLayout = device->CreateBindGroupLayout(&layoutDescriptor);
+    mLayout = device.CreateBindGroupLayout(&layoutDescriptor);
 }
 WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
 }// namespace filament::backend

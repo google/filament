@@ -523,7 +523,7 @@ void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
 
 void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
         backend::DescriptorSetLayout&& info) {
-    constructHandle<WebGPUDescriptorSetLayout>(dslh, std::move(info), &mDevice);
+    constructHandle<WebGPUDescriptorSetLayout>(dslh, std::move(info), mDevice);
 }
 
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
