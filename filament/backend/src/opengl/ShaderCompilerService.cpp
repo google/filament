@@ -103,9 +103,9 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     // `KHR_parallel_shader_compile` is enabled.
     bool isLinkCompleted() const noexcept;
 
-    // Check link status of the program and log errors on failure. `linked` is updated with the
-    // result. Also cleanup shaders regardless of the result.
-    void checkLinkStatusAndCleanupShaders() noexcept;
+    // Check link status of the program and log errors on failure. Return the result of the link.
+    // Also cleanup shaders regardless of the result.
+    bool checkLinkStatusAndCleanupShaders() noexcept;
 
     // Try caching the program if we haven't done it yet. Cache it only when the program is valid.
     void tryCachingProgram(OpenGLBlobCache& cache, OpenGLPlatform& platform) noexcept;
@@ -147,8 +147,6 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     mutable utils::Condition cond;
     bool signaled = false;
 
-    bool canceled = false; // not part of the signaling
-    bool linked = false;
     bool cached = false;
 };
 
@@ -338,11 +336,11 @@ bool ShaderCompilerService::OpenGLProgramToken::isLinkCompleted() const noexcept
     return (status == GL_TRUE);
 }
 
-void ShaderCompilerService::OpenGLProgramToken::checkLinkStatusAndCleanupShaders() noexcept {
+bool ShaderCompilerService::OpenGLProgramToken::checkLinkStatusAndCleanupShaders() noexcept {
     SYSTRACE_CALL();
     assert_invariant(gl.program);
 
-    linked = true;
+    bool linked = true;
     GLint status;
     // GL_LINK_STATUS may block until the link is completed.
     glGetProgramiv(gl.program, GL_LINK_STATUS, &status);
@@ -360,6 +358,7 @@ void ShaderCompilerService::OpenGLProgramToken::checkLinkStatusAndCleanupShaders
             shader = 0;
         }
     }
+    return linked;
 }
 
 void ShaderCompilerService::OpenGLProgramToken::tryCachingProgram(OpenGLBlobCache& blobCache,
@@ -595,10 +594,7 @@ GLuint ShaderCompilerService::getProgram(ShaderCompilerService::program_token_t&
  */
 /* static */ void ShaderCompilerService::terminate(program_token_t& token) {
 
-    assert_invariant(token);// This function can be called when the token is still alive.
-    assert_invariant(!token->linked);// This function cannot be called after `initialize`
-
-    token->canceled = true;
+    assert_invariant(token);// This function should be called when the token is still alive.
 
     if (token->compiler.mMode == Mode::THREAD_POOL) {
         auto job = token->compiler.mCompilerThreadPool.dequeue(token);
@@ -644,18 +640,16 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
 
     SYSTRACE_CALL();
 
-    assert_invariant(token);           // This function can be called when the token is still alive.
-    assert_invariant(!token->canceled);// This function cannot be called after `terminate`
+    assert_invariant(token);// This function should be called when the token is still alive.
 
     ensureTokenIsReady(token);
     assert_invariant(token->gl.program);
 
-    // Check status of program linking. If it failed, errors will be logged, and `token->linked`
-    // will be set to false. Otherwise, `token->linked` should be set to true.
-    token->checkLinkStatusAndCleanupShaders();
+    // Check status of program linking. If it failed, errors will be logged.
+    bool linked = token->checkLinkStatusAndCleanupShaders();
 
     // We panic if it failed to create the program.
-    FILAMENT_CHECK_POSTCONDITION(token->linked)
+    FILAMENT_CHECK_POSTCONDITION(linked)
             << "OpenGL program " << token->name.c_str_safe() << " failed to link or compile";
 
     // The program is successfully created. Try caching the program blob.
