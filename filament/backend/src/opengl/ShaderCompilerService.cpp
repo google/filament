@@ -123,12 +123,17 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
         GLuint program = 0;
     } gl; // 12 bytes
 
+    // Used in THREAD_POOL mode. The job from ThreadPool should call this when the token is ready to
+    // be used. It sends a signal to the engine thread being blocked upon the `wait` call, so that
+    // the engine thread resumes its processing with the token.
     void signal() noexcept {
         std::unique_lock const l(lock);
         signaled = true;
         cond.notify_one();
     }
 
+    // Used in THREAD_POOL mode. The engine thread should call this before accessing token's fields.
+    // This may block until the token is ready to be used.
     void wait() const noexcept {
         std::unique_lock l(lock);
         cond.wait(l, [this]() { return signaled; });
