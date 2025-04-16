@@ -142,6 +142,42 @@ private:
             Job job) noexcept;
     void executeTickOps() noexcept;
     bool cancelTickOp(program_token_t const& token) noexcept;
+
+    // Compile shaders with the given `shaderSource`. `gl.shaders` is always populated with valid
+    // shader IDs after this method. But this doesn't necessarily mean the shaders are successfully
+    // compiled. Errors can be checked by calling `checkCompileStatus` later.
+    static void compileShaders(OpenGLContext& context, Program::ShaderSource shadersSource,
+            utils::FixedCapacityVector<Program::SpecializationConstant> const&
+                    specializationConstants,
+            bool multiview, program_token_t const& token) noexcept;
+
+    // Check if the shader compilation is completed. You may want to call this when the extension
+    // `KHR_parallel_shader_compile` is enabled.
+    static bool isCompileCompleted(program_token_t const& token) noexcept;
+
+    // Check compilation status of the shaders and log errors on failure.
+    static void checkCompileStatus(program_token_t const& token) noexcept;
+
+    // Create a program by linking the compiled shaders. `gl.program` is always populated with a
+    // valid program ID after this method. But this doesn't necessarily mean the program is
+    // successfully linked. Errors can be checked by calling `checkLinkStatusAndCleanupShaders`
+    // later.
+    static void linkProgram(OpenGLContext& context, program_token_t const& token) noexcept;
+
+    // Check if the program link is completed. You may want to call this when the extension
+    // `KHR_parallel_shader_compile` is enabled.
+    static bool isLinkCompleted(program_token_t const& token) noexcept;
+
+    // Check link status of the program and log errors on failure. Return the result of the link.
+    // Also cleanup shaders regardless of the result.
+    static bool checkLinkStatusAndCleanupShaders(program_token_t const& token) noexcept;
+
+    // Try caching the program if we haven't done it yet. Cache it only when the program is valid.
+    static void tryCachingProgram(OpenGLBlobCache& cache, OpenGLPlatform& platform,
+            program_token_t const& token) noexcept;
+
+    // Cleanup GL resources.
+    static void cleanupProgramAndShaders(program_token_t const& token) noexcept;
 };
 
 } // namespace filament::backend
