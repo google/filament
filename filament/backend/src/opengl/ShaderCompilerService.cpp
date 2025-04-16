@@ -107,6 +107,9 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     // result. Also cleanup shaders regardless of the result.
     void checkLinkStatusAndCleanupShaders() noexcept;
 
+    // Try caching the program if we haven't done it yet. Cache it only when the program is valid.
+    void tryCachingProgram(OpenGLBlobCache& cache, OpenGLPlatform& platform) noexcept;
+
     // Cleanup GL resources.
     void cleanupProgramAndShaders() noexcept;
 
@@ -141,6 +144,7 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
 
     bool canceled = false; // not part of the signaling
     bool linked = false;
+    bool cached = false;
 };
 
 ShaderCompilerService::OpenGLProgramToken::~OpenGLProgramToken() {
@@ -353,6 +357,24 @@ void ShaderCompilerService::OpenGLProgramToken::checkLinkStatusAndCleanupShaders
     }
 }
 
+void ShaderCompilerService::OpenGLProgramToken::tryCachingProgram(OpenGLBlobCache& blobCache,
+        OpenGLPlatform& platform) noexcept {
+    if (cached) {
+        return;// Already cached
+    }
+    if (!key || !gl.program) {
+        return;// Invalid params
+    }
+    GLint status = GL_FALSE;
+    glGetProgramiv(gl.program, GL_LINK_STATUS, &status);
+    if (status == GL_FALSE) {
+        return;// Link failure
+    }
+
+    blobCache.insert(platform, key, gl.program);
+    cached = true;
+}
+
 void ShaderCompilerService::OpenGLProgramToken::cleanupProgramAndShaders() noexcept {
     for (GLuint& shader: gl.shaders) {
         if (!shader) {
@@ -503,10 +525,11 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
     switch (mMode) {
         case Mode::THREAD_POOL: {
             mCompilerThreadPool.queue(priorityQueue, token,
-                    [&gl, program = std::move(program), token]() mutable {
+                    [this, &gl, program = std::move(program), token]() mutable {
                         token->compileShaders(gl, std::move(program.getShadersSource()),
                                 program.getSpecializationConstants(), program.isMultiview());
                         token->linkProgram(gl);
+                        token->tryCachingProgram(mBlobCache, mDriver.mPlatform);
                         // Now `token->gl.program` must be populated, so we signal the completion
                         // of the linking. We don't need to check the result of the program here
                         // because it'll be done in the engine thread.
@@ -631,9 +654,7 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
             << "OpenGL program " << token->name.c_str_safe() << " failed to link or compile";
 
     // The program is successfully created. Try caching the program blob.
-    if (token->key) {
-        mBlobCache.insert(mDriver.mPlatform, token->key, token->gl.program);
-    }
+    token->tryCachingProgram(mBlobCache, mDriver.mPlatform);
 
     GLuint program = token->gl.program;
 
