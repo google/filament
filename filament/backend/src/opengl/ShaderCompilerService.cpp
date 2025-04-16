@@ -90,8 +90,7 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     // `KHR_parallel_shader_compile` is enabled.
     bool isCompileCompleted() noexcept;
 
-    // Check compilation status of the shaders and log errors on failure. `compiled` is updated with
-    // the result.
+    // Check compilation status of the shaders and log errors on failure.
     void checkCompileStatus() noexcept;
 
     // Create a program by linking the compiled shaders. `gl.program` is always populated with a
@@ -141,7 +140,6 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     bool signaled = false;
 
     bool canceled = false; // not part of the signaling
-    bool compiled = false;
     bool linked = false;
 };
 
@@ -278,7 +276,6 @@ bool ShaderCompilerService::OpenGLProgramToken::isCompileCompleted() noexcept {
 void ShaderCompilerService::OpenGLProgramToken::checkCompileStatus() noexcept {
     SYSTRACE_CALL();
 
-    compiled = true;
     UTILS_NOUNROLL
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         const GLuint shader = gl.shaders[i];
@@ -294,7 +291,6 @@ void ShaderCompilerService::OpenGLProgramToken::checkCompileStatus() noexcept {
         // Something went wrong. Log the error message.
         const ShaderStage type = static_cast<ShaderStage>(i);
         logCompilationError(slog.e, type, name.c_str_safe(), shader, shaderSourceCode[i]);
-        compiled = false;
     }
 }
 
