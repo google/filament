@@ -30,6 +30,7 @@
 
 #include <limits>
 #include <memory>
+#include <vector>
 
 #include "dawn/native/Buffer.h"
 #include "partition_alloc/pointers/raw_ptr.h"
@@ -69,6 +70,8 @@ class Buffer final : public BufferBase {
                                                            uint64_t size);
     MaybeError EnsureDataInitializedAsDestination(CommandRecordingContext* commandContext,
                                                   const CopyTextureToBufferCmd* copy);
+
+    MaybeError SynchronizeBufferBeforeUse();
 
     // Dawn API
     void SetLabelImpl() override;

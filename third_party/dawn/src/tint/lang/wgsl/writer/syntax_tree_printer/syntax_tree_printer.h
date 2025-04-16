@@ -29,7 +29,7 @@
 #define SRC_TINT_LANG_WGSL_WRITER_SYNTAX_TREE_PRINTER_SYNTAX_TREE_PRINTER_H_
 
 #include "src/tint/lang/wgsl/program/program.h"
-#include "src/tint/utils/text_generator.h"
+#include "src/tint/utils/text_generator/text_generator.h"
 
 // Forward declarations
 namespace tint::core {

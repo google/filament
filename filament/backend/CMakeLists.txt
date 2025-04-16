@@ -177,29 +177,6 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             include/backend/platforms/VulkanPlatform.h
-            src/vulkan/VulkanDescriptorSetCache.cpp
-            src/vulkan/VulkanDescriptorSetCache.h
-            src/vulkan/VulkanDescriptorSetLayoutCache.cpp
-            src/vulkan/VulkanDescriptorSetLayoutCache.h
-            src/vulkan/VulkanPipelineLayoutCache.cpp
-            src/vulkan/VulkanPipelineLayoutCache.h
-            src/vulkan/memory/ResourceManager.cpp
-            src/vulkan/memory/ResourceManager.h
-            src/vulkan/memory/ResourcePointer.h
-            src/vulkan/memory/Resource.cpp
-            src/vulkan/memory/Resource.h
-            src/vulkan/platform/VulkanPlatform.cpp
-            src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
-            src/vulkan/platform/VulkanPlatformSwapChainImpl.h
-            src/vulkan/utils/Conversion.cpp
-            src/vulkan/utils/Conversion.h
-            src/vulkan/utils/Definitions.h
-            src/vulkan/utils/Helper.h
-            src/vulkan/utils/Image.h
-            src/vulkan/utils/Image.cpp
-            src/vulkan/utils/Spirv.h
-            src/vulkan/utils/Spirv.cpp
-            src/vulkan/utils/StaticVector.h
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
@@ -210,6 +187,10 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanConstants.h
             src/vulkan/VulkanContext.cpp
             src/vulkan/VulkanContext.h
+            src/vulkan/VulkanDescriptorSetCache.cpp
+            src/vulkan/VulkanDescriptorSetCache.h
+            src/vulkan/VulkanDescriptorSetLayoutCache.cpp
+            src/vulkan/VulkanDescriptorSetLayoutCache.h
             src/vulkan/VulkanDriver.cpp
             src/vulkan/VulkanDriver.h
             src/vulkan/VulkanDriverFactory.h
@@ -217,22 +198,43 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp
             src/vulkan/VulkanHandles.h
-            src/vulkan/VulkanMemory.h
             src/vulkan/VulkanMemory.cpp
+            src/vulkan/VulkanMemory.h
             src/vulkan/VulkanPipelineCache.cpp
             src/vulkan/VulkanPipelineCache.h
+            src/vulkan/VulkanPipelineLayoutCache.cpp
+            src/vulkan/VulkanPipelineLayoutCache.h
             src/vulkan/VulkanQueryManager.cpp
             src/vulkan/VulkanQueryManager.h
+            src/vulkan/VulkanReadPixels.cpp
+            src/vulkan/VulkanReadPixels.h
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp
             src/vulkan/VulkanStagePool.h
             src/vulkan/VulkanSwapChain.cpp
             src/vulkan/VulkanSwapChain.h
-            src/vulkan/VulkanReadPixels.cpp
-            src/vulkan/VulkanReadPixels.h
             src/vulkan/VulkanTexture.cpp
             src/vulkan/VulkanTexture.h
+            src/vulkan/VulkanYcbcrConversionCache.cpp
+            src/vulkan/VulkanYcbcrConversionCache.h
+            src/vulkan/memory/Resource.cpp
+            src/vulkan/memory/Resource.h
+            src/vulkan/memory/ResourceManager.cpp
+            src/vulkan/memory/ResourceManager.h
+            src/vulkan/memory/ResourcePointer.h
+            src/vulkan/platform/VulkanPlatform.cpp
+            src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
+            src/vulkan/platform/VulkanPlatformSwapChainImpl.h
+            src/vulkan/utils/Conversion.cpp
+            src/vulkan/utils/Conversion.h
+            src/vulkan/utils/Definitions.h
+            src/vulkan/utils/Helper.h
+            src/vulkan/utils/Image.cpp
+            src/vulkan/utils/Image.h
+            src/vulkan/utils/Spirv.cpp
+            src/vulkan/utils/Spirv.h
+            src/vulkan/utils/StaticVector.h
     )
     if (LINUX OR WIN32)
         list(APPEND SRCS src/vulkan/platform/VulkanPlatformLinuxWindows.cpp)
@@ -253,6 +255,10 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUConstants.h
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
+            src/webgpu/WebGPUHandles.cpp
+            src/webgpu/WebGPUHandles.h
+            src/webgpu/WebGPUSwapChain.cpp
+            src/webgpu/WebGPUSwapChain.h
     )
     if (WIN32)
         list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)
@@ -301,6 +307,11 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 # add this subproject to the Filament folder
 set_target_properties(${TARGET} PROPERTIES FOLDER Filament)
+
+# we need to export the headers properly for backend.lib on windows
+if (WIN32 AND FILAMENT_SUPPORTS_WEBGPU)
+    target_compile_definitions(${TARGET} PRIVATE "WGPU_IMPLEMENTATION")
+endif()
 
 # ==================================================================================================
 # Expose a header-only target to minimize dependencies.
@@ -497,6 +508,7 @@ if (APPLE OR LINUX)
         test/ImageExpectations.cpp
         test/Lifetimes.cpp
         test/Shader.cpp
+        test/SharedShaders.cpp
         test/test_FeedbackLoops.cpp
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp

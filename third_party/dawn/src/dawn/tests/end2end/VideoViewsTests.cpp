@@ -680,7 +680,7 @@ TEST_P(VideoViewsTests, SampleUVtoRG) {
     mBackend->DestroyVideoTextureForTest(std::move(platformTexture));
 }
 
-// Renders a "checkerboard" texture into a RGB quad, then checks the the entire
+// Renders a "checkerboard" texture into a RGB quad, then checks the entire
 // contents to ensure the image has not been flipped.
 TEST_P(VideoViewsTests, SampleYUVtoRGB) {
     std::unique_ptr<VideoViewsTestBackend::PlatformTexture> platformTexture =
@@ -758,7 +758,7 @@ TEST_P(VideoViewsTests, SampleYUVtoRGB) {
     mBackend->DestroyVideoTextureForTest(std::move(platformTexture));
 }
 
-// Renders a "checkerboard" texture into a RGBA quad, then checks the the entire
+// Renders a "checkerboard" texture into a RGBA quad, then checks the entire
 // contents to ensure the image has not been flipped.
 TEST_P(VideoViewsTests, SampleYUVAtoRGBA) {
     std::unique_ptr<VideoViewsTestBackend::PlatformTexture> platformTexture =
@@ -847,7 +847,7 @@ TEST_P(VideoViewsTests, SampleYUVAtoRGBA) {
     mBackend->DestroyVideoTextureForTest(std::move(platformTexture));
 }
 
-// Renders a "checkerboard" texture into a RGB quad with two samplers, then checks the the
+// Renders a "checkerboard" texture into a RGB quad with two samplers, then checks the
 // entire contents to ensure the image has not been flipped.
 TEST_P(VideoViewsTests, SampleYUVtoRGBMultipleSamplers) {
     std::unique_ptr<VideoViewsTestBackend::PlatformTexture> platformTexture =
@@ -928,7 +928,7 @@ TEST_P(VideoViewsTests, SampleYUVtoRGBMultipleSamplers) {
     mBackend->DestroyVideoTextureForTest(std::move(platformTexture));
 }
 
-// Renders a "checkerboard" texture into a RGBA quad with three samplers, then checks the the
+// Renders a "checkerboard" texture into a RGBA quad with three samplers, then checks the
 // entire contents to ensure the image has not been flipped.
 TEST_P(VideoViewsTests, SampleYUVAtoRGBAMultipleSamplers) {
     std::unique_ptr<VideoViewsTestBackend::PlatformTexture> platformTexture =

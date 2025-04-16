@@ -71,11 +71,11 @@ TEST_F(SpirvWriter_MergeReturnTest, NoModify_SingleReturnInMergeBlock) {
 
     b.Append(func->Block(), [&] {
         auto* ifelse = b.If(cond);
-        ifelse->SetResults(b.InstructionResult(ty.i32()));
+        ifelse->SetResult(b.InstructionResult(ty.i32()));
         b.Append(ifelse->True(), [&] { b.ExitIf(ifelse, b.Add(ty.i32(), in, 1_i)); });
         b.Append(ifelse->False(), [&] { b.ExitIf(ifelse, b.Add(ty.i32(), in, 2_i)); });
 
-        b.Return(func, ifelse->Result(0));
+        b.Return(func, ifelse->Result());
     });
     auto* src = R"(
 %foo = func(%2:i32, %3:bool):i32 {
@@ -117,11 +117,11 @@ TEST_F(SpirvWriter_MergeReturnTest, NoModify_SingleReturnInNestedMergeBlock) {
         b.Append(l->Body(), [&] { b.ExitLoop(l); });
 
         auto* ifelse = b.If(cond);
-        ifelse->SetResults(b.InstructionResult(ty.i32()));
+        ifelse->SetResult(b.InstructionResult(ty.i32()));
         b.Append(ifelse->True(), [&] { b.ExitIf(ifelse, b.Add(ty.i32(), in, 1_i)); });
         b.Append(ifelse->False(), [&] { b.ExitIf(ifelse, b.Add(ty.i32(), in, 2_i)); });
 
-        b.Return(func, ifelse->Result(0));
+        b.Return(func, ifelse->Result());
     });
 
     auto* src = R"(
@@ -337,8 +337,8 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_OneSideReturns_WithValue) {
     auto* expect = R"(
 %foo = func(%2:bool):i32 {
   $B1: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     if %2 [t: $B2, f: $B3] {  # if_1
       $B2: {  # true
         store %continue_execution, false
@@ -374,11 +374,11 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_OneSideReturns_WithValue_MergeHasBasi
 
     b.Append(func->Block(), [&] {
         auto* ifelse = b.If(cond);
-        ifelse->SetResults(b.InstructionResult(ty.i32()));
+        ifelse->SetResult(b.InstructionResult(ty.i32()));
         b.Append(ifelse->True(), [&] { b.Return(func, 1_i); });
         b.Append(ifelse->False(), [&] { b.ExitIf(ifelse, 2_i); });
 
-        b.Return(func, ifelse->Result(0));
+        b.Return(func, ifelse->Result());
     });
 
     auto* src = R"(
@@ -401,8 +401,8 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_OneSideReturns_WithValue_MergeHasBasi
     auto* expect = R"(
 %foo = func(%2:bool):i32 {
   $B1: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     %5:i32 = if %2 [t: $B2, f: $B3] {  # if_1
       $B2: {  # true
         store %continue_execution, false
@@ -439,11 +439,11 @@ TEST_F(SpirvWriter_MergeReturnTest,
 
     b.Append(func->Block(), [&] {
         auto* ifelse = b.If(cond);
-        ifelse->SetResults(b.InstructionResult(ty.i32()));
+        ifelse->SetResult(b.InstructionResult(ty.i32()));
         b.Append(ifelse->True(), [&] { b.Return(func, 1_i); });
         b.Append(ifelse->False(), [&] { b.ExitIf(ifelse, nullptr); });
 
-        b.Return(func, ifelse->Result(0));
+        b.Return(func, ifelse->Result());
     });
 
     auto* src = R"(
@@ -466,8 +466,8 @@ TEST_F(SpirvWriter_MergeReturnTest,
     auto* expect = R"(
 %foo = func(%2:bool):i32 {
   $B1: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     %5:i32 = if %2 [t: $B2, f: $B3] {  # if_1
       $B2: {  # true
         store %continue_execution, false
@@ -715,7 +715,7 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_ThenStatements) {
 
     auto* src = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:bool):void {
@@ -738,12 +738,12 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:bool):void {
   $B2: {
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %continue_execution:ptr<function, bool, read_write> = var true
     if %3 [t: $B3, f: $B4] {  # if_1
       $B3: {  # true
         store %continue_execution, false
@@ -791,7 +791,7 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_ThenStatements_ReturnsCreatedInDiffer
 
     auto* src = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:bool):void {
@@ -814,12 +814,12 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:bool):void {
   $B2: {
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %continue_execution:ptr<function, bool, read_write> = var true
     if %3 [t: $B3, f: $B4] {  # if_1
       $B3: {  # true
         store %continue_execution, false
@@ -879,7 +879,7 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_Nested) {
 
     auto* src = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%condA:bool, %condB:bool, %condC:bool):i32 {
@@ -921,13 +921,13 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%condA:bool, %condB:bool, %condC:bool):i32 {
   $B2: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     if %condA [t: $B3, f: $B4] {  # if_1
       $B3: {  # true
         store %continue_execution, false
@@ -1022,7 +1022,7 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_Nested_TrivialMerge) {
     });
     auto* src = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%condA:bool, %condB:bool, %condC:bool):i32 {
@@ -1060,13 +1060,13 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%condA:bool, %condB:bool, %condC:bool):i32 {
   $B2: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     if %condA [t: $B3, f: $B4] {  # if_1
       $B3: {  # true
         store %continue_execution, false
@@ -1125,11 +1125,11 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_Nested_WithBasicBlockArguments) {
 
     b.Append(func->Block(), [&] {
         auto* ifelse_outer = b.If(condA);
-        ifelse_outer->SetResults(b.InstructionResult(ty.i32()));
+        ifelse_outer->SetResult(b.InstructionResult(ty.i32()));
         b.Append(ifelse_outer->True(), [&] { b.Return(func, 3_i); });
         b.Append(ifelse_outer->False(), [&] {
             auto* ifelse_middle = b.If(condB);
-            ifelse_middle->SetResults(b.InstructionResult(ty.i32()));
+            ifelse_middle->SetResult(b.InstructionResult(ty.i32()));
             b.Append(ifelse_middle->True(), [&] {
                 auto* ifelse_inner = b.If(condC);
 
@@ -1140,15 +1140,15 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_Nested_WithBasicBlockArguments) {
             });
             b.Append(ifelse_middle->False(),
                      [&] { b.ExitIf(ifelse_middle, b.Add(ty.i32(), 43_i, 2_i)); });
-            b.ExitIf(ifelse_outer, b.Add(ty.i32(), ifelse_middle->Result(0), 1_i));
+            b.ExitIf(ifelse_outer, b.Add(ty.i32(), ifelse_middle->Result(), 1_i));
         });
 
-        b.Return(func, b.Add(ty.i32(), ifelse_outer->Result(0), 1_i));
+        b.Return(func, b.Add(ty.i32(), ifelse_outer->Result(), 1_i));
     });
 
     auto* src = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%condA:bool, %condB:bool, %condC:bool):i32 {
@@ -1190,13 +1190,13 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%condA:bool, %condB:bool, %condC:bool):i32 {
   $B2: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     %8:i32 = if %condA [t: $B3, f: $B4] {  # if_1
       $B3: {  # true
         store %continue_execution, false
@@ -1312,8 +1312,8 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_Consecutive) {
     auto* expect = R"(
 %foo = func(%2:i32):i32 {
   $B1: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     %5:bool = eq %2, 1i
     if %5 [t: $B2] {  # if_1
       $B2: {  # true
@@ -1413,8 +1413,8 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_Consecutive_ThenUnreachable) {
     auto* expect = R"(
 %foo = func(%2:i32):i32 {
   $B1: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     %5:bool = eq %2, 1i
     if %5 [t: $B2] {  # if_1
       $B2: {  # true
@@ -1529,8 +1529,8 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_NestedConsecutives) {
     auto* expect = R"(
 %foo = func(%2:i32):i32 {
   $B1: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     %5:bool = eq %2, 1i
     if %5 [t: $B2] {  # if_1
       $B2: {  # true
@@ -1605,7 +1605,7 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_NestedConsecutives_WithResults) {
     b.Append(func->Block(), [&] {
         auto* outer_result = b.InstructionResult(ty.i32());
         auto* outer = b.If(b.Equal(ty.bool_(), value, 1_i));
-        outer->SetResults(Vector{outer_result});
+        outer->SetResult(outer_result);
         b.Append(outer->True(), [&] {
             auto* middle_first = b.If(b.Equal(ty.bool_(), value, 2_i));
             b.Append(middle_first->True(), [&] {  //
@@ -1614,7 +1614,7 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_NestedConsecutives_WithResults) {
 
             auto middle_result = b.InstructionResult(ty.i32());
             auto* middle_second = b.If(b.Equal(ty.bool_(), value, 3_i));
-            middle_second->SetResults(Vector{middle_result});
+            middle_second->SetResult(middle_result);
             b.Append(middle_second->True(), [&] {
                 auto* inner_first = b.If(b.Equal(ty.bool_(), value, 4_i));
                 b.Append(inner_first->True(), [&] {  //
@@ -1623,7 +1623,7 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_NestedConsecutives_WithResults) {
 
                 auto inner_result = b.InstructionResult(ty.i32());
                 auto* inner_second = b.If(b.Equal(ty.bool_(), value, 5_i));
-                inner_second->SetResults(Vector{inner_result});
+                inner_second->SetResult(inner_result);
                 b.Append(inner_second->True(), [&] {  //
                     b.ExitIf(inner_second, 505_i);
                 });
@@ -1682,8 +1682,8 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_NestedConsecutives_WithResults) {
     auto* expect = R"(
 %foo = func(%2:i32):i32 {
   $B1: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     %5:bool = eq %2, 1i
     %6:i32 = if %5 [t: $B2] {  # if_1
       $B2: {  # true
@@ -1779,7 +1779,7 @@ TEST_F(SpirvWriter_MergeReturnTest, Loop_UnconditionalReturnInBody) {
     auto* expect = R"(
 %foo = func():i32 {
   $B1: {
-    %return_value:ptr<function, i32, read_write> = var
+    %return_value:ptr<function, i32, read_write> = var undef
     loop [b: $B2] {  # loop_1
       $B2: {  # body
         store %return_value, 42i
@@ -1827,7 +1827,7 @@ TEST_F(SpirvWriter_MergeReturnTest, Loop_ConditionalReturnInBody) {
 
     auto* src = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:bool):i32 {
@@ -1859,13 +1859,13 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:bool):i32 {
   $B2: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     loop [b: $B3, c: $B4] {  # loop_1
       $B3: {  # body
         if %3 [t: $B5, f: $B6] {  # if_1
@@ -1941,7 +1941,7 @@ TEST_F(SpirvWriter_MergeReturnTest, Loop_ConditionalReturnInBody_UnreachableMerg
 
     auto* src = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:bool):i32 {
@@ -1972,13 +1972,13 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:bool):i32 {
   $B2: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     loop [b: $B3, c: $B4] {  # loop_1
       $B3: {  # body
         if %3 [t: $B5, f: $B6] {  # if_1
@@ -2026,7 +2026,7 @@ TEST_F(SpirvWriter_MergeReturnTest, DISABLED_Loop_WithBasicBlockArgumentsOnMerge
 
     b.Append(func->Block(), [&] {
         auto* loop = b.Loop();
-        loop->SetResults(b.InstructionResult(ty.i32()));
+        loop->SetResult(b.InstructionResult(ty.i32()));
         b.Append(loop->Body(), [&] {
             auto* ifelse = b.If(cond);
             b.Append(ifelse->True(), [&] { b.Return(func, 42_i); });
@@ -2042,11 +2042,11 @@ TEST_F(SpirvWriter_MergeReturnTest, DISABLED_Loop_WithBasicBlockArgumentsOnMerge
         });
 
         b.Store(global, 3_i);
-        b.Return(func, loop->Result(0));
+        b.Return(func, loop->Result());
     });
     auto* src = R"(
 %b1 = block {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:bool):i32 -> %b2 {
@@ -2078,13 +2078,13 @@ TEST_F(SpirvWriter_MergeReturnTest, DISABLED_Loop_WithBasicBlockArgumentsOnMerge
 
     auto* expect = R"(
 %b1 = block {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:bool):i32 -> %b2 {
   %b2 = block {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     %6:i32 = loop [b: %b3, c: %b4] {  # loop_1
       %b3 = block {  # body
         if %3 [t: %b5, f: %b6] {  # if_1
@@ -2163,8 +2163,8 @@ TEST_F(SpirvWriter_MergeReturnTest, Switch_UnconditionalReturnInCase) {
     auto* expect = R"(
 %foo = func(%2:i32):i32 {
   $B1: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     switch %2 [c: (1i, $B2), c: (default, $B3)] {  # switch_1
       $B2: {  # case
         store %continue_execution, false
@@ -2220,7 +2220,7 @@ TEST_F(SpirvWriter_MergeReturnTest, Switch_ConditionalReturnInBody) {
 
     auto* src = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:i32):i32 {
@@ -2251,13 +2251,13 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %1:ptr<private, i32, read_write> = var
+  %1:ptr<private, i32, read_write> = var undef
 }
 
 %foo = func(%3:i32):i32 {
   $B2: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     switch %3 [c: (1i, $B3), c: (default, $B4)] {  # switch_1
       $B3: {  # case
         %6:bool = eq %3, 1i
@@ -2309,13 +2309,13 @@ TEST_F(SpirvWriter_MergeReturnTest, Switch_WithBasicBlockArgumentsOnMerge) {
 
     b.Append(func->Block(), [&] {
         auto* sw = b.Switch(cond);
-        sw->SetResults(b.InstructionResult(ty.i32()));  // NOLINT: false detection of std::tuple
+        sw->SetResult(b.InstructionResult(ty.i32()));  // NOLINT: false detection of std::tuple
         b.Append(b.Case(sw, {b.Constant(1_i)}), [&] { b.Return(func, 42_i); });
         b.Append(b.Case(sw, {b.Constant(2_i)}), [&] { b.Return(func, 99_i); });
         b.Append(b.Case(sw, {b.Constant(3_i)}), [&] { b.ExitSwitch(sw, 1_i); });
         b.Append(b.DefaultCase(sw), [&] { b.ExitSwitch(sw, 0_i); });
 
-        b.Return(func, sw->Result(0));
+        b.Return(func, sw->Result());
     });
 
     auto* src = R"(
@@ -2344,8 +2344,8 @@ TEST_F(SpirvWriter_MergeReturnTest, Switch_WithBasicBlockArgumentsOnMerge) {
     auto* expect = R"(
 %foo = func(%2:i32):i32 {
   $B1: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     %5:i32 = switch %2 [c: (1i, $B2), c: (2i, $B3), c: (3i, $B4), c: (default, $B5)] {  # switch_1
       $B2: {  # case
         store %continue_execution, false
@@ -2416,7 +2416,7 @@ TEST_F(SpirvWriter_MergeReturnTest, LoopIfReturnThenContinue) {
     auto* expect = R"(
 %foo = func():void {
   $B1: {
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %continue_execution:ptr<function, bool, read_write> = var true
     loop [b: $B2] {  # loop_1
       $B2: {  # body
         if true [t: $B3] {  # if_1
@@ -2477,8 +2477,8 @@ TEST_F(SpirvWriter_MergeReturnTest, NestedIfsWithReturns) {
     auto* expect = R"(
 %foo = func():i32 {
   $B1: {
-    %return_value:ptr<function, i32, read_write> = var
-    %continue_execution:ptr<function, bool, read_write> = var, true
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
     if true [t: $B2] {  # if_1
       $B2: {  # true
         if true [t: $B3] {  # if_2

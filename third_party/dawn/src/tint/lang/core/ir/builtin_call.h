@@ -37,6 +37,9 @@ namespace tint::core::ir {
 /// The base class for builtin call instructions in the IR.
 class BuiltinCall : public Castable<BuiltinCall, Call> {
   public:
+    /// The fixed number of results returned by this instruction
+    static constexpr size_t kNumResults = 1;
+
     /// The base offset in Operands() for the args
     static constexpr size_t kArgsOperandOffset = 0;
 

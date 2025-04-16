@@ -31,7 +31,6 @@
  * All the standard library includes and main platform specific includes
  * Dll export macro
  * Manifest ICD & Layer structs
- * FolderManager - manages the contents of a folder, cleaning up when needed
  * per-platform library loading - mirrors the vk_loader_platform
  * LibraryWrapper - RAII wrapper for a library
  * DispatchableHandle - RAII wrapper for vulkan dispatchable handle objects
@@ -43,11 +42,11 @@
 
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <iostream>
 #include <ostream>
 #include <string>
 #include <vector>
-#include <unordered_map>
 #include <filesystem>
 
 #include <cassert>
@@ -112,6 +111,8 @@ std::string widen(const std::string& utf8);
 #endif
 
 #include "json_writer.h"
+
+using GetFoldersFunc = std::function<std::vector<std::filesystem::path>(const char*)>;
 
 // get_env_var() - returns a std::string of `name`. if report_failure is true, then it will log to stderr that it didn't find the
 //     env-var
@@ -194,46 +195,6 @@ const long ERROR_REMOVEDIRECTORY_FAILED = 10544;  // chosen at random, attempts 
 const char* win_api_error_str(LSTATUS status);
 void print_error_message(LSTATUS status, const char* function_name, std::string optional_message = "");
 #endif
-
-struct ManifestICD;    // forward declaration for FolderManager::write
-struct ManifestLayer;  // forward declaration for FolderManager::write
-
-namespace fs {
-
-int create_folder(std::filesystem::path const& path);
-int delete_folder(std::filesystem::path const& folder);
-
-class FolderManager {
-   public:
-    explicit FolderManager(std::filesystem::path root_path, std::string name) noexcept;
-    ~FolderManager() noexcept;
-    FolderManager(FolderManager const&) = delete;
-    FolderManager& operator=(FolderManager const&) = delete;
-    FolderManager(FolderManager&& other) noexcept;
-    FolderManager& operator=(FolderManager&& other) noexcept;
-
-    // Add a manifest to the folder
-    std::filesystem::path write_manifest(std::filesystem::path const& name, std::string const& contents);
-
-    // Add an already existing file to the manager, so it will be cleaned up automatically
-    void add_existing_file(std::filesystem::path const& file_name);
-
-    // close file handle, delete file, remove `name` from managed file list.
-    void remove(std::filesystem::path const& name);
-
-    // copy file into this folder with name `new_name`. Returns the full path of the file that was copied
-    std::filesystem::path copy_file(std::filesystem::path const& file, std::filesystem::path const& new_name);
-
-    // location of the managed folder
-    std::filesystem::path location() const { return folder; }
-
-    std::vector<std::filesystem::path> get_files() const { return files; }
-
-   private:
-    std::filesystem::path folder;
-    std::vector<std::filesystem::path> files;
-};
-}  // namespace fs
 
 // copy the contents of a std::string into a char array and add a null terminator at the end
 // src - std::string to read from
@@ -504,44 +465,44 @@ inline std::string version_to_string(uint32_t version) {
 }
 
 // Macro to ease the definition of variables with builder member functions
-// class_name = class the member variable is apart of
 // type = type of the variable
 // name = name of the variable
 // default_value = value to default initialize, use {} if nothing else makes sense
-#define BUILDER_VALUE(class_name, type, name, default_value) \
-    type name = default_value;                               \
-    class_name& set_##name(type const& name) {               \
-        this->name = name;                                   \
-        return *this;                                        \
+#define BUILDER_VALUE_WITH_DEFAULT(type, name, default_value) \
+    type name = default_value;                                \
+    auto set_##name(type const& name)->decltype(*this) {      \
+        this->name = name;                                    \
+        return *this;                                         \
     }
 
+#define BUILDER_VALUE(type, name) BUILDER_VALUE_WITH_DEFAULT(type, name, {})
+
 // Macro to ease the definition of vectors with builder member functions
-// class_name = class the member variable is apart of
 // type = type of the variable
 // name = name of the variable
 // singular_name = used for the `add_singular_name` member function
-#define BUILDER_VECTOR(class_name, type, name, singular_name)                    \
-    std::vector<type> name;                                                      \
-    class_name& add_##singular_name(type const& singular_name) {                 \
-        this->name.push_back(singular_name);                                     \
-        return *this;                                                            \
-    }                                                                            \
-    class_name& add_##singular_name##s(std::vector<type> const& singular_name) { \
-        for (auto& elem : singular_name) this->name.push_back(elem);             \
-        return *this;                                                            \
+#define BUILDER_VECTOR(type, name, singular_name)                                          \
+    std::vector<type> name;                                                                \
+    auto add_##singular_name(type const& singular_name)->decltype(*this) {                 \
+        this->name.push_back(singular_name);                                               \
+        return *this;                                                                      \
+    }                                                                                      \
+    auto add_##singular_name##s(std::vector<type> const& singular_name)->decltype(*this) { \
+        for (auto& elem : singular_name) this->name.push_back(elem);                       \
+        return *this;                                                                      \
     }
 // Like BUILDER_VECTOR but for move only types - where passing in means giving up ownership
-#define BUILDER_VECTOR_MOVE_ONLY(class_name, type, name, singular_name) \
-    std::vector<type> name;                                             \
-    class_name& add_##singular_name(type&& singular_name) {             \
-        this->name.push_back(std::move(singular_name));                 \
-        return *this;                                                   \
+#define BUILDER_VECTOR_MOVE_ONLY(type, name, singular_name)           \
+    std::vector<type> name;                                           \
+    auto add_##singular_name(type&& singular_name)->decltype(*this) { \
+        this->name.push_back(std::move(singular_name));               \
+        return *this;                                                 \
     }
 
 struct ManifestVersion {
-    BUILDER_VALUE(ManifestVersion, uint32_t, major, 1)
-    BUILDER_VALUE(ManifestVersion, uint32_t, minor, 0)
-    BUILDER_VALUE(ManifestVersion, uint32_t, patch, 0)
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, major, 1)
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, minor, 0)
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, patch, 0)
 
     std::string get_version_str() const noexcept {
         return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(patch);
@@ -550,11 +511,11 @@ struct ManifestVersion {
 
 // ManifestICD builder
 struct ManifestICD {
-    BUILDER_VALUE(ManifestICD, ManifestVersion, file_format_version, {})
-    BUILDER_VALUE(ManifestICD, uint32_t, api_version, 0)
-    BUILDER_VALUE(ManifestICD, std::filesystem::path, lib_path, {})
-    BUILDER_VALUE(ManifestICD, bool, is_portability_driver, false)
-    BUILDER_VALUE(ManifestICD, std::string, library_arch, "")
+    BUILDER_VALUE(ManifestVersion, file_format_version)
+    BUILDER_VALUE(uint32_t, api_version)
+    BUILDER_VALUE(std::filesystem::path, lib_path)
+    BUILDER_VALUE(bool, is_portability_driver)
+    BUILDER_VALUE(std::string, library_arch)
     std::string get_manifest_str() const;
 };
 
@@ -571,8 +532,8 @@ struct ManifestLayer {
                 return "INSTANCE";
         }
         struct FunctionOverride {
-            BUILDER_VALUE(FunctionOverride, std::string, vk_func, {})
-            BUILDER_VALUE(FunctionOverride, std::string, override_name, {})
+            BUILDER_VALUE(std::string, vk_func)
+            BUILDER_VALUE(std::string, override_name)
 
             void get_manifest_str(JsonWriter& writer) const { writer.AddKeyedString(vk_func, override_name); }
         };
@@ -585,36 +546,36 @@ struct ManifestLayer {
             std::vector<std::string> entrypoints;
             void get_manifest_str(JsonWriter& writer) const;
         };
-        BUILDER_VALUE(LayerDescription, std::string, name, {})
-        BUILDER_VALUE(LayerDescription, Type, type, Type::INSTANCE)
-        BUILDER_VALUE(LayerDescription, std::filesystem::path, lib_path, {})
-        BUILDER_VALUE(LayerDescription, uint32_t, api_version, VK_API_VERSION_1_0)
-        BUILDER_VALUE(LayerDescription, uint32_t, implementation_version, 0)
-        BUILDER_VALUE(LayerDescription, std::string, description, {})
-        BUILDER_VECTOR(LayerDescription, FunctionOverride, functions, function)
-        BUILDER_VECTOR(LayerDescription, Extension, instance_extensions, instance_extension)
-        BUILDER_VECTOR(LayerDescription, Extension, device_extensions, device_extension)
-        BUILDER_VALUE(LayerDescription, std::string, enable_environment, {})
-        BUILDER_VALUE(LayerDescription, std::string, disable_environment, {})
-        BUILDER_VECTOR(LayerDescription, std::string, component_layers, component_layer)
-        BUILDER_VECTOR(LayerDescription, std::string, blacklisted_layers, blacklisted_layer)
-        BUILDER_VECTOR(LayerDescription, std::filesystem::path, override_paths, override_path)
-        BUILDER_VECTOR(LayerDescription, FunctionOverride, pre_instance_functions, pre_instance_function)
-        BUILDER_VECTOR(LayerDescription, std::string, app_keys, app_key)
-        BUILDER_VALUE(LayerDescription, std::string, library_arch, "")
+        BUILDER_VALUE(std::string, name)
+        BUILDER_VALUE_WITH_DEFAULT(Type, type, Type::INSTANCE)
+        BUILDER_VALUE(std::filesystem::path, lib_path)
+        BUILDER_VALUE_WITH_DEFAULT(uint32_t, api_version, VK_API_VERSION_1_0)
+        BUILDER_VALUE(uint32_t, implementation_version)
+        BUILDER_VALUE(std::string, description)
+        BUILDER_VECTOR(FunctionOverride, functions, function)
+        BUILDER_VECTOR(Extension, instance_extensions, instance_extension)
+        BUILDER_VECTOR(Extension, device_extensions, device_extension)
+        BUILDER_VALUE(std::string, enable_environment)
+        BUILDER_VALUE(std::string, disable_environment)
+        BUILDER_VECTOR(std::string, component_layers, component_layer)
+        BUILDER_VECTOR(std::string, blacklisted_layers, blacklisted_layer)
+        BUILDER_VECTOR(std::filesystem::path, override_paths, override_path)
+        BUILDER_VECTOR(FunctionOverride, pre_instance_functions, pre_instance_function)
+        BUILDER_VECTOR(std::string, app_keys, app_key)
+        BUILDER_VALUE(std::string, library_arch)
 
         void get_manifest_str(JsonWriter& writer) const;
         VkLayerProperties get_layer_properties() const;
     };
-    BUILDER_VALUE(ManifestLayer, ManifestVersion, file_format_version, {})
-    BUILDER_VECTOR(ManifestLayer, LayerDescription, layers, layer)
+    BUILDER_VALUE(ManifestVersion, file_format_version)
+    BUILDER_VECTOR(LayerDescription, layers, layer)
 
     std::string get_manifest_str() const;
 };
 
 struct Extension {
-    BUILDER_VALUE(Extension, std::string, extensionName, {})
-    BUILDER_VALUE(Extension, uint32_t, specVersion, VK_API_VERSION_1_0)
+    BUILDER_VALUE(std::string, extensionName)
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, specVersion, VK_API_VERSION_1_0)
 
     Extension(const char* name, uint32_t specVersion = VK_API_VERSION_1_0) noexcept
         : extensionName(name), specVersion(specVersion) {}
@@ -630,25 +591,25 @@ struct Extension {
 };
 
 struct MockQueueFamilyProperties {
-    BUILDER_VALUE(MockQueueFamilyProperties, VkQueueFamilyProperties, properties, {})
-    BUILDER_VALUE(MockQueueFamilyProperties, bool, support_present, false)
+    BUILDER_VALUE(VkQueueFamilyProperties, properties)
+    BUILDER_VALUE(bool, support_present)
 
     VkQueueFamilyProperties get() const noexcept { return properties; }
 };
 
 struct InstanceCreateInfo {
-    BUILDER_VALUE(InstanceCreateInfo, VkInstanceCreateInfo, instance_info, {})
-    BUILDER_VALUE(InstanceCreateInfo, VkApplicationInfo, application_info, {})
-    BUILDER_VALUE(InstanceCreateInfo, std::string, app_name, {})
-    BUILDER_VALUE(InstanceCreateInfo, std::string, engine_name, {})
-    BUILDER_VALUE(InstanceCreateInfo, uint32_t, flags, 0)
-    BUILDER_VALUE(InstanceCreateInfo, uint32_t, app_version, 0)
-    BUILDER_VALUE(InstanceCreateInfo, uint32_t, engine_version, 0)
-    BUILDER_VALUE(InstanceCreateInfo, uint32_t, api_version, VK_API_VERSION_1_0)
-    BUILDER_VECTOR(InstanceCreateInfo, const char*, enabled_layers, layer)
-    BUILDER_VECTOR(InstanceCreateInfo, const char*, enabled_extensions, extension)
+    BUILDER_VALUE(VkInstanceCreateInfo, instance_info)
+    BUILDER_VALUE(VkApplicationInfo, application_info)
+    BUILDER_VALUE(std::string, app_name)
+    BUILDER_VALUE(std::string, engine_name)
+    BUILDER_VALUE(uint32_t, flags)
+    BUILDER_VALUE(uint32_t, app_version)
+    BUILDER_VALUE(uint32_t, engine_version)
+    BUILDER_VALUE_WITH_DEFAULT(uint32_t, api_version, VK_API_VERSION_1_0)
+    BUILDER_VECTOR(const char*, enabled_layers, layer)
+    BUILDER_VECTOR(const char*, enabled_extensions, extension)
     // tell the get() function to not provide `application_info`
-    BUILDER_VALUE(InstanceCreateInfo, bool, fill_in_application_info, true)
+    BUILDER_VALUE_WITH_DEFAULT(bool, fill_in_application_info, true)
 
     InstanceCreateInfo();
 
@@ -663,8 +624,8 @@ struct DeviceQueueCreateInfo {
     DeviceQueueCreateInfo();
     DeviceQueueCreateInfo(const VkDeviceQueueCreateInfo* create_info);
 
-    BUILDER_VALUE(DeviceQueueCreateInfo, VkDeviceQueueCreateInfo, queue_create_info, {})
-    BUILDER_VECTOR(DeviceQueueCreateInfo, float, priorities, priority)
+    BUILDER_VALUE(VkDeviceQueueCreateInfo, queue_create_info)
+    BUILDER_VECTOR(float, priorities, priority)
 
     VkDeviceQueueCreateInfo get() noexcept;
 };
@@ -673,10 +634,10 @@ struct DeviceCreateInfo {
     DeviceCreateInfo() = default;
     DeviceCreateInfo(const VkDeviceCreateInfo* create_info);
 
-    BUILDER_VALUE(DeviceCreateInfo, VkDeviceCreateInfo, dev, {})
-    BUILDER_VECTOR(DeviceCreateInfo, const char*, enabled_extensions, extension)
-    BUILDER_VECTOR(DeviceCreateInfo, const char*, enabled_layers, layer)
-    BUILDER_VECTOR(DeviceCreateInfo, DeviceQueueCreateInfo, queue_info_details, device_queue)
+    BUILDER_VALUE(VkDeviceCreateInfo, dev)
+    BUILDER_VECTOR(const char*, enabled_extensions, extension)
+    BUILDER_VECTOR(const char*, enabled_layers, layer)
+    BUILDER_VECTOR(DeviceQueueCreateInfo, queue_info_details, device_queue)
 
     VkDeviceCreateInfo* get() noexcept;
 

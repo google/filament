@@ -132,6 +132,7 @@ ResultOrError<Ref<Device>> Device::Create(AdapterBase* adapter,
         Ref<Device> device = AcquireRef(new Device(adapter, std::move(mtlDevice), descriptor,
                                                    deviceToggles, std::move(lostEvent)));
         DAWN_TRY(device->Initialize(descriptor));
+
         return device;
     }
 }
@@ -154,10 +155,15 @@ Device::Device(AdapterBase* adapter,
 }
 
 Device::~Device() {
+    StopTrace();
     Destroy();
 }
 
 MaybeError Device::Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor) {
+    // Note: this has to happen before the queue is created otherwise the queue
+    // itself is not captured.
+    StartTrace();
+
     Ref<Queue> queue;
     DAWN_TRY_ASSIGN(queue, Queue::Create(this, &descriptor->defaultQueue));
 
@@ -411,6 +417,47 @@ id<MTLBuffer> Device::GetMockBlitMtlBuffer() {
     }
 
     return mMockBlitMtlBuffer.Get();
+}
+
+void Device::StartTrace() {
+    assert(!mTraceInProgress);
+
+    auto [filenameBase, shouldTrace] = GetTraceInfo();
+    if (!shouldTrace) {
+        return;
+    }
+
+    MTLCaptureManager* captureManager = [MTLCaptureManager sharedCaptureManager];
+    NSRef<MTLCaptureDescriptor> captureDescriptor =
+        AcquireNSRef([[MTLCaptureDescriptor alloc] init]);
+    (*captureDescriptor).captureObject = *mMtlDevice;
+    (*captureDescriptor).destination = MTLCaptureDestinationGPUTraceDocument;
+
+    std::string filename(absl::StrFormat("%s.gputrace", filenameBase));
+    NSRef<NSString> nsTraceName =
+        AcquireNSRef([[NSString alloc] initWithUTF8String:filename.c_str()]);
+    NSRef<NSURL> traceURL = AcquireNSRef([[NSURL alloc] initFileURLWithPath:*nsTraceName]);
+    (*captureDescriptor).outputURL = *traceURL;
+
+    if ([captureManager supportsDestination:MTLCaptureDestinationGPUTraceDocument]) {
+        NSError* error = nil;
+        if ([captureManager startCaptureWithDescriptor:*captureDescriptor error:&error]) {
+            mTraceInProgress = true;
+            NSLog(@"Metal trace will be saved to to: %@", *traceURL);
+        } else {
+            NSLog(@"Error starting Metal capture: %@", error);
+        }
+    } else {
+        NSLog(@"GPU trace file capture is not supported.");
+    }
+}
+
+void Device::StopTrace() {
+    if (mTraceInProgress) {
+        MTLCaptureManager* captureManager = [MTLCaptureManager sharedCaptureManager];
+        [captureManager stopCapture];
+        NSLog(@"Metal trace saved");
+    }
 }
 
 }  // namespace dawn::native::metal

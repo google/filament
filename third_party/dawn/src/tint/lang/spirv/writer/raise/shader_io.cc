@@ -28,7 +28,6 @@
 #include "src/tint/lang/spirv/writer/raise/shader_io.h"
 
 #include <memory>
-#include <utility>
 
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
@@ -144,18 +143,18 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
     core::ir::Value* GetInput(core::ir::Builder& builder, uint32_t idx) override {
         // Load the input from the global variable declared earlier.
         auto* ptr = ty.ptr(core::AddressSpace::kIn, inputs[idx].type, core::Access::kRead);
-        auto* from = input_vars[idx]->Result(0);
+        auto* from = input_vars[idx]->Result();
 
         // SampleMask becomes an array for SPIR-V, so load from the first element.
         if (inputs[idx].attributes.builtin == core::BuiltinValue::kSampleMask) {
-            from = builder.Access(ptr, input_vars[idx], 0_u)->Result(0);
+            from = builder.Access(ptr, input_vars[idx], 0_u)->Result();
         }
 
-        auto* value = builder.Load(from)->Result(0);
+        auto* value = builder.Load(from)->Result();
 
         // Convert f32 values to f16 values if needed.
         if (config.polyfill_f16_io && inputs[idx].type->DeepestElement()->Is<core::type::F16>()) {
-            value = builder.Convert(inputs[idx].type, value)->Result(0);
+            value = builder.Convert(inputs[idx].type, value)->Result();
         }
 
         return value;
@@ -165,11 +164,11 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
     void SetOutput(core::ir::Builder& builder, uint32_t idx, core::ir::Value* value) override {
         // Store the output to the global variable declared earlier.
         auto* ptr = ty.ptr(core::AddressSpace::kOut, outputs[idx].type, core::Access::kWrite);
-        auto* to = output_vars[idx]->Result(0);
+        auto* to = output_vars[idx]->Result();
 
         // SampleMask becomes an array for SPIR-V, so store to the first element.
         if (outputs[idx].attributes.builtin == core::BuiltinValue::kSampleMask) {
-            to = builder.Access(ptr, to, 0_u)->Result(0);
+            to = builder.Access(ptr, to, 0_u)->Result();
         }
 
         // Clamp frag_depth values if necessary.
@@ -179,7 +178,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
 
         // Convert f16 values to f32 values if needed.
         if (config.polyfill_f16_io && value->Type()->DeepestElement()->Is<core::type::F16>()) {
-            value = builder.Convert(to->Type()->UnwrapPtr(), value)->Result(0);
+            value = builder.Convert(to->Type()->UnwrapPtr(), value)->Result();
         }
 
         builder.Store(to, value);
@@ -190,57 +189,16 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
     /// @param frag_depth the incoming frag_depth value
     /// @returns the clamped value
     core::ir::Value* ClampFragDepth(core::ir::Builder& builder, core::ir::Value* frag_depth) {
-        if (!config.clamp_frag_depth && !config.depth_range_offsets) {
+        if (!config.depth_range_offsets) {
             return frag_depth;
         }
 
-        // Use pre-created push constant block for clamping frag depth if possible.
-        if (config.depth_range_offsets) {
-            auto* push_constants = config.push_constant_layout.var;
-            auto min_idx =
-                u32(config.push_constant_layout.IndexOf(config.depth_range_offsets->min));
-            auto max_idx =
-                u32(config.push_constant_layout.IndexOf(config.depth_range_offsets->max));
-            auto* min =
-                builder.Load(builder.Access<ptr<push_constant, f32>>(push_constants, min_idx));
-            auto* max =
-                builder.Load(builder.Access<ptr<push_constant, f32>>(push_constants, max_idx));
-            return builder.Call<f32>(core::BuiltinFn::kClamp, frag_depth, min, max)->Result(0);
-        }
-
-        // Create the clamp args struct and variable.
-        if (!module_state.frag_depth_clamp_args) {
-            // Check that there are no push constants in the module already.
-            for (auto* inst : *ir.root_block) {
-                if (auto* var = inst->As<core::ir::Var>()) {
-                    auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
-                    if (ptr->AddressSpace() == core::AddressSpace::kPushConstant) {
-                        TINT_ICE() << "cannot clamp frag_depth with pre-existing push constants";
-                    }
-                }
-            }
-
-            // Declare the struct.
-            auto* str = ty.Struct(ir.symbols.Register("FragDepthClampArgs"),
-                                  {
-                                      {ir.symbols.Register("min"), ty.f32()},
-                                      {ir.symbols.Register("max"), ty.f32()},
-                                  });
-            str->SetStructFlag(core::type::kBlock);
-
-            // Declare the variable.
-            auto* var = b.Var("tint_frag_depth_clamp_args", ty.ptr(push_constant, str));
-            ir.root_block->Append(var);
-            module_state.frag_depth_clamp_args = var->Result(0);
-        }
-
-        // Clamp the value.
-        auto* args = builder.Load(module_state.frag_depth_clamp_args);
-        auto* frag_depth_min = builder.Access(ty.f32(), args, 0_u);
-        auto* frag_depth_max = builder.Access(ty.f32(), args, 1_u);
-        return builder
-            .Call(ty.f32(), core::BuiltinFn::kClamp, frag_depth, frag_depth_min, frag_depth_max)
-            ->Result(0);
+        auto* push_constants = config.push_constant_layout.var;
+        auto min_idx = u32(config.push_constant_layout.IndexOf(config.depth_range_offsets->min));
+        auto max_idx = u32(config.push_constant_layout.IndexOf(config.depth_range_offsets->max));
+        auto* min = builder.Load(builder.Access<ptr<push_constant, f32>>(push_constants, min_idx));
+        auto* max = builder.Load(builder.Access<ptr<push_constant, f32>>(push_constants, max_idx));
+        return builder.Call<f32>(core::BuiltinFn::kClamp, frag_depth, min, max)->Result();
     }
 
     /// @copydoc ShaderIO::BackendState::NeedsVertexPointSize

@@ -84,6 +84,8 @@ class CommandRecordingContext {
     MaybeError Initialize(Device* device);
     void Destroy();
 
+    bool IsValid() const;
+
     static ResultOrError<Ref<BufferBase>> CreateInternalUniformBuffer(DeviceBase* device);
     MaybeError SetInternalUniformBuffer(Ref<BufferBase> uniformBuffer);
 
@@ -101,6 +103,7 @@ class CommandRecordingContext {
     bool mIsOpen = false;
     ComPtr<ID3D11Device> mD3D11Device;
     ComPtr<ID3DDeviceContextState> mD3D11DeviceContextState;
+    ComPtr<ID3D11DeviceContext3> mD3D11DeviceContext3;
     ComPtr<ID3D11DeviceContext4> mD3D11DeviceContext4;
     ComPtr<ID3D11Multithread> mD3D11Multithread;
     ComPtr<ID3DUserDefinedAnnotation> mD3DUserDefinedAnnotation;
@@ -185,7 +188,7 @@ class ScopedSwapStateCommandRecordingContext : public ScopedCommandRecordingCont
     ~ScopedSwapStateCommandRecordingContext();
 
     ID3D11Device* GetD3D11Device() const;
-    ID3D11DeviceContext4* GetD3D11DeviceContext4() const;
+    ID3D11DeviceContext3* GetD3D11DeviceContext3() const;
     ID3DUserDefinedAnnotation* GetD3DUserDefinedAnnotation() const;
     Buffer* GetUniformBuffer() const;
 

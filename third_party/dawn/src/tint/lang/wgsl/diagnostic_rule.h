@@ -76,6 +76,7 @@ constexpr std::string_view kCoreDiagnosticRuleStrings[] = {
 /// Chromium-specific diagnostic rules.
 enum class ChromiumDiagnosticRule : uint8_t {
     kUndefined,
+    kSubgroupMatrixUniformity,
     kUnreachableCode,
 };
 
@@ -98,6 +99,7 @@ auto& operator<<(STREAM& out, ChromiumDiagnosticRule value) {
 ChromiumDiagnosticRule ParseChromiumDiagnosticRule(std::string_view str);
 
 constexpr std::string_view kChromiumDiagnosticRuleStrings[] = {
+    "subgroup_matrix_uniformity",
     "unreachable_code",
 };
 

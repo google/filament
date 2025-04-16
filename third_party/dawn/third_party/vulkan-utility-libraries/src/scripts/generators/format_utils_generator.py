@@ -7,8 +7,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-from generators.vulkan_object import (Format)
-from generators.base_generator import BaseGenerator
+from collections import namedtuple
+from vulkan_object import (Format)
+from base_generator import BaseGenerator
 
 # Make C name friendly class name
 def getClassName(className: str) -> str:
@@ -25,7 +26,13 @@ def formatHasEqualBitsize(format: Format, bitsize: str) -> bool:
 
 # True if all components are same numericFormat
 def formatHasNumericFormat(format: Format, numericFormat: str) -> bool:
-    return all(x.numericFormat == numericFormat for x in format.components)
+    if numericFormat == 'SRGB':
+        # For SRGB, the Alpha will be UNORM, but it is still considered an SRGB format
+        if format.name == 'VK_FORMAT_A8_UNORM':
+            return False
+        return all(x.type == 'A' or x.numericFormat == numericFormat for x in format.components)
+    else:
+        return all(x.numericFormat == numericFormat for x in format.components)
 
 class FormatUtilsOutputGenerator(BaseGenerator):
     def __init__(self):
@@ -209,7 +216,7 @@ inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspect
 
 // From table in spec vkspec.html#formats-compatible-zs-color
 // Introduced in VK_KHR_maintenance8 to allow copying between color and depth/stencil formats
-inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format);
+inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format, VkImageAspectFlags aspect_mask);
 
 // Returns the count of components in a VkFormat
 inline uint32_t vkuFormatComponentCount(VkFormat format);
@@ -292,7 +299,7 @@ enum VKU_FORMAT_COMPONENT_TYPE {
 };
 
 // Compressed formats don't have a defined component size
-const uint32_t VKU_FORMAT_COMPRESSED_COMPONENT = 0xFFFFFFFF;
+#define VKU_FORMAT_COMPRESSED_COMPONENT 0xFFFFFFFF
 
 struct VKU_FORMAT_COMPONENT_INFO {
     enum VKU_FORMAT_COMPONENT_TYPE type;
@@ -309,27 +316,57 @@ struct VKU_FORMAT_INFO {
     struct VKU_FORMAT_COMPONENT_INFO components[VKU_FORMAT_MAX_COMPONENTS];
 };
 ''')
-        out.append('inline const struct VKU_FORMAT_INFO vkuGetFormatInfo(VkFormat format) {\n')
-        out.append('    switch (format) {\n')
-        for f in self.vk.formats.values():
+        formats_in_order = {}
+        # Manually add in the entry for VK_FORMAT_UNDEFINED because it is missing from the self.vk.formats dict
+        formats_in_order[0] = Format('VK_FORMAT_UNDEFINED', 'NONE', 0,0, ['0','0','0'], None, None, None, [], [], None)
+        for e in self.vk.enums['VkFormat'].fields:
+            if e.name != 'VK_FORMAT_UNDEFINED':
+                formats_in_order[e.value] = self.vk.formats[e.name]
+        # Number of VkFormats should equal the fields of the VkFormat enum
+        assert(len(formats_in_order) == len(self.vk.enums['VkFormat'].fields))
+        formats_in_order = dict(sorted(formats_in_order.items()))
+
+        out.append(f'const struct VKU_FORMAT_INFO vku_formats[{len(self.vk.formats) + 1}] = {{\n')
+        for f in formats_in_order.values():
             className = getClassName(f.className)
             blockExtent = ', '.join(f.blockExtent) if f.blockExtent is not None else '1, 1, 1'
-            out.extend(f'        case {f.name}: {{\n')
-            out.extend(f'            struct VKU_FORMAT_INFO out = {{VKU_FORMAT_COMPATIBILITY_CLASS_{className}, {f.blockSize}, {f.texelsPerBlock}, {{{blockExtent}}}, {len(f.components)}, {{')
+            out.extend(f'    {{ VKU_FORMAT_COMPATIBILITY_CLASS_{className}, {f.blockSize}, {f.texelsPerBlock}, {{{blockExtent}}}, {len(f.components)}, {{')
             for index, component in enumerate(f.components):
                 bits = 'VKU_FORMAT_COMPRESSED_COMPONENT' if component.bits == 'compressed' else component.bits
                 out.append(f'{{VKU_FORMAT_COMPONENT_TYPE_{component.type}, {bits}}}')
                 if index + 1 != len(f.components):
                     out.append(', ')
-            out.append('}};\n')
-            out.append('            return out; }\n')
-        out.append('''
-        default: {
-            // return values for VK_FORMAT_UNDEFINED
-            struct VKU_FORMAT_INFO out = { VKU_FORMAT_COMPATIBILITY_CLASS_NONE, 0, 0, {0, 0, 0}, 0, {{VKU_FORMAT_COMPONENT_TYPE_NONE, 0}, {VKU_FORMAT_COMPONENT_TYPE_NONE, 0}, {VKU_FORMAT_COMPONENT_TYPE_NONE, 0}, {VKU_FORMAT_COMPONENT_TYPE_NONE, 0}} };
-            return out;
-        }
-    };
+            out.append('} },\n')
+        out.append('};\n')
+
+        # Find the "format groups", eg formats whose value are consecutive, as that is the way they are written into the 'formats' array.
+        # Value refers to the enum value. These are discontinuous.
+        # Index refers to the index of a format in the vku_formats array. These are from 0 to the len(formats_in_order).
+        format_values = list(formats_in_order.keys())
+        FormatGroup = namedtuple('FormatGroup', ['begin_format', 'end_format','array_index'])
+        format_groups = []
+        index = 0
+        while index < len(format_values):
+            start_value = format_values[index]
+            end_value = format_values[-1] # use last format as sentinel so the last group can get the right end value
+            previous_value = start_value - 1
+            # Find the end value for the current group
+            for format_value in format_values[index:]:
+                if previous_value + 1 != format_value:
+                    end_value = previous_value
+                    break
+                previous_value = format_value
+            format_groups.append(FormatGroup(formats_in_order[start_value].name, formats_in_order[end_value].name, index))
+            index += (end_value - start_value) + 1
+
+        out.append('inline const struct VKU_FORMAT_INFO vkuGetFormatInfo(VkFormat format) {\n')
+        for group in format_groups:
+            out.append(f'    {"else " if group.array_index != 0 else ""}if ({group.begin_format} <= format && format <= {group.end_format} )')
+            out.append(f' {{ return vku_formats[format - {group.begin_format} + {group.array_index}]; }}\n')
+        out.append('''    // Default case - return VK_FORMAT_UNDEFINED
+    else {
+        return vku_formats[0];
+    }
 }
 
 struct VKU_FORMAT_PER_PLANE_COMPATIBILITY {
@@ -570,24 +607,30 @@ inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspect
 }
 
 // TODO - This should be generated, but will need updating the spec XML and table
-inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format) {
-    switch (ds_format) {
-        case VK_FORMAT_D32_SFLOAT:
-        case VK_FORMAT_D32_SFLOAT_S8_UINT:
-            return color_format == VK_FORMAT_R32_SFLOAT || color_format == VK_FORMAT_R32_SINT || color_format == VK_FORMAT_R32_UINT;
-        case VK_FORMAT_X8_D24_UNORM_PACK32:
-        case VK_FORMAT_D24_UNORM_S8_UINT:
-            return color_format == VK_FORMAT_R32_SFLOAT || color_format == VK_FORMAT_R32_SINT || color_format == VK_FORMAT_R32_UINT;
-        case VK_FORMAT_D16_UNORM:
-        case VK_FORMAT_D16_UNORM_S8_UINT:
-            return color_format == VK_FORMAT_R16_SFLOAT || color_format == VK_FORMAT_R16_UNORM ||
-                   color_format == VK_FORMAT_R16_SNORM  || color_format == VK_FORMAT_R16_UINT || color_format == VK_FORMAT_R16_SINT;
-        case VK_FORMAT_S8_UINT:
-            return color_format == VK_FORMAT_R8_UINT || color_format == VK_FORMAT_R8_SINT ||
-                   color_format == VK_FORMAT_R8_UNORM || color_format == VK_FORMAT_R8_SNORM;
-        default:
-            return false;
+// Some few case don't have an aspect mask, so might need to check both the Depth and Stencil possiblity
+inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format, VkImageAspectFlags aspect_mask) {
+    bool valid = false;
+
+    if (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+        if (ds_format == VK_FORMAT_S8_UINT || ds_format == VK_FORMAT_D16_UNORM_S8_UINT ||
+            ds_format == VK_FORMAT_D24_UNORM_S8_UINT || ds_format == VK_FORMAT_D32_SFLOAT_S8_UINT) {
+            valid |= (color_format == VK_FORMAT_R8_UINT || color_format == VK_FORMAT_R8_SINT ||
+                      color_format == VK_FORMAT_R8_UNORM || color_format == VK_FORMAT_R8_SNORM);
+        }
     }
+
+    if (aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+        if (ds_format == VK_FORMAT_D32_SFLOAT || ds_format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+            ds_format == VK_FORMAT_X8_D24_UNORM_PACK32 || ds_format == VK_FORMAT_D24_UNORM_S8_UINT) {
+            valid |= (color_format == VK_FORMAT_R32_SFLOAT || color_format == VK_FORMAT_R32_SINT || color_format == VK_FORMAT_R32_UINT);
+        }
+        if (ds_format == VK_FORMAT_D16_UNORM || ds_format == VK_FORMAT_D16_UNORM_S8_UINT) {
+            valid |= (color_format == VK_FORMAT_R16_SFLOAT || color_format == VK_FORMAT_R16_UNORM ||
+                      color_format == VK_FORMAT_R16_SNORM  || color_format == VK_FORMAT_R16_UINT || color_format == VK_FORMAT_R16_SINT);
+        }
+    }
+
+    return valid;
 }
 
 inline uint32_t vkuFormatComponentCount(VkFormat format) { return vkuGetFormatInfo(format).component_count; }

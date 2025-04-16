@@ -28,7 +28,9 @@
 #ifndef SRC_TINT_LANG_MSL_WRITER_RAISE_SHADER_IO_H_
 #define SRC_TINT_LANG_MSL_WRITER_RAISE_SHADER_IO_H_
 
-#include "src/tint/utils/result/result.h"
+#include <cstdint>
+
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

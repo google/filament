@@ -124,6 +124,7 @@ enum class DeviceExt {
     QueueFamilyForeign,
     Robustness2,
     DisplayTiming,
+    CooperativeMatrix,
 
     // External* extensions
     ExternalMemoryAndroidHardwareBuffer,

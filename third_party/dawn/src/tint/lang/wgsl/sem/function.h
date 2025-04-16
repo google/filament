@@ -63,9 +63,6 @@ using WorkgroupSize = std::array<std::optional<uint32_t>, 3>;
 /// Function holds the semantic information for function nodes.
 class Function final : public Castable<Function, CallTarget> {
   public:
-    /// A vector of [Variable*, BindingPoint] pairs
-    using VariableBindings = std::vector<std::pair<const Variable*, BindingPoint>>;
-
     /// Constructor
     /// @param declaration the ast::Function
     explicit Function(const ast::Function* declaration);
@@ -138,20 +135,18 @@ class Function final : public Castable<Function, CallTarget> {
         directly_called_builtins_.Add(builtin);
     }
 
-    /// Adds the given texture/sampler pair to the list of unique pairs
-    /// that this function uses (directly or indirectly). These can only
-    /// be parameters to this function or global variables. Uniqueness is
-    /// ensured by texture_sampler_pairs_ being a UniqueVector.
-    /// @param texture the texture (must be non-null)
-    /// @param sampler the sampler (null indicates a texture-only reference)
-    void AddTextureSamplerPair(const sem::Variable* texture, const sem::Variable* sampler) {
-        TINT_ASSERT(texture != nullptr);
-        texture_sampler_pairs_.Add(VariablePair(texture, sampler));
+    /// Records the source of the first node that uses a subgroup matrix type
+    /// @param src the source
+    void SetDirectlyUsedSubgroupMatrix(const Source* src) {
+        if (!directly_used_subgroup_matrix_) {
+            directly_used_subgroup_matrix_ = src;
+        }
     }
 
-    /// @returns the list of texture/sampler pairs that this function uses
-    /// (directly or indirectly).
-    VectorRef<VariablePair> TextureSamplerPairs() const { return texture_sampler_pairs_; }
+    /// @returns the source of the first node that uses a subgroup matrix type, if any
+    std::optional<const Source*> DirectlyUsedSubgroupMatrix() const {
+        return directly_used_subgroup_matrix_;
+    }
 
     /// @returns the list of direct calls to functions / builtins made by this
     /// function
@@ -181,13 +176,16 @@ class Function final : public Castable<Function, CallTarget> {
     /// @param call the callsite
     void AddCallSite(const Call* call) { callsites_.Push(call); }
 
-    /// @returns the ancestor entry points
-    const Vector<const Function*, 1>& AncestorEntryPoints() const { return ancestor_entry_points_; }
+    /// @returns the entry points that have this function in their call graph. Entry points are in
+    /// their own call graph.
+    const Vector<const Function*, 1>& CallGraphEntryPoints() const {
+        return call_graph_entry_points_;
+    }
 
-    /// Adds a record that the given entry point transitively calls this function
-    /// @param entry_point the entry point that transtively calls this function
-    void AddAncestorEntryPoint(const sem::Function* entry_point) {
-        ancestor_entry_points_.Push(entry_point);
+    /// Adds a record that the given entry point has this function in its call graph.
+    /// @param entry_point the entry point
+    void AddCallGraphEntryPoint(const sem::Function* entry_point) {
+        call_graph_entry_points_.Push(entry_point);
     }
 
     /// Retrieves any referenced location variables
@@ -200,54 +198,10 @@ class Function final : public Castable<Function, CallTarget> {
     std::vector<std::pair<const Variable*, const ast::BuiltinAttribute*>>
     TransitivelyReferencedBuiltinVariables() const;
 
-    /// Retrieves any referenced uniform variables. Note, the variables must be
-    /// decorated with both binding and group attributes.
-    /// @returns the referenced uniforms
-    VariableBindings TransitivelyReferencedUniformVariables() const;
-
-    /// Retrieves any referenced storagebuffer variables. Note, the variables
-    /// must be decorated with both binding and group attributes.
-    /// @returns the referenced storagebuffers
-    VariableBindings TransitivelyReferencedStorageBufferVariables() const;
-
-    /// Retrieves any referenced regular Sampler variables. Note, the
-    /// variables must be decorated with both binding and group attributes.
-    /// @returns the referenced storagebuffers
-    VariableBindings TransitivelyReferencedSamplerVariables() const;
-
-    /// Retrieves any referenced comparison Sampler variables. Note, the
-    /// variables must be decorated with both binding and group attributes.
-    /// @returns the referenced storagebuffers
-    VariableBindings TransitivelyReferencedComparisonSamplerVariables() const;
-
-    /// Retrieves any referenced sampled textures variables. Note, the
-    /// variables must be decorated with both binding and group attributes.
-    /// @returns the referenced sampled textures
-    VariableBindings TransitivelyReferencedSampledTextureVariables() const;
-
-    /// Retrieves any referenced multisampled textures variables. Note, the
-    /// variables must be decorated with both binding and group attributes.
-    /// @returns the referenced sampled textures
-    VariableBindings TransitivelyReferencedMultisampledTextureVariables() const;
-
-    /// Retrieves any referenced variables of the given type. Note, the variables
-    /// must be decorated with both binding and group attributes.
-    /// @param type the type of the variables to find
-    /// @returns the referenced variables
-    VariableBindings TransitivelyReferencedVariablesOfType(const tint::TypeInfo* type) const;
-
-    /// Retrieves any referenced variables of the given type. Note, the variables
-    /// must be decorated with both binding and group attributes.
-    /// @returns the referenced variables
-    template <typename T>
-    VariableBindings TransitivelyReferencedVariablesOfType() const {
-        return TransitivelyReferencedVariablesOfType(&tint::TypeInfo::Of<T>());
-    }
-
-    /// Checks if the given entry point is an ancestor
+    /// Checks if the given entry point has the function in its call graph
     /// @param sym the entry point symbol
-    /// @returns true if `sym` is an ancestor entry point of this function
-    bool HasAncestorEntryPoint(Symbol sym) const;
+    /// @returns true if `sym` has the function in its call graph
+    bool HasCallGraphEntryPoint(Symbol sym) const;
 
     /// Records the first discard statement in the function
     /// @param stmt the `discard` statement.
@@ -287,9 +241,6 @@ class Function final : public Castable<Function, CallTarget> {
     Function(const Function&) = delete;
     Function(Function&&) = delete;
 
-    VariableBindings TransitivelyReferencedSamplerVariablesImpl(core::type::SamplerKind kind) const;
-    VariableBindings TransitivelyReferencedSampledTextureVariablesImpl(bool multisampled) const;
-
     const ast::Function* const declaration_;
 
     sem::WorkgroupSize workgroup_size_;
@@ -300,10 +251,12 @@ class Function final : public Castable<Function, CallTarget> {
     UniqueVector<VariablePair, 8> texture_sampler_pairs_;
     Vector<const Call*, 1> direct_calls_;
     Vector<const Call*, 1> callsites_;
-    Vector<const Function*, 1> ancestor_entry_points_;
+    Vector<const Function*, 1> call_graph_entry_points_;
     const Statement* discard_stmt_ = nullptr;
     sem::Behaviors behaviors_{sem::Behavior::kNext};
     wgsl::DiagnosticRuleSeverities diagnostic_severities_;
+
+    std::optional<const Source*> directly_used_subgroup_matrix_ = std::nullopt;
 
     std::optional<uint32_t> return_location_;
     std::optional<uint32_t> return_index_;

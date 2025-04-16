@@ -85,6 +85,10 @@ class BindGroupLayoutInternalBase : public ApiObjectBase,
     bool HasBinding(BindingNumber bindingNumber) const;
     BindingIndex GetBindingIndex(BindingNumber bindingNumber) const;
 
+    // Signals it's an appropriate time to free unused memory. BindGroupLayout implementations often
+    // have SlabAllocator<BindGroup> that need an external signal.
+    virtual void ReduceMemoryUsage();
+
     // Functions necessary for the unordered_set<BGLBase*>-based cache.
     size_t ComputeContentHash() override;
 

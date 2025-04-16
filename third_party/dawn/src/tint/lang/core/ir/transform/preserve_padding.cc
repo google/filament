@@ -27,8 +27,6 @@
 
 #include "src/tint/lang/core/ir/transform/preserve_padding.h"
 
-#include <utility>
-
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
@@ -139,7 +137,7 @@ struct State {
                                 auto* el_ptr =
                                     b.Access(ty.ptr(storage, arr->ElemType()), target, idx);
                                 auto* el_value = b.Access(arr->ElemType(), value_param, idx);
-                                MakeStore(el_ptr->Result(0), el_value->Result(0));
+                                MakeStore(el_ptr->Result(), el_value->Result());
                             });
                     },
                     [&](const type::Matrix* mat) {
@@ -147,7 +145,7 @@ struct State {
                             auto* col_ptr =
                                 b.Access(ty.ptr(storage, mat->ColumnType()), target, u32(i));
                             auto* col_value = b.Access(mat->ColumnType(), value_param, u32(i));
-                            MakeStore(col_ptr->Result(0), col_value->Result(0));
+                            MakeStore(col_ptr->Result(), col_value->Result());
                         }
                     },
                     [&](const type::Struct* str) {
@@ -156,7 +154,7 @@ struct State {
                                                      u32(member->Index()));
                             auto* sub_value =
                                 b.Access(member->Type(), value_param, u32(member->Index()));
-                            MakeStore(sub_ptr->Result(0), sub_value->Result(0));
+                            MakeStore(sub_ptr->Result(), sub_value->Result());
                         }
                     });
 

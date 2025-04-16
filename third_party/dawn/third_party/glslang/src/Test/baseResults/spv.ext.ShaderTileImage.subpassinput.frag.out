@@ -1,6 +1,0 @@
-spv.ext.ShaderTileImage.subpassinput.frag
-ERROR: 0:6: 'subpassInput' : can not be used with GL_EXT_shader_tile_image enabled 
-ERROR: 1 compilation errors.  No code generated.
-
-
-SPIR-V is not generated for failed compile or link

@@ -73,4 +73,14 @@ std::string List::Str() const {
     return Formatter{style}.Format(*this).Plain();
 }
 
+Failure::Failure() = default;
+
+Failure::Failure(std::string_view err) {
+    reason.AddError(Source{}) << err;
+}
+
+Failure::Failure(diag::Diagnostic diagnostic) : reason(diag::List{std::move(diagnostic)}) {}
+
+Failure::Failure(diag::List diagnostics) : reason(std::move(diagnostics)) {}
+
 }  // namespace tint::diag

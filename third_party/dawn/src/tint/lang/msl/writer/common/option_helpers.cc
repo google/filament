@@ -29,7 +29,8 @@
 
 #include <utility>
 
-#include "src/tint/utils/containers/hashset.h"
+#include "src/tint/utils/containers/hashmap.h"
+#include "src/tint/utils/diagnostic/diagnostic.h"
 
 namespace tint::msl::writer {
 
@@ -88,27 +89,27 @@ Result<SuccessType> ValidateBindingOptions(const Options& options) {
     // Storage and uniform are both [[buffer()]]
     if (!valid(seen_msl_buffer_bindings, options.bindings.uniform)) {
         diagnostics.AddNote(Source{}) << "when processing uniform";
-        return Failure{std::move(diagnostics)};
+        return Failure{diagnostics.Str()};
     }
     if (!valid(seen_msl_buffer_bindings, options.bindings.storage)) {
         diagnostics.AddNote(Source{}) << "when processing storage";
-        return Failure{std::move(diagnostics)};
+        return Failure{diagnostics.Str()};
     }
 
     // Sampler is [[sampler()]]
     if (!valid(seen_msl_sampler_bindings, options.bindings.sampler)) {
         diagnostics.AddNote(Source{}) << "when processing sampler";
-        return Failure{std::move(diagnostics)};
+        return Failure{diagnostics.Str()};
     }
 
     // Texture and storage texture are [[texture()]]
     if (!valid(seen_msl_texture_bindings, options.bindings.texture)) {
         diagnostics.AddNote(Source{}) << "when processing texture";
-        return Failure{std::move(diagnostics)};
+        return Failure{diagnostics.Str()};
     }
     if (!valid(seen_msl_texture_bindings, options.bindings.storage_texture)) {
         diagnostics.AddNote(Source{}) << "when processing storage_texture";
-        return Failure{std::move(diagnostics)};
+        return Failure{diagnostics.Str()};
     }
 
     for (const auto& it : options.bindings.external_texture) {
@@ -120,22 +121,22 @@ Result<SuccessType> ValidateBindingOptions(const Options& options) {
         // Validate with the actual source regardless of what the remapper will do
         if (wgsl_seen(src_binding, plane0)) {
             diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return Failure{std::move(diagnostics)};
+            return Failure{diagnostics.Str()};
         }
 
         // Plane0 & Plane1 are [[texture()]]
         if (msl_seen(seen_msl_texture_bindings, plane0, src_binding)) {
             diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return Failure{std::move(diagnostics)};
+            return Failure{diagnostics.Str()};
         }
         if (msl_seen(seen_msl_texture_bindings, plane1, src_binding)) {
             diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return Failure{std::move(diagnostics)};
+            return Failure{diagnostics.Str()};
         }
         // Metadata is [[buffer()]]
         if (msl_seen(seen_msl_buffer_bindings, metadata, src_binding)) {
             diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return Failure{std::move(diagnostics)};
+            return Failure{diagnostics.Str()};
         }
     }
 

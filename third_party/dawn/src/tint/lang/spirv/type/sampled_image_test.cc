@@ -38,9 +38,25 @@ namespace {
 TEST(SampledImageTest, Equals) {
     core::type::I32 i32;
     core::type::U32 u32;
-    SampledImage a{&i32};
-    SampledImage b{&i32};
-    SampledImage c{&u32};
+    Image img_a{&i32,
+                Dim::kD1,
+                Depth::kNotDepth,
+                Arrayed::kNonArrayed,
+                Multisampled::kSingleSampled,
+                Sampled::kSamplingCompatible,
+                core::TexelFormat::kRgba32Float,
+                core::Access::kRead};
+    Image img_c{&i32,
+                Dim::kD1,
+                Depth::kNotDepth,
+                Arrayed::kNonArrayed,
+                Multisampled::kSingleSampled,
+                Sampled::kSamplingCompatible,
+                core::TexelFormat::kRgba32Float,
+                core::Access::kRead};
+    SampledImage a{&img_a};
+    SampledImage b{&img_a};
+    SampledImage c{&img_c};
 
     EXPECT_TRUE(a.Equals(b));
     EXPECT_FALSE(a.Equals(c));
@@ -48,8 +64,18 @@ TEST(SampledImageTest, Equals) {
 
 TEST(SampledImageTest, FriendlyName) {
     core::type::I32 i32;
-    SampledImage s{&i32};
-    EXPECT_EQ(s.FriendlyName(), "spirv.sampled_image<i32>");
+    Image img_a{&i32,
+                Dim::kD1,
+                Depth::kNotDepth,
+                Arrayed::kNonArrayed,
+                Multisampled::kSingleSampled,
+                Sampled::kSamplingCompatible,
+                core::TexelFormat::kRgba32Float,
+                core::Access::kRead};
+    SampledImage s{&img_a};
+    EXPECT_EQ(s.FriendlyName(),
+              "spirv.sampled_image<spirv.image<i32, 1d, not_depth, non_arrayed, single_sampled, "
+              "sampling_compatible, rgba32float, read>>");
 }
 
 }  // namespace

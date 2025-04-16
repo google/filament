@@ -185,7 +185,7 @@ struct State {
     }
 
     bool IsPointerAccess(core::ir::Instruction* inst) {
-        return inst->Is<core::ir::Access>() && inst->Result(0)->Type()->Is<core::type::Pointer>();
+        return inst->Is<core::ir::Access>() && inst->Result()->Type()->Is<core::type::Pointer>();
     }
 
     /// PutInLet places the value into a new 'let' instruction, immediately after the value's
@@ -200,11 +200,11 @@ struct State {
         }
 
         auto* let = b.Let(value->Type());
-        value->ReplaceAllUsesWith(let->Result(0));
+        value->ReplaceAllUsesWith(let->Result());
         let->SetValue(value);
         let->InsertAfter(inst);
         if (auto name = b.ir.NameOf(value); name.IsValid()) {
-            b.ir.SetName(let->Result(0), name);
+            b.ir.SetName(let->Result(), name);
             b.ir.ClearName(value);
         }
         return let;
@@ -217,10 +217,10 @@ struct State {
 
         for (auto* inst : ir.Instructions()) {
             if (auto* l = inst->As<ir::Let>()) {
-                if (!l->Result(0)->Type()->Is<core::type::Pointer>()) {
+                if (!l->Result()->Type()->Is<core::type::Pointer>()) {
                     continue;
                 }
-                l->Result(0)->ReplaceAllUsesWith(l->Value());
+                l->Result()->ReplaceAllUsesWith(l->Value());
                 l->Destroy();
             }
         }

@@ -32,6 +32,7 @@
 #include <string>
 #include <variant>
 
+#include "src/tint/lang/core/type/array_count.h"
 #include "src/tint/lang/core/type/type.h"
 #include "src/tint/utils/macros/compiler.h"
 
@@ -43,7 +44,7 @@ class BindingArray : public Castable<BindingArray, Type> {
     /// Constructor
     /// @param element the array element type
     /// @param count the number of elements in the array.
-    BindingArray(Type const* element, uint32_t count);
+    BindingArray(Type const* element, const ArrayCount* count);
 
     /// @param other the other node to compare against
     /// @returns true if the this type is equal to @p other
@@ -53,7 +54,7 @@ class BindingArray : public Castable<BindingArray, Type> {
     Type const* ElemType() const { return element_; }
 
     /// @returns the number of elements in the array.
-    uint32_t Count() const { return count_; }
+    const ArrayCount* Count() const { return count_; }
 
     /// @returns the name for this type that closely resembles how it would be
     /// declared in WGSL.
@@ -72,7 +73,7 @@ class BindingArray : public Castable<BindingArray, Type> {
 
   private:
     Type const* const element_;
-    const uint32_t count_;
+    const ArrayCount* count_;
 };
 
 }  // namespace tint::core::type

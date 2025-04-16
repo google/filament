@@ -72,6 +72,22 @@ ResultOrError<Ref<SharedFence>> SharedFenceEGL::Create(
 #endif
 }
 
+ResultOrError<Ref<SharedFence>> SharedFenceEGL::Create(
+    Device* device,
+    StringView label,
+    const SharedFenceEGLSyncDescriptor* descriptor) {
+    DAWN_INVALID_IF(descriptor->sync == EGL_NO_SYNC, "EGLSync is null.");
+
+    DisplayEGL* display = ToBackend(device->GetPhysicalDevice())->GetDisplay();
+
+    Ref<WrappedEGLSync> sync;
+    DAWN_TRY_ASSIGN(sync, WrappedEGLSync::AcquireExternal(display, descriptor->sync));
+
+    auto fence = AcquireRef(
+        new SharedFenceEGL(device, label, wgpu::SharedFenceType::EGLSync, SystemHandle(), sync));
+    return fence;
+}
+
 SharedFenceEGL::SharedFenceEGL(Device* device,
                                StringView label,
                                wgpu::SharedFenceType type,
@@ -103,6 +119,17 @@ MaybeError SharedFenceEGL::ExportInfoImpl(UnpackedPtr<SharedFenceExportInfo>& in
             }
             break;
 #endif
+
+        case wgpu::SharedFenceType::EGLSync:
+            DAWN_TRY(info.ValidateSubset<SharedFenceEGLSyncExportInfo>());
+            {
+                SharedFenceEGLSyncExportInfo* exportInfo = info.Get<SharedFenceEGLSyncExportInfo>();
+                if (exportInfo != nullptr) {
+                    exportInfo->sync = mSync->Get();
+                }
+            }
+            break;
+
         default:
             DAWN_UNREACHABLE();
     }

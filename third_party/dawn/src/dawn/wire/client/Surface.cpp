@@ -118,15 +118,16 @@ WGPUStatus Surface::GetCapabilities(WGPUAdapter adapter,
 void Surface::GetCurrentTexture(WGPUSurfaceTexture* surfaceTexture) {
     // Handle error cases that return no textures first.
     surfaceTexture->texture = nullptr;
-    surfaceTexture->suboptimal = false;
 
     surfaceTexture->status = WGPUSurfaceGetCurrentTextureStatus_Error;
     if (mConfiguredDevice == nullptr) {
         return;
     }
 
-    surfaceTexture->status = WGPUSurfaceGetCurrentTextureStatus_DeviceLost;
     if (!mConfiguredDevice->IsAlive()) {
+        surfaceTexture->status = WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal;
+        surfaceTexture->texture =
+            Texture::CreateError(mConfiguredDevice.Get(), &mTextureDescriptor);
         return;
     }
 
@@ -140,7 +141,7 @@ void Surface::GetCurrentTexture(WGPUSurfaceTexture* surfaceTexture) {
     cmd.configuredDeviceId = mConfiguredDevice->GetWireId();
     wireClient->SerializeCommand(cmd);
 
-    surfaceTexture->status = WGPUSurfaceGetCurrentTextureStatus_Success;
+    surfaceTexture->status = WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal;
     surfaceTexture->texture = ReturnToAPI(std::move(texture));
 }
 

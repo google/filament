@@ -31,7 +31,7 @@ RM = del
 PNGLIBCONF_H_PREBUILT = scripts\pnglibconf.h.prebuilt
 
 # File extensions
-O=.obj
+O = .obj
 
 # File lists
 OBJS1 = png$(O) pngerror$(O) pngget$(O) pngmem$(O) pngpread$(O)

@@ -176,7 +176,7 @@ struct State {
         if (auto* vec = value->Type()->As<type::Vector>()) {
             type = ty.vec(type, vec->Width());
         }
-        return b.Convert(type, value)->Result(0);
+        return b.Convert(type, value)->Result();
     }
 
     /// Clamp operand @p op_idx of @p inst to ensure it is within @p limit.
@@ -195,7 +195,7 @@ struct State {
                                                   const_limit->Value()->ValueAs<uint32_t>())));
         } else {
             // Clamp it to the dynamic limit.
-            clamped_idx = b.Call(ty.u32(), core::BuiltinFn::kMin, CastToU32(idx), limit)->Result(0);
+            clamped_idx = b.Call(ty.u32(), core::BuiltinFn::kMin, CastToU32(idx), limit)->Result();
         }
 
         // Replace the index operand with the clamped version.
@@ -240,12 +240,12 @@ struct State {
                         TINT_ASSERT(base_ptr != nullptr);
                         TINT_ASSERT(i == 1);
                         auto* arr_ptr = ty.ptr(base_ptr->AddressSpace(), arr, base_ptr->Access());
-                        object = b.Access(arr_ptr, object, indices[0])->Result(0);
+                        object = b.Access(arr_ptr, object, indices[0])->Result();
                     }
 
                     // Use the `arrayLength` builtin to get the limit of a runtime-sized array.
                     auto* length = b.Call(ty.u32(), core::BuiltinFn::kArrayLength, object);
-                    return b.Subtract(ty.u32(), length, b.Constant(1_u))->Result(0);
+                    return b.Subtract(ty.u32(), length, b.Constant(1_u))->Result();
                 });
 
             // If there's a dynamic limit that needs enforced, clamp the index operand.
@@ -273,7 +273,7 @@ struct State {
             auto* num_levels = b.Call(ty.u32(), core::BuiltinFn::kTextureNumLevels, args[0]);
             auto* limit = b.Subtract(ty.u32(), num_levels, 1_u);
             clamped_level =
-                b.Call(ty.u32(), core::BuiltinFn::kMin, CastToU32(args[idx]), limit)->Result(0);
+                b.Call(ty.u32(), core::BuiltinFn::kMin, CastToU32(args[idx]), limit)->Result();
             call->SetOperand(CoreBuiltinCall::kArgsOperandOffset + idx, clamped_level);
         };
 
@@ -288,7 +288,7 @@ struct State {
             auto* limit = b.Subtract(type, dims, one);
             call->SetOperand(
                 CoreBuiltinCall::kArgsOperandOffset + idx,
-                b.Call(type, core::BuiltinFn::kMin, CastToU32(args[idx]), limit)->Result(0));
+                b.Call(type, core::BuiltinFn::kMin, CastToU32(args[idx]), limit)->Result());
         };
 
         // Helper for clamping the array index.
@@ -297,7 +297,7 @@ struct State {
             auto* limit = b.Subtract(ty.u32(), num_layers, 1_u);
             call->SetOperand(
                 CoreBuiltinCall::kArgsOperandOffset + idx,
-                b.Call(ty.u32(), core::BuiltinFn::kMin, CastToU32(args[idx]), limit)->Result(0));
+                b.Call(ty.u32(), core::BuiltinFn::kMin, CastToU32(args[idx]), limit)->Result());
         };
 
         // Select which arguments to clamp based on the function overload.

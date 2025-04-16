@@ -49,7 +49,6 @@ class BindGroup final : public BindGroupBase, public PlacementAllocated {
 
     BindGroup(Device* device,
               const BindGroupDescriptor* descriptor,
-              uint32_t viewSizeIncrement,
               const CPUDescriptorHeapAllocation& viewAllocation);
 
     // Returns true if the BindGroup was successfully populated.
@@ -67,7 +66,9 @@ class BindGroup final : public BindGroupBase, public PlacementAllocated {
   private:
     ~BindGroup() override;
 
+    MaybeError InitializeImpl() override;
     void DestroyImpl() override;
+    void DeleteThis() override;
 
     Ref<SamplerHeapCacheEntry> mSamplerAllocationEntry;
 

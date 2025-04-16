@@ -189,7 +189,7 @@ TEST_F(CLITest, UnknownFlag) {
 
     auto res = opts.Parse(Split("--myoption false", " "));
     ASSERT_NE(res, Success);
-    EXPECT_EQ(res.Failure().reason.Str(), R"(error: unknown flag: --myoption
+    EXPECT_EQ(res.Failure().reason, R"(unknown flag: --myoption
 Did you mean '--my_option'?)");
 }
 

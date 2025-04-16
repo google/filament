@@ -1,0 +1,11 @@
+# Compiled executables
+png2pnm
+png2pnm.exe
+png2pnm-static*
+pnm2png
+pnm2png.exe
+pnm2png-static*
+
+# Test artifacts
+*.png
+*.p[abgnp]m

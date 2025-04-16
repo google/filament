@@ -57,7 +57,7 @@ TEST_F(IR_DemoteToHelperTest, NoModify_NoDiscard) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, i32, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, i32, read_write> = var undef @binding_point(0, 0)
 }
 
 %ep = @fragment func():f32 [@location(0)] {
@@ -99,7 +99,7 @@ TEST_F(IR_DemoteToHelperTest, DiscardInEntryPoint_WriteInEntryPoint) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, i32, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, i32, read_write> = var undef @binding_point(0, 0)
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing]):f32 [@location(0)] {
@@ -119,8 +119,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, i32, read_write> = var @binding_point(0, 0)
-  %continue_execution:ptr<private, bool, read_write> = var, true
+  %buffer:ptr<storage, i32, read_write> = var undef @binding_point(0, 0)
+  %continue_execution:ptr<private, bool, read_write> = var true
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing]):f32 [@location(0)] {
@@ -184,7 +184,7 @@ TEST_F(IR_DemoteToHelperTest, DiscardInEntryPoint_WriteInHelper) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, i32, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, i32, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():void {
@@ -210,8 +210,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, i32, read_write> = var @binding_point(0, 0)
-  %continue_execution:ptr<private, bool, read_write> = var, true
+  %buffer:ptr<storage, i32, read_write> = var undef @binding_point(0, 0)
+  %continue_execution:ptr<private, bool, read_write> = var true
 }
 
 %foo = func():void {
@@ -283,7 +283,7 @@ TEST_F(IR_DemoteToHelperTest, DiscardInHelper_WriteInEntryPoint) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, i32, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, i32, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%cond:bool):void {
@@ -309,8 +309,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, i32, read_write> = var @binding_point(0, 0)
-  %continue_execution:ptr<private, bool, read_write> = var, true
+  %buffer:ptr<storage, i32, read_write> = var undef @binding_point(0, 0)
+  %continue_execution:ptr<private, bool, read_write> = var true
 }
 
 %foo = func(%cond:bool):void {
@@ -382,7 +382,7 @@ TEST_F(IR_DemoteToHelperTest, DiscardInHelper_WriteInHelper) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, i32, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, i32, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%cond:bool):void {
@@ -408,8 +408,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, i32, read_write> = var @binding_point(0, 0)
-  %continue_execution:ptr<private, bool, read_write> = var, true
+  %buffer:ptr<storage, i32, read_write> = var undef @binding_point(0, 0)
+  %continue_execution:ptr<private, bool, read_write> = var true
 }
 
 %foo = func(%cond:bool):void {
@@ -472,12 +472,12 @@ TEST_F(IR_DemoteToHelperTest, WriteToInvocationPrivateAddressSpace) {
 
     auto* src = R"(
 $B1: {  # root
-  %priv:ptr<private, i32, read_write> = var
+  %priv:ptr<private, i32, read_write> = var undef
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing]):f32 [@location(0)] {
   $B2: {
-    %func:ptr<function, i32, read_write> = var
+    %func:ptr<function, i32, read_write> = var undef
     if %front_facing [t: $B3] {  # if_1
       $B3: {  # true
         discard
@@ -494,13 +494,13 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %priv:ptr<private, i32, read_write> = var
-  %continue_execution:ptr<private, bool, read_write> = var, true
+  %priv:ptr<private, i32, read_write> = var undef
+  %continue_execution:ptr<private, bool, read_write> = var true
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing]):f32 [@location(0)] {
   $B2: {
-    %func:ptr<function, i32, read_write> = var
+    %func:ptr<function, i32, read_write> = var undef
     if %front_facing [t: $B3] {  # if_1
       $B3: {  # true
         store %continue_execution, false
@@ -528,11 +528,9 @@ $B1: {  # root
 
 TEST_F(IR_DemoteToHelperTest, TextureStore) {
     auto format = core::TexelFormat::kR32Float;
-    auto* texture =
-        b.Var("texture", ty.ptr(core::AddressSpace::kHandle,
-                                ty.Get<core::type::StorageTexture>(
-                                    core::type::TextureDimension::k2d, format, core::Access::kWrite,
-                                    core::type::StorageTexture::SubtypeFor(format, ty))));
+    auto* texture = b.Var("texture", ty.ptr(core::AddressSpace::kHandle,
+                                            ty.storage_texture(core::type::TextureDimension::k2d,
+                                                               format, core::Access::kWrite)));
     texture->SetBindingPoint(0, 0);
     mod.root_block->Append(texture);
 
@@ -560,7 +558,7 @@ TEST_F(IR_DemoteToHelperTest, TextureStore) {
 
     auto* src = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_storage_2d<r32float, write>, read> = var @binding_point(0, 0)
+  %texture:ptr<handle, texture_storage_2d<r32float, write>, read> = var undef @binding_point(0, 0)
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing], %coord:vec2<i32> [@location(0)]):f32 [@location(0)] {
@@ -581,8 +579,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %texture:ptr<handle, texture_storage_2d<r32float, write>, read> = var @binding_point(0, 0)
-  %continue_execution:ptr<private, bool, read_write> = var, true
+  %texture:ptr<handle, texture_storage_2d<r32float, write>, read> = var undef @binding_point(0, 0)
+  %continue_execution:ptr<private, bool, read_write> = var true
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing], %coord:vec2<i32> [@location(0)]):f32 [@location(0)] {
@@ -641,7 +639,7 @@ TEST_F(IR_DemoteToHelperTest, AtomicStore) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, atomic<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, atomic<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing]):f32 [@location(0)] {
@@ -661,8 +659,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, atomic<i32>, read_write> = var @binding_point(0, 0)
-  %continue_execution:ptr<private, bool, read_write> = var, true
+  %buffer:ptr<storage, atomic<i32>, read_write> = var undef @binding_point(0, 0)
+  %continue_execution:ptr<private, bool, read_write> = var true
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing]):f32 [@location(0)] {
@@ -721,7 +719,7 @@ TEST_F(IR_DemoteToHelperTest, AtomicAdd) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, atomic<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, atomic<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing]):f32 [@location(0)] {
@@ -742,8 +740,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, atomic<i32>, read_write> = var @binding_point(0, 0)
-  %continue_execution:ptr<private, bool, read_write> = var, true
+  %buffer:ptr<storage, atomic<i32>, read_write> = var undef @binding_point(0, 0)
+  %continue_execution:ptr<private, bool, read_write> = var true
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing]):f32 [@location(0)] {
@@ -811,7 +809,7 @@ __atomic_compare_exchange_result_i32 = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, atomic<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, atomic<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing]):f32 [@location(0)] {
@@ -838,8 +836,8 @@ __atomic_compare_exchange_result_i32 = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, atomic<i32>, read_write> = var @binding_point(0, 0)
-  %continue_execution:ptr<private, bool, read_write> = var, true
+  %buffer:ptr<storage, atomic<i32>, read_write> = var undef @binding_point(0, 0)
+  %continue_execution:ptr<private, bool, read_write> = var true
 }
 
 %ep = @fragment func(%front_facing:bool [@front_facing]):f32 [@location(0)] {
@@ -897,7 +895,7 @@ TEST_F(IR_DemoteToHelperTest, UnreachableHelperThatDiscards) {
 
     auto* expect = R"(
 $B1: {  # root
-  %continue_execution:ptr<private, bool, read_write> = var, true
+  %continue_execution:ptr<private, bool, read_write> = var true
 }
 
 %foo = func():void {

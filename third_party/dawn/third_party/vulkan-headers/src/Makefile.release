@@ -57,6 +57,7 @@ update-headers:
 
 # Top-level scripts / XML to install
 SCRIPTS = \
+    $(SPEC)/scripts/base_generator.py \
     $(SPEC)/scripts/cgenerator.py \
     $(SPEC)/scripts/generator.py \
     $(SPEC)/scripts/parse_dependency.py \
@@ -64,6 +65,7 @@ SCRIPTS = \
     $(SPEC)/scripts/stripAPI.py \
     $(SPEC)/scripts/apiconventions.py \
     $(SPEC)/scripts/vkconventions.py \
+    $(SPEC)/scripts/vulkan_object.py \
     $(SPEC)/xml/vk.xml \
     $(SPEC)/xml/video.xml \
     $(REGISTRY)/specs/latest/validation/validusage.json

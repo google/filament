@@ -3788,6 +3788,48 @@ TEST_F(PassClassTest, PartialUnrollWithPhiReferencesPhi) {
   SinglePassRunAndMatch<PartialUnrollerTestPass<2>>(text, true);
 }
 
+TEST_F(PassClassTest, UnrollWithDecorationOnPhi) {
+  // With LocalMultiStoreElimPass
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main"
+               OpExecutionMode %2 LocalSize 16 16 1
+; CHECK-NOT: OpDecorate {{%\w+}} RelaxedPrecision
+               OpDecorate %4 RelaxedPrecision
+      %float = OpTypeFloat 32
+%float_0_000122070312 = OpConstant %float 0.000122070312
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+       %bool = OpTypeBool
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+          %2 = OpFunction %void None %12
+         %13 = OpLabel
+               OpBranch %14
+         %14 = OpLabel
+          %4 = OpPhi %float %float_0_000122070312 %13 %3 %15
+         %16 = OpPhi %int %int_0 %13 %17 %15
+         %18 = OpSLessThan %bool %16 %int_1
+               OpLoopMerge %19 %15 Unroll
+               OpBranchConditional %18 %15 %19
+         %15 = OpLabel
+; CHECK: [[v:%\w+]] = OpExtInst %float
+          %3 = OpExtInst %float %1 NMax %float_0_000122070312 %float_0_000122070312
+         %17 = OpIAdd %int %16 %int_1
+               OpBranch %14
+         %19 = OpLabel
+; CHECK: OpCopyObject %float [[v]]
+         %20 = OpCopyObject %float %4
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  SinglePassRunAndMatch<LoopUnroller>(text, true);
+}
+
 TEST_F(PassClassTest, DontUnrollInfiteLoop) {
   // This is an infinite loop that because the step is 0.  We want to make sure
   // the unroller does not try to unroll it.

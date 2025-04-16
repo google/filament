@@ -75,6 +75,7 @@ MaybeError PipelineLayout::Initialize(Device* device) {
                             mUAVBindGroups.set(group);
                             break;
                         case wgpu::BufferBindingType::ReadOnlyStorage:
+                        case kInternalReadOnlyStorageBufferBinding:
                             mIndexInfo[group][bindingIndex] = shaderResourceViewIndex++;
                             break;
                         case wgpu::BufferBindingType::BindingNotUsed:

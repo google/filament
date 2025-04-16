@@ -105,7 +105,7 @@ TEST_F(MslWriter_VertexPullingTest, OneAttribute_Param) {
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -162,7 +162,7 @@ Inputs = struct @align(4) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -208,7 +208,7 @@ TEST_F(MslWriter_VertexPullingTest, OneAttribute_NonDefaultArrayStride) {
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -253,7 +253,7 @@ TEST_F(MslWriter_VertexPullingTest, OneAttribute_NonDefaultArrayStrideAndOffset)
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -299,7 +299,7 @@ TEST_F(MslWriter_VertexPullingTest, InstanceStepMode) {
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_instance_index:u32 [@instance_index]):vec4<f32> [@position] {
@@ -343,7 +343,7 @@ TEST_F(MslWriter_VertexPullingTest, InstanceStepMode_WithArrayStride) {
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_instance_index:u32 [@instance_index]):vec4<f32> [@position] {
@@ -396,7 +396,7 @@ TEST_F(MslWriter_VertexPullingTest, MultipleAttributes_SameBuffer_Params) {
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -481,7 +481,7 @@ Inputs = struct @align(4) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -553,9 +553,9 @@ TEST_F(MslWriter_VertexPullingTest, MultipleAttributes_DifferentBuffers) {
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
-  %tint_vertex_buffer_1:ptr<storage, array<u32>, read> = var @binding_point(4, 1)
-  %tint_vertex_buffer_2:ptr<storage, array<u32>, read> = var @binding_point(4, 2)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
+  %tint_vertex_buffer_1:ptr<storage, array<u32>, read> = var undef @binding_point(4, 1)
+  %tint_vertex_buffer_2:ptr<storage, array<u32>, read> = var undef @binding_point(4, 2)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index], %tint_instance_index:u32 [@instance_index]):vec4<f32> [@position] {
@@ -657,9 +657,9 @@ Inputs = struct @align(4) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
-  %tint_vertex_buffer_1:ptr<storage, array<u32>, read> = var @binding_point(4, 1)
-  %tint_vertex_buffer_2:ptr<storage, array<u32>, read> = var @binding_point(4, 2)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
+  %tint_vertex_buffer_1:ptr<storage, array<u32>, read> = var undef @binding_point(4, 1)
+  %tint_vertex_buffer_2:ptr<storage, array<u32>, read> = var undef @binding_point(4, 2)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index], %tint_instance_index:u32 [@instance_index]):vec4<f32> [@position] {
@@ -750,10 +750,10 @@ TEST_F(MslWriter_VertexPullingTest, ExistingVertexAndIndexAttribute_Params_Multi
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
-  %tint_vertex_buffer_1:ptr<storage, array<u32>, read> = var @binding_point(4, 1)
-  %tint_vertex_buffer_2:ptr<storage, array<u32>, read> = var @binding_point(4, 2)
-  %tint_vertex_buffer_3:ptr<storage, array<u32>, read> = var @binding_point(4, 3)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
+  %tint_vertex_buffer_1:ptr<storage, array<u32>, read> = var undef @binding_point(4, 1)
+  %tint_vertex_buffer_2:ptr<storage, array<u32>, read> = var undef @binding_point(4, 2)
+  %tint_vertex_buffer_3:ptr<storage, array<u32>, read> = var undef @binding_point(4, 3)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index], %tint_instance_index:u32 [@instance_index]):vec4<f32> [@position] {
@@ -836,7 +836,7 @@ TEST_F(MslWriter_VertexPullingTest, ExistingVertexIndex_NotUsedByBuffer) {
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%vertex_index:u32 [@vertex_index], %tint_instance_index:u32 [@instance_index]):vec4<f32> [@position] {
@@ -895,7 +895,7 @@ TEST_F(MslWriter_VertexPullingTest, ExistingInstanceIndex_NotUsedByBuffer) {
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%instance_index:u32 [@instance_index], %tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -985,9 +985,9 @@ Inputs = struct @align(4) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
-  %tint_vertex_buffer_1:ptr<storage, array<u32>, read> = var @binding_point(4, 1)
-  %tint_vertex_buffer_2:ptr<storage, array<u32>, read> = var @binding_point(4, 2)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
+  %tint_vertex_buffer_1:ptr<storage, array<u32>, read> = var undef @binding_point(4, 1)
+  %tint_vertex_buffer_2:ptr<storage, array<u32>, read> = var undef @binding_point(4, 2)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index], %tint_instance_index:u32 [@instance_index]):vec4<f32> [@position] {
@@ -1113,9 +1113,9 @@ Indices = struct @align(4) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
-  %tint_vertex_buffer_1:ptr<storage, array<u32>, read> = var @binding_point(4, 1)
-  %tint_vertex_buffer_2:ptr<storage, array<u32>, read> = var @binding_point(4, 2)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
+  %tint_vertex_buffer_1:ptr<storage, array<u32>, read> = var undef @binding_point(4, 1)
+  %tint_vertex_buffer_2:ptr<storage, array<u32>, read> = var undef @binding_point(4, 2)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index], %tint_instance_index:u32 [@instance_index]):vec4<f32> [@position] {
@@ -1308,7 +1308,7 @@ Inputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -1646,7 +1646,7 @@ Inputs = struct @align(8) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -1946,7 +1946,7 @@ Inputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -2159,7 +2159,7 @@ Inputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -2318,7 +2318,7 @@ Inputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -2443,7 +2443,7 @@ Inputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -2577,7 +2577,7 @@ Inputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -2721,7 +2721,7 @@ Inputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -2861,7 +2861,7 @@ Inputs = struct @align(8) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -2992,7 +2992,7 @@ Inputs = struct @align(4) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -3069,7 +3069,7 @@ Inputs = struct @align(8) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {
@@ -3135,7 +3135,7 @@ Inputs = struct @align(4) {
 }
 
 $B1: {  # root
-  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var @binding_point(4, 0)
+  %tint_vertex_buffer_0:ptr<storage, array<u32>, read> = var undef @binding_point(4, 0)
 }
 
 %foo = @vertex func(%tint_vertex_index:u32 [@vertex_index]):vec4<f32> [@position] {

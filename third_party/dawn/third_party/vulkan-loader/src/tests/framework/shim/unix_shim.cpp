@@ -36,13 +36,13 @@
 PlatformShim platform_shim;
 extern "C" {
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__GNU__) || defined(__QNX__)
-PlatformShim* get_platform_shim(std::vector<fs::FolderManager>* folders) {
-    platform_shim = PlatformShim(folders);
+PlatformShim* get_platform_shim(GetFoldersFunc get_folders_by_name_function) {
+    platform_shim = PlatformShim(get_folders_by_name_function);
     return &platform_shim;
 }
 #elif defined(__APPLE__)
-FRAMEWORK_EXPORT PlatformShim* get_platform_shim(std::vector<fs::FolderManager>* folders) {
-    platform_shim = PlatformShim(folders);
+FRAMEWORK_EXPORT PlatformShim* get_platform_shim(GetFoldersFunc get_folders_by_name_function) {
+    platform_shim = PlatformShim(get_folders_by_name_function);
     return &platform_shim;
 }
 #endif
@@ -205,7 +205,7 @@ FRAMEWORK_EXPORT struct dirent* READDIR_FUNC_NAME(DIR* dir_stream) {
         if (it->is_fake_path) {
             real_path = platform_shim.redirection_map.at(it->folder_path);
         }
-        auto filenames = get_folder_contents(platform_shim.folders, real_path);
+        auto filenames = platform_shim.get_folders_by_name_function(real_path.c_str());
 
         // Add the dirent structures in the order they appear in the FolderManager
         // Ignore anything which wasn't in the FolderManager

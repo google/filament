@@ -148,17 +148,17 @@ struct State {
 
     void BitwiseBoolean(core::ir::Binary* binary) {
         b.InsertBefore(binary, [&] {
-            auto* res_ty = ty.MatchWidth(ty.u32(), binary->Result(0)->Type());
+            auto* res_ty = ty.MatchWidth(ty.u32(), binary->Result()->Type());
             auto* lhs = b.Convert(res_ty, binary->LHS());
             auto* rhs = b.Convert(res_ty, binary->RHS());
 
             core::ir::Value* result = nullptr;
             switch (binary->Op()) {
                 case core::BinaryOp::kAnd:
-                    result = b.And(res_ty, lhs, rhs)->Result(0);
+                    result = b.And(res_ty, lhs, rhs)->Result();
                     break;
                 case core::BinaryOp::kOr:
-                    result = b.Or(res_ty, lhs, rhs)->Result(0);
+                    result = b.Or(res_ty, lhs, rhs)->Result();
                     break;
                 default:
                     TINT_UNREACHABLE();
@@ -178,10 +178,10 @@ struct State {
             b.Append(f->Block(), [&] {
                 core::ir::Value* ret = nullptr;
 
-                ret = b.Divide(type, x, y)->Result(0);
-                ret = b.Call(type, core::BuiltinFn::kTrunc, ret)->Result(0);
-                ret = b.Multiply(type, y, ret)->Result(0);
-                ret = b.Subtract(type, x, ret)->Result(0);
+                ret = b.Divide(type, x, y)->Result();
+                ret = b.Call(type, core::BuiltinFn::kTrunc, ret)->Result();
+                ret = b.Multiply(type, y, ret)->Result();
+                ret = b.Subtract(type, x, ret)->Result();
                 b.Return(f, ret);
             });
             return f;
@@ -193,17 +193,17 @@ struct State {
             auto* lhs = binary->LHS();
             auto* rhs = binary->RHS();
 
-            auto* res_ty = binary->Result(0)->Type();
+            auto* res_ty = binary->Result()->Type();
 
             // The WGSL modulo either takes two of the same types, which would then match the
             // result type, or a mixed scalar/vector combination. The vector type would then match
             // the result type. If we have a mixed scalar/vector, construct a vector of the scalar
             // type which makes the polyfill simpler.
             if (lhs->Type() != res_ty) {
-                lhs = b.Construct(res_ty, lhs)->Result(0);
+                lhs = b.Construct(res_ty, lhs)->Result();
             }
             if (rhs->Type() != res_ty) {
-                rhs = b.Construct(res_ty, rhs)->Result(0);
+                rhs = b.Construct(res_ty, rhs)->Result();
             }
 
             auto* func = CreateFloatModuloPolyfill(res_ty);

@@ -32,14 +32,14 @@
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/Device.h"
 #include "dawn/native/ObjectContentHasher.h"
+#include "dawn/native/ValidationUtils.h"
 #include "dawn/native/ValidationUtils_autogen.h"
 
 namespace dawn::native {
 
 MaybeError ValidateSamplerDescriptor(DeviceBase* device, const SamplerDescriptor* descriptor) {
-    DAWN_INVALID_IF(std::isnan(descriptor->lodMinClamp) || std::isnan(descriptor->lodMaxClamp),
-                    "LOD clamp bounds [%f, %f] contain a NaN.", descriptor->lodMinClamp,
-                    descriptor->lodMaxClamp);
+    DAWN_TRY(ValidateFloat("lodMinClamp", descriptor->lodMinClamp));
+    DAWN_TRY(ValidateFloat("lodMaxClamp", descriptor->lodMaxClamp));
 
     DAWN_INVALID_IF(descriptor->lodMinClamp < 0 || descriptor->lodMaxClamp < 0,
                     "LOD clamp bounds [%f, %f] contain contain a negative number.",
@@ -97,7 +97,7 @@ SamplerBase::SamplerBase(DeviceBase* device,
       mMaxAnisotropy(descriptor->maxAnisotropy) {
     if (auto* yCbCrVkDescriptor = Unpack(descriptor).Get<YCbCrVkDescriptor>()) {
         mIsYCbCr = true;
-        mYCbCrVkDescriptor = *yCbCrVkDescriptor;
+        mYCbCrVkDescriptor = yCbCrVkDescriptor->WithTrivialFrontendDefaults();
         mYCbCrVkDescriptor.nextInChain = nullptr;
     }
 }

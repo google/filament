@@ -20,14 +20,14 @@ jobs:
     strategy:
       matrix:
         config: [Debug, Release]
-        os: [ ubuntu-20.04, ubuntu-22.04, windows-latest, macos-latest ]
+        os: [ ubuntu-22.04, ubuntu-24.04, windows-latest, macos-latest ]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.8
         if: matrix.os != 'macos-latest'
         uses: actions/setup-python@v5
         with:
-          python-version: '3.8'      
+          python-version: '3.8'
       # MacOS machine can run on arm64 and it doesn't support 3.8
       - name: Set up Python 3.10.11
         if: matrix.os == 'macos-latest'
@@ -35,10 +35,10 @@ jobs:
         with:
           python-version: '3.10.11'
       - name: Test CMake Minimum
-        if: matrix.os == 'ubuntu-20.04'
+        if: matrix.os == 'ubuntu-22.04'
         uses: lukka/get-cmake@latest
         with:
-          cmakeVersion: 3.17.2
+          cmakeVersion: 3.22.1
       - run: cmake -S. -B build -D VUL_WERROR=ON -D BUILD_TESTS=ON -D CMAKE_BUILD_TYPE=${{matrix.config}} -D UPDATE_DEPS=ON
       - run: cmake --build build --config ${{matrix.config}} --verbose
       - run: ctest -C ${{matrix.config}} --output-on-failure
@@ -58,11 +58,11 @@ jobs:
       - run: cmake -S. -B build -D VUL_WERROR=ON -D CMAKE_BUILD_TYPE=Debug -D UPDATE_DEPS=ON
       - run: cmake --build build
       - run: cmake --install build --prefix build/install
- 
+
   android:
     # Use chromium as a test build, so don't run this job unless something simple works first
     needs: chromium
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         abi: [ armeabi-v7a, arm64-v8a ]
@@ -97,7 +97,7 @@ jobs:
   # Test to ensure we don't accidentally break the Chromium build.
   chromium:
     needs: generate_source
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -109,7 +109,7 @@ jobs:
         run: python scripts/gn/gn.py
 
   generate_source:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

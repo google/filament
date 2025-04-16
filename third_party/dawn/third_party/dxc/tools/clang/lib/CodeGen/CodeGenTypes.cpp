@@ -14,21 +14,23 @@
 #include "CodeGenTypes.h"
 #include "CGCXXABI.h"
 #include "CGCall.h"
+#include "CGHLSLRuntime.h" // HLSL Change
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
+#include "CodeGenModule.h" // HLSL Change
 #include "TargetInfo.h"
+#include "dxc/DXIL/DxilUtil.h" // HLSL Change
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h" // HLSL Change - clang-format
 #include "clang/AST/Expr.h"
+#include "clang/AST/HlslTypes.h" // HLSL Change
 #include "clang/AST/RecordLayout.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
-#include "CodeGenModule.h" // HLSL Change
-#include "CGHLSLRuntime.h" // HLSL Change
 using namespace clang;
 using namespace CodeGen;
 
@@ -365,7 +367,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
                  .getConstantArrayType(eltTy, llvm::APInt(32, count),
                                        ArrayType::ArraySizeModifier::Normal, 0)
                  .getTypePtr();
-      }
+      } else if (hlsl::IsHLSLHitObjectType(T)) // HLSL Change
+        return hlsl::dxilutil::GetHLSLHitObjectType(&TheModule);
       else
         return ConvertRecordDeclType(RT->getDecl());
     }

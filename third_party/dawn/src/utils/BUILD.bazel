@@ -31,6 +31,7 @@ cc_library(
   name = "utils",
   hdrs = [
     "compiler.h",
+    "numeric.h",
   ],
   srcs = [
     "placeholder.cc",

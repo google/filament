@@ -217,8 +217,7 @@ TEST_F(WireInjectSurfaceTests, TextureReflection) {
 
     wgpu::SurfaceTexture texture;
     surface.GetCurrentTexture(&texture);
-    EXPECT_EQ(texture.status, wgpu::SurfaceGetCurrentTextureStatus::Success);
-    EXPECT_EQ(texture.suboptimal, false);
+    EXPECT_EQ(texture.status, wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal);
 
     EXPECT_EQ(mConfiguration.width, texture.texture.GetWidth());
     EXPECT_EQ(mConfiguration.height, texture.texture.GetHeight());
@@ -244,15 +243,13 @@ TEST_F(WireInjectSurfaceTests, GetCurrentTextureSuccess) {
 
     wgpu::SurfaceTexture texture;
     surface.GetCurrentTexture(&texture);
-    EXPECT_EQ(texture.status, wgpu::SurfaceGetCurrentTextureStatus::Success);
-    EXPECT_EQ(texture.suboptimal, false);
+    EXPECT_EQ(texture.status, wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal);
 
     WGPUTexture apiTexture = api.GetNewTexture();
     EXPECT_CALL(api, SurfaceGetCurrentTexture(apiSurface, _))
         .WillOnce(WithArgs<1>([&](WGPUSurfaceTexture* out) {
             out->texture = apiTexture;
-            out->suboptimal = false;
-            out->status = WGPUSurfaceGetCurrentTextureStatus_Success;
+            out->status = WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal;
         }));
 
     // Check that methods on the returned texture are forwarded to the server correctly.
@@ -276,15 +273,13 @@ TEST_F(WireInjectSurfaceTests, GetCurrentTextureErrorServerSide) {
 
     wgpu::SurfaceTexture texture;
     surface.GetCurrentTexture(&texture);
-    EXPECT_EQ(texture.status, wgpu::SurfaceGetCurrentTextureStatus::Success);
-    EXPECT_EQ(texture.suboptimal, false);
+    EXPECT_EQ(texture.status, wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal);
 
     // Oh no, the GetCurrentTexture server-side fails.
     WGPUTexture apiTexture = api.GetNewTexture();
     EXPECT_CALL(api, SurfaceGetCurrentTexture(apiSurface, _))
         .WillOnce(WithArgs<1>([&](WGPUSurfaceTexture* out) {
             out->texture = nullptr;
-            out->suboptimal = false;
             out->status = WGPUSurfaceGetCurrentTextureStatus_Error;
 
             EXPECT_CALL(api, DeviceCreateErrorTexture(apiDevice, _)).WillOnce(Return(apiTexture));
@@ -345,10 +340,13 @@ TEST_F(WireInjectSurfaceTests, GetCurrentTextureDeviceDestroyed) {
 
     wgpu::SurfaceTexture texture;
     surface.GetCurrentTexture(&texture);
-    EXPECT_EQ(texture.status, wgpu::SurfaceGetCurrentTextureStatus::DeviceLost);
-    EXPECT_EQ(texture.texture, nullptr);
 
-    // The server sees no calls to GetCurrentTexture.
+    WGPUTexture apiTexture = api.GetNewTexture();
+    EXPECT_CALL(api, DeviceCreateErrorTexture(apiDevice, _)).WillOnce(Return(apiTexture));
+
+    EXPECT_EQ(texture.status, wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal);
+    EXPECT_NE(texture.texture.Get(), nullptr);
+
     FlushClient();
 }
 

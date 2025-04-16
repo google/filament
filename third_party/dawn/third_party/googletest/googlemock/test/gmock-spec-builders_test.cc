@@ -98,7 +98,7 @@ class NonDefaultConstructible {
 
 class MockA {
  public:
-  MockA() {}
+  MockA() = default;
 
   MOCK_METHOD1(DoA, void(int n));
   MOCK_METHOD1(ReturnResult, Result(int n));
@@ -113,7 +113,7 @@ class MockA {
 
 class MockB {
  public:
-  MockB() {}
+  MockB() = default;
 
   MOCK_CONST_METHOD0(DoB, int());  // NOLINT
   MOCK_METHOD1(DoB, int(int n));   // NOLINT
@@ -125,7 +125,7 @@ class MockB {
 
 class ReferenceHoldingMock {
  public:
-  ReferenceHoldingMock() {}
+  ReferenceHoldingMock() = default;
 
   MOCK_METHOD1(AcceptReference, void(std::shared_ptr<MockA>*));
 
@@ -143,12 +143,12 @@ class ReferenceHoldingMock {
 
 class CC {
  public:
-  virtual ~CC() {}
+  virtual ~CC() = default;
   virtual int Method() = 0;
 };
 class MockCC : public CC {
  public:
-  MockCC() {}
+  MockCC() = default;
 
   MOCK_METHOD0(Method, int());
 
@@ -804,39 +804,39 @@ TEST(ExpectCallTest, InfersCardinality1WhenThereIsWillRepeatedly) {
       "to be called at least once");
 }
 
-#if defined(__cplusplus) && __cplusplus >= 201703L
-
+// TODO(b/396121064) - Fix this test under MSVC
+#ifndef _MSC_VER
 // It should be possible to return a non-moveable type from a mock action in
 // C++17 and above, where it's guaranteed that such a type can be initialized
 // from a prvalue returned from a function.
 TEST(ExpectCallTest, NonMoveableType) {
   // Define a non-moveable result type.
-  struct Result {
-    explicit Result(int x_in) : x(x_in) {}
-    Result(Result&&) = delete;
+  struct NonMoveableStruct {
+    explicit NonMoveableStruct(int x_in) : x(x_in) {}
+    NonMoveableStruct(NonMoveableStruct&&) = delete;
 
     int x;
   };
 
-  static_assert(!std::is_move_constructible_v<Result>);
-  static_assert(!std::is_copy_constructible_v<Result>);
+  static_assert(!std::is_move_constructible_v<NonMoveableStruct>);
+  static_assert(!std::is_copy_constructible_v<NonMoveableStruct>);
 
-  static_assert(!std::is_move_assignable_v<Result>);
-  static_assert(!std::is_copy_assignable_v<Result>);
+  static_assert(!std::is_move_assignable_v<NonMoveableStruct>);
+  static_assert(!std::is_copy_assignable_v<NonMoveableStruct>);
 
   // We should be able to use a callable that returns that result as both a
   // OnceAction and an Action, whether the callable ignores arguments or not.
-  const auto return_17 = [] { return Result(17); };
+  const auto return_17 = [] { return NonMoveableStruct(17); };
 
-  static_cast<void>(OnceAction<Result()>{return_17});
-  static_cast<void>(Action<Result()>{return_17});
+  static_cast<void>(OnceAction<NonMoveableStruct()>{return_17});
+  static_cast<void>(Action<NonMoveableStruct()>{return_17});
 
-  static_cast<void>(OnceAction<Result(int)>{return_17});
-  static_cast<void>(Action<Result(int)>{return_17});
+  static_cast<void>(OnceAction<NonMoveableStruct(int)>{return_17});
+  static_cast<void>(Action<NonMoveableStruct(int)>{return_17});
 
   // It should be possible to return the result end to end through an
   // EXPECT_CALL statement, with both WillOnce and WillRepeatedly.
-  MockFunction<Result()> mock;
+  MockFunction<NonMoveableStruct()> mock;
   EXPECT_CALL(mock, Call)   //
       .WillOnce(return_17)  //
       .WillRepeatedly(return_17);
@@ -846,7 +846,7 @@ TEST(ExpectCallTest, NonMoveableType) {
   EXPECT_EQ(17, mock.AsStdFunction()().x);
 }
 
-#endif  // C++17 and above
+#endif  // _MSC_VER
 
 // Tests that the n-th action is taken for the n-th matching
 // invocation.
@@ -905,7 +905,7 @@ TEST(ExpectCallTest, TakesDefaultActionWhenWillListIsExhausted) {
                         " - returning default value."));
 }
 
-TEST(FunctionMockerMessageTest, ReportsExpectCallLocationForExhausedActions) {
+TEST(FunctionMockerMessageTest, ReportsExpectCallLocationForExhaustedActions) {
   MockB b;
   std::string expect_call_location = FormatFileLocation(__FILE__, __LINE__ + 1);
   EXPECT_CALL(b, DoB()).Times(AnyNumber()).WillOnce(Return(1));
@@ -1088,7 +1088,7 @@ TEST(UnexpectedCallTest, UnsatisfiedPrerequisites) {
 
   // Verifies that the failure message contains the two unsatisfied
   // pre-requisites but not the satisfied one.
-#if GTEST_USES_POSIX_RE
+#ifdef GTEST_USES_POSIX_RE
   EXPECT_THAT(r.message(),
               ContainsRegex(
                   // POSIX RE doesn't understand the (?s) prefix, but has no
@@ -1881,7 +1881,7 @@ struct Unprintable {
 
 class MockC {
  public:
-  MockC() {}
+  MockC() = default;
 
   MOCK_METHOD6(VoidMethod, void(bool cond, int n, std::string s, void* p,
                                 const Printable& x, Unprintable y));
@@ -2121,7 +2121,7 @@ void PrintTo(PrintMeNot /* dummy */, ::std::ostream* /* os */) {
 
 class LogTestHelper {
  public:
-  LogTestHelper() {}
+  LogTestHelper() = default;
 
   MOCK_METHOD1(Foo, PrintMeNot(PrintMeNot));
 

@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_IR_REFERENCED_MODULE_DECLS_H_
 #define SRC_TINT_LANG_CORE_IR_REFERENCED_MODULE_DECLS_H_
 
+#include "src/tint/lang/core/ir/constexpr_if.h"
 #include "src/tint/lang/core/ir/control_instruction.h"
 #include "src/tint/lang/core/ir/instruction.h"
 #include "src/tint/lang/core/ir/let.h"
@@ -95,14 +96,9 @@ class ReferencedModuleDecls {
                 continue;
             }
 
-            inst->Result(0)->ForEachUseUnsorted([&](const Usage& use) {
-                auto& decls = block_to_direct_decls_.GetOrAddZero(use.instruction->Block());
-
-                // If this is an override we need to add the initializer to used instructions
-                if (inst->template Is<core::ir::Override>()) {
-                    AddToBlock(decls, inst);
-                } else {
-                    decls.Add(inst);
+            inst->Result()->ForEachUseUnsorted([&](const Usage& use) {
+                if (use.instruction->Block() != root_block) {
+                    AddToBlock(block_to_direct_decls_.GetOrAddZero(use.instruction->Block()), inst);
                 }
             });
 
@@ -114,7 +110,7 @@ class ReferencedModuleDecls {
             if (!var) {
                 continue;
             }
-            auto* ptr = var->Result(0)->Type()->template As<core::type::Pointer>();
+            auto* ptr = var->Result()->Type()->template As<core::type::Pointer>();
             TINT_ASSERT(ptr);
 
             if (ptr->AddressSpace() != core::AddressSpace::kWorkgroup) {
@@ -134,7 +130,7 @@ class ReferencedModuleDecls {
 
             // The usage of the var is as a `let` initializer. The array count needs to
             // propagate to the `let` block.
-            var->Result(0)->ForEachUseUnsorted([&](const Usage& use) {
+            var->Result()->ForEachUseUnsorted([&](const Usage& use) {
                 AddToBlock(block_to_direct_decls_.GetOrAddZero(use.instruction->Block()),
                            cnt_inst->Instruction());
             });
@@ -173,7 +169,7 @@ class ReferencedModuleDecls {
     }
 
     void AddToBlock(DeclSet& decls, core::ir::Instruction* inst) {
-        Vector<DeclT*, 4> worklist;
+        Vector<DeclT*, 32> worklist;
         worklist.Push(inst);
 
         while (!worklist.IsEmpty()) {
@@ -189,17 +185,22 @@ class ReferencedModuleDecls {
                     }
                     worklist.Push(res->Instruction());
                 }
-            }
 
-            for (auto* operand : wl_inst->Operands()) {
-                if (!operand) {
-                    continue;
+                // ConstExprIf instruction is special because it use to be a short circuiting binary
+                // operation that was converted to a specialized if instruction.
+                if (auto* const_expr_if = wl_inst->template As<ConstExprIf>()) {
+                    auto add_block_instructions = [&worklist](Block* block) {
+                        if (!block) {
+                            return;
+                        }
+                        for (auto* block_inst : *block) {
+                            worklist.Push(block_inst);
+                        }
+                    };
+
+                    add_block_instructions(const_expr_if->True());
+                    add_block_instructions(const_expr_if->False());
                 }
-                auto* res = operand->template As<core::ir::InstructionResult>();
-                if (!res) {
-                    continue;
-                }
-                worklist.Push(res->Instruction());
             }
         }
     }

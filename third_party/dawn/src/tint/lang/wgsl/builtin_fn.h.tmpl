@@ -120,6 +120,11 @@ bool IsPacked4x8IntegerDotProductBuiltin(BuiltinFn f);
 /// @returns true if the given `f` is a subgroup builtin
 bool IsSubgroup(BuiltinFn f);
 
+/// Determines if the given `f` is a subgroup matrix builtin.
+/// @param f the builtin type
+/// @returns true if the given `f` is a subgroup matrix builtin
+bool IsSubgroupMatrix(BuiltinFn f);
+
 /// Determines if the given `f` is a quadSwap* builtin.
 /// @param f the builtin type
 /// @returns true if the given `f` is a quadSwap* builtin

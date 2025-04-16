@@ -1,9 +1,0 @@
-spv.nv.hitobject-errors.rgen
-ERROR: 0:7: 'hitObjectNV' : hitObjectNV can only be declared in global or function scope with no storage qualifier: uHitObj
-ERROR: 0:9: 'hitObjectNV' : hitObjectNV can only be declared in global or function scope with no storage qualifier: hobjIn
-ERROR: 0:10: 'hitObjectNV' : hitObjectNV can only be declared in global or function scope with no storage qualifier: hobjOut
-ERROR: 0:21: 'hObjWrapper' : struct is not allowed to contain hitObjectNV: wrapper
-ERROR: 4 compilation errors.  No code generated.
-
-
-SPIR-V is not generated for failed compile or link

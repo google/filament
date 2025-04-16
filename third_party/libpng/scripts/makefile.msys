@@ -1,5 +1,5 @@
 # makefile for libpng using MSYS/gcc (shared, static library)
-# Copyright (C) 2019-2022 Cosmin Truta
+# Copyright (C) 2000, 2019-2025 Cosmin Truta
 # Copyright (C) 2012 Glenn Randers-Pehrson and Christopher M. Wheeler
 #
 # Portions taken from makefile.linux and makefile.gcc:
@@ -21,29 +21,34 @@ PNGMAJ=16
 LIBSO=$(LIBNAME).dll
 LIBSOMAJ=$(LIBNAME).dll.$(PNGMAJ)
 
-# Where the zlib library and include files are located.
-#ZLIBLIB=../zlib
-#ZLIBINC=../zlib
-ZLIBLIB=/usr/local/lib
-ZLIBINC=/usr/local/include
-
 # Compiler, linker, lib and other tools
 CC = gcc
 LD = $(CC)
-AR_RC = ar rcs
+AR = ar
 RANLIB = ranlib
 CP = cp
-RM_F = rm -rf
-MKDIR_P=mkdir -p
-LN_SF=ln -sf
+RM_F = rm -f
+LN_SF = ln -sf
 
+# Compiler and linker flags
+NOHWOPT = -DPNG_ARM_NEON_OPT=0 -DPNG_MIPS_MSA_OPT=0 \
+          -DPNG_POWERPC_VSX_OPT=0 -DPNG_INTEL_SSE_OPT=0
+STDC = -pedantic-errors
+WARN = -Wall -Wextra -Wundef
+WARNMORE = -Wcast-align -Wconversion -Wshadow -Wpointer-arith -Wwrite-strings \
+           -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes
+LOCAL_CPPFLAGS = $(NOHWOPT)
 CPPFLAGS = # -DPNG_DEBUG=5
-CFLAGS = -O2 -Wall -Wextra -Wundef # -g
+ALL_CPPFLAGS = $(LOCAL_CPPFLAGS) $(CPPFLAGS)
+LOCAL_CFLAGS = $(STDC) $(WARN) # $(WARNMORE)
+CFLAGS = -O2 # -g
+ALL_CFLAGS = $(LOCAL_CFLAGS) $(CFLAGS)
+ARFLAGS = rc
 LDFLAGS = # -g
 LIBS = -lz -lm
 
 # File extensions
-EXEEXT=.exe
+EXEEXT = .exe
 
 # Pre-built configuration
 # See scripts/pnglibconf.mak for more options
@@ -61,7 +66,7 @@ pnglibconf.h: $(PNGLIBCONF_H_PREBUILT)
 	$(CP) $(PNGLIBCONF_H_PREBUILT) $@
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $<
+	$(CC) -c $(ALL_CPPFLAGS) $(ALL_CFLAGS) -o $@ $*.c
 
 static: libpng.a pngtest$(EXEEXT)
 
@@ -75,7 +80,7 @@ $(LIBSOMAJ):
 	$(CC) -shared -Wl,-soname,$(LIBSOMAJ) -o $(LIBSOMAJ)
 
 libpng.a: $(OBJS)
-	$(AR_RC) $@ $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
 
 install:

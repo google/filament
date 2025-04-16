@@ -27,8 +27,6 @@
 
 #include "src/tint/lang/msl/writer/raise/raise.h"
 
-#include <utility>
-
 #include "src/tint/api/common/binding_point.h"
 #include "src/tint/lang/core/ir/transform/array_length_from_uniform.h"
 #include "src/tint/lang/core/ir/transform/binary_polyfill.h"

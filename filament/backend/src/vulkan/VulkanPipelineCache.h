@@ -18,12 +18,9 @@
 #define TNT_FILAMENT_BACKEND_VULKANPIPELINECACHE_H
 
 #include "VulkanCommands.h"
-#include "VulkanMemory.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
-
-#include "backend/Program.h"
 
 #include <bluevk/BlueVK.h>
 
@@ -31,11 +28,8 @@
 #include <utils/compiler.h>
 #include <utils/Hash.h>
 
-#include <list>
 #include <tsl/robin_map.h>
 #include <type_traits>
-#include <vector>
-#include <unordered_map>
 
 namespace filament::backend {
 

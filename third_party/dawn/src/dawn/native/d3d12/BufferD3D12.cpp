@@ -44,6 +44,7 @@
 #include "dawn/native/d3d12/QueueD3D12.h"
 #include "dawn/native/d3d12/ResidencyManagerD3D12.h"
 #include "dawn/native/d3d12/SharedBufferMemoryD3D12.h"
+#include "dawn/native/d3d12/SharedFenceD3D12.h"
 #include "dawn/native/d3d12/UtilsD3D12.h"
 #include "dawn/platform/DawnPlatform.h"
 #include "dawn/platform/tracing/TraceEvent.h"
@@ -161,10 +162,11 @@ ResultOrError<Ref<Buffer>> Buffer::CreateFromSharedBufferMemory(
 
 MaybeError Buffer::InitializeAsExternalBuffer(ComPtr<ID3D12Resource> d3d12Buffer,
                                               const UnpackedPtr<BufferDescriptor>& descriptor) {
+    mAllocatedSize = descriptor->size;
     AllocationInfo info;
     info.mMethod = AllocationMethod::kExternal;
+    info.mRequestedSize = mAllocatedSize;
     mResourceAllocation = {info, 0, std::move(d3d12Buffer), nullptr, ResourceHeapKind::InvalidEnum};
-    mAllocatedSize = descriptor->size;
     return {};
 }
 
@@ -311,7 +313,7 @@ MaybeError Buffer::InitializeHostMapped(const BufferHostMappedPointer* hostMappe
                                                        IID_PPV_ARGS(&placedResource)),
         "ID3D12Device::CreatePlacedResource"));
 
-    mResourceAllocation = {AllocationInfo{0, AllocationMethod::kExternal}, 0,
+    mResourceAllocation = {AllocationInfo{0, AllocationMethod::kExternal, mAllocatedSize}, 0,
                            std::move(placedResource),
                            /* heap is external, and not tracked for residency */ nullptr,
                            ResourceHeapKind::InvalidEnum};
@@ -338,6 +340,10 @@ ID3D12Resource* Buffer::GetD3D12Resource() const {
 bool Buffer::TrackUsageAndGetResourceBarrier(CommandRecordingContext* commandContext,
                                              D3D12_RESOURCE_BARRIER* barrier,
                                              wgpu::BufferUsage newUsage) {
+    if (mResourceAllocation.GetInfo().mMethod == AllocationMethod::kExternal) {
+        commandContext->AddToSharedBufferList(this);
+    }
+
     // Track the underlying heap to ensure residency.
     // There may be no heap if the allocation is an external one.
     Heap* heap = ToBackend(mResourceAllocation.GetResourceHeap());
@@ -487,6 +493,9 @@ MaybeError Buffer::MapAtCreationImpl() {
 }
 
 MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) {
+    // Externally allocated buffers must be synchronized before any usage.
+    DAWN_TRY(SynchronizeBufferBeforeUse());
+
     // GetPendingCommandContext() call might create a new commandList. Dawn will handle
     // it in Tick() by execute the commandList and signal a fence for it even it is empty.
     // Skip the unnecessary GetPendingCommandContext() call saves an extra fence.
@@ -621,6 +630,34 @@ MaybeError Buffer::EnsureDataInitializedAsDestination(CommandRecordingContext* c
     return {};
 }
 
+MaybeError Buffer::SynchronizeBufferBeforeUse() {
+    // Buffers imported with the SharedBufferMemory feature can include fences that must finish
+    // before Dawn can use the buffer. We acquire and wait for them here.
+    if (SharedResourceMemoryContents* contents = GetSharedResourceMemoryContents()) {
+        Device* device = ToBackend(GetDevice());
+        Queue* queue = ToBackend(device->GetQueue());
+
+        std::vector<FenceAndSignalValue> waitFences;
+        SharedBufferMemoryBase::PendingFenceList fences;
+        contents->AcquirePendingFences(&fences);
+        waitFences.insert(waitFences.end(), std::make_move_iterator(fences.begin()),
+                          std::make_move_iterator(fences.end()));
+
+        ID3D12CommandQueue* commandQueue = queue->GetCommandQueue();
+        for (const auto& fence : waitFences) {
+            DAWN_TRY(CheckHRESULT(commandQueue->Wait(ToBackend(fence.object)->GetD3DFence(),
+                                                     fence.signaledValue),
+                                  "D3D12 fence wait"););
+            // Keep D3D12 fence alive until commands complete.
+            device->ReferenceUntilUnused(ToBackend(fence.object)->GetD3DFence());
+        }
+
+        mLastUsageSerial = queue->GetPendingCommandSerial();
+    }
+
+    return {};
+}
+
 void Buffer::SetLabelImpl() {
     SetDebugName(ToBackend(GetDevice()), mResourceAllocation.GetD3D12Resource(), "Dawn_Buffer",
                  GetLabel());
@@ -655,16 +692,15 @@ MaybeError Buffer::ClearBuffer(CommandRecordingContext* commandContext,
     } else {
         // TODO(crbug.com/dawn/852): use ClearUnorderedAccessView*() when the buffer usage
         // includes STORAGE.
-        DynamicUploader* uploader = device->GetDynamicUploader();
-        UploadHandle uploadHandle;
-        DAWN_TRY_ASSIGN(uploadHandle,
-                        uploader->Allocate(size, device->GetQueue()->GetPendingCommandSerial(),
-                                           kCopyBufferToBufferOffsetAlignment));
-
-        memset(uploadHandle.mappedBuffer, clearValue, size);
-
-        device->CopyFromStagingToBufferHelper(commandContext, uploadHandle.stagingBuffer.Get(),
-                                              uploadHandle.startOffset, this, offset, size);
+        DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
+            size, kCopyBufferToBufferOffsetAlignment,
+            [&](UploadReservation reservation) -> MaybeError {
+                memset(reservation.mappedPointer, clearValue, size);
+                device->CopyFromStagingToBufferHelper(commandContext, reservation.buffer.Get(),
+                                                      reservation.offsetInBuffer, this, offset,
+                                                      size);
+                return {};
+            }));
     }
 
     return {};

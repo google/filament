@@ -29,7 +29,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/tint/lang/core/type/f32.h"
 #include "src/tint/lang/core/type/i32.h"
 
 namespace tint::hlsl::type {
@@ -38,8 +37,10 @@ namespace {
 TEST(HlslTypeUint8T4Packed, Equals) {
     const Uint8T4Packed a;
     const Uint8T4Packed b;
+    const core::type::I32 i;
 
     EXPECT_TRUE(a.Equals(b));
+    EXPECT_FALSE(a.Equals(i));
 }
 
 TEST(HlslTypeUint8T4Packed, FriendlyName) {

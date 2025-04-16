@@ -46,17 +46,13 @@ class PipelineVk {
     ~PipelineVk() = default;
 
     VkPipelineLayout GetVkLayout() const;
-    uint32_t GetInternalImmediateDataSize() const;
 
   protected:
-    MaybeError InitializeBase(PipelineLayout* layout, uint32_t internalImmediateDataSize);
+    MaybeError InitializeBase(PipelineLayout* layout,
+                              const ImmediateConstantMask& immediateConstantMask);
     void DestroyImpl();
 
   private:
-    // Internal immediate data is decided by shader modules and might be different from
-    // pipelines created with same pipeline layout object.
-    int32_t mInternalImmediateDataSize = 0;
-
     Ref<RefCountedVkHandle<VkPipelineLayout>> mVkPipelineLayout;
 };
 

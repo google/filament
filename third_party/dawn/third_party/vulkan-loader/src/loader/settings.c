@@ -207,7 +207,8 @@ out:
     return res;
 }
 
-VkResult check_if_settings_path_exists(const struct loader_instance* inst, char* base, char* suffix, char** settings_file_path) {
+VkResult check_if_settings_path_exists(const struct loader_instance* inst, const char* base, const char* suffix,
+                                       char** settings_file_path) {
     if (NULL == base || NULL == suffix) {
         return VK_ERROR_INITIALIZATION_FAILED;
     }

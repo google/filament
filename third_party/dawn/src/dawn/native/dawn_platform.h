@@ -103,6 +103,10 @@ static constexpr wgpu::TextureUsage kResolveAttachmentLoadingUsage =
 static constexpr wgpu::BufferBindingType kInternalStorageBufferBinding =
     static_cast<wgpu::BufferBindingType>(~0u);
 
+// Extra BufferBindingType for internal readonly storage buffer binding.
+static constexpr wgpu::BufferBindingType kInternalReadOnlyStorageBufferBinding =
+    static_cast<wgpu::BufferBindingType>(~0u - 1);
+
 // Extra TextureSampleType for sampling from a resolve attachment.
 static constexpr wgpu::TextureSampleType kInternalResolveAttachmentSampleType =
     static_cast<wgpu::TextureSampleType>(~0u);

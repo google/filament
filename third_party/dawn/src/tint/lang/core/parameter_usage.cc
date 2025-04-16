@@ -56,6 +56,8 @@ std::string_view ToString(ParameterUsage usage) {
             return "component";
         case ParameterUsage::kCoords:
             return "coords";
+        case ParameterUsage::kCount:
+            return "count";
         case ParameterUsage::kDdx:
             return "ddx";
         case ParameterUsage::kDdy:
@@ -66,6 +68,8 @@ std::string_view ToString(ParameterUsage usage) {
             return "depth";
         case ParameterUsage::kDepthRef:
             return "depth_ref";
+        case ParameterUsage::kDref:
+            return "dref";
         case ParameterUsage::kE:
             return "e";
         case ParameterUsage::kElements:
@@ -78,6 +82,8 @@ std::string_view ToString(ParameterUsage usage) {
             return "i";
         case ParameterUsage::kId:
             return "id";
+        case ParameterUsage::kImageOperands:
+            return "image_operands";
         case ParameterUsage::kInputAttachment:
             return "input_attachment";
         case ParameterUsage::kInsert:

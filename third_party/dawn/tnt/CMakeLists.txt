@@ -33,22 +33,36 @@ if (ANDROID AND FILAMENT_BUILD_FILAMAT)
         tint_lang_core
         tint_lang_core_constant
         tint_lang_core_intrinsic
+        tint_lang_core_ir
+        tint_lang_core_ir_transform
+        tint_lang_core_ir_type
         tint_lang_core_type
+        tint_lang_spirv
+        tint_lang_spirv_intrinsic
+        tint_lang_spirv_ir
         tint_lang_spirv_reader
         tint_lang_spirv_reader_ast_lower
         tint_lang_spirv_reader_ast_parser
         tint_lang_spirv_reader_common
+        tint_lang_spirv_reader_lower
+        tint_lang_spirv_reader_parser
+        tint_lang_spirv_type
+        tint_lang_spirv_validate
         tint_lang_spirv_writer
         tint_lang_wgsl
         tint_lang_wgsl_ast
         tint_lang_wgsl_ast_transform
+        tint_lang_wgsl_common
         tint_lang_wgsl_features
         tint_lang_wgsl_intrinsic
+        tint_lang_wgsl_ir
         tint_lang_wgsl_program
         tint_lang_wgsl_resolver
         tint_lang_wgsl_sem
         tint_lang_wgsl_writer
         tint_lang_wgsl_writer_ast_printer
+        tint_lang_wgsl_writer_ir_to_program
+        tint_lang_wgsl_writer_raise
         tint_results
         tint_utils
         tint_utils_diagnostic
@@ -58,6 +72,7 @@ if (ANDROID AND FILAMENT_BUILD_FILAMAT)
         tint_utils_strconv
         tint_utils_symbol
         tint_utils_text
+        tint_utils_text_generator
     )
 
     # Use the following no-op definitions to introduce a library and its dependency.

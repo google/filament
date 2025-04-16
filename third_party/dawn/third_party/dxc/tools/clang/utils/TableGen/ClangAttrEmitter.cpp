@@ -2327,6 +2327,10 @@ static std::string CalculateDiagnostic(const Record &S) {
     case ObjCProtocol | ObjCInterface:
       return "ExpectedObjectiveCInterfaceOrProtocol";
     case Field | Var: return "ExpectedFieldOrGlobalVar";
+    // SPIRV Changes Start
+    case Func | Var | Param | Type:
+      return "ExpectedFunctionVariableParamOrTypedef";
+    // SPIRV Changes End
     // HLSL Changes Start
     case Var | Param:
       return "ExpectedVariableOrParam";

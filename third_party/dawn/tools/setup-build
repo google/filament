@@ -41,7 +41,8 @@ BUILD_TYPE=""
 BUILD_ARCH=""
 FORCE=""
 VERBOSE=""
-REMOTEEXEC=""
+REMOTEEXEC="1"
+SHARED=""
 
 function show_usage() {
   echo "setup-build [-f] $POSSIBLE_BUILD_SYSTEMS $POSSIBLE_BUILD_TYPES $POSSIBLE_BUILD_ARCHS [fuzz|fuzzer]"
@@ -58,10 +59,13 @@ function show_usage() {
   echo "  cmake         Create CMake build configuration"
   echo "  release       Make a release build"
   echo "  debug         Make a debug build"
+  echo " "
   echo "  fuzz, fuzzer  Build fuzzers. Forces Clang to be used"
   echo "  native        Target the machine you're running on"
   echo "  x86           Target a 32-bit x86 (adds -m32 to compiler flags)"
-  echo "  remoteexec    Use remoteexec to improve compile time"
+  echo "  local         Use local compilation instead of remote"
+  echo "  remoteexec    Use remoteexec to improve compile time (the default)"
+  echo "  shared        Build shared libs (cmake only)"
   if [[ ! -z "$1" ]]; then
     echo
     echo "$1"
@@ -125,6 +129,12 @@ for arg in "$@"; do
     "remoteexec")
       REMOTEEXEC=1
     ;;
+    "local")
+      REMOTEEXEC=
+    ;;
+    "shared")
+      SHARED=1
+    ;;
     "--help" | "-help" | "-h")
       show_usage
     ;;
@@ -164,6 +174,8 @@ function generate() {
 case $BUILD_SYSTEM in
   "gn")
     GN_ARGS=""
+    GN_OPTIONS=""
+    GN_OPTIONS+=' --add-export-compile-commands=//*'
     case $BUILD_TYPE in
       "debug")
         GN_ARGS+="is_debug=true"
@@ -192,11 +204,16 @@ case $BUILD_SYSTEM in
     fi
     if [[ -n "$REMOTEEXEC" ]]; then
         GN_ARGS+=" use_remoteexec=true"
+        GN_ARGS+=" use_reclient=false"
+    fi
+    GN_ARGS+=" use_siso=true"
+    if grep 'dawn_node.*True' .gclient >/dev/null; then
+        GN_ARGS+=" dawn_build_node_bindings=true"
     fi
     if [[ -z "$FORCE" && -f "$ROOT_DIR/out/$BUILD_DIR/args.gn" ]]; then
-      generate "gn" "gen" "out/active" # keep existing args
+      generate "gn" "gen" $GN_OPTIONS "out/active" # keep existing args
     else
-      generate "gn" "gen" "out/active" "--args=$GN_ARGS"
+      generate "gn" "gen" $GN_OPTIONS "out/active" "--args=$GN_ARGS"
     fi
   ;;
   "cmake")
@@ -219,6 +236,9 @@ case $BUILD_SYSTEM in
     fi
     if [[ -x $(command -v ccache) ]]; then
       CMAKE_FLAGS+=("-DCMAKE_CXX_COMPILER_LAUNCHER=ccache")
+    fi
+    if [[ -n "$SHARED" ]]; then
+      CMAKE_FLAGS+=("-DBUILD_SHARED_LIBS=ON")
     fi
     case $BUILD_TYPE in
       "debug")

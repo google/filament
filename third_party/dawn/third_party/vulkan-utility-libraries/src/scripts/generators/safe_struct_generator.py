@@ -10,8 +10,8 @@
 
 import os
 import re
-from generators.vulkan_object import Struct, Member
-from generators.base_generator import BaseGenerator
+from vulkan_object import Struct, Member
+from base_generator import BaseGenerator
 from generators.generator_utils import PlatformGuardHelper
 
 class SafeStructOutputGenerator(BaseGenerator):
@@ -134,6 +134,12 @@ class SafeStructOutputGenerator(BaseGenerator):
         return False
 
     def generate(self):
+        # Should be fixed in 1.4.310 headers
+        # https://gitlab.khronos.org/vulkan/vulkan/-/merge_requests/7196
+        manual_protect = ["VkCudaModuleNV", "VkCudaFunctionNV", "VkCudaModuleCreateInfoNV", "VkCudaFunctionCreateInfoNV", "VkCudaLaunchInfoNV", "VkPhysicalDeviceCudaKernelLaunchFeaturesNV", "VkPhysicalDeviceCudaKernelLaunchPropertiesNV", "VkSetPresentConfigNV", "VkPhysicalDevicePresentMeteringFeaturesNV"]
+        for struct in [x for x in self.vk.structs.values() if x.name in manual_protect]:
+            struct.protect = "VK_ENABLE_BETA_EXTENSIONS"
+
         self.write(f'''// *** THIS FILE IS GENERATED - DO NOT EDIT ***
             // See {os.path.basename(__file__)} for modifications
 

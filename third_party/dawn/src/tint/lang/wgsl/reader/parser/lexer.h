@@ -101,6 +101,8 @@ class Lexer {
     void set_pos(uint32_t pos);
     /// advances current position to next line
     void advance_line();
+    /// @returns true if the current position contains a BOM
+    bool is_bom() const;
     /// @returns true if the end of the input has been reached.
     bool is_eof() const;
     /// @returns true if the end of the current line has been reached.

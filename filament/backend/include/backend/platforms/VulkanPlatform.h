@@ -104,10 +104,6 @@ public:
 
         // Semaphore to be signaled once the image is available.
         VkSemaphore imageReadySemaphore = VK_NULL_HANDLE;
-
-        // A function called right before vkQueueSubmit. After this call, the image must be 
-        // available. This pointer can be null if imageReadySemaphore is not VK_NULL_HANDLE.
-        std::function<void(SwapChainPtr handle)> explicitImageReadyWait = nullptr;
     };
 
     VulkanPlatform();
@@ -361,8 +357,7 @@ public:
             VkImageUsageFlags usage);
 
     virtual VkSampler createExternalSampler(SamplerYcbcrConversion chroma,
-            SamplerParams sampler,
-            uint32_t internalFormat);
+            SamplerParams sampler, uint32_t internalFormat);
 
     virtual VkImageView createExternalImageView(SamplerYcbcrConversion chroma,
             uint32_t internalFormat, VkImage image, VkImageSubresourceRange range,

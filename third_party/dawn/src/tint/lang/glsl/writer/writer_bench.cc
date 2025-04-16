@@ -43,7 +43,7 @@ namespace {
 void GenerateGLSL(benchmark::State& state, std::string input_name) {
     auto res = bench::GetWgslProgram(input_name);
     if (res != Success) {
-        state.SkipWithError(res.Failure().reason.Str());
+        state.SkipWithError(res.Failure().reason);
         return;
     }
 
@@ -53,7 +53,7 @@ void GenerateGLSL(benchmark::State& state, std::string input_name) {
         // Convert the AST program to an IR module, so that we can generating bindings data.
         auto ir = tint::wgsl::reader::ProgramToLoweredIR(res->program);
         if (ir != Success) {
-            state.SkipWithError(ir.Failure().reason.Str());
+            state.SkipWithError(ir.Failure().reason);
             return;
         }
         gen_options.bindings = tint::glsl::writer::GenerateBindings(ir.Get());
@@ -71,21 +71,21 @@ void GenerateGLSL(benchmark::State& state, std::string input_name) {
             // Convert the AST program to an IR module.
             auto ir = tint::wgsl::reader::ProgramToLoweredIR(res->program);
             if (ir != Success) {
-                state.SkipWithError(ir.Failure().reason.Str());
+                state.SkipWithError(ir.Failure().reason);
                 return;
             }
 
             // Run single entry point to strip the program down to a single entry point.
             auto single_result = core::ir::transform::SingleEntryPoint(ir.Get(), names[i]);
             if (single_result != Success) {
-                state.SkipWithError(ir.Failure().reason.Str());
+                state.SkipWithError(ir.Failure().reason);
                 return;
             }
 
             // Generate GLSL.
             auto gen_res = Generate(ir.Get(), gen_options, names[i]);
             if (gen_res != Success) {
-                state.SkipWithError(gen_res.Failure().reason.Str());
+                state.SkipWithError(gen_res.Failure().reason);
             }
         }
     }

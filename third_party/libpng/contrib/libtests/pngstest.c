@@ -1,4 +1,3 @@
-
 /* pngstest.c
  *
  * Copyright (c) 2021 Cosmin Truta
@@ -1151,7 +1150,7 @@ get_pixel(png_uint_32 format))(Pixel *p, png_const_voidp pb)
  *
  * 2) Remove color by mapping to grayscale.  (Grayscale to color is a no-op.)
  *
- * 3) Convert between 8-bit and 16-bit components.  (Both directtions are
+ * 3) Convert between 8-bit and 16-bit components.  (Both directions are
  *    relevant.)
  *
  * This gives the following base format conversion matrix:
@@ -3500,7 +3499,7 @@ main(int argc, char **argv)
    int retval = 0;
    int c;
 
-#if PNG_LIBPNG_VER >= 10700
+#if PNG_LIBPNG_VER == 10700
       /* This error should not exist in 1.7 or later: */
       opts |= GBG_ERROR;
 #endif

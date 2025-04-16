@@ -60,7 +60,9 @@ class ErrorSink {
                                      const Args&... args) {
         if (DAWN_UNLIKELY(maybeError.IsError())) {
             std::unique_ptr<ErrorData> error = maybeError.AcquireError();
-            if (error->GetType() == InternalErrorType::Validation) {
+            if (static_cast<uint32_t>(error->GetType()) &
+                (static_cast<uint32_t>(additionalAllowedErrors) |
+                 static_cast<uint32_t>(InternalErrorType::Validation))) {
                 error->AppendContext(formatStr, args...);
             }
             ConsumeError(std::move(error), additionalAllowedErrors);
@@ -97,7 +99,9 @@ class ErrorSink {
                                      const Args&... args) {
         if (DAWN_UNLIKELY(resultOrError.IsError())) {
             std::unique_ptr<ErrorData> error = resultOrError.AcquireError();
-            if (error->GetType() == InternalErrorType::Validation) {
+            if (static_cast<uint32_t>(error->GetType()) &
+                (static_cast<uint32_t>(additionalAllowedErrors) |
+                 static_cast<uint32_t>(InternalErrorType::Validation))) {
                 error->AppendContext(formatStr, args...);
             }
             ConsumeError(std::move(error), additionalAllowedErrors);

@@ -33,7 +33,7 @@
 
 #include "src/tint/utils/containers/hashset.h"
 #include "src/tint/utils/containers/transform.h"
-#include "src/tint/utils/text/string.h"
+#include "src/tint/utils/text/styled_text.h"
 
 namespace tint::cli {
 

@@ -27,9 +27,7 @@
 
 #include "src/tint/lang/glsl/writer/raise/texture_polyfill.h"
 
-#include <string>
 #include <utility>
-#include <vector>
 
 #include "src/tint/lang/core/fluent_types.h"  // IWYU pragma: export
 #include "src/tint/lang/core/ir/builder.h"
@@ -161,7 +159,7 @@ struct State {
 
         // Remove all replaced textures and samplers as they have been replaced by new globals.
         for (auto* var : replaced_textures_and_samplers_.Vector()) {
-            var->Result(0)->ForEachUseUnsorted([](core::ir::Usage use) {
+            var->Result()->ForEachUseUnsorted([](core::ir::Usage use) {
                 TINT_ASSERT(use.instruction->Is<core::ir::Load>());
                 use.instruction->Destroy();
             });
@@ -173,7 +171,7 @@ struct State {
                                   core::ir::Var* sampler,
                                   const core::type::Pointer* tex_ty) {
         // Don't change storage textures
-        if (tex->Result(0)->Type()->UnwrapPtr()->Is<core::type::StorageTexture>()) {
+        if (tex->Result()->Type()->UnwrapPtr()->Is<core::type::StorageTexture>()) {
             return tex;
         }
 
@@ -321,13 +319,12 @@ struct State {
 
             binding::CombinedTextureSamplerPair key{tex_bp, samp_bp};
             auto* replacement = texture_sampler_to_replacement_.GetOrAdd(key, [&] {
-                return MakeVar(key, tex, sampler,
-                               tex->Result(0)->Type()->As<core::type::Pointer>());
+                return MakeVar(key, tex, sampler, tex->Result()->Type()->As<core::type::Pointer>());
             });
 
             // Don't add depth textures here because the unsampled depth texture will need to be
             // created as a sampled texture, instead of a depth texture.
-            if (!tex->Result(0)->Type()->UnwrapPtr()->Is<core::type::DepthTexture>()) {
+            if (!tex->Result()->Type()->UnwrapPtr()->Is<core::type::DepthTexture>()) {
                 texture_to_replacement_.Add(tex, replacement);
             }
         }
@@ -340,13 +337,12 @@ struct State {
             value->Type()->UnwrapPtr(),
             [&](const core::type::SampledTexture* s) {
                 is_1d = s->Dim() == core::type::TextureDimension::k1d;
-                new_type = ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d,
-                                                              s->Type());
+                new_type = ty.sampled_texture(core::type::TextureDimension::k2d, s->Type());
             },
             [&](const core::type::StorageTexture* s) {
                 is_1d = s->Dim() == core::type::TextureDimension::k1d;
-                new_type = ty.Get<core::type::StorageTexture>(
-                    core::type::TextureDimension::k2d, s->TexelFormat(), s->Access(), s->Type());
+                new_type = ty.storage_texture(core::type::TextureDimension::k2d, s->TexelFormat(),
+                                              s->Access());
             });
         if (!is_1d) {
             return std::nullopt;
@@ -364,11 +360,11 @@ struct State {
                     case core::BuiltinFn::kTextureDimensions: {
                         // Upgrade result to a vec2 and swizzle out the `x` component.
                         auto* res = call->DetachResult();
-                        call->SetResults(b.InstructionResult(ty.vec2<u32>()));
+                        call->SetResult(b.InstructionResult(ty.vec2<u32>()));
 
                         b.InsertAfter(call, [&] {
                             auto* s = b.Swizzle(res->Type(), call, Vector<uint32_t, 1>{0});
-                            res->ReplaceAllUsesWith(s->Result(0));
+                            res->ReplaceAllUsesWith(s->Result());
                         });
                         break;
                     }
@@ -379,7 +375,7 @@ struct State {
                         b.InsertBefore(call, [&] {
                             call->SetArg(1,
                                          b.Construct(ty.vec2(arg->Type()), arg, b.Zero(arg->Type()))
-                                             ->Result(0));
+                                             ->Result());
                         });
                         break;
                     }
@@ -388,7 +384,7 @@ struct State {
                         auto arg = call->Args()[2];
                         b.InsertBefore(call, [&] {
                             call->SetArg(2,
-                                         b.Construct(ty.vec2(arg->Type()), arg, 0.5_f)->Result(0));
+                                         b.Construct(ty.vec2(arg->Type()), arg, 0.5_f)->Result());
                         });
                         break;
                     }
@@ -407,15 +403,15 @@ struct State {
             if (!var) {
                 continue;
             }
-            auto new_type = UpgradeTexture1D(var->Result(0));
+            auto new_type = UpgradeTexture1D(var->Result());
             if (!new_type.has_value()) {
                 continue;
             }
-            var->Result(0)->SetType(new_type.value());
+            var->Result()->SetType(new_type.value());
 
             // All of the usages of the textures should involve loading them as the `var`
             // declarations will be pointers and the function usages require non-pointer textures.
-            for (auto usage : var->Result(0)->UsagesUnsorted()) {
+            for (auto usage : var->Result()->UsagesUnsorted()) {
                 UpgradeLoadOf1DTexture(usage->instruction);
             }
         }
@@ -437,11 +433,11 @@ struct State {
         auto* ld = inst->As<core::ir::Load>();
         TINT_ASSERT(ld);
 
-        auto new_type = UpgradeTexture1D(ld->Result(0));
+        auto new_type = UpgradeTexture1D(ld->Result());
         if (!new_type.has_value()) {
             return;
         }
-        ld->Result(0)->SetType(new_type.value());
+        ld->Result()->SetType(new_type.value());
     }
 
     // Must be called inside an insertion block
@@ -449,7 +445,7 @@ struct State {
         auto* t = VarForValue(tex);
         auto* s = VarForValue(sampler);
 
-        auto* tex_ty = t->Result(0)->Type()->As<core::type::Pointer>();
+        auto* tex_ty = t->Result()->Type()->As<core::type::Pointer>();
         TINT_ASSERT(tex_ty);
 
         // A depth texture gets turned into a SampledTexture of type `f32` when there is no
@@ -458,8 +454,8 @@ struct State {
             if (tex_ty->StoreType()->Is<core::type::DepthTexture>()) {
                 tex_ty =
                     ty.ptr(tex_ty->AddressSpace(),
-                           ty.Get<core::type::SampledTexture>(
-                               tex_ty->UnwrapPtr()->As<core::type::Texture>()->Dim(), ty.f32()),
+                           ty.sampled_texture(tex_ty->UnwrapPtr()->As<core::type::Texture>()->Dim(),
+                                              ty.f32()),
                            tex_ty->Access());
             }
         }
@@ -473,7 +469,7 @@ struct State {
             return tex;
         }
 
-        return b.Load(replacement)->Result(0);
+        return b.Load(replacement)->Result();
     }
 
     // `textureDimensions` returns an unsigned scalar / vector in WGSL. `textureSize` and
@@ -506,32 +502,32 @@ struct State {
                     new_args.Push(b.Constant(0_i));
                 } else {
                     // Make sure the LOD is a i32
-                    new_args.Push(b.Bitcast(ty.i32(), args[idx++])->Result(0));
+                    new_args.Push(b.Bitcast(ty.i32(), args[idx++])->Result());
                 }
             }
 
-            auto ret_type = call->Result(0)->Type();
+            auto ret_type = call->Result()->Type();
 
             // In GLSL the array dimensions return a 3rd parameter.
             if (tex_ty->Dim() == core::type::TextureDimension::k2dArray ||
                 tex_ty->Dim() == core::type::TextureDimension::kCubeArray) {
                 ret_type = ty.vec(ty.i32(), 3);
             } else {
-                ret_type = ty.MatchWidth(ty.i32(), call->Result(0)->Type());
+                ret_type = ty.MatchWidth(ty.i32(), call->Result()->Type());
             }
 
             core::ir::Value* result =
-                b.Call<glsl::ir::BuiltinCall>(ret_type, func, new_args)->Result(0);
+                b.Call<glsl::ir::BuiltinCall>(ret_type, func, new_args)->Result();
 
             // `textureSize` on array samplers returns the array size in the final
             // component, WGSL requires a 2 component response, so drop the array size
             if (tex_ty->Dim() == core::type::TextureDimension::k2dArray ||
                 tex_ty->Dim() == core::type::TextureDimension::kCubeArray) {
-                ret_type = ty.MatchWidth(ty.i32(), call->Result(0)->Type());
-                result = b.Swizzle(ret_type, result, {0, 1})->Result(0);
+                ret_type = ty.MatchWidth(ty.i32(), call->Result()->Type());
+                result = b.Swizzle(ret_type, result, {0, 1})->Result();
             }
 
-            b.BitcastWithResult(call->DetachResult(), result)->Result(0);
+            b.BitcastWithResult(call->DetachResult(), result)->Result();
         });
         call->Destroy();
     }
@@ -563,7 +559,7 @@ struct State {
             auto* new_call = b.Call<glsl::ir::BuiltinCall>(ty.vec(ty.i32(), 3), func, new_args);
 
             auto* swizzle = b.Swizzle(ty.i32(), new_call, {2});
-            b.BitcastWithResult(call->DetachResult(), swizzle->Result(0));
+            b.BitcastWithResult(call->DetachResult(), swizzle->Result());
         });
         call->Destroy();
     }
@@ -610,7 +606,7 @@ struct State {
                 case core::type::TextureDimension::k2dArray: {
                     auto* coord = b.InsertConvertIfNeeded(ty.vec2<i32>(), args[idx++]);
                     auto* ary_idx = b.InsertConvertIfNeeded(ty.i32(), args[idx++]);
-                    call_args.Push(b.Construct(ty.vec3<i32>(), coord, ary_idx)->Result(0));
+                    call_args.Push(b.Construct(ty.vec3<i32>(), coord, ary_idx)->Result());
 
                     if (!is_storage) {
                         call_args.Push(b.InsertConvertIfNeeded(ty.i32(), args[idx++]));
@@ -633,7 +629,7 @@ struct State {
             // sampled 2d texture. Sampled 2d returns a `vec4<f32>` from the texel fetch but the
             // depth texture is expecting an `f32`. So, swap the types to the call and swizzle out
             // the `x` component if needed.
-            const core::type::Type* fetch_ty = call->Result(0)->Type();
+            const core::type::Type* fetch_ty = call->Result()->Type();
             if (source_was_depth) {
                 fetch_ty = ty.vec4<f32>();
             }
@@ -644,7 +640,7 @@ struct State {
                 new_call = b.Swizzle(ty.f32(), new_call, {0});
             }
 
-            call->Result(0)->ReplaceAllUsesWith(new_call->Result(0));
+            call->Result()->ReplaceAllUsesWith(new_call->Result());
         });
         call->Destroy();
     }
@@ -663,7 +659,7 @@ struct State {
             if (tex_type->Dim() == core::type::TextureDimension::k2dArray) {
                 auto* coords = args[idx++];
                 if (!coords->Type()->DeepestElement()->Is<core::type::I32>()) {
-                    coords = b.Convert(ty.vec2<i32>(), coords)->Result(0);
+                    coords = b.Convert(ty.vec2<i32>(), coords)->Result();
                 }
 
                 auto* array = b.InsertConvertIfNeeded(ty.i32(), args[idx++]);
@@ -672,13 +668,13 @@ struct State {
                 TINT_ASSERT(coords_ty);
 
                 auto* new_coords = b.Construct(ty.vec3<i32>(), coords, array);
-                new_args.Push(new_coords->Result(0));
+                new_args.Push(new_coords->Result());
 
                 new_args.Push(args[idx++]);
             } else {
                 auto* coords = args[idx++];
                 if (!coords->Type()->DeepestElement()->Is<core::type::I32>()) {
-                    coords = b.Convert(ty.MatchWidth(ty.i32(), coords->Type()), coords)->Result(0);
+                    coords = b.Convert(ty.MatchWidth(ty.i32(), coords->Type()), coords)->Result();
                 }
                 new_args.Push(coords);
                 new_args.Push(args[idx++]);
@@ -720,15 +716,15 @@ struct State {
                     params.Push(coords);
                     break;
                 case core::type::TextureDimension::k2dArray:
-                    params.Push(b.Construct(ty.vec3<f32>(), coords, b.Convert<f32>(args[idx++]))
-                                    ->Result(0));
+                    params.Push(
+                        b.Construct(ty.vec3<f32>(), coords, b.Convert<f32>(args[idx++]))->Result());
                     break;
                 case core::type::TextureDimension::kCube:
                     params.Push(coords);
                     break;
                 case core::type::TextureDimension::kCubeArray:
-                    params.Push(b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))
-                                    ->Result(0));
+                    params.Push(
+                        b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))->Result());
                     break;
                 default:
                     TINT_UNREACHABLE();
@@ -775,15 +771,15 @@ struct State {
                     params.Push(coords);
                     break;
                 case core::type::TextureDimension::k2dArray:
-                    params.Push(b.Construct(ty.vec3<f32>(), coords, b.Convert<f32>(args[idx++]))
-                                    ->Result(0));
+                    params.Push(
+                        b.Construct(ty.vec3<f32>(), coords, b.Convert<f32>(args[idx++]))->Result());
                     break;
                 case core::type::TextureDimension::kCube:
                     params.Push(coords);
                     break;
                 case core::type::TextureDimension::kCubeArray:
-                    params.Push(b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))
-                                    ->Result(0));
+                    params.Push(
+                        b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))->Result());
                     break;
                 default:
                     TINT_UNREACHABLE();
@@ -826,7 +822,7 @@ struct State {
             switch (tex_type->Dim()) {
                 case core::type::TextureDimension::k2d:
                     if (is_depth) {
-                        coords = b.Construct(ty.vec3<f32>(), coords, depth_ref)->Result(0);
+                        coords = b.Construct(ty.vec3<f32>(), coords, depth_ref)->Result();
                     }
                     params.Push(coords);
 
@@ -836,27 +832,27 @@ struct State {
 
                     Vector<core::ir::Value*, 3> new_coords;
                     new_coords.Push(coords);
-                    new_coords.Push(b.Convert<f32>(args[idx++])->Result(0));
+                    new_coords.Push(b.Convert<f32>(args[idx++])->Result());
 
                     uint32_t vec_width = 3;
                     if (is_depth) {
                         new_coords.Push(b.Value(depth_ref));
                         ++vec_width;
                     }
-                    params.Push(b.Construct(ty.vec(ty.f32(), vec_width), new_coords)->Result(0));
+                    params.Push(b.Construct(ty.vec(ty.f32(), vec_width), new_coords)->Result());
                     break;
                 }
                 case core::type::TextureDimension::k3d:
                 case core::type::TextureDimension::kCube:
                     if (is_depth) {
-                        coords = b.Construct(ty.vec4<f32>(), coords, depth_ref)->Result(0);
+                        coords = b.Construct(ty.vec4<f32>(), coords, depth_ref)->Result();
                     }
                     params.Push(coords);
                     break;
                 case core::type::TextureDimension::kCubeArray:
                     is_array = true;
-                    params.Push(b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))
-                                    ->Result(0));
+                    params.Push(
+                        b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))->Result());
 
                     if (is_depth) {
                         params.Push(b.Value(depth_ref));
@@ -877,8 +873,8 @@ struct State {
                     auto* dpdx = b.Call(coords->Type(), core::BuiltinFn::kDpdx, coords);
                     auto* dpdy = b.Call(coords->Type(), core::BuiltinFn::kDpdy, coords);
 
-                    params.Push(dpdx->Result(0));
-                    params.Push(dpdy->Result(0));
+                    params.Push(dpdx->Result());
+                    params.Push(dpdy->Result());
                 } else {
                     fn = glsl::BuiltinFn::kTextureOffset;
                 }
@@ -914,9 +910,9 @@ struct State {
                 case core::type::TextureDimension::k2dArray: {
                     Vector<core::ir::Value*, 3> new_coords;
                     new_coords.Push(coords);
-                    new_coords.Push(b.Convert<f32>(args[idx++])->Result(0));
+                    new_coords.Push(b.Convert<f32>(args[idx++])->Result());
 
-                    params.Push(b.Construct(ty.vec3<f32>(), new_coords)->Result(0));
+                    params.Push(b.Construct(ty.vec3<f32>(), new_coords)->Result());
                     break;
                 }
                 case core::type::TextureDimension::k3d:
@@ -924,8 +920,8 @@ struct State {
                     params.Push(coords);
                     break;
                 case core::type::TextureDimension::kCubeArray:
-                    params.Push(b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))
-                                    ->Result(0));
+                    params.Push(
+                        b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))->Result());
                     break;
                 default:
                     TINT_UNREACHABLE();
@@ -972,7 +968,7 @@ struct State {
             switch (tex_type->Dim()) {
                 case core::type::TextureDimension::k2d:
                     if (is_depth) {
-                        coords = b.Construct(ty.vec3<f32>(), coords, depth_ref)->Result(0);
+                        coords = b.Construct(ty.vec3<f32>(), coords, depth_ref)->Result();
                     }
                     params.Push(coords);
 
@@ -980,7 +976,7 @@ struct State {
                 case core::type::TextureDimension::k2dArray: {
                     Vector<core::ir::Value*, 3> new_coords;
                     new_coords.Push(coords);
-                    new_coords.Push(b.Convert<f32>(args[idx++])->Result(0));
+                    new_coords.Push(b.Convert<f32>(args[idx++])->Result());
 
                     uint32_t vec_width = 3;
                     if (is_depth) {
@@ -988,20 +984,20 @@ struct State {
                         new_coords.Push(b.Value(depth_ref));
                         ++vec_width;
                     }
-                    params.Push(b.Construct(ty.vec(ty.f32(), vec_width), new_coords)->Result(0));
+                    params.Push(b.Construct(ty.vec(ty.f32(), vec_width), new_coords)->Result());
                     break;
                 }
                 case core::type::TextureDimension::k3d:
                 case core::type::TextureDimension::kCube:
                     if (is_depth) {
                         needs_ext = tex_type->Dim() == core::type::TextureDimension::kCube;
-                        coords = b.Construct(ty.vec4<f32>(), coords, depth_ref)->Result(0);
+                        coords = b.Construct(ty.vec4<f32>(), coords, depth_ref)->Result();
                     }
                     params.Push(coords);
                     break;
                 case core::type::TextureDimension::kCubeArray:
-                    params.Push(b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))
-                                    ->Result(0));
+                    params.Push(
+                        b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))->Result());
 
                     if (is_depth) {
                         needs_ext = true;
@@ -1050,9 +1046,9 @@ struct State {
                 case core::type::TextureDimension::k2dArray: {
                     Vector<core::ir::Value*, 3> new_coords;
                     new_coords.Push(coords);
-                    new_coords.Push(b.Convert<f32>(args[idx++])->Result(0));
+                    new_coords.Push(b.Convert<f32>(args[idx++])->Result());
 
-                    params.Push(b.Construct(ty.vec3<f32>(), new_coords)->Result(0));
+                    params.Push(b.Construct(ty.vec3<f32>(), new_coords)->Result());
                     break;
                 }
                 case core::type::TextureDimension::k3d:
@@ -1060,8 +1056,8 @@ struct State {
                     params.Push(coords);
                     break;
                 case core::type::TextureDimension::kCubeArray:
-                    params.Push(b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))
-                                    ->Result(0));
+                    params.Push(
+                        b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))->Result());
                     break;
                 default:
                     TINT_UNREACHABLE();
@@ -1101,7 +1097,7 @@ struct State {
             core::ir::Value* coords = args[idx++];
             switch (tex_type->Dim()) {
                 case core::type::TextureDimension::k2d:
-                    coords = b.Construct(ty.vec3<f32>(), coords, args[idx++])->Result(0);
+                    coords = b.Construct(ty.vec3<f32>(), coords, args[idx++])->Result();
                     params.Push(coords);
 
                     break;
@@ -1110,20 +1106,20 @@ struct State {
 
                     Vector<core::ir::Value*, 3> new_coords;
                     new_coords.Push(coords);
-                    new_coords.Push(b.Convert<f32>(args[idx++])->Result(0));
+                    new_coords.Push(b.Convert<f32>(args[idx++])->Result());
                     new_coords.Push(b.Value(args[idx++]));
 
-                    params.Push(b.Construct(ty.vec4<f32>(), new_coords)->Result(0));
+                    params.Push(b.Construct(ty.vec4<f32>(), new_coords)->Result());
                     break;
                 }
                 case core::type::TextureDimension::kCube:
-                    coords = b.Construct(ty.vec4<f32>(), coords, args[idx++])->Result(0);
+                    coords = b.Construct(ty.vec4<f32>(), coords, args[idx++])->Result();
                     params.Push(coords);
                     break;
                 case core::type::TextureDimension::kCubeArray:
                     is_array = true;
-                    params.Push(b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))
-                                    ->Result(0));
+                    params.Push(
+                        b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))->Result());
 
                     params.Push(b.Value(args[idx++]));
                     break;
@@ -1142,8 +1138,8 @@ struct State {
                     auto* dpdx = b.Call(coords->Type(), core::BuiltinFn::kDpdx, coords);
                     auto* dpdy = b.Call(coords->Type(), core::BuiltinFn::kDpdy, coords);
 
-                    params.Push(dpdx->Result(0));
-                    params.Push(dpdy->Result(0));
+                    params.Push(dpdx->Result());
+                    params.Push(dpdy->Result());
                 } else {
                     fn = glsl::BuiltinFn::kTextureOffset;
                 }
@@ -1176,7 +1172,7 @@ struct State {
             bool is_depth = tex_type->Is<core::type::DepthTexture>();
             switch (tex_type->Dim()) {
                 case core::type::TextureDimension::k2d:
-                    coords = b.Construct(ty.vec3<f32>(), coords, args[idx++])->Result(0);
+                    coords = b.Construct(ty.vec3<f32>(), coords, args[idx++])->Result();
                     params.Push(coords);
 
                     break;
@@ -1185,21 +1181,21 @@ struct State {
 
                     Vector<core::ir::Value*, 3> new_coords;
                     new_coords.Push(coords);
-                    new_coords.Push(b.Convert<f32>(args[idx++])->Result(0));
+                    new_coords.Push(b.Convert<f32>(args[idx++])->Result());
                     new_coords.Push(b.Value(args[idx++]));
 
-                    params.Push(b.Construct(ty.vec4<f32>(), new_coords)->Result(0));
+                    params.Push(b.Construct(ty.vec4<f32>(), new_coords)->Result());
                     break;
                 }
                 case core::type::TextureDimension::kCube:
-                    coords = b.Construct(ty.vec4<f32>(), coords, args[idx++])->Result(0);
+                    coords = b.Construct(ty.vec4<f32>(), coords, args[idx++])->Result();
                     params.Push(coords);
                     break;
                 case core::type::TextureDimension::kCubeArray:
                     is_array = true;
 
-                    params.Push(b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))
-                                    ->Result(0));
+                    params.Push(
+                        b.Construct(ty.vec4<f32>(), coords, b.Convert<f32>(args[idx++]))->Result());
 
                     params.Push(b.Value(args[idx++]));
                     break;

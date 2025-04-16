@@ -56,6 +56,12 @@ config_setting(
     constraint_values = ["@platforms//os:openbsd"],
 )
 
+# NOTE: Fuchsia is not an officially supported platform.
+config_setting(
+    name = "fuchsia",
+    constraint_values = ["@platforms//os:fuchsia"],
+)
+
 config_setting(
     name = "msvc_compiler",
     flag_values = {
@@ -77,6 +83,10 @@ cc_library(
 )
 
 # Google Test including Google Mock
+
+# For an actual test, use `gtest` and also `gtest_main` if you depend on gtest's
+# main(). For a library, use `gtest_for_library` instead if the library can be
+# testonly.
 cc_library(
     name = "gtest",
     srcs = glob(
@@ -132,23 +142,45 @@ cc_library(
     }),
     deps = select({
         ":has_absl": [
-            "@com_google_absl//absl/debugging:failure_signal_handler",
-            "@com_google_absl//absl/debugging:stacktrace",
-            "@com_google_absl//absl/debugging:symbolize",
-            "@com_google_absl//absl/flags:flag",
-            "@com_google_absl//absl/flags:parse",
-            "@com_google_absl//absl/flags:reflection",
-            "@com_google_absl//absl/flags:usage",
-            "@com_google_absl//absl/strings",
-            "@com_google_absl//absl/types:any",
-            "@com_google_absl//absl/types:optional",
-            "@com_google_absl//absl/types:variant",
-            "@com_googlesource_code_re2//:re2",
+            "@abseil-cpp//absl/container:flat_hash_set",
+            "@abseil-cpp//absl/debugging:failure_signal_handler",
+            "@abseil-cpp//absl/debugging:stacktrace",
+            "@abseil-cpp//absl/debugging:symbolize",
+            "@abseil-cpp//absl/flags:flag",
+            "@abseil-cpp//absl/flags:parse",
+            "@abseil-cpp//absl/flags:reflection",
+            "@abseil-cpp//absl/flags:usage",
+            "@abseil-cpp//absl/strings",
+            "@abseil-cpp//absl/types:any",
+            "@abseil-cpp//absl/types:optional",
+            "@abseil-cpp//absl/types:variant",
+            "@re2//:re2",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        # `gtest-death-test.cc` has `EXPECT_DEATH` that spawns a process,
+        # expects it to crash and inspects its logs with the given matcher,
+        # so that's why these libraries are needed.
+        # Otherwise, builds targeting Fuchsia would fail to compile.
+        ":fuchsia": [
+            "@fuchsia_sdk//pkg/fdio",
+            "@fuchsia_sdk//pkg/syslog",
+            "@fuchsia_sdk//pkg/zx",
         ],
         "//conditions:default": [],
     }),
 )
 
+# `gtest`, but testonly. See guidance on `gtest` for when to use this.
+alias(
+    name = "gtest_for_library",
+    actual = ":gtest",
+    testonly = True,
+)
+
+# Implements main() for tests using gtest. Prefer to depend on `gtest` as well
+# to ensure compliance with the layering_check Bazel feature where only the
+# direct hdrs values are available.
 cc_library(
     name = "gtest_main",
     srcs = ["googlemock/src/gmock_main.cc"],

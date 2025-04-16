@@ -426,35 +426,37 @@ GetHLSLResourceProperties(llvm::Type *Ty) {
                                             false, false, false));
 
     if (name == "SamplerComparisonState")
-      return RetType(
-          true, MakeResourceProperties(hlsl::DXIL::ResourceKind::Sampler, false,
-                                       false, /*cmp or counter*/ true));
+      return RetType(true, MakeResourceProperties(
+                               hlsl::DXIL::ResourceKind::Sampler, /*UAV*/ false,
+                               /*ROV*/ false, /*cmp or counter*/ true));
 
     if (name.startswith("AppendStructuredBuffer<"))
-      return RetType(true, MakeResourceProperties(
-                               hlsl::DXIL::ResourceKind::StructuredBuffer,
-                               false, false, /*cmp or counter*/ true));
+      return RetType(true,
+                     MakeResourceProperties(
+                         hlsl::DXIL::ResourceKind::StructuredBuffer,
+                         /*UAV*/ true, /*ROV*/ false, /*cmp or counter*/ true));
 
     if (name.startswith("ConsumeStructuredBuffer<"))
       return RetType(true, MakeResourceProperties(
                                hlsl::DXIL::ResourceKind::StructuredBuffer,
-                               false, false, /*cmp or counter*/ true));
+                               /*UAV*/ true, /*ROV*/ false,
+                               /*cmp or counter*/ true));
 
     if (name == "RaytracingAccelerationStructure")
       return RetType(true,
                      MakeResourceProperties(
                          hlsl::DXIL::ResourceKind::RTAccelerationStructure,
-                         false, false, false));
+                         /*UAV*/ false, /*ROV*/ false, false));
 
     if (name.startswith("ConstantBuffer<"))
-      return RetType(true,
-                     MakeResourceProperties(hlsl::DXIL::ResourceKind::CBuffer,
-                                            false, false, false));
+      return RetType(
+          true, MakeResourceProperties(hlsl::DXIL::ResourceKind::CBuffer,
+                                       /*UAV*/ false, /*ROV*/ false, false));
 
     if (name.startswith("TextureBuffer<"))
-      return RetType(true,
-                     MakeResourceProperties(hlsl::DXIL::ResourceKind::TBuffer,
-                                            false, false, false));
+      return RetType(
+          true, MakeResourceProperties(hlsl::DXIL::ResourceKind::TBuffer,
+                                       /*UAV*/ false, /*ROV*/ false, false));
 
     if (ConsumePrefix(name, "FeedbackTexture2D")) {
       hlsl::DXIL::ResourceKind kind = hlsl::DXIL::ResourceKind::Invalid;
@@ -464,7 +466,9 @@ GetHLSLResourceProperties(llvm::Type *Ty) {
         kind = hlsl::DXIL::ResourceKind::FeedbackTexture2D;
 
       if (name.startswith("<"))
-        return RetType(true, MakeResourceProperties(kind, false, false, false));
+        return RetType(true,
+                       MakeResourceProperties(kind, /*UAV*/ false,
+                                              /*ROV*/ false, /*Cmp*/ false));
 
       return FalseRet;
     }
@@ -475,63 +479,63 @@ GetHLSLResourceProperties(llvm::Type *Ty) {
     if (name == "ByteAddressBuffer")
       return RetType(true,
                      MakeResourceProperties(hlsl::DXIL::ResourceKind::RawBuffer,
-                                            UAV, ROV, false));
+                                            UAV, ROV, /*Cmp*/ false));
 
     if (name.startswith("Buffer<"))
       return RetType(
           true, MakeResourceProperties(hlsl::DXIL::ResourceKind::TypedBuffer,
-                                       UAV, ROV, false));
+                                       UAV, ROV, /*Cmp*/ false));
 
     if (name.startswith("StructuredBuffer<"))
       return RetType(true, MakeResourceProperties(
                                hlsl::DXIL::ResourceKind::StructuredBuffer, UAV,
-                               ROV, false));
+                               ROV, /*Cmp*/ false));
 
     if (ConsumePrefix(name, "Texture")) {
       if (name.startswith("1D<"))
         return RetType(
             true, MakeResourceProperties(hlsl::DXIL::ResourceKind::Texture1D,
-                                         UAV, ROV, false));
+                                         UAV, ROV, /*Cmp*/ false));
 
       if (name.startswith("1DArray<"))
         return RetType(true, MakeResourceProperties(
                                  hlsl::DXIL::ResourceKind::Texture1DArray, UAV,
-                                 ROV, false));
+                                 ROV, /*Cmp*/ false));
 
       if (name.startswith("2D<"))
         return RetType(
             true, MakeResourceProperties(hlsl::DXIL::ResourceKind::Texture2D,
-                                         UAV, ROV, false));
+                                         UAV, ROV, /*Cmp*/ false));
 
       if (name.startswith("2DArray<"))
         return RetType(true, MakeResourceProperties(
                                  hlsl::DXIL::ResourceKind::Texture2DArray, UAV,
-                                 ROV, false));
+                                 ROV, /*Cmp*/ false));
 
       if (name.startswith("3D<"))
         return RetType(
             true, MakeResourceProperties(hlsl::DXIL::ResourceKind::Texture3D,
-                                         UAV, ROV, false));
+                                         UAV, ROV, /*Cmp*/ false));
 
       if (name.startswith("Cube<"))
         return RetType(
             true, MakeResourceProperties(hlsl::DXIL::ResourceKind::TextureCube,
-                                         UAV, ROV, false));
+                                         UAV, ROV, /*Cmp*/ false));
 
       if (name.startswith("CubeArray<"))
         return RetType(true, MakeResourceProperties(
                                  hlsl::DXIL::ResourceKind::TextureCubeArray,
-                                 UAV, ROV, false));
+                                 UAV, ROV, /*Cmp*/ false));
 
       if (name.startswith("2DMS<"))
         return RetType(
             true, MakeResourceProperties(hlsl::DXIL::ResourceKind::Texture2DMS,
-                                         UAV, ROV, false));
+                                         UAV, ROV, /*Cmp*/ false));
 
       if (name.startswith("2DMSArray<"))
         return RetType(true, MakeResourceProperties(
                                  hlsl::DXIL::ResourceKind::Texture2DMSArray,
-                                 UAV, ROV, false));
+                                 UAV, ROV, /*Cmp*/ false));
       return FalseRet;
     }
   }
@@ -570,6 +574,9 @@ bool IsHLSLObjectType(llvm::Type *Ty) {
 
     if (IsHLSLNodeIOType(Ty))
       return true;
+
+    if (IsHLSLHitObjectType(Ty))
+      return true;
   }
   return false;
 }
@@ -585,6 +592,24 @@ bool IsHLSLRayQueryType(llvm::Type *Ty) {
       return true;
   }
   return false;
+}
+
+llvm::Type *GetHLSLHitObjectType(llvm::Module *M) {
+  using namespace llvm;
+  StructType *HitObjectTy = M->getTypeByName("dx.types.HitObject");
+  if (!HitObjectTy)
+    HitObjectTy = StructType::create({Type::getInt8PtrTy(M->getContext(), 0)},
+                                     "dx.types.HitObject", false);
+  return HitObjectTy;
+}
+
+bool IsHLSLHitObjectType(llvm::Type *Ty) {
+  llvm::StructType *ST = dyn_cast<llvm::StructType>(Ty);
+  if (!ST)
+    return false;
+  if (!ST->hasName())
+    return false;
+  return ST->getName() == "dx.types.HitObject";
 }
 
 bool IsHLSLResourceDescType(llvm::Type *Ty) {
@@ -1388,6 +1413,19 @@ bool DeleteDeadAllocas(llvm::Function &F) {
   }
 
   return Changed;
+}
+
+// Retrieve dxil version in the given module.
+// Where the module doesn't already have a Dxil module,
+// it identifies and returns the version info from the metatdata.
+// Returns false where none of that works, but that shouldn't happen much.
+bool LoadDxilVersion(const Module *M, unsigned &Major, unsigned &Minor) {
+  if (M->HasDxilModule()) {
+    M->GetDxilModule().GetShaderModel()->GetDxilVersion(Major, Minor);
+    return true;
+  }
+  // No module, try metadata.
+  return DxilMDHelper::LoadDxilVersion(M, Major, Minor);
 }
 
 } // namespace dxilutil

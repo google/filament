@@ -2139,6 +2139,18 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
               SourceLocation(), SourceLocation(), nullptr);
   CheckCompletedCXXClass(Instantiation);
 
+  // HLSL Change Begin - set longvec bit for vectors of over 4 elements
+  ClassTemplateSpecializationDecl *Spec =
+      dyn_cast<ClassTemplateSpecializationDecl>(Instantiation);
+  if (Spec && Spec->hasAttr<HLSLVectorAttr>()) {
+    const TemplateArgumentList &argList = Spec->getTemplateArgs();
+    const TemplateArgument &arg1 = argList[1];
+    llvm::APSInt vecSize = arg1.getAsIntegral();
+    if (vecSize.getLimitedValue() > hlsl::DXIL::kDefaultMaxVectorLength)
+      Instantiation->setHasHLSLLongVector();
+  }
+  // HLSL Change End - set longvec bit for vectors of over 4 elements
+
   // Default arguments are parsed, if not instantiated. We can go instantiate
   // default arg exprs for default constructors if necessary now.
   ActOnFinishCXXMemberDefaultArgs(Instantiation);

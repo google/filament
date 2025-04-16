@@ -365,7 +365,8 @@ TEST_F(BindGroupValidationTest, BufferBindingType) {
     }
 }
 
-// Check that an external texture binding must contain exactly an external texture
+// Check that an external texture binding must contain either exactly an external texture or a
+// texture view.
 TEST_F(BindGroupValidationTest, ExternalTextureBindingType) {
     // Create an external texture
     wgpu::Texture texture =
@@ -391,64 +392,78 @@ TEST_F(BindGroupValidationTest, ExternalTextureBindingType) {
     descriptor.entryCount = 1;
     descriptor.entries = &binding;
 
+    wgpu::ExternalTextureBindingEntry externalBindingEntry;
+    externalBindingEntry.externalTexture = externalTexture;
+
     // Not setting anything fails
     ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
 
-    // Control case: setting just the external texture works
-    wgpu::ExternalTextureBindingEntry externalBindingEntry;
-    externalBindingEntry.externalTexture = externalTexture;
-    binding.nextInChain = &externalBindingEntry;
-    device.CreateBindGroup(&descriptor);
-
-    // Setting the texture view as well is an error
-    binding.textureView = mSampledTextureView;
-    ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
-    binding.textureView = nullptr;
-
-    // Setting the sampler as well is an error
-    binding.sampler = mSampler;
-    ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
-    binding.sampler = nullptr;
-
-    // Setting the buffer as well is an error
-    binding.buffer = mUBO;
-    ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
-    binding.buffer = nullptr;
-
-    // Setting the external texture to an error external texture is an error.
-    {
-        wgpu::Texture errorTexture =
-            CreateTexture(wgpu::TextureUsage::TextureBinding, wgpu::TextureFormat::R8Unorm, 1);
-        wgpu::ExternalTextureDescriptor errorExternalDescriptor =
-            CreateDefaultExternalTextureDescriptor();
-        errorExternalDescriptor.plane0 = errorTexture.CreateView();
-
-        wgpu::ExternalTexture errorExternalTexture;
-        ASSERT_DEVICE_ERROR(errorExternalTexture =
-                                device.CreateExternalTexture(&errorExternalDescriptor));
-
-        wgpu::ExternalTextureBindingEntry errorExternalBindingEntry;
-        errorExternalBindingEntry.externalTexture = errorExternalTexture;
-        binding.nextInChain = &errorExternalBindingEntry;
-        ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
+    for (bool bindTextureViewOnly : {false, true}) {
+        binding.textureView = nullptr;
         binding.nextInChain = nullptr;
-    }
 
-    // Setting an external texture with another external texture chained is an error.
-    {
-        wgpu::ExternalTexture externalTexture2 = device.CreateExternalTexture(&externalDesc);
-        wgpu::ExternalTextureBindingEntry externalBindingEntry2;
-        externalBindingEntry2.externalTexture = externalTexture2;
-        externalBindingEntry.nextInChain = &externalBindingEntry2;
+        if (bindTextureViewOnly) {
+            // Control case: setting just the texture view works
+            binding.textureView = mSampledTextureView;
+            device.CreateBindGroup(&descriptor);
+        } else {
+            // Control case: setting just the external texture works
+            binding.nextInChain = &externalBindingEntry;
+            device.CreateBindGroup(&descriptor);
+        }
 
+        // Setting the sampler as well is an error
+        binding.sampler = mSampler;
         ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
-    }
+        binding.sampler = nullptr;
 
-    // Chaining a struct that isn't an external texture binding entry is an error.
-    {
-        wgpu::ExternalTextureBindingLayout externalBindingLayout;
-        binding.nextInChain = &externalBindingLayout;
+        // Setting the buffer as well is an error
+        binding.buffer = mUBO;
         ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
+        binding.buffer = nullptr;
+
+        // Setting the external texture to an error external texture is an error.
+        {
+            wgpu::Texture errorTexture =
+                CreateTexture(wgpu::TextureUsage::TextureBinding, wgpu::TextureFormat::R8Unorm, 1);
+            wgpu::ExternalTextureDescriptor errorExternalDescriptor =
+                CreateDefaultExternalTextureDescriptor();
+            errorExternalDescriptor.plane0 = errorTexture.CreateView();
+
+            wgpu::ExternalTexture errorExternalTexture;
+            ASSERT_DEVICE_ERROR(errorExternalTexture =
+                                    device.CreateExternalTexture(&errorExternalDescriptor));
+
+            wgpu::ExternalTextureBindingEntry errorExternalBindingEntry;
+            errorExternalBindingEntry.externalTexture = errorExternalTexture;
+            binding.nextInChain = &errorExternalBindingEntry;
+            ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
+            binding.nextInChain = nullptr;
+        }
+
+        if (!bindTextureViewOnly) {
+            // Setting the texture view as well is an error
+            binding.nextInChain = &externalBindingEntry;
+            binding.textureView = mSampledTextureView;
+            ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
+            binding.nextInChain = nullptr;
+            binding.textureView = nullptr;
+
+            // Setting an external texture with another external texture chained is an error.
+            wgpu::ExternalTexture externalTexture2 = device.CreateExternalTexture(&externalDesc);
+            wgpu::ExternalTextureBindingEntry externalBindingEntry2;
+            externalBindingEntry2.externalTexture = externalTexture2;
+            externalBindingEntry.nextInChain = &externalBindingEntry2;
+
+            ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
+        }
+
+        // Chaining a struct that isn't an external texture binding entry is an error.
+        {
+            wgpu::ExternalTextureBindingLayout externalBindingLayout;
+            binding.nextInChain = &externalBindingLayout;
+            ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
+        }
     }
 }
 
@@ -1065,7 +1080,7 @@ TEST_F(BindGroupValidationTest, BufferBindingOOB) {
 
 // Tests constraints to be sure the uniform buffer binding isn't too large
 TEST_F(BindGroupValidationTest, MaxUniformBufferBindingSize) {
-    wgpu::Limits supportedLimits = GetSupportedLimits().limits;
+    wgpu::Limits supportedLimits = GetSupportedLimits();
 
     wgpu::BufferDescriptor descriptor;
     descriptor.size = 2 * supportedLimits.maxUniformBufferBindingSize;
@@ -1108,7 +1123,7 @@ TEST_F(BindGroupValidationTest, MaxUniformBufferBindingSize) {
 
 // Tests constraints to be sure the storage buffer binding isn't too large
 TEST_F(BindGroupValidationTest, MaxStorageBufferBindingSize) {
-    wgpu::Limits supportedLimits = GetSupportedLimits().limits;
+    wgpu::Limits supportedLimits = GetSupportedLimits();
 
     wgpu::BufferDescriptor descriptor;
     descriptor.size = 2 * supportedLimits.maxStorageBufferBindingSize;
@@ -1373,7 +1388,7 @@ TEST_F(BindGroupLayoutValidationTest, PerStageLimits) {
         wgpu::BindGroupLayoutEntry otherEntry;
     };
 
-    wgpu::Limits limits = GetSupportedLimits().limits;
+    wgpu::Limits limits = GetSupportedLimits();
 
     std::array<TestInfo, 7> kTestInfos = {
         TestInfo{limits.maxSampledTexturesPerShaderStage,
@@ -1475,7 +1490,7 @@ TEST_F(BindGroupLayoutValidationTest, PerStageLimitsWithExternalTexture) {
         wgpu::BindGroupLayoutEntry otherEntry;
     };
 
-    wgpu::Limits limits = GetSupportedLimits().limits;
+    wgpu::Limits limits = GetSupportedLimits();
 
     std::array<TestInfo, 3> kTestInfos = {
         TestInfo{limits.maxSampledTexturesPerShaderStage, kSampledTexturesPerExternalTexture,
@@ -1565,7 +1580,7 @@ TEST_F(BindGroupLayoutValidationTest, DynamicBufferNumberLimit) {
     std::vector<wgpu::BindGroupLayoutEntry> maxStorageDB;
     std::vector<wgpu::BindGroupLayoutEntry> maxReadonlyStorageDB;
 
-    wgpu::Limits limits = GetSupportedLimits().limits;
+    wgpu::Limits limits = GetSupportedLimits();
 
     // In this test, we use all the same shader stage. Ensure that this does not exceed the
     // per-stage limit.
@@ -2011,8 +2026,7 @@ class SetBindGroupValidationTest : public ValidationTest {
                       wgpu::BufferBindingType::Storage, true},
                      {3, wgpu::ShaderStage::Compute | wgpu::ShaderStage::Fragment,
                       wgpu::BufferBindingType::ReadOnlyStorage, true}});
-        mMinUniformBufferOffsetAlignment =
-            GetSupportedLimits().limits.minUniformBufferOffsetAlignment;
+        mMinUniformBufferOffsetAlignment = GetSupportedLimits().minUniformBufferOffsetAlignment;
         mBufferSize = 3 * mMinUniformBufferOffsetAlignment + 8;
     }
 
@@ -2713,7 +2727,7 @@ class SetBindGroupPersistenceValidationTest : public ValidationTest {
                     return vec4f();
                 })");
 
-        mBufferSize = 3 * GetSupportedLimits().limits.minUniformBufferOffsetAlignment + 8;
+        mBufferSize = 3 * GetSupportedLimits().minUniformBufferOffsetAlignment + 8;
     }
 
     wgpu::Buffer CreateBuffer(uint64_t bufferSize, wgpu::BufferUsage usage) {
@@ -3118,7 +3132,7 @@ class BindingsValidationTest : public BindGroupLayoutCompatibilityTest {
   public:
     void SetUp() override {
         BindGroupLayoutCompatibilityTest::SetUp();
-        mBufferSize = 3 * GetSupportedLimits().limits.minUniformBufferOffsetAlignment + 8;
+        mBufferSize = 3 * GetSupportedLimits().minUniformBufferOffsetAlignment + 8;
     }
 
     void TestRenderPassBindings(const wgpu::BindGroup* bg,
@@ -3434,20 +3448,18 @@ TEST_F(SamplerTypeBindingTest, ShaderAndBGLMatches) {
             })");
     }
 
-    // TODO(crbug.com/376497143): switch this to an error. depth with filtering sampler is
-    // deprecated. Test that a filtering sampler can be used to sample a depth texture.
+    // Test that a filtering sampler can not be used to sample a depth texture.
     {
-        ++mLastWarningCount;
         wgpu::BindGroupLayout bindGroupLayout = utils::MakeBindGroupLayout(
             device, {{0, wgpu::ShaderStage::Fragment, wgpu::SamplerBindingType::Filtering},
                      {1, wgpu::ShaderStage::Fragment, wgpu::TextureSampleType::Depth}});
 
-        CreateFragmentPipeline(&bindGroupLayout, R"(
+        ASSERT_DEVICE_ERROR(CreateFragmentPipeline(&bindGroupLayout, R"(
             @group(0) @binding(0) var mySampler: sampler;
             @group(0) @binding(1) var myTexture: texture_depth_2d;
             @fragment fn main() {
                 _ = textureSample(myTexture, mySampler, vec2f(0.0, 0.0));
-            })");
+            })"));
     }
 
     // Test that a non-filtering sampler can be used to sample a depth texture.
@@ -3798,25 +3810,35 @@ TEST_F(PipelineLayoutValidationTest, BindGroupSlotWithEmptyLayoutIsNotValidated)
     }
 }
 
-class PipelineLayoutDontAllowUnsafeAPIValidationTest : public ValidationTest {
-  protected:
-    bool AllowUnsafeAPIs() override { return false; }
-};
+// Test the empty bind group layout returned by calling `getBindGroupLayout()` on a pipeline created
+// with `auto` pipeline layout cannot be used to create other pipeline layouts.
+TEST_F(PipelineLayoutValidationTest, ReuseEmptyBindGroupLayoutCreatedwithAutoPipelineLayout) {
+    // The empty bind group layout comes from a pipeline created with an explicit pipeline layout.
+    {
+        wgpu::PipelineLayout pipelineLayout = utils::MakePipelineLayout(device, {});
+        wgpu::ComputePipelineDescriptor computePipelineDescriptor = {};
+        computePipelineDescriptor.compute.module = utils::CreateShaderModule(device, R"(
+                @compute @workgroup_size(1, 1) fn main() {})");
+        computePipelineDescriptor.layout = pipelineLayout;
+        wgpu::ComputePipeline computePipeline =
+            device.CreateComputePipeline(&computePipelineDescriptor);
 
-// Test currently creating pipeline layout with null bind group layout doesn't work when unsafe APIs
-// are not allowed.
-TEST_F(PipelineLayoutDontAllowUnsafeAPIValidationTest, CreateWithNullBindGroupLayout) {
-    for (uint32_t nullBGLIndex = 0; nullBGLIndex < 4; ++nullBGLIndex) {
-        std::vector<wgpu::BindGroupLayout> bgls(4);
-        for (uint32_t i = 0; i < 4; ++i) {
-            if (i == nullBGLIndex) {
-                continue;
-            }
-            bgls[i] = utils::MakeBindGroupLayout(
-                device, {{0, wgpu::ShaderStage::Compute, wgpu::StorageTextureAccess::WriteOnly,
-                          wgpu::TextureFormat::R32Float}});
-        }
-        ASSERT_DEVICE_ERROR(utils::MakePipelineLayout(device, bgls));
+        wgpu::BindGroupLayout emptyBindGroupLayout = computePipeline.GetBindGroupLayout(3);
+        std::vector<wgpu::BindGroupLayout> bindGroupLayouts = {{emptyBindGroupLayout}};
+        utils::MakePipelineLayout(device, bindGroupLayouts);
+    }
+
+    // The empty bind group layout comes from a pipeline created with an 'auto' pipeline layout.
+    {
+        wgpu::ComputePipelineDescriptor computePipelineDescriptor = {};
+        computePipelineDescriptor.compute.module = utils::CreateShaderModule(device, R"(
+                @compute @workgroup_size(1, 1) fn main() {})");
+        wgpu::ComputePipeline computePipeline =
+            device.CreateComputePipeline(&computePipelineDescriptor);
+
+        wgpu::BindGroupLayout emptyBindGroupLayout = computePipeline.GetBindGroupLayout(3);
+        std::vector<wgpu::BindGroupLayout> bindGroupLayouts = {{emptyBindGroupLayout}};
+        ASSERT_DEVICE_ERROR(utils::MakePipelineLayout(device, bindGroupLayouts));
     }
 }
 

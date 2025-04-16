@@ -1089,6 +1089,8 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
 
   addDiagnosticArgs(Args, OPT_W_Group, OPT_W_value_Group, opts.Warnings);
 
+  opts.GenMetal = Args.hasFlag(OPT_metal, OPT_INVALID, false);
+
   // SPIRV Change Starts
 #ifdef ENABLE_SPIRV_CODEGEN
   opts.GenSPIRV = Args.hasFlag(OPT_spirv, OPT_INVALID, false);
@@ -1312,6 +1314,21 @@ int ReadDxcOpts(const OptTable *optionTable, unsigned flagsToInclude,
   }
 #endif // ENABLE_SPIRV_CODEGEN
   // SPIRV Change Ends
+
+#ifndef ENABLE_METAL_CODEGEN
+  if (opts.GenMetal) {
+    errors << "Metal CodeGen not available. "
+              "Please rebuild with Metal IR Converter installed.";
+    return 1;
+  }
+#endif
+
+  if (opts.GenMetal) {
+    if (!opts.AssemblyCode.empty() || opts.OutputObject.empty()) {
+      errors << "Disassembly of Metal IR not supported (yet).";
+      return 1;
+    }
+  }
 
   // Validation for DebugInfo here because spirv uses same DebugInfo opt,
   // and legacy wrappers will add EmbedDebug in this case, leading to this

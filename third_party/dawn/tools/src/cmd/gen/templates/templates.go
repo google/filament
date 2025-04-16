@@ -67,6 +67,8 @@ func (c *Cmd) RegisterFlags(ctx context.Context, cfg *common.Config) ([]string, 
 	return nil, nil
 }
 
+// TODO(crbug.com/344014313): Add unittests when fileutils and ClangFormat are
+// updated to support dependency injection.
 func (c Cmd) Run(ctx context.Context, cfg *common.Config) error {
 	staleFiles := common.StaleFiles{}
 	projectRoot := fileutils.DawnRoot()
@@ -81,7 +83,7 @@ func (c Cmd) Run(ctx context.Context, cfg *common.Config) error {
 				"src/tint/**.tmpl",
 				"test/tint/**.tmpl"
 			]}]
-		}`))
+		}`), cfg.OsWrapper)
 		if err != nil {
 			return err
 		}
@@ -135,7 +137,7 @@ func (c Cmd) Run(ctx context.Context, cfg *common.Config) error {
 			}
 
 			// Load the old file
-			existing, err := os.ReadFile(outPath)
+			existing, err := cfg.OsWrapper.ReadFile(outPath)
 			if err != nil {
 				existing = nil
 			}
@@ -154,10 +156,10 @@ func (c Cmd) Run(ctx context.Context, cfg *common.Config) error {
 				if cfg.Flags.CheckStale {
 					staleFiles = append(staleFiles, outPath)
 				} else {
-					if err := os.MkdirAll(filepath.Dir(outPath), 0777); err != nil {
+					if err := cfg.OsWrapper.MkdirAll(filepath.Dir(outPath), 0777); err != nil {
 						return fmt.Errorf("failed to create directory for '%v': %w", outPath, err)
 					}
-					if err := os.WriteFile(outPath, []byte(newContent), 0666); err != nil {
+					if err := cfg.OsWrapper.WriteFile(outPath, []byte(newContent), 0666); err != nil {
 						return fmt.Errorf("failed to write file '%v': %w", outPath, err)
 					}
 				}

@@ -218,8 +218,13 @@ Token Lexer::next() {
         return std::move(t.value());
     }
 
-    return {Token::Type::kError, begin_source(),
-            (is_null() ? "null character found" : "invalid character found")};
+    if (is_null()) {
+        return {Token::Type::kError, begin_source(), "null character found"};
+    }
+    if (is_bom()) {
+        return {Token::Type::kError, begin_source(), "invalid character (UTF-8 BOM) found"};
+    }
+    return {Token::Type::kError, begin_source(), "invalid character found"};
 }
 
 Source Lexer::begin_source() const {
@@ -236,6 +241,15 @@ void Lexer::end_source(Source& src) const {
 
 bool Lexer::is_null() const {
     return (pos() < length()) && (at(pos()) == 0);
+}
+
+bool Lexer::is_bom() const {
+    if (pos() + 2 >= length()) {
+        return false;
+    }
+    return (static_cast<unsigned char>(at(pos())) == 0xEF &&
+            static_cast<unsigned char>(at(pos() + 1)) == 0xBB &&
+            static_cast<unsigned char>(at(pos() + 2)) == 0xBF);
 }
 
 bool Lexer::is_digit(char ch) const {

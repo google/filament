@@ -103,7 +103,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance,
         return 0;
     }
 
-    /* if filename given on commandline, store it */
+    /* if filename given on command line, store it */
     if ((szCmdLine != NULL) && (*szCmdLine != '\0'))
         if (szCmdLine[0] == '"')
             strncpy (szCmdFileName, szCmdLine + 1, strlen(szCmdLine) - 2);

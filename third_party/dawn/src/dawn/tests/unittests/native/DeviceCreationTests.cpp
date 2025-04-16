@@ -167,8 +167,10 @@ TEST_F(DeviceCreationTest, CreateDeviceRequiringExperimentalFeatures) {
 
             wgpu::SupportedFeatures supportedFeatures;
             device.GetFeatures(&supportedFeatures);
-            ASSERT_EQ(1u, supportedFeatures.featureCount);
-            EXPECT_EQ(featureName, supportedFeatures.features[0]);
+            // wgpu::FeatureName::CoreFeaturesAndLimits is required implicitly in core mode
+            ASSERT_EQ(1u + 1u, supportedFeatures.featureCount);
+            EXPECT_TRUE(featureName == supportedFeatures.features[0] ||
+                        featureName == supportedFeatures.features[1]);
         }
 
         // Test creating device with AllowUnsafeApis enabled in device toggle descriptor will
@@ -187,8 +189,10 @@ TEST_F(DeviceCreationTest, CreateDeviceRequiringExperimentalFeatures) {
 
                 wgpu::SupportedFeatures supportedFeatures;
                 device.GetFeatures(&supportedFeatures);
-                ASSERT_EQ(1u, supportedFeatures.featureCount);
-                EXPECT_EQ(featureName, supportedFeatures.features[0]);
+                // wgpu::FeatureName::CoreFeaturesAndLimits is required implicitly in core mode
+                ASSERT_EQ(1u + 1u, supportedFeatures.featureCount);
+                EXPECT_TRUE(featureName == supportedFeatures.features[0] ||
+                            featureName == supportedFeatures.features[1]);
             }
 
             // Test on adapter with AllowUnsafeApis disabled.
@@ -198,8 +202,10 @@ TEST_F(DeviceCreationTest, CreateDeviceRequiringExperimentalFeatures) {
 
                 wgpu::SupportedFeatures supportedFeatures;
                 device.GetFeatures(&supportedFeatures);
-                ASSERT_EQ(1u, supportedFeatures.featureCount);
-                EXPECT_EQ(featureName, supportedFeatures.features[0]);
+                // wgpu::FeatureName::CoreFeaturesAndLimits is required implicitly in core mode
+                ASSERT_EQ(1u + 1u, supportedFeatures.featureCount);
+                EXPECT_TRUE(featureName == supportedFeatures.features[0] ||
+                            featureName == supportedFeatures.features[1]);
             }
         }
 

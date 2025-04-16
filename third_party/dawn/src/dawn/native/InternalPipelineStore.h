@@ -110,6 +110,7 @@ struct InternalPipelineStore {
         blitR8ToStencilPipelines;
 
     absl::flat_hash_map<wgpu::TextureFormat, Ref<RenderPipelineBase>> depthBlitPipelines;
+    absl::flat_hash_map<wgpu::TextureFormat, Ref<RenderPipelineBase>> blitBufferToTexturePipelines;
 
     BlitColorToColorWithDrawPipelinesCache expandResolveTexturePipelines;
 

@@ -234,7 +234,7 @@ TEST_P(WireCreateRenderPipelineAsyncTest, CreateError) {
 }
 
 // Test that registering a callback then wire disconnect calls the callback with
-// InstanceDropped.
+// CallbackCancelled.
 TEST_P(WireCreateComputePipelineAsyncTest, CreateThenDisconnect) {
     CreateComputePipelineAsync(&mDescriptor);
 
@@ -247,7 +247,7 @@ TEST_P(WireCreateComputePipelineAsyncTest, CreateThenDisconnect) {
 
     FlushClient();
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::InstanceDropped, IsNull(),
+        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::CallbackCancelled, IsNull(),
                                  NonEmptySizedString()))
             .Times(1);
 
@@ -256,7 +256,7 @@ TEST_P(WireCreateComputePipelineAsyncTest, CreateThenDisconnect) {
 }
 
 // Test that registering a callback then wire disconnect calls the callback with
-// InstanceDropped.
+// CallbackCancelled.
 TEST_P(WireCreateRenderPipelineAsyncTest, CreateThenDisconnect) {
     CreateRenderPipelineAsync(&mDescriptor);
 
@@ -269,7 +269,7 @@ TEST_P(WireCreateRenderPipelineAsyncTest, CreateThenDisconnect) {
 
     FlushClient();
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::InstanceDropped, IsNull(),
+        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::CallbackCancelled, IsNull(),
                                  NonEmptySizedString()))
             .Times(1);
 
@@ -278,12 +278,12 @@ TEST_P(WireCreateRenderPipelineAsyncTest, CreateThenDisconnect) {
 }
 
 // Test that registering a callback after wire disconnect calls the callback with
-// InstanceDropped.
+// CallbackCancelled.
 TEST_P(WireCreateComputePipelineAsyncTest, CreateAfterDisconnect) {
     GetWireClient()->Disconnect();
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::InstanceDropped, IsNull(),
+        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::CallbackCancelled, IsNull(),
                                  NonEmptySizedString()))
             .Times(1);
 
@@ -292,12 +292,12 @@ TEST_P(WireCreateComputePipelineAsyncTest, CreateAfterDisconnect) {
 }
 
 // Test that registering a callback after wire disconnect calls the callback with
-// InstanceDropped.
+// CallbackCancelled.
 TEST_P(WireCreateRenderPipelineAsyncTest, CreateAfterDisconnect) {
     GetWireClient()->Disconnect();
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::InstanceDropped, IsNull(),
+        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::CallbackCancelled, IsNull(),
                                  NonEmptySizedString()))
             .Times(1);
 
@@ -313,7 +313,7 @@ TEST_P(WireCreateComputePipelineAsyncTest, CreateAndDropInstance) {
     CreateComputePipelineAsync(&mDescriptor);
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::InstanceDropped, IsNull(),
+        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::CallbackCancelled, IsNull(),
                                  NonEmptySizedString()))
             .Times(1);
 
@@ -329,7 +329,7 @@ TEST_P(WireCreateRenderPipelineAsyncTest, CreateAndDropInstance) {
     CreateRenderPipelineAsync(&mDescriptor);
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::InstanceDropped, IsNull(),
+        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::CallbackCancelled, IsNull(),
                                  NonEmptySizedString()))
             .Times(1);
 
@@ -344,7 +344,7 @@ TEST_P(WireCreateComputePipelineAsyncTest, CreateAfterDroppingInstance) {
     instance = nullptr;
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::InstanceDropped, IsNull(),
+        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::CallbackCancelled, IsNull(),
                                  NonEmptySizedString()))
             .Times(1);
 
@@ -359,7 +359,7 @@ TEST_P(WireCreateRenderPipelineAsyncTest, CreateAfterDroppingInstance) {
     instance = nullptr;
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::InstanceDropped, IsNull(),
+        EXPECT_CALL(mockCb, Call(wgpu::CreatePipelineAsyncStatus::CallbackCancelled, IsNull(),
                                  NonEmptySizedString()))
             .Times(1);
 

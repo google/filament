@@ -156,6 +156,8 @@ TEST_P(MultithreadTests, Device_DroppedInCallback_OnAnotherThread) {
     // TODO(crbug.com/dawn/1779): This test seems to cause flakiness in other sampling tests on
     // NVIDIA.
     DAWN_SUPPRESS_TEST_IF(IsD3D12() && IsNvidia());
+    // TODO(crbug.com/407567233): Seeing a lot of timeouts on this test on TSAN bots.
+    DAWN_SUPPRESS_TEST_IF(IsLinux() && IsTsan());
 
     std::vector<wgpu::Device> devices(10);
 
@@ -631,6 +633,27 @@ TEST_P(MultithreadTests, CreateRenderPipelineInParallel) {
     }
 }
 
+// Test that creating and destroying bind groups from the same bind group layout on multiple threads
+// won't race. The bind groups will all be allocated by same SlabAllocator.
+TEST_P(MultithreadTests, CreateAndDestroyBindGroupsInParallel) {
+    wgpu::BindGroupLayout layout = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Fragment, wgpu::BufferBindingType::Storage},
+                });
+    wgpu::Buffer ssbo =
+        CreateBuffer(sizeof(uint32_t), wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc |
+                                           wgpu::BufferUsage::CopyDst);
+    utils::RunInParallel(100, [&, this](uint32_t) {
+        for (int i = 0; i < 10; ++i) {
+            wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, layout,
+                                                             {
+                                                                 {0, ssbo, 0, sizeof(uint32_t)},
+                                                             });
+            EXPECT_NE(nullptr, bindGroup.Get());
+        }
+    });
+}
+
 class MultithreadCachingTests : public MultithreadTests {
   protected:
     wgpu::ShaderModule CreateComputeShaderModule() const {
@@ -873,9 +896,7 @@ TEST_P(MultithreadEncodingTests, ComputePassEncodersInParallel) {
 
 class MultithreadTextureCopyTests : public MultithreadTests {
   protected:
-    void SetUp() override {
-        MultithreadTests::SetUp();
-    }
+    void SetUp() override { MultithreadTests::SetUp(); }
 
     wgpu::Texture CreateAndWriteTexture(uint32_t width,
                                         uint32_t height,

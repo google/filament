@@ -518,28 +518,89 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
     }
 }
 
+void GLSLPostProcessor::rebindImageSamplerForWGSL(std::vector<uint32_t> &spirv) {
+    constexpr size_t HEADER_SIZE = 5;
+    size_t const dataSize = spirv.size();
+    uint32_t *data = spirv.data();
+
+    std::set<uint32_t> samplerTargetIDs;
+
+    auto pass = [&](uint32_t targetOp, std::function<void(uint32_t)> f) {
+        for (uint32_t cursor = HEADER_SIZE, cursorEnd = dataSize; cursor < cursorEnd;) {
+            uint32_t const firstWord = data[cursor];
+            uint32_t const wordCount = firstWord >> 16;
+            uint32_t const op = firstWord & 0x0000FFFF;
+            if (targetOp == op) {
+                f(cursor + 1);
+            }
+            cursor += wordCount;
+        }
+    };
+
+    //Parse through debug name info to determine which bindings are samplers and which are not.
+    // This is possible because the sampler splitting pass outputs sampler and texture pairs of the form:
+    // `uniform sampler2D var_x` => `uniform sampler var_sampler` and `uniform texture2D var_texture`;
+    // TODO: This works, but may limit what optimizations can be done and has the potential to collide with user
+    // variable names. Ideally, trace usage to determine binding type.
+    pass(spv::Op::OpName, [&](uint32_t pos) {
+        auto target = data[pos];
+        char *name = (char *) &data[pos + 1];
+        std::string_view view(name);
+        if (view.find("_sampler") != std::string_view::npos) {
+            samplerTargetIDs.insert(target);
+        }
+    });
+
+    // Write out the offset bindings
+    pass(spv::Op::OpDecorate, [&](uint32_t pos) {
+        uint32_t const type = data[pos + 1];
+        if (type == spv::Decoration::DecorationBinding) {
+            uint32_t const targetVar = data[pos];
+            if (samplerTargetIDs.find(targetVar) != samplerTargetIDs.end()) {
+                data[pos + 2] = data[pos + 2] * 2 + 1;
+            } else {
+                data[pos + 2] = data[pos + 2] * 2;
+            }
+        }
+    });
+}
+
 bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
 #if FILAMENT_SUPPORTS_WEBGPU
-    // We need to remove dead code for our variant-filter workaround for WebGPU to work
-    // This is especially relevant for removing the push constants that morphing uses when not disabled
-    spv::spirvbin_t remapper(0);
-    remapper.remap(*spirv, spv::spirvbin_base_t::DCE_ALL);
+    //We need to run some opt-passes at all times to transpile to WGSL
+    auto optimizer = createEmptyOptimizer();
+    optimizer->RegisterPass(CreateSplitCombinedImageSamplerPass());
+    optimizeSpirv(optimizer, *spirv);
 
-    //Currently no options we want to use
-    const tint::spirv::reader::Options readerOpts{};
+    //After splitting the image samplers, we need to remap the bindings to separate them.
+    rebindImageSamplerForWGSL(*spirv);
+
+    //Allow non-uniform derivitives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
+    const tint::spirv::reader::Options readerOpts{true};
     tint::wgsl::writer::Options writerOpts{};
 
     tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
 
     if (tintRead.Diagnostics().ContainsErrors()) {
-        //TODO remove this if block once combined image sampler conversion works.
-        if (tintRead.Diagnostics().Str().rfind("error: WGSL does not support combined image-samplers") != std::string::npos) {
-            slog.w << "This tint reader error is currently ignored during WebGPU bringup: " << tintRead.Diagnostics().Str() << io::endl;
-        }
-        else {
-            slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
-            return false;
-        }
+        //We know errors can potentially crop up, and want the ability to ignore them if needed for sample bringup
+#ifndef FILAMENT_WEBGPU_IGNORE_TNT_READ_ERRORS
+        slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
+        spv_context context = spvContextCreate(SPV_ENV_VULKAN_1_1_SPIRV_1_4);
+        spv_text text = nullptr;
+        spv_diagnostic diagnostic = nullptr;
+        spv_result_t result = spvBinaryToText(
+            context,
+            spirv->data(),
+            spirv->size(),
+            SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES | SPV_BINARY_TO_TEXT_OPTION_COLOR,
+            &text,
+            &diagnostic);
+        slog.e << "Beginning SpirV-output dump with ret " << result << "\n\n" << text->str << "\n\nEndSPIRV\n" <<
+                io::endl;
+        spvTextDestroy(text);
+        slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
+        return false;
+#endif
     }
 
     tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead,writerOpts);
@@ -547,7 +608,7 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     tint::SuccessType tintSuccess;
 
     if (wgslOut != tintSuccess) {
-        slog.e << "Tint writer error: " << wgslOut.Failure().reason.Str() << io::endl;
+        slog.e << "Tint writer error: " << wgslOut.Failure().reason << io::endl;
         return false;
     }
     *outWsl = wgslOut->wgsl;
@@ -887,10 +948,8 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
     return true;
 }
 
-std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
-        MaterialBuilder::Optimization optimization, Config const& config) {
+std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createEmptyOptimizer() {
     auto optimizer = std::make_shared<spvtools::Optimizer>(SPV_ENV_UNIVERSAL_1_3);
-
     optimizer->SetMessageConsumer([](spv_message_level_t level,
             const char* source, const spv_position_t& position, const char* message) {
         if (!filterSpvOptimizerMessage(level)) {
@@ -899,6 +958,12 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
         slog.e << stringifySpvOptimizerMessage(level, source, position, message)
                 << io::endl;
     });
+    return optimizer;
+}
+
+std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
+        MaterialBuilder::Optimization optimization, Config const& config) {
+    auto optimizer = createEmptyOptimizer();
 
     if (optimization == MaterialBuilder::Optimization::SIZE) {
         // When optimizing for size, we don't run the SPIR-V through any size optimization passes
@@ -923,7 +988,7 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
     return optimizer;
 }
 
-void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) const {
+void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) {
     if (!optimizer->Run(spirv.data(), spirv.size(), &spirv)) {
         slog.e << "SPIR-V optimizer pass failed" << io::endl;
         return;
@@ -955,6 +1020,9 @@ void GLSLPostProcessor::fixupClipDistance(
 // - triggers a segfault with AMD OpenGL drivers on macOS
 // - triggers a crash on some Adreno drivers (b/291140208, b/289401984, b/289393290)
 // However Metal requires this pass in order to correctly generate half-precision MSL
+// CreateMergeReturnPass() also creates issues with Tint conversion related to the
+// bitwise "<<" Operator used in shaders/src/surface_light_directional.fs against
+// a signed integer.
 //
 // CreateSimplificationPass() creates a lot of problems:
 // - Adreno GPU show artifacts after running simplification passes (Vulkan)
@@ -964,6 +1032,11 @@ void GLSLPostProcessor::fixupClipDistance(
 //   while-if-break, unclear if it helps for anything.
 // However, the simplification passes below are necessary when targeting Metal, otherwise the
 // result is mismatched half / float assignments in MSL.
+
+// CreateInlineExhaustivePass() expects CreateMergeReturnPass() to be run beforehand
+// (Throwing many warnings if this is not the case), but we don't consistently do so for the above
+// reasons. While running it alone may have some value, we will disable it for the new WebGPU backend
+// while minimizing other changes.
 
 
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
@@ -978,7 +1051,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
-    RegisterPass(CreateInlineExhaustivePass());
+    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateLocalSingleBlockLoadStoreElimPass());
@@ -1022,7 +1095,8 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateInlineExhaustivePass());
+    //  Disable for WebGPU, see comment above registerPerformancePasses()
+    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
     RegisterPass(CreateEliminateDeadFunctionsPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateScalarReplacementPass(0));

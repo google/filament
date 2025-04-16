@@ -44,6 +44,7 @@ class Texture;
 class CommandRecordingContext {
   public:
     void AddToSharedTextureList(Texture* texture);
+    void AddToSharedBufferList(Buffer* buffer);
     void Open(ComPtr<ID3D12GraphicsCommandList> commandList);
 
     ID3D12GraphicsCommandList* GetCommandList() const;
@@ -66,6 +67,7 @@ class CommandRecordingContext {
     ComPtr<ID3D12GraphicsCommandList> mD3d12CommandList;
     ComPtr<ID3D12GraphicsCommandList4> mD3d12CommandList4;
     bool mNeedsSubmit = false;
+    absl::flat_hash_set<Buffer*> mSharedBuffers;
     absl::flat_hash_set<Texture*> mSharedTextures;
     absl::flat_hash_set<Ref<d3d::KeyedMutex>> mAcquiredKeyedMutexes;
     std::vector<Heap*> mHeapsPendingUsage;

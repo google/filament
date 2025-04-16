@@ -85,7 +85,9 @@ BackendTestConfig VulkanBackend(std::initializer_list<const char*> forceEnabledW
                              forceDisabledWorkarounds);
 }
 
-TestAdapterProperties::TestAdapterProperties(const wgpu::AdapterInfo& info, bool selected)
+TestAdapterProperties::TestAdapterProperties(const wgpu::AdapterInfo& info,
+                                             bool selected,
+                                             bool compatibilityMode)
     : vendorID(info.vendorID),
       vendorName(info.vendor),
       architecture(info.architecture),
@@ -94,7 +96,7 @@ TestAdapterProperties::TestAdapterProperties(const wgpu::AdapterInfo& info, bool
       driverDescription(info.description),
       adapterType(info.adapterType),
       backendType(info.backendType),
-      compatibilityMode(info.compatibilityMode),
+      compatibilityMode(compatibilityMode),
       selected(selected) {}
 
 std::string TestAdapterProperties::ParamName() const {

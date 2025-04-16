@@ -38,6 +38,7 @@ config("internal_config") {
 static_library("utils") {
   sources = [
     "compiler.h",
+    "numeric.h",
     "placeholder.cc",
   ]
 

@@ -2552,6 +2552,19 @@ uint32_t EmitTypeHandler::emitType(const SpirvType *type) {
       // NonWritable decorations
       if (structType->isReadOnly())
         emitDecoration(id, spv::Decoration::NonWritable, {}, i);
+
+      if (field.attributes.hasValue()) {
+        for (auto &attr : field.attributes.getValue()) {
+          if (auto decorateExtAttr = dyn_cast<VKDecorateExtAttr>(attr)) {
+            emitDecoration(
+                id,
+                static_cast<spv::Decoration>(decorateExtAttr->getDecorate()),
+                {decorateExtAttr->literals_begin(),
+                 decorateExtAttr->literals_end()},
+                i);
+          }
+        }
+      }
     }
 
     // Emit Block or BufferBlock decorations if necessary.

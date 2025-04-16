@@ -40,7 +40,6 @@
 #include "dawn/native/vulkan/CommandRecordingContextVk.h"
 #include "dawn/native/vulkan/DeviceVk.h"
 #include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/SharedFenceVk.h"
 #include "dawn/native/vulkan/TextureVk.h"
 #include "dawn/native/vulkan/UniqueVkHandle.h"
 #include "dawn/native/vulkan/UtilsVulkan.h"
@@ -332,42 +331,8 @@ MaybeError Queue::SubmitPendingCommands() {
             device, &mRecordingContext, mRecordingContext.mappableBuffersForEagerTransition);
     }
 
-    // Create an external semaphore for each external textures used in the pending submit.
-    std::vector<UniqueVkHandle<VkSemaphore>> externalTextureSemaphores(
-        mRecordingContext.specialSyncTextures.size());
-    for (size_t i = 0; i < mRecordingContext.specialSyncTextures.size(); ++i) {
-        VkSemaphore semaphore;
-        DAWN_TRY_ASSIGN(semaphore,
-                        device->GetExternalSemaphoreService()->CreateExportableSemaphore());
-        externalTextureSemaphores[i] = {device, semaphore};
-    }
-
-    // Transition eagerly all used external textures for export.
     for (auto texture : mRecordingContext.specialSyncTextures) {
-        texture->TransitionEagerlyForExport(&mRecordingContext);
-
-        // TODO(330385376): Remove once ExternalImageDescriptorVk is removed.
-        std::vector<VkSemaphore> waitRequirements = texture->AcquireWaitRequirements();
-        mRecordingContext.waitSemaphores.insert(mRecordingContext.waitSemaphores.end(),
-                                                waitRequirements.begin(), waitRequirements.end());
-
-        SharedResourceMemoryContents* contents = texture->GetSharedResourceMemoryContents();
-        if (contents != nullptr) {
-            SharedTextureMemoryBase::PendingFenceList fences;
-            contents->AcquirePendingFences(&fences);
-
-            for (const auto& fence : fences) {
-                // All semaphores are binary semaphores.
-                DAWN_ASSERT(fence.signaledValue == 1u);
-                ExternalSemaphoreHandle semaphoreHandle =
-                    ToBackend(fence.object)->GetHandle().Get();
-
-                VkSemaphore semaphore;
-                DAWN_TRY_ASSIGN(semaphore, device->GetExternalSemaphoreService()->ImportSemaphore(
-                                               semaphoreHandle));
-                mRecordingContext.waitSemaphores.push_back(semaphore);
-            }
-        }
+        DAWN_TRY(texture->OnBeforeSubmit(&mRecordingContext));
     }
 
     DAWN_TRY(CheckVkSuccess(device->fn.EndCommandBuffer(mRecordingContext.commandBuffer),
@@ -375,10 +340,6 @@ MaybeError Queue::SubmitPendingCommands() {
 
     std::vector<VkPipelineStageFlags> dstStageMasks(mRecordingContext.waitSemaphores.size(),
                                                     VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-
-    for (auto& externalTextureSemaphore : externalTextureSemaphores) {
-        mRecordingContext.signalSemaphores.push_back(externalTextureSemaphore.Get());
-    }
 
     VkSubmitInfo submitInfo;
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -419,19 +380,9 @@ MaybeError Queue::SubmitPendingCommands() {
         mCommandsInFlight.Enqueue(submittedCommands, lastSubmittedSerial);
     }
 
-    auto externalTextureSemaphoreIter = externalTextureSemaphores.begin();
     for (auto texture : mRecordingContext.specialSyncTextures) {
-        // Export the signal semaphore.
-        ExternalSemaphoreHandle semaphoreHandle;
-        DAWN_TRY_ASSIGN(semaphoreHandle, device->GetExternalSemaphoreService()->ExportSemaphore(
-                                             externalTextureSemaphoreIter->Get()));
-        ++externalTextureSemaphoreIter;
-
-        // Update all external textures, eagerly transitioned in the submit, with the exported
-        // handles.
-        texture->UpdateExternalSemaphoreHandle(semaphoreHandle);
+        DAWN_TRY(texture->OnAfterSubmit());
     }
-    DAWN_ASSERT(externalTextureSemaphoreIter == externalTextureSemaphores.end());
 
     mRecordingContext = CommandRecordingContext();
     DAWN_TRY(PrepareRecordingContext());

@@ -40,6 +40,7 @@
 #include "dawn/native/opengl/BindingPoint.h"
 #include "dawn/native/opengl/DeviceGL.h"
 #include "dawn/native/opengl/PipelineLayoutGL.h"
+#include "dawn/native/opengl/UtilsGL.h"
 #include "dawn/platform/DawnPlatform.h"
 #include "dawn/platform/tracing/TraceEvent.h"
 
@@ -94,7 +95,7 @@ using InterstageLocationAndName = std::pair<uint32_t, std::string>;
     X(SingleShaderStage, stage)                                                                  \
     X(std::optional<tint::ast::transform::SubstituteOverride::Config>, substituteOverrideConfig) \
     X(LimitsForCompilationRequest, limits)                                                       \
-    X(CacheKey::UnsafeUnkeyedValue<const AdapterBase*>, adapter)                                 \
+    X(CacheKey::UnsafeUnkeyedValue<LimitsForCompilationRequest>, adapterSupportedLimits)         \
     X(bool, disableSymbolRenaming)                                                               \
     X(std::vector<InterstageLocationAndName>, interstageVariables)                               \
     X(tint::glsl::writer::Options, tintOptions)                                                  \
@@ -127,8 +128,8 @@ CombinedSamplerInfo GenerateCombinedSamplerInfo(tint::inspector::Inspector& insp
                                                 bool* needsPlaceholderSampler
 
 ) {
-    auto uses =
-        inspector.GetSamplerTextureUses(entryPoint, bindings.placeholder_sampler_bind_point);
+    auto uses = inspector.GetSamplerAndNonSamplerTextureUses(
+        entryPoint, bindings.placeholder_sampler_bind_point);
     CombinedSamplerInfo combinedSamplerInfo;
     for (const auto& use : uses) {
         tint::BindingPoint samplerBindPoint = use.sampler_binding_point;
@@ -295,8 +296,6 @@ ShaderModule::ShaderModule(Device* device,
 
 MaybeError ShaderModule::Initialize(ShaderModuleParseResult* parseResult,
                                     OwnedCompilationMessages* compilationMessages) {
-    ScopedTintICEHandler scopedICEHandler(GetDevice());
-
     DAWN_TRY(InitializeBase(parseResult, compilationMessages));
 
     return {};
@@ -339,6 +338,7 @@ std::pair<tint::glsl::writer::Bindings, BindingMap> GenerateBindingInfo(
                     case kInternalStorageBufferBinding:
                     case wgpu::BufferBindingType::Storage:
                     case wgpu::BufferBindingType::ReadOnlyStorage:
+                    case kInternalReadOnlyStorageBufferBinding:
                         bindings.storage.emplace(
                             srcBindingPoint,
                             tint::glsl::writer::binding::Storage{dstBindingPoint.binding});
@@ -400,7 +400,7 @@ ResultOrError<GLuint> ShaderModule::CompileShader(
     const PipelineLayout* layout,
     bool* needsPlaceholderSampler,
     bool* needsTextureBuiltinUniformBuffer,
-    BindingPointToFunctionAndOffset* bindingPointToData) const {
+    BindingPointToFunctionAndOffset* bindingPointToData) {
     TRACE_EVENT0(GetDevice()->GetPlatform(), General, "TranslateToGLSL");
 
     const OpenGLVersion& version = ToBackend(GetDevice())->GetGL().GetVersion();
@@ -447,13 +447,12 @@ ResultOrError<GLuint> ShaderModule::CompileShader(
         substituteOverrideConfig = BuildSubstituteOverridesTransformConfig(programmableStage);
     }
 
-    const CombinedLimits& limits = GetDevice()->GetLimits();
-
     req.stage = stage;
     req.entryPointName = programmableStage.entryPoint;
     req.substituteOverrideConfig = std::move(substituteOverrideConfig);
-    req.limits = LimitsForCompilationRequest::Create(limits.v1);
-    req.adapter = UnsafeUnkeyedValue(static_cast<const AdapterBase*>(GetDevice()->GetAdapter()));
+    req.limits = LimitsForCompilationRequest::Create(GetDevice()->GetLimits().v1);
+    req.adapterSupportedLimits =
+        LimitsForCompilationRequest::Create(GetDevice()->GetAdapter()->GetLimits().v1);
 
     req.platform = UnsafeUnkeyedValue(GetDevice()->GetPlatform());
 
@@ -497,59 +496,61 @@ ResultOrError<GLuint> ShaderModule::CompileShader(
         GetDevice()->IsToggleEnabled(Toggle::DisablePolyfillsOnIntegerDivisonAndModulo);
 
     CacheResult<GLSLCompilation> compilationResult;
-    DAWN_TRY_LOAD_OR_RUN(
-        compilationResult, GetDevice(), std::move(req), GLSLCompilation::FromBlob,
-        [](GLSLCompilationRequest r) -> ResultOrError<GLSLCompilation> {
-            tint::ast::transform::Manager transformManager;
-            tint::ast::transform::DataMap transformInputs;
+    {
+        ScopedTintICEHandler scopedICEHandler(GetDevice());
+        DAWN_TRY_LOAD_OR_RUN(
+            compilationResult, GetDevice(), std::move(req), GLSLCompilation::FromBlob,
+            [](GLSLCompilationRequest r) -> ResultOrError<GLSLCompilation> {
+                // Convert the AST program to an IR module.
+                auto ir = tint::wgsl::reader::ProgramToLoweredIR(*r.inputProgram);
+                DAWN_INVALID_IF(ir != tint::Success,
+                                "An error occurred while generating Tint IR\n%s",
+                                ir.Failure().reason);
 
-            transformManager.Add<tint::ast::transform::SingleEntryPoint>();
-            transformInputs.Add<tint::ast::transform::SingleEntryPoint::Config>(r.entryPointName);
+                auto singleEntryPointResult =
+                    tint::core::ir::transform::SingleEntryPoint(ir.Get(), r.entryPointName);
+                DAWN_INVALID_IF(singleEntryPointResult != tint::Success,
+                                "Pipeline single entry point (IR) failed:\n%s",
+                                singleEntryPointResult.Failure().reason);
 
-            if (r.substituteOverrideConfig) {
-                // This needs to run after SingleEntryPoint transform which removes unused overrides
-                // for current entry point.
-                transformManager.Add<tint::ast::transform::SubstituteOverride>();
-                transformInputs.Add<tint::ast::transform::SubstituteOverride::Config>(
-                    std::move(r.substituteOverrideConfig).value());
-            }
+                if (r.substituteOverrideConfig) {
+                    // this needs to run after SingleEntryPoint transform which removes unused
+                    // overrides for the current entry point.
+                    tint::core::ir::transform::SubstituteOverridesConfig cfg;
+                    cfg.map = r.substituteOverrideConfig->map;
+                    auto substituteOverridesResult =
+                        tint::core::ir::transform::SubstituteOverrides(ir.Get(), cfg);
+                    DAWN_INVALID_IF(substituteOverridesResult != tint::Success,
+                                    "Pipeline override substitution (IR) failed:\n%s",
+                                    substituteOverridesResult.Failure().reason);
+                }
 
-            tint::Program program;
-            tint::ast::transform::DataMap transformOutputs;
-            DAWN_TRY_ASSIGN(program, RunTransforms(&transformManager, r.inputProgram,
-                                                   transformInputs, &transformOutputs, nullptr));
+                const std::string remappedEntryPoint = "";
+                // Generate GLSL from Tint IR.
+                auto result =
+                    tint::glsl::writer::Generate(ir.Get(), r.tintOptions, remappedEntryPoint);
+                DAWN_INVALID_IF(result != tint::Success,
+                                "An error occurred while generating GLSL:\n%s",
+                                result.Failure().reason);
 
-            // Intentionally assign entry point to empty to avoid a redundant 'SingleEntryPoint'
-            // transform in Tint.
-            // TODO(crbug.com/356424898): In the long run, we want to move SingleEntryPoint to Tint,
-            // but that has interactions with SubstituteOverrides which need to be handled first.
-            const std::string remappedEntryPoint = "";
+                // Workgroup validation has to come after `Generate` because it may require
+                // overrides to have been substituted.
+                if (r.stage == SingleShaderStage::Compute) {
+                    // Validate workgroup size after program runs transforms.
+                    Extent3D _;
+                    DAWN_TRY_ASSIGN(
+                        _, ValidateComputeStageWorkgroupSize(
+                               result->workgroup_info.x, result->workgroup_info.y,
+                               result->workgroup_info.z, result->workgroup_info.storage_size,
+                               /* usesSubgroupMatrix */ false,
+                               /* maxSubgroupSize, GL backend not support */ 0, r.limits,
+                               r.adapterSupportedLimits.UnsafeGetValue()));
+                }
 
-            // Convert the AST program to an IR module.
-            auto ir = tint::wgsl::reader::ProgramToLoweredIR(program);
-            DAWN_INVALID_IF(ir != tint::Success, "An error occurred while generating Tint IR\n%s",
-                            ir.Failure().reason.Str());
-
-            // Generate GLSL from Tint IR.
-            auto result = tint::glsl::writer::Generate(ir.Get(), r.tintOptions, remappedEntryPoint);
-            DAWN_INVALID_IF(result != tint::Success, "An error occurred while generating GLSL:\n%s",
-                            result.Failure().reason.Str());
-
-            // Workgroup validation has to come after `Generate` because it may require overrides to
-            // have been substituted.
-            if (r.stage == SingleShaderStage::Compute) {
-                // Validate workgroup size after program runs transforms.
-                Extent3D _;
-                DAWN_TRY_ASSIGN(
-                    _, ValidateComputeStageWorkgroupSize(
-                           result->workgroup_info.x, result->workgroup_info.y,
-                           result->workgroup_info.z, result->workgroup_info.storage_size, r.limits,
-                           r.adapter.UnsafeGetValue()));
-            }
-
-            return GLSLCompilation{{std::move(result->glsl)}};
-        },
-        "OpenGL.CompileShaderToGLSL");
+                return GLSLCompilation{{std::move(result->glsl)}};
+            },
+            "OpenGL.CompileShaderToGLSL");
+    }
 
     if (GetDevice()->IsToggleEnabled(Toggle::DumpShaders)) {
         std::ostringstream dumpedMsg;
@@ -558,21 +559,21 @@ ResultOrError<GLuint> ShaderModule::CompileShader(
         GetDevice()->EmitLog(WGPULoggingType_Info, dumpedMsg.str().c_str());
     }
 
-    GLuint shader = gl.CreateShader(GLShaderType(stage));
+    GLuint shader = DAWN_GL_TRY(gl, CreateShader(GLShaderType(stage)));
     const char* source = compilationResult->glsl.c_str();
-    gl.ShaderSource(shader, 1, &source, nullptr);
-    gl.CompileShader(shader);
+    DAWN_GL_TRY(gl, ShaderSource(shader, 1, &source, nullptr));
+    DAWN_GL_TRY(gl, CompileShader(shader));
 
     GLint compileStatus = GL_FALSE;
-    gl.GetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
+    DAWN_GL_TRY(gl, GetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus));
     if (compileStatus == GL_FALSE) {
         GLint infoLogLength = 0;
-        gl.GetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
+        DAWN_GL_TRY(gl, GetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength));
 
         if (infoLogLength > 1) {
             std::vector<char> buffer(infoLogLength);
-            gl.GetShaderInfoLog(shader, infoLogLength, nullptr, &buffer[0]);
-            gl.DeleteShader(shader);
+            DAWN_GL_TRY(gl, GetShaderInfoLog(shader, infoLogLength, nullptr, &buffer[0]));
+            DAWN_GL_TRY(gl, DeleteShader(shader));
             return DAWN_VALIDATION_ERROR("%s\nProgram compilation failed:\n%s", source,
                                          buffer.data());
         }

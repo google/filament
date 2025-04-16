@@ -108,6 +108,10 @@ bool BuiltinFn::IsSubgroup() const {
     return wgsl::IsSubgroup(fn_);
 }
 
+bool BuiltinFn::IsSubgroupMatrix() const {
+    return wgsl::IsSubgroupMatrix(fn_);
+}
+
 bool BuiltinFn::IsQuadSwap() const {
     return wgsl::IsQuadSwap(fn_);
 }

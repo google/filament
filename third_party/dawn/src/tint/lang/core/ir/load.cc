@@ -50,7 +50,7 @@ Load::Load(Id id, InstructionResult* result, Value* from) : Base(id) {
 Load::~Load() = default;
 
 Load* Load::Clone(CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     auto* from = ctx.Remap(From());
     return ctx.ir.CreateInstruction<Load>(new_result, from);
 }

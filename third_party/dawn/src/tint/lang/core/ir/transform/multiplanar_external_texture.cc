@@ -34,7 +34,6 @@
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/type/external_texture.h"
 #include "src/tint/lang/core/type/sampled_texture.h"
-#include "src/tint/utils/result/result.h"
 
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
@@ -85,7 +84,7 @@ struct State {
                 if (!var) {
                     continue;
                 }
-                auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+                auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
                 if (ptr->StoreType()->Is<core::type::ExternalTexture>()) {
                     if (auto res = ReplaceVar(var); DAWN_UNLIKELY(res != Success)) {
                         return res.Failure();
@@ -114,7 +113,7 @@ struct State {
 
     /// @returns a 2D sampled texture type with a f32 sampled type
     const core::type::SampledTexture* SampledTexture() {
-        return ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32());
+        return ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
     }
 
     /// Replace an external texture variable declaration.
@@ -157,8 +156,8 @@ struct State {
         }
 
         // Replace all uses of the old variable with the new ones.
-        ReplaceUses(old_var->Result(0), plane_0->Result(0), plane_1->Result(0),
-                    external_texture_params->Result(0));
+        ReplaceUses(old_var->Result(), plane_0->Result(), plane_1->Result(),
+                    external_texture_params->Result());
 
         return Success;
     }
@@ -219,11 +218,11 @@ struct State {
                     Value* plane_1_load = nullptr;
                     Value* params_load = nullptr;
                     b.InsertBefore(load, [&] {
-                        plane_0_load = b.Load(plane_0)->Result(0);
-                        plane_1_load = b.Load(plane_1)->Result(0);
-                        params_load = b.Load(params)->Result(0);
+                        plane_0_load = b.Load(plane_0)->Result();
+                        plane_1_load = b.Load(plane_1)->Result();
+                        params_load = b.Load(params)->Result();
                     });
-                    ReplaceUses(load->Result(0), plane_0_load, plane_1_load, params_load);
+                    ReplaceUses(load->Result(), plane_0_load, plane_1_load, params_load);
                     load->Destroy();
                 },
                 [&](CoreBuiltinCall* call) {
@@ -233,7 +232,7 @@ struct State {
                             auto* apparent_size = b.Access<vec2<u32>>(params, 12_u);
                             auto* vec2u_1_1 = b.Splat<vec2<u32>>(1_u);
                             auto* dimensions = b.Add<vec2<u32>>(apparent_size, vec2u_1_1);
-                            dimensions->SetResults(Vector{call->DetachResult()});
+                            dimensions->SetResult(call->DetachResult());
                         });
                         call->Destroy();
                     } else if (call->Func() == core::BuiltinFn::kTextureLoad) {
@@ -242,7 +241,7 @@ struct State {
                         if (coords->Type()->IsSignedIntegerVector()) {
                             auto* convert = b.Convert(ty.vec2<u32>(), coords);
                             convert->InsertBefore(call);
-                            coords = convert->Result(0);
+                            coords = convert->Result();
                         }
 
                         // Call the `TextureLoadExternal()` helper function.
@@ -465,7 +464,7 @@ struct State {
             // Apply gamma correction if needed.
             auto* final_result = b.InstructionResult(vec3f);
             auto* if_gamma_correct = b.If(b.Equal(ty.bool_(), yuv_to_rgb_conversion_only, 0_u));
-            if_gamma_correct->SetResults(final_result);
+            if_gamma_correct->SetResult(final_result);
             b.Append(if_gamma_correct->True(), [&] {
                 auto* gamma_decode_params = b.Access(GammaTransferParams(), params, 3_u);
                 auto* gamma_encode_params = b.Access(GammaTransferParams(), params, 4_u);
@@ -584,7 +583,7 @@ struct State {
             // Apply gamma correction if needed.
             auto* final_result = b.InstructionResult(vec3f);
             auto* if_gamma_correct = b.If(b.Equal(ty.bool_(), yuv_to_rgb_conversion_only, 0_u));
-            if_gamma_correct->SetResults(final_result);
+            if_gamma_correct->SetResult(final_result);
             b.Append(if_gamma_correct->True(), [&] {
                 auto* gamma_decode_params = b.Access(GammaTransferParams(), params, 3_u);
                 auto* gamma_encode_params = b.Access(GammaTransferParams(), params, 4_u);

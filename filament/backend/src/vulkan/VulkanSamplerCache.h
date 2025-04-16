@@ -17,8 +17,11 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANSAMPLERCACHE_H
 #define TNT_FILAMENT_BACKEND_VULKANSAMPLERCACHE_H
 
-#include "VulkanContext.h"
+#include <backend/DriverEnums.h>
 
+#include <utils/Hash.h>
+
+#include <bluevk/BlueVK.h>
 #include <tsl/robin_map.h>
 
 namespace filament::backend {
@@ -26,12 +29,28 @@ namespace filament::backend {
 // Simple manager for VkSampler objects.
 class VulkanSamplerCache {
 public:
+    struct Params {
+        SamplerParams sampler = {};
+        uint32_t padding = 0;
+        VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
+    };
+
+    static_assert(sizeof(Params) == 16);
+
     explicit VulkanSamplerCache(VkDevice device);
-    VkSampler getSampler(SamplerParams params) noexcept;
+    VkSampler getSampler(Params params) noexcept;
     void terminate() noexcept;
 private:
     VkDevice mDevice;
-    tsl::robin_map<SamplerParams, VkSampler, SamplerParams::Hasher, SamplerParams::EqualTo> mCache;
+
+    struct SamplerEqualTo {
+        bool operator()(Params lhs, Params rhs) const noexcept {
+            SamplerParams::EqualTo equal;
+            return equal(lhs.sampler, rhs.sampler) && lhs.conversion == rhs.conversion;
+        }
+    };
+    using SamplerHashFn = utils::hash::MurmurHashFn<Params>;
+    tsl::robin_map<Params, VkSampler, SamplerHashFn, SamplerEqualTo> mCache;
 };
 
 } // namespace filament::backend

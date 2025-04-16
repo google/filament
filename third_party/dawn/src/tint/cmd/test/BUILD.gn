@@ -43,7 +43,7 @@ if (tint_build_unittests || tint_build_benchmarks) {
   import("//testing/test.gni")
 }
 if (tint_build_unittests) {
-  test("test_cmd") {
+  test("tint_unittests") {
     testonly = true
     output_name = "tint_unittests"
     sources = [ "main_test.cc" ]
@@ -64,6 +64,7 @@ if (tint_build_unittests) {
       "${tint_src_dir}/lang/hlsl/writer/common:unittests",
       "${tint_src_dir}/lang/hlsl/writer/raise:unittests",
       "${tint_src_dir}/lang/msl/ir:unittests",
+      "${tint_src_dir}/lang/msl/ir/transform:unittests",
       "${tint_src_dir}/lang/msl/type:unittests",
       "${tint_src_dir}/lang/spirv/ir:unittests",
       "${tint_src_dir}/lang/spirv/reader/lower:unittests",
@@ -89,7 +90,6 @@ if (tint_build_unittests) {
       "${tint_src_dir}/utils/macros:unittests",
       "${tint_src_dir}/utils/math:unittests",
       "${tint_src_dir}/utils/memory:unittests",
-      "${tint_src_dir}/utils/result:unittests",
       "${tint_src_dir}/utils/rtti:unittests",
       "${tint_src_dir}/utils/strconv:unittests",
       "${tint_src_dir}/utils/symbol:unittests",

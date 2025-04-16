@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2023 The Khronos Group Inc.
+# Copyright (C) 2020-2025 The Khronos Group Inc.
 #
 # All rights reserved.
 #
@@ -118,4 +118,4 @@ if(GLSLANG_ENABLE_INSTALL)
             install(TARGETS spirv-remap EXPORT glslang-targets)
         endif()
     endif()
-endif(GLSLANG_ENABLE_INSTALL)
+endif()

@@ -84,7 +84,7 @@ TEST_F(WireDisconnectTests, FlushAfterDisconnect) {
 // Check that disconnecting the wire client calls the device lost callback exacty once.
 TEST_F(WireDisconnectTests, CallsDeviceLostCallback) {
     // Disconnect the wire client. We should receive device lost only once.
-    EXPECT_CALL(deviceLostCallback, Call(_, wgpu::DeviceLostReason::InstanceDropped, _))
+    EXPECT_CALL(deviceLostCallback, Call(_, wgpu::DeviceLostReason::CallbackCancelled, _))
         .Times(Exactly(1));
     GetWireClient()->Disconnect();
     GetWireClient()->Disconnect();
@@ -124,7 +124,7 @@ TEST_F(WireDisconnectTests, ServerLostThenDisconnectInCallback) {
 // Check that a device loss after a disconnect does not trigger the callback again.
 TEST_F(WireDisconnectTests, DisconnectThenServerLost) {
     // Disconnect the client. We should see the callback once.
-    EXPECT_CALL(deviceLostCallback, Call(_, wgpu::DeviceLostReason::InstanceDropped, _))
+    EXPECT_CALL(deviceLostCallback, Call(_, wgpu::DeviceLostReason::CallbackCancelled, _))
         .Times(Exactly(1));
     GetWireClient()->Disconnect();
 

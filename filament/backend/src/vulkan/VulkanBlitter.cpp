@@ -17,9 +17,6 @@
 #include "VulkanBlitter.h"
 #include "VulkanCommands.h"
 #include "VulkanContext.h"
-#include "VulkanFboCache.h"
-#include "VulkanHandles.h"
-#include "VulkanSamplerCache.h"
 #include "VulkanTexture.h"
 #include "vulkan/utils/Image.h"
 

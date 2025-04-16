@@ -26,18 +26,23 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/ir/evaluator.h"
+#include "src/tint/lang/core/binary_op.h"
 #include "src/tint/lang/core/ir/constant.h"
+#include "src/tint/lang/core/ir/constexpr_if.h"
+#include "src/tint/lang/core/ir/function_param.h"
+#include "src/tint/lang/core/ir/override.h"
+#include "src/tint/lang/core/number.h"
 #include "src/tint/lang/core/type/matrix.h"
 #include "src/tint/utils/rtti/switch.h"
 
 namespace tint::core::ir {
 namespace eval {
 
-Result<core::ir::Constant*> Eval(core::ir::Builder& b, core::ir::Instruction* inst) {
-    return Eval(b, inst->Result(0));
+diag::Result<core::ir::Constant*> Eval(core::ir::Builder& b, core::ir::Instruction* inst) {
+    return Eval(b, inst->Result());
 }
 
-Result<core::ir::Constant*> Eval(core::ir::Builder& b, core::ir::Value* val) {
+diag::Result<core::ir::Constant*> Eval(core::ir::Builder& b, core::ir::Value* val) {
     ir::Evaluator e(b);
     return e.Evaluate(val);
 }
@@ -49,10 +54,10 @@ Evaluator::Evaluator(ir::Builder& builder)
 
 Evaluator::~Evaluator() = default;
 
-Result<core::ir::Constant*> Evaluator::Evaluate(core::ir::Value* src) {
+diag::Result<core::ir::Constant*> Evaluator::Evaluate(core::ir::Value* src) {
     auto res = EvalValue(src);
     if (res != Success) {
-        return Failure(diagnostics_);
+        return diag::Failure(diagnostics_);
     }
     if (!res.Get()) {
         return nullptr;
@@ -75,17 +80,20 @@ Evaluator::EvalResult Evaluator::EvalValue(core::ir::Value* val) {
     return tint::Switch(
         val,  //
         [&](core::ir::Constant* c) { return c->Value(); },
+        [&](core::ir::FunctionParam*) { return nullptr; },
         [&](core::ir::InstructionResult* r) {
             return tint::Switch(
                 r->Instruction(),  //
                 [&](core::ir::Bitcast* bc) { return EvalBitcast(bc); },
                 [&](core::ir::Access* a) { return EvalAccess(a); },
+                [&](core::ir::ConstExprIf* c) { return EvalConstExprIf(c); },
                 [&](core::ir::Construct* c) { return EvalConstruct(c); },
                 [&](core::ir::Convert* c) { return EvalConvert(c); },
                 [&](core::ir::CoreBinary* cb) { return EvalBinary(cb); },
                 [&](core::ir::CoreBuiltinCall* c) { return EvalCoreBuiltinCall(c); },
                 [&](core::ir::CoreUnary* u) { return EvalUnary(u); },
-                [&](core::ir::Swizzle* s) { return EvalSwizzle(s); },  //
+                [&](core::ir::Override* o) { return EvalOverride(o); },  //
+                [&](core::ir::Swizzle* s) { return EvalSwizzle(s); },    //
                 [&](Default) {
                     // Treat any unknown instruction as a termination point for trying to eval.
                     return nullptr;
@@ -104,7 +112,7 @@ Evaluator::EvalResult Evaluator::EvalBitcast(core::ir::Bitcast* bc) {
         return nullptr;
     }
 
-    auto r = const_eval_.bitcast(bc->Result(0)->Type(), Vector{val.Get()}, SourceOf(bc));
+    auto r = const_eval_.bitcast(bc->Result()->Type(), Vector{val.Get()}, SourceOf(bc));
     if (r != Success) {
         return Failure();
     }
@@ -116,12 +124,9 @@ Evaluator::EvalResult Evaluator::EvalAccess(core::ir::Access* a) {
     if (obj_res != Success) {
         return obj_res;
     }
-    // Check if the object could be evaluated
-    if (!obj_res.Get()) {
-        return nullptr;
-    }
-    auto* obj = obj_res.Get();
 
+    auto* obj = obj_res.Get();
+    auto* access_obj_type = a->Object()->Type()->UnwrapPtrOrRef();
     for (auto* idx : a->Indices()) {
         auto val = EvalValue(idx);
         if (val != Success) {
@@ -133,20 +138,24 @@ Evaluator::EvalResult Evaluator::EvalAccess(core::ir::Access* a) {
         }
         TINT_ASSERT(val.Get()->Is<core::constant::Value>());
 
-        auto res = const_eval_.Index(obj, a->Result(0)->Type(), val.Get(), SourceOf(a));
+        auto res = const_eval_.Index(obj, access_obj_type, val.Get(), SourceOf(a));
         if (res != Success) {
             return Failure();
         }
+
+        // Index element to type to support type nested access.
+        access_obj_type = access_obj_type->Element(val.Get()->ValueAs<u32>());
+        TINT_ASSERT(access_obj_type);
+
         obj = res.Get();
     }
-
     return obj;
 }
 
 Evaluator::EvalResult Evaluator::EvalConstruct(core::ir::Construct* c) {
     auto table = core::intrinsic::Table<core::intrinsic::Dialect>(b_.ir.Types(), b_.ir.symbols);
 
-    auto result_ty = c->Result(0)->Type();
+    auto result_ty = c->Result()->Type();
 
     Vector<const core::type::Type*, 4> arg_types;
     arg_types.Reserve(c->Args().Length());
@@ -230,11 +239,50 @@ Evaluator::EvalResult Evaluator::EvalConvert(core::ir::Convert* c) {
     if (!val.Get()) {
         return nullptr;
     }
-    auto r = const_eval_.Convert(c->Result(0)->Type(), val.Get(), SourceOf(c));
+    auto r = const_eval_.Convert(c->Result()->Type(), val.Get(), SourceOf(c));
     if (r != Success) {
         return Failure();
     }
     return r.Get();
+}
+
+Evaluator::EvalResult Evaluator::EvalOverride(core::ir::Override* o) {
+    auto val = EvalValue(o->Initializer());
+    if (val != Success) {
+        return val;
+    }
+    // Check if the value could be evaluated
+    if (!val.Get()) {
+        return nullptr;
+    }
+    return val.Get();
+}
+
+Evaluator::EvalResult Evaluator::EvalConstExprIf(core::ir::ConstExprIf* c) {
+    auto val = EvalValue(c->Condition());
+    if (val != Success) {
+        return val;
+    }
+    // Check if the value could be evaluated
+    if (!val.Get()) {
+        return nullptr;
+    }
+    bool branch_val = val.Get()->ValueAs<bool>();
+    auto* inline_block = branch_val ? c->True() : c->False();
+
+    // Note: ConstExprIf must be limited to side effect boolean values for this evaluation to be
+    // correct. This is currently the case as ConstExprIf was created for the singular purpose of
+    // correctly semantically representing short circuiting operations (and/or).
+    auto ret = EvalValue(inline_block->Terminator()->Args()[0]);
+    if (ret != Success) {
+        return ret;
+    }
+    // Check if the value could be evaluated
+    if (!val.Get()) {
+        return nullptr;
+    }
+
+    return val.Get();
 }
 
 Evaluator::EvalResult Evaluator::EvalSwizzle(core::ir::Swizzle* s) {
@@ -247,7 +295,7 @@ Evaluator::EvalResult Evaluator::EvalSwizzle(core::ir::Swizzle* s) {
         return nullptr;
     }
 
-    auto r = const_eval_.Swizzle(s->Result(0)->Type(), val.Get(), s->Indices());
+    auto r = const_eval_.Swizzle(s->Result()->Type(), val.Get(), s->Indices());
     if (r != Success) {
         return Failure();
     }
@@ -279,7 +327,7 @@ Evaluator::EvalResult Evaluator::EvalUnary(core::ir::CoreUnary* u) {
         return nullptr;
     }
 
-    auto r = (const_eval_.*const_eval_fn)(u->Result(0)->Type(), Vector{val.Get()}, SourceOf(u));
+    auto r = (const_eval_.*const_eval_fn)(u->Result()->Type(), Vector{val.Get()}, SourceOf(u));
     if (r != Success) {
         return Failure();
     }
@@ -312,6 +360,11 @@ Evaluator::EvalResult Evaluator::EvalBinary(core::ir::CoreBinary* cb) {
         return nullptr;
     }
 
+    // These short circuiting operators should not be present in the IR at any time. These need
+    // special handling and are transformed into ConstExprIfs on program construction.
+    TINT_ASSERT(cb->Op() != tint::core::BinaryOp::kLogicalAnd &&
+                cb->Op() != tint::core::BinaryOp::kLogicalOr);
+
     auto rhs = EvalValue(cb->RHS());
     if (rhs != Success) {
         return rhs;
@@ -321,7 +374,7 @@ Evaluator::EvalResult Evaluator::EvalBinary(core::ir::CoreBinary* cb) {
         return nullptr;
     }
 
-    auto r = (const_eval_.*const_eval_fn)(cb->Result(0)->Type(), Vector{lhs.Get(), rhs.Get()},
+    auto r = (const_eval_.*const_eval_fn)(cb->Result()->Type(), Vector{lhs.Get(), rhs.Get()},
                                           SourceOf(cb));
     if (r != Success) {
         return Failure();
@@ -365,7 +418,7 @@ Evaluator::EvalResult Evaluator::EvalCoreBuiltinCall(core::ir::CoreBuiltinCall* 
         return nullptr;
     }
 
-    auto r = (const_eval_.*const_eval_fn)(c->Result(0)->Type(), args, SourceOf(c));
+    auto r = (const_eval_.*const_eval_fn)(c->Result()->Type(), args, SourceOf(c));
     if (r != Success) {
         return Failure();
     }

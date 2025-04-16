@@ -29,12 +29,7 @@ Texture2D   <int4>   t0 : register(t0);
 TextureCubeArray <float4> t1 : register(t1);
 Texture2DMS      <int3>   t2 : register(t2);
 
-struct S {
-    float a;
-    float b;
-};
-
-Texture2DArray<S> t3;
+Texture2DArray<float2> t3;
 
 void main() {
 }

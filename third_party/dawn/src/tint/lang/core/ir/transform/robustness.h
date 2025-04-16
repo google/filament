@@ -28,12 +28,11 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_ROBUSTNESS_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_ROBUSTNESS_H_
 
-#include <string>
 #include <unordered_set>
 
 #include "src/tint/api/common/binding_point.h"
 #include "src/tint/utils/reflection.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

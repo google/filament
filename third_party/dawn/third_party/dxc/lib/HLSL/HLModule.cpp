@@ -604,6 +604,9 @@ MDTuple *HLModule::EmitHLResources() {
 
 void HLModule::LoadHLResources(const llvm::MDOperand &MDO) {
   const llvm::MDTuple *pSRVs, *pUAVs, *pCBuffers, *pSamplers;
+  // No resources. Nothing to do.
+  if (MDO.get() == nullptr)
+    return;
   m_pMDHelper->GetDxilResources(MDO, pSRVs, pUAVs, pCBuffers, pSamplers);
 
   // Load SRV records.

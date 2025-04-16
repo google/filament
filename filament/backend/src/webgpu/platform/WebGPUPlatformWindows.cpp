@@ -22,6 +22,8 @@
 
 #include <cstdint>
 
+#include <Windows.h>
+
 /**
  * Windows OS specific implementation aspects of the WebGPU backend
  */
@@ -41,12 +43,12 @@ wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags
     wgpu::SurfaceSourceWindowsHWND surfaceSourceWin{};
     surfaceSourceWin.hinstance = GetModuleHandle(nullptr);
     surfaceSourceWin.hwnd = nativeWindow;
-    wgpu::SurfaceDescriptor surfaceDescriptor{
+    const wgpu::SurfaceDescriptor surfaceDescriptor{
         .nextInChain = &surfaceSourceWin,
         .label = "windows_surface"
     };
     wgpu::Surface surface = mInstance.CreateSurface(&surfaceDescriptor);
-    FILAMENT_CHECK_POSTCONDITION(surface != nullptr) << "Unable to create Windows-backed surface.";
+    FILAMENT_CHECK_POSTCONDITION(surface.Get() != nullptr) << "Unable to create Windows-backed surface.";
     return surface;
 }
 

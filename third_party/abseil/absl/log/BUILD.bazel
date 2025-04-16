@@ -187,6 +187,7 @@ cc_library(
     deps = [
         ":log_sink",
         "//absl/base:config",
+        "//absl/base:nullability",
         "//absl/log/internal:log_sink_set",
     ],
 )
@@ -222,7 +223,7 @@ cc_library(
         "//absl/base:log_severity",
         "//absl/base:raw_logging_internal",
         "//absl/strings",
-        "@com_google_googletest//:gtest",
+        "@googletest//:gtest",
     ],
 )
 
@@ -233,6 +234,7 @@ cc_library(
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
         "//absl/base:config",
+        "//absl/base:core_headers",
         "//absl/log/internal:structured",
         "//absl/strings",
     ],
@@ -279,8 +281,8 @@ cc_test(
         "//absl/base:log_severity",
         "//absl/flags:flag",
         "//absl/types:optional",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -301,22 +303,23 @@ cc_test(
     deps = [
         ":absl_check",
         ":check_test_impl",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
 cc_test(
     name = "absl_log_basic_test",
     size = "small",
+    timeout = "moderate",
     srcs = ["absl_log_basic_test.cc"],
     copts = ABSL_TEST_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
         ":absl_log",
         ":log_basic_test_impl",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -335,8 +338,8 @@ cc_test(
     deps = [
         ":check",
         ":check_test_impl",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -357,7 +360,9 @@ cc_library(
         "//absl/base:core_headers",
         "//absl/log/internal:test_helpers",
         "//absl/status",
-        "@com_google_googletest//:gtest",
+        "//absl/strings",
+        "//absl/strings:string_view",
+        "@googletest//:gtest",
     ],
 )
 
@@ -371,8 +376,8 @@ cc_test(
         ":die_if_null",
         "//absl/base:core_headers",
         "//absl/log/internal:test_helpers",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -395,8 +400,8 @@ cc_test(
         "//absl/log/internal:test_helpers",
         "//absl/log/internal:test_matchers",
         "//absl/strings",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -414,22 +419,23 @@ cc_test(
         "//absl/base:log_severity",
         "//absl/log/internal:globals",
         "//absl/log/internal:test_helpers",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
 cc_test(
     name = "log_basic_test",
     size = "small",
+    timeout = "moderate",
     srcs = ["log_basic_test.cc"],
     copts = ABSL_TEST_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
         ":log",
         ":log_basic_test_impl",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -450,7 +456,7 @@ cc_library(
         "//absl/log/internal:test_actions",
         "//absl/log/internal:test_helpers",
         "//absl/log/internal:test_matchers",
-        "@com_google_googletest//:gtest",
+        "@googletest//:gtest",
     ],
 )
 
@@ -471,8 +477,8 @@ cc_test(
         "//absl/strings",
         "//absl/time",
         "//absl/types:span",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -490,8 +496,8 @@ cc_test(
         "//absl/strings",
         "//absl/strings:str_format",
         "//absl/types:optional",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -506,8 +512,8 @@ cc_test(
         ":scoped_mock_log",
         "//absl/base:core_headers",
         "//absl/base:log_severity",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -532,8 +538,8 @@ cc_test(
         "//absl/log/internal:test_helpers",
         "//absl/log/internal:test_matchers",
         "//absl/strings",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -554,8 +560,8 @@ cc_test(
         "//absl/log/internal:test_helpers",
         "//absl/log/internal:test_matchers",
         "//absl/strings",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -574,8 +580,8 @@ cc_test(
         "//absl/log/internal:test_matchers",
         "//absl/strings",
         "//absl/time",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -602,8 +608,8 @@ cc_test(
         "//absl/memory",
         "//absl/strings",
         "//absl/synchronization",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -626,8 +632,8 @@ cc_test(
         "//absl/status",
         "//absl/strings",
         "//absl/strings:str_format",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -644,8 +650,8 @@ cc_test(
         "//absl/base:core_headers",
         "//absl/log/internal:test_helpers",
         "//absl/log/internal:test_matchers",
-        "@com_google_googletest//:gtest",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -669,6 +675,6 @@ cc_test(
         "//absl/base:log_severity",
         "//absl/flags:flag",
         "//absl/log/internal:flags",
-        "@com_github_google_benchmark//:benchmark_main",
+        "@google_benchmark//:benchmark_main",
     ],
 )

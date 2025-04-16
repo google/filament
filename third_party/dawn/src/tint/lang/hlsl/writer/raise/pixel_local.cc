@@ -40,7 +40,6 @@
 #include "src/tint/lang/hlsl/type/rasterizer_ordered_texture_2d.h"
 #include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/ice/ice.h"
-#include "src/tint/utils/result/result.h"
 
 namespace tint::hlsl::writer::raise {
 namespace {
@@ -133,11 +132,11 @@ struct State {
         }
 
         // Change the address space of the var from 'pixel_local' to 'private'
-        pixel_local_var->Result(0)->SetType(ty.ptr<private_>(pixel_local_struct));
+        pixel_local_var->Result()->SetType(ty.ptr<private_>(pixel_local_struct));
         // As well as the usages
-        for (auto& usage : pixel_local_var->Result(0)->UsagesUnsorted()) {
-            if (auto* ptr = usage->instruction->Result(0)->Type()->As<core::type::Pointer>()) {
-                usage->instruction->Result(0)->SetType(ty.ptr<private_>(ptr->StoreType()));
+        for (auto& usage : pixel_local_var->Result()->UsagesUnsorted()) {
+            if (auto* ptr = usage->instruction->Result()->Type()->As<core::type::Pointer>()) {
+                usage->instruction->Result()->SetType(ty.ptr<private_>(ptr->StoreType()));
             }
         }
 
@@ -200,8 +199,8 @@ struct State {
         // Inline pointers
         for (auto* inst : ir.Instructions()) {
             if (auto* l = inst->As<core::ir::Let>()) {
-                if (l->Result(0)->Type()->Is<core::type::Pointer>()) {
-                    l->Result(0)->ReplaceAllUsesWith(l->Value());
+                if (l->Result()->Type()->Is<core::type::Pointer>()) {
+                    l->Result()->ReplaceAllUsesWith(l->Value());
                     l->Destroy();
                 }
             }
@@ -212,7 +211,7 @@ struct State {
         const core::type::Struct* pixel_local_struct = nullptr;
         for (auto* inst : *ir.root_block) {
             if (auto* var = inst->As<core::ir::Var>()) {
-                auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+                auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
                 if (ptr->AddressSpace() == core::AddressSpace::kPixelLocal) {
                     pixel_local_var = var;
                     pixel_local_struct = ptr->StoreType()->As<core::type::Struct>();
@@ -220,7 +219,7 @@ struct State {
                 }
             }
         }
-        if (!pixel_local_var || !pixel_local_var->Result(0)->IsUsed()) {
+        if (!pixel_local_var || !pixel_local_var->Result()->IsUsed()) {
             return;
         }
         if (!pixel_local_struct) {

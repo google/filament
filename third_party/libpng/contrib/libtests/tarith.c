@@ -1,4 +1,3 @@
-
 /* tarith.c
  *
  * Copyright (c) 2021 Cosmin Truta
@@ -952,7 +951,7 @@ int validation_gamma(int argc, char **argv)
 
 /**************************** VALIDATION TESTS ********************************/
 /* Various validation routines are included herein, they require some
- * definition for png_warning and png_error, seetings of VALIDATION:
+ * definition for png_warning and png_error, settings of VALIDATION:
  *
  * 1: validates the ASCII to floating point conversions
  * 2: validates png_muldiv

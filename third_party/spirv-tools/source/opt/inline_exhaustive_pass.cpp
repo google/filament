@@ -55,6 +55,11 @@ Pass::Status InlineExhaustivePass::InlineExhaustive(Function* func) {
       }
     }
   }
+
+  if (modified) {
+    FixDebugDeclares(func);
+  }
+
   return (modified ? Status::SuccessWithChange : Status::SuccessWithoutChange);
 }
 

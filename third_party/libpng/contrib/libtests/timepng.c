@@ -1,4 +1,3 @@
-
 /* timepng.c
  *
  * Copyright (c) 2013,2016 John Cunningham Bowler

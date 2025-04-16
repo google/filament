@@ -88,7 +88,7 @@ void ComputePipeline::SetLabelImpl() {
 }
 
 void ComputePipeline::ApplyNow(const ScopedSwapStateCommandRecordingContext* commandContext) {
-    auto* d3dDeviceContext = commandContext->GetD3D11DeviceContext4();
+    auto* d3dDeviceContext = commandContext->GetD3D11DeviceContext3();
     d3dDeviceContext->CSSetShader(mComputeShader.Get(), nullptr, 0);
 }
 

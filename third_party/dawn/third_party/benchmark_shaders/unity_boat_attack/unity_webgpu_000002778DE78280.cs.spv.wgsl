@@ -141,4 +141,3 @@ fn main(@builtin(local_invocation_index) gl_LocalInvocationIndex_param : u32, @b
   gl_GlobalInvocationID = gl_GlobalInvocationID_param;
   main_1();
 }
-

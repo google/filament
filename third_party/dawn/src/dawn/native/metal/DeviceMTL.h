@@ -136,6 +136,10 @@ class Device final : public DeviceBase {
     ResultOrError<Ref<SharedFenceBase>> ImportSharedFenceImpl(
         const SharedFenceDescriptor* descriptor) override;
 
+    void StartTrace();
+    void StopTrace();
+    bool mTraceInProgress = false;
+
     void DestroyImpl() override;
 
     NSPRef<id<MTLDevice>> mMtlDevice;

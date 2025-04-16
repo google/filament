@@ -143,7 +143,7 @@ void Run(std::string_view wgsl, const Options& options, Slice<const std::byte> d
     tint::Program::printer = [](const tint::Program& program) {
         auto result = tint::wgsl::writer::Generate(program, {});
         if (result != Success) {
-            return result.Failure().reason.Str();
+            return result.Failure().reason;
         }
         return result->wgsl;
     };

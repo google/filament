@@ -157,12 +157,13 @@
 using namespace tint::core::number_suffixes;  // NOLINT
 using namespace tint::core::fluent_types;     // NOLINT
 
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 namespace tint::spirv::reader::ast_parser {
 namespace {
 
 constexpr uint32_t kMaxVectorLen = 4;
+
+static constexpr std::array<const char*, 4> kComponentNames = {"x", "y", "z", "w"};
 
 /// @param inst a SPIR-V instruction
 /// @returns Returns the opcode for an instruciton
@@ -1791,7 +1792,7 @@ bool FunctionEmitter::LabelControlFlowConstructs() {
     //
     //      In the same scan, mark each basic block with the nearest enclosing
     //      header: the most recent header for which we haven't reached its merge
-    //      block. Also mark the the most recent continue target for which we
+    //      block. Also mark the most recent continue target for which we
     //      haven't reached the backedge block.
 
     TINT_ASSERT(block_order_.size() > 0);
@@ -4329,8 +4330,7 @@ const ast::Identifier* FunctionEmitter::Swizzle(uint32_t i) {
         Fail() << "vector component index is larger than " << kMaxVectorLen - 1 << ": " << i;
         return nullptr;
     }
-    const char* names[] = {"x", "y", "z", "w"};
-    return builder_.Ident(names[i & 3]);
+    return builder_.Ident(kComponentNames[i & 3]);
 }
 
 const ast::Identifier* FunctionEmitter::PrefixSwizzle(uint32_t n) {
@@ -4600,7 +4600,7 @@ TypedExpression FunctionEmitter::MakeCompositeValueDecomposition(
     // A SPIR-V composite extract is a single instruction with multiple
     // literal indices walking down into composites.
     // A SPIR-V composite insert is similar but also tells you what component
-    // to inject. This function is responsible for the the walking-into part
+    // to inject. This function is responsible for the walking-into part
     // of composite-insert.
     //
     // The Tint AST represents this as ever-deeper nested indexing expressions.
@@ -4738,9 +4738,8 @@ TypedExpression FunctionEmitter::MakeVectorShuffle(const spvtools::opt::Instruct
 
     // Helper to get the name for the component index `i`.
     auto component_name = [](uint32_t i) {
-        constexpr const char* names[] = {"x", "y", "z", "w"};
         TINT_ASSERT(i < 4);
-        return names[i];
+        return kComponentNames[i];
     };
 
     // Build a swizzle for each consecutive set of indices that fall within the same vector.
@@ -5303,7 +5302,7 @@ bool FunctionEmitter::EmitFunctionCall(const spvtools::opt::Instruction& inst) {
 }
 
 bool FunctionEmitter::EmitControlBarrier(const spvtools::opt::Instruction& inst) {
-    uint32_t operands[3];
+    std::array<uint32_t, 3> operands;
     for (uint32_t i = 0; i < 3; i++) {
         auto id = inst.GetSingleWordInOperand(i);
         if (auto* constant = constant_mgr_->FindDeclaredConstant(id)) {
@@ -6475,5 +6474,3 @@ TINT_INSTANTIATE_TYPEINFO(tint::spirv::reader::ast_parser::StatementBuilder);
 TINT_INSTANTIATE_TYPEINFO(tint::spirv::reader::ast_parser::SwitchStatementBuilder);
 TINT_INSTANTIATE_TYPEINFO(tint::spirv::reader::ast_parser::IfStatementBuilder);
 TINT_INSTANTIATE_TYPEINFO(tint::spirv::reader::ast_parser::LoopStatementBuilder);
-
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);

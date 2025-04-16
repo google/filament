@@ -28,7 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_REMOVE_CONTINUE_IN_SWITCH_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_REMOVE_CONTINUE_IN_SWITCH_H_
 
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

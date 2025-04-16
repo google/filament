@@ -80,20 +80,22 @@ TEST_F(SpirvWriterTest, Loop_BreakIf_WithRobustness) {
     });
 
     ASSERT_TRUE(Generate()) << Error() << output_;
-    EXPECT_INST("%17 = OpConstantComposite %v2uint %uint_4294967295 %uint_4294967295");
+
+    EXPECT_INST("%14 = OpConstantComposite %v2uint %uint_4294967295 %uint_4294967295");
     EXPECT_INST(R"(
           %4 = OpLabel
-%tint_loop_idx = OpVariable %_ptr_Function_v2uint Function %14
+%tint_loop_idx = OpVariable %_ptr_Function_v2uint Function
                OpBranch %5
           %5 = OpLabel
+               OpStore %tint_loop_idx %14
                OpBranch %8
           %8 = OpLabel
                OpLoopMerge %9 %7 None
                OpBranch %6
           %6 = OpLabel
-         %15 = OpLoad %v2uint %tint_loop_idx None
-         %16 = OpIEqual %v2bool %15 %17
-         %21 = OpAll %bool %16
+         %16 = OpLoad %v2uint %tint_loop_idx None
+         %17 = OpIEqual %v2bool %16 %18
+         %21 = OpAll %bool %17
                OpSelectionMerge %22 None
                OpBranchConditional %21 %23 %22
          %23 = OpLabel
@@ -103,21 +105,20 @@ TEST_F(SpirvWriterTest, Loop_BreakIf_WithRobustness) {
           %7 = OpLabel
          %24 = OpAccessChain %_ptr_Function_uint %tint_loop_idx %uint_0
          %27 = OpLoad %uint %24 None
-%tint_low_inc = OpIAdd %uint %27 %uint_1
+%tint_low_inc = OpISub %uint %27 %uint_1
          %30 = OpAccessChain %_ptr_Function_uint %tint_loop_idx %uint_0
                OpStore %30 %tint_low_inc None
-         %31 = OpIEqual %bool %tint_low_inc %uint_0
+         %31 = OpIEqual %bool %tint_low_inc %uint_4294967295
  %tint_carry = OpSelect %uint %31 %uint_1 %uint_0
          %33 = OpAccessChain %_ptr_Function_uint %tint_loop_idx %uint_1
          %34 = OpLoad %uint %33 None
-         %35 = OpIAdd %uint %34 %tint_carry
+         %35 = OpISub %uint %34 %tint_carry
          %36 = OpAccessChain %_ptr_Function_uint %tint_loop_idx %uint_1
                OpStore %36 %35 None
                OpBranchConditional %true %9 %8
           %9 = OpLabel
                OpReturn
                OpFunctionEnd
-
 )");
 }
 
@@ -481,14 +482,14 @@ TEST_F(SpirvWriterTest, Loop_NestedLoopInContinuing_UnreachableInNestedBody_With
     b.Append(func->Block(), [&] {
         auto* outer_result = b.InstructionResult(ty.i32());
         auto* outer_loop = b.Loop();
-        outer_loop->SetResults(Vector{outer_result});
+        outer_loop->SetResult(outer_result);
         b.Append(outer_loop->Body(), [&] {
             b.Continue(outer_loop);
 
             b.Append(outer_loop->Continuing(), [&] {
                 auto* inner_result = b.InstructionResult(ty.i32());
                 auto* inner_loop = b.Loop();
-                inner_loop->SetResults(Vector{inner_result});
+                inner_loop->SetResult(inner_result);
                 b.Append(inner_loop->Body(), [&] {
                     auto* ifelse = b.If(true);
                     b.Append(ifelse->True(), [&] {  //
@@ -673,14 +674,14 @@ TEST_F(SpirvWriterTest, Loop_Phi_NestedIf) {
         loop->Body()->SetParams({loop_param});
         b.Append(loop->Body(), [&] {
             auto* inner = b.If(true);
-            inner->SetResults(b.InstructionResult(ty.i32()));
+            inner->SetResult(b.InstructionResult(ty.i32()));
             b.Append(inner->True(), [&] {  //
                 b.ExitIf(inner, 10_i);
             });
             b.Append(inner->False(), [&] {  //
                 b.ExitIf(inner, 20_i);
             });
-            b.Continue(loop, inner->Result(0));
+            b.Continue(loop, inner->Result());
         });
 
         auto* cont_param = b.BlockParam(ty.i32());
@@ -809,7 +810,7 @@ TEST_F(SpirvWriterTest, Loop_Phi_NestedIfWithResultAndImplicitFalse_InContinuing
         b.Append(loop->Continuing(), [&] {
             auto* if_ = b.If(true);
             auto* cond = b.InstructionResult(ty.bool_());
-            if_->SetResults(Vector{cond});
+            if_->SetResult(cond);
             b.Append(if_->True(), [&] {  //
                 b.ExitIf(if_, true);
             });
@@ -852,7 +853,7 @@ TEST_F(SpirvWriterTest, Loop_ExitValue) {
     b.Append(func->Block(), [&] {
         auto* result = b.InstructionResult(ty.i32());
         auto* loop = b.Loop();
-        loop->SetResults(Vector{result});
+        loop->SetResult(result);
         b.Append(loop->Body(), [&] {  //
             b.ExitLoop(loop, 42_i);
         });
@@ -897,7 +898,7 @@ TEST_F(SpirvWriterTest, Loop_ExitValue_BreakIf) {
     b.Append(func->Block(), [&] {
         auto* result = b.InstructionResult(ty.i32());
         auto* loop = b.Loop();
-        loop->SetResults(Vector{result});
+        loop->SetResult(result);
         b.Append(loop->Body(), [&] {  //
             auto* if_ = b.If(false);
             b.Append(if_->True(), [&] {  //

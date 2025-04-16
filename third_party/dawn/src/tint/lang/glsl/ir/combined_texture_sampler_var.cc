@@ -48,7 +48,7 @@ CombinedTextureSamplerVar::CombinedTextureSamplerVar(Id id,
 CombinedTextureSamplerVar::~CombinedTextureSamplerVar() = default;
 
 CombinedTextureSamplerVar* CombinedTextureSamplerVar::Clone(core::ir::CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     return ctx.ir.CreateInstruction<CombinedTextureSamplerVar>(new_result, TextureBindingPoint(),
                                                                SamplerBindingPoint());
 }

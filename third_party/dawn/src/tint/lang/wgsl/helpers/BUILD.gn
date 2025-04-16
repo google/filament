@@ -51,18 +51,17 @@ libtint_source_set("helpers") {
     "apply_substitute_overrides.h",
     "check_supported_extensions.cc",
     "check_supported_extensions.h",
-    "flatten_bindings.cc",
-    "flatten_bindings.h",
   ]
   deps = [
     "${dawn_root}/src/utils:utils",
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/constant",
+    "${tint_src_dir}/lang/core/ir",
+    "${tint_src_dir}/lang/core/ir/transform",
     "${tint_src_dir}/lang/core/type",
     "${tint_src_dir}/lang/wgsl",
     "${tint_src_dir}/lang/wgsl/ast",
-    "${tint_src_dir}/lang/wgsl/ast/transform",
     "${tint_src_dir}/lang/wgsl/features",
     "${tint_src_dir}/lang/wgsl/inspector",
     "${tint_src_dir}/lang/wgsl/program",
@@ -74,7 +73,6 @@ libtint_source_set("helpers") {
     "${tint_src_dir}/utils/macros",
     "${tint_src_dir}/utils/math",
     "${tint_src_dir}/utils/memory",
-    "${tint_src_dir}/utils/result",
     "${tint_src_dir}/utils/rtti",
     "${tint_src_dir}/utils/symbol",
     "${tint_src_dir}/utils/text",
@@ -85,7 +83,6 @@ if (tint_build_unittests) {
     sources = [
       "append_vector_test.cc",
       "check_supported_extensions_test.cc",
-      "flatten_bindings_test.cc",
     ]
     deps = [
       "${dawn_root}/src/utils:utils",
@@ -112,7 +109,6 @@ if (tint_build_unittests) {
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
-      "${tint_src_dir}/utils/result",
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/symbol",
       "${tint_src_dir}/utils/text",

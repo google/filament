@@ -47,6 +47,7 @@ class WrappedEGLSync : public RefCounted, NonMovable {
     static ResultOrError<Ref<WrappedEGLSync>> Create(DisplayEGL* display,
                                                      EGLenum type,
                                                      const EGLint* attribs);
+    static ResultOrError<Ref<WrappedEGLSync>> AcquireExternal(DisplayEGL* display, EGLSync sync);
 
     EGLSync Get() const;
 
@@ -63,12 +64,13 @@ class WrappedEGLSync : public RefCounted, NonMovable {
     ResultOrError<EGLint> DupFD();
 
   protected:
-    WrappedEGLSync(DisplayEGL* display, EGLSync sync);
+    WrappedEGLSync(DisplayEGL* display, EGLSync sync, bool ownsSync);
     ~WrappedEGLSync() override;
 
   private:
     Ref<DisplayEGL> mDisplay;
     EGLSync mSync = nullptr;
+    bool mOwnsSync = false;
 };
 
 }  // namespace dawn::native::opengl

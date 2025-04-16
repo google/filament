@@ -36,7 +36,9 @@ namespace tint::spirv::type {
 SampledImage::SampledImage(const core::type::Type* image)
     : Base(static_cast<size_t>(Hash(tint::TypeCode::Of<SampledImage>().bits, image)),
            core::type::Flags{}),
-      image_(image) {}
+      image_(image->As<spirv::type::Image>()) {
+    TINT_ASSERT(image_);
+}
 
 bool SampledImage::Equals(const UniqueNode& other) const {
     if (auto* o = other.As<SampledImage>()) {

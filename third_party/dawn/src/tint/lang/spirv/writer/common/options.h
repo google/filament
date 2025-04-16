@@ -182,9 +182,6 @@ struct Options {
     /// from all vertex shaders in the module.
     bool emit_vertex_point_size = true;
 
-    /// Set to `true` to clamp frag depth
-    bool clamp_frag_depth = false;
-
     /// Set to `true` to always pass matrices to user functions by pointer instead of by value.
     bool pass_matrix_by_pointer = false;
 
@@ -218,7 +215,6 @@ struct Options {
                  use_zero_initialize_workgroup_memory_extension,
                  use_storage_input_output_16,
                  emit_vertex_point_size,
-                 clamp_frag_depth,
                  pass_matrix_by_pointer,
                  polyfill_dot_4x8_packed,
                  polyfill_pack_unpack_4x8_norm,

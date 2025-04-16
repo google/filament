@@ -32,6 +32,7 @@
 #include <type_traits>
 
 #include "dawn/common/Assert.h"
+#include "dawn/common/Platform.h"
 
 namespace dawn {
 
@@ -48,6 +49,9 @@ class DynamicLib {
 
     bool Valid() const;
 
+#if DAWN_PLATFORM_IS(WINDOWS) && !DAWN_PLATFORM_IS(WINUWP)
+    bool OpenSystemLibrary(std::wstring_view filename, std::string* error = nullptr);
+#endif
     bool Open(const std::string& filename, std::string* error = nullptr);
     void Close();
 

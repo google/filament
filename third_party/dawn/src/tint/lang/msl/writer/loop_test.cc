@@ -54,9 +54,9 @@ using namespace metal;
 
 void a() {
   {
-    uint2 tint_loop_idx = 0u;
+    uint2 tint_loop_idx = uint2(4294967295u);
     while(true) {
-      if (all((tint_loop_idx == uint2(4294967295u)))) {
+      if (all((tint_loop_idx == uint2(0u)))) {
         break;
       }
       break;
@@ -104,16 +104,16 @@ using namespace metal;
 
 void a() {
   {
-    uint2 tint_loop_idx = 0u;
+    uint2 tint_loop_idx = uint2(4294967295u);
     while(true) {
-      if (all((tint_loop_idx == uint2(4294967295u)))) {
+      if (all((tint_loop_idx == uint2(0u)))) {
         break;
       }
       {
-        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        uint const tint_low_inc = (tint_loop_idx.x - 1u);
         tint_loop_idx.x = tint_low_inc;
-        uint const tint_carry = uint((tint_low_inc == 0u));
-        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        uint const tint_carry = uint((tint_low_inc == 4294967295u));
+        tint_loop_idx.y = (tint_loop_idx.y - tint_carry);
         if (true) { break; }
       }
       continue;
@@ -168,17 +168,17 @@ using namespace metal;
 
 void a() {
   {
-    uint2 tint_loop_idx = 0u;
+    uint2 tint_loop_idx = uint2(4294967295u);
     while(true) {
-      if (all((tint_loop_idx == uint2(4294967295u)))) {
+      if (all((tint_loop_idx == uint2(0u)))) {
         break;
       }
       bool v = true;
       {
-        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        uint const tint_low_inc = (tint_loop_idx.x - 1u);
         tint_loop_idx.x = tint_low_inc;
-        uint const tint_carry = uint((tint_low_inc == 0u));
-        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        uint const tint_carry = uint((tint_low_inc == 4294967295u));
+        tint_loop_idx.y = (tint_loop_idx.y - tint_carry);
         if (v) { break; }
       }
       continue;
@@ -239,17 +239,17 @@ using namespace metal;
 
 void a() {
   {
-    uint2 tint_loop_idx = 0u;
+    uint2 tint_loop_idx = uint2(4294967295u);
     bool v = true;
     while(true) {
-      if (all((tint_loop_idx == uint2(4294967295u)))) {
+      if (all((tint_loop_idx == uint2(0u)))) {
         break;
       }
       {
-        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        uint const tint_low_inc = (tint_loop_idx.x - 1u);
         tint_loop_idx.x = tint_low_inc;
-        uint const tint_carry = uint((tint_low_inc == 0u));
-        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        uint const tint_carry = uint((tint_low_inc == 4294967295u));
+        tint_loop_idx.y = (tint_loop_idx.y - tint_carry);
         if (v) { break; }
       }
       continue;

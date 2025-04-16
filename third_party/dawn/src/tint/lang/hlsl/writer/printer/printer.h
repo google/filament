@@ -28,11 +28,9 @@
 #ifndef SRC_TINT_LANG_HLSL_WRITER_PRINTER_PRINTER_H_
 #define SRC_TINT_LANG_HLSL_WRITER_PRINTER_PRINTER_H_
 
-#include <string>
-
 #include "src/tint/lang/hlsl/writer/common/options.h"
 #include "src/tint/lang/hlsl/writer/common/output.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations
 namespace tint::core::ir {

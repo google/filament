@@ -1565,9 +1565,10 @@ TEST_F(ValidateComposites, CoopMatKHRConstantCompositeMismatchFail) {
 OpCapability Shader
 OpCapability Float16
 OpCapability CooperativeMatrixKHR
+OpCapability VulkanMemoryModelKHR
 OpExtension "SPV_KHR_cooperative_matrix"
 OpExtension "SPV_KHR_vulkan_memory_model"
-OpMemoryModel Logical GLSL450
+OpMemoryModel Logical VulkanKHR
 OpEntryPoint GLCompute %main "main"
 %void = OpTypeVoid
 %func = OpTypeFunction %void
@@ -1592,8 +1593,8 @@ OpEntryPoint GLCompute %main "main"
 OpReturn
 OpFunctionEnd)";
 
-  CompileSuccessfully(body.c_str());
-  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  CompileSuccessfully(body.c_str(), SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr(
@@ -1606,9 +1607,10 @@ TEST_F(ValidateComposites, CoopMatKHRCompositeConstructMismatchFail) {
 OpCapability Shader
 OpCapability Float16
 OpCapability CooperativeMatrixKHR
+OpCapability VulkanMemoryModelKHR
 OpExtension "SPV_KHR_cooperative_matrix"
 OpExtension "SPV_KHR_vulkan_memory_model"
-OpMemoryModel Logical GLSL450
+OpMemoryModel Logical VulkanKHR
 OpEntryPoint GLCompute %main "main"
 %void = OpTypeVoid
 %func = OpTypeFunction %void
@@ -1633,8 +1635,9 @@ OpEntryPoint GLCompute %main "main"
 OpReturn
 OpFunctionEnd)";
 
-  CompileSuccessfully(body.c_str());
-  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  CompileSuccessfully(body.c_str(), SPV_ENV_UNIVERSAL_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr("Expected Constituent type to be equal to the component type"));
@@ -2108,7 +2111,6 @@ OpCapability Shader
 OpCapability Float16
 OpCapability CooperativeVectorNV
 OpExtension "SPV_NV_cooperative_vector"
-OpExtension "SPV_KHR_vulkan_memory_model"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %main "main"
 %void = OpTypeVoid
@@ -2144,7 +2146,6 @@ OpCapability Shader
 OpCapability Float16
 OpCapability CooperativeVectorNV
 OpExtension "SPV_NV_cooperative_vector"
-OpExtension "SPV_KHR_vulkan_memory_model"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %main "main"
 %void = OpTypeVoid
@@ -2184,7 +2185,6 @@ OpCapability Shader
 OpCapability Float16
 OpCapability CooperativeVectorNV
 OpExtension "SPV_NV_cooperative_vector"
-OpExtension "SPV_KHR_vulkan_memory_model"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %main "main"
 %void = OpTypeVoid
@@ -2220,7 +2220,6 @@ OpCapability Shader
 OpCapability Float16
 OpCapability CooperativeVectorNV
 OpExtension "SPV_NV_cooperative_vector"
-OpExtension "SPV_KHR_vulkan_memory_model"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %main "main"
 %void = OpTypeVoid
@@ -2259,7 +2258,6 @@ OpCapability Shader
 OpCapability Float16
 OpCapability CooperativeVectorNV
 OpExtension "SPV_NV_cooperative_vector"
-OpExtension "SPV_KHR_vulkan_memory_model"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %main "main"
 %void = OpTypeVoid

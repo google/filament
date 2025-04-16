@@ -222,10 +222,9 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
      {"use_user_defined_labels_in_backend",
       "Enables setting labels on backend-specific APIs that label objects. The labels used will be "
       "those of the corresponding frontend objects if non-empty and default labels otherwise. "
-      "Defaults to false. NOTE: On Vulkan, backend labels are currently always set (with default "
-      "labels if this toggle is not set). The reason is that Dawn currently uses backend "
-      "object labels on Vulkan to map errors back to the device with which the backend objects "
-      "included in the error are associated.",
+      "Defaults to false unless backend validation is enabled in which case it defaults to true. "
+      "NOTE: On Vulkan, backend labels are required to map errors back to the device with which "
+      "the backend objects included in the error are associated.",
       "https://crbug.com/dawn/840", ToggleStage::Device}},
     {Toggle::UsePlaceholderFragmentInVertexOnlyPipeline,
      {"use_placeholder_fragment_in_vertex_only_pipeline",
@@ -431,7 +430,7 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "Workaround for OpenGLES.",
       "https://crbug.com/dawn/2079", ToggleStage::Device}},
     {Toggle::UseBlitForRG11B10UfloatTextureCopy,
-     {"use_blit_for_rgb9e5ufloat_texture_copy",
+     {"use_blit_for_rg11b10ufloat_texture_copy",
       "Use a blit instead of a copy command to copy rg11b10ufloat texture to a texture or a buffer."
       "Workaround for OpenGLES.",
       "https://crbug.com/381214487", ToggleStage::Device}},
@@ -450,6 +449,15 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "Use a compute based blit instead of a copy command to copy texture with supported format to "
       "a buffer.",
       "https://crbug.com/dawn/348654098", ToggleStage::Device}},
+    {Toggle::UseBlitForB2T,
+     {"use_blit_for_b2t",
+      "Use a shader based blit instead of a copy command to copy a buffer to a texture with "
+      "supported format.",
+      "https://crbug.com/dawn/348653642", ToggleStage::Device}},
+    {Toggle::D3D11DisableCPUUploadBuffers,
+     {"d3d11_disable_cpu_buffers",
+      "Force disabling the usages of CPU upload buffers in the D3D11 backend.",
+      "https://crbug.com/dawn/348653642", ToggleStage::Device}},
     {Toggle::UseT2B2TForSRGBTextureCopy,
      {"use_t2b2t_for_srgb_texture_copy",
       "Use T2B and B2T copies to emulate a T2T copy between sRGB and non-sRGB textures."
@@ -614,7 +622,7 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "https://crbug.com/381000081", ToggleStage::Device}},
     {Toggle::UseVulkanMemoryModel,
      {"use_vulkan_memory_model", "Use the Vulkan Memory Model if available.",
-      "https://crbug.com/392606604", ToggleStage::Device}},
+      "https://crbug.com/392606604", ToggleStage::Adapter}},
     {Toggle::NoWorkaroundSampleMaskBecomesZeroForAllButLastColorTarget,
      {"no_workaround_sample_mask_becomes_zero_for_all_but_last_color_target",
       "MacOS 12.0+ Intel has a bug where the sample mask is only applied for the last color "
@@ -644,6 +652,10 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
     {Toggle::D3D11UseUnmonitoredFence,
      {"d3d11_use_unmonitored_fence", "Use d3d11 unmonitored fence.",
       "https://crbug.com/chromium/335553337", ToggleStage::Device}},
+    {Toggle::D3D11DisableFence,
+     {"d3d11_disable_fence",
+      "Disable d3d11 fence. Fences are not always available on every D3D11 device.",
+      "https://crbug.com/chromium/390441217", ToggleStage::Device}},
     {Toggle::IgnoreImportedAHardwareBufferVulkanImageSize,
      {"ignore_imported_ahardwarebuffer_vulkan_image_size",
       "Don't validate the required VkImage size against the size of the AHardwareBuffer on import. "

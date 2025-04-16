@@ -32,8 +32,6 @@
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/ir/var.h"
-#include "src/tint/utils/result/result.h"
-#include "src/tint/utils/text/string.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 
@@ -41,13 +39,12 @@ namespace tint::core::ir::transform {
 
 namespace {
 
-Result<SuccessType> Run(ir::Module& ir,
-                        const std::unordered_map<BindingPoint, BindingPoint>& binding_points) {
+void Run(ir::Module& ir, const std::unordered_map<BindingPoint, BindingPoint>& binding_points) {
     if (binding_points.empty()) {
-        return Success;
+        return;
     }
     if (ir.root_block->IsEmpty()) {
-        return Success;
+        return;
     }
 
     // Find binding resources.
@@ -68,8 +65,6 @@ Result<SuccessType> Run(ir::Module& ir,
             var->SetBindingPoint(to->second.group, to->second.binding);
         }
     }
-
-    return Success;
 }
 
 }  // namespace
@@ -82,7 +77,9 @@ Result<SuccessType> BindingRemapper(
         return result;
     }
 
-    return Run(ir, binding_points);
+    Run(ir, binding_points);
+
+    return Success;
 }
 
 }  // namespace tint::core::ir::transform

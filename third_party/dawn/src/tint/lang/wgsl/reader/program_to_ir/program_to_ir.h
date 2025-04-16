@@ -29,7 +29,7 @@
 #define SRC_TINT_LANG_WGSL_READER_PROGRAM_TO_IR_PROGRAM_TO_IR_H_
 
 #include "src/tint/lang/core/ir/module.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward Declarations
 namespace tint {
@@ -45,7 +45,7 @@ namespace tint::wgsl::reader {
 /// @note this assumes the `program.IsValid()`, and has had const-eval done so
 /// any abstract values have been calculated and converted into the relevant
 /// concrete types.
-tint::Result<core::ir::Module> ProgramToIR(const Program& program);
+Result<core::ir::Module> ProgramToIR(const Program& program);
 
 }  // namespace tint::wgsl::reader
 

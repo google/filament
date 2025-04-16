@@ -32,26 +32,8 @@
 #include <limits>
 
 #include "dawn/common/Assert.h"
-#include "dawn/common/Platform.h"
-
-#if DAWN_COMPILER_IS(MSVC)
-#include <intrin.h>
-#endif
 
 namespace dawn {
-
-uint32_t ScanForward(uint32_t bits) {
-    DAWN_ASSERT(bits != 0);
-#if DAWN_COMPILER_IS(MSVC)
-    // NOLINTNEXTLINE(runtime/int)
-    unsigned long firstBitIndex = 0ul;
-    unsigned char ret = _BitScanForward(&firstBitIndex, bits);
-    DAWN_ASSERT(ret != 0);
-    return firstBitIndex;
-#else
-    return static_cast<uint32_t>(__builtin_ctz(bits));
-#endif
-}
 
 uint32_t Log2(uint32_t value) {
     DAWN_ASSERT(value != 0);

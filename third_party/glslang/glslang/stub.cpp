@@ -32,6 +32,20 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-// This empty source file exists to support building stubbed versions of
-// deprecated libraries which have been integrated into the main glslang
-// library. It should be deleted once the stub libraries are fully removed.
+#ifdef GLSLANG_IS_SHARED_LIBRARY
+#ifdef _WIN32
+#ifdef GLSLANG_EXPORTING
+#define STUB_EXPORT __declspec(dllexport)
+#else
+#define STUB_EXPORT __declspec(dllimport)
+#endif
+#endif
+#endif // GLSLANG_IS_SHARED_LIBRARY
+
+#ifndef STUB_EXPORT
+#define STUB_EXPORT
+#endif
+
+// Force stub library to export function to preserve backcompat.
+// https://github.com/KhronosGroup/glslang/issues/3882
+STUB_EXPORT int stub_library_function() { return 0; }

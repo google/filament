@@ -25,10 +25,12 @@
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
+#include "vulkan/VulkanSamplerCache.h"
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Conversion.h"
 #include "vulkan/utils/Definitions.h"
+#include "vulkan/vulkan_core.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/platforms/VulkanPlatform.h>
@@ -212,6 +214,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mPipelineCache(mPlatform->getDevice()),
       mStagePool(mAllocator, &mCommands),
       mFramebufferCache(mPlatform->getDevice()),
+      mYcbcrConversionCache(mPlatform->getDevice()),
       mSamplerCache(mPlatform->getDevice()),
       mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
       mReadPixels(mPlatform->getDevice()),
@@ -363,7 +366,7 @@ void VulkanDriver::collectGarbage() {
     FVK_SYSTRACE_SCOPE();
     // Command buffers need to be submitted and completed before other resources can be gc'd.
     mCommands.gc();
-    mDescriptorSetCache.clearHistory();
+    mDescriptorSetCache.gc();
     mStagePool.gc();
     mFramebufferCache.gc();
     mPipelineCache.gc();
@@ -418,7 +421,11 @@ void VulkanDriver::updateDescriptorSetTexture(
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
-    VkSampler const vksampler = mSamplerCache.getSampler(params);
+    // TODO: YcbcrConversion?
+    VulkanSamplerCache::Params cacheParams = {
+        .sampler = params,
+    };
+    VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
     mDescriptorSetCache.updateSampler(set, binding, texture, vksampler);
 }
 
@@ -556,7 +563,7 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         Platform::ExternalImageHandleRef externalImage) {
     FVK_SYSTRACE_SCOPE();
-    const auto& metadata = mPlatform->getExternalImageMetadata(externalImage);
+    auto const& metadata = mPlatform->getExternalImageMetadata(externalImage);
     if (metadata.isProtected) {
         usage |= backend::TextureUsage::PROTECTED;
     }
@@ -566,7 +573,7 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
         vkUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
 
-    if (any(usage & (TextureUsage::BLIT_DST & TextureUsage::UPLOADABLE))) {
+    if (any(usage & (TextureUsage::BLIT_DST | TextureUsage::UPLOADABLE))) {
         vkUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
@@ -582,13 +589,15 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
     FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex != VK_MAX_MEMORY_TYPES)
             << "failed to find a valid memory type for external image memory.";
 
-    const auto& data =
+    VkImage vkimg;
+    VkDeviceMemory deviceMemory;
+    std::tie(vkimg, deviceMemory) =
             mPlatform->createExternalImageData(externalImage, metadata, memoryTypeIndex, vkUsage);
 
-    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
-            mAllocator, &mResourceManager, &mCommands, data.first, data.second, metadata.format,
-            metadata.samples, metadata.width, metadata.height, metadata.layerCount, usage,
-            mStagePool);
+    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mContext,
+            mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimg, deviceMemory,
+            metadata.format, VK_NULL_HANDLE, metadata.samples, metadata.width, metadata.height,
+            metadata.layerCount, usage, mStagePool);
 
     texture.inc();
 }
@@ -597,13 +606,14 @@ void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::Sa
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         void* externalImage) {
     FVK_SYSTRACE_SCOPE();
-
+    assert_invariant(false && "Not supported in Vulkan backend");
     // not supported in this backend
 }
 
 void VulkanDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         void* image, uint32_t plane) {
+    assert_invariant(false && "Not supported in Vulkan backend");
 }
 
 void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
@@ -611,6 +621,7 @@ void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage) {
     // not supported in this backend
+    assert_invariant(false && "Not supported in Vulkan backend");
 }
 
 void VulkanDriver::destroyTexture(Handle<HwTexture> th) {

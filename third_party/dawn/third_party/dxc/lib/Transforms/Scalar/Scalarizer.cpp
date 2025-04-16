@@ -14,6 +14,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "dxc/DXIL/DxilModule.h"
+#include "dxc/DXIL/DxilUtil.h"
+
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -151,6 +154,7 @@ public:
 
 // HLSL Change Begin
   bool AllowFolding = false;
+  bool SupportsVectors = false;
   Scalarizer(bool AllowFolding) :
     FunctionPass(ID),
     AllowFolding(AllowFolding) {
@@ -290,6 +294,13 @@ bool Scalarizer::doInitialization(Module &M) {
 }
 
 bool Scalarizer::runOnFunction(Function &F) {
+  // HLSL Change start - set SupportsVectors
+  const Module *M = F.getParent();
+  unsigned Major = 0, Minor = 0;
+  if (hlsl::dxilutil::LoadDxilVersion(M, Major, Minor))
+    SupportsVectors = (Major == 1 && Minor >= 9);
+  // HLSL Change end - set SupportsVectors
+
   for (Function::iterator BBI = F.begin(), BBE = F.end(); BBI != BBE; ++BBI) {
     BasicBlock *BB = BBI;
     for (BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE;) {
@@ -436,7 +447,8 @@ bool Scalarizer::getVectorLayout(Type *Ty, unsigned Alignment,
 template<typename Splitter>
 bool Scalarizer::splitBinary(Instruction &I, const Splitter &Split) {
   VectorType *VT = dyn_cast<VectorType>(I.getType());
-  if (!VT)
+  // HLSL Change - allow > 1 vectors where supported.
+  if (!VT || (SupportsVectors && VT->getNumElements() > 1))
     return false;
 
   unsigned NumElems = VT->getNumElements();
@@ -457,7 +469,8 @@ bool Scalarizer::splitBinary(Instruction &I, const Splitter &Split) {
 
 bool Scalarizer::visitSelectInst(SelectInst &SI) {
   VectorType *VT = dyn_cast<VectorType>(SI.getType());
-  if (!VT)
+  // HLSL Change - allow > 1 vectors where supported.
+  if (!VT || (SupportsVectors && VT->getNumElements() > 1))
     return false;
 
   unsigned NumElems = VT->getNumElements();
@@ -500,7 +513,8 @@ bool Scalarizer::visitBinaryOperator(BinaryOperator &BO) {
 
 bool Scalarizer::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   VectorType *VT = dyn_cast<VectorType>(GEPI.getType());
-  if (!VT)
+  // HLSL Change - allow > 1 vectors where supported.
+  if (!VT || (SupportsVectors && VT->getNumElements() > 1))
     return false;
 
   IRBuilder<> Builder(GEPI.getParent(), &GEPI);
@@ -534,7 +548,8 @@ bool Scalarizer::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
 
 bool Scalarizer::visitCastInst(CastInst &CI) {
   VectorType *VT = dyn_cast<VectorType>(CI.getDestTy());
-  if (!VT)
+  // HLSL Change - allow > 1 vectors where supported.
+  if (!VT || (SupportsVectors && VT->getNumElements() > 1))
     return false;
 
   unsigned NumElems = VT->getNumElements();
@@ -559,6 +574,12 @@ bool Scalarizer::visitBitCastInst(BitCastInst &BCI) {
 
   unsigned DstNumElems = DstVT->getNumElements();
   unsigned SrcNumElems = SrcVT->getNumElements();
+
+  // HLSL Change Begin - allow > 1 vectors where supported.
+  if (SupportsVectors && (DstNumElems > 1 || SrcNumElems > 1))
+    return false;
+  // HLSL Change End - allow > 1 vectors where supported.
+
   IRBuilder<> Builder(BCI.getParent(), &BCI);
   Builder.AllowFolding = this->AllowFolding; // HLSL Change
   Scatterer Op0 = scatter(&BCI, BCI.getOperand(0));
@@ -609,7 +630,8 @@ bool Scalarizer::visitBitCastInst(BitCastInst &BCI) {
 
 bool Scalarizer::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   VectorType *VT = dyn_cast<VectorType>(SVI.getType());
-  if (!VT)
+  // HLSL Change - allow > 1 vectors where supported.
+  if (!VT || (SupportsVectors && VT->getNumElements() > 1))
     return false;
 
   unsigned NumElems = VT->getNumElements();
@@ -643,7 +665,8 @@ bool Scalarizer::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
 
 bool Scalarizer::visitPHINode(PHINode &PHI) {
   VectorType *VT = dyn_cast<VectorType>(PHI.getType());
-  if (!VT)
+  // HLSL Change - allow > 1 vectors where supported.
+  if (!VT || (SupportsVectors && VT->getNumElements() > 1))
     return false;
 
   unsigned NumElems = VT->getNumElements();
@@ -679,6 +702,10 @@ bool Scalarizer::visitLoadInst(LoadInst &LI) {
     return false;
 
   unsigned NumElems = Layout.VecTy->getNumElements();
+  // HLSL Change Begin - allow > 1 vectors where supported.
+  if (SupportsVectors && NumElems > 1)
+    return false;
+  // HLSL Change End - allow > 1 vectors where supported.
   IRBuilder<> Builder(LI.getParent(), &LI);
   Builder.AllowFolding = this->AllowFolding; // HLSL Change
   Scatterer Ptr = scatter(&LI, LI.getPointerOperand());
@@ -705,6 +732,10 @@ bool Scalarizer::visitStoreInst(StoreInst &SI) {
     return false;
 
   unsigned NumElems = Layout.VecTy->getNumElements();
+  // HLSL Change Begin - allow > 1 vectors where supported.
+  if (SupportsVectors && NumElems > 1)
+    return false;
+  // HLSL Change End - allow > 1 vectors where supported.
   IRBuilder<> Builder(SI.getParent(), &SI);
   Builder.AllowFolding = this->AllowFolding; // HLSL Change
   Scatterer Ptr = scatter(&SI, SI.getPointerOperand());

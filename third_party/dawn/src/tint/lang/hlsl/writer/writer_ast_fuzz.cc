@@ -57,6 +57,9 @@ bool CanRun(const Program& program) {
         }
     }
     for (auto* enable : program.AST().Enables()) {
+        if (enable->HasExtension(tint::wgsl::Extension::kChromiumExperimentalSubgroupMatrix)) {
+            return false;
+        }
         if (enable->HasExtension(tint::wgsl::Extension::kChromiumExperimentalPixelLocal)) {
             if (num_entry_points > 1) {
                 return false;

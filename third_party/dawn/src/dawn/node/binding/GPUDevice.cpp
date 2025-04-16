@@ -27,6 +27,7 @@
 
 #include "src/dawn/node/binding/GPUDevice.h"
 
+#include <cassert>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -181,8 +182,7 @@ interop::Interface<interop::GPUSupportedFeatures> GPUDevice::getFeatures(Napi::E
 }
 
 interop::Interface<interop::GPUSupportedLimits> GPUDevice::getLimits(Napi::Env env) {
-    wgpu::SupportedLimits limits{};
-    wgpu::DawnExperimentalSubgroupLimits subgroupLimits{};
+    wgpu::Limits limits{};
     wgpu::DawnExperimentalImmediateDataLimits immediateDataLimits{};
 
     auto InsertInChain = [&](wgpu::ChainedStructOut* node) {
@@ -190,15 +190,10 @@ interop::Interface<interop::GPUSupportedLimits> GPUDevice::getLimits(Napi::Env e
         limits.nextInChain = node;
     };
 
-    // Query the subgroup limits only if subgroups feature is enabled on the device.
-    if (device_.HasFeature(wgpu::FeatureName::Subgroups)) {
-        InsertInChain(&subgroupLimits);
-    }
-
     // Query the immediate data limits only if ChromiumExperimentalImmediateData feature
     // is available on device.
     if (device_.HasFeature(FeatureName::ChromiumExperimentalImmediateData)) {
-        InsertInChain(&subgroupLimits);
+        InsertInChain(&immediateDataLimits);
     }
 
     if (!device_.GetLimits(&limits)) {
@@ -238,6 +233,17 @@ interop::Interface<interop::GPUBuffer> GPUDevice::createBuffer(
         !conv(desc.size, descriptor.size) || !conv(desc.usage, descriptor.usage)) {
         return {};
     }
+
+    wgpu::Buffer dawnBuffer = device_.CreateBuffer(&desc);
+    // Buffer creation may return nullptr if it fails to map at creation. Translate that to a
+    // RangeError as required by the spec.
+    if (dawnBuffer == nullptr) {
+        assert(descriptor.mappedAtCreation);
+        Napi::RangeError::New(env, "createBuffer failed to allocate a buffer mapped at creation.")
+            .ThrowAsJavaScriptException();
+        return {};
+    }
+
     return interop::GPUBuffer::Create<GPUBuffer>(env, device_.CreateBuffer(&desc), desc, device_,
                                                  async_);
 }

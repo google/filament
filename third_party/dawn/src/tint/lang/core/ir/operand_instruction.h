@@ -81,6 +81,14 @@ class OperandInstruction : public Castable<OperandInstruction<N, R>, Instruction
         }
     }
 
+    /// Appends a new operand
+    /// @param operand the new operand
+    void PushOperand(ir::Value* operand) {
+        auto idx = operands_.Length();
+        operands_.Push(operand);
+        operand->AddUsage({this, static_cast<uint32_t>(idx)});
+    }
+
     /// Removes all operands from the instruction
     void ClearOperands() {
         for (uint32_t i = 0; i < operands_.Length(); i++) {
@@ -90,6 +98,16 @@ class OperandInstruction : public Castable<OperandInstruction<N, R>, Instruction
             operands_[i]->RemoveUsage({this, i});
         }
         operands_.Clear();
+    }
+
+    /// Replaces the results of the instruction with a single result.
+    /// @param result the new result of the instruction
+    void SetResult(ir::InstructionResult* result) override {
+        ClearResults();
+        results_.Push(result);
+        if (result) {
+            result->SetInstruction(this);
+        }
     }
 
     /// Replaces the results of the instruction
@@ -111,6 +129,15 @@ class OperandInstruction : public Castable<OperandInstruction<N, R>, Instruction
                   tint::traits::Decay<tint::traits::NthTypeOf<0, ARGS..., void>>>>>
     void SetResults(ARGS&&... values) {
         SetResults(Vector{std::forward<ARGS>(values)...});
+    }
+
+    /// Appends a result value to the instruction
+    /// @param value the value to append
+    void AddResult(InstructionResult* value) {
+        if (value) {
+            value->SetInstruction(this);
+        }
+        results_.Push(value);
     }
 
     /// Removes all results from the instruction.
@@ -149,6 +176,20 @@ class OperandInstruction : public Castable<OperandInstruction<N, R>, Instruction
         return idx < results_.Length() ? results_[idx] : nullptr;
     }
 
+    /// @returns the instruction result
+    /// @note must only be called on instructions with exactly one result
+    InstructionResult* Result() {
+        TINT_ASSERT(results_.Length() == 1u);
+        return results_[0];
+    }
+
+    /// @returns the instruction result
+    /// @note must only be called on instructions with exactly one result
+    const InstructionResult* Result() const {
+        TINT_ASSERT(results_.Length() == 1u);
+        return results_[0];
+    }
+
   protected:
     /// Append a new operand to the operand list for this instruction.
     /// @param idx the index the operand should be at
@@ -171,15 +212,6 @@ class OperandInstruction : public Castable<OperandInstruction<N, R>, Instruction
             AddOperand(idx, val);
             idx += 1;
         }
-    }
-
-    /// Appends a result value to the instruction
-    /// @param value the value to append
-    void AddResult(InstructionResult* value) {
-        if (value) {
-            value->SetInstruction(this);
-        }
-        results_.Push(value);
     }
 
     /// The operands to this instruction.

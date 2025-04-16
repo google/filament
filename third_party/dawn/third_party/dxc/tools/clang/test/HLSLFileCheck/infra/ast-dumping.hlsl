@@ -28,6 +28,7 @@ void main() {
 // IMPLICIT-NEXT: TemplateArgument type 'vector<float, 4>':'vector<float, 4>'
 // IMPLICIT-NEXT: CXXRecordDecl {{0x[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> implicit class Buffer
 // IMPLICIT-NEXT: FinalAttr {{0x[0-9a-fA-F]+}} <<invalid sloc>> Implicit final
+// IMPLICIT-NEXT: HLSLResourceAttr {{0x[0-9a-fA-F]+}} <<invalid sloc>> Implicit 10 0
 // IMPLICIT-NEXT: FieldDecl {{0x[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> implicit h 'element'
 // IMPLICIT-NOT: CXXMethodDecl
 // IMPLICIT: CXXRecordDecl
@@ -39,6 +40,7 @@ void main() {
 // IMPLICIT-NEXT: TemplateTypeParmDecl {{0x[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> class element
 // IMPLICIT-NEXT: CXXRecordDecl {{0x[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> implicit class RWBuffer definition
 // IMPLICIT-NEXT: FinalAttr {{0x[0-9a-fA-F]+}} <<invalid sloc>> Implicit final
+// IMPLICIT-NEXT: HLSLResourceAttr {{0x[0-9a-fA-F]+}} <<invalid sloc>> Implicit 10 1
 // IMPLICIT-NEXT: FieldDecl {{0x[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> implicit h 'element'
 // IMPLICIT-NEXT: FunctionTemplateDecl {{0x[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> operator[]
 

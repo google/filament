@@ -35,12 +35,15 @@
 
 #include "src/tint/utils/macros/compiler.h"
 
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 namespace tint::bytes {
 
-/// @return the input integer value with all bytes reversed
-/// @param value the input value
+/// @returns the input value with all bytes reversed
+/// @param value the input value, can be any type that passes std::is_integral
+///              (this includes non-obvious types like wchar_t)
+/// TODO(394825124): Once ranges from C++20 is available this code can be
+///                  rewritten to avoid needing to disable warnings.
+TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 template <typename T>
 [[nodiscard]] inline T Swap(T value) {
     static_assert(std::is_integral_v<T>);
@@ -53,9 +56,9 @@ template <typename T>
     memcpy(&out, bytes, sizeof(T));
     return out;
 }
+TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 }  // namespace tint::bytes
 
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 #endif  // SRC_TINT_UTILS_BYTES_SWAP_H_

@@ -380,6 +380,16 @@ spv_result_t CheckMemoryAccess(ValidationState_t& _, const Instruction* inst,
              << _.VkErrorID(4708)
              << "Memory accesses with PhysicalStorageBuffer must use Aligned.";
     }
+  } else {
+    // even if there are other masks, the Aligned operand will be next
+    const uint32_t aligned_value = inst->GetOperandAs<uint32_t>(index + 1);
+    const bool is_power_of_two =
+        aligned_value && !(aligned_value & (aligned_value - 1));
+    if (!is_power_of_two) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "Memory accesses Aligned operand value " << aligned_value
+             << " is not a power of two.";
+    }
   }
 
   return SPV_SUCCESS;
@@ -2781,15 +2791,40 @@ spv_result_t ValidatePtrComparison(ValidationState_t& _,
 
   const auto op1 = _.FindDef(inst->GetOperandAs<uint32_t>(2u));
   const auto op2 = _.FindDef(inst->GetOperandAs<uint32_t>(3u));
-  if (!op1 || !op2 || op1->type_id() != op2->type_id()) {
-    return _.diag(SPV_ERROR_INVALID_ID, inst)
-           << "The types of Operand 1 and Operand 2 must match";
-  }
   const auto op1_type = _.FindDef(op1->type_id());
+  const auto op2_type = _.FindDef(op2->type_id());
   if (!op1_type || (op1_type->opcode() != spv::Op::OpTypePointer &&
                     op1_type->opcode() != spv::Op::OpTypeUntypedPointerKHR)) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
            << "Operand type must be a pointer";
+  }
+
+  if (!op2_type || (op2_type->opcode() != spv::Op::OpTypePointer &&
+                    op2_type->opcode() != spv::Op::OpTypeUntypedPointerKHR)) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Operand type must be a pointer";
+  }
+
+  if (inst->opcode() == spv::Op::OpPtrDiff) {
+    if (op1->type_id() != op2->type_id()) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "The types of Operand 1 and Operand 2 must match";
+    }
+  } else {
+    const auto either_untyped =
+        op1_type->opcode() == spv::Op::OpTypeUntypedPointerKHR ||
+        op2_type->opcode() == spv::Op::OpTypeUntypedPointerKHR;
+    if (either_untyped) {
+      const auto sc1 = op1_type->GetOperandAs<spv::StorageClass>(1);
+      const auto sc2 = op2_type->GetOperandAs<spv::StorageClass>(1);
+      if (sc1 != sc2) {
+        return _.diag(SPV_ERROR_INVALID_ID, inst)
+               << "Pointer storage classes must match";
+      }
+    } else if (op1->type_id() != op2->type_id()) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "The types of Operand 1 and Operand 2 must match";
+    }
   }
 
   spv::StorageClass sc = op1_type->GetOperandAs<spv::StorageClass>(1u);

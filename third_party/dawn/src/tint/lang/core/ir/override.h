@@ -71,13 +71,13 @@ class Override final : public Castable<Override, OperandInstruction<1, 1>> {
     /// @param id the override id
     void SetOverrideId(OverrideId id) { override_id_ = id; }
     /// @returns the override ID
-    tint::OverrideId OverrideId() const { return override_id_; }
+    std::optional<tint::OverrideId> OverrideId() const { return override_id_; }
 
     /// @returns the friendly name for the instruction
     std::string FriendlyName() const override { return "override"; }
 
   private:
-    tint::OverrideId override_id_;
+    std::optional<tint::OverrideId> override_id_{};
 };
 
 }  // namespace tint::core::ir

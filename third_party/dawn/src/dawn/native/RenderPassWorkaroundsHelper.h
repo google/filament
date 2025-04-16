@@ -28,8 +28,6 @@
 #ifndef SRC_DAWN_NATIVE_RENDERPASSWORKAROUNDSHELPER_H_
 #define SRC_DAWN_NATIVE_RENDERPASSWORKAROUNDSHELPER_H_
 
-#include <functional>
-
 #include "dawn/common/NonMovable.h"
 #include "dawn/common/Ref.h"
 #include "dawn/common/ityp_array.h"

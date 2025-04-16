@@ -32,13 +32,13 @@ void main() {
 // CHECK: [[ptr:%[0-9]+]] = OpAccessChain %_ptr_Function_ulong %s1 %int_0
 // CHECK: [[raw:%[0-9]+]] = OpLoad %ulong [[ptr]]
 // CHECK: [[tmp:%[0-9]+]] = OpShiftLeftLogical %ulong [[raw]] %uint_32
-// CHECK: [[out:%[0-9]+]] = OpShiftRightArithmetic %ulong [[tmp]] %uint_32
+// CHECK: [[out:%[0-9]+]] = OpShiftRightLogical %ulong [[tmp]] %uint_32
 // CHECK:                   OpStore %vulong [[out]]
   vulong = s1.f2;
 // CHECK: [[ptr:%[0-9]+]] = OpAccessChain %_ptr_Function_ulong %s1 %int_0
 // CHECK: [[raw:%[0-9]+]] = OpLoad %ulong [[ptr]]
 // CHECK: [[tmp:%[0-9]+]] = OpShiftLeftLogical %ulong [[raw]] %uint_31
-// CHECK: [[out:%[0-9]+]] = OpShiftRightArithmetic %ulong [[tmp]] %uint_63
+// CHECK: [[out:%[0-9]+]] = OpShiftRightLogical %ulong [[tmp]] %uint_63
 // CHECK:                   OpStore %vulong [[out]]
 
   S2 s2;
@@ -60,20 +60,20 @@ void main() {
 // CHECK: [[ptr:%[0-9]+]] = OpAccessChain %_ptr_Function_ulong %s3 %int_0
 // CHECK: [[raw:%[0-9]+]] = OpLoad %ulong [[ptr]]
 // CHECK: [[tmp:%[0-9]+]] = OpShiftLeftLogical %ulong [[raw]] %uint_19
-// CHECK: [[out:%[0-9]+]] = OpShiftRightArithmetic %ulong [[tmp]] %uint_19
+// CHECK: [[out:%[0-9]+]] = OpShiftRightLogical %ulong [[tmp]] %uint_19
 // CHECK:                   OpStore %vulong [[out]]
   vulong = s3.f2;
 // CHECK: [[ptr:%[0-9]+]] = OpAccessChain %_ptr_Function_ulong %s3 %int_0
 // CHECK: [[raw:%[0-9]+]] = OpLoad %ulong [[ptr]]
 // CHECK: [[tmp:%[0-9]+]] = OpShiftLeftLogical %ulong [[raw]] %uint_9
-// CHECK: [[out:%[0-9]+]] = OpShiftRightArithmetic %ulong [[tmp]] %uint_54
+// CHECK: [[out:%[0-9]+]] = OpShiftRightLogical %ulong [[tmp]] %uint_54
 // CHECK:                   OpStore %vulong [[out]]
 
   vushort = s3.f3;
 // CHECK: [[ptr:%[0-9]+]] = OpAccessChain %_ptr_Function_ushort %s3 %int_1
 // CHECK: [[raw:%[0-9]+]] = OpLoad %ushort [[ptr]]
 // CHECK: [[tmp:%[0-9]+]] = OpShiftLeftLogical %ushort [[raw]] %uint_9
-// CHECK: [[out:%[0-9]+]] = OpShiftRightArithmetic %ushort [[tmp]] %uint_9
+// CHECK: [[out:%[0-9]+]] = OpShiftRightLogical %ushort [[tmp]] %uint_9
 // CHECK:                   OpStore %vushort [[out]]
 
   vuint = s3.f4;

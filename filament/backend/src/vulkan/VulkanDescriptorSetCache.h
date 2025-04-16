@@ -41,6 +41,8 @@ public:
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT;
 
     using DescriptorSetLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
+    using DescriptorSetArray =
+            std::array<fvkmemory::resource_ptr<VulkanDescriptorSet>, UNIQUE_DESCRIPTOR_SET_COUNT>;
 
     VulkanDescriptorSetCache(VkDevice device, fvkmemory::ResourceManager* resourceManager);
     ~VulkanDescriptorSetCache();
@@ -68,13 +70,20 @@ public:
     fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
-    void clearHistory();
+    // This method is only meant to be used with external samplers (or internally within this
+    // class).
+    VkDescriptorSet getVkSet(fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
+
+    // This method is only meant to be used with external samplers.
+    void manualRecyle(VulkanDescriptorSetLayout::Count const& count, VkDescriptorSetLayout vklayout,
+            VkDescriptorSet vkSet);
+
+    DescriptorSetArray const& getBoundSets() const { return mStashedSets; }
+
+    void gc();
 
 private:
     class DescriptorInfinitePool;
-
-    using DescriptorSetArray =
-            std::array<fvkmemory::resource_ptr<VulkanDescriptorSet>, UNIQUE_DESCRIPTOR_SET_COUNT>;
 
     VkDevice mDevice;
     fvkmemory::ResourceManager* mResourceManager;

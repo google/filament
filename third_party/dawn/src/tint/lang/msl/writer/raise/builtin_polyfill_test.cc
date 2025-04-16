@@ -472,7 +472,7 @@ __atomic_compare_exchange_result_i32 = struct @align(4) {
 }
 %4 = func(%atomic_ptr:ptr<workgroup, atomic<i32>, read_write>, %cmp:i32, %val:i32):__atomic_compare_exchange_result_i32 {
   $B3: {
-    %old_value:ptr<function, i32, read_write> = var, %cmp
+    %old_value:ptr<function, i32, read_write> = var %cmp
     %11:bool = msl.atomic_compare_exchange_weak_explicit %atomic_ptr, %old_value, %val, 0u, 0u
     %12:i32 = load %old_value
     %13:__atomic_compare_exchange_result_i32 = construct %12, %11
@@ -552,7 +552,7 @@ __atomic_compare_exchange_result_i32 = struct @align(4) {
 }
 %4 = func(%atomic_ptr:ptr<workgroup, atomic<i32>, read_write>, %cmp:i32, %val:i32):__atomic_compare_exchange_result_i32 {
   $B3: {
-    %old_value:ptr<function, i32, read_write> = var, %cmp
+    %old_value:ptr<function, i32, read_write> = var %cmp
     %13:bool = msl.atomic_compare_exchange_weak_explicit %atomic_ptr, %old_value, %val, 0u, 0u
     %14:i32 = load %old_value
     %15:__atomic_compare_exchange_result_i32 = construct %14, %13
@@ -645,7 +645,7 @@ __atomic_compare_exchange_result_u32 = struct @align(4) {
 }
 %5 = func(%atomic_ptr:ptr<workgroup, atomic<i32>, read_write>, %cmp:i32, %val:i32):__atomic_compare_exchange_result_i32 {
   $B3: {
-    %old_value:ptr<function, i32, read_write> = var, %cmp
+    %old_value:ptr<function, i32, read_write> = var %cmp
     %16:bool = msl.atomic_compare_exchange_weak_explicit %atomic_ptr, %old_value, %val, 0u, 0u
     %17:i32 = load %old_value
     %18:__atomic_compare_exchange_result_i32 = construct %17, %16
@@ -654,7 +654,7 @@ __atomic_compare_exchange_result_u32 = struct @align(4) {
 }
 %7 = func(%atomic_ptr_1:ptr<workgroup, atomic<u32>, read_write>, %cmp_1:u32, %val_1:u32):__atomic_compare_exchange_result_u32 {  # %atomic_ptr_1: 'atomic_ptr', %cmp_1: 'cmp', %val_1: 'val'
   $B4: {
-    %old_value_1:ptr<function, u32, read_write> = var, %cmp_1  # %old_value_1: 'old_value'
+    %old_value_1:ptr<function, u32, read_write> = var %cmp_1  # %old_value_1: 'old_value'
     %23:bool = msl.atomic_compare_exchange_weak_explicit %atomic_ptr_1, %old_value_1, %val_1, 0u, 0u
     %24:u32 = load %old_value_1
     %25:__atomic_compare_exchange_result_u32 = construct %24, %23
@@ -735,7 +735,7 @@ __atomic_compare_exchange_result_i32 = struct @align(4) {
 }
 %5 = func(%atomic_ptr:ptr<workgroup, atomic<i32>, read_write>, %cmp:i32, %val:i32):__atomic_compare_exchange_result_i32 {
   $B3: {
-    %old_value:ptr<function, i32, read_write> = var, %cmp
+    %old_value:ptr<function, i32, read_write> = var %cmp
     %15:bool = msl.atomic_compare_exchange_weak_explicit %atomic_ptr, %old_value, %val, 0u, 0u
     %16:i32 = load %old_value
     %17:__atomic_compare_exchange_result_i32 = construct %16, %15
@@ -744,7 +744,7 @@ __atomic_compare_exchange_result_i32 = struct @align(4) {
 }
 %7 = func(%atomic_ptr_1:ptr<storage, atomic<i32>, read_write>, %cmp_1:i32, %val_1:i32):__atomic_compare_exchange_result_i32 {  # %atomic_ptr_1: 'atomic_ptr', %cmp_1: 'cmp', %val_1: 'val'
   $B4: {
-    %old_value_1:ptr<function, i32, read_write> = var, %cmp_1  # %old_value_1: 'old_value'
+    %old_value_1:ptr<function, i32, read_write> = var %cmp_1  # %old_value_1: 'old_value'
     %22:bool = msl.atomic_compare_exchange_weak_explicit %atomic_ptr_1, %old_value_1, %val_1, 0u, 0u
     %23:i32 = load %old_value_1
     %24:__atomic_compare_exchange_result_i32 = construct %23, %22
@@ -1061,7 +1061,7 @@ __frexp_result_f32 = struct @align(4) {
 
 %foo = func(%value:f32):f32 {
   $B1: {
-    %3:ptr<function, __frexp_result_f32, read_write> = var
+    %3:ptr<function, __frexp_result_f32, read_write> = var undef
     %4:ptr<function, i32, read_write> = access %3, 1u
     %5:i32 = load %4
     %6:f32 = msl.frexp %value, %5
@@ -1121,7 +1121,7 @@ __frexp_result_vec4_f32 = struct @align(16) {
 
 %foo = func(%value:vec4<f32>):vec4<f32> {
   $B1: {
-    %3:ptr<function, __frexp_result_vec4_f32, read_write> = var
+    %3:ptr<function, __frexp_result_vec4_f32, read_write> = var undef
     %4:ptr<function, vec4<i32>, read_write> = access %3, 1u
     %5:vec4<i32> = load %4
     %6:vec4<f32> = msl.frexp %value, %5
@@ -1246,7 +1246,7 @@ __modf_result_f32 = struct @align(4) {
 
 %foo = func(%value:f32):f32 {
   $B1: {
-    %3:ptr<function, __modf_result_f32, read_write> = var
+    %3:ptr<function, __modf_result_f32, read_write> = var undef
     %4:ptr<function, f32, read_write> = access %3, 1u
     %5:f32 = load %4
     %6:f32 = msl.modf %value, %5
@@ -1304,7 +1304,7 @@ __modf_result_vec4_f32 = struct @align(16) {
 
 %foo = func(%value:vec4<f32>):vec4<f32> {
   $B1: {
-    %3:ptr<function, __modf_result_vec4_f32, read_write> = var
+    %3:ptr<function, __modf_result_vec4_f32, read_write> = var undef
     %4:ptr<function, vec4<f32>, read_write> = access %3, 1u
     %5:vec4<f32> = load %4
     %6:vec4<f32> = msl.modf %value, %5
@@ -1498,8 +1498,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, Sign_Vector) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureDimensions_1d) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k1d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k1d, ty.f32()));
     auto* func = b.Function("foo", ty.u32());
     func->SetParams({t});
     b.Append(func->Block(), [&] {
@@ -1533,8 +1532,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureDimensions_1d) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureDimensions_2d_WithoutLod) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* func = b.Function("foo", ty.vec2<u32>());
     func->SetParams({t});
     b.Append(func->Block(), [&] {
@@ -1569,8 +1567,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureDimensions_2d_WithoutLod) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureDimensions_2d_WithI32Lod) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* func = b.Function("foo", ty.vec2<u32>());
     func->SetParams({t});
     b.Append(func->Block(), [&] {
@@ -1606,8 +1603,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureDimensions_2d_WithI32Lod) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureDimensions_3d) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k3d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k3d, ty.f32()));
     auto* func = b.Function("foo", ty.vec3<u32>());
     func->SetParams({t});
     b.Append(func->Block(), [&] {
@@ -1643,8 +1639,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureDimensions_3d) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureGather_2d_UnsignedComponent) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* func = b.Function("foo", ty.vec4<f32>());
@@ -1679,8 +1674,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureGather_2d_UnsignedComponent) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureGather_2d_SignedComponent) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* func = b.Function("foo", ty.vec4<f32>());
@@ -1715,8 +1709,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureGather_2d_SignedComponent) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureGather_2d_WithOffset) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* offset = b.FunctionParam("offset", ty.vec2<i32>());
@@ -1828,9 +1821,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureGatherCompare) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_1d_U32Coord) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k1d, format, core::Access::kRead,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k1d, format, core::Access::kRead);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.u32());
     auto* func = b.Function("foo", ty.vec4<f32>());
@@ -1866,9 +1858,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_1d_U32Coord) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_1d_I32Coord) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k1d, format, core::Access::kRead,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k1d, format, core::Access::kRead);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.i32());
     auto* func = b.Function("foo", ty.vec4<f32>());
@@ -1905,9 +1896,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_1d_I32Coord) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2d_U32Coords) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k2d, format, core::Access::kRead,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k2d, format, core::Access::kRead);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
     auto* func = b.Function("foo", ty.vec4<f32>());
@@ -1943,9 +1933,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2d_U32Coords) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2d_I32Coords) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k2d, format, core::Access::kRead,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k2d, format, core::Access::kRead);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
     auto* func = b.Function("foo", ty.vec4<f32>());
@@ -1981,8 +1970,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2d_I32Coords) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2d_WithLevel) {
-    auto* texture_ty =
-        ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.i32());
+    auto* texture_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.i32());
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
     auto* level = b.FunctionParam("level", ty.i32());
@@ -2020,9 +2008,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2d_WithLevel) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2darray_U32Index) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k2dArray, format, core::Access::kRead,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k2dArray, format, core::Access::kRead);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
     auto* index = b.FunctionParam("index", ty.u32());
@@ -2060,9 +2047,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2darray_U32Index) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2darray_I32Index) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k2dArray, format, core::Access::kRead,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k2dArray, format, core::Access::kRead);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
     auto* index = b.FunctionParam("index", ty.i32());
@@ -2099,8 +2085,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2darray_I32Index) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2darray_WithLevel) {
-    auto* texture_ty =
-        ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2dArray, ty.f32());
+    auto* texture_ty = ty.sampled_texture(core::type::TextureDimension::k2dArray, ty.f32());
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
     auto* index = b.FunctionParam("index", ty.i32());
@@ -2139,9 +2124,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_2darray_WithLevel) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_3d) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k3d, format, core::Access::kRead,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k3d, format, core::Access::kRead);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec3<i32>());
     auto* func = b.Function("foo", ty.vec4<f32>());
@@ -2177,8 +2161,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureLoad_3d) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureNumLayers) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2dArray, ty.f32()));
+    auto* t =
+        b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2dArray, ty.f32()));
     auto* func = b.Function("foo", ty.u32());
     func->SetParams({t});
     b.Append(func->Block(), [&] {
@@ -2211,8 +2195,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureNumLayers) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureNumLevels) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* func = b.Function("foo", ty.u32());
     func->SetParams({t});
     b.Append(func->Block(), [&] {
@@ -2279,8 +2262,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureNumSamples) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureSample) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* func = b.Function("foo", ty.vec4<f32>());
@@ -2315,8 +2297,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureSample) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleBias) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* bias = b.FunctionParam("bias", ty.f32());
@@ -2353,8 +2334,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleBias) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleBias_Array) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2dArray, ty.f32()));
+    auto* t =
+        b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2dArray, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* index = b.FunctionParam("index", ty.u32());
@@ -2509,8 +2490,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleCompareLevel_WithOffset) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleGrad_2d) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* ddx = b.FunctionParam("ddx", ty.vec2<f32>());
@@ -2549,8 +2529,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleGrad_2d) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureGather_2dArray) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2dArray, ty.f32()));
+    auto* t =
+        b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2dArray, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* index = b.FunctionParam("index", ty.i32());
@@ -2587,8 +2567,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureGather_2dArray) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleGrad_2dArray) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2dArray, ty.f32()));
+    auto* t =
+        b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2dArray, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* index = b.FunctionParam("index", ty.i32());
@@ -2629,8 +2609,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleGrad_2dArray) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleGrad_3d) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k3d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k3d, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec3<f32>());
     auto* ddx = b.FunctionParam("ddx", ty.vec3<f32>());
@@ -2669,8 +2648,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleGrad_3d) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleGrad_Cube) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::kCube, ty.f32()));
+    auto* t =
+        b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::kCube, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec3<f32>());
     auto* ddx = b.FunctionParam("ddx", ty.vec3<f32>());
@@ -2709,8 +2688,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleGrad_Cube) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleGrad_WithOffset) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* ddx = b.FunctionParam("ddx", ty.vec2<f32>());
@@ -2750,8 +2728,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleGrad_WithOffset) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleLevel) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* level = b.FunctionParam("level", ty.f32());
@@ -2788,8 +2765,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleLevel) {
 }
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleLevel_Array) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2dArray, ty.f32()));
+    auto* t =
+        b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2dArray, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* index = b.FunctionParam("index", ty.u32());
@@ -2829,9 +2806,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureSampleLevel_Array) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_1d_U32Coord) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k1d, format, core::Access::kWrite,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k1d, format, core::Access::kWrite);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.u32());
     auto* value = b.FunctionParam("value", ty.vec4<f32>());
@@ -2868,9 +2844,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_1d_U32Coord) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_1d_I32Coord) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k1d, format, core::Access::kWrite,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k1d, format, core::Access::kWrite);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.i32());
     auto* value = b.FunctionParam("value", ty.vec4<f32>());
@@ -2908,9 +2883,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_1d_I32Coord) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_2d_U32Coords) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k2d, format, core::Access::kWrite,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k2d, format, core::Access::kWrite);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
     auto* value = b.FunctionParam("value", ty.vec4<f32>());
@@ -2947,9 +2921,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_2d_U32Coords) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_2d_I32Coords) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k2d, format, core::Access::kWrite,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k2d, format, core::Access::kWrite);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
     auto* value = b.FunctionParam("value", ty.vec4<f32>());
@@ -2987,9 +2960,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_2d_I32Coords) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_2darray_U32Index) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k2dArray, format, core::Access::kWrite,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k2dArray, format, core::Access::kWrite);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
     auto* index = b.FunctionParam("index", ty.u32());
@@ -3028,9 +3000,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_2darray_U32Index) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_2darray_I32Index) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k2dArray, format, core::Access::kWrite,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k2dArray, format, core::Access::kWrite);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
     auto* index = b.FunctionParam("index", ty.i32());
@@ -3069,9 +3040,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_2darray_I32Index) {
 
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_3d) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k3d, format, core::Access::kWrite,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k3d, format, core::Access::kWrite);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec3<i32>());
     auto* value = b.FunctionParam("value", ty.vec4<f32>());
@@ -3110,9 +3080,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, TextureStore_3d) {
 // Test that we insert a fence after the store to ensure that it is ordered before the load.
 TEST_F(MslWriter_BuiltinPolyfillTest, TextureStoreToReadWriteBeforeLoad) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k2d, format, core::Access::kReadWrite,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k2d, format, core::Access::kReadWrite);
     auto* t = b.FunctionParam("t", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<i32>());
     auto* value = b.FunctionParam("value", ty.vec4<f32>());
@@ -3320,8 +3289,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, SubgroupMatrixLoad_Storage_F32) {
     auto* func = b.Function("foo", mat);
     func->SetParams({p});
     b.Append(func->Block(), [&] {
-        auto* call = b.Call(mat, core::BuiltinFn::kSubgroupMatrixLoad, p, 64_u, false, 32_u);
-        call->SetExplicitTemplateParams(Vector{mat});
+        auto* call = b.CallExplicit(mat, core::BuiltinFn::kSubgroupMatrixLoad, Vector{mat}, p, 64_u,
+                                    false, 32_u);
         b.Return(func, call);
     });
 
@@ -3340,7 +3309,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, SubgroupMatrixLoad_Storage_F32) {
   $B1: {
     %3:ptr<storage, f32, read_write> = access %p, 64u
     %4:u64 = msl.convert 32u
-    %5:ptr<function, subgroup_matrix_result<f32, 8, 8>, read_write> = var
+    %5:ptr<function, subgroup_matrix_result<f32, 8, 8>, read_write> = var undef
     %6:subgroup_matrix_result<f32, 8, 8> = load %5
     %7:void = msl.simdgroup_load %6, %3, %4, vec2<u64>(0u64), false
     %8:subgroup_matrix_result<f32, 8, 8> = load %5
@@ -3361,8 +3330,8 @@ TEST_F(MslWriter_BuiltinPolyfillTest, SubgroupMatrixLoad_Workgroup_F16) {
     auto* func = b.Function("foo", mat);
     func->SetParams({p});
     b.Append(func->Block(), [&] {
-        auto* call = b.Call(mat, core::BuiltinFn::kSubgroupMatrixLoad, p, 64_u, false, 32_u);
-        call->SetExplicitTemplateParams(Vector{mat});
+        auto* call = b.CallExplicit(mat, core::BuiltinFn::kSubgroupMatrixLoad, Vector{mat}, p, 64_u,
+                                    false, 32_u);
         b.Return(func, call);
     });
 
@@ -3381,7 +3350,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, SubgroupMatrixLoad_Workgroup_F16) {
   $B1: {
     %3:ptr<workgroup, f16, read_write> = access %p, 64u
     %4:u64 = msl.convert 32u
-    %5:ptr<function, subgroup_matrix_result<f16, 8, 8>, read_write> = var
+    %5:ptr<function, subgroup_matrix_result<f16, 8, 8>, read_write> = var undef
     %6:subgroup_matrix_result<f16, 8, 8> = load %5
     %7:void = msl.simdgroup_load %6, %3, %4, vec2<u64>(0u64), false
     %8:subgroup_matrix_result<f16, 8, 8> = load %5
@@ -3477,14 +3446,15 @@ TEST_F(MslWriter_BuiltinPolyfillTest, SubgroupMatrixMultiply_F32) {
     auto* func = b.Function("foo", result);
     func->SetParams({left, right});
     b.Append(func->Block(), [&] {
-        auto* call = b.Call(result, core::BuiltinFn::kSubgroupMatrixMultiply, left, right);
+        auto* call = b.CallExplicit(result, core::BuiltinFn::kSubgroupMatrixMultiply,
+                                    Vector{ty.f32()}, left, right);
         b.Return(func, call);
     });
 
     auto* src = R"(
 %foo = func(%left:subgroup_matrix_left<f32, 4, 8>, %right:subgroup_matrix_right<f32, 8, 4>):subgroup_matrix_result<f32, 8, 8> {
   $B1: {
-    %4:subgroup_matrix_result<f32, 8, 8> = subgroupMatrixMultiply %left, %right
+    %4:subgroup_matrix_result<f32, 8, 8> = subgroupMatrixMultiply<f32> %left, %right
     ret %4
   }
 }
@@ -3494,7 +3464,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, SubgroupMatrixMultiply_F32) {
     auto* expect = R"(
 %foo = func(%left:subgroup_matrix_left<f32, 4, 8>, %right:subgroup_matrix_right<f32, 8, 4>):subgroup_matrix_result<f32, 8, 8> {
   $B1: {
-    %4:ptr<function, subgroup_matrix_result<f32, 8, 8>, read_write> = var
+    %4:ptr<function, subgroup_matrix_result<f32, 8, 8>, read_write> = var undef
     %5:subgroup_matrix_result<f32, 8, 8> = load %4
     %6:void = msl.simdgroup_multiply %5, %left, %right
     %7:subgroup_matrix_result<f32, 8, 8> = load %4
@@ -3515,14 +3485,15 @@ TEST_F(MslWriter_BuiltinPolyfillTest, SubgroupMatrixMultiply_F16) {
     auto* func = b.Function("foo", result);
     func->SetParams({left, right});
     b.Append(func->Block(), [&] {
-        auto* call = b.Call(result, core::BuiltinFn::kSubgroupMatrixMultiply, left, right);
+        auto* call = b.CallExplicit(result, core::BuiltinFn::kSubgroupMatrixMultiply,
+                                    Vector{ty.f16()}, left, right);
         b.Return(func, call);
     });
 
     auto* src = R"(
 %foo = func(%left:subgroup_matrix_left<f16, 8, 4>, %right:subgroup_matrix_right<f16, 2, 8>):subgroup_matrix_result<f16, 2, 4> {
   $B1: {
-    %4:subgroup_matrix_result<f16, 2, 4> = subgroupMatrixMultiply %left, %right
+    %4:subgroup_matrix_result<f16, 2, 4> = subgroupMatrixMultiply<f16> %left, %right
     ret %4
   }
 }
@@ -3532,7 +3503,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, SubgroupMatrixMultiply_F16) {
     auto* expect = R"(
 %foo = func(%left:subgroup_matrix_left<f16, 8, 4>, %right:subgroup_matrix_right<f16, 2, 8>):subgroup_matrix_result<f16, 2, 4> {
   $B1: {
-    %4:ptr<function, subgroup_matrix_result<f16, 2, 4>, read_write> = var
+    %4:ptr<function, subgroup_matrix_result<f16, 2, 4>, read_write> = var undef
     %5:subgroup_matrix_result<f16, 2, 4> = load %4
     %6:void = msl.simdgroup_multiply %5, %left, %right
     %7:subgroup_matrix_result<f16, 2, 4> = load %4
@@ -3572,7 +3543,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, SubgroupMatrixMultiplyAccumulate_F32) {
     auto* expect = R"(
 %foo = func(%left:subgroup_matrix_left<f32, 4, 8>, %right:subgroup_matrix_right<f32, 8, 4>, %acc:subgroup_matrix_result<f32, 8, 8>):subgroup_matrix_result<f32, 8, 8> {
   $B1: {
-    %5:ptr<function, subgroup_matrix_result<f32, 8, 8>, read_write> = var
+    %5:ptr<function, subgroup_matrix_result<f32, 8, 8>, read_write> = var undef
     %6:subgroup_matrix_result<f32, 8, 8> = load %5
     %7:void = msl.simdgroup_multiply_accumulate %6, %left, %right, %acc
     %8:subgroup_matrix_result<f32, 8, 8> = load %5
@@ -3612,7 +3583,7 @@ TEST_F(MslWriter_BuiltinPolyfillTest, SubgroupMatrixMultiplyAccumulate_F16) {
     auto* expect = R"(
 %foo = func(%left:subgroup_matrix_left<f16, 8, 4>, %right:subgroup_matrix_right<f16, 2, 8>, %acc:subgroup_matrix_result<f16, 2, 4>):subgroup_matrix_result<f16, 2, 4> {
   $B1: {
-    %5:ptr<function, subgroup_matrix_result<f16, 2, 4>, read_write> = var
+    %5:ptr<function, subgroup_matrix_result<f16, 2, 4>, read_write> = var undef
     %6:subgroup_matrix_result<f16, 2, 4> = load %5
     %7:void = msl.simdgroup_multiply_accumulate %6, %left, %right, %acc
     %8:subgroup_matrix_result<f16, 2, 4> = load %5

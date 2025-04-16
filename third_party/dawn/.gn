@@ -50,3 +50,7 @@ default_args = {
   use_sysroot = true
   enable_js_protobuf = false
 }
+
+# Export compile_commands.json to build dir for all generated targets.
+# Useful for editors that parse the compilation database for symbol lookup.
+export_compile_commands = [ "*" ]
