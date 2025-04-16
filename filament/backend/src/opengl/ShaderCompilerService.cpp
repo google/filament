@@ -88,10 +88,10 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
 
     // Check if the shader compilation is completed. You may want to call this when the extension
     // `KHR_parallel_shader_compile` is enabled.
-    bool isCompileCompleted() noexcept;
+    bool isCompileCompleted() const noexcept;
 
     // Check compilation status of the shaders and log errors on failure.
-    void checkCompileStatus() noexcept;
+    void checkCompileStatus() const noexcept;
 
     // Create a program by linking the compiled shaders. `gl.program` is always populated with a
     // valid program ID after this method. But this doesn't necessarily mean the program is
@@ -101,7 +101,7 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
 
     // Check if the program link is completed. You may want to call this when the extension
     // `KHR_parallel_shader_compile` is enabled.
-    bool isLinkCompleted() noexcept;
+    bool isLinkCompleted() const noexcept;
 
     // Check link status of the program and log errors on failure. `linked` is updated with the
     // result. Also cleanup shaders regardless of the result.
@@ -254,7 +254,7 @@ void ShaderCompilerService::OpenGLProgramToken::compileShaders(OpenGLContext& co
     }
 }
 
-bool ShaderCompilerService::OpenGLProgramToken::isCompileCompleted() noexcept {
+bool ShaderCompilerService::OpenGLProgramToken::isCompileCompleted() const noexcept {
     GLenum param = GL_COMPLETION_STATUS;
     if (UTILS_UNLIKELY(compiler.mMode != Mode::ASYNCHRONOUS)) {
         param = GL_COMPILE_STATUS;
@@ -273,7 +273,7 @@ bool ShaderCompilerService::OpenGLProgramToken::isCompileCompleted() noexcept {
     return true;
 }
 
-void ShaderCompilerService::OpenGLProgramToken::checkCompileStatus() noexcept {
+void ShaderCompilerService::OpenGLProgramToken::checkCompileStatus() const noexcept {
     SYSTRACE_CALL();
 
     UTILS_NOUNROLL
@@ -316,7 +316,7 @@ void ShaderCompilerService::OpenGLProgramToken::linkProgram(OpenGLContext& conte
     gl.program = program;
 }
 
-bool ShaderCompilerService::OpenGLProgramToken::isLinkCompleted() noexcept {
+bool ShaderCompilerService::OpenGLProgramToken::isLinkCompleted() const noexcept {
     assert_invariant(gl.program);
 
     GLenum param = GL_COMPLETION_STATUS;
