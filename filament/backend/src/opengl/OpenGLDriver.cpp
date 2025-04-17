@@ -2098,6 +2098,7 @@ void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer, const m
 
     glstream->user_thread.pending = mPlatform.transformAcquiredImage({
             hwbuffer, cb, userData, handler });
+    glstream->user_thread.transform = transform;
 
     if (glstream->user_thread.pending.image != nullptr) {
         // If there's no pending image, do nothing. Note that GL_OES_EGL_image does not let you pass
