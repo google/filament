@@ -31,6 +31,14 @@
 
 namespace filament::backend {
 
+struct WGPUProgram : public HwProgram {
+    WGPUProgram(wgpu::Device&, Program&);
+
+    wgpu::ShaderModule vertexShaderModule = nullptr;
+    wgpu::ShaderModule fragmentShaderModule = nullptr;
+    wgpu::ShaderModule computeShaderModule = nullptr;
+};
+
 struct WGPUBufferObject;
 // TODO: Currently WGPUVertexBufferInfo is not used by WebGPU for useful task.
 // Update the struct when used by WebGPU driver.

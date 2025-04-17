@@ -325,6 +325,9 @@ void WebGPUDriver::destroyTexture(Handle<HwTexture> th) {
 }
 
 void WebGPUDriver::destroyProgram(Handle<HwProgram> ph) {
+    if (ph) {
+        destructHandle<WGPUProgram>(ph);
+    }
 }
 
 void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
@@ -369,7 +372,7 @@ Handle<HwTexture> WebGPUDriver::importTextureS() noexcept {
 }
 
 Handle<HwProgram> WebGPUDriver::createProgramS() noexcept {
-    return Handle<HwProgram>((Handle<HwProgram>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUProgram>();
 }
 
 Handle<HwFence> WebGPUDriver::createFenceS() noexcept {
@@ -505,7 +508,11 @@ void WebGPUDriver::importTextureR(Handle<HwTexture> th, intptr_t id, SamplerType
 void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<HwVertexBuffer> vbh,
         Handle<HwIndexBuffer> ibh, PrimitiveType pt) {}
 
-void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {}
+void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
+    assert_invariant(mDevice);
+    auto* wgpuProgram = constructHandle<WGPUProgram>(ph, mDevice, program);
+    assert_invariant(wgpuProgram);
+}
 
 void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
     assert_invariant(!mDefaultRenderTarget);
@@ -831,6 +838,8 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    assert_invariant(mRenderPassEncoder);
+    mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
 }
 
 void WebGPUDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
@@ -875,6 +884,7 @@ void WebGPUDriver::bindDescriptorSet(
 }
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
+    mHandleAllocator.associateTagToHandle(handleId, std::move(tag));
 }
 
 } // namespace filament

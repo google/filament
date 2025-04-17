@@ -16,7 +16,22 @@
 
 #include "WebGPUHandles.h"
 
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/Program.h>
+
+#include <utils/BitmaskEnum.h>
+#include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
+
+#include <webgpu/webgpu_cpp.h>
+
+#include <algorithm>
+#include <cstdint>
 #include <utility>
+#include <vector>
+#include <sstream>
+#include <string> // for std::to_string
 
 namespace {
 
@@ -27,10 +42,56 @@ wgpu::Buffer createIndexBuffer(wgpu::Device const& device, uint8_t elementSize, 
         .mappedAtCreation = false };
     return device.CreateBuffer(&descriptor);
 }
+
+wgpu::ShaderModule createShaderModuleFromWgsl(wgpu::Device& device, const char* programName,
+        std::string_view shaderType, utils::FixedCapacityVector<uint8_t> const& wgslSource) {
+    wgpu::ShaderModuleWGSLDescriptor wgslDescriptor{};
+    wgslDescriptor.code = wgpu::StringView(reinterpret_cast<const char*>(wgslSource.data()));
+    std::stringstream labelStream;
+    labelStream << programName << "_" << shaderType << "_shader";
+    wgpu::ShaderModuleDescriptor descriptor{
+        .nextInChain = &wgslDescriptor,
+        .label = labelStream.str().data()
+    };
+    return device.CreateShaderModule(&descriptor);
+}
+
+wgpu::ShaderModule createVertexShaderModule(const char* programName, wgpu::Device& device,
+        utils::FixedCapacityVector<uint8_t> const& source) {
+    if (UTILS_UNLIKELY(source.empty())) {
+        return nullptr;// null handle
+    }
+    return createShaderModuleFromWgsl(device, programName, "vertex", source);
+}
+
+wgpu::ShaderModule createFragmentShaderModule(const char* programName, wgpu::Device& device,
+        utils::FixedCapacityVector<uint8_t> const& source) {
+    if (source.empty()) {
+        return nullptr;// null handle
+    }
+    return createShaderModuleFromWgsl(device, programName, "fragment", source);
+}
+
+wgpu::ShaderModule createComputeShaderModule(const char* programName, wgpu::Device& device,
+        utils::FixedCapacityVector<uint8_t> const& source) {
+    if (source.empty()) {
+        return nullptr;// null handle
+    }
+    return createShaderModuleFromWgsl(device, programName, "compute", source);
+}
+
 } // namespace
 
 namespace filament::backend {
 
+WGPUProgram::WGPUProgram(wgpu::Device& device, Program& program)
+    : HwProgram(program.getName()),
+      vertexShaderModule(createVertexShaderModule(name.c_str_safe(), device,
+              program.getShadersSource()[static_cast<size_t>(ShaderStage::VERTEX)])),
+      fragmentShaderModule(createFragmentShaderModule(name.c_str_safe(), device,
+              program.getShadersSource()[static_cast<size_t>(ShaderStage::FRAGMENT)])),
+      computeShaderModule(createComputeShaderModule(name.c_str_safe(), device,
+              program.getShadersSource()[static_cast<size_t>(ShaderStage::COMPUTE)])) {}
 
 WGPUIndexBuffer::WGPUIndexBuffer(wgpu::Device const& device, uint8_t elementSize,
         uint32_t indexCount)
@@ -79,9 +140,9 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         wgpu::Device const& device) {
     assert_invariant(device);
 
-    // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
-    // debugging. For now, hack an incrementing value.
-    static int layoutNum = 0;
+//    // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
+//    // debugging. For now, hack an incrementing value.
+//    static int layoutNum = 0;
 
     uint samplerCount =
             std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
@@ -138,15 +199,15 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         // fEntry.count
     }
 
-    wgpu::BindGroupLayoutDescriptor layoutDescriptor{
-        // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
-        // debugging. For now, hack an incrementing value.
-        .label{ "layout_" + std::to_string(++layoutNum) },
-        .entryCount = wEntries.size(),
-        .entries = wEntries.data()
-    };
-    // TODO Do we need to defer this until we have more info on textures and samplers??
-    mLayout = device.CreateBindGroupLayout(&layoutDescriptor);
+//    wgpu::BindGroupLayoutDescriptor layoutDescriptor{
+//        // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
+//        // debugging. For now, hack an incrementing value.
+//        .label{ "layout_" + std::to_string(++layoutNum) },
+//        .entryCount = wEntries.size(),
+//        .entries = wEntries.data()
+//    };
+//    // TODO Do we need to defer this until we have more info on textures and samplers??
+//    mLayout = device.CreateBindGroupLayout(&layoutDescriptor);
 }
 WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
 }// namespace filament::backend

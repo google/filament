@@ -63,4 +63,7 @@
     #define FWGPU_LOGI (utils::slog.i)
 #endif
 
+// Heuristic: Triple Buffering (3) multiplied by maximum number of renderpasses (15).
+constexpr static const int FWGPU_PIPELINE_MAX_AGE = 3 * 15;
+
 #endif// TNT_FILAMENT_BACKEND_WEBGPUCONSTANTS_H
