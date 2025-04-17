@@ -16,11 +16,14 @@
 
 #ifndef TNT_UTILS_ASHMEM_H
 #define TNT_UTILS_ASHMEM_H
+ 
+#include <utils/compiler.h>
 
 #include <stddef.h>
 
 namespace utils {
 
+UTILS_PUBLIC
 int ashmem_create_region(const char *name, size_t size);
 
 } // namespace utils
