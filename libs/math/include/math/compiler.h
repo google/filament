@@ -122,6 +122,11 @@ struct is_arithmetic : std::integral_constant<bool,
         std::is_integral<T>::value || std::is_floating_point<T>::value> {
 };
 
+template<typename T>
+struct is_floating_point : std::integral_constant<bool,
+        std::is_floating_point<T>::value> {
+};
+
 } // filament::math
 
 #endif // TNT_MATH_COMPILER_H
