@@ -198,6 +198,10 @@ private:
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;
 
+    // Vuklan Driver pipeline cache handle. In the cases a pipeline has been  evicted by the `gc`,
+    // recreating the same pipeline is cheaper, helping with frame stalling.
+    VkPipelineCache mPipelineCache = VK_NULL_HANDLE;
+
     // Current requirements for the pipeline layout, pipeline, and descriptor sets.
     PipelineKey mPipelineRequirements = {};
 
