@@ -859,6 +859,7 @@ void WebGPUDriver::resetState(int) {
 void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
         backend::descriptor_binding_t binding, Handle<HwBufferObject> boh, uint32_t offset,
         uint32_t size) {
+    /*
     auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
     auto buffer = handleCast<WGPUBufferObject>(boh);
     if (!bindGroup->getIsLocked()) {
@@ -870,26 +871,31 @@ void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
         bindGroup->addEntry(entry.binding, entry);
     }
     //TODO Just the setup, this function stilll needs the rest of logic implemented
+     */
 }
 
 void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
         backend::descriptor_binding_t binding, Handle<HwTexture> th, SamplerParams params) {
-    auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
-    auto texture = handleCast<WGPUTexture>(th);
+    // TODO: We can't actually run all this until we have handle instantiation properly done
+    /*
+        auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
+        auto texture = handleCast<WGPUTexture>(th);
 
-    // TODO very high odds badd assumptions are in here about handling HwTexture. Revisit with more
-    // understanding. Right now assuming there is a wgpu::TextureView filled in
-    if (!bindGroup->getIsLocked()) {
-        // TODO making assumptions that size and offset mean the same thing here.
-        wgpu::BindGroupEntry tEntry{ .binding = static_cast<uint32_t>(binding * 2),
-            .textureView = texture->texView };
-        bindGroup->addEntry(tEntry.binding, tEntry);
+        // TODO very high odds badd assumptions are in here about handling HwTexture. Revisit with
+       more
+        // understanding. Right now assuming there is a wgpu::TextureView filled in
+        if (!bindGroup->getIsLocked()) {
+            // TODO making assumptions that size and offset mean the same thing here.
+            wgpu::BindGroupEntry tEntry{ .binding = static_cast<uint32_t>(binding * 2),
+                .textureView = texture->texView };
+            bindGroup->addEntry(tEntry.binding, tEntry);
 
-        wgpu::BindGroupEntry sEntry{ .binding = static_cast<uint32_t>(binding * 2 + 1),
-            .sampler = texture->sampler };
-        bindGroup->addEntry(sEntry.binding, sEntry);
-    }
-    //TODO Just the setup, this function stilll needs the rest of logic implemented
+            wgpu::BindGroupEntry sEntry{ .binding = static_cast<uint32_t>(binding * 2 + 1),
+                .sampler = texture->sampler };
+            bindGroup->addEntry(sEntry.binding, sEntry);
+        }
+        //TODO Just the setup, this function stilll needs the rest of logic implemented
+        */
 }
 
 void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh, backend::descriptor_set_t set,
