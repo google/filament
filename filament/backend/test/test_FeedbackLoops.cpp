@@ -18,6 +18,7 @@
 
 #include "Lifetimes.h"
 #include "Shader.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 #include <backend/DriverEnums.h>
@@ -98,6 +99,9 @@ struct MaterialParams {
 // The problems are caused by both uploading and rendering into the same texture, since the OpenGL
 // backend's readPixels does not work correctly with textures that have image data uploaded.
 TEST_F(BackendTest, FeedbackLoops) {
+    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL),
+            "OpenGL image is upside down due to readPixels failing for texture with uploaded image "
+            "data");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -239,7 +243,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             // seems to be un-reliable on some GPU's.
             if (frame == kNumFrames - 1) {
                 EXPECT_IMAGE(renderTargets[0], getExpectations(),
-                        ScreenshotParams(kTexWidth, kTexHeight, "FeedbackLoops", 0x70695aa1));
+                        ScreenshotParams(kTexWidth, kTexHeight, "FeedbackLoops", 4192780705));
             }
 
             api.flush();

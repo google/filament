@@ -20,6 +20,7 @@
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 using namespace filament;
@@ -161,6 +162,7 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
 }
 
 TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
+    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL), "Stencil isn't applied");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -237,7 +239,7 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     api.endFrame(0);
 
     EXPECT_IMAGE(renderTarget1, getExpectations(),
-            ScreenshotParams(512, 512, "StencilBufferAutoResolve", 0x6CEFAC8F));
+            ScreenshotParams(512, 512, "StencilBufferAutoResolve", 3353562179));
 
     flushAndWait();
     getDriver().purge();

@@ -55,8 +55,10 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup
     prog.descriptorBindings(1, bindingsInfo);
     mProgram = cleanup.add(api.createProgram(std::move(prog)));
 
-    mDescriptorSetLayout = cleanup.add(
-            api.createDescriptorSetLayout(DescriptorSetLayout{ kLayouts }));
+    if (!kLayouts.empty()) {
+        mDescriptorSetLayout =
+                cleanup.add(api.createDescriptorSetLayout(DescriptorSetLayout{ kLayouts }));
+    }
 }
 
 filament::backend::DescriptorSetHandle Shader::createDescriptorSet(DriverApi& api) const {
