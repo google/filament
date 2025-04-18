@@ -43,6 +43,7 @@ public:
     using DescriptorSetLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
     using DescriptorSetArray =
             std::array<fvkmemory::resource_ptr<VulkanDescriptorSet>, UNIQUE_DESCRIPTOR_SET_COUNT>;
+    using DescriptorCount = VulkanDescriptorSetLayout::Count;
 
     VulkanDescriptorSetCache(VkDevice device, fvkmemory::ResourceManager* resourceManager);
     ~VulkanDescriptorSetCache();
@@ -56,6 +57,10 @@ public:
     void updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
             fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler) noexcept;
 
+    void updateSamplerForExternalSamplerSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
+            fvkmemory::resource_ptr<VulkanTexture> texture) noexcept;
+
+
     void updateInputAttachment(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
             VulkanAttachment const& attachment) noexcept;
 
@@ -65,17 +70,17 @@ public:
     void unbind(uint8_t setIndex);
 
     void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout,
+            fvkutils::DescriptorSetMask const& useExternalSamplerMask,
             fvkutils::DescriptorSetMask const& setMask);
 
     fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
-    // This method is only meant to be used with external samplers (or internally within this
-    // class).
-    VkDescriptorSet getVkSet(fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
+    // This method is meant to be used with external samplers
+    VkDescriptorSet getVkSet(DescriptorCount const& count, VkDescriptorSetLayout vklayout);
 
-    // This method is only meant to be used with external samplers.
-    void manualRecyle(VulkanDescriptorSetLayout::Count const& count, VkDescriptorSetLayout vklayout,
+    // This method is meant to be used with external samplers
+    void manualRecycle(VulkanDescriptorSetLayout::Count const& count, VkDescriptorSetLayout vklayout,
             VkDescriptorSet vkSet);
 
     DescriptorSetArray const& getBoundSets() const { return mStashedSets; }
@@ -83,6 +88,9 @@ public:
     void gc();
 
 private:
+    void updateSamplerImpl(VkDescriptorSet set, uint8_t binding,
+            fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler) noexcept;
+
     class DescriptorInfinitePool;
 
     VkDevice mDevice;

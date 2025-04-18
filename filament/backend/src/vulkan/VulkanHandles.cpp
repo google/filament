@@ -149,9 +149,16 @@ void VulkanDescriptorSet::acquire(fvkmemory::resource_ptr<VulkanBufferObject> ob
     mResources.push_back(obj);
 }
 
-VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(DescriptorSetLayout const& layout)
+VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(DescriptorSetLayout&& layout,
+        VkDescriptorSetLayout vkLayout)
     : bitmask(fromBackendLayout(layout)),
-      count(Count::fromLayoutBitmask(bitmask)) {}
+      count(Count::fromLayoutBitmask(bitmask)),
+      mVkLayout(vkLayout) {}
+
+VulkanDescriptorSetLayout::Bitmask VulkanDescriptorSetLayout::Bitmask::fromLayoutDescription(
+        DescriptorSetLayout const& layout) {
+    return fromBackendLayout(layout);
+}
 
 PushConstantDescription::PushConstantDescription(backend::Program const& program) noexcept {
     mRangeCount = 0;
