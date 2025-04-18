@@ -401,7 +401,7 @@ Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
 }
 
 Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
-    return Handle<HwDescriptorSet>((Handle<HwDescriptorSet>::HandleId) mNextFakeHandle++);
+    return allocHandle<WebGPUDescriptorSet>();
 }
 
 Handle<HwRenderPrimitive> WebGPUDriver::createRenderPrimitiveS() noexcept {
@@ -527,7 +527,10 @@ void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh
 }
 
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
-        Handle<HwDescriptorSetLayout> dslh) {}
+        Handle<HwDescriptorSetLayout> dslh) {
+    auto layout = handleCast<WebGPUDescriptorSetLayout>(dslh);
+    constructHandle<WebGPUDescriptorSet>(dsh, layout->getLayout(), layout->getLayoutSize());
+}
 
 Handle<HwStream> WebGPUDriver::createStreamNative(void* nativeStream) {
     return {};
@@ -853,25 +856,47 @@ void WebGPUDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 void WebGPUDriver::resetState(int) {
 }
 
-void WebGPUDriver::updateDescriptorSetBuffer(
-        Handle<HwDescriptorSet> dsh,
-        backend::descriptor_binding_t binding,
-        Handle<HwBufferObject> boh,
-        uint32_t offset,
+void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
+        backend::descriptor_binding_t binding, Handle<HwBufferObject> boh, uint32_t offset,
         uint32_t size) {
+    auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
+    auto buffer = handleCast<WGPUBufferObject>(boh);
+    if (!bindGroup->getIsLocked()) {
+        // TODO making assumptions that size and offset mean the same thing here.
+        wgpu::BindGroupEntry entry{ .binding = static_cast<uint32_t>(binding * 2),
+            .buffer = buffer->buffer,
+            .offset = offset,
+            .size = size };
+        bindGroup->addEntry(entry.binding, entry);
+    }
+    //TODO Just the setup, this function stilll needs the rest of logic implemented
 }
 
-void WebGPUDriver::updateDescriptorSetTexture(
-        Handle<HwDescriptorSet> dsh,
-        backend::descriptor_binding_t binding,
-        Handle<HwTexture> th,
-        SamplerParams params) {
+void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
+        backend::descriptor_binding_t binding, Handle<HwTexture> th, SamplerParams params) {
+    auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
+    auto texture = handleCast<WGPUTexture>(th);
+
+    // TODO very high odds badd assumptions are in here about handling HwTexture. Revisit with more
+    // understanding. Right now assuming there is a wgpu::TextureView filled in
+    if (!bindGroup->getIsLocked()) {
+        // TODO making assumptions that size and offset mean the same thing here.
+        wgpu::BindGroupEntry tEntry{ .binding = static_cast<uint32_t>(binding * 2),
+            .textureView = texture->texView };
+        bindGroup->addEntry(tEntry.binding, tEntry);
+
+        wgpu::BindGroupEntry sEntry{ .binding = static_cast<uint32_t>(binding * 2 + 1),
+            .sampler = texture->sampler };
+        bindGroup->addEntry(sEntry.binding, sEntry);
+    }
+    //TODO Just the setup, this function stilll needs the rest of logic implemented
 }
 
-void WebGPUDriver::bindDescriptorSet(
-        Handle<HwDescriptorSet> dsh,
-        backend::descriptor_set_t set,
+void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh, backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
+    auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
+    // TODO: presume we need this, use it. Probably Encoder::SetBindGroup
+    auto wbg = bindGroup->lockAndReturn(mDevice);
 }
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {

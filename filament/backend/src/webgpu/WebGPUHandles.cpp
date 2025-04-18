@@ -146,7 +146,36 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         .entries = wEntries.data()
     };
     // TODO Do we need to defer this until we have more info on textures and samplers??
+    mLayoutSize = wEntries.size();
     mLayout = device.CreateBindGroupLayout(&layoutDescriptor);
 }
 WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
+WebGPUDescriptorSet::WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize)
+    : mLayout(layout) {
+    // Establish the size of entries based on the layout. This should be reliable and efficient.
+    entries.resize(layoutSize);
+}
+WebGPUDescriptorSet::~WebGPUDescriptorSet() {}
+wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(const wgpu::Device& device) {
+    if (mIsLocked) {
+        return mBindGroup;
+    }
+    // TODO label? Should we just copy layout label?
+    wgpu::BindGroupDescriptor desc{ .layout = mLayout,
+        .entryCount = entries.size(),
+        .entries = entries.data() };
+    mBindGroup = device.CreateBindGroup(&desc);
+    mIsLocked = true;
+    return mBindGroup;
+}
+void WebGPUDescriptorSet::addEntry(uint index, wgpu::BindGroupEntry entry) {
+    if (mIsLocked) {
+        // We will keep getting hits from future updates, but shouldn't do anything
+        // Filament guarantees this won't change after things have locked.
+        return;
+    }
+    // TODO: Putting some level of trust that Filament is not going to reuse indexes or go past the
+    // layout index for efficiency. Add guards if wrong.
+    entries[index] = entry;
+}
 }// namespace filament::backend
