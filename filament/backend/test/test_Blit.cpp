@@ -144,7 +144,6 @@ static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidt
 
 TEST_F(BlitTest, ColorMagnify) {
     auto& api = getDriverApi();
-    mCleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 256;
     constexpr int kSrcTexHeight = 256;
@@ -205,14 +204,11 @@ TEST_F(BlitTest, ColorMagnify) {
                     ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMagnify", 0x410bdd31));
             api.commit(swapChain);
         }
-
-        flushAndWait();
     }
 }
 
 TEST_F(BlitTest, ColorMinify) {
     auto& api = getDriverApi();
-    mCleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 1024;
     constexpr int kSrcTexHeight = 1024;
@@ -266,7 +262,6 @@ TEST_F(BlitTest, ColorMinify) {
         EXPECT_IMAGE(dstRenderTargets[0], expectations,
                 ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMinify", 0xf3d9c53f));
 
-        flushAndWait();
     }
 }
 
@@ -357,13 +352,11 @@ TEST_F(BlitTest, ColorResolve) {
         EXPECT_IMAGE(dstRenderTarget, expectations,
                 ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve", 0xebfac2ef));
 
-        flushAndWait();
     }
 }
 
 TEST_F(BlitTest, Blit2DTextureArray) {
     auto& api = getDriverApi();
-    mCleanup.addPostCall([&]() { executeCommands(); });
 
     api.startCapture(0);
     mCleanup.addPostCall([&]() { api.stopCapture(0); });
@@ -432,14 +425,11 @@ TEST_F(BlitTest, Blit2DTextureArray) {
                             0x8de7d55b));
             api.commit(swapChain);
         }
-
-        flushAndWait();
     }
 }
 
 TEST_F(BlitTest, BlitRegion) {
     auto& api = getDriverApi();
-    mCleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 1024;
     constexpr int kSrcTexHeight = 1024;
@@ -513,14 +503,11 @@ TEST_F(BlitTest, BlitRegion) {
             //         kDstTexHeight, "BlitRegion", 0x74fa34ed));
             api.commit(swapChain);
         }
-
-        flushAndWait();
     }
 }
 
 TEST_F(BlitTest, BlitRegionToSwapChain) {
     auto& api = getDriverApi();
-    mCleanup.addPostCall([&]() { executeCommands(); });
 
     constexpr int kSrcTexWidth = 1024;
     constexpr int kSrcTexHeight = 1024;
@@ -584,7 +571,6 @@ TEST_F(BlitTest, BlitRegionToSwapChain) {
             // EXPECT_IMAGE(dstRenderTarget, expectations,
             //         ScreenshotParams(kDstTexWidth, kDstTexHeight, "BlitRegionToSwapChain", 0x0));
         }
-        flushAndWait();
     }
 }
 

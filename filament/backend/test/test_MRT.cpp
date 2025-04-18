@@ -116,24 +116,23 @@ TEST_F(BackendTest, MRT) {
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
         state.rasterState.culling = CullingMode::NONE;
 
+        Cleanup captureCleanup(api);
         api.startCapture(0);
+        captureCleanup.addPostCall([&]() { api.stopCapture(0); });
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0, 0);
+        {
+            RenderFrame frame(api);
 
-        // Draw a triangle.
-        api.beginRenderPass(renderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-        api.endRenderPass();
+            // Draw a triangle.
+            api.beginRenderPass(renderTarget, params);
+            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+            api.endRenderPass();
 
-        api.flush();
-        api.commit(swapChain);
-        api.endFrame(0);
-
-        api.stopCapture(0);
+            api.flush();
+            api.commit(swapChain);
+        }
     }
-
-    executeCommands();
 }
 
 } // namespace test

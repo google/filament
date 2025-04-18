@@ -287,15 +287,19 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
     api.startCapture();
 
+    Cleanup cleanup(api);
+    cleanup.addPostCall([&]() { api.finish(); });
+    cleanup.addPostCall([&]() { api.stopCapture(); });
+
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     for (const auto& t : testCases) {
-        Cleanup cleanup(api);
+        Cleanup caseCleanup(api);
 
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = cleanup.add(createSwapChain());
+        auto swapChain = caseCleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+        auto defaultRenderTarget = caseCleanup.add(api.createDefaultRenderTarget(0));
 
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
@@ -303,7 +307,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
         std::string const fragment = stringReplace("{samplerType}",
                 getSamplerTypeName(t.textureFormat), fragmentTemplate);
-        Shader shader(api, cleanup, ShaderConfig{
+        Shader shader(api, caseCleanup, ShaderConfig{
            .vertexShader = mVertexShader,
            .fragmentShader= fragment,
            .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
@@ -311,7 +315,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
         // Create a Texture.
         auto usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
-        Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
+        Handle<HwTexture> const texture = caseCleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
                 t.textureFormat, 1, 512, 512, 1u, usage));
 
         // Upload some pixel data.
@@ -344,17 +348,13 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         api.commit(swapChain);
         api.endFrame(0);
     }
-
-    api.finish();
-    api.stopCapture();
-
-    flushAndWait();
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
+    cleanup.addPostCall([&]() { api.stopCapture(); });
 
     PixelDataFormat const pixelFormat = PixelDataFormat::RGBA;
     PixelDataType const pixelType = PixelDataType::UBYTE;
@@ -402,36 +402,37 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 
     api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 1, std::move(descriptor));
 
-    api.beginFrame(0, 0, 0);
+    {
+        RenderFrame frame(api);
 
-    // Update samplers.
-    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
+        // Update samplers.
+        DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+                .filterMag = SamplerMagFilter::LINEAR,
+                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+        });
 
-    api.bindDescriptorSet(descriptorSet, 1, {});
+        api.bindDescriptorSet(descriptorSet, 1, {});
 
-    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
-            defaultRenderTarget, swapChain, shader.getProgram());
+        renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+                defaultRenderTarget, swapChain, shader.getProgram());
 
-    static const uint32_t expectedHash = 359858623;
-    readPixelsAndAssertHash("UpdateImageSRGB", 512, 512, defaultRenderTarget, expectedHash);
+        static const uint32_t expectedHash = 359858623;
+        readPixelsAndAssertHash("UpdateImageSRGB", 512, 512, defaultRenderTarget, expectedHash);
 
-    api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
+        api.flush();
+        api.commit(swapChain);
+    }
 
     // This ensures all driver commands have finished before exiting the test.
     api.finish();
-    api.stopCapture();
 }
 
 TEST_F(LoadImageTest, UpdateImageMipLevel) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
+    cleanup.addPostCall([&]() { api.stopCapture(); });
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
     PixelDataType pixelType = PixelDataType::HALF;
@@ -464,36 +465,37 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     PixelBufferDescriptor descriptor = checkerboardPixelBuffer(pixelFormat, pixelType, 512);
     api.update3DImage(texture, /* level*/ 1, 0, 0, 0, 512, 512, 1, std::move(descriptor));
 
-    api.beginFrame(0, 0, 0);
+    {
+        RenderFrame frame(api);
 
-    // Update samplers.
-    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
+        // Update samplers.
+        DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+                .filterMag = SamplerMagFilter::LINEAR,
+                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+        });
 
-    api.bindDescriptorSet(descriptorSet, 1, {});
+        api.bindDescriptorSet(descriptorSet, 1, {});
 
-    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
-            defaultRenderTarget, swapChain, shader.getProgram());
+        renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+                defaultRenderTarget, swapChain, shader.getProgram());
 
-    static const uint32_t expectedHash = 3644679986;
-    readPixelsAndAssertHash("UpdateImageMipLevel", 512, 512, defaultRenderTarget, expectedHash);
+        static const uint32_t expectedHash = 3644679986;
+        readPixelsAndAssertHash("UpdateImageMipLevel", 512, 512, defaultRenderTarget, expectedHash);
 
-    api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
+        api.flush();
+        api.commit(swapChain);
+    }
 
     // This ensures all driver commands have finished before exiting the test.
     api.finish();
-    api.stopCapture();
 }
 
 TEST_F(LoadImageTest, UpdateImage3D) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
+    cleanup.addPostCall([&]() { api.stopCapture(); });
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
     PixelDataType pixelType = PixelDataType::FLOAT;
@@ -538,30 +540,30 @@ TEST_F(LoadImageTest, UpdateImage3D) {
 
     api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 4, std::move(descriptor));
 
-    api.beginFrame(0, 0, 0);
+    {
+        RenderFrame frame(api);
 
-    // Update samplers.
-    DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
+        // Update samplers.
+        DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+                .filterMag = SamplerMagFilter::LINEAR,
+                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+        });
 
-    api.bindDescriptorSet(descriptorSet, 1, {});
+        api.bindDescriptorSet(descriptorSet, 1, {});
 
-    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
-            defaultRenderTarget, swapChain, shader.getProgram());
+        renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+                defaultRenderTarget, swapChain, shader.getProgram());
 
-    static const uint32_t expectedHash = 3644679986;
-    readPixelsAndAssertHash("UpdateImage3D", 512, 512, defaultRenderTarget, expectedHash);
+        static const uint32_t expectedHash = 3644679986;
+        readPixelsAndAssertHash("UpdateImage3D", 512, 512, defaultRenderTarget, expectedHash);
 
-    api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
+        api.flush();
+        api.commit(swapChain);
+    }
 
     // This ensures all driver commands have finished before exiting the test.
     api.finish();
-    api.stopCapture();
 }
 
 } // namespace test
