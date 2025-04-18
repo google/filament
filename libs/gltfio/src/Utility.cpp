@@ -21,6 +21,8 @@
 #include "GltfEnums.h"
 
 #include <utils/Log.h>
+
+#define SYSTRACE_TAG SYSTRACE_TAG_GLTFIO
 #include <utils/Systrace.h>
 
 #define CGLTF_IMPLEMENTATION

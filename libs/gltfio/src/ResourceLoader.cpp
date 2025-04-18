@@ -37,7 +37,10 @@
 #include <utils/compiler.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
+
+#define SYSTRACE_TAG SYSTRACE_TAG_GLTFIO
 #include <utils/Systrace.h>
+
 #include <utils/Path.h>
 
 #include <cgltf.h>

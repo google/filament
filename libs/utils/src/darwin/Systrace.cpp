@@ -14,11 +14,17 @@
  * limitations under the License.
  */
 
-#include <utils/Systrace.h>
-#include <utils/Log.h>
+#include <utils/darwin/Systrace.h>
+
+#ifndef FILAMENT_APPLE_SYSTRACE
+#   define FILAMENT_APPLE_SYSTRACE 0
+#endif
 
 #if FILAMENT_APPLE_SYSTRACE
 
+#include <atomic>
+#include <stack>
+#include <stdint.h>
 #include <pthread.h>
 
 static pthread_once_t atrace_once_control = PTHREAD_ONCE_INIT;
@@ -41,21 +47,24 @@ void Systrace::setup() noexcept {
     pthread_once(&atrace_once_control, init_once);
 }
 
-void Systrace::enable(uint32_t tags) noexcept {
+void Systrace::enable(uint32_t tag) noexcept {
     setup();
-    sGlobalState.isTracingEnabled.fetch_or(tags, std::memory_order_relaxed);
+    uint32_t const mask = 1 << tag;
+    sGlobalState.isTracingEnabled.fetch_or(mask, std::memory_order_relaxed);
 }
 
-void Systrace::disable(uint32_t tags) noexcept {
-    sGlobalState.isTracingEnabled.fetch_and(~tags, std::memory_order_relaxed);
+void Systrace::disable(uint32_t tag) noexcept {
+    uint32_t const mask = 1 << tag;
+    sGlobalState.isTracingEnabled.fetch_and(~mask, std::memory_order_relaxed);
 }
 
-// unfortunately, this generates quite a bit of code because reading a global is not
+// Unfortunately, this generates quite a bit of code because reading a global is not
 // trivial. For this reason, we do not inline this method.
 bool Systrace::isTracingEnabled(uint32_t tag) noexcept {
     if (tag) {
         setup();
-        return bool((sGlobalState.isTracingEnabled.load(std::memory_order_relaxed) | SYSTRACE_TAG_ALWAYS) & tag);
+        uint32_t const mask = 1 << tag;
+        return bool(sGlobalState.isTracingEnabled.load(std::memory_order_relaxed) & mask);
     }
     return false;
 }
