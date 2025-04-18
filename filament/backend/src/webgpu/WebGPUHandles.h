@@ -75,20 +75,41 @@ struct WGPUIndexBuffer : public HwIndexBuffer {
 struct WGPUBufferObject : HwBufferObject {
     WGPUBufferObject(BufferObjectBinding bindingType, uint32_t byteCount);
 
-    wgpu::Buffer buffer;
+    wgpu::Buffer buffer = nullptr;
     const BufferObjectBinding bufferObjectBinding;
 };
-class WebGPUDescriptorSetLayout : public HwDescriptorSetLayout {
+class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
 public:
     WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const& device);
     ~WebGPUDescriptorSetLayout();
+    [[nodiscard]] const wgpu::BindGroupLayout& getLayout() const { return mLayout; }
+    [[nodiscard]] uint getLayoutSize() const { return mLayoutSize; }
 
 private:
     // TODO: If this is useful elsewhere, remove it from this class
     // Convert Filament Shader Stage Flags bitmask to webgpu equivilant
     static wgpu::ShaderStage filamentStageToWGPUStage(ShaderStageFlags fFlags);
-
+    uint mLayoutSize;
     wgpu::BindGroupLayout mLayout;
+};
+
+class WebGPUDescriptorSet final : public HwDescriptorSet {
+public:
+    WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize);
+    ~WebGPUDescriptorSet();
+
+    wgpu::BindGroup lockAndReturn(wgpu::Device const& device);
+    void addEntry(uint index, wgpu::BindGroupEntry&& entry);
+    [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
+
+private:
+    // TODO: Consider storing what we used to make the layout. However we need to essentially
+    // Recreate some of the info (Sampler in slot X with the actual sampler) so letting Dawn confirm
+    // there isn't a mismatch may be easiest.
+    // Also storing the wgpu ObjectBase takes care of ownership challenges in theory
+    wgpu::BindGroupLayout mLayout;
+    std::vector<wgpu::BindGroupEntry> entries;
+    wgpu::BindGroup mBindGroup;
 };
 
 // TODO: Currently WGPUTexture is not used by WebGPU for useful task.
@@ -101,6 +122,11 @@ struct WGPUTexture : public HwTexture {
     WGPUTexture(WGPUTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
 
     wgpu::Texture texture = nullptr;
+    // TODO: Adding this but not yet setting it up. Filament "Textures" are combined image samplers,
+    // rep both.
+    wgpu::Sampler sampler = nullptr;
+    //TODO: Not sure all the ways HwTexture is used. Overloading like this might be entirely wrong.
+    wgpu::TextureView texView = nullptr;
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
