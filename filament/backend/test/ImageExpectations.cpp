@@ -97,16 +97,21 @@ void ImageExpectation::evaluate() {
 
 void ImageExpectation::compareImage() const {
     bool bytesFilled = mResult.bytesFilled();
+    // If this fails, it likely means that BackendTest::flushAndWait needs to be called before
+    // ImageExpectations is evaluated or destroyed.
     EXPECT_THAT(bytesFilled, testing::IsTrue())
                         << "Render target wasn't copied to the buffer for " << mFileName;
     if (bytesFilled) {
-        LoadedPng loadedImage(mParams.expectedFilePath());
         // Rather than directly compare the two images compare their hashes because comparing very
         // large arrays generates way too much debug output to be useful.
         uint32_t actualHash = mResult.hash();
+#ifndef FILAMENT_IOS
+        LoadedPng loadedImage(mParams.expectedFilePath());
         uint32_t loadedImageHash = loadedImage.hash();
-        EXPECT_THAT(actualHash, testing::Eq(loadedImageHash));
-        EXPECT_THAT(actualHash, testing::Eq(mParams.expectedHash()));
+        EXPECT_THAT(actualHash, testing::Eq(loadedImageHash)) << mParams.expectedFileName();
+#endif
+        // For builds that can't load PNGs (currently iOS only) use the expected hash.
+        EXPECT_THAT(actualHash, testing::Eq(mParams.expectedHash())) << mParams.expectedFileName();
         // TODO: Add better debug output, such as generating a diff image.
     }
 }
@@ -121,12 +126,13 @@ ImageExpectations::~ImageExpectations() {
 
 void ImageExpectations::addExpectation(const char* fileName, int lineNumber,
         filament::backend::RenderTargetHandle renderTarget, ScreenshotParams params) {
-    mExpectations.emplace_back(fileName, lineNumber, mApi, std::move(params), renderTarget);
+    mExpectations.emplace_back(std::make_unique<ImageExpectation>(fileName, lineNumber, mApi,
+            std::move(params), renderTarget));
 }
 
 void ImageExpectations::evaluate() {
     for (auto& expectation: mExpectations) {
-        expectation.evaluate();
+        expectation->evaluate();
     }
     mExpectations.clear();
 }
@@ -134,16 +140,13 @@ void ImageExpectations::evaluate() {
 RenderTargetDump::RenderTargetDump(filament::backend::DriverApi& api,
         filament::backend::RenderTargetHandle renderTarget, const ScreenshotParams& params)
         : mInternal(std::make_unique<RenderTargetDump::Internal>(params)) {
-#ifdef FILAMENT_IOS
-    bytesFilled_ = true;
-    bytes_.resize(size);
-    std::fill(bytes_.begin(), bytes_.end(), 0);
-#else
     const size_t size = mInternal->params.width() * mInternal->params.height() * 4;
     mInternal->bytes.resize(size);
 
     auto cb = [](void* buffer, size_t size, void* user) {
         auto* internal = static_cast<RenderTargetDump::Internal*>(user);
+        internal->bytesFilled = true;
+#ifndef FILAMENT_IOS
         image::LinearImage image(internal->params.width(), internal->params.width(), 4);
         image = image::toLinearWithAlpha<uint8_t>(internal->params.width(),
                 internal->params.height(),
@@ -152,14 +155,13 @@ RenderTargetDump::RenderTargetDump(filament::backend::DriverApi& api,
         std::ofstream pngStream(filePath, std::ios::binary | std::ios::trunc);
         image::ImageEncoder::encode(pngStream, image::ImageEncoder::Format::PNG, image, "",
                 filePath);
-        internal->bytesFilled = true;
+#endif
     };
     filament::backend::PixelBufferDescriptor pb(mInternal->bytes.data(), size,
             filament::backend::PixelDataFormat::RGBA, filament::backend::PixelDataType::UBYTE, cb,
             (void*)mInternal.get());
     api.readPixels(renderTarget, 0, 0, mInternal->params.width(), mInternal->params.height(),
             std::move(pb));
-#endif
 }
 
 RenderTargetDump::~RenderTargetDump() {
@@ -183,9 +185,9 @@ bool RenderTargetDump::bytesFilled() const {
 
 RenderTargetDump::Internal::Internal(const ScreenshotParams& params) : params(params) {}
 
-LoadedPng::LoadedPng(std::string filePath) {
+LoadedPng::LoadedPng(std::string filePath) : mFilePath(std::move(filePath)) {
 #ifndef FILAMENT_IOS
-    std::ifstream pngStream(filePath, std::ios::binary);
+    std::ifstream pngStream(mFilePath, std::ios::binary);
     image::LinearImage loadedImage = image::ImageDecoder::decode(pngStream, filePath,
             image::ImageDecoder::ColorSpace::LINEAR);
     size_t valuesInImage = loadedImage.getWidth() * loadedImage.getHeight() *
@@ -201,7 +203,8 @@ LoadedPng::LoadedPng(std::string filePath) {
 }
 
 uint32_t LoadedPng::hash() const {
-    EXPECT_THAT(mBytes, testing::Not(testing::IsEmpty()));
+    EXPECT_THAT(mBytes, testing::Not(testing::IsEmpty()))
+            << "Failed to load expected test result: " << mFilePath;
     if (mBytes.empty()) {
         return 0;
     }

@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
@@ -200,17 +201,16 @@ TEST_F(BackendTest, RenderExternalImage) {
     api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
     api.endRenderPass();
 
-    readPixelsAndAssertHash("RenderExternalImage", 512, 512, defaultRenderTarget, 267229901, true);
-
     api.flush();
     api.commit(swapChain);
     api.endFrame(0);
+    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+            ScreenshotParams(512, 512, "RenderExternalImage", 267229901));
 
     api.stopCapture(0);
-
     api.finish();
+    flushAndWait();
 
-    executeCommands();
 }
 
 } // namespace test
