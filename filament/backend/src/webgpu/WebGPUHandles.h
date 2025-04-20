@@ -77,12 +77,10 @@ private:
 };
 
 struct WGPUVertexBuffer : public HwVertexBuffer {
-    WGPUVertexBuffer(wgpu::Device const &device, uint32_t vextexCount, uint32_t bufferCount,
-                     Handle<WGPUVertexBufferInfo> vbih);
+    WGPUVertexBuffer(wgpu::Device const &device, uint32_t vertexCount, uint32_t bufferCount,
+                     Handle<HwVertexBufferInfo> vbih);
 
-    void setBuffer(WGPUBufferObject *bufferObject, uint32_t index);
-
-    Handle<WGPUVertexBufferInfo> vbih;
+    Handle<HwVertexBufferInfo> vbih;
     utils::FixedCapacityVector<wgpu::Buffer> buffers;
 };
 
@@ -91,12 +89,11 @@ struct WGPUIndexBuffer : public HwIndexBuffer {
                     uint32_t indexCount);
 
     wgpu::Buffer buffer;
+    wgpu::IndexFormat indexFormat;
 };
 
-// TODO: Currently WGPUBufferObject is not used by WebGPU for useful task.
-// Update the struct when used by WebGPU driver.
 struct WGPUBufferObject : HwBufferObject {
-    WGPUBufferObject(BufferObjectBinding bindingType, uint32_t byteCount);
+    WGPUBufferObject(wgpu::Device const &device, BufferObjectBinding bindingType, uint32_t byteCount);
 
     wgpu::Buffer buffer = nullptr;
     const BufferObjectBinding bufferObjectBinding;
