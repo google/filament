@@ -520,7 +520,16 @@ void WebGPUDriver::importTextureR(Handle<HwTexture> th, intptr_t id, SamplerType
         uint32_t depth, TextureUsage usage) {}
 
 void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<HwVertexBuffer> vbh,
-        Handle<HwIndexBuffer> ibh, PrimitiveType pt) {}
+        Handle<HwIndexBuffer> ibh, PrimitiveType pt) {
+    assert_invariant(mDevice);
+
+    auto* renderPrimitive = constructHandle<WGPURenderPrimitive>(rph);
+    auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
+    auto* indexBuffer = handleCast<WGPUIndexBuffer>(ibh);
+    renderPrimitive->vertexBuffer = vertexBuffer;
+    renderPrimitive->indexBuffer = indexBuffer;
+    renderPrimitive->type = pt;
+}
 
 void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     constructHandle<WGPUProgram>(ph, mDevice, program);
@@ -853,6 +862,19 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
 }
 
 void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+    auto* renderPrimitive = handleCast<WGPURenderPrimitive>(rph);
+
+    // This *must* match the WGPUVertexBufferInfo that was bound in bindPipeline(). But we want
+    // to allow to call this before bindPipeline(), so the validation can only happen in draw()
+    auto vbi = handleCast<WGPUVertexBufferInfo>(renderPrimitive->vertexBuffer->vbih);
+    assert_invariant(
+            vbi->getVertexBufferLayoutSize() == renderPrimitive->vertexBuffer->buffers.size());
+    for (uint32_t i = 0; i < vbi->getVertexBufferLayoutSize(); i++) {
+        mRenderPassEncoder.SetVertexBuffer(i, renderPrimitive->vertexBuffer->buffers[i]);
+    }
+
+    mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->buffer,
+            renderPrimitive->indexBuffer->indexFormat);
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
