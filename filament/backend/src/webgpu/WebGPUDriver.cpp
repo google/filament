@@ -184,8 +184,6 @@ void printAdapterDetails(wgpu::Adapter const& adapter) {
 }
 #endif
 
-
-
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printDeviceDetails(wgpu::Device const& device) {
     wgpu::SupportedFeatures supportedFeatures{};
@@ -319,6 +317,9 @@ void WebGPUDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 }
 
 void WebGPUDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
+    if (boh) {
+        destructHandle<WGPUBufferObject>(boh);
+    }
 }
 
 void WebGPUDriver::destroyTexture(Handle<HwTexture> th) {
@@ -470,16 +471,27 @@ void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
         uint32_t height, uint64_t flags) {}
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
-        uint8_t attributeCount, AttributeArray attributes) {}
+        uint8_t attributeCount, AttributeArray attributes) {
+    constructHandle<WGPUVertexBufferInfo>(vbih, bufferCount, attributeCount, attributes);
+}
 
 void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
-        Handle<HwVertexBufferInfo> vbih) {}
+        Handle<HwVertexBufferInfo> vbih) {
+    auto* vertexBufferInfo = handleCast<WGPUVertexBufferInfo>(vbih);
+    constructHandle<WGPUVertexBuffer>(vbh, mDevice, vertexCount, vertexBufferInfo->bufferCount,
+            vbih);
+}
 
 void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
-        uint32_t indexCount, BufferUsage usage) {}
+        uint32_t indexCount, BufferUsage usage) {
+    auto elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
+    constructHandle<WGPUIndexBuffer>(ibh, mDevice, elementSize, indexCount);
+}
 
 void WebGPUDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
-        BufferObjectBinding bindingType, BufferUsage usage) {}
+        BufferObjectBinding bindingType, BufferUsage usage) {
+    constructHandle<WGPUBufferObject>(boh, mDevice, bindingType, byteCount);
+}
 
 void WebGPUDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
@@ -688,7 +700,8 @@ void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
     auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
     auto* bufferObject = handleCast<WGPUBufferObject>(boh);
     assert_invariant(index < vertexBuffer->buffers.size());
-    vertexBuffer->setBuffer(bufferObject, index);
+    assert_invariant(bufferObject->buffer.GetUsage() & wgpu::BufferUsage::Vertex);
+    vertexBuffer->buffers[index] = bufferObject->buffer;
 }
 
 void WebGPUDriver::update3DImage(Handle<HwTexture> th,
@@ -726,6 +739,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     };
     mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
     assert_invariant(mCommandEncoder);
+
     // TODO: Remove this code once WebGPU pipeline is implemented
     static float red = 1.0f;
     if (red - 0.01 > 0) {

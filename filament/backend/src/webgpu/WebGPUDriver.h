@@ -112,7 +112,7 @@ private:
     template<typename D, typename B>
     void destructHandle(Handle<B>& handle) noexcept {
         auto* p = mHandleAllocator.handle_cast<D*>(handle);
-        return mHandleAllocator.deallocate(handle, p);
+        mHandleAllocator.deallocate(handle, p);
     }
 };
 
