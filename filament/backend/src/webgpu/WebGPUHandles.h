@@ -150,7 +150,7 @@ struct WGPUTexture : public HwTexture {
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
-    WGPURenderPrimitive();
+    WGPURenderPrimitive() {}
 
     void setBuffers(WGPUVertexBufferInfo const* const vbi,
             WGPUVertexBuffer* vertexBuffer, WGPUIndexBuffer* indexBuffer);
