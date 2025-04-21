@@ -51,6 +51,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    test::initTests(backend, false, argc, argv);
+    test::initTests(backend, test::OperatingSystem::LINUX, false, argc, argv);
     return test::runTests();
 }

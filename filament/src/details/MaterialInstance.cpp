@@ -269,12 +269,14 @@ void FMaterialInstance::setParameterImpl(std::string_view const name,
     if (texture && texture->textureHandleCanMutate()) {
         mTextureParameters[binding] = { texture, sampler.getSamplerParams() };
     } else {
+        // Ensure to erase the binding from mTextureParameters since it will not
+        // be updated.
+        mTextureParameters.erase(binding);
+
         Handle<HwTexture> handle{};
         if (texture) {
             handle = texture->getHwHandleForSampling();
             assert_invariant(handle == texture->getHwHandle());
-        } else {
-            mTextureParameters.erase(binding);
         }
         mDescriptorSet.setSampler(binding, handle, sampler.getSamplerParams());
     }
