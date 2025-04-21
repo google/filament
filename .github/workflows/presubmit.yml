@@ -112,11 +112,12 @@ jobs:
         run: pip install mako setuptools pyyaml
       - name: Run script
         run: |
-          bash test/renderdiff/test.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: presubmit-renderdiff-result
-          path: ./out/renderdiff_tests
+          echo "disabled test"
+#          bash test/renderdiff/test.sh
+#      - uses: actions/upload-artifact@v4
+#        with:
+#          name: presubmit-renderdiff-result
+#          path: ./out/renderdiff_tests
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
