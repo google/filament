@@ -24,22 +24,22 @@
 #include "OpenGLBlobCache.h"
 
 #include <backend/CallbackHandler.h>
+#include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
-#include <utils/Invocable.h>
 #include <utils/JobSystem.h>
 
-#include <atomic>
-#include <condition_variable>
-#include <deque>
+#include <array>
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <thread>
+#include <tuple>
 #include <utility>
 #include <vector>
+
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -94,7 +94,7 @@ public:
     static void* getUserData(const program_token_t& token) noexcept;
 
     // Issue one callback handle.
-    CallbackManager::Handle issueCallbackHandle() noexcept;
+    CallbackManager::Handle issueCallbackHandle() const noexcept;
 
     // Return a callback handle to the callback manager.
     void submitCallbackHandle(CallbackManager::Handle handle) noexcept;
@@ -106,7 +106,7 @@ public:
 private:
     struct Job {
         template<typename FUNC>
-        Job(FUNC&& fn) : fn(std::forward<FUNC>(fn)) {}
+        Job(FUNC&& fn) : fn(std::forward<FUNC>(fn)) {} // NOLINT(*-explicit-constructor)
         Job(std::function<bool(Job const& job)> fn,
                 CallbackHandler* handler, void* user, CallbackHandler::Callback callback)
                 : fn(std::move(fn)), handler(handler), user(user), callback(callback) {
@@ -162,7 +162,7 @@ private:
     // valid program ID after this method. But this doesn't necessarily mean the program is
     // successfully linked. Errors can be checked by calling `checkLinkStatusAndCleanupShaders`
     // later.
-    static void linkProgram(OpenGLContext& context, program_token_t const& token) noexcept;
+    static void linkProgram(OpenGLContext const& context, program_token_t const& token) noexcept;
 
     // Check if the program link is completed. You may want to call this when the extension
     // `KHR_parallel_shader_compile` is enabled.
