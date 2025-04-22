@@ -446,6 +446,7 @@ void VulkanDriver::finish(int dummy) {
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
         PrimitiveType pt) {
+    FVK_SYSTRACE_SCOPE();
     auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
     auto ptr = resource_ptr<VulkanRenderPrimitive>::make(&mResourceManager, rph, pt, vb, ib);
@@ -456,12 +457,14 @@ void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     if (!rph) {
         return;
     }
+    FVK_SYSTRACE_SCOPE();
     auto ptr = resource_ptr<VulkanRenderPrimitive>::cast(&mResourceManager, rph);
     ptr.dec();
 }
 
 void VulkanDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
         uint8_t attributeCount, AttributeArray attributes) {
+    FVK_SYSTRACE_SCOPE();
     auto vbi = resource_ptr<VulkanVertexBufferInfo>::make(&mResourceManager, vbih, bufferCount,
             attributeCount, attributes);
     vbi.inc();
@@ -471,12 +474,14 @@ void VulkanDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
     if (!vbih) {
         return;
     }
+    FVK_SYSTRACE_SCOPE();
     auto vbi = resource_ptr<VulkanVertexBufferInfo>::cast(&mResourceManager, vbih);
     vbi.dec();
 }
 
 void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
         Handle<HwVertexBufferInfo> vbih) {
+    FVK_SYSTRACE_SCOPE();
     auto vbi = resource_ptr<VulkanVertexBufferInfo>::cast(&mResourceManager, vbih);
     auto vb = resource_ptr<VulkanVertexBuffer>::make(&mResourceManager, vbh, mContext, mStagePool,
             vertexCount, vbi);
@@ -487,12 +492,14 @@ void VulkanDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     if (!vbh) {
         return;
     }
+    FVK_SYSTRACE_SCOPE();
     auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
     vb.dec();
 }
 
 void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage) {
+    FVK_SYSTRACE_SCOPE();
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     auto ib = resource_ptr<VulkanIndexBuffer>::make(&mResourceManager, ibh, mAllocator, mStagePool,
             elementSize, indexCount);
@@ -503,12 +510,14 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (!ibh) {
         return;
     }
+    FVK_SYSTRACE_SCOPE();
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
     ib.dec();
 }
 
 void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage) {
+    FVK_SYSTRACE_SCOPE();
     auto bo = resource_ptr<VulkanBufferObject>::make(&mResourceManager, boh, mAllocator, mStagePool,
             byteCount, bindingType);
     bo.inc();
@@ -518,6 +527,7 @@ void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (!boh) {
         return;
     }
+    FVK_SYSTRACE_SCOPE();
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     bo.dec();
 }
@@ -746,6 +756,7 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
+    FVK_SYSTRACE_SCOPE();
     // Running gc() to guard against an edge case where the old swapchains need to have been
     // destroyed before the new swapchain can be created. Otherwise, we would fail
     // vkCreateSwapchainKHR with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR.
@@ -787,6 +798,7 @@ void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 
 void VulkanDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
         backend::DescriptorSetLayout&& info) {
+    FVK_SYSTRACE_SCOPE();
     auto layout = mDescriptorSetLayoutCache.createLayout(dslh, std::move(info));
     layout.inc();
 }

@@ -295,6 +295,8 @@ VulkanCommandBuffer& CommandBufferPool::getRecording() {
 }
 
 void CommandBufferPool::gc() {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("CommandBufferPool::gc");
     ActiveBuffers reclaimed;
     mSubmitted.forEachSetBit([this,&reclaimed] (size_t index) {
         auto& buffer = mBuffers[index];
@@ -304,6 +306,7 @@ void CommandBufferPool::gc() {
         }
     });
     mSubmitted &= ~reclaimed;
+    FVK_SYSTRACE_END();
 }
 
 void CommandBufferPool::update() {
@@ -333,7 +336,9 @@ void CommandBufferPool::wait() {
     mSubmitted.forEachSetBit([this, &count, &fences] (size_t index) {
         fences[count++] = mBuffers[index]->getVkFence();
     });
-    vkWaitForFences(mDevice, count, fences, VK_TRUE, UINT64_MAX);
+    if (count) {
+        vkWaitForFences(mDevice, count, fences, VK_TRUE, UINT64_MAX);
+    }
     update();
 }
 
