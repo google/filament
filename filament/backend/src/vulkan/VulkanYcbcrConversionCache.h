@@ -30,10 +30,9 @@ namespace filament::backend {
 class VulkanYcbcrConversionCache {
 public:
     struct Params {
-        SamplerYcbcrConversion conversion = {};
-        TextureFormat format = {};
-        uint16_t padding = 0;
-        uint64_t externalFormat = 0;
+        SamplerYcbcrConversion conversion = {}; // 4
+        VkFormat format;                        // 4
+        uint64_t externalFormat = 0;            // 8
     };
     static_assert(sizeof(Params) == 16);
 
