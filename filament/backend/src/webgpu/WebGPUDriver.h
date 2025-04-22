@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
 #include "WebGPUHandles.h"
+#include "webgpu/WebGPUConstants.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
@@ -34,7 +35,7 @@
 #include <memory>
 
 #ifndef FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB
-#    define FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB 8
+#define FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB 8
 #endif
 
 namespace filament::backend {
@@ -55,6 +56,27 @@ private:
     explicit WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
     [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
+
+    template<typename GPUBufferObject>
+    void updateGPUBuffer(GPUBufferObject* gpuBufferObject, BufferDescriptor&& bufferDescriptor,
+            uint32_t byteOffset) {
+        FILAMENT_CHECK_PRECONDITION(bufferDescriptor.buffer)
+                << "copyIntoBuffer called with a null buffer";
+        FILAMENT_CHECK_PRECONDITION(
+                bufferDescriptor.size + byteOffset <= gpuBufferObject->buffer.GetSize())
+                << "Attempting to copy " << bufferDescriptor.size << " bytes into a buffer of size "
+                << gpuBufferObject->buffer.GetSize() << " at offset " << byteOffset;
+
+        // TODO: All buffer objects are created with CopyDst usage.
+        // This may have some performance implications. That should be investigated later.
+        assert_invariant(gpuBufferObject->buffer.GetUsage() & wgpu::BufferUsage::CopyDst);
+
+        // WriteBuffer is an async call. But cpu buffer data is already written to the staging
+        // buffer on return from the WriteBuffer.
+        mQueue.WriteBuffer(gpuBufferObject->buffer, byteOffset, bufferDescriptor.buffer,
+                bufferDescriptor.size);
+        scheduleDestroy(std::move(bufferDescriptor));
+    }
 
     // the platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
     // handled in the WebGPUPlatform
@@ -99,8 +121,8 @@ private:
         return mHandleAllocator.allocate<D>();
     }
 
-    template<typename D, typename B, typename ... ARGS>
-    D* constructHandle(Handle<B>& handle, ARGS&& ... args) noexcept {
+    template<typename D, typename B, typename... ARGS>
+    D* constructHandle(Handle<B>& handle, ARGS&&... args) noexcept {
         return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
     }
 

@@ -17,7 +17,6 @@
 #include "webgpu/WebGPUDriver.h"
 
 #include "WebGPUSwapChain.h"
-#include "webgpu/WebGPUConstants.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "CommandStreamDispatcher.h"
@@ -235,6 +234,7 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfi
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printDeviceDetails(mDevice);
 #endif
+    mQueue = mDevice.GetQueue();
 }
 
 WebGPUDriver::~WebGPUDriver() noexcept = default;
@@ -448,7 +448,6 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
 
-    mQueue = mDevice.GetQueue();
     wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
     mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
             mDevice, flags);
@@ -679,20 +678,21 @@ size_t WebGPUDriver::getMaxArrayTextureLayers() {
 
 void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
-    scheduleDestroy(std::move(p));
+    updateGPUBuffer(handleCast<WGPUIndexBuffer>(ibh), std::move(p), byteOffset);
 }
 
 void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
-    scheduleDestroy(std::move(p));
+    updateGPUBuffer(handleCast<WGPUBufferObject>(ibh), std::move(p), byteOffset);
 }
 
-void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
-        uint32_t byteOffset) {
-    scheduleDestroy(std::move(p));
+void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> ibh,
+        BufferDescriptor&& p, uint32_t byteOffset) {
+    updateGPUBuffer(handleCast<WGPUBufferObject>(ibh), std::move(p), byteOffset);
 }
 
 void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> boh) {
+    // Is there something that needs to be done here? Vulkan has left it unimplemented.
 }
 
 void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
