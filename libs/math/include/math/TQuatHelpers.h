@@ -244,9 +244,8 @@ public:
     QUATERNION<T> MATH_PURE pow(const QUATERNION<T>& q, T a) {
         // could also be computed as: exp(a*log(q));
         const T nq(norm(q));
-        const T cos_theta = q.w / nq;
-        const T sin_theta = std::sqrt(T(1) - cos_theta * cos_theta);
-        return std::pow(nq, a) * QUATERNION<T>(normalize(q.xyz) * sin_theta, cos_theta);
+        const T theta(a * std::acos(q.w / nq));
+        return std::pow(nq, a) * QUATERNION<T>(normalize(q.xyz) * std::sin(theta), std::cos(theta));
     }
 
     friend inline
