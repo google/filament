@@ -108,16 +108,27 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Install python prereqs
-        run: pip install mako setuptools pyyaml
-      - name: Run script
+      - name: Cache Mesa and deps
+        id: mesa-cache
+        uses: actions/cache@v4 # Use a specific version
+        with:
+          path: |
+            $HOME/Library/Caches/Homebrew
+            mesa
+          key: ${{ runner.os }}-mesa-deps-${{ vars.MESA_VERSION }}
+      - name: Get Mesa
+        id: mesa-prereq
+        env:
+          MESA_VERSION: ${{ vars.MESA_VERSION }}
         run: |
-          echo "disabled test"
-#          bash test/renderdiff/test.sh
-#      - uses: actions/upload-artifact@v4
-#        with:
-#          name: presubmit-renderdiff-result
-#          path: ./out/renderdiff_tests
+          bash test/utils/get_mesa.sh
+      - name: Run Test
+        run: |
+          bash test/renderdiff/test.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: presubmit-renderdiff-result
+          path: ./out/renderdiff_tests
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
