@@ -152,12 +152,12 @@ static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 #elif FVK_ENABLED(FVK_DEBUG_SYSTRACE)
 
     #include <utils/Systrace.h>
-    
+
     #define FVK_SYSTRACE_CONTEXT()      SYSTRACE_CONTEXT()
     #define FVK_SYSTRACE_START(marker)  SYSTRACE_NAME_BEGIN(marker)
     #define FVK_SYSTRACE_END()          SYSTRACE_NAME_END()
-    #define FVK_SYSTRACE_SCOPE()        SYSTRACE_NAME(__func__)
-    #define FVK_PROFILE_MARKER(marker)  FVK_SYSTRACE_SCOPE()
+    #define FVK_SYSTRACE_SCOPE()        SYSTRACE_CALL()
+    #define FVK_PROFILE_MARKER(marker)  SYSTRACE_CALL()
 
 #else
     #define FVK_SYSTRACE_CONTEXT()

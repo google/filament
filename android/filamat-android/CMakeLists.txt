@@ -26,6 +26,10 @@ add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libutils.a)
 
+add_library(perfetto STATIC IMPORTED)
+set_target_properties(perfetto PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libperfetto.a)
+
 add_library(filabridge STATIC IMPORTED)
 set_target_properties(filabridge PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilabridge.a)
@@ -40,6 +44,7 @@ set_target_properties(shaders PROPERTIES IMPORTED_LOCATION
 
 set(FILAMAT_INCLUDE_DIRS
         ../../libs/utils/include
+        ../../third_party/perfetto
         )
 
 include_directories(${FILAMENT_DIR}/include)
@@ -55,6 +60,7 @@ target_link_libraries(filamat-jni
         filabridge
         shaders
         utils
+        perfetto
         log
         smol-v
         $<$<STREQUAL:${FILAMENT_SUPPORTS_WEBGPU},ON>:tint>

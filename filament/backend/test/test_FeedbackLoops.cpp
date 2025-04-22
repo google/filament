@@ -71,8 +71,6 @@ void main() {
     fragColor = textureLod(test_tex, uv, params.sourceLevel);
 })";
 
-static uint32_t sPixelHashResult = 0;
-
 // Selecting a NPOT texture size seems to exacerbate the bug seen with Intel GPU's.
 // Note that Filament uses a higher precision format (R11F_G11F_B10F) but this does not seem
 // necessary to trigger the bug.
@@ -95,25 +93,6 @@ struct MaterialParams {
     float sourceLevel;
     float unused;
 };
-
-static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
-    const size_t size = kTexWidth * kTexHeight * 4;
-    void* buffer = calloc(1, size);
-    auto cb = [](void* buffer, size_t size, void* user) {
-        int w = kTexWidth, h = kTexHeight;
-        const uint32_t* texels = (uint32_t*) buffer;
-        sPixelHashResult = utils::hash::murmur3(texels, size / 4, 0);
-#ifndef FILAMENT_IOS
-        LinearImage image(w, h, 4);
-        image = toLinearWithAlpha<uint8_t>(w, h, w * 4, (uint8_t*) buffer);
-        std::ofstream pngstrm("feedback.png", std::ios::binary | std::ios::trunc);
-        ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", "feedback.png");
-#endif
-        free(buffer);
-    };
-    PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
-    dapi.readPixels(rt, 0, 0, kTexWidth, kTexHeight, std::move(pb));
-}
 
 // TODO: This test needs work to get Metal and OpenGL to agree on results.
 // The problems are caused by both uploading and rendering into the same texture, since the OpenGL
@@ -259,7 +238,8 @@ TEST_F(BackendTest, FeedbackLoops) {
             // NOTE: Calling glReadPixels on any miplevel other than the base level
             // seems to be un-reliable on some GPU's.
             if (frame == kNumFrames - 1) {
-                dumpScreenshot(api, renderTargets[0]);
+                EXPECT_IMAGE(renderTargets[0], getExpectations(),
+                        ScreenshotParams(kTexWidth, kTexHeight, "FeedbackLoops", 0x70695aa1));
             }
 
             api.flush();
@@ -270,10 +250,6 @@ TEST_F(BackendTest, FeedbackLoops) {
             getDriver().purge();
         }
     }
-
-    const uint32_t expected = 0x70695aa1;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sPixelHashResult, expected);
-    EXPECT_TRUE(sPixelHashResult == expected);
 }
 
 } // namespace test
