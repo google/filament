@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "Skip.h"
@@ -151,19 +152,14 @@ TEST_F(BackendTest, PushConstants) {
 
         api.endRenderPass();
 
-        readPixelsAndAssertHash("pushConstants", 512, 512, renderTarget, 1957275826, true);
+        EXPECT_IMAGE(renderTarget, getExpectations(),
+                ScreenshotParams(512, 512, "pushConstants", 1957275826));
 
         api.commit(swapChain);
         api.endFrame(0);
     }
 
     api.stopCapture(0);
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-
-    executeCommands();
-    getDriver().purge();
 }
 
 } // namespace test

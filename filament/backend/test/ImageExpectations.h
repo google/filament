@@ -106,6 +106,7 @@ public:
     uint32_t hash() const;
 
 private:
+    std::string mFilePath;
     std::vector<unsigned char> mBytes;
 };
 
@@ -141,7 +142,8 @@ public:
 
 private:
     filament::backend::DriverApi& mApi;
-    std::vector<ImageExpectation> mExpectations;
+    // Store expectations in unique pointers because they are self referential.
+    std::vector<std::unique_ptr<ImageExpectation>> mExpectations;
 };
 
 #endif //TNT_IMAGE_EXPECTATIONS_H
