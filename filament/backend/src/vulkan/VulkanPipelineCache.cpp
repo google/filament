@@ -66,8 +66,12 @@ void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
     // If an error occurred, allow higher levels to handle it gracefully.
     assert_invariant(cacheEntry != nullptr && "Failed to create/find pipeline");
 
-    mBoundPipeline = mPipelineRequirements;
-    vkCmdBindPipeline(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cacheEntry->handle);
+
+    static PipelineEqual equal;
+    if (!equal(mBoundPipeline, mPipelineRequirements)) {
+        mBoundPipeline = mPipelineRequirements;
+        vkCmdBindPipeline(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cacheEntry->handle);
+    }
 }
 
 VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() noexcept {

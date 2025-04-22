@@ -98,6 +98,8 @@ bool isVkDepthFormat(VkFormat format);
 
 bool isVkStencilFormat(VkFormat format);
 
+bool isVKYcbcrConversionFormat(VkFormat format);
+
 VkImageAspectFlags getImageAspect(VkFormat format);
 
 uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);

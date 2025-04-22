@@ -46,6 +46,7 @@ public:
 
     // This method is meant to be used with external samplers
     VkDescriptorSetLayout getVkLayout(VulkanDescriptorSetLayout::Bitmask const& bitmasks,
+            fvkutils::SamplerBitmask externalSamplers,
             utils::FixedCapacityVector<VkSampler> immutableSamplers = {});
 
 private:
