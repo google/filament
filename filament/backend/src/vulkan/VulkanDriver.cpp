@@ -197,7 +197,7 @@ Dispatcher VulkanDriver::getDispatcher() const noexcept {
 }
 
 VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& context,
-        Platform::DriverConfig const& driverConfig) noexcept
+        Platform::DriverConfig const& driverConfig)
     : mPlatform(platform),
       mResourceManager(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck,
               driverConfig.disableHeapHandleTags),
@@ -250,7 +250,7 @@ VulkanDriver::~VulkanDriver() noexcept = default;
 
 UTILS_NOINLINE
 Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& context,
-         Platform::DriverConfig const& driverConfig) noexcept {
+         Platform::DriverConfig const& driverConfig) {
 #if 0
     // this is useful for development, but too verbose even for debug builds
     // For reference on a 64-bits machine in Release mode:

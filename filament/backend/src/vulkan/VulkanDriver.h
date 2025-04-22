@@ -55,7 +55,7 @@ constexpr uint8_t MAX_RENDERTARGET_ATTACHMENT_TEXTURES =
 class VulkanDriver final : public DriverBase {
 public:
     static Driver* create(VulkanPlatform* platform, VulkanContext const& context,
-            Platform::DriverConfig const& driverConfig) noexcept;
+            Platform::DriverConfig const& driverConfig);
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     // Encapsulates the VK_EXT_debug_utils extension.  In particular, we use
@@ -90,8 +90,8 @@ private:
     void debugCommandBegin(CommandStream* cmds, bool synchronous,
             const char* methodName) noexcept override;
 
-    inline VulkanDriver(VulkanPlatform* platform, VulkanContext const& context,
-            Platform::DriverConfig const& driverConfig) noexcept;
+    VulkanDriver(VulkanPlatform* platform, VulkanContext const& context,
+            Platform::DriverConfig const& driverConfig);
 
     ~VulkanDriver() noexcept override;
 
