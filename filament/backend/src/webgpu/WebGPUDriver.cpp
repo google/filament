@@ -325,6 +325,9 @@ void WebGPUDriver::destroyTexture(Handle<HwTexture> th) {
 }
 
 void WebGPUDriver::destroyProgram(Handle<HwProgram> ph) {
+    if (ph) {
+        destructHandle<WGPUProgram>(ph);
+    }
 }
 
 void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
@@ -369,7 +372,7 @@ Handle<HwTexture> WebGPUDriver::importTextureS() noexcept {
 }
 
 Handle<HwProgram> WebGPUDriver::createProgramS() noexcept {
-    return Handle<HwProgram>((Handle<HwProgram>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUProgram>();
 }
 
 Handle<HwFence> WebGPUDriver::createFenceS() noexcept {
@@ -505,7 +508,9 @@ void WebGPUDriver::importTextureR(Handle<HwTexture> th, intptr_t id, SamplerType
 void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<HwVertexBuffer> vbh,
         Handle<HwIndexBuffer> ibh, PrimitiveType pt) {}
 
-void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {}
+void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
+    constructHandle<WGPUProgram>(ph, mDevice, program);
+}
 
 void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
     assert_invariant(!mDefaultRenderTarget);

@@ -194,6 +194,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanDriver.cpp
             src/vulkan/VulkanDriver.h
             src/vulkan/VulkanDriverFactory.h
+            src/vulkan/VulkanExternalImageManager.cpp
+            src/vulkan/VulkanExternalImageManager.h
             src/vulkan/VulkanFboCache.cpp
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp
@@ -259,6 +261,7 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUHandles.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
+            src/webgpu/WGPUProgram.cpp
     )
     if (WIN32)
         list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)

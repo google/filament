@@ -41,10 +41,10 @@ function prepare_mesa() {
 #  - Run the python script that runs the test
 #  - Zip up the result
 
-set -e && set -x && prepare_mesa && \
+set -ex && prepare_mesa && \
     mkdir -p ${OUTPUT_DIR} && \
-    ./build.sh -X ${MESA_DIR} -p desktop debug gltf_viewer && \
-    python3 ${RENDERDIFF_TEST_DIR}/src/run.py \
+        CXX=`which clang++` CC=`which clang` ./build.sh -X ${MESA_DIR} -p desktop debug gltf_viewer && \
+        python3 ${RENDERDIFF_TEST_DIR}/src/run.py \
             --gltf_viewer="$(pwd)/out/cmake-debug/samples/gltf_viewer" \
             --test=${RENDERDIFF_TEST_DIR}/tests/presubmit.json \
             --output_dir=${OUTPUT_DIR} \
