@@ -246,7 +246,7 @@ public:
         const T nq(norm(q));
         const T cos_theta = q.w / nq;
         const T sin_theta = std::sqrt(T(1) - cos_theta * cos_theta);
-        return std::pow(nq, a) * QUATERNION<T>(normalize(q.xyz) * sin_theta), cos_theta);
+        return std::pow(nq, a) * QUATERNION<T>(normalize(q.xyz) * sin_theta), cos_theta;
     }
 
     friend inline
