@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
@@ -130,20 +131,14 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
-        readPixelsAndAssertHash("scissor", kSrcTexWidth >> 1, kSrcTexHeight >> 1, fullRenderTarget,
-                0xAB3D1C53, true);
+        EXPECT_IMAGE(fullRenderTarget, getExpectations(),
+                ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 0xAB3D1C53));
 
         api.commit(swapChain);
         api.endFrame(0);
 
         api.stopCapture(0);
     }
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-
-    executeCommands();
-    getDriver().purge();
 }
 
 // Verify that a negative Viewport origin works with scissor.
@@ -226,20 +221,14 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
-        readPixelsAndAssertHash(
-                "ScissorViewportEdgeCases", 512, 512, renderTarget, 0x6BF00F31, true);
+        EXPECT_IMAGE(renderTarget, getExpectations(),
+                ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 0x6BF00F31));
 
         api.commit(swapChain);
         api.endFrame(0);
 
         api.stopCapture(0);
     }
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-
-    executeCommands();
-    getDriver().purge();
 }
 
 } // namespace test

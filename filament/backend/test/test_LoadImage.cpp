@@ -246,42 +246,42 @@ TEST_F(LoadImageTest, UpdateImage2D) {
     std::vector<TestCase> testCases;
 
     // Test basic upload.
-    testCases.emplace_back("RGBA, UBYTE -> RGBA8", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8);
+    testCases.emplace_back("RGBA UBYTE to RGBA8", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8);
 
     // Test format conversion.
     // TODO: Vulkan crashes with `Texture at colorAttachment[0] has usage (0x01) which doesn't specify MTLTextureUsageRenderTarget (0x04)'
-    testCases.emplace_back("RGBA, FLOAT -> RGBA16F", PixelDataFormat::RGBA, PixelDataType::FLOAT, TextureFormat::RGBA16F);
+    testCases.emplace_back("RGBA FLOAT to RGBA16F", PixelDataFormat::RGBA, PixelDataType::FLOAT, TextureFormat::RGBA16F);
 
     // Test texture formats not all backends support natively.
     // TODO: Vulkan crashes with "VK_FORMAT_R32G32B32_SFLOAT is not supported"
-    testCases.emplace_back("RGB, FLOAT -> RGB32F", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F);
-    testCases.emplace_back("RGB, FLOAT -> RGB16F", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB16F);
+    testCases.emplace_back("RGB FLOAT to RGB32F", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F);
+    testCases.emplace_back("RGB FLOAT to RGB16F", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB16F);
 
     // Test packed format uploads.
     // TODO: Vulkan crashes with "Texture at colorAttachment[0] has usage (0x01) which doesn't specify MTLTextureUsageRenderTarget (0x04)"
-    testCases.emplace_back("RGBA, UINT_2_10_10_10_REV -> RGB10_A2", PixelDataFormat::RGBA, PixelDataType::UINT_2_10_10_10_REV, TextureFormat::RGB10_A2);
-    testCases.emplace_back("RGB, UINT_10F_11F_11F_REV -> R11F_G11F_B10F", PixelDataFormat::RGB, PixelDataType::UINT_10F_11F_11F_REV, TextureFormat::R11F_G11F_B10F);
-    testCases.emplace_back("RGB, HALF -> R11F_G11F_B10F", PixelDataFormat::RGB, PixelDataType::HALF, TextureFormat::R11F_G11F_B10F);
+    testCases.emplace_back("RGBA UINT_2_10_10_10_REV to RGB10_A2", PixelDataFormat::RGBA, PixelDataType::UINT_2_10_10_10_REV, TextureFormat::RGB10_A2);
+    testCases.emplace_back("RGB UINT_10F_11F_11F_REV to R11F_G11F_B10F", PixelDataFormat::RGB, PixelDataType::UINT_10F_11F_11F_REV, TextureFormat::R11F_G11F_B10F);
+    testCases.emplace_back("RGB HALF to R11F_G11F_B10F", PixelDataFormat::RGB, PixelDataType::HALF, TextureFormat::R11F_G11F_B10F);
 
     // Test integer format uploads.
     // TODO: These cases fail on OpenGL and Vulkan.
     // TODO: These cases now also fail on Metal, but at some point previously worked.
-     testCases.emplace_back("RGB_INTEGER, UBYTE -> RGB8UI", PixelDataFormat::RGB_INTEGER, PixelDataType::UBYTE, TextureFormat::RGB8UI);
-     testCases.emplace_back("RGB_INTEGER, USHORT -> RGB16UI", PixelDataFormat::RGB_INTEGER, PixelDataType::USHORT, TextureFormat::RGB16UI);
-     testCases.emplace_back("RGB_INTEGER, INT -> RGB32I", PixelDataFormat::RGB_INTEGER, PixelDataType::INT, TextureFormat::RGB32I);
+     testCases.emplace_back("RGB_INTEGER UBYTE to RGB8UI", PixelDataFormat::RGB_INTEGER, PixelDataType::UBYTE, TextureFormat::RGB8UI);
+     testCases.emplace_back("RGB_INTEGER USHORT to RGB16UI", PixelDataFormat::RGB_INTEGER, PixelDataType::USHORT, TextureFormat::RGB16UI);
+     testCases.emplace_back("RGB_INTEGER INT to RGB32I", PixelDataFormat::RGB_INTEGER, PixelDataType::INT, TextureFormat::RGB32I);
 
     // Test uploads with buffer padding.
     // TODO: Vulkan crashes with "Assertion failed: (offset + size <= allocationSize)"
-    testCases.emplace_back("RGBA, UBYTE -> RGBA8 (with buffer padding)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 64u);
-    testCases.emplace_back("RGBA, FLOAT -> RGBA16F (with buffer padding)", PixelDataFormat::RGBA, PixelDataType::FLOAT, TextureFormat::RGBA16F, 64u);
-    testCases.emplace_back("RGB, FLOAT -> RGB32F (with buffer padding)", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F, 64u);
+    testCases.emplace_back("RGBA UBYTE to RGBA8 (with buffer padding)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 64u);
+    testCases.emplace_back("RGBA FLOAT to RGBA16F (with buffer padding)", PixelDataFormat::RGBA, PixelDataType::FLOAT, TextureFormat::RGBA16F, 64u);
+    testCases.emplace_back("RGB FLOAT to RGB32F (with buffer padding)", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F, 64u);
 
     // Upload subregions separately.
     // TODO: Vulkan crashes with "Offsets not yet supported"
-    testCases.emplace_back("RGBA, UBYTE -> RGBA8 (subregions)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 0u, true);
-    testCases.emplace_back("RGBA, FLOAT -> RGBA16F (subregions)", PixelDataFormat::RGBA, PixelDataType::FLOAT, TextureFormat::RGBA16F, 0u, true);
-    testCases.emplace_back("RGBA, UBYTE -> RGBA8 (subregions, buffer padding)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 64u, true);
-    testCases.emplace_back("RGB, FLOAT -> RGB32F (subregions, buffer padding)", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F, 64u, true);
+    testCases.emplace_back("RGBA UBYTE to RGBA8 (subregions)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 0u, true);
+    testCases.emplace_back("RGBA FLOAT to RGBA16F (subregions)", PixelDataFormat::RGBA, PixelDataType::FLOAT, TextureFormat::RGBA16F, 0u, true);
+    testCases.emplace_back("RGBA UBYTE to RGBA8 (subregions and buffer padding)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 64u, true);
+    testCases.emplace_back("RGB FLOAT to RGB32F (subregions and buffer padding)", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F, 64u, true);
 
     auto& api = getDriverApi();
 
@@ -339,16 +339,14 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
                 defaultRenderTarget, swapChain, shader.getProgram());
 
-        readPixelsAndAssertHash(t.name, 512, 512, defaultRenderTarget, expectedHash);
+        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+                ScreenshotParams(512, 512, t.name, expectedHash));
 
         api.commit(swapChain);
         api.endFrame(0);
     }
 
-    api.finish();
     api.stopCapture();
-
-    flushAndWait();
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
@@ -372,7 +370,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
             getSamplerTypeName(textureFormat), fragmentTemplate);
     Shader shader(api, cleanup, ShaderConfig{
         .vertexShader = mVertexShader, .fragmentShader = fragment, .uniforms = {{
-            "text_tex", DescriptorType::SAMPLER, samplerInfo
+            "test_tex", DescriptorType::SAMPLER, samplerInfo
     }}});
 
     // Create a texture.
@@ -416,15 +414,12 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
             defaultRenderTarget, swapChain, shader.getProgram());
 
-    static const uint32_t expectedHash = 359858623;
-    readPixelsAndAssertHash("UpdateImageSRGB", 512, 512, defaultRenderTarget, expectedHash);
+    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+            ScreenshotParams(512, 512, "UpdateImageSRGB", 359858623));
 
-    api.flush();
     api.commit(swapChain);
     api.endFrame(0);
 
-    // This ensures all driver commands have finished before exiting the test.
-    api.finish();
     api.stopCapture();
 }
 
@@ -478,15 +473,12 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
             defaultRenderTarget, swapChain, shader.getProgram());
 
-    static const uint32_t expectedHash = 3644679986;
-    readPixelsAndAssertHash("UpdateImageMipLevel", 512, 512, defaultRenderTarget, expectedHash);
+    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+            ScreenshotParams(512, 512, "UpdateImageMipLevel", 3644679986));
 
-    api.flush();
     api.commit(swapChain);
     api.endFrame(0);
 
-    // This ensures all driver commands have finished before exiting the test.
-    api.finish();
     api.stopCapture();
 }
 
@@ -538,29 +530,24 @@ TEST_F(LoadImageTest, UpdateImage3D) {
 
     api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 4, std::move(descriptor));
 
-    api.beginFrame(0, 0, 0);
+    {
+        RenderFrame frame(api);
 
-    // Update samplers.
-    DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
+        // Update samplers.
+        DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture,
+                { .filterMag = SamplerMagFilter::LINEAR,
+                    .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
 
-    api.bindDescriptorSet(descriptorSet, 1, {});
+        api.bindDescriptorSet(descriptorSet, 1, {});
 
-    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
-            defaultRenderTarget, swapChain, shader.getProgram());
+        renderTriangle({ { DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() } },
+                defaultRenderTarget, swapChain, shader.getProgram());
 
-    static const uint32_t expectedHash = 3644679986;
-    readPixelsAndAssertHash("UpdateImage3D", 512, 512, defaultRenderTarget, expectedHash);
+        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+                ScreenshotParams(512, 512, "UpdateImage3D", 3644679986));
+    }
 
-    api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    // This ensures all driver commands have finished before exiting the test.
-    api.finish();
     api.stopCapture();
 }
 

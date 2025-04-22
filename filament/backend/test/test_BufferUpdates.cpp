@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
@@ -220,9 +221,9 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
             renderTarget, swapChain, shader.getProgram(), params);
 
-    static const uint32_t expectedHash = 91322442;
-    readPixelsAndAssertHash(
-            "BufferObjectUpdateWithOffset", 512, 512, renderTarget, expectedHash, true);
+
+    EXPECT_IMAGE(renderTarget, getExpectations(),
+            ScreenshotParams(512, 512, "BufferObjectUpdateWithOffset", 91322442));
 
     api.flush();
     api.commit(swapChain);
