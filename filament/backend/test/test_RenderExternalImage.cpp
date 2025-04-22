@@ -86,27 +86,27 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
 
-    api.startCapture(0);
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0, 0);
+    {
+        Cleanup cleanupCapture(api);
+        api.startCapture(0);
+        cleanup.addPostCall([&]() { api.stopCapture(0); });
+        api.makeCurrent(swapChain, swapChain);
+        {
+            RenderFrame frame(api);
 
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
-    api.bindDescriptorSet(descriptorSet, 1, {});
+            api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
+            api.bindDescriptorSet(descriptorSet, 1, {});
 
-    // Render a triangle.
-    api.beginRenderPass(defaultRenderTarget, params);
-    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-    api.endRenderPass();
+            // Render a triangle.
+            api.beginRenderPass(defaultRenderTarget, params);
+            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+            api.endRenderPass();
 
-    api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    api.stopCapture(0);
-
+            api.flush();
+            api.commit(swapChain);
+        }
+    }
     api.finish();
-
-    executeCommands();
 }
 
 TEST_F(BackendTest, RenderExternalImage) {
@@ -188,29 +188,29 @@ TEST_F(BackendTest, RenderExternalImage) {
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
     state.rasterState.culling = CullingMode::NONE;
 
-    api.startCapture(0);
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0, 0);
+    {
+        Cleanup cleanupCapture(api);
+        api.startCapture(0);
+        cleanup.addPostCall([&]() { api.stopCapture(0); });
+        api.makeCurrent(swapChain, swapChain);
+        {
+            RenderFrame frame(api);
 
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
-    api.bindDescriptorSet(descriptorSet, 1, {});
+            api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
+            api.bindDescriptorSet(descriptorSet, 1, {});
 
-    // Render a triangle.
-    api.beginRenderPass(defaultRenderTarget, params);
-    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-    api.endRenderPass();
+            // Render a triangle.
+            api.beginRenderPass(defaultRenderTarget, params);
+            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+            api.endRenderPass();
 
-    readPixelsAndAssertHash("RenderExternalImage", 512, 512, defaultRenderTarget, 267229901, true);
+            readPixelsAndAssertHash("RenderExternalImage", 512, 512, defaultRenderTarget, 267229901, true);
 
-    api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    api.stopCapture(0);
-
+            api.flush();
+            api.commit(swapChain);
+        }
+    }
     api.finish();
-
-    executeCommands();
 }
 
 } // namespace test

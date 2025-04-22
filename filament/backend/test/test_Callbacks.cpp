@@ -27,58 +27,61 @@ namespace test {
 TEST_F(BackendTest, FrameScheduledCallback) {
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL));
 
-    auto& api = getDriverApi();
-    Cleanup cleanup(api);
-
-    // Create a SwapChain.
-    // In order for the frameScheduledCallback to be called, this must be a real SwapChain (not
-    // headless) so we obtain a drawable.
-    auto swapChain = cleanup.add(createSwapChain());
-
-    Handle<HwRenderTarget> renderTarget = cleanup.add(api.createDefaultRenderTarget());
-
     int callbackCountA = 0;
-    api.setFrameScheduledCallback(swapChain, nullptr, [&callbackCountA](PresentCallable callable) {
-        callable();
-        callbackCountA++;
-    }, 0);
-
-    // Render the first frame.
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0, 0);
-    api.beginRenderPass(renderTarget, {});
-    api.endRenderPass(0);
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    // Render the next frame. The same callback should be called.
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0, 0);
-    api.beginRenderPass(renderTarget, {});
-    api.endRenderPass(0);
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    // Now switch out the callback.
     int callbackCountB = 0;
-    api.setFrameScheduledCallback(swapChain, nullptr, [&callbackCountB](PresentCallable callable) {
-        callable();
-        callbackCountB++;
-    }, 0);
+    {
+        auto& api = getDriverApi();
+        Cleanup cleanup(api);
+        cleanup.addPostCall([&]() { executeCommands(); });
+        cleanup.addPostCall([&]() { getDriver().purge(); });
 
-    // Render one final frame.
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0, 0);
-    api.beginRenderPass(renderTarget, {});
-    api.endRenderPass(0);
-    api.commit(swapChain);
-    api.endFrame(0);
+        // Create a SwapChain.
+        // In order for the frameScheduledCallback to be called, this must be a real SwapChain (not
+        // headless) so we obtain a drawable.
+        auto swapChain = cleanup.add(createSwapChain());
 
-    api.finish();
+        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createDefaultRenderTarget());
 
-    executeCommands();
-    getDriver().purge();
+        api.setFrameScheduledCallback(swapChain, nullptr, [&callbackCountA](PresentCallable callable) {
+            callable();
+            callbackCountA++;
+        }, 0);
 
+        // Render the first frame.
+        api.makeCurrent(swapChain, swapChain);
+        {
+            RenderFrame frame(api);
+            api.beginRenderPass(renderTarget, {});
+            api.endRenderPass(0);
+            api.commit(swapChain);
+        }
+
+        // Render the next frame. The same callback should be called.
+        api.makeCurrent(swapChain, swapChain);
+        {
+            RenderFrame frame(api);
+            api.beginRenderPass(renderTarget, {});
+            api.endRenderPass(0);
+            api.commit(swapChain);
+        }
+
+        // Now switch out the callback.
+        api.setFrameScheduledCallback(swapChain, nullptr, [&callbackCountB](PresentCallable callable) {
+            callable();
+            callbackCountB++;
+        }, 0);
+
+        // Render one final frame.
+        api.makeCurrent(swapChain, swapChain);
+        {
+            RenderFrame frame(api);
+            api.beginRenderPass(renderTarget, {});
+            api.endRenderPass(0);
+            api.commit(swapChain);
+        }
+
+        api.finish();
+    }
     EXPECT_EQ(callbackCountA, 2);
     EXPECT_EQ(callbackCountB, 1);
 }
@@ -86,43 +89,47 @@ TEST_F(BackendTest, FrameScheduledCallback) {
 TEST_F(BackendTest, FrameCompletedCallback) {
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL));
 
-    auto& api = getDriverApi();
-    Cleanup cleanup(api);
-
-    // Create a SwapChain.
-    auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
-
     int callbackCountA = 0;
-    api.setFrameCompletedCallback(swapChain, nullptr,
-            [&callbackCountA]() { callbackCountA++; });
-
-    // Render the first frame.
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0, 0);
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    // Render the next frame. The same callback should be called.
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0, 0);
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    // Now switch out the callback.
     int callbackCountB = 0;
-    api.setFrameCompletedCallback(swapChain, nullptr,
-            [&callbackCountB]() { callbackCountB++; });
+    {
+        auto& api = getDriverApi();
+        Cleanup cleanup(api);
+        cleanup.addPostCall([&]() { executeCommands(); });
+        cleanup.addPostCall([&]() { getDriver().purge(); });
 
-    // Render one final frame.
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0, 0);
-    api.commit(swapChain);
-    api.endFrame(0);
+        // Create a SwapChain.
+        auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
 
-    api.finish();
+        api.setFrameCompletedCallback(swapChain, nullptr,
+                [&callbackCountA]() { callbackCountA++; });
 
-    executeCommands();
-    getDriver().purge();
+        // Render the first frame.
+        api.makeCurrent(swapChain, swapChain);
+        {
+            RenderFrame frame(api);
+            api.commit(swapChain);
+        }
+
+        // Render the next frame. The same callback should be called.
+        api.makeCurrent(swapChain, swapChain);
+        {
+            RenderFrame frame(api);
+            api.commit(swapChain);
+        }
+
+        // Now switch out the callback.
+        api.setFrameCompletedCallback(swapChain, nullptr,
+                [&callbackCountB]() { callbackCountB++; });
+
+        // Render one final frame.
+        api.makeCurrent(swapChain, swapChain);
+        {
+            RenderFrame frame(api);
+            api.commit(swapChain);
+        }
+
+        api.finish();
+    }
 
     EXPECT_EQ(callbackCountA, 2);
     EXPECT_EQ(callbackCountB, 1);
