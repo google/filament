@@ -46,11 +46,12 @@ public:
     int height() const;
     uint32_t expectedHash() const;
 
-    std::string outputDirectoryPath() const;
-    std::string generatedActualFileName() const;
-    std::string generatedActualFilePath() const;
-    std::string goldenFileName() const;
-    std::string goldenFilePath() const;
+    static std::string actualDirectoryPath();
+    std::string actualFileName() const;
+    std::string actualFilePath() const;
+    static std::string expectedDirectoryPath();
+    std::string expectedFileName() const;
+    std::string expectedFilePath() const;
 
 private:
     int mWidth;
@@ -98,6 +99,17 @@ private:
     std::unique_ptr<Internal> mInternal;
 };
 
+class LoadedPng {
+public:
+    explicit LoadedPng(std::string filePath);
+
+    uint32_t hash() const;
+
+private:
+    std::string mFilePath;
+    std::vector<unsigned char> mBytes;
+};
+
 class ImageExpectation {
 public:
     ImageExpectation(const char* fileName, int lineNumber, filament::backend::DriverApi& api,
@@ -130,7 +142,8 @@ public:
 
 private:
     filament::backend::DriverApi& mApi;
-    std::vector<ImageExpectation> mExpectations;
+    // Store expectations in unique pointers because they are self referential.
+    std::vector<std::unique_ptr<ImageExpectation>> mExpectations;
 };
 
 #endif //TNT_IMAGE_EXPECTATIONS_H

@@ -85,6 +85,7 @@ OpenGLProgram::~OpenGLProgram() noexcept {
         delete lazyInitializationData;
 
         ShaderCompilerService::terminate(mToken);
+        assert_invariant(!mToken);
     }
 
     delete [] mUniformsRecords;

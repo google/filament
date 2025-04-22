@@ -35,6 +35,10 @@ add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libutils.a)
 
+add_library(perfetto STATIC IMPORTED)
+set_target_properties(perfetto PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libperfetto.a)
+
 add_library(uberzlib STATIC IMPORTED)
 set_target_properties(uberzlib PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libuberzlib.a)
@@ -121,6 +125,7 @@ set(GLTFIO_INCLUDE_DIRS
         ../../third_party/meshoptimizer/src
         ../../third_party/robin-map
         ../../third_party/stb
+        ../../third_party/perfetto
         ../../libs/utils/include
         ../../libs/ktxreader/include
 )
@@ -129,7 +134,7 @@ add_library(gltfio-jni SHARED ${GLTFIO_SRCS})
 target_include_directories(gltfio-jni PRIVATE ${GLTFIO_INCLUDE_DIRS})
 set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
 set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
-target_link_libraries(gltfio-jni filament-jni utils uberzlib log stb ktxreader basis_transcoder zstd uberarchive)
+target_link_libraries(gltfio-jni filament-jni utils perfetto uberzlib log stb ktxreader basis_transcoder zstd uberarchive)
 target_link_libraries(gltfio-jni dracodec meshoptimizer)
 target_compile_definitions(gltfio-jni PUBLIC GLTFIO_DRACO_SUPPORTED=1)
 target_include_directories(gltfio-jni PRIVATE ${DRACO_DIR}/src)

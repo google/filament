@@ -261,6 +261,7 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUHandles.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
+            src/webgpu/WGPUProgram.cpp
     )
     if (WIN32)
         list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)
@@ -536,6 +537,9 @@ if (APPLE OR LINUX)
         filamat
         SPIRV
         spirv-cross-glsl)
+    # Create input/output directories for test result images.
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/actual_images)
+    file(COPY test/expected_images DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/images)
 endif()
 
 # TODO: Disabling IOS test due to breakage wrt glslang update
