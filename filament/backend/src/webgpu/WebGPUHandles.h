@@ -28,8 +28,19 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
+#include <vector>
 
 namespace filament::backend {
+
+class WGPUProgram final : public HwProgram {
+public:
+    WGPUProgram(wgpu::Device&, Program&);
+
+    wgpu::ShaderModule vertexShaderModule = nullptr;
+    wgpu::ShaderModule fragmentShaderModule = nullptr;
+    wgpu::ShaderModule computeShaderModule = nullptr;
+    std::vector<wgpu::ConstantEntry> constants;
+};
 
 struct WGPUBufferObject;
 // TODO: Currently WGPUVertexBufferInfo is not used by WebGPU for useful task.
@@ -69,7 +80,7 @@ struct WGPUBufferObject : HwBufferObject {
 };
 class WebGPUDescriptorSetLayout : public HwDescriptorSetLayout {
 public:
-    WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const* device);
+    WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const& device);
     ~WebGPUDescriptorSetLayout();
 
 private:

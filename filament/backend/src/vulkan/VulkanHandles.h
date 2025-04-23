@@ -71,7 +71,7 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
         fvkutils::SamplerBitmask sampler;           // 8 bytes
         fvkutils::InputAttachmentBitmask inputAttachment; // 8 bytes
 
-        // This is a subset of the bitmask.sampler field.
+        // This is a subset of the sampler field.
         fvkutils::SamplerBitmask externalSampler; // 8 bytes
 
         bool operator==(Bitmask const& right) const {
@@ -79,6 +79,8 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
                    inputAttachment == right.inputAttachment &&
                    externalSampler == right.externalSampler;
         }
+
+        static Bitmask fromLayoutDescription(DescriptorSetLayout const& layout);
     };
     static_assert(sizeof(Bitmask) == 40);
 
@@ -120,16 +122,20 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
         }
     };
 
-    VulkanDescriptorSetLayout(DescriptorSetLayout const& layout);
+    VulkanDescriptorSetLayout(DescriptorSetLayout&& layout, VkDescriptorSetLayout vkLayout);
 
     // Note that we don't destroy the vklayout. This is done by the layout cache.
     ~VulkanDescriptorSetLayout() = default;
 
-    VkDescriptorSetLayout const& getVkLayout() const noexcept { return mVkLayout; }
+    VkDescriptorSetLayout getVkLayout() const noexcept { return mVkLayout; }
 
-    // It is possible to have the layout switch out due to AHardwarebuffer (external image) format
-    // changes.
-    void setVkLayout(VkDescriptorSetLayout vklayout) noexcept { mVkLayout = vklayout; }
+    VkDescriptorSetLayout getExternalSamplerVkLayout() const noexcept {
+        return mExternalSamplerVkLayout;
+    }
+
+    void setExternalSamplerVkLayout(VkDescriptorSetLayout vklayout) noexcept {
+        mExternalSamplerVkLayout = vklayout;
+    }
 
     bool hasExternalSamplers() const noexcept { return bitmask.externalSampler.count() > 0; }
 
@@ -137,7 +143,11 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
     Count const count;
 
 private:
-    VkDescriptorSetLayout mVkLayout = VK_NULL_HANDLE;
+    // This is the layout without any immutable samplers.
+    VkDescriptorSetLayout const mVkLayout = VK_NULL_HANDLE;
+
+    // This is the layout with immutable samplers, and can be updated.
+    VkDescriptorSetLayout mExternalSamplerVkLayout = VK_NULL_HANDLE;
 };
 
 struct VulkanDescriptorSet : public HwDescriptorSet, fvkmemory::Resource {
@@ -149,23 +159,36 @@ public:
     VulkanDescriptorSet(
             fvkutils::UniformBufferBitmask const& dynamicUboMask,
             uint8_t uniqueDynamicUboCount,
-            OnRecycle&& onRecycleFn)
+            OnRecycle&& onRecycleFn, VkDescriptorSet vkSet)
         : dynamicUboMask(dynamicUboMask),
           uniqueDynamicUboCount(uniqueDynamicUboCount),
+          mVkSet(vkSet),
           mOnRecycleFn(std::move(onRecycleFn)) {}
 
     ~VulkanDescriptorSet() {
         if (mOnRecycleFn) {
             mOnRecycleFn(this);
         }
+        if (mOnRecycleExternalSamplerFn) {
+            mOnRecycleExternalSamplerFn(this);
+        }
     }
 
-    VkDescriptorSet const& getVkSet() const noexcept {
+    VkDescriptorSet getVkSet() const noexcept {
         return mVkSet;
     }
 
-    // Note that the only case where you'd set it more than once is with external images/samplers.
-    void setVkSet(VkDescriptorSet vkset) noexcept { mVkSet = vkset; }
+    VkDescriptorSet getExternalSamplerVkSet() const noexcept {
+        return mExternalSamplerVkSet;
+    }
+
+    void setExternalSamplerVkSet(VkDescriptorSet vkset, OnRecycle onRecycle) noexcept {
+        mExternalSamplerVkSet = vkset;
+        if (mOnRecycleExternalSamplerFn) {
+            mOnRecycleExternalSamplerFn(this);
+        }
+        mOnRecycleExternalSamplerFn = onRecycle;
+    }
 
     void setOffsets(backend::DescriptorSetOffsetArray&& offsets) noexcept {
         mOffsets = std::move(offsets);
@@ -182,10 +205,13 @@ public:
     uint8_t const uniqueDynamicUboCount;
 
 private:
-    VkDescriptorSet mVkSet = VK_NULL_HANDLE;
+    VkDescriptorSet const mVkSet;
+    VkDescriptorSet mExternalSamplerVkSet = VK_NULL_HANDLE;
+
     backend::DescriptorSetOffsetArray mOffsets;
     std::vector<fvkmemory::resource_ptr<fvkmemory::Resource>> mResources;
     OnRecycle mOnRecycleFn;
+    OnRecycle mOnRecycleExternalSamplerFn;
 };
 
 using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
