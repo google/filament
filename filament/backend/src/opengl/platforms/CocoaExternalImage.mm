@@ -17,8 +17,10 @@
 #define COREVIDEO_SILENCE_GL_DEPRECATION
 
 #include "CocoaExternalImage.h"
-#include <utils/Panic.h>
 #include "../GLUtils.h"
+
+#include <utils/Panic.h>
+#include <utils/Log.h>
 
 namespace filament::backend {
 
