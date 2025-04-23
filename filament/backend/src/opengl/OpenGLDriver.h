@@ -161,7 +161,7 @@ public:
             uint8_t cur = 0;
             AcquiredImage acquired;
             AcquiredImage pending;
-            math::mat3f transform = math::mat3f();
+            math::mat3f transform;
         } user_thread;
 
          math::mat3f transform;
