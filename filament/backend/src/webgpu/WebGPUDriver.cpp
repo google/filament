@@ -325,6 +325,9 @@ void WebGPUDriver::destroyTexture(Handle<HwTexture> th) {
 }
 
 void WebGPUDriver::destroyProgram(Handle<HwProgram> ph) {
+    if (ph) {
+        destructHandle<WGPUProgram>(ph);
+    }
 }
 
 void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
@@ -369,7 +372,7 @@ Handle<HwTexture> WebGPUDriver::importTextureS() noexcept {
 }
 
 Handle<HwProgram> WebGPUDriver::createProgramS() noexcept {
-    return Handle<HwProgram>((Handle<HwProgram>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUProgram>();
 }
 
 Handle<HwFence> WebGPUDriver::createFenceS() noexcept {
@@ -505,7 +508,9 @@ void WebGPUDriver::importTextureR(Handle<HwTexture> th, intptr_t id, SamplerType
 void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<HwVertexBuffer> vbh,
         Handle<HwIndexBuffer> ibh, PrimitiveType pt) {}
 
-void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {}
+void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
+    constructHandle<WGPUProgram>(ph, mDevice, program);
+}
 
 void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
     assert_invariant(!mDefaultRenderTarget);
@@ -523,7 +528,7 @@ void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
 
 void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
         backend::DescriptorSetLayout&& info) {
-    constructHandle<WebGPUDescriptorSetLayout>(dslh, std::move(info), &mDevice);
+    constructHandle<WebGPUDescriptorSetLayout>(dslh, std::move(info), mDevice);
 }
 
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
@@ -802,7 +807,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> src,
     scheduleDestroy(std::move(p));
 }
 
-void WebGPUDriver::readBufferSubData(backend::BufferObjectHandle boh,
+void WebGPUDriver::readBufferSubData(Handle<HwBufferObject> boh,
         uint32_t offset, uint32_t size, backend::BufferDescriptor&& p) {
     scheduleDestroy(std::move(p));
 }
@@ -854,22 +859,22 @@ void WebGPUDriver::resetState(int) {
 }
 
 void WebGPUDriver::updateDescriptorSetBuffer(
-        backend::DescriptorSetHandle dsh,
+        Handle<HwDescriptorSet> dsh,
         backend::descriptor_binding_t binding,
-        backend::BufferObjectHandle boh,
+        Handle<HwBufferObject> boh,
         uint32_t offset,
         uint32_t size) {
 }
 
 void WebGPUDriver::updateDescriptorSetTexture(
-        backend::DescriptorSetHandle dsh,
+        Handle<HwDescriptorSet> dsh,
         backend::descriptor_binding_t binding,
-        backend::TextureHandle th,
+        Handle<HwTexture> th,
         SamplerParams params) {
 }
 
 void WebGPUDriver::bindDescriptorSet(
-        backend::DescriptorSetHandle dsh,
+        Handle<HwDescriptorSet> dsh,
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
 }

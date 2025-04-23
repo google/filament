@@ -16,9 +16,15 @@
 
 #include "GLUtils.h"
 
+#include "private/backend/Driver.h"
+
+#include <utils/compiler.h>
+#include <utils/ostream.h>
 #include <utils/trap.h>
 
-#include "private/backend/Driver.h"
+#include <string_view>
+
+#include <stddef.h>
 
 namespace filament::backend {
 
@@ -28,38 +34,31 @@ using namespace utils;
 namespace GLUtils {
 
 UTILS_NOINLINE
-const char* getGLError(GLenum error) noexcept {
-    const char* string = "unknown";
+std::string_view getGLErrorString(GLenum error) noexcept {
     switch (error) {
         case GL_NO_ERROR:
-            string = "GL_NO_ERROR";
-            break;
+            return "GL_NO_ERROR";
         case GL_INVALID_ENUM:
-            string = "GL_INVALID_ENUM";
-            break;
+            return "GL_INVALID_ENUM";
         case GL_INVALID_VALUE:
-            string = "GL_INVALID_VALUE";
-            break;
+            return "GL_INVALID_VALUE";
         case GL_INVALID_OPERATION:
-            string = "GL_INVALID_OPERATION";
-            break;
+            return "GL_INVALID_OPERATION";
         case GL_INVALID_FRAMEBUFFER_OPERATION:
-            string = "GL_INVALID_FRAMEBUFFER_OPERATION";
-            break;
+            return "GL_INVALID_FRAMEBUFFER_OPERATION";
         case GL_OUT_OF_MEMORY:
-            string = "GL_OUT_OF_MEMORY";
-            break;
+            return "GL_OUT_OF_MEMORY";
         default:
             break;
     }
-    return string;
+    return "unknown";
 }
 
 UTILS_NOINLINE
 GLenum checkGLError(io::ostream& out, const char* function, size_t line) noexcept {
     GLenum const error = glGetError();
-    if (error != GL_NO_ERROR) {
-        const char* string = getGLError(error);
+    if (UTILS_VERY_UNLIKELY(error != GL_NO_ERROR)) {
+        auto const string = getGLErrorString(error);
         out << "OpenGL error " << io::hex << error << " (" << string << ") in \""
             << function << "\" at line " << io::dec << line << io::endl;
     }
@@ -69,46 +68,39 @@ GLenum checkGLError(io::ostream& out, const char* function, size_t line) noexcep
 UTILS_NOINLINE
 void assertGLError(io::ostream& out, const char* function, size_t line) noexcept {
     GLenum const err = checkGLError(out, function, line);
-    if (err != GL_NO_ERROR) {
+    if (UTILS_VERY_UNLIKELY(err != GL_NO_ERROR)) {
         debug_trap();
     }
 }
 
 UTILS_NOINLINE
-const char* getFramebufferStatus(GLenum status) noexcept {
-    const char* string = "unknown";
+std::string_view getFramebufferStatusString(GLenum status) noexcept {
     switch (status) {
         case GL_FRAMEBUFFER_COMPLETE:
-            string = "GL_FRAMEBUFFER_COMPLETE";
-            break;
+            return "GL_FRAMEBUFFER_COMPLETE";
         case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-            string = "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";
-            break;
+            return "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";
         case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-            string = "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
-            break;
+            return "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
         case GL_FRAMEBUFFER_UNSUPPORTED:
-            string = "GL_FRAMEBUFFER_UNSUPPORTED";
-            break;
+            return "GL_FRAMEBUFFER_UNSUPPORTED";
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
         case GL_FRAMEBUFFER_UNDEFINED:
-            string = "GL_FRAMEBUFFER_UNDEFINED";
-            break;
+            return "GL_FRAMEBUFFER_UNDEFINED";
         case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-            string = "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
-            break;
+            return "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
 #endif
         default:
             break;
     }
-    return string;
+    return "unknown";
 }
 
 UTILS_NOINLINE
 GLenum checkFramebufferStatus(io::ostream& out, GLenum target, const char* function, size_t line) noexcept {
     GLenum const status = glCheckFramebufferStatus(target);
-    if (status != GL_FRAMEBUFFER_COMPLETE) {
-        const char* string = getFramebufferStatus(status);
+    if (UTILS_VERY_UNLIKELY(status != GL_FRAMEBUFFER_COMPLETE)) {
+        auto const string = getFramebufferStatusString(status);
         out << "OpenGL framebuffer error " << io::hex << status << " (" << string << ") in \""
             << function << "\" at line " << io::dec << line << io::endl;
     }
@@ -118,7 +110,7 @@ GLenum checkFramebufferStatus(io::ostream& out, GLenum target, const char* funct
 UTILS_NOINLINE
 void assertFramebufferStatus(io::ostream& out, GLenum target, const char* function, size_t line) noexcept {
     GLenum const status = checkFramebufferStatus(out, target, function, line);
-    if (status != GL_FRAMEBUFFER_COMPLETE) {
+    if (UTILS_VERY_UNLIKELY(status != GL_FRAMEBUFFER_COMPLETE)) {
         debug_trap();
     }
 }
