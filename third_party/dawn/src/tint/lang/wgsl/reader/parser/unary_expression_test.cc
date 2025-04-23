@@ -181,28 +181,42 @@ TEST_F(WGSLParserTest, UnaryExpression_Tilde) {
               ast::IntLiteralExpression::Suffix::kNone);
 }
 
-TEST_F(WGSLParserTest, UnaryExpression_PrefixPlusPlus) {
+// (++a) is not a valid unary expression.
+TEST_F(WGSLParserTest, _PrefixPlusPlus) {
     auto p = parser("++a");
     auto e = p->unary_expression();
     EXPECT_FALSE(e.matched);
     EXPECT_TRUE(e.errored);
     EXPECT_EQ(e.value, nullptr);
     EXPECT_TRUE(p->has_error());
-    EXPECT_EQ(p->error(),
-              "1:1: prefix increment and decrement operators are reserved for a "
-              "future WGSL version");
+    EXPECT_EQ(p->error(), "1:1: prefix increment and decrement operators are not supported");
 }
 
+// A unary expression of form (--a) should be parsed as nested Negation unary expression (-(-a)).
 TEST_F(WGSLParserTest, UnaryExpression_PrefixMinusMinus) {
-    auto p = parser("--a");
+    auto p = parser("-- 1");
     auto e = p->unary_expression();
-    EXPECT_FALSE(e.matched);
-    EXPECT_TRUE(e.errored);
-    EXPECT_EQ(e.value, nullptr);
-    EXPECT_TRUE(p->has_error());
-    EXPECT_EQ(p->error(),
-              "1:1: prefix increment and decrement operators are reserved for a "
-              "future WGSL version");
+
+    // The expression should be parsed as a MINUS unary expression.
+    EXPECT_TRUE(e.matched);
+    EXPECT_FALSE(e.errored);
+    EXPECT_FALSE(p->has_error()) << p->error();
+    ASSERT_NE(e.value, nullptr);
+    ASSERT_TRUE(e->Is<ast::UnaryOpExpression>());
+
+    // The outer unary expression should be Negation of the inner unary expression.
+    auto* outer = e->As<ast::UnaryOpExpression>();
+    ASSERT_EQ(outer->op, core::UnaryOp::kNegation);
+    ASSERT_TRUE(outer->expr->Is<ast::UnaryOpExpression>());
+
+    // The inner unary expression should be Negation of integer literal.
+    auto* inner = outer->expr->As<ast::UnaryOpExpression>();
+    ASSERT_EQ(inner->op, core::UnaryOp::kNegation);
+
+    ASSERT_TRUE(inner->expr->Is<ast::IntLiteralExpression>());
+    EXPECT_EQ(inner->expr->As<ast::IntLiteralExpression>()->value, 1);
+    ASSERT_EQ(inner->expr->As<ast::IntLiteralExpression>()->suffix,
+              ast::IntLiteralExpression::Suffix::kNone);
 }
 
 }  // namespace

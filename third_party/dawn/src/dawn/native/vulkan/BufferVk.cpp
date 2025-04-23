@@ -157,6 +157,33 @@ VkAccessFlags VulkanAccessFlags(wgpu::BufferUsage usage) {
     return flags;
 }
 
+MemoryKind GetMemoryKindFor(wgpu::BufferUsage bufferUsage) {
+    MemoryKind requestKind = MemoryKind::Linear;
+    if (bufferUsage & wgpu::BufferUsage::MapRead) {
+        requestKind |= MemoryKind::ReadMappable;
+    }
+    if (bufferUsage & wgpu::BufferUsage::MapWrite) {
+        requestKind |= MemoryKind::WriteMappable;
+    }
+
+    // `kDeviceLocalBufferUsages` covers all the buffer usages that prefer the memory type
+    // `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT`.
+    constexpr wgpu::BufferUsage kDeviceLocalBufferUsages =
+        wgpu::BufferUsage::Index | wgpu::BufferUsage::QueryResolve | wgpu::BufferUsage::Storage |
+        wgpu::BufferUsage::Uniform | wgpu::BufferUsage::Vertex | kInternalStorageBuffer |
+        kReadOnlyStorageBuffer | kIndirectBufferForBackendResourceTracking;
+    if (bufferUsage & kDeviceLocalBufferUsages) {
+        requestKind |= MemoryKind::DeviceLocal;
+        // All mappable buffers with extended buffer usages should be allocated on the memory type
+        // with `VK_MEMORY_PROPERTY_HOST_CACHED_BIT`.
+        if (bufferUsage & (wgpu::BufferUsage::MapRead | wgpu::BufferUsage::MapWrite)) {
+            requestKind |= MemoryKind::HostCached;
+        }
+    }
+
+    return requestKind;
+}
+
 }  // namespace
 
 // static
@@ -233,12 +260,7 @@ MaybeError Buffer::Initialize(bool mappedAtCreation) {
     VkMemoryRequirements requirements;
     device->fn.GetBufferMemoryRequirements(device->GetVkDevice(), mHandle, &requirements);
 
-    MemoryKind requestKind = MemoryKind::Linear;
-    if (GetInternalUsage() & wgpu::BufferUsage::MapRead) {
-        requestKind = MemoryKind::LinearReadMappable;
-    } else if (GetInternalUsage() & wgpu::BufferUsage::MapWrite) {
-        requestKind = MemoryKind::LinearWriteMappable;
-    }
+    MemoryKind requestKind = GetMemoryKindFor(GetInternalUsage());
     DAWN_TRY_ASSIGN(mMemoryAllocation,
                     device->GetResourceMemoryAllocator()->Allocate(requirements, requestKind));
 
@@ -330,15 +352,11 @@ MaybeError Buffer::InitializeHostMapped(const BufferHostMappedPointer* hostMappe
         requirements.memoryTypeBits &= hostPointerProperties.memoryTypeBits;
     }
 
-    MemoryKind requestKind;
-    if (GetInternalUsage() & wgpu::BufferUsage::MapRead) {
-        requestKind = MemoryKind::LinearReadMappable;
-    } else if (GetInternalUsage() & wgpu::BufferUsage::MapWrite) {
-        requestKind = MemoryKind::LinearWriteMappable;
-    } else {
-        requestKind = MemoryKind::Linear;
-    }
-
+    // We can choose memory type with `requirements.memoryTypeBits` only because host-mapped memory
+    // - is CPU-visible
+    // - is device-local on UMA
+    // - cannot be non-device-local on non-UMA
+    MemoryKind requestKind = MemoryKind::Linear;
     int memoryTypeIndex =
         device->GetResourceMemoryAllocator()->FindBestTypeIndex(requirements, requestKind);
     DAWN_INVALID_IF(memoryTypeIndex < 0, "Failed to find suitable memory type.");
@@ -721,9 +739,6 @@ void Buffer::TransitionMappableBuffersEagerly(Device* device,
     size_t originalBufferCount = buffers.size();
     for (const Ref<Buffer>& buffer : buffers) {
         wgpu::BufferUsage mapUsage = buffer->GetInternalUsage() & kMappableBufferUsages;
-        DAWN_ASSERT(mapUsage == wgpu::BufferUsage::MapRead ||
-                    mapUsage == wgpu::BufferUsage::MapWrite);
-
         buffer->TrackUsageAndGetResourceBarrier(recordingContext, mapUsage,
                                                 wgpu::ShaderStage::None);
     }

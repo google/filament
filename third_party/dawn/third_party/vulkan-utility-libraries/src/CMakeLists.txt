@@ -3,11 +3,9 @@
 # Copyright 2023 LunarG, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
-cmake_minimum_required(VERSION 3.17.2)
+cmake_minimum_required(VERSION 3.22.1)
 
 project(VUL LANGUAGES CXX)
-
-string(COMPARE EQUAL ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR} VUL_IS_TOP_LEVEL) # Remove when min is 3.21
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON) # Remove when min is 3.26, see CMP0143
 
@@ -30,12 +28,17 @@ find_package(VulkanHeaders CONFIG)
 add_subdirectory(src)
 add_subdirectory(include)
 
-if (VUL_IS_TOP_LEVEL)
+if (PROJECT_IS_TOP_LEVEL)
     option(BUILD_TESTS "Build tests")
     if (BUILD_TESTS)
         enable_testing()
         add_subdirectory(tests)
     endif()
+endif()
+
+option(VUL_ENABLE_INSTALL "Enable install" ${PROJECT_IS_TOP_LEVEL})
+
+if (VUL_ENABLE_INSTALL)
 
     include(GNUInstallDirs)
     include(CMakePackageConfigHelpers)

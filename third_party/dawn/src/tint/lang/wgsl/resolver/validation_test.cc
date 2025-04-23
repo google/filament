@@ -1472,6 +1472,35 @@ TEST_F(ResolverValidationTest, ShiftLeft_I32_CompoundAssign_Invalid) {
         R"(1:2 error: shift left value must be less than the bit width of the lhs, which is 32)");
 }
 
+TEST_F(ResolverValidationTest, WorkgroupUniformLoad_ArraySize_NamedOverride) {
+    // override size = 10u;
+    // var<workgroup> a : array<u32, size>;
+    auto* override = Override("size", Expr(10_u));
+    auto* a = GlobalVar(Source{{7, 3}}, "a", ty.array(ty.u32(), override),
+                        core::AddressSpace::kWorkgroup);
+
+    auto* call = Call("workgroupUniformLoad", AddressOf(a));
+    WrapInFunction(call);
+
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(
+        r()->error(),
+        R"(error: workgroupUniformLoad must be called with an argument whose type is constructible)");
+}
+
+TEST_F(ResolverValidationTest, WorkgroupUniformLoad_ArraySize_NamedConstant) {
+    // const size = 10u;
+    // var<workgroup> a : array<u32, size>;
+    auto* const_exp = GlobalConst("size", Expr(10_u));
+    auto* a = GlobalVar(Source{{7, 3}}, "a", ty.array(ty.u32(), const_exp),
+                        core::AddressSpace::kWorkgroup);
+
+    auto* call = Call("workgroupUniformLoad", AddressOf(a));
+    WrapInFunction(call);
+
+    EXPECT_TRUE(r()->Resolve()) << r()->error();
+}
+
 }  // namespace
 }  // namespace tint::resolver
 

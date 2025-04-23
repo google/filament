@@ -61,6 +61,18 @@ bool DynamicLib::Valid() const {
     return mHandle != nullptr;
 }
 
+#if DAWN_PLATFORM_IS(WINDOWS) && !DAWN_PLATFORM_IS(WINUWP)
+bool DynamicLib::OpenSystemLibrary(std::wstring_view filename, std::string* error) {
+    // Force LOAD_LIBRARY_SEARCH_SYSTEM32 for system libraries to avoid DLL search path
+    // attacks.
+    mHandle = ::LoadLibraryExW(filename.data(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (mHandle == nullptr && error != nullptr) {
+        *error = "Windows Error: " + std::to_string(GetLastError());
+    }
+    return mHandle != nullptr;
+}
+#endif
+
 bool DynamicLib::Open(const std::string& filename, std::string* error) {
 #if DAWN_PLATFORM_IS(WINDOWS)
 #if DAWN_PLATFORM_IS(WINUWP)
@@ -90,7 +102,12 @@ void DynamicLib::Close() {
     }
 
 #if DAWN_PLATFORM_IS(WINDOWS)
+#if !DAWN_ASAN_ENABLED()
+    // Freeing and reloading a DLL on Windows causes ASAN to detect ODR violations.
+    // https://github.com/google/sanitizers/issues/89
+    // In ASAN builds, we have to leak the DLL instead in case it gets loaded again later.
     FreeLibrary(static_cast<HMODULE>(mHandle));
+#endif
 #elif DAWN_PLATFORM_IS(POSIX)
     dlclose(mHandle);
 #else

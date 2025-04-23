@@ -31,7 +31,7 @@
 #include <unordered_map>
 
 #include "src/tint/api/common/binding_point.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

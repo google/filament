@@ -19,6 +19,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
       - name: Run build script
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
@@ -40,10 +42,12 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-16core'
 
     steps:
       - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
@@ -60,6 +64,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
       - name: Run build script
         run: |
           cd build/ios && printf "y" | ./build.sh presubmit
@@ -69,7 +75,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-16core'
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -79,7 +85,7 @@ jobs:
 
   validate-docs:
     name: validate-docs
-    runs-on: ubuntu-22.04-4core
+    runs-on: 'ubuntu-24.04-4core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -102,9 +108,21 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Install python prereqs
-        run: pip install mako setuptools pyyaml
-      - name: Run script
+      - name: Cache Mesa and deps
+        id: mesa-cache
+        uses: actions/cache@v4 # Use a specific version
+        with:
+          path: |
+            $HOME/Library/Caches/Homebrew
+            mesa
+          key: ${{ runner.os }}-mesa-deps-${{ vars.MESA_VERSION }}
+      - name: Get Mesa
+        id: mesa-prereq
+        env:
+          MESA_VERSION: ${{ vars.MESA_VERSION }}
+        run: |
+          bash test/utils/get_mesa.sh
+      - name: Run Test
         run: |
           bash test/renderdiff/test.sh
       - uses: actions/upload-artifact@v4
@@ -114,7 +132,7 @@ jobs:
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
-    runs-on: ubuntu-22.04-8core
+    runs-on: 'ubuntu-24.04-8core'
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -122,3 +140,31 @@ jobs:
         run: source ./build/linux/ci-common.sh && ./build.sh -W debug test_filamat filament
       - name: Run test
         run: ./out/cmake-debug/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
+
+  code-correcteness:
+    name: code-correctness
+    runs-on: 'macos-14-xlarge'
+    steps:
+      - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install prerequisites
+        run: |
+          pip install pyyaml
+          brew install llvm
+          sudo ln -s "$(brew --prefix llvm)/bin/clang-tidy" "/usr/local/bin/clang-tidy"
+      - name: Run build script
+        # We need to build before clang-tidy can run analysis
+        run: |
+          # This will build for all three desktop backends on mac
+          ./build.sh -p desktop debug gltf_viewer
+      - name: Run test
+        run: |
+          bash test/code-correctness/test.sh

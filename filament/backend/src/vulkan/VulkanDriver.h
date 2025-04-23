@@ -27,8 +27,10 @@
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
 #include "VulkanQueryManager.h"
+#include "VulkanYcbcrConversionCache.h"
 #include "vulkan/VulkanDescriptorSetCache.h"
 #include "vulkan/VulkanDescriptorSetLayoutCache.h"
+#include "vulkan/VulkanExternalImageManager.h"
 #include "vulkan/VulkanPipelineLayoutCache.h"
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
@@ -118,6 +120,8 @@ private:
 
 private:
     void collectGarbage();
+    void bindPipelineImpl(PipelineState const& pipelineState, VkPipelineLayout pipelineLayout,
+            fvkutils::DescriptorSetMask descriptorSetMask);
 
     VulkanPlatform* mPlatform = nullptr;
     fvkmemory::ResourceManager mResourceManager;
@@ -135,27 +139,46 @@ private:
     VulkanPipelineCache mPipelineCache;
     VulkanStagePool mStagePool;
     VulkanFboCache mFramebufferCache;
+    VulkanYcbcrConversionCache mYcbcrConversionCache;
     VulkanSamplerCache mSamplerCache;
     VulkanBlitter mBlitter;
     VulkanReadPixels mReadPixels;
     VulkanDescriptorSetLayoutCache mDescriptorSetLayoutCache;
     VulkanDescriptorSetCache mDescriptorSetCache;
     VulkanQueryManager mQueryManager;
+    VulkanExternalImageManager mExternalImageManager;
 
     // This is necessary for us to write to push constants after binding a pipeline.
-    struct {
-        resource_ptr<VulkanProgram> program;
-        VkPipelineLayout pipelineLayout;
-        fvkutils::DescriptorSetMask descriptorSetMask;
-    } mBoundPipeline = {};
+    using DescriptorSetLayoutHandleList = std::array<resource_ptr<VulkanDescriptorSetLayout>,
+            VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
 
-    // We need to store information about a render pass to enable better barriers at the end of a
-    // renderpass.
+    struct BindInDrawBundle {
+        PipelineState pipelineState = {};
+        DescriptorSetLayoutHandleList dsLayoutHandles = {};
+        fvkutils::DescriptorSetMask descriptorSetMask = {};
+        resource_ptr<VulkanProgram> program = {};
+    };
+
     struct {
-        using AttachmentArray =
-                fvkutils::StaticVector<VulkanAttachment, MAX_RENDERTARGET_ATTACHMENT_TEXTURES>;
-        AttachmentArray attachments;
-    } mRenderPassFboInfo = {};
+        // For push constant
+        resource_ptr<VulkanProgram> program = {};
+        // For push commiting dynamic ubos in draw()
+        VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+        fvkutils::DescriptorSetMask descriptorSetMask = {};
+
+        std::pair<bool, BindInDrawBundle> bindInDraw = {false, {}};
+    } mPipelineState = {};
+
+    struct {
+        // This tracks whether the app has seen external samplers bound to a the descriptor set.
+        // This will force bindPipeline to take a slow path.
+        bool hasExternalSamplerLayouts = false;
+        bool hasBoundExternalImages = false;
+
+        bool hasExternalSamplers() const noexcept {
+            return hasExternalSamplerLayouts && hasBoundExternalImages;
+        }
+    } mAppState;
 
     bool const mIsSRGBSwapChainSupported;
     backend::StereoscopicType const mStereoscopicType;

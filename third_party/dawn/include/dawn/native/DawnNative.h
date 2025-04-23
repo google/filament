@@ -315,12 +315,33 @@ class DAWN_NATIVE_EXPORT MemoryDump {
 };
 DAWN_NATIVE_EXPORT void DumpMemoryStatistics(WGPUDevice device, MemoryDump* dump);
 
-// Unlike memory dumps which include detailed information about allocations, this only returns the
-// total estimated memory usage, and is intended for background tracing for UMA.
-DAWN_NATIVE_EXPORT uint64_t ComputeEstimatedMemoryUsage(WGPUDevice device);
+// Intended for background tracing for UMA that returns the estimated memory usage with details:
+// - total memory usage of textures.
+// - total memory usage of buffers.
+// - total memory usage of depth/stencil textures.
+// - total memory usage of MSAA textures.
+struct DAWN_NATIVE_EXPORT MemoryUsageInfo {
+    uint64_t totalUsage;
+    uint64_t depthStencilTexturesUsage;
+    uint64_t msaaTexturesUsage;
+    uint64_t texturesUsage;
+    uint64_t buffersUsage;
+};
+DAWN_NATIVE_EXPORT MemoryUsageInfo ComputeEstimatedMemoryUsageInfo(WGPUDevice device);
 
-// Free any unused GPU memory like staging buffers, cached resources, etc.
-DAWN_NATIVE_EXPORT void ReduceMemoryUsage(WGPUDevice device);
+// Memory information gathered from backend specific allocators.
+// - memory allocated by clients for objects such as buffers, textures.
+// - heap memory used by the allocator for allocations.
+struct DAWN_NATIVE_EXPORT AllocatorMemoryInfo {
+    uint64_t totalUsedMemory = 0;
+    uint64_t totalAllocatedMemory = 0;
+};
+DAWN_NATIVE_EXPORT AllocatorMemoryInfo GetAllocatorMemoryInfo(WGPUDevice device);
+
+// Free any unused GPU memory like staging buffers, cached resources, etc. Returns true if there are
+// still objects to delete and ReduceMemoryUsage() should be run again after a short delay to allow
+// submitted work to complete.
+DAWN_NATIVE_EXPORT bool ReduceMemoryUsage(WGPUDevice device);
 
 // Perform tasks that are appropriate to do when idle like serializing pipeline
 // caches, etc.

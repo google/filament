@@ -568,3 +568,12 @@ else()
 endif()
 
 string(REPLACE " " ";" LLVM_BINDINGS_LIST "${LLVM_BINDINGS}")
+
+# HLSL Change Begin - Metal IR Converter
+find_package(MetalIRConverter)
+if (METAL_IRCONVERTER_FOUND)
+  set(ENABLE_METAL_CODEGEN On)
+  message(STATUS "Enabling Metal Support")
+  add_definitions(-DENABLE_METAL_CODEGEN)
+endif()
+# HLSL Change End - Metal IR Converter

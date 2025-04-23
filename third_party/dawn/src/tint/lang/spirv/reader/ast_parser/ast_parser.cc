@@ -33,6 +33,7 @@
 #include <utility>
 
 #include "source/opt/build_module.h"
+#include "spirv-tools/optimizer.hpp"
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/type/depth_texture.h"
 #include "src/tint/lang/core/type/multisampled_texture.h"
@@ -337,6 +338,22 @@ bool ASTParser::Parse() {
         success_ = false;
         return false;
     }
+
+    // Split combined-image-samplers into separate image and sampler parts.
+    // Sampler bindings numbers get incremented. The increments are propagated
+    // among resource variaables until settling occurs.
+    {
+        spvtools::Optimizer optimizer(kInputEnv);
+        optimizer.SetMessageConsumer(message_consumer_);
+        optimizer.RegisterPass(spvtools::CreateSplitCombinedImageSamplerPass());
+        optimizer.RegisterPass(spvtools::CreateResolveBindingConflictsPass());
+        std::vector<uint32_t> new_binary;
+        if (!optimizer.Run(spv_binary_.data(), spv_binary_.size(), &new_binary)) {
+            return false;
+        }
+        spv_binary_ = std::move(new_binary);
+    }
+
     if (!BuildInternalModule()) {
         return false;
     }

@@ -47,7 +47,7 @@ namespace dawn::native::d3d11 {
 namespace {
 
 bool CheckAllSlotsAreEmpty(const ScopedSwapStateCommandRecordingContext* commandContext) {
-    auto* deviceContext = commandContext->GetD3D11DeviceContext4();
+    auto* deviceContext = commandContext->GetD3D11DeviceContext3();
 
     // Reserve one slot for builtin constants.
     constexpr uint32_t kReservedCBVSlots = 1;
@@ -104,7 +104,7 @@ bool CheckAllSlotsAreEmpty(const ScopedSwapStateCommandRecordingContext* command
 }
 
 void ResetAllRenderSlots(const ScopedSwapStateCommandRecordingContext* commandContext) {
-    auto* deviceContext = commandContext->GetD3D11DeviceContext4();
+    auto* deviceContext = commandContext->GetD3D11DeviceContext3();
 
     // Reserve one slot for builtin constants.
     constexpr uint32_t kReservedCBVSlots = 1;
@@ -147,7 +147,7 @@ MaybeError BindGroupTracker::ApplyBindGroup(BindGroupIndex index) {
     constexpr wgpu::ShaderStage kVisibleVertex = wgpu::ShaderStage::Vertex & kVisibleStage;
     constexpr wgpu::ShaderStage kVisibleCompute = wgpu::ShaderStage::Compute & kVisibleStage;
 
-    auto* deviceContext = mCommandContext->GetD3D11DeviceContext4();
+    auto* deviceContext = mCommandContext->GetD3D11DeviceContext3();
     BindGroupBase* group = mBindGroups[index];
     const ityp::vector<BindingIndex, uint64_t>& dynamicOffsets = mDynamicOffsets[index];
     const auto& indices = ToBackend(mPipelineLayout)->GetBindingIndexInfo()[index];
@@ -213,7 +213,8 @@ MaybeError BindGroupTracker::ApplyBindGroup(BindGroupIndex index) {
                         }
                         break;
                     }
-                    case wgpu::BufferBindingType::ReadOnlyStorage: {
+                    case wgpu::BufferBindingType::ReadOnlyStorage:
+                    case kInternalReadOnlyStorageBufferBinding: {
                         ComPtr<ID3D11ShaderResourceView> d3d11SRV;
                         DAWN_TRY_ASSIGN(d3d11SRV,
                                         ToGPUUsableBuffer(binding.buffer)
@@ -338,7 +339,7 @@ ComputePassBindGroupTracker::~ComputePassBindGroupTracker() {
 }
 
 void ComputePassBindGroupTracker::UnapplyComputeBindings(BindGroupIndex index) {
-    auto* deviceContext = GetCommandContext()->GetD3D11DeviceContext4();
+    auto* deviceContext = GetCommandContext()->GetD3D11DeviceContext3();
     const BindGroupLayoutInternalBase* groupLayout =
         mLastAppliedPipelineLayout->GetBindGroupLayout(index);
     const auto& indices = ToBackend(mLastAppliedPipelineLayout)->GetBindingIndexInfo()[index];
@@ -366,7 +367,8 @@ void ComputePassBindGroupTracker::UnapplyComputeBindings(BindGroupIndex index) {
                         deviceContext->CSSetUnorderedAccessViews(bindingSlot, 1, &nullUAV, nullptr);
                         break;
                     }
-                    case wgpu::BufferBindingType::ReadOnlyStorage: {
+                    case wgpu::BufferBindingType::ReadOnlyStorage:
+                    case kInternalReadOnlyStorageBufferBinding: {
                         ID3D11ShaderResourceView* nullSRV = nullptr;
                         deviceContext->CSSetShaderResources(bindingSlot, 1, &nullSRV);
                         break;
@@ -496,7 +498,8 @@ MaybeError RenderPassBindGroupTracker::Apply() {
                             break;
                         }
                         case wgpu::BufferBindingType::Uniform:
-                        case wgpu::BufferBindingType::ReadOnlyStorage: {
+                        case wgpu::BufferBindingType::ReadOnlyStorage:
+                        case kInternalReadOnlyStorageBufferBinding: {
                             break;
                         }
                         case wgpu::BufferBindingType::BindingNotUsed:
@@ -553,7 +556,7 @@ MaybeError RenderPassBindGroupTracker::Apply() {
     }
 
     if (!plsAndUavs.empty()) {
-        GetCommandContext()->GetD3D11DeviceContext4()->OMSetRenderTargetsAndUnorderedAccessViews(
+        GetCommandContext()->GetD3D11DeviceContext3()->OMSetRenderTargetsAndUnorderedAccessViews(
             D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr, uavStartSlot,
             plsAndUavCount, plsAndUavs.data(), nullptr);
     }

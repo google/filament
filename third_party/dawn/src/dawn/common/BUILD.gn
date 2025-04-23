@@ -127,6 +127,11 @@ config("internal_config") {
 
   cflags = []
 
+  if (is_clang) {
+    # We use __builtin_assume liberally in DAWN_ASSERT, allow ignoring side-effects there.
+    cflags += [ "-Wno-assume" ]
+  }
+
   # Enable more warnings that were found when using Dawn in other projects.
   # Add them only when building in standalone because we control which clang
   # version we use. Otherwise we risk breaking projects depending on Dawn when
@@ -242,6 +247,7 @@ group("abseil") {
     public_deps = [
       "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_set",
       "${dawn_root}/third_party/gn/abseil-cpp:inlined_vector",
+      "${dawn_root}/third_party/gn/abseil-cpp:no_destructor",
     ]
   }
 }
@@ -300,6 +306,8 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
       "SerialMap.h",
       "SerialQueue.h",
       "SerialStorage.h",
+      "Sha3.cpp",
+      "Sha3.h",
       "SlabAllocator.cpp",
       "SlabAllocator.h",
       "StackAllocated.h",
@@ -307,6 +315,8 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
       "StringViewUtils.h",
       "SystemUtils.cpp",
       "SystemUtils.h",
+      "ThreadLocal.cpp",
+      "ThreadLocal.h",
       "TypeTraits.h",
       "TypedInteger.h",
       "UnderlyingType.h",

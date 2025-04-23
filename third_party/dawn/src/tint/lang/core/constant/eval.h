@@ -28,14 +28,10 @@
 #ifndef SRC_TINT_LANG_CORE_CONSTANT_EVAL_H_
 #define SRC_TINT_LANG_CORE_CONSTANT_EVAL_H_
 
-#include <stddef.h>
-#include <algorithm>
-#include <string>
-
-#include "src/tint/lang/core/number.h"
 #include "src/tint/lang/core/type/type.h"
 #include "src/tint/utils/containers/vector.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/diagnostic/diagnostic.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations
 namespace tint {
@@ -695,6 +691,7 @@ class Eval {
     /// @param args the input arguments
     /// @param source the source location
     /// @return the result value, or null if the value cannot be calculated
+    // NOLINTNEXTLINE(build/include_what_you_use) This isn't std::max ...
     Result max(const core::type::Type* ty, VectorRef<const Value*> args, const Source& source);
 
     /// min builtin

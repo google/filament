@@ -884,7 +884,7 @@ Outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %1:ptr<storage, Outputs, read> = var @binding_point(0, 0)
+  %1:ptr<storage, Outputs, read> = var undef @binding_point(0, 0)
 }
 
 %vert = @vertex func():Outputs {
@@ -908,7 +908,7 @@ vert_outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %1:ptr<storage, Outputs, read> = var @binding_point(0, 0)
+  %1:ptr<storage, Outputs, read> = var undef @binding_point(0, 0)
 }
 
 %vert_inner = func():Outputs {
@@ -983,7 +983,7 @@ Outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %1:ptr<storage, Outputs, write> = var @binding_point(0, 0)
+  %1:ptr<storage, Outputs, write> = var undef @binding_point(0, 0)
 }
 
 %frag = @fragment func():void {
@@ -1003,7 +1003,7 @@ Outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %1:ptr<storage, Outputs, write> = var @binding_point(0, 0)
+  %1:ptr<storage, Outputs, write> = var undef @binding_point(0, 0)
 }
 
 %frag = @fragment func():void {
@@ -1422,7 +1422,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroups_NonStruct) {
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var @binding_point(0, 0)
+  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo_inner = func(%num_wgs:vec3<u32>):void {
@@ -1494,7 +1494,7 @@ Inputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var @binding_point(0, 0)
+  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo_inner = func(%inputs:Inputs):void {
@@ -1543,7 +1543,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroups_ExplicitBinding
 
     auto* expect = R"(
 $B1: {  # root
-  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var @binding_point(1, 23)
+  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var undef @binding_point(1, 23)
 }
 
 %foo_inner = func(%num_wgs:vec3<u32>):void {
@@ -1589,16 +1589,16 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroups_AutoBinding) {
 
     auto* src = R"(
 $B1: {  # root
-  %1:ptr<storage, i32, read_write> = var @binding_point(0, 1)
-  %2:ptr<storage, i32, read_write> = var @binding_point(1, 2)
-  %3:ptr<storage, i32, read_write> = var @binding_point(2, 3)
-  %4:ptr<storage, i32, read_write> = var @binding_point(3, 4)
-  %5:ptr<storage, i32, read_write> = var @binding_point(4, 5)
-  %6:ptr<storage, i32, read_write> = var @binding_point(5, 6)
-  %7:ptr<storage, i32, read_write> = var @binding_point(6, 7)
-  %8:ptr<storage, i32, read_write> = var @binding_point(7, 8)
-  %9:ptr<storage, i32, read_write> = var @binding_point(8, 9)
-  %10:ptr<storage, i32, read_write> = var @binding_point(9, 10)
+  %1:ptr<storage, i32, read_write> = var undef @binding_point(0, 1)
+  %2:ptr<storage, i32, read_write> = var undef @binding_point(1, 2)
+  %3:ptr<storage, i32, read_write> = var undef @binding_point(2, 3)
+  %4:ptr<storage, i32, read_write> = var undef @binding_point(3, 4)
+  %5:ptr<storage, i32, read_write> = var undef @binding_point(4, 5)
+  %6:ptr<storage, i32, read_write> = var undef @binding_point(5, 6)
+  %7:ptr<storage, i32, read_write> = var undef @binding_point(6, 7)
+  %8:ptr<storage, i32, read_write> = var undef @binding_point(7, 8)
+  %9:ptr<storage, i32, read_write> = var undef @binding_point(8, 9)
+  %10:ptr<storage, i32, read_write> = var undef @binding_point(9, 10)
 }
 
 %foo = @compute @workgroup_size(1u, 1u, 1u) func(%num_wgs:vec3<u32> [@num_workgroups]):void {
@@ -1612,17 +1612,17 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %1:ptr<storage, i32, read_write> = var @binding_point(0, 1)
-  %2:ptr<storage, i32, read_write> = var @binding_point(1, 2)
-  %3:ptr<storage, i32, read_write> = var @binding_point(2, 3)
-  %4:ptr<storage, i32, read_write> = var @binding_point(3, 4)
-  %5:ptr<storage, i32, read_write> = var @binding_point(4, 5)
-  %6:ptr<storage, i32, read_write> = var @binding_point(5, 6)
-  %7:ptr<storage, i32, read_write> = var @binding_point(6, 7)
-  %8:ptr<storage, i32, read_write> = var @binding_point(7, 8)
-  %9:ptr<storage, i32, read_write> = var @binding_point(8, 9)
-  %10:ptr<storage, i32, read_write> = var @binding_point(9, 10)
-  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var @binding_point(10, 0)
+  %1:ptr<storage, i32, read_write> = var undef @binding_point(0, 1)
+  %2:ptr<storage, i32, read_write> = var undef @binding_point(1, 2)
+  %3:ptr<storage, i32, read_write> = var undef @binding_point(2, 3)
+  %4:ptr<storage, i32, read_write> = var undef @binding_point(3, 4)
+  %5:ptr<storage, i32, read_write> = var undef @binding_point(4, 5)
+  %6:ptr<storage, i32, read_write> = var undef @binding_point(5, 6)
+  %7:ptr<storage, i32, read_write> = var undef @binding_point(6, 7)
+  %8:ptr<storage, i32, read_write> = var undef @binding_point(7, 8)
+  %9:ptr<storage, i32, read_write> = var undef @binding_point(8, 9)
+  %10:ptr<storage, i32, read_write> = var undef @binding_point(9, 10)
+  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var undef @binding_point(10, 0)
 }
 
 %foo_inner = func(%num_wgs:vec3<u32>):void {
@@ -1677,7 +1677,7 @@ foo_inputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var @binding_point(0, 0)
+  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo_inner = func(%invoc_id:vec3<u32>, %num_wgs:vec3<u32>):void {
@@ -1734,7 +1734,7 @@ foo_inputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var @binding_point(0, 0)
+  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo_inner = func(%num_wgs:vec3<u32>, %invoc_id:vec3<u32>):void {
@@ -1821,7 +1821,7 @@ foo_inputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var @binding_point(0, 0)
+  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var undef @binding_point(0, 0)
 }
 
 %foo_inner = func(%invoc_id:vec3<u32>, %num_wgs:vec3<u32>, %invoc_index:u32, %sg_id:u32, %glob_id:vec3<u32>, %sg_size:u32, %wg_id:vec3<u32>):void {
@@ -3561,7 +3561,7 @@ foo_outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_first_index_offset:ptr<uniform, tint_first_index_offset_struct, read> = var @binding_point(12, 34)
+  %tint_first_index_offset:ptr<uniform, tint_first_index_offset_struct, read> = var undef @binding_point(12, 34)
 }
 
 %foo_inner = func(%vert_idx:u32):vec4<f32> {
@@ -3630,7 +3630,7 @@ foo_outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_first_index_offset:ptr<uniform, tint_first_index_offset_struct, read> = var @binding_point(12, 34)
+  %tint_first_index_offset:ptr<uniform, tint_first_index_offset_struct, read> = var undef @binding_point(12, 34)
 }
 
 %foo_inner = func(%inst_idx:u32):vec4<f32> {
@@ -3703,7 +3703,7 @@ foo_outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_first_index_offset:ptr<uniform, tint_first_index_offset_struct, read> = var @binding_point(12, 34)
+  %tint_first_index_offset:ptr<uniform, tint_first_index_offset_struct, read> = var undef @binding_point(12, 34)
 }
 
 %foo_inner = func(%vert_idx:u32, %inst_idx:u32):vec4<f32> {
@@ -3780,7 +3780,7 @@ foo_outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %tint_first_index_offset:ptr<uniform, tint_first_index_offset_struct, read> = var @binding_point(12, 34)
+  %tint_first_index_offset:ptr<uniform, tint_first_index_offset_struct, read> = var undef @binding_point(12, 34)
 }
 
 %foo_inner = func(%inst_idx:u32, %vert_idx:u32):vec4<f32> {

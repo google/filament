@@ -37,18 +37,49 @@ struct OpenGLFunctions;
 
 GLuint ToOpenGLCompareFunction(wgpu::CompareFunction compareFunction);
 GLint GetStencilMaskFromStencilFormat(wgpu::TextureFormat depthStencilFormat);
-void CopyImageSubData(const OpenGLFunctions& gl,
-                      Aspect srcAspects,
-                      GLuint srcHandle,
-                      GLenum srcTarget,
-                      GLint srcLevel,
-                      const Origin3D& src,
-                      GLuint dstHandle,
-                      GLenum dstTarget,
-                      GLint dstLevel,
-                      const Origin3D& dst,
-                      const Extent3D& size);
+MaybeError CopyImageSubData(const OpenGLFunctions& gl,
+                            Aspect srcAspects,
+                            GLuint srcHandle,
+                            GLenum srcTarget,
+                            GLint srcLevel,
+                            const Origin3D& src,
+                            GLuint dstHandle,
+                            GLenum dstTarget,
+                            GLint dstLevel,
+                            const Origin3D& dst,
+                            const Extent3D& size);
 bool HasAnisotropicFiltering(const OpenGLFunctions& gl);
+
+const char* GLErrorAsString(GLenum error);
+
+// Clear all errors on the context, emits logs only
+void ClearErrors(const OpenGLFunctions& gl,
+                 const char* file,
+                 const char* function,
+                 unsigned int line);
+
+// Check for a single GL error.
+MaybeError CheckError(const OpenGLFunctions& gl,
+                      const char* call,
+                      const char* file,
+                      const char* function,
+                      unsigned int line);
+
+#define DAWN_GL_TRY_ALWAYS_CHECK(gl, call)                      \
+    (ClearErrors(gl, __FILE__, __func__, __LINE__), (gl.call)); \
+    DAWN_TRY(CheckError(gl, "gl" #call, __FILE__, __func__, __LINE__))
+#define DAWN_GL_TRY_ALWAYS_CHECK_IGNORE_ERRORS(gl, call)        \
+    (ClearErrors(gl, __FILE__, __func__, __LINE__), (gl.call)); \
+    IgnoreErrors(CheckError(gl, "gl" #call, __FILE__, __func__, __LINE__))
+
+#if defined(DAWN_ENABLE_ASSERTS)
+#define DAWN_GL_TRY(gl, call) DAWN_GL_TRY_ALWAYS_CHECK(gl, call)
+#define DAWN_GL_TRY_IGNORE_ERRORS(gl, call) DAWN_GL_TRY_ALWAYS_CHECK_IGNORE_ERRORS(gl, call)
+#else
+#define DAWN_GL_TRY(gl, call) (gl.call)
+#define DAWN_GL_TRY_IGNORE_ERRORS(gl, call) (gl.call)
+#endif
+
 }  // namespace dawn::native::opengl
 
 #endif  // SRC_DAWN_NATIVE_OPENGL_UTILSGL_H_

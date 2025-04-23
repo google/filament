@@ -51,7 +51,7 @@ TEST_F(WgslASTPrinterTest, Emit_GlobalDeclAfterFunction) {
     gen.IncrementIndent();
     gen.Generate();
     EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
-    EXPECT_EQ(gen.Result(), R"(  @compute @workgroup_size(1i, 1i, 1i)
+    EXPECT_EQ(gen.Result(), R"(  @compute @workgroup_size(1u, 1u, 1u)
   fn test_function() {
     var a : f32;
   }

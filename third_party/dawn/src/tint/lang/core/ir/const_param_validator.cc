@@ -46,7 +46,6 @@
 #include "src/tint/lang/core/type/type.h"
 #include "src/tint/utils/diagnostic/diagnostic.h"
 #include "src/tint/utils/internal_limits.h"
-#include "src/tint/utils/result/result.h"
 #include "src/tint/utils/rtti/switch.h"
 
 namespace tint::core::ir {
@@ -105,6 +104,9 @@ const constant::Value* GetConstArg(const CoreBuiltinCall* call, uint32_t param_i
     if (call->Args()[param_index] == nullptr) {
         return nullptr;
     }
+    if (!call->Args()[param_index]->Is<ir::Constant>()) {
+        return nullptr;
+    }
     return call->Args()[param_index]->As<ir::Constant>()->Value();
 }
 
@@ -147,14 +149,14 @@ void ConstParamValidator::CheckLdexpCall(const CoreBuiltinCall* call) {
 void ConstParamValidator::CheckQuantizeToF16(const CoreBuiltinCall* call) {
     if (auto const_val = GetConstArg(call, 0)) {
         [[maybe_unused]] auto result = const_eval_.quantizeToF16(
-            call->Result(0)->Type(), Vector{const_val}, mod_.SourceOf(call));
+            call->Result()->Type(), Vector{const_val}, mod_.SourceOf(call));
     }
 }
 
 void ConstParamValidator::CheckPack2x16float(const CoreBuiltinCall* call) {
     if (auto const_val = GetConstArg(call, 0)) {
         [[maybe_unused]] auto result = const_eval_.pack2x16float(
-            call->Result(0)->Type(), Vector{const_val}, mod_.SourceOf(call));
+            call->Result()->Type(), Vector{const_val}, mod_.SourceOf(call));
     }
 }
 
@@ -191,17 +193,17 @@ void ConstParamValidator::CheckClampCall(const CoreBuiltinCall* call) {
     if (const_val_low && const_val_high) {
         auto fakeArgs = Vector{const_val_low, const_val_low, const_val_high};
         [[maybe_unused]] auto result =
-            const_eval_.clamp(call->Result(0)->Type(), fakeArgs, mod_.SourceOf(call));
+            const_eval_.clamp(call->Result()->Type(), fakeArgs, mod_.SourceOf(call));
     }
 }
 
 void ConstParamValidator::CheckSmoothstepCall(const CoreBuiltinCall* call) {
-    auto* const_val_low = GetConstArg(call, 1);
-    auto* const_val_high = GetConstArg(call, 2);
+    auto* const_val_low = GetConstArg(call, 0);
+    auto* const_val_high = GetConstArg(call, 1);
     if (const_val_low && const_val_high) {
         auto fakeArgs = Vector{const_val_low, const_val_high, const_val_high};
         [[maybe_unused]] auto result =
-            const_eval_.smoothstep(call->Result(0)->Type(), fakeArgs, mod_.SourceOf(call));
+            const_eval_.smoothstep(call->Result()->Type(), fakeArgs, mod_.SourceOf(call));
     }
 }
 
@@ -247,7 +249,7 @@ void ConstParamValidator::CheckBinaryDivModCall(const CoreBinary* call) {
     // constant-evaluated.
     if (call->RHS()->Type()->IsIntegerScalarOrVector()) {
         auto rhs_constant = call->RHS()->As<ir::Constant>();
-        if (rhs_constant->Value()->AnyZero()) {
+        if (rhs_constant && rhs_constant->Value()->AnyZero()) {
             AddError(*call) << "integer division by zero is invalid";
         }
     }
@@ -300,7 +302,7 @@ Result<SuccessType> ConstParamValidator::Run() {
     }
 
     if (diagnostics_.ContainsErrors()) {
-        return Failure{std::move(diagnostics_)};
+        return Failure{diagnostics_.Str()};
     }
 
     return Success;
@@ -310,8 +312,7 @@ Result<SuccessType> ConstParamValidator::Run() {
 
 Result<SuccessType> ValidateConstParam(Module& mod) {
     ConstParamValidator v(mod);
-    auto ret = v.Run();
-    return ret;
+    return v.Run();
 }
 
 }  // namespace tint::core::ir

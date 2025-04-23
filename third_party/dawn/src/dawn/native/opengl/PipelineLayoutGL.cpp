@@ -60,6 +60,7 @@ PipelineLayout::PipelineLayout(Device* device,
                         case wgpu::BufferBindingType::Storage:
                         case kInternalStorageBufferBinding:
                         case wgpu::BufferBindingType::ReadOnlyStorage:
+                        case kInternalReadOnlyStorageBufferBinding:
                             mIndexInfo[group][bindingIndex] = ssboIndex;
                             ssboIndex++;
                             break;

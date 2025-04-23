@@ -42,7 +42,7 @@ class SharedTextureMemoryEGL final : public SharedTextureMemory {
         StringView label,
         const SharedTextureMemoryAHardwareBufferDescriptor* descriptor);
 
-    GLuint GenerateGLTexture() override;
+    ResultOrError<GLuint> GenerateGLTexture() override;
 
   private:
     SharedTextureMemoryEGL(Device* device,

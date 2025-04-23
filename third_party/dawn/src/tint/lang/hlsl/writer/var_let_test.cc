@@ -201,7 +201,7 @@ using VarSampledTextureTest = HlslWriterTestWithParam<HlslSampledTextureData>;
 TEST_P(VarSampledTextureTest, Emit) {
     auto params = GetParam();
 
-    const core::type::Type* datatype;
+    const core::type::Type* datatype = nullptr;
     switch (params.datatype) {
         case TextureDataType::F32:
             datatype = ty.f32();
@@ -214,8 +214,7 @@ TEST_P(VarSampledTextureTest, Emit) {
             break;
     }
 
-    auto* s =
-        b.Var("tex", ty.ptr<handle>(ty.Get<core::type::SampledTexture>(params.dim, datatype)));
+    auto* s = b.Var("tex", ty.ptr<handle>(ty.sampled_texture(params.dim, datatype)));
     s->SetBindingPoint(2, 1);
 
     b.ir.root_block->Append(s);
@@ -358,8 +357,8 @@ using VarStorageTextureTest = HlslWriterTestWithParam<HlslStorageTextureData>;
 TEST_P(VarStorageTextureTest, Emit) {
     auto params = GetParam();
 
-    auto* s = b.Var("tex", ty.ptr<handle>(ty.Get<core::type::StorageTexture>(
-                               params.dim, params.imgfmt, params.access, ty.f32())));
+    auto* s =
+        b.Var("tex", ty.ptr<handle>(ty.storage_texture(params.dim, params.imgfmt, params.access)));
     s->SetBindingPoint(2, 1);
 
     b.ir.root_block->Append(s);

@@ -74,6 +74,58 @@ jobs:
         - run: ctest --output-on-failure
           working-directory: build
 
+  cmake-unix-modules:
+    runs-on: ${{ matrix.os }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        cmake-version: [ 'latest' ]
+        compiler: [ clang++-18 ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: ${{ matrix.cmake-version }}
+      - uses: ilammy/msvc-dev-cmd@v1
+      - run: |
+          cmake -S . -B build \
+          -D VULKAN_HEADERS_ENABLE_TESTS=ON \
+          -D VULKAN_HEADERS_ENABLE_INSTALL=ON \
+          -D VULKAN_HEADERS_ENABLE_MODULE=ON \
+          -D VULKAN_HEADERS_ENABLE_MODULE_STD=OFF \
+          -D CMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -G Ninja
+      - run: cmake --build ./build
+      - run: cmake --install build/ --prefix build/install
+      - run: CXX=${{ matrix.compiler }} ctest --output-on-failure
+        working-directory: build
+
+  cmake-windows-modules:
+    runs-on: ${{ matrix.os }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    strategy:
+      matrix:
+        os: [ windows-latest ]
+        cmake-version: [ 'latest' ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: ${{ matrix.cmake-version }}
+      - uses: ilammy/msvc-dev-cmd@v1
+      - run: |
+          cmake -S . -B build `
+          -D VULKAN_HEADERS_ENABLE_TESTS=ON `
+          -D VULKAN_HEADERS_ENABLE_INSTALL=ON `
+          -D VULKAN_HEADERS_ENABLE_MODULE=ON `
+          -D VULKAN_HEADERS_ENABLE_MODULE_STD=OFF `
+          -G Ninja
+      - run: cmake --build ./build
+      - run: cmake --install build/ --prefix build/install
+      - run: ctest --output-on-failure
+        working-directory: build
+
   reuse:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name

@@ -560,6 +560,10 @@ void LoopUnrollerUtilsImpl::ReplaceInductionUseWithFinalValue(Loop* loop) {
   loop->GetInductionVariables(inductions);
 
   for (size_t index = 0; index < inductions.size(); ++index) {
+    // We don't want the decorations that applied to the induction variable
+    // to be applied to the value that replace it.
+    context_->KillNamesAndDecorates(state_.previous_phis_[index]);
+
     uint32_t trip_step_id = GetPhiDefID(state_.previous_phis_[index],
                                         state_.previous_latch_block_->id());
     context_->ReplaceAllUsesWith(inductions[index]->result_id(), trip_step_id);

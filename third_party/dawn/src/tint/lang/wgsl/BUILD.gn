@@ -56,6 +56,7 @@ libtint_source_set("wgsl") {
   ]
   deps = [
     "${dawn_root}/src/utils:utils",
+    "${tint_src_dir}/utils",
     "${tint_src_dir}/utils/containers",
     "${tint_src_dir}/utils/diagnostic",
     "${tint_src_dir}/utils/ice",
@@ -99,7 +100,6 @@ if (tint_build_unittests) {
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
-      "${tint_src_dir}/utils/result",
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/symbol",
       "${tint_src_dir}/utils/text",
@@ -132,6 +132,7 @@ if (tint_build_benchmarks) {
       "${dawn_root}/src/utils:utils",
       "${tint_src_dir}:google_benchmark",
       "${tint_src_dir}/lang/wgsl",
+      "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/diagnostic",
       "${tint_src_dir}/utils/ice",
@@ -141,56 +142,5 @@ if (tint_build_benchmarks) {
       "${tint_src_dir}/utils/rtti",
       "${tint_src_dir}/utils/text",
     ]
-  }
-}
-
-tint_fuzz_source_set("fuzz") {
-  sources = []
-  deps = [
-    "${dawn_root}/src/utils:utils",
-    "${tint_src_dir}/api/common",
-    "${tint_src_dir}/lang/core",
-    "${tint_src_dir}/lang/core/constant",
-    "${tint_src_dir}/lang/core/ir",
-    "${tint_src_dir}/lang/core/type",
-    "${tint_src_dir}/lang/wgsl",
-    "${tint_src_dir}/lang/wgsl/ast",
-    "${tint_src_dir}/lang/wgsl/ast/transform",
-    "${tint_src_dir}/lang/wgsl/common",
-    "${tint_src_dir}/lang/wgsl/features",
-    "${tint_src_dir}/lang/wgsl/helpers",
-    "${tint_src_dir}/lang/wgsl/program",
-    "${tint_src_dir}/lang/wgsl/sem",
-    "${tint_src_dir}/lang/wgsl/writer/ir_to_program",
-    "${tint_src_dir}/lang/wgsl/writer/raise",
-    "${tint_src_dir}/utils",
-    "${tint_src_dir}/utils/bytes",
-    "${tint_src_dir}/utils/command",
-    "${tint_src_dir}/utils/containers",
-    "${tint_src_dir}/utils/diagnostic",
-    "${tint_src_dir}/utils/ice",
-    "${tint_src_dir}/utils/macros",
-    "${tint_src_dir}/utils/math",
-    "${tint_src_dir}/utils/memory",
-    "${tint_src_dir}/utils/result",
-    "${tint_src_dir}/utils/rtti",
-    "${tint_src_dir}/utils/symbol",
-    "${tint_src_dir}/utils/text",
-  ]
-
-  if (tint_build_wgsl_reader) {
-    deps += [
-      "${tint_src_dir}/cmd/fuzz/wgsl:fuzz",
-      "${tint_src_dir}/lang/wgsl/reader",
-      "${tint_src_dir}/lang/wgsl/reader/program_to_ir",
-    ]
-  }
-
-  if (tint_build_wgsl_reader && tint_build_wgsl_writer) {
-    sources += [ "ir_roundtrip_fuzz.cc" ]
-  }
-
-  if (tint_build_wgsl_writer) {
-    deps += [ "${tint_src_dir}/lang/wgsl/writer" ]
   }
 }

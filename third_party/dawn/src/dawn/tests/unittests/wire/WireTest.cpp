@@ -113,7 +113,7 @@ void WireTest::SetUp() {
             })));
 
         EXPECT_CALL(api, AdapterGetLimits(apiAdapter, NotNull()))
-            .WillOnce(WithArg<1>(Invoke([&](WGPUSupportedLimits* limits) {
+            .WillOnce(WithArg<1>(Invoke([&](WGPULimits* limits) {
                 *limits = {};
                 return WGPUStatus_Success;
             })));
@@ -160,7 +160,7 @@ void WireTest::SetUp() {
             object->mUncapturedErrorUserdata2 = desc->uncapturedErrorCallbackInfo.userdata2;
 
             EXPECT_CALL(api, DeviceGetLimits(apiDevice, NotNull()))
-                .WillOnce(WithArg<1>(Invoke([&](WGPUSupportedLimits* limits) {
+                .WillOnce(WithArg<1>(Invoke([&](WGPULimits* limits) {
                     *limits = {};
                     return WGPUStatus_Success;
                 })));

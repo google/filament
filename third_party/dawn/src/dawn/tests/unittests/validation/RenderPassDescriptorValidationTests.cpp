@@ -1320,32 +1320,32 @@ TEST_F(RenderPassDescriptorValidationTest, UseNaNOrINFINITYAsColorOrDepthClearVa
         AssertBeginRenderPassError(&renderPass);
     }
 
-    // Tests that INFINITY can be used in clearColor.
+    // Tests that INFINITY cannot be used in clearColor.
     {
         utils::ComboRenderPassDescriptor renderPass({color}, nullptr);
         renderPass.cColorAttachments[0].clearValue.r = INFINITY;
-        AssertBeginRenderPassSuccess(&renderPass);
+        AssertBeginRenderPassError(&renderPass);
     }
 
     {
         utils::ComboRenderPassDescriptor renderPass({color}, nullptr);
         renderPass.cColorAttachments[0].clearValue.g = INFINITY;
-        AssertBeginRenderPassSuccess(&renderPass);
+        AssertBeginRenderPassError(&renderPass);
     }
 
     {
         utils::ComboRenderPassDescriptor renderPass({color}, nullptr);
         renderPass.cColorAttachments[0].clearValue.b = INFINITY;
-        AssertBeginRenderPassSuccess(&renderPass);
+        AssertBeginRenderPassError(&renderPass);
     }
 
     {
         utils::ComboRenderPassDescriptor renderPass({color}, nullptr);
         renderPass.cColorAttachments[0].clearValue.a = INFINITY;
-        AssertBeginRenderPassSuccess(&renderPass);
+        AssertBeginRenderPassError(&renderPass);
     }
 
-    // Tests that NaN cannot be used in depthClearValue.
+    // Tests that NaN cannot be used in depthClearValue if depthLoadOp is Clear.
     {
         wgpu::TextureView depth =
             Create2DAttachment(device, 1, 1, wgpu::TextureFormat::Depth24Plus);

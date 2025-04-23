@@ -25,9 +25,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import("build/config/rust.gni")
+import("//build/config/c++/c++.gni")
 import("scripts/dawn_overrides_with_defaults.gni")
 import("scripts/tint_overrides_with_defaults.gni")
+
+import("${dawn_root}/scripts/dawn_features.gni")
 
 if (!is_clang && is_win) {
   # libc++ cannot currently build with MSVC. See https://anglebug.com/376074941
@@ -52,6 +54,12 @@ group("libs") {
     "src/dawn/native:webgpu_dawn",
     "src/tint:libs",
   ]
+  if (dawn_build_node_bindings) {
+    assert(
+        !defined(use_libfuzzer) || !use_libfuzzer,
+        "Building dawn node bindings with use_libfuzzer currently not supported")
+    deps += [ "src/dawn/node:dawn_node" ]
+  }
 }
 
 group("tests") {
@@ -99,13 +107,6 @@ group("all") {
     ":libs",
     ":tests",
   ]
-}
-
-if (enable_rust) {
-  group("rust_build_tests") {
-    testonly = true
-    deps = [ "//build/rust/tests" ]
-  }
 }
 
 # This target is built when no specific target is specified on the command line.

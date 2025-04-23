@@ -57,6 +57,7 @@ enum core_diagnostic_rule {
 // chromium-specific diagnostics
 enum chromium_diagnostic_rule {
   // Chromium specific rules not defined in the spec.
+  subgroup_matrix_uniformity
   unreachable_code
 }
 
@@ -151,6 +152,7 @@ type ref<S: address_space, T, A: access>
 type atomic<T>
 @display("array<{T}>") type runtime_array<T>
 type array<T, N: num>
+type binding_array<T, N: num>
 type sampler
 type sampler_comparison
 type texture_1d<T>
@@ -272,7 +274,7 @@ match workgroup
 // implicit template parameter. For example, instead of:                      //
 //   fn F(scalar)                                                             //
 // use:                                                                       //
-//   implicit(S: scalar) fn F(S)                                                       //
+//   implicit(S: scalar) fn F(S)                                              //
 ////////////////////////////////////////////////////////////////////////////////
 
 // https://gpuweb.github.io/gpuweb/wgsl/#builtin-functions
@@ -684,15 +686,15 @@ match workgroup
 @must_use @stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num, AC: num) fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<workgroup_or_storage, array<S, AC>, readable>, u32, @const bool, u32) -> T
 @stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num) fn subgroupMatrixStore(ptr<storage, runtime_array<S>, writable>, u32, subgroup_matrix<K, S, C, R>, @const bool, u32)
 @stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num, AC: num) fn subgroupMatrixStore(ptr<workgroup_or_storage, array<S, AC>, writable>, u32, subgroup_matrix<K, S, C, R>, @const bool, u32)
-@must_use @stage("compute") implicit(S: subgroup_matrix_elements, C: num, R: num, K: num) fn subgroupMatrixMultiply(
-  subgroup_matrix<subgroup_matrix_kind_left, S, K, R>,
-  subgroup_matrix<subgroup_matrix_kind_right, S, C, K>)
-  -> subgroup_matrix<subgroup_matrix_kind_result, S, C, R>
-@must_use @stage("compute") implicit(S: subgroup_matrix_elements, C: num, R: num, K: num) fn subgroupMatrixMultiplyAccumulate(
-  subgroup_matrix<subgroup_matrix_kind_left, S, K, R>,
-  subgroup_matrix<subgroup_matrix_kind_right, S, C, K>,
-  subgroup_matrix<subgroup_matrix_kind_result, S, C, R>)
-  -> subgroup_matrix<subgroup_matrix_kind_result, S, C, R>
+@must_use @stage("compute") implicit(T: subgroup_matrix_elements, C: num, R: num, K: num) fn subgroupMatrixMultiply<TR: subgroup_matrix_elements>(
+  subgroup_matrix<subgroup_matrix_kind_left, T, K, R>,
+  subgroup_matrix<subgroup_matrix_kind_right, T, C, K>)
+  -> subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>
+@must_use @stage("compute") implicit(T: subgroup_matrix_elements, TR: subgroup_matrix_elements, C: num, R: num, K: num) fn subgroupMatrixMultiplyAccumulate(
+  subgroup_matrix<subgroup_matrix_kind_left, T, K, R>,
+  subgroup_matrix<subgroup_matrix_kind_right, T, C, K>,
+  subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>)
+  -> subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>
 
 ////////////////////////////////////////////////////////////////////////////////
 // Value constructors                                                         //

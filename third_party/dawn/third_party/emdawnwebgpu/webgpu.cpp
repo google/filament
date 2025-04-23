@@ -13,6 +13,7 @@
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <cinttypes>
 #include <cstdlib>
 #include <map>
 #include <memory>
@@ -22,6 +23,15 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+// Used for "implementation-defined logging" per webgpu.h spec.
+// This is a no-op in Release, to reduce code-size.
+#ifndef NDEBUG
+#include <cstdio>
+#define DEBUG_PRINTF(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define DEBUG_PRINTF(...)
+#endif
 
 using FutureID = uint64_t;
 static constexpr FutureID kNullFutureId = 0;
@@ -35,8 +45,8 @@ extern "C" {
 void emwgpuDelete(void* ptr);
 void emwgpuSetLabel(void* ptr, const char* data, size_t length);
 
-// Note that for the JS entry points, we pass uint64_t as pointer and decode it
-// on the other side.
+// Note that for the JS entry points, we pass uint64_t as pointer and deref it
+// in JS on the other side.
 double emwgpuWaitAny(FutureID const* futurePtr,
                      size_t futureCount,
                      uint64_t const* timeoutNSPtr);
@@ -44,9 +54,10 @@ WGPUTextureFormat emwgpuGetPreferredFormat();
 
 // Device functions, i.e. creation functions to create JS backing objects given
 // a pre-allocated handle, and destruction implementations.
-void emwgpuDeviceCreateBuffer(WGPUDevice device,
-                              const WGPUBufferDescriptor* descriptor,
-                              WGPUBuffer buffer);
+[[nodiscard]] bool emwgpuDeviceCreateBuffer(
+    WGPUDevice device,
+    const WGPUBufferDescriptor* descriptor,
+    WGPUBuffer buffer);
 void emwgpuDeviceCreateShaderModule(
     WGPUDevice device,
     const WGPUShaderModuleDescriptor* descriptor,
@@ -59,6 +70,14 @@ const void* emwgpuBufferGetConstMappedRange(WGPUBuffer buffer,
                                             size_t offset,
                                             size_t size);
 void* emwgpuBufferGetMappedRange(WGPUBuffer buffer, size_t offset, size_t size);
+WGPUStatus emwgpuBufferWriteMappedRange(WGPUBuffer buffer,
+                                        size_t offset,
+                                        void const* data,
+                                        size_t size);
+WGPUStatus emwgpuBufferReadMappedRange(WGPUBuffer buffer,
+                                       size_t offset,
+                                       void* data,
+                                       size_t size);
 void emwgpuBufferUnmap(WGPUBuffer buffer);
 
 // Future/async operation that need to be forwarded to JS.
@@ -76,15 +95,18 @@ void emwgpuBufferMapAsync(WGPUBuffer buffer,
 void emwgpuDeviceCreateComputePipelineAsync(
     WGPUDevice device,
     FutureID futureId,
-    const WGPUComputePipelineDescriptor* descriptor);
+    const WGPUComputePipelineDescriptor* descriptor,
+    WGPUComputePipeline pipeline);
 void emwgpuDeviceCreateRenderPipelineAsync(
     WGPUDevice device,
     FutureID futureId,
-    const WGPURenderPipelineDescriptor* descriptor);
+    const WGPURenderPipelineDescriptor* descriptor,
+    WGPURenderPipeline pipeline);
 void emwgpuDevicePopErrorScope(WGPUDevice device, FutureID futureId);
 void emwgpuInstanceRequestAdapter(WGPUInstance instance,
                                   FutureID futureId,
-                                  const WGPURequestAdapterOptions* options);
+                                  const WGPURequestAdapterOptions* options,
+                                  WGPUAdapter adapter);
 void emwgpuQueueOnSubmittedWorkDone(WGPUQueue queue, FutureID futureId);
 void emwgpuShaderModuleGetCompilationInfo(WGPUShaderModule shader,
                                           FutureID futureId,
@@ -118,9 +140,19 @@ class NonMovable : NonCopyable {
   void operator=(NonMovable&&) = delete;
 };
 
+// For some objects we may do additional cleanup routines, i.e. Destroy if the
+// object was natively created via the API. However, if the object was imported
+// from JS, we don't do the additional cleanup because they may still be used
+// outside of the WASM API.
+struct ImportedFromJSTag {};
+static constexpr ImportedFromJSTag kImportedFromJS;
+
 class RefCounted : NonMovable {
  public:
   static constexpr bool HasExternalRefCount = false;
+
+  explicit RefCounted(ImportedFromJSTag) : mIsImportedFromJS(true) {}
+  RefCounted() = default;
 
   void AddRef() {
     [[maybe_unused]] uint64_t oldRefCount =
@@ -131,20 +163,25 @@ class RefCounted : NonMovable {
   bool Release() {
     if (mRefCount.fetch_sub(1u, std::memory_order_release) == 1u) {
       std::atomic_thread_fence(std::memory_order_acquire);
-      emwgpuDelete(this);
       return true;
     }
     return false;
   }
 
+  bool IsImported() { return mIsImportedFromJS; }
+
  private:
   std::atomic<uint64_t> mRefCount = 1;
+  bool mIsImportedFromJS = false;
 };
 
 class RefCountedWithExternalCount : public RefCounted {
  public:
   static constexpr bool HasExternalRefCount = true;
 
+  explicit RefCountedWithExternalCount(ImportedFromJSTag tag)
+      : RefCounted(tag) {}
+  RefCountedWithExternalCount() = default;
   virtual ~RefCountedWithExternalCount() = default;
 
   void AddRef() {
@@ -234,6 +271,11 @@ class Ref {
   static void Release(T value) {
     if (value != nullptr && value->RefCounted::Release()) {
       delete value;
+      // emwgpuDelete() removes the pointer from the jsObjects mapping.
+      // Considering some class implementation may need to use it in
+      // destructor, we call emwgpuDelete() after the pointer delete.
+      // This also applies to implementation of `wgpu{Type}Release`.
+      emwgpuDelete(value);
     }
   }
 
@@ -249,6 +291,13 @@ class Ref {
 
   T mValue;
 };
+
+template <typename T>
+Ref<T*> AcquireRef(T* pointee) {
+  Ref<T*> ref;
+  ref.Acquire(pointee);
+  return ref;
+}
 
 template <typename T>
 auto ReturnToAPI(Ref<T*>&& object) {
@@ -401,15 +450,16 @@ class EventManager : NonMovable {
   void UnregisterInstance(InstanceID instance) {
     assert(instance);
     std::unique_lock<std::mutex> lock(mMutex);
-    auto it = mPerInstanceEvents.find(instance);
-    assert(it != mPerInstanceEvents.end());
+    auto instanceIt = mPerInstanceEvents.find(instance);
+    assert(instanceIt != mPerInstanceEvents.end());
 
     // When unregistering the Instance, resolve all non-spontaneous callbacks
     // with Shutdown.
-    for (const FutureID futureId : it->second) {
-      if (auto it = mEvents.find(futureId); it != mEvents.end()) {
-        it->second->Complete(futureId, EventCompletionType::Shutdown);
-        mEvents.erase(it);
+    for (const FutureID futureId : instanceIt->second) {
+      if (auto futureIdsIt = mEvents.find(futureId);
+          futureIdsIt != mEvents.end()) {
+        futureIdsIt->second->Complete(futureId, EventCompletionType::Shutdown);
+        mEvents.erase(futureIdsIt);
       }
     }
     mPerInstanceEvents.erase(instance);
@@ -466,10 +516,8 @@ class EventManager : NonMovable {
 
     // To handle timeouts, use Asyncify and proxy back into JS.
     if (timeoutNS > 0) {
-      // Cannot handle timeouts if we are not using Asyncify.
-      if (!emscripten_has_asyncify()) {
-        return WGPUWaitStatus_Error;
-      }
+      // Should have already been validated in WGPUInstanceImpl::WaitAny.
+      assert(emscripten_has_asyncify());
 
       std::vector<FutureID> futures;
       std::unordered_map<FutureID, WGPUFutureWaitInfo*> futureIdToInfo;
@@ -642,11 +690,15 @@ struct WGPUBufferImpl final : public EventSource,
                               public RefCountedWithExternalCount {
  public:
   WGPUBufferImpl(const EventSource* source, bool mappedAtCreation);
+  // Injection constructor used when we already have a backing Buffer.
+  WGPUBufferImpl(const EventSource* source, WGPUBufferMapState mapState);
 
   void Destroy();
   const void* GetConstMappedRange(size_t offset, size_t size);
   WGPUBufferMapState GetMapState() const;
   void* GetMappedRange(size_t offset, size_t size);
+  WGPUStatus WriteMappedRange(size_t offset, void const* data, size_t size);
+  WGPUStatus ReadMappedRange(size_t offset, void* data, size_t size);
   WGPUFuture MapAsync(WGPUMapMode mode,
                       size_t offset,
                       size_t size,
@@ -707,7 +759,7 @@ struct WGPUDeviceImpl final : public EventSource,
 // Instance is specially implemented in order to handle Futures implementation.
 struct WGPUInstanceImpl final : public EventSource, public RefCounted {
  public:
-  WGPUInstanceImpl();
+  WGPUInstanceImpl(const WGPUInstanceDescriptor* desc);
   ~WGPUInstanceImpl();
 
   void ProcessEvents();
@@ -717,6 +769,8 @@ struct WGPUInstanceImpl final : public EventSource, public RefCounted {
 
  private:
   static InstanceID GetNextInstanceId();
+
+  WGPUInstanceCapabilities mCapabilities = {};
 };
 
 struct WGPUShaderModuleImpl final : public EventSource, public RefCounted {
@@ -740,6 +794,8 @@ struct WGPUShaderModuleImpl final : public EventSource, public RefCounted {
         free(const_cast<char*>(compilationInfo->messages[0].message.data));
       }
       if (compilationInfo->messages) {
+        free(reinterpret_cast<WGPUDawnCompilationMessageUtf16*>(
+            compilationInfo->messages[0].nextInChain));
         free(const_cast<WGPUCompilationMessage*>(compilationInfo->messages));
       }
       delete compilationInfo;
@@ -786,7 +842,7 @@ class CompilationInfoEvent final : public TrackedEvent {
 
   void Complete(FutureID, EventCompletionType type) override {
     if (type == EventCompletionType::Shutdown) {
-      mStatus = WGPUCompilationInfoRequestStatus_InstanceDropped;
+      mStatus = WGPUCompilationInfoRequestStatus_CallbackCancelled;
     }
     if (mCallback) {
       mCallback(mStatus,
@@ -832,7 +888,7 @@ class CreatePipelineEventBase final : public TrackedEvent {
 
   void Complete(FutureID, EventCompletionType type) override {
     if (type == EventCompletionType::Shutdown) {
-      mStatus = WGPUCreatePipelineAsyncStatus_InstanceDropped;
+      mStatus = WGPUCreatePipelineAsyncStatus_CallbackCancelled;
       mMessage = "A valid external Instance reference no longer exists.";
     }
     if (mCallback) {
@@ -889,7 +945,7 @@ class DeviceLostEvent final : public TrackedEvent {
 
   void Complete(FutureID, EventCompletionType type) override {
     if (type == EventCompletionType::Shutdown) {
-      mReason = WGPUDeviceLostReason_InstanceDropped;
+      mReason = WGPUDeviceLostReason_CallbackCancelled;
       mMessage = "A valid external Instance reference no longer exists.";
     }
     if (mCallback) {
@@ -937,7 +993,7 @@ class PopErrorScopeEvent final : public TrackedEvent {
 
   void Complete(FutureID, EventCompletionType type) override {
     if (type == EventCompletionType::Shutdown) {
-      mStatus = WGPUPopErrorScopeStatus_InstanceDropped;
+      mStatus = WGPUPopErrorScopeStatus_CallbackCancelled;
       mErrorType = WGPUErrorType_NoError;
       mMessage = "A valid external Instance reference no longer exists.";
     }
@@ -989,7 +1045,7 @@ class MapAsyncEvent final : public TrackedEvent {
 
   void Complete(FutureID futureID, EventCompletionType type) override {
     if (type == EventCompletionType::Shutdown) {
-      mStatus = WGPUMapAsyncStatus_InstanceDropped;
+      mStatus = WGPUMapAsyncStatus_CallbackCancelled;
       mMessage = "A valid external Instance reference no longer exists.";
     }
 
@@ -1044,7 +1100,7 @@ class RequestAdapterEvent final : public TrackedEvent {
 
   void Complete(FutureID, EventCompletionType type) override {
     if (type == EventCompletionType::Shutdown) {
-      mStatus = WGPURequestAdapterStatus_InstanceDropped;
+      mStatus = WGPURequestAdapterStatus_CallbackCancelled;
       mMessage = "A valid external Instance reference no longer exists.";
     }
     if (mCallback) {
@@ -1091,7 +1147,7 @@ class RequestDeviceEvent final : public TrackedEvent {
 
   void Complete(FutureID, EventCompletionType type) override {
     if (type == EventCompletionType::Shutdown) {
-      mStatus = WGPURequestDeviceStatus_InstanceDropped;
+      mStatus = WGPURequestDeviceStatus_CallbackCancelled;
       mMessage = "A valid external Instance reference no longer exists.";
     }
     if (mCallback) {
@@ -1130,7 +1186,7 @@ class WorkDoneEvent final : public TrackedEvent {
 
   void Complete(FutureID, EventCompletionType type) override {
     if (type == EventCompletionType::Shutdown) {
-      mStatus = WGPUQueueWorkDoneStatus_InstanceDropped;
+      mStatus = WGPUQueueWorkDoneStatus_CallbackCancelled;
     }
     if (mCallback) {
       mCallback(mStatus, mUserdata1, mUserdata2);
@@ -1154,29 +1210,29 @@ extern "C" {
 // in the JS object table in library_webgpu.js.
 #define DEFINE_EMWGPU_DEFAULT_CREATE(Name)                             \
   WGPU##Name emwgpuCreate##Name(const EventSource* source = nullptr) { \
-    return new WGPU##Name##Impl(source);                               \
+    return ReturnToAPI(AcquireRef(new WGPU##Name##Impl(source)));      \
   }
 WGPU_PASSTHROUGH_OBJECTS(DEFINE_EMWGPU_DEFAULT_CREATE)
 
 WGPUAdapter emwgpuCreateAdapter(const EventSource* source) {
-  return new WGPUAdapterImpl(source);
+  return ReturnToAPI(AcquireRef(new WGPUAdapterImpl(source)));
 }
 
 WGPUBuffer emwgpuCreateBuffer(const EventSource* source,
-                              bool mappedAtCreation = false) {
-  return new WGPUBufferImpl(source, mappedAtCreation);
+                              WGPUBufferMapState mapState) {
+  return ReturnToAPI(AcquireRef(new WGPUBufferImpl(source, mapState)));
 }
 
 WGPUDevice emwgpuCreateDevice(const EventSource* source, WGPUQueue queue) {
-  return new WGPUDeviceImpl(source, queue);
+  return ReturnToAPI(AcquireRef(new WGPUDeviceImpl(source, queue)));
 }
 
 WGPUQueue emwgpuCreateQueue(const EventSource* source) {
-  return new WGPUQueueImpl(source);
+  return ReturnToAPI(AcquireRef(new WGPUQueueImpl(source)));
 }
 
 WGPUShaderModule emwgpuCreateShaderModule(const EventSource* source) {
-  return new WGPUShaderModuleImpl(source);
+  return ReturnToAPI(AcquireRef(new WGPUShaderModuleImpl(source)));
 }
 
 // Future event callbacks.
@@ -1191,6 +1247,11 @@ void emwgpuOnCreateComputePipelineCompleted(
     WGPUCreatePipelineAsyncStatus status,
     WGPUComputePipeline pipeline,
     const char* message) {
+  assert(pipeline);
+  if (status != WGPUCreatePipelineAsyncStatus_Success) {
+    delete pipeline;
+    pipeline = nullptr;
+  }
   GetEventManager().SetFutureReady<CreateComputePipelineEvent>(
       futureId, status, pipeline, message);
 }
@@ -1198,6 +1259,11 @@ void emwgpuOnCreateRenderPipelineCompleted(double futureId,
                                            WGPUCreatePipelineAsyncStatus status,
                                            WGPURenderPipeline pipeline,
                                            const char* message) {
+  assert(pipeline);
+  if (status != WGPUCreatePipelineAsyncStatus_Success) {
+    delete pipeline;
+    pipeline = nullptr;
+  }
   GetEventManager().SetFutureReady<CreateRenderPipelineEvent>(
       futureId, status, pipeline, message);
 }
@@ -1222,6 +1288,11 @@ void emwgpuOnRequestAdapterCompleted(double futureId,
                                      WGPURequestAdapterStatus status,
                                      WGPUAdapter adapter,
                                      const char* message) {
+  assert(adapter);
+  if (status != WGPURequestAdapterStatus_Success) {
+    delete adapter;
+    adapter = nullptr;
+  }
   GetEventManager().SetFutureReady<RequestAdapterEvent>(futureId, status,
                                                         adapter, message);
 }
@@ -1284,6 +1355,12 @@ WGPUBufferImpl::WGPUBufferImpl(const EventSource* source, bool mappedAtCreation)
   }
 }
 
+WGPUBufferImpl::WGPUBufferImpl(const EventSource* source,
+                               WGPUBufferMapState mapState)
+    : EventSource(source),
+      RefCountedWithExternalCount(kImportedFromJS),
+      mMapState(mapState) {}
+
 void WGPUBufferImpl::Destroy() {
   emwgpuBufferDestroy(this);
   AbortPendingMap("Buffer was destroyed before mapping was resolved.");
@@ -1310,6 +1387,28 @@ void* WGPUBufferImpl::GetMappedRange(size_t offset, size_t size) {
   }
 
   return emwgpuBufferGetMappedRange(this, offset, size);
+}
+
+WGPUStatus WGPUBufferImpl::WriteMappedRange(size_t offset,
+                                            void const* data,
+                                            size_t size) {
+  if (mMapState != WGPUBufferMapState_Mapped) {
+    return WGPUStatus_Error;
+  }
+  if (mPendingMapRequest.mode != WGPUMapMode_Write) {
+    assert(false);
+    return WGPUStatus_Error;
+  }
+  return emwgpuBufferWriteMappedRange(this, offset, data, size);
+}
+
+WGPUStatus WGPUBufferImpl::ReadMappedRange(size_t offset,
+                                           void* data,
+                                           size_t size) {
+  if (mMapState != WGPUBufferMapState_Mapped) {
+    return WGPUStatus_Error;
+  }
+  return emwgpuBufferReadMappedRange(this, offset, data, size);
 }
 
 WGPUFuture WGPUBufferImpl::MapAsync(WGPUMapMode mode,
@@ -1386,7 +1485,7 @@ WGPUDeviceImpl::WGPUDeviceImpl(const EventSource* source,
 }
 
 WGPUDeviceImpl::WGPUDeviceImpl(const EventSource* source, WGPUQueue queue)
-    : EventSource(source) {
+    : EventSource(source), RefCountedWithExternalCount(kImportedFromJS) {
   mQueue.Acquire(queue);
 }
 
@@ -1416,14 +1515,23 @@ void WGPUDeviceImpl::OnUncapturedError(WGPUErrorType type,
 }
 
 void WGPUDeviceImpl::WillDropLastExternalRef() {
-  Destroy();
+  if (!IsImported()) {
+    Destroy();
+  }
 }
 
 // ----------------------------------------------------------------------------
 // WGPUInstanceImpl implementations.
 // ----------------------------------------------------------------------------
 
-WGPUInstanceImpl::WGPUInstanceImpl() : EventSource(GetNextInstanceId()) {
+WGPUInstanceImpl::WGPUInstanceImpl(const WGPUInstanceDescriptor* desc)
+    : EventSource(GetNextInstanceId()) {
+  if (desc) {
+    mCapabilities = desc->capabilities;
+    if (mCapabilities.timedWaitAnyMaxCount < 64) {
+      mCapabilities.timedWaitAnyMaxCount = 64;
+    }
+  }
   GetEventManager().RegisterInstance(GetInstanceId());
 }
 WGPUInstanceImpl::~WGPUInstanceImpl() {
@@ -1437,6 +1545,30 @@ void WGPUInstanceImpl::ProcessEvents() {
 WGPUWaitStatus WGPUInstanceImpl::WaitAny(size_t count,
                                          WGPUFutureWaitInfo* infos,
                                          uint64_t timeoutNS) {
+  if (timeoutNS > 0) {
+    if (!mCapabilities.timedWaitAnyEnable) {
+      // Timed wait not valid unless enabled on the instance.
+      DEBUG_PRINTF(
+          "WaitAny timeoutNS (%" PRIu64
+          ") > 0, but timedWaitAnyEnable not enabled at wgpuCreateInstance\n",
+          timeoutNS);
+      return WGPUWaitStatus_Error;
+    }
+    // Cannot handle timeouts without Asyncify. Assert should never fail,
+    // because wgpuCreateInstance should disallow timedWaitAnyEnable.
+    // TODO(crbug.com/377760848): Use the preprocessor to remove all this code
+    // (and emwgpuWaitAny) when building without Asyncify.
+    assert(emscripten_has_asyncify());
+
+    if (count > mCapabilities.timedWaitAnyMaxCount) {
+      DEBUG_PRINTF(
+          "WaitAny count (%zu) > the timedWaitAnyMaxCount (%zu) which was "
+          "enabled at wgpuCreateInstance\n",
+          count, mCapabilities.timedWaitAnyMaxCount);
+      return WGPUWaitStatus_Error;
+    }
+  }
+
   return GetEventManager().WaitAny(GetInstanceId(), count, infos, timeoutNS);
 }
 
@@ -1504,6 +1636,7 @@ WGPUFuture WGPUShaderModuleImpl::GetCompilationInfo(
   void wgpu##Name##Release(WGPU##Name o) {       \
     if (o->Release()) {                          \
       delete o;                                  \
+      emwgpuDelete(o);                           \
     }                                            \
   }
 WGPU_OBJECTS(DEFINE_WGPU_DEFAULT_ADDREF_RELEASE)
@@ -1536,10 +1669,22 @@ void wgpuSurfaceCapabilitiesFreeMembers(WGPUSurfaceCapabilities) {
 // Standalone (non-method) functions
 // ----------------------------------------------------------------------------
 
+bool ValidateInstanceDescriptor(const WGPUInstanceDescriptor& descriptor) {
+  if (descriptor.capabilities.timedWaitAnyEnable &&
+      !emscripten_has_asyncify()) {
+    DEBUG_PRINTF(
+        "timedWaitAnyEnable requested, but requires Asyncify or JSPI.");
+    return false;
+  }
+  return true;
+}
+
 WGPUInstance wgpuCreateInstance(
     [[maybe_unused]] const WGPUInstanceDescriptor* descriptor) {
-  // TODO: descriptor not implemented yet.
-  return new WGPUInstanceImpl();
+  if (descriptor && !ValidateInstanceDescriptor(*descriptor)) {
+    return nullptr;
+  }
+  return new WGPUInstanceImpl(descriptor);
 }
 
 // ----------------------------------------------------------------------------
@@ -1604,6 +1749,20 @@ void* wgpuBufferGetMappedRange(WGPUBuffer buffer, size_t offset, size_t size) {
   return buffer->GetMappedRange(offset, size);
 }
 
+WGPUStatus wgpuBufferWriteMappedRange(WGPUBuffer buffer,
+                                      size_t offset,
+                                      void const* data,
+                                      size_t size) {
+  return buffer->WriteMappedRange(offset, data, size);
+}
+
+WGPUStatus wgpuBufferReadMappedRange(WGPUBuffer buffer,
+                                     size_t offset,
+                                     void* data,
+                                     size_t size) {
+  return buffer->ReadMappedRange(offset, data, size);
+}
+
 WGPUFuture wgpuBufferMapAsync(WGPUBuffer buffer,
                               WGPUMapMode mode,
                               size_t offset,
@@ -1639,7 +1798,10 @@ void wgpuBufferUnmap(WGPUBuffer buffer) {
 WGPUBuffer wgpuDeviceCreateBuffer(WGPUDevice device,
                                   const WGPUBufferDescriptor* descriptor) {
   WGPUBuffer buffer = new WGPUBufferImpl(device, descriptor->mappedAtCreation);
-  emwgpuDeviceCreateBuffer(device, descriptor, buffer);
+  if (!emwgpuDeviceCreateBuffer(device, descriptor, buffer)) {
+    delete buffer;
+    return nullptr;
+  }
   return buffer;
 }
 
@@ -1654,7 +1816,9 @@ WGPUFuture wgpuDeviceCreateComputePipelineAsync(
     return WGPUFuture{kNullFutureId};
   }
 
-  emwgpuDeviceCreateComputePipelineAsync(device, futureId, descriptor);
+  WGPUComputePipeline pipeline = emwgpuCreateComputePipeline(device);
+  emwgpuDeviceCreateComputePipelineAsync(device, futureId, descriptor,
+                                         pipeline);
   return WGPUFuture{futureId};
 }
 
@@ -1669,7 +1833,8 @@ WGPUFuture wgpuDeviceCreateRenderPipelineAsync(
     return WGPUFuture{kNullFutureId};
   }
 
-  emwgpuDeviceCreateRenderPipelineAsync(device, futureId, descriptor);
+  WGPURenderPipeline pipeline = emwgpuCreateRenderPipeline(device);
+  emwgpuDeviceCreateRenderPipelineAsync(device, futureId, descriptor, pipeline);
   return WGPUFuture{futureId};
 }
 
@@ -1725,7 +1890,8 @@ WGPUFuture wgpuInstanceRequestAdapter(
     return WGPUFuture{kNullFutureId};
   }
 
-  emwgpuInstanceRequestAdapter(instance, futureId, options);
+  WGPUAdapter adapter = emwgpuCreateAdapter(instance);
+  emwgpuInstanceRequestAdapter(instance, futureId, options, adapter);
   return WGPUFuture{futureId};
 }
 

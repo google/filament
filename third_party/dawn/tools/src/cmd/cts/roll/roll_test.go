@@ -28,13 +28,23 @@
 package roll
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"dawn.googlesource.com/dawn/tools/src/buildbucket"
 	"dawn.googlesource.com/dawn/tools/src/cmd/cts/common"
 	"dawn.googlesource.com/dawn/tools/src/git"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 )
+
+// The following functions and those that call it cannot currently be tested due
+// to using exec.
+//   - generateFiles
+//   - gnTSDepList
+//   - genTestList
 
 func MustParseHash(s string) git.Hash {
 	hash, err := git.ParseHash("d5e605a556408eaeeda64fb9d33c3f596fd90b70")
@@ -136,4 +146,92 @@ Change-Id: I4aa059c6c183e622975b74dbdfdfe0b12341ae15
 	if diff := cmp.Diff(msg, expect); diff != "" {
 		t.Errorf("rollCommitMessage: %v", diff)
 	}
+}
+
+func TestRoller_GenResourceFilesList_NonExistentDirectory(t *testing.T) {
+	wrapper := oswrapper.CreateMemMapOSWrapper()
+	r := roller{
+		ctsDir: "/non_existent",
+	}
+
+	_, err := r.genResourceFilesList(context.Background(), wrapper)
+	require.ErrorContains(t, err, "open /non_existent/src/resources: file does not exist")
+}
+
+func TestRoller_GenResourceFilesList_Success(t *testing.T) {
+	wrapper := oswrapper.CreateMemMapOSWrapper()
+	err := wrapper.MkdirAll("/root/src/resources/subdir_1", 0o700)
+	require.NoErrorf(t, err, "Error creating directory: %v", err)
+	err = wrapper.MkdirAll("/root/src/resources/subdir_2", 0o700)
+	require.NoErrorf(t, err, "Error creating cirectory: %v", err)
+
+	f, err := wrapper.Create("/root/src/resources/subdir_1/file_1.txt")
+	require.NoErrorf(t, err, "Error creating file: %v", err)
+	defer f.Close()
+	f, err = wrapper.Create("/root/src/resources/subdir_1/file_2.txt")
+	require.NoErrorf(t, err, "Error creating file: %v", err)
+	defer f.Close()
+	f, err = wrapper.Create("/root/src/resources/subdir_2/file_1.txt")
+	require.NoErrorf(t, err, "Error creating file: %v", err)
+	defer f.Close()
+
+	r := roller{
+		ctsDir: "/root",
+	}
+	fileList, err := r.genResourceFilesList(context.Background(), wrapper)
+	require.NoErrorf(t, err, "Error generating resource file list: %v", err)
+	expectedList := `subdir_1/file_1.txt
+subdir_1/file_2.txt
+subdir_2/file_1.txt
+`
+	require.Equal(t, expectedList, fileList)
+}
+
+func TestRoller_GenWebTestSources_NonExistentDirectory(t *testing.T) {
+	wrapper := oswrapper.CreateMemMapOSWrapper()
+	r := roller{
+		ctsDir: "/non_existent",
+	}
+
+	_, err := r.genWebTestSources(context.Background(), wrapper)
+	require.ErrorContains(t, err, "open /non_existent/src/webgpu: file does not exist")
+}
+
+func TestRoller_GenWebTestSources_Success(t *testing.T) {
+	htmlContent := `<!-- Comment -->
+<html name=foo>
+</html>`
+
+	wrapper := oswrapper.CreateMemMapOSWrapper()
+	directories := []string{"subdir_1", "subdir_2"}
+	files := []string{"file_1.html", "file_2.txt", "file_3.html"}
+	for _, directory := range directories {
+		directory_path := fmt.Sprintf("/root/src/webgpu/%s", directory)
+		err := wrapper.MkdirAll(directory_path, 0o700)
+		require.NoErrorf(t, err, "Error creating directory: %v", err)
+		for _, filename := range files {
+			f, err := wrapper.Create(fmt.Sprintf("%s/%s", directory_path, filename))
+			require.NoErrorf(t, err, "Error creating file: %v", err)
+			defer f.Close()
+			f.Write([]byte(htmlContent))
+		}
+	}
+
+	r := roller{
+		ctsDir: "/root",
+	}
+	fileMap, err := r.genWebTestSources(context.Background(), wrapper)
+	require.NoErrorf(t, err, "Error generating web test sources: %v", err)
+
+	expectedHtmlContent := `<!-- Comment -->
+<html name=foo>
+  <base ref="/gen/third_party/dawn/webgpu-cts/src/webgpu" />
+</html>`
+	expectedMapContent := map[string]string{
+		"webgpu-cts/webtests/subdir_1/file_1.html": expectedHtmlContent,
+		"webgpu-cts/webtests/subdir_1/file_3.html": expectedHtmlContent,
+		"webgpu-cts/webtests/subdir_2/file_1.html": expectedHtmlContent,
+		"webgpu-cts/webtests/subdir_2/file_3.html": expectedHtmlContent,
+	}
+	require.Equal(t, expectedMapContent, fileMap)
 }

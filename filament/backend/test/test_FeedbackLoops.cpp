@@ -16,7 +16,8 @@
 
 #include "BackendTest.h"
 
-#include "ShaderGenerator.h"
+#include "Lifetimes.h"
+#include "Shader.h"
 #include "TrianglePrimitive.h"
 
 #include <backend/DriverEnums.h>
@@ -70,8 +71,6 @@ void main() {
     fragColor = textureLod(test_tex, uv, params.sourceLevel);
 })";
 
-static uint32_t sPixelHashResult = 0;
-
 // Selecting a NPOT texture size seems to exacerbate the bug seen with Intel GPU's.
 // Note that Filament uses a higher precision format (R11F_G11F_B10F) but this does not seem
 // necessary to trigger the bug.
@@ -95,100 +94,47 @@ struct MaterialParams {
     float unused;
 };
 
-static void uploadUniforms(DriverApi& dapi, Handle<HwBufferObject> ubh, MaterialParams params) {
-    MaterialParams* tmp = new MaterialParams(params);
-    auto cb = [](void* buffer, size_t size, void* user) {
-        MaterialParams* sp = (MaterialParams*) buffer;
-        delete sp;
-    };
-    BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
-    dapi.updateBufferObject(ubh, std::move(bd), 0);
-}
-
-static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
-    const size_t size = kTexWidth * kTexHeight * 4;
-    void* buffer = calloc(1, size);
-    auto cb = [](void* buffer, size_t size, void* user) {
-        int w = kTexWidth, h = kTexHeight;
-        const uint32_t* texels = (uint32_t*) buffer;
-        sPixelHashResult = utils::hash::murmur3(texels, size / 4, 0);
-#ifndef FILAMENT_IOS
-        LinearImage image(w, h, 4);
-        image = toLinearWithAlpha<uint8_t>(w, h, w * 4, (uint8_t*) buffer);
-        std::ofstream pngstrm("feedback.png", std::ios::binary | std::ios::trunc);
-        ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", "feedback.png");
-#endif
-        free(buffer);
-    };
-    PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
-    dapi.readPixels(rt, 0, 0, kTexWidth, kTexHeight, std::move(pb));
-}
-
 // TODO: This test needs work to get Metal and OpenGL to agree on results.
 // The problems are caused by both uploading and rendering into the same texture, since the OpenGL
 // backend's readPixels does not work correctly with textures that have image data uploaded.
 TEST_F(BackendTest, FeedbackLoops) {
     auto& api = getDriverApi();
+    Cleanup cleanup(api);
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = createSwapChain();
+        auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
-        ProgramHandle program;
-        {
-            filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
+        filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
                 SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
-            filamat::DescriptorSets descriptors;
-            descriptors[1] = {
-                { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
-                        samplerInfo },
-                { "Params", { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 1 }, {} }
-            };
-            ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform,
-                    std::move(descriptors));
-            Program prog = shaderGen.getProgram(api);
-            prog.descriptorBindings(1, {
-                    { "test_tex", DescriptorType::SAMPLER, 0 },
-                    { "Params", DescriptorType::UNIFORM_BUFFER, 1 }
-            });
-            program = api.createProgram(std::move(prog));
-        }
-
-        DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
-                {{
-                         DescriptorType::SAMPLER,
-                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
-                         DescriptorFlags::NONE, 0
-                 },
-                 {
-                         DescriptorType::UNIFORM_BUFFER,
-                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 1,
-                         DescriptorFlags::NONE, 0
-                 }}});
-
+        Shader shader = Shader(api, cleanup, ShaderConfig {
+            .vertexShader = fullscreenVs,
+            .fragmentShader = fullscreenFs,
+            .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}, {"Params"}}
+        });
 
         TrianglePrimitive const triangle(getDriverApi());
 
         // Create a texture.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-        Handle<HwTexture> const texture = api.createTexture(
-            SamplerType::SAMPLER_2D, kNumLevels, kTexFormat, 1, kTexWidth, kTexHeight, 1, usage);
+        Handle<HwTexture> const texture = cleanup.add(api.createTexture(
+            SamplerType::SAMPLER_2D, kNumLevels, kTexFormat, 1, kTexWidth, kTexHeight, 1, usage));
 
         // Create ubo
-        auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
-                BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+        auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams),
+                BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
         // Create a RenderTarget for each miplevel.
         Handle<HwRenderTarget> renderTargets[kNumLevels];
         for (uint8_t level = 0; level < kNumLevels; level++) {
             slog.i << "Level " << int(level) << ": " <<
                     (kTexWidth >> level) << "x" << (kTexHeight >> level) << io::endl;
-            renderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
-                    kTexWidth >> level, kTexHeight >> level, 1, 0, { texture, level, 0 }, {}, {});
+            renderTargets[level] = cleanup.add(api.createRenderTarget( TargetBufferFlags::COLOR,
+                    kTexWidth >> level, kTexHeight >> level, 1, 0, { texture, level, 0 }, {}, {}));
         }
 
         // Fill the base level of the texture with interesting colors.
@@ -216,8 +162,8 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.colorWrite = true;
             state.rasterState.depthWrite = false;
             state.rasterState.depthFunc = RasterState::DepthFunc::A;
-            state.program = program;
-            state.pipelineLayout.setLayout[1] = { descriptorSetLayout };
+            state.program = shader.getProgram();
+            state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
 
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0, 0);
@@ -226,29 +172,32 @@ TEST_F(BackendTest, FeedbackLoops) {
             params.flags.discardStart = TargetBufferFlags::ALL;
             state.rasterState.disableBlending();
             for (int targetLevel = 1; targetLevel < kNumLevels; targetLevel++) {
+                Cleanup passCleanup(api);
                 const uint32_t sourceLevel = targetLevel - 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
 
-                auto textureView = api.createTextureView(texture, sourceLevel, 1);
-                DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+                auto descriptorSet = shader.createDescriptorSet(api);
+                auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
                 api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                 });
-                api.updateDescriptorSetBuffer(descriptorSet, 1, ubuffer, 0, sizeof(MaterialParams));
-                api.bindDescriptorSet(descriptorSet, 1, {});
 
-                uploadUniforms(getDriverApi(), ubuffer, {
+                UniformBindingConfig uniformBinding{
+                    .binding = 1,
+                    .descriptorSet = descriptorSet
+                };
+                shader.bindUniform<MaterialParams>(api, ubuffer, uniformBinding);
+                shader.uploadUniform(api, ubuffer, uniformBinding, MaterialParams{
                     .fbWidth = float(params.viewport.width),
                     .fbHeight = float(params.viewport.height),
                     .sourceLevel = float(sourceLevel),
                 });
+
                 api.beginRenderPass(renderTargets[targetLevel], params);
                 api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
                 api.endRenderPass();
-                api.destroyTexture(textureView);
-                api.destroyDescriptorSet(descriptorSet);
             }
 
             // Upsample passes
@@ -256,29 +205,32 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
             state.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
             for (int targetLevel = kNumLevels - 2; targetLevel >= 0; targetLevel--) {
+                Cleanup passCleanup(api);
                 const uint32_t sourceLevel = targetLevel + 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
 
-                auto textureView = api.createTextureView(texture, sourceLevel, 1);
-                DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+                auto descriptorSet = shader.createDescriptorSet(api);
+                auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
                 api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                 });
-                api.updateDescriptorSetBuffer(descriptorSet, 1, ubuffer, 0, sizeof(MaterialParams));
-                api.bindDescriptorSet(descriptorSet, 1, {});
 
-                uploadUniforms(getDriverApi(), ubuffer, {
-                    .fbWidth = float(params.viewport.width),
-                    .fbHeight = float(params.viewport.height),
-                    .sourceLevel = float(sourceLevel),
+                UniformBindingConfig uniformBinding{
+                        .binding = 1,
+                        .descriptorSet = descriptorSet
+                };
+                shader.bindUniform<MaterialParams>(api, ubuffer, uniformBinding);
+                shader.uploadUniform(api, ubuffer, uniformBinding, MaterialParams{
+                        .fbWidth = float(params.viewport.width),
+                        .fbHeight = float(params.viewport.height),
+                        .sourceLevel = float(sourceLevel),
                 });
+
                 api.beginRenderPass(renderTargets[targetLevel], params);
                 api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
                 api.endRenderPass();
-                api.destroyTexture(textureView);
-                api.destroyDescriptorSet(descriptorSet);
             }
 
             // Read back the render target corresponding to the base level.
@@ -286,7 +238,8 @@ TEST_F(BackendTest, FeedbackLoops) {
             // NOTE: Calling glReadPixels on any miplevel other than the base level
             // seems to be un-reliable on some GPU's.
             if (frame == kNumFrames - 1) {
-                dumpScreenshot(api, renderTargets[0]);
+                EXPECT_IMAGE(renderTargets[0], getExpectations(),
+                        ScreenshotParams(kTexWidth, kTexHeight, "FeedbackLoops", 0x70695aa1));
             }
 
             api.flush();
@@ -296,20 +249,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             executeCommands();
             getDriver().purge();
         }
-
-        api.destroyDescriptorSetLayout(descriptorSetLayout);
-        api.destroyProgram(program);
-        api.destroySwapChain(swapChain);
-        api.destroyTexture(texture);
-        api.destroyBufferObject(ubuffer);
-        for (auto rt : renderTargets)  {
-            api.destroyRenderTarget(rt);
-        }
     }
-
-    const uint32_t expected = 0x70695aa1;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sPixelHashResult, expected);
-    EXPECT_TRUE(sPixelHashResult == expected);
 }
 
 } // namespace test

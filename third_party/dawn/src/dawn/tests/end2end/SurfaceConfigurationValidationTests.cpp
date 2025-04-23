@@ -267,22 +267,22 @@ TEST_P(SurfaceConfigurationValidationTests, ZeroHeight) {
 // A width that exceeds the maximum texture size fails
 TEST_P(SurfaceConfigurationValidationTests, ExcessiveWidth) {
     wgpu::Surface surface = CreateTestSurface();
-    wgpu::SupportedLimits supported;
+    wgpu::Limits supported;
     device.GetLimits(&supported);
 
     wgpu::SurfaceConfiguration config = GetPreferredConfiguration(surface);
-    config.width = supported.limits.maxTextureDimension1D + 1;
+    config.width = supported.maxTextureDimension1D + 1;
     ASSERT_DEVICE_ERROR(surface.Configure(&config));
 }
 
 // A height that exceeds the maximum texture size fails
 TEST_P(SurfaceConfigurationValidationTests, ExcessiveHeight) {
     wgpu::Surface surface = CreateTestSurface();
-    wgpu::SupportedLimits supported;
+    wgpu::Limits supported;
     device.GetLimits(&supported);
 
     wgpu::SurfaceConfiguration config = GetPreferredConfiguration(surface);
-    config.height = supported.limits.maxTextureDimension2D + 1;
+    config.height = supported.maxTextureDimension2D + 1;
     ASSERT_DEVICE_ERROR(surface.Configure(&config));
 }
 

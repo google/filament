@@ -82,9 +82,10 @@ func (a AST) String() string {
 
 // EnumDecl describes an enumerator
 type EnumDecl struct {
-	Source  tok.Source
-	Name    string
-	Entries []EnumEntry
+	Source     tok.Source
+	Name       string
+	Attributes Attributes
+	Entries    []EnumEntry
 }
 
 // Format implements the fmt.Formatter interface

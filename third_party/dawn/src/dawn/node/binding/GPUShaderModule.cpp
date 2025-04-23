@@ -55,10 +55,21 @@ GPUShaderModule::getCompilationInfo(Napi::Env env) {
 
         explicit GPUCompilationMessage(const wgpu::CompilationMessage& m)
             : lineNum(m.lineNum),
-              linePos(m.utf16LinePos),
-              offset(m.utf16Offset),
-              length(m.utf16Length),
               message(m.message) {
+            bool foundUtf16 = false;
+            for (const auto* chain = m.nextInChain; chain != nullptr; chain = chain->nextInChain) {
+                if (chain->sType == wgpu::SType::DawnCompilationMessageUtf16) {
+                    assert(!foundUtf16);
+                    foundUtf16 = true;
+                    const auto* utf16 =
+                        reinterpret_cast<const wgpu::DawnCompilationMessageUtf16*>(chain);
+                    linePos = utf16->linePos;
+                    offset = utf16->offset;
+                    length = utf16->length;
+                }
+            }
+            assert(foundUtf16);
+
             switch (m.type) {
                 case wgpu::CompilationMessageType::Error:
                     type = interop::GPUCompilationMessageType::kError;

@@ -36,6 +36,9 @@
 #include "dawn/native/DawnNative.h"
 
 #if defined(DAWN_ENABLE_BACKEND_VULKAN)
+// This must be above VulkanBackend.h otherwise vulkan.h will be included before we can wrap it with
+// vulkan_platform.h.
+#include "dawn/common/vulkan_platform.h"
 #include "dawn/native/VulkanBackend.h"
 #endif  // defined(DAWN_ENABLE_BACKEND_VULKAN)
 
@@ -168,7 +171,6 @@ TEST_F(AdapterEnumerationTests, MatchingDXGIAdapterD3D11) {
         EXPECT_EQ(info.adapterType, infoAgain.adapterType);
         EXPECT_EQ(info.vendorID, infoAgain.vendorID);
         EXPECT_EQ(info.deviceID, infoAgain.deviceID);
-        EXPECT_EQ(info.compatibilityMode, infoAgain.compatibilityMode);
     }
 }
 #endif  // defined(DAWN_ENABLE_BACKEND_D3D11)
@@ -245,7 +247,6 @@ TEST_F(AdapterEnumerationTests, MatchingDXGIAdapterD3D12) {
         EXPECT_EQ(info.adapterType, infoAgain.adapterType);
         EXPECT_EQ(info.vendorID, infoAgain.vendorID);
         EXPECT_EQ(info.deviceID, infoAgain.deviceID);
-        EXPECT_EQ(info.compatibilityMode, infoAgain.compatibilityMode);
     }
 }
 #endif  // defined(DAWN_ENABLE_BACKEND_D3D12)

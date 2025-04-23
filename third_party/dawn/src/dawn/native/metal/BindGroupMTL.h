@@ -37,14 +37,17 @@ class Device;
 
 class BindGroup final : public BindGroupBase, public PlacementAllocated {
   public:
-    static Ref<BindGroup> Create(Device* device, const BindGroupDescriptor* descriptor);
+    static ResultOrError<Ref<BindGroup>> Create(Device* device,
+                                                const BindGroupDescriptor* descriptor);
 
     BindGroup(Device* device, const BindGroupDescriptor* descriptor);
 
   private:
     ~BindGroup() override;
 
-    void DestroyImpl() override;
+    MaybeError InitializeImpl() override;
+
+    void DeleteThis() override;
 };
 
 }  // namespace dawn::native::metal

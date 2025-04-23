@@ -44,6 +44,9 @@ class SharedResourceMemoryContents;
 
 enum SharedResourceAccessState { NotAccessed, ExclusiveRead, SimultaneousRead, Write };
 
+// The interface for the resources that can be created from a SharedResourceMemory (SRM).
+// Note that in practice this is only Buffer and Texture and that some internals of SRM assume that
+// with static polymorphism.
 class SharedResource : public ApiObjectBase {
   public:
     using ApiObjectBase::ApiObjectBase;
@@ -97,15 +100,15 @@ class SharedResourceMemory : public ApiObjectBase, public WeakRefSupport<SharedR
 
     SharedResourceMemoryContents* GetContents() const;
 
-    // Validate that the resource was created from this SharedResourceMemory.
-    MaybeError ValidateResourceCreatedFromSelf(SharedResource* resource);
-
   protected:
     SharedResourceMemory(DeviceBase* device, ObjectBase::ErrorTag, StringView label);
     using ApiObjectBase::ApiObjectBase;
 
   private:
     virtual Ref<SharedResourceMemoryContents> CreateContents();
+
+    // Validate that the resource was created from this SharedResourceMemory.
+    MaybeError ValidateResourceCreatedFromSelf(SharedResource* resource);
 
     template <typename Resource, typename BeginAccessDescriptor>
     MaybeError BeginAccess(Resource* resource, const BeginAccessDescriptor* rawDescriptor);
@@ -138,6 +141,7 @@ class SharedResourceMemory : public ApiObjectBase, public WeakRefSupport<SharedR
         ExecutionSerial lastUsageSerial,
         UnpackedPtr<SharedBufferMemoryEndAccessState>& state);
 
+    // If non-null, the SRM is exclusively accessed from that SR, used for validation.
     Ref<SharedResource> mExclusiveAccess;
     Ref<SharedResourceMemoryContents> mContents;
 };
@@ -163,11 +167,14 @@ class SharedResourceMemoryContents : public RefCounted {
   private:
     friend class SharedResourceMemory;
 
+    // The fences that must be waited on before the next use of the resource, whether that use is
+    // internal to Dawn or external (when exporting on EndAccess).
     PendingFenceList mPendingFences;
 
     SharedResourceAccessState mSharedResourceAccessState = SharedResourceAccessState::NotAccessed;
     int mReadAccessCount = 0;
 
+    // A pointer to the parent SRM that's a weak to prevent potential ref cycles.
     WeakRef<SharedResourceMemory> mSharedResourceMemory;
 };
 

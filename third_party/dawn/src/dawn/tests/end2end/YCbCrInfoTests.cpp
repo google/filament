@@ -27,6 +27,10 @@
 
 #include <vector>
 
+// This must be above VulkanBackend.h otherwise vulkan.h will be included before we can wrap it with
+// vulkan_platform.h.
+#include "dawn/common/vulkan_platform.h"
+
 #include "dawn/native/VulkanBackend.h"
 #include "dawn/tests/DawnTest.h"
 #include "dawn/utils/WGPUHelpers.h"

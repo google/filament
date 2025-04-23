@@ -91,7 +91,7 @@ TEST_F(WgslWriter_RaiseTest, WorkgroupBarrier) {
 
     auto* src = R"(
 $B1: {  # root
-  %W:ptr<workgroup, i32, read_write> = var
+  %W:ptr<workgroup, i32, read_write> = var undef
 }
 
 %f = func():i32 {
@@ -107,7 +107,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %W:ref<workgroup, i32, read_write> = var
+  %W:ref<workgroup, i32, read_write> = var undef
 }
 
 %f = func():i32 {
@@ -138,7 +138,7 @@ TEST_F(WgslWriter_RaiseTest, WorkgroupBarrier_NoMatch) {
 
     auto* src = R"(
 $B1: {  # root
-  %W:ptr<workgroup, i32, read_write> = var
+  %W:ptr<workgroup, i32, read_write> = var undef
 }
 
 %f = func():i32 {
@@ -155,7 +155,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %W:ref<workgroup, i32, read_write> = var
+  %W:ref<workgroup, i32, read_write> = var undef
 }
 
 %f = func():i32 {

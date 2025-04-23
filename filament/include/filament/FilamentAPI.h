@@ -20,6 +20,7 @@
 #include <utils/compiler.h>
 #include <utils/PrivateImplementation.h>
 #include <utils/CString.h>
+#include <utils/StaticString.h>
 
 #include <stddef.h>
 
@@ -61,12 +62,26 @@ UTILS_PUBLIC void builderMakeName(utils::CString& outName, const char* name, siz
 template <typename Builder>
 class UTILS_PUBLIC BuilderNameMixin {
 public:
+    UTILS_DEPRECATED
     Builder& name(const char* name, size_t len) noexcept {
         builderMakeName(mName, name, len);
         return static_cast<Builder&>(*this);
     }
 
+    Builder& name(utils::StaticString const& name) noexcept {
+        builderMakeName(mName, name.data(), name.size());
+        return static_cast<Builder&>(*this);
+    }
+
     utils::CString const& getName() const noexcept { return mName; }
+
+    utils::CString const& getNameOrDefault() const noexcept {
+        if (const auto& name = getName(); !name.empty()) {
+            return name;
+        }
+        static const utils::CString sDefaultName = "(none)";
+        return sDefaultName;
+    }
 
 private:
     utils::CString mName;

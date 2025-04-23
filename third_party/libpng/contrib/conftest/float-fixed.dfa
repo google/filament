@@ -1,0 +1,14 @@
+# fixed-float.dfa
+#  Build time configuration of libpng
+#
+# Author: John Bowler
+# Copyright: (c) John Bowler, 2025
+# Usage rights:
+#  To the extent possible under law, the author has waived all copyright and
+#  related or neighboring rights to this work.  This work is published from:
+#  United States.
+#
+# Test the standard libpng configuration with the fixed point internal
+# implementation in place of the default floating point
+#
+option FLOATING_ARITHMETIC off

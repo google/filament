@@ -64,6 +64,11 @@ struct ExternalTextureParams {
 MaybeError ValidateExternalTextureDescriptor(const DeviceBase* device,
                                              const ExternalTextureDescriptor* descriptor);
 
+// Create a parameter buffer for a simple texture view intended for use as an external texture. The
+// buffer contains the uniform parameters required by a shader to sample from an external texture.
+ResultOrError<Ref<BufferBase>> MakeParamsBufferForSimpleView(DeviceBase* device,
+                                                             Ref<TextureViewBase> textureView);
+
 class ExternalTextureBase : public ApiObjectBase {
   public:
     static ResultOrError<Ref<ExternalTextureBase>> Create(

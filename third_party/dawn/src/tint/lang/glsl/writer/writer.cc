@@ -27,9 +27,6 @@
 
 #include "src/tint/lang/glsl/writer/writer.h"
 
-#include <memory>
-#include <utility>
-
 #include "src/tint/lang/core/ir/core_builtin_call.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/var.h"
@@ -58,7 +55,7 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
         if (!var) {
             continue;
         }
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
 
         // The pixel_local extension is not supported by the GLSL backend.
         if (ptr->AddressSpace() == core::AddressSpace::kPixelLocal) {

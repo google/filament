@@ -9,16 +9,24 @@
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include "dxc/DXIL/DxilFunctionProps.h"
 #include "dxc/DXIL/DxilShaderModel.h"
+#include "dxc/HLSL/HLOperations.h"
 #include "dxc/HlslIntrinsicOp.h"
 #include "dxc/Support/Global.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/HlslTypes.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -142,13 +150,21 @@ private:
   }
 
 public:
-  void BuildForEntry(FunctionDecl *EntryFnDecl) {
+  void BuildForEntry(FunctionDecl *EntryFnDecl,
+                     llvm::ArrayRef<VarDecl *> GlobalsWithInit) {
     DXASSERT_NOMSG(EntryFnDecl);
     EntryFnDecl = getFunctionWithBody(EntryFnDecl);
     PendingFunctions pendingFunctions;
     FnReferenceVisitor visitor(m_visitedFunctions, pendingFunctions,
                                m_callNodes);
-    pendingFunctions.push_back(EntryFnDecl);
+
+    // First, traverse all initializers, then entry function.
+    m_visitedFunctions.insert(EntryFnDecl);
+    visitor.setSourceFn(EntryFnDecl);
+    for (VarDecl *VD : GlobalsWithInit)
+      visitor.TraverseDecl(VD);
+    visitor.TraverseDecl(EntryFnDecl);
+
     while (!pendingFunctions.empty()) {
       FunctionDecl *pendingDecl = pendingFunctions.pop_back_val();
       if (m_visitedFunctions.insert(pendingDecl).second == true) {
@@ -284,33 +300,67 @@ std::vector<FunctionDecl *> GetAllExportedFDecls(clang::Sema *self) {
   return AllExportedFDecls;
 }
 
+void GatherGlobalsWithInitializers(
+    DeclContext *DC, llvm::SmallVectorImpl<VarDecl *> &GlobalsWithInit,
+    llvm::SmallVectorImpl<VarDecl *> &SubObjects) {
+  for (auto *D : DC->decls()) {
+    // Skip built-ins and function decls.
+    if (D->isImplicit() || isa<FunctionDecl>(D))
+      continue;
+    if (auto *VD = dyn_cast<VarDecl>(D)) {
+      // Add if user-defined static or groupshared global with initializer.
+      if (VD->hasInit() && VD->hasGlobalStorage() &&
+          (VD->getStorageClass() == SC_Static ||
+           VD->hasAttr<HLSLGroupSharedAttr>())) {
+        // Place subobjects in a separate collection.
+        if (const RecordType *RT = VD->getType()->getAs<RecordType>()) {
+          if (RT->getDecl()->hasAttr<HLSLSubObjectAttr>()) {
+            SubObjects.push_back(VD);
+            continue;
+          }
+        }
+        GlobalsWithInit.push_back(VD);
+      }
+    } else if (auto *DC = dyn_cast<DeclContext>(D)) {
+      // Recurse into DeclContexts like namespace, cbuffer, class/struct, etc.
+      GatherGlobalsWithInitializers(DC, GlobalsWithInit, SubObjects);
+    }
+  }
+}
+
 // in the non-library case, this function will be run only once,
 // but in the library case, this function will be run for each
 // viable top-level function declaration by
 // ValidateNoRecursionInTranslationUnit.
 //  (viable as in, is exported)
-clang::FunctionDecl *ValidateNoRecursion(CallGraphWithRecurseGuard &callGraph,
-                                         clang::FunctionDecl *FD) {
+clang::FunctionDecl *
+ValidateNoRecursion(CallGraphWithRecurseGuard &callGraph,
+                    clang::FunctionDecl *FD,
+                    llvm::ArrayRef<VarDecl *> GlobalsWithInit) {
   // Validate that there is no recursion reachable by this function declaration
   // NOTE: the information gathered here could be used to bypass code generation
   // on functions that are unreachable (as an early form of dead code
   // elimination).
   if (FD) {
-    callGraph.BuildForEntry(FD);
+    callGraph.BuildForEntry(FD, GlobalsWithInit);
     return callGraph.CheckRecursion(FD);
   }
   return nullptr;
 }
 
-class HLSLCallDiagnoseVisitor
-    : public RecursiveASTVisitor<HLSLCallDiagnoseVisitor> {
+class HLSLReachableDiagnoseVisitor
+    : public RecursiveASTVisitor<HLSLReachableDiagnoseVisitor> {
 public:
-  explicit HLSLCallDiagnoseVisitor(
+  explicit HLSLReachableDiagnoseVisitor(
       Sema *S, const hlsl::ShaderModel *SM, DXIL::ShaderKind EntrySK,
       DXIL::NodeLaunchType NodeLaunchTy, const FunctionDecl *EntryDecl,
-      llvm::SmallPtrSetImpl<CallExpr *> &DiagnosedCalls)
+      llvm::SmallPtrSetImpl<CallExpr *> &DiagnosedCalls,
+      llvm::SmallPtrSetImpl<DeclRefExpr *> &DeclAvailabilityChecked,
+      llvm::SmallSet<SourceLocation, 16> &DiagnosedTypeLocs)
       : sema(S), SM(SM), EntrySK(EntrySK), NodeLaunchTy(NodeLaunchTy),
-        EntryDecl(EntryDecl), DiagnosedCalls(DiagnosedCalls) {}
+        EntryDecl(EntryDecl), DiagnosedCalls(DiagnosedCalls),
+        DeclAvailabilityChecked(DeclAvailabilityChecked),
+        DiagnosedTypeLocs(DiagnosedTypeLocs) {}
 
   bool VisitCallExpr(CallExpr *CE) {
     // Set flag if already diagnosed from another entry, allowing some
@@ -325,6 +375,126 @@ public:
     return true;
   }
 
+  bool VisitVarDecl(VarDecl *VD) {
+    QualType VarType = VD->getType();
+    if (const TemplateSpecializationType *TST =
+            dyn_cast<TemplateSpecializationType>(VarType.getTypePtr())) {
+      const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl();
+      if (!TD)
+        return true;
+
+      // verify this is a rayquery decl
+      if (TD->getTemplatedDecl()->hasAttr<HLSLRayQueryObjectAttr>()) {
+        if (TST->getNumArgs() == 1) {
+          return true;
+        }
+        // now guaranteed 2 args
+        const TemplateArgument &Arg2 = TST->getArg(1);
+        Expr *Expr2 = Arg2.getAsExpr();
+        llvm::APSInt Arg2val;
+        Expr2->isIntegerConstantExpr(Arg2val, sema->getASTContext());
+
+        const ShaderModel *SM = hlsl::ShaderModel::GetByName(
+            sema->getLangOpts().HLSLProfile.c_str());
+
+        if (Arg2val.getZExtValue() != 0 && !SM->IsSMAtLeast(6, 9)) {
+          // if it's an integer literal, emit
+          // warn_hlsl_rayquery_flags_disallowed
+          if (Arg2.getKind() == TemplateArgument::Expression) {
+            if (auto *castExpr = dyn_cast<ImplicitCastExpr>(
+                    Arg2.getAsExpr()->IgnoreParens())) {
+              // Now check if the sub-expression is a DeclRefExpr
+              Expr *subExpr = castExpr->getSubExpr();
+              if (auto *IL = dyn_cast<IntegerLiteral>(subExpr))
+                sema->Diag(VD->getLocStart(),
+                           diag::warn_hlsl_rayquery_flags_disallowed);
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  bool VisitTypeLoc(TypeLoc TL) {
+    // Diagnose availability for used type.
+    if (AvailabilityAttr *AAttr = GetAvailabilityAttrOnce(TL)) {
+      UnqualTypeLoc UTL = TL.getUnqualifiedLoc();
+      DiagnoseAvailability(AAttr, TL.getType(), UTL.getLocStart());
+    }
+
+    return true;
+  }
+
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    // Diagnose availability for referenced decl.
+    if (AvailabilityAttr *AAttr = GetAvailabilityAttrOnce(DRE)) {
+      DiagnoseAvailability(AAttr, DRE->getDecl(), DRE->getExprLoc());
+    }
+
+    return true;
+  }
+
+  AvailabilityAttr *GetAvailabilityAttrOnce(TypeLoc TL) {
+    QualType Ty = TL.getType();
+    CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
+    if (!RD)
+      return nullptr;
+    AvailabilityAttr *AAttr = RD->getAttr<AvailabilityAttr>();
+    if (!AAttr)
+      return nullptr;
+    // Skip redundant availability diagnostics for the same Type.
+    // Use the end location to avoid diagnosing the same type multiple times.
+    if (!DiagnosedTypeLocs.insert(TL.getEndLoc()).second)
+      return nullptr;
+
+    return AAttr;
+  }
+
+  AvailabilityAttr *GetAvailabilityAttrOnce(DeclRefExpr *DRE) {
+    AvailabilityAttr *AAttr = DRE->getDecl()->getAttr<AvailabilityAttr>();
+    if (!AAttr)
+      return nullptr;
+    // Skip redundant availability diagnostics for the same Decl.
+    if (!DeclAvailabilityChecked.insert(DRE).second)
+      return nullptr;
+
+    return AAttr;
+  }
+
+  bool CheckSMVersion(VersionTuple AAttrVT) {
+    VersionTuple SMVT = VersionTuple(SM->GetMajor(), SM->GetMinor());
+    return SMVT >= AAttrVT;
+  }
+
+  void DiagnoseAvailability(AvailabilityAttr *AAttr, QualType Ty,
+                            SourceLocation Loc) {
+    VersionTuple AAttrVT = AAttr->getIntroduced();
+    if (CheckSMVersion(AAttrVT))
+      return;
+
+    sema->Diag(Loc, diag::warn_hlsl_builtin_type_unavailable)
+        << Ty << SM->GetName() << AAttrVT.getAsString();
+  }
+
+  void DiagnoseAvailability(AvailabilityAttr *AAttr, NamedDecl *ND,
+                            SourceLocation Loc) {
+    VersionTuple AAttrVT = AAttr->getIntroduced();
+    if (CheckSMVersion(AAttrVT))
+      return;
+
+    if (isa<FunctionDecl>(ND)) {
+      sema->Diag(Loc, diag::warn_hlsl_intrinsic_in_wrong_shader_model)
+          << ND->getQualifiedNameAsString() << EntryDecl
+          << AAttrVT.getAsString();
+      return;
+    }
+
+    sema->Diag(Loc, diag::warn_hlsl_builtin_constant_unavailable)
+        << ND << SM->GetName() << AAttrVT.getAsString();
+  }
+
   clang::Sema *getSema() { return sema; }
 
 private:
@@ -334,6 +504,8 @@ private:
   DXIL::NodeLaunchType NodeLaunchTy;
   const FunctionDecl *EntryDecl;
   llvm::SmallPtrSetImpl<CallExpr *> &DiagnosedCalls;
+  llvm::SmallPtrSetImpl<DeclRefExpr *> &DeclAvailabilityChecked;
+  llvm::SmallSet<SourceLocation, 16> &DiagnosedTypeLocs;
 };
 
 std::optional<uint32_t>
@@ -428,18 +600,38 @@ void hlsl::DiagnoseTranslationUnit(clang::Sema *self) {
   const auto *shaderModel =
       hlsl::ShaderModel::GetByName(self->getLangOpts().HLSLProfile.c_str());
 
-  std::set<FunctionDecl *> DiagnosedDecls;
+  llvm::SmallVector<VarDecl *, 16> GlobalsWithInit;
+  llvm::SmallVector<VarDecl *, 16> SubObjects;
+  std::set<FunctionDecl *> DiagnosedRecursiveDecls;
   llvm::SmallPtrSet<CallExpr *, 16> DiagnosedCalls;
+  llvm::SmallPtrSet<DeclRefExpr *, 16> DeclAvailabilityChecked;
+  llvm::SmallSet<SourceLocation, 16> DiagnosedTypeLocs;
+
+  GatherGlobalsWithInitializers(self->getASTContext().getTranslationUnitDecl(),
+                                GlobalsWithInit, SubObjects);
+
+  if (shaderModel->GetKind() == DXIL::ShaderKind::Library) {
+    DXIL::NodeLaunchType NodeLaunchTy = DXIL::NodeLaunchType::Invalid;
+    HLSLReachableDiagnoseVisitor Visitor(
+        self, shaderModel, shaderModel->GetKind(), NodeLaunchTy, nullptr,
+        DiagnosedCalls, DeclAvailabilityChecked, DiagnosedTypeLocs);
+    for (VarDecl *VD : SubObjects)
+      Visitor.TraverseDecl(VD);
+  }
+
   // for each FDecl, check for recursion
   for (FunctionDecl *FDecl : FDeclsToCheck) {
     CallGraphWithRecurseGuard callGraph;
-    FunctionDecl *result = ValidateNoRecursion(callGraph, FDecl);
+    ArrayRef<VarDecl *> InitGlobals = {};
+    // if entry function, include globals with initializers.
+    if (FDecl->hasAttr<HLSLShaderAttr>())
+      InitGlobals = GlobalsWithInit;
+    FunctionDecl *result = ValidateNoRecursion(callGraph, FDecl, InitGlobals);
 
     if (result) {
       // don't emit duplicate diagnostics for the same recursive function
       // if A and B call recursive function C, only emit 1 diagnostic for C.
-      if (DiagnosedDecls.find(result) == DiagnosedDecls.end()) {
-        DiagnosedDecls.insert(result);
+      if (DiagnosedRecursiveDecls.insert(result).second) {
         self->Diag(result->getSourceRange().getBegin(),
                    diag::err_hlsl_no_recursion)
             << FDecl->getQualifiedNameAsString()
@@ -463,12 +655,12 @@ void hlsl::DiagnoseTranslationUnit(clang::Sema *self) {
     }
 
     if (pPatchFnDecl) {
-      FunctionDecl *patchResult = ValidateNoRecursion(callGraph, pPatchFnDecl);
+      FunctionDecl *patchResult =
+          ValidateNoRecursion(callGraph, pPatchFnDecl, GlobalsWithInit);
 
       // In this case, recursion was detected in the patch-constant function
       if (patchResult) {
-        if (DiagnosedDecls.find(patchResult) == DiagnosedDecls.end()) {
-          DiagnosedDecls.insert(patchResult);
+        if (DiagnosedRecursiveDecls.insert(patchResult).second) {
           self->Diag(patchResult->getSourceRange().getBegin(),
                      diag::err_hlsl_no_recursion)
               << pPatchFnDecl->getQualifiedNameAsString()
@@ -482,15 +674,12 @@ void hlsl::DiagnoseTranslationUnit(clang::Sema *self) {
       // disconnected with respect to the call graph.
       // Only check this if neither function decl is recursive
       if (!result && !patchResult) {
-        CallGraphWithRecurseGuard CG;
-        CG.BuildForEntry(pPatchFnDecl);
-        if (CG.CheckReachability(pPatchFnDecl, FDecl)) {
+        if (callGraph.CheckReachability(pPatchFnDecl, FDecl)) {
           self->Diag(FDecl->getSourceRange().getBegin(),
                      diag::err_hlsl_patch_reachability_not_allowed)
               << 1 << FDecl->getName() << 0 << pPatchFnDecl->getName();
         }
-        CG.BuildForEntry(FDecl);
-        if (CG.CheckReachability(FDecl, pPatchFnDecl)) {
+        if (callGraph.CheckReachability(FDecl, pPatchFnDecl)) {
           self->Diag(FDecl->getSourceRange().getBegin(),
                      diag::err_hlsl_patch_reachability_not_allowed)
               << 0 << pPatchFnDecl->getName() << 1 << FDecl->getName();
@@ -520,8 +709,21 @@ void hlsl::DiagnoseTranslationUnit(clang::Sema *self) {
               << hullPatchCount.value();
         }
       }
-    }
+      for (const auto *param : pPatchFnDecl->params())
+        if (containsLongVector(param->getType())) {
+          const unsigned PatchConstantFunctionParametersIdx = 8;
+          self->Diag(param->getLocation(),
+                     diag::err_hlsl_unsupported_long_vector)
+              << PatchConstantFunctionParametersIdx;
+        }
 
+      if (containsLongVector(pPatchFnDecl->getReturnType())) {
+        const unsigned PatchConstantFunctionReturnIdx = 9;
+        self->Diag(pPatchFnDecl->getLocation(),
+                   diag::err_hlsl_unsupported_long_vector)
+            << PatchConstantFunctionReturnIdx;
+      }
+    }
     DXIL::ShaderKind EntrySK = shaderModel->GetKind();
     DXIL::NodeLaunchType NodeLaunchTy = DXIL::NodeLaunchType::Invalid;
     if (EntrySK == DXIL::ShaderKind::Library) {
@@ -537,12 +739,16 @@ void hlsl::DiagnoseTranslationUnit(clang::Sema *self) {
           NodeLaunchTy = DXIL::NodeLaunchType::Broadcasting;
       }
     }
+
     // Visit all visited functions in call graph to collect illegal intrinsic
     // calls.
-    for (FunctionDecl *FD : callGraph.GetVisitedFunctions()) {
-      HLSLCallDiagnoseVisitor Visitor(self, shaderModel, EntrySK, NodeLaunchTy,
-                                      FDecl, DiagnosedCalls);
+    HLSLReachableDiagnoseVisitor Visitor(
+        self, shaderModel, EntrySK, NodeLaunchTy, FDecl, DiagnosedCalls,
+        DeclAvailabilityChecked, DiagnosedTypeLocs);
+    // Visit globals with initializers when processing entry point.
+    for (VarDecl *VD : InitGlobals)
+      Visitor.TraverseDecl(VD);
+    for (FunctionDecl *FD : callGraph.GetVisitedFunctions())
       Visitor.TraverseDecl(FD);
-    }
   }
 }

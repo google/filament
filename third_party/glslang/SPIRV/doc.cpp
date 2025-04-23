@@ -1,6 +1,6 @@
 //
 // Copyright (C) 2014-2015 LunarG, Inc.
-// Copyright (C) 2022-2024 Arm Limited.
+// Copyright (C) 2022-2025 Arm Limited.
 // Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
 //
 // All rights reserved.
@@ -1009,6 +1009,7 @@ const char* CapabilityString(int info)
     case CapabilityRayTraversalPrimitiveCullingKHR: return "RayTraversalPrimitiveCullingKHR";
     case CapabilityRayTracingPositionFetchKHR:      return "RayTracingPositionFetchKHR";
     case CapabilityDisplacementMicromapNV:           return "DisplacementMicromapNV";
+    case CapabilityRayTracingOpacityMicromapEXT:    return "RayTracingOpacityMicromapEXT";
     case CapabilityRayTracingDisplacementMicromapNV: return "CapabilityRayTracingDisplacementMicromapNV";
     case CapabilityRayQueryPositionFetchKHR:        return "RayQueryPositionFetchKHR";
     case CapabilityComputeDerivativeGroupQuadsNV:   return "ComputeDerivativeGroupQuadsNV";

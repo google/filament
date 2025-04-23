@@ -27,17 +27,20 @@
 
 #include "src/tint/lang/core/constant/splat.h"
 
-#include "src/tint/lang/core/constant/helper_test.h"
+#include "gtest/gtest.h"
 #include "src/tint/lang/core/constant/scalar.h"
+#include "src/tint/lang/core/type/f32.h"
+#include "src/tint/lang/core/type/vector.h"
 
 namespace tint::core::constant {
 namespace {
 
 using namespace tint::core::number_suffixes;  // NOLINT
 
-using ConstantTest_Value = TestHelper;
+using ConstantTest_Value = testing::Test;
 
 TEST_F(ConstantTest_Value, Equal_Scalar_Scalar) {
+    Manager constants;
     EXPECT_TRUE(constants.Get(10_i)->Equal(constants.Get(10_i)));
     EXPECT_FALSE(constants.Get(10_i)->Equal(constants.Get(20_i)));
     EXPECT_FALSE(constants.Get(20_i)->Equal(constants.Get(10_i)));
@@ -52,7 +55,8 @@ TEST_F(ConstantTest_Value, Equal_Scalar_Scalar) {
 }
 
 TEST_F(ConstantTest_Value, Equal_Splat_Splat) {
-    auto* vec3f = create<core::type::Vector>(create<core::type::F32>(), 3u);
+    Manager constants;
+    auto* vec3f = constants.types.vec(constants.types.f32(), 3u);
 
     auto* vec3f_1_1_1 = constants.Splat(vec3f, constants.Get(1_f));
     auto* vec3f_2_2_2 = constants.Splat(vec3f, constants.Get(2_f));
@@ -63,7 +67,8 @@ TEST_F(ConstantTest_Value, Equal_Splat_Splat) {
 }
 
 TEST_F(ConstantTest_Value, Equal_Composite_Composite) {
-    auto* vec3f = create<core::type::Vector>(create<core::type::F32>(), 3u);
+    Manager constants;
+    auto* vec3f = constants.types.vec(constants.types.f32(), 3u);
 
     auto* vec3f_1_1_2 = constants.Composite(
         vec3f, Vector{constants.Get(1_f), constants.Get(1_f), constants.Get(2_f)});
@@ -76,7 +81,8 @@ TEST_F(ConstantTest_Value, Equal_Composite_Composite) {
 }
 
 TEST_F(ConstantTest_Value, Equal_Splat_Composite) {
-    auto* vec3f = create<core::type::Vector>(create<core::type::F32>(), 3u);
+    Manager constants;
+    auto* vec3f = constants.types.vec(constants.types.f32(), 3u);
 
     auto* vec3f_1_1_1 = constants.Splat(vec3f, constants.Get(1_f));
     auto* vec3f_1_2_1 = constants.Composite(

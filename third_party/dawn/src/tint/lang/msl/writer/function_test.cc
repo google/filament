@@ -99,7 +99,7 @@ fragment void foo(device int* storage_var [[buffer(1)]], const constant int* uni
 }
 
 TEST_F(MslWriterTest, EntryPointParameterHandleBindingPoint) {
-    auto* t = ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32());
+    auto* t = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
     auto* texture = b.Var("t", ty.ptr<handle>(t));
     auto* sampler = b.Var("s", ty.ptr<handle>(ty.sampler()));
     texture->SetBindingPoint(0, 1);

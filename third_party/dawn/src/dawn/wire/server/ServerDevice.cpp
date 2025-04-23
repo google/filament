@@ -128,7 +128,7 @@ void Server::OnCreateComputePipelineAsyncCallback(CreatePipelineAsyncUserData* d
 
     if (status == WGPUCreatePipelineAsyncStatus_Success &&
         FillReservation(data->pipelineObjectID, pipeline) == WireResult::FatalError) {
-        cmd.status = WGPUCreatePipelineAsyncStatus_InstanceDropped;
+        cmd.status = WGPUCreatePipelineAsyncStatus_CallbackCancelled;
         cmd.message = ToOutputStringView("Destroyed before request was fulfilled.");
     }
     SerializeCommand(cmd);
@@ -170,7 +170,7 @@ void Server::OnCreateRenderPipelineAsyncCallback(CreatePipelineAsyncUserData* da
 
     if (status == WGPUCreatePipelineAsyncStatus_Success &&
         FillReservation(data->pipelineObjectID, pipeline) == WireResult::FatalError) {
-        cmd.status = WGPUCreatePipelineAsyncStatus_InstanceDropped;
+        cmd.status = WGPUCreatePipelineAsyncStatus_CallbackCancelled;
         cmd.message = ToOutputStringView("Destroyed before request was fulfilled.");
     }
     SerializeCommand(cmd);

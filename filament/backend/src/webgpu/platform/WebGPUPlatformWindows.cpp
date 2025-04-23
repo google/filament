@@ -22,11 +22,23 @@
 
 #include <cstdint>
 
+#include <Windows.h>
+
 /**
  * Windows OS specific implementation aspects of the WebGPU backend
  */
 
 namespace filament::backend {
+
+wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
+    HWND window = static_cast<HWND>(nativeWindow);
+    RECT windowRect;
+    GetWindowRect(window, &windowRect);
+    return wgpu::Extent2D{
+        .width = static_cast<uint32_t>(windowRect.right - windowRect.left),
+        .height = static_cast<uint32_t>(windowRect.bottom - windowRect.top)
+    };
+}
 
 wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags*/) {
     // TODO verify this is necessary for Dawn implementation as well:
@@ -41,12 +53,12 @@ wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags
     wgpu::SurfaceSourceWindowsHWND surfaceSourceWin{};
     surfaceSourceWin.hinstance = GetModuleHandle(nullptr);
     surfaceSourceWin.hwnd = nativeWindow;
-    wgpu::SurfaceDescriptor surfaceDescriptor{
+    const wgpu::SurfaceDescriptor surfaceDescriptor{
         .nextInChain = &surfaceSourceWin,
         .label = "windows_surface"
     };
     wgpu::Surface surface = mInstance.CreateSurface(&surfaceDescriptor);
-    FILAMENT_CHECK_POSTCONDITION(surface != nullptr) << "Unable to create Windows-backed surface.";
+    FILAMENT_CHECK_POSTCONDITION(surface.Get() != nullptr) << "Unable to create Windows-backed surface.";
     return surface;
 }
 

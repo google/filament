@@ -67,7 +67,7 @@ class PopErrorScopeEvent final : public TrackedEvent {
   private:
     void CompleteImpl(FutureID futureID, EventCompletionType completionType) override {
         if (completionType == EventCompletionType::Shutdown) {
-            mStatus = WGPUPopErrorScopeStatus_InstanceDropped;
+            mStatus = WGPUPopErrorScopeStatus_CallbackCancelled;
             mMessage = "";
         }
         if (mCallback) {
@@ -124,7 +124,7 @@ class CreatePipelineEventBase : public TrackedEvent {
         }
 
         if (completionType == EventCompletionType::Shutdown) {
-            mStatus = WGPUCreatePipelineAsyncStatus_InstanceDropped;
+            mStatus = WGPUCreatePipelineAsyncStatus_CallbackCancelled;
             mMessage = "A valid external Instance reference no longer exists.";
         }
 
@@ -188,7 +188,7 @@ class Device::DeviceLostEvent : public TrackedEvent {
   private:
     void CompleteImpl(FutureID futureID, EventCompletionType completionType) override {
         if (completionType == EventCompletionType::Shutdown) {
-            mReason = WGPUDeviceLostReason_InstanceDropped;
+            mReason = WGPUDeviceLostReason_CallbackCancelled;
             mMessage = "A valid external Instance reference no longer exists.";
         }
 
@@ -285,7 +285,7 @@ void Device::WillDropLastExternalRef() {
     Unregister();
 }
 
-WGPUStatus Device::GetLimits(WGPUSupportedLimits* limits) const {
+WGPUStatus Device::GetLimits(WGPULimits* limits) const {
     return mLimitsAndFeatures.GetLimits(limits);
 }
 
@@ -301,7 +301,7 @@ WGPUStatus Device::GetAdapterInfo(WGPUAdapterInfo* adapterInfo) const {
     return mAdapter->GetInfo(adapterInfo);
 }
 
-void Device::SetLimits(const WGPUSupportedLimits* limits) {
+void Device::SetLimits(const WGPULimits* limits) {
     return mLimitsAndFeatures.SetLimits(limits);
 }
 

@@ -28,10 +28,8 @@
 #ifndef SRC_TINT_LANG_CORE_IR_VALIDATOR_H_
 #define SRC_TINT_LANG_CORE_IR_VALIDATOR_H_
 
-#include <string>
-
 #include "src/tint/utils/containers/enum_set.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations
 namespace tint::core::ir {

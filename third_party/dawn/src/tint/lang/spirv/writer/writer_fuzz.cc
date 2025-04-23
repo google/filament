@@ -38,13 +38,13 @@ namespace {
 Result<SuccessType> IRFuzzer(core::ir::Module& module, const fuzz::ir::Context&, Options options) {
     auto check = CanGenerate(module, options);
     if (check != Success) {
-        return check;
+        return Failure{check.Failure().reason};
     }
 
     options.bindings = GenerateBindings(module);
     auto output = Generate(module, options);
     if (output != Success) {
-        return output.Failure();
+        return Failure{output.Failure().reason};
     }
 
     auto& spirv = output->spirv;

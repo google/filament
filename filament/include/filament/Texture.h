@@ -26,6 +26,7 @@
 #include <backend/Platform.h>
 
 #include <utils/compiler.h>
+#include <utils/StaticString.h>
 
 #include <utility>
 
@@ -229,8 +230,20 @@ public:
          * @param name A string to identify this Texture
          * @param len Length of name, should be less than or equal to 128
          * @return This Builder, for chaining calls.
+         * @deprecated Use name(utils::StaticString const&) instead.
          */
-         Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
+        UTILS_DEPRECATED
+        Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
+
+        /**
+         * Associate an optional name with this Texture for debugging purposes.
+         *
+         * name will show in error messages and should be kept as short as possible.
+         *
+         * @param name A string literal to identify this Texture
+         * @return This Builder, for chaining calls.
+         */
+        Builder& name(utils::StaticString const& name) noexcept;
 
         /**
          * Creates an external texture. The content must be set using setExternalImage().

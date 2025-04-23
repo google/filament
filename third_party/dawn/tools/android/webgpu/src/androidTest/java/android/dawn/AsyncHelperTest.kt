@@ -1,5 +1,6 @@
-import android.dawn.*
+package android.dawn
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -56,11 +57,9 @@ class AsyncHelperTest {
                 )
             )
 
-            assert(result.status == CreatePipelineAsyncStatus.Success) {
-                """Create render pipeline (async) should pass with a simple shader.
-                   The result was: ${result.status}
-                   The message was: ${result.message}"""
-            }
+          /* Create render pipeline (async) should pass with a simple shader.. */
+          assertEquals(result.status, CreatePipelineAsyncStatus.Success)
+
         }
     }
 }

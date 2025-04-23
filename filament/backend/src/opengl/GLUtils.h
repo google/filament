@@ -17,29 +17,26 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_GLUTILS_H
 #define TNT_FILAMENT_BACKEND_OPENGL_GLUTILS_H
 
-#include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Log.h>
+#include <utils/ostream.h>
 
 #include <backend/DriverEnums.h>
 
 #include <string_view>
 #include <unordered_set>
 
-#include <stdint.h>
 #include <stddef.h>
-#include <string.h>
+#include <stdint.h>
 
 #include "gl_headers.h"
 
-namespace filament::backend {
-namespace GLUtils {
+namespace filament::backend::GLUtils {
 
-const char* getGLError(GLenum error) noexcept;
+std::string_view getGLErrorString(GLenum error) noexcept;
 GLenum checkGLError(utils::io::ostream& out, const char* function, size_t line) noexcept;
 void assertGLError(utils::io::ostream& out, const char* function, size_t line) noexcept;
 
-const char* getFramebufferStatus(GLenum err) noexcept;
+std::string_view getFramebufferStatusString(GLenum err) noexcept;
 GLenum checkFramebufferStatus(utils::io::ostream& out, GLenum target, const char* function, size_t line) noexcept;
 void assertFramebufferStatus(utils::io::ostream& out, GLenum target, const char* function, size_t line) noexcept;
 
@@ -53,7 +50,7 @@ void assertFramebufferStatus(utils::io::ostream& out, GLenum target, const char*
 #   define CHECK_GL_FRAMEBUFFER_STATUS(out, target) { GLUtils::checkFramebufferStatus(out, target, __func__, __LINE__); }
 #endif
 
-constexpr GLuint getComponentCount(ElementType type) noexcept {
+constexpr GLuint getComponentCount(ElementType const type) noexcept {
     using ElementType = ElementType;
     switch (type) {
         case ElementType::BYTE:
@@ -87,27 +84,29 @@ constexpr GLuint getComponentCount(ElementType type) noexcept {
         case ElementType::USHORT4:
             return 4;
     }
+    // should never happen
+    return 1;
 }
 
 // ------------------------------------------------------------------------------------------------
 // Our enums to GLenum conversions
 // ------------------------------------------------------------------------------------------------
 
-constexpr GLbitfield getAttachmentBitfield(TargetBufferFlags flags) noexcept {
+constexpr GLbitfield getAttachmentBitfield(TargetBufferFlags const flags) noexcept {
     GLbitfield mask = 0;
     if (any(flags & TargetBufferFlags::COLOR_ALL)) {
-        mask |= (GLbitfield)GL_COLOR_BUFFER_BIT;
+        mask |= GLbitfield(GL_COLOR_BUFFER_BIT);
     }
     if (any(flags & TargetBufferFlags::DEPTH)) {
-        mask |= (GLbitfield)GL_DEPTH_BUFFER_BIT;
+        mask |= GLbitfield(GL_DEPTH_BUFFER_BIT);
     }
     if (any(flags & TargetBufferFlags::STENCIL)) {
-        mask |= (GLbitfield)GL_STENCIL_BUFFER_BIT;
+        mask |= GLbitfield(GL_STENCIL_BUFFER_BIT);
     }
     return mask;
 }
 
-constexpr GLenum getBufferUsage(BufferUsage usage) noexcept {
+constexpr GLenum getBufferUsage(BufferUsage const usage) noexcept {
     switch (usage) {
         case BufferUsage::STATIC:
             return GL_STATIC_DRAW;
@@ -116,7 +115,7 @@ constexpr GLenum getBufferUsage(BufferUsage usage) noexcept {
     }
 }
 
-constexpr GLenum getBufferBindingType(BufferObjectBinding bindingType) noexcept {
+constexpr GLenum getBufferBindingType(BufferObjectBinding const bindingType) noexcept {
     switch (bindingType) {
         case BufferObjectBinding::VERTEX:
             return GL_ARRAY_BUFFER;
@@ -135,13 +134,15 @@ constexpr GLenum getBufferBindingType(BufferObjectBinding bindingType) noexcept 
             return 0x90D2; // just to return something
 #endif
     }
+    // should never happen
+    return GL_ARRAY_BUFFER;
 }
 
-constexpr GLboolean getNormalization(bool normalized) noexcept {
+constexpr GLboolean getNormalization(bool const normalized) noexcept {
     return GLboolean(normalized ? GL_TRUE : GL_FALSE);
 }
 
-constexpr GLenum getComponentType(ElementType type) noexcept {
+constexpr GLenum getComponentType(ElementType const type) noexcept {
     using ElementType = ElementType;
     switch (type) {
         case ElementType::BYTE:
@@ -184,9 +185,11 @@ constexpr GLenum getComponentType(ElementType type) noexcept {
             return GL_HALF_FLOAT_OES;
 #endif
     }
+    // should never happen
+    return GL_INT;
 }
 
-constexpr GLenum getTextureTargetNotExternal(SamplerType target) noexcept {
+constexpr GLenum getTextureTargetNotExternal(SamplerType const target) noexcept {
     switch (target) {
         case SamplerType::SAMPLER_2D:
             return GL_TEXTURE_2D;
@@ -202,14 +205,16 @@ constexpr GLenum getTextureTargetNotExternal(SamplerType target) noexcept {
             // we should never be here
             return GL_TEXTURE_2D;
     }
+    // should never happen
+    return GL_TEXTURE_2D;
 }
 
-constexpr GLenum getCubemapTarget(uint16_t layer) noexcept {
+constexpr GLenum getCubemapTarget(uint16_t const layer) noexcept {
     assert_invariant(layer <= 5);
     return GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer;
 }
 
-constexpr GLenum getWrapMode(SamplerWrapMode mode) noexcept {
+constexpr GLenum getWrapMode(SamplerWrapMode const mode) noexcept {
     using SamplerWrapMode = SamplerWrapMode;
     switch (mode) {
         case SamplerWrapMode::REPEAT:
@@ -219,6 +224,8 @@ constexpr GLenum getWrapMode(SamplerWrapMode mode) noexcept {
         case SamplerWrapMode::MIRRORED_REPEAT:
             return GL_MIRRORED_REPEAT;
     }
+    // should never happen
+    return GL_CLAMP_TO_EDGE;
 }
 
 constexpr GLenum getTextureFilter(SamplerMinFilter filter) noexcept {
@@ -234,6 +241,8 @@ constexpr GLenum getTextureFilter(SamplerMinFilter filter) noexcept {
             return GL_NEAREST_MIPMAP_NEAREST
                    - GLenum(SamplerMinFilter::NEAREST_MIPMAP_NEAREST) + GLenum(filter);
     }
+    // should never happen
+    return GL_NEAREST;
 }
 
 constexpr GLenum getTextureFilter(SamplerMagFilter filter) noexcept {
@@ -241,7 +250,7 @@ constexpr GLenum getTextureFilter(SamplerMagFilter filter) noexcept {
 }
 
 
-constexpr GLenum getBlendEquationMode(BlendEquation mode) noexcept {
+constexpr GLenum getBlendEquationMode(BlendEquation const mode) noexcept {
     using BlendEquation = BlendEquation;
     switch (mode) {
         case BlendEquation::ADD:               return GL_FUNC_ADD;
@@ -250,9 +259,11 @@ constexpr GLenum getBlendEquationMode(BlendEquation mode) noexcept {
         case BlendEquation::MIN:               return GL_MIN;
         case BlendEquation::MAX:               return GL_MAX;
     }
+    // should never happen
+    return GL_FUNC_ADD;
 }
 
-constexpr GLenum getBlendFunctionMode(BlendFunction mode) noexcept {
+constexpr GLenum getBlendFunctionMode(BlendFunction const mode) noexcept {
     using BlendFunction = BlendFunction;
     switch (mode) {
         case BlendFunction::ZERO:                  return GL_ZERO;
@@ -267,9 +278,11 @@ constexpr GLenum getBlendFunctionMode(BlendFunction mode) noexcept {
         case BlendFunction::ONE_MINUS_DST_ALPHA:   return GL_ONE_MINUS_DST_ALPHA;
         case BlendFunction::SRC_ALPHA_SATURATE:    return GL_SRC_ALPHA_SATURATE;
     }
+    // should never happen
+    return GL_ONE;
 }
 
-constexpr GLenum getCompareFunc(SamplerCompareFunc func) noexcept {
+constexpr GLenum getCompareFunc(SamplerCompareFunc const func) noexcept {
     switch (func) {
         case SamplerCompareFunc::LE:    return GL_LEQUAL;
         case SamplerCompareFunc::GE:    return GL_GEQUAL;
@@ -280,28 +293,30 @@ constexpr GLenum getCompareFunc(SamplerCompareFunc func) noexcept {
         case SamplerCompareFunc::A:     return GL_ALWAYS;
         case SamplerCompareFunc::N:     return GL_NEVER;
     }
+    // should never happen
+    return GL_LEQUAL;
 }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-constexpr GLenum getTextureCompareMode(SamplerCompareMode mode) noexcept {
+constexpr GLenum getTextureCompareMode(SamplerCompareMode const mode) noexcept {
     return mode == SamplerCompareMode::NONE ?
            GL_NONE : GL_COMPARE_REF_TO_TEXTURE;
 }
 
-constexpr GLenum getTextureCompareFunc(SamplerCompareFunc func) noexcept {
+constexpr GLenum getTextureCompareFunc(SamplerCompareFunc const func) noexcept {
     return getCompareFunc(func);
 }
 #endif
 
-constexpr GLenum getDepthFunc(SamplerCompareFunc func) noexcept {
+constexpr GLenum getDepthFunc(SamplerCompareFunc const func) noexcept {
     return getCompareFunc(func);
 }
 
-constexpr GLenum getStencilFunc(SamplerCompareFunc func) noexcept {
+constexpr GLenum getStencilFunc(SamplerCompareFunc const func) noexcept {
     return getCompareFunc(func);
 }
 
-constexpr GLenum getStencilOp(StencilOperation op) noexcept {
+constexpr GLenum getStencilOp(StencilOperation const op) noexcept {
     switch (op) {
         case StencilOperation::KEEP:        return GL_KEEP;
         case StencilOperation::ZERO:        return GL_ZERO;
@@ -312,9 +327,11 @@ constexpr GLenum getStencilOp(StencilOperation op) noexcept {
         case StencilOperation::DECR_WRAP:   return GL_DECR_WRAP;
         case StencilOperation::INVERT:      return GL_INVERT;
     }
+    // should never happen
+    return GL_KEEP;
 }
 
-constexpr GLenum getFormat(PixelDataFormat format) noexcept {
+constexpr GLenum getFormat(PixelDataFormat const format) noexcept {
     using PixelDataFormat = PixelDataFormat;
     switch (format) {
         case PixelDataFormat::RGB:              return GL_RGB;
@@ -336,9 +353,11 @@ constexpr GLenum getFormat(PixelDataFormat format) noexcept {
         default: return GL_NONE;
 #endif
     }
+    // should never happen
+    return GL_RGBA;
 }
 
-constexpr GLenum getType(PixelDataType type) noexcept {
+constexpr GLenum getType(PixelDataType const type) noexcept {
     using PixelDataType = PixelDataType;
     switch (type) {
         case PixelDataType::UBYTE:                return GL_UNSIGNED_BYTE;
@@ -360,10 +379,12 @@ constexpr GLenum getType(PixelDataType type) noexcept {
         default: return GL_NONE;
 #endif
     }
+    // should never happen
+    return GL_UNSIGNED_INT;
 }
 
 #if !defined(__EMSCRIPTEN__)  && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
-constexpr GLenum getSwizzleChannel(TextureSwizzle c) noexcept {
+constexpr GLenum getSwizzleChannel(TextureSwizzle const c) noexcept {
     using TextureSwizzle = TextureSwizzle;
     switch (c) {
         case TextureSwizzle::SUBSTITUTE_ZERO:   return GL_ZERO;
@@ -373,10 +394,12 @@ constexpr GLenum getSwizzleChannel(TextureSwizzle c) noexcept {
         case TextureSwizzle::CHANNEL_2:         return GL_BLUE;
         case TextureSwizzle::CHANNEL_3:         return GL_ALPHA;
     }
+    // should never happen
+    return GL_RED;
 }
 #endif
 
-constexpr GLenum getCullingMode(CullingMode mode) noexcept {
+constexpr GLenum getCullingMode(CullingMode const mode) noexcept {
     switch (mode) {
         case CullingMode::NONE:
             // should never happen
@@ -388,11 +411,13 @@ constexpr GLenum getCullingMode(CullingMode mode) noexcept {
         case CullingMode::FRONT_AND_BACK:
             return GL_FRONT_AND_BACK;
     }
+    // should never happen
+    return GL_FRONT_AND_BACK;
 }
 
 // ES2 supported internal formats for texturing and how they  map to a format/type
 constexpr std::pair<GLenum, GLenum> textureFormatToFormatAndType(
-        TextureFormat format) noexcept {
+        TextureFormat const format) noexcept {
     switch (format) {
         case TextureFormat::R8:         return { 0x1909 /*GL_LUMINANCE*/, GL_UNSIGNED_BYTE };
         case TextureFormat::RGB8:       return { GL_RGB,                  GL_UNSIGNED_BYTE };
@@ -413,7 +438,7 @@ constexpr std::pair<GLenum, GLenum> textureFormatToFormatAndType(
 // clang loses it on this one, and generates a huge jump table when
 // inlined. So we don't  mark it as inline (only constexpr) which solves the problem,
 // strangely, when not inlined, clang simply generates an array lookup.
-constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
+constexpr /* inline */ GLenum getInternalFormat(TextureFormat const format) noexcept {
     switch (format) {
 
         /* Formats supported by our ES2 implementations */
@@ -661,7 +686,7 @@ public:
 
 unordered_string_set split(const char* extensions) noexcept;
 
-} // namespace GLUtils
-} // namespace filament::backend
+} // namespace filament::backend::GLUtils
+
 
 #endif // TNT_FILAMENT_BACKEND_OPENGL_GLUTILS_H

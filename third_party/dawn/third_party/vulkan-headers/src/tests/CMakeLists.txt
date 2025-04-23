@@ -12,7 +12,7 @@ add_test(NAME integration.add_subdirectory
         --build-and-test ${CMAKE_CURRENT_LIST_DIR}/integration
                          ${CMAKE_CURRENT_BINARY_DIR}/add_subdirectory
         --build-generator ${CMAKE_GENERATOR}
-        --build-options -DFIND_PACKAGE_TESTING=OFF -DVULKAN_HEADERS_ENABLE_MODULE=OFF
+        --build-options -DFIND_PACKAGE_TESTING=OFF -DVULKAN_HEADERS_ENABLE_MODULE=${VULKAN_HEADERS_ENABLE_MODULE}
 )
 
 set(test_install_dir "${CMAKE_CURRENT_BINARY_DIR}/install")

@@ -15,7 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_LANGOPTIONS_H
 #define LLVM_CLANG_BASIC_LANGOPTIONS_H
 
-#include "dxc/DXIL/DxilConstants.h" // For DXIL::DefaultLinkage
+#include "dxc/DXIL/DxilConstants.h" // For DXIL:: default values.
 #include "dxc/Support/HLSLVersion.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/LLVM.h"
@@ -168,6 +168,7 @@ public:
       hlsl::DXIL::DefaultLinkage::Default;
   /// Whether use row major as default matrix major.
   bool HLSLDefaultRowMajor = false;
+  unsigned MaxHLSLVectorLength = hlsl::DXIL::kDefaultMaxVectorLength;
   // HLSL Change Ends
 
   bool SPIRV = false;  // SPIRV Change

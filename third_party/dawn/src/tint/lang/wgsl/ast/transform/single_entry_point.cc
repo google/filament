@@ -122,7 +122,7 @@ Transform::ApplyResult SingleEntryPoint::Apply(const Program& src,
                 b.AST().AddGlobalVariable(ctx.Clone(c));
             },
             [&](const Function* func) {
-                if (sem.Get(func)->HasAncestorEntryPoint(entry_point->name->symbol)) {
+                if (sem.Get(func)->HasCallGraphEntryPoint(entry_point->name->symbol)) {
                     b.AST().AddFunction(ctx.Clone(func));
                 }
             },
@@ -135,9 +135,6 @@ Transform::ApplyResult SingleEntryPoint::Apply(const Program& src,
             [&](const DiagnosticDirective* d) { b.AST().AddDiagnosticDirective(ctx.Clone(d)); },  //
             TINT_ICE_ON_NO_MATCH);
     }
-
-    // Clone the entry point.
-    b.AST().AddFunction(ctx.Clone(entry_point));
 
     return resolver::Resolve(b);
 }

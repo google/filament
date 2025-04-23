@@ -111,8 +111,6 @@
 #error "internal tint header being #included from tint.h"
 #endif
 
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
-
 // Forward declarations
 namespace tint::ast {
 class CloneContext;
@@ -663,7 +661,7 @@ class Builder {
         /// @return a matrix of @p type
         ast::Type mat(const Source& source, ast::Type type, uint32_t columns, uint32_t rows) const {
             if (DAWN_LIKELY(columns >= 2 && columns <= 4 && rows >= 2 && rows <= 4)) {
-                static constexpr const char* names[] = {
+                static constexpr std::array<const char*, 9> names = {
                     "mat2x2", "mat2x3", "mat2x4",  //
                     "mat3x2", "mat3x3", "mat3x4",  //
                     "mat4x2", "mat4x3", "mat4x4",  //
@@ -3653,7 +3651,5 @@ inline GenerationID GenerationIDOf(const ast::Builder* builder) {
 }
 
 }  // namespace tint
-
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 #endif  // SRC_TINT_LANG_WGSL_AST_BUILDER_H_

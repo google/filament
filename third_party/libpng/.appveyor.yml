@@ -1,0 +1,81 @@
+version: 1.6.x-{build}
+
+branches:
+  except:
+    - /libpng[0-1][0-8]/
+    - /v[0-1][.][0-8][.][0-9]+/
+
+image:
+  - Visual Studio 2022
+
+shallow_clone: true
+
+environment:
+  matrix:
+    - TOOLCHAIN: vstudio
+      AUTOMATION: cmake
+      ARCH: x86
+    - TOOLCHAIN: vstudio
+      AUTOMATION: cmake
+      ARCH: x64
+    - TOOLCHAIN: vstudio
+      AUTOMATION: cmake
+      ARCH: arm64
+    - TOOLCHAIN: llvm
+      AUTOMATION: cmake
+      ARCH: x64
+    - TOOLCHAIN: msys2
+      AUTOMATION: cmake
+      ARCH: i686
+    - TOOLCHAIN: msys2
+      AUTOMATION: cmake
+      ARCH: x86_64
+    - TOOLCHAIN: msys2
+      AUTOMATION: configure
+      ARCH: i686
+    - TOOLCHAIN: msys2
+      AUTOMATION: configure
+      ARCH: x86_64
+    - TOOLCHAIN: msys2
+      AUTOMATION: makefiles
+      ARCH: i686
+    - TOOLCHAIN: msys2
+      AUTOMATION: makefiles
+      ARCH: x86_64
+
+install:
+  - 'if "%TOOLCHAIN%"=="vstudio" C:\tools\vcpkg\vcpkg.exe install zlib:%ARCH%-windows'
+  - 'if "%TOOLCHAIN%"=="vstudio" C:\tools\vcpkg\vcpkg.exe integrate install'
+  - 'if "%TOOLCHAIN%"=="llvm" C:\tools\vcpkg\vcpkg.exe install zlib:%ARCH%-windows'
+  - 'if "%TOOLCHAIN%"=="llvm" C:\tools\vcpkg\vcpkg.exe integrate install'
+  - 'if "%TOOLCHAIN%"=="msys2" if "%AUTOMATION%"=="cmake" C:\msys64\usr\bin\pacman.exe -S --noconfirm mingw-w64-%ARCH%-cmake mingw-w64-%ARCH%-ninja'
+
+before_build:
+  - 'if "%TOOLCHAIN%"=="vstudio" set CI_CMAKE_GENERATOR=Visual Studio 17 2022'
+  - 'if "%TOOLCHAIN%"=="vstudio" set CI_CMAKE_TOOLCHAIN_FILE=C:\tools\vcpkg\scripts\buildsystems\vcpkg.cmake'
+  - 'if "%TOOLCHAIN%"=="vstudio" if "%ARCH%"=="x86" set CI_CMAKE_GENERATOR_PLATFORM=Win32'
+  - 'if "%TOOLCHAIN%"=="vstudio" if "%ARCH%"=="x64" set CI_CMAKE_GENERATOR_PLATFORM=x64'
+  - 'if "%TOOLCHAIN%"=="vstudio" if "%ARCH%"=="arm64" set CI_CMAKE_GENERATOR_PLATFORM=ARM64'
+  - 'if "%TOOLCHAIN%"=="vstudio" if "%ARCH%"=="arm64" set CI_CMAKE_VARS=-DPNG_TESTS=0'
+  - 'if "%TOOLCHAIN%"=="llvm" set CI_CMAKE_GENERATOR=Ninja'
+  - 'if "%TOOLCHAIN%"=="llvm" set CI_CMAKE_TOOLCHAIN_FILE=C:\tools\vcpkg\scripts\buildsystems\vcpkg.cmake'
+  - 'if "%TOOLCHAIN%"=="llvm" set CI_CC=clang'
+  - 'if "%TOOLCHAIN%"=="msys2" set CI_CMAKE_GENERATOR=Ninja'
+  - 'if "%TOOLCHAIN%"=="msys2" set CI_CC=gcc'
+  - 'if "%TOOLCHAIN%"=="msys2" if "%ARCH%"=="i686" set MSYSTEM=MINGW32'
+  - 'if "%TOOLCHAIN%"=="msys2" if "%ARCH%"=="x86_64" set MSYSTEM=MINGW64'
+  - 'set CI_CMAKE_BUILD_FLAGS=-j2'
+  - 'set CI_CTEST_FLAGS=-j2'
+  - 'set CI_MAKE_FLAGS=-j2'
+  - 'set CI_MAKEFILES=scripts/makefile.gcc scripts/makefile.msys scripts/makefile.std'
+
+build_script:
+  - 'if "%TOOLCHAIN%"=="vstudio" C:\msys64\usr\bin\bash.exe -l "%APPVEYOR_BUILD_FOLDER%\ci\ci_verify_cmake.sh"'
+  - 'if "%TOOLCHAIN%"=="llvm" C:\msys64\usr\bin\bash.exe -l "%APPVEYOR_BUILD_FOLDER%\ci\ci_verify_cmake.sh"'
+  - 'if "%TOOLCHAIN%"=="msys2" if "%AUTOMATION%"=="cmake" C:\msys64\usr\bin\bash.exe -l "%APPVEYOR_BUILD_FOLDER%\ci\ci_verify_cmake.sh"'
+  - 'if "%TOOLCHAIN%"=="msys2" if "%AUTOMATION%"=="configure" C:\msys64\usr\bin\bash.exe -l "%APPVEYOR_BUILD_FOLDER%\ci\ci_verify_configure.sh"'
+  - 'if "%TOOLCHAIN%"=="msys2" if "%AUTOMATION%"=="makefiles" C:\msys64\usr\bin\bash.exe -l "%APPVEYOR_BUILD_FOLDER%\ci\ci_verify_makefiles.sh"'
+
+cache:
+  - 'C:\tools\vcpkg\installed'
+  - 'C:\msys64\var\cache\pacman'

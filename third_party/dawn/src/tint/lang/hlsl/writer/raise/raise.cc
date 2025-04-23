@@ -59,7 +59,6 @@
 #include "src/tint/lang/hlsl/writer/raise/replace_default_only_switch.h"
 #include "src/tint/lang/hlsl/writer/raise/replace_non_indexable_mat_vec_stores.h"
 #include "src/tint/lang/hlsl/writer/raise/shader_io.h"
-#include "src/tint/utils/result/result.h"
 
 namespace tint::hlsl::writer {
 

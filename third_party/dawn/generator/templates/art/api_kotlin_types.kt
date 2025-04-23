@@ -70,42 +70,6 @@
         {%- endif %}
     {%- elif type.name.get() == 'bool' -%}
         Boolean{{ '?' if optional }}{% if default_value %} = {{ default_value }}{% endif %}
-    {%- elif type.name.get() == 'float' -%}
-        Float{{ '?' if optional }}{% if default_value %} ={{ ' ' }}
-        {{- 'Float.NaN' if default_value == 'NAN' else default_value or '0.0f' }}{% endif %}
-    {%- elif type.name.get() == 'double' -%}
-        Double{{ '?' if optional }}{% if default_value %} ={{ ' ' }}
-        {{- 'Double.NaN' if default_value == 'NAN' else default_value or '0.0' }}{% endif %}
-    {%- elif type.name.get() in ['int8_t', 'uint8_t'] -%}
-        Byte{{ '?' if optional }}{% if default_value %} = {{ default_value }}{% endif %}
-    {%- elif type.name.get() in ['int16_t', 'uint16_t'] -%}
-        Short{{ '?' if optional }}{% if default_value %} = {{ default_value }}{% endif %}
-    {%- elif type.name.get() in ['int', 'int32_t', 'uint32_t'] -%}
-        Int
-        {%- if default_value not in [None, undefined] -%}
-            {%- if default_value is string and default_value.startswith('WGPU_') -%}
-                {{ ' ' }}= {{ 'Constants.' + default_value | replace('WGPU_', '') }}
-            {%- elif default_value == 'nullptr' -%}
-                ? = null
-            {%- elif default_value == '0xFFFFFFFF' -%}
-                {{ ' ' }}= -0x7FFFFFFF
-            {%- else -%}
-                {{ ' ' }}= {{ default_value }}
-            {%- endif %}
-        {% endif %}
-    {%- elif type.name.get() in ['int64_t', 'uint64_t', 'size_t'] -%}
-        Long
-        {%- if default_value not in [None, undefined] %}
-            {%- if default_value is string and default_value.startswith('WGPU_') -%}
-                {{ ' ' }}= {{ 'Constants.' + default_value | replace('WGPU_', '') }}
-            {%- elif default_value == 'nullptr' -%}
-                ? = null
-            {%- elif default_value == '0xFFFFFFFFFFFFFFFF' -%}
-                {{ ' ' }}= -0x7FFFFFFFFFFFFFFF
-            {%- else -%}
-                {{ ' ' }}= {{ default_value }}
-            {%- endif %}
-        {% endif %}
     {%- elif type.name.get() in ['void *', 'void const *'] %}
         //* Hack: void* for a return value is a ByteBuffer.
         {% if not arg.name %}
@@ -113,6 +77,41 @@
         {% else %}
             Long
         {% endif %}
+    {%- elif type.category == 'native' -%}
+        {%- set ns = namespace(type_name='', default_value=default_value) -%}
+        {%- if type.name.get() == 'float' -%}
+            {%- set ns.type_name = 'Float' -%}
+        {%- elif type.name.get() == 'double' -%}
+            {%- set ns.type_name = 'Double' -%}
+        {%- elif type.name.get() in ['int8_t', 'uint8_t'] -%}
+            {%- set ns.type_name = 'Byte' -%}
+        {%- elif type.name.get() in ['int16_t', 'uint16_t'] -%}
+            {%- set ns.type_name = 'Short' -%}
+        {%- elif type.name.get() in ['int', 'int32_t', 'uint32_t'] -%}
+            {%- set ns.type_name = 'Int' -%}
+            {%- if ns.default_value == '0xFFFFFFFF' -%}
+                {%- set ns.default_value = '-0x7FFFFFFF' -%}
+            {%- endif -%}
+        {%- elif type.name.get() in ['int64_t', 'uint64_t', 'size_t'] -%}
+            {%- set ns.type_name = 'Long' -%}
+            {%- if ns.default_value == '0xFFFFFFFFFFFFFFFF' -%}
+                {%- set ns.default_value = '-0x7FFFFFFFFFFFFFFF' -%}
+            {%- endif -%}
+        {%- else -%}
+            {{ unreachable_code('Unsupported native type: ' + type.name.get()) }}
+        {%- endif -%}
+        {%- if optional -%}
+            {%- set ns.type_name = ns.type_name + '?' -%}
+        {%- endif -%}
+        {{ ns.type_name }}
+        {%- if ns.default_value not in [None, undefined] -%} {{ ' ' }}={{ ' ' }}
+            {%- set constant = find_by_name(by_category["constant"], ns.default_value) -%}
+            {%- if constant -%}
+                Constants.{{ as_ktName(constant.name.SNAKE_CASE()) }}
+            {%- else -%}
+                {{ ns.default_value }}
+            {%- endif -%}
+        {%- endif -%}
     {%- else -%}
         {{ unreachable_code('Unsupported type: ' + type.name.get()) }}
     {%- endif %}

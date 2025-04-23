@@ -264,7 +264,7 @@ class ServiceImplementationDmaBuf : public ServiceImplementation {
         // import's constraint.
         memoryRequirements.memoryTypeBits &= fdProperties.memoryTypeBits;
         int memoryTypeIndex = mDevice->GetResourceMemoryAllocator()->FindBestTypeIndex(
-            memoryRequirements, MemoryKind::Opaque);
+            memoryRequirements, MemoryKind::DeviceLocal);
         DAWN_INVALID_IF(memoryTypeIndex == -1,
                         "Unable to find an appropriate memory type for import.");
 

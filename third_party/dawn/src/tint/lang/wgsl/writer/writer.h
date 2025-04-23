@@ -31,7 +31,7 @@
 #include "src/tint/lang/wgsl/writer/ir_to_program/program_options.h"
 #include "src/tint/lang/wgsl/writer/options.h"
 #include "src/tint/lang/wgsl/writer/output.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations
 namespace tint {

@@ -38,7 +38,6 @@
 #include "src/tint/lang/core/type/texture_dimension.h"
 #include "src/tint/lang/core/type/vector.h"
 #include "src/tint/lang/msl/builtin_fn.h"
-#include "src/tint/utils/result/result.h"
 
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
@@ -49,8 +48,7 @@ namespace {
 using IR_MslMemberBuiltinCallTest = core::ir::IRTestHelper;
 
 TEST_F(IR_MslMemberBuiltinCallTest, Clone) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()));
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
     auto* s = b.FunctionParam("s", ty.sampler());
     auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
     auto* builtin =
@@ -59,8 +57,8 @@ TEST_F(IR_MslMemberBuiltinCallTest, Clone) {
     auto* new_b = clone_ctx.Clone(builtin);
 
     EXPECT_NE(builtin, new_b);
-    EXPECT_NE(builtin->Result(0), new_b->Result(0));
-    EXPECT_EQ(mod.Types().void_(), new_b->Result(0)->Type());
+    EXPECT_NE(builtin->Result(), new_b->Result());
+    EXPECT_EQ(mod.Types().void_(), new_b->Result()->Type());
 
     EXPECT_EQ(BuiltinFn::kSample, new_b->Func());
 
@@ -85,7 +83,7 @@ TEST_F(IR_MslMemberBuiltinCallTest, DoesNotMatchNonMemberFunction) {
     auto res = core::ir::Validate(mod);
     ASSERT_NE(res, Success);
     EXPECT_EQ(
-        res.Failure().reason.Str(),
+        res.Failure().reason,
         R"(:3:17 error: atomic_load_explicit: no matching call to 'atomic_load_explicit(ptr<workgroup, atomic<u32>, read_write>, u32)'
 
     %3:u32 = %t.atomic_load_explicit 0u
@@ -100,6 +98,164 @@ note: # Disassembly
   $B1: {
     %3:u32 = %t.atomic_load_explicit 0u
     ret %3
+  }
+}
+)");
+}
+
+TEST_F(IR_MslMemberBuiltinCallTest, Valid) {
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
+    auto* func = b.Function("foo", ty.void_());
+    func->SetParams({t});
+    b.Append(func->Block(), [&] {
+        b.MemberCall<MemberBuiltinCall>(mod.Types().u32(), BuiltinFn::kGetWidth, t, 0_u);
+        b.Return(func);
+    });
+
+    auto res = core::ir::Validate(mod);
+    ASSERT_EQ(res, Success);
+}
+
+TEST_F(IR_MslMemberBuiltinCallTest, MissingResults) {
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
+    auto* func = b.Function("foo", ty.void_());
+    func->SetParams({t});
+    b.Append(func->Block(), [&] {
+        auto* m = b.MemberCall<MemberBuiltinCall>(mod.Types().u32(), BuiltinFn::kGetWidth, t, 0_u);
+        m->ClearResults();
+        b.Return(func);
+    });
+
+    auto res = core::ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason,
+              R"(:3:16 error: get_width: expected exactly 1 results, got 0
+    undef = %t.get_width 0u
+               ^^^^^^^^^
+
+:2:3 note: in block
+  $B1: {
+  ^^^
+
+note: # Disassembly
+%foo = func(%t:texture_2d<f32>):void {
+  $B1: {
+    undef = %t.get_width 0u
+    ret
+  }
+}
+)");
+}
+
+TEST_F(IR_MslMemberBuiltinCallTest, TooFewArgs) {
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
+    auto* func = b.Function("foo", ty.void_());
+    func->SetParams({t});
+    b.Append(func->Block(), [&] {
+        b.MemberCall<MemberBuiltinCall>(mod.Types().u32(), BuiltinFn::kGetWidth, t);
+        b.Return(func);
+    });
+
+    auto res = core::ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason,
+              R"(:3:17 error: get_width: no matching call to 'get_width(texture_2d<f32>)'
+
+16 candidate functions:
+ • 'get_width(texture: texture_depth_multisampled_2d  ✗ ) -> u32'
+ • 'get_width(texture: texture_storage_1d<F, A>  ✗ ) -> u32'
+ • 'get_width(texture: texture_1d<T>  ✗ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_2d<T>  ✓ , u32  ✗ ) -> u32' where:
+      ✓  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_multisampled_2d<T>  ✗ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_depth_2d  ✗ , u32  ✗ ) -> u32'
+ • 'get_width(texture: texture_depth_2d_array  ✗ , u32  ✗ ) -> u32'
+ • 'get_width(texture: texture_depth_cube  ✗ , u32  ✗ ) -> u32'
+ • 'get_width(texture: texture_depth_cube_array  ✗ , u32  ✗ ) -> u32'
+ • 'get_width(texture: texture_storage_2d<F, A>  ✗ , u32  ✗ ) -> u32'
+ • 'get_width(texture: texture_storage_2d_array<F, A>  ✗ , u32  ✗ ) -> u32'
+ • 'get_width(texture: texture_storage_3d<F, A>  ✗ , u32  ✗ ) -> u32'
+ • 'get_width(texture: texture_2d_array<T>  ✗ , u32  ✗ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_3d<T>  ✗ , u32  ✗ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_cube<T>  ✗ , u32  ✗ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_cube_array<T>  ✗ , u32  ✗ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+
+    %3:u32 = %t.get_width
+                ^^^^^^^^^
+
+:2:3 note: in block
+  $B1: {
+  ^^^
+
+note: # Disassembly
+%foo = func(%t:texture_2d<f32>):void {
+  $B1: {
+    %3:u32 = %t.get_width
+    ret
+  }
+}
+)");
+}
+
+TEST_F(IR_MslMemberBuiltinCallTest, TooManyArgs) {
+    auto* t = b.FunctionParam("t", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()));
+    auto* func = b.Function("foo", ty.void_());
+    func->SetParams({t});
+    b.Append(func->Block(), [&] {
+        b.MemberCall<MemberBuiltinCall>(mod.Types().u32(), BuiltinFn::kGetWidth, t, 0_u, 1_u, 2_u);
+        b.Return(func);
+    });
+
+    auto res = core::ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_EQ(
+        res.Failure().reason,
+        R"(:3:17 error: get_width: no matching call to 'get_width(texture_2d<f32>, u32, u32, u32)'
+
+16 candidate functions:
+ • 'get_width(texture: texture_2d<T>  ✓ , u32  ✓ ) -> u32' where:
+      ✗  overload expects 2 arguments, call passed 4 arguments
+      ✓  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_depth_2d  ✗ , u32  ✓ ) -> u32'
+ • 'get_width(texture: texture_depth_2d_array  ✗ , u32  ✓ ) -> u32'
+ • 'get_width(texture: texture_depth_cube  ✗ , u32  ✓ ) -> u32'
+ • 'get_width(texture: texture_depth_cube_array  ✗ , u32  ✓ ) -> u32'
+ • 'get_width(texture: texture_storage_2d<F, A>  ✗ , u32  ✓ ) -> u32'
+ • 'get_width(texture: texture_storage_2d_array<F, A>  ✗ , u32  ✓ ) -> u32'
+ • 'get_width(texture: texture_storage_3d<F, A>  ✗ , u32  ✓ ) -> u32'
+ • 'get_width(texture: texture_2d_array<T>  ✗ , u32  ✓ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_3d<T>  ✗ , u32  ✓ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_cube<T>  ✗ , u32  ✓ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_cube_array<T>  ✗ , u32  ✓ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_depth_multisampled_2d  ✗ ) -> u32'
+ • 'get_width(texture: texture_storage_1d<F, A>  ✗ ) -> u32'
+ • 'get_width(texture: texture_1d<T>  ✗ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'get_width(texture: texture_multisampled_2d<T>  ✗ ) -> u32' where:
+      ✗  'T' is 'f32', 'i32' or 'u32'
+
+    %3:u32 = %t.get_width 0u, 1u, 2u
+                ^^^^^^^^^
+
+:2:3 note: in block
+  $B1: {
+  ^^^
+
+note: # Disassembly
+%foo = func(%t:texture_2d<f32>):void {
+  $B1: {
+    %3:u32 = %t.get_width 0u, 1u, 2u
+    ret
   }
 }
 )");

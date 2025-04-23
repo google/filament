@@ -2500,9 +2500,11 @@ void CGMSHLSLRuntime::AddHLSLFunctionInfo(Function *F, const FunctionDecl *FD) {
 
     // Type annotation for this pointer.
     if (const CXXMethodDecl *MFD = dyn_cast<CXXMethodDecl>(FD)) {
-      const CXXRecordDecl *RD = MFD->getParent();
-      QualType Ty = CGM.getContext().getTypeDeclType(RD);
-      AddTypeAnnotation(Ty, dxilTypeSys, arrayEltSize);
+      if (!MFD->isStatic()) {
+        const CXXRecordDecl *RD = MFD->getParent();
+        QualType Ty = CGM.getContext().getTypeDeclType(RD);
+        AddTypeAnnotation(Ty, dxilTypeSys, arrayEltSize);
+      }
     }
 
     for (const ValueDecl *param : FD->params()) {
@@ -3375,48 +3377,6 @@ void CGMSHLSLRuntime::CreateSubobject(
   }
 }
 
-static void CollectScalarTypes(std::vector<QualType> &ScalarTys, QualType Ty) {
-  if (Ty->isRecordType()) {
-    if (hlsl::IsHLSLMatType(Ty)) {
-      QualType EltTy = hlsl::GetHLSLMatElementType(Ty);
-      unsigned row = 0;
-      unsigned col = 0;
-      hlsl::GetRowsAndCols(Ty, row, col);
-      unsigned size = col * row;
-      for (unsigned i = 0; i < size; i++) {
-        CollectScalarTypes(ScalarTys, EltTy);
-      }
-    } else if (hlsl::IsHLSLVecType(Ty)) {
-      QualType EltTy = hlsl::GetHLSLVecElementType(Ty);
-      unsigned row = 0;
-      unsigned col = 0;
-      hlsl::GetRowsAndColsForAny(Ty, row, col);
-      unsigned size = col;
-      for (unsigned i = 0; i < size; i++) {
-        CollectScalarTypes(ScalarTys, EltTy);
-      }
-    } else {
-      const RecordType *RT = Ty->getAs<RecordType>();
-      RecordDecl *RD = RT->getDecl();
-      for (FieldDecl *field : RD->fields())
-        CollectScalarTypes(ScalarTys, field->getType());
-    }
-  } else if (Ty->isArrayType()) {
-    const clang::ArrayType *AT = Ty->getAsArrayTypeUnsafe();
-    QualType EltTy = AT->getElementType();
-    // Set it to 5 for unsized array.
-    unsigned size = 5;
-    if (AT->isConstantArrayType()) {
-      size = cast<ConstantArrayType>(AT)->getSize().getLimitedValue();
-    }
-    for (unsigned i = 0; i < size; i++) {
-      CollectScalarTypes(ScalarTys, EltTy);
-    }
-  } else {
-    ScalarTys.emplace_back(Ty);
-  }
-}
-
 bool CGMSHLSLRuntime::SetUAVSRV(SourceLocation loc,
                                 hlsl::DxilResourceBase::Class resClass,
                                 DxilResource *hlslRes, QualType QualTy) {
@@ -3443,66 +3403,13 @@ bool CGMSHLSLRuntime::SetUAVSRV(SourceLocation loc,
     hlslRes->SetSampleCount(sampleCount);
   }
 
-  if (hlsl::DxilResource::IsAnyTexture(kind)) {
-    const ClassTemplateSpecializationDecl *templateDecl =
-        cast<ClassTemplateSpecializationDecl>(RD);
-    const clang::TemplateArgument &texelTyArg =
-        templateDecl->getTemplateArgs()[0];
-    llvm::Type *texelTy = CGM.getTypes().ConvertType(texelTyArg.getAsType());
-    if (!texelTy->isFloatingPointTy() && !texelTy->isIntegerTy() &&
-        !hlsl::IsHLSLVecType(texelTyArg.getAsType())) {
-      DiagnosticsEngine &Diags = CGM.getDiags();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "texture resource texel type must be scalar or vector");
-      Diags.Report(loc, DiagID);
-      return false;
-    }
-  }
-
   QualType resultTy = hlsl::GetHLSLResourceResultType(QualTy);
   if (kind != hlsl::DxilResource::Kind::StructuredBuffer &&
       !resultTy.isNull()) {
     QualType Ty = resultTy;
     QualType EltTy = Ty;
-    if (hlsl::IsHLSLVecType(Ty)) {
+    if (hlsl::IsHLSLVecType(Ty))
       EltTy = hlsl::GetHLSLVecElementType(Ty);
-    } else if (hlsl::IsHLSLMatType(Ty)) {
-      EltTy = hlsl::GetHLSLMatElementType(Ty);
-    } else if (hlsl::IsHLSLAggregateType(resultTy)) {
-      // Struct or array in a none-struct resource.
-      std::vector<QualType> ScalarTys;
-      CollectScalarTypes(ScalarTys, resultTy);
-      unsigned size = ScalarTys.size();
-      if (size == 0) {
-        DiagnosticsEngine &Diags = CGM.getDiags();
-        unsigned DiagID = Diags.getCustomDiagID(
-            DiagnosticsEngine::Error,
-            "object's templated type must have at least one element");
-        Diags.Report(loc, DiagID);
-        return false;
-      }
-      if (size > 4) {
-        DiagnosticsEngine &Diags = CGM.getDiags();
-        unsigned DiagID = Diags.getCustomDiagID(
-            DiagnosticsEngine::Error, "elements of typed buffers and textures "
-                                      "must fit in four 32-bit quantities");
-        Diags.Report(loc, DiagID);
-        return false;
-      }
-
-      EltTy = ScalarTys[0];
-      for (QualType ScalarTy : ScalarTys) {
-        if (ScalarTy != EltTy) {
-          DiagnosticsEngine &Diags = CGM.getDiags();
-          unsigned DiagID = Diags.getCustomDiagID(
-              DiagnosticsEngine::Error,
-              "all template type components must have the same type");
-          Diags.Report(loc, DiagID);
-          return false;
-        }
-      }
-    }
 
     bool bSNorm = false;
     bool bHasNormAttribute = hlsl::HasHLSLUNormSNorm(Ty, &bSNorm);
@@ -3510,11 +3417,20 @@ bool CGMSHLSLRuntime::SetUAVSRV(SourceLocation loc,
     if (const BuiltinType *BTy = EltTy->getAs<BuiltinType>()) {
       CompType::Kind kind = BuiltinTyToCompTy(BTy, bHasNormAttribute && bSNorm,
                                               bHasNormAttribute && !bSNorm);
-      // 64bits types are implemented with u32.
-      if (kind == CompType::Kind::U64 || kind == CompType::Kind::I64 ||
-          kind == CompType::Kind::SNormF64 ||
-          kind == CompType::Kind::UNormF64 || kind == CompType::Kind::F64) {
+      // Boolean, 64-bit, and packed types are implemented with u32.
+      switch (kind) {
+      case CompType::Kind::I1:
+      case CompType::Kind::U64:
+      case CompType::Kind::I64:
+      case CompType::Kind::F64:
+      case CompType::Kind::SNormF64:
+      case CompType::Kind::UNormF64:
+      case CompType::Kind::PackedS8x32:
+      case CompType::Kind::PackedU8x32:
         kind = CompType::Kind::U32;
+        break;
+      default:
+        break;
       }
       hlslRes->SetCompType(kind);
     } else {

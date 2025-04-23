@@ -281,7 +281,7 @@ TEST_F(ResolverDiagnosticControlTest, UnrecognizedChromiumRuleName_Directive) {
     EXPECT_EQ(r()->error(),
               R"(12:34 warning: unrecognized diagnostic rule 'chromium.unreachable_cod'
 Did you mean 'chromium.unreachable_code'?
-Possible values: 'chromium.unreachable_code')");
+Possible values: 'chromium.subgroup_matrix_uniformity', 'chromium.unreachable_code')");
 }
 
 TEST_F(ResolverDiagnosticControlTest, UnrecognizedChromiumRuleName_Attribute) {
@@ -293,7 +293,7 @@ TEST_F(ResolverDiagnosticControlTest, UnrecognizedChromiumRuleName_Attribute) {
     EXPECT_EQ(r()->error(),
               R"(12:34 warning: unrecognized diagnostic rule 'chromium.unreachable_cod'
 Did you mean 'chromium.unreachable_code'?
-Possible values: 'chromium.unreachable_code')");
+Possible values: 'chromium.subgroup_matrix_uniformity', 'chromium.unreachable_code')");
 }
 
 TEST_F(ResolverDiagnosticControlTest, UnrecognizedOtherRuleName_Directive) {
@@ -340,10 +340,10 @@ TEST_F(ResolverDiagnosticControlTest, Conflict_SameUnknownNameDifferentSeverity_
     EXPECT_EQ(r()->error(),
               R"(12:34 warning: unrecognized diagnostic rule 'chromium.unreachable_codes'
 Did you mean 'chromium.unreachable_code'?
-Possible values: 'chromium.unreachable_code'
+Possible values: 'chromium.subgroup_matrix_uniformity', 'chromium.unreachable_code'
 56:78 warning: unrecognized diagnostic rule 'chromium.unreachable_codes'
 Did you mean 'chromium.unreachable_code'?
-Possible values: 'chromium.unreachable_code'
+Possible values: 'chromium.subgroup_matrix_uniformity', 'chromium.unreachable_code'
 56:78 error: conflicting diagnostic directive
 12:34 note: severity of 'chromium.unreachable_codes' set to 'off' here)");
 }
@@ -394,10 +394,10 @@ TEST_F(ResolverDiagnosticControlTest, Conflict_SameUnknownNameDifferentSeverity_
     EXPECT_EQ(r()->error(),
               R"(12:34 warning: unrecognized diagnostic rule 'chromium.unreachable_codes'
 Did you mean 'chromium.unreachable_code'?
-Possible values: 'chromium.unreachable_code'
+Possible values: 'chromium.subgroup_matrix_uniformity', 'chromium.unreachable_code'
 56:78 warning: unrecognized diagnostic rule 'chromium.unreachable_codes'
 Did you mean 'chromium.unreachable_code'?
-Possible values: 'chromium.unreachable_code'
+Possible values: 'chromium.subgroup_matrix_uniformity', 'chromium.unreachable_code'
 56:78 error: conflicting diagnostic attribute
 12:34 note: severity of 'chromium.unreachable_codes' set to 'off' here)");
 }

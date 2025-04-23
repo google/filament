@@ -28,10 +28,7 @@
 #ifndef SRC_TINT_LANG_SPIRV_WRITER_RAISE_HANDLE_MATRIX_ARITHMETIC_H_
 #define SRC_TINT_LANG_SPIRV_WRITER_RAISE_HANDLE_MATRIX_ARITHMETIC_H_
 
-#include <string>
-
-#include "src/tint/utils/diagnostic/diagnostic.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

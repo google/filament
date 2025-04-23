@@ -84,7 +84,7 @@ bool IsOne(Value* v) {
 bool IsIncrementOrDecrementOfVar(const Var& var, Value* val) {
     auto is_var_op_one = [&](Value* a, Value* b) {
         if (auto* a_load = As<Load>(a)) {
-            return (a_load->From() == var.Result(0)) && IsOne(b);
+            return (a_load->From() == var.Result()) && IsOne(b);
         }
         return false;
     };
@@ -127,7 +127,7 @@ struct LoopAnalysisImpl {
                     continue;
                 }
 
-                const auto* pty = var->Result(0)->Type()->As<core::type::Pointer>();
+                const auto* pty = var->Result()->Type()->As<core::type::Pointer>();
                 if (!pty->StoreType()->IsIntegerScalar()) {
                     break;
                 }
@@ -151,7 +151,7 @@ struct LoopAnalysisImpl {
         // Look for a store to the index in the continuing block.
         // Make sure there is only one, and make sure that the only other uses are loads.
         Store* single_store_in_continue_block = nullptr;
-        const auto& uses = index.Result(0)->UsagesUnsorted();
+        const auto& uses = index.Result()->UsagesUnsorted();
         for (auto& use : uses) {
             if (auto* store = use->instruction->As<Store>()) {
                 if (store->Block() != loop.Continuing()) {
@@ -210,7 +210,7 @@ struct LoopAnalysisImpl {
         // Returns `true` if the given value is a load of the index variable.
         auto is_index = [&index](Value* v) {
             if (auto* load = As<Load>(UnwrapBitcast(v))) {
-                return load->From() == index.Result(0);
+                return load->From() == index.Result();
             }
             return false;
         };

@@ -240,6 +240,7 @@ class Disassembler {
     void EmitInstruction(const Instruction* inst);
     void EmitValueWithType(const Instruction* val);
     void EmitValueWithType(const Value* val);
+    StyledText ValueToStyledText(const Value* val);
     void EmitValue(const Value* val);
     void EmitBinary(const Binary* b);
     void EmitUnary(const Unary* b);

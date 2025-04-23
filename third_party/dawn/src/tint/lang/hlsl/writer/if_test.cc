@@ -156,7 +156,7 @@ TEST_F(HlslWriterTest, IfWithSinglePhi) {
     auto* func = b.ComputeFunction("foo");
     b.Append(func->Block(), [&] {
         auto* i = b.If(true);
-        i->SetResults(b.InstructionResult(ty.i32()));
+        i->SetResult(b.InstructionResult(ty.i32()));
         b.Append(i->True(), [&] {  //
             b.ExitIf(i, 10_i);
         });

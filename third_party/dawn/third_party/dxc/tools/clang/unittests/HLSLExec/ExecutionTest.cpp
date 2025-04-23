@@ -820,10 +820,10 @@ public:
         return false;
       }
 
-      if (GetModuleHandle("d3d10warp.dll") != NULL) {
-        CHAR szFullModuleFilePath[MAX_PATH] = "";
-        GetModuleFileName(GetModuleHandle("d3d10warp.dll"),
-                          szFullModuleFilePath, sizeof(szFullModuleFilePath));
+      if (GetModuleHandleW(L"d3d10warp.dll") != NULL) {
+        WCHAR szFullModuleFilePath[MAX_PATH] = L"";
+        GetModuleFileNameW(GetModuleHandleW(L"d3d10warp.dll"),
+                           szFullModuleFilePath, sizeof(szFullModuleFilePath));
         WEX::Logging::Log::Comment(WEX::Common::String().Format(
             L"WARP driver loaded from: %S", szFullModuleFilePath));
       }
@@ -6881,22 +6881,6 @@ ToleranceType ToleranceStringToEnum(LPCWSTR toleranceType) {
 }
 
 static bool CompareOutputWithExpectedValueFloat(
-    float output, float ref, ToleranceType type, double tolerance,
-    hlsl::DXIL::Float32DenormMode mode = hlsl::DXIL::Float32DenormMode::Any) {
-  if (type == ToleranceType::RELATIVE_EPSILON) {
-    return CompareFloatRelativeEpsilon(output, ref, (int)tolerance, mode);
-  } else if (type == ToleranceType::EPSILON) {
-    return CompareFloatEpsilon(output, ref, (float)tolerance, mode);
-  } else if (type == ToleranceType::ULP) {
-    return CompareFloatULP(output, ref, (int)tolerance, mode);
-  } else {
-    LogErrorFmt(L"Failed to read comparison type %S", type);
-  }
-
-  return false;
-}
-
-static bool CompareOutputWithExpectedValueFloat(
     float output, float ref, LPCWSTR type, double tolerance,
     hlsl::DXIL::Float32DenormMode mode = hlsl::DXIL::Float32DenormMode::Any) {
   if (_wcsicmp(type, L"Relative") == 0) {
@@ -6920,21 +6904,6 @@ static bool VerifyOutputWithExpectedValueFloat(
 }
 
 static bool CompareOutputWithExpectedValueHalf(uint16_t output, uint16_t ref,
-                                               ToleranceType type,
-                                               double tolerance) {
-  if (type == ToleranceType::RELATIVE_EPSILON) {
-    return CompareHalfRelativeEpsilon(output, ref, (int)tolerance);
-  } else if (type == ToleranceType::EPSILON) {
-    return CompareHalfEpsilon(output, ref, (float)tolerance);
-  } else if (type == ToleranceType::ULP) {
-    return CompareHalfULP(output, ref, (float)tolerance);
-  } else {
-    LogErrorFmt(L"Failed to read comparison type %S", type);
-    return false;
-  }
-}
-
-static bool CompareOutputWithExpectedValueHalf(uint16_t output, uint16_t ref,
                                                LPCWSTR type, double tolerance) {
   if (_wcsicmp(type, L"Relative") == 0) {
     return CompareHalfRelativeEpsilon(output, ref, (int)tolerance);
@@ -6952,29 +6921,6 @@ static bool VerifyOutputWithExpectedValueHalf(uint16_t output, uint16_t ref,
                                               LPCWSTR type, double tolerance) {
   return VERIFY_IS_TRUE(
       CompareOutputWithExpectedValueHalf(output, ref, type, tolerance));
-}
-
-template <typename T>
-static bool CompareOutputWithExpectedValue(T output, T ref,
-                                           ToleranceType toleranceType,
-                                           double tolerance) {
-  if (std::is_same<T, DirectX::PackedVector::HALF>::value) { // uint16 treated
-                                                             // as half
-    return CompareOutputWithExpectedValueHalf((uint16_t)output, (uint16_t)ref,
-                                              toleranceType, tolerance);
-  } else if (std::is_integral<T>::value &&
-             std::is_signed<T>::value) { // signed ints
-    return CompareOutputWithExpectedValueInt((int)output, (int)ref,
-                                             (int)tolerance);
-  } else if (std::is_integral<T>::value) { // unsigned ints
-    return CompareOutputWithExpectedValueUInt((uint32_t)output, (uint32_t)ref,
-                                              (uint32_t)tolerance);
-  } else if (std::is_floating_point<T>::value) { // floating point
-    return CompareOutputWithExpectedValueFloat((float)output, (float)ref,
-                                               toleranceType, tolerance);
-  }
-
-  DXASSERT_NOMSG("Invalid Parameter Type");
 }
 
 template <typename T>

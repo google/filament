@@ -16,6 +16,7 @@
 
 #include "webgpu/WebGPUDriver.h"
 
+#include "WebGPUSwapChain.h"
 #include "webgpu/WebGPUConstants.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -35,6 +36,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <sstream>
 #include <string_view>
 #include <utility>
@@ -116,7 +118,6 @@ void printLimits(wgpu::Limits const& limits) {
     printLimit("maxBufferSize", limits.maxBufferSize);
     printLimit("maxVertexAttributes", limits.maxVertexAttributes);
     printLimit("maxVertexBufferArrayStride", limits.maxVertexBufferArrayStride);
-    printLimit("maxInterStageShaderComponents", limits.maxInterStageShaderComponents);
     printLimit("maxInterStageShaderVariables", limits.maxInterStageShaderVariables);
     printLimit("maxColorAttachments", limits.maxColorAttachments);
     printLimit("maxColorAttachmentBytesPerSample", limits.maxColorAttachmentBytesPerSample);
@@ -158,8 +159,6 @@ void printAdapterDetails(wgpu::Adapter const& adapter) {
         FWGPU_LOGI << "  vendor ID: " << adapterInfo.vendorID << utils::io::endl;
         FWGPU_LOGI << "  subgroup min size: " << adapterInfo.subgroupMinSize << utils::io::endl;
         FWGPU_LOGI << "  subgroup max size: " << adapterInfo.subgroupMaxSize << utils::io::endl;
-        FWGPU_LOGI << "  compatibility mode: " << bool(adapterInfo.compatibilityMode)
-                   << utils::io::endl;
         FWGPU_LOGI << "  power preference: " << powerPreferenceStream.str() << utils::io::endl;
     }
     wgpu::SupportedFeatures supportedFeatures{};
@@ -175,55 +174,17 @@ void printAdapterDetails(wgpu::Adapter const& adapter) {
                     FWGPU_LOGI << "  " << nameStream.str().data() << utils::io::endl;
                 });
     }
-    wgpu::SupportedLimits supportedLimits{};
+    wgpu::Limits supportedLimits{};
     if (!adapter.GetLimits(&supportedLimits)) {
         FWGPU_LOGW << "Failed to get WebGPU adapter supported limits" << utils::io::endl;
     } else {
         FWGPU_LOGI << "WebGPU adapter supported limits:" << utils::io::endl;
-        printLimits(supportedLimits.limits);
+        printLimits(supportedLimits);
     }
 }
 #endif
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-void printSurfaceCapabilitiesDetails(wgpu::SurfaceCapabilities const& capabilities) {
-    std::stringstream usages_stream{};
-    usages_stream << capabilities.usages;
-    FWGPU_LOGI << "WebGPU surface capabilities:" << utils::io::endl;
-    FWGPU_LOGI << "  surface usages: " << usages_stream.str().data() << utils::io::endl;
-    FWGPU_LOGI << "  surface formats (" << capabilities.formatCount << "):" << utils::io::endl;
-    if (capabilities.formatCount > 0 && capabilities.formats != nullptr) {
-        std::for_each(capabilities.formats, capabilities.formats + capabilities.formatCount,
-                [](wgpu::TextureFormat const format) {
-                    std::stringstream format_stream{};
-                    format_stream << format;
-                    FWGPU_LOGI << "    " << format_stream.str().data() << utils::io::endl;
-                });
-    }
-    FWGPU_LOGI << "  surface present modes (" << capabilities.presentModeCount
-               << "):" << utils::io::endl;
-    if (capabilities.presentModeCount > 0 && capabilities.presentModes != nullptr) {
-        std::for_each(capabilities.presentModes,
-                capabilities.presentModes + capabilities.presentModeCount,
-                [](wgpu::PresentMode const presentMode) {
-                    std::stringstream present_mode_stream{};
-                    present_mode_stream << presentMode;
-                    FWGPU_LOGI << "    " << present_mode_stream.str().data() << utils::io::endl;
-                });
-    }
-    FWGPU_LOGI << "  surface alpha modes (" << capabilities.alphaModeCount
-               << "):" << utils::io::endl;
-    if (capabilities.alphaModeCount > 0 && capabilities.alphaModes != nullptr) {
-        std::for_each(capabilities.alphaModes,
-                capabilities.alphaModes + capabilities.alphaModeCount,
-                [](wgpu::CompositeAlphaMode const alphaMode) {
-                    std::stringstream alpha_mode_stream{};
-                    alpha_mode_stream << alphaMode;
-                    FWGPU_LOGI << "    " << alpha_mode_stream.str().data() << utils::io::endl;
-                });
-    }
-}
-#endif
+
 
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printDeviceDetails(wgpu::Device const& device) {
@@ -240,26 +201,41 @@ void printDeviceDetails(wgpu::Device const& device) {
                     FWGPU_LOGI << "  " << nameStream.str().data() << utils::io::endl;
                 });
     }
-    wgpu::SupportedLimits supportedLimits{};
+    wgpu::Limits supportedLimits{};
     if (!device.GetLimits(&supportedLimits)) {
         FWGPU_LOGW << "Failed to get WebGPU supported device limits" << utils::io::endl;
     } else {
         FWGPU_LOGI << "WebGPU device supported limits:" << utils::io::endl;
-        printLimits(supportedLimits.limits);
+        printLimits(supportedLimits);
     }
 }
 #endif
 
 }// namespace
 
-Driver* WebGPUDriver::create(WebGPUPlatform& platform) noexcept {
-    return new WebGPUDriver(platform);
+Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept {
+    constexpr size_t defaultSize = FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
+    Platform::DriverConfig validConfig {driverConfig};
+    validConfig.handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize);
+    return new WebGPUDriver(platform, validConfig);
 }
 
-WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform) noexcept
-    : mPlatform(platform) {
+WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept
+    : mPlatform(platform),
+      mHandleAllocator("Handles",
+              driverConfig.handleArenaSize,
+              driverConfig.disableHandleUseAfterFreeCheck,
+              driverConfig.disableHeapHandleTags) {
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printInstanceDetails(mPlatform.getInstance());
+#endif
+    mAdapter = mPlatform.requestAdapter(nullptr);
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+    printAdapterDetails(mAdapter);
+#endif
+    mDevice = mPlatform.requestDevice(mAdapter);
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+    printDeviceDetails(mDevice);
 #endif
 }
 
@@ -289,6 +265,7 @@ void WebGPUDriver::terminate() {
 }
 
 void WebGPUDriver::tick(int) {
+    mDevice.Tick();
 }
 
 void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
@@ -318,15 +295,27 @@ void WebGPUDriver::finish(int) {
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+   if (rph) {
+        destructHandle<WGPURenderPrimitive>(rph);
+    }
 }
 
 void WebGPUDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
+   if (vbih) {
+        destructHandle<WGPUVertexBufferInfo>(vbih);
+    }
 }
 
 void WebGPUDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
+    if (vbh) {
+        destructHandle<WGPUVertexBuffer>(vbh);
+    }
 }
 
 void WebGPUDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
+    if (ibh) {
+        destructHandle<WGPUIndexBuffer>(ibh);
+    }
 }
 
 void WebGPUDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
@@ -336,12 +325,19 @@ void WebGPUDriver::destroyTexture(Handle<HwTexture> th) {
 }
 
 void WebGPUDriver::destroyProgram(Handle<HwProgram> ph) {
+    if (ph) {
+        destructHandle<WGPUProgram>(ph);
+    }
 }
 
 void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
 void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
+    if (sch) {
+        destructHandle<WebGPUSwapChain>(sch);
+    }
+    mSwapChain = nullptr;
 }
 
 void WebGPUDriver::destroyStream(Handle<HwStream> sh) {
@@ -351,13 +347,16 @@ void WebGPUDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void WebGPUDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
+    if (tqh) {
+        destructHandle<WebGPUDescriptorSetLayout>(tqh);
+    }
 }
 
 void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
-    return Handle<HwSwapChain>((Handle<HwSwapChain>::HandleId) mNextFakeHandle++);
+    return allocHandle<WebGPUSwapChain>();
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainHeadlessS() noexcept {
@@ -365,7 +364,7 @@ Handle<HwSwapChain> WebGPUDriver::createSwapChainHeadlessS() noexcept {
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureS() noexcept {
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
 }
 
 Handle<HwTexture> WebGPUDriver::importTextureS() noexcept {
@@ -373,7 +372,7 @@ Handle<HwTexture> WebGPUDriver::importTextureS() noexcept {
 }
 
 Handle<HwProgram> WebGPUDriver::createProgramS() noexcept {
-    return Handle<HwProgram>((Handle<HwProgram>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUProgram>();
 }
 
 Handle<HwFence> WebGPUDriver::createFenceS() noexcept {
@@ -385,7 +384,7 @@ Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
 }
 
 Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
-    return Handle<HwIndexBuffer>((Handle<HwIndexBuffer>::HandleId) mNextFakeHandle++);
+    return allocHandle<HwIndexBuffer>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
@@ -393,15 +392,15 @@ Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
 }
 
 Handle<HwBufferObject> WebGPUDriver::createBufferObjectS() noexcept {
-    return Handle<HwBufferObject>((Handle<HwBufferObject>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUBufferObject>();
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createRenderTargetS() noexcept {
-    return Handle<HwRenderTarget>((Handle<HwRenderTarget>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPURenderTarget>();
 }
 
 Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
-    return Handle<HwVertexBuffer>((Handle<HwVertexBuffer>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUVertexBuffer>();
 }
 
 Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
@@ -409,11 +408,11 @@ Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
 }
 
 Handle<HwRenderPrimitive> WebGPUDriver::createRenderPrimitiveS() noexcept {
-    return Handle<HwRenderPrimitive>((Handle<HwRenderPrimitive>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPURenderPrimitive>();
 }
 
 Handle<HwVertexBufferInfo> WebGPUDriver::createVertexBufferInfoS() noexcept {
-    return Handle<HwVertexBufferInfo>((Handle<HwVertexBufferInfo>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUVertexBufferInfo>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewSwizzleS() noexcept {
@@ -421,12 +420,11 @@ Handle<HwTexture> WebGPUDriver::createTextureViewSwizzleS() noexcept {
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createDefaultRenderTargetS() noexcept {
-    return Handle<HwRenderTarget>((Handle<HwRenderTarget>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPURenderTarget>();
 }
 
 Handle<HwDescriptorSetLayout> WebGPUDriver::createDescriptorSetLayoutS() noexcept {
-    return Handle<HwDescriptorSetLayout>(
-            (Handle<HwDescriptorSetLayout>::HandleId) mNextFakeHandle++);
+    return allocHandle<WebGPUDescriptorSetLayout>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureExternalImageS() noexcept {
@@ -442,25 +440,15 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 }
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
-    mSurface= mPlatform.createSurface(nativeWindow, flags);
-    mAdapter = mPlatform.requestAdapter(mSurface);
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    printAdapterDetails(mAdapter);
-    wgpu::SurfaceCapabilities surfaceCapabilities{};
-    if (!mSurface.GetCapabilities(mAdapter, &surfaceCapabilities)) {
-        FWGPU_LOGW << "Failed to get WebGPU surface capabilities" << utils::io::endl;
-    } else {
-        printSurfaceCapabilitiesDetails(surfaceCapabilities);
-    }
-#endif
-    mDevice = mPlatform.requestDevice(mAdapter);
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    printDeviceDetails(mDevice);
-#endif
+    mNativeWindow = nativeWindow;
+    assert_invariant(!mSwapChain);
+    wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
+
     mQueue = mDevice.GetQueue();
-    // TODO configure the surface (maybe before or after creating the swapchain?
-    //                             how do we get the surface extent?)
-    // TODO actually create the swapchain
+    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
+    mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
+            mDevice, flags);
+    assert_invariant(mSwapChain);
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
                   "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
@@ -520,9 +508,15 @@ void WebGPUDriver::importTextureR(Handle<HwTexture> th, intptr_t id, SamplerType
 void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<HwVertexBuffer> vbh,
         Handle<HwIndexBuffer> ibh, PrimitiveType pt) {}
 
-void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {}
+void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
+    constructHandle<WGPUProgram>(ph, mDevice, program);
+}
 
-void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {}
+void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
+    assert_invariant(!mDefaultRenderTarget);
+    mDefaultRenderTarget = constructHandle<WGPURenderTarget>(rth);
+    assert_invariant(mDefaultRenderTarget);
+}
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
         uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount, MRT color,
@@ -533,7 +527,9 @@ void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {}
 void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
 
 void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
-        backend::DescriptorSetLayout&& info) {}
+        backend::DescriptorSetLayout&& info) {
+    constructHandle<WebGPUDescriptorSetLayout>(dslh, std::move(info), mDevice);
+}
 
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
         Handle<HwDescriptorSetLayout> dslh) {}
@@ -683,6 +679,10 @@ void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> boh) {
 
 void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
+    auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
+    auto* bufferObject = handleCast<WGPUBufferObject>(boh);
+    assert_invariant(index < vertexBuffer->buffers.size());
+    vertexBuffer->setBuffer(bufferObject, index);
 }
 
 void WebGPUDriver::update3DImage(Handle<HwTexture> th,
@@ -715,18 +715,71 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 }
 
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
+    wgpu::CommandEncoderDescriptor commandEncoderDescriptor = {
+        .label = "command_encoder"
+    };
+    mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+    assert_invariant(mCommandEncoder);
+    // TODO: Remove this code once WebGPU pipeline is implemented
+    static float red = 1.0f;
+    if (red - 0.01 > 0) {
+        red -= 0.01;
+    } else {
+        red = 1.0f;
+    }
+    assert_invariant(mTextureView);
+    wgpu::RenderPassColorAttachment renderPassColorAttachment = {
+        .view = mTextureView,
+        // TODO: remove this code once WebGPU Pipeline is implemented with render targets, pipeline and buffers.
+        .depthSlice = wgpu::kDepthSliceUndefined,
+        .loadOp = wgpu::LoadOp::Clear,
+        .storeOp = wgpu::StoreOp::Store,
+        .clearValue = wgpu::Color{red, 0 , 0 , 1},
+    };
+
+    wgpu::RenderPassDescriptor renderPassDescriptor = {
+        .colorAttachmentCount = 1,
+        .colorAttachments = &renderPassColorAttachment,
+        .depthStencilAttachment = nullptr,
+        .timestampWrites = nullptr,
+    };
+
+    mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
+    mRenderPassEncoder.SetViewport(params.viewport.left, params.viewport.bottom,
+            params.viewport.width, params.viewport.height, params.depthRange.near, params.depthRange.far);
 }
 
 void WebGPUDriver::endRenderPass(int) {
+    mRenderPassEncoder.End();
+    mRenderPassEncoder = nullptr;
+    wgpu::CommandBufferDescriptor commandBufferDescriptor {
+        .label = "command_buffer",
+    };
+    mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
+    assert_invariant(mCommandBuffer);
 }
 
 void WebGPUDriver::nextSubpass(int) {
 }
 
 void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
+    ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
+            "WebGPU driver does not support distinct draw/read swap chains.");
+    auto* swapChain = handleCast<WebGPUSwapChain>(drawSch);
+    mSwapChain = swapChain;
+    assert_invariant(mSwapChain);
+    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
+    mTextureView = mSwapChain->getCurrentSurfaceTextureView(surfaceSize);
+    assert_invariant(mTextureView);
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
+    mCommandEncoder = nullptr;
+    mQueue.Submit(1, &mCommandBuffer);
+    mCommandBuffer = nullptr;
+    mTextureView = nullptr;
+    assert_invariant(mSwapChain);
+    mSwapChain->present();
 }
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
@@ -754,7 +807,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> src,
     scheduleDestroy(std::move(p));
 }
 
-void WebGPUDriver::readBufferSubData(backend::BufferObjectHandle boh,
+void WebGPUDriver::readBufferSubData(Handle<HwBufferObject> boh,
         uint32_t offset, uint32_t size, backend::BufferDescriptor&& p) {
     scheduleDestroy(std::move(p));
 }
@@ -806,22 +859,22 @@ void WebGPUDriver::resetState(int) {
 }
 
 void WebGPUDriver::updateDescriptorSetBuffer(
-        backend::DescriptorSetHandle dsh,
+        Handle<HwDescriptorSet> dsh,
         backend::descriptor_binding_t binding,
-        backend::BufferObjectHandle boh,
+        Handle<HwBufferObject> boh,
         uint32_t offset,
         uint32_t size) {
 }
 
 void WebGPUDriver::updateDescriptorSetTexture(
-        backend::DescriptorSetHandle dsh,
+        Handle<HwDescriptorSet> dsh,
         backend::descriptor_binding_t binding,
-        backend::TextureHandle th,
+        Handle<HwTexture> th,
         SamplerParams params) {
 }
 
 void WebGPUDriver::bindDescriptorSet(
-        backend::DescriptorSetHandle dsh,
+        Handle<HwDescriptorSet> dsh,
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
 }

@@ -1,3 +1,155 @@
-.DS_Store
-/Release/
-/Debug/
+# Prerequisites
+*.d
+
+# Precompiled headers
+*.gch
+*.pch
+
+# Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Linker output files
+*.exp
+*.ilk
+*.map
+
+# Compiled dynamic libraries
+*.dll
+*.dylib
+*.so
+*.so.*
+
+# Compiled static libraries
+*.a
+*.la
+*.lai
+*.lib
+
+# Compiled executables
+*.app/
+*.exe
+a.out
+
+# Debug files
+*.dSYM/
+*.idb
+*.pdb
+*.su
+
+# Tag files
+TAGS
+.TAGS
+!TAGS/
+tags
+.tags
+!tags/
+gtags.files
+GTAGS
+GRTAGS
+GPATH
+GSYMS
+cscope.files
+cscope.out
+cscope.*.out
+
+# Text editing and text processing artifacts
+\#*\#
+.\#*
+[._]*.sw[a-p]
+[._]sw[a-p]
+*.bak
+*.orig
+*.rej
+*.tmp
+*~
+
+# IDE files and directories
+## Eclipse
+.cproject/
+.project/
+.settings/
+## Embarcadero RAD Studio
+*.cbproj.*
+__recovery/
+## JetBrains
+.idea/
+## NetBeans
+nbbuild/
+nbdist/
+nbproject/
+## Visual Studio
+.vs/
+### Visual Studio user files
+*.rsuser
+*.sln.docstates
+*.suo
+*.user
+*.userprefs
+### Visual Studio cache files (for older versions)
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+ipch/
+## Visual Studio Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json
+## (Various)
+*.*cache
+*.cache*
+[._]*_history
+.history/
+[Bb]ackup*/
+
+# Build, test and CI output directories
+*[Dd]ebug/
+[Dd]ebug*/
+*[Rr]elease/
+[Rr]elease*/
+[._]build*/
+/[Bb]uild*/
+/[Oo]ut/
+
+# Libpng configuration and auxiliary build artifacts
+*.out
+*out.png
+[._]deps/
+.dirstamp
+/Makefile
+/autom4te.cache/
+/config*~
+/config.h
+/config.log
+/config.status
+/install*~
+/libpng*-config
+/libpng*.pc
+/libpng.vers
+/libtool
+/stamp-h1
+CMake*.json
+!CMakePresets.json
+CMakeLists.txt.*
+# pnglibconf.[ch]
+pnglibconf.dfn
+pnglibconf.pre
+pngprefix.h
+
+# Libpng test programs
+png-fix-itxt
+pngcp
+pngfix
+pngimage
+pngstest
+pngtest
+pngunknown
+pngvalid
+timepng

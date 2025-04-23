@@ -1,4 +1,5 @@
 // RUN: %dxc -T cs_6_6 -E main -fspv-extension=SPV_NV_compute_shader_derivatives -fcgl  %s -spirv  2>&1 | FileCheck %s
+// RUN: %dxc -T cs_6_6 -E main -fspv-extension=SPV_NV_compute_shader_derivatives %s -spirv  2>&1 | FileCheck %s
 
 // CHECK: OpCapability ComputeDerivativeGroupQuadsKHR
 // CHECK: OpExtension "SPV_NV_compute_shader_derivatives"

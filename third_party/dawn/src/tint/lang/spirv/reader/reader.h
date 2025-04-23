@@ -41,7 +41,7 @@ class Module;
 namespace tint::spirv::reader {
 
 /// Reads the SPIR-V source data, returning a core IR module.
-/// If the SPIR-V binary fails to parse then the result will contain diagnostic error messages.
+/// If the SPIR-V binary fails to parse then the result will contain error messages.
 /// TODO(crbug.com/tint/1907): Rename when we remove the AST path.
 /// @param input the SPIR-V binary data
 /// @returns the Tint IR module

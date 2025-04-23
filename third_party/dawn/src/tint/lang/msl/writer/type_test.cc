@@ -1062,7 +1062,7 @@ using MslWriterSampledtexturesTest = MslWriterTestWithParam<MslTextureData>;
 TEST_P(MslWriterSampledtexturesTest, Emit) {
     auto params = GetParam();
 
-    auto* t = ty.Get<core::type::SampledTexture>(params.dim, ty.f32());
+    auto* t = ty.sampled_texture(params.dim, ty.f32());
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", t);
     func->SetParams({param});
@@ -1119,9 +1119,7 @@ using MslWriterStorageTexturesTest = MslWriterTestWithParam<MslStorageTextureDat
 TEST_P(MslWriterStorageTexturesTest, Emit) {
     auto params = GetParam();
 
-    auto* f32 = ty.f32();
-    auto s = ty.Get<core::type::StorageTexture>(params.dim, core::TexelFormat::kR32Float,
-                                                core::Access::kWrite, f32);
+    auto s = ty.storage_texture(params.dim, core::TexelFormat::kR32Float, core::Access::kWrite);
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", s);
     func->SetParams({param});

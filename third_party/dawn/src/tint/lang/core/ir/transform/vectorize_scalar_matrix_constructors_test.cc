@@ -45,7 +45,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, NoModify_NoOperands) {
     auto* func = b.Function("foo", mat);
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -72,7 +72,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, NoModify_Identity) {
     func->SetParams({value});
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat, value);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -101,7 +101,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, NoModify_Vectors) {
     func->SetParams({v1, v2, v3});
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat, v1, v2, v3);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -131,7 +131,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, Mat2x2) {
     func->SetParams({v1, v2, v3, v4});
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat, v1, v2, v3, v4);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -172,7 +172,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, Mat2x3) {
     func->SetParams({v1, v2, v3, v4, v5, v6});
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat, v1, v2, v3, v4, v5, v6);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -215,7 +215,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, Mat2x4) {
     func->SetParams({v1, v2, v3, v4, v5, v6, v7, v8});
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat, v1, v2, v3, v4, v5, v6, v7, v8);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -256,7 +256,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, Mat3x2) {
     func->SetParams({v1, v2, v3, v4, v5, v6});
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat, v1, v2, v3, v4, v5, v6);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -301,7 +301,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, Mat3x3) {
     func->SetParams({v1, v2, v3, v4, v5, v6, v7, v8, v9});
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat, v1, v2, v3, v4, v5, v6, v7, v8, v9);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -349,7 +349,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, Mat3x4) {
     func->SetParams({v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12});
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -393,7 +393,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, Mat4x2) {
     func->SetParams({v1, v2, v3, v4, v5, v6, v7, v8});
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat, v1, v2, v3, v4, v5, v6, v7, v8);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -442,7 +442,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, Mat4x3) {
     func->SetParams({v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12});
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -496,7 +496,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, Mat4x4) {
     b.Append(func->Block(), [&] {
         auto* construct =
             b.Construct(mat, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(
@@ -542,7 +542,7 @@ TEST_F(IR_VectorizeScalarMatrixConstructorsTest, Mat3x3_F16) {
     func->SetParams({v1, v2, v3, v4, v5, v6, v7, v8, v9});
     b.Append(func->Block(), [&] {
         auto* construct = b.Construct(mat, v1, v2, v3, v4, v5, v6, v7, v8, v9);
-        b.Return(func, construct->Result(0));
+        b.Return(func, construct->Result());
     });
 
     auto* src = R"(

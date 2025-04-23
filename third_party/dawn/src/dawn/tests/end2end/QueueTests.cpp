@@ -190,7 +190,7 @@ TEST_P(QueueWriteBufferTests, SuperLargeWriteBuffer) {
 // Test using the max buffer size. Regression test for dawn:1985. We don't bother validating the
 // results for this case since that would take a lot longer, just that there are no errors.
 TEST_P(QueueWriteBufferTests, MaxBufferSizeWriteBuffer) {
-    uint32_t maxBufferSize = GetSupportedLimits().limits.maxBufferSize;
+    uint32_t maxBufferSize = GetSupportedLimits().maxBufferSize;
     wgpu::BufferDescriptor descriptor;
     descriptor.size = maxBufferSize;
     descriptor.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst;
@@ -985,6 +985,7 @@ TEST_P(QueueWriteTextureSimpleTests, WriteStencilAspectAfterOtherQueueWriteTextu
 DAWN_INSTANTIATE_TEST(QueueWriteTextureSimpleTests,
                       D3D11Backend(),
                       D3D11Backend({"d3d11_use_unmonitored_fence"}),
+                      D3D11Backend({"d3d11_disable_fence"}),
                       D3D12Backend(),
                       MetalBackend(),
                       OpenGLBackend(),

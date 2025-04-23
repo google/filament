@@ -42,26 +42,20 @@ constexpr static uint32_t kRTSize = 8;
 
 class BindGroupTests : public DawnTest {
   protected:
-    wgpu::RequiredLimits GetRequiredLimits(const wgpu::SupportedLimits& supported) override {
+    wgpu::Limits GetRequiredLimits(const wgpu::Limits& supported) override {
         // TODO(crbug.com/383593270): Enable all the limits.
-        wgpu::RequiredLimits required = {};
-        required.limits.maxStorageBuffersInVertexStage =
-            supported.limits.maxStorageBuffersInVertexStage;
-        required.limits.maxStorageBuffersInFragmentStage =
-            supported.limits.maxStorageBuffersInFragmentStage;
-        required.limits.maxStorageBuffersPerShaderStage =
-            supported.limits.maxStorageBuffersPerShaderStage;
-        required.limits.maxStorageTexturesInFragmentStage =
-            supported.limits.maxStorageTexturesInFragmentStage;
-        required.limits.maxStorageTexturesPerShaderStage =
-            supported.limits.maxStorageTexturesPerShaderStage;
+        wgpu::Limits required = {};
+        required.maxStorageBuffersInVertexStage = supported.maxStorageBuffersInVertexStage;
+        required.maxStorageBuffersInFragmentStage = supported.maxStorageBuffersInFragmentStage;
+        required.maxStorageBuffersPerShaderStage = supported.maxStorageBuffersPerShaderStage;
+        required.maxStorageTexturesInFragmentStage = supported.maxStorageTexturesInFragmentStage;
+        required.maxStorageTexturesPerShaderStage = supported.maxStorageTexturesPerShaderStage;
         return required;
     }
 
     void SetUp() override {
         DawnTest::SetUp();
-        mMinUniformBufferOffsetAlignment =
-            GetSupportedLimits().limits.minUniformBufferOffsetAlignment;
+        mMinUniformBufferOffsetAlignment = GetSupportedLimits().minUniformBufferOffsetAlignment;
     }
     wgpu::CommandBuffer CreateSimpleComputeCommandBuffer(const wgpu::ComputePipeline& pipeline,
                                                          const wgpu::BindGroup& bindGroup) {
@@ -811,7 +805,7 @@ TEST_P(BindGroupTests, ThreePipelinesInSameRenderpass) {
 
 // Test that bind groups set for one pipeline are still set when the pipeline changes.
 TEST_P(BindGroupTests, BindGroupsPersistAfterPipelineChange) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().limits.maxStorageBuffersInFragmentStage < 1);
+    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
@@ -893,7 +887,7 @@ TEST_P(BindGroupTests, BindGroupsPersistAfterPipelineChange) {
 TEST_P(BindGroupTests, DrawThenChangePipelineAndBindGroup) {
     // TODO(anglebug.com/3032): fix failure in ANGLE/D3D11
     DAWN_SUPPRESS_TEST_IF(IsANGLE() && IsWindows());
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().limits.maxStorageBuffersInFragmentStage < 1);
+    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
@@ -1488,7 +1482,7 @@ TEST_P(BindGroupTests, EmptyLayout) {
 // This is a regression test for crbug.com/dawn/410 which tests that it can successfully compile and
 // execute the shader.
 TEST_P(BindGroupTests, ReadonlyStorage) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().limits.maxStorageBuffersInFragmentStage < 1);
+    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
     utils::ComboRenderPipelineDescriptor pipelineDescriptor;
 
@@ -1559,7 +1553,7 @@ TEST_P(BindGroupTests, CreateWithDestroyedResource) {
 
     // Test various usages and binding types since they take different backend code paths.
     doBufferTest(wgpu::BufferBindingType::Uniform, wgpu::BufferUsage::Uniform);
-    if (GetSupportedLimits().limits.maxStorageBuffersInFragmentStage > 0) {
+    if (GetSupportedLimits().maxStorageBuffersInFragmentStage > 0) {
         doBufferTest(wgpu::BufferBindingType::Storage, wgpu::BufferUsage::Storage);
         doBufferTest(wgpu::BufferBindingType::ReadOnlyStorage, wgpu::BufferUsage::Storage);
     }

@@ -30,4 +30,3 @@ entry:
 declare float @"\01?foo@@YAMY02V?$vector@M$02@@@Z"([3 x <3 x float>]*)
 
 attributes #0 = { nounwind }
-

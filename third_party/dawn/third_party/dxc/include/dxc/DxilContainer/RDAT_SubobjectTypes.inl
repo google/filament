@@ -69,9 +69,10 @@ RDAT_DXIL_ENUM_START(hlsl::DXIL::RaytracingPipelineFlags, uint32_t)
   RDAT_ENUM_VALUE_NODEF(SkipProceduralPrimitives)
   // No need to define mask here
   // RDAT_ENUM_VALUE_NODEF(ValidMask)
+  RDAT_ENUM_VALUE_NODEF(AllowOpacityMicromaps)
 #if DEF_RDAT_ENUMS == DEF_RDAT_DUMP_IMPL
   static_assert((unsigned)hlsl::DXIL::RaytracingPipelineFlags::ValidMask ==
-                    0x300,
+                    0x700,
                 "otherwise, RDAT_DXIL_ENUM definition needs updating");
 #endif
 RDAT_ENUM_END()

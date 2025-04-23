@@ -76,6 +76,7 @@ void IncrementBindingCounts(BindingCounts* bindingCounts,
 
             case wgpu::BufferBindingType::Storage:
             case kInternalStorageBufferBinding:
+            case kInternalReadOnlyStorageBufferBinding:
             case wgpu::BufferBindingType::ReadOnlyStorage:
                 if (buffer.hasDynamicOffset) {
                     ++bindingCounts->dynamicStorageBufferCount;
@@ -144,7 +145,8 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
         "The number of dynamic uniform buffers (%u) exceeds the maximum per-pipeline-layout "
         "limit (%u).%s",
         bindingCounts.dynamicUniformBufferCount, maxDynamicUniformBuffersPerPipelineLayout,
-        DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxDynamicUniformBuffersPerPipelineLayout,
+        DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1,
+                                    maxDynamicUniformBuffersPerPipelineLayout,
                                     bindingCounts.dynamicUniformBufferCount));
 
     uint32_t maxDynamicStorageBuffersPerPipelineLayout =
@@ -154,7 +156,8 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
         "The number of dynamic storage buffers (%u) exceeds the maximum per-pipeline-layout "
         "limit (%u).%s",
         bindingCounts.dynamicStorageBufferCount, maxDynamicStorageBuffersPerPipelineLayout,
-        DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxDynamicStorageBuffersPerPipelineLayout,
+        DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1,
+                                    maxDynamicStorageBuffersPerPipelineLayout,
                                     bindingCounts.dynamicStorageBufferCount));
 
     uint32_t maxSampledTexturesPerShaderStage = limits.v1.maxSampledTexturesPerShaderStage;
@@ -168,12 +171,13 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
     uint32_t maxStorageTexturesPerShaderStage = limits.v1.maxStorageTexturesPerShaderStage;
     for (SingleShaderStage stage : IterateStages(kAllStages)) {
         uint32_t sampledTextureCount = bindingCounts.perStage[stage].sampledTextureCount;
-        DAWN_INVALID_IF(sampledTextureCount > maxSampledTexturesPerShaderStage,
-                        "The number of sampled textures (%u) in the %s stage exceeds the maximum "
-                        "per-stage limit (%u).%s",
-                        sampledTextureCount, stage, maxSampledTexturesPerShaderStage,
-                        DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxSampledTexturesPerShaderStage,
-                                                    sampledTextureCount));
+        DAWN_INVALID_IF(
+            sampledTextureCount > maxSampledTexturesPerShaderStage,
+            "The number of sampled textures (%u) in the %s stage exceeds the maximum "
+            "per-stage limit (%u).%s",
+            sampledTextureCount, stage, maxSampledTexturesPerShaderStage,
+            DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1, maxSampledTexturesPerShaderStage,
+                                        sampledTextureCount));
 
         uint32_t externalTextureCount = bindingCounts.perStage[stage].externalTextureCount;
         uint32_t sampledTextureAndExternalTextureCount =
@@ -184,7 +188,7 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
             "stage exceeds the maximum per-stage limit (%u).%s",
             sampledTextureCount, externalTextureCount, kSampledTexturesPerExternalTexture, stage,
             maxSampledTexturesPerShaderStage,
-            DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxSampledTexturesPerShaderStage,
+            DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1, maxSampledTexturesPerShaderStage,
                                         sampledTextureCount));
 
         uint32_t samplerCount = bindingCounts.perStage[stage].samplerCount;
@@ -194,7 +198,8 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
             "The number of samplers (%u) in the %s stage exceeds the maximum per-stage limit "
             "(%u).%s",
             samplerCount, stage, maxSamplersPerShaderStage,
-            DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxSamplersPerShaderStage, samplerCount));
+            DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1, maxSamplersPerShaderStage,
+                                        samplerCount));
 
         uint32_t samplerAndExternalTextureCount =
             samplerCount + (externalTextureCount * kSamplersPerExternalTexture);
@@ -205,7 +210,7 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
             "exceeds the maximum per-stage limit (%u).%s",
             samplerCount, externalTextureCount, kSamplersPerExternalTexture, stage,
             maxSamplersPerShaderStage,
-            DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxSamplersPerShaderStage,
+            DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1, maxSamplersPerShaderStage,
                                         samplerAndExternalTextureCount));
 
         uint32_t storageBufferCount = bindingCounts.perStage[stage].storageBufferCount;
@@ -214,7 +219,7 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
             "The number of storage buffers (%u) in the %s stage exceeds the maximum per-stage "
             "limit (%u).%s",
             storageBufferCount, stage, maxStorageBuffersPerShaderStage,
-            DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxStorageBuffersPerShaderStage,
+            DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1, maxStorageBuffersPerShaderStage,
                                         storageBufferCount));
 
         uint32_t storageTextureCount = bindingCounts.perStage[stage].storageTextureCount;
@@ -223,7 +228,7 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
             "The number of storage textures (%u) in the %s stage exceeds the maximum per-stage "
             "limit (%u).%s",
             storageTextureCount, stage, maxStorageTexturesPerShaderStage,
-            DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxStorageTexturesPerShaderStage,
+            DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1, maxStorageTexturesPerShaderStage,
                                         storageTextureCount));
 
         uint32_t uniformBufferCount = bindingCounts.perStage[stage].uniformBufferCount;
@@ -232,7 +237,7 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
             "The number of uniform buffers (%u) in the %s stage exceeds the maximum per-stage "
             "limit (%u).%s",
             uniformBufferCount, stage, maxUniformBuffersPerShaderStage,
-            DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxUniformBuffersPerShaderStage,
+            DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1, maxUniformBuffersPerShaderStage,
                                         uniformBufferCount));
 
         uint32_t uniformBuffersAndExternalTextureCount =
@@ -243,7 +248,7 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
             "stage exceeds the maximum per-stage limit (%u).%s",
             uniformBufferCount, externalTextureCount, kUniformsPerExternalTexture, stage,
             maxUniformBuffersPerShaderStage,
-            DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxUniformBuffersPerShaderStage,
+            DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1, maxUniformBuffersPerShaderStage,
                                         uniformBuffersAndExternalTextureCount));
 
         switch (stage) {
@@ -252,29 +257,32 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
                                 "number of storage buffers used in fragment stage (%u) exceeds "
                                 "maxStorageBuffersInFragmentStage (%u).%s",
                                 storageBufferCount, maxStorageBuffersInFragmentStage,
-                                DAWN_INCREASE_LIMIT_MESSAGE(
-                                    adapter, maxStorageBuffersInFragmentStage, storageBufferCount));
-                DAWN_INVALID_IF(
-                    storageTextureCount > maxStorageTexturesInFragmentStage,
-                    "number of storage textures used in fragment stage (%u) exceeds "
-                    "maxStorageTexturesInFragmentStage (%u).%s",
-                    storageTextureCount, maxStorageTexturesInFragmentStage,
-                    DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxStorageTexturesInFragmentStage,
-                                                storageTextureCount));
+                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1,
+                                                            maxStorageBuffersInFragmentStage,
+                                                            storageBufferCount));
+                DAWN_INVALID_IF(storageTextureCount > maxStorageTexturesInFragmentStage,
+                                "number of storage textures used in fragment stage (%u) exceeds "
+                                "maxStorageTexturesInFragmentStage (%u).%s",
+                                storageTextureCount, maxStorageTexturesInFragmentStage,
+                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1,
+                                                            maxStorageTexturesInFragmentStage,
+                                                            storageTextureCount));
                 break;
             case SingleShaderStage::Vertex:
                 DAWN_INVALID_IF(storageBufferCount > maxStorageBuffersInVertexStage,
                                 "number of storage buffers used in vertex stage (%u) exceeds "
                                 "maxStorageBuffersInVertexStage (%u).%s",
                                 storageBufferCount, maxStorageBuffersInVertexStage,
-                                DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxStorageBuffersInVertexStage,
+                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1,
+                                                            maxStorageBuffersInVertexStage,
                                                             storageBufferCount));
                 DAWN_INVALID_IF(storageTextureCount > maxStorageTexturesInVertexStage,
                                 "number of storage textures used in vertex stage (%u) exceeds "
                                 "maxStorageTexturesInVertexStage (%u).%s",
                                 storageTextureCount, maxStorageTexturesInVertexStage,
-                                DAWN_INCREASE_LIMIT_MESSAGE(
-                                    adapter, maxStorageTexturesInVertexStage, storageTextureCount));
+                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1,
+                                                            maxStorageTexturesInVertexStage,
+                                                            storageTextureCount));
                 break;
             default:
                 break;

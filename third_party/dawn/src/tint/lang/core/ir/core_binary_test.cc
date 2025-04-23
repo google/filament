@@ -54,8 +54,8 @@ TEST_F(IR_BinaryTest, Result) {
     auto* a = b.Add(mod.Types().i32(), 4_i, 2_i);
 
     EXPECT_EQ(a->Results().Length(), 1u);
-    EXPECT_TRUE(a->Result(0)->Is<InstructionResult>());
-    EXPECT_EQ(a, a->Result(0)->Instruction());
+    EXPECT_TRUE(a->Result()->Is<InstructionResult>());
+    EXPECT_EQ(a, a->Result()->Instruction());
 }
 
 TEST_F(IR_BinaryTest, CreateAnd) {
@@ -63,7 +63,7 @@ TEST_F(IR_BinaryTest, CreateAnd) {
 
     ASSERT_TRUE(inst->Is<Binary>());
     EXPECT_EQ(inst->Op(), BinaryOp::kAnd);
-    ASSERT_NE(inst->Results()[0]->Type(), nullptr);
+    ASSERT_NE(inst->Result()->Type(), nullptr);
 
     ASSERT_TRUE(inst->LHS()->Is<Constant>());
     auto lhs = inst->LHS()->As<Constant>()->Value();
@@ -378,7 +378,7 @@ TEST_F(IR_BinaryTest, Clone) {
 
     EXPECT_NE(inst, c);
 
-    EXPECT_EQ(mod.Types().i32(), c->Result(0)->Type());
+    EXPECT_EQ(mod.Types().i32(), c->Result()->Type());
     EXPECT_EQ(BinaryOp::kAnd, c->Op());
 
     auto new_lhs = c->LHS()->As<Constant>()->Value();

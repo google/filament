@@ -64,7 +64,7 @@ struct State {
     /// The mapping from functions to their transitively referenced output variables.
     core::ir::ReferencedModuleVars<core::ir::Module> referenced_output_vars{
         ir, [](const core::ir::Var* var) {
-            auto* view = var->Result(0)->Type()->As<core::type::MemoryView>();
+            auto* view = var->Result()->Type()->As<core::type::MemoryView>();
             return view && view->AddressSpace() == core::AddressSpace::kOut;
         }};
 
@@ -97,7 +97,7 @@ struct State {
         // This is done last as we need to copy attributes during `ProcessEntryPointOutputs()`.
         for (auto& var : output_variables) {
             var->SetAttributes({});
-            if (auto* str = var->Result(0)->Type()->UnwrapPtr()->As<core::type::Struct>()) {
+            if (auto* str = var->Result()->Type()->UnwrapPtr()->As<core::type::Struct>()) {
                 for (auto* member : str->Members()) {
                     // TODO(crbug.com/tint/745): Remove the const_cast.
                     const_cast<core::type::StructMember*>(member)->SetAttributes({});
@@ -118,7 +118,7 @@ struct State {
         Vector<core::ir::Var*, 4> inputs;
         for (auto* global : *ir.root_block) {
             if (auto* var = global->As<core::ir::Var>()) {
-                auto addrspace = var->Result(0)->Type()->As<core::type::Pointer>()->AddressSpace();
+                auto addrspace = var->Result()->Type()->As<core::type::Pointer>()->AddressSpace();
                 if (addrspace == core::AddressSpace::kIn) {
                     inputs.Push(var);
                 }
@@ -127,7 +127,7 @@ struct State {
 
         // Replace the input variables with function parameters.
         for (auto* var : inputs) {
-            ReplaceInputPointerUses(var, var->Result(0));
+            ReplaceInputPointerUses(var, var->Result());
             var->Destroy();
         }
     }
@@ -143,7 +143,7 @@ struct State {
         // Update all uses of the module-scope variable.
         value->ForEachUseUnsorted([&](core::ir::Usage use) {
             if (auto* access = use.instruction->As<core::ir::Access>()) {
-                ReplaceOutputPointerAddressSpace(access->Result(0));
+                ReplaceOutputPointerAddressSpace(access->Result());
             } else if (!use.instruction->IsAnyOf<core::ir::Load, core::ir::LoadVectorElement,
                                                  core::ir::Store, core::ir::StoreVectorElement>()) {
                 TINT_UNREACHABLE()
@@ -189,12 +189,12 @@ struct State {
             // Change the address space of the variable to private and update its uses, if we
             // haven't already seen this variable.
             if (output_variables.Add(var)) {
-                ReplaceOutputPointerAddressSpace(var->Result(0));
+                ReplaceOutputPointerAddressSpace(var->Result());
             }
 
             // Copy the variable attributes to the struct member.
             auto var_attributes = var->Attributes();
-            auto var_type = var->Result(0)->Type()->UnwrapPtr();
+            auto var_type = var->Result()->Type()->UnwrapPtr();
             if (auto* str = var_type->As<core::type::Struct>()) {
                 bool skipped_member_emission = false;
 
@@ -221,7 +221,7 @@ struct State {
                     b.Append(wrapper->Block(), [&] {  //
                         auto* access =
                             b.Access(ty.ptr<private_>(member->Type()), var, u32(member->Index()));
-                        results.Push(b.Load(access)->Result(0));
+                        results.Push(b.Load(access)->Result());
                     });
                 }
 
@@ -229,19 +229,19 @@ struct State {
                 // used through `access` instructions, otherwise the members may no longer match due
                 // to the skipping.
                 if (skipped_member_emission) {
-                    for (auto& usage : var->Result(0)->UsagesUnsorted()) {
+                    for (auto& usage : var->Result()->UsagesUnsorted()) {
                         TINT_ASSERT(usage->instruction->Is<core::ir::Access>());
                     }
                 }
             } else {
                 // Load the final result from the original variable.
                 b.Append(wrapper->Block(), [&] {
-                    results.Push(b.Load(var)->Result(0));
+                    results.Push(b.Load(var)->Result());
 
                     // If we're dealing with sample_mask, extract the scalar from the array.
                     if (var_attributes.builtin == core::BuiltinValue::kSampleMask) {
                         var_type = ty.u32();
-                        results.Back() = b.Access(ty.u32(), results.Back(), u32(0))->Result(0);
+                        results.Back() = b.Access(ty.u32(), results.Back(), u32(0))->Result();
                     }
                 });
                 add_output(ir.NameOf(var), var_type, std::move(var_attributes));
@@ -296,11 +296,11 @@ struct State {
             return true;
         }
         if (member_attributes.builtin == core::BuiltinValue::kCullDistance) {
-            TINT_ASSERT(!IsIndexAccessed(var->Result(0), member->Index()));
+            TINT_ASSERT(!IsIndexAccessed(var->Result(), member->Index()));
             return true;
         }
         if (member_attributes.builtin == core::BuiltinValue::kClipDistances) {
-            return !IsIndexAccessed(var->Result(0), member->Index());
+            return !IsIndexAccessed(var->Result(), member->Index());
         }
         return false;
     }
@@ -350,7 +350,7 @@ struct State {
                 use.instruction,
                 [&](core::ir::Load* l) {
                     // Fold the load away and replace its uses with the new parameter.
-                    l->Result(0)->ReplaceAllUsesWith(object);
+                    l->Result()->ReplaceAllUsesWith(object);
                     to_destroy.Push(l);
                 },
                 [&](core::ir::LoadVectorElement* lve) {
@@ -362,8 +362,8 @@ struct State {
                 [&](core::ir::Access* a) {
                     // Remove the pointer from the source and destination type.
                     a->SetOperand(core::ir::Access::kObjectOperandOffset, object);
-                    a->Result(0)->SetType(a->Result(0)->Type()->UnwrapPtr());
-                    ReplaceInputPointerUses(var, a->Result(0));
+                    a->Result()->SetType(a->Result()->Type()->UnwrapPtr());
+                    ReplaceInputPointerUses(var, a->Result());
                 },
                 TINT_ICE_ON_NO_MATCH);
         });
@@ -390,7 +390,7 @@ struct State {
     core::ir::Value* GetParameter(core::ir::Function* func, core::ir::Var* var) {
         return function_parameter_map.GetOrAddZero(func).GetOrAdd(var, [&] {
             const bool entry_point = func->IsEntryPoint();
-            auto* var_type = var->Result(0)->Type()->UnwrapPtr();
+            auto* var_type = var->Result()->Type()->UnwrapPtr();
 
             // Use a scalar u32 for sample_mask builtins for entry point parameters.
             if (entry_point && var->Attributes().builtin == core::BuiltinValue::kSampleMask) {
@@ -426,9 +426,9 @@ struct State {
             core::ir::Value* result = param;
             if (entry_point && var->Attributes().builtin == core::BuiltinValue::kSampleMask) {
                 // Construct an array from the scalar sample_mask builtin value for entry points.
-                auto* construct = b.Construct(var->Result(0)->Type()->UnwrapPtr(), param);
+                auto* construct = b.Construct(var->Result()->Type()->UnwrapPtr(), param);
                 func->Block()->Prepend(construct);
-                result = construct->Result(0);
+                result = construct->Result();
             }
             return result;
         });
@@ -464,7 +464,10 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ShaderIO(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.ShaderIO");
+    auto result = ValidateAndDumpIfNeeded(ir, "spirv.ShaderIO",
+                                          core::ir::Capabilities{
+                                              core::ir::Capability::kAllowOverrides,
+                                          });
     if (result != Success) {
         return result.Failure();
     }

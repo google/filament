@@ -35,7 +35,7 @@
 #include <optional>
 
 #include "src/tint/utils/macros/compiler.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 #include "src/tint/utils/rtti/traits.h"
 #include "src/tint/utils/text/string_stream.h"
 

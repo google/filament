@@ -281,8 +281,8 @@ bool ValidationTest::HasToggleEnabled(const char* toggle) const {
            }) != toggles.end();
 }
 
-wgpu::SupportedLimits ValidationTest::GetSupportedLimits() const {
-    wgpu::SupportedLimits supportedLimits = {};
+wgpu::Limits ValidationTest::GetSupportedLimits() const {
+    wgpu::Limits supportedLimits = {};
     device.GetLimits(&supportedLimits);
     return supportedLimits;
 }
@@ -295,7 +295,7 @@ std::vector<wgpu::FeatureName> ValidationTest::GetRequiredFeatures() {
     return {};
 }
 
-wgpu::RequiredLimits ValidationTest::GetRequiredLimits(const wgpu::SupportedLimits&) {
+wgpu::Limits ValidationTest::GetRequiredLimits(const wgpu::Limits&) {
     return {};
 }
 
@@ -358,11 +358,6 @@ void ValidationTest::SetUp(const wgpu::InstanceDescriptor* nativeDesc,
         "_" + ::testing::UnitTest::GetInstance()->current_test_info()->name();
     mWireHelper->BeginWireTrace(traceName.c_str());
 
-    // The wire client and server request subgroup limit info, which
-    // triggers a deprecation warning.
-    // TODO(crbug.com/382520104): Remove those limits
-    const auto deprecationCountFromSubgroupLimits = UsesWire() ? 1u : 0u;
-
     // Initialize the instances.
     std::tie(instance, mDawnInstance) = mWireHelper->CreateInstances(nativeDesc, wireDesc);
 
@@ -371,11 +366,9 @@ void ValidationTest::SetUp(const wgpu::InstanceDescriptor* nativeDesc,
     options.backendType = wgpu::BackendType::Null;
     options.featureLevel = gCurrentTest->UseCompatibilityMode() ? wgpu::FeatureLevel::Compatibility
                                                                 : wgpu::FeatureLevel::Core;
-    EXPECT_DEPRECATION_WARNINGS(
-        instance.RequestAdapter(&options, wgpu::CallbackMode::AllowSpontaneous,
-                                [this](wgpu::RequestAdapterStatus, wgpu::Adapter result,
-                                       wgpu::StringView) -> void { adapter = std::move(result); }),
-        deprecationCountFromSubgroupLimits);
+    instance.RequestAdapter(&options, wgpu::CallbackMode::AllowSpontaneous,
+                            [this](wgpu::RequestAdapterStatus, wgpu::Adapter result,
+                                   wgpu::StringView) -> void { adapter = std::move(result); });
 
     FlushWire();
     DAWN_ASSERT(adapter);
@@ -416,10 +409,10 @@ void ValidationTest::SetUp(const wgpu::InstanceDescriptor* nativeDesc,
     deviceDescriptor.requiredFeatures = requiredFeatures.data();
     deviceDescriptor.requiredFeatureCount = requiredFeatures.size();
 
-    wgpu::SupportedLimits supportedLimits;
-    dawn::native::GetProcs().adapterGetLimits(
-        mBackendAdapter.Get(), reinterpret_cast<WGPUSupportedLimits*>(&supportedLimits));
-    wgpu::RequiredLimits requiredLimits = GetRequiredLimits(supportedLimits);
+    wgpu::Limits supportedLimits;
+    dawn::native::GetProcs().adapterGetLimits(mBackendAdapter.Get(),
+                                              reinterpret_cast<WGPULimits*>(&supportedLimits));
+    wgpu::Limits requiredLimits = GetRequiredLimits(supportedLimits);
     deviceDescriptor.requiredLimits = &requiredLimits;
 
     device = RequestDeviceSync(deviceDescriptor);

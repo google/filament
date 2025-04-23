@@ -10,6 +10,8 @@
 #include "assert.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
+
+#if defined(LLVM_ASSERTIONS_TRAP) || !defined(WIN32)
 namespace {
 void llvm_assert_trap(const char *_Message, const char *_File, unsigned _Line,
                       const char *_Function) {
@@ -18,6 +20,7 @@ void llvm_assert_trap(const char *_Message, const char *_File, unsigned _Line,
   LLVM_BUILTIN_TRAP;
 }
 } // namespace
+#endif
 
 #ifdef _WIN32
 #include "dxc/Support/Global.h"

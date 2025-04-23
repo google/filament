@@ -199,6 +199,18 @@ constexpr uint32_t toolsUAVRegister = 0;
 template <typename RootSigDesc, typename RootParameterDesc>
 void ExtendRootSig(RootSigDesc &rootSigDesc) {
   auto *existingParams = rootSigDesc.pParameters;
+  for (uint32_t i = 0; i < rootSigDesc.NumParameters; ++i) {
+    if (rootSigDesc.pParameters[i].ParameterType ==
+        DxilRootParameterType::UAV) {
+      if (rootSigDesc.pParameters[i].Descriptor.RegisterSpace ==
+              toolsRegisterSpace &&
+          rootSigDesc.pParameters[i].Descriptor.ShaderRegister ==
+              toolsUAVRegister) {
+        // Already added
+        return;
+      }
+    }
+  }
   auto *newParams = new RootParameterDesc[rootSigDesc.NumParameters + 1];
   if (existingParams != nullptr) {
     memcpy(newParams, existingParams,

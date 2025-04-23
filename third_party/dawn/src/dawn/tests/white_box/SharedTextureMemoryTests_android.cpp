@@ -33,6 +33,7 @@
 #include <utility>
 #include <vector>
 
+#include "dawn/common/Assert.h"
 #include "dawn/native/vulkan/DeviceVk.h"
 #include "dawn/native/vulkan/UtilsVulkan.h"
 #include "dawn/native/vulkan/VulkanError.h"
@@ -185,17 +186,31 @@ class SharedTextureMemoryTestAndroidVulkanBackend
     }
 };
 
-class SharedTextureMemoryTestAndroidOpenGLESBackend
+class SharedTextureMemoryTestAndroidSyncFDOpenGLESBackend
     : public SharedTextureMemoryTestAndroidBackend<SharedTextureMemoryTestBackend> {
   public:
     static SharedTextureMemoryTestBackend* GetInstance() {
-        static SharedTextureMemoryTestAndroidOpenGLESBackend b;
+        static SharedTextureMemoryTestAndroidSyncFDOpenGLESBackend b;
         return &b;
     }
 
     std::vector<wgpu::FeatureName> RequiredFeatures(const wgpu::Adapter&) const override {
         return {wgpu::FeatureName::SharedTextureMemoryAHardwareBuffer,
                 wgpu::FeatureName::SharedFenceSyncFD};
+    }
+};
+
+class SharedTextureMemoryTestAndroidEGLSyncOpenGLESBackend
+    : public SharedTextureMemoryTestAndroidBackend<SharedTextureMemoryTestBackend> {
+  public:
+    static SharedTextureMemoryTestBackend* GetInstance() {
+        static SharedTextureMemoryTestAndroidEGLSyncOpenGLESBackend b;
+        return &b;
+    }
+
+    std::vector<wgpu::FeatureName> RequiredFeatures(const wgpu::Adapter&) const override {
+        return {wgpu::FeatureName::SharedTextureMemoryAHardwareBuffer,
+                wgpu::FeatureName::SharedFenceEGLSync};
     }
 };
 
@@ -253,9 +268,14 @@ TEST_P(SharedTextureMemoryTests, GPUWriteThenCPURead) {
     memory.EndAccess(texture, &endState);
 
     wgpu::SharedFenceExportInfo exportInfo;
+    endState.fences[0].ExportInfo(&exportInfo);
+
+    // AHardwareBuffer_lock requires a fd to wait on. Otherwise we would need wait until the
+    // submitted work is finished here.
+    DAWN_TEST_UNSUPPORTED_IF(exportInfo.type != wgpu::SharedFenceType::SyncFD);
+
     wgpu::SharedFenceSyncFDExportInfo syncFdExportInfo;
     exportInfo.nextInChain = &syncFdExportInfo;
-
     endState.fences[0].ExportInfo(&exportInfo);
 
     void* ptr;
@@ -653,17 +673,32 @@ DAWN_INSTANTIATE_PREFIXED_TEST_P(Vulkan,
                                  {SharedTextureMemoryTestAndroidVulkanBackend::GetInstance()},
                                  {1});
 
-DAWN_INSTANTIATE_PREFIXED_TEST_P(OpenGLES,
-                                 SharedTextureMemoryNoFeatureTests,
-                                 {OpenGLESBackend()},
-                                 {SharedTextureMemoryTestAndroidOpenGLESBackend::GetInstance()},
-                                 {1});
+DAWN_INSTANTIATE_PREFIXED_TEST_P(
+    OpenGLES_SyncFD,
+    SharedTextureMemoryNoFeatureTests,
+    {OpenGLESBackend()},
+    {SharedTextureMemoryTestAndroidSyncFDOpenGLESBackend::GetInstance()},
+    {1});
 
-DAWN_INSTANTIATE_PREFIXED_TEST_P(OpenGLES,
-                                 SharedTextureMemoryTests,
-                                 {OpenGLESBackend()},
-                                 {SharedTextureMemoryTestAndroidOpenGLESBackend::GetInstance()},
-                                 {1});
+DAWN_INSTANTIATE_PREFIXED_TEST_P(
+    OpenGLES_SyncFD,
+    SharedTextureMemoryTests,
+    {OpenGLESBackend()},
+    {SharedTextureMemoryTestAndroidSyncFDOpenGLESBackend::GetInstance()},
+    {1});
 
+DAWN_INSTANTIATE_PREFIXED_TEST_P(
+    OpenGLES_EGLSync,
+    SharedTextureMemoryNoFeatureTests,
+    {OpenGLESBackend()},
+    {SharedTextureMemoryTestAndroidEGLSyncOpenGLESBackend::GetInstance()},
+    {1});
+
+DAWN_INSTANTIATE_PREFIXED_TEST_P(
+    OpenGLES_EGLSync,
+    SharedTextureMemoryTests,
+    {OpenGLESBackend()},
+    {SharedTextureMemoryTestAndroidEGLSyncOpenGLESBackend::GetInstance()},
+    {1});
 }  // anonymous namespace
 }  // namespace dawn

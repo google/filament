@@ -25,15 +25,17 @@
 #include "private/backend/DriverApi.h"
 
 #include "PlatformRunner.h"
+#include "ImageExpectations.h"
 
 namespace test {
 
 class BackendTest : public ::testing::Test {
 public:
 
-    static void init(Backend backend, bool isMobilePlatform);
+    static void init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform);
 
     static Backend sBackend;
+    static OperatingSystem sOperatingSystem;
     static bool sIsMobilePlatform;
 
 protected:
@@ -64,13 +66,14 @@ protected:
             filament::backend::Handle<filament::backend::HwProgram> program,
             const filament::backend::RenderPassParams& params);
 
-    void readPixelsAndAssertHash(const char* testName, size_t width, size_t height,
-            filament::backend::Handle<filament::backend::HwRenderTarget> rt, uint32_t expectedHash,
-            bool exportScreenshot = false);
-
     filament::backend::DriverApi& getDriverApi() { return *commandStream; }
     filament::backend::Driver& getDriver() { return *driver; }
 
+    ImageExpectations& getExpectations() { return *mImageExpectations; }
+
+    static bool matchesEnvironment(Backend backend);
+    static bool matchesEnvironment(OperatingSystem operatingSystem);
+    static bool matchesEnvironment(OperatingSystem operatingSystem, Backend backend);
 private:
 
     filament::backend::Driver* driver = nullptr;
@@ -78,6 +81,10 @@ private:
     std::unique_ptr<filament::backend::DriverApi> commandStream;
 
     filament::backend::Handle<filament::backend::HwBufferObject> uniform;
+
+    // This isn't truly optional, it just needs to delay construction until after the driver has
+    // been initialized
+    std::optional<ImageExpectations> mImageExpectations;
 };
 
 } // namespace test

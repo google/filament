@@ -114,21 +114,13 @@ void Server::OnRequestDeviceCallback(RequestDeviceUserdata* data,
     cmd.featuresCount = features.size();
     cmd.features = features.data();
 
-    // Query and report the adapter limits, including DawnExperimentalSubgroupLimits,
-    // DawnExperimentalImmediateDataLimits and DawnTexelCopyBufferRowAlignmentLimits.
-    // Reporting to client.
-    WGPUSupportedLimits limits = {};
-
-    // Chained DawnExperimentalSubgroupLimits.
-    // TODO(crbug.com/354751907) Remove this, as it is now in AdapterInfo.
-    WGPUDawnExperimentalSubgroupLimits experimentalSubgroupLimits = {};
-    experimentalSubgroupLimits.chain.sType = WGPUSType_DawnExperimentalSubgroupLimits;
-    limits.nextInChain = &experimentalSubgroupLimits.chain;
+    // Query and report the adapter limits, including all known extension limits.
+    WGPULimits limits = {};
 
     // Chained DawnExperimentalImmediateDataLimits.
     WGPUDawnExperimentalImmediateDataLimits experimentalImmediateDataLimits = {};
     experimentalImmediateDataLimits.chain.sType = WGPUSType_DawnExperimentalImmediateDataLimits;
-    experimentalSubgroupLimits.chain.next = &experimentalImmediateDataLimits.chain;
+    limits.nextInChain = &experimentalImmediateDataLimits.chain;
 
     // Chained DawnTexelCopyBufferRowAlignmentLimits.
     WGPUDawnTexelCopyBufferRowAlignmentLimits texelCopyBufferRowAlignmentLimits = {};
@@ -141,7 +133,7 @@ void Server::OnRequestDeviceCallback(RequestDeviceUserdata* data,
     // Assign the handle and allocated status if the device is created successfully.
     Known<WGPUDevice> reservation;
     if (FillReservation(data->deviceObjectId, device, &reservation) == WireResult::FatalError) {
-        cmd.status = WGPURequestDeviceStatus_InstanceDropped;
+        cmd.status = WGPURequestDeviceStatus_CallbackCancelled;
         cmd.message = ToOutputStringView("Destroyed before request was fulfilled.");
         SerializeCommand(cmd);
         return;

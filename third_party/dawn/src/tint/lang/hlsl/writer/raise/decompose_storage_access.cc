@@ -34,7 +34,6 @@
 #include "src/tint/lang/hlsl/builtin_fn.h"
 #include "src/tint/lang/hlsl/ir/member_builtin_call.h"
 #include "src/tint/lang/hlsl/type/byte_address_buffer.h"
-#include "src/tint/utils/result/result.h"
 
 namespace tint::hlsl::writer::raise {
 namespace {
@@ -71,7 +70,7 @@ struct State {
             }
 
             // Var must be a pointer
-            auto* var_ty = var->Result(0)->Type()->As<core::type::Pointer>();
+            auto* var_ty = var->Result()->Type()->As<core::type::Pointer>();
             TINT_ASSERT(var_ty);
 
             // Only care about storage address space variables.
@@ -83,7 +82,7 @@ struct State {
         }
 
         for (auto* var : var_worklist) {
-            auto* result = var->Result(0);
+            auto* result = var->Result();
 
             // Find all the usages of the `var` which is loading or storing.
             Vector<core::ir::Instruction*, 4> usage_worklist;
@@ -142,10 +141,10 @@ struct State {
                         // The `let` is, essentially, an alias for the `var` as it's assigned
                         // directly. Gather all the `let` usages into our worklist, and then replace
                         // the `let` with the `var` itself.
-                        for (auto& usage : let->Result(0)->UsagesSorted()) {
+                        for (auto& usage : let->Result()->UsagesSorted()) {
                             usage_worklist.Push(usage.instruction);
                         }
-                        let->Result(0)->ReplaceAllUsesWith(result);
+                        let->Result()->ReplaceAllUsesWith(result);
                         let->Destroy();
                     },
                     [&](core::ir::CoreBuiltinCall* call) {
@@ -215,14 +214,14 @@ struct State {
             // the correct `var` name.
             core::ir::Instruction* inst = b.Var(ty.ptr(function, ty.u32()));
             b.MemberCall<hlsl::ir::MemberBuiltinCall>(ty.void_(), BuiltinFn::kGetDimensions, var,
-                                                      inst->Result(0));
+                                                      inst->Result());
 
             inst = b.Load(inst);
             if (offset > 0) {
                 inst = b.Subtract(ty.u32(), inst, u32(offset));
             }
             auto* div = b.Divide(ty.u32(), inst, u32(arr_ty->Stride()));
-            call->Result(0)->ReplaceAllUsesWith(div->Result(0));
+            call->Result()->ReplaceAllUsesWith(div->Result());
         });
         call->Destroy();
     }
@@ -321,7 +320,7 @@ struct State {
 
     // An atomic load is an Or with 0
     void AtomicLoad(core::ir::Var* var, core::ir::CoreBuiltinCall* call, const OffsetData& offset) {
-        auto* type = call->Result(0)->Type();
+        auto* type = call->Result()->Type();
         b.InsertBefore(call, [&] {
             auto* original_value = b.Var(ty.ptr(function, type));
             original_value->SetInitializer(b.Zero(type));
@@ -361,9 +360,9 @@ struct State {
             [&](core::ir::Value* val) {
                 auto* idx = val;
                 if (val->Type() != ty.u32()) {
-                    idx = b.Convert(ty.u32(), val)->Result(0);
+                    idx = b.Convert(ty.u32(), val)->Result();
                 }
-                offset->expr.Push(b.Multiply(ty.u32(), idx, u32(elm_size))->Result(0));
+                offset->expr.Push(b.Multiply(ty.u32(), idx, u32(elm_size))->Result());
             },
             TINT_ICE_ON_NO_MATCH);
     }
@@ -372,7 +371,7 @@ struct State {
     core::ir::Value* OffsetToValue(const OffsetData& offset) {
         core::ir::Value* val = b.Value(u32(offset.byte_offset));
         for (core::ir::Value* expr : offset.expr) {
-            val = b.Add(ty.u32(), val, expr)->Result(0);
+            val = b.Add(ty.u32(), val, expr)->Result();
         }
         return val;
     }
@@ -437,7 +436,7 @@ struct State {
         if (is_f16) {
             cast = from;
         } else {
-            cast = b.Bitcast(cast_ty, from)->Result(0);
+            cast = b.Bitcast(cast_ty, from)->Result();
         }
         b.MemberCall<hlsl::ir::MemberBuiltinCall>(ty.void_(), fn, var, offset, cast);
     }
@@ -512,7 +511,7 @@ struct State {
         if (is_f16) {
             res = builtin;
         } else {
-            res = b.Bitcast(result_ty, builtin->Result(0));
+            res = b.Bitcast(result_ty, builtin->Result());
         }
         return res;
     }
@@ -539,8 +538,8 @@ struct State {
                 Vector<core::ir::Value*, 4> values;
                 for (const auto* mem : s->Members()) {
                     values.Push(MakeLoad(inst, var, mem->Type(),
-                                         b.Add<u32>(p, u32(mem->Offset()))->Result(0))
-                                    ->Result(0));
+                                         b.Add<u32>(p, u32(mem->Offset()))->Result())
+                                    ->Result());
                 }
 
                 b.Return(fn, b.Construct(s, values));
@@ -562,8 +561,8 @@ struct State {
             b.Append(fn->Block(), [&] {
                 for (const auto* mem : s->Members()) {
                     auto* from = b.Access(mem->Type(), obj, u32(mem->Index()));
-                    MakeStore(inst, var, from->Result(0),
-                              b.Add<u32>(p, u32(mem->Offset()))->Result(0));
+                    MakeStore(inst, var, from->Result(),
+                              b.Add<u32>(p, u32(mem->Offset()))->Result());
                 }
 
                 b.Return(fn);
@@ -595,8 +594,8 @@ struct State {
                 Vector<core::ir::Value*, 4> values;
                 for (size_t i = 0; i < mat->Columns(); ++i) {
                     auto* add = b.Add<u32>(p, u32(i * mat->ColumnStride()));
-                    auto* load = MakeLoad(inst, var, mat->ColumnType(), add->Result(0));
-                    values.Push(load->Result(0));
+                    auto* load = MakeLoad(inst, var, mat->ColumnType(), add->Result());
+                    values.Push(load->Result());
                 }
 
                 b.Return(fn, b.Construct(mat, values));
@@ -619,8 +618,8 @@ struct State {
                 Vector<core::ir::Value*, 4> values;
                 for (size_t i = 0; i < mat->Columns(); ++i) {
                     auto* from = b.Access(mat->ColumnType(), obj, u32(i));
-                    MakeStore(inst, var, from->Result(0),
-                              b.Add<u32>(p, u32(i * mat->ColumnStride()))->Result(0));
+                    MakeStore(inst, var, from->Result(),
+                              b.Add<u32>(p, u32(i * mat->ColumnStride()))->Result());
                 }
 
                 b.Return(fn);
@@ -663,7 +662,7 @@ struct State {
                     auto* access = b.Access(ty.ptr<function>(arr->ElemType()), result_arr, idx);
                     auto* stride = b.Multiply<u32>(idx, u32(arr->Stride()));
                     auto* byte_offset = b.Add<u32>(p, stride);
-                    b.Store(access, MakeLoad(inst, var, arr->ElemType(), byte_offset->Result(0)));
+                    b.Store(access, MakeLoad(inst, var, arr->ElemType(), byte_offset->Result()));
                 });
 
                 b.Return(fn, b.Load(result_arr));
@@ -690,7 +689,7 @@ struct State {
                     auto* from = b.Access(arr->ElemType(), obj, idx);
                     auto* stride = b.Multiply<u32>(idx, u32(arr->Stride()));
                     auto* byte_offset = b.Add<u32>(p, stride);
-                    MakeStore(inst, var, from->Result(0), byte_offset->Result(0));
+                    MakeStore(inst, var, from->Result(), byte_offset->Result());
                 });
 
                 b.Return(fn);
@@ -743,7 +742,7 @@ struct State {
         }
 
         // Copy the usages into a vector so we can remove items from the hashset.
-        auto usages = a->Result(0)->UsagesSorted();
+        auto usages = a->Result()->UsagesSorted();
         while (!usages.IsEmpty()) {
             auto usage = usages.Pop();
             tint::Switch(
@@ -752,10 +751,10 @@ struct State {
                     // The `let` is essentially an alias to the `access`. So, add the `let`
                     // usages into the usage worklist, and replace the let with the access chain
                     // directly.
-                    for (auto& u : let->Result(0)->UsagesSorted()) {
+                    for (auto& u : let->Result()->UsagesSorted()) {
                         usages.Push(u);
                     }
-                    let->Result(0)->ReplaceAllUsesWith(a->Result(0));
+                    let->Result()->ReplaceAllUsesWith(a->Result());
                     let->Destroy();
                 },
                 [&](core::ir::Access* sub_access) {
@@ -766,7 +765,7 @@ struct State {
                 },
 
                 [&](core::ir::LoadVectorElement* lve) {
-                    a->Result(0)->RemoveUsage(usage);
+                    a->Result()->RemoveUsage(usage);
 
                     OffsetData load_offset = offset;
                     b.InsertBefore(lve, [&] {
@@ -775,12 +774,12 @@ struct State {
                     Load(lve, var, load_offset);
                 },
                 [&](core::ir::Load* ld) {
-                    a->Result(0)->RemoveUsage(usage);
+                    a->Result()->RemoveUsage(usage);
                     Load(ld, var, offset);
                 },
 
                 [&](core::ir::StoreVectorElement* sve) {
-                    a->Result(0)->RemoveUsage(usage);
+                    a->Result()->RemoveUsage(usage);
 
                     OffsetData store_offset = offset;
                     b.InsertBefore(sve, [&] {
@@ -856,8 +855,8 @@ struct State {
     void Load(core::ir::Instruction* inst, core::ir::Var* var, const OffsetData& offset) {
         b.InsertBefore(inst, [&] {
             auto* off = OffsetToValue(offset);
-            auto* call = MakeLoad(inst, var, inst->Result(0)->Type(), off);
-            inst->Result(0)->ReplaceAllUsesWith(call->Result(0));
+            auto* call = MakeLoad(inst, var, inst->Result()->Type(), off);
+            inst->Result()->ReplaceAllUsesWith(call->Result());
         });
         inst->Destroy();
     }
@@ -874,8 +873,8 @@ struct State {
             UpdateOffsetData(lve->Index(), var_ty->StoreType()->DeepestElement()->Size(), &offset);
 
             auto* result =
-                MakeScalarOrVectorLoad(var, lve->Result(0)->Type(), OffsetToValue(offset));
-            lve->Result(0)->ReplaceAllUsesWith(result->Result(0));
+                MakeScalarOrVectorLoad(var, lve->Result()->Type(), OffsetToValue(offset));
+            lve->Result()->ReplaceAllUsesWith(result->Result());
         });
 
         lve->Destroy();

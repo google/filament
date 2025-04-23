@@ -40,7 +40,7 @@ class Backend;
 class PhysicalDevice : public d3d::PhysicalDevice {
   public:
     PhysicalDevice(Backend* backend,
-                   ComPtr<IDXGIAdapter4> hardwareAdapter,
+                   ComPtr<IDXGIAdapter3> hardwareAdapter,
                    ComPtr<ID3D11Device> d3d11Device);
     ~PhysicalDevice() override;
 

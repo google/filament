@@ -37,6 +37,18 @@
 
 namespace dawn::native::opengl {
 
+namespace {
+ResultOrError<wgpu::SharedFenceType> ChooseFenceTypeFromFeatures(Device* device) {
+    if (device->HasFeature(Feature::SharedFenceSyncFD)) {
+        return wgpu::SharedFenceType::SyncFD;
+    } else if (device->HasFeature(Feature::SharedFenceEGLSync)) {
+        return wgpu::SharedFenceType::EGLSync;
+    } else {
+        return DAWN_VALIDATION_ERROR("No enabled features for SharedFence creation.");
+    }
+}
+}  // namespace
+
 SharedTextureMemory::SharedTextureMemory(Device* device,
                                          StringView label,
                                          const SharedTextureMemoryProperties& properties)
@@ -63,6 +75,12 @@ MaybeError SharedTextureMemory::BeginAccessImpl(
                                 wgpu::FeatureName::SharedFenceSyncFD,
                                 wgpu::SharedFenceType::SyncFD);
                 break;
+            case wgpu::SharedFenceType::EGLSync:
+                DAWN_INVALID_IF(!GetDevice()->HasFeature(Feature::SharedFenceEGLSync),
+                                "Required feature (%s) for %s is missing.",
+                                wgpu::FeatureName::SharedFenceEGLSync,
+                                wgpu::SharedFenceType::EGLSync);
+                break;
             default:
                 return DAWN_VALIDATION_ERROR("Unsupported fence type %s.", exportInfo.type);
         }
@@ -80,11 +98,14 @@ ResultOrError<FenceAndSignalValue> SharedTextureMemory::EndAccessImpl(
     ExecutionSerial lastUsageSerial,
     UnpackedPtr<EndAccessState>& state) {
     DAWN_TRY(state.ValidateSubset<>());
-    DAWN_INVALID_IF(!GetDevice()->HasFeature(Feature::SharedFenceSyncFD),
-                    "Required feature (%s) is missing.", wgpu::FeatureName::SharedFenceSyncFD);
+
+    wgpu::SharedFenceType fenceType;
+    DAWN_TRY_ASSIGN(fenceType, ChooseFenceTypeFromFeatures(ToBackend(GetDevice())));
+
     Ref<SharedFence> fence;
-    DAWN_TRY_ASSIGN(fence,
-                    ToBackend(GetDevice()->GetQueue())->GetOrCreateSharedFence(lastUsageSerial));
+    DAWN_TRY_ASSIGN(
+        fence,
+        ToBackend(GetDevice()->GetQueue())->GetOrCreateSharedFence(lastUsageSerial, fenceType));
     return FenceAndSignalValue{std::move(fence), 1};
 }
 

@@ -198,6 +198,68 @@ TEST_F(ResolverIndexAccessorTest, Vector) {
     EXPECT_EQ(idx_sem->Object()->Declaration(), acc->object);
 }
 
+TEST_F(ResolverIndexAccessorTest, BindingArray_F32) {
+    GlobalVar(
+        "a", Binding(0_a), Group(0_a),
+        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+    auto* acc = IndexAccessor("a", Expr(Source{{12, 34}}, 2_f));
+    auto* call = Call("textureDimensions", acc);
+    WrapInFunction(call);
+
+    EXPECT_FALSE(r()->Resolve());
+    EXPECT_EQ(r()->error(), "12:34 error: index must be of type 'i32' or 'u32', found: 'f32'");
+}
+
+TEST_F(ResolverIndexAccessorTest, BindingArray_Literal_i32) {
+    GlobalVar(
+        "a", Binding(0_a), Group(0_a),
+        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+    auto* acc = IndexAccessor("a", 2_i);
+    auto* call = Call("textureDimensions", acc);
+    WrapInFunction(call);
+
+    EXPECT_TRUE(r()->Resolve()) << r()->error();
+
+    ASSERT_NE(TypeOf(acc), nullptr);
+    EXPECT_TRUE(TypeOf(acc)->Is<core::type::SampledTexture>());
+    ASSERT_TRUE(TypeOf(acc)->As<core::type::SampledTexture>()->Type()->Is<core::type::F32>());
+    ASSERT_EQ(TypeOf(acc)->As<core::type::SampledTexture>()->Dim(),
+              core::type::TextureDimension::k2d);
+
+    auto idx_sem = Sem().Get(acc)->UnwrapLoad()->As<sem::IndexAccessorExpression>();
+    ASSERT_NE(idx_sem, nullptr);
+    EXPECT_EQ(idx_sem->Index()->Declaration(), acc->index);
+    EXPECT_EQ(idx_sem->Object()->Declaration(), acc->object);
+}
+
+TEST_F(ResolverIndexAccessorTest, BindingArray_Dynamic_i32) {
+    GlobalVar(
+        "a", Binding(0_a), Group(0_a),
+        ty("binding_array", ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), 4_u));
+    auto* idx = Var("idx", ty.i32(), Call<i32>());
+    auto* acc = IndexAccessor("a", idx);
+    auto* call = Call("textureDimensions", acc);
+    auto* f = Var("f", call);
+    Func("my_func", tint::Empty, ty.void_(),
+         Vector{
+             Decl(idx),
+             Decl(f),
+         });
+
+    EXPECT_TRUE(r()->Resolve()) << r()->error();
+
+    ASSERT_NE(TypeOf(acc), nullptr);
+    EXPECT_TRUE(TypeOf(acc)->Is<core::type::SampledTexture>());
+    ASSERT_TRUE(TypeOf(acc)->As<core::type::SampledTexture>()->Type()->Is<core::type::F32>());
+    ASSERT_EQ(TypeOf(acc)->As<core::type::SampledTexture>()->Dim(),
+              core::type::TextureDimension::k2d);
+
+    auto idx_sem = Sem().Get(acc)->UnwrapLoad()->As<sem::IndexAccessorExpression>();
+    ASSERT_NE(idx_sem, nullptr);
+    EXPECT_EQ(idx_sem->Index()->Declaration(), acc->index);
+    EXPECT_EQ(idx_sem->Object()->Declaration(), acc->object);
+}
+
 TEST_F(ResolverIndexAccessorTest, Array_Literal_i32) {
     GlobalVar("my_var", ty.array<f32, 3>(), core::AddressSpace::kPrivate);
     auto* acc = IndexAccessor("my_var", 2_i);

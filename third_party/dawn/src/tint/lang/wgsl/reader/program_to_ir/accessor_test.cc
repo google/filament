@@ -50,7 +50,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_ArraySingleIndex) {
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, array<u32, 3>, read_write> = var
+    %a:ptr<function, array<u32, 3>, read_write> = var undef
     %3:ptr<function, u32, read_write> = access %a, 2u
     %4:u32 = load %3
     %b:u32 = let %4
@@ -76,7 +76,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_ArraySingleIndex_ViaDerefPointerInd
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, array<u32, 3>, read_write> = var
+    %a:ptr<function, array<u32, 3>, read_write> = var undef
     %p:ptr<function, array<u32, 3>, read_write> = let %a
     %4:ptr<function, u32, read_write> = access %p, 2u
     %5:u32 = load %4
@@ -103,7 +103,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_ArraySingleIndex_ViaPointerIndex) {
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, array<u32, 3>, read_write> = var
+    %a:ptr<function, array<u32, 3>, read_write> = var undef
     %p:ptr<function, array<u32, 3>, read_write> = let %a
     %4:ptr<function, u32, read_write> = access %p, 2u
     %5:u32 = load %4
@@ -156,7 +156,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_VectorSingleIndex) {
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, vec3<u32>, read_write> = var
+    %a:ptr<function, vec3<u32>, read_write> = var undef
     %3:u32 = load_vector_element %a, 2u
     %b:u32 = let %3
     ret
@@ -181,7 +181,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_VectorSingleIndex_ViaDerefPointerIn
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, vec3<u32>, read_write> = var
+    %a:ptr<function, vec3<u32>, read_write> = var undef
     %p:ptr<function, vec3<u32>, read_write> = let %a
     %4:u32 = load_vector_element %p, 2u
     %b:u32 = let %4
@@ -207,7 +207,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_VectorSingleIndex_ViaPointerIndex) 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, vec3<u32>, read_write> = var
+    %a:ptr<function, vec3<u32>, read_write> = var undef
     %p:ptr<function, vec3<u32>, read_write> = let %a
     %4:u32 = load_vector_element %p, 2u
     %b:u32 = let %4
@@ -231,7 +231,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_ArraysMultiIndex) {
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, array<array<f32, 4>, 3>, read_write> = var
+    %a:ptr<function, array<array<f32, 4>, 3>, read_write> = var undef
     %3:ptr<function, f32, read_write> = access %a, 2u, 3u
     %4:f32 = load %3
     %b:f32 = let %4
@@ -257,7 +257,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_ArraysMultiIndex_ViaDerefPointerInd
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, array<array<f32, 4>, 3>, read_write> = var
+    %a:ptr<function, array<array<f32, 4>, 3>, read_write> = var undef
     %p:ptr<function, array<array<f32, 4>, 3>, read_write> = let %a
     %4:ptr<function, f32, read_write> = access %p, 2u, 3u
     %5:f32 = load %4
@@ -284,7 +284,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_ArraysMultiIndex_ViaPointerIndex) {
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, array<array<f32, 4>, 3>, read_write> = var
+    %a:ptr<function, array<array<f32, 4>, 3>, read_write> = var undef
     %p:ptr<function, array<array<f32, 4>, 3>, read_write> = let %a
     %4:ptr<function, f32, read_write> = access %p, 2u, 3u
     %5:f32 = load %4
@@ -309,7 +309,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_MatrixMultiIndex) {
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, mat3x4<f32>, read_write> = var
+    %a:ptr<function, mat3x4<f32>, read_write> = var undef
     %3:ptr<function, vec4<f32>, read_write> = access %a, 2u
     %4:f32 = load_vector_element %3, 3u
     %b:f32 = let %4
@@ -341,7 +341,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_SingleMember) {
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, MyStruct, read_write> = var
+    %a:ptr<function, MyStruct, read_write> = var undef
     %3:ptr<function, i32, read_write> = access %a, 0u
     %4:i32 = load %3
     %b:i32 = let %4
@@ -375,7 +375,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_SingleMember_ViaDerefPointerIndex) 
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, MyStruct, read_write> = var
+    %a:ptr<function, MyStruct, read_write> = var undef
     %p:ptr<function, MyStruct, read_write> = let %a
     %4:ptr<function, i32, read_write> = access %p, 0u
     %5:i32 = load %4
@@ -410,7 +410,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_SingleMember_ViaPointerIndex) {
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, MyStruct, read_write> = var
+    %a:ptr<function, MyStruct, read_write> = var undef
     %p:ptr<function, MyStruct, read_write> = let %a
     %4:ptr<function, i32, read_write> = access %p, 0u
     %5:i32 = load %4
@@ -453,7 +453,7 @@ Outer = struct @align(4) {
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, Outer, read_write> = var
+    %a:ptr<function, Outer, read_write> = var undef
     %3:ptr<function, f32, read_write> = access %a, 1u, 0u
     %4:f32 = load %3
     %b:f32 = let %4
@@ -501,7 +501,7 @@ Outer = struct @align(16) {
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, array<Outer, 4>, read_write> = var
+    %a:ptr<function, array<Outer, 4>, read_write> = var undef
     %3:ptr<function, vec4<f32>, read_write> = access %a, 0u, 1u, 1u, 2u
     %4:vec4<f32> = load %3
     %b:vec4<f32> = let %4
@@ -525,7 +525,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_AssignmentLHS) {
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, array<u32, 4>, read_write> = var
+    %a:ptr<function, array<u32, 4>, read_write> = var undef
     %3:ptr<function, u32, read_write> = access %a, 2u
     store %3, 0u
     ret
@@ -548,7 +548,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_VectorElementSwizzle) {
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, vec2<f32>, read_write> = var
+    %a:ptr<function, vec2<f32>, read_write> = var undef
     %3:f32 = load_vector_element %a, 1u
     %b:f32 = let %3
     ret
@@ -573,7 +573,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_VectorElementSwizzle_ViaDerefPointe
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, vec2<f32>, read_write> = var
+    %a:ptr<function, vec2<f32>, read_write> = var undef
     %p:ptr<function, vec2<f32>, read_write> = let %a
     %4:f32 = load_vector_element %p, 1u
     %b:f32 = let %4
@@ -599,7 +599,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_VectorElementSwizzle_ViaPointerInde
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, vec2<f32>, read_write> = var
+    %a:ptr<function, vec2<f32>, read_write> = var undef
     %p:ptr<function, vec2<f32>, read_write> = let %a
     %4:f32 = load_vector_element %p, 1u
     %b:f32 = let %4
@@ -623,7 +623,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_MultiElementSwizzle) {
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, vec3<f32>, read_write> = var
+    %a:ptr<function, vec3<f32>, read_write> = var undef
     %3:vec3<f32> = load %a
     %4:vec4<f32> = swizzle %3, zyxz
     %b:vec4<f32> = let %4
@@ -647,7 +647,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_MultiElementSwizzleOfSwizzle) {
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
               R"(%test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, vec3<f32>, read_write> = var
+    %a:ptr<function, vec3<f32>, read_write> = var undef
     %3:vec3<f32> = load %a
     %4:vec3<f32> = swizzle %3, zyx
     %5:vec2<f32> = swizzle %4, yy
@@ -684,7 +684,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Var_MultiElementSwizzle_MiddleOfChain) 
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %a:ptr<function, MyStruct, read_write> = var
+    %a:ptr<function, MyStruct, read_write> = var undef
     %3:ptr<function, vec4<f32>, read_write> = access %a, 1u
     %4:vec4<f32> = load %3
     %5:vec3<f32> = swizzle %4, zyx
@@ -987,7 +987,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Const_AbstractVectorWithIndex) {
   $B1: {
     %i:i32 = let 1i
     %3:i32 = access vec3<i32>(1i, 2i, 3i), %i
-    %b:ptr<function, i32, read_write> = var, %3
+    %b:ptr<function, i32, read_write> = var %3
     ret
   }
 }
@@ -1012,7 +1012,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Const_AbstractVectorWithSwizzleAndIndex
   $B1: {
     %i:i32 = let 1i
     %3:i32 = access vec2<i32>(1i, 2i), %i
-    %b:ptr<function, i32, read_write> = var, %3
+    %b:ptr<function, i32, read_write> = var %3
     ret
   }
 }
@@ -1039,7 +1039,7 @@ TEST_F(ProgramToIRAccessorTest, Accessor_Const_ExpressionIndex) {
     %3:i32 = add %i, 2i
     %4:i32 = sub %3, 3i
     %5:i32 = access vec2<i32>(1i, 2i), %4
-    %b:ptr<function, i32, read_write> = var, %5
+    %b:ptr<function, i32, read_write> = var %5
     ret
   }
 }

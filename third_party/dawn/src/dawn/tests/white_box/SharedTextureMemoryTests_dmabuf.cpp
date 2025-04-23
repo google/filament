@@ -28,13 +28,15 @@
 #include <fcntl.h>
 #include <gbm.h>
 #include <unistd.h>
-#include <vulkan/vulkan.h>
 #include <webgpu/webgpu_cpp.h>
 
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+
+// This must be included instead of vulkan.h so that we can wrap it with vulkan_platform.h.
+#include "dawn/common/vulkan_platform.h"
 
 #include "dawn/tests/white_box/SharedTextureMemoryTests.h"
 
@@ -168,7 +170,7 @@ class Backend : public SharedTextureMemoryTestVulkanBackend {
     }
 
   private:
-    void SetUp() override {
+    void SetUp(const wgpu::Device& device) override {
         // Render nodes [1] are the primary interface for communicating with the GPU on
         // devices that support DRM. The actual filename of the render node is
         // implementation-specific, so we must scan through all possible filenames to find

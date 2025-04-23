@@ -50,6 +50,7 @@ import (
 	"dawn.googlesource.com/dawn/tools/src/fileutils"
 	"dawn.googlesource.com/dawn/tools/src/glob"
 	"dawn.googlesource.com/dawn/tools/src/match"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/transform"
 	"github.com/fatih/color"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -98,7 +99,7 @@ var dirsWithNoPassExpectations = []string{
 }
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(oswrapper.GetRealOSWrapper()); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -128,7 +129,10 @@ optional flags:`,
 	os.Exit(1)
 }
 
-func run() error {
+// TODO(crbug.com/344014313): Add unittests once fileutils is converted to
+// support dependency injection. This should also be broken up into multiple
+// functions.
+func run(fsReaderWriter oswrapper.FilesystemReaderWriter) error {
 	terminalWidth, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		terminalWidth = 0
@@ -212,7 +216,7 @@ func run() error {
 
 	// Glob the absFiles to test
 	for _, g := range globs {
-		globFiles, err := glob.Glob(g)
+		globFiles, err := glob.Glob(g, fsReaderWriter)
 		if err != nil {
 			return fmt.Errorf("Failed to glob files: %w", err)
 		}
@@ -293,15 +297,16 @@ func run() error {
 		fmt.Println()
 
 		toolchainHash.Write([]byte(tool.name))
-		if s, err := os.Stat(*tool.path); err == nil {
+		if s, err := fsReaderWriter.Stat(*tool.path); err == nil {
 			toolchainHash.Write([]byte(s.ModTime().String()))
 			toolchainHash.Write([]byte(fmt.Sprint(s.Size())))
 		}
 	}
 	fmt.Println()
 
-	validationCache := loadValidationCache(fmt.Sprintf("%x", toolchainHash.Sum(nil)), verbose)
-	defer saveValidationCache(validationCache)
+	validationCache := loadValidationCache(
+		fmt.Sprintf("%x", toolchainHash.Sum(nil)), verbose, fsReaderWriter)
+	defer saveValidationCache(validationCache, fsReaderWriter)
 
 	// Build the list of results.
 	// These hold the chans used to report the job results.
@@ -330,7 +335,7 @@ func run() error {
 	for cpu := 0; cpu < numCPU; cpu++ {
 		go func() {
 			for job := range pendingJobs {
-				job.run(runCfg)
+				job.run(runCfg, fsReaderWriter)
 			}
 		}()
 	}
@@ -338,7 +343,7 @@ func run() error {
 	// Issue the jobs...
 	go func() {
 		for i, file := range absFiles { // For each test file...
-			flags, err := parseFlags(file)
+			flags, err := parseFlags(file, fsReaderWriter)
 			if err != nil {
 				fmt.Println(file+" error:", err)
 				continue
@@ -671,10 +676,17 @@ type runConfig struct {
 // We use this to scrub the path to avoid generating needless diffs.
 var reFXCErrorStringHash = regexp.MustCompile(`(?:.*?)(\(.*?\): (?:warning|error).*)`)
 
-func (j job) run(cfg runConfig) {
+// TODO(crbug.com/344014313): Split this up into multiple functions and add
+// unittest coverage for functions that can be tested.
+func (j job) run(cfg runConfig, fsReaderWriter oswrapper.FilesystemReaderWriter) {
 	j.result <- func() status {
 		// expectedFilePath is the path to the expected output file for the given test
 		expectedFilePath := j.file + ".expected."
+
+		// Only attempt to generate WGSL for SPVASM input files
+		if strings.HasSuffix(j.file, ".spvasm") && j.format != wgsl {
+			return status{code: skip, timeTaken: 0}
+		}
 
 		useIr := j.format == hlslDXCIR || j.format == hlslFXCIR
 
@@ -693,7 +705,7 @@ func (j job) run(cfg runConfig) {
 
 		// Is there an expected output file? If so, load it.
 		expected, expectedFileExists := "", false
-		if content, err := os.ReadFile(expectedFilePath); err == nil {
+		if content, err := fsReaderWriter.ReadFile(expectedFilePath); err == nil {
 			expected = string(content)
 			expectedFileExists = true
 		}
@@ -710,6 +722,15 @@ func (j job) run(cfg runConfig) {
 		isSkipTimeoutTest := false
 		if strings.HasPrefix(expected, "SKIP: TIMEOUT") { // Special timeout test case token
 			isSkipTimeoutTest = true
+		}
+
+		// If the test is known to fail and we are not regenerating expectations, just skip the test.
+		if isSkipTest && !cfg.generateExpected && !cfg.generateSkip {
+			if isSkipInvalidTest {
+				return status{code: invalid, timeTaken: 0}
+			} else {
+				return status{code: skip, timeTaken: 0}
+			}
 		}
 
 		expected = strings.ReplaceAll(expected, "\r\n", "\n")
@@ -793,7 +814,7 @@ func (j job) run(cfg runConfig) {
 		}
 
 		saveExpectedFile := func(path string, content string) error {
-			return os.WriteFile(path, []byte(content), 0666)
+			return fsReaderWriter.WriteFile(path, []byte(content), 0666)
 		}
 
 		// Do not update expected if test is marked as SKIP: TIMEOUT
@@ -805,7 +826,7 @@ func (j job) run(cfg runConfig) {
 				// Test lives in a directory where we do not want to save PASS
 				// files, and there already exists an expectation file. Test has
 				// likely started passing. Delete the old expectation.
-				os.Remove(expectedFilePath)
+				fsReaderWriter.Remove(expectedFilePath)
 			}
 			matched = true // test passed and matched expectations
 		}
@@ -1001,8 +1022,8 @@ type cmdLineFlags struct {
 
 // parseFlags looks for a `// flags:` or `// [format] flags:` header at the start of the file with
 // the given path, returning each of the parsed flags
-func parseFlags(path string) ([]cmdLineFlags, error) {
-	inputFile, err := os.Open(path)
+func parseFlags(path string, fsReader oswrapper.FilesystemReader) ([]cmdLineFlags, error) {
+	inputFile, err := fsReader.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -1076,8 +1097,8 @@ func printDuration(d time.Duration) string {
 	sec := int(d.Seconds())
 	min := int(sec) / 60
 	hour := min / 60
-	min -= hour * 60
 	sec -= min * 60
+	min -= hour * 60
 	sb := &strings.Builder{}
 	if hour > 0 {
 		fmt.Fprintf(sb, "%dh", hour)
@@ -1126,15 +1147,19 @@ func validationCachePath() string {
 	return filepath.Join(fileutils.DawnRoot(), "test", "tint", "validation.cache")
 }
 
+// TODO(crbug.com/344014313): Add unittest coverage once DawnRoot() uses
+// dependency injection.
 // loadValidationCache attempts to load the validation cache.
 // Returns an empty cache if the file could not be loaded, or if toolchains have changed.
-func loadValidationCache(toolchainHash string, verbose bool) validationCache {
+func loadValidationCache(
+	toolchainHash string, verbose bool, fsReader oswrapper.FilesystemReader) validationCache {
+
 	out := validationCache{
 		toolchainHash: toolchainHash,
 		knownGood:     knownGoodHashes{},
 	}
 
-	file, err := os.Open(validationCachePath())
+	file, err := fsReader.Open(validationCachePath())
 	if err != nil {
 		if verbose {
 			fmt.Println(err)
@@ -1165,8 +1190,10 @@ func loadValidationCache(toolchainHash string, verbose bool) validationCache {
 	return out
 }
 
+// TODO(crbug.com/344014313): Add unittest coverage once DawnRoot() uses
+// dependency injection.
 // saveValidationCache saves the validation cache file.
-func saveValidationCache(vc validationCache) {
+func saveValidationCache(vc validationCache, fsWriter oswrapper.FilesystemWriter) {
 	out := ValidationCacheFile{
 		ToolchainHash: vc.toolchainHash,
 		KnownGood:     make([]ValidationCacheFileKnownGood, 0, len(vc.knownGood)),
@@ -1194,7 +1221,7 @@ func saveValidationCache(vc validationCache) {
 		return false
 	})
 
-	file, err := os.Create(validationCachePath())
+	file, err := fsWriter.Create(validationCachePath())
 	if err != nil {
 		fmt.Printf("WARNING: failed to save the validation cache file: %v\n", err)
 	}

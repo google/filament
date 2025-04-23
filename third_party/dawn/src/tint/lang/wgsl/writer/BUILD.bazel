@@ -70,10 +70,10 @@ cc_library(
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/tint/utils/memory",
-    "//src/tint/utils/result",
     "//src/tint/utils/rtti",
     "//src/tint/utils/symbol",
     "//src/tint/utils/text",
+    "//src/tint/utils/text_generator",
     "//src/utils",
   ] + select({
     ":tint_build_wgsl_writer": [
@@ -114,7 +114,6 @@ cc_library(
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/tint/utils/memory",
-    "//src/tint/utils/result",
     "//src/tint/utils/rtti",
     "//src/tint/utils/symbol",
     "//src/tint/utils/text",
@@ -153,7 +152,6 @@ cc_library(
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/tint/utils/memory",
-    "//src/tint/utils/result",
     "//src/tint/utils/rtti",
     "//src/tint/utils/symbol",
     "//src/tint/utils/text",

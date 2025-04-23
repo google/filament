@@ -37,7 +37,8 @@ class Device;
 
 class BindGroup final : public BindGroupBase, public PlacementAllocated {
   public:
-    static Ref<BindGroup> Create(Device* device, const BindGroupDescriptor* descriptor);
+    static ResultOrError<Ref<BindGroup>> Create(Device* device,
+                                                const BindGroupDescriptor* descriptor);
 
   private:
     friend SlabAllocator<BindGroup>;
@@ -45,7 +46,9 @@ class BindGroup final : public BindGroupBase, public PlacementAllocated {
     BindGroup(Device* device, const BindGroupDescriptor* descriptor);
     ~BindGroup() override;
 
-    void DestroyImpl() override;
+    MaybeError InitializeImpl() override;
+
+    void DeleteThis() override;
 };
 
 }  // namespace dawn::native::d3d11

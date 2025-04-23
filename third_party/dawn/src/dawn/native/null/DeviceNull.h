@@ -239,6 +239,8 @@ class BindGroup final : private BindGroupDataHolder, public BindGroupBase {
 
   private:
     ~BindGroup() override = default;
+
+    MaybeError InitializeImpl() override;
 };
 
 class BindGroupLayout final : public BindGroupLayoutInternalBase {

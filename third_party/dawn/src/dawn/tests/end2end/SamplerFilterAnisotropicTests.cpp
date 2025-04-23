@@ -291,7 +291,7 @@ class SamplerFilterAnisotropicTest : public DawnTest {
 };
 
 TEST_P(SamplerFilterAnisotropicTest, SlantedPlaneMipmap) {
-    // TODO(crbug.com/388318201): investigate
+    // requires EXT_texture_filter_anisotropic
     DAWN_SUPPRESS_TEST_IF(IsCompatibilityMode() &&
                           HasToggleEnabled("gl_force_es_31_and_no_extensions"));
     const uint16_t maxAnisotropyLists[] = {1, 2, 16, 128};

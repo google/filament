@@ -47,6 +47,8 @@ libtint_source_set("common") {
   sources = [
     "allowed_features.h",
     "common.cc",
+    "reserved_words.cc",
+    "reserved_words.h",
   ]
   deps = [
     "${dawn_root}/src/utils:utils",
@@ -54,14 +56,11 @@ libtint_source_set("common") {
     "${tint_src_dir}/lang/wgsl/features",
     "${tint_src_dir}/utils",
     "${tint_src_dir}/utils/containers",
-    "${tint_src_dir}/utils/diagnostic",
     "${tint_src_dir}/utils/ice",
     "${tint_src_dir}/utils/macros",
     "${tint_src_dir}/utils/math",
     "${tint_src_dir}/utils/memory",
-    "${tint_src_dir}/utils/result",
     "${tint_src_dir}/utils/rtti",
-    "${tint_src_dir}/utils/text",
   ]
 }
 if (tint_build_unittests) {
@@ -75,14 +74,11 @@ if (tint_build_unittests) {
       "${tint_src_dir}/lang/wgsl/features",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
-      "${tint_src_dir}/utils/diagnostic",
       "${tint_src_dir}/utils/ice",
       "${tint_src_dir}/utils/macros",
       "${tint_src_dir}/utils/math",
       "${tint_src_dir}/utils/memory",
-      "${tint_src_dir}/utils/result",
       "${tint_src_dir}/utils/rtti",
-      "${tint_src_dir}/utils/text",
     ]
   }
 }

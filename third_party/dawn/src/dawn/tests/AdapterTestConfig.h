@@ -48,7 +48,7 @@ struct BackendTestConfig {
 };
 
 struct TestAdapterProperties {
-    TestAdapterProperties(const wgpu::AdapterInfo& info, bool selected);
+    TestAdapterProperties(const wgpu::AdapterInfo& info, bool selected, bool compatibilityMode);
     uint32_t vendorID;
     std::string vendorName;
     std::string architecture;

@@ -106,11 +106,13 @@ NF==2 && $2 ~ /^@[1-9][0-9]*$/ { # exported symbol
 # At the end check for symbols marked as both duplicated and removed
 END{
    if (symbolo > lasto) {
-      print "highest symbol ordinal in png.h,", symbolo ", exceeds last ordinal from png.h", lasto
+      print "highest symbol ordinal in png.h,",
+            symbolo ", exceeds last ordinal from png.h", lasto
       err = 1
    }
    if (mastero > lasto) {
-      print "highest symbol ordinal in", master ",", mastero ", exceeds last ordinal from png.h", lasto
+      print "highest symbol ordinal in", master ",",
+            mastero ", exceeds last ordinal from png.h", lasto
       err = 1
    }
    unexported=0
@@ -149,17 +151,21 @@ END{
          unexported = 0
       }
       if (symbol[o] != "" && removed[o] != "") {
-         print "png.h: symbol", o, "both exported as '" symbol[o] "' and removed as '" removed[o] "'"
+         print "png.h: symbol", o,
+               "both exported as '" symbol[o] "' and removed as '" removed[o] "'"
          err = 1
       } else if (symbol[o] != official[o]) {
          # either the symbol is missing somewhere or it changed
          err = 1
          if (symbol[o] == "")
-            print "png.h: symbol", o, "is exported as '" official[o] "' in", master
+            print "png.h: symbol", o,
+                  "is exported as '" official[o] "' in", master
          else if (official[o] == "")
-            print "png.h: exported symbol", o, "'" symbol[o] "' not present in", master
+            print "png.h: exported symbol", o,
+                  "'" symbol[o] "' not present in", master
          else
-            print "png.h: exported symbol", o, "'" symbol[o] "' exists as '" official[o] "' in", master
+            print "png.h: exported symbol", o,
+                  "'" symbol[o] "' exists as '" official[o] "' in", master
       }
 
       # Finally generate symbols.new

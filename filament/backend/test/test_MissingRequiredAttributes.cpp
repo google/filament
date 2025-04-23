@@ -16,7 +16,9 @@
 
 #include "BackendTest.h"
 
-#include "ShaderGenerator.h"
+#include "Lifetimes.h"
+#include "Shader.h"
+#include "SharedShaders.h"
 #include "TrianglePrimitive.h"
 
 namespace {
@@ -25,7 +27,7 @@ namespace {
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::string vertex (R"(#version 450 core
+std::string vertex(R"(#version 450 core
 
 layout(location = 0) in vec4 mesh_position;
 
@@ -45,16 +47,6 @@ void main() {
 }
 )");
 
-std::string fragment (R"(#version 450 core
-
-layout(location = 0) out vec4 fragColor;
-
-void main() {
-    fragColor = vec4(1.0);
-}
-
-)");
-
 }
 
 namespace test {
@@ -70,52 +62,52 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
+        DriverApi& api = getDriverApi();
+        Cleanup cleanup(api);
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = createSwapChain();
-        getDriverApi().makeCurrent(swapChain, swapChain);
+        auto swapChain = cleanup.add(createSwapChain());
+        api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(getDriverApi());
-        auto program = getDriverApi().createProgram(std::move(p));
+        Shader shader(api, cleanup, ShaderConfig{
+                .vertexShader = vertex,
+                .fragmentShader = SharedShaders::getFragmentShaderText(FragmentShaderType::White,
+                        ShaderUniformType::None),
+        });
 
-        auto defaultRenderTarget = getDriverApi().createDefaultRenderTarget(0);
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
-        TrianglePrimitive triangle(getDriverApi());
+        TrianglePrimitive triangle(api);
 
         RenderPassParams params = {};
         fullViewport(params);
         params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = {0.f, 1.f, 0.f, 1.f};
+        params.clearColor = { 0.f, 1.f, 0.f, 1.f };
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState state;
-        state.program = program;
+        state.program = shader.getProgram();
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
         state.rasterState.culling = CullingMode::NONE;
 
-        getDriverApi().startCapture(0);
+        api.startCapture(0);
 
-        getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0, 0);
+        api.makeCurrent(swapChain, swapChain);
+        api.beginFrame(0, 0, 0);
 
         // Render a triangle.
-        getDriverApi().beginRenderPass(defaultRenderTarget, params);
-        getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-        getDriverApi().endRenderPass();
+        api.beginRenderPass(defaultRenderTarget, params);
+        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        api.endRenderPass();
 
-        getDriverApi().flush();
-        getDriverApi().commit(swapChain);
-        getDriverApi().endFrame(0);
+        api.flush();
+        api.commit(swapChain);
+        api.endFrame(0);
 
-        getDriverApi().stopCapture(0);
-
-        getDriverApi().destroyProgram(program);
-        getDriverApi().destroySwapChain(swapChain);
-        getDriverApi().destroyRenderTarget(defaultRenderTarget);
+        api.stopCapture(0);
     }
 
     executeCommands();

@@ -21,12 +21,19 @@ The included licenses apply to the following files:
 
 Place release notes for the upcoming release below this line and remove this line upon naming this release.
 
+- Typed buffers (including ROV buffers) no longer accept types other than vectors and scalars. Any other types will produce descriptive errors. This removes support for appropriately sized matrices and structs. Though it worked in some contexts, code generated from such types was unreliable.
+
 ### Version 1.8.2502
+
+This cumulative release contains numerous bug fixes and stability improvements.
+
+Here are some highlights:
 
 - The incomplete WaveMatrix implementation has been removed. [#6807](https://github.com/microsoft/DirectXShaderCompiler/pull/6807)
 - DXIL Validator Hash is open sourced. [#6846](https://github.com/microsoft/DirectXShaderCompiler/pull/6846)
 - DXIL container validation for PSV0 part allows any content ordering inside string and semantic index tables. [#6859](https://github.com/microsoft/DirectXShaderCompiler/pull/6859)
 - The and() and or() intrinsics will now accept non-integer parameters by casting them to bools. [#7060](https://github.com/microsoft/DirectXShaderCompiler/pull/7060)
+- Released executables will now expect the filenames associated with the released pdbs. Instead of expecting `dxc_full.pdb`, `dxc.exe` will now expect `dxc.pdb`.
 
 ### Version 1.8.2407
 

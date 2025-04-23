@@ -148,6 +148,12 @@ class Device final : public DeviceBase {
         const SharedTextureMemoryDescriptor* descriptor) override;
     ResultOrError<Ref<SharedFenceBase>> ImportSharedFenceImpl(
         const SharedFenceDescriptor* descriptor) override;
+    ResultOrError<Ref<TextureBase>> CreateTextureWrappingEGLImageImpl(
+        const ExternalImageDescriptor* descriptor,
+        ::EGLImage image);
+    ResultOrError<Ref<TextureBase>> CreateTextureWrappingGLTextureImpl(
+        const ExternalImageDescriptor* descriptor,
+        GLuint texture);
 
     void DestroyImpl() override;
 

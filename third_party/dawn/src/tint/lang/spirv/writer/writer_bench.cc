@@ -45,20 +45,20 @@ namespace {
 void GenerateSPIRV(benchmark::State& state, std::string input_name) {
     auto res = bench::GetWgslProgram(input_name);
     if (res != Success) {
-        state.SkipWithError(res.Failure().reason.Str());
+        state.SkipWithError(res.Failure().reason);
         return;
     }
     for (auto _ : state) {
         // Convert the AST program to an IR module.
         auto ir = tint::wgsl::reader::ProgramToLoweredIR(res->program);
         if (ir != Success) {
-            state.SkipWithError(ir.Failure().reason.Str());
+            state.SkipWithError(ir.Failure().reason);
             return;
         }
 
         auto gen_res = Generate(ir.Get(), {});
         if (gen_res != Success) {
-            state.SkipWithError(gen_res.Failure().reason.Str());
+            state.SkipWithError(gen_res.Failure().reason);
         }
     }
 }

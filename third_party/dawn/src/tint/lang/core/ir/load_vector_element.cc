@@ -53,7 +53,7 @@ LoadVectorElement::LoadVectorElement(Id id,
 LoadVectorElement::~LoadVectorElement() = default;
 
 LoadVectorElement* LoadVectorElement::Clone(CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     auto* from = ctx.Remap(From());
     auto* index = ctx.Remap(Index());
     return ctx.ir.CreateInstruction<LoadVectorElement>(new_result, from, index);

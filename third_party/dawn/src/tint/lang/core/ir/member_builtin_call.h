@@ -43,6 +43,9 @@ class MemberBuiltinCall : public Castable<MemberBuiltinCall, Call> {
     /// The base offset in Operands() for the args
     static constexpr size_t kArgsOperandOffset = 1;
 
+    /// The fixed number of results returned by this instruction
+    static constexpr size_t kNumResults = 1;
+
     /// Constructor (no results, no operands)
     /// @param id the instruction id
     explicit MemberBuiltinCall(Id id);

@@ -68,7 +68,7 @@ class GlslWriterTestHelperBase : public BASE {
                   tint::ast::PipelineStage stage = tint::ast::PipelineStage::kCompute) {
         auto result = writer::Generate(mod, options, "");
         if (result != Success) {
-            err_ = result.Failure().reason.Str();
+            err_ = result.Failure().reason;
             return false;
         }
         output_ = result.Get();

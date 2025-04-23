@@ -116,7 +116,6 @@ ShaderModule::ShaderModule(Device* device,
 
 MaybeError ShaderModule::Initialize(ShaderModuleParseResult* parseResult,
                                     OwnedCompilationMessages* compilationMessages) {
-    ScopedTintICEHandler scopedICEHandler(GetDevice());
     return InitializeBase(parseResult, compilationMessages);
 }
 
@@ -131,7 +130,6 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
     TRACE_EVENT0(device->GetPlatform(), General, "ShaderModuleD3D12::Compile");
     DAWN_ASSERT(!IsError());
 
-    ScopedTintICEHandler scopedICEHandler(device);
     const EntryPointMetadata& entryPoint = GetEntryPoint(programmableStage.entryPoint);
     const bool useTintIR = device->IsToggleEnabled(Toggle::UseTintIR);
 
@@ -213,6 +211,7 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
                     case kInternalStorageBufferBinding:
                     case wgpu::BufferBindingType::Storage:
                     case wgpu::BufferBindingType::ReadOnlyStorage:
+                    case kInternalReadOnlyStorageBufferBinding:
                         bindings.storage.emplace(
                             srcBindingPoint, tint::hlsl::writer::binding::Storage{
                                                  dstBindingPoint.group, dstBindingPoint.binding});
@@ -265,7 +264,8 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
                 // buffer bindings to be treated as UAV instead of SRV. Internal storage
                 // buffer is a storage buffer used in the internal pipeline.
                 const bool forceStorageBufferAsUAV =
-                    (bufferBindingInfo->type == wgpu::BufferBindingType::ReadOnlyStorage &&
+                    ((bufferBindingInfo->type == wgpu::BufferBindingType::ReadOnlyStorage ||
+                      bufferBindingInfo->type == kInternalReadOnlyStorageBufferBinding) &&
                      (bindingLayout.type == wgpu::BufferBindingType::Storage ||
                       bindingLayout.type == kInternalStorageBufferBinding));
                 if (forceStorageBufferAsUAV) {
@@ -382,13 +382,17 @@ ResultOrError<d3d::CompiledShader> ShaderModule::Compile(
     req.hlsl.tintOptions.polyfill_pack_unpack_4x8 =
         device->IsToggleEnabled(Toggle::D3D12PolyFillPackUnpack4x8);
 
-    const CombinedLimits& limits = device->GetLimits();
-    req.hlsl.limits = LimitsForCompilationRequest::Create(limits.v1);
-    req.hlsl.adapter = UnsafeUnkeyedValue(static_cast<const AdapterBase*>(device->GetAdapter()));
+    req.hlsl.limits = LimitsForCompilationRequest::Create(device->GetLimits().v1);
+    req.hlsl.adapterSupportedLimits =
+        LimitsForCompilationRequest::Create(device->GetAdapter()->GetLimits().v1);
+    req.hlsl.maxSubgroupSize = device->GetAdapter()->GetPhysicalDevice()->GetSubgroupMaxSize();
 
     CacheResult<d3d::CompiledShader> compiledShader;
-    DAWN_TRY_LOAD_OR_RUN(compiledShader, device, std::move(req), d3d::CompiledShader::FromBlob,
-                         d3d::CompileShader, "D3D12.CompileShader");
+    {
+        ScopedTintICEHandler scopedICEHandler(device);
+        DAWN_TRY_LOAD_OR_RUN(compiledShader, device, std::move(req), d3d::CompiledShader::FromBlob,
+                             d3d::CompileShader, "D3D12.CompileShader");
+    }
 
     if (device->IsToggleEnabled(Toggle::DumpShaders)) {
         if (device->IsToggleEnabled(Toggle::UseDXC)) {

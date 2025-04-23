@@ -25,11 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "dawn/tests/ChromiumTestCompat.h"
 #include "unittests/validation/ValidationTest.h"
 
 #include "gtest/gtest.h"
 
 int main(int argc, char** argv) {
+    dawn::SubstituteChromiumArgs(argc, argv);
     InitDawnValidationTestEnvironment(argc, argv);
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

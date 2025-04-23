@@ -19,7 +19,7 @@
 
 # Function to print out a list of numbers as integers; the function truncates
 # the integers which must be one-per-line.
-function print(){
+print(){
    awk 'BEGIN{
       str = ""
    }

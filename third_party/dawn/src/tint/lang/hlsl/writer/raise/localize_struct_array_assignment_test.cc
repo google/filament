@@ -72,13 +72,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s1:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s1:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s1, 0u, %5
     %7:InnerS = load %v
@@ -100,19 +100,19 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s1:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s1:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s1, 0u, %5
     %7:InnerS = load %v
     %8:ptr<function, array<InnerS, 8>, read_write> = access %s1, 0u
     %9:array<InnerS, 8> = load %8
-    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var, %9
+    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var %9
     %11:ptr<function, InnerS, read_write> = access %tint_array_copy, %5
     store %11, %7
     %12:array<InnerS, 8> = load %tint_array_copy
@@ -158,13 +158,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s1:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s1:ptr<function, OuterS, read_write> = var undef
     %5:ptr<function, array<InnerS, 8>, read_write> = access %s1, 0u
     %6:u32 = load %dyn_index
     %7:ptr<function, InnerS, read_write> = access %5, %6
@@ -187,20 +187,20 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s1:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s1:ptr<function, OuterS, read_write> = var undef
     %5:ptr<function, array<InnerS, 8>, read_write> = access %s1, 0u
     %6:u32 = load %dyn_index
     %7:ptr<function, InnerS, read_write> = access %5, %6
     %8:InnerS = load %v
     %9:ptr<function, array<InnerS, 8>, read_write> = access %s1, 0u
     %10:array<InnerS, 8> = load %9
-    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var, %10
+    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var %10
     %12:ptr<function, InnerS, read_write> = access %tint_array_copy, %6
     store %12, %8
     %13:array<InnerS, 8> = load %tint_array_copy
@@ -250,13 +250,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s1:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s1:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s1, 0u, 0u, %5
     %7:InnerS = load %v
@@ -282,19 +282,19 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s1:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s1:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s1, 0u, 0u, %5
     %7:InnerS = load %v
     %8:ptr<function, array<InnerS, 8>, read_write> = access %s1, 0u, 0u
     %9:array<InnerS, 8> = load %8
-    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var, %9
+    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var %9
     %11:ptr<function, InnerS, read_write> = access %tint_array_copy, %5
     store %11, %7
     %12:array<InnerS, 8> = load %tint_array_copy
@@ -348,13 +348,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s1:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s1:ptr<function, OuterS, read_write> = var undef
     %5:ptr<function, S1, read_write> = access %s1, 0u
     %6:ptr<function, array<InnerS, 8>, read_write> = access %5, 0u
     %7:u32 = load %dyn_index
@@ -382,13 +382,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s1:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s1:ptr<function, OuterS, read_write> = var undef
     %5:ptr<function, S1, read_write> = access %s1, 0u
     %6:ptr<function, array<InnerS, 8>, read_write> = access %5, 0u
     %7:u32 = load %dyn_index
@@ -396,7 +396,7 @@ $B1: {  # root
     %9:InnerS = load %v
     %10:ptr<function, array<InnerS, 8>, read_write> = access %s1, 0u, 0u
     %11:array<InnerS, 8> = load %10
-    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var, %11
+    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var %11
     %13:ptr<function, InnerS, read_write> = access %tint_array_copy, %7
     store %13, %9
     %14:array<InnerS, 8> = load %tint_array_copy
@@ -448,13 +448,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s, 0u, %5, 0u, %5
     %7:InnerS = load %v
@@ -480,19 +480,19 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s, 0u, %5, 0u, %5
     %7:InnerS = load %v
     %8:ptr<function, array<S1, 8>, read_write> = access %s, 0u
     %9:array<S1, 8> = load %8
-    %tint_array_copy:ptr<function, array<S1, 8>, read_write> = var, %9
+    %tint_array_copy:ptr<function, array<S1, 8>, read_write> = var %9
     %11:ptr<function, InnerS, read_write> = access %tint_array_copy, %5, 0u, %5
     store %11, %7
     %12:array<S1, 8> = load %tint_array_copy
@@ -546,13 +546,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s:ptr<function, OuterS, read_write> = var undef
     %5:ptr<function, array<S1, 8>, read_write> = access %s, 0u
     %6:u32 = load %dyn_index
     %7:ptr<function, S1, read_write> = access %5, %6
@@ -582,13 +582,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s:ptr<function, OuterS, read_write> = var undef
     %5:ptr<function, array<S1, 8>, read_write> = access %s, 0u
     %6:u32 = load %dyn_index
     %7:ptr<function, S1, read_write> = access %5, %6
@@ -598,7 +598,7 @@ $B1: {  # root
     %11:InnerS = load %v
     %12:ptr<function, array<S1, 8>, read_write> = access %s, 0u
     %13:array<S1, 8> = load %12
-    %tint_array_copy:ptr<function, array<S1, 8>, read_write> = var, %13
+    %tint_array_copy:ptr<function, array<S1, 8>, read_write> = var %13
     %15:ptr<function, InnerS, read_write> = access %tint_array_copy, %6, 0u, %9
     store %15, %11
     %16:array<S1, 8> = load %tint_array_copy
@@ -650,13 +650,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s, 0u, 3u, 0u, %5
     %7:InnerS = load %v
@@ -682,19 +682,19 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s, 0u, 3u, 0u, %5
     %7:InnerS = load %v
     %8:ptr<function, array<InnerS, 8>, read_write> = access %s, 0u, 3u, 0u
     %9:array<InnerS, 8> = load %8
-    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var, %9
+    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var %9
     %11:ptr<function, InnerS, read_write> = access %tint_array_copy, %5
     store %11, %7
     %12:array<InnerS, 8> = load %tint_array_copy
@@ -740,13 +740,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s, 0u, 3u, %5
     %7:InnerS = load %v
@@ -768,19 +768,19 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s, 0u, 3u, %5
     %7:InnerS = load %v
     %8:ptr<function, array<InnerS, 8>, read_write> = access %s, 0u, 3u
     %9:array<InnerS, 8> = load %8
-    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var, %9
+    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var %9
     %11:ptr<function, InnerS, read_write> = access %tint_array_copy, %5
     store %11, %7
     %12:array<InnerS, 8> = load %tint_array_copy
@@ -829,13 +829,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s1:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s1:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s1, 0u, %5
     %7:InnerS = load %v
@@ -869,19 +869,19 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s1:ptr<function, OuterS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s1:ptr<function, OuterS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s1, 0u, %5
     %7:InnerS = load %v
     %8:ptr<function, array<InnerS, 8>, read_write> = access %s1, 0u
     %9:array<InnerS, 8> = load %8
-    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var, %9
+    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var %9
     %11:ptr<function, InnerS, read_write> = access %tint_array_copy, %5
     store %11, %7
     %12:array<InnerS, 8> = load %tint_array_copy
@@ -891,7 +891,7 @@ $B1: {  # root
     %15:InnerS = load %v
     %16:ptr<function, array<InnerS, 8>, read_write> = access %s1, 0u
     %17:array<InnerS, 8> = load %16
-    %tint_array_copy_1:ptr<function, array<InnerS, 8>, read_write> = var, %17  # %tint_array_copy_1: 'tint_array_copy'
+    %tint_array_copy_1:ptr<function, array<InnerS, 8>, read_write> = var %17  # %tint_array_copy_1: 'tint_array_copy'
     %19:ptr<function, InnerS, read_write> = access %tint_array_copy_1, %13
     store %19, %15
     %20:array<InnerS, 8> = load %tint_array_copy_1
@@ -903,7 +903,7 @@ $B1: {  # root
     %25:InnerS = load %v
     %26:ptr<function, array<InnerS, 8>, read_write> = access %s1, 0u
     %27:array<InnerS, 8> = load %26
-    %tint_array_copy_2:ptr<function, array<InnerS, 8>, read_write> = var, %27  # %tint_array_copy_2: 'tint_array_copy'
+    %tint_array_copy_2:ptr<function, array<InnerS, 8>, read_write> = var %27  # %tint_array_copy_2: 'tint_array_copy'
     %29:ptr<function, InnerS, read_write> = access %tint_array_copy_2, %21
     store %29, %25
     %30:array<InnerS, 8> = load %tint_array_copy_2
@@ -911,7 +911,7 @@ $B1: {  # root
     %31:InnerS = load %v
     %32:ptr<function, array<InnerS, 8>, read_write> = access %s1, 0u
     %33:array<InnerS, 8> = load %32
-    %tint_array_copy_3:ptr<function, array<InnerS, 8>, read_write> = var, %33  # %tint_array_copy_3: 'tint_array_copy'
+    %tint_array_copy_3:ptr<function, array<InnerS, 8>, read_write> = var %33  # %tint_array_copy_3: 'tint_array_copy'
     %35:ptr<function, InnerS, read_write> = access %tint_array_copy_3, %23
     store %35, %31
     %36:array<InnerS, 8> = load %tint_array_copy_3
@@ -958,13 +958,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
-  %s1:ptr<private, OuterS, read_write> = var
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
+  %s1:ptr<private, OuterS, read_write> = var undef
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<private, InnerS, read_write> = access %s1, 0u, %5
     %7:InnerS = load %v
@@ -986,19 +986,19 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
-  %s1:ptr<private, OuterS, read_write> = var
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
+  %s1:ptr<private, OuterS, read_write> = var undef
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<private, InnerS, read_write> = access %s1, 0u, %5
     %7:InnerS = load %v
     %8:ptr<private, array<InnerS, 8>, read_write> = access %s1, 0u
     %9:array<InnerS, 8> = load %8
-    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var, %9
+    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var %9
     %11:ptr<function, InnerS, read_write> = access %tint_array_copy, %5
     store %11, %7
     %12:array<InnerS, 8> = load %tint_array_copy
@@ -1047,13 +1047,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
-  %s1:ptr<private, OuterS, read_write> = var
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
+  %s1:ptr<private, OuterS, read_write> = var undef
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<private, InnerS, read_write> = access %s1, 0u, %5
     %p:ptr<private, InnerS, read_write> = let %6
@@ -1076,19 +1076,19 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
-  %s1:ptr<private, OuterS, read_write> = var
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
+  %s1:ptr<private, OuterS, read_write> = var undef
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<private, InnerS, read_write> = access %s1, 0u, %5
     %7:InnerS = load %v
     %8:ptr<private, array<InnerS, 8>, read_write> = access %s1, 0u
     %9:array<InnerS, 8> = load %8
-    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var, %9
+    %tint_array_copy:ptr<function, array<InnerS, 8>, read_write> = var %9
     %11:ptr<function, InnerS, read_write> = access %tint_array_copy, %5
     store %11, %7
     %12:array<InnerS, 8> = load %tint_array_copy
@@ -1136,13 +1136,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
-  %s1:ptr<storage, OuterS, read_write> = var @binding_point(0, 1)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
+  %s1:ptr<storage, OuterS, read_write> = var undef @binding_point(0, 1)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<storage, InnerS, read_write> = access %s1, 0u, %5
     %7:InnerS = load %v
@@ -1193,13 +1193,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
-  %s1:ptr<workgroup, OuterS, read_write> = var
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
+  %s1:ptr<workgroup, OuterS, read_write> = var undef
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<workgroup, InnerS, read_write> = access %s1, 0u, %5
     %7:InnerS = load %v
@@ -1250,13 +1250,13 @@ OuterS = struct @align(4) {
 }
 
 $B1: {  # root
-  %dyn_index:ptr<uniform, u32, read> = var @binding_point(0, 0)
+  %dyn_index:ptr<uniform, u32, read> = var undef @binding_point(0, 0)
 }
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %v:ptr<function, InnerS, read_write> = var
-    %s:ptr<function, array<OuterS, 2>, read_write> = var
+    %v:ptr<function, InnerS, read_write> = var undef
+    %s:ptr<function, array<OuterS, 2>, read_write> = var undef
     %5:u32 = load %dyn_index
     %6:ptr<function, InnerS, read_write> = access %s, %5, 0u, %5
     %7:InnerS = load %v

@@ -351,6 +351,11 @@ TEST_P(TextureZeroInitTest, CopyBufferToTexture) {
 // Test for a copy only to a subset of the subresource, lazy init is necessary to clear the other
 // half.
 TEST_P(TextureZeroInitTest, CopyBufferToTextureHalf) {
+    // TODO(348653642): D3D11 emulates B2T with a render pass, and render pass' lazy clear
+    // is not currently counted properly. So GetLazyClearCountForTesting() would not return the
+    // expected value.
+    DAWN_SUPPRESS_TEST_IF(HasToggleEnabled("use_blit_for_b2t"));
+
     wgpu::TextureDescriptor descriptor =
         CreateTextureDescriptor(4, 1,
                                 wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::TextureBinding |

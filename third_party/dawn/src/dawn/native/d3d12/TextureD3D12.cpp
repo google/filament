@@ -323,32 +323,6 @@ void Texture::DestroyImpl() {
     mSwapChainTexture = false;
 }
 
-ResultOrError<ExecutionSerial> Texture::EndAccess() {
-    DAWN_ASSERT(mD3D12ResourceFlags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS);
-
-    NotifySwapChainPresentToPIX();
-
-    // Synchronize if texture access wasn't synchronized already due to ExecuteCommandLists. If
-    // there were pending commands that used this texture mLastSharedTextureMemoryUsageSerial will
-    // be set, but if it's still not set, generate a signal fence after waiting on wait fences.
-    Queue* queue = ToBackend(GetDevice()->GetQueue());
-    if (mLastSharedTextureMemoryUsageSerial == kBeginningOfGPUTime) {
-        // Even though we aren't recording any commands here, asking for a command context ensures
-        // that the device fence is signaled eventually even if no commands were recorded before
-        // EndAccess. This is a little sub-optimal, but shouldn't occur often in practice.
-        CommandRecordingContext* context =
-            queue->GetPendingCommandContext(ExecutionQueueBase::SubmitMode::Passive);
-        DAWN_TRY(SynchronizeTextureBeforeUse(context));
-        DAWN_ASSERT(mLastSharedTextureMemoryUsageSerial != kBeginningOfGPUTime);
-    }
-    // Make the queue signal the fence in finite time.
-    DAWN_TRY(queue->EnsureCommandsFlushed(mLastSharedTextureMemoryUsageSerial));
-
-    ExecutionSerial ret = mLastSharedTextureMemoryUsageSerial;
-    mLastSharedTextureMemoryUsageSerial = kBeginningOfGPUTime;
-    return ret;
-}
-
 DXGI_FORMAT Texture::GetD3D12Format() const {
     return d3d::DXGITextureFormat(GetDevice(), GetFormat().format);
 }
@@ -850,42 +824,41 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* commandContext,
             uint32_t bytesPerRow =
                 Align((largestMipSize.width / blockInfo.width) * blockInfo.byteSize,
                       kTextureBytesPerRowAlignment);
-            uint64_t bufferSize = bytesPerRow * (largestMipSize.height / blockInfo.height) *
+            uint64_t uploadSize = bytesPerRow * (largestMipSize.height / blockInfo.height) *
                                   largestMipSize.depthOrArrayLayers;
-            DynamicUploader* uploader = device->GetDynamicUploader();
-            UploadHandle uploadHandle;
-            DAWN_TRY_ASSIGN(
-                uploadHandle,
-                uploader->Allocate(bufferSize, device->GetQueue()->GetPendingCommandSerial(),
-                                   blockInfo.byteSize));
-            memset(uploadHandle.mappedBuffer, clearColor, bufferSize);
 
-            for (uint32_t level = range.baseMipLevel; level < range.baseMipLevel + range.levelCount;
-                 ++level) {
-                // compute d3d12 texture copy locations for texture and buffer
-                Extent3D copySize = GetMipLevelSingleSubresourcePhysicalSize(level, aspect);
+            DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
+                uploadSize, blockInfo.byteSize, [&](UploadReservation reservation) -> MaybeError {
+                    memset(reservation.mappedPointer, clearColor, uploadSize);
 
-                for (uint32_t layer = range.baseArrayLayer;
-                     layer < range.baseArrayLayer + range.layerCount; ++layer) {
-                    if (clearValue == TextureBase::ClearValue::Zero &&
-                        IsSubresourceContentInitialized(
-                            SubresourceRange::SingleMipAndLayer(level, layer, aspect))) {
-                        // Skip lazy clears if already initialized.
-                        continue;
+                    for (uint32_t level = range.baseMipLevel;
+                         level < range.baseMipLevel + range.levelCount; ++level) {
+                        // compute d3d12 texture copy locations for texture and buffer
+                        Extent3D copySize = GetMipLevelSingleSubresourcePhysicalSize(level, aspect);
+
+                        for (uint32_t layer = range.baseArrayLayer;
+                             layer < range.baseArrayLayer + range.layerCount; ++layer) {
+                            if (clearValue == TextureBase::ClearValue::Zero &&
+                                IsSubresourceContentInitialized(
+                                    SubresourceRange::SingleMipAndLayer(level, layer, aspect))) {
+                                // Skip lazy clears if already initialized.
+                                continue;
+                            }
+
+                            TextureCopy textureCopy;
+                            textureCopy.texture = this;
+                            textureCopy.origin = {0, 0, layer};
+                            textureCopy.mipLevel = level;
+                            textureCopy.aspect = aspect;
+                            RecordBufferTextureCopyWithBufferHandle(
+                                BufferTextureCopyDirection::B2T, commandList,
+                                ToBackend(reservation.buffer)->GetD3D12Resource(),
+                                reservation.offsetInBuffer, bytesPerRow, largestMipSize.height,
+                                textureCopy, copySize);
+                        }
                     }
-
-                    TextureCopy textureCopy;
-                    textureCopy.texture = this;
-                    textureCopy.origin = {0, 0, layer};
-                    textureCopy.mipLevel = level;
-                    textureCopy.aspect = aspect;
-                    RecordBufferTextureCopyWithBufferHandle(
-                        BufferTextureCopyDirection::B2T, commandList,
-                        ToBackend(uploadHandle.stagingBuffer)->GetD3D12Resource(),
-                        uploadHandle.startOffset, bytesPerRow, largestMipSize.height, textureCopy,
-                        copySize);
-                }
-            }
+                    return {};
+                }));
         }
     }
     if (clearValue == TextureBase::ClearValue::Zero) {

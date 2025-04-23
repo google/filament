@@ -1,4 +1,3 @@
-
 /* pngunknown.c - test the read side unknown chunk handling
  *
  * Copyright (c) 2021 Cosmin Truta
@@ -114,6 +113,8 @@ typedef png_byte *png_const_bytep;
 #define png_PLTE PNG_U32( 80,  76,  84,  69)
 #define png_bKGD PNG_U32( 98,  75,  71,  68)
 #define png_cHRM PNG_U32( 99,  72,  82,  77)
+#define png_cICP PNG_U32( 99,  73,  67,  80) /* PNGv3 */
+#define png_cLLI PNG_U32( 99,  76,  76,  73) /* PNGv3 */
 #define png_eXIf PNG_U32(101,  88,  73, 102) /* registered July 2017 */
 #define png_fRAc PNG_U32(102,  82,  65,  99) /* registered, not defined */
 #define png_gAMA PNG_U32(103,  65,  77,  65)
@@ -123,6 +124,7 @@ typedef png_byte *png_const_bytep;
 #define png_hIST PNG_U32(104,  73,  83,  84)
 #define png_iCCP PNG_U32(105,  67,  67,  80)
 #define png_iTXt PNG_U32(105,  84,  88, 116)
+#define png_mDCV PNG_U32(109,  68,  67,  86) /* PNGv3 */
 #define png_oFFs PNG_U32(111,  70,  70, 115)
 #define png_pCAL PNG_U32(112,  67,  65,  76)
 #define png_pHYs PNG_U32(112,  72,  89, 115)
@@ -211,6 +213,20 @@ static struct
          1,
 #     endif
       1,  START, 0 },
+   { "cICP", PNG_INFO_cICP, png_cICP,
+#     ifdef PNG_READ_cICP_SUPPORTED
+         0,
+#     else
+         1,
+#     endif
+      1,  START, 0 },
+   { "cLLI", PNG_INFO_cLLI, png_cLLI,
+#     ifdef PNG_READ_cLLI_SUPPORTED
+         0,
+#     else
+         1,
+#     endif
+      1,  START, 0 },
    { "eXIf", PNG_INFO_eXIf, png_eXIf,
 #     ifdef PNG_READ_eXIf_SUPPORTED
          0,
@@ -246,6 +262,13 @@ static struct
          1,
 #     endif
       1, ABSENT, 0 },
+   { "mDCV", PNG_INFO_mDCV, png_mDCV,
+#     ifdef PNG_READ_mDCV_SUPPORTED
+         0,
+#     else
+         1,
+#     endif
+      1,  START, 0 },
    { "oFFs", PNG_INFO_oFFs, png_oFFs,
 #     ifdef PNG_READ_oFFs_SUPPORTED
          0,

@@ -114,21 +114,45 @@ ResultOrError<Ref<WrappedEGLSync>> WrappedEGLSync::Create(DisplayEGL* display,
     }
 
     DAWN_TRY(CheckEGL(egl, sync != EGL_NO_SYNC, "eglCreateSync"));
-    return AcquireRef(new WrappedEGLSync(display, sync));
+    return AcquireRef(new WrappedEGLSync(display, sync, true));
 }
 
-WrappedEGLSync::WrappedEGLSync(DisplayEGL* display, EGLSync sync) : mDisplay(display), mSync(sync) {
+ResultOrError<Ref<WrappedEGLSync>> WrappedEGLSync::AcquireExternal(DisplayEGL* display,
+                                                                   EGLSync sync) {
+    const EGLFunctions& egl = display->egl;
+
+    // Query a property of the sync object to verify that it's valid and associated with this
+    // EGLDisplay.
+    EGLBoolean queryResult = 0;
+    if (egl.HasExt(EGLExt::FenceSync)) {
+        EGLint syncType = 0;
+        queryResult = egl.GetSyncAttribKHR(display->GetDisplay(), sync, EGL_SYNC_TYPE, &syncType);
+    } else {
+        DAWN_ASSERT(egl.IsAtLeastVersion(1, 5));
+        EGLAttrib syncType = 0;
+        queryResult = egl.GetSyncAttrib(display->GetDisplay(), sync, EGL_SYNC_TYPE, &syncType);
+    }
+
+    DAWN_TRY(CheckEGL(egl, queryResult, "eglGetSyncAttrib"));
+
+    return AcquireRef(new WrappedEGLSync(display, sync, false));
+}
+
+WrappedEGLSync::WrappedEGLSync(DisplayEGL* display, EGLSync sync, bool ownsSync)
+    : mDisplay(display), mSync(sync), mOwnsSync(ownsSync) {
     DAWN_ASSERT(mDisplay != nullptr);
     DAWN_ASSERT(mSync != EGL_NO_SYNC);
 }
 
 WrappedEGLSync::~WrappedEGLSync() {
-    const EGLFunctions& egl = mDisplay->egl;
-    if (egl.HasExt(EGLExt::FenceSync)) {
-        egl.DestroySyncKHR(mDisplay->GetDisplay(), mSync);
-    } else {
-        DAWN_ASSERT(egl.IsAtLeastVersion(1, 5));
-        egl.DestroySync(mDisplay->GetDisplay(), mSync);
+    if (mOwnsSync) {
+        const EGLFunctions& egl = mDisplay->egl;
+        if (egl.HasExt(EGLExt::FenceSync)) {
+            egl.DestroySyncKHR(mDisplay->GetDisplay(), mSync);
+        } else {
+            DAWN_ASSERT(egl.IsAtLeastVersion(1, 5));
+            egl.DestroySync(mDisplay->GetDisplay(), mSync);
+        }
     }
 }
 

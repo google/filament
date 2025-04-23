@@ -563,8 +563,11 @@ MaybeError ValidateCompatibilityOfSingleBindingWithLayout(const DeviceBase* devi
             // group layout is invalid. For internal usage with internal shaders, a storage
             // binding in the shader with an internal storage buffer in the bind group
             // layout is also valid.
-            bool validBindingConversion = (bindingLayout.type == kInternalStorageBufferBinding &&
-                                           bindingInfo.type == wgpu::BufferBindingType::Storage);
+            bool validBindingConversion =
+                (bindingLayout.type == kInternalStorageBufferBinding &&
+                 bindingInfo.type == wgpu::BufferBindingType::Storage) ||
+                (bindingLayout.type == kInternalReadOnlyStorageBufferBinding &&
+                 bindingInfo.type == wgpu::BufferBindingType::ReadOnlyStorage);
 
             DAWN_INVALID_IF(
                 bindingLayout.type != bindingInfo.type && !validBindingConversion,
@@ -640,9 +643,8 @@ ResultOrError<std::unique_ptr<EntryPointMetadata>> ReflectEntryPointUsingTint(
         return invalid;                                                             \
     })()
 
+    const auto& name2Id = inspector->GetNamedOverrideIds();
     if (!entryPoint.overrides.empty()) {
-        const auto& name2Id = inspector->GetNamedOverrideIds();
-
         for (auto& c : entryPoint.overrides) {
             auto id = name2Id.at(c.name);
             EntryPointMetadata::Override override = {id, FromTintOverrideType(c.type),
@@ -662,6 +664,20 @@ ResultOrError<std::unique_ptr<EntryPointMetadata>> ReflectEntryPointUsingTint(
                 DAWN_ASSERT(inserted);
             }
         }
+    }
+
+    // Add overrides which are not used by the entry point into the list so we
+    // can validate set constants in the pipeline.
+    for (auto& o : inspector->Overrides()) {
+        std::string identifier = o.is_id_specified ? std::to_string(o.id.value) : o.name;
+        if (metadata->overrides.count(identifier) != 0) {
+            continue;
+        }
+
+        auto id = name2Id.at(o.name);
+        EntryPointMetadata::Override override = {id, FromTintOverrideType(o.type), o.is_initialized,
+                                                 /* isUsed */ false};
+        metadata->overrides[identifier] = override;
     }
 
     DAWN_TRY_ASSIGN(metadata->stage, TintPipelineStageToShaderStage(entryPoint.stage));
@@ -1018,7 +1034,7 @@ ResultOrError<std::unique_ptr<EntryPointMetadata>> ReflectEntryPointUsingTint(
 
         if (DelayedInvalidIf(bindGroupIndex >= kMaxBindGroupsTyped,
                              "The entry-point uses a binding with a group decoration (%u) "
-                             "that exceeds the maximum (%u).",
+                             "that exceeds maxBindGroups (%u) - 1.",
                              resource.bind_group, kMaxBindGroups) ||
             DelayedInvalidIf(bindingNumber >= kMaxBindingsPerBindGroupTyped,
                              "Binding number (%u) exceeds the maxBindingsPerBindGroup limit (%u).",
@@ -1037,7 +1053,7 @@ ResultOrError<std::unique_ptr<EntryPointMetadata>> ReflectEntryPointUsingTint(
     if (device->IsCompatibilityMode()) {
         tint::BindingPoint nonSamplerBindingPoint = {std::numeric_limits<uint32_t>::max()};
         auto samplerAndNonSamplerTextureUses =
-            inspector->GetSamplerTextureUses(entryPoint.name, nonSamplerBindingPoint);
+            inspector->GetSamplerAndNonSamplerTextureUses(entryPoint.name, nonSamplerBindingPoint);
 
         // separate sampled from non-sampled and put sampled in set
         std::set<tint::BindingPoint> sampledTextures;
@@ -1078,7 +1094,7 @@ ResultOrError<std::unique_ptr<EntryPointMetadata>> ReflectEntryPointUsingTint(
     // Reflection of combined sampler and texture uses.
     auto samplerTextureUses = inspector->GetSamplerTextureUses(entryPoint.name);
 
-    metadata->samplerTexturePairs.reserve(samplerTextureUses.Length());
+    metadata->samplerTexturePairs.reserve(samplerTextureUses.size());
     std::transform(samplerTextureUses.begin(), samplerTextureUses.end(),
                    std::back_inserter(metadata->samplerTexturePairs),
                    [](const tint::inspector::SamplerTexturePair& pair) {
@@ -1090,15 +1106,18 @@ ResultOrError<std::unique_ptr<EntryPointMetadata>> ReflectEntryPointUsingTint(
                        return result;
                    });
 
+    metadata->usesSubgroupMatrix = entryPoint.uses_subgroup_matrix;
+
 #undef DelayedInvalidIf
     return std::move(metadata);
 }
 
-MaybeError ReflectShaderUsingTint(const DeviceBase* device,
+MaybeError ReflectShaderUsingTint(DeviceBase* device,
                                   const tint::Program* program,
                                   OwnedCompilationMessages* compilationMessages,
                                   EntryPointMetadataTable* entryPointMetadataTable) {
     DAWN_ASSERT(program->IsValid());
+    ScopedTintICEHandler scopedICEHandler(device);
 
     tint::inspector::Inspector inspector(*program);
 
@@ -1119,10 +1138,13 @@ MaybeError ReflectShaderUsingTint(const DeviceBase* device,
 }
 }  // anonymous namespace
 
-ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(const tint::Program& program,
-                                                          const char* entryPointName,
-                                                          const LimitsForCompilationRequest& limits,
-                                                          const AdapterBase* adapter) {
+ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(
+    const tint::Program& program,
+    const char* entryPointName,
+    bool usesSubgroupMatrix,
+    uint32_t maxSubgroupSize,
+    const LimitsForCompilationRequest& limits,
+    const LimitsForCompilationRequest& adaterSupportedlimits) {
     tint::inspector::Inspector inspector(program);
 
     // At this point the entry point must exist and must have workgroup size values.
@@ -1131,15 +1153,19 @@ ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(const tint::Program& p
     const tint::inspector::WorkgroupSize& workgroup_size = entryPoint.workgroup_size.value();
 
     return ValidateComputeStageWorkgroupSize(workgroup_size.x, workgroup_size.y, workgroup_size.z,
-                                             entryPoint.workgroup_storage_size, limits, adapter);
+                                             entryPoint.workgroup_storage_size, usesSubgroupMatrix,
+                                             maxSubgroupSize, limits, adaterSupportedlimits);
 }
 
-ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(uint32_t x,
-                                                          uint32_t y,
-                                                          uint32_t z,
-                                                          size_t workgroupStorageSize,
-                                                          const LimitsForCompilationRequest& limits,
-                                                          const AdapterBase* adapter) {
+ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(
+    uint32_t x,
+    uint32_t y,
+    uint32_t z,
+    size_t workgroupStorageSize,
+    bool usesSubgroupMatrix,
+    uint32_t maxSubgroupSize,
+    const LimitsForCompilationRequest& limits,
+    const LimitsForCompilationRequest& adaterSupportedlimits) {
     DAWN_INVALID_IF(x < 1 || y < 1 || z < 1,
                     "Entry-point uses workgroup_size(%u, %u, %u) that are below the "
                     "minimum allowed (1, 1, 1).",
@@ -1147,16 +1173,12 @@ ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(uint32_t x,
 
     if (DAWN_UNLIKELY(x > limits.maxComputeWorkgroupSizeX || y > limits.maxComputeWorkgroupSizeY ||
                       z > limits.maxComputeWorkgroupSizeZ)) {
-        SupportedLimits adapterLimits;
-        wgpu::Status status = adapter->APIGetLimits(&adapterLimits);
-        DAWN_ASSERT(status == wgpu::Status::Success);
-
         uint32_t maxComputeWorkgroupSizeXAdapterLimit =
-            adapterLimits.limits.maxComputeWorkgroupSizeX;
+            adaterSupportedlimits.maxComputeWorkgroupSizeX;
         uint32_t maxComputeWorkgroupSizeYAdapterLimit =
-            adapterLimits.limits.maxComputeWorkgroupSizeY;
+            adaterSupportedlimits.maxComputeWorkgroupSizeY;
         uint32_t maxComputeWorkgroupSizeZAdapterLimit =
-            adapterLimits.limits.maxComputeWorkgroupSizeZ;
+            adaterSupportedlimits.maxComputeWorkgroupSizeZ;
         std::string increaseLimitAdvice =
             (x <= maxComputeWorkgroupSizeXAdapterLimit &&
              y <= maxComputeWorkgroupSizeYAdapterLimit && z <= maxComputeWorkgroupSizeZAdapterLimit)
@@ -1178,12 +1200,12 @@ ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(uint32_t x,
 
     uint64_t numInvocations = static_cast<uint64_t>(x) * y * z;
     uint32_t maxComputeInvocationsPerWorkgroup = limits.maxComputeInvocationsPerWorkgroup;
-    DAWN_INVALID_IF(
-        numInvocations > maxComputeInvocationsPerWorkgroup,
-        "The total number of workgroup invocations (%u) exceeds the "
-        "maximum allowed (%u).%s",
-        numInvocations, maxComputeInvocationsPerWorkgroup,
-        DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxComputeInvocationsPerWorkgroup, numInvocations));
+    DAWN_INVALID_IF(numInvocations > maxComputeInvocationsPerWorkgroup,
+                    "The total number of workgroup invocations (%u) exceeds the "
+                    "maximum allowed (%u).%s",
+                    numInvocations, maxComputeInvocationsPerWorkgroup,
+                    DAWN_INCREASE_LIMIT_MESSAGE(adaterSupportedlimits,
+                                                maxComputeInvocationsPerWorkgroup, numInvocations));
 
     uint32_t maxComputeWorkgroupStorageSize = limits.maxComputeWorkgroupStorageSize;
     DAWN_INVALID_IF(
@@ -1191,7 +1213,18 @@ ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(uint32_t x,
         "The total use of workgroup storage (%u bytes) is larger than "
         "the maximum allowed (%u bytes).%s",
         workgroupStorageSize, maxComputeWorkgroupStorageSize,
-        DAWN_INCREASE_LIMIT_MESSAGE(adapter, maxComputeWorkgroupStorageSize, workgroupStorageSize));
+        DAWN_INCREASE_LIMIT_MESSAGE(adaterSupportedlimits, maxComputeWorkgroupStorageSize,
+                                    workgroupStorageSize));
+
+    if (usesSubgroupMatrix) {
+        // maxSubgroupSize must have a valid value if usesSubgroupMatrix is true and subgroups
+        // feature is supported.
+        DAWN_ASSERT(maxSubgroupSize > 0);
+        DAWN_INVALID_IF((x % maxSubgroupSize) != 0,
+                        "The x-dimension of workgroup_size (%u) must be a multiple of the device "
+                        "maxSubgroupSize (%u) when the shader uses a subgroup matrix",
+                        x, maxSubgroupSize);
+    }
 
     return Extent3D{x, y, z};
 }
@@ -1218,7 +1251,7 @@ MaybeError ValidateAndParseShaderModule(
 
     wgpu::SType moduleType;
     // A WGSL (or SPIR-V, if enabled) subdescriptor is required, and a Dawn-specific SPIR-V options
-// descriptor is allowed when using SPIR-V.
+    // descriptor is allowed when using SPIR-V.
 #if TINT_BUILD_SPV_READER
     DAWN_TRY_ASSIGN(
         moduleType,
@@ -1365,24 +1398,11 @@ MaybeError ValidateCompatibilityWithPipelineLayout(DeviceBase* device,
 
         DAWN_INVALID_IF(
             sampledTextureBindingInfo.sampleType != wgpu::TextureSampleType::Float &&
-                // TODO(crbug.com/376497143): remove Depth as it's invalid WebGPU. See deprecation
-                // warning below.
-                sampledTextureBindingInfo.sampleType != wgpu::TextureSampleType::Depth &&
                 sampledTextureBindingInfo.sampleType != kInternalResolveAttachmentSampleType,
             "Texture binding (group:%u, binding:%u) is %s but used statically with a sampler "
             "(group:%u, binding:%u) that's %s",
             pair.texture.group, pair.texture.binding, sampledTextureBindingInfo.sampleType,
             pair.sampler.group, pair.sampler.binding, wgpu::SamplerBindingType::Filtering);
-
-        // TODO(crbug.com/376497143): remove this deprecation warning.
-        if (sampledTextureBindingInfo.sampleType == wgpu::TextureSampleType::Depth) {
-            const char* msg =
-                "Using a TextureType::Depth with SamplerType::Filtering is deprecated."
-                "TextureType::Depth can only be used with SamplerType::NonFiltering or "
-                "SamplerType::Comparison.";
-            device->EmitWarningOnce(msg);
-            device->GetInstance()->EmitDeprecationWarning(msg);
-        }
     }
 
     // Validate compatibility of the pixel local storage.
@@ -1436,6 +1456,14 @@ MaybeError ValidateCompatibilityWithPipelineLayout(DeviceBase* device,
                         "The layout contains a (non-empty) pixel local storage but the entry-point "
                         "doesn't use a `pixel local` block.");
     }
+
+    // Validate that immediate data used by programmable state are smaller than pipelineLayout
+    // immediate data range bytes.
+    DAWN_INVALID_IF(entryPoint.immediateDataRangeByteSize > layout->GetImmediateDataRangeByteSize(),
+                    "The entry-point uses more bytes of immediate data (%u) than the reserved "
+                    "amount (%u) in %s.",
+                    entryPoint.immediateDataRangeByteSize, layout->GetImmediateDataRangeByteSize(),
+                    layout);
 
     return {};
 }
@@ -1531,18 +1559,25 @@ bool ShaderModuleBase::EqualityFunc::operator()(const ShaderModuleBase* a,
 }
 
 ShaderModuleBase::ScopedUseTintProgram ShaderModuleBase::UseTintProgram() {
-    return mTintData.Use([&](auto tintData) {
-        if (tintData->tintProgram) {
-            return ScopedUseTintProgram(this);
-        }
+    // Directly return ScopedUseTintProgram to add ref count. If the mTintProgram is valid,
+    // this will prevent it from being released before using. If it is already released,
+    // it will be recreated in the GetTintProgram, right before actually using it.
+    return ScopedUseTintProgram(this);
+}
 
-        // When the ShaderModuleBase is not referenced externally, and not used for initializing
-        // any pipeline, the mTintProgram will be released. However the ShaderModuleBase itself
-        // may still alive due to being referenced by some pipelines. In this case, when
-        // DeviceBase::APICreateShaderModule() with the same shader source code, Dawn will look
-        // up from the cache and return the same ShaderModuleBase. In this case, we have to
-        // recreate mTintProgram, when the mTintProgram is required for initializing new
-        // pipelines.
+Ref<TintProgram> ShaderModuleBase::GetTintProgram() {
+    return mTintData.Use([&](auto tintData) {
+        // If the tintProgram is valid, just return it.
+        if (tintData->tintProgram) {
+            return tintData->tintProgram;
+        }
+        // Otherwise, recreate the tintProgram. When the ShaderModuleBase is not referenced
+        // externally, and not used for initializing any pipeline, the mTintProgram will be
+        // released. However the ShaderModuleBase itself may still alive due to being referenced by
+        // some pipelines. In this case, when DeviceBase::APICreateShaderModule() with the same
+        // shader source code, Dawn will look up from the cache and return the same
+        // ShaderModuleBase. In this case, we have to recreate the released mTintProgram for
+        // initializing new pipelines.
         ShaderModuleDescriptor descriptor;
         ShaderSourceWGSL wgslDescriptor;
         ShaderSourceSPIRV sprivDescriptor;
@@ -1564,25 +1599,18 @@ ShaderModuleBase::ScopedUseTintProgram ShaderModuleBase::UseTintProgram() {
         ShaderModuleParseResult parseResult;
         ValidateAndParseShaderModule(GetDevice(), Unpack(&descriptor), mInternalExtensions,
                                      &parseResult,
-                                     /*compilationMessages=*/nullptr)
+                                     /*compilationMessages*/ nullptr)
             .AcquireSuccess();
         DAWN_ASSERT(parseResult.tintProgram != nullptr);
 
         tintData->tintProgram = std::move(parseResult.tintProgram);
         tintData->tintProgramRecreateCount++;
 
-        return ScopedUseTintProgram(this);
-    });
-}
-
-Ref<TintProgram> ShaderModuleBase::GetTintProgram() const {
-    return mTintData.Use([&](auto tintData) {
-        DAWN_ASSERT(tintData->tintProgram != nullptr);
         return tintData->tintProgram;
     });
 }
 
-Ref<TintProgram> ShaderModuleBase::GetTintProgramForTesting() const {
+Ref<TintProgram> ShaderModuleBase::GetNullableTintProgramForTesting() const {
     return mTintData.Use([&](auto tintData) { return tintData->tintProgram; });
 }
 
@@ -1613,7 +1641,7 @@ Future ShaderModuleBase::APIGetCompilationInfo(
 
         void Complete(EventCompletionType completionType) override {
             WGPUCompilationInfoRequestStatus status =
-                WGPUCompilationInfoRequestStatus_InstanceDropped;
+                WGPUCompilationInfoRequestStatus_CallbackCancelled;
             const CompilationInfo* compilationInfo = nullptr;
             if (completionType == EventCompletionType::Ready) {
                 status = WGPUCompilationInfoRequestStatus_Success;
@@ -1674,6 +1702,9 @@ MaybeError ShaderModuleBase::InitializeBase(ShaderModuleParseResult* parseResult
 }
 
 void ShaderModuleBase::WillDropLastExternalRef() {
+    // The last external ref being dropped indicates that the application is not currently using,
+    // and no pending task will use the shader module. In this case we can free the memory for the
+    // parsed module.
     mTintData.Use([&](auto tintData) { tintData->tintProgram = nullptr; });
 }
 

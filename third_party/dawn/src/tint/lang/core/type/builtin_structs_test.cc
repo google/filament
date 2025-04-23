@@ -28,6 +28,7 @@
 #include "src/tint/lang/core/type/builtin_structs.h"
 
 #include "gmock/gmock.h"
+#include "src/tint/lang/core/builtin_type.h"
 #include "src/tint/lang/core/type/abstract_float.h"
 #include "src/tint/lang/core/type/abstract_int.h"
 #include "src/tint/lang/core/type/bool.h"
@@ -98,6 +99,7 @@ class BuiltinFrexpResultStructTest : public BuiltinStructsTest<FrexpCase> {
         EXPECT_EQ(str->Members()[0]->Type(), fract_type);
         EXPECT_EQ(str->Members()[1]->Name().Name(), "exp");
         EXPECT_EQ(str->Members()[1]->Type(), exp_type);
+        EXPECT_TRUE(str->IsWgslInternal());
     }
 };
 TEST_P(BuiltinFrexpResultStructTest, Scalar) {
@@ -116,6 +118,7 @@ TEST_P(BuiltinFrexpResultStructTest, Vec4) {
     auto params = GetParam();
     Run(ty.vec4(Make(params.in)), ty.vec4(Make(params.fract)), ty.vec4(Make(params.exp)));
 }
+
 INSTANTIATE_TEST_SUITE_P(BuiltinFrexpResultStructTest,
                          BuiltinFrexpResultStructTest,
                          testing::Values(FrexpCase{kAFloat, kAFloat, kAInt},
@@ -134,6 +137,7 @@ class BuiltinModfResultStructTest : public BuiltinStructsTest<ElementType> {
         EXPECT_EQ(str->Members()[0]->Type(), type);
         EXPECT_EQ(str->Members()[1]->Name().Name(), "whole");
         EXPECT_EQ(str->Members()[1]->Type(), type);
+        EXPECT_TRUE(str->IsWgslInternal());
     }
 };
 TEST_P(BuiltinModfResultStructTest, Scalar) {
@@ -164,6 +168,7 @@ class BuiltinAtomicCompareExchangeResultStructTest : public BuiltinStructsTest<E
         EXPECT_EQ(str->Members()[0]->Type(), type);
         EXPECT_EQ(str->Members()[1]->Name().Name(), "exchanged");
         EXPECT_EQ(str->Members()[1]->Type(), ty.bool_());
+        EXPECT_TRUE(str->IsWgslInternal());
     }
 };
 TEST_P(BuiltinAtomicCompareExchangeResultStructTest, Scalar) {
@@ -172,6 +177,63 @@ TEST_P(BuiltinAtomicCompareExchangeResultStructTest, Scalar) {
 INSTANTIATE_TEST_SUITE_P(BuiltinAtomicCompareExchangeResultStructTest,
                          BuiltinAtomicCompareExchangeResultStructTest,
                          testing::Values(kI32, kU32));
+
+using BuiltinStructTest = testing::Test;
+
+TEST_F(BuiltinStructTest, FrexpResult_NoClashWithUserDeclaredStruct) {
+    Manager ty;
+    SymbolTable symbols(GenerationID::New());
+
+    auto* user_struct = ty.Struct(symbols.New(ToString(BuiltinType::kFrexpResultF32)),
+                                  {
+                                      {symbols.New("fract"), ty.f32()},
+                                      {symbols.New("exp"), ty.i32()},
+                                  });
+
+    auto* internal_struct = CreateFrexpResult(ty, symbols, ty.f32());
+
+    ASSERT_NE(internal_struct, nullptr);
+    EXPECT_NE(internal_struct, user_struct);
+    EXPECT_TRUE(internal_struct->IsWgslInternal());
+    EXPECT_FALSE(user_struct->IsWgslInternal());
+}
+
+TEST_F(BuiltinStructTest, ModfResult_NoClashWithUserDeclaredStruct) {
+    Manager ty;
+    SymbolTable symbols(GenerationID::New());
+
+    auto* user_struct = ty.Struct(symbols.New(ToString(BuiltinType::kModfResultVec4F16)),
+                                  {
+                                      {symbols.New("fract"), ty.vec4<f16>()},
+                                      {symbols.New("whole"), ty.vec4<f16>()},
+                                  });
+
+    auto* internal_struct = CreateModfResult(ty, symbols, ty.vec4<f16>());
+
+    ASSERT_NE(internal_struct, nullptr);
+    EXPECT_NE(internal_struct, user_struct);
+    EXPECT_TRUE(internal_struct->IsWgslInternal());
+    EXPECT_FALSE(user_struct->IsWgslInternal());
+}
+
+TEST_F(BuiltinStructTest, AtomicCompareExchangeResult_NoClashWithUserDeclaredStruct) {
+    Manager ty;
+    SymbolTable symbols(GenerationID::New());
+
+    auto* user_struct =
+        ty.Struct(symbols.New(ToString(BuiltinType::kAtomicCompareExchangeResultU32)),
+                  {
+                      {symbols.New("old_value"), ty.u32()},
+                      {symbols.New("exchanged"), ty.bool_()},
+                  });
+
+    auto* internal_struct = CreateAtomicCompareExchangeResult(ty, symbols, ty.u32());
+
+    ASSERT_NE(internal_struct, nullptr);
+    EXPECT_NE(internal_struct, user_struct);
+    EXPECT_TRUE(internal_struct->IsWgslInternal());
+    EXPECT_FALSE(user_struct->IsWgslInternal());
+}
 
 }  // namespace
 }  // namespace tint::core::type

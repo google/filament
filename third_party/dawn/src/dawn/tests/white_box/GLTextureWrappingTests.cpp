@@ -179,7 +179,7 @@ TEST_P(GLTextureValidationTests, SuccessWithInternalUsageDescriptor) {
 // Test an error occurs if an invalid sType is the nextInChain
 TEST_P(GLTextureValidationTests, InvalidTextureDescriptor) {
     wgpu::ChainedStruct chainedDescriptor;
-    chainedDescriptor.sType = wgpu::SType::SurfaceDescriptorFromWindowsSwapChainPanel;
+    chainedDescriptor.sType = wgpu::SType::SurfaceDescriptorFromWindowsUWPSwapChainPanel;
     descriptor.nextInChain = &chainedDescriptor;
 
     ScopedGLTexture glTexture = CreateDefaultGLTexture();

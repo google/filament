@@ -68,7 +68,7 @@ struct CallTargetSignature {
     int IndexOf(core::ParameterUsage usage) const;
 
     /// @param usage  the parameter usage to find
-    /// @returns the the parameter with the given usage, or nullptr if no parameter with the given
+    /// @returns the parameter with the given usage, or nullptr if no parameter with the given
     /// usage exists.
     inline const sem::Parameter* Parameter(core::ParameterUsage usage) const {
         auto idx = IndexOf(usage);

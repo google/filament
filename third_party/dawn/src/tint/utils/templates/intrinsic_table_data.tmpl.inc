@@ -337,22 +337,23 @@ constexpr TypeMatcher k{{$name}}Matcher {
 {{- /* ------------------------------------------------------------------ */ -}}
 {{- $class := PascalCase .Name -}}
 {{- $enum := PascalCase .Enum.Name -}}
+{{- $NS := .Enum.NS -}}
 /// EnumMatcher for 'match {{.Name}}'
 constexpr NumberMatcher k{{$class}}Matcher {
 {{ if eq 1 (len .Options) -}}
 {{-   $option := index .Options 0 }}
 {{-   $entry := printf "k%v" (PascalCase $option.Name) -}}
 /* match */ [](MatchState&, Number number) -> Number {
-    if (number.IsAny() || number.Value() == static_cast<uint32_t>(core::{{$enum}}::{{$entry}})) {
-      return Number(static_cast<uint32_t>(core::{{$enum}}::{{$entry}}));
+    if (number.IsAny() || number.Value() == static_cast<uint32_t>({{$NS}}::{{$enum}}::{{$entry}})) {
+      return Number(static_cast<uint32_t>({{$NS}}::{{$enum}}::{{$entry}}));
     }
     return Number::invalid;
   },
 {{- else -}}
 /* match */ [](MatchState&, Number number) -> Number {
-    switch (static_cast<core::{{$enum}}>(number.Value())) {
+    switch (static_cast<{{$NS}}::{{$enum}}>(number.Value())) {
 {{-   range .Options }}
-      case core::{{$enum}}::k{{PascalCase .Name}}:
+      case {{$NS}}::{{$enum}}::k{{PascalCase .Name}}:
 {{-   end }}
         return number;
       default:

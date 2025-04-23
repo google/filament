@@ -1,6 +1,6 @@
 // RUN: %dxc -T ps_6_0 -E main %s | FileCheck %s
 // Note: FXC accepts this
-// CHECK: error: texture resource texel type must be scalar or vector
+// CHECK: error: elements of typed buffers and textures must be scalars or vectors
 Texture2D<float1x1> t;
 RWTexture2D<float1x1> rwt;
 SamplerState s;

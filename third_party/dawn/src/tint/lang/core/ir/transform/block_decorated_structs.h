@@ -28,9 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_BLOCK_DECORATED_STRUCTS_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_BLOCK_DECORATED_STRUCTS_H_
 
-#include <string>
-
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

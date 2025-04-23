@@ -98,7 +98,7 @@ test::NativeView getNativeView() {
 
 int main(int argc, char* argv[]) {
     auto backend = test::parseArgumentsForBackend(argc, argv);
-    test::initTests(backend, false, argc, argv);
+    test::initTests(backend, test::OperatingSystem::APPLE, false, argc, argv);
     AppDelegate* delegate = [AppDelegate new];
     delegate.backend = backend;
     NSApplication* app = [NSApplication sharedApplication];

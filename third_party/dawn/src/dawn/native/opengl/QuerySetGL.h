@@ -39,10 +39,14 @@ class Device;
 
 class QuerySet final : public QuerySetBase {
   public:
-    QuerySet(Device* device, const QuerySetDescriptor* descriptor);
+    static ResultOrError<Ref<QuerySet>> Create(Device* device,
+                                               const QuerySetDescriptor* descriptor);
+
     GLuint Get(uint32_t index) const;
 
   private:
+    QuerySet(Device* device, const QuerySetDescriptor* descriptor);
+
     ~QuerySet() override;
     void DestroyImpl() override;
     std::vector<GLuint> mQueries;

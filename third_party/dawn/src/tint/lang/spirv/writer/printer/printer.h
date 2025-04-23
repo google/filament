@@ -30,7 +30,7 @@
 
 #include "src/tint/lang/spirv/writer/common/options.h"
 #include "src/tint/lang/spirv/writer/common/output.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations
 namespace tint::core::ir {
@@ -42,7 +42,7 @@ namespace tint::spirv::writer {
 /// @returns the generated SPIR-V instructions on success, or failure
 /// @param module the Tint IR module to generate
 /// @param options the printer options
-tint::Result<Output> Print(core::ir::Module& module, const Options& options);
+Result<Output> Print(core::ir::Module& module, const Options& options);
 
 }  // namespace tint::spirv::writer
 

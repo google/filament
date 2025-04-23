@@ -1,7 +1,7 @@
 //
 // Copyright (C) 2014-2016 LunarG, Inc.
 // Copyright (C) 2015-2020 Google, Inc.
-// Copyright (C) 2017, 2022-2024 Arm Limited.
+// Copyright (C) 2017, 2022-2025 Arm Limited.
 // Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
 //
 // All rights reserved.
@@ -1913,6 +1913,10 @@ TGlslangToSpvTraverser::TGlslangToSpvTraverser(unsigned int spvVersion,
     case EShLangCallable:
     {
         auto& extensions = glslangIntermediate->getRequestedExtensions();
+        if (extensions.find("GL_EXT_opacity_micromap") != extensions.end()) {
+            builder.addCapability(spv::CapabilityRayTracingOpacityMicromapEXT);
+            builder.addExtension("SPV_EXT_opacity_micromap");
+        }
         if (extensions.find("GL_NV_ray_tracing") == extensions.end()) {
             builder.addCapability(spv::CapabilityRayTracingKHR);
             builder.addExtension("SPV_KHR_ray_tracing");

@@ -174,8 +174,24 @@
 
         //* Gather how much space will be needed for the extension chain.
         {% if record.extensible %}
-            if (record.nextInChain != nullptr) {
-                result += GetChainedStructExtraRequiredSize(record.nextInChain);
+            const WGPUChainedStruct* next = record.nextInChain;
+            while (next != nullptr) {
+                switch (next->sType) {
+                    {% for extension in record.extensions if extension.name.CamelCase() not in client_side_structures %}
+                        {% set CType = as_cType(extension.name) %}
+                        case {{as_cEnum(types["s type"].name, extension.name)}}: {
+                            const auto& typedStruct = *reinterpret_cast<{{CType}} const *>(next);
+                            result += WireAlignSizeof<{{CType}}Transfer>();
+                            result += {{CType}}GetExtraRequiredSize(typedStruct);
+                            break;
+                        }
+                    {% endfor %}
+                    default: {
+                        result += WireAlignSizeof<WGPUDawnInjectedInvalidSTypeTransfer>();
+                        break;
+                    }
+                }
+                next = next->next;
             }
         {% endif %}
         //* Gather space needed for pointer members.
@@ -230,11 +246,36 @@
         {% endif %}
 
         {% if record.extensible %}
-            if (record.nextInChain != nullptr) {
+            const WGPUChainedStruct* next = record.nextInChain;
+            transfer->hasNextInChain = false;
+            while (next != nullptr) {
                 transfer->hasNextInChain = true;
-                WIRE_TRY(SerializeChainedStruct(record.nextInChain, buffer, provider));
-            } else {
-                transfer->hasNextInChain = false;
+                switch (next->sType) {
+                    {% for extension in record.extensions if extension.name.CamelCase() not in client_side_structures %}
+                        {% set CType = as_cType(extension.name) %}
+                        case {{as_cEnum(types["s type"].name, extension.name)}}: {
+                            {{CType}}Transfer* chainTransfer;
+                            WIRE_TRY(buffer->Next(&chainTransfer));
+                            chainTransfer->chain.sType = next->sType;
+                            chainTransfer->chain.hasNext = next->next != nullptr;
+
+                            WIRE_TRY({{CType}}Serialize(*reinterpret_cast<{{CType}} const*>(next), chainTransfer, buffer, provider));
+                            break;
+                        }
+                    {% endfor %}
+                    default: {
+                        // Invalid enum. Serialize just the invalid sType for validation purposes.
+                        dawn::WarningLog() << "Unknown sType " << next->sType << " discarded.";
+
+                        WGPUDawnInjectedInvalidSTypeTransfer* chainTransfer;
+                        WIRE_TRY(buffer->Next(&chainTransfer));
+                        chainTransfer->chain.sType = WGPUSType_DawnInjectedInvalidSType;
+                        chainTransfer->chain.hasNext = next->next != nullptr;
+                        chainTransfer->invalidSType = next->sType;
+                        break;
+                    }
+                }
+                next = next->next;
             }
         {% endif %}
         {% if record.chained %}
@@ -305,8 +346,7 @@
         [[maybe_unused]] DeserializeAllocator* allocator
         {%- if record.may_have_dawn_object -%}
             , const ObjectIdResolver& resolver
-        {%- endif -%}
-    ) {
+        {%- endif -%}) {
         {% if is_cmd %}
             DAWN_ASSERT(transfer->commandId == {{Return}}WireCmd::{{name}});
         {% endif %}
@@ -315,10 +355,43 @@
         {% endif %}
 
         {% if record.extensible %}
-            record->nextInChain = nullptr;
-            if (transfer->hasNextInChain) {
-                WIRE_TRY(DeserializeChainedStruct(&record->nextInChain, deserializeBuffer, allocator, resolver));
+            WGPUChainedStruct** outChainNext = &record->nextInChain;
+            bool hasNext = transfer->hasNextInChain;
+            while (hasNext) {
+                const volatile WGPUChainedStructTransfer* header;
+                WIRE_TRY(deserializeBuffer->Peek(&header));
+                WGPUSType sType = header->sType;
+                hasNext = header->hasNext;
+
+                switch (sType) {
+                    //* All extensible types need to be able to handle deserializing the invalid
+                    //* sType struct.
+                    {% set extensions = record.extensions + [types['dawn injected invalid s type']] %}
+                    {% for extension in extensions if extension.name.CamelCase() not in client_side_structures %}
+                        {% set CType = as_cType(extension.name) %}
+                        case {{as_cEnum(types["s type"].name, extension.name)}}: {
+                            const volatile {{CType}}Transfer* chainTransfer;
+                            WIRE_TRY(deserializeBuffer->Read(&chainTransfer));
+
+                            {{CType}}* typedOutStruct;
+                            WIRE_TRY(GetSpace(allocator, 1u, &typedOutStruct));
+                            typedOutStruct->chain.sType = sType;
+                            typedOutStruct->chain.next = nullptr;
+                            WIRE_TRY({{CType}}Deserialize(typedOutStruct, chainTransfer,
+                                                          deserializeBuffer, allocator, resolver));
+                            *outChainNext = &typedOutStruct->chain;
+                            outChainNext = &typedOutStruct->chain.next;
+                            break;
+                        }
+                    {% endfor %}
+                    default: {
+                        //* For invalid sTypes, it's a fatal error since this implies a compromised
+                        //* or corrupt client.
+                        return WireResult::FatalError;
+                    }
+                }
             }
+            *outChainNext = nullptr;
         {% endif %}
         {% if record.chained %}
             //* Should be set by the root descriptor's call to DeserializeChainedStruct.
@@ -505,14 +578,8 @@ struct WGPUChainedStructTransfer {
     bool hasNext;
 };
 
-size_t GetChainedStructExtraRequiredSize(WGPUChainedStruct* chainedStruct);
-[[nodiscard]] WireResult SerializeChainedStruct(WGPUChainedStruct* chainedStruct,
-                                                SerializeBuffer* buffer,
-                                                const ObjectIdProvider& provider);
-WireResult DeserializeChainedStruct(WGPUChainedStruct** outChainNext,
-                                    DeserializeBuffer* deserializeBuffer,
-                                    DeserializeAllocator* allocator,
-                                    const ObjectIdResolver& resolver);
+//* Structs that need special handling for [de]serialization code generation.
+{% set SpecialSerializeStructs = ["string view", "dawn injected invalid s type"] %}
 
 // Manually define serialization and deserialization for WGPUStringView because
 // it has a special encoding where:
@@ -599,10 +666,15 @@ WireResult WGPUStringViewDeserialize(
     return WireResult::Success;
 }
 
+//* Force generation of de[serialization] methods for WGPUDawnInjectedInvalidSType early.
+{% set type = types["dawn injected invalid s type"] %}
+{%- set name = as_cType(type.name) -%}
+{{write_record_serialization_helpers(type, name, type.members, is_cmd=False)}}
+
 //* Output structure [de]serialization first because it is used by commands.
 {% for type in by_category["structure"] %}
     {%- set name = as_cType(type.name) -%}
-    {% if type.name.CamelCase() not in client_side_structures and name != "WGPUStringView" -%}
+    {% if type.name.CamelCase() not in client_side_structures and type.name.get() not in SpecialSerializeStructs -%}
         {{write_record_serialization_helpers(type, name, type.members, is_cmd=False)}}
     {% endif %}
 {% endfor %}
@@ -617,138 +689,6 @@ WireResult WGPUStringViewDeserialize(
     {% endif %}
     {% do sTypes.append(sType) %}
 {% endfor %}
-
-size_t GetChainedStructExtraRequiredSize(WGPUChainedStruct* chainedStruct) {
-    DAWN_ASSERT(chainedStruct != nullptr);
-    size_t result = 0;
-    while (chainedStruct != nullptr) {
-        uint32_t sType_as_uint;
-        std::memcpy(&sType_as_uint, &(chainedStruct->sType), sizeof(uint32_t));
-        switch (sType_as_uint) {
-            {% for sType in sTypes %}
-                case {{as_cEnum(types["s type"].name, sType.name)}}: {
-                    const auto& typedStruct = *reinterpret_cast<{{as_cType(sType.name)}} const *>(chainedStruct);
-                    result += WireAlignSizeof<{{as_cType(sType.name)}}Transfer>();
-                    result += {{as_cType(sType.name)}}GetExtraRequiredSize(typedStruct);
-                    chainedStruct = typedStruct.chain.next;
-                    break;
-                }
-            {% endfor %}
-            default:
-                // Invalid enum. Reserve space just for the transfer header (sType and hasNext).
-                result += WireAlignSizeof<WGPUChainedStructTransfer>();
-                chainedStruct = chainedStruct->next;
-                break;
-        }
-    }
-    return result;
-}
-
-[[nodiscard]] WireResult SerializeChainedStruct(WGPUChainedStruct* chainedStruct,
-                                                SerializeBuffer* buffer,
-                                                const ObjectIdProvider& provider) {
-    DAWN_ASSERT(chainedStruct != nullptr);
-    DAWN_ASSERT(buffer != nullptr);
-    do {
-        uint32_t sType_as_uint;
-        std::memcpy(&sType_as_uint, &(chainedStruct->sType), sizeof(uint32_t));
-        switch (sType_as_uint) {
-            {% for sType in sTypes %}
-                {% set CType = as_cType(sType.name) %}
-                case {{as_cEnum(types["s type"].name, sType.name)}}: {
-                    {{CType}}Transfer* transfer;
-                    WIRE_TRY(buffer->Next(&transfer));
-                    transfer->chain.sType = chainedStruct->sType;
-                    transfer->chain.hasNext = chainedStruct->next != nullptr;
-
-                    WIRE_TRY({{CType}}Serialize(*reinterpret_cast<{{CType}} const*>(chainedStruct), transfer, buffer
-                        {%- if types[sType.name.get()].may_have_dawn_object -%}
-                        , provider
-                        {%- endif -%}
-                    ));
-
-                    chainedStruct = chainedStruct->next;
-                } break;
-            {% endfor %}
-            default: {
-                // Invalid enum. Serialize just the transfer header with Invalid as the sType.
-                // TODO(crbug.com/dawn/369): Unknown sTypes are silently discarded.
-                if (sType_as_uint != 0u) {
-                    dawn::WarningLog() << "Unknown sType " << sType_as_uint << " discarded.";
-                }
-
-                WGPUChainedStructTransfer* transfer;
-                WIRE_TRY(buffer->Next(&transfer));
-                transfer->sType = WGPUSType(0);
-                transfer->hasNext = chainedStruct->next != nullptr;
-
-                // Still move on in case there are valid structs after this.
-                chainedStruct = chainedStruct->next;
-                break;
-            }
-        }
-    } while (chainedStruct != nullptr);
-    return WireResult::Success;
-}
-
-WireResult DeserializeChainedStruct(WGPUChainedStruct** outChainNext,
-                                    DeserializeBuffer* deserializeBuffer,
-                                    DeserializeAllocator* allocator,
-                                    const ObjectIdResolver& resolver) {
-    bool hasNext;
-    do {
-        const volatile WGPUChainedStructTransfer* header;
-        WIRE_TRY(deserializeBuffer->Peek(&header));
-        WGPUSType sType = header->sType;
-        switch (sType) {
-            {% for sType in sTypes %}
-                {% set CType = as_cType(sType.name) %}
-                case {{as_cEnum(types["s type"].name, sType.name)}}: {
-                    const volatile {{CType}}Transfer* transfer;
-                    WIRE_TRY(deserializeBuffer->Read(&transfer));
-
-                    {{CType}}* outStruct;
-                    WIRE_TRY(GetSpace(allocator, 1u, &outStruct));
-                    outStruct->chain.sType = sType;
-                    outStruct->chain.next = nullptr;
-
-                    *outChainNext = &outStruct->chain;
-                    outChainNext = &outStruct->chain.next;
-
-                    WIRE_TRY({{CType}}Deserialize(outStruct, transfer, deserializeBuffer, allocator
-                        {%- if types[sType.name.get()].may_have_dawn_object -%}
-                            , resolver
-                        {%- endif -%}
-                    ));
-
-                    hasNext = transfer->chain.hasNext;
-                } break;
-            {% endfor %}
-            default: {
-                // Invalid enum. Deserialize just the transfer header with Invalid as the sType.
-                // TODO(crbug.com/dawn/369): Unknown sTypes are silently discarded.
-                if (sType != WGPUSType(0)) {
-                    dawn::WarningLog() << "Unknown sType " << sType << " discarded.";
-                }
-
-                const volatile WGPUChainedStructTransfer* transfer;
-                WIRE_TRY(deserializeBuffer->Read(&transfer));
-
-                WGPUChainedStruct* outStruct;
-                WIRE_TRY(GetSpace(allocator, 1u, &outStruct));
-                outStruct->sType = WGPUSType(0);
-                outStruct->next = nullptr;
-
-                // Still move on in case there are valid structs after this.
-                *outChainNext = outStruct;
-                outChainNext = &outStruct->next;
-                hasNext = transfer->hasNext;
-                break;
-            }
-        }
-    } while (hasNext);
-    return WireResult::Success;
-}
 
 //* Output [de]serialization helpers for commands
 {% for command in cmd_records["command"] %}

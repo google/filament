@@ -1798,7 +1798,7 @@ std::vector<std::string_view> ConstructableTypes() {
         if (type != "ptr" && type != "atomic" && !tint::HasPrefix(type, "sampler") &&
             !tint::HasPrefix(type, "texture") && !tint::HasPrefix(type, "__") &&
             !tint::HasPrefix(type, "input_attachment") &&
-            !tint::HasPrefix(type, "subgroup_matrix")) {
+            !tint::HasPrefix(type, "subgroup_matrix") && !tint::HasPrefix(type, "binding_array")) {
             out.push_back(type);
         }
     }

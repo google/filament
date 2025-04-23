@@ -103,7 +103,7 @@ TEST_P(WireQueueTests, OnSubmittedWorkDoneBeforeDisconnectAfterReply) {
     FlushFutures();
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::QueueWorkDoneStatus::InstanceDropped)).Times(1);
+        EXPECT_CALL(mockCb, Call(wgpu::QueueWorkDoneStatus::CallbackCancelled)).Times(1);
 
         GetWireClient()->Disconnect();
     });
@@ -121,7 +121,7 @@ TEST_P(WireQueueTests, OnSubmittedWorkDoneBeforeDisconnectBeforeReply) {
     FlushClient();
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::QueueWorkDoneStatus::InstanceDropped)).Times(1);
+        EXPECT_CALL(mockCb, Call(wgpu::QueueWorkDoneStatus::CallbackCancelled)).Times(1);
 
         GetWireClient()->Disconnect();
     });
@@ -133,7 +133,7 @@ TEST_P(WireQueueTests, OnSubmittedWorkDoneAfterDisconnect) {
     GetWireClient()->Disconnect();
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::QueueWorkDoneStatus::InstanceDropped)).Times(1);
+        EXPECT_CALL(mockCb, Call(wgpu::QueueWorkDoneStatus::CallbackCancelled)).Times(1);
 
         OnSubmittedWorkDone();
     });
@@ -150,7 +150,7 @@ TEST_P(WireQueueTests, OnSubmittedWorkDoneInsideCallbackBeforeDisconnect) {
     FlushClient();
 
     ExpectWireCallbacksWhen([&](auto& mockCb) {
-        EXPECT_CALL(mockCb, Call(wgpu::QueueWorkDoneStatus::InstanceDropped))
+        EXPECT_CALL(mockCb, Call(wgpu::QueueWorkDoneStatus::CallbackCancelled))
             .Times(kNumRequests + 1)
             .WillOnce([&]() {
                 for (size_t i = 0; i < kNumRequests; i++) {

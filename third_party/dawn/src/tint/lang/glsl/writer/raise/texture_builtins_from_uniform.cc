@@ -131,9 +131,9 @@ struct State {
                 tex,
                 [&](core::ir::InstructionResult* r) {
                     tint::Switch(
-                        r->Instruction(),                               //
-                        [&](core::ir::Var* v) { res = v->Result(0); },  //
-                        [&](core::ir::Load* l) { tex = l->From(); },    //
+                        r->Instruction(),                              //
+                        [&](core::ir::Var* v) { res = v->Result(); },  //
+                        [&](core::ir::Load* l) { tex = l->From(); },   //
                         TINT_ICE_ON_NO_MATCH);
                 },
                 [&](core::ir::FunctionParam* fp) { res = fp; },
@@ -150,7 +150,7 @@ struct State {
             [&](core::ir::InstructionResult* r) -> core::ir::Value* {
                 if (auto* v = r->Instruction()->As<core::ir::Var>()) {
                     auto* access = GetUniformValue(v->BindingPoint().value());
-                    return b.Load(access)->Result(0);
+                    return b.Load(access)->Result();
 
                 } else {
                     TINT_UNREACHABLE() << "invalid instruction type";
@@ -191,7 +191,7 @@ struct State {
         auto* src = call->Args()[0];
         b.InsertBefore(call, [&] {
             auto* val = GetAccessFromUniform(src);
-            call->Result(0)->ReplaceAllUsesWith(val);
+            call->Result()->ReplaceAllUsesWith(val);
         });
 
         call->Destroy();

@@ -29,7 +29,6 @@
 
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/validator.h"
-#include "src/tint/utils/result/result.h"
 
 namespace tint::hlsl::writer::raise {
 namespace {
@@ -118,7 +117,7 @@ struct State {
                 // Matrix is in a struct or array, for example
                 matrix = b.Access(ty.ptr(to_ptr->AddressSpace(), mat_ty), to_access->Object(),
                                   ToVector<4>(indicesButLast))
-                             ->Result(0);
+                             ->Result();
             }
             // Switch over dynamic index, emitting a case for all possible column indices
             auto* switch_ = b.Switch(to_access->Indices().Back());
@@ -261,8 +260,8 @@ struct State {
         for (auto* inst : ir.Instructions()) {
             // Inline pointers
             if (auto* l = inst->As<core::ir::Let>()) {
-                if (l->Result(0)->Type()->Is<core::type::Pointer>()) {
-                    l->Result(0)->ReplaceAllUsesWith(l->Value());
+                if (l->Result()->Type()->Is<core::type::Pointer>()) {
+                    l->Result()->ReplaceAllUsesWith(l->Value());
                     l->Destroy();
                 }
             }

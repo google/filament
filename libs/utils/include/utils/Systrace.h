@@ -17,24 +17,23 @@
 #ifndef TNT_UTILS_SYSTRACE_H
 #define TNT_UTILS_SYSTRACE_H
 
-
-#define SYSTRACE_TAG_NEVER          (0)
-#define SYSTRACE_TAG_ALWAYS         (1<<0)
-#define SYSTRACE_TAG_FILAMENT       (1<<1)  // don't change, used in makefiles
-#define SYSTRACE_TAG_JOBSYSTEM      (1<<2)
+#define SYSTRACE_TAG_DISABLED       (0)
+#define SYSTRACE_TAG_FILAMENT       (2) // don't change used in makefiles
+#define SYSTRACE_TAG_JOBSYSTEM      (3)
+#define SYSTRACE_TAG_GLTFIO         (4)
 
 /*
- * The SYSTRACE_ macros use SYSTRACE_TAG as a the TAG, which should be defined
- * before this file is included. If not, the SYSTRACE_TAG_ALWAYS tag will be used.
+ * The SYSTRACE_ macros use SYSTRACE_TAG as a category, which must be defined
+ * before this file is included.
  */
 
 #ifndef SYSTRACE_TAG
-#define SYSTRACE_TAG (SYSTRACE_TAG_ALWAYS)
+#   error SYSTRACE_TAG must be set to SYSTRACE_TAG_{DISABLED|FILAMENT|JOBSYSTEM}
 #endif
 
 // Systrace on Apple platforms is fragile and adds overhead, should only be enabled in dev builds.
 #ifndef FILAMENT_APPLE_SYSTRACE
-#define FILAMENT_APPLE_SYSTRACE 0
+#   define FILAMENT_APPLE_SYSTRACE 0
 #endif
 
 #if defined(__ANDROID__)
@@ -44,7 +43,6 @@
 #else
 
 #define SYSTRACE_ENABLE()
-#define SYSTRACE_DISABLE()
 #define SYSTRACE_CONTEXT()
 #define SYSTRACE_NAME(name)
 #define SYSTRACE_FRAME_ID(frame)
@@ -56,6 +54,6 @@
 #define SYSTRACE_VALUE32(name, val)
 #define SYSTRACE_VALUE64(name, val)
 
-#endif // ANDROID
+#endif
 
 #endif // TNT_UTILS_SYSTRACE_H

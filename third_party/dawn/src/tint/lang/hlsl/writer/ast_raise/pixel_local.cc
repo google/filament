@@ -31,7 +31,6 @@
 #include <utility>
 
 #include "src/tint/lang/core/fluent_types.h"
-#include "src/tint/lang/core/number.h"
 #include "src/tint/lang/wgsl/program/clone_context.h"
 #include "src/tint/lang/wgsl/resolver/resolve.h"
 #include "src/tint/lang/wgsl/sem/function.h"
@@ -40,9 +39,7 @@
 #include "src/tint/lang/wgsl/sem/struct.h"
 #include "src/tint/utils/containers/transform.h"
 #include "src/tint/utils/diagnostic/diagnostic.h"
-#include "src/tint/utils/result/result.h"
 #include "src/tint/utils/rtti/switch.h"
-#include "src/tint/utils/text/text_style.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::hlsl::writer::PixelLocal);
 TINT_INSTANTIATE_TYPEINFO(tint::hlsl::writer::PixelLocal::RasterizerOrderedView);
@@ -146,9 +143,9 @@ struct PixelLocal::State {
     /// @param entry_point the entry point
     /// @param pixel_local_var the `var<pixel_local>`
     /// @param pixel_local_str the struct type of the var
-    Result<SuccessType> TransformEntryPoint(const sem::Function* entry_point,
-                                            const sem::GlobalVariable* pixel_local_var,
-                                            const sem::Struct* pixel_local_str) {
+    diag::Result<SuccessType> TransformEntryPoint(const sem::Function* entry_point,
+                                                  const sem::GlobalVariable* pixel_local_var,
+                                                  const sem::Struct* pixel_local_str) {
         // Wrap the old entry point "fn" into a new entry point where functions to load and store
         // ROV data are called.
         auto* original_entry_point_fn = entry_point->Declaration();
@@ -296,7 +293,7 @@ struct PixelLocal::State {
     /// @param store_rov_function_name the name of the function that stores the data into the ROVs
     /// @param pixel_local_variable_name the name of the pixel local variable
     /// @param pixel_local_str the struct type of the pixel local variable
-    Result<SuccessType> DeclareROVsAndLoadStoreFunctions(
+    diag::Result<SuccessType> DeclareROVsAndLoadStoreFunctions(
         const Symbol& load_rov_function_name,
         const Symbol& store_rov_function_name,
         const std::string& pixel_local_variable_name,
@@ -474,14 +471,14 @@ struct PixelLocal::State {
 
     /// @returns the texel format for the pixel local field with the given index
     /// @param field_index the pixel local field index
-    Result<core::TexelFormat> ROVTexelFormat(uint32_t field_index) {
+    diag::Result<core::TexelFormat> ROVTexelFormat(uint32_t field_index) {
         auto format = cfg.pls_member_to_rov_format.Get(field_index);
         if (DAWN_UNLIKELY(!format)) {
             diag::Diagnostic err;
             err.severity = diag::Severity::Error;
             err.message << "PixelLocal::Config::attachments missing entry for field "
                         << field_index;
-            return Failure{std::move(err)};
+            return diag::Failure{std::move(err)};
         }
         return *format;
     }

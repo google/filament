@@ -51,6 +51,7 @@ cc_library(
     "extension.h",
   ],
   deps = [
+    "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",
     "//src/tint/utils/ice",
@@ -105,7 +106,6 @@ cc_library(
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/tint/utils/memory",
-    "//src/tint/utils/result",
     "//src/tint/utils/rtti",
     "//src/tint/utils/symbol",
     "//src/tint/utils/text",
@@ -138,6 +138,7 @@ cc_library(
   ],
   deps = [
     "//src/tint/lang/wgsl",
+    "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",
     "//src/tint/utils/ice",

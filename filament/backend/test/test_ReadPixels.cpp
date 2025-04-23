@@ -16,9 +16,11 @@
 
 #include "BackendTest.h"
 
-#include "ShaderGenerator.h"
-#include "TrianglePrimitive.h"
 #include "BackendTestUtils.h"
+#include "Lifetimes.h"
+#include "Shader.h"
+#include "SharedShaders.h"
+#include "TrianglePrimitive.h"
 
 #include <utils/Hash.h>
 
@@ -29,6 +31,7 @@ using namespace filament;
 using namespace filament::backend;
 
 #ifndef FILAMENT_IOS
+
 #include <imageio/ImageEncoder.h>
 #include <image/ColorTransform.h>
 
@@ -41,20 +44,7 @@ namespace {
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::string vertex (R"(#version 450 core
-
-layout(location = 0) in vec4 mesh_position;
-
-void main() {
-    gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
-    gl_Position.y = -gl_Position.y;
-#endif
-}
-)");
-
-std::string fragmentFloat (R"(#version 450 core
+std::string fragmentFloat(R"(#version 450 core
 
 layout(location = 0) out vec4 fragColor;
 
@@ -64,7 +54,7 @@ void main() {
 
 )");
 
-std::string fragmentUint (R"(#version 450 core
+std::string fragmentUint(R"(#version 450 core
 
 layout(location = 0) out uvec4 fragColor;
 
@@ -107,7 +97,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         size_t samples = 1;
 
         // The size of the actual render target, taking mip level into account;
-        size_t getRenderTargetSize () const {
+        size_t getRenderTargetSize() const {
             return std::max(size_t(1), renderTargetBaseSize >> mipLevel);
         }
 
@@ -137,11 +127,11 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         }
 
         void exportScreenshot(void* pixelData) const {
-            #ifndef FILAMENT_IOS
+#ifndef FILAMENT_IOS
             const size_t width = readRect.width, height = readRect.height;
             LinearImage image(width, height, 4);
             if (format == PixelDataFormat::RGBA && type == PixelDataType::UBYTE) {
-                image = toLinearWithAlpha<uint8_t>(width, height, width * 4, (uint8_t*) pixelData);
+                image = toLinearWithAlpha<uint8_t>(width, height, width * 4, (uint8_t*)pixelData);
             }
             if (format == PixelDataFormat::RGBA && type == PixelDataType::FLOAT) {
                 memcpy(image.getPixelRef(), pixelData, width * height * sizeof(math::float4));
@@ -150,13 +140,13 @@ TEST_F(ReadPixelsTest, ReadPixels) {
             std::ofstream outputStream(png.c_str(), std::ios::binary | std::ios::trunc);
             ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
                     png.c_str());
-            #endif
+#endif
         }
 
         void exportRawBytes(void* pixelData) const {
             std::string out = std::string(testName) + ".raw";
             std::ofstream outputStream(out.c_str(), std::ios::binary | std::ios::trunc);
-            outputStream.write((char*) pixelData, getBufferSizeBytes());
+            outputStream.write((char*)pixelData, getBufferSizeBytes());
             outputStream.close();
         }
 
@@ -236,94 +226,95 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
     TestCase const testCases[] = { t0, t2, t3, t4, t5, t6, t7, t8 };
 
-    // Create programs.
-    Handle<HwProgram> programFloat, programUint;
-    {
-        ShaderGenerator shaderGen(vertex, fragmentFloat, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(getDriverApi());
-        programFloat = getDriverApi().createProgram(std::move(p));
-    }
-    {
-        ShaderGenerator shaderGen(vertex, fragmentUint, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(getDriverApi());
-        programUint = getDriverApi().createProgram(std::move(p));
-    }
+    DriverApi& api = getDriverApi();
+    Cleanup cleanup(api);
 
+    std::string vertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
+            ShaderUniformType::None);
+    Shader floatShader(api, cleanup, ShaderConfig{
+            .vertexShader = vertexShader,
+            .fragmentShader = fragmentFloat,
+            .uniforms = {}
+    });
+    Shader uintShader(api, cleanup, ShaderConfig{
+            .vertexShader = vertexShader,
+            .fragmentShader = fragmentUint,
+            .uniforms = {}
+    });
 
-    for (const auto& t : testCases)
-    {
+    for (const auto& t: testCases) {
         // Create a platform-specific SwapChain and make it current.
         Handle<HwSwapChain> swapChain;
         if (t.useDefaultRT) {
-            swapChain = createSwapChain();
+            swapChain = cleanup.add(createSwapChain());
         } else {
-            swapChain = getDriverApi().createSwapChainHeadless(t.getRenderTargetSize(),
-                    t.getRenderTargetSize(), 0);
+            swapChain = cleanup.add(api.createSwapChainHeadless(t.getRenderTargetSize(),
+                    t.getRenderTargetSize(), 0));
         }
 
-        getDriverApi().makeCurrent(swapChain, swapChain);
+        api.makeCurrent(swapChain, swapChain);
 
         // Create a Texture and RenderTarget to render into.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-        Handle<HwTexture> const texture = getDriverApi().createTexture(SamplerType::SAMPLER_2D,
+        Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
                 t.mipLevels, t.textureFormat, 1, renderTargetBaseSize, renderTargetBaseSize, 1,
-                usage);
+                usage));
 
         Handle<HwRenderTarget> renderTarget;
         if (t.useDefaultRT) {
             // The width and height must match the width and height of the respective mip
             // level (at least for OpenGL).
-            renderTarget = getDriverApi().createDefaultRenderTarget();
+            renderTarget = cleanup.add(api.createDefaultRenderTarget());
         } else {
             // The width and height must match the width and height of the respective mip
             // level (at least for OpenGL).
-            renderTarget = getDriverApi().createRenderTarget(
+            renderTarget = cleanup.add(api.createRenderTarget(
                     TargetBufferFlags::COLOR, t.getRenderTargetSize(),
                     t.getRenderTargetSize(), t.samples, 0, {{ texture, uint8_t(t.mipLevel) }}, {},
-                    {});
+                    {}));
         }
 
-        TrianglePrimitive const triangle(getDriverApi());
+        TrianglePrimitive const triangle(api);
 
         RenderPassParams params = {};
         fullViewport(params);
         params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = {0.f, 0.f, 1.f, 1.f};
+        params.clearColor = { 0.f, 0.f, 1.f, 1.f };
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
         params.viewport.height = t.getRenderTargetSize();
         params.viewport.width = t.getRenderTargetSize();
 
-        getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0, 0);
+        api.makeCurrent(swapChain, swapChain);
+        api.beginFrame(0, 0, 0);
 
         // Render a white triangle over blue.
-        getDriverApi().beginRenderPass(renderTarget, params);
+        api.beginRenderPass(renderTarget, params);
 
         PipelineState state;
-        state.program = programFloat;
+        state.program = floatShader.getProgram();
         if (isUnsignedIntFormat(t.textureFormat)) {
-            state.program = programUint;
+            state.program = uintShader.getProgram();
         }
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
         state.rasterState.culling = CullingMode::NONE;
-        getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
 
-        getDriverApi().endRenderPass();
+        api.endRenderPass();
 
         if (t.mipLevel > 0) {
+            Cleanup localCleanup(api);
             // Render red to the first mip level to check that the backend is actually reading the
             // correct mip.
             RenderPassParams p = params;
-            Handle<HwRenderTarget> mipLevelOneRT = getDriverApi().createRenderTarget(
+            Handle<HwRenderTarget> mipLevelOneRT = localCleanup.add(api.createRenderTarget(
                     TargetBufferFlags::COLOR, renderTargetBaseSize, renderTargetBaseSize, 1, 0,
-                    {{ texture }}, {}, {});
-            p.clearColor = {1.f, 0.f, 0.f, 1.f};
-            getDriverApi().beginRenderPass(mipLevelOneRT, p);
-            getDriverApi().endRenderPass();
-            getDriverApi().destroyRenderTarget(mipLevelOneRT);
+                    {{ texture }}, {}, {}));
+            p.clearColor = { 1.f, 0.f, 0.f, 1.f };
+            api.beginRenderPass(mipLevelOneRT, p);
+            api.endRenderPass();
         }
 
         // Read pixels.
@@ -331,41 +322,34 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
         PixelBufferDescriptor descriptor(buffer, t.getBufferSizeBytes(), t.format, t.type,
                 t.alignment, t.left, t.top, t.getPixelBufferStride(), [](void* buffer, size_t size,
-                    void* user) {
-                    const auto* test = (const TestCase*) user;
+                        void* user) {
+                    const auto* test = (const TestCase*)user;
                     assert_invariant(test);
 
                     test->exportScreenshot(buffer);
                     //test->exportRawBytes(buffer);
 
                     // Hash the contents of the buffer and check that they match.
-                    uint32_t hash = utils::hash::murmur3((const uint32_t*) buffer, size / 4, 0);
+                    uint32_t hash = utils::hash::murmur3((const uint32_t*)buffer, size / 4, 0);
 
                     ASSERT_EQ(test->hash, hash) << test->testName <<
-                        " failed: hashes do not match." << std::endl;
+                                                " failed: hashes do not match." << std::endl;
 
                     free(buffer);
-                }, (void*) &t);
+                }, (void*)&t);
 
-        getDriverApi().readPixels(renderTarget, t.readRect.x, t.readRect.y, t.readRect.width,
+        api.readPixels(renderTarget, t.readRect.x, t.readRect.y, t.readRect.width,
                 t.readRect.height, std::move(descriptor));
 
         // Now render red over what was just rendered. This ensures that readPixels captures the
         // state of rendering between render passes.
-        params.clearColor = {1.f, 0.f, 0.f, 1.f};
-        getDriverApi().beginRenderPass(renderTarget, params);
-        getDriverApi().endRenderPass();
+        params.clearColor = { 1.f, 0.f, 0.f, 1.f };
+        api.beginRenderPass(renderTarget, params);
+        api.endRenderPass();
 
-        getDriverApi().commit(swapChain);
-        getDriverApi().endFrame(0);
-
-        getDriverApi().destroySwapChain(swapChain);
-        getDriverApi().destroyRenderTarget(renderTarget);
-        getDriverApi().destroyTexture(texture);
+        api.commit(swapChain);
+        api.endFrame(0);
     }
-
-    getDriverApi().destroyProgram(programFloat);
-    getDriverApi().destroyProgram(programUint);
 
     // This ensures all driver commands have finished before exiting the test.
     flushAndWait();
@@ -375,28 +359,33 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     const size_t renderTargetSize = 2000;
     const int iterationCount = 100;
 
-    // Create a platform-specific SwapChain and make it current.
-    auto swapChain = getDriverApi().createSwapChainHeadless(renderTargetSize, renderTargetSize, 0);
-    getDriverApi().makeCurrent(swapChain, swapChain);
+    DriverApi& api = getDriverApi();
+    Cleanup cleanup(api);
 
-    // Create a program.
-    ShaderGenerator shaderGen(vertex, fragmentFloat, sBackend, sIsMobilePlatform);
-    Program p = shaderGen.getProgram(getDriverApi());
-    auto program = getDriverApi().createProgram(std::move(p));
+    // Create a platform-specific SwapChain and make it current.
+    auto swapChain = cleanup.add(
+            api.createSwapChainHeadless(renderTargetSize, renderTargetSize, 0));
+    api.makeCurrent(swapChain, swapChain);
+
+    Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{
+            .mVertexType = VertexShaderType::Noop,
+            .mFragmentType = FragmentShaderType::White,
+            .mUniformType = ShaderUniformType::None
+    });
 
     // Create a Texture and RenderTarget to render into.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-    Handle<HwTexture> texture = getDriverApi().createTexture(
-                SamplerType::SAMPLER_2D,            // target
-                1,                                  // levels
-                TextureFormat::RGBA8,               // format
-                1,                                  // samples
-                renderTargetSize,                   // width
-                renderTargetSize,                   // height
-                1,                                  // depth
-                usage);                             // usage
+    Handle<HwTexture> texture = cleanup.add(api.createTexture(
+            SamplerType::SAMPLER_2D,            // target
+            1,                                  // levels
+            TextureFormat::RGBA8,               // format
+            1,                                  // samples
+            renderTargetSize,                   // width
+            renderTargetSize,                   // height
+            1,                                  // depth
+            usage));                             // usage
 
-    Handle<HwRenderTarget> renderTarget = getDriverApi().createRenderTarget(
+    Handle<HwRenderTarget> renderTarget = cleanup.add(api.createRenderTarget(
             TargetBufferFlags::COLOR,
             renderTargetSize,                          // width
             renderTargetSize,                          // height
@@ -404,14 +393,14 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
             0,                                         // layerCount
             {{ texture }},                             // color
             {},                                        // depth
-            {});                                       // stencil
+            {}));                                       // stencil
 
-    TrianglePrimitive triangle(getDriverApi());
+    TrianglePrimitive triangle(api);
 
     RenderPassParams params = {};
     fullViewport(params);
     params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = {0.f, 0.f, 1.f, 1.f};
+    params.clearColor = { 0.f, 0.f, 1.f, 1.f };
     params.flags.discardStart = TargetBufferFlags::ALL;
     params.flags.discardEnd = TargetBufferFlags::NONE;
     params.viewport.height = renderTargetSize;
@@ -420,7 +409,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     void* buffer = calloc(1, renderTargetSize * renderTargetSize * 4);
 
     PipelineState state;
-    state.program = program;
+    state.program = shader.getProgram();
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -433,24 +422,25 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
             printf("Executing test %d / %d\n", iteration, iterationCount);
         }
 
-        getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0, 0);
+        api.makeCurrent(swapChain, swapChain);
+        api.beginFrame(0, 0, 0);
 
         // Render some content, just so we don't read back uninitialized data.
-        getDriverApi().beginRenderPass(renderTarget, params);
-        getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-        getDriverApi().endRenderPass();
+        api.beginRenderPass(renderTarget, params);
+        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        api.endRenderPass();
 
         PixelBufferDescriptor descriptor(buffer, renderTargetSize * renderTargetSize * 4,
                 PixelDataFormat::RGBA, PixelDataType::UBYTE, 1, 0, 0, renderTargetSize,
                 [](void* buffer, size_t size, void* user) {
-                    ReadPixelsTest* test = (ReadPixelsTest*) user;
+                    ReadPixelsTest* test = (ReadPixelsTest*)user;
                     test->readPixelsFinished = true;
                 }, this);
 
-        getDriverApi().readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize, std::move(descriptor));
-        getDriverApi().commit(swapChain);
-        getDriverApi().endFrame(0);
+        api.readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize,
+                std::move(descriptor));
+        api.commit(swapChain);
+        api.endFrame(0);
 
         flushAndWait();
         getDriver().purge();
@@ -460,11 +450,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
     free(buffer);
 
-    getDriverApi().destroyProgram(program);
-    getDriverApi().destroySwapChain(swapChain);
-    getDriverApi().destroyRenderTarget(renderTarget);
-    getDriverApi().destroyTexture(texture);
-    getDriverApi().finish();
+    api.finish();
     executeCommands();
 }
 

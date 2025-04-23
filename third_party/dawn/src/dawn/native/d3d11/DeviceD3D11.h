@@ -51,6 +51,7 @@ class Device final : public d3d::Device {
     MaybeError Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor);
 
     ID3D11Device* GetD3D11Device() const;
+    ID3D11Device3* GetD3D11Device3() const;
     ID3D11Device5* GetD3D11Device5() const;
 
     const DeviceInfo& GetDeviceInfo() const;
@@ -76,7 +77,9 @@ class Device final : public d3d::Device {
     bool MayRequireDuplicationOfIndirectParameters() const override;
     uint64_t GetBufferCopyOffsetAlignmentForDepthStencil() const override;
     bool CanTextureLoadResolveTargetInTheSameRenderpass() const override;
-    bool PreferNotUsingMappableOrUniformBufferAsStorage() const override;
+    bool CanAddStorageUsageToBufferWithoutSideEffects(wgpu::BufferUsage storageUsage,
+                                                      wgpu::BufferUsage originalUsage,
+                                                      size_t bufferSize) const override;
     void SetLabelImpl() override;
 
     void DisposeKeyedMutex(ComPtr<IDXGIKeyedMutex> dxgiKeyedMutex) override;
@@ -144,6 +147,7 @@ class Device final : public d3d::Device {
 
     ComPtr<ID3D11Device> mD3d11Device;
     bool mIsDebugLayerEnabled = false;
+    ComPtr<ID3D11Device3> mD3d11Device3;
     ComPtr<ID3D11Device5> mD3d11Device5;
     SerialQueue<ExecutionSerial, ComPtr<IUnknown>> mUsedComObjectRefs;
 

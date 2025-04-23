@@ -645,6 +645,42 @@ struct LlvmInst_VAArg {
   bool isAllowed() const { return false; }
 };
 
+/// This instruction extracts from vector
+struct LlvmInst_ExtractElement {
+  llvm::Instruction *Instr;
+  // Construction and identification
+  LlvmInst_ExtractElement(llvm::Instruction *pInstr) : Instr(pInstr) {}
+  operator bool() const {
+    return Instr->getOpcode() == llvm::Instruction::ExtractElement;
+  }
+  // Validation support
+  bool isAllowed() const { return true; }
+};
+
+/// This instruction inserts into vector
+struct LlvmInst_InsertElement {
+  llvm::Instruction *Instr;
+  // Construction and identification
+  LlvmInst_InsertElement(llvm::Instruction *pInstr) : Instr(pInstr) {}
+  operator bool() const {
+    return Instr->getOpcode() == llvm::Instruction::InsertElement;
+  }
+  // Validation support
+  bool isAllowed() const { return true; }
+};
+
+/// This instruction Shuffle two vectors
+struct LlvmInst_ShuffleVector {
+  llvm::Instruction *Instr;
+  // Construction and identification
+  LlvmInst_ShuffleVector(llvm::Instruction *pInstr) : Instr(pInstr) {}
+  operator bool() const {
+    return Instr->getOpcode() == llvm::Instruction::ShuffleVector;
+  }
+  // Validation support
+  bool isAllowed() const { return true; }
+};
+
 /// This instruction extracts from aggregate
 struct LlvmInst_ExtractValue {
   llvm::Instruction *Instr;
@@ -8754,6 +8790,128 @@ struct DxilInst_StartInstanceLocation {
   operator bool() const {
     return hlsl::OP::IsDxilOpFuncCallInst(
         Instr, hlsl::OP::OpCode::StartInstanceLocation);
+  }
+  // Validation support
+  bool isAllowed() const { return true; }
+  bool isArgumentListValid() const {
+    if (1 != llvm::dyn_cast<llvm::CallInst>(Instr)->getNumArgOperands())
+      return false;
+    return true;
+  }
+  // Metadata
+  bool requiresUniformInputs() const { return false; }
+};
+
+/// This instruction allocates space for RayQuery and return handle
+struct DxilInst_AllocateRayQuery2 {
+  llvm::Instruction *Instr;
+  // Construction and identification
+  DxilInst_AllocateRayQuery2(llvm::Instruction *pInstr) : Instr(pInstr) {}
+  operator bool() const {
+    return hlsl::OP::IsDxilOpFuncCallInst(Instr,
+                                          hlsl::OP::OpCode::AllocateRayQuery2);
+  }
+  // Validation support
+  bool isAllowed() const { return true; }
+  bool isArgumentListValid() const {
+    if (3 != llvm::dyn_cast<llvm::CallInst>(Instr)->getNumArgOperands())
+      return false;
+    return true;
+  }
+  // Metadata
+  bool requiresUniformInputs() const { return false; }
+  // Operand indexes
+  enum OperandIdx {
+    arg_constRayFlags = 1,
+    arg_constRayQueryFlags = 2,
+  };
+  // Accessors
+  llvm::Value *get_constRayFlags() const { return Instr->getOperand(1); }
+  void set_constRayFlags(llvm::Value *val) { Instr->setOperand(1, val); }
+  uint32_t get_constRayFlags_val() const {
+    return (uint32_t)(llvm::dyn_cast<llvm::ConstantInt>(Instr->getOperand(1))
+                          ->getZExtValue());
+  }
+  void set_constRayFlags_val(uint32_t val) {
+    Instr->setOperand(1, llvm::Constant::getIntegerValue(
+                             llvm::IntegerType::get(Instr->getContext(), 32),
+                             llvm::APInt(32, (uint64_t)val)));
+  }
+  llvm::Value *get_constRayQueryFlags() const { return Instr->getOperand(2); }
+  void set_constRayQueryFlags(llvm::Value *val) { Instr->setOperand(2, val); }
+  uint32_t get_constRayQueryFlags_val() const {
+    return (uint32_t)(llvm::dyn_cast<llvm::ConstantInt>(Instr->getOperand(2))
+                          ->getZExtValue());
+  }
+  void set_constRayQueryFlags_val(uint32_t val) {
+    Instr->setOperand(2, llvm::Constant::getIntegerValue(
+                             llvm::IntegerType::get(Instr->getContext(), 32),
+                             llvm::APInt(32, (uint64_t)val)));
+  }
+};
+
+/// This instruction Creates a new HitObject representing a miss
+struct DxilInst_HitObject_MakeMiss {
+  llvm::Instruction *Instr;
+  // Construction and identification
+  DxilInst_HitObject_MakeMiss(llvm::Instruction *pInstr) : Instr(pInstr) {}
+  operator bool() const {
+    return hlsl::OP::IsDxilOpFuncCallInst(Instr,
+                                          hlsl::OP::OpCode::HitObject_MakeMiss);
+  }
+  // Validation support
+  bool isAllowed() const { return true; }
+  bool isArgumentListValid() const {
+    if (11 != llvm::dyn_cast<llvm::CallInst>(Instr)->getNumArgOperands())
+      return false;
+    return true;
+  }
+  // Metadata
+  bool requiresUniformInputs() const { return false; }
+  // Operand indexes
+  enum OperandIdx {
+    arg_RayFlags = 1,
+    arg_MissShaderIndex = 2,
+    arg_Origin_X = 3,
+    arg_Origin_Y = 4,
+    arg_Origin_Z = 5,
+    arg_TMin = 6,
+    arg_Direction_X = 7,
+    arg_Direction_Y = 8,
+    arg_Direction_Z = 9,
+    arg_TMax = 10,
+  };
+  // Accessors
+  llvm::Value *get_RayFlags() const { return Instr->getOperand(1); }
+  void set_RayFlags(llvm::Value *val) { Instr->setOperand(1, val); }
+  llvm::Value *get_MissShaderIndex() const { return Instr->getOperand(2); }
+  void set_MissShaderIndex(llvm::Value *val) { Instr->setOperand(2, val); }
+  llvm::Value *get_Origin_X() const { return Instr->getOperand(3); }
+  void set_Origin_X(llvm::Value *val) { Instr->setOperand(3, val); }
+  llvm::Value *get_Origin_Y() const { return Instr->getOperand(4); }
+  void set_Origin_Y(llvm::Value *val) { Instr->setOperand(4, val); }
+  llvm::Value *get_Origin_Z() const { return Instr->getOperand(5); }
+  void set_Origin_Z(llvm::Value *val) { Instr->setOperand(5, val); }
+  llvm::Value *get_TMin() const { return Instr->getOperand(6); }
+  void set_TMin(llvm::Value *val) { Instr->setOperand(6, val); }
+  llvm::Value *get_Direction_X() const { return Instr->getOperand(7); }
+  void set_Direction_X(llvm::Value *val) { Instr->setOperand(7, val); }
+  llvm::Value *get_Direction_Y() const { return Instr->getOperand(8); }
+  void set_Direction_Y(llvm::Value *val) { Instr->setOperand(8, val); }
+  llvm::Value *get_Direction_Z() const { return Instr->getOperand(9); }
+  void set_Direction_Z(llvm::Value *val) { Instr->setOperand(9, val); }
+  llvm::Value *get_TMax() const { return Instr->getOperand(10); }
+  void set_TMax(llvm::Value *val) { Instr->setOperand(10, val); }
+};
+
+/// This instruction Creates an empty nop HitObject
+struct DxilInst_HitObject_MakeNop {
+  llvm::Instruction *Instr;
+  // Construction and identification
+  DxilInst_HitObject_MakeNop(llvm::Instruction *pInstr) : Instr(pInstr) {}
+  operator bool() const {
+    return hlsl::OP::IsDxilOpFuncCallInst(Instr,
+                                          hlsl::OP::OpCode::HitObject_MakeNop);
   }
   // Validation support
   bool isAllowed() const { return true; }

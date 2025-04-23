@@ -32,7 +32,7 @@
 
 #include "src/tint/lang/core/ir/constant.h"
 #include "src/tint/lang/core/type/type.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/lang/spirv/type/image.h"
 
 namespace tint::spirv::type {
 
@@ -55,10 +55,10 @@ class SampledImage final : public Castable<SampledImage, core::type::Type> {
     SampledImage* Clone(core::type::CloneContext& ctx) const override;
 
     /// @returns the image type
-    const core::type::Type* Image() const { return image_; }
+    const spirv::type::Image* Image() const { return image_; }
 
   private:
-    const core::type::Type* image_;
+    const spirv::type::Image* image_;
 };
 
 }  // namespace tint::spirv::type

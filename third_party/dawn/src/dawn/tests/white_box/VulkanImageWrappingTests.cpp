@@ -219,7 +219,7 @@ TEST_P(VulkanImageWrappingValidationTests, SuccessfulImportWithInternalUsageDesc
 // Test an error occurs if an invalid sType is the nextInChain
 TEST_P(VulkanImageWrappingValidationTests, InvalidTextureDescriptor) {
     wgpu::ChainedStruct chainedDescriptor;
-    chainedDescriptor.sType = wgpu::SType::SurfaceDescriptorFromWindowsSwapChainPanel;
+    chainedDescriptor.sType = wgpu::SType::SurfaceDescriptorFromWindowsUWPSwapChainPanel;
     defaultDescriptor.nextInChain = &chainedDescriptor;
 
     ASSERT_DEVICE_ERROR(wgpu::Texture texture = WrapVulkanImage(device, &defaultDescriptor,

@@ -30,6 +30,7 @@
 #include "src/tint/lang/core/type/abstract_float.h"
 #include "src/tint/lang/core/type/abstract_int.h"
 #include "src/tint/lang/core/type/array.h"
+#include "src/tint/lang/core/type/binding_array.h"
 #include "src/tint/lang/core/type/bool.h"
 #include "src/tint/lang/core/type/f16.h"
 #include "src/tint/lang/core/type/f32.h"
@@ -151,8 +152,12 @@ bool Type::IsAbstractScalarOrVector() const {
     return Is<AbstractInt>() || Is([](const Vector* v) { return v->Type()->Is<AbstractInt>(); });
 }
 
+bool Type::IsBoolVector() const {
+    return Is([](const Vector* v) { return v->Type()->Is<Bool>(); });
+}
+
 bool Type::IsBoolScalarOrVector() const {
-    return Is<Bool>() || Is([](const Vector* v) { return v->Type()->Is<Bool>(); });
+    return Is<Bool>() || IsBoolVector();
 }
 
 bool Type::IsScalarVector() const {
@@ -165,7 +170,13 @@ bool Type::IsNumericScalarOrVector() const {
 }
 
 bool Type::IsHandle() const {
-    return IsAnyOf<Sampler, Texture>();
+    if (IsAnyOf<Sampler, Texture>()) {
+        return true;
+    }
+    if (auto* binding_array = As<BindingArray>()) {
+        return binding_array->ElemType()->IsHandle();
+    }
+    return false;
 }
 
 bool Type::IsAbstract() const {

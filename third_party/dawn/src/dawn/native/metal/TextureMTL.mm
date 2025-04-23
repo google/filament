@@ -674,50 +674,46 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* commandContext,
                 (largestMipSize.width / blockInfo.width) * blockInfo.byteSize;
             uint64_t largestMipBytesPerImage = static_cast<uint64_t>(largestMipBytesPerRow) *
                                                (largestMipSize.height / blockInfo.height);
-            uint64_t bufferSize = largestMipBytesPerImage * largestMipSize.depthOrArrayLayers;
+            uint64_t uploadSize = largestMipBytesPerImage * largestMipSize.depthOrArrayLayers;
 
-            if (bufferSize > std::numeric_limits<NSUInteger>::max()) {
-                return DAWN_OUT_OF_MEMORY_ERROR("Unable to allocate buffer.");
-            }
+            DAWN_TRY(device->GetDynamicUploader()->WithUploadReservation(
+                uploadSize, blockInfo.byteSize, [&](UploadReservation reservation) -> MaybeError {
+                    memset(reservation.mappedPointer, clearColor, uploadSize);
 
-            DynamicUploader* uploader = device->GetDynamicUploader();
-            UploadHandle uploadHandle;
-            DAWN_TRY_ASSIGN(
-                uploadHandle,
-                uploader->Allocate(bufferSize, device->GetQueue()->GetPendingCommandSerial(),
-                                   blockInfo.byteSize));
-            memset(uploadHandle.mappedBuffer, clearColor, bufferSize);
+                    id<MTLBuffer> buffer = ToBackend(reservation.buffer)->GetMTLBuffer();
+                    for (uint32_t level = range.baseMipLevel;
+                         level < range.baseMipLevel + range.levelCount; ++level) {
+                        Extent3D virtualSize =
+                            GetMipLevelSingleSubresourceVirtualSize(level, aspect);
 
-            id<MTLBuffer> uploadBuffer = ToBackend(uploadHandle.stagingBuffer)->GetMTLBuffer();
+                        for (uint32_t arrayLayer = range.baseArrayLayer;
+                             arrayLayer < range.baseArrayLayer + range.layerCount; ++arrayLayer) {
+                            if (clearValue == TextureBase::ClearValue::Zero &&
+                                IsSubresourceContentInitialized(SubresourceRange::SingleMipAndLayer(
+                                    level, arrayLayer, aspect))) {
+                                // Skip lazy clears if already initialized.
+                                continue;
+                            }
 
-            for (uint32_t level = range.baseMipLevel; level < range.baseMipLevel + range.levelCount;
-                 ++level) {
-                Extent3D virtualSize = GetMipLevelSingleSubresourceVirtualSize(level, aspect);
-
-                for (uint32_t arrayLayer = range.baseArrayLayer;
-                     arrayLayer < range.baseArrayLayer + range.layerCount; ++arrayLayer) {
-                    if (clearValue == TextureBase::ClearValue::Zero &&
-                        IsSubresourceContentInitialized(
-                            SubresourceRange::SingleMipAndLayer(level, arrayLayer, aspect))) {
-                        // Skip lazy clears if already initialized.
-                        continue;
+                            MTLBlitOption blitOption = ComputeMTLBlitOption(aspect);
+                            [commandContext->EnsureBlit()
+                                     copyFromBuffer:buffer
+                                       sourceOffset:reservation.offsetInBuffer
+                                  sourceBytesPerRow:largestMipBytesPerRow
+                                sourceBytesPerImage:largestMipBytesPerImage
+                                         sourceSize:MTLSizeMake(virtualSize.width,
+                                                                virtualSize.height,
+                                                                virtualSize.depthOrArrayLayers)
+                                          toTexture:GetMTLTexture(aspect)
+                                   destinationSlice:arrayLayer
+                                   destinationLevel:level
+                                  destinationOrigin:MTLOriginMake(0, 0, 0)
+                                            options:blitOption];
+                        }
                     }
 
-                    MTLBlitOption blitOption = ComputeMTLBlitOption(aspect);
-                    [commandContext->EnsureBlit()
-                             copyFromBuffer:uploadBuffer
-                               sourceOffset:uploadHandle.startOffset
-                          sourceBytesPerRow:largestMipBytesPerRow
-                        sourceBytesPerImage:largestMipBytesPerImage
-                                 sourceSize:MTLSizeMake(virtualSize.width, virtualSize.height,
-                                                        virtualSize.depthOrArrayLayers)
-                                  toTexture:GetMTLTexture(aspect)
-                           destinationSlice:arrayLayer
-                           destinationLevel:level
-                          destinationOrigin:MTLOriginMake(0, 0, 0)
-                                    options:blitOption];
-                }
-            }
+                    return {};
+                }));
         }
     }
     return {};

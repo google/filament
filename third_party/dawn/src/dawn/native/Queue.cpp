@@ -68,17 +68,18 @@ namespace {
 void CopyTextureData(uint8_t* dstPointer,
                      const uint8_t* srcPointer,
                      uint32_t depth,
-                     uint32_t rowsPerImage,
-                     uint64_t imageAdditionalStride,
+                     uint32_t dstRowsPerImage,
+                     uint64_t srcRowsPerImage,
                      uint32_t actualBytesPerRow,
                      uint32_t dstBytesPerRow,
                      uint32_t srcBytesPerRow) {
+    uint64_t imageAdditionalStride = srcBytesPerRow * (srcRowsPerImage - dstRowsPerImage);
     bool copyWholeLayer = actualBytesPerRow == dstBytesPerRow && dstBytesPerRow == srcBytesPerRow;
     bool copyWholeData = copyWholeLayer && imageAdditionalStride == 0;
 
     if (!copyWholeLayer) {  // copy row by row
         for (uint32_t d = 0; d < depth; ++d) {
-            for (uint32_t h = 0; h < rowsPerImage; ++h) {
+            for (uint32_t h = 0; h < dstRowsPerImage; ++h) {
                 memcpy(dstPointer, srcPointer, actualBytesPerRow);
                 dstPointer += dstBytesPerRow;
                 srcPointer += srcBytesPerRow;
@@ -86,7 +87,7 @@ void CopyTextureData(uint8_t* dstPointer,
             srcPointer += imageAdditionalStride;
         }
     } else {
-        uint64_t layerSize = uint64_t(rowsPerImage) * actualBytesPerRow;
+        uint64_t layerSize = uint64_t(dstRowsPerImage) * actualBytesPerRow;
         if (!copyWholeData) {  // copy layer by layer
             for (uint32_t d = 0; d < depth; ++d) {
                 memcpy(dstPointer, srcPointer, layerSize);
@@ -97,62 +98,6 @@ void CopyTextureData(uint8_t* dstPointer,
             memcpy(dstPointer, srcPointer, layerSize * depth);
         }
     }
-}
-
-ResultOrError<UploadHandle> UploadTextureDataAligningBytesPerRowAndOffset(
-    DeviceBase* device,
-    const void* data,
-    uint32_t alignedBytesPerRow,
-    uint32_t optimallyAlignedBytesPerRow,
-    uint32_t alignedRowsPerImage,
-    const TexelCopyBufferLayout& dataLayout,
-    bool hasDepthOrStencil,
-    const TexelBlockInfo& blockInfo,
-    const Extent3D& writeSizePixel) {
-    uint64_t newDataSizeBytes;
-    DAWN_TRY_ASSIGN(newDataSizeBytes,
-                    ComputeRequiredBytesInCopy(blockInfo, writeSizePixel,
-                                               optimallyAlignedBytesPerRow, alignedRowsPerImage));
-
-    uint64_t optimalOffsetAlignment = device->GetOptimalBufferToTextureCopyOffsetAlignment();
-    DAWN_ASSERT(IsPowerOfTwo(optimalOffsetAlignment));
-    DAWN_ASSERT(IsPowerOfTwo(blockInfo.byteSize));
-    // We need the offset to be aligned to both optimalOffsetAlignment and blockByteSize,
-    // since both of them are powers of two, we only need to align to the max value.
-    uint64_t offsetAlignment = std::max(optimalOffsetAlignment, uint64_t(blockInfo.byteSize));
-
-    // Buffer offset alignments must follow additional restrictions when we copy with depth stencil
-    // formats.
-    if (hasDepthOrStencil) {
-        offsetAlignment =
-            std::max(offsetAlignment, device->GetBufferCopyOffsetAlignmentForDepthStencil());
-    }
-
-    UploadHandle uploadHandle;
-    DAWN_TRY_ASSIGN(
-        uploadHandle,
-        device->GetDynamicUploader()->Allocate(
-            newDataSizeBytes, device->GetQueue()->GetPendingCommandSerial(), offsetAlignment));
-    DAWN_ASSERT(uploadHandle.mappedBuffer != nullptr);
-
-    uint8_t* dstPointer = static_cast<uint8_t*>(uploadHandle.mappedBuffer);
-    const uint8_t* srcPointer = static_cast<const uint8_t*>(data);
-    srcPointer += dataLayout.offset;
-
-    uint32_t dataRowsPerImage = dataLayout.rowsPerImage;
-    if (dataRowsPerImage == 0) {
-        dataRowsPerImage = writeSizePixel.height / blockInfo.height;
-    }
-
-    DAWN_ASSERT(dataRowsPerImage >= alignedRowsPerImage);
-    uint64_t imageAdditionalStride =
-        dataLayout.bytesPerRow * (dataRowsPerImage - alignedRowsPerImage);
-
-    CopyTextureData(dstPointer, srcPointer, writeSizePixel.depthOrArrayLayers, alignedRowsPerImage,
-                    imageAdditionalStride, alignedBytesPerRow, optimallyAlignedBytesPerRow,
-                    dataLayout.bytesPerRow);
-
-    return uploadHandle;
 }
 
 class ErrorQueue : public QueueBase {
@@ -264,7 +209,7 @@ Future QueueBase::APIOnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& ca
             // WorkDoneEvent has no error cases other than the mEarlyStatus ones.
             WGPUQueueWorkDoneStatus status = WGPUQueueWorkDoneStatus_Success;
             if (completionType == EventCompletionType::Shutdown) {
-                status = WGPUQueueWorkDoneStatus_InstanceDropped;
+                status = WGPUQueueWorkDoneStatus_CallbackCancelled;
             } else if (mEarlyStatus) {
                 status = mEarlyStatus.value();
             }
@@ -433,33 +378,49 @@ MaybeError QueueBase::WriteTextureImpl(const TexelCopyTextureInfo& destination,
     // writeSizePixel->height are multiples of blockWidth and blockHeight respectively.
     DAWN_ASSERT(writeSizePixel.width % blockInfo.width == 0);
     DAWN_ASSERT(writeSizePixel.height % blockInfo.height == 0);
-    uint32_t alignedBytesPerRow = writeSizePixel.width / blockInfo.width * blockInfo.byteSize;
-    uint32_t alignedRowsPerImage = writeSizePixel.height / blockInfo.height;
+    uint32_t rowsPerImage = writeSizePixel.height / blockInfo.height;
+    uint32_t bytesPerRow = writeSizePixel.width / blockInfo.width * blockInfo.byteSize;
+    uint32_t alignedBytesPerRow = Align(bytesPerRow, GetDevice()->GetOptimalBytesPerRowAlignment());
 
-    uint32_t optimalBytesPerRowAlignment = GetDevice()->GetOptimalBytesPerRowAlignment();
-    uint32_t optimallyAlignedBytesPerRow = Align(alignedBytesPerRow, optimalBytesPerRowAlignment);
+    uint64_t packedDataSize;
+    DAWN_TRY_ASSIGN(packedDataSize, ComputeRequiredBytesInCopy(blockInfo, writeSizePixel,
+                                                               alignedBytesPerRow, rowsPerImage));
 
-    UploadHandle uploadHandle;
-    DAWN_TRY_ASSIGN(uploadHandle, UploadTextureDataAligningBytesPerRowAndOffset(
-                                      GetDevice(), data, alignedBytesPerRow,
-                                      optimallyAlignedBytesPerRow, alignedRowsPerImage, dataLayout,
-                                      format.HasDepthOrStencil(), blockInfo, writeSizePixel));
+    // We need the offset to be aligned to both the optimal offset for that device and
+    // blockByteSize, since both of them are powers of two, we only need to align to the max value.
+    DAWN_ASSERT(IsPowerOfTwo(GetDevice()->GetOptimalBufferToTextureCopyOffsetAlignment()));
+    DAWN_ASSERT(IsPowerOfTwo(blockInfo.byteSize));
+    uint64_t offsetAlignment = std::max(
+        uint64_t(blockInfo.byteSize), GetDevice()->GetOptimalBufferToTextureCopyOffsetAlignment());
 
-    TexelCopyBufferLayout passDataLayout = dataLayout;
-    passDataLayout.offset = uploadHandle.startOffset;
-    passDataLayout.bytesPerRow = optimallyAlignedBytesPerRow;
-    passDataLayout.rowsPerImage = alignedRowsPerImage;
+    // Buffer offset alignments must follow additional restrictions for depth stencil formats.
+    if (format.HasDepthOrStencil()) {
+        offsetAlignment =
+            std::max(offsetAlignment, GetDevice()->GetBufferCopyOffsetAlignmentForDepthStencil());
+    }
 
-    TextureCopy textureCopy;
-    textureCopy.texture = destination.texture;
-    textureCopy.mipLevel = destination.mipLevel;
-    textureCopy.origin = destination.origin;
-    textureCopy.aspect = ConvertAspect(format, destination.aspect);
+    return GetDevice()->GetDynamicUploader()->WithUploadReservation(
+        packedDataSize, offsetAlignment, [&](UploadReservation reservation) -> MaybeError {
+            const uint8_t* srcPointer = reinterpret_cast<const uint8_t*>(data) + dataLayout.offset;
+            uint8_t* dstPointer = reinterpret_cast<uint8_t*>(reservation.mappedPointer);
+            CopyTextureData(dstPointer, srcPointer, writeSizePixel.depthOrArrayLayers, rowsPerImage,
+                            dataLayout.rowsPerImage, bytesPerRow, alignedBytesPerRow,
+                            dataLayout.bytesPerRow);
 
-    DeviceBase* device = GetDevice();
+            TexelCopyBufferLayout passDataLayout = dataLayout;
+            passDataLayout.offset = reservation.offsetInBuffer;
+            passDataLayout.bytesPerRow = alignedBytesPerRow;
+            passDataLayout.rowsPerImage = rowsPerImage;
 
-    return device->CopyFromStagingToTexture(uploadHandle.stagingBuffer.Get(), passDataLayout,
-                                            textureCopy, writeSizePixel);
+            TextureCopy textureCopy;
+            textureCopy.texture = destination.texture;
+            textureCopy.mipLevel = destination.mipLevel;
+            textureCopy.origin = destination.origin;
+            textureCopy.aspect = ConvertAspect(format, destination.aspect);
+
+            return GetDevice()->CopyFromStagingToTexture(reservation.buffer.Get(), passDataLayout,
+                                                         textureCopy, writeSizePixel);
+        });
 }
 
 void QueueBase::APICopyTextureForBrowser(const TexelCopyTextureInfo* source,

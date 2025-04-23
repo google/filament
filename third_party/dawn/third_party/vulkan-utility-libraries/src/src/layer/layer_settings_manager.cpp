@@ -38,31 +38,31 @@
  * Android API level 26. If not avaible use the old __system_property_get function.
  */
 
-// Weak function declaration, used only when not decalered in the Android headers
+// Weak function declaration, used only when not declared in the Android headers
 void __system_property_read_callback(const prop_info *info,
                                      void (*callback)(void *cookie, const char *name, const char *value, uint32_t serial),
                                      void *cookie) __attribute__((weak));
 static std::string GetAndroidProperty(const char *name) {
     std::string output;
-    if (__system_property_read_callback != nullptr) {
-        const prop_info *pi = __system_property_find(name);
-        if (pi) {
-            __system_property_read_callback(
-                pi,
-                [](void *cookie, const char *name, const char *value, uint32_t serial) {
-                    (void)name;
-                    (void)serial;
-                    reinterpret_cast<std::string *>(cookie)->assign(value);
-                },
-                reinterpret_cast<void *>(&output));
-        }
-    } else {
-        char value_buf[PROP_VALUE_MAX] = "";
-        size_t len = static_cast<size_t>(__system_property_get(name, value_buf));
-        if (len > 0 && len < sizeof(value_buf)) {
-            output.assign(value_buf, len);
-        }
+#if __ANDROID_API__ >= 26
+    const prop_info *pi = __system_property_find(name);
+    if (pi) {
+        __system_property_read_callback(
+            pi,
+            [](void *cookie, const char *name, const char *value, uint32_t serial) {
+                (void)name;
+                (void)serial;
+                reinterpret_cast<std::string *>(cookie)->assign(value);
+            },
+            reinterpret_cast<void *>(&output));
     }
+#else
+    char value_buf[PROP_VALUE_MAX] = "";
+    size_t len = static_cast<size_t>(__system_property_get(name, value_buf));
+    if (len > 0 && len < sizeof(value_buf)) {
+        output.assign(value_buf, len);
+    }
+#endif
     return output;
 }
 #endif

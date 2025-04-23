@@ -52,7 +52,7 @@ Var::Var(Id id, InstructionResult* result) : Base(id) {
 Var::~Var() = default;
 
 Var* Var::Clone(CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     auto* new_var = ctx.ir.CreateInstruction<Var>(new_result);
 
     new_var->binding_point_ = binding_point_;
@@ -74,7 +74,7 @@ void Var::SetInitializer(Value* initializer) {
 }
 
 void Var::DestroyIfOnlyAssigned() {
-    auto* result = Result(0);
+    auto* result = Result();
     if (result->UsagesUnsorted().All(
             [](const Usage& u) { return u.instruction->Is<ir::Store>(); })) {
         while (result->IsUsed()) {

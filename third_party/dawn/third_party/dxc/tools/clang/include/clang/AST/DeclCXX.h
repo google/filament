@@ -465,6 +465,10 @@ class CXXRecordDecl : public RecordDecl {
     /// \brief Whether we are currently parsing base specifiers.
     bool IsParsingBaseSpecifiers : 1;
 
+    /// \brief Whether this class contains at least one member or base
+    ///  class containing an HLSL vector longer than 4 elements.
+    bool HasHLSLLongVector : 1;
+
     /// \brief The number of base class specifiers in Bases.
     unsigned NumBases;
 
@@ -1017,6 +1021,13 @@ public:
   bool needsOverloadResolutionForDestructor() const {
     return data().NeedOverloadResolutionForDestructor;
   }
+
+  // HLSL Change add HLSL Long vector bit.
+  /// \brief Determine whether this class contains an HLSL long vector
+  /// of over 4 elements.
+  bool hasHLSLLongVector() { return data().HasHLSLLongVector; }
+  /// \brief Set that this class contains an HLSL long vector of over 4 elements
+  bool setHasHLSLLongVector() { return data().HasHLSLLongVector = true; }
 
   /// \brief Determine whether this class describes a lambda function object.
   bool isLambda() const {
