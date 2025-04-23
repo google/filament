@@ -28,6 +28,7 @@
 #include <utils/compiler.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
+#include <utils/Log.h>
 
 namespace filament::backend {
 
