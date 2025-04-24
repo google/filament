@@ -173,17 +173,11 @@ template<> struct is_floating_point<half> : public std::true_type {};
 
 namespace std {
 
-// Note: This code may work with non-Clang compilers or Clang versions older than Clang 20.
-// Clang 20 explicitly blocks to customizing standard type traits.
-#if !defined(__clang__) || (defined(__clang__) && __clang_major__ < 20)
-template<> struct is_floating_point<filament::math::half> : public std::true_type {};
-
-// note: this shouldn't be needed (is_floating_point<> is enough) but some version of msvc need it
-// This stopped working with MSVC 2019 16.4, so we specialize our own version of is_arithmetic in
+// Remove the standard template specializations for filament::math::half
+// Clang 20 explicitly blocks customizing standard type traits
+// Instead, use the traits defined in the math:: namespace
+// This avoids compatibility issues with Clang 20 and MSVC 2019 16.4+
 // the math::filament namespace (see above).
-template<> struct is_arithmetic<filament::math::half> : public std::true_type {};
-#endif
-
 template<>
 class numeric_limits<filament::math::half> {
 public:
