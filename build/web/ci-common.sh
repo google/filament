@@ -1,16 +1,4 @@
 #!/bin/bash
-if [ `uname` == "Linux" ];then
-    source `dirname $0`/../linux/ci-common.sh
-elif [ `uname` == "Darwin" ];then
-    curl -OL https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-mac.zip
-    unzip -q ninja-mac.zip
-else
-    echo "Unsupported OS"
-    exit 1
-fi
-
-chmod +x ninja
-export PATH="$PWD:$PATH"
 
 # Install emscripten.
 curl -L https://github.com/emscripten-core/emsdk/archive/refs/tags/3.1.60.zip > emsdk.zip

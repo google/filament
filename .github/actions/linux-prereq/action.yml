@@ -1,0 +1,38 @@
+name: 'Linux Preqrequisites'
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/actions/dep-versions
+    - name: Install Linux Prerequisites
+      shell: bash
+      run: |
+        set -xe
+        # See https://askubuntu.com/questions/272248/processing-triggers-for-man-db/1476024#1476024
+        echo "set man-db/auto-update false" | sudo debconf-communicate
+        sudo dpkg-reconfigure man-db
+
+        # Install ninja
+        source ./build/common/get-ninja.sh
+
+        # Install CMake
+        mkdir -p cmake
+        cd cmake
+
+        sudo wget https://github.com/Kitware/CMake/releases/download/v$GITHUB_CMAKE_VERSION/cmake-$GITHUB_CMAKE_VERSION-Linux-x86_64.sh
+        sudo chmod +x ./cmake-$GITHUB_CMAKE_VERSION-Linux-x86_64.sh
+        sudo ./cmake-$GITHUB_CMAKE_VERSION-Linux-x86_64.sh --skip-license > /dev/null
+        sudo update-alternatives --install /usr/bin/cmake cmake $(pwd)/bin/cmake 1000 --force
+
+        cd ..
+
+        sudo wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo apt-get update
+        sudo apt-get install clang-$GITHUB_CLANG_VERSION libc++-$GITHUB_CLANG_VERSION-dev libc++abi-$GITHUB_CLANG_VERSION-dev
+        sudo apt-get install mesa-common-dev libxi-dev libxxf86vm-dev
+
+        # For dawn
+        sudo apt-get install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libx11-xcb-dev
+
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-${GITHUB_CLANG_VERSION} 100
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${GITHUB_CLANG_VERSION} 100
+        set +xe
