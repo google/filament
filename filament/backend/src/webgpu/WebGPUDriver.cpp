@@ -598,7 +598,7 @@ bool WebGPUDriver::isTextureFormatSupported(TextureFormat format) {
 }
 
 bool WebGPUDriver::isTextureSwizzleSupported() {
-    return true;
+    return false;
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(TextureFormat format) {
