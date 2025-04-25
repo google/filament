@@ -97,6 +97,30 @@ wgpu::Adapter WebGPUPlatform::requestAdapter(wgpu::Surface const& surface) {
     return adapter;
 }
 
+wgpu::Adapter WebGPUPlatform::requestHeadlessAdapter() {
+    wgpu::RequestAdapterOptions adaptorOptions{ .compatibleSurface = nullptr };
+    wgpu::Adapter adapter = nullptr;
+    wgpu::WaitStatus status = mInstance.WaitAny(
+            mInstance.RequestAdapter(&adaptorOptions, wgpu::CallbackMode::WaitAnyOnly,
+                    [&adapter](wgpu::RequestAdapterStatus const status,
+                            wgpu::Adapter const& readyAdapter, wgpu::StringView const message) {
+                        // TODO consider more robust error handling
+                        FILAMENT_CHECK_POSTCONDITION(status == wgpu::RequestAdapterStatus::Success)
+                                << "Unable to request a WebGPU adapter. Status "
+                                << static_cast<uint32_t>(status)
+                                << " with message: " << message.data;
+                        adapter = readyAdapter;
+                    }),
+            UINT16_MAX);// TODO define reasonable timeout (or do this asynchronously)
+    FILAMENT_CHECK_POSTCONDITION(status == wgpu::WaitStatus::Success)
+            << "Non-successful wait status requesting a WebGPU adapter "
+            << static_cast<uint32_t>(status);
+    FILAMENT_CHECK_POSTCONDITION(adapter != nullptr)
+            << "Failed to get a WebGPU adapter for the platform";
+    // TODO consider validating adapter has required features and/or limits
+    return adapter;
+}
+
 wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     // TODO consider passing required features and/or limits
     wgpu::DeviceDescriptor deviceDescriptor{};

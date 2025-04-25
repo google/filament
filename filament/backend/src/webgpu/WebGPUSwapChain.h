@@ -28,8 +28,12 @@ namespace filament::backend {
 
 class WebGPUSwapChain final : public Platform::SwapChain, HwSwapChain {
 public:
-    WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& surfaceSize,
+    WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
             wgpu::Adapter& adapter, wgpu::Device& device, uint64_t flags);
+
+    WebGPUSwapChain( uint64_t width, uint64_t height,wgpu::Adapter& adapter,
+             wgpu::Device& device, uint64_t flags);
+
     ~WebGPUSwapChain();
 
     wgpu::TextureView getCurrentSurfaceTextureView(wgpu::Extent2D const&);
@@ -37,10 +41,23 @@ public:
     void present();
 
 private:
+
+    [[nodiscard]] bool isHeadless() const { return mType == SwapChainType::HEADLESS; }
     void setExtent(wgpu::Extent2D const&);
+
+
+    enum class SwapChainType {
+        HEADLESS,
+        SURFACE
+    };
 
     wgpu::Surface mSurface = {};
     wgpu::SurfaceConfiguration mConfig = {};
+    SwapChainType mType;
+    uint32_t mHeadlessWidth = 0;
+    uint32_t mHeadlessHeight = 0;
+
+
 };
 
 } // namespace filament::backend
