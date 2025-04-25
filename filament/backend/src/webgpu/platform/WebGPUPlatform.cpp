@@ -98,10 +98,23 @@ wgpu::Adapter WebGPUPlatform::requestAdapter(wgpu::Surface const& surface) {
 }
 
 wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
-    // TODO consider passing required features and/or limits
+    // TODO consider passing limits
+    constexpr std::array desiredFeatures = {
+        wgpu::FeatureName::DepthClipControl,
+        wgpu::FeatureName::Depth32FloatStencil8,
+        wgpu::FeatureName::CoreFeaturesAndLimits };
+    std::vector<wgpu::FeatureName> requiredFeatures;
+    requiredFeatures.reserve(desiredFeatures.size());
+    wgpu::SupportedFeatures supportedFeatures;
+    adapter.GetFeatures(&supportedFeatures);
+    std::set_intersection(supportedFeatures.features,
+            supportedFeatures.features + supportedFeatures.featureCount, desiredFeatures.begin(),
+            desiredFeatures.end(), std::back_inserter(requiredFeatures));
     wgpu::DeviceDescriptor deviceDescriptor{};
     deviceDescriptor.label = "graphics_device";
     deviceDescriptor.defaultQueue.label = "default_queue";
+    deviceDescriptor.requiredFeatureCount = requiredFeatures.size();
+    deviceDescriptor.requiredFeatures = requiredFeatures.data();
     deviceDescriptor.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous,
             [](wgpu::Device const&, wgpu::DeviceLostReason const& reason,
                     wgpu::StringView message) {
