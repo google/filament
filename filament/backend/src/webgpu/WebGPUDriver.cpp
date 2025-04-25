@@ -903,7 +903,6 @@ void WebGPUDriver::resetState(int) {
 void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
         backend::descriptor_binding_t binding, Handle<HwBufferObject> boh, uint32_t offset,
         uint32_t size) {
-    /*
     auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
     auto buffer = handleCast<WGPUBufferObject>(boh);
     if (!bindGroup->getIsLocked()) {
@@ -914,8 +913,6 @@ void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
             .size = size };
         bindGroup->addEntry(entry.binding, std::move(entry));
     }
-    //TODO Just the setup, this function stilll needs the rest of logic implemented
-     */
 }
 
 void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
