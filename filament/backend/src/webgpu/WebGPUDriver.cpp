@@ -473,7 +473,7 @@ void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
      mDevice = mDevice = mPlatform.requestDevice(mAdapter);
      mQueue = mDevice.GetQueue();
      wgpu::Extent2D extent = { width, height};
-     mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), extent, mAdapter,
+     mSwapChain = constructHandle<WebGPUSwapChain>(sch, extent, mAdapter,
             mDevice, flags);
 
 }
@@ -540,7 +540,7 @@ void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
 
 void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
         backend::DescriptorSetLayout&& info) {
-    //constructHandle<WebGPUDescriptorSetLayout>(dslh, std::move(info), mDevice);
+    constructHandle<WebGPUDescriptorSetLayout>(dslh, std::move(info), mDevice);
 }
 
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,

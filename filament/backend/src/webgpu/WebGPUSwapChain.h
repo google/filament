@@ -31,8 +31,8 @@ public:
     WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
             wgpu::Adapter& adapter, wgpu::Device& device, uint64_t flags);
 
-    WebGPUSwapChain( uint64_t width, uint64_t height,wgpu::Adapter& adapter,
-             wgpu::Device& device, uint64_t flags);
+    WebGPUSwapChain(wgpu::Extent2D const& extent,
+            wgpu::Adapter& adapter, wgpu::Device& device, uint64_t flags);
 
     ~WebGPUSwapChain();
 
@@ -53,6 +53,7 @@ private:
 
     wgpu::Surface mSurface = {};
     wgpu::SurfaceConfiguration mConfig = {};
+    wgpu::Device mDevice = {};
     SwapChainType mType;
     uint32_t mHeadlessWidth = 0;
     uint32_t mHeadlessHeight = 0;

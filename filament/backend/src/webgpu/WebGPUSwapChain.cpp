@@ -197,10 +197,8 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
     config.usage = wgpu::TextureUsage::RenderAttachment;
     config.width = extent.width;
     config.height = extent.height;
-    config.format =
-            selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);
-    config.presentMode =
-            selectPresentMode(capabilities.presentModeCount, capabilities.presentModes);
+    config.format = selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);
+    config.presentMode = selectPresentMode(capabilities.presentModeCount, capabilities.presentModes);
     config.alphaMode = selectAlphaMode(capabilities.alphaModeCount, capabilities.alphaModes);
 }
 
@@ -210,16 +208,9 @@ namespace filament::backend {
 
 WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
         wgpu::Adapter& adapter, wgpu::Device& device, uint64_t flags)
-    : mSurface(surface) {
+    : mSurface(surface),
+      mType(SwapChainType::SURFACE)  {
     wgpu::SurfaceCapabilities capabilities = {};
-    if(!surface){
-        mType = SwapChainType::HEADLESS;
-        mHeadlessWidth = extent.width;
-        mHeadlessHeight = extent.height;
-        const bool useSRGBColorSpace = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0;
-        initConfig(mConfig, device, capabilities, extent, useSRGBColorSpace);
-    }
-    mType = SwapChainType::SURFACE;
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
         FWGPU_LOGW << "Failed to get WebGPU surface capabilities" << utils::io::endl;
     } else {
@@ -232,6 +223,12 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
     mSurface.Configure(&mConfig);
 }
 
+WebGPUSwapChain::WebGPUSwapChain(wgpu::Extent2D const& extent,
+        wgpu::Adapter& adapter, wgpu::Device& device, uint64_t flags)
+    : mDevice(device),
+      mType(SwapChainType::HEADLESS),
+      mHeadlessWidth(extent.width),
+      mHeadlessHeight(extent.height){}
 
 WebGPUSwapChain::~WebGPUSwapChain() {
     if(!isHeadless())
@@ -262,17 +259,29 @@ wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView( wgpu::Extent2D 
     wgpu::Texture renderTarget;
 
     if(isHeadless()){
-         wgpu::TextureViewDescriptor targetTextureViewDesc {
-            .label = "headless Rendered texture view",
-            .format = mConfig.format,
+        wgpu::TextureDescriptor headlessTextureDesc {
+            .label = "headless render target",
+            .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc,
+            .dimension = wgpu::TextureDimension::e2D,
+            .size = { mHeadlessWidth,mHeadlessHeight, 1 },
+            .format = wgpu::TextureFormat::RGBA8UnormSrgb,
+            .viewFormatCount = 0,
+            .viewFormats = nullptr,
+        };
+
+        renderTarget = mDevice.CreateTexture(&headlessTextureDesc);
+
+        wgpu::TextureViewDescriptor targetTextureViewDesc {
+            .label = "headless rendered texture view",
+            .format = renderTarget.GetFormat(),
             .dimension = wgpu::TextureViewDimension::e2D,
             .baseMipLevel = 0,
             .mipLevelCount = 1,
             .baseArrayLayer = 0,
             .arrayLayerCount = 1,
             .aspect = wgpu::TextureAspect::All
-         };
-         return renderTarget.CreateView(&targetTextureViewDesc);
+        };
+        return renderTarget.CreateView(&targetTextureViewDesc);
     }
 
     setExtent(currentSurfaceSize);
@@ -284,7 +293,7 @@ wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView( wgpu::Extent2D 
     // TODO: review these initiliazations as webgpu pipeline gets mature
     wgpu::TextureViewDescriptor textureViewDescriptor = {
         .label = "texture_view",
-        .format = mConfig.format,
+        .format = surfaceTexture.texture.GetFormat(),
         .dimension = wgpu::TextureViewDimension::e2D,
         .baseMipLevel = 0,
         .mipLevelCount = 1,
