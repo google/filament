@@ -194,12 +194,8 @@ struct MetalIndexBuffer : public HwIndexBuffer {
 };
 
 struct MetalRenderPrimitive : public HwRenderPrimitive {
-    MetalRenderPrimitive();
-    void setBuffers(MetalVertexBufferInfo const* const vbi,
-            MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer);
     // The pointers to MetalVertexBuffer and MetalIndexBuffer are "weak".
     // The MetalVertexBuffer and MetalIndexBuffer must outlive the MetalRenderPrimitive.
-
     MetalVertexBuffer* vertexBuffer = nullptr;
     MetalIndexBuffer* indexBuffer = nullptr;
 };
@@ -380,7 +376,6 @@ public:
 
     math::uint2 getAttachmentSize() noexcept;
 
-    bool isDefaultRenderTarget() const { return defaultRenderTarget; }
     uint8_t getSamples() const { return samples; }
 
     Attachment getDrawColorAttachment(size_t index);
