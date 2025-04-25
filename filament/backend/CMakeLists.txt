@@ -262,6 +262,7 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
             src/webgpu/WGPUProgram.cpp
+            src/webgpu/WGPUTimerQuery.cpp
     )
     if (WIN32)
         list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)
