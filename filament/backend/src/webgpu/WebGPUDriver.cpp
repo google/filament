@@ -17,7 +17,6 @@
 #include "webgpu/WebGPUDriver.h"
 
 #include "WebGPUSwapChain.h"
-#include "webgpu/WebGPUConstants.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "CommandStreamDispatcher.h"
@@ -184,8 +183,6 @@ void printAdapterDetails(wgpu::Adapter const& adapter) {
 }
 #endif
 
-
-
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printDeviceDetails(wgpu::Device const& device) {
     wgpu::SupportedFeatures supportedFeatures{};
@@ -237,6 +234,7 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfi
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printDeviceDetails(mDevice);
 #endif
+    mQueue = mDevice.GetQueue();
 }
 
 WebGPUDriver::~WebGPUDriver() noexcept = default;
@@ -319,6 +317,9 @@ void WebGPUDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 }
 
 void WebGPUDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
+    if (boh) {
+        destructHandle<WGPUBufferObject>(boh);
+    }
 }
 
 void WebGPUDriver::destroyTexture(Handle<HwTexture> th) {
@@ -447,7 +448,6 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
 
-    mQueue = mDevice.GetQueue();
     wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
     mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), extent, mAdapter,
             mDevice, flags);
@@ -479,16 +479,27 @@ void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
 }
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
-        uint8_t attributeCount, AttributeArray attributes) {}
+        uint8_t attributeCount, AttributeArray attributes) {
+    constructHandle<WGPUVertexBufferInfo>(vbih, bufferCount, attributeCount, attributes);
+}
 
 void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
-        Handle<HwVertexBufferInfo> vbih) {}
+        Handle<HwVertexBufferInfo> vbih) {
+    auto* vertexBufferInfo = handleCast<WGPUVertexBufferInfo>(vbih);
+    constructHandle<WGPUVertexBuffer>(vbh, mDevice, vertexCount, vertexBufferInfo->bufferCount,
+            vbih);
+}
 
 void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
-        uint32_t indexCount, BufferUsage usage) {}
+        uint32_t indexCount, BufferUsage usage) {
+    auto elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
+    constructHandle<WGPUIndexBuffer>(ibh, mDevice, elementSize, indexCount);
+}
 
 void WebGPUDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
-        BufferObjectBinding bindingType, BufferUsage usage) {}
+        BufferObjectBinding bindingType, BufferUsage usage) {
+    constructHandle<WGPUBufferObject>(boh, mDevice, bindingType, byteCount);
+}
 
 void WebGPUDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
@@ -518,7 +529,16 @@ void WebGPUDriver::importTextureR(Handle<HwTexture> th, intptr_t id, SamplerType
         uint32_t depth, TextureUsage usage) {}
 
 void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<HwVertexBuffer> vbh,
-        Handle<HwIndexBuffer> ibh, PrimitiveType pt) {}
+        Handle<HwIndexBuffer> ibh, PrimitiveType pt) {
+    assert_invariant(mDevice);
+
+    auto* renderPrimitive = constructHandle<WGPURenderPrimitive>(rph);
+    auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
+    auto* indexBuffer = handleCast<WGPUIndexBuffer>(ibh);
+    renderPrimitive->vertexBuffer = vertexBuffer;
+    renderPrimitive->indexBuffer = indexBuffer;
+    renderPrimitive->type = pt;
+}
 
 void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     constructHandle<WGPUProgram>(ph, mDevice, program);
@@ -587,7 +607,7 @@ bool WebGPUDriver::isTextureFormatSupported(TextureFormat format) {
 }
 
 bool WebGPUDriver::isTextureSwizzleSupported() {
-    return true;
+    return false;
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(TextureFormat format) {
@@ -676,20 +696,21 @@ size_t WebGPUDriver::getMaxArrayTextureLayers() {
 
 void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
-    scheduleDestroy(std::move(p));
+    updateGPUBuffer(handleCast<WGPUIndexBuffer>(ibh), std::move(p), byteOffset);
 }
 
 void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
-    scheduleDestroy(std::move(p));
+    updateGPUBuffer(handleCast<WGPUBufferObject>(ibh), std::move(p), byteOffset);
 }
 
-void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
-        uint32_t byteOffset) {
-    scheduleDestroy(std::move(p));
+void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> ibh,
+        BufferDescriptor&& p, uint32_t byteOffset) {
+    updateGPUBuffer(handleCast<WGPUBufferObject>(ibh), std::move(p), byteOffset);
 }
 
 void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> boh) {
+    // Is there something that needs to be done here? Vulkan has left it unimplemented.
 }
 
 void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
@@ -697,7 +718,8 @@ void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
     auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
     auto* bufferObject = handleCast<WGPUBufferObject>(boh);
     assert_invariant(index < vertexBuffer->buffers.size());
-    vertexBuffer->setBuffer(bufferObject, index);
+    assert_invariant(bufferObject->buffer.GetUsage() & wgpu::BufferUsage::Vertex);
+    vertexBuffer->buffers[index] = bufferObject->buffer;
 }
 
 void WebGPUDriver::update3DImage(Handle<HwTexture> th,
@@ -735,6 +757,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     };
     mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
     assert_invariant(mCommandEncoder);
+
     // TODO: Remove this code once WebGPU pipeline is implemented
     static float red = 1.0f;
     if (red - 0.01 > 0) {
@@ -848,6 +871,19 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
 }
 
 void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+    auto* renderPrimitive = handleCast<WGPURenderPrimitive>(rph);
+
+    // This *must* match the WGPUVertexBufferInfo that was bound in bindPipeline(). But we want
+    // to allow to call this before bindPipeline(), so the validation can only happen in draw()
+    auto vbi = handleCast<WGPUVertexBufferInfo>(renderPrimitive->vertexBuffer->vbih);
+    assert_invariant(
+            vbi->getVertexBufferLayoutSize() == renderPrimitive->vertexBuffer->buffers.size());
+    for (uint32_t i = 0; i < vbi->getVertexBufferLayoutSize(); i++) {
+        mRenderPassEncoder.SetVertexBuffer(i, renderPrimitive->vertexBuffer->buffers[i]);
+    }
+
+    mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->buffer,
+            renderPrimitive->indexBuffer->indexFormat);
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
@@ -876,7 +912,6 @@ void WebGPUDriver::resetState(int) {
 void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
         backend::descriptor_binding_t binding, Handle<HwBufferObject> boh, uint32_t offset,
         uint32_t size) {
-    /*
     auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
     auto buffer = handleCast<WGPUBufferObject>(boh);
     if (!bindGroup->getIsLocked()) {
@@ -887,8 +922,6 @@ void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
             .size = size };
         bindGroup->addEntry(entry.binding, std::move(entry));
     }
-    //TODO Just the setup, this function stilll needs the rest of logic implemented
-     */
 }
 
 void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
