@@ -51,6 +51,8 @@ VkFormat getVkFormat(ElementType type, bool normalized, bool integer) {
                 return VK_FORMAT_UNDEFINED;
         }
     }
+
+    // Non-normalized case
     switch (type) {
         // Single Component Types
         case ElementType::BYTE: return integer ? VK_FORMAT_R8_SINT : VK_FORMAT_R8_SSCALED;

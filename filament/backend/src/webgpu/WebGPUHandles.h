@@ -43,23 +43,44 @@ public:
 };
 
 struct WGPUBufferObject;
-// TODO: Currently WGPUVertexBufferInfo is not used by WebGPU for useful task.
-// Update the struct when used by WebGPU driver.
-struct WGPUVertexBufferInfo : public HwVertexBufferInfo {
+
+// VertexBufferInfo contains layout info for Vertex Buffer based on WebGPU structs. In WebGPU each
+// VertexBufferLayout is associated with a single vertex buffer. So number of mVertexBufferLayout
+// is equal to bufferCount. Each VertexBufferLayout can contain multiple VertexAttribute. Bind index
+// of vertex buffer is implicitly calculated by the position of VertexBufferLayout in an array.
+class WGPUVertexBufferInfo : public HwVertexBufferInfo {
+public:
     WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
-            AttributeArray const& attributes)
-        : HwVertexBufferInfo(bufferCount, attributeCount),
-          attributes(attributes) {}
-    AttributeArray attributes;
+            AttributeArray const& attributes);
+    inline  wgpu::VertexBufferLayout const* getVertexBufferLayout() const {
+        return mVertexBufferLayout.data();
+    }
+
+    inline uint32_t getVertexBufferLayoutSize() const {
+        return mVertexBufferLayout.size();
+    }
+
+    inline wgpu::VertexAttribute const* getVertexAttributeForIndex(uint32_t index) const {
+        assert_invariant(index < mAttributes.size());
+        return mAttributes[index].data();
+    }
+
+    inline uint32_t getVertexAttributeSize(uint32_t index) const {
+        assert_invariant(index < mAttributes.size());
+        return mAttributes[index].size();
+    }
+
+private:
+    // TODO: can we do better in terms on heap management.
+    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayout {};
+    std::vector<std::vector<wgpu::VertexAttribute>> mAttributes {};
 };
 
 struct WGPUVertexBuffer : public HwVertexBuffer {
-    WGPUVertexBuffer(wgpu::Device const &device, uint32_t vextexCount, uint32_t bufferCount,
-                     Handle<WGPUVertexBufferInfo> vbih);
+    WGPUVertexBuffer(wgpu::Device const &device, uint32_t vertexCount, uint32_t bufferCount,
+                     Handle<HwVertexBufferInfo> vbih);
 
-    void setBuffer(WGPUBufferObject *bufferObject, uint32_t index);
-
-    Handle<WGPUVertexBufferInfo> vbih;
+    Handle<HwVertexBufferInfo> vbih;
     utils::FixedCapacityVector<wgpu::Buffer> buffers;
 };
 
@@ -68,27 +89,47 @@ struct WGPUIndexBuffer : public HwIndexBuffer {
                     uint32_t indexCount);
 
     wgpu::Buffer buffer;
+    wgpu::IndexFormat indexFormat;
 };
 
-// TODO: Currently WGPUVertexBufferInfo is not used by WebGPU for useful task.
-// Update the struct when used by WebGPU driver.
 struct WGPUBufferObject : HwBufferObject {
-    WGPUBufferObject(BufferObjectBinding bindingType, uint32_t byteCount);
+    WGPUBufferObject(wgpu::Device const &device, BufferObjectBinding bindingType, uint32_t byteCount);
 
-    wgpu::Buffer buffer;
+    wgpu::Buffer buffer = nullptr;
     const BufferObjectBinding bufferObjectBinding;
 };
-class WebGPUDescriptorSetLayout : public HwDescriptorSetLayout {
+class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
 public:
     WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const& device);
     ~WebGPUDescriptorSetLayout();
+    [[nodiscard]] const wgpu::BindGroupLayout& getLayout() const { return mLayout; }
+    [[nodiscard]] uint getLayoutSize() const { return mLayoutSize; }
 
 private:
     // TODO: If this is useful elsewhere, remove it from this class
     // Convert Filament Shader Stage Flags bitmask to webgpu equivilant
     static wgpu::ShaderStage filamentStageToWGPUStage(ShaderStageFlags fFlags);
-
+    uint mLayoutSize;
     wgpu::BindGroupLayout mLayout;
+};
+
+class WebGPUDescriptorSet final : public HwDescriptorSet {
+public:
+    WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize);
+    ~WebGPUDescriptorSet();
+
+    wgpu::BindGroup lockAndReturn(wgpu::Device const& device);
+    void addEntry(uint index, wgpu::BindGroupEntry&& entry);
+    [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
+
+private:
+    // TODO: Consider storing what we used to make the layout. However we need to essentially
+    // Recreate some of the info (Sampler in slot X with the actual sampler) so letting Dawn confirm
+    // there isn't a mismatch may be easiest.
+    // Also storing the wgpu ObjectBase takes care of ownership challenges in theory
+    wgpu::BindGroupLayout mLayout;
+    std::vector<wgpu::BindGroupEntry> entries;
+    wgpu::BindGroup mBindGroup;
 };
 
 // TODO: Currently WGPUTexture is not used by WebGPU for useful task.
@@ -101,10 +142,15 @@ struct WGPUTexture : public HwTexture {
     WGPUTexture(WGPUTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
 
     wgpu::Texture texture = nullptr;
+    // TODO: Adding this but not yet setting it up. Filament "Textures" are combined image samplers,
+    // rep both.
+    wgpu::Sampler sampler = nullptr;
+    //TODO: Not sure all the ways HwTexture is used. Overloading like this might be entirely wrong.
+    wgpu::TextureView texView = nullptr;
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
-    WGPURenderPrimitive();
+    WGPURenderPrimitive() {}
 
     void setBuffers(WGPUVertexBufferInfo const* const vbi,
             WGPUVertexBuffer* vertexBuffer, WGPUIndexBuffer* indexBuffer);
