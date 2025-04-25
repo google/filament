@@ -33,7 +33,7 @@ VulkanYcbcrConversionCache::VulkanYcbcrConversionCache(VkDevice device)
     : mDevice(device) {}
 
 VkSamplerYcbcrConversion VulkanYcbcrConversionCache::getConversion(
-        VulkanYcbcrConversionCache::Params params) noexcept {
+        VulkanYcbcrConversionCache::Params params) {
     auto iter = mCache.find(params);
     if (UTILS_LIKELY(iter != mCache.end())) {
         return iter->second;
