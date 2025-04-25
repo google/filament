@@ -31,6 +31,8 @@ ResourceManager::ResourceManager(size_t arenaSize, bool disableUseAfterFreeCheck
     : mHandleAllocatorImpl("Handles", arenaSize, disableUseAfterFreeCheck, disablePoolHandleTags) {}
 
 void ResourceManager::gc() noexcept {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("ResourceManager::gc");
     auto destroyAll = [this](GcList& list) {
         for (auto const& [type, id]: list) {
             destroyWithType(type, id);
@@ -49,6 +51,7 @@ void ResourceManager::gc() noexcept {
     GcList gcs;
     std::swap(gcs, mGcList);
     destroyAll(gcs);
+    FVK_SYSTRACE_END();
 }
 
 void ResourceManager::terminate() noexcept {

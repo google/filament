@@ -104,6 +104,19 @@
 #   define UTILS_UNLIKELY( exp )  (!!(exp))
 #endif
 
+#if __has_builtin(__builtin_expect_with_probability)
+#   ifdef __cplusplus
+#      define UTILS_VERY_LIKELY( exp )    (__builtin_expect_with_probability( !!(exp), true, 0.995 ))
+#      define UTILS_VERY_UNLIKELY( exp )  (__builtin_expect_with_probability( !!(exp), false, 0.995 ))
+#   else
+#      define UTILS_VERY_LIKELY( exp )    (__builtin_expect_with_probability( !!(exp), 1, 0.995 ))
+#      define UTILS_VERY_UNLIKELY( exp )  (__builtin_expect_with_probability( !!(exp), 0, 0.995 ))
+#   endif
+#else
+#   define UTILS_VERY_LIKELY( exp )    (!!(exp))
+#   define UTILS_VERY_UNLIKELY( exp )  (!!(exp))
+#endif
+
 #if __has_builtin(__builtin_prefetch)
 #   define UTILS_PREFETCH( exp ) (__builtin_prefetch(exp))
 #else
