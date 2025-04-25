@@ -117,7 +117,6 @@ class MainActivity : Activity() {
 
         engine = Engine.Builder()
             .config(config)
-            .backend(Engine.Backend.WEBGPU)
             .featureLevel(Engine.FeatureLevel.FEATURE_LEVEL_0)
             .build()
         renderer = engine.createRenderer()
