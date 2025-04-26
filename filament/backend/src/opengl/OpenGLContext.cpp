@@ -59,6 +59,9 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
     // OpenGL version
     glGetIntegerv(GL_MAJOR_VERSION, major);
     glGetIntegerv(GL_MINOR_VERSION, minor);
+
+    CHECK_GL_INIT_ERROR_FOR_OPTIMIZED_BUILD(utils::slog.e)
+
     return (glGetError() == GL_NO_ERROR);
 #endif
 }
@@ -109,6 +112,8 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE,               &gets.max_3d_texture_size);
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS,          &gets.max_array_texture_layers);
 
+    CHECK_GL_INIT_ERROR_FOR_OPTIMIZED_BUILD(utils::slog.e)
+
     mFeatureLevel = resolveFeatureLevel(state.major, state.minor, ext, gets, bugs);
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
@@ -149,6 +154,7 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
         glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT,
                 &gets.uniform_buffer_offset_alignment);
 #endif
+        CHECK_GL_INIT_ERROR_FOR_OPTIMIZED_BUILD(utils::slog.e)
     }
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
@@ -235,6 +241,7 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     }
 #endif
 #endif
+CHECK_GL_INIT_ERROR_FOR_OPTIMIZED_BUILD(utils::slog.e)
 
     // in practice KHR_Debug has never been useful, and actually is confusing. We keep this
     // only for our own debugging, in case we need it some day.
@@ -269,6 +276,7 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
         glDebugMessageCallback(cb, nullptr);
     }
 #endif
+CHECK_GL_INIT_ERROR_FOR_OPTIMIZED_BUILD(utils::slog.e)
 
     mTimerQueryFactory = TimerQueryFactory::init(platform, *this);
 }
@@ -384,6 +392,8 @@ void OpenGLContext::setDefaultState() noexcept {
         glEnable(GL_CLIP_DISTANCE0);
         glEnable(GL_CLIP_DISTANCE1);
     }
+
+    CHECK_GL_INIT_ERROR_FOR_OPTIMIZED_BUILD(utils::slog.e)
 }
 
 
@@ -761,6 +771,8 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
         ext->EXT_discard_framebuffer = true;
         ext->OES_vertex_array_object = true;
     }
+
+    CHECK_GL_INIT_ERROR_FOR_OPTIMIZED_BUILD(utils::slog.e)
 }
 
 #endif // BACKEND_OPENGL_VERSION_GLES
@@ -831,6 +843,8 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
     if (major > 4 || (major == 4 && minor >= 5)) {
         ext->EXT_clip_control = true;
     }
+
+    CHECK_GL_INIT_ERROR_FOR_OPTIMIZED_BUILD(utils::slog.e)
 }
 
 #endif // BACKEND_OPENGL_VERSION_GL
