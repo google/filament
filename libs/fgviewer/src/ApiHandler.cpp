@@ -32,7 +32,6 @@
 #include <cstring>
 #include <mutex>
 #include <string>
-#include <sstream>
 
 namespace filament::fgviewer {
 

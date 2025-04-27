@@ -267,7 +267,7 @@ class FrameGraphSidePanel extends LitElement {
 
     render() {
         const renderFrameGraphs = (title) => {
-            if (!this.framegraphs.length) return html`No framegraphs available.`;
+            if (!this.framegraphs.length) return nothing;
             return html`
                 <menu-section title="${title}">
                     ${this.selectedFrameGraph ? html`
@@ -325,7 +325,7 @@ class FrameGraphSidePanel extends LitElement {
             <style>
                 ${this.dynamicStyle()}
             </style>
-            <div class="title">Filament FrameGraph Viewer</div>
+            <div class="title">fgviewer</div>
             ${renderFrameGraphs("FrameGraphs")}
             ${renderResourceDetails("Resource")}
         `;
