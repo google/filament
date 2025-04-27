@@ -32,7 +32,7 @@
 
 // If set to 0, this serves HTML from a resgen resource. Use 1 only during local development, which
 // serves files directly from the source code tree.
-#define SERVE_FROM_SOURCE_TREE 1
+#define SERVE_FROM_SOURCE_TREE 0
 
 #if SERVE_FROM_SOURCE_TREE
 
