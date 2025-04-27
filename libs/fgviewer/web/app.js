@@ -17,7 +17,6 @@
 import {LitElement, html, css, unsafeCSS, nothing} from "https://unpkg.com/lit@2.8.0?module";
 import { graphviz } from "https://cdn.skypack.dev/d3-graphviz@5.1.0";
 import * as d3 from "https://cdn.skypack.dev/d3@7";
-import { graphviz as initWasm } from "https://cdn.skypack.dev/@hpcc-js/wasm@1.14.1";
 
 const kUntitledPlaceholder = "Untitled View";
 
