@@ -15,10 +15,9 @@
 */
 
 import {LitElement, html, css, unsafeCSS, nothing} from "https://unpkg.com/lit@2.8.0?module";
-// Import Graphviz rendering libraries
+import { graphviz } from "https://cdn.skypack.dev/d3-graphviz@5.1.0";
 import * as d3 from "https://cdn.skypack.dev/d3@7";
-import { graphviz } from "https://cdn.skypack.dev/@hpcc-js/wasm@1.14.1";
-import { Graphviz } from "https://cdn.skypack.dev/d3-graphviz@4.4.0";
+import { graphviz as initWasm } from "https://cdn.skypack.dev/@hpcc-js/wasm@1.14.1";
 
 const kUntitledPlaceholder = "Untitled View";
 
@@ -571,7 +570,6 @@ class FrameGraphTable extends LitElement {
 
 customElements.define("framegraph-table", FrameGraphTable);
 
-// 新增 GraphvizView 組件
 class GraphvizView extends LitElement {
     static get styles() {
         return css`
@@ -643,24 +641,23 @@ class GraphvizView extends LitElement {
             this.loading = false;
         }
     }
-    
+
     _renderGraphviz() {
         if (!this.graphvizData) return;
-        
+
         const container = this.renderRoot.querySelector('#graph');
         if (!container) return;
-        
+
         try {
-            // Use d3-graphviz to render Graphviz data
-            const graphviz = d3.select(container)
-                .graphviz()
+            const viz = d3.select(container)
+                .graphviz({ useWorker: false })
                 .zoom(true)
                 .fit(true);
-                
-            graphviz.renderDot(this.graphvizData);
+
+            viz.renderDot(this.graphvizData);
         } catch (error) {
             console.error('Failed to render graphviz:', error);
-            container.innerHTML = `<div class="error">Failed to render graph: ${error.message}</div>`;
+            container.innerHTML = `<div class="error">Failed to render graphviz: ${error.message}</div>`;
         }
     }
     

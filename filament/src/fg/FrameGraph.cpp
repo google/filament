@@ -574,10 +574,9 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
     info.setPasses(std::move(passes));
 
     // Generate GraphViz DOT data
-    std::ostringstream graphvizStream;
-    utils::io::ostream out(graphvizStream);
+    utils::io::sstream out;
     const_cast<FrameGraph*>(this)->export_graphviz(out, viewName);
-    info.setGraphvizData(utils::CString(graphvizStream.str().c_str()));
+    info.setGraphvizData(utils::CString(out.c_str()));
 
     return info;
 #else
