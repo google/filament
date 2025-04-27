@@ -252,13 +252,14 @@ class FrameGraphSidePanel extends LitElement {
     }
 
     _findCurrentResource() {
-        if (this.selectedResourceId >= 0 && this.selectedFrameGraph) {
-            const resources = this.database[this.selectedFrameGraph]?.resources;
-            if (resources) {
-                const resource = resources[this.selectedResourceId];
-                if (resource) {
-                    return resource;
-                }
+        if (!this.selectedFrameGraph)
+            return null;
+
+        const resources = this.database[this.selectedFrameGraph]?.resources;
+        if (resources) {
+            const resource = resources[this.selectedResourceId];
+            if (resource) {
+                return resource;
             }
         }
         return null;
@@ -283,12 +284,14 @@ class FrameGraphSidePanel extends LitElement {
                     ` : nothing}
 
                     <div class="framegraphs">
-                        ${this.framegraphs.map(fg => html`
-                            <div @click="${() => this._handleFrameGraphClick(fg.fgid)}"
-                                 class="framegraph ${fg.fgid === this.selectedFrameGraph ? 'selected' : ''}">
-                                ${fg.name}
-                            </div>
-                        `)}
+                        ${this.framegraphs.map(({fgid, name}) => {
+                            const isSelected = this.selectedFrameGraph === fgid;
+                            return html`
+                                <div @click="${() => this._handleFrameGraphClick(fgid)}"
+                                     class="framegraph ${isSelected ? 'selected' : ''}">
+                                    ${isSelected ? '● ' : ''}${name}
+                                </div>`;
+                        })}
                     </div>
                 </menu-section>
             `;
