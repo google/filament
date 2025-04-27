@@ -33,7 +33,8 @@ FrameGraphInfo::FrameGraphInfo(FrameGraphInfo&& rhs) noexcept = default;
 bool FrameGraphInfo::operator==(const FrameGraphInfo& rhs) const {
     return viewName == rhs.viewName
             && passes == rhs.passes
-            && resources == rhs.resources;
+            && resources == rhs.resources
+            && graphvizData == rhs.graphvizData;
 }
 
 FrameGraphInfo::Pass::Pass(utils::CString name, std::vector<ResourceId> reads,
@@ -66,6 +67,10 @@ void FrameGraphInfo::setPasses(std::vector<Pass> sortedPasses) {
     passes = std::move(sortedPasses);
 }
 
+void FrameGraphInfo::setGraphvizData(utils::CString data) {
+    graphvizData = std::move(data);
+}
+
 const char* FrameGraphInfo::getViewName() const {
     return viewName.c_str_safe();
 }
@@ -77,6 +82,10 @@ const std::vector<FrameGraphInfo::Pass>& FrameGraphInfo::getPasses() const {
 const std::unordered_map<ResourceId, FrameGraphInfo::Resource>&
     FrameGraphInfo::getResources() const {
     return resources;
+}
+
+const char* FrameGraphInfo::getGraphvizData() const {
+    return graphvizData.c_str_safe();
 }
 
 } // namespace filament::fgviewer

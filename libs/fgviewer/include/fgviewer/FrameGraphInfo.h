@@ -77,12 +77,18 @@ public:
 
     // The incoming passes should be sorted by the execution order.
     void setPasses(std::vector<Pass> sortedPasses);
+    
+    // Set the GraphViz DOT format data for this FrameGraph
+    void setGraphvizData(utils::CString data);
 
     const char* getViewName() const;
 
     const std::vector<Pass>& getPasses() const;
 
     const std::unordered_map<ResourceId, Resource>& getResources() const;
+    
+    // Get the GraphViz DOT format data
+    const char* getGraphvizData() const;
 
 private:
     utils::CString viewName;
@@ -90,6 +96,9 @@ private:
     // order of the passes.
     std::vector<Pass> passes;
     std::unordered_map<ResourceId, Resource> resources;
+    
+    // Contains the GraphViz DOT format data for this FrameGraph
+    utils::CString graphvizData;
 };
 } // namespace filament::fgviewer
 

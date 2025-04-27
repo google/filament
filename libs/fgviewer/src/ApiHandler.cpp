@@ -32,6 +32,7 @@
 #include <cstring>
 #include <mutex>
 #include <string>
+#include <sstream>
 
 namespace filament::fgviewer {
 
@@ -91,6 +92,10 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
         mg_printf(conn, "{ %s }", writer.getJsonString());
         return true;
     }
+    
+    if (uri == "/api/graphviz") {
+        return handleGetGraphviz(conn, request);
+    }
 
     return error(__LINE__, uri);
 }
@@ -139,6 +144,23 @@ bool ApiHandler::handleGetStatus(struct mg_connection* conn,
         // gone.
         mg_write(conn, "1", 1);
     }
+    return true;
+}
+
+bool ApiHandler::handleGetGraphviz(struct mg_connection* conn,
+                                   struct mg_request_info const* request) {
+    const FrameGraphInfo* fgInfo = getFrameGraphInfo(request);
+    if (!fgInfo) {
+        return error(__LINE__, request->local_uri);
+    }
+    
+    // Use the pre-generated GraphViz data from FrameGraphInfo
+    const char* graphvizData = fgInfo->getGraphvizData();
+    
+    // Send Graphviz data
+    mg_printf(conn, kSuccessHeader.data(), "text/plain");
+    mg_write(conn, graphvizData, strlen(graphvizData));
+    
     return true;
 }
 

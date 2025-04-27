@@ -15,6 +15,10 @@
 */
 
 import {LitElement, html, css, unsafeCSS, nothing} from "https://unpkg.com/lit@2.8.0?module";
+// Import Graphviz rendering libraries
+import * as d3 from "https://cdn.skypack.dev/d3@7";
+import { graphviz } from "https://cdn.skypack.dev/@hpcc-js/wasm@1.14.1";
+import { Graphviz } from "https://cdn.skypack.dev/d3-graphviz@4.4.0";
 
 const kUntitledPlaceholder = "Untitled View";
 
@@ -39,6 +43,10 @@ const RESOURCE_USAGE_TYPE_NO_ACCESS = 'no-access';
 const RESOURCE_USAGE_TYPE_READ_WRITE = 'read-write';
 
 const IS_SUBRESOURCE_KEY = 'is_subresource_of'
+
+// View mode constants
+const VIEW_MODE_TABLE = 'table';
+const VIEW_MODE_GRAPHVIZ = 'graphviz';
 
 class MenuSection extends LitElement {
     static get properties() {
@@ -163,6 +171,29 @@ class FrameGraphSidePanel extends LitElement {
                 font-size: ${REGULAR_FONT_SIZE}px;
                 color: ${UNSELECTED_COLOR};
             }
+            .view-mode-selector {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+                margin-bottom: 15px;
+            }
+            .view-toggle {
+                display: inline-block;
+                background-color: #3f4cbe;
+                color: white;
+                padding: 5px 10px;
+                margin: 5px;
+                border-radius: 4px;
+                cursor: pointer;
+                user-select: none;
+                font-size: 12px;
+                text-align: center;
+                flex: 1;
+            }
+            .view-toggle.active {
+                background-color: #2c3892;
+                font-weight: bold;
+            }
         `;
     }
 
@@ -171,6 +202,7 @@ class FrameGraphSidePanel extends LitElement {
             connected: {type: Boolean, attribute: 'connected'},
             selectedFrameGraph: {type: String, attribute: 'selected-framegraph'},
             selectedResourceId: {type: Number, attribute: 'selected-resource'},
+            viewMode: {type: String, attribute: 'view-mode'},
 
             database: {type: Object, state: true},
             framegraphs: {type: Array, state: true},
@@ -182,6 +214,7 @@ class FrameGraphSidePanel extends LitElement {
         this.connected = false;
         this.framegraphs = [];
         this.database = {};
+        this.viewMode = VIEW_MODE_TABLE;
     }
 
     updated(props) {
@@ -199,7 +232,6 @@ class FrameGraphSidePanel extends LitElement {
         }
     }
 
-
     _handleFrameGraphClick(ev) {
         this.dispatchEvent(new CustomEvent('select-framegraph', {
             detail: ev,
@@ -208,55 +240,89 @@ class FrameGraphSidePanel extends LitElement {
         }));
     }
 
+    _handleViewModeClick(mode) {
+        this.dispatchEvent(new CustomEvent('change-view-mode', {
+            detail: mode,
+            bubbles: true,
+            composed: true
+        }));
+    }
+
     _findCurrentResource() {
-        if (!this.selectedFrameGraph)
-            return null;
-        const frameGraph = this.database[this.selectedFrameGraph];
-        return Object.values(frameGraph?.resources)
-            .find(resource => resource.id === this.selectedResourceId) || null;
+        if (this.selectedResourceId >= 0 && this.selectedFrameGraph) {
+            const resources = this.database[this.selectedFrameGraph]?.resources;
+            if (resources) {
+                const resource = resources[this.selectedResourceId];
+                if (resource) {
+                    return resource;
+                }
+            }
+        }
+        return null;
     }
 
     render() {
         const renderFrameGraphs = (title) => {
-            if (!this.framegraphs.length) return nothing;
-
+            if (!this.framegraphs.length) return html`No framegraphs available.`;
             return html`
                 <menu-section title="${title}">
-                    ${this.framegraphs.map(({ fgid, name }) => html`
-                        <div class="framegraph"
-                            @click="${() => this._handleFrameGraphClick(fgid)}"
-                            data-id="${fgid}">
-                            ${fgid === this.selectedFrameGraph ? '● ' : ''}${name}
+                    <div class="view-mode-selector">
+                        <div class="view-toggle ${this.viewMode === VIEW_MODE_TABLE ? 'active' : ''}"
+                             @click="${() => this._handleViewModeClick(VIEW_MODE_TABLE)}">
+                            Table Mode
                         </div>
-                    `)}
+                        <div class="view-toggle ${this.viewMode === VIEW_MODE_GRAPHVIZ ? 'active' : ''}"
+                             @click="${() => this._handleViewModeClick(VIEW_MODE_GRAPHVIZ)}">
+                            Graph Mode
+                        </div>
+                    </div>
+                    <div class="framegraphs">
+                        ${this.framegraphs.map(fg => html`
+                            <div @click="${() => this._handleFrameGraphClick(fg.fgid)}"
+                                class="framegraph ${fg.fgid === this.selectedFrameGraph ? 'selected' : ''}">
+                                ${fg.name}
+                            </div>
+                        `)}
+                    </div>
                 </menu-section>
             `;
         };
 
         const renderResourceDetails = (title) => {
-            const currentResource = this._findCurrentResource();
-            if (!currentResource) return nothing;
+            const resource = this._findCurrentResource();
+            if (!resource) return html``;
 
             return html`
                 <menu-section title="${title}">
-                    <div class="resource-title">${currentResource.id}: ${currentResource.name}</div>
-                    ${currentResource.properties?.map(({ key, value }) => html`
-                <div class="resource-content">${key}: ${value}</div>
-            `)}
+                    <div class="resource-title">
+                        <div><b>Name:</b> ${resource.name}</div>
+                    </div>
+                    <div class="resource-content">
+                        <div><b>ID:</b> ${resource.id}</div>
+                    </div>
+                    ${resource.properties.length > 0 ? html`
+                        <div class="resource-content">
+                            <div><b>Properties:</b></div>
+                            <ul>
+                                ${resource.properties.map(prop => html`
+                                    <li>${prop.key}: ${prop.value}</li>
+                                `)}
+                            </ul>
+                        </div>
+                    ` : ''}
                 </menu-section>
             `;
-        };
+        }
 
         return html`
-            <style>${this.dynamicStyle()}</style>
-            <div class="container">
-                <div class="title">fgviewer</div>
-                ${renderFrameGraphs("Views") ?? nothing}
-                ${renderResourceDetails("Resource Details") ?? nothing}
-            </div>
+            <style>
+                ${this.dynamicStyle()}
+            </style>
+            <div class="title">Filament FrameGraph Viewer</div>
+            ${renderFrameGraphs("FrameGraphs")}
+            ${renderResourceDetails("Resource")}
         `;
     }
-
 }
 
 customElements.define("framegraph-sidepanel", FrameGraphSidePanel);
@@ -505,6 +571,112 @@ class FrameGraphTable extends LitElement {
 
 customElements.define("framegraph-table", FrameGraphTable);
 
+// 新增 GraphvizView 組件
+class GraphvizView extends LitElement {
+    static get styles() {
+        return css`
+            :host {
+                display: block;
+                flex-grow: 1;
+                width: 80%;
+            }
+
+            .graphviz-container {
+                margin-left: 300px;
+                height: 100vh;
+                width: calc(100% - 300px);
+                overflow: auto;
+                background-color: white;
+            }
+            
+            .loading {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100%;
+                font-size: 18px;
+                color: #666;
+            }
+            
+            #graph {
+                width: 100%;
+                height: 100%;
+            }
+        `;
+    }
+    
+    static get properties() {
+        return {
+            frameGraphId: {type: String, attribute: 'framegraph-id'},
+            graphvizData: {type: String, state: true},
+            loading: {type: Boolean, state: true}
+        };
+    }
+    
+    constructor() {
+        super();
+        this.frameGraphId = null;
+        this.graphvizData = '';
+        this.loading = false;
+    }
+    
+    updated(changedProps) {
+        if (changedProps.has('frameGraphId') && this.frameGraphId) {
+            this._fetchGraphvizData();
+        }
+        
+        if (changedProps.has('graphvizData') && this.graphvizData) {
+            this._renderGraphviz();
+        }
+    }
+    
+    async _fetchGraphvizData() {
+        if (!this.frameGraphId) return;
+        
+        this.loading = true;
+        try {
+            this.graphvizData = await fetchGraphviz(this.frameGraphId);
+        } catch (error) {
+            console.error('Failed to fetch graphviz data:', error);
+            this.graphvizData = '';
+        } finally {
+            this.loading = false;
+        }
+    }
+    
+    _renderGraphviz() {
+        if (!this.graphvizData) return;
+        
+        const container = this.renderRoot.querySelector('#graph');
+        if (!container) return;
+        
+        try {
+            // Use d3-graphviz to render Graphviz data
+            const graphviz = d3.select(container)
+                .graphviz()
+                .zoom(true)
+                .fit(true);
+                
+            graphviz.renderDot(this.graphvizData);
+        } catch (error) {
+            console.error('Failed to render graphviz:', error);
+            container.innerHTML = `<div class="error">Failed to render graph: ${error.message}</div>`;
+        }
+    }
+    
+    render() {
+        return html`
+            <div class="graphviz-container">
+                ${this.loading 
+                    ? html`<div class="loading">Loading...</div>` 
+                    : html`<div id="graph"></div>`}
+            </div>
+        `;
+    }
+}
+
+customElements.define("graphviz-view", GraphvizView);
+
 class FrameGraphViewer extends LitElement {
     static get styles() {
         return css`
@@ -522,6 +694,10 @@ class FrameGraphViewer extends LitElement {
 
     get _framegraphTable() {
         return this.renderRoot.querySelector('#table');
+    }
+    
+    get _graphvizView() {
+        return this.renderRoot.querySelector('#graphviz');
     }
 
     async init() {
@@ -555,6 +731,7 @@ class FrameGraphViewer extends LitElement {
         this.database = {};
         this.selectedFrameGraph = null;
         this.selectedResourceId = -1;
+        this.viewMode = VIEW_MODE_TABLE;
         this.init();
 
         this.addEventListener('select-framegraph',
@@ -568,6 +745,12 @@ class FrameGraphViewer extends LitElement {
                 this.selectedResourceId = ev.detail;
             }
         );
+        
+        this.addEventListener('change-view-mode',
+            (ev) => {
+                this.viewMode = ev.detail;
+            }
+        );
     }
 
     static get properties() {
@@ -576,6 +759,7 @@ class FrameGraphViewer extends LitElement {
             database: {type: Object, state: true},
             selectedFrameGraph: {type: String, state: true},
             selectedResourceId: {type: Number, state: true},
+            viewMode: {type: String, state: true},
         }
     }
 
@@ -593,13 +777,23 @@ class FrameGraphViewer extends LitElement {
             <framegraph-sidepanel id="sidepanel"
                 ?connected="${this.connected}"
                 selected-framegraph="${this.selectedFrameGraph}"
-                selected-resource="${this.selectedResourceId}">
+                selected-resource="${this.selectedResourceId}"
+                view-mode="${this.viewMode}">
             </framegraph-sidepanel>
-            <framegraph-table id="table"
-                ?connected="${this.connected}"
-                selected-framegraph="${this.selectedFrameGraph}"
-                selected-resource="${this.selectedResourceId}">
-            </framegraph-table>
+            
+            ${this.viewMode === VIEW_MODE_TABLE 
+              ? html`
+                <framegraph-table id="table"
+                    ?connected="${this.connected}"
+                    selected-framegraph="${this.selectedFrameGraph}"
+                    selected-resource="${this.selectedResourceId}">
+                </framegraph-table>
+              ` 
+              : html`
+                <graphviz-view id="graphviz"
+                    framegraph-id="${this.selectedFrameGraph}">
+                </graphviz-view>
+              `}
         `;
     }
 }
