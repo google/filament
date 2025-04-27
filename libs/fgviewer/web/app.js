@@ -270,6 +270,7 @@ class FrameGraphSidePanel extends LitElement {
             if (!this.framegraphs.length) return html`No framegraphs available.`;
             return html`
                 <menu-section title="${title}">
+                    ${this.selectedFrameGraph ? html`
                     <div class="view-mode-selector">
                         <div class="view-toggle ${this.viewMode === VIEW_MODE_TABLE ? 'active' : ''}"
                              @click="${() => this._handleViewModeClick(VIEW_MODE_TABLE)}">
@@ -280,10 +281,12 @@ class FrameGraphSidePanel extends LitElement {
                             Graph Mode
                         </div>
                     </div>
+                    ` : nothing}
+
                     <div class="framegraphs">
                         ${this.framegraphs.map(fg => html`
                             <div @click="${() => this._handleFrameGraphClick(fg.fgid)}"
-                                class="framegraph ${fg.fgid === this.selectedFrameGraph ? 'selected' : ''}">
+                                 class="framegraph ${fg.fgid === this.selectedFrameGraph ? 'selected' : ''}">
                                 ${fg.name}
                             </div>
                         `)}
