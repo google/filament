@@ -260,7 +260,9 @@ class FrameGraphSidePanel extends LitElement {
 
     render() {
         const renderFrameGraphs = (title) => {
-            if (!this.framegraphs.length) return nothing;
+            if (!this.framegraphs.length)
+                return nothing;
+
             return html`
                 <menu-section title="${title}">
                     ${this.selectedFrameGraph ? html`
@@ -292,7 +294,8 @@ class FrameGraphSidePanel extends LitElement {
 
         const renderResourceDetails = (title) => {
             const currentResource = this._findCurrentResource();
-            if (!currentResource) return nothing;
+            if (!currentResource)
+                return nothing;
 
             return html`
                 <menu-section title="${title}">
@@ -314,7 +317,7 @@ class FrameGraphSidePanel extends LitElement {
                     ` : ''}
                 </menu-section>
             `;
-        }
+        };
 
         return html`
             <style>${this.dynamicStyle()}</style>
@@ -548,7 +551,8 @@ class FrameGraphTable extends LitElement {
     }
 
     render() {
-        if (!this.frameGraphData?.passes || !this.frameGraphData?.resources) return nothing;
+        if (!this.frameGraphData?.passes || !this.frameGraphData?.resources)
+            return nothing;
 
         const allPasses = this.frameGraphData.passes;
         const resources = Object.values(this.frameGraphData.resources);
@@ -615,10 +619,12 @@ class GraphvizView extends LitElement {
     }
 
     _renderGraphviz() {
-        if (!this.graphvizData) return;
+        if (!this.graphvizData)
+            return;
 
         const container = this.renderRoot.querySelector('#graphviz-view');
-        if (!container) return;
+        if (!container)
+            return;
 
         try {
             const viz = d3.select(container)
@@ -634,7 +640,8 @@ class GraphvizView extends LitElement {
     }
     
     render() {
-        if(!this.graphvizData) return nothing;
+        if(!this.graphvizData)
+            return nothing;
 
         return html`
             <div class="graphviz-container">
