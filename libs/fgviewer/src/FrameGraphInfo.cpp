@@ -31,10 +31,10 @@ FrameGraphInfo::~FrameGraphInfo() = default;
 FrameGraphInfo::FrameGraphInfo(FrameGraphInfo&& rhs) noexcept = default;
 
 bool FrameGraphInfo::operator==(const FrameGraphInfo& rhs) const {
+    // We skip checking graphviz here since checking passes and resources should be enough.
     return viewName == rhs.viewName
             && passes == rhs.passes
-            && resources == rhs.resources
-            && graphvizData == rhs.graphvizData;
+            && resources == rhs.resources;
 }
 
 FrameGraphInfo::Pass::Pass(utils::CString name, std::vector<ResourceId> reads,

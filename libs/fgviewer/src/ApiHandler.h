@@ -31,7 +31,6 @@ struct FrameGraphInfo;
 //    GET /api/framegraphs
 //    GET /api/framegraph?fg={fgid}
 //    GET /api/status
-//    GET /api/graphviz?fgid={fgid} - Get Graphviz data for the specified framegraph
 //
 class ApiHandler : public CivetHandler {
 public:
@@ -48,9 +47,6 @@ private:
 
     bool handleGetStatus(struct mg_connection* conn,
                          struct mg_request_info const* request);
-                         
-    bool handleGetGraphviz(struct mg_connection* conn,
-                          struct mg_request_info const* request);
 
     DebugServer* mServer;
 

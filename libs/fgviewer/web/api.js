@@ -41,17 +41,6 @@ async function fetchFrameGraph(fgid) {
     return fgInfo;
 }
 
-// Function to fetch Graphviz data
-async function fetchGraphviz(fgid) {
-    try {
-        const graphvizData = await _fetchText(`api/graphviz?fgid=${fgid}`);
-        return graphvizData;
-    } catch (error) {
-        console.error('Error fetching graphviz data:', error);
-        return '';
-    }
-}
-
 const STATUS_LOOP_TIMEOUT = 3000;
 
 const STATUS_CONNECTED = 1;

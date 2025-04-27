@@ -595,15 +595,6 @@ class GraphvizView extends LitElement {
                 background-color: white;
             }
             
-            .loading {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100%;
-                font-size: 18px;
-                color: #666;
-            }
-            
             #graph {
                 width: 100%;
                 height: 100%;
@@ -613,47 +604,25 @@ class GraphvizView extends LitElement {
     
     static get properties() {
         return {
-            frameGraphId: {type: String, attribute: 'framegraph-id'},
             graphvizData: {type: String, state: true},
-            loading: {type: Boolean, state: true}
         };
     }
     
     constructor() {
         super();
-        this.frameGraphId = null;
         this.graphvizData = '';
-        this.loading = false;
     }
     
     updated(changedProps) {
-        if (changedProps.has('frameGraphId') && this.frameGraphId) {
-            this._fetchGraphvizData();
-        }
-        
-        if (changedProps.has('graphvizData') && this.graphvizData) {
+        if (changedProps.has('graphvizData')) {
             this._renderGraphviz();
-        }
-    }
-    
-    async _fetchGraphvizData() {
-        if (!this.frameGraphId) return;
-        
-        this.loading = true;
-        try {
-            this.graphvizData = await fetchGraphviz(this.frameGraphId);
-        } catch (error) {
-            console.error('Failed to fetch graphviz data:', error);
-            this.graphvizData = '';
-        } finally {
-            this.loading = false;
         }
     }
 
     _renderGraphviz() {
         if (!this.graphvizData) return;
 
-        const container = this.renderRoot.querySelector('#graph');
+        const container = this.renderRoot.querySelector('#graphviz-view');
         if (!container) return;
 
         try {
@@ -670,11 +639,11 @@ class GraphvizView extends LitElement {
     }
     
     render() {
+        if(!this.graphvizData) return nothing;
+
         return html`
             <div class="graphviz-container">
-                ${this.loading 
-                    ? html`<div class="loading">Loading...</div>` 
-                    : html`<div id="graph"></div>`}
+                <div id="graphviz-view"></div>
             </div>
         `;
     }
@@ -716,6 +685,7 @@ class FrameGraphViewer extends LitElement {
                         let fgInfo = await fetchFrameGraph(fgid);
                         this.database[fgInfo.fgid] = fgInfo;
                         this._framegraphTable.frameGraphData = fgInfo;
+                        this._graphvizView.graphvizData = fgInfo.graphviz;
                     }
                 }
         );
@@ -772,6 +742,7 @@ class FrameGraphViewer extends LitElement {
         if (props.has('selectedFrameGraph') || props.has('database')) {
             const framegraph = this._getFrameGraph();
             this._framegraphTable.frameGraphData = framegraph;
+            this._graphvizView.graphvizData = framegraph?.graphviz;
             this._sidePanel.database = this.database;
         }
     }
