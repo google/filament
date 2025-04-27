@@ -36,6 +36,11 @@ const READ_WRITE_COLOR = '#ffeb99';
 const DEFAULT_COLOR = '#ffffff';
 const SUBRESOURCE_COLOR = '#d3d3d3';
 
+// Constants for view mode toggle
+const VIEW_TOGGLE_INACTIVE_COLOR = '#292929';
+const VIEW_TOGGLE_UNSELECTED_COLOR = '#3f4cbe';
+const VIEW_TOGGLE_SELECTED_COLOR = '#2c3892';
+
 const RESOURCE_USAGE_TYPE_READ = 'read';
 const RESOURCE_USAGE_TYPE_WRITE = 'write';
 const RESOURCE_USAGE_TYPE_NO_ACCESS = 'no-access';
@@ -178,7 +183,7 @@ class FrameGraphSidePanel extends LitElement {
             }
             .view-toggle {
                 display: inline-block;
-                background-color: #3f4cbe;
+                background-color: ${this.connected ? VIEW_TOGGLE_UNSELECTED_COLOR:VIEW_TOGGLE_INACTIVE_COLOR};
                 color: white;
                 padding: 5px 10px;
                 margin: 5px;
@@ -190,7 +195,7 @@ class FrameGraphSidePanel extends LitElement {
                 flex: 1;
             }
             .view-toggle.active {
-                background-color: #2c3892;
+                background-color: ${this.connected ? VIEW_TOGGLE_SELECTED_COLOR:VIEW_TOGGLE_INACTIVE_COLOR};
                 font-weight: bold;
             }
         `;
@@ -778,19 +783,17 @@ class FrameGraphViewer extends LitElement {
                 view-mode="${this.viewMode}">
             </framegraph-sidepanel>
             
-            ${this.viewMode === VIEW_MODE_TABLE 
-              ? html`
-                <framegraph-table id="table"
-                    ?connected="${this.connected}"
-                    selected-framegraph="${this.selectedFrameGraph}"
-                    selected-resource="${this.selectedResourceId}">
-                </framegraph-table>
-              ` 
-              : html`
-                <graphviz-view id="graphviz"
-                    framegraph-id="${this.selectedFrameGraph}">
-                </graphviz-view>
-              `}
+            <framegraph-table id="table"
+                style="display: ${this.viewMode === VIEW_MODE_TABLE ? 'block' : 'none'};"
+                ?connected="${this.connected}"
+                selected-framegraph="${this.selectedFrameGraph}"
+                selected-resource="${this.selectedResourceId}">
+            </framegraph-table>
+            
+            <graphviz-view id="graphviz"
+                style="display: ${this.viewMode === VIEW_MODE_GRAPHVIZ ? 'block' : 'none'};"
+                framegraph-id="${this.selectedFrameGraph}">
+            </graphviz-view>
         `;
     }
 }
