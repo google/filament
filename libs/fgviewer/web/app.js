@@ -161,13 +161,6 @@ class FrameGraphSidePanel extends LitElement {
                 font-weight: bolder;
                 color: ${FOREGROUND_COLOR};
             }
-            .resource-title {
-                display: flex;
-                flex-direction: column;
-                margin-bottom: 5px;
-                font-size: ${REGULAR_FONT_SIZE}px;
-                color: ${UNSELECTED_COLOR};
-            }
             .resource-content {
                 display: flex;
                 flex-direction: column;
@@ -298,22 +291,22 @@ class FrameGraphSidePanel extends LitElement {
         };
 
         const renderResourceDetails = (title) => {
-            const resource = this._findCurrentResource();
-            if (!resource) return html``;
+            const currentResource = this._findCurrentResource();
+            if (!currentResource) return nothing;
 
             return html`
                 <menu-section title="${title}">
-                    <div class="resource-title">
-                        <div><b>Name:</b> ${resource.name}</div>
+                    <div class="resource-content">
+                        <div><b>Name:</b> ${currentResource.name}</div>
                     </div>
                     <div class="resource-content">
-                        <div><b>ID:</b> ${resource.id}</div>
+                        <div><b>ID:</b> ${currentResource.id}</div>
                     </div>
-                    ${resource.properties.length > 0 ? html`
+                    ${currentResource.properties.length > 0 ? html`
                         <div class="resource-content">
                             <div><b>Properties:</b></div>
                             <ul>
-                                ${resource.properties.map(prop => html`
+                                ${currentResource.properties.map(prop => html`
                                     <li>${prop.key}: ${prop.value}</li>
                                 `)}
                             </ul>
@@ -324,12 +317,12 @@ class FrameGraphSidePanel extends LitElement {
         }
 
         return html`
-            <style>
-                ${this.dynamicStyle()}
-            </style>
-            <div class="title">fgviewer</div>
-            ${renderFrameGraphs("FrameGraphs")}
-            ${renderResourceDetails("Resource")}
+            <style>${this.dynamicStyle()}</style>
+            <div class="container">
+                <div class="title">fgviewer</div>
+                ${renderFrameGraphs("Views") ?? nothing}
+                ${renderResourceDetails("Resource Details") ?? nothing}
+            </div>
         `;
     }
 }
