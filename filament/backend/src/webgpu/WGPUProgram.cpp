@@ -66,53 +66,62 @@ namespace {
     };
     wgpu::ShaderModule module = device.CreateShaderModule(&descriptor);
     FILAMENT_CHECK_POSTCONDITION(module != nullptr) << "Failed to create " << descriptor.label;
-    module.GetCompilationInfo(wgpu::CallbackMode::AllowSpontaneous,
-            [&descriptor](auto const& status, wgpu::CompilationInfo const* info) {
-                switch (status) {
-                    case wgpu::CompilationInfoRequestStatus::CallbackCancelled:
-                        FWGPU_LOGW << "Shader compilation info callback cancelled for "
-                                   << descriptor.label << "?" << utils::io::endl;
-                        return;
-                    case wgpu::CompilationInfoRequestStatus::Success:
-                        break;
-                }
-                if (info != nullptr) {
-                    std::stringstream errorStream;
-                    int errorCount = 0;
-                    for (size_t msgIndex = 0; msgIndex < info->messageCount; msgIndex++) {
-                        wgpu::CompilationMessage const& message = info->messages[msgIndex];
-                        switch (message.type) {
-                            case wgpu::CompilationMessageType::Info:
-                                FWGPU_LOGI << descriptor.label << ": " << message.message
-                                           << " line#:" << message.lineNum
-                                           << " linePos:" << message.linePos
-                                           << " offset:" << message.offset
-                                           << " length:" << message.length << utils::io::endl;
-                                break;
-                            case wgpu::CompilationMessageType::Warning:
-                                FWGPU_LOGW << "Warning compiling " << descriptor.label << ": "
-                                           << message.message << " line#:" << message.lineNum
-                                           << " linePos:" << message.linePos
-                                           << " offset:" << message.offset
-                                           << " length:" << message.length << utils::io::endl;
-                                break;
-                            case wgpu::CompilationMessageType::Error:
-                                errorCount++;
-                                errorStream << "Error " << errorCount << " : "
-                                            << std::string_view(message.message)
-                                            << " line#:" << message.lineNum
-                                            << " linePos:" << message.linePos
-                                            << " offset:" << message.offset
-                                            << " length:" << message.length << "\n";
+
+    wgpu::Instance instance = device.GetAdapter().GetInstance();
+    instance.WaitAny(
+            module.GetCompilationInfo(wgpu::CallbackMode::WaitAnyOnly,
+                    [&descriptor](auto const& status,
+                            wgpu::CompilationInfo const* info) {
+                        switch (status) {
+                            case wgpu::CompilationInfoRequestStatus::CallbackCancelled:
+                                FWGPU_LOGW << "Shader compilation info callback cancelled for "
+                                           << descriptor.label << "?" << utils::io::endl;
+                                return;
+                            case wgpu::CompilationInfoRequestStatus::Success:
                                 break;
                         }
-                    }
-                    FILAMENT_CHECK_POSTCONDITION(errorCount < 1)
-                            << errorCount << " error(s) compiling " << descriptor.label << ":\n"
-                            << errorStream.str();
-                }
-                FWGPU_LOGD << descriptor.label << " compiled successfully" << utils::io::endl;
-            });
+                        if (info != nullptr) {
+                            std::stringstream errorStream;
+                            int errorCount = 0;
+                            for (size_t msgIndex = 0; msgIndex < info->messageCount; msgIndex++) {
+                                wgpu::CompilationMessage const& message = info->messages[msgIndex];
+                                switch (message.type) {
+                                    case wgpu::CompilationMessageType::Info:
+                                        FWGPU_LOGI << descriptor.label << ": " << message.message
+                                                   << " line#:" << message.lineNum
+                                                   << " linePos:" << message.linePos
+                                                   << " offset:" << message.offset
+                                                   << " length:" << message.length
+                                                   << utils::io::endl;
+                                        break;
+                                    case wgpu::CompilationMessageType::Warning:
+                                        FWGPU_LOGW
+                                                << "Warning compiling " << descriptor.label << ": "
+                                                << message.message << " line#:" << message.lineNum
+                                                << " linePos:" << message.linePos
+                                                << " offset:" << message.offset
+                                                << " length:" << message.length << utils::io::endl;
+                                        break;
+                                    case wgpu::CompilationMessageType::Error:
+                                        errorCount++;
+                                        errorStream << "Error " << errorCount << " : "
+                                                    << std::string_view(message.message)
+                                                    << " line#:" << message.lineNum
+                                                    << " linePos:" << message.linePos
+                                                    << " offset:" << message.offset
+                                                    << " length:" << message.length << "\n";
+                                        break;
+                                }
+                            }
+                            FILAMENT_CHECK_POSTCONDITION(errorCount < 1)
+                                    << errorCount << " error(s) compiling " << descriptor.label
+                                    << ":\n"
+                                    << errorStream.str();
+                        }
+                        FWGPU_LOGD << descriptor.label << " compiled successfully"
+                                   << utils::io::endl;
+                    }),
+            UINT16_MAX);
     return module;
 }
 
