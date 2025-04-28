@@ -132,21 +132,35 @@ private:
     wgpu::BindGroup mBindGroup;
 };
 
-// TODO: Currently WGPUTexture is not used by WebGPU for useful task.
-// Update the struct when used by WebGPU driver.
-struct WGPUTexture : public HwTexture {
+class WGPUTexture : public HwTexture {
+public:
     WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-            uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage) noexcept;
+            uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+            wgpu::Device device) noexcept;
 
-    // constructors for creating texture views
-    WGPUTexture(WGPUTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
+    WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount,
+            wgpu::Device device) noexcept;
 
+    // TODO: createTextureExternalImage1/2 createTextureExternalImagePlaneR importTextureR cases
+
+    const wgpu::Texture& getTexture() const { return texture; }
+    const wgpu::Sampler& getSampler() const { return sampler; }
+    const wgpu::TextureView& getTexView() const { return texView; }
+
+    static wgpu::TextureFormat fToWGPUTextureFormat(const filament::backend::TextureFormat& fUsage);
+
+private:
+    wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount);
+    // CreateTextureR has info for a texture and sampler. Texture Views are needed for binding,
+    // along with a sampler Current plan: Inherit the sampler and Texture to always exist (It is a
+    // ref counted pointer) when making views. View is optional
     wgpu::Texture texture = nullptr;
     // TODO: Adding this but not yet setting it up. Filament "Textures" are combined image samplers,
     // rep both.
     wgpu::Sampler sampler = nullptr;
-    //TODO: Not sure all the ways HwTexture is used. Overloading like this might be entirely wrong.
+    // TODO: Not sure all the ways HwTexture is used. Overloading like this might be entirely wrong.
     wgpu::TextureView texView = nullptr;
+    wgpu::TextureUsage fToWGPUTextureUsage(const filament::backend::TextureUsage& fUsage);
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
@@ -170,7 +184,7 @@ struct WGPURenderTarget : public HwRenderTarget {
         Attachment(WGPUTexture* gpuTexture, uint8_t level = 0, uint16_t layer = 0)
             : level(level),
               layer(layer),
-              texture(gpuTexture->texture),
+              texture(gpuTexture->getTexture()),
               mWGPUTexture(gpuTexture) {}
 
         uint8_t level = 0;
