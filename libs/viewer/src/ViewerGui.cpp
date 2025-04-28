@@ -824,6 +824,12 @@ void ViewerGui::updateUserInterface() {
     if (ImGui::CollapsingHeader("SSAO Options")) {
         auto& ssao = mSettings.view.ssao;
 
+        ImGui::Checkbox("Enabled", &ssao.enabled);
+
+        int aoType = (int)ssao.aoType;
+        ImGui::Combo("AO Type", &aoType, "SAO\0GTAO\0\0");
+        ssao.aoType = (decltype(ssao.aoType))aoType;
+
         int quality = (int) ssao.quality;
         int lowpass = (int) ssao.lowPassFilter;
         bool upsampling = ssao.upsampling != View::QualityLevel::LOW;
@@ -833,7 +839,19 @@ void ViewerGui::updateUserInterface() {
         ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
         ImGui::Checkbox("Bent Normals", &ssao.bentNormals);
         ImGui::Checkbox("High quality upsampling", &upsampling);
-        ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f, (float)M_PI_4);
+
+        switch (ssao.aoType) {
+            case AmbientOcclusionOptions::AOType::SAO:
+                ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f, (float)M_PI_4);
+                break;
+            case AmbientOcclusionOptions::AOType::GTAO:
+                ImGui::SliderInt("Slice Count", &ssao.gtao.sampleSliceCount, 1, 10);
+            ImGui::SliderInt("Steps Per Slice", &ssao.gtao.sampleStepsPerSlice, 1, 4);
+            break;
+            default:
+                break;
+        }
+
         ImGui::SliderFloat("Bilateral Threshold", &ssao.bilateralThreshold, 0.0f, 0.1f);
         ImGui::Checkbox("Half resolution", &halfRes);
         ssao.resolution = halfRes ? 0.5f : 1.0f;
