@@ -237,11 +237,14 @@ static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage t
 }
 
 enum class DescriptorType : uint8_t {
+    SAMPLER_FLOAT,
+    SAMPLER_INT,
+    SAMPLER_UINT,
+    SAMPLER_DEPTH,
+    SAMPLER_EXTERNAL,
     UNIFORM_BUFFER,
     SHADER_STORAGE_BUFFER,
-    SAMPLER,
     INPUT_ATTACHMENT,
-    SAMPLER_EXTERNAL
 };
 
 enum class DescriptorFlags : uint8_t {
@@ -254,6 +257,9 @@ using descriptor_set_t = uint8_t;
 using descriptor_binding_t = uint8_t;
 
 struct DescriptorSetLayoutBinding {
+    static bool isSampler(DescriptorType type) noexcept {
+        return int(type) <= int(DescriptorType::SAMPLER_EXTERNAL);
+    }
     DescriptorType type;
     ShaderStageFlags stageFlags;
     descriptor_binding_t binding;

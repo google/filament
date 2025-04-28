@@ -93,7 +93,11 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
             case DescriptorType::SAMPLER_EXTERNAL:
                 fromStageFlags(binding.stageFlags, binding.binding, mask.externalSampler);
                 UTILS_FALLTHROUGH;
-            case DescriptorType::SAMPLER: {
+
+            case DescriptorType::SAMPLER_FLOAT:
+            case DescriptorType::SAMPLER_INT:
+            case DescriptorType::SAMPLER_UINT:
+            case DescriptorType::SAMPLER_DEPTH: {
                 fromStageFlags(binding.stageFlags, binding.binding, mask.sampler);
                 break;
             }

@@ -95,7 +95,11 @@ GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle ds
                 }
                 break;
             }
-            case DescriptorType::SAMPLER:
+
+            case DescriptorType::SAMPLER_FLOAT:
+            case DescriptorType::SAMPLER_INT:
+            case DescriptorType::SAMPLER_UINT:
+            case DescriptorType::SAMPLER_DEPTH:
             case DescriptorType::SAMPLER_EXTERNAL:
                 if (UTILS_UNLIKELY(gl.isES2())) {
                     desc.emplace<SamplerGLES2>();
