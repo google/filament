@@ -19,40 +19,35 @@
 
 #include <chrono>
 
-
 namespace filament::backend {
 
-void WGPUTimerQuery::beginTimeElapsedQuery(WGPUTimerQuery* query) {
-    query->status->elapsed = 0;
-    query->status->available.store(false);
-
-    // Capture the timer query status via a weak_ptr because the MetalTimerQuery could be destroyed
-    // before the block executes.
-    std::weak_ptr<WGPUTimerQuery::Status> status = query->status;
-
-    if (auto s = status.lock()) {
-        s->elapsed = std::chrono::steady_clock::now().time_since_epoch().count();
-    }
-
-    ;
-}
-
-void WGPUTimerQuery::endTimeElapsedQuery(WGPUTimerQuery* query) {
+void WGPUTimerQuery::beginTimeElapsedQuery() {
+    status->elapsedNanoseconds = 0;
     // Capture the timer query status via a weak_ptr because the WGPUTimerQuery could be destroyed
     // before the block executes.
-    std::weak_ptr<WGPUTimerQuery::Status> status = query->status;
-    if (auto s = status.lock()) {
-        s->elapsed = std::chrono::steady_clock::now().time_since_epoch().count() - s->elapsed;
-        s->available.store(true);
+    std::weak_ptr<WGPUTimerQuery::Status> statusPtr = status;
+
+    if (auto s = statusPtr.lock()) {
+        s->elapsedNanoseconds = std::chrono::steady_clock::now().time_since_epoch().count();
     }
 }
 
-bool WGPUTimerQuery::getQueryResult(WGPUTimerQuery* query, uint64_t* outElapsedTime) {
-    if (!query->status->available.load()) {
+void WGPUTimerQuery::endTimeElapsedQuery() {
+    // Capture the timer query status via a weak_ptr because the WGPUTimerQuery could be destroyed
+    // before the block executes.
+    std::weak_ptr<WGPUTimerQuery::Status> statusPtr = status;
+    if (auto s = statusPtr.lock()) {
+        s->previousElapsed = s->elapsedNanoseconds = std::chrono::steady_clock::now().time_since_epoch().count() - s->elapsedNanoseconds;
+    }
+}
+
+bool WGPUTimerQuery::getQueryResult(uint64_t* outElapsedTime) {
+    if (status->previousElapsed == 0) {
         return false;
     }
     if (outElapsedTime) {
-        *outElapsedTime = query->status->elapsed;
+        *outElapsedTime = status->previousElapsed;
+        status->previousElapsed = 0;
     }
     return true;
 }

@@ -15,6 +15,7 @@
  */
 
 #include "webgpu/WebGPUDriver.h"
+
 #include "WebGPUSwapChain.h"
 #include "webgpu/WebGPUConstants.h"
 #include "webgpu/WebGPUHandles.h"
@@ -30,14 +31,21 @@
 #include <utils/CString.h>
 #include <utils/ostream.h>
 
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+#include <dawn/webgpu_cpp_print.h>
+#endif
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
 #include <cstddef>
-
+#include <cstdint>
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+#include <sstream>
+#include <string_view>
+#endif
 #include <utility>
 #include <variant>
-
+#include <iostream>
 namespace filament::backend {
 
 namespace {
@@ -357,6 +365,8 @@ Handle<HwFence> WebGPUDriver::createFenceS() noexcept {
 }
 
 Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
+    // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
+    // before createTimerQueryR is executed.
     return allocAndConstructHandle<WGPUTimerQuery, HwTimerQuery>();
 }
 
@@ -371,18 +381,16 @@ void WebGPUDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void WebGPUDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
-    auto* tq = handleCast<WGPUTimerQuery>(tqh);
-    tq->beginTimeElapsedQuery(tq);
+    mTimerQuery = handleCast<WGPUTimerQuery>(tqh);
 }
 
 void WebGPUDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
-    auto* tq = handleCast<WGPUTimerQuery>(tqh);
-    tq->endTimeElapsedQuery(tq);
+    mTimerQuery = handleCast<WGPUTimerQuery>(tqh);
 }
 
 TimerQueryResult WebGPUDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     auto* tq = handleCast<WGPUTimerQuery>(tqh);
-    return tq->getQueryResult(tq, elapsedTime) ? TimerQueryResult::AVAILABLE
+    return tq->getQueryResult(elapsedTime) ? TimerQueryResult::AVAILABLE
                                                : TimerQueryResult::NOT_READY;
 }
 
@@ -719,6 +727,13 @@ void WebGPUDriver::endRenderPass(int) {
         .label = "command_buffer",
     };
     mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
+    mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowSpontaneous, [this](auto const& status) {
+        if (status == wgpu::QueueWorkDoneStatus::Success) {
+            if (mTimerQuery) {
+                mTimerQuery->endTimeElapsedQuery();
+            }
+        }
+    });
     assert_invariant(mCommandBuffer);
 }
 
@@ -741,6 +756,7 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
     mCommandEncoder = nullptr;
+    mTimerQuery->beginTimeElapsedQuery();
     mQueue.Submit(1, &mCommandBuffer);
     mCommandBuffer = nullptr;
     mTextureView = nullptr;

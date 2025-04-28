@@ -39,7 +39,9 @@
 namespace filament::backend {
 
 class WebGPUSwapChain;
+class WGPUTimerQuery;
 struct WGPURenderTarget;
+
 /**
  * WebGPU backend (driver) implementation
  */
@@ -92,7 +94,7 @@ private:
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WGPURenderTarget* mDefaultRenderTarget = nullptr;
-
+    WGPUTimerQuery* mTimerQuery = nullptr;
 
     /*
      * Driver interface

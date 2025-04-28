@@ -25,9 +25,10 @@
 
 #include <utils/FixedCapacityVector.h>
 
+#include <webgpu/webgpu_cpp.h>
+
 #include <cstdint>
 #include <vector>
-#include <webgpu/webgpu_cpp.h>
 
 namespace filament::backend {
 
@@ -161,13 +162,14 @@ public:
     WGPUTimerQuery()
         : status(std::make_shared<Status>()) {}
 
-    void beginTimeElapsedQuery(WGPUTimerQuery* timerQuery);
-    void endTimeElapsedQuery(WGPUTimerQuery* timerQuery);
-    bool getQueryResult(WGPUTimerQuery* query, uint64_t* outElapsedTime);
+    void beginTimeElapsedQuery();
+    void endTimeElapsedQuery();
+    bool getQueryResult(uint64_t* outElapsedTimeNanoseconds);
 
+private:
     struct Status {
-        std::atomic<bool> available{ false };
-        std::atomic<uint64_t> elapsed{ 0 };// only valid if available is true
+        std::atomic<uint64_t> elapsedNanoseconds{ 0 };
+        std::atomic<uint64_t> previousElapsed{ 0 };
     };
 
     std::shared_ptr<Status> status;
