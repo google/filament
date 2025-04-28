@@ -27,7 +27,10 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <utility>
 
@@ -194,10 +197,23 @@ void MaterialDescriptorBindingsChuck::flatten(Flattener& f) {
     // all the material's sampler descriptors
     for (auto const& entry: mSamplerInterfaceBlock.getSamplerInfoList()) {
         f.writeString({ entry.uniformName.data(), entry.uniformName.size() });
-        if (entry.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
+        if (UTILS_UNLIKELY(entry.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL)) {
             f.writeUint8(uint8_t(DescriptorType::SAMPLER_EXTERNAL));
         } else {
-            f.writeUint8(uint8_t(DescriptorType::SAMPLER));
+            switch (entry.format) {
+                case SamplerFormat::INT:
+                    f.writeUint8(uint8_t(DescriptorType::SAMPLER_INT));
+                    break;
+                case SamplerFormat::UINT:
+                    f.writeUint8(uint8_t(DescriptorType::SAMPLER_UINT));
+                    break;
+                case SamplerFormat::FLOAT:
+                    f.writeUint8(uint8_t(DescriptorType::SAMPLER_FLOAT));
+                    break;
+                case SamplerFormat::SHADOW:
+                    f.writeUint8(uint8_t(DescriptorType::SAMPLER_DEPTH));
+                    break;
+            }
         }
         f.writeUint8(entry.binding);
     }
@@ -228,10 +244,23 @@ void MaterialDescriptorSetLayoutChunk::flatten(Flattener& f) {
 
     // all the material's sampler descriptors
     for (auto const& entry: mSamplerInterfaceBlock.getSamplerInfoList()) {
-        if (entry.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
+        if (UTILS_UNLIKELY(entry.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL)) {
             f.writeUint8(uint8_t(DescriptorType::SAMPLER_EXTERNAL));
         } else {
-            f.writeUint8(uint8_t(DescriptorType::SAMPLER));
+            switch (entry.format) {
+                case SamplerFormat::INT:
+                    f.writeUint8(uint8_t(DescriptorType::SAMPLER_INT));
+                    break;
+                case SamplerFormat::UINT:
+                    f.writeUint8(uint8_t(DescriptorType::SAMPLER_UINT));
+                    break;
+                case SamplerFormat::FLOAT:
+                    f.writeUint8(uint8_t(DescriptorType::SAMPLER_FLOAT));
+                    break;
+                case SamplerFormat::SHADOW:
+                    f.writeUint8(uint8_t(DescriptorType::SAMPLER_DEPTH));
+                    break;
+            }
         }
         f.writeUint8(uint8_t(ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT));
         f.writeUint8(entry.binding);

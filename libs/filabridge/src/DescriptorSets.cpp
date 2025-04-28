@@ -51,8 +51,8 @@ static constexpr std::initializer_list<DescriptorSetLayoutBinding> depthVariantD
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> ssrVariantDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
+    { DescriptorType::SAMPLER_FLOAT,                             ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
+    { DescriptorType::SAMPLER_FLOAT,                             ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
 };
 
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> perViewDescriptorSetLayoutList = {
@@ -61,22 +61,22 @@ static constexpr std::initializer_list<DescriptorSetLayoutBinding> perViewDescri
     { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::LIGHTS         },
     { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::RECORD_BUFFER  },
     { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FROXEL_BUFFER  },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOW_MAP     },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_DFG_LUT    },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_SPECULAR   },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSAO           },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
+    { DescriptorType::SAMPLER_FLOAT,                             ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
+    { DescriptorType::SAMPLER_DEPTH,                             ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOW_MAP     },
+    { DescriptorType::SAMPLER_FLOAT,                             ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_DFG_LUT    },
+    { DescriptorType::SAMPLER_FLOAT,                             ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_SPECULAR   },
+    { DescriptorType::SAMPLER_FLOAT,                             ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSAO           },
+    { DescriptorType::SAMPLER_FLOAT,                             ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
+    { DescriptorType::SAMPLER_FLOAT,                             ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
 };
 
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> perRenderableDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::OBJECT_UNIFORMS, DescriptorFlags::DYNAMIC_OFFSET },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::BONES_UNIFORMS,  DescriptorFlags::DYNAMIC_OFFSET },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::MORPHING_UNIFORMS         },
-    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS    },
-    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS     },
-    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS },
+    { DescriptorType::SAMPLER_FLOAT,  ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS    },
+    { DescriptorType::SAMPLER_FLOAT,  ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS     },
+    { DescriptorType::SAMPLER_FLOAT,  ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS },
 };
 
 // used for post-processing passes

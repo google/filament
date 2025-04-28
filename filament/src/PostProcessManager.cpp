@@ -504,6 +504,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 if (config.picking) {
+                    // FIXME: the DescriptorSetLayout must specify SAMPLER_FLOAT
                     data.picking = builder.createTexture("Picking Buffer", {
                             .width = width, .height = height,
                             .format = isES2 ? TextureFormat::RGBA8 : TextureFormat::RG32F });

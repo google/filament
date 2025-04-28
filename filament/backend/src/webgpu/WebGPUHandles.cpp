@@ -254,8 +254,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 
     unsigned int samplerCount =
             std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
-                return fEntry.type == DescriptorType::SAMPLER ||
-                       fEntry.type == DescriptorType::SAMPLER_EXTERNAL;
+                return DescriptorSetLayoutBinding::isSampler(fEntry.type);
             });
 
 
@@ -271,8 +270,11 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         entryInfo.binding = wEntry.binding;
 
         switch (fEntry.type) {
-            case DescriptorType::SAMPLER_EXTERNAL:
-            case DescriptorType::SAMPLER: {
+            case DescriptorType::SAMPLER_FLOAT:
+            case DescriptorType::SAMPLER_INT:
+            case DescriptorType::SAMPLER_UINT:
+            case DescriptorType::SAMPLER_DEPTH:
+            case DescriptorType::SAMPLER_EXTERNAL: {
                 auto& samplerEntry = wEntries.emplace_back();
                 auto& samplerEntryInfo = mBindGroupEntries.emplace_back();
                 samplerEntry.binding = fEntry.binding * 2 + 1;

@@ -672,22 +672,32 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
 }
 
-const char* toString(DescriptorType type) {
+UTILS_UNUSED
+static const char* toString(DescriptorType const type) noexcept {
     switch (type) {
         case DescriptorType::UNIFORM_BUFFER:
             return "UNIFORM_BUFFER";
         case DescriptorType::SHADER_STORAGE_BUFFER:
             return "SHADER_STORAGE_BUFFER";
-        case DescriptorType::SAMPLER:
-            return "SAMPLER";
+        case DescriptorType::SAMPLER_INT:
+            return "SAMPLER_INT";
+        case DescriptorType::SAMPLER_UINT:
+            return "SAMPLER_UINT";
+        case DescriptorType::SAMPLER_FLOAT:
+            return "SAMPLER_FLOAT";
+        case DescriptorType::SAMPLER_DEPTH:
+            return "SAMPLER_DEPTH";
         case DescriptorType::INPUT_ATTACHMENT:
             return "INPUT_ATTACHMENT";
         case DescriptorType::SAMPLER_EXTERNAL:
             return "SAMPLER_EXTERNAL";
     }
+    // should never get here
+    return "UNKNOWN";
 }
 
-const char* toString(ShaderStageFlags flags) {
+UTILS_UNUSED
+static const char* toString(ShaderStageFlags flags) {
     std::vector<const char*> stages;
     if (any(flags & ShaderStageFlags::VERTEX)) {
         stages.push_back("VERTEX");
