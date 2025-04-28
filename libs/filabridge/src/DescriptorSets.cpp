@@ -35,10 +35,12 @@ namespace filament::descriptor_sets {
 
 using namespace backend;
 
+// used for post-processing passes
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> postProcessDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
 };
 
+// used to generate shadow-maps
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> depthVariantDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
 };
@@ -55,6 +57,21 @@ static constexpr std::initializer_list<DescriptorSetLayoutBinding> ssrVariantDes
     { DescriptorType::SAMPLER_FLOAT,                             ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
 };
 
+// Used for generating the color pass (i.e. the main pass). This is in fact a template that gets
+// declined into 8 different layouts, based on variants.
+//
+// Note about the SHADOW_MAP binding points:
+// This descriptor can either be a SAMPLER_FLOAT or a SAMPLER_DEPTH,
+// and there are 3 cases to consider:
+//
+//          | TextureType | CompareMode | Filtered | SamplerType | Variant |
+// ---------+-------------+-------------+----------+-------------+---------+
+//  PCF     |    DEPTH    |    COMPARE  |   Yes    |    DEPTH    |    -    |
+//  VSM     |    FLOAT    |     NONE    |   Yes    |    FLOAT    |   VSM   |
+//  OTHER   |    DEPTH    |     NONE    |   No     |    FLOAT    |   VSM   |
+//
+// The SamplerType to use depends on the Variant. Variant::VSM is set for all cases except PCM.
+//
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> perViewDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
@@ -164,13 +181,8 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
 
 DescriptorSetLayout getPerViewDescriptorSetLayout(
         MaterialDomain const domain,
-        UserVariantFilterMask const variantFilter,
-        bool const isLit,
-        ReflectionMode const reflectionMode,
-        RefractionMode const refractionMode) noexcept {
-
-    bool const ssr = reflectionMode == ReflectionMode::SCREEN_SPACE ||
-                     refractionMode == RefractionMode::SCREEN_SPACE;
+        bool const isLit, bool const isSSR, bool const hasFog,
+        bool const isVSM) noexcept {
 
     switch (domain) {
         case MaterialDomain::SURFACE: {
@@ -189,7 +201,7 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
                         layout.bindings.end());
             }
             // remove descriptors not needed for SSRs
-            if (!ssr) {
+            if (!isSSR) {
                 layout.bindings.erase(
                         std::remove_if(layout.bindings.begin(), layout.bindings.end(),
                                 [](auto const& entry) {
@@ -199,13 +211,24 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
 
             }
             // remove fog descriptor if filtered out
-            if (variantFilter & (UserVariantFilterMask)UserVariantFilterBit::FOG) {
+            if (!hasFog) {
                 layout.bindings.erase(
                         std::remove_if(layout.bindings.begin(), layout.bindings.end(),
                                 [](auto const& entry) {
                                     return entry.binding == PerViewBindingPoints::FOG;
                                 }),
                         layout.bindings.end());
+            }
+
+            // change the SHADOW_MAP descriptor type for VSM
+            if (isVSM) {
+                auto pos = std::find_if(layout.bindings.begin(), layout.bindings.end(),
+                        [](auto const& v) {
+                            return v.binding == PerViewBindingPoints::SHADOW_MAP;
+                        });
+                if (pos != layout.bindings.end()) {
+                    pos->type = DescriptorType::SAMPLER_FLOAT;
+                }
             }
             return layout;
         }
@@ -220,10 +243,7 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
 DescriptorSetLayout getPerViewDescriptorSetLayoutWithVariant(
         Variant const variant,
         MaterialDomain domain,
-        UserVariantFilterMask const variantFilter,
-        bool const isLit,
-        ReflectionMode const reflectionMode,
-        RefractionMode const refractionMode) noexcept {
+        bool const isLit, bool const isSSR, bool const hasFog) noexcept {
     if (Variant::isValidDepthVariant(variant)) {
         return depthVariantDescriptorSetLayout;
     }
@@ -231,8 +251,8 @@ DescriptorSetLayout getPerViewDescriptorSetLayoutWithVariant(
         return ssrVariantDescriptorSetLayout;
     }
     // We need to filter out all the descriptors not included in the "resolved" layout below
-    return getPerViewDescriptorSetLayout(domain, variantFilter,
-            isLit, reflectionMode, refractionMode);
+    return getPerViewDescriptorSetLayout(domain, isLit, isSSR, hasFog,
+            Variant::isVSMVariant(variant));
 }
 
 

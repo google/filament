@@ -20,6 +20,9 @@
 
 #include "details/Engine.h"
 
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
+
 #include <backend/DriverEnums.h>
 
 #include <algorithm>
@@ -36,8 +39,14 @@ DescriptorSetLayout::DescriptorSetLayout(
     for (auto&& desc : descriptorSetLayout.bindings) {
         mMaxDescriptorBinding = std::max(mMaxDescriptorBinding, desc.binding);
         mSamplers.set(desc.binding, backend::DescriptorSetLayoutBinding::isSampler(desc.type));
-        mUniformBuffers.set(desc.binding,
-                desc.type == backend::DescriptorType::UNIFORM_BUFFER);
+        mUniformBuffers.set(desc.binding, desc.type == backend::DescriptorType::UNIFORM_BUFFER);
+    }
+
+    assert_invariant(mMaxDescriptorBinding < utils::bitset64::BIT_COUNT);
+
+    mDescriptorTypes = utils::FixedCapacityVector<backend::DescriptorType>(mMaxDescriptorBinding + 1);
+    for (auto&& desc : descriptorSetLayout.bindings) {
+        mDescriptorTypes[desc.binding] = desc.type;
     }
 
     mDescriptorSetLayoutHandle = factory.create(driver,

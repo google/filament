@@ -93,7 +93,8 @@ public:
         return mPerViewDescriptorSetLayout;
     }
 
-    DescriptorSetLayout const& getPerViewDescriptorSetLayout(Variant const variant) const noexcept {
+    DescriptorSetLayout const& getPerViewDescriptorSetLayout(
+            Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept {
         if (Variant::isValidDepthVariant(variant)) {
             assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
             return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
@@ -101,6 +102,10 @@ public:
         if (Variant::isSSRVariant(variant)) {
             assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
             return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
+        }
+        if (useVsmDescriptorSetLayout) {
+            assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
+            return mPerViewDescriptorSetLayoutVsm;
         }
         return mPerViewDescriptorSetLayout;
     }
@@ -312,6 +317,7 @@ private:
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
     DescriptorSetLayout mPerViewDescriptorSetLayout;
+    DescriptorSetLayout mPerViewDescriptorSetLayoutVsm;
     DescriptorSetLayout mDescriptorSetLayout;
     backend::Program::DescriptorSetInfo mProgramDescriptorBindings;
 

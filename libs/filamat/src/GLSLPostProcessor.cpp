@@ -75,29 +75,6 @@ using BindingIndexMap = std::unordered_map<std::string, uint16_t>;
 #define DEBUG_LOG_DESCRIPTOR_SETS 0
 #endif
 
-static const char* toString(DescriptorType const type) noexcept {
-    switch (type) {
-        case DescriptorType::UNIFORM_BUFFER:
-            return "UNIFORM_BUFFER";
-        case DescriptorType::SHADER_STORAGE_BUFFER:
-            return "SHADER_STORAGE_BUFFER";
-        case DescriptorType::SAMPLER_INT:
-            return "SAMPLER_INT";
-        case DescriptorType::SAMPLER_UINT:
-            return "SAMPLER_UINT";
-        case DescriptorType::SAMPLER_FLOAT:
-            return "SAMPLER_FLOAT";
-        case DescriptorType::SAMPLER_DEPTH:
-            return "SAMPLER_DEPTH";
-        case DescriptorType::INPUT_ATTACHMENT:
-            return "INPUT_ATTACHMENT";
-        case DescriptorType::SAMPLER_EXTERNAL:
-            return "SAMPLER_EXTERNAL";
-    }
-    // should never get here
-    return "UNKNOWN";
-}
-
 static const char* toString(ShaderStageFlags const flags) {
     std::vector<const char*> stages;
     if (any(flags & ShaderStageFlags::VERTEX)) {
@@ -195,11 +172,12 @@ static void collectDescriptorsForSet(DescriptorSetBindingPoints set,
     DescriptorSetLayout const descriptorSetLayout = [&] {
         switch (set) {
             case DescriptorSetBindingPoints::PER_VIEW: {
+                bool const isLit = material.isLit || material.hasShadowMultiplier;
+                bool const isSSR = material.reflectionMode == ReflectionMode::SCREEN_SPACE ||
+                        material.refractionMode == RefractionMode::SCREEN_SPACE;
+                bool const hasFog = !(config.variantFilter & UserVariantFilterMask(UserVariantFilterBit::FOG));
                 return descriptor_sets::getPerViewDescriptorSetLayoutWithVariant(
-                        config.variant, config.domain, config.variantFilter,
-                        material.isLit || material.hasShadowMultiplier,
-                        material.reflectionMode,
-                        material.refractionMode);
+                        config.variant, config.domain, isLit, isSSR, hasFog);
             }
             case DescriptorSetBindingPoints::PER_RENDERABLE:
                 return descriptor_sets::getPerRenderableLayout();
@@ -279,15 +257,21 @@ static void prettyPrintDescriptorSetInfoVector(DescriptorSets const& sets) noexc
             auto const& [name, info, sampler] = descriptor;
         if (DescriptorSetLayoutBinding::isSampler(info.type)) {
                 assert_invariant(sampler.has_value());
-                printf("    {name = %s, binding = %d, type = %s, count = %d, stage = %s, flags = "
+                printf("    {name = %s, binding = %d, type = %.*s, count = %d, stage = %s, flags = "
                        "%s, samplerType = %s}",
-                        name.c_str_safe(), info.binding, toString(info.type), info.count,
+                        name.c_str_safe(), info.binding,
+                        int(to_string(info.type).size()),
+                        to_string(info.type).data(),
+                        info.count,
                         toString(info.stageFlags), prettyDescriptorFlags(info.flags),
                         prettyPrintSamplerType(sampler->type));
             } else {
-                printf("    {name = %s, binding = %d, type = %s, count = %d, stage = %s, flags = "
+                printf("    {name = %s, binding = %d, type = %.*s, count = %d, stage = %s, flags = "
                        "%s}",
-                        name.c_str_safe(), info.binding, toString(info.type), info.count,
+                        name.c_str_safe(), info.binding,
+                        int(to_string(info.type).size()),
+                        to_string(info.type).data(),
+                        info.count,
                         toString(info.stageFlags), prettyDescriptorFlags(info.flags));
             }
             printf(",\n");
