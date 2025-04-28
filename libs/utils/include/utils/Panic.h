@@ -560,7 +560,7 @@ public:
     switch (0)                                                                                     \
     case 0:                                                                                        \
     default:                                                                                       \
-        UTILS_LIKELY(cond) ? (void)0 : ::utils::details::Voidify()&&
+        UTILS_VERY_LIKELY(cond) ? (void)0 : ::utils::details::Voidify()&&
 
 #define FILAMENT_PANIC_IMPL(message, TYPE)                                                         \
         ::utils::details::TPanicStream<::utils::TYPE>(PANIC_FUNCTION, PANIC_FILE(__FILE__), __LINE__, message)
@@ -629,14 +629,14 @@ public:
  * @param format printf-style string describing the error in more details
  */
 #define ASSERT_PRECONDITION(cond, format, ...)                                                     \
-    (!UTILS_LIKELY(cond) ? PANIC_PRECONDITION_IMPL(cond, format, ##__VA_ARGS__) : (void)0)
+    (!UTILS_VERY_LIKELY(cond) ? PANIC_PRECONDITION_IMPL(cond, format, ##__VA_ARGS__) : (void)0)
 
 #if defined(UTILS_EXCEPTIONS) || !defined(NDEBUG)
 #define ASSERT_PRECONDITION_NON_FATAL(cond, format, ...)                                           \
-    (!UTILS_LIKELY(cond) ? PANIC_PRECONDITION_IMPL(cond, format, ##__VA_ARGS__), false : true)
+    (!UTILS_VERY_LIKELY(cond) ? PANIC_PRECONDITION_IMPL(cond, format, ##__VA_ARGS__), false : true)
 #else
 #define ASSERT_PRECONDITION_NON_FATAL(cond, format, ...)                                           \
-    (!UTILS_LIKELY(cond) ? PANIC_LOG_IMPL(cond, format, ##__VA_ARGS__), false : true)
+    (!UTILS_VERY_LIKELY(cond) ? PANIC_LOG_IMPL(cond, format, ##__VA_ARGS__), false : true)
 #endif
 
 
@@ -657,14 +657,14 @@ public:
  * @endcode
  */
 #define ASSERT_POSTCONDITION(cond, format, ...)                                                    \
-    (!UTILS_LIKELY(cond) ? PANIC_POSTCONDITION_IMPL(cond, format, ##__VA_ARGS__) : (void)0)
+    (!UTILS_VERY_LIKELY(cond) ? PANIC_POSTCONDITION_IMPL(cond, format, ##__VA_ARGS__) : (void)0)
 
 #if defined(UTILS_EXCEPTIONS) || !defined(NDEBUG)
 #define ASSERT_POSTCONDITION_NON_FATAL(cond, format, ...)                                          \
-    (!UTILS_LIKELY(cond) ? PANIC_POSTCONDITION_IMPL(cond, format, ##__VA_ARGS__), false : true)
+    (!UTILS_VERY_LIKELY(cond) ? PANIC_POSTCONDITION_IMPL(cond, format, ##__VA_ARGS__), false : true)
 #else
 #define ASSERT_POSTCONDITION_NON_FATAL(cond, format, ...)                                          \
-    (!UTILS_LIKELY(cond) ? PANIC_LOG_IMPL(cond, format, ##__VA_ARGS__), false : true)
+    (!UTILS_VERY_LIKELY(cond) ? PANIC_LOG_IMPL(cond, format, ##__VA_ARGS__), false : true)
 #endif
 
 /**
@@ -689,10 +689,10 @@ public:
 
 #if defined(UTILS_EXCEPTIONS) || !defined(NDEBUG)
 #define ASSERT_ARITHMETIC_NON_FATAL(cond, format, ...)                                             \
-    (!UTILS_LIKELY(cond) ? PANIC_ARITHMETIC_IMPL(cond, format, ##__VA_ARGS__), false : true)
+    (!UTILS_VERY_LIKELY(cond) ? PANIC_ARITHMETIC_IMPL(cond, format, ##__VA_ARGS__), false : true)
 #else
 #define ASSERT_ARITHMETIC_NON_FATAL(cond, format, ...)                                             \
-    (!UTILS_LIKELY(cond) ? PANIC_LOG_IMPL(cond, format, ##__VA_ARGS__), false : true)
+    (!UTILS_VERY_LIKELY(cond) ? PANIC_LOG_IMPL(cond, format, ##__VA_ARGS__), false : true)
 #endif
 
 /**
@@ -717,6 +717,6 @@ public:
  * @endcode
  */
 #define ASSERT_DESTRUCTOR(cond, format, ...)                                                       \
-    (!UTILS_LIKELY(cond) ? PANIC_LOG_IMPL(cond, format, ##__VA_ARGS__) : (void)0)
+    (!UTILS_VERY_LIKELY(cond) ? PANIC_LOG_IMPL(cond, format, ##__VA_ARGS__) : (void)0)
 
 #endif  // TNT_UTILS_PANIC_H

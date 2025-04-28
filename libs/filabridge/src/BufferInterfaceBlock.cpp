@@ -175,7 +175,7 @@ ssize_t BufferInterfaceBlock::getTransformFieldOffset(uint8_t binding) const {
     if (pos == mTransformOffsetMap.end()) {
         return -1;
     }
-    return (ssize_t)pos->second;
+    return (ssize_t)pos->second * sizeof(uint32_t);
 }
 
 BufferInterfaceBlock::FieldInfo const* BufferInterfaceBlock::getFieldInfo(

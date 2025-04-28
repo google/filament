@@ -536,15 +536,6 @@ MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uin
         uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
         buffer(context, BufferObjectBinding::VERTEX, usage, elementSize * indexCount, true) { }
 
-MetalRenderPrimitive::MetalRenderPrimitive() {
-}
-
-void MetalRenderPrimitive::setBuffers(MetalVertexBufferInfo const* const vbi,
-        MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer) {
-    this->vertexBuffer = vertexBuffer;
-    this->indexBuffer = indexBuffer;
-}
-
 MetalProgram::MetalProgram(MetalContext& context, Program&& program) noexcept
     : HwProgram(program.getName()), mContext(context) {
     mToken = context.shaderCompiler->createProgram(program.getName(), std::move(program));

@@ -239,11 +239,11 @@ VulkanTextureState::VulkanTextureState(VulkanStagePool& stagePool, VulkanCommand
       mIsProtected(isProtected) {}
 
 VulkanTextureState::~VulkanTextureState() {
+    clearCachedImageViews();
     if (mTextureImageMemory != VK_NULL_HANDLE) {
         vkDestroyImage(mDevice, mTextureImage, VKALLOC);
         vkFreeMemory(mDevice, mTextureImageMemory, VKALLOC);
     }
-    clearCachedImageViews();
 }
 
 void VulkanTextureState::clearCachedImageViews() noexcept {

@@ -24,7 +24,7 @@
 
 #include <utils/Panic.h>
 
-static constexpr uint32_t TIME_BEFORE_EVICTION = FVK_MAX_COMMAND_BUFFERS;
+static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
 
 namespace filament::backend {
 
@@ -39,7 +39,7 @@ VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
         auto stage = iter->second;
         mFreeStages.erase(iter);
         stage->lastAccessed = mCurrentFrame;
-        mUsedStages.insert(stage);
+        mUsedStages.push_back(stage);
         return stage;
     }
     // We were not able to find a sufficiently large stage, so create a new one.
@@ -51,7 +51,7 @@ VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
     });
 
     // Create the VkBuffer.
-    mUsedStages.insert(stage);
+    mUsedStages.push_back(stage);
     VkBufferCreateInfo bufferInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = numBytes,
@@ -77,7 +77,7 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
         if (image->format == vkformat && image->width == width && image->height == height) {
             mFreeImages.erase(image);
             image->lastAccessed = mCurrentFrame;
-            mUsedImages.insert(image);
+            mUsedImages.push_back(image);
             return image;
         }
     }
@@ -89,7 +89,7 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
         .lastAccessed = mCurrentFrame,
     });
 
-    mUsedImages.insert(image);
+    mUsedImages.push_back(image);
 
     const VkImageCreateInfo imageInfo = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -161,7 +161,7 @@ void VulkanStagePool::gc() noexcept {
             stage->lastAccessed = mCurrentFrame;
             mFreeStages.insert(std::make_pair(stage->capacity, stage));
         } else {
-            mUsedStages.insert(stage);
+            mUsedStages.push_back(stage);
         }
     }
 
@@ -185,7 +185,7 @@ void VulkanStagePool::gc() noexcept {
             image->lastAccessed = mCurrentFrame;
             mFreeImages.insert(image);
         } else {
-            mUsedImages.insert(image);
+            mUsedImages.push_back(image);
         }
     }
     FVK_SYSTRACE_END();
