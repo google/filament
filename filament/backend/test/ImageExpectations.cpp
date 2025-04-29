@@ -33,9 +33,10 @@
 #endif
 
 ScreenshotParams::ScreenshotParams(int width, int height, std::string fileName,
-        uint32_t expectedHash)
+        uint32_t expectedHash, bool isSrgb)
     : mWidth(width),
       mHeight(height),
+      mIsSrgb(isSrgb),
       mExpectedPixelHash(expectedHash),
       mFileName(std::move(fileName)) {}
 
@@ -45,6 +46,10 @@ int ScreenshotParams::width() const {
 
 int ScreenshotParams::height() const {
     return mHeight;
+}
+
+bool ScreenshotParams::isSrgb() const {
+    return mIsSrgb;
 }
 
 uint32_t ScreenshotParams::expectedHash() const {
@@ -147,13 +152,25 @@ RenderTargetDump::RenderTargetDump(filament::backend::DriverApi& api,
         auto* internal = static_cast<RenderTargetDump::Internal*>(user);
         internal->bytesFilled = true;
 #ifndef FILAMENT_IOS
-        image::LinearImage image(internal->params.width(), internal->params.width(), 4);
-        image = image::toLinearWithAlpha<uint8_t>(internal->params.width(),
-                internal->params.height(),
-                internal->params.width() * 4, (uint8_t*)buffer);
+        image::LinearImage image;
+        if (internal->params.isSrgb()) {
+            image = image::toLinearWithAlpha<uint8_t>(internal->params.width(),
+                    internal->params.height(),
+                    internal->params.width() * 4, (uint8_t*)buffer);
+        } else {
+            // The image data is already linear, so pass in transforms that simply go from uint8_t
+            // to float. toLinearWithAlpha divides the float values by uint8_t max so there's no
+            // need to scale it to [0, 1]
+            image = image::toLinearWithAlpha<uint8_t>(
+                    internal->params.width(), internal->params.height(),
+                    internal->params.width() * 4, (uint8_t*) buffer,
+                    [](uint8_t value) -> float { return value; },
+                    [](filament::math::float4 rgba) -> filament::math::float4 { return rgba; });
+        }
         std::string filePath = internal->params.actualFilePath();
         std::ofstream pngStream(filePath, std::ios::binary | std::ios::trunc);
-        image::ImageEncoder::encode(pngStream, image::ImageEncoder::Format::PNG, image, "",
+        // To avoid going from linear -> sRGB -> linear save the PNG as linear.
+        image::ImageEncoder::encode(pngStream, image::ImageEncoder::Format::PNG_LINEAR, image, "",
                 filePath);
 #endif
     };
@@ -175,8 +192,12 @@ RenderTargetDump::~RenderTargetDump() {
     }
 }
 
+uint32_t RenderTargetDump::Internal::hash() const {
+    return utils::hash::murmur3((uint32_t*)bytes.data(), bytes.size() / 4, 0);
+}
+
 uint32_t RenderTargetDump::hash() const {
-    return utils::hash::murmur3((uint32_t*)mInternal->bytes.data(), mInternal->bytes.size() / 4, 0);
+    return mInternal->hash();
 }
 
 bool RenderTargetDump::bytesFilled() const {
@@ -204,9 +225,15 @@ LoadedPng::LoadedPng(std::string filePath) : mFilePath(std::move(filePath)) {
 
 uint32_t LoadedPng::hash() const {
     EXPECT_THAT(mBytes, testing::Not(testing::IsEmpty()))
-            << "Failed to load expected test result: " << mFilePath;
+            << "Failed to load expected test result: " << mFilePath << ".\n"
+            << "Did you forget to sync CMake after updating the expected image in the source "
+               "directory?";
     if (mBytes.empty()) {
         return 0;
     }
     return utils::hash::murmur3((uint32_t*)mBytes.data(), mBytes.size() / 4, 0);
+}
+
+const std::vector<unsigned char>& LoadedPng::bytes() const {
+    return mBytes;
 }
