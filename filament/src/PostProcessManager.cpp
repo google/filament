@@ -289,6 +289,7 @@ static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
         { "mipmapDepth",                MATERIAL(MIPMAPDEPTH) },
         { "sao",                        MATERIAL(SAO) },
         { "saoBentNormals",             MATERIAL(SAOBENTNORMALS) },
+        { "gtao",                       MATERIAL(GTAO) },
         { "separableGaussianBlur1",     MATERIAL(SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 1} } },
         { "separableGaussianBlur1L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
@@ -845,12 +846,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         0.5f * cameraInfo.projection[0].x * desc.width,
                         0.5f * cameraInfo.projection[1].y * desc.height);
 
-                // Where the falloff function peaks
-                const float peak = 0.1f * options.radius;
-                const float intensity = (f::TAU * peak) * options.intensity;
-                // always square AO result, as it looks much better
-                const float power = options.power * 2.0f;
-
                 const auto invProjection = inverse(cameraInfo.projection);
                 const float inc = (1.0f / (sampleCount - 0.5f)) * spiralTurns * f::TAU;
 
@@ -861,37 +856,67 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         0.0, 0.0, 0.0, 1.0
                 }};
 
-                auto& material = computeBentNormals ?
-                            getPostProcessMaterial("saoBentNormals") :
-                            getPostProcessMaterial("sao");
+                auto& material = options.aoType == AmbientOcclusionOptions::AOType::GTAO
+                                         ? getPostProcessMaterial("gtao")
+                                 : computeBentNormals ? getPostProcessMaterial("saoBentNormals")
+                                                      : getPostProcessMaterial("sao");
                 FMaterial const* const ma = material.getMaterial(mEngine);
                 FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(ma);
+
+                // Set AO type specific material parameters
+                switch (options.aoType) {
+                    case AmbientOcclusionOptions::AOType::SAO: {
+                        // Where the falloff function peaks
+                        const float peak = 0.1f * options.radius;
+                        const float intensity = (f::TAU * peak) * options.intensity;
+
+                        // always square AO result, as it looks much better
+                        const float power = options.power * 2.0f;
+
+                        mi->setParameter("invRadiusSquared",
+                                1.0f / (options.radius * options.radius));
+                        mi->setParameter("minHorizonAngleSineSquared",
+                                std::pow(std::sin(options.minHorizonAngleRad), 2.0f));
+                        mi->setParameter("intensity", intensity / sampleCount);
+                        mi->setParameter("power", power);
+                        mi->setParameter("peak2", peak * peak);
+                        mi->setParameter("bias", options.bias);
+                        mi->setParameter("sampleCount",
+                                float2{ sampleCount, 1.0f / (sampleCount - 0.5f) });
+                        mi->setParameter("spiralTurns", spiralTurns);
+                        mi->setParameter("angleIncCosSin", float2{ std::cos(inc), std::sin(inc) });
+                        break;
+                    }
+                    case AmbientOcclusionOptions::AOType::GTAO: {
+                        mi->setParameter("stepsPerSlice", options.gtao.sampleStepsPerSlice);
+                        mi->setParameter("sliceCount", options.gtao.sampleSliceCount);
+                        mi->setParameter("power", options.power);
+                        mi->setParameter("radius", options.radius);
+                        mi->setParameter("intensity", options.intensity);
+                        mi->setParameter("thicknessHeuristic", options.gtao.thicknessHeuristic);
+
+                        // TODO: Set const param for bent normal
+                        break;
+                    }
+                    default:
+                        break;
+                }
+
+                // Set common material parameters
                 mi->setParameter("depth", depth, {
                         .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("screenFromViewMatrix",
                         mat4f(screenFromClipMatrix * cameraInfo.projection));
                 mi->setParameter("resolution",
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
-                mi->setParameter("invRadiusSquared",
-                        1.0f / (options.radius * options.radius));
-                mi->setParameter("minHorizonAngleSineSquared",
-                        std::pow(std::sin(options.minHorizonAngleRad), 2.0f));
                 mi->setParameter("projectionScale",
                         projectionScale);
                 mi->setParameter("projectionScaleRadius",
                         projectionScale * options.radius);
                 mi->setParameter("positionParams", float2{
                         invProjection[0][0], invProjection[1][1] } * 2.0f);
-                mi->setParameter("peak2", peak * peak);
-                mi->setParameter("bias", options.bias);
-                mi->setParameter("power", power);
-                mi->setParameter("intensity", intensity / sampleCount);
                 mi->setParameter("maxLevel", uint32_t(levelCount - 1));
-                mi->setParameter("sampleCount", float2{ sampleCount, 1.0f / (sampleCount - 0.5f) });
-                mi->setParameter("spiralTurns", spiralTurns);
-                mi->setParameter("angleIncCosSin", float2{ std::cos(inc), std::sin(inc) });
                 mi->setParameter("invFarPlane", 1.0f / -cameraInfo.zf);
-
                 mi->setParameter("ssctShadowDistance", options.ssct.shadowDistance);
                 mi->setParameter("ssctConeAngleTangeant", std::tan(options.ssct.lightConeRad * 0.5f));
                 mi->setParameter("ssctContactDistanceMaxInv", 1.0f / options.ssct.contactDistanceMax);
