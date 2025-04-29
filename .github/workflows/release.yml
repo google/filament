@@ -118,6 +118,7 @@ jobs:
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/linux-prereq
+      - uses: ./.github/actions/web-prereq
       - name: Run build script
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
