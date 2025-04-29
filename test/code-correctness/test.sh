@@ -25,4 +25,4 @@ if ! command -v clang-tidy > /dev/null 2>&1; then
 fi
 
 set -e && set -x && \
-    python3 ${CODE_CORRECTNESS_TEST_DIR}/src/run.py
+    python3 ${CODE_CORRECTNESS_TEST_DIR}/src/run.py "$@"
