@@ -447,35 +447,22 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     mNativeWindow = nativeWindow;
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
-
     wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
     mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), extent, mAdapter,
             mDevice, flags);
     assert_invariant(mSwapChain);
-    FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
-                  "background components have been instantiated/selected, such as surface/screen, "
-                  "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
-               << utils::io::endl;
-#if !FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) && !defined(NDEBUG)
-    FWGPU_LOGI << "If the FILAMENT_BACKEND_DEBUG_FLAG variable were set with the " << utils::io::hex
-               << FWGPU_PRINT_SYSTEM << utils::io::dec
-               << " bit flag on during build time the application would print system details "
-                  "about the selected graphics device, surface, etc. To see this try "
-                  "rebuilding Filament with that flag, e.g. ./build.sh -x "
-               << FWGPU_PRINT_SYSTEM << " ..." << utils::io::endl;
-#endif
 }
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
         uint32_t height, uint64_t flags) {
      wgpu::Surface surface = nullptr;
-     mAdapter = mPlatform.requestHeadlessAdapter();
-     mDevice = mDevice = mPlatform.requestDevice(mAdapter);
+     mAdapter = mPlatform.requestAdapter(nullptr);
+     mDevice = mPlatform.requestDevice(mAdapter);
      mQueue = mDevice.GetQueue();
      wgpu::Extent2D extent = { width, height};
      mSwapChain = constructHandle<WebGPUSwapChain>(sch, extent, mAdapter,
             mDevice, flags);
-
+     assert_invariant(mSwapChain);
 }
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,

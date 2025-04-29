@@ -54,9 +54,9 @@ private:
     wgpu::Surface mSurface = {};
     wgpu::SurfaceConfiguration mConfig = {};
     wgpu::Device mDevice = {};
-    SwapChainType mType;
-    uint32_t mHeadlessWidth = 0;
-    uint32_t mHeadlessHeight = 0;
+    const SwapChainType mType;
+    const uint32_t mHeadlessWidth;
+    const uint32_t mHeadlessHeight;
 
 
 };

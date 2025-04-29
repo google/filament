@@ -256,6 +256,7 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
 wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView( wgpu::Extent2D const& currentSurfaceSize) {
 
     wgpu::SurfaceTexture surfaceTexture;
+    //TODO: eventually merge with texture handles
     wgpu::Texture renderTarget;
 
     if(isHeadless()){
