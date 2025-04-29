@@ -133,8 +133,8 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
             float shc0 = dot(sampleHorizonV0, viewDir);
             float shc1 = dot(sampleHorizonV1, viewDir);
 
-            horizonCos0 = shc0 > horizonCos0 ? lerp(shc0, horizonCos0, fallOff.x) : lerp(horizonCos0, shc0, materialParams.thickness);
-            horizonCos1 = shc1 > horizonCos1 ? lerp(shc1, horizonCos1, fallOff.y) : lerp(horizonCos1, shc1, materialParams.thickness);
+            horizonCos0 = shc0 > horizonCos0 ? lerp(shc0, horizonCos0, fallOff.x) : lerp(horizonCos0, shc0, materialParams.thicknessHeuristic);
+            horizonCos1 = shc1 > horizonCos1 ? lerp(shc1, horizonCos1, fallOff.y) : lerp(horizonCos1, shc1, materialParams.thicknessHeuristic);
         }
 
         float h0 = -fastACos(horizonCos1);

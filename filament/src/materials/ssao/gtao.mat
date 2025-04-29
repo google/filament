@@ -58,7 +58,7 @@ material {
         },
         {
             type : float,
-            name : thickness
+            name : thicknessHeuristic
         },
         {
             type : float,
