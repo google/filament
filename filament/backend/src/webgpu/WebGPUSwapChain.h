@@ -36,7 +36,7 @@ public:
 
     ~WebGPUSwapChain();
 
-    wgpu::TextureView getCurrentSurfaceTextureView(wgpu::Extent2D const&);
+    wgpu::TextureView getCurrentSurfaceTextureView(wgpu::Extent2D const&, wgpu::Device& device);
 
     void present();
 
@@ -53,7 +53,6 @@ private:
 
     wgpu::Surface mSurface = {};
     wgpu::SurfaceConfiguration mConfig = {};
-    wgpu::Device mDevice = {};
     const SwapChainType mType;
     const uint32_t mHeadlessWidth;
     const uint32_t mHeadlessHeight;

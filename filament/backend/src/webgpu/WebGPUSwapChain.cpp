@@ -209,7 +209,9 @@ namespace filament::backend {
 WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
         wgpu::Adapter& adapter, wgpu::Device& device, uint64_t flags)
     : mSurface(surface),
-      mType(SwapChainType::SURFACE)  {
+      mType(SwapChainType::SURFACE),
+      mHeadlessWidth(0),
+      mHeadlessHeight(0) {
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
         FWGPU_LOGW << "Failed to get WebGPU surface capabilities" << utils::io::endl;
@@ -225,8 +227,7 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
 
 WebGPUSwapChain::WebGPUSwapChain(wgpu::Extent2D const& extent,
         wgpu::Adapter& adapter, wgpu::Device& device, uint64_t flags)
-    : mDevice(device),
-      mType(SwapChainType::HEADLESS),
+    : mType(SwapChainType::HEADLESS),
       mHeadlessWidth(extent.width),
       mHeadlessHeight(extent.height){}
 
@@ -253,7 +254,7 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     }
 }
 
-wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView( wgpu::Extent2D const& currentSurfaceSize) {
+wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView( wgpu::Extent2D const& currentSurfaceSize, wgpu::Device& device) {
 
     wgpu::SurfaceTexture surfaceTexture;
     //TODO: eventually merge with texture handles
@@ -270,7 +271,7 @@ wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView( wgpu::Extent2D 
             .viewFormats = nullptr,
         };
 
-        renderTarget = mDevice.CreateTexture(&headlessTextureDesc);
+        renderTarget = device.CreateTexture(&headlessTextureDesc);
 
         wgpu::TextureViewDescriptor targetTextureViewDesc {
             .label = "headless rendered texture view",
