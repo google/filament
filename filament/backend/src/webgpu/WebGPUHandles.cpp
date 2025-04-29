@@ -267,10 +267,14 @@ WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
 
 WebGPUDescriptorSet::WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize)
     : mLayout(layout),
-      entries(layoutSize, wgpu::BindGroupEntry{}) {
+      entries(layoutSize, wgpu::BindGroupEntry{.buffer = nullptr, .sampler = nullptr, .textureView = nullptr}) {
     // Establish the size of entries based on the layout. This should be reliable and efficient.
 }
-WebGPUDescriptorSet::~WebGPUDescriptorSet() {}
+WebGPUDescriptorSet::~WebGPUDescriptorSet() {
+    mBindGroup = nullptr;
+    mLayout = nullptr;
+    entries.clear();
+}
 
 wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(const wgpu::Device& device) {
     if (mBindGroup) {

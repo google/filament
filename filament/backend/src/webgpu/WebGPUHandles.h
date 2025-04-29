@@ -141,7 +141,6 @@ public:
     WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
 
     const wgpu::Texture& getTexture() const { return texture; }
-    const wgpu::Sampler& getSampler() const { return sampler; }
     const wgpu::TextureView& getTexView() const { return texView; }
 
     // Public to allow checking for support of a texture format
@@ -153,10 +152,6 @@ private:
     // along with a sampler Current plan: Inherit the sampler and Texture to always exist (It is a
     // ref counted pointer) when making views. View is optional
     wgpu::Texture texture = nullptr;
-    // TODO: Adding this but not yet setting it up. Filament "Textures" are combined image samplers,
-    // rep both.
-    wgpu::Sampler sampler = nullptr;
-    // TODO: Not sure all the ways HwTexture is used. Overloading like this might be entirely wrong.
     wgpu::TextureView texView = nullptr;
     wgpu::TextureUsage fToWGPUTextureUsage(const filament::backend::TextureUsage& fUsage);
 };

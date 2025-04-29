@@ -972,24 +972,22 @@ void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
 
 void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
         backend::descriptor_binding_t binding, Handle<HwTexture> th, SamplerParams params) {
-    /*
     auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
     auto texture = handleCast<WGPUTexture>(th);
 
-    // TODO very high odds badd assumptions are in here about handling HwTexture. Revisit with more
-    // understanding. Right now assuming there is a wgpu::TextureView filled in
     if (!bindGroup->getIsLocked()) {
+        // Dawn will cache duplicate samplers, so we don't strictly need to maintain a cache.
+        //  Making a cache might save us minor perf by reducing param translation
+        auto sampler = makeSampler(params);
         // TODO making assumptions that size and offset mean the same thing here.
         wgpu::BindGroupEntry tEntry{ .binding = static_cast<uint32_t>(binding * 2),
-            .textureView = texture->texView };
+            .textureView = texture->getTexView() };
         bindGroup->addEntry(tEntry.binding, std::move(tEntry));
 
         wgpu::BindGroupEntry sEntry{ .binding = static_cast<uint32_t>(binding * 2 + 1),
-            .sampler = texture->sampler };
+            .sampler = sampler };
         bindGroup->addEntry(sEntry.binding, std::move(sEntry));
     }
-    //TODO Just the setup, this function stilll needs the rest of logic implemented
-     */
 }
 
 void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh, backend::descriptor_set_t set,
@@ -1001,5 +999,121 @@ void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh, backend::descr
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
 }
+wgpu::Sampler WebGPUDriver::makeSampler(SamplerParams const& params) {
+    wgpu::SamplerDescriptor desc;
+
+    desc.label = "TODO";
+    desc.addressModeU = fWrapModeToWAddressMode(params.wrapS);
+    desc.addressModeV = fWrapModeToWAddressMode(params.wrapR);
+    desc.addressModeW = fWrapModeToWAddressMode(params.wrapT);
+    switch (params.filterMag) {
+        case SamplerMagFilter::NEAREST: {
+            desc.magFilter = wgpu::FilterMode::Nearest;
+            break;
+        }
+        case SamplerMagFilter::LINEAR: {
+            desc.magFilter = wgpu::FilterMode::Linear;
+            break;
+        }
+    }
+    switch (params.filterMin) {
+        case SamplerMinFilter::NEAREST: {
+            desc.minFilter = wgpu::FilterMode::Nearest;
+            // Metal Driver uses an explicit not-mipmapped value webgpu lacks. Nearest should
+            // suffice
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+            break;
+        }
+        case SamplerMinFilter::LINEAR: {
+            desc.minFilter = wgpu::FilterMode::Linear;
+            // Metal Driver uses an explicit not-mipmapped value webgpu lacks. Nearest should
+            // suffice
+
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+            break;
+        }
+        case SamplerMinFilter::NEAREST_MIPMAP_NEAREST: {
+            desc.minFilter = wgpu::FilterMode::Nearest;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+            break;
+        }
+        case SamplerMinFilter::LINEAR_MIPMAP_NEAREST: {
+            desc.minFilter = wgpu::FilterMode::Linear;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+
+            break;
+        }
+        case SamplerMinFilter::NEAREST_MIPMAP_LINEAR: {
+            desc.minFilter = wgpu::FilterMode::Nearest;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+
+            break;
+        }
+        case SamplerMinFilter::LINEAR_MIPMAP_LINEAR: {
+            desc.minFilter = wgpu::FilterMode::Linear;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+            break;
+        }
+    }
+    switch (params.compareFunc) {
+        case SamplerCompareFunc::LE: {
+            desc.compare = wgpu::CompareFunction::LessEqual;
+            break;
+        }
+        case SamplerCompareFunc::GE: {
+            desc.compare = wgpu::CompareFunction::GreaterEqual;
+            break;
+        }
+        case SamplerCompareFunc::L: {
+            desc.compare = wgpu::CompareFunction::Less;
+            break;
+        }
+        case SamplerCompareFunc::G: {
+            desc.compare = wgpu::CompareFunction::Greater;
+            break;
+        }
+        case SamplerCompareFunc::E: {
+            desc.compare = wgpu::CompareFunction::Equal;
+            break;
+        }
+        case SamplerCompareFunc::NE: {
+            desc.compare = wgpu::CompareFunction::NotEqual;
+            break;
+        }
+        case SamplerCompareFunc::A: {
+            desc.compare = wgpu::CompareFunction::Always;
+            break;
+        }
+        case SamplerCompareFunc::N: {
+            desc.compare = wgpu::CompareFunction::Never;
+            break;
+        }
+    }
+
+    desc.maxAnisotropy = 1u << params.anisotropyLog2;
+
+
+    // Unused: Filament's compareMode, WGPU lodMinClamp/lodMaxClamp
+
+    return mDevice.CreateSampler();
+}
+wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& fWrapMode) {
+    switch (fWrapMode) {
+        case SamplerWrapMode::CLAMP_TO_EDGE: {
+            return wgpu::AddressMode::ClampToEdge;
+            break;
+        }
+        case SamplerWrapMode::REPEAT: {
+            return wgpu::AddressMode::Repeat;
+            break;
+        }
+        case SamplerWrapMode::MIRRORED_REPEAT: {
+            return wgpu::AddressMode::MirrorRepeat;
+            break;
+        }
+    }
+    return wgpu::AddressMode::Undefined;
+}
+
 
 } // namespace filament
