@@ -292,7 +292,7 @@ void WebGPUDescriptorSet::addEntry(uint index, wgpu::BindGroupEntry&& entry) {
     }
     // TODO: Putting some level of trust that Filament is not going to reuse indexes or go past the
     // layout index for efficiency. Add guards if wrong.
-    entries[index] = std::move(entry);
+    entries.emplace_back(std::move(entry));
 }
 // From createTextureR
 WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
