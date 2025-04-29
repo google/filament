@@ -171,7 +171,7 @@ public:
     bool isEdgeValid(Edge const* edge) const noexcept;
 
     //! export a graphviz view of the graph
-    void export_graphviz(utils::io::ostream& out, const char* name = nullptr);
+    void export_graphviz(utils::io::ostream& out, const char* name = nullptr) const noexcept;
 
     bool isAcyclic() const noexcept;
 
