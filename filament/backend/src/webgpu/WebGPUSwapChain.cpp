@@ -216,9 +216,9 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
         FWGPU_LOGW << "Failed to get WebGPU surface capabilities" << utils::io::endl;
     } else {
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-        printSurfaceCapabilitiesDetails(capabilities);
-#endif
+        #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+                printSurfaceCapabilitiesDetails(capabilities);
+        #endif
     }
     const bool useSRGBColorSpace = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0;
     initConfig(mConfig, device, capabilities, extent, useSRGBColorSpace);
@@ -243,9 +243,9 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     if (mConfig.width != currentSurfaceSize.width || mConfig.height != currentSurfaceSize.height) {
         mConfig.width = currentSurfaceSize.width;
         mConfig.height = currentSurfaceSize.height;
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-        printSurfaceConfiguration(mConfig);
-#endif
+        #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+                printSurfaceConfiguration(mConfig);
+        #endif
         FWGPU_LOGD << "Resizing to width " << mConfig.width << " height " << mConfig.height
                    << utils::io::endl;
         // TODO we may need to ensure no surface texture is flight when we do this. some

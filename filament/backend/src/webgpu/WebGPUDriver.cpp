@@ -455,10 +455,6 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
         uint32_t height, uint64_t flags) {
-     wgpu::Surface surface = nullptr;
-     mAdapter = mPlatform.requestAdapter(nullptr);
-     mDevice = mPlatform.requestDevice(mAdapter);
-     mQueue = mDevice.GetQueue();
      wgpu::Extent2D extent = { width, height};
      mSwapChain = constructHandle<WebGPUSwapChain>(sch, extent, mAdapter,
             mDevice, flags);
