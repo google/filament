@@ -144,6 +144,7 @@ public:
     const wgpu::Sampler& getSampler() const { return sampler; }
     const wgpu::TextureView& getTexView() const { return texView; }
 
+    // Public to allow checking for support of a texture format
     static wgpu::TextureFormat fToWGPUTextureFormat(const filament::backend::TextureFormat& fUsage);
 
 private:
