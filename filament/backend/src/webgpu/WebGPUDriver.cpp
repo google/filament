@@ -923,7 +923,7 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
             pipelineState.polygonOffset, pipelineState.primitiveType, mSwapChain->getColorFormat(),
             mSwapChain->getDepthFormat());
     // TODO: uncomment once we have a valid pipeline to set
-    // mRenderPassEncoder.SetPipeline(pipeline);
+    mRenderPassEncoder.SetPipeline(pipeline);
 }
 
 void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -943,6 +943,7 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    mRenderPassEncoder.DrawIndexed(indexOffset, indexCount, instanceCount, 0);
 }
 
 void WebGPUDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,

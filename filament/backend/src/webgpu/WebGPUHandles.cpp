@@ -220,8 +220,8 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 samplerEntry.binding = fEntry.binding * 2 + 1;
                 samplerEntry.visibility = wEntry.visibility;
                 // We are simply hoping that undefined and defaults suffices here.
-                samplerEntry.sampler.type = wgpu::SamplerBindingType::Undefined;
-                wEntry.texture.sampleType = wgpu::TextureSampleType::Undefined;
+                samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering;
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
                 break;
             }
             case DescriptorType::UNIFORM_BUFFER: {
