@@ -410,8 +410,8 @@ struct AmbientOcclusionOptions {
     Ssct ssct;                           // %codegen_skip_javascript% %codegen_java_flatten%
 
     struct Gtao {
-        int sampleSliceCount = 4;        //!< TODO
-        int sampleStepsPerSlice = 4;     //!< TODO
+        float sampleSliceCount = 4.0f;        //!< TODO
+        float sampleStepsPerSlice = 4.0f;     //!< TODO
         float thicknessHeuristic = 0.004f;//!< TODO
     };
     Gtao gtao;

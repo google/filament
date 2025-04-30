@@ -842,12 +842,20 @@ void ViewerGui::updateUserInterface() {
 
         switch (ssao.aoType) {
             case AmbientOcclusionOptions::AOType::SAO:
-                ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f, (float)M_PI_4);
+                ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f,
+                        (float) M_PI_4);
                 break;
             case AmbientOcclusionOptions::AOType::GTAO:
-                ImGui::SliderInt("Slice Count", &ssao.gtao.sampleSliceCount, 1, 10);
-            ImGui::SliderInt("Steps Per Slice", &ssao.gtao.sampleStepsPerSlice, 1, 4);
-            break;
+                int sliceCount = (int) ssao.gtao.sampleSliceCount;
+                int stepsPerSlice = (int) ssao.gtao.sampleSliceCount;
+
+                ImGui::SliderFloat("Radius", &ssao.radius, 0.1f, 10.0f);
+                ImGui::SliderInt("Slice Count", &sliceCount, 1, 10);
+                ImGui::SliderInt("Steps Per Slice", &stepsPerSlice, 1, 4);
+
+                ssao.gtao.sampleSliceCount = sliceCount;
+                ssao.gtao.sampleSliceCount = stepsPerSlice;
+                break;
             default:
                 break;
         }
