@@ -16,6 +16,7 @@
 
 #include "webgpu/WebGPUDriver.h"
 
+#include "WebGPUPipelineCreation.h"
 #include "WebGPUSwapChain.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -24,18 +25,20 @@
 #include "private/backend/Dispatcher.h"
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <backend/TargetBufferInfo.h>
 
 #include <math/mat3.h>
 #include <utils/CString.h>
+#include <utils/Panic.h>
 #include <utils/ostream.h>
 
 #include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <sstream>
 #include <string_view>
 #include <utility>
@@ -859,6 +862,44 @@ void WebGPUDriver::blit(
 }
 
 void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
+    const auto* program = handleCast<WGPUProgram>(pipelineState.program);
+    assert_invariant(program);
+    assert_invariant(program->computeShaderModule == nullptr &&
+                     "WebGPU backend does not (yet) support compute pipelines.");
+    FILAMENT_CHECK_POSTCONDITION(program->vertexShaderModule)
+            << "WebGPU backend requires a vertex shader module for a render pipeline";
+    std::array<wgpu::BindGroupLayout, MAX_DESCRIPTOR_SET_COUNT> bindGroupLayouts{};
+    assert_invariant(bindGroupLayouts.size() >= pipelineState.pipelineLayout.setLayout.size());
+    size_t bindGroupLayoutCount = 0;
+    for (size_t i = 0; i < bindGroupLayouts.size(); i++) {
+        const auto handle = pipelineState.pipelineLayout.setLayout[bindGroupLayoutCount];
+        if (handle.getId() == HandleBase::nullid) {
+            continue;
+        }
+        bindGroupLayouts[bindGroupLayoutCount++] =
+                handleCast<WebGPUDescriptorSetLayout>(handle)->getLayout();
+    }
+    std::stringstream layoutLabelStream;
+    layoutLabelStream << program->name.c_str() << " layout";
+    const auto layoutLabel = layoutLabelStream.str();
+    const wgpu::PipelineLayoutDescriptor layoutDescriptor{
+        .label = wgpu::StringView(layoutLabel),
+        .bindGroupLayoutCount = bindGroupLayoutCount,
+        .bindGroupLayouts = bindGroupLayouts.data()
+        // TODO investigate immediateDataRangeByteSize
+    };
+    const wgpu::PipelineLayout layout = mDevice.CreatePipelineLayout(&layoutDescriptor);
+    FILAMENT_CHECK_POSTCONDITION(layout)
+            << "Failed to create wgpu::PipelineLayout for render pipeline for "
+            << layoutDescriptor.label;
+    auto const* vertexBufferInfo = handleCast<WGPUVertexBufferInfo>(pipelineState.vertexBufferInfo);
+    assert_invariant(vertexBufferInfo);
+    const wgpu::RenderPipeline pipeline = createWebGPURenderPipeline(mDevice, *program,
+            *vertexBufferInfo, layout, pipelineState.rasterState, pipelineState.stencilState,
+            pipelineState.polygonOffset, pipelineState.primitiveType, mSwapChain->getColorFormat(),
+            mSwapChain->getDepthFormat());
+    // TODO: uncomment once we have a valid pipeline to set
+    // mRenderPassEncoder.SetPipeline(pipeline);
 }
 
 void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
