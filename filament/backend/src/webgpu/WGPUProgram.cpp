@@ -125,6 +125,34 @@ namespace {
     return module;
 }
 
+wgpu::StringView getSpecConstantStringValue(uint32_t value) {
+    switch (value) {
+        case 0:
+            return "BACKEND_FEATURE_LEVEL_hack";
+        case 1:
+            return "CONFIG_MAX_INSTANCES_hack";
+        case 2:
+            return "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND_hack";
+        case 3:
+            return "CONFIG_SRGB_SWAPCHAIN_EMULATION_hack";
+        case 4:
+            return "CONFIG_FROXEL_BUFFER_HEIGHT_hack";
+        case 5:
+            return "CONFIG_POWER_VR_SHADER_WORKAROUNDS_hack";
+        case 6:
+            return "CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP_hack";
+        case 7:
+            return "CONFIG_DEBUG_FROXEL_VISUALIZATION_hack";
+        case 8:
+            return "CONFIG_STEREO_EYE_COUNT_hack";
+        case 9:
+            return "CONFIG_SH_BANDS_COUNT_hack";
+        case 10:
+            return "CONFIG_SHADOW_SAMPLING_METHOD_hack";
+    }
+    return "";
+}
+
 std::vector<wgpu::ConstantEntry> convertConstants(
         utils::FixedCapacityVector<filament::backend::Program::SpecializationConstant> const&
                 constantsInfo) {
@@ -132,7 +160,7 @@ std::vector<wgpu::ConstantEntry> convertConstants(
     for (size_t i = 0; i < constantsInfo.size(); i++) {
         filament::backend::Program::SpecializationConstant const& specConstant = constantsInfo[i];
         wgpu::ConstantEntry& constantEntry = constants[i];
-        constantEntry.key = wgpu::StringView(std::to_string(specConstant.id));
+        constantEntry.key = getSpecConstantStringValue(specConstant.id);
         if (auto* v = std::get_if<int32_t>(&specConstant.value)) {
             constantEntry.value = static_cast<double>(*v);
         } else if (auto* f = std::get_if<float>(&specConstant.value)) {
