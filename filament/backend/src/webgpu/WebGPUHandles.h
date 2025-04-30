@@ -130,6 +130,7 @@ private:
     wgpu::BindGroupLayout mLayout;
     std::vector<wgpu::BindGroupEntry> entries;
     wgpu::BindGroup mBindGroup;
+    std::unordered_map<uint, wgpu::BindGroupEntry> entriesMap;
 };
 
 class WGPUTexture : public HwTexture {
