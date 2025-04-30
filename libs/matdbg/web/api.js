@@ -39,6 +39,9 @@ async function fetchShaderCode(matid, backend, language, index) {
         case "metal":
             query = `type=${language}&metalindex=${index}`;
             break;
+        case "webgpu":
+            query = `type=${language}&wgpuindex=${index}`;
+            break;
     }
     return await _fetchText(`api/shader?matid=${matid}&${query}`);
 }
@@ -88,6 +91,7 @@ function rebuildMaterial(materialId, backend, shaderIndex, editedText) {
             break;
         case "vulkan": api = 2; break;
         case "metal":  api = 3; break;
+        case "webgpu":  api = 4; break;
     }
     return new Promise((ok, fail) => {
         const req = new XMLHttpRequest();
