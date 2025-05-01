@@ -192,8 +192,6 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         wgpu::Device const& device) {
     assert_invariant(device);
 
-    // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
-    // debugging. For now, hack an incrementing value.
     static int layoutNum = 0;
 
     uint samplerCount =
@@ -205,70 +203,54 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 
     std::vector<wgpu::BindGroupLayoutEntry> wEntries;
     wEntries.reserve(layout.bindings.size() + samplerCount);
-    uint indexTracker = 0;
+    uint indexTracker = 0; // Tracks the current index within wEntries vector
     for (auto fEntry: layout.bindings) {
         auto& wEntry = wEntries.emplace_back();
         wEntry.visibility = filamentStageToWGPUStage(fEntry.stageFlags);
         wEntry.binding = fEntry.binding * 2;
 
         switch (fEntry.type) {
-            // TODO Metal treats these the same. Is this fine?
             case DescriptorType::SAMPLER_EXTERNAL:
             case DescriptorType::SAMPLER: {
-                // Sampler binding is 2n+1 due to split.
                 auto& samplerEntry = wEntries.emplace_back();
                 samplerEntry.binding = fEntry.binding * 2 + 1;
                 samplerEntry.visibility = wEntry.visibility;
-                // We are simply hoping that undefined and defaults suffices here.
-                samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering;
-                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
+                samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering; // Example default
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;      // Example default
                 typeVec.push_back({fEntry.binding, bindType::TEX});
-
-                bindingToIndex[fEntry.binding] = indexTracker++;
-                //Thinking to just bump the tracker twice here, then do samp+1 logic to handle it
-                indexTracker++;
+                bindingToIndex[fEntry.binding] = indexTracker; // Store index of the texture entry
+                indexTracker += 2; // Account for both texture and sampler entries added
                 break;
             }
             case DescriptorType::UNIFORM_BUFFER: {
                 wEntry.buffer.hasDynamicOffset =
                         any(fEntry.flags & DescriptorFlags::DYNAMIC_OFFSET);
                 wEntry.buffer.type = wgpu::BufferBindingType::Uniform;
-                // TODO: Ideally we fill minBindingSize
                 typeVec.push_back({fEntry.binding, bindType::BUFF});
-                bindingToIndex[fEntry.binding] = indexTracker++;
-
+                bindingToIndex[fEntry.binding] = indexTracker; // Store index of the buffer entry
+                indexTracker += 1; // Account for buffer entry added
                 break;
             }
 
             case DescriptorType::INPUT_ATTACHMENT: {
-                // TODO: support INPUT_ATTACHMENT. Metal does not currently.
                 PANIC_POSTCONDITION("Input Attachment is not supported");
                 break;
             }
-
             case DescriptorType::SHADER_STORAGE_BUFFER: {
-                // TODO: Vulkan does not support this, can we?
                 PANIC_POSTCONDITION("Shader storage is not supported");
                 break;
             }
         }
-
-        // Currently flags are only used to specify dynamic offset.
-
-        // UNUSED
-        // fEntry.count
+        // fEntry.count is unused currently
     }
     std::string label =  "layout_"+ layout.label + std::to_string(++layoutNum) ;
     wgpu::BindGroupLayoutDescriptor layoutDescriptor{
-        // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
-        // debugging. For now, hack an incrementing value.
-        .label{label},
+        .label{label.c_str()}, // Use .c_str() if label needs to be const char*
         .entryCount = wEntries.size(),
         .entries = wEntries.data()
     };
     printf("===R Creating layout %i with %lu entries\n", layoutNum, wEntries.size());
     layoutNumI = layoutNum;
-    // TODO Do we need to defer this until we have more info on textures and samplers??
     mLayoutSize = wEntries.size();
     mLayout = device.CreateBindGroupLayout(&layoutDescriptor);
 }
@@ -277,22 +259,44 @@ WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
 
 WebGPUDescriptorSet::WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize, std::unordered_map<uint, uint> bindingToIndex, std::vector<std::pair<uint, bindType>> typeVec, dummyBundle& bundle)
     : mLayout(layout),
-    entries(layoutSize, wgpu::BindGroupEntry{.buffer = nullptr, .sampler = nullptr, .textureView = nullptr}),
-      bindingToIndex(bindingToIndex)
+      entries(layoutSize, wgpu::BindGroupEntry{.buffer = nullptr, .sampler = nullptr, .textureView = nullptr}), // Initialize vector with correct size
+      bindingToIndex(bindingToIndex) // Store the map for use here and in addEntry
 {
-    for(uint i=0; i < layoutSize; ++i){
-        const auto& type = typeVec[i];
-        entries[i].binding = type.first*2;
-        if(type.second == bindType::BUFF){
-            entries[i].buffer = bundle.buffer;
-        } else if(type.second == bindType::TEX){
-            entries[i].textureView = bundle.textureView;
-            entries[i+1].binding=type.first*2+1;
-            entries[i+1].sampler=bundle.sampler;
-            ++i;
-        }
+    // Iterate based on the actual Filament bindings described in typeVec
+    // This fixes the potential out-of-bounds access on typeVec
+    for (const auto& typeInfo : typeVec) {
+         uint originalBinding = typeInfo.first;
+         bindType bindingKind = typeInfo.second;
+
+         // Use the map to find the correct starting index in 'entries'
+         // This fixes using 'i' directly as the index into 'entries'
+         // We assume originalBinding exists in the map (use .at() for minimal checking, or [] if certain)
+         // Using .at() throws if key not found, indicating error in layout logic.
+         uint entryIndex = this->bindingToIndex.at(originalBinding);
+
+         if (bindingKind == bindType::BUFF) {
+             // Assign buffer entry using the calculated index
+             entries[entryIndex].binding = originalBinding * 2;
+             entries[entryIndex].buffer = bundle.buffer;
+             // Minimal change: Assume offset/size defaults or are handled later
+             entries[entryIndex].offset = 0;
+             entries[entryIndex].size = WGPU_WHOLE_SIZE;
+         } else if (bindingKind == bindType::TEX) {
+             // Assign texture entry using the calculated index
+             entries[entryIndex].binding = originalBinding * 2;
+             entries[entryIndex].textureView = bundle.textureView;
+
+             // Assign sampler entry at the next index
+             // This index is guaranteed to be valid because the layout reserved space for it
+             uint samplerEntryIndex = entryIndex + 1; // Calculate sampler index explicitly
+             entries[samplerEntryIndex].binding = originalBinding * 2 + 1;
+             entries[samplerEntryIndex].sampler = bundle.sampler;
+
+             // Removed the manual '++i', fixing the loop control and
+             // preventing potential out-of-bounds access on entries[i+1]
+         }
     }
-    // Establish the size of entries based on the layout. This should be reliable and efficient.
+    // entries vector is now pre-populated with dummy objects at correct bindings
 }
 WebGPUDescriptorSet::~WebGPUDescriptorSet() {
     mBindGroup = nullptr;
