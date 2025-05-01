@@ -15,7 +15,7 @@
  */
 
 /*
- * This is our implementation of SAO -- it's not standalone because it uses materialParams
+ * This is our implementation of GTAO -- it's not standalone because it uses materialParams
  * directly. Therefore it must be included in *.mat file that has all these parameters.
  * The main reason for using a separate file is to be able to have several version of the
  * code with only minor changes.
