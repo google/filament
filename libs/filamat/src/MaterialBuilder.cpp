@@ -1610,15 +1610,9 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     // User texture parameters
     container.push<MaterialSamplerInterfaceBlockChunk>(info.sib);
 
-
-    DescriptorSetLayout const perViewDescriptorSetLayout =
-            descriptor_sets::getPerViewDescriptorSetLayout(
-            mMaterialDomain, mVariantFilter,
-            info.isLit || info.hasShadowMultiplier, info.reflectionMode, info.refractionMode);
-
     // Descriptor layout and descriptor name/binding mapping
-    container.push<MaterialDescriptorBindingsChuck>(info.sib, perViewDescriptorSetLayout);
-    container.push<MaterialDescriptorSetLayoutChunk>(info.sib, perViewDescriptorSetLayout);
+    container.push<MaterialDescriptorBindingsChuck>(info.sib);
+    container.push<MaterialDescriptorSetLayoutChunk>(info.sib);
 
     // User constant parameters
     FixedCapacityVector<MaterialConstant> constantsEntry(mConstants.size());

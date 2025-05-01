@@ -44,8 +44,8 @@ public:
 
     struct Descriptor {
         utils::CString name;
-        backend::DescriptorType type;
-        backend::descriptor_binding_t binding;
+        DescriptorType type;
+        descriptor_binding_t binding;
     };
 
     struct SpecializationConstant {
