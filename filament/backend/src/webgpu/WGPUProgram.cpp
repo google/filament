@@ -125,7 +125,10 @@ namespace {
     return module;
 }
 
-wgpu::StringView getSpecConstantStringValue(uint32_t value) {
+// This is a 1 to 1 mapping of the ReservedSpecializationConstants enum in filament/EngineEnums.h
+// The _hack is a workaround until https://issues.chromium.org/issues/42250586 is resolved
+// This workaround is the same one being used on the generateSpecializationConstant() function
+constexpr wgpu::StringView getSpecConstantStringValue(uint32_t value) {
     switch (value) {
         case 0:
             return "BACKEND_FEATURE_LEVEL_hack";
@@ -149,8 +152,9 @@ wgpu::StringView getSpecConstantStringValue(uint32_t value) {
             return "CONFIG_SH_BANDS_COUNT_hack";
         case 10:
             return "CONFIG_SHADOW_SAMPLING_METHOD_hack";
+        default:
+            PANIC_POSTCONDITION("Invalid spect constant value passed: %u", value);
     }
-    return "";
 }
 
 std::vector<wgpu::ConstantEntry> convertConstants(
