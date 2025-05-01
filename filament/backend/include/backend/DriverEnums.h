@@ -1455,6 +1455,11 @@ enum class Workaround : uint16_t {
     DISABLE_BLIT_INTO_TEXTURE_ARRAY,
     // Multiple workarounds needed for PowerVR GPUs
     POWER_VR_SHADER_WORKAROUNDS,
+    // Some browsers, such as Firefox on Mac, struggle with slow shader compile/link times when
+    // creating programs for the default material, leading to startup stutters. This workaround
+    // prevents these stutters by not precaching depth variants of the default material for those
+    // particular browsers.
+    DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL,
 };
 
 using StereoscopicType = backend::Platform::StereoscopicType;

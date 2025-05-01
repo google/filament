@@ -49,7 +49,7 @@
 </tr>
 <tr>
 <td align="left"><a href="#EntityManager">EntityManager</a></td>
-<td align="left">Singleton used for constructing entities in Filament&#x27;s ECS.</td>
+<td align="left">Singleton used for constructing entities in Filament's ECS.</td>
 </tr>
 <tr>
 <td align="left"><a href="#Frustum">Frustum</a></td>
@@ -89,7 +89,7 @@
 </tr>
 <tr>
 <td align="left"><a href="#Renderer">Renderer</a></td>
-<td align="left">Represents the platform&#x27;s native window.</td>
+<td align="left">Represents the platform's native window.</td>
 </tr>
 <tr>
 <td align="left"><a href="#Scene">Scene</a></td>
@@ -97,7 +97,7 @@
 </tr>
 <tr>
 <td align="left"><a href="#SwapChain">SwapChain</a></td>
-<td align="left">Represents the platform&#x27;s native rendering surface.</td>
+<td align="left">Represents the platform's native rendering surface.</td>
 </tr>
 <tr>
 <td align="left"><a href="#Texture">Texture</a></td>
@@ -604,11 +604,11 @@
 </ul>
 <p>To create an entity with no components, use <a href="#EntityManager">EntityManager</a>.
 TODO: It would be better to expose these as JS numbers rather than as JS objects.
-This would also be more consistent with Filament&#x27;s Java bindings.</p>
+This would also be more consistent with Filament's Java bindings.</p>
 </div>
 <div class='classdoc'>
 <h2>class <a id='EntityManager' href='#EntityManager'>EntityManager</a></h2>
-<p>Singleton used for constructing entities in Filament&#x27;s ECS.</p>
+<p>Singleton used for constructing entities in Filament's ECS.</p>
 <ul>
 <li><strong>entityManager.create()</strong>
 <ul>
@@ -742,7 +742,7 @@ properties.</p>
 </ul>
 </li>
 </ul>
-<p>Be sure to call the instance&#x27;s <code>delete</code> method when you&#x27;re done with it.</p>
+<p>Be sure to call the instance's <code>delete</code> method when you're done with it.</p>
 </div>
 <div class='classdoc'>
 <h2>class <a id='PixelBufferDescriptor' href='#PixelBufferDescriptor'>PixelBufferDescriptor</a></h2>
@@ -780,11 +780,11 @@ properties.</p>
 </ul>
 </li>
 </ul>
-<p>Be sure to call the instance&#x27;s <code>delete</code> method when you&#x27;re done with it.</p>
+<p>Be sure to call the instance's <code>delete</code> method when you're done with it.</p>
 </div>
 <div class='classdoc'>
 <h2>class <a id='Renderer' href='#Renderer'>Renderer</a></h2>
-<p>Represents the platform&#x27;s native window.</p>
+<p>Represents the platform's native window.</p>
 <ul>
 <li><strong>renderer.render(swapChain, view)</strong>
 <ul>
@@ -803,7 +803,7 @@ properties.</p>
 </div>
 <div class='classdoc'>
 <h2>class <a id='SwapChain' href='#SwapChain'>SwapChain</a></h2>
-<p>Represents the platform&#x27;s native rendering surface.</p>
+<p>Represents the platform's native rendering surface.</p>
 <p>See also the <a href="#Engine">Engine</a> methods <code>createSwapChain</code> and <code>destroySwapChain</code>.</p>
 </div>
 <div class='classdoc'>
@@ -847,7 +847,7 @@ properties.</p>
 </ul>
 </li>
 </ul>
-<p>Be sure to call the instance&#x27;s <code>delete</code> method when you&#x27;re done with it.</p>
+<p>Be sure to call the instance's <code>delete</code> method when you're done with it.</p>
 </div>
 <div class='classdoc'>
 <h2>class <a id='VertexBuffer' href='#VertexBuffer'>VertexBuffer</a></h2>
@@ -944,7 +944,7 @@ See also the <a href="#Engine">Engine</a> methods <code>createView</code> and <c
 <ul>
 <li><strong>assets</strong>
 <ul>
-<li>Array of strings containing URL&#x27;s of required assets.</li>
+<li>Array of strings containing URL's of required assets.</li>
 </ul>
 </li>
 <li><strong>onDone</strong>
@@ -954,7 +954,7 @@ See also the <a href="#Engine">Engine</a> methods <code>createView</code> and <c
 </li>
 <li><strong>onFetched</strong>
 <ul>
-<li>optional callback that&#x27;s invoked after each asset is downloaded.</li>
+<li>optional callback that's invoked after each asset is downloaded.</li>
 </ul>
 </li>
 </ul>
@@ -1001,7 +1001,7 @@ useful for compressed textures. For example, some platforms accept ETC and other
 <ul>
 <li><strong>assets</strong>
 <ul>
-<li>Array of strings containing URL&#x27;s of required assets.</li>
+<li>Array of strings containing URL's of required assets.</li>
 </ul>
 </li>
 <li><strong>onready</strong>
@@ -1010,12 +1010,12 @@ useful for compressed textures. For example, some platforms accept ETC and other
 </ul>
 </li>
 </ul>
-<p>All JavaScript clients must call the init function, passing in a list of asset URL&#x27;s and a
+<p>All JavaScript clients must call the init function, passing in a list of asset URL's and a
 callback. This callback gets invoked only after all assets have been downloaded and the Filament
-WebAssembly module has been loaded. Clients should only pass asset URL&#x27;s that absolutely must
+WebAssembly module has been loaded. Clients should only pass asset URL's that absolutely must
 be ready at initialization time.
 When the callback is called, each downloaded asset is available in the <code>Filament.assets</code> global
-object, which contains a mapping from URL&#x27;s to Uint8Array objects.</p>
+object, which contains a mapping from URL's to Uint8Array objects.</p>
 </div>
 <div class='funcdoc'>
 <h2>function <a id='loadMathExtensions' href='#loadMathExtensions'>loadMathExtensions</a>()</h2>

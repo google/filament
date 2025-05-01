@@ -328,6 +328,11 @@ public:
         // bugs or performance issues.
         bool force_feature_level0;
 
+        // Some browsers, such as Firefox on Mac, struggle with slow shader compile/link times when
+        // creating programs for the default material, leading to startup stutters. This workaround
+        // prevents these stutters by not precaching depth variants of the default material for
+        // those particular browsers.
+        bool disable_depth_precache_for_default_material;
 
     } bugs = {};
 
@@ -568,6 +573,9 @@ private:
                     ""},
             {   bugs.force_feature_level0,
                     "force_feature_level0",
+                    ""},
+            {   bugs.disable_depth_precache_for_default_material,
+                    "disable_depth_precache_for_default_material",
                     ""},
     }};
 
