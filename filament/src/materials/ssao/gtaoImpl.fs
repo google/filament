@@ -107,7 +107,6 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
         float horizonCos0 = -1.0;
         float horizonCos1 = -1.0;
-        // Find the value of the cosine value of horizon angles theta1 and theta2
         for (float j = 0.0; j < materialParams.stepsPerSlice; j += 1.0) {
             // At least move 1 pixel forward in the screen-space
             vec2 sampleOffset = max((j + initialRayStep)*stepRadius, 1.0 + j) * omega;
