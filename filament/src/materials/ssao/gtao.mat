@@ -149,7 +149,7 @@ fragment {
                 materialParams.positionParams);
 
         float occlusion = 0.0;
-        vec3 bentNormal; // will be discarded
+        vec3 bentNormal;
 
         if (materialParams.intensity > 0.0) {
             groundTruthAmbientOcclusion(occlusion, bentNormal, uv, origin, normal);

@@ -25,25 +25,34 @@
 
 const float kLog2LodRate = 3.0;
 
+// Ambient Occlusion, largely inspired from:
+// "Practical Real-Time Strategies for Accurate Indirect Occlusion" by Jimenez et al.
+// https://github.com/GameTechDev/XeGTAO
+// https://github.com/MaxwellGengYF/Unity-Ground-Truth-Ambient-Occlusion
+
 float integrateArcCosWeight(float h, float n) {
-    float Arc = -cos(2.0 * h - n) + cos(n) + 2.0 * h * sin(n);
-    return 0.25 * Arc;
+    float arc = -cos(2.0 * h - n) + cos(n) + 2.0 * h * sin(n);
+    return 0.25 * arc;
 }
 
+// https://blog.selfshadow.com/publications/s2016-shading-course/activision/s2016_pbs_activision_occlusion.pdf slide 93
 float spatialDirectionNoise(float2 uv) {
     int2 position = int2(uv * materialParams.resolution.xy);
 	return (1.0/16.0) * (float(((position.x + position.y) & 3) << 2) + float(position.x & 3));
 }
 
+// https://blog.selfshadow.com/publications/s2016-shading-course/activision/s2016_pbs_activision_occlusion.pdf slide 93
 float spatialOffsetsNoise(float2 uv) {
 	int2 position = int2(uv * materialParams.resolution.xy);
 	return 0.25 * float((position.y - position.x) & 3);
 }
 
+// http://h14s.p5r.org/2012/09/0x5f3759df.html, [Drobot2014a] Low Level Optimizations for GCN, https://blog.selfshadow.com/publications/s2016-shading-course/activision/s2016_pbs_activision_occlusion.pdf slide 63
 float fastSqrt(float x) {
     return intBitsToFloat(0x1fbd1df5 + (floatBitsToInt(x) >> 1));
 }
 
+// input [-1, 1] and output [0, PI], from https://seblagarde.wordpress.com/2014/12/01/inverse-trigonometric-functions-gpu-optimization-for-amd-gcn-architecture/
 float fastACos(float inX) {
     float x = abs(inX);
     float res = -0.156583 * x + HALF_PI;
@@ -56,15 +65,16 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
     vec2 uvSamplePos = uv;
     highp vec3 viewDir = normalize(-origin);
     highp float ssRadius = -(materialParams.projectionScaleRadius / origin.z);
-    ssRadius = max(min(ssRadius, 512.0), materialParams.sliceCount);
 
     float noiseOffset = spatialOffsetsNoise(uv);
     float noiseDirection = spatialDirectionNoise(uv);
 
     float initialRayStep = fract(noiseOffset);
 
-    float visibility = 0.0;
+    // The distance we want to move forward for each step
     float stepRadius = ssRadius / (materialParams.stepsPerSlice + 1.0);
+
+    float visibility = 0.0;
     for (float i = 0.0; i < materialParams.sliceCount; i += 1.0) {
         float slice = (i + noiseDirection) / materialParams.sliceCount;
         float phi = slice * PI;
@@ -72,19 +82,25 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         float sinPhi = sin(phi);
         vec2 omega = vec2(cosPhi, sinPhi);
 
-        vec3 directionV = vec3(cosPhi, sinPhi, 0.0);
-        vec3 orthoDirectionV = directionV - (dot(directionV, viewDir)*viewDir);
-        vec3 axisV = normalize(cross(orthoDirectionV, viewDir));
-        vec3 projNormalV = normal - axisV * dot(normal, axisV);
+        // Calculate the direction of the current slice
+        vec3 direction = vec3(cosPhi, sinPhi, 0.0);
+        // Project direction onto the plane orthogonal to viewDir.
+        vec3 orthoDirection = direction - (dot(direction, viewDir)*viewDir);
+        // axis is orthogonal to direction and viewDir (basically the normal of the slice plane)
+        // Used to define projectedNormal
+        vec3 axis = normalize(cross(orthoDirection, viewDir));
+        // Project the normal onto the slice plane
+        vec3 projNormal = normal - axis * dot(normal, axis);
 
-        float signNorm = sign(dot(orthoDirectionV, projNormalV));
-        float projNormalLength = length(projNormalV);
-        float cosNorm = saturate(dot(projNormalV, viewDir) / projNormalLength);
+        float signNorm = sign(dot(orthoDirection, projNormal));
+        float projNormalLength = length(projNormal);
+        float cosNorm = saturate(dot(projNormal, viewDir) / projNormalLength);
 
         float n = signNorm * fastACos(cosNorm);
 
         float horizonCos0 = -1.0;
         float horizonCos1 = -1.0;
+        // Find the value of the cosine value of horizon angles theta1 and theta2
         for (float j = 0.0; j < materialParams.stepsPerSlice; j += 1.0) {
             // At least move 1 pixel forward in the screen-space
             vec2 sampleOffset = max((j + initialRayStep)*stepRadius, 1.0 + j) * omega;
@@ -92,14 +108,16 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
             float level = clamp(floor(log2(sampleOffsetLength)) - kLog2LodRate, 0.0, float(materialParams.maxLevel));
 
-            sampleOffset *= materialParams.resolution.zw;
+            vec2 sampleOffsetUV = sampleOffset * materialParams.resolution.zw;
 
-            vec2 sampleScreenPos0 = uv + sampleOffset;
+            vec2 sampleScreenPos0 = uv + sampleOffsetUV;
+            // Sample the depth and use it to reconstruct the view space position
             highp float sampleDepth0 = sampleDepthLinear(materialParams_depth, sampleScreenPos0, level);
             highp vec3 samplePos0 = computeViewSpacePositionFromDepth(sampleScreenPos0, sampleDepth0,
                 materialParams.positionParams);
 
-            float2 sampleScreenPos1 = uv - sampleOffset;
+            float2 sampleScreenPos1 = uv - sampleOffsetUV;
+            // Sample the depth and use it to reconstruct the view space position
             highp float sampleDepth1 = sampleDepthLinear(materialParams_depth, sampleScreenPos1, level);
             highp vec3 samplePos1 = computeViewSpacePositionFromDepth(sampleScreenPos1, sampleDepth1,
                 materialParams.positionParams);
@@ -115,9 +133,12 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
             float wsRadius = materialParams.radius;
             vec2 fallOff = saturate(float2(sampleDist0*sampleDist0, sampleDist1*sampleDist1) * (2.0/(wsRadius*wsRadius)));
 
+            // sample horizon cos
             float shc0 = dot(sampleHorizonV0, viewDir);
             float shc1 = dot(sampleHorizonV1, viewDir);
 
+            // If the new sample value is greater then the current one, update the value with some fallOff.
+            // Otherwise, apply thicknessHeuristic.
             horizonCos0 = shc0 > horizonCos0 ? mix(shc0, horizonCos0, fallOff.x) : mix(horizonCos0, shc0, materialParams.thicknessHeuristic);
             horizonCos1 = shc1 > horizonCos1 ? mix(shc1, horizonCos1, fallOff.y) : mix(horizonCos1, shc1, materialParams.thicknessHeuristic);
         }
@@ -127,8 +148,10 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         h0 = n + clamp(h0-n, -HALF_PI, HALF_PI);
         h1 = n + clamp(h1-n, -HALF_PI, HALF_PI);
 
-        float angle = 0.5 * (h0 + h1);
-        bentNormal += viewDir * cos(angle) - axisV * sin(angle);
+        if (materialConstants_bentNormals) {
+            float angle = 0.5 * (h0 + h1);
+            bentNormal += viewDir * cos(angle) - axis * sin(angle);
+        }
 
         visibility += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
     }
