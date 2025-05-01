@@ -157,6 +157,7 @@ std::vector<wgpu::ConstantEntry> convertConstants(
         utils::FixedCapacityVector<filament::backend::Program::SpecializationConstant> const&
                 constantsInfo) {
     std::vector<wgpu::ConstantEntry> constants(constantsInfo.size());
+    return constants;
     for (size_t i = 0; i < constantsInfo.size(); i++) {
         filament::backend::Program::SpecializationConstant const& specConstant = constantsInfo[i];
         wgpu::ConstantEntry& constantEntry = constants[i];
@@ -182,6 +183,8 @@ WGPUProgram::WGPUProgram(wgpu::Device& device, Program& program)
               ShaderStage::FRAGMENT)),
       computeShaderModule(createShaderModule(device, name.c_str_safe(), program.getShadersSource(),
               ShaderStage::COMPUTE)),
-      constants(convertConstants(program.getSpecializationConstants())) {}
+      constants(convertConstants(program.getSpecializationConstants())) {
+    auto test = program.getShadersSource();
+}
 
 }// namespace filament::backend
