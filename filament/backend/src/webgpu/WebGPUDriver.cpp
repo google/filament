@@ -239,10 +239,10 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfi
 #endif
     mQueue = mDevice.GetQueue();
     bundle.sampler = mDevice.CreateSampler();
-    wgpu::BufferDescriptor bDesc{.label = "DummyBuff", .usage = wgpu::BufferUsage::MapRead};
+    wgpu::BufferDescriptor bDesc{.label = "DummyBuff", .usage = wgpu::BufferUsage::Uniform, .size=1};
     bundle.buffer = mDevice.CreateBuffer(&bDesc);
     //Do we  need to keep a ref to this? If so into the bundle it goes
-    wgpu::TextureDescriptor texDesc{.label = "DummyTex",.usage=wgpu::TextureUsage::CopySrc, .dimension = wgpu::TextureDimension::e2D, .size={1,1,1},.format=wgpu::TextureFormat::R8Unorm};
+    wgpu::TextureDescriptor texDesc{.label = "DummyTex",.usage=wgpu::TextureUsage::TextureBinding, .dimension = wgpu::TextureDimension::e2D, .size={1,1,1},.format=wgpu::TextureFormat::R8Unorm};
     auto tempTex = mDevice.CreateTexture(&texDesc);
     wgpu::TextureViewDescriptor texVDesc{.label = "DummyTex"};
     bundle.textureView = tempTex.CreateView(&texVDesc);
@@ -1114,7 +1114,8 @@ wgpu::Sampler WebGPUDriver::makeSampler(SamplerParams const& params) {
 
     // Unused: Filament's compareMode, WGPU lodMinClamp/lodMaxClamp
 
-    return mDevice.CreateSampler(&desc);
+    //TODO Once we can properly map to descriptorsetlayout use the sampler.
+    return mDevice.CreateSampler(/*&desc*/);
 }
 wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& fWrapMode) {
     switch (fWrapMode) {
