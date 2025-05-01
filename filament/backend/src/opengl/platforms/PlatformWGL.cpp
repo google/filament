@@ -32,8 +32,9 @@
 #include "GL/glext.h"
 #include "GL/wglext.h"
 
-#include <utils/Log.h>
 #include <utils/Panic.h>
+
+#include <absl/log/log.h>
 
 namespace {
 
@@ -55,8 +56,7 @@ void reportWindowsError(DWORD dwError) {
         0, nullptr
 	);
 
-    utils::slog.e << "Windows error code: " << dwError << ". " << lpMessageBuffer
-            << utils::io::endl;
+    LOG(ERROR) << "Windows error code: " << dwError << ". " << lpMessageBuffer;
 
     LocalFree(lpMessageBuffer);
 }
@@ -106,7 +106,7 @@ Driver* PlatformWGL::createDriver(void* sharedGLContext,
     HDC whdc = mWhdc = GetDC(mHWnd);
     if (whdc == NULL) {
         dwError = GetLastError();
-        utils::slog.e << "CreateWindowA() failed" << utils::io::endl;
+        LOG(ERROR) << "CreateWindowA() failed";
         goto error;
     }
 
@@ -117,8 +117,7 @@ Driver* PlatformWGL::createDriver(void* sharedGLContext,
     tempContext = wglCreateContext(whdc);
     if (!wglMakeCurrent(whdc, tempContext)) {
         dwError = GetLastError();
-        utils::slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", tempContext=" <<
-                tempContext << utils::io::endl;
+        LOG(ERROR) << "wglMakeCurrent() failed, whdc=" << whdc << ", tempContext=" << tempContext;
         goto error;
     }
 
@@ -142,7 +141,7 @@ Driver* PlatformWGL::createDriver(void* sharedGLContext,
     }
 
     if (!mContext) {
-        utils::slog.e << "wglCreateContextAttribs() failed, whdc=" << whdc << utils::io::endl;
+        LOG(ERROR) << "wglCreateContextAttribs() failed, whdc=" << whdc;
         goto error;
     }
 
@@ -152,8 +151,7 @@ Driver* PlatformWGL::createDriver(void* sharedGLContext,
 
     if (!wglMakeCurrent(whdc, mContext)) {
         dwError = GetLastError();
-        utils::slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", mContext=" <<
-                mContext << utils::io::endl;
+        LOG(ERROR) << "wglMakeCurrent() failed, whdc=" << whdc << ", mContext=" << mContext;
         goto error;
     }
 

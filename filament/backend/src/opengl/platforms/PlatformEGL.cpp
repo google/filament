@@ -34,8 +34,9 @@
 
 #include <utils/debug.h>
 #include <utils/Invocable.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
+
+#include <absl/log/log.h>
 
 #include <algorithm>
 #include <new>
@@ -74,7 +75,7 @@ void PlatformEGL::logEglError(const char* name) noexcept {
 }
 
 void PlatformEGL::logEglError(const char* name, EGLint error) noexcept {
-    slog.e << name << " failed with " << getEglErrorName(error) << io::endl;
+    LOG(ERROR) << name << " failed with " << getEglErrorName(error);
 }
 
 const char* PlatformEGL::getEglErrorName(EGLint error) noexcept {
@@ -101,7 +102,7 @@ void PlatformEGL::clearGlError() noexcept {
     // clear GL error that may have been set by previous calls
     GLenum const error = glGetError();
     if (error != GL_NO_ERROR) {
-        slog.w << "Ignoring pending GL error " << io::hex << error << io::endl;
+        LOG(WARNING) << "Ignoring pending GL error " << io::hex << error;
     }
 }
 
@@ -142,7 +143,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
     }
 
     if (UTILS_UNLIKELY(!initialized)) {
-        slog.e << "eglInitialize failed" << io::endl;
+        LOG(ERROR) << "eglInitialize failed";
         return nullptr;
     }
 

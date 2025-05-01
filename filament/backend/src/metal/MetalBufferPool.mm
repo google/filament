@@ -19,8 +19,9 @@
 #include "MetalContext.h"
 
 #include <utils/Panic.h>
-#include <utils/Log.h>
 #include <utils/trap.h>
+
+#include <absl/log/log.h>
 
 #include <thread>
 #include <chrono>
@@ -77,8 +78,7 @@ void MetalBufferPool::releaseBuffer(MetalBufferPoolEntry const *stage) noexcept 
 
     auto iter = mUsedStages.find(stage);
     if (iter == mUsedStages.end()) {
-        utils::slog.e << "Unknown Metal buffer: " << stage->capacity << " bytes"
-                << utils::io::endl;
+        LOG(ERROR) << "Unknown Metal buffer: " << stage->capacity << " bytes";
         return;
     }
     stage->lastAccessed = mCurrentFrame;

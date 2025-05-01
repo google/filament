@@ -20,11 +20,12 @@
 
 #include <utils/Allocator.h>
 #include <utils/CString.h>
-#include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
+
+#include <absl/log/log.h>
 
 #include <algorithm>
 #include <exception>
@@ -57,8 +58,8 @@ HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& ar
     size_t const maxHeapSize = std::min(area.size(), HANDLE_INDEX_MASK * getAlignment());
 
     if (UTILS_UNLIKELY(maxHeapSize != area.size())) {
-        slog.w << "HandleAllocator heap size reduced to "
-               << maxHeapSize << " from " << area.size() << io::endl;
+        LOG(WARNING) << "HandleAllocator heap size reduced to " << maxHeapSize << " from "
+                     << area.size();
     }
 
     // make sure we start with a clean arena. This is needed to ensure that all blocks start

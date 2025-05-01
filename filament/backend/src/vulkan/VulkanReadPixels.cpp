@@ -171,7 +171,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
 #if FVK_ENABLED(FVK_DEBUG_READ_PIXELS)
     FVK_LOGD << "readPixels created image=" << stagingImage
              << " to copy from image=" << srcTexture->getVkImage()
-             << " src-layout=" << srcTexture->getLayout(0, 0) << utils::io::endl;
+             << " src-layout=" << srcTexture->getLayout(0, 0);
 #endif
 
     VkMemoryRequirements memReqs;
@@ -188,8 +188,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
         memoryTypeIndex = selectMemoryFunc(memReqs.memoryTypeBits,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         FVK_LOGW
-                << "readPixels is slow because VK_MEMORY_PROPERTY_HOST_CACHED_BIT is not available"
-                << utils::io::endl;
+                << "readPixels is slow because VK_MEMORY_PROPERTY_HOST_CACHED_BIT is not available";
     }
 
     FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
@@ -305,7 +304,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
         VkResult status = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
         // Fence hasn't been reached. Try waiting again.
         if (status != VK_SUCCESS) {
-            FVK_LOGE << "Failed to wait for readPixels fence" << utils::io::endl;
+            FVK_LOGE << "Failed to wait for readPixels fence";
             return;
         }
 
@@ -323,7 +322,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
                     fvkutils::getComponentCount(srcFormat), srcPixels,
                     static_cast<int>(subResourceLayout.rowPitch), static_cast<int>(width),
                     static_cast<int>(height), swizzle)) {
-            FVK_LOGE << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
+            FVK_LOGE << "Unsupported PixelDataFormat or PixelDataType";
         }
 
         vkUnmapMemory(device, stagingMemory);

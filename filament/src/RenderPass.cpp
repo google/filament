@@ -406,8 +406,8 @@ RenderPass::Command* RenderPass::instanceify(DriverApi& driver,
     }
 
     if (UTILS_UNLIKELY(firstSentinel)) {
-        //slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
-        //       << count << io::endl;
+        // DLOG(INFO) << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
+        //            << count;
         // we have instanced primitives
         // copy our instanced ubo data
         driver.updateBufferObjectUnsynchronized(mInstancedUboHandle, {

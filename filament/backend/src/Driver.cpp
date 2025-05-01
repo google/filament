@@ -25,9 +25,10 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
 #include <utils/Systrace.h>
+
+#include <absl/log/log.h>
 
 #include <math/half.h>
 #include <math/vec2.h>
@@ -148,7 +149,7 @@ void DriverBase::scheduleRelease(AcquiredImage const& image) noexcept {
 void DriverBase::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
     if constexpr (bool(FILAMENT_DEBUG_COMMANDS > FILAMENT_DEBUG_COMMANDS_NONE)) {
         if constexpr (bool(FILAMENT_DEBUG_COMMANDS & FILAMENT_DEBUG_COMMANDS_LOG)) {
-            utils::slog.d << methodName << utils::io::endl;
+            DLOG(INFO) << methodName;
         }
         if constexpr (bool(FILAMENT_DEBUG_COMMANDS & FILAMENT_DEBUG_COMMANDS_SYSTRACE)) {
             SYSTRACE_CONTEXT();

@@ -113,14 +113,14 @@ void TimerQueryNativeFactory::createTimerQuery(GLTimerQuery* tq) {
 
     tq->state = std::make_shared<GLTimerQuery::State>();
     mContext.procs.genQueries(1u, &tq->state->gl.query);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void TimerQueryNativeFactory::destroyTimerQuery(GLTimerQuery* tq) {
     assert_invariant(tq->state);
 
     mContext.procs.deleteQueries(1u, &tq->state->gl.query);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
     tq->state.reset();
 }
@@ -130,14 +130,14 @@ void TimerQueryNativeFactory::beginTimeElapsedQuery(GLTimerQuery* tq) {
 
     tq->state->elapsed.store(int64_t(TimerQueryResult::NOT_READY), std::memory_order_relaxed);
     mContext.procs.beginQuery(GL_TIME_ELAPSED, tq->state->gl.query);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void TimerQueryNativeFactory::endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQuery* tq) {
     assert_invariant(tq->state);
 
     mContext.procs.endQuery(GL_TIME_ELAPSED);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
     std::weak_ptr<GLTimerQuery::State> const weak = tq->state;
 
@@ -152,7 +152,7 @@ void TimerQueryNativeFactory::endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQ
 
         GLuint available = 0;
         context.procs.getQueryObjectuiv(state->gl.query, GL_QUERY_RESULT_AVAILABLE, &available);
-        CHECK_GL_ERROR(utils::slog.e)
+        CHECK_GL_ERROR()
         if (!available) {
             // we need to try this one again later
             return false;

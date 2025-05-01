@@ -16,7 +16,7 @@
 
 #include "ResourceList.h"
 
-#include <utils/Log.h>
+#include <absl/log/log.h>
 
 #include <algorithm>
 
@@ -32,7 +32,7 @@ ResourceListBase::ResourceListBase(const char* typeName)
 ResourceListBase::~ResourceListBase() noexcept {
 #ifndef NDEBUG
     if (!mList.empty()) {
-        utils::slog.d << "leaked " << mList.size() << " " << mTypeName << utils::io::endl;
+        DLOG(INFO) << "leaked " << mList.size() << " " << mTypeName;
     }
 #endif
 }

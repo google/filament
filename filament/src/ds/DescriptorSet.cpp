@@ -27,7 +27,8 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Log.h>
+
+#include <absl/log/log.h>
 
 #include <utility>
 #include <limits>
@@ -115,9 +116,8 @@ void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints 
     // assert_invariant(mDirty.none());
     if (mDirty.any() && !mSetAfterCommitWarning) {
         mDirty.forEachSetBit([&](uint8_t const binding) {
-            utils::slog.w << "Descriptor set (handle=" << mDescriptorSetHandle.getId()
-                          << ") binding=" << (int) binding
-                          << " was set between begin/endRenderPass" << utils::io::endl;
+            LOG(WARNING) << "Descriptor set (handle=" << mDescriptorSetHandle.getId()
+                         << ") binding=" << (int) binding << " was set between begin/endRenderPass";
         });
         mSetAfterCommitWarning = true;
     }

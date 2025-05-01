@@ -34,9 +34,10 @@
 #include <utils/compiler.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
-#include <utils/Log.h>
 #include <utils/compiler.h>
 #include <utils/ostream.h>
+
+#include <absl/log/log.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -326,7 +327,7 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
             EGL_NATIVE_BUFFER_ANDROID, clientBuffer, imageAttrs);
     if (eglImage == EGL_NO_IMAGE_KHR) {
         // Handle error
-        slog.e << "Failed to create EGL image" << io::endl;
+        LOG(ERROR) << "Failed to create EGL image";
         glDeleteTextures(1, &texture->id);
         return false;
     }
@@ -339,7 +340,7 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
     glBindTexture(texture->target, texture->id);
     GLenum error = glGetError();
     if (UTILS_UNLIKELY(error != GL_NO_ERROR)) {
-        slog.e << "Error after glBindTexture: " << error << io::endl;
+        LOG(ERROR) << "Error after glBindTexture: " << error;
         glDeleteTextures(1, &texture->id);
         eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
         glActiveTexture(prevActiveTexture);
@@ -349,7 +350,7 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
     glEGLImageTargetTexture2DOES(texture->target, static_cast<GLeglImageOES>(eglImage));
     error = glGetError();
     if (UTILS_UNLIKELY(error != GL_NO_ERROR)) {
-        slog.e << "Error after glEGLImageTargetTexture2DOES: " << error << io::endl;
+        LOG(ERROR) << "Error after glEGLImageTargetTexture2DOES: " << error;
         glDeleteTextures(1, &texture->id);
         eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
         glActiveTexture(prevActiveTexture);
@@ -407,7 +408,7 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) n
 
     EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID(pHardwareBuffer);
     if (!clientBuffer) {
-        slog.e << "Unable to get EGLClientBuffer from AHardwareBuffer." << io::endl;
+        LOG(ERROR) << "Unable to get EGLClientBuffer from AHardwareBuffer.";
         return {};
     }
 
@@ -426,7 +427,7 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) n
     EGLImageKHR eglImage = eglCreateImageKHR(mEGLDisplay,
             EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID, clientBuffer, attributes.data());
     if (eglImage == EGL_NO_IMAGE_KHR) {
-        slog.e << "eglCreateImageKHR returned no image." << io::endl;
+        LOG(ERROR) << "eglCreateImageKHR returned no image.";
         return {};
     }
 
@@ -441,7 +442,7 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) n
     auto patchedCallback = [](void* image, void* userdata) {
         Closure* closure = (Closure*)userdata;
         if (eglDestroyImageKHR(closure->display, (EGLImageKHR) image) == EGL_FALSE) {
-            slog.e << "eglDestroyImageKHR failed." << io::endl;
+            LOG(ERROR) << "eglDestroyImageKHR failed.";
         }
         closure->acquiredImage.callback(closure->acquiredImage.image, closure->acquiredImage.userData);
         delete closure;

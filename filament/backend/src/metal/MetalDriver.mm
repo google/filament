@@ -38,10 +38,11 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
-#include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/sstream.h>
 #include <utils/Invocable.h>
+
+#include <absl/log/log.h>
 
 #include <algorithm>
 
@@ -78,20 +79,18 @@ Driver* MetalDriverFactory::create(PlatformMetal* const platform, const Platform
     //    MetalVertexBufferInfo        : 552       moderate
     // -- less than or equal to 552 bytes
 
-    utils::slog.d
-           << "\nMetalSwapChain: " << sizeof(MetalSwapChain)
-           << "\nMetalBufferObject: " << sizeof(MetalBufferObject)
-           << "\nMetalVertexBuffer: " << sizeof(MetalVertexBuffer)
-           << "\nMetalVertexBufferInfo: " << sizeof(MetalVertexBufferInfo)
-           << "\nMetalIndexBuffer: " << sizeof(MetalIndexBuffer)
-           << "\nMetalRenderPrimitive: " << sizeof(MetalRenderPrimitive)
-           << "\nMetalTexture: " << sizeof(MetalTexture)
-           << "\nMetalTimerQuery: " << sizeof(MetalTimerQuery)
-           << "\nHwStream: " << sizeof(HwStream)
-           << "\nMetalRenderTarget: " << sizeof(MetalRenderTarget)
-           << "\nMetalFence: " << sizeof(MetalFence)
-           << "\nMetalProgram: " << sizeof(MetalProgram)
-           << utils::io::endl;
+    DLOG(INFO) << "MetalSwapChain: " << sizeof(MetalSwapChain);
+    DLOG(INFO) << "MetalBufferObject: " << sizeof(MetalBufferObject);
+    DLOG(INFO) << "MetalVertexBuffer: " << sizeof(MetalVertexBuffer);
+    DLOG(INFO) << "MetalVertexBufferInfo: " << sizeof(MetalVertexBufferInfo);
+    DLOG(INFO) << "MetalIndexBuffer: " << sizeof(MetalIndexBuffer);
+    DLOG(INFO) << "MetalRenderPrimitive: " << sizeof(MetalRenderPrimitive);
+    DLOG(INFO) << "MetalTexture: " << sizeof(MetalTexture);
+    DLOG(INFO) << "MetalTimerQuery: " << sizeof(MetalTimerQuery);
+    DLOG(INFO) << "HwStream: " << sizeof(HwStream);
+    DLOG(INFO) << "MetalRenderTarget: " << sizeof(MetalRenderTarget);
+    DLOG(INFO) << "MetalFence: " << sizeof(MetalFence);
+    DLOG(INFO) << "MetalProgram: " << sizeof(MetalProgram);
 #endif
     return MetalDriver::create(platform, driverConfig);
 }
@@ -135,19 +134,18 @@ MetalDriver::MetalDriver(
 
     initializeSupportedGpuFamilies(mContext);
 
-    utils::slog.v << "Supported GPU families: " << utils::io::endl;
+    LOG(INFO) << "Supported GPU families: ";
     if (mContext->highestSupportedGpuFamily.common > 0) {
-        utils::slog.v << "  MTLGPUFamilyCommon" << (int) mContext->highestSupportedGpuFamily.common << utils::io::endl;
+        LOG(INFO) << "  MTLGPUFamilyCommon" << (int) mContext->highestSupportedGpuFamily.common;
     }
     if (mContext->highestSupportedGpuFamily.apple > 0) {
-        utils::slog.v << "  MTLGPUFamilyApple" << (int) mContext->highestSupportedGpuFamily.apple << utils::io::endl;
+        LOG(INFO) << "  MTLGPUFamilyApple" << (int) mContext->highestSupportedGpuFamily.apple;
     }
     if (mContext->highestSupportedGpuFamily.mac > 0) {
-        utils::slog.v << "  MTLGPUFamilyMac" << (int) mContext->highestSupportedGpuFamily.mac << utils::io::endl;
+        LOG(INFO) << "  MTLGPUFamilyMac" << (int) mContext->highestSupportedGpuFamily.mac;
     }
-    utils::slog.v << "Features:" << utils::io::endl;
-    utils::slog.v << "  readWriteTextureSupport: " <<
-            (bool) mContext->device.readWriteTextureSupport << utils::io::endl;
+    LOG(INFO) << "Features:";
+    LOG(INFO) << "  readWriteTextureSupport: " << (bool) mContext->device.readWriteTextureSupport;
 
     // In order to support texture swizzling, the GPU needs to support it and the system be running
     // iOS 13+.
@@ -588,7 +586,7 @@ void MetalDriver::createProgramR(Handle<HwProgram> rph, Program&& program) {
 #if FILAMENT_METAL_DEBUG_LOG
     auto handleId = rph.getId();
     DEBUG_LOG("createProgramR(rph = %d, program = ", handleId);
-    utils::slog.d << program << utils::io::endl;
+    DLOG(INFO) << program;
 #endif
     construct_handle<MetalProgram>(rph, *mContext, std::move(program));
 }
@@ -2091,7 +2089,7 @@ void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGro
                                                             error:&error];
     if (error) {
         auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
-        utils::slog.e << description << utils::io::endl;
+        LOG(ERROR) << description;
     }
     assert_invariant(!error);
 

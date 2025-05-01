@@ -20,8 +20,9 @@
 #include "details/Camera.h"
 
 #include <utils/Entity.h>
-#include <utils/Log.h>
 #include <utils/debug.h>
+
+#include <absl/log/log.h>
 
 using namespace utils;
 using namespace filament::math;
@@ -37,8 +38,7 @@ void FCameraManager::terminate(FEngine& engine) noexcept {
     auto& manager = mManager;
     if (!manager.empty()) {
 #ifndef NDEBUG
-        slog.d << "cleaning up " << manager.getComponentCount()
-               << " leaked Camera components" << io::endl;
+        DLOG(INFO) << "cleaning up " << manager.getComponentCount() << " leaked Camera components";
 #endif
         Slice<Entity> const entities{ manager.getEntities(), manager.getComponentCount() };
         for (Entity const e : entities) {

@@ -19,12 +19,13 @@
 #include "private/backend/CommandStream.h"
 
 #include <utils/compiler.h>
-#include <utils/Log.h>
 #include <utils/Mutex.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 #include <utils/debug.h>
+
+#include <absl/log/log.h>
 
 #include <algorithm>
 #include <mutex>
@@ -120,11 +121,10 @@ void CommandBufferQueue::flush() noexcept {
 
 #ifndef NDEBUG
         size_t const totalUsed = circularBuffer.size() - mFreeSpace;
-        slog.d << "CommandStream used too much space (will block): "
-                << "needed space " << requiredSize << " out of " << mFreeSpace
-                << ", totalUsed=" << totalUsed << ", current=" << used
-                << ", queue size=" << mCommandBuffersToExecute.size() << " buffers"
-                << io::endl;
+        DLOG(INFO) << "CommandStream used too much space (will block): "
+                   << "needed space " << requiredSize << " out of " << mFreeSpace
+                   << ", totalUsed=" << totalUsed << ", current=" << used
+                   << ", queue size=" << mCommandBuffersToExecute.size() << " buffers";
 
         mHighWatermark = std::max(mHighWatermark, totalUsed);
 #endif

@@ -40,7 +40,7 @@ inline void blitFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect, V
         FVK_LOGD << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
                       << " layout=" << src.getLayout()
                       << " to=" << dst.texture->getVkImage() << ",level=" << (int) dst.level
-                      << " layout=" << dst.getLayout() << utils::io::endl;
+                      << " layout=" << dst.getLayout();
     }
 
     VkImageSubresourceRange const srcRange = src.getSubresourceRange();
@@ -80,7 +80,7 @@ inline void resolveFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect
         FVK_LOGD << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
                       << " layout=" << src.getLayout()
                       << " to=" << dst.texture->getVkImage() << ",level=" << (int) dst.level
-                      << " layout=" << dst.getLayout() << utils::io::endl;
+                      << " layout=" << dst.getLayout();
     }
 
     VkImageSubresourceRange const srcRange = src.getSubresourceRange();

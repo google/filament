@@ -16,13 +16,14 @@
 
 #include "private/backend/CircularBuffer.h"
 
-#include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/architecture.h>
 #include <utils/ashmem.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
+
+#include <absl/log/log.h>
 
 #if !defined(WIN32) && !defined(__EMSCRIPTEN__)
 #    include <sys/mman.h>
@@ -127,7 +128,7 @@ void* CircularBuffer::alloc(size_t size) noexcept {
                 "couldn't allocate " << (size * 2 / 1024) <<
                 " KiB of virtual address space for the command buffer";
 
-        slog.w << "Using 'soft' CircularBuffer (" << (size * 2 / 1024) << " KiB)" << io::endl;
+        LOG(WARNING) << "Using 'soft' CircularBuffer (" << (size * 2 / 1024) << " KiB)";
 
         // guard page at the end
         void* guard = (void*)(uintptr_t(data) + size * 2);

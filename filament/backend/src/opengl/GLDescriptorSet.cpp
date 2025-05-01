@@ -335,7 +335,7 @@ void GLDescriptorSet::bind(
             }
         }, entry.desc);
     });
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void GLDescriptorSet::validate(HandleAllocatorGL& allocator,

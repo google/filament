@@ -99,15 +99,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
         VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
         int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) {
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        FVK_LOGE << "VULKAN ERROR: (" << pLayerPrefix << ") " << pMessage << utils::io::endl;
+        FVK_LOGE << "VULKAN ERROR: (" << pLayerPrefix << ") " << pMessage;
     } else {
         // TODO: emit best practices warnings about aggressive pipeline barriers.
         if (strstr(pMessage, "ALL_GRAPHICS_BIT") || strstr(pMessage, "ALL_COMMANDS_BIT")) {
             return VK_FALSE;
         }
-        FVK_LOGW << "VULKAN WARNING: (" << pLayerPrefix << ") " << pMessage << utils::io::endl;
+        FVK_LOGW << "VULKAN WARNING: (" << pLayerPrefix << ") " << pMessage;
     }
-    FVK_LOGE << utils::io::endl;
+    FVK_LOGE;
     return VK_FALSE;
 }
 #endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
@@ -117,18 +117,16 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
         VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
         void* pUserData) {
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-        FVK_LOGE << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage
-                 << utils::io::endl;
+        FVK_LOGE << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage;
     } else {
         // TODO: emit best practices warnings about aggressive pipeline barriers.
         if (strstr(cbdata->pMessage, "ALL_GRAPHICS_BIT")
                 || strstr(cbdata->pMessage, "ALL_COMMANDS_BIT")) {
             return VK_FALSE;
         }
-        FVK_LOGW << "VULKAN WARNING: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage
-                 << utils::io::endl;
+        FVK_LOGW << "VULKAN WARNING: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage;
     }
-    FVK_LOGE << utils::io::endl;
+    FVK_LOGE << "";
     return VK_FALSE;
 }
 #endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
@@ -270,20 +268,18 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
     //    VulkanRenderTarget            : 312       few
     // -- less than or equal to 312 bytes
 
-    FVK_LOGD
-           << "\nVulkanSwapChain: " << sizeof(VulkanSwapChain)
-           << "\nVulkanBufferObject: " << sizeof(VulkanBufferObject)
-           << "\nVulkanVertexBuffer: " << sizeof(VulkanVertexBuffer)
-           << "\nVulkanVertexBufferInfo: " << sizeof(VulkanVertexBufferInfo)
-           << "\nVulkanIndexBuffer: " << sizeof(VulkanIndexBuffer)
-           << "\nVulkanRenderPrimitive: " << sizeof(VulkanRenderPrimitive)
-           << "\nVulkanTexture: " << sizeof(VulkanTexture)
-           << "\nVulkanTimerQuery: " << sizeof(VulkanTimerQuery)
-           << "\nHwStream: " << sizeof(HwStream)
-           << "\nVulkanRenderTarget: " << sizeof(VulkanRenderTarget)
-           << "\nVulkanFence: " << sizeof(VulkanFence)
-           << "\nVulkanProgram: " << sizeof(VulkanProgram)
-           << utils::io::endl;
+    FVK_LOGD << "VulkanSwapChain: " << sizeof(VulkanSwapChain);
+    FVK_LOGD << "VulkanBufferObject: " << sizeof(VulkanBufferObject);
+    FVK_LOGD << "VulkanVertexBuffer: " << sizeof(VulkanVertexBuffer);
+    FVK_LOGD << "VulkanVertexBufferInfo: " << sizeof(VulkanVertexBufferInfo);
+    FVK_LOGD << "VulkanIndexBuffer: " << sizeof(VulkanIndexBuffer);
+    FVK_LOGD << "VulkanRenderPrimitive: " << sizeof(VulkanRenderPrimitive);
+    FVK_LOGD << "VulkanTexture: " << sizeof(VulkanTexture);
+    FVK_LOGD << "VulkanTimerQuery: " << sizeof(VulkanTimerQuery);
+    FVK_LOGD << "HwStream: " << sizeof(HwStream);
+    FVK_LOGD << "VulkanRenderTarget: " << sizeof(VulkanRenderTarget);
+    FVK_LOGD << "VulkanFence: " << sizeof(VulkanFence);
+    FVK_LOGD << "VulkanProgram: " << sizeof(VulkanProgram);
 #endif
 
     assert_invariant(platform);
@@ -784,14 +780,12 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     mResourceManager.gc();
 
     if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 && !isSRGBSwapChainSupported()) {
-        FVK_LOGW << "sRGB swapchain requested, but Platform does not support it"
-                 << utils::io::endl;
+        FVK_LOGW << "sRGB swapchain requested, but Platform does not support it";
         flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
     }
     if (flags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
         if (!isProtectedContentSupported()) {
-            FVK_LOGW << "protected swapchain requested, but Platform does not support it"
-                << utils::io::endl;
+            FVK_LOGW << "protected swapchain requested, but Platform does not support it";
         }
     }
     auto swapChain = resource_ptr<VulkanSwapChain>::make(&mResourceManager, sch, mPlatform,
@@ -802,8 +796,7 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
         uint32_t height, uint64_t flags) {
     if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 && !isSRGBSwapChainSupported()) {
-        FVK_LOGW << "sRGB swapchain requested, but Platform does not support it"
-                      << utils::io::endl;
+        FVK_LOGW << "sRGB swapchain requested, but Platform does not support it";
         flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
     }
     assert_invariant(width > 0 && height > 0 && "Vulkan requires non-zero swap chain dimensions.");
@@ -1291,7 +1284,7 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
     uint64_t const end = results.endTime;
     if (begin >= end) {
         // TODO: queries might have ran on different command buffers.
-        FVK_LOGW << "Timestamps are not monotonically increasing. " << utils::io::endl;
+        FVK_LOGW << "Timestamps are not monotonically increasing. ";
         *elapsedTime = 0;
         return TimerQueryResult::ERROR;
     }
@@ -2029,7 +2022,7 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
         assert_invariant(inRenderPass);
         inRenderPass = false;
     } else if (inRenderPass && OUTSIDE_COMMANDS.find(command) != OUTSIDE_COMMANDS.end()) {
-        FVK_LOGE << command.data() << " issued inside a render pass." << utils::io::endl;
+        FVK_LOGE << command.data() << " issued inside a render pass.";
     }
 #endif
 }

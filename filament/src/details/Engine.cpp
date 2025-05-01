@@ -55,12 +55,13 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Invocable.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
 #include <utils/Systrace.h>
 #include <utils/ThreadUtils.h>
+
+#include <absl/log/log.h>
 
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -125,7 +126,7 @@ Engine* FEngine::create(Builder const& builder) {
             instance->mOwnPlatform = true;
         }
         if (platform == nullptr) {
-            slog.e << "Selected backend not supported in this build." << io::endl;
+            LOG(ERROR) << "Selected backend not supported in this build.";
             delete instance;
             return nullptr;
         }
@@ -278,8 +279,8 @@ FEngine::FEngine(Builder const& builder) :
     // (it may not be the case)
     mJobSystem.adopt();
 
-    slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
-           << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
+    LOG(INFO) << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
+              << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)");
 }
 
 uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
@@ -314,8 +315,8 @@ void FEngine::init() {
     assert_invariant(mActiveFeatureLevel > FeatureLevel::FEATURE_LEVEL_0);
 #endif
 
-    slog.i << "Backend feature level: " << int(driverApi.getFeatureLevel()) << io::endl;
-    slog.i << "FEngine feature level: " << int(mActiveFeatureLevel) << io::endl;
+    LOG(INFO) << "Backend feature level: " << int(driverApi.getFeatureLevel());
+    LOG(INFO) << "FEngine feature level: " << int(mActiveFeatureLevel);
 
 
     mResourceAllocatorDisposer = std::make_shared<ResourceAllocatorDisposer>(driverApi);
@@ -523,8 +524,7 @@ void FEngine::shutdown() {
     // print out some statistics about this run
     size_t const wm = mCommandBufferQueue.getHighWatermark();
     size_t const wmpct = wm / (getCommandBufferSize() / 100);
-    slog.d << "CircularBuffer: High watermark "
-           << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
+    DLOG(INFO) << "CircularBuffer: High watermark " << wm / 1024 << " KiB (" << wmpct << "%)";
 #endif
 
     DriverApi& driver = getDriverApi();
@@ -713,9 +713,9 @@ int FEngine::loop() {
         mPlatform = PlatformFactory::create(&mBackend);
         mOwnPlatform = true;
         const char* const backend = backendToString(mBackend);
-        slog.i << "FEngine resolved backend: " << backend << io::endl;
+        LOG(INFO) << "FEngine resolved backend: " << backend;
         if (mPlatform == nullptr) {
-            slog.e << "Selected backend not supported in this build." << io::endl;
+            LOG(ERROR) << "Selected backend not supported in this build.";
             mDriverBarrier.latch();
             return 0;
         }
@@ -1015,8 +1015,8 @@ UTILS_NOINLINE
 void FEngine::cleanupResourceList(ResourceList<T>&& list) {
     if (UTILS_UNLIKELY(!list.empty())) {
 #ifndef NDEBUG
-        slog.d << "cleaning up " << list.size()
-               << " leaked " << CallStack::typeName<T>().c_str() << io::endl;
+        DLOG(INFO) << "cleaning up " << list.size() << " leaked "
+                   << CallStack::typeName<T>().c_str();
 #endif
         list.forEach([this, &allocator = mHeapAllocator](T* item) {
             item->terminate(*this);
@@ -1213,11 +1213,10 @@ bool FEngine::destroy(const FMaterialInstance* p) {
                             << ri.asValue() << ", index=" << j << ")";
                 } else {
                     if (UTILS_UNLIKELY(mi == p)) {
-                        slog.e  << "destroying MaterialInstance \""
-                                << mi->getName() << "\" which is still in use by Renderable (entity="
-                                << entity.getId() << ", instance="
-                                << ri.asValue() << ", index=" << j << ")"
-                                << io::endl;
+                        LOG(ERROR) << "destroying MaterialInstance \"" << mi->getName()
+                                   << "\" which is still in use by Renderable (entity="
+                                   << entity.getId() << ", instance=" << ri.asValue()
+                                   << ", index=" << j << ")";
                     }
                 }
             }

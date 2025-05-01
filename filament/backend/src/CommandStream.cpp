@@ -20,11 +20,13 @@
 #include <utils/CallStack.h>
 #endif
 
-#include <utils/compiler.h>
-#include <utils/Log.h>
-#include <utils/ostream.h>
 #include <utils/Profiler.h>
 #include <utils/Systrace.h>
+#include <utils/compiler.h>
+#include <utils/ostream.h>
+#include <utils/sstream.h>
+
+#include <absl/log/log.h>
 
 #include <cstddef>
 #include <functional>
@@ -127,9 +129,10 @@ void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log(std::index_seq
 #if DEBUG_COMMAND_STREAM
     static_assert(UTILS_HAS_RTTI, "DEBUG_COMMAND_STREAM can only be used with RTTI");
     std::string command = utils::CallStack::demangleTypeName(typeid(Command).name()).c_str();
-    slog.d << extractMethodName(command) << " : size=" << sizeof(Command) << "\n\t";
-    printParameterPack(slog.d, std::get<I>(mArgs)...);
-    slog.d << io::endl;
+    DLOG(INFO) << extractMethodName(command) << " : size=" << sizeof(Command);
+    utils::io::sstream parameterPack;
+    printParameterPack(parameterPack, std::get<I>(mArgs)...);
+    DLOG(INFO) << "\t" << parameterPack.c_str();
 #endif
 }
 
