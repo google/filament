@@ -143,8 +143,8 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
         float h0 = -fastACos(horizonCos1);
         float h1 = fastACos(horizonCos0);
-        h0 = n + clamp(h0-n, -HALF_PI, HALF_PI);
-        h1 = n + clamp(h1-n, -HALF_PI, HALF_PI);
+        h0 = n + clamp(h0 - n, -HALF_PI, HALF_PI);
+        h1 = n + clamp(h1 - n, -HALF_PI, HALF_PI);
 
         if (materialConstants_bentNormals) {
             float angle = 0.5 * (h0 + h1);
