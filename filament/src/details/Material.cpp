@@ -1139,6 +1139,8 @@ void FMaterial::precacheDepthVariants(FEngine& engine) {
 
 void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* const parser) {
     UTILS_UNUSED_IN_RELEASE bool success;
+    utils::CString namestr;
+    parser->getName(&namestr);
 
     success = parser->getDescriptorBindings(&mProgramDescriptorBindings);
     assert_invariant(success);
@@ -1147,6 +1149,11 @@ void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* con
     success = parser->getDescriptorSetLayout(&descriptorSetLayout);
     assert_invariant(success);
 
+    descriptorSetLayout[0].label =  namestr.c_str();
+    descriptorSetLayout[1].label = namestr.c_str();
+    descriptorSetLayout[0].label+="0\0";
+    descriptorSetLayout[1].label+="1\0";
+
     mDescriptorSetLayout = {
             engine.getDescriptorSetLayoutFactory(),
             engine.getDriverApi(), std::move(descriptorSetLayout[0]) };
@@ -1154,6 +1161,7 @@ void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* con
     mPerViewDescriptorSetLayout = {
             engine.getDescriptorSetLayoutFactory(),
             engine.getDriverApi(), std::move(descriptorSetLayout[1]) };
+
 }
 
 descriptor_binding_t FMaterial::getSamplerBinding(
