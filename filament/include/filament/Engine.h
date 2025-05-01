@@ -401,6 +401,13 @@ public:
          * @deprecated use "backend.opengl.assert_native_window_is_valid" feature flag instead
          */
         bool assertNativeWindowIsValid = false;
+
+        /*
+         * Setting this to true disables precaching of depth variants for the default material.
+         * This may eliminate an initial startup hiccup, but the loading work for these variants
+         * will instead be spread out and occur later as they are needed.
+         */
+        bool disableDepthPrecacheForDefaultMaterial = false;
     };
 
 

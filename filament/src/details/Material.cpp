@@ -1103,7 +1103,8 @@ void FMaterial::precacheDepthVariants(FEngine const& engine) {
     // entirely optional; if we remove this pre-caching, these variants will be populated
     // later, when/if needed by createAndCacheProgram(). Doing it now potentially uses more
     // memory and increases init time, but reduces hiccups during the first frame.
-    if (UTILS_UNLIKELY(mIsDefaultMaterial)) {
+    if (UTILS_UNLIKELY(
+                mIsDefaultMaterial && !engine.getConfig().disableDepthPrecacheForDefaultMaterial)) {
         const bool stereoSupported = mEngine.getDriverApi().isStereoSupported();
         auto const allDepthVariants = VariantUtils::getDepthVariants();
         for (auto const variant: allDepthVariants) {
