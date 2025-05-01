@@ -104,6 +104,7 @@ public:
     ~WebGPUDescriptorSetLayout();
     [[nodiscard]] const wgpu::BindGroupLayout& getLayout() const { return mLayout; }
     [[nodiscard]] uint getLayoutSize() const { return mLayoutSize; }
+    uint layoutNumI;
 
 private:
     // TODO: If this is useful elsewhere, remove it from this class

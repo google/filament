@@ -258,6 +258,8 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         .entryCount = wEntries.size(),
         .entries = wEntries.data()
     };
+    printf("===R Creating layout %i with %lu entries\n", layoutNum, wEntries.size());
+    layoutNumI = layoutNum;
     // TODO Do we need to defer this until we have more info on textures and samplers??
     mLayoutSize = wEntries.size();
     mLayout = device.CreateBindGroupLayout(&layoutDescriptor);
@@ -282,6 +284,25 @@ wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(const wgpu::Device& device) {
     for(auto entry : entriesMap){
         entries.emplace_back(entry.second);
     }
+    std::sort(entries.begin(), entries.end(),[](const wgpu::BindGroupEntry& a, const wgpu::BindGroupEntry& b)
+                                  {
+                                      return a.binding < b.binding;
+                                  });
+    for (const auto& entry : entries){
+        if(entry.buffer != nullptr){
+            printf("===R Entry %i is buffer\n", entry.binding);
+        }
+        else if(entry.sampler != nullptr){
+            printf("===R Entry %i is sampler\n", entry.binding);
+        }
+        else if(entry.textureView != nullptr){
+            printf("===R Entry %i is textureView\n", entry.binding);
+        }
+        else{
+            printf("===R Entry %i is ERROR STATE\n", entry.binding);
+        }
+    }
+    printf("===R Complete Group\n");
     // TODO label? Should we just copy layout label?
     wgpu::BindGroupDescriptor desc{ .layout = mLayout,
         .entryCount = entries.size(),
