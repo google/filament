@@ -50,7 +50,7 @@ void assertFramebufferStatus(utils::io::ostream& out, GLenum target, const char*
 #   define CHECK_GL_FRAMEBUFFER_STATUS(out, target) { GLUtils::checkFramebufferStatus(out, target, __func__, __LINE__); }
 #endif
 
-#ifdef defined(NDEBUG) && defined(FILAMENT_ENABLE_INIT_GL_WARNINGS_FOR_OPTIMIZED_BUILD)
+#if defined(NDEBUG) && defined(FILAMENT_ENABLE_INIT_GL_WARNINGS_FOR_OPTIMIZED_BUILD)
 #   define CHECK_GL_INIT_ERROR_FOR_OPTIMIZED_BUILD(out) { GLUtils::assertGLError(out, __func__, __LINE__);}
 #else
 #   define CHECK_GL_INIT_ERROR_FOR_OPTIMIZED_BUILD(out)
