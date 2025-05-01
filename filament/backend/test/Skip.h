@@ -20,7 +20,8 @@
 #include <gtest/gtest.h>
 #include "BackendTest.h"
 
-// skipEnvironment must be a test::SkipEnvironment
+// skipEnvironment must be a test::SkipEnvironment or something that can be passed to the type's
+// constructor
 // rationale must be a string
 #define SKIP_IF(skipEnvironment, rationale)                                                    \
 do {                                                                                           \
@@ -28,6 +29,17 @@ do {                                                                            
     if (skip.matches()) {                                                                      \
         GTEST_SKIP() << "Skipping test as the " << skip.describe() << "\n"                     \
                      << " This test can't run there because " << rationale;                    \
+    }                                                                                          \
+} while (false)
+
+#define FAIL_IF(skipEnvironment, rationale)                                                    \
+do {                                                                                           \
+    SkipEnvironment skip(skipEnvironment);                                                     \
+    if (skip.matches()) {                                                                      \
+        GTEST_FAIL()                                                                           \
+                << "Failing test as the " << skip.describe() << "\n"                           \
+                << " This test should be able to succeed but it needs to fail early because"   \
+                << rationale;                                                                  \
     }                                                                                          \
 } while (false)
 
