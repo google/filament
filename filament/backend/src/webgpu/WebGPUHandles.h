@@ -27,6 +27,7 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <array>
 #include <cstdint>
 #include <vector>
 
@@ -98,51 +99,68 @@ struct WGPUBufferObject : HwBufferObject {
     wgpu::Buffer buffer = nullptr;
     const BufferObjectBinding bufferObjectBinding;
 };
-enum bindType {
-    BUFF,
-    TEX,
-//    SAMPLER
-};
+
 class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
 public:
+
+    enum class BindGroupEntryType : uint8_t {
+        UNIFORM_BUFFER,
+        TEXTURE_VIEW,
+        SAMPLER
+    };
+
+    struct BindGroupEntryInfo final {
+        uint8_t binding = 0;
+        BindGroupEntryType type = BindGroupEntryType::UNIFORM_BUFFER;
+    };
+
     WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const& device);
     ~WebGPUDescriptorSetLayout();
     [[nodiscard]] const wgpu::BindGroupLayout& getLayout() const { return mLayout; }
-    [[nodiscard]] uint getLayoutSize() const { return mLayoutSize; }
-    std::unordered_map<uint, uint> bindingToIndex;
-    std::vector<std::pair<uint, bindType>> typeVec;
-    uint layoutNumI;
+    [[nodiscard]] std::vector<BindGroupEntryInfo> const& getBindGroupEntries() const {
+        return mBindGroupEntries;
+    }
 
 private:
     // TODO: If this is useful elsewhere, remove it from this class
     // Convert Filament Shader Stage Flags bitmask to webgpu equivilant
     static wgpu::ShaderStage filamentStageToWGPUStage(ShaderStageFlags fFlags);
-    uint mLayoutSize;
+    std::vector<BindGroupEntryInfo> mBindGroupEntries;
     wgpu::BindGroupLayout mLayout;
 };
-struct dummyBundle{
-    wgpu::TextureView textureView;
-    wgpu::Buffer buffer;
-    wgpu::Sampler sampler;
-};
+
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
-    WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize, std::unordered_map<uint, uint> bindingToIndex, std::vector<std::pair<uint, bindType>> typeVec, dummyBundle& bundle);
+    static void initializeDummyResourcesIfNotAlready(wgpu::Device const&,
+            wgpu::TextureFormat aColorFormat);
+
+    WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout,
+            std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
     ~WebGPUDescriptorSet();
 
-    wgpu::BindGroup lockAndReturn(wgpu::Device const& device);
+    wgpu::BindGroup lockAndReturn(wgpu::Device const&);
     void addEntry(uint index, wgpu::BindGroupEntry&& entry);
     [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
 
 private:
+
+    static wgpu::Buffer sDummyUniformBuffer;
+    static wgpu::Texture sDummyTexture;
+    static wgpu::TextureView sDummyTextureView;
+    static wgpu::Sampler sDummySampler;
+
+    static std::vector<wgpu::BindGroupEntry> createDummyEntriesSortedByBinding(
+            std::vector<filament::backend::WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&);
+
     // TODO: Consider storing what we used to make the layout. However we need to essentially
     // Recreate some of the info (Sampler in slot X with the actual sampler) so letting Dawn confirm
     // there isn't a mismatch may be easiest.
     // Also storing the wgpu ObjectBase takes care of ownership challenges in theory
-    wgpu::BindGroupLayout mLayout;
-    std::vector<wgpu::BindGroupEntry> entries;
-    wgpu::BindGroup mBindGroup;
-    std::unordered_map<uint, uint> bindingToIndex;
+    wgpu::BindGroupLayout mLayout = nullptr;
+    static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
+    std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding {};
+    std::vector<wgpu::BindGroupEntry> mEntriesSortedByBinding;
+    wgpu::BindGroup mBindGroup = nullptr;
 };
 
 class WGPUTexture : public HwTexture {
