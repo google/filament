@@ -161,13 +161,12 @@ fragment {
 
         // occlusion to visibility
         float aoVisibility = pow(saturate(1.0 - occlusion), materialParams.power);
+        aoVisibility = lerp(1.0, aoVisibility, materialParams.intensity);
 
 #if defined(TARGET_MOBILE)
         // this line is needed to workaround what seems to be a bug on qualcomm hardware
         aoVisibility += gl_FragCoord.x * MEDIUMP_FLT_MIN;
 #endif
-
-        aoVisibility = lerp(1.0, aoVisibility, materialParams.intensity);
 
         if (materialConstants_bentNormals) {
             // transform to world space (we're guaranteed the view matrix is a rigid body transform)

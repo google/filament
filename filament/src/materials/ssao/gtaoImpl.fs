@@ -58,10 +58,9 @@ float fastACos(float inX) {
 void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         highp vec2 uv, highp vec3 origin, vec3 normal) {
     vec2 uvSamplePos = uv;
-    vec3 viewDir = normalize(-origin);
-    float ssRadius = -(materialParams.projectionScaleRadius / origin.z);
-    // TODO: Determine the constant
-    ssRadius = max(min(ssRadius, 256.0), materialParams.sliceCount);
+    highp vec3 viewDir = normalize(-origin);
+    highp float ssRadius = -(materialParams.projectionScaleRadius / origin.z);
+    ssRadius = max(min(ssRadius, 512.0), materialParams.sliceCount);
 
     float noiseOffset = spatialOffsetsNoise(uv);
     float noiseDirection = spatialDirectionNoise(uv);
@@ -70,7 +69,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
     float occlusion = 0.0;
     float stepRadius = ssRadius / (materialParams.stepsPerSlice + 1.0);
-    for (float i = 0.0; i < materialParams.sliceCount; i+=1.0) {
+    for (float i = 0.0; i < materialParams.sliceCount; i += 1.0) {
         float slice = (i + noiseDirection) / materialParams.sliceCount;
         float phi = slice * PI;
         float cosPhi = cos(phi);
@@ -90,7 +89,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
         float horizonCos0 = -1.0;
         float horizonCos1 = -1.0;
-        for (float j = 0.0; j < materialParams.stepsPerSlice; j++) {
+        for (float j = 0.0; j < materialParams.stepsPerSlice; j += 1.0) {
             // At least move 1 pixel forward in the screen-space
             vec2 sampleOffset = max((j + initialRayStep)*stepRadius, 1.0 + j) * omega;
             float sampleOffsetLength = length(sampleOffset);
@@ -99,7 +98,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
             sampleOffset *= materialParams.resolution.zw;
 
-            float2 sampleScreenPos0 = uv + sampleOffset;
+            vec2 sampleScreenPos0 = uv + sampleOffset;
             highp float sampleDepth0 = sampleDepthLinear(materialParams_depth, sampleScreenPos0, level);
             highp vec3 samplePos0 = computeViewSpacePositionFromDepth(sampleScreenPos0, sampleDepth0,
                 materialParams.positionParams);
@@ -109,16 +108,16 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
             highp vec3 samplePos1 = computeViewSpacePositionFromDepth(sampleScreenPos1, sampleDepth1,
                 materialParams.positionParams);
 
-            float3 sampleDelta0 = (samplePos0 - origin);
-            float3 sampleDelta1 = (samplePos1 - origin);
+            highp vec3 sampleDelta0 = (samplePos0 - origin);
+            highp vec3 sampleDelta1 = (samplePos1 - origin);
             float sampleDist0 = length(sampleDelta0);
             float sampleDist1 = length(sampleDelta1);
 
-            float3 sampleHorizonV0 = sampleDelta0/sampleDist0;
-            float3 sampleHorizonV1 = sampleDelta1/sampleDist1;
+            vec3 sampleHorizonV0 = sampleDelta0/sampleDist0;
+            vec3 sampleHorizonV1 = sampleDelta1/sampleDist1;
 
             float wsRadius = materialParams.radius;
-            float2 fallOff = saturate(float2(sampleDist0*sampleDist0, sampleDist1*sampleDist1) * (2.0/(wsRadius*wsRadius)));
+            vec2 fallOff = saturate(float2(sampleDist0*sampleDist0, sampleDist1*sampleDist1) * (2.0/(wsRadius*wsRadius)));
 
             float shc0 = dot(sampleHorizonV0, viewDir);
             float shc1 = dot(sampleHorizonV1, viewDir);
