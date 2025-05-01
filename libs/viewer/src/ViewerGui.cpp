@@ -841,11 +841,12 @@ void ViewerGui::updateUserInterface() {
         ImGui::Checkbox("High quality upsampling", &upsampling);
 
         switch (ssao.aoType) {
-            case AmbientOcclusionOptions::AOType::SAO:
+            case AmbientOcclusionOptions::AOType::SAO: {
                 ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f,
                         (float) M_PI_4);
                 break;
-            case AmbientOcclusionOptions::AOType::GTAO:
+            }
+            case AmbientOcclusionOptions::AOType::GTAO: {
                 int sliceCount = (int) ssao.gtao.sampleSliceCount;
                 int stepsPerSlice = (int) ssao.gtao.sampleSliceCount;
 
@@ -856,6 +857,7 @@ void ViewerGui::updateUserInterface() {
                 ssao.gtao.sampleSliceCount = sliceCount;
                 ssao.gtao.sampleSliceCount = stepsPerSlice;
                 break;
+            }
             default:
                 break;
         }

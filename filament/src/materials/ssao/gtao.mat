@@ -93,6 +93,25 @@ material {
             name : ssctSampleCount
         }
     ],
+    constants : [
+        {
+            type : bool,
+            name : bentNormals,
+            default : false
+        }
+    ],
+    outputs : [
+        {
+            name : aoData,
+            target : color,
+            type : float3
+        },
+        {
+            name : bnData,
+            target : color,
+            type : float3
+        }
+    ],
     variables : [
          vertex
     ],
@@ -110,8 +129,6 @@ vertex {
 }
 
 fragment {
-
-#define COMPUTE_BENT_NORMAL 0
 
     #include "gtaoImpl.fs"
     #include "ssctImpl.fs"
@@ -152,6 +169,12 @@ fragment {
 
         aoVisibility = lerp(1.0, aoVisibility, materialParams.intensity);
 
-        postProcess.color.rgb = vec3(aoVisibility, pack(origin.z * materialParams.invFarPlane));
+        if (materialConstants_bentNormals) {
+            // transform to world space (we're guaranteed the view matrix is a rigid body transform)
+            vec3 bn = mat3(getWorldFromViewMatrix()) * bentNormal;
+            postProcess.bnData = packBentNormal(bn);
+        }
+
+        postProcess.aoData = vec3(aoVisibility, pack(origin.z * materialParams.invFarPlane));
     }
 }

@@ -100,7 +100,9 @@ using namespace backend;
 static constexpr uint8_t kMaxBloomLevels = 12u;
 static_assert(kMaxBloomLevels >= 3, "We require at least 3 bloom levels");
 
-constexpr static float halton(unsigned int i, unsigned int const b) noexcept {
+namespace {
+
+constexpr float halton(unsigned int i, unsigned int const b) noexcept {
     // skipping a bunch of entries makes the average of the sequence closer to 0.5
     i += 409;
     float f = 1.0f;
@@ -112,6 +114,19 @@ constexpr static float halton(unsigned int i, unsigned int const b) noexcept {
     }
     return r;
 }
+
+template <typename ValueType>
+void setConstantParameter(FMaterial* const material, std::string_view const name,
+        ValueType value, bool& dirty) noexcept {
+    auto id = material->getSpecializationConstantId(name);
+    if (id.has_value()) {
+        if (material->setConstant(id.value(), value)) {
+            dirty = true;
+        }
+    }
+}
+
+} // anonymous
 
 // ------------------------------------------------------------------------------------------------
 
@@ -860,8 +875,20 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                                          ? getPostProcessMaterial("gtao")
                                  : computeBentNormals ? getPostProcessMaterial("saoBentNormals")
                                                       : getPostProcessMaterial("sao");
-                FMaterial const* const ma = material.getMaterial(mEngine);
-                FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(ma);
+                FMaterial* const ma = material.getMaterial(mEngine);
+                if (options.aoType == AmbientOcclusionOptions::AOType::GTAO) {
+                    bool dirty = false;
+                    setConstantParameter(ma, "bentNormals", computeBentNormals, dirty);
+
+                    if (dirty) {
+                        ma->invalidate();
+                        // TODO: call Material::compile(), we can't do that now because it works
+                        // only
+                        //       with surface materials
+                    }
+                }
+
+                FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(mEngine, material);
 
                 // Set AO type specific material parameters
                 switch (options.aoType) {
@@ -895,7 +922,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         mi->setParameter("intensity", options.intensity);
                         mi->setParameter("thicknessHeuristic", options.gtao.thicknessHeuristic);
 
-                        // TODO: Set const param for bent normal
                         break;
                     }
                     default:
@@ -2656,25 +2682,15 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
     FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine);
     bool dirty = false;
 
-    auto setConstantParameter =
-            [&dirty](FMaterial* const material, std::string_view const name, auto value) noexcept {
-        auto id = material->getSpecializationConstantId(name);
-        if (id.has_value()) {
-            if (material->setConstant(id.value(), value)) {
-                dirty = true;
-            }
-        }
-    };
-
-    setConstantParameter(ma, "upscaling", taaOptions.upscaling);
-    setConstantParameter(ma, "historyReprojection", taaOptions.historyReprojection);
-    setConstantParameter(ma, "filterHistory", taaOptions.filterHistory);
-    setConstantParameter(ma, "filterInput", taaOptions.filterInput);
-    setConstantParameter(ma, "useYCoCg", taaOptions.useYCoCg);
-    setConstantParameter(ma, "preventFlickering", taaOptions.preventFlickering);
-    setConstantParameter(ma, "boxType", int32_t(taaOptions.boxType));
-    setConstantParameter(ma, "boxClipping", int32_t(taaOptions.boxClipping));
-    setConstantParameter(ma, "varianceGamma", taaOptions.varianceGamma);
+    setConstantParameter(ma, "upscaling", taaOptions.upscaling, dirty);
+    setConstantParameter(ma, "historyReprojection", taaOptions.historyReprojection, dirty);
+    setConstantParameter(ma, "filterHistory", taaOptions.filterHistory, dirty);
+    setConstantParameter(ma, "filterInput", taaOptions.filterInput, dirty);
+    setConstantParameter(ma, "useYCoCg", taaOptions.useYCoCg, dirty);
+    setConstantParameter(ma, "preventFlickering", taaOptions.preventFlickering, dirty);
+    setConstantParameter(ma, "boxType", int32_t(taaOptions.boxType), dirty);
+    setConstantParameter(ma, "boxClipping", int32_t(taaOptions.boxClipping), dirty);
+    setConstantParameter(ma, "varianceGamma", taaOptions.varianceGamma, dirty);
     if (dirty) {
         ma->invalidate();
         // TODO: call Material::compile(), we can't do that now because it works only
@@ -2689,18 +2705,8 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(
     FMaterial* const ma = material.getMaterial(mEngine);
     bool dirty = false;
 
-    auto setConstantParameter =
-            [&dirty](FMaterial* const material, std::string_view const name, auto value) noexcept {
-        auto id = material->getSpecializationConstantId(name);
-        if (id.has_value()) {
-            if (material->setConstant(id.value(), value)) {
-                dirty = true;
-            }
-        }
-    };
-
-    setConstantParameter(ma, "isOneDimensional", colorGrading->isOneDimensional());
-    setConstantParameter(ma, "isLDR", colorGrading->isLDR());
+    setConstantParameter(ma, "isOneDimensional", colorGrading->isOneDimensional(), dirty);
+    setConstantParameter(ma, "isLDR", colorGrading->isLDR(), dirty);
 
     if (dirty) {
         ma->invalidate();

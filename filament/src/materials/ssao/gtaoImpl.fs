@@ -23,17 +23,7 @@
 
 #include "../utils/geometry.fs"
 
-#ifndef COMPUTE_BENT_NORMAL
-#error COMPUTE_BENT_NORMAL must be set
-#endif
-
 const float kLog2LodRate = 3.0;
-
-// fallOffRange.x --> Distance to start fallOff
-// fallOffRange.y --> Intensity of the fallOff
-// float computeDistanceFade(const float distance) {
-//     return saturate(max(0, distance - materialParams.fallOffRange.x) * materialParams.fallOffRange.y);
-// }
 
 float integrateArcCosWeight(float h, float n) {
     float Arc = -cos(2.0 * h - n) + cos(n) + 2.0 * h * sin(n);
@@ -142,13 +132,16 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         h0 = n + clamp(h0-n, -HALF_PI, HALF_PI);
         h1 = n + clamp(h1-n, -HALF_PI, HALF_PI);
 
+        float angle = 0.5 * (h0 + h1);
+        bentNormal += viewDir * cos(angle) - axisV * sin(angle);
+
         occlusion += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
     }
 
     occlusion = 1.0 - saturate(occlusion / materialParams.sliceCount);
     obscurance = occlusion;
 
-#if COMPUTE_BENT_NORMAL
-    bentNormal = normalize(bentNormal);
-#endif
+    if (materialConstants_bentNormals) {
+        bentNormal = normalize(bentNormal);
+    }
 }
