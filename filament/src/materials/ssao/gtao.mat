@@ -161,7 +161,7 @@ fragment {
 
         // occlusion to visibility
         float aoVisibility = pow(saturate(1.0 - occlusion), materialParams.power);
-        aoVisibility = lerp(1.0, aoVisibility, materialParams.intensity);
+        aoVisibility = mix(1.0, aoVisibility, materialParams.intensity);
 
 #if defined(TARGET_MOBILE)
         // this line is needed to workaround what seems to be a bug on qualcomm hardware

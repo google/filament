@@ -30,10 +30,6 @@ float integrateArcCosWeight(float h, float n) {
     return 0.25 * Arc;
 }
 
-float lerp(const float x, const float y, float a) {
-    return x * (1.0 - a) + y * a;
-}
-
 float spatialDirectionNoise(float2 uv) {
     int2 position = int2(uv * materialParams.resolution.xy);
 	return (1.0/16.0) * (float(((position.x + position.y) & 3) << 2) + float(position.x & 3));
@@ -67,7 +63,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
     float initialRayStep = fract(noiseOffset);
 
-    float occlusion = 0.0;
+    float visibility = 0.0;
     float stepRadius = ssRadius / (materialParams.stepsPerSlice + 1.0);
     for (float i = 0.0; i < materialParams.sliceCount; i += 1.0) {
         float slice = (i + noiseDirection) / materialParams.sliceCount;
@@ -122,8 +118,8 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
             float shc0 = dot(sampleHorizonV0, viewDir);
             float shc1 = dot(sampleHorizonV1, viewDir);
 
-            horizonCos0 = shc0 > horizonCos0 ? lerp(shc0, horizonCos0, fallOff.x) : lerp(horizonCos0, shc0, materialParams.thicknessHeuristic);
-            horizonCos1 = shc1 > horizonCos1 ? lerp(shc1, horizonCos1, fallOff.y) : lerp(horizonCos1, shc1, materialParams.thicknessHeuristic);
+            horizonCos0 = shc0 > horizonCos0 ? mix(shc0, horizonCos0, fallOff.x) : mix(horizonCos0, shc0, materialParams.thicknessHeuristic);
+            horizonCos1 = shc1 > horizonCos1 ? mix(shc1, horizonCos1, fallOff.y) : mix(horizonCos1, shc1, materialParams.thicknessHeuristic);
         }
 
         float h0 = -fastACos(horizonCos1);
@@ -134,11 +130,10 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         float angle = 0.5 * (h0 + h1);
         bentNormal += viewDir * cos(angle) - axisV * sin(angle);
 
-        occlusion += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
+        visibility += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
     }
 
-    occlusion = 1.0 - saturate(occlusion / materialParams.sliceCount);
-    obscurance = occlusion;
+    obscurance = 1.0 - saturate(visibility / materialParams.sliceCount);
 
     if (materialConstants_bentNormals) {
         bentNormal = normalize(bentNormal);
