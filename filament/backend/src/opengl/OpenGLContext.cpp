@@ -604,7 +604,7 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         // We disable depth precache for the default material on Mozilla FireFox. It struggles with
         // slow shader compile/link times if the shader contains large arrays of uniform. Some depth
         // program variants have skinning-related data, which incurs this slowness and end up
-        // causing an initial startup stalls.
+        // causing an initial startup stalls. (b/392917621)
         bugs->disable_depth_precache_for_default_material = true;
     }
 
