@@ -181,6 +181,18 @@ static bool printMetalInfo(ostream& json, const ChunkContainer& container) {
     return true;
 }
 
+static bool printWGPUInfo(ostream& json, const ChunkContainer& container) {
+    std::vector<ShaderInfo> info;
+    info.resize(getShaderCount(container, ChunkType::MaterialWgsl));
+    if (!getShaderInfo(container, info.data(), ChunkType::MaterialWgsl)) {
+        return false;
+    }
+    json << "\"webgpu\": [\n";
+    printShaderInfo(json, info, container);
+    json << "],\n";
+    return true;
+}
+
 bool JsonWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
     ostringstream json;
     if (!printMaterial(json, container)) {
@@ -199,6 +211,9 @@ bool JsonWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
         return false;
     }
     if (!printMetalInfo(json, container)) {
+        return false;
+    }
+    if (!printWGPUInfo(json, container)) {
         return false;
     }
 

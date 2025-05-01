@@ -90,6 +90,7 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
     std::string_view const essl1("essl1");
     std::string_view const msl("msl");
     std::string_view const spirv("spirv");
+    std::string_view const wgsl("wgsl");
     size_t const qlength = strlen(request->query_string);
 
     char type[6] = {};
@@ -102,11 +103,13 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
     char glindex[4] = {};
     char vkindex[4] = {};
     char metalindex[4] = {};
+    char wgpuindex[4] = {};
     mg_get_var(request->query_string, qlength, "glindex", glindex, sizeof(glindex));
     mg_get_var(request->query_string, qlength, "vkindex", vkindex, sizeof(vkindex));
     mg_get_var(request->query_string, qlength, "metalindex", metalindex, sizeof(metalindex));
+    mg_get_var(request->query_string, qlength, "wgpuindex", wgpuindex, sizeof(wgpuindex));
 
-    if (!glindex[0] && !vkindex[0] && !metalindex[0]) {
+    if (!glindex[0] && !vkindex[0] && !metalindex[0] && !wgpuindex[0]) {
         return error(__LINE__, uri);
     }
 
@@ -218,6 +221,37 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
 
         return softError("Only MSL is supported.");
     }
+
+    if (wgpuindex[0]) {
+        ShaderExtractor extractor(ShaderLanguage::WGSL, result->package, result->packageSize);
+        if (!extractor.parse()) {
+            return error(__LINE__, uri);
+        }
+
+        FixedCapacityVector<ShaderInfo> info(getShaderCount(package, ChunkType::MaterialWgsl));
+        if (!getShaderInfo(package, info.data(), ChunkType::MaterialWgsl)) {
+            return error(__LINE__, uri);
+        }
+
+        int const shaderIndex = std::stoi(wgpuindex);
+        if (shaderIndex >= info.size()) {
+            return error(__LINE__, uri);
+        }
+
+        auto const& item = info[shaderIndex];
+        filaflat::ShaderContent content;
+        extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
+
+        if (language == wgsl) {
+            std::string const shader = mFormatter.format((char const*) content.data());
+            mg_printf(conn, kSuccessHeader.data(), "application/txt");
+            mg_write(conn, shader.c_str(), shader.size());
+            return true;
+        }
+
+        return softError("Only WGSL is supported.");
+    }
+
     return error(__LINE__, uri);
 }
 

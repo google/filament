@@ -160,7 +160,7 @@ VulkanDescriptorSetLayout::Bitmask VulkanDescriptorSetLayout::Bitmask::fromLayou
     return fromBackendLayout(layout);
 }
 
-PushConstantDescription::PushConstantDescription(backend::Program const& program) noexcept {
+PushConstantDescription::PushConstantDescription(backend::Program const& program) {
     mRangeCount = 0;
     for (auto stage : { ShaderStage::VERTEX, ShaderStage::FRAGMENT, ShaderStage::COMPUTE }) {
         auto const& constants = program.getPushConstants(stage);

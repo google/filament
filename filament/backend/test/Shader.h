@@ -96,6 +96,7 @@ public:
 protected:
     Cleanup& mCleanup;
     filament::backend::ProgramHandle mProgram;
+    // This will be a null handle if there are no uniforms.
     filament::backend::DescriptorSetLayoutHandle mDescriptorSetLayout;
 };
 

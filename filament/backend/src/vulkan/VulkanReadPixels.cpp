@@ -335,7 +335,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
     mTaskHandler->post(std::move(waitFenceFunc), std::move(cleanPbdFunc));
 }
 
-void VulkanReadPixels::runUntilComplete() noexcept {
+void VulkanReadPixels::runUntilComplete() {
     if (!mTaskHandler) {
         return;
     }

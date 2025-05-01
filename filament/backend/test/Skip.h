@@ -21,12 +21,14 @@
 #include "BackendTest.h"
 
 // skipEnvironment must be a test::SkipEnvironment
-#define SKIP_IF(skipEnvironment)                                                                   \
-do {                                                                                               \
-    SkipEnvironment skip(skipEnvironment);                                                         \
-    if (skip.matches()) {                                                                          \
-        GTEST_SKIP() << "Skipping test as the " << skip.describe();                                \
-    }                                                                                              \
+// rationale must be a string
+#define SKIP_IF(skipEnvironment, rationale)                                                    \
+do {                                                                                           \
+    SkipEnvironment skip(skipEnvironment);                                                     \
+    if (skip.matches()) {                                                                      \
+        GTEST_SKIP() << "Skipping test as the " << skip.describe() << "\n"                     \
+                     << " This test can't run there because " << rationale;                    \
+    }                                                                                          \
 } while (false)
 
 namespace test {

@@ -259,6 +259,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUDriver.h
             src/webgpu/WebGPUHandles.cpp
             src/webgpu/WebGPUHandles.h
+            src/webgpu/WebGPUPipelineCreation.cpp
+            src/webgpu/WebGPUPipelineCreation.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
             src/webgpu/WGPUProgram.cpp

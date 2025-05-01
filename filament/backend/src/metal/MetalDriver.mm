@@ -1408,8 +1408,8 @@ void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, Primit
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
     auto vertexBuffer = handle_cast<MetalVertexBuffer>(vbh);
     auto indexBuffer = handle_cast<MetalIndexBuffer>(ibh);
-    MetalVertexBufferInfo const* const vbi = handle_cast<MetalVertexBufferInfo>(vertexBuffer->vbih);
-    primitive->setBuffers(vbi, vertexBuffer, indexBuffer);
+    primitive->vertexBuffer = vertexBuffer;
+    primitive->indexBuffer = indexBuffer;
     primitive->type = pt;
 }
 
