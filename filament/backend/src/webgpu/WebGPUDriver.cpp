@@ -1130,7 +1130,7 @@ wgpu::Sampler WebGPUDriver::makeSampler(SamplerParams const& params) {
 
     // Unused: Filament's compareMode, WGPU lodMinClamp/lodMaxClamp
 
-    return mDevice.CreateSampler();
+    return mDevice.CreateSampler(&desc);
 }
 wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& fWrapMode) {
     switch (fWrapMode) {
