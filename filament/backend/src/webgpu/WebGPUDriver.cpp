@@ -238,6 +238,14 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfi
     printDeviceDetails(mDevice);
 #endif
     mQueue = mDevice.GetQueue();
+    bundle.sampler = mDevice.CreateSampler();
+    wgpu::BufferDescriptor bDesc{.label = "DummyBuff", .usage = wgpu::BufferUsage::MapRead};
+    bundle.buffer = mDevice.CreateBuffer(&bDesc);
+    //Do we  need to keep a ref to this? If so into the bundle it goes
+    wgpu::TextureDescriptor texDesc{.label = "DummyTex",.usage=wgpu::TextureUsage::CopySrc, .dimension = wgpu::TextureDimension::e2D, .size={1,1,1},.format=wgpu::TextureFormat::R8Unorm};
+    auto tempTex = mDevice.CreateTexture(&texDesc);
+    wgpu::TextureViewDescriptor texVDesc{.label = "DummyTex"};
+    bundle.textureView = tempTex.CreateView(&texVDesc);
 }
 
 WebGPUDriver::~WebGPUDriver() noexcept = default;
@@ -574,7 +582,7 @@ void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
         Handle<HwDescriptorSetLayout> dslh) {
     auto layout = handleCast<WebGPUDescriptorSetLayout>(dslh);
-    constructHandle<WebGPUDescriptorSet>(dsh, layout->getLayout(), layout->getLayoutSize());
+    constructHandle<WebGPUDescriptorSet>(dsh, layout->getLayout(), layout->getLayoutSize(), layout->bindingToIndex, layout->typeVec, bundle);
 }
 
 Handle<HwStream> WebGPUDriver::createStreamNative(void* nativeStream) {
@@ -977,7 +985,7 @@ void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
             .buffer = buffer->buffer,
             .offset = offset,
             .size = size };
-        bindGroup->addEntry(entry.binding, std::move(entry));
+        bindGroup->addEntry(binding, std::move(entry));
     }
 }
 
@@ -993,11 +1001,11 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
         // TODO making assumptions that size and offset mean the same thing here.
         wgpu::BindGroupEntry tEntry{ .binding = static_cast<uint32_t>(binding * 2),
             .textureView = texture->getTexView() };
-        bindGroup->addEntry(tEntry.binding, std::move(tEntry));
+        bindGroup->addEntry(binding, std::move(tEntry));
 
         wgpu::BindGroupEntry sEntry{ .binding = static_cast<uint32_t>(binding * 2 + 1),
             .sampler = sampler };
-        bindGroup->addEntry(sEntry.binding, std::move(sEntry));
+        bindGroup->addEntry(binding, std::move(sEntry));
     }
 }
 

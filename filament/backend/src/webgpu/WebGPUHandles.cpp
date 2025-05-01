@@ -205,7 +205,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 
     std::vector<wgpu::BindGroupLayoutEntry> wEntries;
     wEntries.reserve(layout.bindings.size() + samplerCount);
-
+    uint indexTracker = 0;
     for (auto fEntry: layout.bindings) {
         auto& wEntry = wEntries.emplace_back();
         wEntry.visibility = filamentStageToWGPUStage(fEntry.stageFlags);
@@ -222,6 +222,11 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 // We are simply hoping that undefined and defaults suffices here.
                 samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering;
                 wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
+                typeVec.push_back({fEntry.binding, bindType::TEX});
+
+                bindingToIndex[fEntry.binding] = indexTracker++;
+                //Thinking to just bump the tracker twice here, then do samp+1 logic to handle it
+                indexTracker++;
                 break;
             }
             case DescriptorType::UNIFORM_BUFFER: {
@@ -229,6 +234,9 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                         any(fEntry.flags & DescriptorFlags::DYNAMIC_OFFSET);
                 wEntry.buffer.type = wgpu::BufferBindingType::Uniform;
                 // TODO: Ideally we fill minBindingSize
+                typeVec.push_back({fEntry.binding, bindType::BUFF});
+                bindingToIndex[fEntry.binding] = indexTracker++;
+
                 break;
             }
 
@@ -267,8 +275,23 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 
 WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
 
-WebGPUDescriptorSet::WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize)
-    : mLayout(layout) {
+WebGPUDescriptorSet::WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize, std::unordered_map<uint, uint> bindingToIndex, std::vector<std::pair<uint, bindType>> typeVec, dummyBundle& bundle)
+    : mLayout(layout),
+    entries(layoutSize, wgpu::BindGroupEntry{.buffer = nullptr, .sampler = nullptr, .textureView = nullptr}),
+      bindingToIndex(bindingToIndex)
+{
+    for(uint i=0; i < layoutSize; ++i){
+        const auto& type = typeVec[i];
+        entries[i].binding = type.first*2;
+        if(type.second == bindType::BUFF){
+            entries[i].buffer = bundle.buffer;
+        } else if(type.second == bindType::TEX){
+            entries[i].textureView = bundle.textureView;
+            entries[i+1].binding=type.first*2+1;
+            entries[i+1].sampler=bundle.sampler;
+            ++i;
+        }
+    }
     // Establish the size of entries based on the layout. This should be reliable and efficient.
 }
 WebGPUDescriptorSet::~WebGPUDescriptorSet() {
@@ -280,9 +303,6 @@ WebGPUDescriptorSet::~WebGPUDescriptorSet() {
 wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(const wgpu::Device& device) {
     if (mBindGroup) {
         return mBindGroup;
-    }
-    for(auto entry : entriesMap){
-        entries.emplace_back(entry.second);
     }
     std::sort(entries.begin(), entries.end(),[](const wgpu::BindGroupEntry& a, const wgpu::BindGroupEntry& b)
                                   {
@@ -317,10 +337,9 @@ void WebGPUDescriptorSet::addEntry(uint index, wgpu::BindGroupEntry&& entry) {
         // Filament guarantees this won't change after things have locked.
         return;
     }
-    // TODO: Putting some level of trust that Filament is not going to reuse indexes or go past the
-    // layout index for efficiency. Add guards if wrong.
-    entriesMap[index] = std::move(entry);
-    //entries.emplace_back(std::move(entry));
+    uint plusOne = entry.sampler == nullptr  ? 0 : 1;
+
+    entries[bindingToIndex[index]+plusOne] = std::move(entry);
 }
 // From createTextureR
 WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,

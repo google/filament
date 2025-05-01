@@ -98,12 +98,19 @@ struct WGPUBufferObject : HwBufferObject {
     wgpu::Buffer buffer = nullptr;
     const BufferObjectBinding bufferObjectBinding;
 };
+enum bindType {
+    BUFF,
+    TEX,
+//    SAMPLER
+};
 class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
 public:
     WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const& device);
     ~WebGPUDescriptorSetLayout();
     [[nodiscard]] const wgpu::BindGroupLayout& getLayout() const { return mLayout; }
     [[nodiscard]] uint getLayoutSize() const { return mLayoutSize; }
+    std::unordered_map<uint, uint> bindingToIndex;
+    std::vector<std::pair<uint, bindType>> typeVec;
     uint layoutNumI;
 
 private:
@@ -113,10 +120,14 @@ private:
     uint mLayoutSize;
     wgpu::BindGroupLayout mLayout;
 };
-
+struct dummyBundle{
+    wgpu::TextureView textureView;
+    wgpu::Buffer buffer;
+    wgpu::Sampler sampler;
+};
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
-    WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize);
+    WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize, std::unordered_map<uint, uint> bindingToIndex, std::vector<std::pair<uint, bindType>> typeVec, dummyBundle& bundle);
     ~WebGPUDescriptorSet();
 
     wgpu::BindGroup lockAndReturn(wgpu::Device const& device);
@@ -131,7 +142,7 @@ private:
     wgpu::BindGroupLayout mLayout;
     std::vector<wgpu::BindGroupEntry> entries;
     wgpu::BindGroup mBindGroup;
-    std::unordered_map<uint, wgpu::BindGroupEntry> entriesMap;
+    std::unordered_map<uint, uint> bindingToIndex;
 };
 
 class WGPUTexture : public HwTexture {
