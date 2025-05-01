@@ -848,14 +848,15 @@ void ViewerGui::updateUserInterface() {
             }
             case AmbientOcclusionOptions::AOType::GTAO: {
                 int sliceCount = (int) ssao.gtao.sampleSliceCount;
-                int stepsPerSlice = (int) ssao.gtao.sampleSliceCount;
+                int stepsPerSlice = (int) ssao.gtao.sampleStepsPerSlice;
 
                 ImGui::SliderFloat("Radius", &ssao.radius, 0.1f, 10.0f);
                 ImGui::SliderInt("Slice Count", &sliceCount, 1, 10);
                 ImGui::SliderInt("Steps Per Slice", &stepsPerSlice, 1, 4);
+                ImGui::SliderFloat("Power", &ssao.power, 1.0f, 8.0f);
 
                 ssao.gtao.sampleSliceCount = sliceCount;
-                ssao.gtao.sampleSliceCount = stepsPerSlice;
+                ssao.gtao.sampleStepsPerSlice = stepsPerSlice;
                 break;
             }
             default:
