@@ -165,6 +165,7 @@ public:
           mVkSet(vkSet),
           mOnRecycleFn(std::move(onRecycleFn)) {}
 
+    // NOLINTNEXTLINE(bugprone-exception-escape)
     ~VulkanDescriptorSet() {
         if (mOnRecycleFn) {
             mOnRecycleFn(this);
@@ -182,7 +183,7 @@ public:
         return mExternalSamplerVkSet;
     }
 
-    void setExternalSamplerVkSet(VkDescriptorSet vkset, OnRecycle onRecycle) noexcept {
+    void setExternalSamplerVkSet(VkDescriptorSet vkset, OnRecycle onRecycle) {
         mExternalSamplerVkSet = vkset;
         if (mOnRecycleExternalSamplerFn) {
             mOnRecycleExternalSamplerFn(this);
@@ -218,7 +219,7 @@ using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
 using PushConstantNameByStage = std::array<PushConstantNameArray, Program::SHADER_TYPE_COUNT>;
 
 struct PushConstantDescription {
-    explicit PushConstantDescription(backend::Program const& program) noexcept;
+    explicit PushConstantDescription(backend::Program const& program);
 
     VkPushConstantRange const* getVkRanges() const noexcept { return mRanges; }
     uint32_t getVkRangeCount() const noexcept { return mRangeCount; }

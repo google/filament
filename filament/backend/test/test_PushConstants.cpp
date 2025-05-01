@@ -80,7 +80,7 @@ void main() {
 })";
 
 TEST_F(BackendTest, PushConstants) {
-    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL));
+    SKIP_IF(Backend::OPENGL, "Push constants not supported on OpenGL");
 
     auto& api = getDriverApi();
 

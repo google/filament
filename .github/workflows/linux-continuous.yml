@@ -14,6 +14,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/linux-prereq
       - name: Run build script
         run: |
           cd build/linux && printf "y" | ./build.sh continuous

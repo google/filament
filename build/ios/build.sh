@@ -28,7 +28,6 @@ set -e
 set -x
 
 source `dirname $0`/../common/ci-common.sh
-source `dirname $0`/ci-common.sh
 source `dirname $0`/../common/build-common.sh
 
 pushd `dirname $0`/../.. > /dev/null
@@ -41,4 +40,3 @@ if [[ "${GENERATE_ARCHIVES}" ]]; then
 fi
 
 ./build.sh -i -p ios -c $BUILD_SIMULATOR $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
-

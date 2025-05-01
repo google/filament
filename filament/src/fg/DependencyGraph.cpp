@@ -139,7 +139,7 @@ void DependencyGraph::clear() noexcept {
     mNodes.clear();
 }
 
-void DependencyGraph::export_graphviz(utils::io::ostream& out, char const* name) {
+void DependencyGraph::export_graphviz(utils::io::ostream& out, char const* name) const noexcept {
 #ifndef NDEBUG
     const char* graphName = name ? name : "graph";
     out << "digraph \"" << graphName << "\" {\n";

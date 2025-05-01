@@ -28,7 +28,7 @@ namespace filament::backend {
 VulkanSamplerCache::VulkanSamplerCache(VkDevice device)
     : mDevice(device) {}
 
-VkSampler VulkanSamplerCache::getSampler(Params params) noexcept {
+VkSampler VulkanSamplerCache::getSampler(Params params) {
     auto iter = mCache.find(params);
     if (UTILS_LIKELY(iter != mCache.end())) {
         return iter->second;

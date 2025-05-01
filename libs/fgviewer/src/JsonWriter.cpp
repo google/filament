@@ -27,6 +27,7 @@
 namespace filament::fgviewer {
 
 namespace {
+
 void writeJSONString(std::ostream& os, const char* str) {
     os << '"';
     const char* p = str;
@@ -46,7 +47,7 @@ void writeJSONString(std::ostream& os, const char* str) {
 void writeViewName(std::ostream& os, const FrameGraphInfo& frameGraph) {
     os << "  \"viewName\": ";
     writeJSONString(os, frameGraph.getViewName());
-    os << ",\n";
+    os << "\n";
 }
 
 void writeResourceIds(std::ostream& os, const std::vector<ResourceId>& resources) {
@@ -80,7 +81,7 @@ void writePasses(std::ostream& os, const FrameGraphInfo& frameGraph) {
         if (i + 1 < passes.size()) os << ",";
         os << "\n";
     }
-    os << "  ],\n";
+    os << "  ]\n";
 }
 
 void writeResources(std::ostream& os, const FrameGraphInfo& frameGraph) {
@@ -114,6 +115,15 @@ void writeResources(std::ostream& os, const FrameGraphInfo& frameGraph) {
     }
     os << "  }\n";
 }
+
+void writeGraphviz(std::ostream& os, const FrameGraphInfo& frameGraph) {
+    const char* graphvizString = frameGraph.getGraphvizData();
+
+    os << "  \"graphviz\": ";
+    writeJSONString(os, graphvizString);
+    os << "\n";
+}
+
 } // anonymous
 
 const char* JsonWriter::getJsonString() const {
@@ -128,8 +138,12 @@ bool JsonWriter::writeFrameGraphInfo(const FrameGraphInfo& frameGraph) {
     std::ostringstream os;
 
     writeViewName(os, frameGraph);
+    os << ",\n";
     writePasses(os, frameGraph);
+    os << ",\n";
     writeResources(os, frameGraph);
+    os << ",\n";
+    writeGraphviz(os, frameGraph);
 
 
     mJsonString = utils::CString(os.str().c_str());
