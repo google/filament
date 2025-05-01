@@ -39,7 +39,7 @@ namespace filamat {
 
 MaterialUniformInterfaceBlockChunk::MaterialUniformInterfaceBlockChunk(
         BufferInterfaceBlock const& uib) :
-        Chunk(ChunkType::MaterialUib),
+        Chunk(MaterialUib),
         mUib(uib) {
 }
 
@@ -60,7 +60,7 @@ void MaterialUniformInterfaceBlockChunk::flatten(Flattener& f) {
 
 MaterialSamplerInterfaceBlockChunk::MaterialSamplerInterfaceBlockChunk(
         SamplerInterfaceBlock const& sib) :
-        Chunk(ChunkType::MaterialSib),
+        Chunk(MaterialSib),
         mSib(sib) {
 }
 
@@ -81,7 +81,7 @@ void MaterialSamplerInterfaceBlockChunk::flatten(Flattener& f) {
 // ------------------------------------------------------------------------------------------------
 
 MaterialSubpassInterfaceBlockChunk::MaterialSubpassInterfaceBlockChunk(SubpassInfo const& subpass) :
-        Chunk(ChunkType::MaterialSubpass),
+        Chunk(MaterialSubpass),
         mSubpass(subpass) {
 }
 
@@ -101,8 +101,8 @@ void MaterialSubpassInterfaceBlockChunk::flatten(Flattener& f) {
 // ------------------------------------------------------------------------------------------------
 
 MaterialConstantParametersChunk::MaterialConstantParametersChunk(
-        utils::FixedCapacityVector<MaterialConstant> constants)
-    : Chunk(ChunkType::MaterialConstants), mConstants(std::move(constants)) {}
+        FixedCapacityVector<MaterialConstant> constants)
+    : Chunk(MaterialConstants), mConstants(std::move(constants)) {}
 
 void MaterialConstantParametersChunk::flatten(Flattener& f) {
     f.writeUint64(mConstants.size());
@@ -115,8 +115,8 @@ void MaterialConstantParametersChunk::flatten(Flattener& f) {
 // ------------------------------------------------------------------------------------------------
 
 MaterialPushConstantParametersChunk::MaterialPushConstantParametersChunk(
-        CString const& structVarName, utils::FixedCapacityVector<MaterialPushConstant> constants)
-    : Chunk(ChunkType::MaterialPushConstants),
+        CString const& structVarName, FixedCapacityVector<MaterialPushConstant> constants)
+    : Chunk(MaterialPushConstants),
       mStructVarName(structVarName),
       mConstants(std::move(constants)) {}
 
@@ -133,7 +133,7 @@ void MaterialPushConstantParametersChunk::flatten(Flattener& f) {
 // ------------------------------------------------------------------------------------------------
 
 MaterialBindingUniformInfoChunk::MaterialBindingUniformInfoChunk(Container list) noexcept
-        : Chunk(ChunkType::MaterialBindingUniformInfo),
+        : Chunk(MaterialBindingUniformInfo),
           mBindingUniformInfo(std::move(list)) {
 }
 
@@ -155,7 +155,7 @@ void MaterialBindingUniformInfoChunk::flatten(Flattener& f) {
 // ------------------------------------------------------------------------------------------------
 
 MaterialAttributesInfoChunk::MaterialAttributesInfoChunk(Container list) noexcept
-        : Chunk(ChunkType::MaterialAttributeInfo),
+        : Chunk(MaterialAttributeInfo),
           mAttributeInfo(std::move(list))
 {
 }
@@ -170,11 +170,9 @@ void MaterialAttributesInfoChunk::flatten(Flattener& f) {
 
 // ------------------------------------------------------------------------------------------------
 
-MaterialDescriptorBindingsChuck::MaterialDescriptorBindingsChuck(Container const& sib,
-        backend::DescriptorSetLayout const& perViewLayout) noexcept
-        : Chunk(ChunkType::MaterialDescriptorBindingsInfo),
-          mSamplerInterfaceBlock(sib),
-          mPerViewLayout(perViewLayout) {
+MaterialDescriptorBindingsChuck::MaterialDescriptorBindingsChuck(Container const& sib) noexcept
+        : Chunk(MaterialDescriptorBindingsInfo),
+          mSamplerInterfaceBlock(sib) {
 }
 
 void MaterialDescriptorBindingsChuck::flatten(Flattener& f) {
@@ -182,13 +180,6 @@ void MaterialDescriptorBindingsChuck::flatten(Flattener& f) {
     assert_invariant(sizeof(backend::descriptor_binding_t) == sizeof(uint8_t));
 
     using namespace backend;
-
-
-    // number of descriptor-sets
-    f.writeUint8(3);
-
-    // set
-    f.writeUint8(+DescriptorSetBindingPoints::PER_MATERIAL);
 
     // samplers + 1 descriptor for the UBO
     f.writeUint8(mSamplerInterfaceBlock.getSize() + 1);
@@ -210,37 +201,13 @@ void MaterialDescriptorBindingsChuck::flatten(Flattener& f) {
         }
         f.writeUint8(entry.binding);
     }
-
-    // set
-    f.writeUint8(+DescriptorSetBindingPoints::PER_RENDERABLE);
-    f.writeUint8(descriptor_sets::getPerRenderableLayout().bindings.size());
-    for (auto const& entry: descriptor_sets::getPerRenderableLayout().bindings) {
-        auto const& name = descriptor_sets::getDescriptorName(
-                DescriptorSetBindingPoints::PER_RENDERABLE, entry.binding);
-        f.writeString({ name.data(), name.size() });
-        f.writeUint8(uint8_t(entry.type));
-        f.writeUint8(entry.binding);
-    }
-
-    // set
-    f.writeUint8(+DescriptorSetBindingPoints::PER_VIEW);
-    f.writeUint8(mPerViewLayout.bindings.size());
-    for (auto const& entry: mPerViewLayout.bindings) {
-        auto const& name = descriptor_sets::getDescriptorName(
-                DescriptorSetBindingPoints::PER_VIEW, entry.binding);
-        f.writeString({ name.data(), name.size() });
-        f.writeUint8(uint8_t(entry.type));
-        f.writeUint8(entry.binding);
-    }
 }
 
 // ------------------------------------------------------------------------------------------------
 
-MaterialDescriptorSetLayoutChunk::MaterialDescriptorSetLayoutChunk(Container const& sib,
-        backend::DescriptorSetLayout const& perViewLayout) noexcept
-        : Chunk(ChunkType::MaterialDescriptorSetLayoutInfo),
-          mSamplerInterfaceBlock(sib),
-          mPerViewLayout(perViewLayout) {
+MaterialDescriptorSetLayoutChunk::MaterialDescriptorSetLayoutChunk(Container const& sib) noexcept
+        : Chunk(MaterialDescriptorSetLayoutInfo),
+          mSamplerInterfaceBlock(sib) {
 }
 
 void MaterialDescriptorSetLayoutChunk::flatten(Flattener& f) {
@@ -270,18 +237,6 @@ void MaterialDescriptorSetLayoutChunk::flatten(Flattener& f) {
         f.writeUint8(entry.binding);
         f.writeUint8(uint8_t(DescriptorFlags::NONE));
         f.writeUint16(0);
-    }
-
-    // samplers + 1 descriptor for the UBO
-    f.writeUint8(mPerViewLayout.bindings.size());
-
-    // all the material's sampler descriptors
-    for (auto const& entry: mPerViewLayout.bindings) {
-        f.writeUint8(uint8_t(entry.type));
-        f.writeUint8(uint8_t(entry.stageFlags));
-        f.writeUint8(entry.binding);
-        f.writeUint8(uint8_t(entry.flags));
-        f.writeUint16(entry.count);
     }
 }
 
