@@ -1098,12 +1098,16 @@ void FMaterial::processPushConstants(FEngine&, MaterialParser const* parser) {
             });
 }
 
-void FMaterial::precacheDepthVariants(FEngine const& engine) {
+void FMaterial::precacheDepthVariants(FEngine& engine) {
+
+    bool const disableDepthPrecacheForDefaultMaterial = engine.getDriverApi().isWorkaroundNeeded(
+                               Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
+
     // pre-cache all depth variants inside the default material. Note that this should be
     // entirely optional; if we remove this pre-caching, these variants will be populated
     // later, when/if needed by createAndCacheProgram(). Doing it now potentially uses more
     // memory and increases init time, but reduces hiccups during the first frame.
-    if (UTILS_UNLIKELY(mIsDefaultMaterial)) {
+    if (UTILS_UNLIKELY(mIsDefaultMaterial && !disableDepthPrecacheForDefaultMaterial)) {
         const bool stereoSupported = mEngine.getDriverApi().isStereoSupported();
         auto const allDepthVariants = VariantUtils::getDepthVariants();
         for (auto const variant: allDepthVariants) {
