@@ -23,12 +23,19 @@
 
 #include "../utils/geometry.fs"
 
+#define rsqrt inversesqrt
+
 const float kLog2LodRate = 3.0;
 
 // Ambient Occlusion, largely inspired from:
 // "Practical Real-Time Strategies for Accurate Indirect Occlusion" by Jimenez et al.
 // https://github.com/GameTechDev/XeGTAO
 // https://github.com/MaxwellGengYF/Unity-Ground-Truth-Ambient-Occlusion
+
+highp vec3 getViewSpacePosition(vec2 uv, float level) {
+    highp float depth = sampleDepthLinear(materialParams_depth, uv, level);
+    return computeViewSpacePositionFromDepth(uv, depth, materialParams.positionParams);
+}
 
 float integrateArcCosWeight(float h, float n) {
     float arc = -cos(2.0 * h - n) + cos(n) + 2.0 * h * sin(n);
@@ -108,34 +115,26 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
             float level = clamp(floor(log2(sampleOffsetLength)) - kLog2LodRate, 0.0, float(materialParams.maxLevel));
 
-            vec2 sampleOffsetUV = sampleOffset * materialParams.resolution.zw;
+            vec2 uvSampleOffset = sampleOffset * materialParams.resolution.zw;
 
-            vec2 sampleScreenPos0 = uv + sampleOffsetUV;
-            // Sample the depth and use it to reconstruct the view space position
-            highp float sampleDepth0 = sampleDepthLinear(materialParams_depth, sampleScreenPos0, level);
-            highp vec3 samplePos0 = computeViewSpacePositionFromDepth(sampleScreenPos0, sampleDepth0,
-                materialParams.positionParams);
+            vec2 sampleScreenPos0 = uv + uvSampleOffset;
+            vec2 sampleScreenPos1 = uv - uvSampleOffset;
 
-            float2 sampleScreenPos1 = uv - sampleOffsetUV;
             // Sample the depth and use it to reconstruct the view space position
-            highp float sampleDepth1 = sampleDepthLinear(materialParams_depth, sampleScreenPos1, level);
-            highp vec3 samplePos1 = computeViewSpacePositionFromDepth(sampleScreenPos1, sampleDepth1,
-                materialParams.positionParams);
+            highp vec3 samplePos0 = getViewSpacePosition(sampleScreenPos0, level);
+            highp vec3 samplePos1 = getViewSpacePosition(sampleScreenPos1, level);
 
             highp vec3 sampleDelta0 = (samplePos0 - origin);
             highp vec3 sampleDelta1 = (samplePos1 - origin);
-            float sampleDist0 = length(sampleDelta0);
-            float sampleDist1 = length(sampleDelta1);
+            vec2 sqSampleDist = vec2(dot(sampleDelta0, sampleDelta0), dot(sampleDelta1, sampleDelta1));
+            vec2 invSampleDist = rsqrt(sqSampleDist);
 
-            vec3 sampleHorizonV0 = sampleDelta0/sampleDist0;
-            vec3 sampleHorizonV1 = sampleDelta1/sampleDist1;
-
-            float wsRadius = materialParams.radius;
-            vec2 fallOff = saturate(float2(sampleDist0*sampleDist0, sampleDist1*sampleDist1) * (2.0/(wsRadius*wsRadius)));
+            // Use the view space radius to calculate the fallOff
+            vec2 fallOff = saturate(sqSampleDist.xy * (2.0/sq(materialParams.radius)));
 
             // sample horizon cos
-            float shc0 = dot(sampleHorizonV0, viewDir);
-            float shc1 = dot(sampleHorizonV1, viewDir);
+            float shc0 = dot(sampleDelta0, viewDir) * invSampleDist.x;
+            float shc1 = dot(sampleDelta1, viewDir) * invSampleDist.y;
 
             // If the new sample value is greater then the current one, update the value with some fallOff.
             // Otherwise, apply thicknessHeuristic.
