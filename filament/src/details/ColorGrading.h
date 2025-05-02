@@ -51,6 +51,8 @@ private:
     uint32_t mDimension;
     bool mIsOneDimensional;
     bool mIsLDR;
+
+    void initializeSettings(Settings& settings, const Builder& builder) noexcept;
 };
 
 FILAMENT_DOWNCAST(ColorGrading)
