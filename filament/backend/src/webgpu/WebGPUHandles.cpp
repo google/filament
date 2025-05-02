@@ -144,7 +144,7 @@ WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attribut
         mAttributes[attrib.buffer].push_back({
             .format = vertexFormat,
             .offset = attrib.offset,
-            .shaderLocation = static_cast<uint32_t>(mAttributes[attrib.buffer].size()),
+            .shaderLocation = attribIndex,
         });
 
         mVertexBufferLayout[attrib.buffer].stepMode = wgpu::VertexStepMode::Vertex;
