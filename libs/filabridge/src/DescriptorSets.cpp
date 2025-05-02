@@ -17,6 +17,7 @@
 #include "private/filament/DescriptorSets.h"
 
 #include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
 
 #include <filament/MaterialEnums.h>
 
@@ -26,34 +27,35 @@
 #include <utils/debug.h>
 
 #include <algorithm>
-#include <unordered_map>
+#include <initializer_list>
 #include <string_view>
+#include <unordered_map>
 
 namespace filament::descriptor_sets {
 
 using namespace backend;
 
-static DescriptorSetLayout const postProcessDescriptorSetLayout{{
+static constexpr std::initializer_list<DescriptorSetLayoutBinding> postProcessDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
-}};
+};
 
-static DescriptorSetLayout const depthVariantDescriptorSetLayout{{
+static constexpr std::initializer_list<DescriptorSetLayoutBinding> depthVariantDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
-}};
+};
 
 // ssrVariantDescriptorSetLayout must match perViewDescriptorSetLayout's vertex stage. This is
 // because the SSR variant is always using the "standard" vertex shader (i.e. there is no
 // dedicated SSR vertex shader), which uses perViewDescriptorSetLayout.
 // This means that PerViewBindingPoints::SHADOWS must be in the layout even though it's not used
 // by the SSR variant.
-static DescriptorSetLayout const ssrVariantDescriptorSetLayout{{
-   { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
-   { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
-   { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
-   { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
-}};
+static constexpr std::initializer_list<DescriptorSetLayoutBinding> ssrVariantDescriptorSetLayoutList = {
+    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
+    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
+    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
+    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
+};
 
-static DescriptorSetLayout perViewDescriptorSetLayout = {{
+static constexpr std::initializer_list<DescriptorSetLayoutBinding> perViewDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
     { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::LIGHTS         },
@@ -66,16 +68,30 @@ static DescriptorSetLayout perViewDescriptorSetLayout = {{
     { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSAO           },
     { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
     { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
-}};
+};
 
-static DescriptorSetLayout perRenderableDescriptorSetLayout = {{
+static constexpr std::initializer_list<DescriptorSetLayoutBinding> perRenderableDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::OBJECT_UNIFORMS, DescriptorFlags::DYNAMIC_OFFSET },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::BONES_UNIFORMS,  DescriptorFlags::DYNAMIC_OFFSET },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::MORPHING_UNIFORMS         },
     { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS    },
     { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS     },
     { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS },
-}};
+};
+
+// used for post-processing passes
+static DescriptorSetLayout const postProcessDescriptorSetLayout{ postProcessDescriptorSetLayoutList };
+
+// used to generate shadow-maps
+static DescriptorSetLayout const depthVariantDescriptorSetLayout{ depthVariantDescriptorSetLayoutList };
+
+static DescriptorSetLayout const ssrVariantDescriptorSetLayout{ ssrVariantDescriptorSetLayoutList };
+
+// Used for generating the color pass (i.e. the main pass). This is in fact a template that gets
+// declined into 8 different layouts, based on variants.
+static DescriptorSetLayout perViewDescriptorSetLayout = { perViewDescriptorSetLayoutList };
+
+static DescriptorSetLayout perRenderableDescriptorSetLayout = { perRenderableDescriptorSetLayoutList };
 
 DescriptorSetLayout const& getPostProcessLayout() noexcept {
     return postProcessDescriptorSetLayout;
@@ -93,8 +109,8 @@ DescriptorSetLayout const& getPerRenderableLayout() noexcept {
     return perRenderableDescriptorSetLayout;
 }
 
-utils::CString getDescriptorName(DescriptorSetBindingPoints set,
-        descriptor_binding_t binding) noexcept {
+utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
+        descriptor_binding_t const binding) noexcept {
     using namespace std::literals;
 
     static std::unordered_map<descriptor_binding_t, std::string_view> const set0{{
@@ -140,11 +156,11 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints set,
 }
 
 DescriptorSetLayout getPerViewDescriptorSetLayout(
-        MaterialDomain domain,
-        UserVariantFilterMask variantFilter,
-        bool isLit,
-        ReflectionMode reflectionMode,
-        RefractionMode refractionMode) noexcept {
+        MaterialDomain const domain,
+        UserVariantFilterMask const variantFilter,
+        bool const isLit,
+        ReflectionMode const reflectionMode,
+        RefractionMode const refractionMode) noexcept {
 
     bool const ssr = reflectionMode == ReflectionMode::SCREEN_SPACE ||
                      refractionMode == RefractionMode::SCREEN_SPACE;
@@ -187,11 +203,65 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
             return layout;
         }
         case MaterialDomain::POST_PROCESS:
-            return descriptor_sets::getPostProcessLayout();
+            return postProcessDescriptorSetLayout;
         case MaterialDomain::COMPUTE:
             // TODO: what's the layout for compute?
-            return descriptor_sets::getPostProcessLayout();
+            return postProcessDescriptorSetLayout;
     }
 }
+
+DescriptorSetLayout getPerViewDescriptorSetLayoutWithVariant(
+        Variant const variant,
+        MaterialDomain domain,
+        UserVariantFilterMask const variantFilter,
+        bool const isLit,
+        ReflectionMode const reflectionMode,
+        RefractionMode const refractionMode) noexcept {
+    if (Variant::isValidDepthVariant(variant)) {
+        return depthVariantDescriptorSetLayout;
+    }
+    if (Variant::isSSRVariant(variant)) {
+        return ssrVariantDescriptorSetLayout;
+    }
+    // We need to filter out all the descriptors not included in the "resolved" layout below
+    return getPerViewDescriptorSetLayout(domain, variantFilter,
+            isLit, reflectionMode, refractionMode);
+}
+
+
+
+template<class ITERATOR, class PREDICATE>
+constexpr static ITERATOR find_if(ITERATOR first, ITERATOR last, PREDICATE pred) {
+    for (; first != last; ++first)
+        if (pred(*first)) break;
+    return first;
+}
+
+constexpr static bool checkConsistency() noexcept {
+    // check that all descriptors that apply to the vertex stage in perViewDescriptorSetLayout
+    // are present in ssrVariantDescriptorSetLayout; meaning that the latter is compatible
+    // with the former.
+    for (auto const& r: perViewDescriptorSetLayoutList) {
+        if (hasShaderType(r.stageFlags, ShaderStage::VERTEX)) {
+            auto const pos = find_if(
+                    ssrVariantDescriptorSetLayoutList.begin(),
+                    ssrVariantDescriptorSetLayoutList.end(),
+                    [r](auto const& l) {
+                        return l.count == r.count &&
+                               l.type == r.type &&
+                               l.binding == r.binding &&
+                               l.flags == r.flags &&
+                               l.stageFlags == r.stageFlags;
+                    });
+            if (pos == ssrVariantDescriptorSetLayoutList.end()) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static_assert(checkConsistency(), "ssrVariantDescriptorSetLayout is not compatible with "
+        "perViewDescriptorSetLayout");
 
 } // namespace filament::descriptor_sets
