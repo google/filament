@@ -1,14 +1,42 @@
+# Copyright (C) 2025 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import shutil
+import re
 
-from utils import execute, ArgParseImpl
+from utils import execute, ArgParseImpl, mkdir_p
 
 GOLDENS_DIR = 'renderdiff'
 
+ACCESS_TYPE_TOKEN = 'token'
+ACCESS_TYPE_SSH = 'ssh'
+ACCESS_TYPE_READ_ONLY = 'read-only'
+
+def _read_git_config(curdir):
+  with open(os.path.join(curdir, './.git/config'), 'r') as f:
+    return f.read()
+
+def _write_git_config(curdir, config_str):
+  with open(os.path.join(curdir, './.git/config'), 'w') as f:
+    return f.write(config_str)
+
 class GoldenManager:
-  def __init__(self, working_dir, access_token=None):
+  def __init__(self, working_dir, access_type=ACCESS_TYPE_READ_ONLY, access_token=None):
     self.working_dir_ = working_dir
     self.access_token_ = access_token
+    self.access_type_ = access_type
     assert os.path.isdir(self.working_dir_),\
         f"working directory {self.working_dir_} does not exist"
     self._prepare()
@@ -16,16 +44,36 @@ class GoldenManager:
   def _assets_dir(self):
     return os.path.join(self.working_dir_, "filament-assets")
 
+  # Returns the directory containing the goldens
+  def directory(self):
+    return os.path.join(self._assets_dir(), GOLDENS_DIR)
+
+  def _get_repo_url(self):
+    protocol = ''
+    protocol_separator = ''
+    if self.access_type_ == ACCESS_TYPE_SSH:
+      protocol = 'git@'
+      protocol_separator = ':'
+    else:
+      protocol = 'https://' + \
+        (f'x-access-token:{self.access_token_}@' if self.access_token_ else '')
+      protocol_separator = '/'
+    return f'{protocol}github.com{protocol_separator}google/filament-assets.git'
+
   def _prepare(self):
     assets_dir = self._assets_dir()
     if not os.path.exists(assets_dir):
-      access_token_part = ''
-      if self.access_token_:
-        access_token_part = f'x-access-token:{self.access_token_}@'
       execute(
-          f'git clone --depth=1 https://{access_token_part}github.com/google/filament-assets.git',
-          cwd=self.working_dir_)
+          f'git clone --depth=1 {self._get_repo_url()}',
+          cwd=self.working_dir_,
+          capture_output=False
+      )
     else:
+      if self.access_type_ == ACCESS_TYPE_SSH:
+        config = _read_git_config(self._assets_dir())
+        https_url = r'https://github\.com\/google\/filament\.git'
+        config = re.sub(https_url, self._get_repo_url(), config)
+        _write_git_config(self._assets_dir(), config)
       self.update()
 
   def update(self):
@@ -41,31 +89,46 @@ class GoldenManager:
     assets_dir = self._assets_dir()
     self._git_exec(f'checkout main')
     self._git_exec(f'merge --no-ff {branch}')
-    if push_to_remote and self.access_token_:
+    if push_to_remote and \
+       (self.access_token_ or self.access_type_ == ACCESS_TYPE_SSH):
       self._git_exec(f'push origin main')
+      self.update()
 
-  def source_from_and_commit(self, src_dir, commit_msg, branch, push_to_remote=False):
+  def source_from(self, src_dir, commit_msg, branch,
+                  updates=[], deletes=[], push_to_remote=False):
     assets_dir = self._assets_dir()
     self._git_exec(f'checkout main')
     # Force create the branch (note will overwrite the old branch)
     self._git_exec(f'switch -C {branch}')
     rdiff_dir = os.path.join(assets_dir, GOLDENS_DIR)
-    execute(f'rm -rf {rdiff_dir}')
-    execute(f'mkdir -p {rdiff_dir}')
-    shutil.copytree(src_dir, rdiff_dir, dirs_exist_ok=True)
-    self._git_exec(f'add {GOLDENS_DIR}')
+    if len(updates) == 0 and len(deletes) == 0:
+      shutil.rmtree(rdiff_dir, ignore_errors=True)
+      mkdir_p(rdiff_dir)
+      shutil.copytree(src_dir, rdiff_dir, dirs_exist_ok=True)
+      self._git_exec(f'add {GOLDENS_DIR}')
+    else:
+      for f in deletes:
+        self._git_exec(f'remove {os.path.join(GOLDENS_DIR, f)}')
+      for f in updates:
+        shutil.copy2(
+          os.path.join(src_dir, f),
+          os.path.join(rdiff_dir, f))
+        self._git_exec(f'add {os.path.join(GOLDENS_DIR, f)}')
 
     TMP_GOLDEN_COMMIT_FILE = '/tmp/golden_commit.txt'
 
     with open(TMP_GOLDEN_COMMIT_FILE, 'w') as f:
       f.write(commit_msg)
-    self._git_exec(f'commit -F {TMP_GOLDEN_COMMIT_FILE}')
-    if push_to_remote and self.access_token_:
-      self._git_exec(f'push -f origin ${branch}')
+    self._git_exec(f'commit -a -F {TMP_GOLDEN_COMMIT_FILE}')
+    if push_to_remote and \
+       (self.access_token_ or self.access_type_ == ACCESS_TYPE_SSH):
+      self._git_exec(f'push -f origin {branch}')
+      self.update()
 
   def download_to(self, dest_dir, branch='main'):
+    self._git_exec(f'checkout {branch}')
     assets_dir = self._assets_dir()
-    execute(f'mkdir -p {dest_dir}')
+    mkdir_p(dest_dir)
     rdiff_dir = os.path.join(assets_dir, GOLDENS_DIR)
     shutil.copytree(rdiff_dir, dest_dir, dirs_exist_ok=True)
 
