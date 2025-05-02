@@ -49,7 +49,7 @@ option(FILAMENT_SUPPORTS_OSMESA "Enable OSMesa (headless GL context) for Filamen
 
 option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)
 
-option(FILAMENT_ENABLE_INIT_GL_WARNINGS_FOR_OPTIMIZED_BUILD "Enable GL error warnings during init in optimized builds" ON)
+option(FILAMENT_ENABLE_INIT_GL_WARNINGS_FOR_OPTIMIZED_BUILD "Enable GL error warnings during init in optimized builds" OFF)
 
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
