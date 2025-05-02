@@ -871,12 +871,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         0.0, 0.0, 0.0, 1.0
                 }};
 
-                auto& material = options.aoType == AmbientOcclusionOptions::AOType::GTAO
+                auto& material = options.ambientOcclusionType == AmbientOcclusionOptions::AmbientOcclusionType::GTAO
                                          ? getPostProcessMaterial("gtao")
                                  : computeBentNormals ? getPostProcessMaterial("saoBentNormals")
                                                       : getPostProcessMaterial("sao");
                 FMaterial* const ma = material.getMaterial(mEngine);
-                if (options.aoType == AmbientOcclusionOptions::AOType::GTAO) {
+                if (options.ambientOcclusionType == AmbientOcclusionOptions::AmbientOcclusionType::GTAO) {
                     bool dirty = false;
                     setConstantParameter(ma, "bentNormals", computeBentNormals, dirty);
 
@@ -891,8 +891,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(mEngine, material);
 
                 // Set AO type specific material parameters
-                switch (options.aoType) {
-                    case AmbientOcclusionOptions::AOType::SAO: {
+                switch (options.ambientOcclusionType) {
+                    case AmbientOcclusionOptions::AmbientOcclusionType::SAO: {
                         // Where the falloff function peaks
                         const float peak = 0.1f * options.radius;
                         const float intensity = (f::TAU * peak) * options.intensity;
@@ -914,9 +914,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         mi->setParameter("angleIncCosSin", float2{ std::cos(inc), std::sin(inc) });
                         break;
                     }
-                    case AmbientOcclusionOptions::AOType::GTAO: {
-                        mi->setParameter("stepsPerSlice", options.gtao.sampleStepsPerSlice);
-                        mi->setParameter("sliceCount", options.gtao.sampleSliceCount);
+                    case AmbientOcclusionOptions::AmbientOcclusionType::GTAO: {
+                        mi->setParameter("stepsPerSlice", static_cast<float>(options.gtao.sampleStepsPerSlice));
+                        mi->setParameter("sliceCount", static_cast<float>(options.gtao.sampleSliceCount));
                         mi->setParameter("power", options.power);
                         mi->setParameter("radius", options.radius);
                         mi->setParameter("intensity", options.intensity);

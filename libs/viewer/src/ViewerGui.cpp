@@ -826,9 +826,9 @@ void ViewerGui::updateUserInterface() {
 
         ImGui::Checkbox("Enabled", &ssao.enabled);
 
-        int aoType = (int)ssao.aoType;
-        ImGui::Combo("AO Type", &aoType, "SAO\0GTAO\0\0");
-        ssao.aoType = (decltype(ssao.aoType))aoType;
+        int ambienOcclusionType = (int)ssao.ambientOcclusionType;
+        ImGui::Combo("AO Type", &ambienOcclusionType, "SAO\0GTAO\0\0");
+        ssao.ambientOcclusionType = (decltype(ssao.ambientOcclusionType))ambienOcclusionType;
 
         int quality = (int) ssao.quality;
         int lowpass = (int) ssao.lowPassFilter;
@@ -840,23 +840,23 @@ void ViewerGui::updateUserInterface() {
         ImGui::Checkbox("Bent Normals", &ssao.bentNormals);
         ImGui::Checkbox("High quality upsampling", &upsampling);
 
-        switch (ssao.aoType) {
-            case AmbientOcclusionOptions::AOType::SAO: {
+        switch (ssao.ambientOcclusionType) {
+            case AmbientOcclusionOptions::AmbientOcclusionType::SAO: {
                 ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f,
                         (float) M_PI_4);
                 break;
             }
-            case AmbientOcclusionOptions::AOType::GTAO: {
-                int sliceCount = (int) ssao.gtao.sampleSliceCount;
-                int stepsPerSlice = (int) ssao.gtao.sampleStepsPerSlice;
+            case AmbientOcclusionOptions::AmbientOcclusionType::GTAO: {
+                int sliceCount = ssao.gtao.sampleSliceCount;
+                int stepsPerSlice = ssao.gtao.sampleStepsPerSlice;
 
                 ImGui::SliderFloat("Radius", &ssao.radius, 0.1f, 10.0f);
                 ImGui::SliderInt("Slice Count", &sliceCount, 1, 10);
                 ImGui::SliderInt("Steps Per Slice", &stepsPerSlice, 1, 4);
                 ImGui::SliderFloat("Power", &ssao.power, 1.0f, 8.0f);
 
-                ssao.gtao.sampleSliceCount = sliceCount;
-                ssao.gtao.sampleStepsPerSlice = stepsPerSlice;
+                ssao.gtao.sampleSliceCount = static_cast<uint8_t>(sliceCount);
+                ssao.gtao.sampleStepsPerSlice = static_cast<uint8_t>(stepsPerSlice);
                 break;
             }
             default:

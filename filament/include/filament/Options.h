@@ -373,12 +373,12 @@ struct RenderQuality {
  * @see setAmbientOcclusionOptions()
  */
 struct AmbientOcclusionOptions {
-    enum class AOType : uint8_t {
+    enum class AmbientOcclusionType : uint8_t {
         SAO,        //!< use Scalable Ambient Occlusion
         GTAO,       //!< use Ground Truth-Based Ambient Occlusion
     };
 
-    AOType aoType = AOType::SAO;//!< Type of ambient occlusion algorithm.
+    AmbientOcclusionType ambientOcclusionType = AmbientOcclusionType::SAO;//!< Type of ambient occlusion algorithm.
     float radius = 0.3f;    //!< Ambient Occlusion radius in meters, between 0 and ~10.
     float power = 1.0f;     //!< Controls ambient occlusion's contrast. Must be positive.
 
@@ -419,8 +419,8 @@ struct AmbientOcclusionOptions {
      * Ground Truth-base Ambient Occlusion (GTAO) options
      */
     struct Gtao {
-        float sampleSliceCount = 4.0f;     //!< # of slices. Higher values make less noise.
-        float sampleStepsPerSlice = 4.0f;  //!< # of steps the radius is divided into for integration
+        uint8_t sampleSliceCount = 4;     //!< # of slices. Higher values make less noise.
+        uint8_t sampleStepsPerSlice = 4;  //!< # of steps the radius is divided into for integration
         float thicknessHeuristic = 0.004f; //!< thickness heuristic, should be closed to 0
     };
     Gtao gtao;                           // %codegen_skip_javascript% %codegen_java_flatten%
