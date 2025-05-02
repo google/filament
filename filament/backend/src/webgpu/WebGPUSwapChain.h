@@ -28,30 +28,53 @@ namespace filament::backend {
 
 class WebGPUSwapChain final : public Platform::SwapChain, HwSwapChain {
 public:
-    WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& surfaceSize,
+    WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
             wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags);
+
+    WebGPUSwapChain( wgpu::Extent2D const& extent,
+            wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags);
+
     ~WebGPUSwapChain();
 
     [[nodiscard]] wgpu::TextureFormat getColorFormat() const { return mConfig.format; }
 
     [[nodiscard]] wgpu::TextureFormat getDepthFormat() const { return mDepthFormat; }
 
-    [[nodiscard]] wgpu::TextureView getCurrentSurfaceTextureView(wgpu::Extent2D const&);
+    [[nodiscard]] wgpu::TextureView getCurrentTextureView(wgpu::Extent2D const& extent, wgpu::Device const& device );
+
+    [[nodiscard]] wgpu::TextureDescriptor createRenderTargetDescriptor(uint32_t width, uint32_t height, wgpu::TextureFormat format);
 
     [[nodiscard]] wgpu::TextureView getDepthTextureView() const { return mDepthTextureView; }
 
     void present();
 
 private:
+
+    [[nodiscard]] bool isHeadless() const { return mType == SwapChainType::HEADLESS; }
+
     void setExtent(wgpu::Extent2D const&);
 
     wgpu::Device mDevice = nullptr;
+    enum class SwapChainType {
+        HEADLESS,
+        SURFACE
+    };
+
     wgpu::Surface mSurface = {};
     wgpu::SurfaceConfiguration mConfig = {};
     bool mNeedStencil = false;
     wgpu::TextureFormat mDepthFormat = wgpu::TextureFormat::Undefined;
     wgpu::Texture mDepthTexture = nullptr;
     wgpu::TextureView mDepthTextureView = nullptr;
+    const SwapChainType mType;
+    const uint32_t mHeadlessWidth;
+    const uint32_t mHeadlessHeight;
+
+    ///TODO: eventually config for double or triple buffering
+    const uint32_t mHeadlessBufferCount = 3;
+    uint32_t mHeadlessBufferIndex = 0;
+    std::array<wgpu::Texture, 3> mRenderTargetTextures;
+    std::array<wgpu::TextureView, 3> mRenderTargetViews;
 };
 
 } // namespace filament::backend

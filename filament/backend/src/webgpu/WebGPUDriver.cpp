@@ -259,7 +259,7 @@ Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainHeadlessS() noexcept {
-    return Handle<HwSwapChain>((Handle<HwSwapChain>::HandleId) mNextFakeHandle++);
+    return allocHandle<WebGPUSwapChain>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureS() noexcept {
@@ -343,8 +343,8 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
 
-    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
-    mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
+    wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
+    mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), extent, mAdapter,
             mDevice, flags);
     assert_invariant(mSwapChain);
 
@@ -360,7 +360,12 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 }
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
-        uint32_t height, uint64_t flags) {}
+        uint32_t height, uint64_t flags) {
+     wgpu::Extent2D extent = { width, height};
+     mSwapChain = constructHandle<WebGPUSwapChain>(sch, extent, mAdapter,
+            mDevice, flags);
+     assert_invariant(mSwapChain);
+}
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
         const uint8_t bufferCount, const uint8_t attributeCount, const AttributeArray attributes) {
@@ -991,7 +996,7 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     mSwapChain = swapChain;
     assert_invariant(mSwapChain);
     wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
-    mTextureView = mSwapChain->getCurrentSurfaceTextureView(surfaceSize);
+    mTextureView = mSwapChain->getCurrentTextureView(surfaceSize, mDevice);
     assert_invariant(mTextureView);
 
     assert_invariant(mDefaultRenderTarget);
