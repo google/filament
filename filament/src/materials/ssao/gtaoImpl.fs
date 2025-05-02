@@ -96,10 +96,10 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         // Calculate the direction of the current slice
         vec3 direction = vec3(cosPhi, sinPhi, 0.0);
         // Project direction onto the plane orthogonal to viewDir.
-        vec3 orthoDirection = direction - (dot(direction, viewDir)*viewDir);
+        vec3 orthoDirection = normalize(direction - (dot(direction, viewDir)*viewDir));
         // axis is orthogonal to direction and viewDir (basically the normal of the slice plane)
         // Used to define projectedNormal
-        vec3 axis = normalize(cross(orthoDirection, viewDir));
+        vec3 axis = cross(orthoDirection, viewDir);
         // Project the normal onto the slice plane
         vec3 projNormal = normal - axis * dot(normal, axis);
 
@@ -152,7 +152,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
 #if COMPUTE_BENT_NORMAL
         float angle = 0.5 * (h0 + h1);
-        bentNormal += viewDir * cos(angle) - axis * sin(angle);
+        bentNormal += viewDir * cos(angle) - orthoDirection * sin(angle);
 #endif
 
         visibility += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
