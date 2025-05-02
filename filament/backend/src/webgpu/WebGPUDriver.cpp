@@ -793,7 +793,7 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     mSwapChain = swapChain;
     assert_invariant(mSwapChain);
     wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
-    mTextureView = mSwapChain->getCurrentSurfaceTextureView(surfaceSize, mDevice);
+    mTextureView = mSwapChain->getCurrentTextureView(surfaceSize, mDevice);
     assert_invariant(mTextureView);
 }
 

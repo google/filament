@@ -250,14 +250,42 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
 }
 
 WebGPUSwapChain::WebGPUSwapChain(wgpu::Extent2D const& extent,
-        wgpu::Adapter& adapter, wgpu::Device& device, uint64_t flags)
+        wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags)
     : mType(SwapChainType::HEADLESS),
       mHeadlessWidth(extent.width),
-      mHeadlessHeight(extent.height){}
+      mHeadlessHeight(extent.height){
+
+    ///TODO: get ideal format with platform
+    const wgpu::TextureFormat renderTargetFormat = wgpu::TextureFormat::RGBA8Unorm;
+    const wgpu::TextureDescriptor textureDescriptor = createRenderTargetDescriptor(mHeadlessWidth, mHeadlessHeight,  renderTargetFormat);
+
+    ///TODO: eventually merge with handles
+     mRenderTargetTextures.fill(nullptr);
+     mRenderTargetViews.fill(nullptr);
+
+    for (size_t i = 0; i < mHeadlessBufferCount; ++i) {
+        mRenderTargetTextures[i] = device.CreateTexture(&textureDescriptor);
+        wgpu::TextureViewDescriptor viewDesc{};
+        viewDesc.format = textureDescriptor.format;
+        viewDesc.dimension = wgpu::TextureViewDimension::e2D;
+        viewDesc.baseMipLevel = 0;
+        viewDesc.mipLevelCount = 1;
+        viewDesc.baseArrayLayer = 0;
+        viewDesc.arrayLayerCount = 1;
+        viewDesc.aspect = wgpu::TextureAspect::All;
+        mRenderTargetViews[i] = mRenderTargetTextures[i].CreateView(&viewDesc);
+    }
+}
 
 WebGPUSwapChain::~WebGPUSwapChain() {
-    if(!isHeadless())
+    if(!isHeadless()){
         mSurface.Unconfigure();
+    } else {
+        for (auto& texture : mRenderTargetTextures) {
+            if (texture)
+                texture.Destroy();
+        }
+    }
 }
 
 void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
@@ -278,43 +306,19 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     }
 }
 
-wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView( wgpu::Extent2D const& currentSurfaceSize, wgpu::Device const& device) {
-
-    wgpu::SurfaceTexture surfaceTexture;
-    //TODO: eventually merge with texture handles
-    wgpu::Texture renderTarget;
+wgpu::TextureView WebGPUSwapChain::getCurrentTextureView( wgpu::Extent2D const& extent, wgpu::Device const& device) {
 
     if(isHeadless()){
-        wgpu::TextureDescriptor headlessTextureDesc {
-            .label = "headless render target",
-            .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc,
-            .dimension = wgpu::TextureDimension::e2D,
-            .size = { mHeadlessWidth,mHeadlessHeight, 1 },
-            .format = wgpu::TextureFormat::RGBA8UnormSrgb,
-            .viewFormatCount = 0,
-            .viewFormats = nullptr,
-        };
-
-        renderTarget = device.CreateTexture(&headlessTextureDesc);
-
-        wgpu::TextureViewDescriptor targetTextureViewDesc {
-            .label = "headless rendered texture view",
-            .format = renderTarget.GetFormat(),
-            .dimension = wgpu::TextureViewDimension::e2D,
-            .baseMipLevel = 0,
-            .mipLevelCount = 1,
-            .baseArrayLayer = 0,
-            .arrayLayerCount = 1,
-            .aspect = wgpu::TextureAspect::All
-        };
-        return renderTarget.CreateView(&targetTextureViewDesc);
+        return mRenderTargetViews[mHeadlessBufferIndex];
     }
 
-    setExtent(currentSurfaceSize);
+    wgpu::SurfaceTexture surfaceTexture;
+    setExtent(extent);
     mSurface.GetCurrentTexture(&surfaceTexture);
     if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
         return nullptr;
     }
+
     // Create a view for this surface texture
     // TODO: review these initiliazations as webgpu pipeline gets mature
     wgpu::TextureViewDescriptor textureViewDescriptor = {
@@ -331,7 +335,22 @@ wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView( wgpu::Extent2D 
 
 void WebGPUSwapChain::present() {
     assert_invariant(mSurface);
+    if(isHeadless()){
+        mHeadlessBufferIndex = (mHeadlessBufferIndex + 1) % mHeadlessBufferCount;
+    }
     mSurface.Present();
+}
+
+wgpu::TextureDescriptor WebGPUSwapChain::createRenderTargetDescriptor(uint32_t width,
+        uint32_t height, wgpu::TextureFormat format) {
+    wgpu::TextureDescriptor desc;
+    desc.size = { width, height, 1 };
+    desc.format = format;
+    desc.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc;
+    desc.mipLevelCount = 1;
+    desc.sampleCount = 1;
+    desc.dimension = wgpu::TextureDimension::e2D;
+    return desc;
 }
 
 }// namespace filament::backend
