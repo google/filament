@@ -378,7 +378,7 @@ struct AmbientOcclusionOptions {
         GTAO,       //!< use Ground Truth-Based Ambient Occlusion
     };
 
-    AmbientOcclusionType ambientOcclusionType = AmbientOcclusionType::SAO;//!< Type of ambient occlusion algorithm.
+    AmbientOcclusionType aoType = AmbientOcclusionType::SAO;//!< Type of ambient occlusion algorithm.
     float radius = 0.3f;    //!< Ambient Occlusion radius in meters, between 0 and ~10.
     float power = 1.0f;     //!< Controls ambient occlusion's contrast. Must be positive.
 

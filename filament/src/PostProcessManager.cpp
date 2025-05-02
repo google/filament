@@ -873,7 +873,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 }};
 
                 std::string_view materialName;
-                if (options.ambientOcclusionType ==
+                if (options.aoType ==
                         AmbientOcclusionOptions::AmbientOcclusionType::GTAO) {
                     materialName = computeBentNormals ? "gtaoBentNormals" : "gtao";
                 } else {
@@ -886,7 +886,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(ma);
 
                 // Set AO type specific material parameters
-                switch (options.ambientOcclusionType) {
+                switch (options.aoType) {
                     case AmbientOcclusionOptions::AmbientOcclusionType::SAO: {
                         // Where the falloff function peaks
                         const float peak = 0.1f * options.radius;

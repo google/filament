@@ -826,9 +826,9 @@ void ViewerGui::updateUserInterface() {
 
         ImGui::Checkbox("Enabled", &ssao.enabled);
 
-        int ambienOcclusionType = (int)ssao.ambientOcclusionType;
+        int ambienOcclusionType = (int)ssao.aoType;
         ImGui::Combo("AO Type", &ambienOcclusionType, "SAO\0GTAO\0\0");
-        ssao.ambientOcclusionType = (decltype(ssao.ambientOcclusionType))ambienOcclusionType;
+        ssao.aoType = (decltype(ssao.aoType))ambienOcclusionType;
 
         int quality = (int) ssao.quality;
         int lowpass = (int) ssao.lowPassFilter;
@@ -840,7 +840,7 @@ void ViewerGui::updateUserInterface() {
         ImGui::Checkbox("Bent Normals", &ssao.bentNormals);
         ImGui::Checkbox("High quality upsampling", &upsampling);
 
-        switch (ssao.ambientOcclusionType) {
+        switch (ssao.aoType) {
             case AmbientOcclusionOptions::AmbientOcclusionType::SAO: {
                 ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f,
                         (float) M_PI_4);
