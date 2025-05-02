@@ -93,6 +93,18 @@ material {
             name : ssctSampleCount
         }
     ],
+    outputs : [
+        {
+            name : aoData,
+            target : color,
+            type : float3
+        },
+        {
+            name : bnData,
+            target : color,
+            type : float3
+        }
+    ],
     variables : [
          vertex
     ],
@@ -111,7 +123,7 @@ vertex {
 
 fragment {
 
-#define COMPUTE_BENT_NORMAL 0
+#define COMPUTE_BENT_NORMAL 1
 
     #include "gtaoImpl.fs"
     #include "ssctImpl.fs"
@@ -132,7 +144,7 @@ fragment {
                 materialParams.positionParams);
 
         float occlusion = 0.0;
-        vec3 bentNormal; // will be discarded
+        vec3 bentNormal = normal;
 
         if (materialParams.intensity > 0.0) {
             groundTruthAmbientOcclusion(occlusion, bentNormal, uv, origin, normal);
@@ -151,6 +163,10 @@ fragment {
         aoVisibility += gl_FragCoord.x * MEDIUMP_FLT_MIN;
 #endif
 
-        postProcess.color.rgb = vec3(aoVisibility, pack(origin.z * materialParams.invFarPlane));
+        // transform to world space (we're guaranteed the view matrix is a rigid body transform)
+        vec3 bn = mat3(getWorldFromViewMatrix()) * bentNormal;
+
+        postProcess.bnData = packBentNormal(bn);
+        postProcess.aoData = vec3(aoVisibility, pack(origin.z * materialParams.invFarPlane));
     }
 }

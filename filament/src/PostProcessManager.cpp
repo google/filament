@@ -305,6 +305,7 @@ static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
         { "sao",                        MATERIAL(SAO) },
         { "saoBentNormals",             MATERIAL(SAOBENTNORMALS) },
         { "gtao",                       MATERIAL(GTAO) },
+        { "gtaoBentNormals",            MATERIAL(GTAOBENTNORMALS) },
         { "separableGaussianBlur1",     MATERIAL(SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 1} } },
         { "separableGaussianBlur1L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
@@ -871,24 +872,18 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         0.0, 0.0, 0.0, 1.0
                 }};
 
-                auto& material = options.ambientOcclusionType == AmbientOcclusionOptions::AmbientOcclusionType::GTAO
-                                         ? getPostProcessMaterial("gtao")
-                                 : computeBentNormals ? getPostProcessMaterial("saoBentNormals")
-                                                      : getPostProcessMaterial("sao");
-                FMaterial* const ma = material.getMaterial(mEngine);
-                if (options.ambientOcclusionType == AmbientOcclusionOptions::AmbientOcclusionType::GTAO) {
-                    bool dirty = false;
-                    setConstantParameter(ma, "bentNormals", computeBentNormals, dirty);
-
-                    if (dirty) {
-                        ma->invalidate();
-                        // TODO: call Material::compile(), we can't do that now because it works
-                        // only
-                        //       with surface materials
-                    }
+                std::string_view materialName;
+                if (options.ambientOcclusionType ==
+                        AmbientOcclusionOptions::AmbientOcclusionType::GTAO) {
+                    materialName = computeBentNormals ? "gtaoBentNormals" : "gtao";
+                } else {
+                    materialName = computeBentNormals ? "saoBentNormals" : "sao";
                 }
 
-                FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(mEngine, material);
+                auto& material = getPostProcessMaterial(materialName);
+
+                FMaterial const * const ma = material.getMaterial(mEngine);
+                FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(ma);
 
                 // Set AO type specific material parameters
                 switch (options.ambientOcclusionType) {

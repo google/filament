@@ -25,6 +25,10 @@
 
 #define rsqrt inversesqrt
 
+#ifndef COMPUTE_BENT_NORMAL
+#error COMPUTE_BENT_NORMAL must be set
+#endif
+
 const float kLog2LodRate = 3.0;
 
 // Ambient Occlusion, largely inspired from:
@@ -146,17 +150,17 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         h0 = n + clamp(h0 - n, -HALF_PI, HALF_PI);
         h1 = n + clamp(h1 - n, -HALF_PI, HALF_PI);
 
-        if (materialConstants_bentNormals) {
-            float angle = 0.5 * (h0 + h1);
-            bentNormal += viewDir * cos(angle) - axis * sin(angle);
-        }
+#if COMPUTE_BENT_NORMAL
+        float angle = 0.5 * (h0 + h1);
+        bentNormal += viewDir * cos(angle) - axis * sin(angle);
+#endif
 
         visibility += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
     }
 
     obscurance = 1.0 - saturate(visibility / materialParams.sliceCount);
 
-    if (materialConstants_bentNormals) {
-        bentNormal = normalize(bentNormal);
-    }
+#if COMPUTE_BENT_NORMAL
+    bentNormal = normalize(bentNormal);
+#endif
 }

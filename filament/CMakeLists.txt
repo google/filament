@@ -263,6 +263,7 @@ set(MATERIAL_SRCS
         src/materials/ssao/sao.mat
         src/materials/ssao/saoBentNormals.mat
         src/materials/ssao/gtao.mat
+        src/materials/ssao/gtaoBentNormals.mat
         src/materials/vsmMipmap.mat
 )
 
@@ -466,6 +467,17 @@ add_custom_command(
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/gtao.filamat"
+        DEPENDS src/materials/ssao/ssaoUtils.fs
+        DEPENDS src/materials/ssao/ssct.fs
+        DEPENDS src/materials/utils/depthUtils.fs
+        DEPENDS src/materials/utils/geometry.fs
+        DEPENDS src/materials/ssao/gtaoImpl.fs
+        DEPENDS src/materials/ssao/ssctImpl.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/gtaoBentNormals.filamat"
         DEPENDS src/materials/ssao/ssaoUtils.fs
         DEPENDS src/materials/ssao/ssct.fs
         DEPENDS src/materials/utils/depthUtils.fs
