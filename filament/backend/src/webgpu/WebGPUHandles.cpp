@@ -231,6 +231,12 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 // We are simply hoping that undefined and defaults suffices here.
                 samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering; // Example default
                 wEntry.texture.sampleType = wgpu::TextureSampleType::Float;      // Example default
+                // TODO: FIX! THIS IS HACK FOR HELLO-TRIANGLE!
+                if (layout.label.find("Skybox") != std::string::npos) {
+                    wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
+                } else {
+                    wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2D; // Example default
+                }
                 entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW;
                 break;
             }
@@ -436,7 +442,6 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     wgpu::TextureDescriptor desc;
 
     switch (target) {
-        case SamplerType::SAMPLER_CUBEMAP:
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
         case SamplerType::SAMPLER_2D:
         case SamplerType::SAMPLER_2D_ARRAY:
@@ -445,6 +450,7 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
             desc.dimension = wgpu::TextureDimension::e2D;
             break;
         }
+        case SamplerType::SAMPLER_CUBEMAP:
         case SamplerType::SAMPLER_3D: {
             desc.dimension = wgpu::TextureDimension::e3D;
             break;
@@ -467,12 +473,12 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     texture = device.CreateTexture(&desc);
 
     // TODO should a default levelCount be something other than 0? Sample count?
-    texView = makeTextureView(0, 1);
+    texView = makeTextureView(0, 1, target);
 }
 // From createTextureViewR
 WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
     texture = src->texture;
-    texView = makeTextureView(baseLevel, levelCount);
+    texView = makeTextureView(baseLevel, levelCount, target);
 }
 
 wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(const TextureUsage& fUsage) {
@@ -763,8 +769,8 @@ wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(const TextureFormat& fUsag
     }
 }
 
-wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel,
-        const uint8_t& levelCount) {
+wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
+        SamplerType target) {
     wgpu::TextureViewDescriptor desc;
     desc.baseMipLevel = baseLevel;
     desc.mipLevelCount = levelCount;
@@ -779,7 +785,26 @@ wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel,
     desc.label = "TODO";
 
     desc.format = wgpu::TextureFormat::Undefined;
-    desc.dimension = wgpu::TextureViewDimension::Undefined;
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+            desc.dimension = wgpu::TextureViewDimension::e2D;
+            break;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            desc.dimension = wgpu::TextureViewDimension::e2DArray;
+            break;
+        case SamplerType::SAMPLER_CUBEMAP:
+            desc.dimension = wgpu::TextureViewDimension::Cube;
+            break;
+        case SamplerType::SAMPLER_EXTERNAL:
+            desc.dimension = wgpu::TextureViewDimension::Undefined;
+            break;
+        case SamplerType::SAMPLER_3D:
+            desc.dimension = wgpu::TextureViewDimension::e3D;
+            break;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            desc.dimension = wgpu::TextureViewDimension::CubeArray;
+            break;
+    }
     desc.usage = wgpu::TextureUsage::None;
 
     return texture.CreateView(&desc);

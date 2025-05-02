@@ -178,7 +178,8 @@ public:
     static wgpu::TextureFormat fToWGPUTextureFormat(const filament::backend::TextureFormat& fUsage);
 
 private:
-    wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount);
+    wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
+            SamplerType target);
     // CreateTextureR has info for a texture and sampler. Texture Views are needed for binding,
     // along with a sampler Current plan: Inherit the sampler and Texture to always exist (It is a
     // ref counted pointer) when making views. View is optional
