@@ -292,7 +292,22 @@ void WebGPUDriver::endFrame(uint32_t frameId) {
 void WebGPUDriver::flush(int) {
 }
 
-void WebGPUDriver::finish(int) {
+void WebGPUDriver::finish(int /* dummy */) {
+    if (mCommandEncoder != nullptr) {
+        // submit the command buffer thus far...
+        assert_invariant(mRenderPassEncoder == nullptr);
+        wgpu::CommandBufferDescriptor commandBufferDescriptor{
+            .label = "command_buffer",
+        };
+        mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
+        assert_invariant(mCommandBuffer);
+        mQueue.Submit(1, &mCommandBuffer);
+        mCommandBuffer = nullptr;
+        // create a new command buffer encoder to continue recording the next command for frame...
+        wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "command_encoder" };
+        mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+        assert_invariant(mCommandEncoder);
+    }
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -738,12 +753,7 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 }
 
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
-    wgpu::CommandEncoderDescriptor commandEncoderDescriptor = {
-        .label = "command_encoder"
-    };
-    mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
     assert_invariant(mCommandEncoder);
-
     // TODO: Remove this code once WebGPU pipeline is implemented
     static float red = 1.0f;
     if (red - 0.01 > 0) {
@@ -773,14 +783,9 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             params.viewport.width, params.viewport.height, params.depthRange.near, params.depthRange.far);
 }
 
-void WebGPUDriver::endRenderPass(int) {
+void WebGPUDriver::endRenderPass(int /* dummy */) {
     mRenderPassEncoder.End();
     mRenderPassEncoder = nullptr;
-    wgpu::CommandBufferDescriptor commandBufferDescriptor {
-        .label = "command_buffer",
-    };
-    mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
-    assert_invariant(mCommandBuffer);
 }
 
 void WebGPUDriver::nextSubpass(int) {
@@ -795,9 +800,19 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
     mTextureView = mSwapChain->getCurrentTextureView(surfaceSize, mDevice);
     assert_invariant(mTextureView);
+    wgpu::CommandEncoderDescriptor commandEncoderDescriptor = {
+        .label = "command_encoder"
+    };
+    mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+    assert_invariant(mCommandEncoder);
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
+    wgpu::CommandBufferDescriptor commandBufferDescriptor{
+        .label = "command_buffer",
+    };
+    mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
+    assert_invariant(mCommandBuffer);
     mCommandEncoder = nullptr;
     mQueue.Submit(1, &mCommandBuffer);
     mCommandBuffer = nullptr;
