@@ -20,6 +20,7 @@
 #include <backend/DriverEnums.h>
 
 #include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
 
 #include <filament/MaterialEnums.h>
 
@@ -39,8 +40,16 @@ backend::DescriptorSetLayout getPerViewDescriptorSetLayout(
         ReflectionMode reflectionMode,
         RefractionMode refractionMode) noexcept;
 
+backend::DescriptorSetLayout getPerViewDescriptorSetLayoutWithVariant(
+        Variant variant,
+        MaterialDomain domain,
+        UserVariantFilterMask variantFilter,
+        bool isLit,
+        ReflectionMode reflectionMode,
+        RefractionMode refractionMode) noexcept;
+
 utils::CString getDescriptorName(
-        filament::DescriptorSetBindingPoints set,
+        DescriptorSetBindingPoints set,
         backend::descriptor_binding_t binding) noexcept;
 
 } // namespace filament::descriptor_sets
