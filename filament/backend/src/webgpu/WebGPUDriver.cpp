@@ -788,7 +788,19 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
     //                << utils::io::endl;
     // }
     wgpu::RenderPassDescriptor renderPassDescriptor2;
-    renderTarget->setUpRenderPassAttachments(&renderPassDescriptor2, mTextureView, params);
+    wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{
+        .view = mSwapChain->getDepthTextureView(),
+        .depthLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH),
+        .depthStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH),
+        .depthClearValue = static_cast<float>(params.clearDepth),
+        .depthReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0,
+        .stencilLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL),
+        .stencilStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL),
+        .stencilClearValue = params.clearStencil,
+        .stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0
+    };
+    renderTarget->setUpRenderPassAttachments(renderPassDescriptor2, mTextureView, params);
+    renderPassDescriptor2.depthStencilAttachment = &depthStencilAttachment;
     // TODO: Remove this code once WebGPU pipeline is implemented
     static float red = 1.0f;
     if (red - 0.01 > 0) {
