@@ -117,6 +117,44 @@ wgpu::VertexFormat getVertexFormat(filament::backend::ElementType type, bool nor
     }
 }
 
+wgpu::StringView getUserTextureLabel(filament::backend::SamplerType target) {
+    // TODO will be helpful to get more useful info than this
+    using filament::backend::SamplerType;
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+            return "a_2D_user_texture";
+        case SamplerType::SAMPLER_2D_ARRAY:
+            return "a_2D_array_user_texture";
+        case SamplerType::SAMPLER_CUBEMAP:
+            return "a_cube_map_user_texture";
+        case SamplerType::SAMPLER_EXTERNAL:
+            return "an_external_user_texture";
+        case SamplerType::SAMPLER_3D:
+            return "a_3D_user_texture";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return "a_cube_mape_array_user_texture";
+    }
+}
+
+wgpu::StringView getUserTextureViewLabel(filament::backend::SamplerType target) {
+    // TODO will be helpful to get more useful info than this
+    using filament::backend::SamplerType;
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+            return "a_2D_user_texture_view";
+        case SamplerType::SAMPLER_2D_ARRAY:
+            return "a_2D_array_user_texture_view";
+        case SamplerType::SAMPLER_CUBEMAP:
+            return "a_cube_map_user_texture_view";
+        case SamplerType::SAMPLER_EXTERNAL:
+            return "an_external_user_texture_view";
+        case SamplerType::SAMPLER_3D:
+            return "a_3D_user_texture_view";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return "a_cube_mape_array_user_texture_view";
+    }
+}
+
 }// namespace
 
 namespace filament::backend {
@@ -232,10 +270,12 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering; // Example default
                 wEntry.texture.sampleType = wgpu::TextureSampleType::Float;      // Example default
                 // TODO: FIX! THIS IS HACK FOR HELLO-TRIANGLE!
-                if (layout.label.find("Skybox") != std::string::npos) {
+                if (layout.label.find("Skybox") != std::string::npos ||
+                        (layout.label == "Filament Default Material1" && wEntry.binding == 22)) {
                     wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
                 } else {
-                    wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2D; // Example default
+                    wEntry.texture.viewDimension =
+                            wgpu::TextureViewDimension::e2D;// Example default
                 }
                 entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW;
                 break;
@@ -436,49 +476,65 @@ void WebGPUDescriptorSet::addEntry(uint index, wgpu::BindGroupEntry&& entry) {
 // From createTextureR
 WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
         uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
-        wgpu::Device device) noexcept {
-
-    // First the texture aspect
-    wgpu::TextureDescriptor desc;
-
+        wgpu::Device const& device) noexcept {
+    assert_invariant(
+            samples == 1 ||
+            samples == 4 &&
+                    "An invalid number of samples were requested, as WGPU requires the sample "
+                    "count to either be 1 (no multisampling) or 4, at least as of April 2025 of "
+                    "the spec. See https://www.w3.org/TR/webgpu/#texture-creation or "
+                    "https://gpuweb.github.io/gpuweb/#multisample-state");
+    // First, the texture aspect, starting with the defaults/basic configuration
+    mUsage = fToWGPUTextureUsage(usage);
+    mFormat = fToWGPUTextureFormat(format);
+    wgpu::TextureDescriptor textureDescriptor{
+        .label = getUserTextureLabel(target),
+        .usage = mUsage,
+        .dimension = target == SamplerType::SAMPLER_3D ? wgpu::TextureDimension::e3D
+                                                       : wgpu::TextureDimension::e2D,
+        .size = { .width = width, .height = height, .depthOrArrayLayers = depth },
+        .format = mFormat,
+        .mipLevelCount = levels,
+        .sampleCount = samples,
+        // TODO Is this fine? Could do all-the-things, a naive mapping or get something from
+        // Filament
+        .viewFormatCount = 0,
+        .viewFormats = nullptr,
+    };
+    // adjust for specific cases
     switch (target) {
-        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
         case SamplerType::SAMPLER_2D:
+            mArrayLayerCount = 1;
+            break;
         case SamplerType::SAMPLER_2D_ARRAY:
-        // Should be safe to assume external is 2d
-        case SamplerType::SAMPLER_EXTERNAL: {
-            desc.dimension = wgpu::TextureDimension::e2D;
+            mArrayLayerCount = textureDescriptor.size.depthOrArrayLayers;
             break;
-        }
         case SamplerType::SAMPLER_CUBEMAP:
-        case SamplerType::SAMPLER_3D: {
-            desc.dimension = wgpu::TextureDimension::e3D;
+            textureDescriptor.size.depthOrArrayLayers = 6;
+            mArrayLayerCount = textureDescriptor.size.depthOrArrayLayers;
             break;
-        }
+        case SamplerType::SAMPLER_EXTERNAL:
+        case SamplerType::SAMPLER_3D:
+            mArrayLayerCount = 1;
+            break;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            textureDescriptor.size.depthOrArrayLayers = depth * 6;
+            mArrayLayerCount = textureDescriptor.size.depthOrArrayLayers;
+            break;
     }
-    desc.size = { .width = width, .height = height, .depthOrArrayLayers = depth };
-    desc.format = fToWGPUTextureFormat(format);
-    assert_invariant(desc.format != wgpu::TextureFormat::Undefined);
-
-    // WGPU requires this to be true. Filament should comply
-    assert(samples == 1 || samples || 4);
-
-    desc.sampleCount = samples;
-    desc.usage = fToWGPUTextureUsage(usage);
-    desc.mipLevelCount = levels;
-
-    // TODO Is this fine? Could do all-the-things, a naive mapping or get something from Filament
-    desc.viewFormats = nullptr;
-
-    texture = device.CreateTexture(&desc);
-
-    // TODO should a default levelCount be something other than 0? Sample count?
-    texView = makeTextureView(0, 1, target);
+    assert_invariant(textureDescriptor.format != wgpu::TextureFormat::Undefined &&
+                     "Could not find appropriate WebGPU format");
+    mTexture = device.CreateTexture(&textureDescriptor);
+    FILAMENT_CHECK_POSTCONDITION(mTexture)
+            << "Failed to create texture for " << textureDescriptor.label;
+    // Second, the texture view aspect
+    mTexView = makeTextureView(0, levels, target);
 }
+
 // From createTextureViewR
 WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
-    texture = src->texture;
-    texView = makeTextureView(baseLevel, levelCount, target);
+    mTexture = src->mTexture;
+    mTexView = makeTextureView(baseLevel, levelCount, target);
 }
 
 wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(const TextureUsage& fUsage) {
@@ -771,43 +827,46 @@ wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(const TextureFormat& fUsag
 
 wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
         SamplerType target) {
-    wgpu::TextureViewDescriptor desc;
-    desc.baseMipLevel = baseLevel;
-    desc.mipLevelCount = levelCount;
-
-    // baseArrayLayer is required, making a guess
-    desc.baseArrayLayer = 0;
-    // Have not found an analouge to aspect in other drivers, but ALL should be unrestrictive.
-    // TODO Can we make this better?
-    desc.aspect = wgpu::TextureAspect::All;
-
-    // The rest of the properties should be fine to leave as default, using the texture params.
-    desc.label = "TODO";
-
-    desc.format = wgpu::TextureFormat::Undefined;
+    // starting with the defaults/basic configuration
+    wgpu::TextureViewDescriptor textureViewDescriptor{
+        .label = getUserTextureViewLabel(target),
+        .format = mFormat,
+        // dimension depends on target and is set below
+        .baseMipLevel = baseLevel,
+        .mipLevelCount = levelCount,
+        // baseArrayLayer is required, making a guess
+        .baseArrayLayer = 0,
+        .arrayLayerCount = mArrayLayerCount,
+        // Have not found an analog to aspect in other drivers, but ALL should be unrestrictive.
+        // TODO Can we make this better?
+        .aspect = wgpu::TextureAspect::All,
+        .usage = mUsage
+    };
+    // adjust for specific cases
     switch (target) {
         case SamplerType::SAMPLER_2D:
-            desc.dimension = wgpu::TextureViewDimension::e2D;
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2D;
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
-            desc.dimension = wgpu::TextureViewDimension::e2DArray;
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2DArray;
             break;
         case SamplerType::SAMPLER_CUBEMAP:
-            desc.dimension = wgpu::TextureViewDimension::Cube;
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::Cube;
             break;
         case SamplerType::SAMPLER_EXTERNAL:
-            desc.dimension = wgpu::TextureViewDimension::Undefined;
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2D;
             break;
         case SamplerType::SAMPLER_3D:
-            desc.dimension = wgpu::TextureViewDimension::e3D;
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::e3D;
             break;
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-            desc.dimension = wgpu::TextureViewDimension::CubeArray;
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::CubeArray;
             break;
     }
-    desc.usage = wgpu::TextureUsage::None;
-
-    return texture.CreateView(&desc);
+    wgpu::TextureView textureView = mTexture.CreateView(&textureViewDescriptor);
+    FILAMENT_CHECK_POSTCONDITION(textureView)
+            << "Failed to create texture view " << textureViewDescriptor.label;
+    return textureView;
 }
 
 WGPURenderTarget::Attachment WGPURenderTarget::getDrawColorAttachment(size_t index) {

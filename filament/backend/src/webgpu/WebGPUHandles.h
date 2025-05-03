@@ -167,12 +167,12 @@ class WGPUTexture : public HwTexture {
 public:
     WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
             uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
-            wgpu::Device device) noexcept;
+            wgpu::Device const& device) noexcept;
 
     WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
 
-    const wgpu::Texture& getTexture() const { return texture; }
-    const wgpu::TextureView& getTexView() const { return texView; }
+    const wgpu::Texture& getTexture() const { return mTexture; }
+    const wgpu::TextureView& getTexView() const { return mTexView; }
 
     // Public to allow checking for support of a texture format
     static wgpu::TextureFormat fToWGPUTextureFormat(const filament::backend::TextureFormat& fUsage);
@@ -183,8 +183,11 @@ private:
     // CreateTextureR has info for a texture and sampler. Texture Views are needed for binding,
     // along with a sampler Current plan: Inherit the sampler and Texture to always exist (It is a
     // ref counted pointer) when making views. View is optional
-    wgpu::Texture texture = nullptr;
-    wgpu::TextureView texView = nullptr;
+    wgpu::Texture mTexture = nullptr;
+    wgpu::TextureUsage mUsage = wgpu::TextureUsage::None;
+    wgpu::TextureFormat mFormat = wgpu::TextureFormat::Undefined;
+    uint32_t mArrayLayerCount = 1;
+    wgpu::TextureView mTexView = nullptr;
     wgpu::TextureUsage fToWGPUTextureUsage(const filament::backend::TextureUsage& fUsage);
 };
 
