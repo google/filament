@@ -899,8 +899,8 @@ wgpu::StoreOp WGPURenderTarget::getStoreOperation(RenderPassParams const& params
     }
     return wgpu::StoreOp::Store;
 }
-void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor* descriptor,
-            wgpu::TextureView const& textureView, const RenderPassParams& params) {
+void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& descriptor,
+        wgpu::TextureView const& textureView, RenderPassParams const& params) {
     // auto discardFlags = params.flags.discardEnd;
     // (void) discardFlags;
     // std::vector<wgpu::RenderPassColorAttachment> colorAttachments;
@@ -916,11 +916,10 @@ void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor* de
             colorAttachments.emplace_back(colorAttachment);
         // }
     }
-    descriptor->colorAttachments = colorAttachments.data();
-    descriptor->colorAttachmentCount = colorAttachments.size();
-    descriptor->depthStencilAttachment = nullptr;
-    descriptor->timestampWrites = nullptr;
-
+    descriptor.colorAttachments = colorAttachments.data();
+    descriptor.colorAttachmentCount = colorAttachments.size();
+    descriptor.depthStencilAttachment = nullptr;
+    descriptor.timestampWrites = nullptr;
 }
 
 

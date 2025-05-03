@@ -227,8 +227,8 @@ public:
         : HwRenderTarget(0, 0),
           defaultRenderTarget(true) {}
 
-    void setUpRenderPassAttachments(wgpu::RenderPassDescriptor* descriptor,
-            wgpu::TextureView const& textureView, const RenderPassParams& params);
+    void setUpRenderPassAttachments(wgpu::RenderPassDescriptor& descriptor,
+            wgpu::TextureView const& textureView, RenderPassParams const& params);
 
     math::uint2 getAttachmentSize() noexcept;
 
@@ -238,10 +238,9 @@ public:
     Attachment getDrawColorAttachment(size_t index);
     Attachment getReadColorAttachment(size_t index);
 
-private:
     static wgpu::LoadOp getLoadOperation(const RenderPassParams& params, TargetBufferFlags buffer);
     static wgpu::StoreOp getStoreOperation(const RenderPassParams& params, TargetBufferFlags buffer);
-
+private:
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
 
