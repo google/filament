@@ -28,6 +28,7 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <array>
+#include <bitset>
 #include <cstdint>
 #include <vector>
 
@@ -112,6 +113,7 @@ public:
     struct BindGroupEntryInfo final {
         uint8_t binding = 0;
         BindGroupEntryType type = BindGroupEntryType::UNIFORM_BUFFER;
+        bool hasDynamicOffset = false;
     };
 
     WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const& device);
@@ -134,14 +136,15 @@ public:
     static void initializeDummyResourcesIfNotAlready(wgpu::Device const&,
             wgpu::TextureFormat aColorFormat);
 
-    WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout,
+    WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
             std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
     ~WebGPUDescriptorSet();
 
     wgpu::BindGroup lockAndReturn(wgpu::Device const&);
     void addEntry(uint index, wgpu::BindGroupEntry&& entry);
+    [[nodiscard]] uint32_t const* setDynamicOffsets(uint32_t const* offsets);
     [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
-
+    [[nodiscard]] size_t countEntitiesWithDynamicOffsets() const;
 private:
 
     static wgpu::Buffer sDummyUniformBuffer;
@@ -160,6 +163,9 @@ private:
     static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
     std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding {};
     std::vector<wgpu::BindGroupEntry> mEntriesSortedByBinding;
+    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingWithDynamicOffsets {};
+    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingAdded {};
+    std::vector<uint32_t> mDynamicOffsets;
     wgpu::BindGroup mBindGroup = nullptr;
 };
 
