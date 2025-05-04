@@ -60,7 +60,11 @@ float spatialOffsetsNoise(float2 uv) {
 
 // http://h14s.p5r.org/2012/09/0x5f3759df.html, [Drobot2014a] Low Level Optimizations for GCN, https://blog.selfshadow.com/publications/s2016-shading-course/activision/s2016_pbs_activision_occlusion.pdf slide 63
 float fastSqrt(float x) {
+#if defined(TARGET_MOBILE)
+    return sqrt(x);
+#else
     return intBitsToFloat(0x1fbd1df5 + (floatBitsToInt(x) >> 1));
+#endif
 }
 
 // input [-1, 1] and output [0, PI], from https://seblagarde.wordpress.com/2014/12/01/inverse-trigonometric-functions-gpu-optimization-for-amd-gcn-architecture/
