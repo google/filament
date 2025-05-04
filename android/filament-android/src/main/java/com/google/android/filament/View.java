@@ -1801,6 +1801,22 @@ public class View {
      * @see setAmbientOcclusionOptions()
      */
     public static class AmbientOcclusionOptions {
+        public enum AmbientOcclusionType {
+            /**
+             * use Scalable Ambient Occlusion
+             */
+            SAO,
+            /**
+             * use Ground Truth-Based Ambient Occlusion
+             */
+            GTAO,
+        }
+
+        /**
+         * Type of ambient occlusion algorithm.
+         */
+        @NonNull
+        public AmbientOcclusionOptions.AmbientOcclusionType aoType = AmbientOcclusionOptions.AmbientOcclusionType.SAO;
         /**
          * Ambient Occlusion radius in meters, between 0 and ~10.
          */
@@ -1810,7 +1826,8 @@ public class View {
          */
         public float power = 1.0f;
         /**
-         * Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
+         * Self-occlusion bias in meters. Use to avoid self-occlusion.
+         * Between 0 and a few mm. No effect when aoType set to GTAO
          */
         public float bias = 0.0005f;
         /**
@@ -1826,7 +1843,7 @@ public class View {
          */
         public float bilateralThreshold = 0.05f;
         /**
-         * affects # of samples used for AO.
+         * affects # of samples used for AO. No effect when aoType set to GTAO.
          */
         @NonNull
         public QualityLevel quality = QualityLevel.LOW;
@@ -1849,7 +1866,7 @@ public class View {
          */
         public boolean bentNormals = false;
         /**
-         * min angle in radian to consider
+         * min angle in radian to consider. No effect when aoType set to GTAO.
          */
         public float minHorizonAngleRad = 0.0f;
         /**
@@ -1903,6 +1920,19 @@ public class View {
          * Ambient shadows from dominant light
          */
         public boolean ssctEnabled = false;
+
+        /**
+         * Ground Truth-base Ambient Occlusion (GTAO) options
+         */
+        public int gtaoSampleSliceCount = 4;
+        /**
+         * Ground Truth-base Ambient Occlusion (GTAO) options
+         */
+        public int gtaoSampleStepsPerSlice = 4;
+        /**
+         * Ground Truth-base Ambient Occlusion (GTAO) options
+         */
+        public float gtaoThicknessHeuristic = 0.004f;
 
     }
 
@@ -1980,7 +2010,7 @@ public class View {
         }
 
         /**
-         * reconstruction filter width typically between 0.2 (sharper, aliased) and 1.5 (smoother)
+         * reconstruction filter width typically between 1 (sharper) and 2 (smoother)
          */
         public float filterWidth = 1.0f;
         /**

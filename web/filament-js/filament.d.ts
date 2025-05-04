@@ -1176,10 +1176,10 @@ export interface View$DynamicResolutionOptions {
     /**
      * Upscaling quality
      * LOW:    bilinear filtered blit. Fastest, poor quality
-     * MEDIUM: AMD FidelityFX FSR1 w/ mobile optimizations
+     * MEDIUM: Qualcomm Snapdragon Game Super Resolution (SGSR) 1.0
      * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations
      * ULTRA:  AMD FidelityFX FSR1
-     *      FSR1 require a well anti-aliased (MSAA or TAA), noise free scene.
+     *      FSR1 and SGSR require a well anti-aliased (MSAA or TAA), noise free scene. Avoid FXAA and dithering.
      *
      * The default upscaling quality is set to LOW.
      */
@@ -1516,6 +1516,11 @@ export interface View$RenderQuality {
     hdrColorBuffer?: View$QualityLevel;
 }
 
+export enum View$AmbientOcclusionOptions$AmbientOcclusionType {
+    SAO, // use Scalable Ambient Occlusion
+    GTAO, // use Ground Truth-Based Ambient Occlusion
+}
+
 /**
  * Screen Space Cone Tracing (SSCT) options
  * Ambient shadows from dominant light
@@ -1564,10 +1569,32 @@ export interface View$AmbientOcclusionOptions$Ssct {
 }
 
 /**
+ * Ground Truth-base Ambient Occlusion (GTAO) options
+ */
+export interface View$AmbientOcclusionOptions$Gtao {
+    /**
+     * # of slices. Higher values make less noise.
+     */
+    sampleSliceCount?: number;
+    /**
+     * # of steps the radius is divided into for integration
+     */
+    sampleStepsPerSlice?: number;
+    /**
+     * thickness heuristic, should be closed to 0
+     */
+    thicknessHeuristic?: number;
+}
+
+/**
  * Options for screen space Ambient Occlusion (SSAO) and Screen Space Cone Tracing (SSCT)
  * @see setAmbientOcclusionOptions()
  */
 export interface View$AmbientOcclusionOptions {
+    /**
+     * Type of ambient occlusion algorithm.
+     */
+    aoType?: View$AmbientOcclusionOptions$AmbientOcclusionType;
     /**
      * Ambient Occlusion radius in meters, between 0 and ~10.
      */
@@ -1577,7 +1604,8 @@ export interface View$AmbientOcclusionOptions {
      */
     power?: number;
     /**
-     * Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
+     * Self-occlusion bias in meters. Use to avoid self-occlusion.
+     * Between 0 and a few mm. No effect when aoType set to GTAO
      */
     bias?: number;
     /**
@@ -1593,7 +1621,7 @@ export interface View$AmbientOcclusionOptions {
      */
     bilateralThreshold?: number;
     /**
-     * affects # of samples used for AO.
+     * affects # of samples used for AO. No effect when aoType set to GTAO.
      */
     quality?: View$QualityLevel;
     /**
@@ -1613,10 +1641,11 @@ export interface View$AmbientOcclusionOptions {
      */
     bentNormals?: boolean;
     /**
-     * min angle in radian to consider
+     * min angle in radian to consider. No effect when aoType set to GTAO.
      */
     minHorizonAngleRad?: number;
     // JavaScript binding for ssct is not yet supported, must use default value.
+    // JavaScript binding for gtao is not yet supported, must use default value.
 }
 
 /**
@@ -1675,7 +1704,7 @@ export enum View$TemporalAntiAliasingOptions$JitterPattern {
  */
 export interface View$TemporalAntiAliasingOptions {
     /**
-     * reconstruction filter width typically between 0.2 (sharper, aliased) and 1.5 (smoother)
+     * reconstruction filter width typically between 1 (sharper) and 2 (smoother)
      */
     filterWidth?: number;
     /**
