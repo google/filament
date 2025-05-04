@@ -859,8 +859,6 @@ void ViewerGui::updateUserInterface() {
                 ssao.gtao.sampleStepsPerSlice = static_cast<uint8_t>(stepsPerSlice);
                 break;
             }
-            default:
-                break;
         }
 
         ImGui::SliderFloat("Bilateral Threshold", &ssao.bilateralThreshold, 0.0f, 0.1f);

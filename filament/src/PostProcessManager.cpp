@@ -919,8 +919,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 
                         break;
                     }
-                    default:
-                        break;
                 }
 
                 // Set common material parameters
