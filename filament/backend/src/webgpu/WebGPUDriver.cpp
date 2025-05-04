@@ -976,8 +976,9 @@ void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
     mRenderPassEncoder.DrawIndexed(indexOffset, indexCount, instanceCount, 0);
 }
 
-void WebGPUDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
-        uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+void WebGPUDriver::draw(PipelineState, Handle<HwRenderPrimitive>, uint32_t indexOffset,
+        uint32_t indexCount, uint32_t instanceCount) {
+    draw2(indexOffset, indexCount, instanceCount);
 }
 
 void WebGPUDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
