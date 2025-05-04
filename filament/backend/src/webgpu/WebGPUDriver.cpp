@@ -1031,11 +1031,18 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
     }
 }
 
-void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh, backend::descriptor_set_t set,
-        backend::DescriptorSetOffsetArray&& offsets) {
-    auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
-    // TODO: presume we need this, use it. Probably Encoder::SetBindGroup
-    auto wbg = bindGroup->lockAndReturn(mDevice);
+void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh,
+        backend::descriptor_set_t setIndex, backend::DescriptorSetOffsetArray&& offsets) {
+    const auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
+    const auto wbg = bindGroup->lockAndReturn(mDevice);
+    assert_invariant(mRenderPassEncoder);
+    // TODO is this how we should be getting the dynamic offsets?
+    //      should we add offsets for unused entries or is the input already have them?
+    //      this implementation assumes unused entries are not provided, and adds dummy values.
+    //      The count also includes unused entities, as not doing so produces errors
+    const size_t dynamicOffsetCount = bindGroup->countEntitiesWithDynamicOffsets();
+    uint32_t const* const dynamicOffsetsWithUnused = bindGroup->setDynamicOffsets(offsets.data());
+    mRenderPassEncoder.SetBindGroup(setIndex, wbg, dynamicOffsetCount, dynamicOffsetsWithUnused);
 }
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {

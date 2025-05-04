@@ -18,6 +18,8 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utils/BitmaskEnum.h>
+
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
@@ -283,6 +285,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
             case DescriptorType::UNIFORM_BUFFER: {
                 wEntry.buffer.hasDynamicOffset =
                         any(fEntry.flags & DescriptorFlags::DYNAMIC_OFFSET);
+                entryInfo.hasDynamicOffset = wEntry.buffer.hasDynamicOffset;
                 wEntry.buffer.type = wgpu::BufferBindingType::Uniform;
                 // TODO: Ideally we fill minBindingSize
                 break;
@@ -398,7 +401,7 @@ std::vector<wgpu::BindGroupEntry> WebGPUDescriptorSet::createDummyEntriesSortedB
     return entries;
 }
 
-WebGPUDescriptorSet::WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout,
+WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
         std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
     : mLayout(layout),
       mEntriesSortedByBinding(createDummyEntriesSortedByBinding(bindGroupEntries)) {
@@ -412,6 +415,13 @@ WebGPUDescriptorSet::WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout,
         assert_invariant(entry.binding < mEntryIndexByBinding.size());
         mEntryIndexByBinding[entry.binding] = static_cast<uint8_t>(index);
     }
+    for (auto const& entry : bindGroupEntries) {
+        if (entry.hasDynamicOffset) {
+            assert_invariant(entry.binding < mEntriesByBindingWithDynamicOffsets.size());
+            mEntriesByBindingWithDynamicOffsets[entry.binding] = true;
+        }
+    }
+    mDynamicOffsets.reserve(mEntriesSortedByBinding.size());
 }
 
 WebGPUDescriptorSet::~WebGPUDescriptorSet() {
@@ -471,6 +481,30 @@ void WebGPUDescriptorSet::addEntry(uint index, wgpu::BindGroupEntry&& entry) {
             << "Invalid binding " << index;
     entry.binding = index;
     mEntriesSortedByBinding[entryIndex] = std::move(entry);
+    mEntriesByBindingAdded[index] = true;
+}
+
+uint32_t const* WebGPUDescriptorSet::setDynamicOffsets(uint32_t const* offsets) {
+    // mDynamicOffsets already reserves enough memory for the number of entries in the set
+    mDynamicOffsets.clear();
+    // this implementation copies the offsets to mDynamicOffsets, but also adds values for
+    // unused entries TODO: is this necessary?
+    size_t inputIndex = 0;
+    size_t outputIndex = 0;
+    for (auto const& entry : mEntriesSortedByBinding) {
+        if (mEntriesByBindingWithDynamicOffsets[entry.binding]) {
+            if (mEntriesByBindingAdded[entry.binding]) {
+                mDynamicOffsets[outputIndex++] = offsets[inputIndex++];
+            } else {
+                mDynamicOffsets[outputIndex++] = 0; // dummy offset, as it was never added
+            }
+        }
+    }
+    return mDynamicOffsets.data();
+}
+
+size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {
+    return mEntriesByBindingWithDynamicOffsets.count();
 }
 
 // From createTextureR
