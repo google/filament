@@ -241,7 +241,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 
     static int layoutNum = 0;
 
-    uint samplerCount =
+    unsigned int samplerCount =
             std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
                 return fEntry.type == DescriptorType::SAMPLER ||
                        fEntry.type == DescriptorType::SAMPLER_EXTERNAL;
@@ -463,7 +463,7 @@ wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(const wgpu::Device& device) {
     return mBindGroup;
 }
 
-void WebGPUDescriptorSet::addEntry(uint index, wgpu::BindGroupEntry&& entry) {
+void WebGPUDescriptorSet::addEntry(unsigned int index, wgpu::BindGroupEntry&& entry) {
     if (mBindGroup) {
         // We will keep getting hits from future updates, but shouldn't do anything
         // Filament guarantees this won't change after things have locked.
