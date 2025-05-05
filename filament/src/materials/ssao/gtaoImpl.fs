@@ -67,14 +67,6 @@ float fastSqrt(float x) {
 #endif
 }
 
-// input [-1, 1] and output [0, PI], from https://seblagarde.wordpress.com/2014/12/01/inverse-trigonometric-functions-gpu-optimization-for-amd-gcn-architecture/
-float fastACos(float inX) {
-    float x = abs(inX);
-    float res = -0.156583 * x + HALF_PI;
-    res *= fastSqrt(1.0 - x);
-    return (inX >= 0.0) ? res : PI - res;
-}
-
 void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         highp vec2 uv, highp vec3 origin, vec3 normal) {
     vec2 uvSamplePos = uv;
@@ -111,7 +103,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         float projNormalLength = length(projNormal);
         float cosNorm = saturate(dot(projNormal, viewDir) / projNormalLength);
 
-        float n = signNorm * fastACos(cosNorm);
+        float n = signNorm * acosFast(cosNorm);
 
         float horizonCos0 = -1.0;
         float horizonCos1 = -1.0;
@@ -149,8 +141,8 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
             horizonCos1 = shc1 > horizonCos1 ? mix(shc1, horizonCos1, fallOff.y) : mix(horizonCos1, shc1, materialParams.thicknessHeuristic);
         }
 
-        float h0 = -fastACos(horizonCos1);
-        float h1 = fastACos(horizonCos0);
+        float h0 = -acosFast(horizonCos1);
+        float h1 = acosFast(horizonCos0);
         h0 = n + clamp(h0 - n, -HALF_PI, HALF_PI);
         h1 = n + clamp(h1 - n, -HALF_PI, HALF_PI);
 
