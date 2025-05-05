@@ -141,7 +141,7 @@ public:
     ~WebGPUDescriptorSet();
 
     wgpu::BindGroup lockAndReturn(wgpu::Device const&);
-    void addEntry(uint index, wgpu::BindGroupEntry&& entry);
+    void addEntry(unsigned int index, wgpu::BindGroupEntry&& entry);
     [[nodiscard]] uint32_t const* setDynamicOffsets(uint32_t const* offsets);
     [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
     [[nodiscard]] size_t countEntitiesWithDynamicOffsets() const;
