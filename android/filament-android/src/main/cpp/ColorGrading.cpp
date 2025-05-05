@@ -69,7 +69,7 @@ Java_com_google_android_filament_ColorGrading_nBuilderToneMapper(JNIEnv*, jclass
         jlong nativeBuilder, jlong toneMapper_) {
     ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
     ToneMapper* toneMapper = reinterpret_cast<ToneMapper*>(toneMapper_);
-    std::shared_ptr<ToneMapper> toneMapperCopy = std::make_shared<ToneMapper>(*toneMapper);
+    std::shared_ptr<ToneMapper> toneMapperCopy(toneMapper->clone());
     builder->toneMapper(toneMapperCopy);
 }
 
