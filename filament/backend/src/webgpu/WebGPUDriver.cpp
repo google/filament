@@ -470,9 +470,8 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     assert_invariant(mSwapChain);
     WebGPUDescriptorSet::initializeDummyResourcesIfNotAlready(mDevice,
             mSwapChain->getColorFormat());
-    FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
-                  "background components have been instantiated/selected, such as surface/screen, "
-                  "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
+    FWGPU_LOGW << "WebGPU support is highly limited, only supporting the hello-triangle sample in "
+                  "a brittle/hacked way and untested, likely, breaking in other samples."
                << utils::io::endl;
 #if !FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) && !defined(NDEBUG)
     FWGPU_LOGI << "If the FILAMENT_BACKEND_DEBUG_FLAG variable were set with the " << utils::io::hex
@@ -591,7 +590,14 @@ void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
         Handle<HwDescriptorSetLayout> dslh) {
     auto layout = handleCast<WebGPUDescriptorSetLayout>(dslh);
-    constructHandle<WebGPUDescriptorSet>(dsh, layout->getLayout(), layout->getBindGroupEntries());
+    constructHandle<WebGPUDescriptorSet>(
+            dsh,
+#ifndef NDEBUG
+            wgpu::StringView(layout->getLabel()),
+#endif
+            layout->getLayout(),
+            layout->getBindGroupEntries()
+            );
 }
 
 Handle<HwStream> WebGPUDriver::createStreamNative(void* nativeStream) {

@@ -34,6 +34,8 @@
 // order of calls).
 #define FWGPU_DEBUG_FORCE_LOG_TO_I 0x00000004
 
+#define FWGPU_DEBUG_DESCRIPTOR_SETS 0x00000008
+
 // Useful default combinations
 #define FWGPU_DEBUG_EVERYTHING     0xFFFFFFFF
 

@@ -34,6 +34,9 @@
 #include <math/vec4.h>
 
 #include <array>
+#if !defined(NDEBUG)
+#include <string>
+#endif
 #include <type_traits>
 #include <variant>
 
@@ -1139,7 +1142,9 @@ struct ExternalSamplerDatum {
 static_assert(sizeof(ExternalSamplerDatum) == 12);
 
 struct DescriptorSetLayout {
+#if !defined(NDEBUG)
     std::string label;
+#endif
     utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
 
 //  TODO: uncomment when needed

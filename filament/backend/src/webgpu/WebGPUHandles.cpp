@@ -16,14 +16,28 @@
 
 #include "WebGPUHandles.h"
 
+#include "WebGPUConstants.h"
+
 #include <backend/DriverEnums.h>
 
 #include <utils/BitmaskEnum.h>
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+#include <utils/ostream.h>
+#endif
 
 #include <webgpu/webgpu_cpp.h>
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+#include <webgpu/webgpu_cpp_print.h>
+#endif
 
 #include <algorithm>
 #include <cstdint>
+#ifndef NDEBUG
+#include <string>
+#endif
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+#include <string_view>
+#endif
 #include <utility>
 #include <vector>
 
@@ -157,6 +171,226 @@ wgpu::StringView getUserTextureViewLabel(filament::backend::SamplerType target) 
     }
 }
 
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+std::string_view toString(filament::backend::DescriptorType type) {
+    using filament::backend::DescriptorType;
+    switch (type) {
+        case DescriptorType::UNIFORM_BUFFER:
+            return "UNIFORM_BUFFER";
+        case DescriptorType::SHADER_STORAGE_BUFFER:
+            return "SHADER_STORAGE_BUFFER";
+        case DescriptorType::SAMPLER:
+            return "SAMPLER";
+        case DescriptorType::INPUT_ATTACHMENT:
+            return "INPUT_ATTACHMENT";
+        case DescriptorType::SAMPLER_EXTERNAL:
+            return "SAMPLER_EXTERNAL";
+    }
+}
+#endif
+
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+std::string_view toString(filament::backend::ShaderStageFlags flags) {
+    using filament::backend::ShaderStageFlags;
+    switch (flags) {
+        case ShaderStageFlags::NONE:
+            return "NONE";
+        case ShaderStageFlags::VERTEX:
+            return "VERTEX";
+        case ShaderStageFlags::FRAGMENT:
+            return "FRAGMENT";
+        case ShaderStageFlags::COMPUTE:
+            return "COMPUTE";
+        case ShaderStageFlags::ALL_SHADER_STAGE_FLAGS:
+            return "ALL_SHADER_STAGE_FLAGS";
+    }
+    if (any(flags & ShaderStageFlags::VERTEX)) {
+        if (any(flags & ShaderStageFlags::FRAGMENT)) {
+            return "VERTEX | FRAGMENT";
+        }
+        if (any(flags & ShaderStageFlags::COMPUTE)) {
+            return "VERTEX | COMPUTE";
+        }
+    }
+    if (any(flags & ShaderStageFlags::FRAGMENT)) {
+        if (any(flags & ShaderStageFlags::COMPUTE)) {
+            return "FRAGMENT | COMPUTE";
+        }
+    }
+    PANIC_POSTCONDITION("IMPOSSIBLE ShaderStageFlags combination. flags: %d", flags);
+}
+#endif
+
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+std::string_view toString(wgpu::ShaderStage stages) {
+    switch (stages) {
+        case wgpu::ShaderStage::None:
+            return "None";
+        case wgpu::ShaderStage::Vertex:
+            return "Vertex";
+        case wgpu::ShaderStage::Fragment:
+            return "Fragment";
+        case wgpu::ShaderStage::Compute:
+            return "Compute";
+    }
+    wgpu::ShaderStage allStages =
+            wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment | wgpu::ShaderStage::Compute;
+    if ((stages & allStages) == allStages) {
+        return "Vertex | Fragment | Compute";
+    }
+    if ((stages & wgpu::ShaderStage::Vertex) != 0) {
+        if ((stages & wgpu::ShaderStage::Fragment) != 0) {
+            return "Vertex | Fragment";
+        }
+        if ((stages & wgpu::ShaderStage::Compute) != 0) {
+            return "Vertex | Compute";
+        }
+    }
+    if ((stages & wgpu::ShaderStage::Fragment) != 0) {
+        if ((stages & wgpu::ShaderStage::Compute) != 0) {
+            return "Fragment | Compute";
+        }
+    }
+}
+#endif
+
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+std::string_view toString(filament::backend::DescriptorFlags flags) {
+    using filament::backend::DescriptorFlags;
+    switch (flags) {
+        case DescriptorFlags::NONE:
+            return "NONE";
+        case DescriptorFlags::DYNAMIC_OFFSET:
+            return "DYNAMIC_OFFSET";
+    }
+}
+#endif
+
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+void printFilamentDescriptorSetLayout(filament::backend::DescriptorSetLayout const& layout) {
+    using filament::backend::DescriptorSetLayoutBinding;
+    FWGPU_LOGD << "filament::backend::DescriptorSetLayout \"" << layout.label
+               << "\":" << utils::io::endl;
+    FWGPU_LOGD << "  bindings (" << layout.bindings.size() << "):" << utils::io::endl;
+    for (DescriptorSetLayoutBinding const& binding: layout.bindings) {
+        FWGPU_LOGD << "    binding " << static_cast<uint32_t>(binding.binding) << ":"
+                   << " type " << toString(binding.type) << " stageFlags "
+                   << toString(binding.stageFlags) << " flags " << toString(binding.flags)
+                   << " count " << binding.count << utils::io::endl;
+    }
+}
+#endif
+
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+void printBindGroupLayout(wgpu::BindGroupLayoutDescriptor const& layout) {
+    FWGPU_LOGD << "wgpu::BindGroupLayoutDescriptor label \"" << layout.label
+               << "\":" << utils::io::endl;
+    FWGPU_LOGD << "  entries (" << layout.entryCount << "):" << utils::io::endl;
+    for (size_t entryIndex = 0; entryIndex < layout.entryCount; entryIndex++) {
+        wgpu::BindGroupLayoutEntry const& entry = layout.entries[entryIndex];
+        FWGPU_LOGD << "    binding " << entry.binding << " visibility "
+                   << toString(entry.visibility);
+        if (entry.buffer.type != wgpu::BufferBindingType::BindingNotUsed &&
+                entry.buffer.type != wgpu::BufferBindingType::Undefined) {
+            // buffer entry...
+            assert_invariant(
+                    entry.sampler.type == wgpu::SamplerBindingType::BindingNotUsed &&
+                    entry.texture.sampleType == wgpu::TextureSampleType::BindingNotUsed &&
+                    entry.storageTexture.access == wgpu::StorageTextureAccess::BindingNotUsed &&
+                    "entry is for a buffer but one of the other layout types (sampler, texture, "
+                    "storage) are somehow also being used?");
+            std::stringstream typeStream;
+            typeStream << entry.buffer.type;
+            FWGPU_LOGD << " " << typeStream.str() << " hasDynamicOffset "
+                       << bool(entry.buffer.hasDynamicOffset) << " minBindingSize "
+                       << entry.buffer.minBindingSize;
+        }
+        if (entry.sampler.type != wgpu::SamplerBindingType::BindingNotUsed &&
+                entry.sampler.type != wgpu::SamplerBindingType::Undefined) {
+            // sampler entry...
+            assert_invariant(
+                    entry.buffer.type == wgpu::BufferBindingType::BindingNotUsed &&
+                    entry.texture.sampleType == wgpu::TextureSampleType::BindingNotUsed &&
+                    entry.storageTexture.access == wgpu::StorageTextureAccess::BindingNotUsed &&
+                    "entry is for a sampler but one of the other layout types (buffer, texture, "
+                    "storage) are somehow also being used?");
+            std::stringstream typeStream;
+            typeStream << entry.sampler.type;
+            FWGPU_LOGD << " " << typeStream.str();
+        }
+        if (entry.texture.sampleType != wgpu::TextureSampleType::BindingNotUsed &&
+                entry.texture.sampleType != wgpu::TextureSampleType::Undefined) {
+            // texture entry...
+            assert_invariant(
+                    entry.buffer.type == wgpu::BufferBindingType::BindingNotUsed &&
+                    entry.sampler.type == wgpu::SamplerBindingType::BindingNotUsed &&
+                    entry.storageTexture.access == wgpu::StorageTextureAccess::BindingNotUsed &&
+                    "entry is for a texture but one of the other layout types (buffer, sampler, "
+                    "storage) are somehow also being used?");
+            std::stringstream typeStream;
+            typeStream << entry.texture.sampleType;
+            std::stringstream  dimensionStream;
+            dimensionStream << entry.texture.viewDimension;
+            FWGPU_LOGD << " " << typeStream.str() << " " << dimensionStream.str()
+                       << " multisampled " << bool(entry.texture.multisampled);
+        }
+        if (entry.storageTexture.access != wgpu::StorageTextureAccess::BindingNotUsed &&
+                entry.storageTexture.access != wgpu::StorageTextureAccess::Undefined) {
+            // storageTexture entry...
+            assert_invariant(
+                    entry.buffer.type == wgpu::BufferBindingType::BindingNotUsed &&
+                    entry.sampler.type == wgpu::SamplerBindingType::BindingNotUsed &&
+                    entry.texture.sampleType == wgpu::TextureSampleType::BindingNotUsed &&
+                    "entry is for a storage texture but one of the other layout types (buffer, "
+                    "sampler, texture) are somehow also being used?");
+            std::stringstream accessStream;
+            accessStream << entry.storageTexture.access;
+            std::stringstream formatStream;
+            formatStream << entry.storageTexture.format;
+            std::stringstream dimensionStream;
+            dimensionStream << entry.storageTexture.viewDimension;
+            FWGPU_LOGD << " " << accessStream.str() << " " << formatStream.str() << " "
+                       << dimensionStream.str();
+        }
+        FWGPU_LOGD << utils::io::endl;
+    }
+}
+#endif
+
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+template <size_t ENTRY_SIZE>
+void printBindGroup(wgpu::BindGroupDescriptor const& bindGroup,
+        std::bitset<ENTRY_SIZE> const& entriesByBindingWithDynamicOffsets,
+        std::bitset<ENTRY_SIZE> const& entriesByBindingAdded) {
+    assert_invariant(bindGroup.layout);
+    FWGPU_LOGD << "wgpu::BindGroupDescriptor label \"" << bindGroup.label
+               << "\":" << utils::io::endl;
+    FWGPU_LOGD << "  entries (" << bindGroup.entryCount << "):" << utils::io::endl;
+    for (size_t entryIndex = 0; entryIndex < bindGroup.entryCount; entryIndex++) {
+        wgpu::BindGroupEntry const& entry = bindGroup.entries[entryIndex];
+        FWGPU_LOGD << "    binding " << entry.binding;
+        if (entry.buffer) {
+            assert_invariant(entry.sampler == nullptr && entry.textureView == nullptr &&
+                             "buffer set but also sampler and/or textureView?");
+            FWGPU_LOGD << " buffer";
+        }
+        if (entry.sampler) {
+            assert_invariant(entry.buffer == nullptr && entry.textureView == nullptr &&
+                             "sampler set but also buffer and/or textureView?");
+            FWGPU_LOGD << " sampler";
+        }
+        if (entry.textureView) {
+            assert_invariant(entry.buffer == nullptr && entry.sampler == nullptr &&
+                             "textureView set but also buffer and/or sampler?");
+            FWGPU_LOGD << " textureView";
+        }
+        FWGPU_LOGD << " offset " << entry.offset << " size " << entry.size << " hasDynamicOffset "
+                   << bool(entriesByBindingWithDynamicOffsets[entry.binding]) << " added "
+                   << bool(entriesByBindingAdded[entry.binding]) << utils::io::endl;
+    }
+}
+#endif
+
 }// namespace
 
 namespace filament::backend {
@@ -236,7 +470,14 @@ wgpu::ShaderStage WebGPUDescriptorSetLayout::filamentStageToWGPUStage(ShaderStag
 }
 
 WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout,
-        wgpu::Device const& device) {
+        wgpu::Device const& device)
+#ifndef NDEBUG
+    : mLabel(layout.label)
+#endif
+{
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+    printFilamentDescriptorSetLayout(layout);
+#endif
     assert_invariant(device);
 
     static int layoutNum = 0;
@@ -272,6 +513,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering; // Example default
                 wEntry.texture.sampleType = wgpu::TextureSampleType::Float;      // Example default
                 // TODO: FIX! THIS IS HACK FOR HELLO-TRIANGLE!
+#ifndef NDEBUG
                 if (layout.label.find("Skybox") != std::string::npos ||
                         (layout.label == "Filament Default Material1" && wEntry.binding == 22)) {
                     wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
@@ -279,6 +521,10 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                     wEntry.texture.viewDimension =
                             wgpu::TextureViewDimension::e2D;// Example default
                 }
+#else
+                // TODO: AGAIN, fix the above because hello-triangle will break on release builds
+                wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2D;// Example default
+#endif
                 entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW;
                 break;
             }
@@ -302,13 +548,17 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         }
         // fEntry.count is unused currently
     }
-    std::string label =  "layout_"+ layout.label + std::to_string(++layoutNum) ;
     wgpu::BindGroupLayoutDescriptor layoutDescriptor{
-        .label{label.c_str()}, // Use .c_str() if label needs to be const char*
         .entryCount = wEntries.size(),
         .entries = wEntries.data()
     };
-    printf("===R Creating layout %i with %lu entries\n", layoutNum, wEntries.size());
+#ifndef NDEBUG
+    std::string label = "layout_" + layout.label + std::to_string(++layoutNum);
+    layoutDescriptor.label = label.c_str();// Use .c_str() if label needs to be const char*
+#endif
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+    printBindGroupLayout(layoutDescriptor);
+#endif
     mLayout = device.CreateBindGroupLayout(&layoutDescriptor);
 }
 
@@ -401,9 +651,17 @@ std::vector<wgpu::BindGroupEntry> WebGPUDescriptorSet::createDummyEntriesSortedB
     return entries;
 }
 
-WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
+WebGPUDescriptorSet::WebGPUDescriptorSet(
+#ifndef NDEBUG
+        wgpu::StringView const& label,
+#endif
+        wgpu::BindGroupLayout const& layout,
         std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
-    : mLayout(layout),
+    :
+#ifndef NDEBUG
+      mLabel(label),
+#endif
+      mLayout(layout),
       mEntriesSortedByBinding(createDummyEntriesSortedByBinding(bindGroupEntries)) {
     // Establish the size of entries based on the layout. This should be reliable and efficient.
     assert_invariant(INVALID_INDEX > mEntryIndexByBinding.size());
@@ -426,38 +684,26 @@ WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
 
 WebGPUDescriptorSet::~WebGPUDescriptorSet() {
     mBindGroup = nullptr;
-    mLayout = nullptr;
 }
 
 wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(const wgpu::Device& device) {
     if (mBindGroup) {
         return mBindGroup;
     }
-    for (const auto& entry : mEntriesSortedByBinding){
-        if(entry.buffer != nullptr){
-            printf("===R Entry %i is buffer\n", entry.binding);
-        }
-        else if(entry.sampler != nullptr){
-            printf("===R Entry %i is sampler\n", entry.binding);
-        }
-        else if(entry.textureView != nullptr){
-            printf("===R Entry %i is textureView\n", entry.binding);
-        }
-        else{
-            printf("===R Entry %i is ERROR STATE\n", entry.binding);
-        }
-    }
-    printf("===R Complete Group\n");
-    // TODO label? Should we just copy layout label?
     wgpu::BindGroupDescriptor desc{
+#ifndef NDEBUG
+        .label = mLabel,
+#endif
         .layout = mLayout,
         .entryCount = mEntriesSortedByBinding.size(),
         .entries = mEntriesSortedByBinding.data()
     };
+#if FWGPU_ENABLED(FWGPU_DEBUG_DESCRIPTOR_SETS)
+    printBindGroup(desc, mEntriesByBindingWithDynamicOffsets, mEntriesByBindingAdded);
+#endif
     mBindGroup = device.CreateBindGroup(&desc);
     FILAMENT_CHECK_POSTCONDITION(mBindGroup) << "Failed to create bind group?";
     // once we have created the bind group itself we should no longer need any other state
-    mLayout = nullptr;
     mEntriesSortedByBinding.clear();
     mEntriesSortedByBinding.shrink_to_fit();
     return mBindGroup;
