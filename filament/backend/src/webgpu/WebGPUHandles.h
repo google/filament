@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 #define TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 
@@ -24,6 +23,7 @@
 #include <backend/Handle.h>
 
 #include <utils/FixedCapacityVector.h>
+#include <utils/CString.h>
 
 #include <webgpu/webgpu_cpp.h>
 
@@ -118,6 +118,8 @@ public:
 
     WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const& device);
     ~WebGPUDescriptorSetLayout();
+
+    [[nodiscard]] utils::CString const& getLabel() const { return mLabel; }
     [[nodiscard]] const wgpu::BindGroupLayout& getLayout() const { return mLayout; }
     [[nodiscard]] std::vector<BindGroupEntryInfo> const& getBindGroupEntries() const {
         return mBindGroupEntries;
@@ -127,6 +129,8 @@ private:
     // TODO: If this is useful elsewhere, remove it from this class
     // Convert Filament Shader Stage Flags bitmask to webgpu equivilant
     static wgpu::ShaderStage filamentStageToWGPUStage(ShaderStageFlags fFlags);
+
+    utils::CString mLabel;
     std::vector<BindGroupEntryInfo> mBindGroupEntries;
     wgpu::BindGroupLayout mLayout;
 };
@@ -136,7 +140,7 @@ public:
     static void initializeDummyResourcesIfNotAlready(wgpu::Device const&,
             wgpu::TextureFormat aColorFormat);
 
-    WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
+    WebGPUDescriptorSet(wgpu::StringView label, wgpu::BindGroupLayout const& layout,
             std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
     ~WebGPUDescriptorSet();
 
@@ -155,11 +159,12 @@ private:
     static std::vector<wgpu::BindGroupEntry> createDummyEntriesSortedByBinding(
             std::vector<filament::backend::WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&);
 
+    const wgpu::StringView mLabel;
     // TODO: Consider storing what we used to make the layout. However we need to essentially
     // Recreate some of the info (Sampler in slot X with the actual sampler) so letting Dawn confirm
     // there isn't a mismatch may be easiest.
     // Also storing the wgpu ObjectBase takes care of ownership challenges in theory
-    wgpu::BindGroupLayout mLayout = nullptr;
+    wgpu::BindGroupLayout const& mLayout;
     static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
     std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding {};
     std::vector<wgpu::BindGroupEntry> mEntriesSortedByBinding;
