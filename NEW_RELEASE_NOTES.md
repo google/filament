@@ -7,3 +7,4 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- `ColorGrading::Builder::toneMapper` now takes a `shared_ptr<ToneMapper>`
