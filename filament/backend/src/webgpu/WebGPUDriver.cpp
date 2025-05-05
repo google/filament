@@ -973,7 +973,13 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
-    mRenderPassEncoder.DrawIndexed(indexOffset, indexCount, instanceCount, 0);
+    // Calling DrawIndexed with "firstInstance = 0" results in a NON spinning triangle
+//    mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
+    // Calling DrawIndexed with "firstInstance = 1" results in a spinning triangle
+    mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 1);
+    // Calling Draw with "firstInstance = 0" results in a NON spinning triangle
+    // Calling Draw with "firstInstance = 1" results in a spinning triangle
+//    mRenderPassEncoder.Draw(indexCount, instanceCount, 0, 1);
 }
 
 void WebGPUDriver::draw(PipelineState, Handle<HwRenderPrimitive>, uint32_t indexOffset,
