@@ -209,16 +209,14 @@ constexpr wgpu::CompositeAlphaMode selectAlphaMode(size_t availableAlphaModesCou
 }
 
 void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
-        wgpu::SurfaceCapabilities const& capabilities, wgpu::Extent2D const& surfaceSize,
+        wgpu::SurfaceCapabilities const& capabilities, wgpu::Extent2D const& extent,
         bool useSRGBColorSpace) {
     config.device = device;
     config.usage = wgpu::TextureUsage::RenderAttachment;
-    config.width = surfaceSize.width;
-    config.height = surfaceSize.height;
-    config.format =
-            selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);
-    config.presentMode =
-            selectPresentMode(capabilities.presentModeCount, capabilities.presentModes);
+    config.width = extent.width;
+    config.height = extent.height;
+    config.format = selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);
+    config.presentMode = selectPresentMode(capabilities.presentModeCount, capabilities.presentModes);
     config.alphaMode = selectAlphaMode(capabilities.alphaModeCount, capabilities.alphaModes);
 }
 
@@ -226,9 +224,12 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
 
 namespace filament::backend {
 
-WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& surfaceSize,
+WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
         wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags)
-    : mSurface(surface) {
+    : mSurface(surface),
+      mType(SwapChainType::SURFACE),
+      mHeadlessWidth(0),
+      mHeadlessHeight(0) {
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
         FWGPU_LOGW << "Failed to get WebGPU surface capabilities" << utils::io::endl;
@@ -239,7 +240,7 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
     }
     const bool useSRGBColorSpace = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0;
     const bool needStencil = (flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0;
-    initConfig(mConfig, device, capabilities, surfaceSize, useSRGBColorSpace);
+    initConfig(mConfig, device, capabilities, extent, useSRGBColorSpace);
     mDepthFormat = selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
             needStencil);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -248,9 +249,45 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
     mSurface.Configure(&mConfig);
 }
 
-WebGPUSwapChain::~WebGPUSwapChain() {
-    mSurface.Unconfigure();
+
+WebGPUSwapChain::WebGPUSwapChain(wgpu::Extent2D const& extent,
+        wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags)
+    : mType(SwapChainType::HEADLESS),
+      mHeadlessWidth(extent.width),
+      mHeadlessHeight(extent.height){
+
+    //TODO: review these initializations as webgpu pipeline gets mature
+    const wgpu::TextureFormat renderTargetFormat = wgpu::TextureFormat::RGBA8Unorm;
+    const wgpu::TextureDescriptor textureDescriptor = createRenderTargetDescriptor(mHeadlessWidth, mHeadlessHeight,  renderTargetFormat);
+
+    //TODO: eventually merge with handles
+     mRenderTargetTextures.fill(nullptr);
+     mRenderTargetViews.fill(nullptr);
+
+    for (size_t i = 0; i < mHeadlessBufferCount; ++i) {
+        mRenderTargetTextures[i] = device.CreateTexture(&textureDescriptor);
+        wgpu::TextureViewDescriptor viewDesc{};
+        viewDesc.format = textureDescriptor.format;
+        viewDesc.dimension = wgpu::TextureViewDimension::e2D;
+        viewDesc.baseMipLevel = 0;
+        viewDesc.mipLevelCount = 1;
+        viewDesc.baseArrayLayer = 0;
+        viewDesc.arrayLayerCount = 1;
+        viewDesc.aspect = wgpu::TextureAspect::All;
+        mRenderTargetViews[i] = mRenderTargetTextures[i].CreateView(&viewDesc);
+    }
 }
+
+WebGPUSwapChain::~WebGPUSwapChain() {
+    if (isHeadless()) {
+        for (auto& texture: mRenderTargetTextures) {
+            if (texture) texture.Destroy();
+        }
+    } else {
+        mSurface.Unconfigure();
+    }
+}
+
 
 void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     FILAMENT_CHECK_POSTCONDITION(currentSurfaceSize.width > 0 || currentSurfaceSize.height > 0)
@@ -270,16 +307,20 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     }
 }
 
-wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView(
-        wgpu::Extent2D const& currentSurfaceSize) {
-    setExtent(currentSurfaceSize);
+wgpu::TextureView WebGPUSwapChain::getCurrentTextureView( wgpu::Extent2D const& extent, wgpu::Device const& device) {
+
+     if(isHeadless()){
+        return mRenderTargetViews[mHeadlessBufferIndex];
+    }
+
+    setExtent(extent);
     wgpu::SurfaceTexture surfaceTexture;
     mSurface.GetCurrentTexture(&surfaceTexture);
     if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
         return nullptr;
     }
-    // Create a view for this surface texture
-    // TODO: review these initiliazations as webgpu pipeline gets mature
+
+    // TODO: review these initializations as webgpu pipeline gets mature
     wgpu::TextureViewDescriptor textureViewDescriptor = {
         .label = "surface_texture_view",
         .format = surfaceTexture.texture.GetFormat(),
@@ -292,8 +333,22 @@ wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView(
     return surfaceTexture.texture.CreateView(&textureViewDescriptor);
 }
 
+wgpu::TextureDescriptor WebGPUSwapChain::createRenderTargetDescriptor(uint32_t width,
+        uint32_t height, wgpu::TextureFormat format) {
+    wgpu::TextureDescriptor desc;
+    desc.size = { width, height, 1 };
+    desc.format = format;
+    desc.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc;
+    desc.mipLevelCount = 1;
+    desc.sampleCount = 1;
+    desc.dimension = wgpu::TextureDimension::e2D;
+    return desc;
+}
+
 void WebGPUSwapChain::present() {
-    assert_invariant(mSurface);
+     if(isHeadless()){
+        mHeadlessBufferIndex = (mHeadlessBufferIndex + 1) % mHeadlessBufferCount;
+    }
     mSurface.Present();
 }
 
