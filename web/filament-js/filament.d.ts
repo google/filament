@@ -1621,11 +1621,11 @@ export interface View$AmbientOcclusionOptions {
      */
     bilateralThreshold?: number;
     /**
-     * affects # of samples used for AO. No effect when aoType set to GTAO.
+     * affects # of samples used for AO and params for filtering
      */
     quality?: View$QualityLevel;
     /**
-     * affects AO smoothness
+     * affects AO smoothness. Recommend setting to HIGH when aoType set to GTAO.
      */
     lowPassFilter?: View$QualityLevel;
     /**

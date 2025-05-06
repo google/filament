@@ -1843,12 +1843,12 @@ public class View {
          */
         public float bilateralThreshold = 0.05f;
         /**
-         * affects # of samples used for AO. No effect when aoType set to GTAO.
+         * affects # of samples used for AO and params for filtering
          */
         @NonNull
         public QualityLevel quality = QualityLevel.LOW;
         /**
-         * affects AO smoothness
+         * affects AO smoothness. Recommend setting to HIGH when aoType set to GTAO.
          */
         @NonNull
         public QualityLevel lowPassFilter = QualityLevel.MEDIUM;
