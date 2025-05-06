@@ -201,6 +201,15 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         wgpu::Device const& device) {
     assert_invariant(device);
 
+    std::string baseLabel;
+    if (std::holds_alternative<utils::StaticString>(layout.label)) {
+        const auto& temp = std::get_if<utils::StaticString>(&layout.label);
+        baseLabel = temp->c_str();
+    } else if (std::holds_alternative<utils::CString>(layout.label)) {
+        const auto& temp = std::get_if<utils::CString>(&layout.label);
+        baseLabel = temp->c_str();
+    }
+
     // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
     // debugging. For now, hack an incrementing value.
     static int layoutNum = 0;
@@ -258,7 +267,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         }
         // fEntry.count is unused currently
     }
-    std::string label =  "layout_"+ std::to_string(++layoutNum) ;
+    std::string label =  "layout_" + baseLabel + std::to_string(++layoutNum) ;
     wgpu::BindGroupLayoutDescriptor layoutDescriptor{
         .label{label.c_str()}, // Use .c_str() if label needs to be const char*
         .entryCount = wEntries.size(),
