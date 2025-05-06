@@ -776,8 +776,19 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
     }
 }
 
-void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
+void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams const& params) {
     assert_invariant(mCommandEncoder);
+
+    auto* renderTarget = handleCast<WGPURenderTarget>(rth);
+    // if (renderTarget == mDefaultRenderTarget) {
+    //     FWGPU_LOGW << "Default render target"
+    //                << utils::io::endl;
+    // } else {
+    //     FWGPU_LOGW << "Non Default render target"
+    //                << utils::io::endl;
+    // }
+    wgpu::RenderPassDescriptor renderPassDescriptor2;
+    renderTarget->setUpRenderPassAttachments(&renderPassDescriptor2, mTextureView, params);
     // TODO: Remove this code once WebGPU pipeline is implemented
     static float red = 1.0f;
     if (red - 0.01 > 0) {
@@ -802,7 +813,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .timestampWrites = nullptr,
     };
 
-    mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
+    mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor2);
     mRenderPassEncoder.SetViewport(params.viewport.left, params.viewport.bottom,
             params.viewport.width, params.viewport.height, params.depthRange.near, params.depthRange.far);
 }
@@ -930,7 +941,7 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
             pipelineState.polygonOffset, pipelineState.primitiveType, mSwapChain->getColorFormat(),
             mSwapChain->getDepthFormat());
     // TODO: uncomment once we have a valid pipeline to set
-    // mRenderPassEncoder.SetPipeline(pipeline);
+    mRenderPassEncoder.SetPipeline(pipeline);
 }
 
 void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {

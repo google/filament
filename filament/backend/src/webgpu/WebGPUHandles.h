@@ -188,28 +188,26 @@ private:
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
-    WGPURenderPrimitive() {}
-
-    void setBuffers(WGPUVertexBufferInfo const* const vbi,
-            WGPUVertexBuffer* vertexBuffer, WGPUIndexBuffer* indexBuffer);
 
     WGPUVertexBuffer* vertexBuffer = nullptr;
     WGPUIndexBuffer* indexBuffer = nullptr;
 };
 
-// TODO: Currently WGPURenderTarget is not used by WebGPU for useful task.
-// Update the struct when used by WebGPU driver.
-struct WGPURenderTarget : public HwRenderTarget {
+class WGPURenderTarget : public HwRenderTarget {
+public:
     class Attachment {
     public:
-        friend struct WGPURenderTarget;
+        friend class WGPURenderTarget;
 
         Attachment() = default;
         Attachment(WGPUTexture* gpuTexture, uint8_t level = 0, uint16_t layer = 0)
             : level(level),
               layer(layer),
-              texture(gpuTexture->texture),
+              texture(gpuTexture->getTexture()),
               mWGPUTexture(gpuTexture) {}
+        operator bool() const {
+            return mWGPUTexture != nullptr;
+        }
 
         uint8_t level = 0;
         uint16_t layer = 0;
@@ -226,7 +224,7 @@ struct WGPURenderTarget : public HwRenderTarget {
           defaultRenderTarget(true) {}
 
     void setUpRenderPassAttachments(wgpu::RenderPassDescriptor* descriptor,
-            const RenderPassParams& params);
+            wgpu::TextureView const& textureView, const RenderPassParams& params);
 
     math::uint2 getAttachmentSize() noexcept;
 
@@ -237,14 +235,15 @@ struct WGPURenderTarget : public HwRenderTarget {
     Attachment getReadColorAttachment(size_t index);
 
 private:
-    static wgpu::LoadOp getLoadAction(const RenderPassParams& params, TargetBufferFlags buffer);
-    static wgpu::LoadOp getStoreAction(const RenderPassParams& params, TargetBufferFlags buffer);
+    static wgpu::LoadOp getLoadOperation(const RenderPassParams& params, TargetBufferFlags buffer);
+    static wgpu::StoreOp getStoreOperation(const RenderPassParams& params, TargetBufferFlags buffer);
 
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
 
     Attachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     math::uint2 attachmentSize = {};
+    std::vector<wgpu::RenderPassColorAttachment> colorAttachments {};
 };
 
 }// namespace filament::backend
