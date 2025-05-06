@@ -1140,12 +1140,29 @@ void FMaterial::precacheDepthVariants(FEngine& engine) {
 void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* const parser) {
     UTILS_UNUSED_IN_RELEASE bool success;
 
+
     success = parser->getDescriptorBindings(&mProgramDescriptorBindings);
     assert_invariant(success);
 
     std::array<backend::DescriptorSetLayout, 2> descriptorSetLayout;
     success = parser->getDescriptorSetLayout(&descriptorSetLayout);
     assert_invariant(success);
+
+    // Setup Labels for debugging
+    utils::CString namestr;
+    utils::StaticString perViewStr = "_perView";
+    utils::StaticString singleStr = "_single";
+
+    parser->getName(&namestr);
+
+    utils::CString singleLabel(namestr.c_str(), namestr.length() + singleStr.length());
+    memccpy(singleLabel.c_str() + namestr.length(), singleStr.c_str(), '\0', singleStr.length());
+
+    utils::CString perViewLabel(namestr.c_str(), namestr.length() + perViewStr.length());
+    memccpy(perViewLabel.c_str() + namestr.length(), perViewStr.c_str(), '\0', perViewStr.length());
+
+    descriptorSetLayout[0].label = namestr;
+    descriptorSetLayout[1].label = perViewLabel;
 
     mDescriptorSetLayout = {
             engine.getDescriptorSetLayoutFactory(),

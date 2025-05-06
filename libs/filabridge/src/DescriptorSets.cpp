@@ -33,11 +33,13 @@ namespace filament::descriptor_sets {
 
 using namespace backend;
 
-static DescriptorSetLayout const postProcessDescriptorSetLayout{{
+static DescriptorSetLayout const postProcessDescriptorSetLayout{
+    utils::StaticString("postProcess"),{
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
 }};
 
-static DescriptorSetLayout const depthVariantDescriptorSetLayout{{
+static DescriptorSetLayout const depthVariantDescriptorSetLayout{
+    utils::StaticString("depthVariant"),{
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
 }};
 
@@ -46,14 +48,16 @@ static DescriptorSetLayout const depthVariantDescriptorSetLayout{{
 // dedicated SSR vertex shader), which uses perViewDescriptorSetLayout.
 // This means that PerViewBindingPoints::SHADOWS must be in the layout even though it's not used
 // by the SSR variant.
-static DescriptorSetLayout const ssrVariantDescriptorSetLayout{{
+static DescriptorSetLayout const ssrVariantDescriptorSetLayout{
+    utils::StaticString("ssrVariant"),{
    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
 }};
 
-static DescriptorSetLayout perViewDescriptorSetLayout = {{
+static DescriptorSetLayout perViewDescriptorSetLayout = {
+    utils::StaticString("perView"),{
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
     { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::LIGHTS         },
@@ -68,7 +72,8 @@ static DescriptorSetLayout perViewDescriptorSetLayout = {{
     { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
 }};
 
-static DescriptorSetLayout perRenderableDescriptorSetLayout = {{
+static DescriptorSetLayout perRenderableDescriptorSetLayout = {
+    utils::StaticString("perRenderable"),{
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::OBJECT_UNIFORMS, DescriptorFlags::DYNAMIC_OFFSET },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::BONES_UNIFORMS,  DescriptorFlags::DYNAMIC_OFFSET },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::MORPHING_UNIFORMS         },

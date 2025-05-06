@@ -39,6 +39,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <utils/StaticString.h>
 
 /**
  * Types and enums used by filament's driver.
@@ -1139,6 +1140,7 @@ struct ExternalSamplerDatum {
 static_assert(sizeof(ExternalSamplerDatum) == 12);
 
 struct DescriptorSetLayout {
+    std::variant<utils::StaticString, utils::CString, std::monostate> label;
     utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
 
 //  TODO: uncomment when needed
