@@ -185,6 +185,7 @@ inline MTLPixelFormat getMetalFormat(PixelDataFormat format, PixelDataType type)
     CONVERT(RGBA_INTEGER, UINT, RGBA32Uint);
     CONVERT(RGBA_INTEGER, INT, RGBA32Sint);
     CONVERT(RGBA, FLOAT, RGBA32Float);
+    CONVERT(DEPTH_COMPONENT, FLOAT, Depth32Float);
     #undef CONVERT
 
     return MTLPixelFormatInvalid;
