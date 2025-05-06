@@ -58,15 +58,6 @@ float spatialOffsetsNoise(float2 uv) {
 	return 0.25 * float((position.y - position.x) & 3);
 }
 
-// http://h14s.p5r.org/2012/09/0x5f3759df.html, [Drobot2014a] Low Level Optimizations for GCN, https://blog.selfshadow.com/publications/s2016-shading-course/activision/s2016_pbs_activision_occlusion.pdf slide 63
-float fastSqrt(float x) {
-#if defined(TARGET_MOBILE)
-    return sqrt(x);
-#else
-    return intBitsToFloat(0x1fbd1df5 + (floatBitsToInt(x) >> 1));
-#endif
-}
-
 void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         highp vec2 uv, highp vec3 origin, vec3 normal) {
     vec2 uvSamplePos = uv;
