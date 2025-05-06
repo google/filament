@@ -389,9 +389,7 @@ Handle<HwTexture> WebGPUDriver::createTextureS() noexcept {
     return allocHandle<WGPUTexture>();
 }
 
-Handle<HwTexture> WebGPUDriver::importTextureS() noexcept {
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
-}
+Handle<HwTexture> WebGPUDriver::importTextureS() noexcept { return allocHandle<WGPUTexture>(); }
 
 Handle<HwProgram> WebGPUDriver::createProgramS() noexcept {
     return allocHandle<WGPUProgram>();
@@ -410,7 +408,7 @@ Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
 }
 
 Handle<HwBufferObject> WebGPUDriver::createBufferObjectS() noexcept {
@@ -438,7 +436,7 @@ Handle<HwVertexBufferInfo> WebGPUDriver::createVertexBufferInfoS() noexcept {
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewSwizzleS() noexcept {
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createDefaultRenderTargetS() noexcept {
@@ -450,15 +448,15 @@ Handle<HwDescriptorSetLayout> WebGPUDriver::createDescriptorSetLayoutS() noexcep
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureExternalImageS() noexcept {
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureExternalImage2S() noexcept {
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
-    return Handle<HwTexture>((Handle<HwTexture>::HandleId) mNextFakeHandle++);
+    return allocHandle<WGPUTexture>();
 }
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
@@ -470,6 +468,8 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
             mDevice, flags);
     assert_invariant(mSwapChain);
+    WebGPUDescriptorSet::initializeDummyResourcesIfNotAlready(mDevice,
+            mSwapChain->getColorFormat());
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
                   "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
@@ -512,30 +512,46 @@ void WebGPUDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
 
 void WebGPUDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-        TextureUsage usage) {}
+        TextureUsage usage) {
+    constructHandle<WGPUTexture>(th, target, levels, format, samples, w, h, depth, usage, mDevice);
+}
 
 void WebGPUDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
-        uint8_t baseLevel, uint8_t levelCount) {}
+        uint8_t baseLevel, uint8_t levelCount) {
+    auto source = handleCast<WGPUTexture>(srch);
+
+    constructHandle<WGPUTexture>(th, source, baseLevel, levelCount);
+}
 
 void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
-        backend::TextureSwizzle a) {}
+        backend::TextureSwizzle a) {
+    PANIC_POSTCONDITION("Swizzle WebGPU Texture is not supported");
+}
 
 void WebGPUDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::SamplerType target,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
-        Platform::ExternalImageHandleRef externalImage) {}
+        Platform::ExternalImageHandleRef externalImage) {
+    PANIC_POSTCONDITION("External WebGPU Texture is not supported");
+}
 
 void WebGPUDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::SamplerType target,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
-        void* externalImage) {}
+        void* externalImage) {
+    PANIC_POSTCONDITION("External WebGPU Texture is not supported");
+}
 
 void WebGPUDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
-        void* image, uint32_t plane) {}
+        void* image, uint32_t plane) {
+    PANIC_POSTCONDITION("External WebGPU Texture is not supported");
+}
 
 void WebGPUDriver::importTextureR(Handle<HwTexture> th, intptr_t id, SamplerType target,
         uint8_t levels, TextureFormat format, uint8_t samples, uint32_t w, uint32_t h,
-        uint32_t depth, TextureUsage usage) {}
+        uint32_t depth, TextureUsage usage) {
+    PANIC_POSTCONDITION("Import WebGPU Texture is not supported");
+}
 
 void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<HwVertexBuffer> vbh,
         Handle<HwIndexBuffer> ibh, PrimitiveType pt) {
@@ -575,7 +591,7 @@ void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
         Handle<HwDescriptorSetLayout> dslh) {
     auto layout = handleCast<WebGPUDescriptorSetLayout>(dslh);
-    constructHandle<WebGPUDescriptorSet>(dsh, layout->getLayout(), layout->getLayoutSize());
+    constructHandle<WebGPUDescriptorSet>(dsh, layout->getLayout(), layout->getBindGroupEntries());
 }
 
 Handle<HwStream> WebGPUDriver::createStreamNative(void* nativeStream) {
@@ -612,7 +628,7 @@ FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fh) {
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
 // the GPU supports the given texture format with non-zero optimal tiling features.
 bool WebGPUDriver::isTextureFormatSupported(TextureFormat format) {
-    return true;
+    return WGPUTexture::fToWGPUTextureFormat(format) != wgpu::TextureFormat::Undefined;
 }
 
 bool WebGPUDriver::isTextureSwizzleSupported() {
@@ -973,24 +989,22 @@ void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
 
 void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
         backend::descriptor_binding_t binding, Handle<HwTexture> th, SamplerParams params) {
-    /*
     auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
     auto texture = handleCast<WGPUTexture>(th);
 
-    // TODO very high odds badd assumptions are in here about handling HwTexture. Revisit with more
-    // understanding. Right now assuming there is a wgpu::TextureView filled in
     if (!bindGroup->getIsLocked()) {
+        // Dawn will cache duplicate samplers, so we don't strictly need to maintain a cache.
+        //  Making a cache might save us minor perf by reducing param translation
+        auto sampler = makeSampler(params);
         // TODO making assumptions that size and offset mean the same thing here.
         wgpu::BindGroupEntry tEntry{ .binding = static_cast<uint32_t>(binding * 2),
-            .textureView = texture->texView };
+            .textureView = texture->getTexView() };
         bindGroup->addEntry(tEntry.binding, std::move(tEntry));
 
         wgpu::BindGroupEntry sEntry{ .binding = static_cast<uint32_t>(binding * 2 + 1),
-            .sampler = texture->sampler };
+            .sampler = sampler };
         bindGroup->addEntry(sEntry.binding, std::move(sEntry));
     }
-    //TODO Just the setup, this function stilll needs the rest of logic implemented
-     */
 }
 
 void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh, backend::descriptor_set_t set,
@@ -1002,5 +1016,122 @@ void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh, backend::descr
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
 }
+wgpu::Sampler WebGPUDriver::makeSampler(SamplerParams const& params) {
+    wgpu::SamplerDescriptor desc;
+
+    desc.label = "TODO";
+    desc.addressModeU = fWrapModeToWAddressMode(params.wrapS);
+    desc.addressModeV = fWrapModeToWAddressMode(params.wrapR);
+    desc.addressModeW = fWrapModeToWAddressMode(params.wrapT);
+    switch (params.filterMag) {
+        case SamplerMagFilter::NEAREST: {
+            desc.magFilter = wgpu::FilterMode::Nearest;
+            break;
+        }
+        case SamplerMagFilter::LINEAR: {
+            desc.magFilter = wgpu::FilterMode::Linear;
+            break;
+        }
+    }
+    switch (params.filterMin) {
+        case SamplerMinFilter::NEAREST: {
+            desc.minFilter = wgpu::FilterMode::Nearest;
+            // Metal Driver uses an explicit not-mipmapped value webgpu lacks. Nearest should
+            // suffice
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+            break;
+        }
+        case SamplerMinFilter::LINEAR: {
+            desc.minFilter = wgpu::FilterMode::Linear;
+            // Metal Driver uses an explicit not-mipmapped value webgpu lacks. Nearest should
+            // suffice
+
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+            break;
+        }
+        case SamplerMinFilter::NEAREST_MIPMAP_NEAREST: {
+            desc.minFilter = wgpu::FilterMode::Nearest;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+            break;
+        }
+        case SamplerMinFilter::LINEAR_MIPMAP_NEAREST: {
+            desc.minFilter = wgpu::FilterMode::Linear;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+
+            break;
+        }
+        case SamplerMinFilter::NEAREST_MIPMAP_LINEAR: {
+            desc.minFilter = wgpu::FilterMode::Nearest;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+
+            break;
+        }
+        case SamplerMinFilter::LINEAR_MIPMAP_LINEAR: {
+            desc.minFilter = wgpu::FilterMode::Linear;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+            break;
+        }
+    }
+    switch (params.compareFunc) {
+        case SamplerCompareFunc::LE: {
+            desc.compare = wgpu::CompareFunction::LessEqual;
+            break;
+        }
+        case SamplerCompareFunc::GE: {
+            desc.compare = wgpu::CompareFunction::GreaterEqual;
+            break;
+        }
+        case SamplerCompareFunc::L: {
+            desc.compare = wgpu::CompareFunction::Less;
+            break;
+        }
+        case SamplerCompareFunc::G: {
+            desc.compare = wgpu::CompareFunction::Greater;
+            break;
+        }
+        case SamplerCompareFunc::E: {
+            desc.compare = wgpu::CompareFunction::Equal;
+            break;
+        }
+        case SamplerCompareFunc::NE: {
+            desc.compare = wgpu::CompareFunction::NotEqual;
+            break;
+        }
+        case SamplerCompareFunc::A: {
+            desc.compare = wgpu::CompareFunction::Always;
+            break;
+        }
+        case SamplerCompareFunc::N: {
+            desc.compare = wgpu::CompareFunction::Never;
+            break;
+        }
+    }
+
+    desc.maxAnisotropy = 1u << params.anisotropyLog2;
+
+
+    // Unused: Filament's compareMode, WGPU lodMinClamp/lodMaxClamp
+
+    //TODO Once we can properly map to descriptorsetlayout use the sampler.
+    return mDevice.CreateSampler(/*&desc*/);
+}
+wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& fWrapMode) {
+    switch (fWrapMode) {
+        case SamplerWrapMode::CLAMP_TO_EDGE: {
+            return wgpu::AddressMode::ClampToEdge;
+            break;
+        }
+        case SamplerWrapMode::REPEAT: {
+            return wgpu::AddressMode::Repeat;
+            break;
+        }
+        case SamplerWrapMode::MIRRORED_REPEAT: {
+            return wgpu::AddressMode::MirrorRepeat;
+            break;
+        }
+    }
+    return wgpu::AddressMode::Undefined;
+}
+
 
 } // namespace filament

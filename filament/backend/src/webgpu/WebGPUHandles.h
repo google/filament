@@ -27,6 +27,7 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <array>
 #include <cstdint>
 #include <vector>
 
@@ -98,55 +99,92 @@ struct WGPUBufferObject : HwBufferObject {
     wgpu::Buffer buffer = nullptr;
     const BufferObjectBinding bufferObjectBinding;
 };
+
 class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
 public:
+
+    enum class BindGroupEntryType : uint8_t {
+        UNIFORM_BUFFER,
+        TEXTURE_VIEW,
+        SAMPLER
+    };
+
+    struct BindGroupEntryInfo final {
+        uint8_t binding = 0;
+        BindGroupEntryType type = BindGroupEntryType::UNIFORM_BUFFER;
+    };
+
     WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const& device);
     ~WebGPUDescriptorSetLayout();
     [[nodiscard]] const wgpu::BindGroupLayout& getLayout() const { return mLayout; }
-    [[nodiscard]] uint getLayoutSize() const { return mLayoutSize; }
+    [[nodiscard]] std::vector<BindGroupEntryInfo> const& getBindGroupEntries() const {
+        return mBindGroupEntries;
+    }
 
 private:
     // TODO: If this is useful elsewhere, remove it from this class
     // Convert Filament Shader Stage Flags bitmask to webgpu equivilant
     static wgpu::ShaderStage filamentStageToWGPUStage(ShaderStageFlags fFlags);
-    uint mLayoutSize;
+    std::vector<BindGroupEntryInfo> mBindGroupEntries;
     wgpu::BindGroupLayout mLayout;
 };
 
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
-    WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize);
+    static void initializeDummyResourcesIfNotAlready(wgpu::Device const&,
+            wgpu::TextureFormat aColorFormat);
+
+    WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout,
+            std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
     ~WebGPUDescriptorSet();
 
-    wgpu::BindGroup lockAndReturn(wgpu::Device const& device);
+    wgpu::BindGroup lockAndReturn(wgpu::Device const&);
     void addEntry(uint index, wgpu::BindGroupEntry&& entry);
     [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
 
 private:
+
+    static wgpu::Buffer sDummyUniformBuffer;
+    static wgpu::Texture sDummyTexture;
+    static wgpu::TextureView sDummyTextureView;
+    static wgpu::Sampler sDummySampler;
+
+    static std::vector<wgpu::BindGroupEntry> createDummyEntriesSortedByBinding(
+            std::vector<filament::backend::WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&);
+
     // TODO: Consider storing what we used to make the layout. However we need to essentially
     // Recreate some of the info (Sampler in slot X with the actual sampler) so letting Dawn confirm
     // there isn't a mismatch may be easiest.
     // Also storing the wgpu ObjectBase takes care of ownership challenges in theory
-    wgpu::BindGroupLayout mLayout;
-    std::vector<wgpu::BindGroupEntry> entries;
-    wgpu::BindGroup mBindGroup;
+    wgpu::BindGroupLayout mLayout = nullptr;
+    static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
+    std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding {};
+    std::vector<wgpu::BindGroupEntry> mEntriesSortedByBinding;
+    wgpu::BindGroup mBindGroup = nullptr;
 };
 
-// TODO: Currently WGPUTexture is not used by WebGPU for useful task.
-// Update the struct when used by WebGPU driver.
-struct WGPUTexture : public HwTexture {
+class WGPUTexture : public HwTexture {
+public:
     WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-            uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage) noexcept;
+            uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+            wgpu::Device device) noexcept;
 
-    // constructors for creating texture views
-    WGPUTexture(WGPUTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
+    WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
 
+    const wgpu::Texture& getTexture() const { return texture; }
+    const wgpu::TextureView& getTexView() const { return texView; }
+
+    // Public to allow checking for support of a texture format
+    static wgpu::TextureFormat fToWGPUTextureFormat(const filament::backend::TextureFormat& fUsage);
+
+private:
+    wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount);
+    // CreateTextureR has info for a texture and sampler. Texture Views are needed for binding,
+    // along with a sampler Current plan: Inherit the sampler and Texture to always exist (It is a
+    // ref counted pointer) when making views. View is optional
     wgpu::Texture texture = nullptr;
-    // TODO: Adding this but not yet setting it up. Filament "Textures" are combined image samplers,
-    // rep both.
-    wgpu::Sampler sampler = nullptr;
-    //TODO: Not sure all the ways HwTexture is used. Overloading like this might be entirely wrong.
     wgpu::TextureView texView = nullptr;
+    wgpu::TextureUsage fToWGPUTextureUsage(const filament::backend::TextureUsage& fUsage);
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
