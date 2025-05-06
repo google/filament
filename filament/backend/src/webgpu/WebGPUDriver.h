@@ -56,7 +56,8 @@ private:
     explicit WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
     [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
-
+    [[nodiscard]] wgpu::Sampler makeSampler(SamplerParams const& params);
+    [[nodiscard]] static wgpu::AddressMode fWrapModeToWAddressMode(const filament::backend::SamplerWrapMode& fUsage);
     template<typename GPUBufferObject>
     void updateGPUBuffer(GPUBufferObject* gpuBufferObject, BufferDescriptor&& bufferDescriptor,
             uint32_t byteOffset) {
