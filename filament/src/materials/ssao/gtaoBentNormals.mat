@@ -25,7 +25,7 @@ material {
             name : invFarPlane
         },
         {
-            type : float,
+            type : int,
             name : maxLevel
         },
         {
@@ -37,7 +37,7 @@ material {
             name : intensity
         },
         {
-            type : float,
+            type : float2,
             name : sliceCount
         },
         {
@@ -47,6 +47,10 @@ material {
         {
             type : float,
             name : radius
+        },
+        {
+            type : float,
+            name : invRadiusSquared
         },
         {
             type : float,

@@ -73,8 +73,8 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
     float stepRadius = ssRadius / (materialParams.stepsPerSlice + 1.0);
 
     float visibility = 0.0;
-    for (float i = 0.0; i < materialParams.sliceCount; i += 1.0) {
-        float slice = (i + noiseDirection) / materialParams.sliceCount;
+    for (float i = 0.0; i < materialParams.sliceCount.x; i += 1.0) {
+        float slice = (i + noiseDirection) * materialParams.sliceCount.y;
         float phi = slice * PI;
         float cosPhi = cos(phi);
         float sinPhi = sin(phi);
@@ -120,7 +120,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
             vec2 invSampleDist = rsqrt(sqSampleDist);
 
             // Use the view space radius to calculate the fallOff
-            vec2 fallOff = saturate(sqSampleDist.xy * (2.0/sq(materialParams.radius)));
+            vec2 fallOff = saturate(sqSampleDist.xy * materialParams.invRadiusSquared * 2.0);
 
             // sample horizon cos
             float shc0 = dot(sampleDelta0, viewDir) * invSampleDist.x;
@@ -145,7 +145,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         visibility += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
     }
 
-    obscurance = 1.0 - saturate(visibility / materialParams.sliceCount);
+    obscurance = 1.0 - saturate(visibility * materialParams.sliceCount.y);
 
 #if COMPUTE_BENT_NORMAL
     bentNormal = normalize(bentNormal);

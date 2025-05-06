@@ -391,8 +391,8 @@ struct AmbientOcclusionOptions {
     float resolution = 0.5f;//!< How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
     float intensity = 1.0f; //!< Strength of the Ambient Occlusion effect.
     float bilateralThreshold = 0.05f; //!< depth distance that constitute an edge for filtering
-    QualityLevel quality = QualityLevel::LOW; //!< affects # of samples used for AO. No effect when aoType set to GTAO.
-    QualityLevel lowPassFilter = QualityLevel::MEDIUM; //!< affects AO smoothness
+    QualityLevel quality = QualityLevel::LOW; //!< affects # of samples used for AO and params for filtering
+    QualityLevel lowPassFilter = QualityLevel::MEDIUM; //!< affects AO smoothness. Recommend setting to HIGH when aoType set to GTAO.
     QualityLevel upsampling = QualityLevel::LOW; //!< affects AO buffer upsampling quality
     bool enabled = false;    //!< enables or disables screen-space ambient occlusion
     bool bentNormals = false; //!< enables bent normals computation from AO, and specular AO

@@ -895,8 +895,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         // always square AO result, as it looks much better
                         const float power = options.power * 2.0f;
 
-                        mi->setParameter("invRadiusSquared",
-                                1.0f / (options.radius * options.radius));
                         mi->setParameter("minHorizonAngleSineSquared",
                                 std::pow(std::sin(options.minHorizonAngleRad), 2.0f));
                         mi->setParameter("intensity", intensity / sampleCount);
@@ -910,8 +908,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         break;
                     }
                     case AmbientOcclusionOptions::AmbientOcclusionType::GTAO: {
-                        mi->setParameter("stepsPerSlice", static_cast<float>(options.gtao.sampleStepsPerSlice));
-                        mi->setParameter("sliceCount", static_cast<float>(options.gtao.sampleSliceCount));
+                        const auto sliceCount = static_cast<float>(options.gtao.sampleSliceCount);
+                        mi->setParameter("stepsPerSlice",
+                                static_cast<float>(options.gtao.sampleStepsPerSlice));
+                        mi->setParameter("sliceCount",
+                                float2{ sliceCount, 1.0f / sliceCount });
                         mi->setParameter("power", options.power);
                         mi->setParameter("radius", options.radius);
                         mi->setParameter("intensity", options.intensity);
@@ -922,23 +923,24 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 }
 
                 // Set common material parameters
-                mi->setParameter("depth", depth, {
-                        .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                mi->setParameter("invRadiusSquared", 1.0f / (options.radius * options.radius));
+                mi->setParameter("depth", depth,
+                        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("screenFromViewMatrix",
                         mat4f(screenFromClipMatrix * cameraInfo.projection));
                 mi->setParameter("resolution",
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
-                mi->setParameter("projectionScale",
-                        projectionScale);
-                mi->setParameter("projectionScaleRadius",
-                        projectionScale * options.radius);
-                mi->setParameter("positionParams", float2{
-                        invProjection[0][0], invProjection[1][1] } * 2.0f);
+                mi->setParameter("projectionScale", projectionScale);
+                mi->setParameter("projectionScaleRadius", projectionScale * options.radius);
+                mi->setParameter("positionParams",
+                        float2{ invProjection[0][0], invProjection[1][1] } * 2.0f);
                 mi->setParameter("maxLevel", uint32_t(levelCount - 1));
                 mi->setParameter("invFarPlane", 1.0f / -cameraInfo.zf);
                 mi->setParameter("ssctShadowDistance", options.ssct.shadowDistance);
-                mi->setParameter("ssctConeAngleTangeant", std::tan(options.ssct.lightConeRad * 0.5f));
-                mi->setParameter("ssctContactDistanceMaxInv", 1.0f / options.ssct.contactDistanceMax);
+                mi->setParameter("ssctConeAngleTangeant",
+                        std::tan(options.ssct.lightConeRad * 0.5f));
+                mi->setParameter("ssctContactDistanceMaxInv",
+                        1.0f / options.ssct.contactDistanceMax);
                 // light direction in view space
                 const mat4f view{ cameraInfo.getUserViewMatrix() };
                 const float3 l = normalize(
