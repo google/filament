@@ -27,6 +27,7 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <algorithm>
 #include <sstream>
 #include <string_view>
 #include <vector>
@@ -125,21 +126,64 @@ namespace {
     return module;
 }
 
+// This is a 1 to 1 mapping of the ReservedSpecializationConstants enum in EngineEnums.h
+// The _hack is a workaround until https://issues.chromium.org/issues/42250586 is resolved
+// This workaround is the same one being used on the generateSpecializationConstant() function
+wgpu::StringView getSpecConstantStringId(uint32_t id) {
+    switch (id) {
+        case 0:
+            return "0";// BACKEND_FEATURE_LEVEL_hack
+        case 1:
+            return "1";// CONFIG_MAX_INSTANCES_hack
+        case 2:
+            return "2";// ONFIG_STATIC_TEXTURE_TARGET_WORKAROUND_hack
+        case 3:
+            return "3";// CONFIG_SRGB_SWAPCHAIN_EMULATION_hack
+        case 4:
+            return "4";// CONFIG_FROXEL_BUFFER_HEIGHT_hack
+        case 5:
+            return "5";// CONFIG_POWER_VR_SHADER_WORKAROUNDS_hack
+        case 6:
+            return "6";// CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP_hack
+        case 7:
+            return "7";// CONFIG_DEBUG_FROXEL_VISUALIZATION_hack
+        case 8:
+            return "8";// CONFIG_STEREO_EYE_COUNT_hack
+        case 9:
+            return "9";// CONFIG_SH_BANDS_COUNT_hack
+        case 10:
+            return "10";// CONFIG_SHADOW_SAMPLING_METHOD_hack
+        default:
+            PANIC_POSTCONDITION("Unknown/unhandled spec constant key/id: %d", id);
+    }
+}
+
 std::vector<wgpu::ConstantEntry> convertConstants(
         utils::FixedCapacityVector<filament::backend::Program::SpecializationConstant> const&
                 constantsInfo) {
-    std::vector<wgpu::ConstantEntry> constants(constantsInfo.size());
-    for (size_t i = 0; i < constantsInfo.size(); i++) {
-        filament::backend::Program::SpecializationConstant const& specConstant = constantsInfo[i];
-        wgpu::ConstantEntry& constantEntry = constants[i];
-        constantEntry.key = wgpu::StringView(std::to_string(specConstant.id));
-        if (auto* v = std::get_if<int32_t>(&specConstant.value)) {
-            constantEntry.value = static_cast<double>(*v);
-        } else if (auto* f = std::get_if<float>(&specConstant.value)) {
-            constantEntry.value = static_cast<double>(*f);
-        } else if (auto* b = std::get_if<bool>(&specConstant.value)) {
-            constantEntry.value = *b ? 0.0 : 1.0;
+    std::vector<wgpu::ConstantEntry> constants;
+    constants.reserve(constantsInfo.size());
+    for (filament::backend::Program::SpecializationConstant const& constant: constantsInfo) {
+        // CONFIG_MAX_INSTANCES (1) and CONFIG_FROXEL_BUFFER_HEIGHT (4) will not be present
+        // as constant overrides in the generated WGSL, because WGSL doesn't support specialization
+        // constants as an array length
+        // More information at https://github.com/gpuweb/gpuweb/issues/572#issuecomment-649760005
+        // CONFIG_SRGB_SWAPCHAIN_EMULATION (3) is being skipped all together since it's only
+        // included for the case of mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0, which should
+        // not be possible for WebGPU
+        if (constant.id == 1 || constant.id == 3 || constant.id == 4) {
+            continue;
         }
+        double value = 0.0;
+        if (auto* v = std::get_if<int32_t>(&constant.value)) {
+            value = static_cast<double>(*v);
+        } else if (auto* f = std::get_if<float>(&constant.value)) {
+            value = static_cast<double>(*f);
+        } else if (auto* b = std::get_if<bool>(&constant.value)) {
+            value = *b ? 0.0 : 1.0;
+        }
+        constants.push_back(
+                wgpu::ConstantEntry{ .key = getSpecConstantStringId(constant.id), .value = value });
     }
     return constants;
 }
