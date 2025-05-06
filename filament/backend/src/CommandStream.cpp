@@ -84,7 +84,7 @@ void CommandStream::execute(void* buffer) {
 
     Profiler profiler;
 
-    if constexpr (SYSTRACE_TAG) {
+    if (SYSTRACE_TAG) {
         if (UTILS_UNLIKELY(mUsePerformanceCounter)) {
             // we want to remove all this when tracing is completely disabled
             profiler.resetEvents(Profiler::EV_CPU_CYCLES  | Profiler::EV_BPU_MISSES);
@@ -100,7 +100,7 @@ void CommandStream::execute(void* buffer) {
         }
     });
 
-    if constexpr (SYSTRACE_TAG) {
+    if (SYSTRACE_TAG) {
         if (UTILS_UNLIKELY(mUsePerformanceCounter)) {
             // we want to remove all this when tracing is completely disabled
             profiler.stop();

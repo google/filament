@@ -29,24 +29,12 @@
 #include <utils/compiler.h>
 #include <stack>
 
-#if SYSTRACE_TAG == SYSTRACE_TAG_DISABLED
-
-#define SYSTRACE_ENABLE()
-#define SYSTRACE_CONTEXT()
-#define SYSTRACE_NAME(name)
-#define SYSTRACE_FRAME_ID(frame)
-#define SYSTRACE_NAME_BEGIN(name)
-#define SYSTRACE_NAME_END()
-#define SYSTRACE_CALL()
-#define SYSTRACE_ASYNC_BEGIN(name, cookie)
-#define SYSTRACE_ASYNC_END(name, cookie)
-#define SYSTRACE_VALUE32(name, val)
-#define SYSTRACE_VALUE64(name, val)
-
-#else
-
 // enable tracing
 #define SYSTRACE_ENABLE() ::utils::details::Systrace::enable(SYSTRACE_TAG)
+
+// disable tracing
+#define SYSTRACE_DISABLE() ::utils::details::Systrace::disable(SYSTRACE_TAG)
+
 
 /**
  * Creates a Systrace context in the current scope. needed for calling all other systrace
@@ -105,8 +93,6 @@ extern thread_local std::stack<const char*> ___tracerSections;
 #define SYSTRACE_VALUE64(name, val) \
         ___tracer.value(SYSTRACE_TAG, name, int64_t(val))
 
-#endif // SYSTRACE_TAG == SYSTRACE_TAG_DISABLED
-
 // ------------------------------------------------------------------------------------------------
 // No user serviceable code below...
 // ------------------------------------------------------------------------------------------------
@@ -132,40 +118,50 @@ namespace utils {
 namespace details {
 
 class Systrace {
-public:
+   public:
+
+    enum tags {
+        NEVER       = SYSTRACE_TAG_NEVER,
+        ALWAYS      = SYSTRACE_TAG_ALWAYS,
+        FILAMENT    = SYSTRACE_TAG_FILAMENT,
+        JOBSYSTEM   = SYSTRACE_TAG_JOBSYSTEM
+        // we could define more TAGS here, as we need them.
+    };
+
     explicit Systrace(uint32_t tag) noexcept {
         if (tag) init(tag);
     }
 
-    static void enable(uint32_t tag) noexcept;
+    static void enable(uint32_t tags) noexcept;
+    static void disable(uint32_t tags) noexcept;
 
-    void traceBegin(uint32_t tag, const char* name) noexcept {
+    inline void traceBegin(uint32_t tag, const char* name) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
             APPLE_SIGNPOST_EMIT(sGlobalState.systraceLog, OS_SIGNPOST_INTERVAL_BEGIN,
                     OS_SIGNPOST_ID_EXCLUSIVE, name, name)
         }
     }
 
-    void traceEnd(uint32_t tag, const char* name) noexcept {
+    inline void traceEnd(uint32_t tag, const char* name) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
             APPLE_SIGNPOST_EMIT(sGlobalState.systraceLog, OS_SIGNPOST_INTERVAL_END,
                     OS_SIGNPOST_ID_EXCLUSIVE, name, "")
         }
     }
 
-    void asyncBegin(uint32_t tag, const char* name, int32_t cookie) noexcept {
+    inline void asyncBegin(uint32_t tag, const char* name, int32_t cookie) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
             // TODO
         }
     }
 
-    void asyncEnd(uint32_t tag, const char* name, int32_t cookie) noexcept {
+    inline void asyncEnd(uint32_t tag, const char* name, int32_t cookie) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
             // TODO
         }
     }
 
-    void value(uint32_t tag, const char* name, int32_t value) noexcept {
+    inline void value(uint32_t tag, const char* name, int32_t value) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
             char buf[64];
             snprintf(buf, 64, "%s - %d", name, value);
@@ -174,7 +170,7 @@ public:
         }
     }
 
-    void value(uint32_t tag, const char* name, int64_t value) noexcept {
+    inline void value(uint32_t tag, const char* name, int64_t value) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
             char buf[64];
             snprintf(buf, 64, "%s - %lld", name, value);
@@ -183,16 +179,16 @@ public:
         }
     }
 
-    void frameId(uint32_t tag, uint32_t frame) noexcept {
+    inline void frameId(uint32_t tag, uint32_t frame) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            char buf[64];
-            snprintf(buf, 64, "frame %u", frame);
+            char buf[64]; \
+            snprintf(buf, 64, "frame %u", frame); \
             APPLE_SIGNPOST_EMIT(sGlobalState.frameIdLog, OS_SIGNPOST_EVENT,
                     OS_SIGNPOST_ID_EXCLUSIVE, "frame", buf)
         }
     }
 
-private:
+   private:
     friend class ScopedTrace;
 
     struct GlobalState {
@@ -217,25 +213,25 @@ private:
 // ------------------------------------------------------------------------------------------------
 
 class ScopedTrace {
-public:
+   public:
     // we don't inline this because it's relatively heavy due to a global check
     ScopedTrace(uint32_t tag, const char* name) noexcept : mTrace(tag), mName(name), mTag(tag) {
         mTrace.traceBegin(tag, name);
     }
 
-    ~ScopedTrace() noexcept {
+    inline ~ScopedTrace() noexcept {
         mTrace.traceEnd(mTag, mName);
     }
 
-    void value(uint32_t tag, const char* name, int32_t v) noexcept {
+    inline void value(uint32_t tag, const char* name, int32_t v) noexcept {
         mTrace.value(tag, name, v);
     }
 
-    void value(uint32_t tag, const char* name, int64_t v) noexcept {
+    inline void value(uint32_t tag, const char* name, int64_t v) noexcept {
         mTrace.value(tag, name, v);
     }
 
-private:
+   private:
     Systrace mTrace;
     const char* mName;
     const uint32_t mTag;
