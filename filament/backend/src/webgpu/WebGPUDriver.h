@@ -17,8 +17,6 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
-#include "WebGPUHandles.h"
-#include "webgpu/WebGPUConstants.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
@@ -41,6 +39,8 @@
 namespace filament::backend {
 
 class WebGPUSwapChain;
+class WGPUTimerQuery;
+struct WGPURenderTarget;
 
 /**
  * WebGPU backend (driver) implementation
@@ -50,10 +50,12 @@ public:
     ~WebGPUDriver() noexcept override;
 
     [[nodiscard]] Dispatcher getDispatcher() const noexcept final;
-    [[nodiscard]] static Driver* create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
+    [[nodiscard]] static Driver* create(WebGPUPlatform& platform,
+            const Platform::DriverConfig& driverConfig) noexcept;
 
 private:
-    explicit WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
+    explicit WebGPUDriver(WebGPUPlatform& platform,
+            const Platform::DriverConfig& driverConfig) noexcept;
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
     [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
 
@@ -92,6 +94,8 @@ private:
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WGPURenderTarget* mDefaultRenderTarget = nullptr;
+    WGPUTimerQuery* mTimerQuery = nullptr;
+
     /*
      * Driver interface
      */
@@ -126,6 +130,11 @@ private:
         return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
     }
 
+    template<typename D, typename B, typename... ARGS>
+    Handle<B> allocAndConstructHandle(ARGS&&... args) {
+        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args)...);
+    }
+
     template<typename D, typename B>
     D* handleCast(Handle<B> handle) noexcept {
         return mHandleAllocator.handle_cast<D*>(handle);
@@ -140,4 +149,4 @@ private:
 
 }// namespace filament::backend
 
-#endif // TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
+#endif// TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H

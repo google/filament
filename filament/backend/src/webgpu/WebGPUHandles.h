@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2025 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,13 +52,11 @@ class WGPUVertexBufferInfo : public HwVertexBufferInfo {
 public:
     WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
             AttributeArray const& attributes);
-    inline  wgpu::VertexBufferLayout const* getVertexBufferLayout() const {
+    inline wgpu::VertexBufferLayout const* getVertexBufferLayout() const {
         return mVertexBufferLayout.data();
     }
 
-    inline uint32_t getVertexBufferLayoutSize() const {
-        return mVertexBufferLayout.size();
-    }
+    inline uint32_t getVertexBufferLayoutSize() const { return mVertexBufferLayout.size(); }
 
     inline wgpu::VertexAttribute const* getVertexAttributeForIndex(uint32_t index) const {
         assert_invariant(index < mAttributes.size());
@@ -72,28 +70,28 @@ public:
 
 private:
     // TODO: can we do better in terms on heap management.
-    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayout {};
-    std::vector<std::vector<wgpu::VertexAttribute>> mAttributes {};
+    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayout{};
+    std::vector<std::vector<wgpu::VertexAttribute>> mAttributes{};
 };
 
 struct WGPUVertexBuffer : public HwVertexBuffer {
-    WGPUVertexBuffer(wgpu::Device const &device, uint32_t vertexCount, uint32_t bufferCount,
-                     Handle<HwVertexBufferInfo> vbih);
+    WGPUVertexBuffer(wgpu::Device const& device, uint32_t vertexCount, uint32_t bufferCount,
+            Handle<HwVertexBufferInfo> vbih);
 
     Handle<HwVertexBufferInfo> vbih;
     utils::FixedCapacityVector<wgpu::Buffer> buffers;
 };
 
 struct WGPUIndexBuffer : public HwIndexBuffer {
-    WGPUIndexBuffer(wgpu::Device const &device, uint8_t elementSize,
-                    uint32_t indexCount);
+    WGPUIndexBuffer(wgpu::Device const& device, uint8_t elementSize, uint32_t indexCount);
 
     wgpu::Buffer buffer;
     wgpu::IndexFormat indexFormat;
 };
 
 struct WGPUBufferObject : HwBufferObject {
-    WGPUBufferObject(wgpu::Device const &device, BufferObjectBinding bindingType, uint32_t byteCount);
+    WGPUBufferObject(wgpu::Device const& device, BufferObjectBinding bindingType,
+            uint32_t byteCount);
 
     wgpu::Buffer buffer = nullptr;
     const BufferObjectBinding bufferObjectBinding;
@@ -145,18 +143,36 @@ struct WGPUTexture : public HwTexture {
     // TODO: Adding this but not yet setting it up. Filament "Textures" are combined image samplers,
     // rep both.
     wgpu::Sampler sampler = nullptr;
-    //TODO: Not sure all the ways HwTexture is used. Overloading like this might be entirely wrong.
+    // TODO: Not sure all the ways HwTexture is used. Overloading like this might be entirely wrong.
     wgpu::TextureView texView = nullptr;
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
     WGPURenderPrimitive() {}
 
-    void setBuffers(WGPUVertexBufferInfo const* const vbi,
-            WGPUVertexBuffer* vertexBuffer, WGPUIndexBuffer* indexBuffer);
+    void setBuffers(WGPUVertexBufferInfo const* const vbi, WGPUVertexBuffer* vertexBuffer,
+            WGPUIndexBuffer* indexBuffer);
 
     WGPUVertexBuffer* vertexBuffer = nullptr;
     WGPUIndexBuffer* indexBuffer = nullptr;
+};
+
+class WGPUTimerQuery : public HwTimerQuery {
+public:
+    WGPUTimerQuery()
+        : status(std::make_shared<Status>()) {}
+
+    void beginTimeElapsedQuery();
+    void endTimeElapsedQuery();
+    bool getQueryResult(uint64_t* outElapsedTimeNanoseconds);
+
+private:
+    struct Status {
+        std::atomic<uint64_t> elapsedNanoseconds{ 0 };
+        std::atomic<uint64_t> previousElapsed{ 0 };
+    };
+
+    std::shared_ptr<Status> status;
 };
 
 // TODO: Currently WGPURenderTarget is not used by WebGPU for useful task.
