@@ -237,7 +237,6 @@ set(MATERIAL_SRCS
         src/materials/colorGrading/colorGradingAsSubpass.mat
         src/materials/colorGrading/customResolveAsSubpass.mat
         src/materials/debugShadowCascades.mat
-        src/materials/defaultMaterial.mat
         src/materials/dof/dof.mat
         src/materials/dof/dofCoc.mat
         src/materials/dof/dofCombine.mat
@@ -255,7 +254,6 @@ set(MATERIAL_SRCS
         src/materials/sgsr/sgsr1.mat
         src/materials/resolveDepth.mat
         src/materials/separableGaussianBlur.mat
-        src/materials/skybox.mat
         src/materials/shadowmap.mat
         src/materials/ssao/bilateralBlur.mat
         src/materials/ssao/bilateralBlurBentNormals.mat
@@ -265,15 +263,13 @@ set(MATERIAL_SRCS
         src/materials/vsmMipmap.mat
 )
 
-set(MATERIAL_FL0_SRCS
-        src/materials/defaultMaterial.mat
-        src/materials/skybox.mat
-)
-
-set(MATERIAL_MULTIVIEW_SRCS
-        src/materials/defaultMaterial.mat
-        src/materials/skybox.mat
-)
+set(BASIC_MATERIAL_SRCS)
+if (NOT FILAMENT_TRIM_DEFAULT_MATERIAL)
+    list(APPEND BASIC_MATERIAL_SRCS src/materials/defaultMaterial.mat)
+endif()
+if (NOT FILAMENT_TRIM_SKYBOX_MATERIAL)
+    list(APPEND BASIC_MATERIAL_SRCS src/materials/skybox.mat)
+endif()
 
 # Embed the binary resource blob for materials.
 get_resgen_vars(${RESOURCE_DIR} materials)
@@ -307,6 +303,16 @@ endif()
 # Whether to include MULTIVIEW materials.
 if (FILAMENT_ENABLE_MULTIVIEW)
     add_definitions(-DFILAMENT_ENABLE_MULTIVIEW)
+endif()
+
+# Whether to trim default material.
+if (FILAMENT_TRIM_DEFAULT_MATERIAL)
+    add_definitions(-DFILAMENT_TRIM_DEFAULT_MATERIAL)
+endif()
+
+# Whether to trim skybox material.
+if (FILAMENT_TRIM_SKYBOX_MATERIAL)
+    add_definitions(-DFILAMENT_TRIM_SKYBOX_MATERIAL)
 endif()
 
 # Whether to force the profiling mode.
@@ -352,9 +358,22 @@ foreach (mat_src ${MATERIAL_SRCS})
             COMMENT "Compiling material ${fullname} to ${output_path}"
     )
     list(APPEND MATERIAL_BINS ${output_path})
+endforeach()
 
-    list(FIND MATERIAL_FL0_SRCS ${mat_src} index)
-    if (${index} GREATER -1 AND FILAMENT_ENABLE_FEATURE_LEVEL_0)
+foreach (mat_src ${BASIC_MATERIAL_SRCS})
+    get_filename_component(localname "${mat_src}" NAME_WE)
+    get_filename_component(fullname "${mat_src}" ABSOLUTE)
+    set(output_path "${MATERIAL_DIR}/${localname}.filamat")
+    add_custom_command(
+            OUTPUT ${output_path}
+            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
+            MAIN_DEPENDENCY ${fullname}
+            DEPENDS matc
+            COMMENT "Compiling material ${fullname} to ${output_path}"
+    )
+    list(APPEND MATERIAL_BINS ${output_path})
+
+    if (FILAMENT_ENABLE_FEATURE_LEVEL_0)
         string(REGEX REPLACE "[.]filamat$" "_fl0.filamat" output_path_fl0 ${output_path})
         add_custom_command(
                 OUTPUT ${output_path_fl0}
@@ -366,8 +385,7 @@ foreach (mat_src ${MATERIAL_SRCS})
         list(APPEND MATERIAL_BINS ${output_path_fl0})
     endif ()
 
-    list(FIND MATERIAL_MULTIVIEW_SRCS ${mat_src} index)
-    if (${index} GREATER -1 AND FILAMENT_ENABLE_MULTIVIEW)
+    if (FILAMENT_ENABLE_MULTIVIEW)
         string(REGEX REPLACE "[.]filamat$" "_multiview.filamat" output_path_multiview ${output_path})
         add_custom_command(
                 OUTPUT ${output_path_multiview}
@@ -378,7 +396,6 @@ foreach (mat_src ${MATERIAL_SRCS})
         )
         list(APPEND MATERIAL_BINS ${output_path_multiview})
     endif ()
-
 endforeach()
 
 # Additional dependencies on included files for materials

@@ -416,15 +416,18 @@ void FEngine::init() {
 
 #ifdef FILAMENT_ENABLE_FEATURE_LEVEL_0
     if (UTILS_UNLIKELY(mActiveFeatureLevel == FeatureLevel::FEATURE_LEVEL_0)) {
+#if !defined(FILAMENT_TRIM_DEFAULT_MATERIAL)
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
         defaultMaterialBuilder.package(
                 MATERIALS_DEFAULTMATERIAL_FL0_DATA, MATERIALS_DEFAULTMATERIAL_FL0_SIZE);
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
+#endif
     } else
 #endif
     {
         mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
 
+#if !defined(FILAMENT_TRIM_DEFAULT_MATERIAL)
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
         switch (mConfig.stereoscopicType) {
             case StereoscopicType::NONE:
@@ -442,6 +445,7 @@ void FEngine::init() {
                 break;
         }
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*this));
+#endif
 
         constexpr float3 dummyPositions[1] = {};
         constexpr short4 dummyTangents[1] = {};
@@ -794,9 +798,9 @@ int FEngine::loop() {
 #if FILAMENT_ENABLE_MATDBG
     if(debug.server) {
         delete debug.server;
-    } 
+    }
 #endif
-#if FILAMENT_ENABLE_FGVIEWER 
+#if FILAMENT_ENABLE_FGVIEWER
     if(debug.fgviewerServer) {
         delete debug.fgviewerServer;
     }

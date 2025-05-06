@@ -88,7 +88,11 @@ Skybox* Skybox::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(!cubemap || cubemap->isCubemap())
             << "environment maps must be a cubemap";
 
+#if defined(FILAMENT_TRIM_SKYBOX_MATERIAL)
+    return nullptr;
+#else
     return downcast(engine).createSkybox(*this);
+#endif
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -124,6 +128,9 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
 }
 
 FMaterial const* FSkybox::createMaterial(FEngine& engine) {
+#ifdef FILAMENT_TRIM_SKYBOX_MATERIAL
+    return nullptr;
+#else
     Material::Builder builder;
 #ifdef FILAMENT_ENABLE_FEATURE_LEVEL_0
     if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == Engine::FeatureLevel::FEATURE_LEVEL_0)) {
@@ -148,6 +155,7 @@ FMaterial const* FSkybox::createMaterial(FEngine& engine) {
     }
     auto material = builder.build(engine);
     return downcast(material);
+#endif
 }
 
 void FSkybox::terminate(FEngine& engine) noexcept {

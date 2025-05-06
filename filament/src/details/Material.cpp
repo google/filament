@@ -1126,6 +1126,7 @@ void FMaterial::precacheDepthVariants(FEngine& engine) {
         return;
     }
 
+#if !defined(FILAMENT_TRIM_DEFAULT_MATERIAL)
     // if possible pre-cache all depth variants from the default material
     if (mMaterialDomain == MaterialDomain::SURFACE &&
             !mIsDefaultMaterial &&
@@ -1138,6 +1139,7 @@ void FMaterial::precacheDepthVariants(FEngine& engine) {
             mCachedPrograms[variant.key] = pDefaultMaterial->mCachedPrograms[variant.key];
         }
     }
+#endif
 }
 
 void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* const parser) {
