@@ -57,7 +57,7 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup
 
     if (!kLayouts.empty()) {
         mDescriptorSetLayout =
-                cleanup.add(api.createDescriptorSetLayout(DescriptorSetLayout{ kLayouts }));
+                cleanup.add(api.createDescriptorSetLayout(DescriptorSetLayout{ .bindings = kLayouts }));
     }
 }
 
