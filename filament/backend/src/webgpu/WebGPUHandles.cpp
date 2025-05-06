@@ -144,7 +144,7 @@ WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attribut
         mAttributes[attrib.buffer].push_back({
             .format = vertexFormat,
             .offset = attrib.offset,
-            .shaderLocation = static_cast<uint32_t>(mAttributes[attrib.buffer].size()),
+            .shaderLocation = attribIndex,
         });
 
         mVertexBufferLayout[attrib.buffer].stepMode = wgpu::VertexStepMode::Vertex;
@@ -770,5 +770,60 @@ wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel,
 
     return texture.CreateView(&desc);
 }
+
+WGPURenderTarget::Attachment WGPURenderTarget::getDrawColorAttachment(size_t index) {
+    assert_invariant( index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
+    auto result = color[index];
+    if (index == 0 && defaultRenderTarget) {
+
+    }
+
+    return result;
+}
+
+wgpu::LoadOp WGPURenderTarget::getLoadOperation(RenderPassParams const& params,
+                                             TargetBufferFlags buffer) {
+    auto clearFlags = params.flags.clear;
+    auto discardStartFlags = params.flags.discardStart;
+    if (any(clearFlags & buffer)) {
+        return wgpu::LoadOp::Clear;
+    } else if (any(discardStartFlags & buffer)) {
+        return wgpu::LoadOp::Clear;
+    }
+    return wgpu::LoadOp::Load;
+}
+
+wgpu::StoreOp WGPURenderTarget::getStoreOperation(RenderPassParams const& params,
+                                               TargetBufferFlags buffer) {
+    const auto discardEndFlags = params.flags.discardEnd;
+    if (any(discardEndFlags & buffer)) {
+        return wgpu::StoreOp::Discard;
+    }
+    return wgpu::StoreOp::Store;
+}
+void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor* descriptor,
+            wgpu::TextureView const& textureView, const RenderPassParams& params) {
+    // auto discardFlags = params.flags.discardEnd;
+    // (void) discardFlags;
+    // std::vector<wgpu::RenderPassColorAttachment> colorAttachments;
+    colorAttachments.clear();
+    for (size_t i = 0; i < 1/*MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT*/; i++) {
+        // auto attachment = getDrawColorAttachment(i);
+        // if (attachment) {
+            wgpu::RenderPassColorAttachment colorAttachment;
+            colorAttachment.view = textureView;
+            colorAttachment.loadOp  = getLoadOperation(params, getTargetBufferFlagsAt(i));
+            colorAttachment.storeOp = getStoreOperation(params, getTargetBufferFlagsAt(i));
+            colorAttachment.clearValue = { params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a };
+            colorAttachments.emplace_back(colorAttachment);
+        // }
+    }
+    descriptor->colorAttachments = colorAttachments.data();
+    descriptor->colorAttachmentCount = colorAttachments.size();
+    descriptor->depthStencilAttachment = nullptr;
+    descriptor->timestampWrites = nullptr;
+
+}
+
 
 }// namespace filament::backend
