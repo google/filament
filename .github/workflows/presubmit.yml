@@ -124,13 +124,15 @@ jobs:
       - uses: ./.github/actions/mac-prereq
       - name: Cache Mesa and deps
         id: mesa-cache
-        uses: actions/cache@v4 # Use a specific version
+        uses: actions/cache@v4
         with:
           path: mesa
           key: ${{ runner.os }}-mesa-deps-2-${{ vars.MESA_VERSION }}
-      - name: Get Mesa
-        id: mesa-prereq
-        run: bash test/utils/get_mesa.sh
+      - name: Prerequisites
+        id: prereqs
+        run: |
+          bash test/utils/get_mesa.sh
+          pip install tifffile numpy
       - name: Run Test
         run: bash test/renderdiff/test.sh
       - uses: actions/upload-artifact@v4
@@ -151,7 +153,7 @@ jobs:
       - name: Run test
         run: ./out/cmake-debug/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
 
-  code-correcteness:
+  code-correctness:
     name: code-correctness
     runs-on: 'macos-14-xlarge'
     steps:

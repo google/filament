@@ -25,7 +25,8 @@ def get_last_commit():
   return (
     commit.split(' ')[1],
     title.strip(),
-    desc)
+    desc
+  )
 
 def sanitized_split(line, split_atom='\n'):
   return list(filter(lambda x: len(x) > 0, map(lambda x: x.strip(), line.split(split_atom))))
