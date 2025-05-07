@@ -1149,11 +1149,17 @@ void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* con
     backend::DescriptorSetLayout descriptorSetLayout;
     success = parser->getDescriptorSetLayout(&descriptorSetLayout);
     assert_invariant(success);
+    auto perMatLabel = mName;
+    perMatLabel.append("_perMat");
+    descriptorSetLayout.label = std::move(perMatLabel);
 
     // get the PER_VIEW descriptor binding info
-    auto const& perViewDescriptorSetLayout = descriptor_sets::getPerViewDescriptorSetLayout(
-            mMaterialDomain, mVariantFilterMask,
+    auto perViewDescriptorSetLayout =
+            descriptor_sets::getPerViewDescriptorSetLayout(mMaterialDomain, mVariantFilterMask,
             mIsVariantLit || mHasShadowMultiplier, mReflectionMode, mRefractionMode);
+    auto perViewLabel = mName;
+    perViewLabel.append("_perView");
+    perViewDescriptorSetLayout.label = std::move(perViewLabel);
 
     // get the PER_RENDERABLE and PER_VIEW descriptor binding info
     for (auto&& [bindingPoint, descriptorSetLayout] : {
