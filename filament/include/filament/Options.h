@@ -420,7 +420,7 @@ struct AmbientOcclusionOptions {
      */
     struct Gtao {
         uint8_t sampleSliceCount = 4;     //!< # of slices. Higher value makes less noise.
-        uint8_t sampleStepsPerSlice = 4;  //!< # of steps the radius is divided into for integration. Higher value makes less bias.
+        uint8_t sampleStepsPerSlice = 3;  //!< # of steps the radius is divided into for integration. Higher value makes less bias.
         float thicknessHeuristic = 0.004f; //!< thickness heuristic, should be closed to 0
     };
     Gtao gtao;                           // %codegen_skip_javascript% %codegen_java_flatten%
