@@ -363,6 +363,8 @@ python ./emsdk.py activate latest
 source ./emsdk_env.sh
 ```
 
+Alternatively, you can try running the script `build/common/get-emscripten.sh`.
+
 After this you can invoke the [easy build](#easy-build) script as follows:
 
 ```shell
