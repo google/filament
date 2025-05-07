@@ -15,8 +15,10 @@
  */
 
 // Note: The overhead of SYSTRACE_TAG_JOBSYSTEM is not negligible especially with parallel_for().
-#define SYSTRACE_TAG SYSTRACE_TAG_DISABLED
+#ifndef SYSTRACE_TAG
 //#define SYSTRACE_TAG SYSTRACE_TAG_JOBSYSTEM
+#define SYSTRACE_TAG SYSTRACE_TAG_NEVER
+#endif
 
 // when SYSTRACE_TAG_JOBSYSTEM is used, enables even heavier systraces
 #define HEAVY_SYSTRACE  0

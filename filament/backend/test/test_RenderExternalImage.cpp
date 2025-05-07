@@ -47,6 +47,7 @@ Shader createShader(DriverApi& api, Cleanup& cleanup, Backend backend) {
 // Rendering an external image without setting any data should not crash.
 TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     SKIP_IF(Backend::METAL, "External images aren't supported in metal");
+    SKIP_IF(Backend::VULKAN, "External images aren't supported in vulkan");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -81,7 +82,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     PipelineState state;
     state.program = shader.getProgram();
-    state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
+    state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -94,7 +95,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     api.beginFrame(0, 0, 0);
 
     api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
-    api.bindDescriptorSet(descriptorSet, 1, {});
+    api.bindDescriptorSet(descriptorSet, 0, {});
 
     // Render a triangle.
     api.beginRenderPass(defaultRenderTarget, params);
@@ -114,6 +115,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
 TEST_F(BackendTest, RenderExternalImage) {
     SKIP_IF(Backend::METAL, "External images aren't supported in metal");
+    SKIP_IF(Backend::VULKAN, "External images aren't supported in vulkan");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -186,7 +188,7 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     PipelineState state;
     state.program = shader.getProgram();
-    state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
+    state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -197,7 +199,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     api.beginFrame(0, 0, 0);
 
     api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
-    api.bindDescriptorSet(descriptorSet, 1, {});
+    api.bindDescriptorSet(descriptorSet, 0, {});
 
     // Render a triangle.
     api.beginRenderPass(defaultRenderTarget, params);

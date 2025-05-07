@@ -107,7 +107,7 @@ ResolvedUniformBindingConfig UniformBindingConfig::resolve() {
             .dataSize = resolvedDataSize,
             .bufferSize = bufferSize.value_or(resolvedDataSize),
             .byteOffset = byteOffset.value_or(0),
-            .set = set.value_or(1),
+            .set = set.value_or(0),
             .binding = binding.value_or(0),
             .descriptorSet = descriptorSet
     };

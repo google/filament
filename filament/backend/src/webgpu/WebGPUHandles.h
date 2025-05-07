@@ -27,6 +27,8 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <array>
+#include <bitset>
 #include <cstdint>
 #include <vector>
 
@@ -98,80 +100,124 @@ struct WGPUBufferObject : HwBufferObject {
     wgpu::Buffer buffer = nullptr;
     const BufferObjectBinding bufferObjectBinding;
 };
+
 class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
 public:
+
+    enum class BindGroupEntryType : uint8_t {
+        UNIFORM_BUFFER,
+        TEXTURE_VIEW,
+        SAMPLER
+    };
+
+    struct BindGroupEntryInfo final {
+        uint8_t binding = 0;
+        BindGroupEntryType type = BindGroupEntryType::UNIFORM_BUFFER;
+        bool hasDynamicOffset = false;
+    };
+
     WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const& device);
     ~WebGPUDescriptorSetLayout();
     [[nodiscard]] const wgpu::BindGroupLayout& getLayout() const { return mLayout; }
-    [[nodiscard]] uint getLayoutSize() const { return mLayoutSize; }
+    [[nodiscard]] std::vector<BindGroupEntryInfo> const& getBindGroupEntries() const {
+        return mBindGroupEntries;
+    }
 
 private:
     // TODO: If this is useful elsewhere, remove it from this class
     // Convert Filament Shader Stage Flags bitmask to webgpu equivilant
     static wgpu::ShaderStage filamentStageToWGPUStage(ShaderStageFlags fFlags);
-    uint mLayoutSize;
+    std::vector<BindGroupEntryInfo> mBindGroupEntries;
     wgpu::BindGroupLayout mLayout;
 };
 
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
-    WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize);
+    static void initializeDummyResourcesIfNotAlready(wgpu::Device const&,
+            wgpu::TextureFormat aColorFormat);
+
+    WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
+            std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
     ~WebGPUDescriptorSet();
 
-    wgpu::BindGroup lockAndReturn(wgpu::Device const& device);
-    void addEntry(uint index, wgpu::BindGroupEntry&& entry);
+    wgpu::BindGroup lockAndReturn(wgpu::Device const&);
+    void addEntry(unsigned int index, wgpu::BindGroupEntry&& entry);
+    [[nodiscard]] uint32_t const* setDynamicOffsets(uint32_t const* offsets);
     [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
-
+    [[nodiscard]] size_t countEntitiesWithDynamicOffsets() const;
 private:
+
+    static wgpu::Buffer sDummyUniformBuffer;
+    static wgpu::Texture sDummyTexture;
+    static wgpu::TextureView sDummyTextureView;
+    static wgpu::Sampler sDummySampler;
+
+    static std::vector<wgpu::BindGroupEntry> createDummyEntriesSortedByBinding(
+            std::vector<filament::backend::WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&);
+
     // TODO: Consider storing what we used to make the layout. However we need to essentially
     // Recreate some of the info (Sampler in slot X with the actual sampler) so letting Dawn confirm
     // there isn't a mismatch may be easiest.
     // Also storing the wgpu ObjectBase takes care of ownership challenges in theory
-    wgpu::BindGroupLayout mLayout;
-    std::vector<wgpu::BindGroupEntry> entries;
-    wgpu::BindGroup mBindGroup;
+    wgpu::BindGroupLayout mLayout = nullptr;
+    static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
+    std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding {};
+    std::vector<wgpu::BindGroupEntry> mEntriesSortedByBinding;
+    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingWithDynamicOffsets {};
+    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingAdded {};
+    std::vector<uint32_t> mDynamicOffsets;
+    wgpu::BindGroup mBindGroup = nullptr;
 };
 
-// TODO: Currently WGPUTexture is not used by WebGPU for useful task.
-// Update the struct when used by WebGPU driver.
-struct WGPUTexture : public HwTexture {
+class WGPUTexture : public HwTexture {
+public:
     WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-            uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage) noexcept;
+            uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+            wgpu::Device const& device) noexcept;
 
-    // constructors for creating texture views
-    WGPUTexture(WGPUTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
+    WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
 
-    wgpu::Texture texture = nullptr;
-    // TODO: Adding this but not yet setting it up. Filament "Textures" are combined image samplers,
-    // rep both.
-    wgpu::Sampler sampler = nullptr;
-    //TODO: Not sure all the ways HwTexture is used. Overloading like this might be entirely wrong.
-    wgpu::TextureView texView = nullptr;
+    const wgpu::Texture& getTexture() const { return mTexture; }
+    const wgpu::TextureView& getTexView() const { return mTexView; }
+
+    // Public to allow checking for support of a texture format
+    static wgpu::TextureFormat fToWGPUTextureFormat(const filament::backend::TextureFormat& fUsage);
+
+private:
+    wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
+            SamplerType target);
+    // CreateTextureR has info for a texture and sampler. Texture Views are needed for binding,
+    // along with a sampler Current plan: Inherit the sampler and Texture to always exist (It is a
+    // ref counted pointer) when making views. View is optional
+    wgpu::Texture mTexture = nullptr;
+    wgpu::TextureUsage mUsage = wgpu::TextureUsage::None;
+    wgpu::TextureFormat mFormat = wgpu::TextureFormat::Undefined;
+    uint32_t mArrayLayerCount = 1;
+    wgpu::TextureView mTexView = nullptr;
+    wgpu::TextureUsage fToWGPUTextureUsage(const filament::backend::TextureUsage& fUsage);
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
-    WGPURenderPrimitive() {}
-
-    void setBuffers(WGPUVertexBufferInfo const* const vbi,
-            WGPUVertexBuffer* vertexBuffer, WGPUIndexBuffer* indexBuffer);
 
     WGPUVertexBuffer* vertexBuffer = nullptr;
     WGPUIndexBuffer* indexBuffer = nullptr;
 };
 
-// TODO: Currently WGPURenderTarget is not used by WebGPU for useful task.
-// Update the struct when used by WebGPU driver.
-struct WGPURenderTarget : public HwRenderTarget {
+class WGPURenderTarget : public HwRenderTarget {
+public:
     class Attachment {
     public:
-        friend struct WGPURenderTarget;
+        friend class WGPURenderTarget;
 
         Attachment() = default;
         Attachment(WGPUTexture* gpuTexture, uint8_t level = 0, uint16_t layer = 0)
             : level(level),
               layer(layer),
-              texture(gpuTexture->texture),
+              texture(gpuTexture->getTexture()),
               mWGPUTexture(gpuTexture) {}
+        operator bool() const {
+            return mWGPUTexture != nullptr;
+        }
 
         uint8_t level = 0;
         uint16_t layer = 0;
@@ -187,8 +233,8 @@ struct WGPURenderTarget : public HwRenderTarget {
         : HwRenderTarget(0, 0),
           defaultRenderTarget(true) {}
 
-    void setUpRenderPassAttachments(wgpu::RenderPassDescriptor* descriptor,
-            const RenderPassParams& params);
+    void setUpRenderPassAttachments(wgpu::RenderPassDescriptor& descriptor,
+            wgpu::TextureView const& textureView, RenderPassParams const& params);
 
     math::uint2 getAttachmentSize() noexcept;
 
@@ -198,15 +244,15 @@ struct WGPURenderTarget : public HwRenderTarget {
     Attachment getDrawColorAttachment(size_t index);
     Attachment getReadColorAttachment(size_t index);
 
+    static wgpu::LoadOp getLoadOperation(const RenderPassParams& params, TargetBufferFlags buffer);
+    static wgpu::StoreOp getStoreOperation(const RenderPassParams& params, TargetBufferFlags buffer);
 private:
-    static wgpu::LoadOp getLoadAction(const RenderPassParams& params, TargetBufferFlags buffer);
-    static wgpu::LoadOp getStoreAction(const RenderPassParams& params, TargetBufferFlags buffer);
-
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
 
     Attachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     math::uint2 attachmentSize = {};
+    std::vector<wgpu::RenderPassColorAttachment> colorAttachments {};
 };
 
 }// namespace filament::backend

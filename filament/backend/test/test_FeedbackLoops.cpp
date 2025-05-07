@@ -57,9 +57,9 @@ layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(binding = 0, set = 1) uniform sampler2D test_tex;
+layout(binding = 0, set = 0) uniform sampler2D test_tex;
 
-layout(binding = 1, set = 1) uniform Params {
+layout(binding = 1, set = 0) uniform Params {
     highp float fbWidth;
     highp float fbHeight;
     highp float sourceLevel;
@@ -167,7 +167,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.depthWrite = false;
             state.rasterState.depthFunc = RasterState::DepthFunc::A;
             state.program = shader.getProgram();
-            state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
+            state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
 
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0, 0);
