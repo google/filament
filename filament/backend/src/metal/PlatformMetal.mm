@@ -28,6 +28,7 @@
 namespace filament::backend {
 
 struct PlatformMetalImpl {
+    id<MTLDevice> mDevice = nil;
     id<MTLCommandQueue> mCommandQueue = nil;
     // read form driver thread, read/written to from client thread
     std::atomic<PlatformMetal::DrawableFailureBehavior> mDrawableFailureBehavior =
@@ -48,7 +49,29 @@ Driver* PlatformMetal::createDriver(void* /*sharedContext*/, const Platform::Dri
     return MetalDriverFactory::create(this, driverConfig);
 }
 
+
+bool PlatformMetal::initialize() noexcept {
+    MetalDevice device{};
+    createDevice(device);
+    if (device.device == nil) {
+        return false;
+    }
+
+    MetalCommandQueue commandQueue{};
+    createCommandQueue(device, commandQueue);
+    if (commandQueue.commandQueue == nil) {
+        return false;
+    }
+
+    return true;
+}
+
 void PlatformMetal::createDevice(MetalDevice& outDevice) noexcept {
+    if (pImpl->mDevice) {
+        outDevice.device = pImpl->mDevice;
+        return;
+    }
+
     id<MTLDevice> result;
 
 #if !defined(FILAMENT_IOS)
@@ -74,10 +97,15 @@ void PlatformMetal::createDevice(MetalDevice& outDevice) noexcept {
                   << utils::io::endl;
 
     outDevice.device = result;
+    pImpl->mDevice = result;
 }
 
 void PlatformMetal::createCommandQueue(
         MetalDevice& device, MetalCommandQueue& outCommandQueue) noexcept {
+    if (pImpl->mCommandQueue) {
+        outCommandQueue.commandQueue = pImpl->mCommandQueue;
+        return;
+    }
     pImpl->mCommandQueue = [device.device newCommandQueue];
     pImpl->mCommandQueue.label = @"Filament";
     outCommandQueue.commandQueue = pImpl->mCommandQueue;
