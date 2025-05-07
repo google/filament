@@ -111,7 +111,7 @@ Filament.loadGeneratedExtensions = function() {
     Filament.View.prototype.setGtaoDefaults = function(overrides) {
         const options = {
             sampleSliceCount: 4,
-            sampleStepsPerSlice: 4,
+            sampleStepsPerSlice: 3,
             thicknessHeuristic: 0.004,
         };
         return Object.assign(options, overrides);

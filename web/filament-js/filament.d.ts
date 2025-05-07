@@ -1573,11 +1573,11 @@ export interface View$AmbientOcclusionOptions$Ssct {
  */
 export interface View$AmbientOcclusionOptions$Gtao {
     /**
-     * # of slices. Higher values make less noise.
+     * # of slices. Higher value makes less noise.
      */
     sampleSliceCount?: number;
     /**
-     * # of steps the radius is divided into for integration
+     * # of steps the radius is divided into for integration. Higher value makes less bias.
      */
     sampleStepsPerSlice?: number;
     /**

@@ -1928,7 +1928,7 @@ public class View {
         /**
          * Ground Truth-base Ambient Occlusion (GTAO) options
          */
-        public int gtaoSampleStepsPerSlice = 4;
+        public int gtaoSampleStepsPerSlice = 3;
         /**
          * Ground Truth-base Ambient Occlusion (GTAO) options
          */
