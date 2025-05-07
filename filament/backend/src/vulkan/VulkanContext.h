@@ -142,6 +142,10 @@ public:
         return mPortabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
     }
 
+    inline bool isUnifiedMemoryArchitecture() const noexcept {
+        return mIsUnifiedMemoryArchitecture;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
@@ -164,6 +168,7 @@ private:
     bool mDebugUtilsSupported = false;
     bool mLazilyAllocatedMemorySupported = false;
     bool mProtectedMemorySupported = false;
+    bool mIsUnifiedMemoryArchitecture = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;

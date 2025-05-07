@@ -824,6 +824,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     variant.setDirectionalLighting(view.hasDirectionalLighting());
     variant.setDynamicLighting(view.hasDynamicLighting());
     variant.setFog(view.hasFog());
+    // The VSM bit has a different meaning for STANDARD_VARIANT (as opposed to DEPTH_VARIANT),
+    // In the STANDARD_VARIANT case, we are *using* the shadow-map, and the VSM only decides which
+    // type of sampler is used (samplerShadow or sampler2D).
     variant.setVsm(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
     variant.setStereo(view.hasStereo());
 
@@ -841,7 +844,11 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     if (view.needsShadowMap()) {
         Variant shadowVariant(Variant::DEPTH_VARIANT);
+        // The VSM bit has a different meaning for DEPTH_VARIANT (as opposed to STANDARD_VARIANT),
+        // In the DEPTH_VARIANT case, we are *generating* the shadow-map, and some computations
+        // are handled differently. In addition, the color buffer is used.
         shadowVariant.setVsm(view.getShadowType() == ShadowType::VSM);
+
         auto shadows = view.renderShadowMaps(engine, fg, cameraInfo, mShaderUserTime,
                 RenderPassBuilder{ commandArena }
                     .renderFlags(renderFlags)

@@ -34,7 +34,7 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup
     // This assumes that the uniforms will all be in a single descriptor set at index 1.
     // If there are shaders with uniforms in other sets then ShaderConfig will need to be expanded
     // to accommodate that.
-    size_t kDescriptorSetIndex = 1;
+    size_t kDescriptorSetIndex = 0;
     filamat::DescriptorSets descriptors;
     descriptors[kDescriptorSetIndex] = filamat::DescriptorSetInfo(config.uniforms.size());
     for (unsigned char i = 0; i < config.uniforms.size(); ++i) {
@@ -52,11 +52,13 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup
                 config.uniforms[i].name,
                 config.uniforms[i].type.value_or(DescriptorType::UNIFORM_BUFFER), i };
     }
-    prog.descriptorBindings(1, bindingsInfo);
+    prog.descriptorBindings(0, bindingsInfo);
     mProgram = cleanup.add(api.createProgram(std::move(prog)));
 
-    mDescriptorSetLayout = cleanup.add(
-            api.createDescriptorSetLayout(DescriptorSetLayout{ kLayouts }));
+    if (!kLayouts.empty()) {
+        mDescriptorSetLayout =
+                cleanup.add(api.createDescriptorSetLayout(DescriptorSetLayout{ .bindings = kLayouts }));
+    }
 }
 
 filament::backend::DescriptorSetHandle Shader::createDescriptorSet(DriverApi& api) const {
@@ -64,10 +66,15 @@ filament::backend::DescriptorSetHandle Shader::createDescriptorSet(DriverApi& ap
 }
 
 filament::backend::ProgramHandle Shader::getProgram() const {
+    assert(mProgram);
+    EXPECT_THAT(mProgram, ::testing::IsTrue())
+                        << "Shader program accessed despite being null.";
     return mProgram;
 }
 
 filament::backend::DescriptorSetLayoutHandle Shader::getDescriptorSetLayout() const {
+    EXPECT_THAT(mDescriptorSetLayout, ::testing::IsTrue())
+            << "Shader descriptor set layout accessed despite being null.";
     return mDescriptorSetLayout;
 }
 

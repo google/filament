@@ -609,9 +609,12 @@ Program FMaterial::getProgramWithVariants(
         program.attributes(mAttributeInfo);
     }
 
-    program.descriptorBindings(0, mProgramDescriptorBindings[0]);
-    program.descriptorBindings(1, mProgramDescriptorBindings[1]);
-    program.descriptorBindings(2, mProgramDescriptorBindings[2]);
+    program.descriptorBindings(+DescriptorSetBindingPoints::PER_VIEW,
+            mProgramDescriptorBindings[+DescriptorSetBindingPoints::PER_VIEW]);
+    program.descriptorBindings(+DescriptorSetBindingPoints::PER_RENDERABLE,
+            mProgramDescriptorBindings[+DescriptorSetBindingPoints::PER_RENDERABLE]);
+    program.descriptorBindings(+DescriptorSetBindingPoints::PER_MATERIAL,
+            mProgramDescriptorBindings[+DescriptorSetBindingPoints::PER_MATERIAL]);
     program.specializationConstants(mSpecializationConstants);
 
     program.pushConstants(ShaderStage::VERTEX, mPushConstants[uint8_t(ShaderStage::VERTEX)]);
@@ -1098,12 +1101,16 @@ void FMaterial::processPushConstants(FEngine&, MaterialParser const* parser) {
             });
 }
 
-void FMaterial::precacheDepthVariants(FEngine const& engine) {
+void FMaterial::precacheDepthVariants(FEngine& engine) {
+
+    bool const disableDepthPrecacheForDefaultMaterial = engine.getDriverApi().isWorkaroundNeeded(
+                               Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
+
     // pre-cache all depth variants inside the default material. Note that this should be
     // entirely optional; if we remove this pre-caching, these variants will be populated
     // later, when/if needed by createAndCacheProgram(). Doing it now potentially uses more
     // memory and increases init time, but reduces hiccups during the first frame.
-    if (UTILS_UNLIKELY(mIsDefaultMaterial)) {
+    if (UTILS_UNLIKELY(mIsDefaultMaterial && !disableDepthPrecacheForDefaultMaterial)) {
         const bool stereoSupported = mEngine.getDriverApi().isStereoSupported();
         auto const allDepthVariants = VariantUtils::getDepthVariants();
         for (auto const variant: allDepthVariants) {
@@ -1139,17 +1146,42 @@ void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* con
     success = parser->getDescriptorBindings(&mProgramDescriptorBindings);
     assert_invariant(success);
 
-    std::array<backend::DescriptorSetLayout, 2> descriptorSetLayout;
+    backend::DescriptorSetLayout descriptorSetLayout;
     success = parser->getDescriptorSetLayout(&descriptorSetLayout);
     assert_invariant(success);
+    auto perMatLabel = mName;
+    perMatLabel.append("_perMat");
+    descriptorSetLayout.label = std::move(perMatLabel);
+
+    // get the PER_VIEW descriptor binding info
+    auto perViewDescriptorSetLayout =
+            descriptor_sets::getPerViewDescriptorSetLayout(mMaterialDomain, mVariantFilterMask,
+            mIsVariantLit || mHasShadowMultiplier, mReflectionMode, mRefractionMode);
+    auto perViewLabel = mName;
+    perViewLabel.append("_perView");
+    perViewDescriptorSetLayout.label = std::move(perViewLabel);
+
+    // get the PER_RENDERABLE and PER_VIEW descriptor binding info
+    for (auto&& [bindingPoint, descriptorSetLayout] : {
+            std::pair{ DescriptorSetBindingPoints::PER_RENDERABLE,
+                    descriptor_sets::getPerRenderableLayout() },
+            std::pair{ DescriptorSetBindingPoints::PER_VIEW,
+                    perViewDescriptorSetLayout }}) {
+        Program::DescriptorBindingsInfo& descriptors = mProgramDescriptorBindings[+bindingPoint];
+        descriptors.reserve(descriptorSetLayout.bindings.size());
+        for (auto const& entry: descriptorSetLayout.bindings) {
+            auto const& name = descriptor_sets::getDescriptorName(bindingPoint, entry.binding);
+            descriptors.push_back({ name, entry.type, entry.binding });
+        }
+    }
 
     mDescriptorSetLayout = {
             engine.getDescriptorSetLayoutFactory(),
-            engine.getDriverApi(), std::move(descriptorSetLayout[0]) };
+            engine.getDriverApi(), std::move(descriptorSetLayout) };
 
     mPerViewDescriptorSetLayout = {
             engine.getDescriptorSetLayoutFactory(),
-            engine.getDriverApi(), std::move(descriptorSetLayout[1]) };
+            engine.getDriverApi(), perViewDescriptorSetLayout };
 }
 
 descriptor_binding_t FMaterial::getSamplerBinding(
