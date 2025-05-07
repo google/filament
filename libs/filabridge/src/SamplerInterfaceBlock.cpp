@@ -16,6 +16,7 @@
 
 #include "private/filament/SamplerInterfaceBlock.h"
 
+#include <private/filament/DescriptorSets.h>
 
 #include <backend/DriverEnums.h>
 
@@ -102,7 +103,7 @@ const SamplerInterfaceBlock::SamplerInfo* SamplerInterfaceBlock::getSamplerInfo(
     return &mSamplersInfoList[pos->second];
 }
 
-utils::CString SamplerInterfaceBlock::generateUniformName(const char* group, const char* sampler) noexcept {
+CString SamplerInterfaceBlock::generateUniformName(const char* group, const char* sampler) noexcept {
     char uniformName[256];
 
     // sampler interface block name
@@ -117,9 +118,27 @@ utils::CString SamplerInterfaceBlock::generateUniformName(const char* group, con
             std::min(sizeof(uniformName) / 2 - 2, strlen(sampler)),
             prefix + 1);
     *last++ = 0; // null terminator
-    assert(last <= std::end(uniformName));
+    assert_invariant(last <= std::end(uniformName));
 
     return CString{ uniformName, size_t(last - uniformName) - 1u };
+}
+
+SamplerInterfaceBlock::SamplerInfoList SamplerInterfaceBlock::filterSamplerList(
+        SamplerInfoList list, backend::DescriptorSetLayout const& descriptorSetLayout) {
+    // remove all the samplers that are not included in the descriptor-set layout
+    list.erase(
+            std::remove_if(list.begin(), list.end(),
+                    [&](auto const& entry) {
+                        auto pos = std::find_if(
+                                descriptorSetLayout.bindings.begin(),
+                                descriptorSetLayout.bindings.end(),
+                                [&entry](const auto& item) {
+                                    return item.binding == entry.binding;
+                                });
+                        return pos == descriptorSetLayout.bindings.end();
+                    }), list.end());
+
+    return list;
 }
 
 } // namespace filament

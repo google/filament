@@ -604,27 +604,13 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel shaderMode
 
     if (featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
         assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
-
-        auto const perViewDescriptorSetLayout = getPerViewDescriptorSetLayoutWithVariant(
-                variant, variantFilter,
-                material.isLit || material.hasShadowMultiplier,
-                material.reflectionMode, material.refractionMode);
-
         // this is the list of samplers we need to filter
-        auto list = SibGenerator::getPerViewSib(variant).getSamplerInfoList();
-
-        // remove all the samplers that are not included in the descriptor-set layout
-        list.erase(
-                std::remove_if(list.begin(), list.end(),
-                        [&perViewDescriptorSetLayout](auto const& entry) {
-                            auto pos = std::find_if(
-                                    perViewDescriptorSetLayout.bindings.begin(),
-                                    perViewDescriptorSetLayout.bindings.end(),
-                                    [&entry](const auto& item) {
-                                        return item.binding == entry.binding;
-                                    });
-                            return pos == perViewDescriptorSetLayout.bindings.end();
-                        }), list.end());
+        auto const list = SamplerInterfaceBlock::filterSamplerList(
+                SibGenerator::getPerViewSib(variant).getSamplerInfoList(),
+                descriptor_sets::getPerViewDescriptorSetLayoutWithVariant(
+                        variant, mMaterialDomain, variantFilter,
+                        material.isLit || material.hasShadowMultiplier,
+                        material.reflectionMode, material.refractionMode));
 
         cg.generateCommonSamplers(fs, DescriptorSetBindingPoints::PER_VIEW, list);
     }
@@ -839,24 +825,6 @@ bool ShaderGenerator::hasStereo(
             // HACK(exv): Ignore stereo variant when targeting ESSL 1.0. We should properly build a
             // system in matc which allows the set of included variants to differ per-feature level.
             && featureLevel > MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0;
-}
-
-backend::DescriptorSetLayout ShaderGenerator::getPerViewDescriptorSetLayoutWithVariant(
-        filament::Variant variant,
-        UserVariantFilterMask variantFilter,
-        bool isLit,
-        ReflectionMode reflectionMode,
-        RefractionMode refractionMode) {
-    if (filament::Variant::isValidDepthVariant(variant)) {
-        return descriptor_sets::getDepthVariantLayout();
-    }
-    if (filament::Variant::isSSRVariant(variant)) {
-        return descriptor_sets::getSsrVariantLayout();
-    }
-    // We need to filter out all the descriptors not included in the "resolved" layout below
-    return descriptor_sets::getPerViewDescriptorSetLayout(
-            MaterialDomain::SURFACE, variantFilter,
-            isLit, reflectionMode, refractionMode);
 }
 
 } // namespace filament
