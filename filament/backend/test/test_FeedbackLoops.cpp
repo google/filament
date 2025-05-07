@@ -18,6 +18,7 @@
 
 #include "Lifetimes.h"
 #include "Shader.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 #include <backend/DriverEnums.h>
@@ -56,9 +57,9 @@ layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(binding = 0, set = 1) uniform sampler2D test_tex;
+layout(binding = 0, set = 0) uniform sampler2D test_tex;
 
-layout(binding = 1, set = 1) uniform Params {
+layout(binding = 1, set = 0) uniform Params {
     highp float fbWidth;
     highp float fbHeight;
     highp float sourceLevel;
@@ -98,6 +99,9 @@ struct MaterialParams {
 // The problems are caused by both uploading and rendering into the same texture, since the OpenGL
 // backend's readPixels does not work correctly with textures that have image data uploaded.
 TEST_F(BackendTest, FeedbackLoops) {
+    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL),
+            "OpenGL image is upside down due to readPixels failing for texture with uploaded image "
+            "data");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -163,7 +167,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.depthWrite = false;
             state.rasterState.depthFunc = RasterState::DepthFunc::A;
             state.program = shader.getProgram();
-            state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
+            state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
 
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0, 0);
@@ -239,7 +243,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             // seems to be un-reliable on some GPU's.
             if (frame == kNumFrames - 1) {
                 EXPECT_IMAGE(renderTargets[0], getExpectations(),
-                        ScreenshotParams(kTexWidth, kTexHeight, "FeedbackLoops", 0x70695aa1));
+                        ScreenshotParams(kTexWidth, kTexHeight, "FeedbackLoops", 4192780705));
             }
 
             api.flush();

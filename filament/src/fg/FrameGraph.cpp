@@ -476,7 +476,7 @@ bool FrameGraph::isAcyclic() const noexcept {
     return mGraph.isAcyclic();
 }
 
-void FrameGraph::export_graphviz(utils::io::ostream& out, char const* name) {
+void FrameGraph::export_graphviz(utils::io::ostream& out, char const* name) const noexcept {
     mGraph.export_graphviz(out, name);
 }
 
@@ -572,6 +572,11 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
 
     info.setResources(std::move(resources));
     info.setPasses(std::move(passes));
+
+    // Generate GraphViz DOT data
+    utils::io::sstream out;
+    this->export_graphviz(out, viewName);
+    info.setGraphvizData(utils::CString(out.c_str()));
 
     return info;
 #else

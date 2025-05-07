@@ -78,11 +78,15 @@ public:
     // The incoming passes should be sorted by the execution order.
     void setPasses(std::vector<Pass> sortedPasses);
 
+    void setGraphvizData(utils::CString data);
+
     const char* getViewName() const;
 
     const std::vector<Pass>& getPasses() const;
 
     const std::unordered_map<ResourceId, Resource>& getResources() const;
+
+    const char* getGraphvizData() const;
 
 private:
     utils::CString viewName;
@@ -90,6 +94,7 @@ private:
     // order of the passes.
     std::vector<Pass> passes;
     std::unordered_map<ResourceId, Resource> resources;
+    utils::CString graphvizData;
 };
 } // namespace filament::fgviewer
 

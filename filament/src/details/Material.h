@@ -298,7 +298,7 @@ private:
 
     void processPushConstants(FEngine& engine, MaterialParser const* parser);
 
-    void precacheDepthVariants(FEngine const& engine);
+    void precacheDepthVariants(FEngine& engine);
 
     void processDescriptorSets(FEngine& engine, MaterialParser const* parser);
 

@@ -25,7 +25,7 @@ using namespace filament::backend;
 namespace test {
 
 TEST_F(BackendTest, FrameScheduledCallback) {
-    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL));
+    SKIP_IF(Backend::OPENGL, "Frame callbacks are unsupported in OpenGL");
 
     auto& api = getDriverApi();
     Cleanup cleanup(api);
@@ -84,7 +84,7 @@ TEST_F(BackendTest, FrameScheduledCallback) {
 }
 
 TEST_F(BackendTest, FrameCompletedCallback) {
-    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL));
+    SKIP_IF(Backend::OPENGL, "Frame callbacks are unsupported in OpenGL");
 
     auto& api = getDriverApi();
     Cleanup cleanup(api);
