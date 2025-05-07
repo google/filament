@@ -2435,6 +2435,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
             return mContext.bugs.disable_blit_into_texture_array;
         case Workaround::POWER_VR_SHADER_WORKAROUNDS:
             return mContext.bugs.powervr_shader_workarounds;
+        case Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL:
+            return mContext.bugs.disable_depth_precache_for_default_material;
         default:
             return false;
     }

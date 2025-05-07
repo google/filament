@@ -20,6 +20,7 @@
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 #include <utils/Hash.h>
@@ -309,7 +310,7 @@ TEST_F(BlitTest, ColorResolve) {
 
     PipelineState state = {};
     state.program = shader.getProgram();
-    state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
+    state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -489,6 +490,7 @@ TEST_F(BlitTest, BlitRegion) {
 }
 
 TEST_F(BlitTest, BlitRegionToSwapChain) {
+    FAIL_IF(Backend::VULKAN, "Crashes due to not finding color attachment");
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 

@@ -23,6 +23,8 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <private/filament/DescriptorSets.h>
+
 #include <initializer_list>
 #include <unordered_map>
 #include <string_view>
@@ -127,6 +129,9 @@ public:
     bool isEmpty() const noexcept { return mSamplersInfoList.empty(); }
 
     static utils::CString generateUniformName(const char* group, const char* sampler) noexcept;
+
+    static SamplerInfoList filterSamplerList(SamplerInfoList list,
+            backend::DescriptorSetLayout const& descriptorSetLayout);
 
 private:
     friend class Builder;
