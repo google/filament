@@ -560,7 +560,6 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     mTexView = makeTextureView(0, levels, target);
 }
 
-// From createTextureViewR
 WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
     mTexture = src->mTexture;
     mTexView = makeTextureView(baseLevel, levelCount, target);
@@ -614,6 +613,7 @@ wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(const TextureUsage& fUsage) 
     //  PROTECTED
     return retUsage;
 }
+
 wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(const TextureFormat& fUsage) {
     switch (fUsage) {
         case filament::backend::TextureFormat::R8:
@@ -854,24 +854,153 @@ wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(const TextureFormat& fUsag
     }
 }
 
+wgpu::TextureAspect WGPUTexture::inferWGPUTextureViewAspect(const wgpu::TextureFormat& format,
+        const wgpu::TextureUsage& usage) {
+     switch (format) {
+        case wgpu::TextureFormat::R8Unorm:
+        case wgpu::TextureFormat::R8Snorm:
+        case wgpu::TextureFormat::R8Uint:
+        case wgpu::TextureFormat::R8Sint:
+        case wgpu::TextureFormat::R16Float:
+        case wgpu::TextureFormat::R16Uint:
+        case wgpu::TextureFormat::R16Sint:
+        case wgpu::TextureFormat::RG8Unorm:
+        case wgpu::TextureFormat::RG8Snorm:
+        case wgpu::TextureFormat::RG8Uint:
+        case wgpu::TextureFormat::RG8Sint:
+        case wgpu::TextureFormat::R32Float:
+        case wgpu::TextureFormat::R32Uint:
+        case wgpu::TextureFormat::R32Sint:
+        case wgpu::TextureFormat::RG16Float:
+        case wgpu::TextureFormat::RG16Uint:
+        case wgpu::TextureFormat::RG16Sint:
+        case wgpu::TextureFormat::RGBA8Unorm:
+        case wgpu::TextureFormat::RGBA8UnormSrgb:
+        case wgpu::TextureFormat::RGBA8Snorm:
+        case wgpu::TextureFormat::RGBA8Uint:
+        case wgpu::TextureFormat::RGBA8Sint:
+        case wgpu::TextureFormat::RG32Float:
+        case wgpu::TextureFormat::RG32Uint:
+        case wgpu::TextureFormat::RG32Sint:
+        case wgpu::TextureFormat::RGBA16Float:
+        case wgpu::TextureFormat::RGBA16Uint:
+        case wgpu::TextureFormat::RGBA16Sint:
+        case wgpu::TextureFormat::RGBA32Float:
+        case wgpu::TextureFormat::RGBA32Uint:
+        case wgpu::TextureFormat::RGBA32Sint:
+        case wgpu::TextureFormat::EACR11Unorm:
+        case wgpu::TextureFormat::EACR11Snorm:
+        case wgpu::TextureFormat::EACRG11Unorm:
+        case wgpu::TextureFormat::EACRG11Snorm:
+        case wgpu::TextureFormat::ETC2RGB8Unorm:
+        case wgpu::TextureFormat::ETC2RGB8UnormSrgb:
+        case wgpu::TextureFormat::ETC2RGB8A1Unorm:
+        case wgpu::TextureFormat::ETC2RGB8A1UnormSrgb:
+        case wgpu::TextureFormat::ETC2RGBA8Unorm:
+        case wgpu::TextureFormat::ETC2RGBA8UnormSrgb:
+        case wgpu::TextureFormat::ASTC4x4Unorm:
+        case wgpu::TextureFormat::ASTC4x4UnormSrgb:
+        case wgpu::TextureFormat::ASTC5x4Unorm:
+        case wgpu::TextureFormat::ASTC5x4UnormSrgb:
+        case wgpu::TextureFormat::ASTC5x5Unorm:
+        case wgpu::TextureFormat::ASTC5x5UnormSrgb:
+        case wgpu::TextureFormat::ASTC6x5Unorm:
+        case wgpu::TextureFormat::ASTC6x5UnormSrgb:
+        case wgpu::TextureFormat::ASTC6x6Unorm:
+        case wgpu::TextureFormat::ASTC6x6UnormSrgb:
+        case wgpu::TextureFormat::ASTC8x5Unorm:
+        case wgpu::TextureFormat::ASTC8x5UnormSrgb:
+        case wgpu::TextureFormat::ASTC8x6Unorm:
+        case wgpu::TextureFormat::ASTC8x6UnormSrgb:
+        case wgpu::TextureFormat::ASTC8x8Unorm:
+        case wgpu::TextureFormat::ASTC8x8UnormSrgb:
+        case wgpu::TextureFormat::ASTC10x5Unorm:
+        case wgpu::TextureFormat::ASTC10x5UnormSrgb:
+        case wgpu::TextureFormat::ASTC10x6Unorm:
+        case wgpu::TextureFormat::ASTC10x6UnormSrgb:
+        case wgpu::TextureFormat::ASTC10x8Unorm:
+        case wgpu::TextureFormat::ASTC10x8UnormSrgb:
+        case wgpu::TextureFormat::ASTC10x10Unorm:
+        case wgpu::TextureFormat::ASTC10x10UnormSrgb:
+        case wgpu::TextureFormat::ASTC12x10Unorm:
+        case wgpu::TextureFormat::ASTC12x10UnormSrgb:
+        case wgpu::TextureFormat::ASTC12x12Unorm:
+        case wgpu::TextureFormat::ASTC12x12UnormSrgb:
+        case wgpu::TextureFormat::BC4RUnorm:
+        case wgpu::TextureFormat::BC4RSnorm:
+        case wgpu::TextureFormat::BC5RGUnorm:
+        case wgpu::TextureFormat::BC5RGSnorm:
+        case wgpu::TextureFormat::BC6HRGBUfloat:
+        case wgpu::TextureFormat::BC6HRGBFloat:
+        case wgpu::TextureFormat::BC7RGBAUnorm:
+        case wgpu::TextureFormat::BC7RGBAUnormSrgb:
+        case wgpu::TextureFormat::RGB9E5Ufloat:
+        case wgpu::TextureFormat::RG11B10Ufloat:
+        case wgpu::TextureFormat::BC1RGBAUnorm:
+        case wgpu::TextureFormat::BC1RGBAUnormSrgb:
+        case wgpu::TextureFormat::BC2RGBAUnorm:
+        case wgpu::TextureFormat::BC2RGBAUnormSrgb:
+        case wgpu::TextureFormat::BC3RGBAUnorm:
+        case wgpu::TextureFormat::BC3RGBAUnormSrgb:
+            return wgpu::TextureAspect::All;
+
+        case wgpu::TextureFormat::Depth32Float:
+        case wgpu::TextureFormat::Depth24Plus:
+        case wgpu::TextureFormat::Depth16Unorm:
+            if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::RenderAttachment)) {
+                return wgpu::TextureAspect::DepthOnly;
+            } else if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::TextureBinding)) {
+                return wgpu::TextureAspect::DepthOnly;
+            } else if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::StorageBinding)) {
+                return wgpu::TextureAspect::DepthOnly;
+            } else if (static_cast<uint32_t>(usage) & (static_cast<uint32_t>(wgpu::TextureUsage::CopySrc) | static_cast<uint32_t>(wgpu::TextureUsage::CopyDst))) {
+                return wgpu::TextureAspect::All;
+            }
+            return wgpu::TextureAspect::DepthOnly;
+
+        case wgpu::TextureFormat::Stencil8:
+            if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::RenderAttachment)) {
+                return wgpu::TextureAspect::StencilOnly;
+            } else if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::StorageBinding)) {
+                return wgpu::TextureAspect::StencilOnly;
+            } else if (static_cast<uint32_t>(usage) & (static_cast<uint32_t>(wgpu::TextureUsage::CopySrc) | static_cast<uint32_t>(wgpu::TextureUsage::CopyDst))) {
+                return wgpu::TextureAspect::All;
+            }
+            return wgpu::TextureAspect::StencilOnly;
+
+        case wgpu::TextureFormat::Depth24PlusStencil8:
+        case wgpu::TextureFormat::Depth32FloatStencil8:
+            if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::RenderAttachment)) {
+                return wgpu::TextureAspect::All;
+            } else if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::TextureBinding)) {
+                return wgpu::TextureAspect::DepthOnly;
+            } else if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::StorageBinding)) {
+                return wgpu::TextureAspect::All;
+            } else if (static_cast<uint32_t>(usage) & (static_cast<uint32_t>(wgpu::TextureUsage::CopySrc) | static_cast<uint32_t>(wgpu::TextureUsage::CopyDst))) {
+                return wgpu::TextureAspect::All;
+            }
+            return wgpu::TextureAspect::All;
+
+        default:
+            return wgpu::TextureAspect::All;
+    }
+}
+
 wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
         SamplerType target) {
-    // starting with the defaults/basic configuration
+
     wgpu::TextureViewDescriptor textureViewDescriptor{
         .label = getUserTextureViewLabel(target),
         .format = mFormat,
-        // dimension depends on target and is set below
         .baseMipLevel = baseLevel,
         .mipLevelCount = levelCount,
-        // baseArrayLayer is required, making a guess
+        // TODO: check if this baseArrayLayer assumption is correct
         .baseArrayLayer = 0,
         .arrayLayerCount = mArrayLayerCount,
-        // Have not found an analog to aspect in other drivers, but ALL should be unrestrictive.
-        // TODO Can we make this better?
-        .aspect = wgpu::TextureAspect::All,
+        .aspect = inferWGPUTextureViewAspect(mFormat, mUsage),
         .usage = mUsage
     };
-    // adjust for specific cases
+
     switch (target) {
         case SamplerType::SAMPLER_2D:
             textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2D;
