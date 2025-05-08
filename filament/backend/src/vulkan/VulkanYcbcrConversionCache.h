@@ -30,15 +30,14 @@ namespace filament::backend {
 class VulkanYcbcrConversionCache {
 public:
     struct Params {
-        SamplerYcbcrConversion conversion = {};
-        TextureFormat format = {};
-        uint16_t padding = 0;
-        uint64_t externalFormat = 0;
+        SamplerYcbcrConversion conversion = {}; // 4
+        VkFormat format;                        // 4
+        uint64_t externalFormat = 0;            // 8
     };
     static_assert(sizeof(Params) == 16);
 
     explicit VulkanYcbcrConversionCache(VkDevice device);
-    VkSamplerYcbcrConversion getConversion(Params params) noexcept;
+    VkSamplerYcbcrConversion getConversion(Params params);
     void terminate() noexcept;
 
 private:
@@ -48,7 +47,8 @@ private:
         bool operator()(Params lhs, Params rhs) const noexcept {
             SamplerYcbcrConversion::EqualTo equal;
             return equal(lhs.conversion, rhs.conversion) &&
-                   lhs.externalFormat == rhs.externalFormat;
+                   lhs.externalFormat == rhs.externalFormat &&
+                   lhs.format == rhs.format;
         }
     };
     using ConversionHashFn = utils::hash::MurmurHashFn<Params>;

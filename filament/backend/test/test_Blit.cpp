@@ -20,6 +20,7 @@
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 #include <utils/Hash.h>
@@ -197,16 +198,10 @@ TEST_F(BlitTest, ColorMagnify) {
     }
 
     {
-        ImageExpectations expectations(api);
-
-        {
-            RenderFrame frame(api);
-            EXPECT_IMAGE(dstRenderTargets[0], expectations,
-                    ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMagnify", 0x410bdd31));
-            api.commit(swapChain);
-        }
-
-        flushAndWait();
+        RenderFrame frame(api);
+        EXPECT_IMAGE(dstRenderTargets[0], getExpectations(),
+                ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMagnify", 0x410bdd31));
+        api.commit(swapChain);
     }
 }
 
@@ -260,14 +255,8 @@ TEST_F(BlitTest, ColorMinify) {
             { 0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel },
             SamplerMagFilter::LINEAR);
 
-    {
-        ImageExpectations expectations(api);
-
-        EXPECT_IMAGE(dstRenderTargets[0], expectations,
-                ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMinify", 0xf3d9c53f));
-
-        flushAndWait();
-    }
+    EXPECT_IMAGE(dstRenderTargets[0], getExpectations(),
+            ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMinify", 0xf3d9c53f));
 }
 
 TEST_F(BlitTest, ColorResolve) {
@@ -321,7 +310,7 @@ TEST_F(BlitTest, ColorResolve) {
 
     PipelineState state = {};
     state.program = shader.getProgram();
-    state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
+    state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -351,14 +340,8 @@ TEST_F(BlitTest, ColorResolve) {
             srcRenderTarget, { 0, 0, kSrcTexWidth, kSrcTexHeight },
             SamplerMagFilter::NEAREST);
 
-    {
-        ImageExpectations expectations(api);
-
-        EXPECT_IMAGE(dstRenderTarget, expectations,
-                ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve", 0xebfac2ef));
-
-        flushAndWait();
-    }
+    EXPECT_IMAGE(dstRenderTarget, getExpectations(),
+            ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve", 0xebfac2ef));
 }
 
 TEST_F(BlitTest, Blit2DTextureArray) {
@@ -423,17 +406,11 @@ TEST_F(BlitTest, Blit2DTextureArray) {
     }
 
     {
-        ImageExpectations expectations(api);
-
-        {
-            RenderFrame frame(api);
-            EXPECT_IMAGE(dstRenderTarget, expectations,
-                    ScreenshotParams(kDstTexWidth, kDstTexHeight, "Blit2DTextureArray",
-                            0x8de7d55b));
-            api.commit(swapChain);
-        }
-
-        flushAndWait();
+        RenderFrame frame(api);
+        EXPECT_IMAGE(dstRenderTarget, getExpectations(),
+                ScreenshotParams(kDstTexWidth, kDstTexHeight, "Blit2DTextureArray",
+                        0x8de7d55b));
+        api.commit(swapChain);
     }
 }
 
@@ -503,22 +480,17 @@ TEST_F(BlitTest, BlitRegion) {
     }
 
     {
-        ImageExpectations expectations(api);
-
-        {
-            RenderFrame frame(api);
-            // TODO: for some reason, this test has very, very slight (as in one pixel) differences
-            // between OpenGL and Metal. So disable golden checking for now.
-            // EXPECT_IMAGE(dstRenderTarget, expectations, ScreenshotParams(kDstTexWidth,
-            //         kDstTexHeight, "BlitRegion", 0x74fa34ed));
-            api.commit(swapChain);
-        }
-
-        flushAndWait();
+        RenderFrame frame(api);
+        // TODO: for some reason, this test has very, very slight (as in one pixel) differences
+        // between OpenGL and Metal. So disable golden checking for now.
+        // EXPECT_IMAGE(dstRenderTarget, expectations, ScreenshotParams(kDstTexWidth,
+        //         kDstTexHeight, "BlitRegion", 0x74fa34ed));
+        api.commit(swapChain);
     }
 }
 
 TEST_F(BlitTest, BlitRegionToSwapChain) {
+    FAIL_IF(Backend::VULKAN, "Crashes due to not finding color attachment");
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 
@@ -567,25 +539,19 @@ TEST_F(BlitTest, BlitRegionToSwapChain) {
     };
 
     {
-        ImageExpectations expectations(api);
-        {
-            {
-                RenderFrame frame(api);
+        RenderFrame frame(api);
 
-                api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTarget,
-                        dstRect, srcRenderTargets[srcLevel],
-                        srcRect, SamplerMagFilter::LINEAR);
+        api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTarget,
+                dstRect, srcRenderTargets[srcLevel],
+                srcRect, SamplerMagFilter::LINEAR);
 
-                api.commit(swapChain);
-            }
-
-            // TODO: for some reason, this test has been disabled. It needs to be tested on all
-            // machines.
-            // EXPECT_IMAGE(dstRenderTarget, expectations,
-            //         ScreenshotParams(kDstTexWidth, kDstTexHeight, "BlitRegionToSwapChain", 0x0));
-        }
-        flushAndWait();
+        api.commit(swapChain);
     }
+
+    // TODO: for some reason, this test has been disabled. It needs to be tested on all
+    // machines.
+    // EXPECT_IMAGE(dstRenderTarget, expectations,
+    //         ScreenshotParams(kDstTexWidth, kDstTexHeight, "BlitRegionToSwapChain", 0x0));
 }
 
 } // namespace test

@@ -18,6 +18,7 @@
 
 #include "Lifetimes.h"
 #include "Shader.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 #include <backend/DriverEnums.h>
@@ -56,9 +57,9 @@ layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(binding = 0, set = 1) uniform sampler2D test_tex;
+layout(binding = 0, set = 0) uniform sampler2D test_tex;
 
-layout(binding = 1, set = 1) uniform Params {
+layout(binding = 1, set = 0) uniform Params {
     highp float fbWidth;
     highp float fbHeight;
     highp float sourceLevel;
@@ -70,8 +71,6 @@ void main() {
     vec2 uv = (gl_FragCoord.xy + 0.5) / fbsize;
     fragColor = textureLod(test_tex, uv, params.sourceLevel);
 })";
-
-static uint32_t sPixelHashResult = 0;
 
 // Selecting a NPOT texture size seems to exacerbate the bug seen with Intel GPU's.
 // Note that Filament uses a higher precision format (R11F_G11F_B10F) but this does not seem
@@ -96,29 +95,13 @@ struct MaterialParams {
     float unused;
 };
 
-static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
-    const size_t size = kTexWidth * kTexHeight * 4;
-    void* buffer = calloc(1, size);
-    auto cb = [](void* buffer, size_t size, void* user) {
-        int w = kTexWidth, h = kTexHeight;
-        const uint32_t* texels = (uint32_t*) buffer;
-        sPixelHashResult = utils::hash::murmur3(texels, size / 4, 0);
-#ifndef FILAMENT_IOS
-        LinearImage image(w, h, 4);
-        image = toLinearWithAlpha<uint8_t>(w, h, w * 4, (uint8_t*) buffer);
-        std::ofstream pngstrm("feedback.png", std::ios::binary | std::ios::trunc);
-        ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", "feedback.png");
-#endif
-        free(buffer);
-    };
-    PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
-    dapi.readPixels(rt, 0, 0, kTexWidth, kTexHeight, std::move(pb));
-}
-
 // TODO: This test needs work to get Metal and OpenGL to agree on results.
 // The problems are caused by both uploading and rendering into the same texture, since the OpenGL
 // backend's readPixels does not work correctly with textures that have image data uploaded.
 TEST_F(BackendTest, FeedbackLoops) {
+    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL),
+            "OpenGL image is upside down due to readPixels failing for texture with uploaded image "
+            "data");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -184,7 +167,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.depthWrite = false;
             state.rasterState.depthFunc = RasterState::DepthFunc::A;
             state.program = shader.getProgram();
-            state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
+            state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
 
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0, 0);
@@ -259,7 +242,8 @@ TEST_F(BackendTest, FeedbackLoops) {
             // NOTE: Calling glReadPixels on any miplevel other than the base level
             // seems to be un-reliable on some GPU's.
             if (frame == kNumFrames - 1) {
-                dumpScreenshot(api, renderTargets[0]);
+                EXPECT_IMAGE(renderTargets[0], getExpectations(),
+                        ScreenshotParams(kTexWidth, kTexHeight, "FeedbackLoops", 4192780705));
             }
 
             api.flush();
@@ -270,10 +254,6 @@ TEST_F(BackendTest, FeedbackLoops) {
             getDriver().purge();
         }
     }
-
-    const uint32_t expected = 0x70695aa1;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sPixelHashResult, expected);
-    EXPECT_TRUE(sPixelHashResult == expected);
 }
 
 } // namespace test

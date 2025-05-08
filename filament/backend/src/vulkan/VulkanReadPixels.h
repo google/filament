@@ -79,7 +79,7 @@ public:
             OnReadCompleteFunction const& readCompleteFunc);
 
     // This method will block until all of the in-flight requests are complete.
-    void runUntilComplete() noexcept;
+    void runUntilComplete();
 
 private:
     VkDevice mDevice = VK_NULL_HANDLE;

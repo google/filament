@@ -33,7 +33,7 @@ VulkanYcbcrConversionCache::VulkanYcbcrConversionCache(VkDevice device)
     : mDevice(device) {}
 
 VkSamplerYcbcrConversion VulkanYcbcrConversionCache::getConversion(
-        VulkanYcbcrConversionCache::Params params) noexcept {
+        VulkanYcbcrConversionCache::Params params) {
     auto iter = mCache.find(params);
     if (UTILS_LIKELY(iter != mCache.end())) {
         return iter->second;
@@ -43,7 +43,7 @@ VkSamplerYcbcrConversion VulkanYcbcrConversionCache::getConversion(
     TextureSwizzle const swizzleArray[] = { chroma.r, chroma.g, chroma.b, chroma.a };
     VkSamplerYcbcrConversionCreateInfo conversionInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
-        .format = fvkutils::getVkFormat(params.format),
+        .format = params.format,
         .ycbcrModel = fvkutils::getYcbcrModelConversion(chroma.ycbcrModel),
         .ycbcrRange = fvkutils::getYcbcrRange(chroma.ycbcrRange),
         .components = fvkutils::getSwizzleMap(swizzleArray),

@@ -16,9 +16,11 @@
 
 #include "BackendTest.h"
 
+#include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 using namespace filament;
@@ -129,7 +131,8 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
 
     RunTest(renderTarget);
 
-    readPixelsAndAssertHash("StencilBuffer", 512, 512, renderTarget, 0x3B1AEF0F, true);
+    EXPECT_IMAGE(renderTarget, getExpectations(),
+            ScreenshotParams(512, 512, "StencilBuffer", 0x3B1AEF0F));
 
     flushAndWait();
     getDriver().purge();
@@ -151,13 +154,15 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
 
     RunTest(renderTarget);
 
-    readPixelsAndAssertHash("DepthAndStencilBuffer", 512, 512, renderTarget, 0x3B1AEF0F, true);
+    EXPECT_IMAGE(renderTarget, getExpectations(),
+            ScreenshotParams(512, 512, "DepthAndStencilBuffer", 0x3B1AEF0F));
 
     flushAndWait();
     getDriver().purge();
 }
 
 TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
+    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL), "Stencil isn't applied");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -233,7 +238,8 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     api.stopCapture(0);
     api.endFrame(0);
 
-    readPixelsAndAssertHash("StencilBufferAutoResolve", 512, 512, renderTarget1, 0x6CEFAC8F, true);
+    EXPECT_IMAGE(renderTarget1, getExpectations(),
+            ScreenshotParams(512, 512, "StencilBufferAutoResolve", 3353562179));
 
     flushAndWait();
     getDriver().purge();

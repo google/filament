@@ -1,0 +1,23 @@
+name: 'Mac Preqrequisites'
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/actions/dep-versions
+    - name: Set up Homebrew
+      id: set-up-homebrew
+      uses: Homebrew/actions/setup-homebrew@master
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Cache Brew
+      id: brew-cache
+      uses: actions/cache@v4 # Use a specific version
+      with:
+        path: $HOME/Library/Caches/Homebrew
+        key: ${{ runner.os }}-brew-20250424
+    - name: Install Mac Prerequisites
+      shell: bash
+      run: |
+        # Install ninja
+        source ./build/common/get-ninja.sh

@@ -50,7 +50,7 @@ struct Variant {
     // DEP: Depth only
     // FOG: Fog
     // PCK: Picking (depth variant only)
-    // VSM: Variance shadow maps
+    // VSM: Variance shadow maps (depth) / sampler type (standard)
     // STE: Instanced stereo rendering
     //
     //   X: either 1 or 0
@@ -75,7 +75,8 @@ struct Variant {
     //                      | STE | VSM | PCK |  1  | SKN |  0  |  0  |  0  |   16 - 4 = 12
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
     //       Vertex depth      X     X     0     1     X     0     0     0
-    //     Fragment depth      0     X     X     1     0     0     0     0
+    //     Fragment depth      0     0     X     1     0     0     0     0
+    //     Fragment depth      0     1     0     1     0     0     0     0
     //           Reserved      X     1     1     1     X     0     0     0     [  -4]
     //
     // 96 variants used, 160 reserved (256 - 96)
@@ -95,7 +96,7 @@ struct Variant {
     static constexpr type_t DEP   = 0x10; // depth only variants
     static constexpr type_t FOG   = 0x20; // fog (standard)
     static constexpr type_t PCK   = 0x20; // picking (depth)
-    static constexpr type_t VSM   = 0x40; // variance shadow maps
+    static constexpr type_t VSM   = 0x40; // variance shadow maps / sampler type
     static constexpr type_t STE   = 0x80; // instanced stereo
 
     // special variants (variants that use the reserved space)
@@ -113,21 +114,21 @@ struct Variant {
     static constexpr type_t UNLIT_MASK         = STE | SKN | FOG;
 
     // returns raw variant bits
-    inline bool hasDirectionalLighting() const noexcept { return key & DIR; }
-    inline bool hasDynamicLighting() const noexcept     { return key & DYN; }
-    inline bool hasSkinningOrMorphing() const noexcept  { return key & SKN; }
-    inline bool hasStereo() const noexcept              { return key & STE; }
+    bool hasDirectionalLighting() const noexcept { return key & DIR; }
+    bool hasDynamicLighting() const noexcept     { return key & DYN; }
+    bool hasSkinningOrMorphing() const noexcept  { return key & SKN; }
+    bool hasStereo() const noexcept              { return key & STE; }
 
-    inline void setDirectionalLighting(bool v) noexcept { set(v, DIR); }
-    inline void setDynamicLighting(bool v) noexcept     { set(v, DYN); }
-    inline void setShadowReceiver(bool v) noexcept      { set(v, SRE); }
-    inline void setSkinning(bool v) noexcept            { set(v, SKN); }
-    inline void setFog(bool v) noexcept                 { set(v, FOG); }
-    inline void setPicking(bool v) noexcept             { set(v, PCK); }
-    inline void setVsm(bool v) noexcept                 { set(v, VSM); }
-    inline void setStereo(bool v) noexcept              { set(v, STE); }
+    void setDirectionalLighting(bool v) noexcept { set(v, DIR); }
+    void setDynamicLighting(bool v) noexcept     { set(v, DYN); }
+    void setShadowReceiver(bool v) noexcept      { set(v, SRE); }
+    void setSkinning(bool v) noexcept            { set(v, SKN); }
+    void setFog(bool v) noexcept                 { set(v, FOG); }
+    void setPicking(bool v) noexcept             { set(v, PCK); }
+    void setVsm(bool v) noexcept                 { set(v, VSM); }
+    void setStereo(bool v) noexcept              { set(v, STE); }
 
-    inline static constexpr bool isValidDepthVariant(Variant variant) noexcept {
+    static constexpr bool isValidDepthVariant(Variant variant) noexcept {
         // Can't have VSM and PICKING together with DEPTH variants
         constexpr type_t RESERVED_MASK  = VSM | PCK | DEP | SRE | DYN | DIR;
         constexpr type_t RESERVED_VALUE = VSM | PCK | DEP;
@@ -135,7 +136,7 @@ struct Variant {
                ((variant.key & RESERVED_MASK) != RESERVED_VALUE);
    }
 
-    inline static constexpr bool isValidStandardVariant(Variant variant) noexcept {
+    static constexpr bool isValidStandardVariant(Variant variant) noexcept {
         // can't have shadow receiver if we don't have any lighting
         constexpr type_t RESERVED0_MASK  = VSM | FOG | SRE | DYN | DIR;
         constexpr type_t RESERVED0_VALUE = VSM | FOG | SRE;
@@ -154,11 +155,11 @@ struct Variant {
                ((variant.key & RESERVED2_MASK) != RESERVED2_VALUE);
     }
 
-    inline static constexpr bool isVertexVariant(Variant variant) noexcept {
+    static constexpr bool isVertexVariant(Variant variant) noexcept {
         return filterVariantVertex(variant) == variant;
     }
 
-    inline static constexpr bool isFragmentVariant(Variant variant) noexcept {
+    static constexpr bool isFragmentVariant(Variant variant) noexcept {
         return filterVariantFragment(variant) == variant;
     }
 
@@ -170,32 +171,32 @@ struct Variant {
         return isValidStandardVariant(variant) || isValidDepthVariant(variant);
     }
 
-    inline static constexpr bool isSSRVariant(Variant variant) noexcept {
+    static constexpr bool isSSRVariant(Variant variant) noexcept {
         return (variant.key & (STE | VSM | DEP | SRE | DYN | DIR)) == (VSM | SRE);
     }
 
-    inline static constexpr bool isVSMVariant(Variant variant) noexcept {
+    static constexpr bool isVSMVariant(Variant variant) noexcept {
         return !isSSRVariant(variant) && ((variant.key & VSM) == VSM);
     }
 
-    inline static constexpr bool isShadowReceiverVariant(Variant variant) noexcept {
+    static constexpr bool isShadowReceiverVariant(Variant variant) noexcept {
         return !isSSRVariant(variant) && ((variant.key & SRE) == SRE);
     }
 
-    inline static constexpr bool isFogVariant(Variant variant) noexcept {
+    static constexpr bool isFogVariant(Variant variant) noexcept {
         return (variant.key & (FOG | DEP)) == FOG;
     }
 
-    inline static constexpr bool isPickingVariant(Variant variant) noexcept {
+    static constexpr bool isPickingVariant(Variant variant) noexcept {
         return (variant.key & (PCK | DEP)) == (PCK | DEP);
     }
 
-    inline static constexpr bool isStereoVariant(Variant variant) noexcept {
+    static constexpr bool isStereoVariant(Variant variant) noexcept {
         return (variant.key & STE) == STE;
     }
 
     static constexpr Variant filterVariantVertex(Variant variant) noexcept {
-        // filter out vertex variants that are not needed. For e.g. fog doesn't affect the
+        // Filter out vertex variants that are not needed. For e.g. fog doesn't affect the
         // vertex shader.
         if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
             if (isSSRVariant(variant)) {

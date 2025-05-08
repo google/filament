@@ -73,7 +73,8 @@ void printSurfaceCapabilitiesDetails(wgpu::SurfaceCapabilities const& capabiliti
 #endif
 
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config) {
+void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
+        wgpu::TextureFormat depthFormat) {
     std::stringstream formatStream{};
     formatStream << config.format;
     std::stringstream usageStream{};
@@ -82,6 +83,8 @@ void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config) {
     alphaModeStream << config.alphaMode;
     std::stringstream presentModeStream{};
     presentModeStream << config.presentMode;
+    std::stringstream depthFormatStream;
+    depthFormatStream << depthFormat;
     FWGPU_LOGI << "WebGPU surface configuration:" << utils::io::endl;
     FWGPU_LOGI << "  surface format: " << formatStream.str() << utils::io::endl;
     FWGPU_LOGI << "  surface usage: " << usageStream.str() << utils::io::endl;
@@ -98,10 +101,11 @@ void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config) {
     FWGPU_LOGI << "  surface width: " << config.width << utils::io::endl;
     FWGPU_LOGI << "  surface height: " << config.height << utils::io::endl;
     FWGPU_LOGI << "  surface present mode: " << presentModeStream.str() << utils::io::endl;
+    FWGPU_LOGI << "WebGPU selected depth format: " << depthFormatStream.str() << utils::io::endl;
 }
 #endif
 
-wgpu::TextureFormat selectColorFormat(size_t availableFormatsCount,
+constexpr wgpu::TextureFormat selectColorFormat(size_t availableFormatsCount,
         wgpu::TextureFormat const* availableFormats, bool useSRGBColorSpace) {
     const std::array expectedColorFormats =
             useSRGBColorSpace ?
@@ -119,7 +123,21 @@ wgpu::TextureFormat selectColorFormat(size_t availableFormatsCount,
     return *firstFoundColorFormat;
 }
 
-wgpu::PresentMode selectPresentMode(size_t availablePresentModesCount,
+constexpr wgpu::TextureFormat selectDepthFormat(bool depth32FloatStencil8Enabled,
+        bool needStencil) {
+    if (needStencil) {
+        if (depth32FloatStencil8Enabled) {
+            return wgpu::TextureFormat::Depth32FloatStencil8;
+        } else {
+            return wgpu::TextureFormat::Depth24PlusStencil8;
+        }
+    } else {
+        // other options: Depth16Unorm or Depth24Plus
+        return wgpu::TextureFormat::Depth32Float;
+    }
+}
+
+constexpr wgpu::PresentMode selectPresentMode(size_t availablePresentModesCount,
         wgpu::PresentMode const* availablePresentModes) {
     // Verify that our chosen present mode is supported. In practice all devices support the FIFO
     // mode, but we check for it anyway for completeness.  (and to avoid validation warnings)
@@ -133,7 +151,7 @@ wgpu::PresentMode selectPresentMode(size_t availablePresentModesCount,
     return desiredPresentMode;
 }
 
-wgpu::CompositeAlphaMode selectAlphaMode(size_t availableAlphaModesCount,
+constexpr wgpu::CompositeAlphaMode selectAlphaMode(size_t availableAlphaModesCount,
         wgpu::CompositeAlphaMode const* availableAlphaModes) {
     bool autoAvailable = false;
     bool inheritAvailable = false;
@@ -209,7 +227,7 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
 namespace filament::backend {
 
 WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& surfaceSize,
-        wgpu::Adapter& adapter, wgpu::Device& device, uint64_t flags)
+        wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags)
     : mSurface(surface) {
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
@@ -220,7 +238,13 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
 #endif
     }
     const bool useSRGBColorSpace = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0;
+    const bool needStencil = (flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0;
     initConfig(mConfig, device, capabilities, surfaceSize, useSRGBColorSpace);
+    mDepthFormat = selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
+            needStencil);
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+    printSurfaceConfiguration(mConfig, mDepthFormat);
+#endif
     mSurface.Configure(&mConfig);
 }
 
@@ -235,12 +259,12 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     if (mConfig.width != currentSurfaceSize.width || mConfig.height != currentSurfaceSize.height) {
         mConfig.width = currentSurfaceSize.width;
         mConfig.height = currentSurfaceSize.height;
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-        printSurfaceConfiguration(mConfig);
-#endif
         FWGPU_LOGD << "Resizing to width " << mConfig.width << " height " << mConfig.height
                    << utils::io::endl;
-        // TODO we may need to ensure no surface texture is flight when we do this. some
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+        printSurfaceConfiguration(mConfig, mDepthFormat);
+#endif
+        // TODO we may need to ensure no surface texture is in flight when we do this. some
         //      synchronization may be necessary
         mSurface.Configure(&mConfig);
     }
@@ -257,7 +281,7 @@ wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView(
     // Create a view for this surface texture
     // TODO: review these initiliazations as webgpu pipeline gets mature
     wgpu::TextureViewDescriptor textureViewDescriptor = {
-        .label = "texture_view",
+        .label = "surface_texture_view",
         .format = surfaceTexture.texture.GetFormat(),
         .dimension = wgpu::TextureViewDimension::e2D,
         .baseMipLevel = 0,

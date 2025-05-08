@@ -56,10 +56,16 @@ popd >/dev/null
 rm -rf out/check-headers
 mkdir -p out/check-headers
 
+TMP_FILE=out/check-headers/temp.cpp
 echo "Checking that public headers compile independently..."
 for include in "${includes[@]}"; do
+    rm -f ${TMP_FILE}
     echo "Checking ${include}"
-    echo "#include <${include}>" >> out/check-headers/temp.cpp
-    clang -std=c++17 -I "${FILAMENT_HEADERS}" out/check-headers/temp.cpp -c -o /dev/null
+    if [[ "${include}" == "utils/Systrace.h" ]]; then
+        # A necessary define before we can include utils/Systrace.h
+        echo "#define SYSTRACE_TAG SYSTRACE_TAG_DISABLED" >> ${TMP_FILE}
+    fi
+    echo "#include <${include}>" >> ${TMP_FILE}
+    clang -std=c++17 -I "${FILAMENT_HEADERS}" ${TMP_FILE} -c -o /dev/null
 done
 echo "Done!"

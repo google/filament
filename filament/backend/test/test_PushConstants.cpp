@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "Skip.h"
@@ -79,7 +80,8 @@ void main() {
 })";
 
 TEST_F(BackendTest, PushConstants) {
-    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL));
+    SKIP_IF(Backend::OPENGL, "Push constants not supported on OpenGL");
+    FAIL_IF(Backend::VULKAN, "Crashing due to no program set when setting push constants");
 
     auto& api = getDriverApi();
 
@@ -151,19 +153,14 @@ TEST_F(BackendTest, PushConstants) {
 
         api.endRenderPass();
 
-        readPixelsAndAssertHash("pushConstants", 512, 512, renderTarget, 1957275826, true);
+        EXPECT_IMAGE(renderTarget, getExpectations(),
+                ScreenshotParams(512, 512, "pushConstants", 1957275826));
 
         api.commit(swapChain);
         api.endFrame(0);
     }
 
     api.stopCapture(0);
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-
-    executeCommands();
-    getDriver().purge();
 }
 
 } // namespace test

@@ -38,7 +38,7 @@ public:
     static_assert(sizeof(Params) == 16);
 
     explicit VulkanSamplerCache(VkDevice device);
-    VkSampler getSampler(Params params) noexcept;
+    VkSampler getSampler(Params params);
     void terminate() noexcept;
 private:
     VkDevice mDevice;

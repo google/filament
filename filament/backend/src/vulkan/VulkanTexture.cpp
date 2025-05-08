@@ -223,8 +223,7 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
 VulkanTextureState::VulkanTextureState(VulkanStagePool& stagePool, VulkanCommands* commands,
         VmaAllocator allocator, VkDevice device, VkImage image, VkDeviceMemory deviceMemory,
         VkFormat format, VkImageViewType viewType, uint8_t levels, uint8_t layerCount,
-        VkSamplerYcbcrConversion ycbcrConversion, bool isExternalFormat, VkImageUsageFlags usage,
-        bool isProtected)
+        VkSamplerYcbcrConversion ycbcrConversion, VkImageUsageFlags usage, bool isProtected)
     : mStagePool(stagePool),
       mCommands(commands),
       mAllocator(allocator),
@@ -234,17 +233,17 @@ VulkanTextureState::VulkanTextureState(VulkanStagePool& stagePool, VulkanCommand
       mVkFormat(format),
       mViewType(viewType),
       mFullViewRange{ fvkutils::getImageAspect(format), 0, levels, 0, layerCount },
-      mYcbcr{ ycbcrConversion, isExternalFormat },
+      mYcbcr{ ycbcrConversion },
       mDefaultLayout(getDefaultLayoutImpl(usage)),
       mUsage(usage),
       mIsProtected(isProtected) {}
 
 VulkanTextureState::~VulkanTextureState() {
+    clearCachedImageViews();
     if (mTextureImageMemory != VK_NULL_HANDLE) {
         vkDestroyImage(mDevice, mTextureImage, VKALLOC);
         vkFreeMemory(mDevice, mTextureImageMemory, VKALLOC);
     }
-    clearCachedImageViews();
 }
 
 void VulkanTextureState::clearCachedImageViews() noexcept {
@@ -272,7 +271,7 @@ VkImageView VulkanTextureState::getImageView(VkImageSubresourceRange range, VkIm
         .flags = 0,
         .image = mTextureImage,
         .viewType = viewType,
-        .format = mYcbcr.isExternalFormat ? VK_FORMAT_UNDEFINED : mVkFormat,
+        .format = mYcbcr.conversion != VK_NULL_HANDLE ? VK_FORMAT_UNDEFINED : mVkFormat,
         .components = swizzle,
         .subresourceRange = range,
     };
@@ -294,7 +293,6 @@ VulkanTexture::VulkanTexture(VulkanContext const& context, VkDevice device, VmaA
               commands, allocator, device, image, memory, format,
               fvkutils::getViewType(SamplerType::SAMPLER_2D),
               /*mipLevels=*/1, getLayerCountFromDepth(depth), conversion,
-              /*isExternalFormat=*/false,
               getUsage(context, samples, VK_NULL_HANDLE, format, tusage),
               any(usage & TextureUsage::PROTECTED))) {
     mPrimaryViewRange = mState->mFullViewRange;
@@ -424,8 +422,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     mState = fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, stagePool,
             commands, allocator, device, textureImage, textureImageMemory, vkFormat,
             fvkutils::getViewType(target), levels, getLayerCount(target, depth),
-            VK_NULL_HANDLE /* ycbcrConversion */, false /*isExternalFormat*/, imageInfo.usage,
-            isProtected);
+            VK_NULL_HANDLE /* ycbcrConversion */, imageInfo.usage, isProtected);
 
     // Spec out the "primary" VkImageView that shaders use to sample from the image.
     mPrimaryViewRange = mState->mFullViewRange;
@@ -764,15 +761,13 @@ void VulkanTexture::setLayout(VkImageSubresourceRange const& range, VulkanLayout
     }
 }
 
-void VulkanTexture::setYcbcrConversion(VkSamplerYcbcrConversion conversion, bool isExternalFormat) {
+void VulkanTexture::setYcbcrConversion(VkSamplerYcbcrConversion conversion) {
     // Note that this comparison is valid because we only ever create VkSamplerYcbcrConversion from
     // a cache.  So for each set of parameters, there is exactly one conversion (similar to
     // samplers).
     VulkanTextureState::Ycbcr ycbcr = {
         .conversion = conversion,
-        .isExternalFormat = isExternalFormat,
     };
-
     if (mState->mYcbcr != ycbcr) {
         mState->mYcbcr = ycbcr;
         mState->clearCachedImageViews();
