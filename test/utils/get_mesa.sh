@@ -14,9 +14,9 @@
 
 #!/usr/bin/bash
 
-set -x
+set -e
 if [[ "$GITHUB_WORKFLOW" ]]; then
-    set -e
+    set -x
 fi
 
 OS_NAME=$(uname -s)
@@ -35,7 +35,7 @@ source ${ORIG_DIR}/venv/bin/activate
 
 NEEDED_PYTHON_DEPS=("mako" "setuptools" "pyyaml")
 for cmd in "${NEEDED_PYTHON_DEPS[@]}"; do
-    if ! python3 -m pip show "${cmd}" >/dev/null 2>&1; then
+    if ! python3 -m pip show -q "${cmd}" >/dev/null 2>&1; then
         python3 -m pip install ${cmd}
     fi
 done
@@ -145,6 +145,6 @@ deactivate
 popd
 
 if [[ "$GITHUB_WORKFLOW" ]]; then
-    set +e
+    set +x
 fi
-set +x
+set +e
