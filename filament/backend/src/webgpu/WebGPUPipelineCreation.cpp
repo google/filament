@@ -235,6 +235,7 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         fragmentState.constantCount = program.constants.size(),
         fragmentState.constants = program.constants.data(),
         fragmentState.targetCount = 1; // TODO need to get this from the render target
+        fragmentState.targets = colorTargets.data();
         assert_invariant(fragmentState.targetCount <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
         for (size_t targetIndex = 0; targetIndex < fragmentState.targetCount; targetIndex++) {
             auto& colorTarget = colorTargets[targetIndex];
