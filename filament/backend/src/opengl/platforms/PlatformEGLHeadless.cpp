@@ -22,8 +22,9 @@
 #include <EGL/eglext.h>
 
 #include <utils/compiler.h>
-#include <utils/Log.h>
 #include <utils/Panic.h>
+
+#include <absl/log/log.h>
 
 using namespace utils;
 
@@ -42,12 +43,12 @@ backend::Driver* PlatformEGLHeadless::createDriver(void* sharedContext,
         const Platform::DriverConfig& driverConfig) noexcept {
     EGLBoolean bindAPI = eglBindAPI(EGL_OPENGL_API);
     if (UTILS_UNLIKELY(!bindAPI)) {
-        slog.e << "eglBindAPI EGL_OPENGL_API failed" << io::endl;
+        LOG(ERROR) << "eglBindAPI EGL_OPENGL_API failed";
         return nullptr;
     }
     int bindBlueGL = bluegl::bind();
     if (UTILS_UNLIKELY(bindBlueGL != 0)) {
-        slog.e << "bluegl bind failed" << io::endl;
+        LOG(ERROR) << "bluegl bind failed";
         return nullptr;
     }
 

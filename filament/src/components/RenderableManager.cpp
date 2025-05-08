@@ -43,10 +43,13 @@
 #include <utils/debug.h>
 #include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Slice.h>
+
+#include <utils/Log.h>
+
+#include <absl/log/log.h>
 
 #include <math/mat4.h>
 #include <math/scalar.h>
@@ -396,10 +399,11 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
                 }
 #ifndef NDEBUG
                 else {
-                    slog.w << "Warning of skinning: [entity=%" << entity.getId()
-                        << ", primitive @ %" << primitiveIndex
-                        << "] sum of bone weights of vertex=" << iVertex << " is " << boneWeightsSum
-                        << ", it should be one. Weights will be normalized." << io::endl;
+                    LOG(WARNING) << "Warning of skinning: [entity=%" << entity.getId()
+                                 << ", primitive @ %" << primitiveIndex
+                                 << "] sum of bone weights of vertex=" << iVertex << " is "
+                                 << boneWeightsSum
+                                 << ", it should be one. Weights will be normalized.";
                 }
 #endif
 
@@ -498,9 +502,9 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
         AttributeBitset const declared = downcast(entry.vertices)->getDeclaredAttributes();
         AttributeBitset const required = material->getRequiredAttributes();
         if ((declared & required) != required) {
-            slog.w << "[entity=" << entity.getId() << ", primitive @ " << i
-                   << "] missing required attributes ("
-                   << required << "), declared=" << declared << io::endl;
+            LOG(WARNING) << "[entity=" << entity.getId() << ", primitive @ " << i
+                         << "] missing required attributes (" << required
+                         << "), declared=" << declared;
         }
 
         // we have at least one valid primitive
@@ -727,8 +731,8 @@ void FRenderableManager::terminate() noexcept {
     auto& manager = mManager;
     if (!manager.empty()) {
 #ifndef NDEBUG
-        slog.d << "cleaning up " << manager.getComponentCount()
-               << " leaked Renderable components" << io::endl;
+        DLOG(INFO) << "cleaning up " << manager.getComponentCount()
+                   << " leaked Renderable components";
 #endif
         while (!manager.empty()) {
             Instance const ci = manager.end() - 1;
@@ -811,9 +815,9 @@ void FRenderableManager::setMaterialInstanceAt(Instance const instance, uint8_t 
             // emitting many invalid warnings as the `declared` bitset is not populated yet.
             bool const isPrimitiveInitialized = !!primitives[primitiveIndex].getHwHandle();
             if (UTILS_UNLIKELY(isPrimitiveInitialized && (declared & required) != required)) {
-                slog.w << "[instance=" << instance.asValue() << ", primitive @ " << primitiveIndex
-                       << "] missing required attributes ("
-                       << required << "), declared=" << declared << io::endl;
+                LOG(WARNING) << "[instance=" << instance.asValue() << ", primitive @ "
+                             << primitiveIndex << "] missing required attributes (" << required
+                             << "), declared=" << declared;
             }
         }
     }

@@ -215,7 +215,7 @@ VkSemaphore VulkanCommandBuffer::submit() {
     }
     FVK_LOGI << ") "
              << " signal=" << mSubmission
-             << " fence=" << mFence << utils::io::endl;
+             << " fence=" << mFence;
 #endif
 
     mFenceStatus->setStatus(VK_NOT_READY);
@@ -224,7 +224,7 @@ VkSemaphore VulkanCommandBuffer::submit() {
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     if (result != VK_SUCCESS) {
-        FVK_LOGD << "Failed command buffer submission result: " << result << utils::io::endl;
+        FVK_LOGD << "Failed command buffer submission result: " << result;
     }
 #endif
     assert_invariant(result == VK_SUCCESS);
@@ -490,7 +490,7 @@ void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timest
         mProtectedPool->pushMarker(str, timestamp);
     }
 #if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
-    FVK_LOGD << "----> " << str << utils::io::endl;
+    FVK_LOGD << "----> " << str;
 #endif
 }
 
@@ -502,8 +502,7 @@ void VulkanCommands::popGroupMarker() {
     auto const& startTime = ret.second;
     auto const endTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = endTime - startTime;
-    FVK_LOGD << "<---- " << marker << " elapsed: " << (diff.count() * 1000) << " ms"
-             << utils::io::endl;
+    FVK_LOGD << "<---- " << marker << " elapsed: " << (diff.count() * 1000) << " ms";
 #else
     mPool->popMarker();
 #endif // FVK_DEBUG_PRINT_GROUP_MARKERS

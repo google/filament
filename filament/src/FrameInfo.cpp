@@ -23,9 +23,10 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
 #include <utils/Systrace.h>
+
+#include <absl/log/log.h>
 
 #include <algorithm>
 #include <atomic>
@@ -111,13 +112,11 @@ void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config, uint3
         using namespace utils;
         auto h = getFrameInfoHistory(1);
         if (!h.empty()) {
-            slog.d << frameId << ": "
-                   << h[0].frameId << " (" << frameId - h[0].frameId << ")"
-                   << ", Dm=" << h[0].endFrame - h[0].beginFrame
-                   << ", L =" << h[0].backendBeginFrame - h[0].beginFrame
-                   << ", Db=" << h[0].backendEndFrame - h[0].backendBeginFrame
-                   << ", T =" << h[0].frameTime
-                   << io::endl;
+            DLOG(INFO) << frameId << ": " << h[0].frameId << " (" << frameId - h[0].frameId << ")"
+                       << ", Dm=" << h[0].endFrame - h[0].beginFrame
+                       << ", L =" << h[0].backendBeginFrame - h[0].beginFrame
+                       << ", Db=" << h[0].backendEndFrame - h[0].backendBeginFrame
+                       << ", T =" << h[0].frameTime;
         }
     }
 }

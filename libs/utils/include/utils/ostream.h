@@ -21,9 +21,19 @@
 #include <utils/compiler.h>
 #include <utils/PrivateImplementation.h>
 
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <utility>
+
+namespace utils {
+
+// handles utils::bitset
+inline std::ostream& operator<<(std::ostream& o, bitset32 const& s) noexcept {
+    return o << (void*) uintptr_t(s.getValue());
+}
+
+}
 
 namespace utils::io {
 
@@ -121,11 +131,6 @@ private:
 
     const char* getFormat(type t) const noexcept;
 };
-
-// handles utils::bitset
-inline ostream& operator << (ostream& o, bitset32 const& s) noexcept {
-    return o << (void*)uintptr_t(s.getValue());
-}
 
 // handles vectors from libmath (but we do this generically, without needing a dependency on libmath)
 template<template<typename T> class VECTOR, typename T>

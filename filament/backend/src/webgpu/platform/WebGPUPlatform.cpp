@@ -44,7 +44,7 @@ namespace {
     wgpu::DawnTogglesDescriptor dawnTogglesDescriptor{};
 #if defined(FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING)
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    FWGPU_LOGI << "setting on toggle enable_immediate_error_handling" << utils::io::endl;
+    FWGPU_LOGI << "setting on toggle enable_immediate_error_handling";
 #endif
     /**
      * Have the un-captured error callback invoked immediately when an error occurs, rather than
@@ -142,8 +142,7 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
             [](wgpu::Device const&, wgpu::DeviceLostReason const& reason,
                     wgpu::StringView message) {
                 if (reason == wgpu::DeviceLostReason::Destroyed) {
-                    FWGPU_LOGD << "WebGPU device lost due to being destroyed (expected)"
-                               << utils::io::endl;
+                    FWGPU_LOGD << "WebGPU device lost due to being destroyed (expected)";
                     return;
                 }
                 // TODO try recreating the device instead of just panicking
@@ -156,8 +155,7 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
             [](wgpu::Device const&, wgpu::ErrorType errorType, wgpu::StringView message) {
                 std::stringstream typeStream{};
                 typeStream << errorType;
-                FWGPU_LOGE << "WebGPU device error: " << typeStream.str() << " " << message.data
-                           << utils::io::endl;
+                FWGPU_LOGE << "WebGPU device error: " << typeStream.str() << " " << message.data;
             });
     wgpu::Device device = nullptr;
     wgpu::WaitStatus status = mInstance.WaitAny(
@@ -183,8 +181,7 @@ Driver* WebGPUPlatform::createDriver(void* sharedContext,
         const Platform::DriverConfig& driverConfig) noexcept {
     if (sharedContext) {
         FWGPU_LOGW << "sharedContext is ignored/unused in the WebGPU backend. A non-null "
-                      "sharedContext was provided, but it will be ignored."
-                   << utils::io::endl;
+                      "sharedContext was provided, but it will be ignored.";
     }
     return WebGPUDriver::create(*this, driverConfig);
 }

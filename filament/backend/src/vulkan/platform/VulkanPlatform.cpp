@@ -28,6 +28,8 @@
 #include <utils/PrivateImplementation-impl.h>
 #include <utils/Panic.h>
 
+#include <absl/log/log.h>
+
 #define SWAPCHAIN_RET_FUNC(func, handle, ...)                                                      \
     if (mImpl->mSurfaceSwapChains.find(handle) != mImpl->mSurfaceSwapChains.end()) {               \
         return static_cast<VulkanPlatformSurfaceSwapChain*>(handle)->func(__VA_ARGS__);            \
@@ -104,7 +106,7 @@ void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
         chainStruct(&physicalDeviceProperties2, &driverProperties);
         vkGetPhysicalDeviceProperties2(device, &physicalDeviceProperties2);
         FVK_LOGI << "Vulkan device driver: " << driverProperties.driverName << " "
-                      << driverProperties.driverInfo << utils::io::endl;
+                 << driverProperties.driverInfo;
     }
 
     VkPhysicalDeviceProperties deviceProperties;
@@ -141,7 +143,7 @@ void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
                   << "(vendor " << utils::io::hex << vendorID << ", "
                   << "device " << deviceID << ", "
                   << "driver " << driverVersion << ", " << utils::io::dec << "api " << major << "."
-                  << minor << ")" << utils::io::endl;
+                  << minor << ")";
 }
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
@@ -158,7 +160,7 @@ void printDepthFormats(VkPhysicalDevice device) {
             FVK_LOGI << format << " ";
         }
     }
-    FVK_LOGI << utils::io::endl;
+    FVK_LOGI << "";
 }
 #endif
 
@@ -278,10 +280,10 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
     } else {
 #if defined(__ANDROID__)
         FVK_LOGD << "Validation layers are not available; did you set jniLibs in your "
-                 << "gradle file?" << utils::io::endl;
+                 << "gradle file?";
 #else
         FVK_LOGD << "Validation layer not available; did you install the Vulkan SDK?\n"
-                 << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
+                 << "Please ensure that VK_LAYER_PATH is set correctly.";
 #endif // __ANDROID__
 
     }
@@ -962,8 +964,7 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
 
     if (flags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
         if (!mImpl->mContext.mProtectedMemorySupported) {
-            utils::slog.w << "protected swapchain requested, but VulkanPlatform does not support it"
-                << utils::io::endl;
+            LOG(WARNING) << "protected swapchain requested, but VulkanPlatform does not support it";
         }
     }
 

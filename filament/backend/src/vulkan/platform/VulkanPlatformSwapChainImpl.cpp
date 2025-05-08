@@ -163,8 +163,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     // the number of images, though there may be limits related to the total amount of memory used
     // by presentable images."
     if (maxImageCount != 0 && desiredImageCount > maxImageCount) {
-        FVK_LOGE << "Swap chain does not support " << desiredImageCount << " images."
-                      << utils::io::endl;
+        FVK_LOGE << "Swap chain does not support " << desiredImageCount << " images.";
         desiredImageCount = caps.minImageCount;
     }
 
@@ -266,8 +265,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
            << "swapchain-size=" << mSwapChainBundle.colors.size() << ", "
            << "identity-transform=" << (caps.currentTransform == 1) << ", "
            << "depth=" << mSwapChainBundle.depthFormat << ", "
-           << "protected=" << mSwapChainBundle.isProtected
-           << io::endl;
+           << "protected=" << mSwapChainBundle.isProtected;
 
     VkSemaphoreCreateInfo const semaphoreCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -293,7 +291,7 @@ VkResult VulkanPlatformSurfaceSwapChain::acquire(VulkanPlatform::ImageSyncData* 
     // Users should be notified of a suboptimal surface, but it should not cause a cascade of
     // log messages or a loop of re-creations.
     if (result == VK_SUBOPTIMAL_KHR && !mSuboptimal) {
-        FVK_LOGW << "Vulkan Driver: Suboptimal swap chain." << io::endl;
+        FVK_LOGW << "Vulkan Driver: Suboptimal swap chain.";
         mSuboptimal = true;
     }
     return result;
@@ -315,7 +313,7 @@ VkResult VulkanPlatformSurfaceSwapChain::present(uint32_t index, VkSemaphore fin
     // On Android Q and above, a suboptimal surface is always reported after screen rotation:
     // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
     if (result == VK_SUBOPTIMAL_KHR && !mSuboptimal) {
-        FVK_LOGW << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
+        FVK_LOGW << "Vulkan Driver: Suboptimal swap chain.";
         mSuboptimal = true;
     }
     return result;

@@ -262,7 +262,7 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
 
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
     FVK_LOGD << "Created VulkanProgram " << builder << ", shaders = (" << modules[0]
-             << ", " << modules[1] << ")" << utils::io::endl;
+             << ", " << modules[1] << ")";
 #endif
 }
 

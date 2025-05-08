@@ -25,7 +25,8 @@
 #include <backend/Handle.h>
 
 #include <utils/Hash.h>
-#include <utils/Log.h>
+
+#include <absl/log/log.h>
 
 #include <fstream>
 #include <string>
@@ -135,8 +136,7 @@ TEST_F(BackendTest, FeedbackLoops) {
         // Create a RenderTarget for each miplevel.
         Handle<HwRenderTarget> renderTargets[kNumLevels];
         for (uint8_t level = 0; level < kNumLevels; level++) {
-            slog.i << "Level " << int(level) << ": " <<
-                    (kTexWidth >> level) << "x" << (kTexHeight >> level) << io::endl;
+            LOG(INFO) << "Level " << int(level) << ": " << (kTexWidth >> level) << "x" << (kTexHeight >> level);
             renderTargets[level] = cleanup.add(api.createRenderTarget( TargetBufferFlags::COLOR,
                     kTexWidth >> level, kTexHeight >> level, 1, 0, { texture, level, 0 }, {}, {}));
         }

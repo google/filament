@@ -19,7 +19,7 @@
 
 #include "MetalDriverFactory.h"
 
-#include <utils/Log.h>
+#include <absl/log/log.h>
 
 #import <Foundation/Foundation.h>
 
@@ -69,9 +69,8 @@ void PlatformMetal::createDevice(MetalDevice& outDevice) noexcept {
         result = MTLCreateSystemDefaultDevice();
     }
 
-    utils::slog.i << "Selected physical device '"
-                  << [result.name cStringUsingEncoding:NSUTF8StringEncoding] << "'"
-                  << utils::io::endl;
+    LOG(INFO) << "Selected physical device '"
+              << [result.name cStringUsingEncoding:NSUTF8StringEncoding] << "'";
 
     outDevice.device = result;
 }

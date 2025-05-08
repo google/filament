@@ -35,6 +35,8 @@
 #include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
 
+#include "absl/strings/str_format.h"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -52,11 +54,10 @@ namespace {
 void printInstanceDetails(wgpu::Instance const& instance) {
     wgpu::SupportedWGSLLanguageFeatures supportedWGSLLanguageFeatures{};
     if (!instance.GetWGSLLanguageFeatures(&supportedWGSLLanguageFeatures)) {
-        FWGPU_LOGW << "Failed to get WebGPU instance supported WGSL language features"
-                   << utils::io::endl;
+        FWGPU_LOGW << "Failed to get WebGPU instance supported WGSL language features";
     } else {
         FWGPU_LOGI << "WebGPU instance supported WGSL language features ("
-                   << supportedWGSLLanguageFeatures.featureCount << "):" << utils::io::endl;
+                   << supportedWGSLLanguageFeatures.featureCount << "):";
         if (supportedWGSLLanguageFeatures.featureCount > 0 &&
                 supportedWGSLLanguageFeatures.features != nullptr) {
             std::for_each(supportedWGSLLanguageFeatures.features,
@@ -65,7 +66,7 @@ void printInstanceDetails(wgpu::Instance const& instance) {
                     [](wgpu::WGSLLanguageFeatureName const featureName) {
                         std::stringstream nameStream{};
                         nameStream << featureName;
-                        FWGPU_LOGI << "  " << nameStream.str() << utils::io::endl;
+                        FWGPU_LOGI << "  " << nameStream.str();
                     });
         }
     }
@@ -90,7 +91,7 @@ void printLimit(std::string_view name, const std::variant<uint32_t, uint64_t> va
     if (undefined) {
         FWGPU_LOGI << "UNDEFINED";
     }
-    FWGPU_LOGI << utils::io::endl;
+    FWGPU_LOGI;
 }
 #endif
 
@@ -142,7 +143,7 @@ void printAdapterDetails(wgpu::Adapter const& adapter) {
     wgpu::AdapterInfo adapterInfo{};
     adapterInfo.nextInChain = &powerPreferenceProperties;
     if (!adapter.GetInfo(&adapterInfo)) {
-        FWGPU_LOGW << "Failed to get WebGPU adapter info" << utils::io::endl;
+        FWGPU_LOGW << "Failed to get WebGPU adapter info";
     } else {
         std::stringstream backendTypeStream{};
         backendTypeStream << adapterInfo.backendType;
@@ -150,37 +151,36 @@ void printAdapterDetails(wgpu::Adapter const& adapter) {
         adapterTypeStream << adapterInfo.adapterType;
         std::stringstream powerPreferenceStream{};
         powerPreferenceStream << powerPreferenceProperties.powerPreference;
-        FWGPU_LOGI << "WebGPU adapter info:" << utils::io::endl;
-        FWGPU_LOGI << "  vendor: " << adapterInfo.vendor.data << utils::io::endl;
-        FWGPU_LOGI << "  architecture: " << adapterInfo.architecture.data << utils::io::endl;
-        FWGPU_LOGI << "  device: " << adapterInfo.device.data << utils::io::endl;
-        FWGPU_LOGI << "  description: " << adapterInfo.description.data << utils::io::endl;
-        FWGPU_LOGI << "  backend type: " << backendTypeStream.str().data() << utils::io::endl;
-        FWGPU_LOGI << "  adapter type: " << adapterTypeStream.str().data() << utils::io::endl;
-        FWGPU_LOGI << "  device ID: " << adapterInfo.deviceID << utils::io::endl;
-        FWGPU_LOGI << "  vendor ID: " << adapterInfo.vendorID << utils::io::endl;
-        FWGPU_LOGI << "  subgroup min size: " << adapterInfo.subgroupMinSize << utils::io::endl;
-        FWGPU_LOGI << "  subgroup max size: " << adapterInfo.subgroupMaxSize << utils::io::endl;
-        FWGPU_LOGI << "  power preference: " << powerPreferenceStream.str() << utils::io::endl;
+        FWGPU_LOGI << "WebGPU adapter info:";
+        FWGPU_LOGI << "  vendor: " << adapterInfo.vendor.data;
+        FWGPU_LOGI << "  architecture: " << adapterInfo.architecture.data;
+        FWGPU_LOGI << "  device: " << adapterInfo.device.data;
+        FWGPU_LOGI << "  description: " << adapterInfo.description.data;
+        FWGPU_LOGI << "  backend type: " << backendTypeStream.str().data();
+        FWGPU_LOGI << "  adapter type: " << adapterTypeStream.str().data();
+        FWGPU_LOGI << "  device ID: " << adapterInfo.deviceID;
+        FWGPU_LOGI << "  vendor ID: " << adapterInfo.vendorID;
+        FWGPU_LOGI << "  subgroup min size: " << adapterInfo.subgroupMinSize;
+        FWGPU_LOGI << "  subgroup max size: " << adapterInfo.subgroupMaxSize;
+        FWGPU_LOGI << "  power preference: " << powerPreferenceStream.str();
     }
     wgpu::SupportedFeatures supportedFeatures{};
     adapter.GetFeatures(&supportedFeatures);
-    FWGPU_LOGI << "WebGPU adapter supported features (" << supportedFeatures.featureCount
-               << "):" << utils::io::endl;
+    FWGPU_LOGI << "WebGPU adapter supported features (" << supportedFeatures.featureCount << "):";
     if (supportedFeatures.featureCount > 0 && supportedFeatures.features != nullptr) {
         std::for_each(supportedFeatures.features,
                 supportedFeatures.features + supportedFeatures.featureCount,
                 [](wgpu::FeatureName const name) {
                     std::stringstream nameStream{};
                     nameStream << name;
-                    FWGPU_LOGI << "  " << nameStream.str().data() << utils::io::endl;
+                    FWGPU_LOGI << "  " << nameStream.str().data();
                 });
     }
     wgpu::Limits supportedLimits{};
     if (!adapter.GetLimits(&supportedLimits)) {
-        FWGPU_LOGW << "Failed to get WebGPU adapter supported limits" << utils::io::endl;
+        FWGPU_LOGW << "Failed to get WebGPU adapter supported limits";
     } else {
-        FWGPU_LOGI << "WebGPU adapter supported limits:" << utils::io::endl;
+        FWGPU_LOGI << "WebGPU adapter supported limits:";
         printLimits(supportedLimits);
     }
 }
@@ -190,22 +190,21 @@ void printAdapterDetails(wgpu::Adapter const& adapter) {
 void printDeviceDetails(wgpu::Device const& device) {
     wgpu::SupportedFeatures supportedFeatures{};
     device.GetFeatures(&supportedFeatures);
-    FWGPU_LOGI << "WebGPU device supported features (" << supportedFeatures.featureCount
-               << "):" << utils::io::endl;
+    FWGPU_LOGI << "WebGPU device supported features (" << supportedFeatures.featureCount << "):";
     if (supportedFeatures.featureCount > 0 && supportedFeatures.features != nullptr) {
         std::for_each(supportedFeatures.features,
                 supportedFeatures.features + supportedFeatures.featureCount,
                 [](wgpu::FeatureName const name) {
                     std::stringstream nameStream{};
                     nameStream << name;
-                    FWGPU_LOGI << "  " << nameStream.str().data() << utils::io::endl;
+                    FWGPU_LOGI << "  " << nameStream.str().data();
                 });
     }
     wgpu::Limits supportedLimits{};
     if (!device.GetLimits(&supportedLimits)) {
-        FWGPU_LOGW << "Failed to get WebGPU supported device limits" << utils::io::endl;
+        FWGPU_LOGW << "Failed to get WebGPU supported device limits";
     } else {
-        FWGPU_LOGI << "WebGPU device supported limits:" << utils::io::endl;
+        FWGPU_LOGI << "WebGPU device supported limits:";
         printLimits(supportedLimits);
     }
 }
@@ -472,15 +471,14 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
             mSwapChain->getColorFormat());
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
-                  "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
-               << utils::io::endl;
+                  "graphics device/GPU, etc.), thus nothing is being drawn to the screen.";
 #if !FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) && !defined(NDEBUG)
-    FWGPU_LOGI << "If the FILAMENT_BACKEND_DEBUG_FLAG variable were set with the " << utils::io::hex
-               << FWGPU_PRINT_SYSTEM << utils::io::dec
+    FWGPU_LOGI << "If the FILAMENT_BACKEND_DEBUG_FLAG variable were set with the "
+               << absl::StrFormat("%#x", FWGPU_PRINT_SYSTEM)
                << " bit flag on during build time the application would print system details "
                   "about the selected graphics device, surface, etc. To see this try "
                   "rebuilding Filament with that flag, e.g. ./build.sh -x "
-               << FWGPU_PRINT_SYSTEM << " ..." << utils::io::endl;
+               << FWGPU_PRINT_SYSTEM << " ...";
 #endif
 }
 

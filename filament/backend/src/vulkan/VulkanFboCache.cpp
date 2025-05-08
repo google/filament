@@ -100,8 +100,7 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey const& config) noexcept {
         << "for render pass " << config.renderPass << ", "
         << "samples = " << int(config.samples) << ", "
         << "depth = " << (config.depth ? 1 : 0) << ", "
-        << "attachmentCount = " << attachmentCount
-        << utils::io::endl;
+        << "attachmentCount = " << attachmentCount;
     #endif
 
     VkFramebufferCreateInfo info {
@@ -341,8 +340,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey const& config) noexcept
              << "needsResolveMask = " << int(config.needsResolveMask) << ", "
              << "usesLazilyAllocatedMemory = " << int(config.usesLazilyAllocatedMemory) << ", "
              << "viewCount = " << int(config.viewCount) << ", "
-             << "colorAttachmentCount[0] = " << subpasses[0].colorAttachmentCount
-             << utils::io::endl;
+             << "colorAttachmentCount[0] = " << subpasses[0].colorAttachmentCount;
 #endif
 
     return renderPass;
