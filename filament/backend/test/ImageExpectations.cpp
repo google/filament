@@ -21,6 +21,7 @@
 #include "utils/Hash.h"
 #include <fstream>
 
+#include "BackendTest.h"
 #include "backend/PixelBufferDescriptor.h"
 #include "private/backend/DriverApi.h"
 
@@ -31,6 +32,8 @@
 #include <image/ColorTransform.h>
 
 #endif
+
+namespace test {
 
 ScreenshotParams::ScreenshotParams(int width, int height, std::string fileName,
         uint32_t expectedHash, bool isSrgb)
@@ -80,6 +83,10 @@ std::string ScreenshotParams::expectedFilePath() const {
     return absl::StrFormat("%s/%s", expectedDirectoryPath(), expectedFileName());
 }
 
+const std::string ScreenshotParams::filePrefix() const {
+    return mFileName;
+}
+
 ImageExpectation::ImageExpectation(const char* fileName, int lineNumber,
         filament::backend::DriverApi& api, ScreenshotParams params,
         filament::backend::RenderTargetHandle renderTarget)
@@ -113,7 +120,11 @@ void ImageExpectation::compareImage() const {
 #ifndef FILAMENT_IOS
         LoadedPng loadedImage(mParams.expectedFilePath());
         uint32_t loadedImageHash = loadedImage.hash();
-        EXPECT_THAT(actualHash, testing::Eq(loadedImageHash)) << mParams.expectedFileName();
+        auto compareToImageMatcher = testing::Eq(loadedImageHash);
+        if (!testing::Matches(compareToImageMatcher)(actualHash)) {
+            BackendTest::markImageAsFailure(mParams.filePrefix());
+        }
+        EXPECT_THAT(actualHash, compareToImageMatcher) << mParams.expectedFileName();
 #endif
         // For builds that can't load PNGs (currently iOS only) use the expected hash.
         EXPECT_THAT(actualHash, testing::Eq(mParams.expectedHash())) << mParams.expectedFileName();
@@ -237,3 +248,5 @@ uint32_t LoadedPng::hash() const {
 const std::vector<unsigned char>& LoadedPng::bytes() const {
     return mBytes;
 }
+
+} // namespace test

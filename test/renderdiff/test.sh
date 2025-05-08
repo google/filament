@@ -43,9 +43,10 @@ function prepare_mesa() {
 
 set -ex && prepare_mesa && \
     mkdir -p ${OUTPUT_DIR} && \
-        CXX=`which clang++` CC=`which clang` ./build.sh -X ${MESA_DIR} -p desktop debug gltf_viewer && \
+        CXX=`which clang++` CC=`which clang` ./build.sh -f -X ${MESA_DIR} -p desktop debug gltf_viewer && \
         python3 ${RENDERDIFF_TEST_DIR}/src/run.py \
             --gltf_viewer="$(pwd)/out/cmake-debug/samples/gltf_viewer" \
             --test=${RENDERDIFF_TEST_DIR}/tests/presubmit.json \
             --output_dir=${OUTPUT_DIR} \
-            --opengl_lib=${MESA_LIB_DIR}
+            --opengl_lib=${MESA_LIB_DIR} \
+            --golden_branch=main

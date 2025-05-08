@@ -17,6 +17,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
+      - uses: ./.github/actions/web-prereq
       - name: Run build script
         run: |
           cd build/web && printf "y" | ./build.sh continuous

@@ -3,5 +3,5 @@ runs:
   using: "composite"
   steps:
     - name: Set up dependency versions
-      shell: bash    
+      shell: bash
       run: cat ./build/common/versions >> $GITHUB_ENV
