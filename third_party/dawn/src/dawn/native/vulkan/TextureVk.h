@@ -102,6 +102,11 @@ class Texture : public TextureBase {
     MaybeError EnsureSubresourceContentInitialized(CommandRecordingContext* recordingContext,
                                                    const SubresourceRange& range);
 
+    // Adds any special synchronization once for the current submit.
+    virtual MaybeError OnBeforeSubmit(CommandRecordingContext* context);
+    // Cleans up after the submit.
+    virtual MaybeError OnAfterSubmit();
+
     void SetLabelHelper(const char* prefix);
 
     // Dawn API
@@ -191,14 +196,6 @@ class SwapChainTexture final : public Texture {
 // TODO(330385376): Merge in SharedTexture once ExternalImageDescriptorVk is fully removed.
 class ImportedTextureBase : public Texture {
   public:
-    virtual std::vector<VkSemaphore> AcquireWaitRequirements() { return {}; }
-
-    // Eagerly transition the texture for export.
-    void TransitionEagerlyForExport(CommandRecordingContext* recordingContext);
-
-    // Update the 'ExternalSemaphoreHandle' to be used for export with the newly submitted one.
-    void UpdateExternalSemaphoreHandle(ExternalSemaphoreHandle handle);
-
     // If needed, modifies the VkImageMemoryBarrier to perform a queue ownership transfer etc.
     void TweakTransition(CommandRecordingContext* recordingContext,
                          std::vector<VkImageMemoryBarrier>* barriers,
@@ -214,9 +211,18 @@ class ImportedTextureBase : public Texture {
                          VkImageLayout* releasedOldLayout,
                          VkImageLayout* releasedNewLayout);
 
+    MaybeError OnBeforeSubmit(CommandRecordingContext* context) override;
+    MaybeError OnAfterSubmit() override;
+
   protected:
     using Texture::Texture;
     ~ImportedTextureBase() override;
+
+    void DestroyImpl() override;
+
+    // Eagerly transition the texture for export.
+    void TransitionEagerlyForExport(CommandRecordingContext* recordingContext);
+
     // The states of an external texture:
     //   PendingAcquire: Initialized as an external texture already, but unavailable for access yet.
     //   Acquired: Ready for access.
@@ -242,6 +248,8 @@ class ImportedTextureBase : public Texture {
     // If the texture was ever used, represents a semaphore signaled once operations on the texture
     // are done so that the receiver of the export can synchronize properly.
     ExternalSemaphoreHandle mExternalSemaphoreHandle = kNullExternalSemaphoreHandle;
+    // The pending semaphore
+    VkSemaphore mPendingSemaphore = VK_NULL_HANDLE;
 };
 
 // A texture created from an VkImage that references an external memory object.
@@ -264,7 +272,7 @@ class ExternalVkImageTexture final : public ImportedTextureBase {
                                      VkImageLayout* releasedOldLayout,
                                      VkImageLayout* releasedNewLayout);
 
-    std::vector<VkSemaphore> AcquireWaitRequirements() override;
+    MaybeError OnBeforeSubmit(CommandRecordingContext* context) override;
 
   private:
     using ImportedTextureBase::ImportedTextureBase;
@@ -282,6 +290,8 @@ class SharedTexture final : public ImportedTextureBase {
     static ResultOrError<Ref<SharedTexture>> Create(
         SharedTextureMemory* memory,
         const UnpackedPtr<TextureDescriptor>& textureDescriptor);
+
+    MaybeError OnBeforeSubmit(CommandRecordingContext* context) override;
 
     void SetPendingAcquire(VkImageLayout pendingAcquireOldLayout,
                            VkImageLayout pendingAcquireNewLayout);

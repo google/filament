@@ -108,7 +108,8 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
                     // f32 for unorm8x4-bgra, but the number of components can be anything. Even if
                     // the input variable is an f32 we need to get the full vec4f when swizzling as
                     // the components are reordered.
-                    if (config.bgra_swizzle_locations.count(*io.attributes.location) != 0) {
+                    if (addrspace == core::AddressSpace::kIn &&
+                        config.bgra_swizzle_locations.count(*io.attributes.location) != 0) {
                         bgra_swizzle_original_types.Add(*io.attributes.location, io.type);
                         type = ty.vec4<f32>();
                     }
@@ -139,8 +140,8 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
 
     /// @copydoc ShaderIO::BackendState::GetInput
     core::ir::Value* GetInput(core::ir::Builder& builder, uint32_t idx) override {
-        auto* from = input_vars[idx]->Result(0);
-        auto* value = builder.Load(from)->Result(0);
+        auto* from = input_vars[idx]->Result();
+        auto* value = builder.Load(from)->Result();
 
         auto& builtin = inputs[idx].attributes.builtin;
         if (builtin.has_value()) {
@@ -149,14 +150,14 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
                 case core::BuiltinValue::kInstanceIndex:
                 case core::BuiltinValue::kSampleIndex: {
                     // GLSL uses i32 for these, so convert to u32.
-                    value = builder.Convert(ty.u32(), value)->Result(0);
+                    value = builder.Convert(ty.u32(), value)->Result();
                     break;
                 }
                 case core::BuiltinValue::kSampleMask: {
                     // gl_SampleMaskIn is an array of i32. Retrieve the first element and
                     // convert it to u32.
                     auto* elem = builder.Access(ty.i32(), value, 0_u);
-                    value = builder.Convert(ty.u32(), elem)->Result(0);
+                    value = builder.Convert(ty.u32(), elem)->Result();
                     break;
                 }
                 default:
@@ -173,7 +174,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             Vector<uint32_t, 4> swizzles = {2, 1, 0, 3};
             swizzles.Resize(original_type->Elements(nullptr, 1).count);
 
-            value = builder.Swizzle(original_type, value, swizzles)->Result(0);
+            value = builder.Swizzle(original_type, value, swizzles)->Result();
         }
 
         return value;
@@ -187,12 +188,12 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
         }
 
         // Store the output to the global variable declared earlier.
-        auto* to = output_vars[idx]->Result(0);
+        auto* to = output_vars[idx]->Result();
 
         if (outputs[idx].attributes.builtin == core::BuiltinValue::kSampleMask) {
             auto* ptr = ty.ptr(core::AddressSpace::kOut, ty.i32(), core::Access::kWrite);
-            to = builder.Access(ptr, to, 0_u)->Result(0);
-            value = builder.Convert(ty.i32(), value)->Result(0);
+            to = builder.Access(ptr, to, 0_u)->Result();
+            value = builder.Convert(ty.i32(), value)->Result();
         } else if (outputs[idx].attributes.builtin == core::BuiltinValue::kPosition) {
             auto* x = builder.Swizzle(ty.f32(), value, {0});
 
@@ -205,7 +206,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             auto* w = builder.Swizzle(ty.f32(), value, {3});
             auto* mul = builder.Multiply(ty.f32(), 2_f, z);
             auto* new_z = builder.Subtract(ty.f32(), mul, w);
-            value = builder.Construct(ty.vec4<f32>(), x, new_y, new_z, w)->Result(0);
+            value = builder.Construct(ty.vec4<f32>(), x, new_y, new_z, w)->Result();
         }
 
         builder.Store(to, value);
@@ -226,7 +227,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
         auto max_idx = u32(config.push_constant_layout.IndexOf(config.depth_range_offsets->max));
         auto* min = builder.Load(builder.Access<ptr<push_constant, f32>>(push_constants, min_idx));
         auto* max = builder.Load(builder.Access<ptr<push_constant, f32>>(push_constants, max_idx));
-        return builder.Call<f32>(core::BuiltinFn::kClamp, frag_depth, min, max)->Result(0);
+        return builder.Call<f32>(core::BuiltinFn::kClamp, frag_depth, min, max)->Result();
     }
 
     /// @copydoc ShaderIO::BackendState::NeedsVertexPointSize

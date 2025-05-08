@@ -1,5 +1,5 @@
 // RUN: %dxc -T ps_6_0 -E main -fcgl  %s -spirv | FileCheck %s -check-prefix=GLSL450
-// RUN: %dxc -T ps_6_0 -E main -fcgl -fspv-use-vulkan-memory-model %s -spirv | FileCheck %s -check-prefix=VULKAN
+// RUN: %dxc -T ps_6_0 -E main -fcgl -fspv-use-vulkan-memory-model -fspv-target-env=vulkan1.1 %s -spirv | FileCheck %s -check-prefix=VULKAN
 
 // When the GLSL450 memory model is used, there should be no memory operands on the loads and stores.
 // When the Vulkan memory model is used, there should be no decorations. There should be memory operands on the loads and stores instead.

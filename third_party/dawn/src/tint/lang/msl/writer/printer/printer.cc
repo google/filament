@@ -29,7 +29,7 @@
 
 #include <atomic>
 #include <cstdint>
-#include <memory>
+#include <string>
 #include <utility>
 
 #include "src/tint/lang/core/constant/composite.h"
@@ -104,7 +104,7 @@
 #include "src/tint/utils/macros/scoped_assignment.h"
 #include "src/tint/utils/rtti/switch.h"
 #include "src/tint/utils/text/string.h"
-#include "src/tint/utils/text_generator.h"
+#include "src/tint/utils/text_generator/text_generator.h"
 
 using namespace tint::core::fluent_types;  // NOLINT
 
@@ -278,7 +278,7 @@ class Printer : public tint::TextGenerator {
                 // Access instruction emission always dereferences the source.
                 // We only produce a pointer when extracting a pointer from a composite value.
                 return !a->Object()->Type()->Is<core::type::Pointer>() &&
-                       a->Result(0)->Type()->Is<core::type::Pointer>();
+                       a->Result()->Type()->Is<core::type::Pointer>();
             });
     }
 
@@ -505,10 +505,10 @@ class Printer : public tint::TextGenerator {
                     [&](const core::ir::Binary* b) { EmitBinary(out, b); },              //
                     [&](const core::ir::CoreUnary* u) { EmitUnary(out, u); },            //
                     [&](const core::ir::Convert* b) { EmitConvert(out, b); },            //
-                    [&](const core::ir::Let* l) { out << NameOf(l->Result(0)); },        //
+                    [&](const core::ir::Let* l) { out << NameOf(l->Result()); },         //
                     [&](const core::ir::Load* l) { EmitLoad(out, l); },                  //
                     [&](const core::ir::Construct* c) { EmitConstruct(out, c); },        //
-                    [&](const core::ir::Var* var) { out << NameOf(var->Result(0)); },    //
+                    [&](const core::ir::Var* var) { out << NameOf(var->Result()); },     //
                     [&](const core::ir::Bitcast* b) { EmitBitcast(out, b); },            //
                     [&](const core::ir::Access* a) { EmitAccess(out, a); },              //
                     [&](const msl::ir::BuiltinCall* c) { EmitMslBuiltinCall(out, c); },  //
@@ -601,7 +601,7 @@ class Printer : public tint::TextGenerator {
     /// Emit a convert instruction
     /// @param c the convert instruction
     void EmitConvert(StringStream& out, const core::ir::Convert* c) {
-        EmitType(out, c->Result(0)->Type());
+        EmitType(out, c->Result()->Type());
         out << "(";
         EmitValue(out, c->Operand(0));
         out << ")";
@@ -612,7 +612,7 @@ class Printer : public tint::TextGenerator {
     void EmitVar(const core::ir::Var* v) {
         auto out = Line();
 
-        auto* ptr = v->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = v->Result()->Type()->As<core::type::Pointer>();
         TINT_ASSERT(ptr);
 
         auto space = ptr->AddressSpace();
@@ -631,7 +631,7 @@ class Printer : public tint::TextGenerator {
         }
 
         EmitType(out, ptr->UnwrapPtr());
-        out << " " << NameOf(v->Result(0));
+        out << " " << NameOf(v->Result());
 
         if (v->Initializer()) {
             out << " = ";
@@ -648,8 +648,8 @@ class Printer : public tint::TextGenerator {
     /// @param l the let instruction
     void EmitLet(const core::ir::Let* l) {
         auto out = Line();
-        EmitType(out, l->Result(0)->Type());
-        out << " const " << NameOf(l->Result(0)) << " = ";
+        EmitType(out, l->Result()->Type());
+        out << " const " << NameOf(l->Result()) << " = ";
         EmitAndTakeAddressIfNeeded(out, l->Value());
         out << ";";
     }
@@ -869,7 +869,7 @@ class Printer : public tint::TextGenerator {
     /// Emit a bitcast instruction
     void EmitBitcast(StringStream& out, const core::ir::Bitcast* b) {
         out << "as_type<";
-        EmitType(out, b->Result(0)->Type());
+        EmitType(out, b->Result()->Type());
         out << ">(";
         EmitValue(out, b->Val());
         out << ")";
@@ -905,9 +905,9 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitCallStmt(const core::ir::Call* c) {
-        if (!c->Result(0)->IsUsed()) {
+        if (!c->Result()->IsUsed()) {
             auto out = Line();
-            EmitValue(out, c->Result(0));
+            EmitValue(out, c->Result());
             out << ";";
         }
     }
@@ -941,7 +941,7 @@ class Printer : public tint::TextGenerator {
             out << "))";
             return;
         } else if (c->Func() == msl::BuiltinFn::kConvert) {
-            EmitType(out, c->Result(0)->Type());
+            EmitType(out, c->Result()->Type());
             out << "(";
             EmitValue(out, c->Operand(0));
             out << ")";
@@ -1204,9 +1204,9 @@ class Printer : public tint::TextGenerator {
     /// Emit a constructor
     void EmitConstruct(StringStream& out, const core::ir::Construct* c) {
         Switch(
-            c->Result(0)->Type(),
+            c->Result()->Type(),
             [&](const core::type::Array*) {
-                EmitType(out, c->Result(0)->Type());
+                EmitType(out, c->Result()->Type());
                 out << "{";
                 size_t i = 0;
                 for (auto* arg : c->Args()) {
@@ -1244,7 +1244,7 @@ class Printer : public tint::TextGenerator {
                 out << "}";
             },
             [&](Default) {
-                EmitType(out, c->Result(0)->Type());
+                EmitType(out, c->Result()->Type());
                 out << "(";
                 size_t i = 0;
                 for (auto* arg : c->Args()) {

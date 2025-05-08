@@ -83,6 +83,7 @@ enum class Command {
     SetScissorRect,
     SetBlendConstant,
     SetBindGroup,
+    SetImmediateData,
     SetIndexBuffer,
     SetVertexBuffer,
     WriteBuffer,
@@ -364,6 +365,14 @@ struct SetBindGroupCmd {
     BindGroupIndex index;
     Ref<BindGroupBase> group;
     uint32_t dynamicOffsetCount;
+};
+
+struct SetImmediateDataCmd {
+    SetImmediateDataCmd();
+    ~SetImmediateDataCmd();
+
+    uint64_t offset;
+    uint64_t size;
 };
 
 struct SetIndexBufferCmd {

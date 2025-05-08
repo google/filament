@@ -261,7 +261,7 @@ RenderPipeline::~RenderPipeline() = default;
 void RenderPipeline::ApplyNow(const ScopedSwapStateCommandRecordingContext* commandContext,
                               const std::array<float, 4>& blendColor,
                               uint32_t stencilReference) {
-    auto* d3d11DeviceContext = commandContext->GetD3D11DeviceContext4();
+    auto* d3d11DeviceContext = commandContext->GetD3D11DeviceContext3();
     d3d11DeviceContext->IASetPrimitiveTopology(mD3DPrimitiveTopology);
     // TODO(dawn:1753): deduplicate these objects in the backend eventually, and to avoid redundant
     // state setting.
@@ -276,14 +276,14 @@ void RenderPipeline::ApplyNow(const ScopedSwapStateCommandRecordingContext* comm
 
 void RenderPipeline::ApplyBlendState(const ScopedSwapStateCommandRecordingContext* commandContext,
                                      const std::array<float, 4>& blendColor) {
-    auto* d3d11DeviceContext = commandContext->GetD3D11DeviceContext4();
+    auto* d3d11DeviceContext = commandContext->GetD3D11DeviceContext3();
     d3d11DeviceContext->OMSetBlendState(mBlendState.Get(), blendColor.data(), GetSampleMask());
 }
 
 void RenderPipeline::ApplyDepthStencilState(
     const ScopedSwapStateCommandRecordingContext* commandContext,
     uint32_t stencilReference) {
-    auto* d3d11DeviceContext = commandContext->GetD3D11DeviceContext4();
+    auto* d3d11DeviceContext = commandContext->GetD3D11DeviceContext3();
     d3d11DeviceContext->OMSetDepthStencilState(mDepthStencilState.Get(), stencilReference);
 }
 

@@ -53,7 +53,7 @@ struct State {
     /// The type manager.
     core::type::Manager& ty{ir.Types()};
 
-    Result<PushConstantLayout> Run() {
+    PushConstantLayout Run() {
         if (config.internal_constants.empty()) {
             return PushConstantLayout{};
         }
@@ -68,7 +68,7 @@ struct State {
             if (!var) {
                 continue;
             }
-            auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+            auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
             if (ptr->AddressSpace() != core::AddressSpace::kPushConstant) {
                 continue;
             }
@@ -113,10 +113,10 @@ struct State {
 
         // Update uses of the user defined push constant variable.
         if (user_defined_constants) {
-            user_defined_constants->Result(0)->ReplaceAllUsesWith([&](Usage use) {
-                auto* access = b.Access(user_defined_constants->Result(0)->Type(), layout.var, 0_u);
+            user_defined_constants->Result()->ReplaceAllUsesWith([&](Usage use) {
+                auto* access = b.Access(user_defined_constants->Result()->Type(), layout.var, 0_u);
                 access->InsertBefore(use.instruction);
-                return access->Result(0);
+                return access->Result();
             });
             user_defined_constants->Destroy();
         }

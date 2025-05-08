@@ -221,7 +221,7 @@ void ComputePassEncoder::APIDispatchWorkgroups(uint32_t workgroupCountX,
                     "Dispatch workgroup count X (%u) exceeds max compute "
                     "workgroups per dimension (%u).%s",
                     workgroupCountX, maxComputeWorkgroupsPerDimension,
-                    DAWN_INCREASE_LIMIT_MESSAGE(GetDevice()->GetAdapter(),
+                    DAWN_INCREASE_LIMIT_MESSAGE(GetDevice()->GetAdapter()->GetLimits().v1,
                                                 maxComputeWorkgroupsPerDimension, workgroupCountX));
 
                 DAWN_INVALID_IF(
@@ -229,7 +229,7 @@ void ComputePassEncoder::APIDispatchWorkgroups(uint32_t workgroupCountX,
                     "Dispatch workgroup count Y (%u) exceeds max compute "
                     "workgroups per dimension (%u).%s",
                     workgroupCountY, maxComputeWorkgroupsPerDimension,
-                    DAWN_INCREASE_LIMIT_MESSAGE(GetDevice()->GetAdapter(),
+                    DAWN_INCREASE_LIMIT_MESSAGE(GetDevice()->GetAdapter()->GetLimits().v1,
                                                 maxComputeWorkgroupsPerDimension, workgroupCountY));
 
                 DAWN_INVALID_IF(
@@ -237,7 +237,7 @@ void ComputePassEncoder::APIDispatchWorkgroups(uint32_t workgroupCountX,
                     "Dispatch workgroup count Z (%u) exceeds max compute "
                     "workgroups per dimension (%u).%s",
                     workgroupCountZ, maxComputeWorkgroupsPerDimension,
-                    DAWN_INCREASE_LIMIT_MESSAGE(GetDevice()->GetAdapter(),
+                    DAWN_INCREASE_LIMIT_MESSAGE(GetDevice()->GetAdapter()->GetLimits().v1,
                                                 maxComputeWorkgroupsPerDimension, workgroupCountZ));
 
                 if (!GetDevice()->HasFlexibleTextureViews()) {

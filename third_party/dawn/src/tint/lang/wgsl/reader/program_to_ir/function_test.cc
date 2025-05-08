@@ -76,7 +76,7 @@ TEST_F(ProgramToIRFunctionTest, EmitFunction_Compute) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(),
-              R"(%test = @compute @workgroup_size(8u, 4u, 2u) func():void {
+              R"(%test = @compute @workgroup_size(8i, 4i, 2i) func():void {
   $B1: {
     ret
   }

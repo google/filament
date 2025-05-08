@@ -809,4 +809,3 @@ fn main(@location(2) in_COLOR0_param : vec4f, @location(0) in_POSITION0_param : 
   main_1();
   return main_out(gl_Position, vs_COLOR0, vs_TEXCOORD0, vs_TEXCOORD2);
 }
-

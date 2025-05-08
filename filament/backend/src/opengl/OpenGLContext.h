@@ -320,14 +320,19 @@ public:
         // a glFinish. So we must delay the destruction until we know the GPU is finished.
         bool delay_fbo_destruction;
 
-        // Mesa sometimes clears the generic buffer binding when *another* buffer is destroyed,
-        // if that other buffer is bound on an *indexed* buffer binding.
+        // Mesa and Mozilla(web) sometimes clear the generic buffer binding when *another* buffer
+        // is destroyed, if that other buffer is bound on an *indexed* buffer binding.
         bool rebind_buffer_after_deletion;
 
         // Force feature level 0. Typically used for low end ES3 devices with significant driver
         // bugs or performance issues.
         bool force_feature_level0;
 
+        // Some browsers, such as Firefox on Mac, struggle with slow shader compile/link times when
+        // creating programs for the default material, leading to startup stutters. This workaround
+        // prevents these stutters by not precaching depth variants of the default material for
+        // those particular browsers.
+        bool disable_depth_precache_for_default_material;
 
     } bugs = {};
 
@@ -568,6 +573,9 @@ private:
                     ""},
             {   bugs.force_feature_level0,
                     "force_feature_level0",
+                    ""},
+            {   bugs.disable_depth_precache_for_default_material,
+                    "disable_depth_precache_for_default_material",
                     ""},
     }};
 

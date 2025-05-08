@@ -27,6 +27,7 @@
 
 #include <cstring>
 #include <iomanip>
+#include <limits>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -226,6 +227,32 @@ TEST(SerializeTests, ByteVectorSinks) {
     expected.insert(expected.end(), data.begin(), data.end());
 
     EXPECT_CACHE_KEY_EQ(data, expected);
+}
+
+// Test that serializing a value, then deserializing it with unexpected size, an error is raised.
+TEST(SerializeTests, SerializeDeserializeVectorSizeOutOfBounds) {
+    size_t value = std::numeric_limits<size_t>::max();
+    ByteVectorSink sink;
+    StreamIn(&sink, value);
+
+    BlobSource source(CreateBlob(std::move(sink)));
+    std::vector<uint8_t> deserialized;
+    auto err = StreamOut(&source, &deserialized);
+    EXPECT_TRUE(err.IsError());
+    err.AcquireError();
+}
+
+// Test that serializing a value, then deserializing it without vector elements, an error is raised.
+TEST(SerializeTests, SerializeDeserializeNoElementsInVector) {
+    size_t value = 1;
+    ByteVectorSink sink;
+    StreamIn(&sink, value);
+
+    BlobSource source(CreateBlob(std::move(sink)));
+    std::vector<uint8_t> deserialized;
+    auto err = StreamOut(&source, &deserialized);
+    EXPECT_TRUE(err.IsError());
+    err.AcquireError();
 }
 
 // Test that ByteVectorSink serializes std::pair as expected.

@@ -203,9 +203,9 @@ TEST_F(VertexStateTest, SetVertexBuffersNumLimit) {
 
 // Check out of bounds condition on total number of vertex attributes
 TEST_F(VertexStateTest, SetVertexAttributesNumLimit) {
-    wgpu::SupportedLimits limits;
+    wgpu::Limits limits;
     device.GetLimits(&limits);
-    uint32_t maxVertexAttributes = limits.limits.maxVertexAttributes;
+    uint32_t maxVertexAttributes = limits.maxVertexAttributes;
 
     // Control case, setting max vertex attribute number
     utils::ComboVertexState state;
@@ -293,9 +293,9 @@ TEST_F(VertexStateTest, SetSameShaderLocation) {
 
 // Check out of bounds condition on attribute shader location
 TEST_F(VertexStateTest, SetAttributeLocationOutOfBounds) {
-    wgpu::SupportedLimits limits;
+    wgpu::Limits limits;
     device.GetLimits(&limits);
-    uint32_t maxVertexAttributes = limits.limits.maxVertexAttributes;
+    uint32_t maxVertexAttributes = limits.maxVertexAttributes;
 
     // Control case, setting last attribute shader location
     utils::ComboVertexState state;

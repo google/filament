@@ -1,5 +1,5 @@
 # makefile for libpng
-# Copyright (C) 2020-2022 Cosmin Truta
+# Copyright (C) 2018-2025 Cosmin Truta
 # Copyright (C) 1998-2014 Glenn Randers-Pehrson
 # Copyright (C) 1995 Guy Eric Schalnat, Group 42, Inc.
 #
@@ -8,14 +8,14 @@
 # and license in png.h
 
 CC=cc
+AR=ar
+#RANLIB=ranlib
+RANLIB=echo
 CPPFLAGS=-I../zlib -DSYSV -Dmips
 CFLAGS=-O -systype sysv -w
 #CFLAGS=-O
+ARFLAGS=rc
 LDFLAGS=-L. -L../zlib/ -lpng -lz -lm
-
-AR_RC=ar rc
-#RANLIB=ranlib
-RANLIB=echo
 
 # Pre-built configuration
 # See scripts/pnglibconf.mak for more options
@@ -26,7 +26,7 @@ OBJS = png.o pngerror.o pngget.o pngmem.o pngpread.o \
        pngtrans.o pngwio.o pngwrite.o pngwtran.o pngwutil.o
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $*.c
 
 all: libpng.a pngtest
 
@@ -34,7 +34,7 @@ pnglibconf.h: $(PNGLIBCONF_H_PREBUILT)
 	cp $(PNGLIBCONF_H_PREBUILT) $@
 
 libpng.a: $(OBJS)
-	$(AR_RC) $@ $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
 
 pngtest: pngtest.o libpng.a

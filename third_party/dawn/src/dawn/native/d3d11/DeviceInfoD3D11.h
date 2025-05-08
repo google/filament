@@ -53,7 +53,7 @@ struct DeviceInfo {
     bool supportsPartialConstantBufferUpdate;
 };
 
-ResultOrError<DeviceInfo> GatherDeviceInfo(const ComPtr<IDXGIAdapter4>& adapter,
+ResultOrError<DeviceInfo> GatherDeviceInfo(const ComPtr<IDXGIAdapter3>& adapter,
                                            const ComPtr<ID3D11Device>& device);
 
 }  // namespace dawn::native::d3d11

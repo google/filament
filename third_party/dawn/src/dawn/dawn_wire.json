@@ -122,6 +122,24 @@
             { "name": "device object handle", "type": "ObjectHandle", "handle_type": "device"},
             { "name": "device lost future", "type": "future" },
             { "name": "descriptor", "type": "device descriptor", "annotation": "const*" }
+        ],
+        "render pass encoder set immediate data": [
+            { "name": "render pass encoder id", "type": "ObjectId", "id_type": "render pass encoder"},
+            {"name": "offset", "type": "uint32_t"},
+            { "name": "data", "type": "uint8_t", "annotation": "const*", "length": "size", "wire_is_data_only": true},
+            { "name": "size", "type": "size_t"}
+        ],
+        "render bundle encoder set immediate data": [
+            { "name": "render bundle encoder id", "type": "ObjectId", "id_type": "render bundle encoder"},
+            {"name": "offset", "type": "uint32_t"},
+            { "name": "data", "type": "uint8_t", "annotation": "const*", "length": "size", "wire_is_data_only": true},
+            { "name": "size", "type": "size_t"}
+        ],
+        "compute pass encoder set immediate data": [
+            { "name": "compute pass encoder id", "type": "ObjectId", "id_type": "compute pass encoder"},
+            {"name": "offset", "type": "uint32_t"},
+            { "name": "data", "type": "uint8_t", "annotation": "const*", "length": "size", "wire_is_data_only": true},
+            { "name": "size", "type": "size_t"}
         ]
     },
     "return commands": {
@@ -185,7 +203,7 @@
             { "name": "status", "type": "request adapter status" },
             { "name": "message", "type": "string view" },
             { "name": "info", "type": "adapter info", "annotation": "const*", "optional": "true" },
-            { "name": "limits", "type": "supported limits", "annotation": "const*", "optional": "true" },
+            { "name": "limits", "type": "limits", "annotation": "const*", "optional": "true" },
             { "name": "features count", "type": "uint32_t"},
             { "name": "features", "type": "feature name", "annotation": "const*", "length": "features count"}
         ],
@@ -194,7 +212,7 @@
             { "name": "future", "type": "future" },
             { "name": "status", "type": "request device status" },
             { "name": "message", "type": "string view" },
-            { "name": "limits", "type": "supported limits", "annotation": "const*", "optional": "true" },
+            { "name": "limits", "type": "limits", "annotation": "const*", "optional": "true" },
             { "name": "features count", "type": "uint32_t"},
             { "name": "features", "type": "feature name", "annotation": "const*", "length": "features count"}
         ]
@@ -203,7 +221,8 @@
         "client_side_structures": [
             "FutureWaitInfo",
             "SurfaceDescriptorFromWindowsCoreWindow",
-            "SurfaceDescriptorFromWindowsSwapChainPanel",
+            "SurfaceDescriptorFromWindowsUWPSwapChainPanel",
+            "SurfaceDescriptorFromWindowsWinUISwapChainPanel",
             "SurfaceSourceMetalLayer",
             "SurfaceSourceWindowsHWND",
             "SurfaceSourceXlibWindow",
@@ -223,6 +242,8 @@
             "BufferMapAsync",
             "BufferGetConstMappedRange",
             "BufferGetMappedRange",
+            "BufferReadMappedRange",
+            "BufferWriteMappedRange",
             "BufferGetMapState",
             "BufferGetSize",
             "BufferGetUsage",
@@ -259,7 +280,10 @@
             "TextureGetSampleCount",
             "TextureGetDimension",
             "TextureGetFormat",
-            "TextureGetUsage"
+            "TextureGetUsage",
+            "RenderPassEncoderSetImmediateData",
+            "RenderBundleEncoderSetImmediateData",
+            "ComputePassEncoderSetImmediateData"
         ],
         "client_handwritten_commands": [
             "AdapterGetInstance",
@@ -285,7 +309,10 @@
             "ShaderModule",
             "Surface",
             "SurfaceCapabilities",
-            "Texture"
+            "Texture",
+            "RenderPassEncoder",
+            "RenderBundleEncoder",
+            "ComputePassEncoder"
         ],
         "server_custom_pre_handler_commands": [
             "BufferDestroy",

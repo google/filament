@@ -14,14 +14,35 @@
 
 #!/usr/bin/bash
 
-set -xe
+set -x
+if [[ "$GITHUB_WORKFLOW" ]]; then
+    set -e
+fi
 
-# GITHUB_CLANG_VERSION is set in build/linux/ci-common.sh
-os_name=$(uname -s)
-LLVM_VERSION=16
-MESA_DIR=$(pwd)/mesa
+OS_NAME=$(uname -s)
+LLVM_VERSION=${GITHUB_LLVM_VERSION-16}
+MESA_VERSION=${GITHUB_MESA_VERSION-24.2.1}
+ORIG_DIR=$(pwd)
+MESA_DIR=${MESA_DIR-${ORIG_DIR}/mesa}
 
-if [[ "$os_name" == "Linux" ]]; then
+if [[ "$OS_NAME" == "Linux" ]]; then
+    sudo apt install python3-venv
+fi
+
+# Install python deps
+python3 -m venv ${ORIG_DIR}/venv
+source ${ORIG_DIR}/venv/bin/activate
+
+NEEDED_PYTHON_DEPS=("mako" "setuptools" "pyyaml")
+for cmd in "${NEEDED_PYTHON_DEPS[@]}"; do
+    if ! python3 -m pip show "${cmd}" >/dev/null 2>&1; then
+        python3 -m pip install ${cmd}
+    fi
+done
+deactivate
+
+# Install system deps
+if [[ "$OS_NAME" == "Linux" ]]; then
     if [[ "$GITHUB_WORKFLOW" ]]; then
         # We only want to do this if it is a CI machine.
         sudo apt-get -y remove llvm-*
@@ -43,29 +64,25 @@ if [[ "$os_name" == "Linux" ]]; then
         sudo apt -y remove llvm-18 llvm-18-* llvm-19 llvm-19-*
         set -e
         CURRENT_CLANG_VERSION=$(clang --version | head -n 1 | awk '{ print $4 }' | awk 'BEGIN { FS="\\." } { print $1 }')
-        GITHUB_CLANG_VERSION=${GITHUB_CLANG_VERSION:-${CURRENT_CLANG_VERSION}}
-        sudo apt-get -y install clang-${GITHUB_CLANG_VERSION} \
-             libc++-${GITHUB_CLANG_VERSION}-dev \
-             libc++abi-${GITHUB_CLANG_VERSION}-dev \
+        CLANG_VERSION=${CURRENT_CLANG_VERSION:-${LLVM_VERSION}}
+        sudo apt-get -y install clang-${CLANG_VERSION} \
+             libc++-${CLANG_VERSION}-dev \
+             libc++abi-${CLANG_VERSION}-dev \
              llvm-${LLVM_VERSION} \
              llvm-${LLVM_VERSION}-{dev,tools,runtime}
-     fi # [[ "$GITHUB_WORKFLOW" ]]
-elif [[ "$os_name" == "Darwin" ]]; then
+        ! command -v clang > /dev/null 2>&1 && \
+            sudo ln -s /usr/bin/clang-${CLANG_VERSION} /usr/bin/clang && \
+            sudo ln -s /usr/bin/clang++-${CLANG_VERSION} /usr/bin/clang++
+    fi # [[ "$GITHUB_WORKFLOW" ]]
+elif [[ "$OS_NAME" == "Darwin" ]]; then
     if [[ ! "$GITHUB_WORKFLOW" ]]; then
         if [ ! command -v brew > /dev/null 2>&1 ]; then
             echo "Error: need to install homebrew to continue"
             exit 1
         fi
     fi
-    brew install autoconf automake libx11 libxext libxrandr llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence
-
-    NEEDED_PYTHON_DEPS=("mako" "setuptools")
-    for cmd in "${NEEDED_PYTHON_DEPS[@]}"; do
-        if ! pip3 show "${cmd}" >/dev/null 2>&1; then
-            sudo pip3 install ${cmd}
-        fi
-    done
-fi # [[ "$os_name" == x ]]
+    HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=true brew install autoconf automake libx11 libxext libxrandr llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence
+fi # [[ "$OS_NAME" == x ]]
 
 LOCAL_LDFLAGS=${LDFLAGS}
 LOCAL_CPPFLAGS=${CPPFLAGS}
@@ -88,10 +105,8 @@ fi
 if [[ "$CHECKOUT_MESA" = "true" ]]; then
     rm -rf ${MESA_DIR}
 
-    #git clone https://gitlab.freedesktop.org/mesa/mesa.git
-    git clone git://anongit.freedesktop.org/mesa/mesa
-    # Due to gitlab mesa outage.    
-    if [[ "${MESA_DIR}" != "$(pwd)/mesa" ]]; then
+    git clone https://gitlab.freedesktop.org/mesa/mesa.git
+    if [[ "${MESA_DIR}" != "${ORIG_DIR}/mesa" ]]; then
         mv mesa ${MESA_DIR}
     fi
 fi
@@ -100,11 +115,13 @@ pushd .
 cd ${MESA_DIR}
 
 # Need >= 24 to have llvmpipe for swrast.  llvmpipe is needed for GL >= 4.1.
-git checkout mesa-24.2.1
+git checkout mesa-${MESA_VERSION}
 
 mkdir -p out
 
-if  [[ "$os_name" == "Darwin" ]]; then
+source ${ORIG_DIR}/venv/bin/activate
+
+if  [[ "$OS_NAME" == "Darwin" ]]; then
     LOCAL_LDFLAGS="-L/opt/homebrew/opt/llvm@${LLVM_VERSION}/lib"
     LOCAL_CPPFLAGS="-I/opt/homebrew/opt/llvm@${LLVM_VERSION}/include -I/opt/homebrew/include"
     LOCAL_PATH=${PATH}:/opt/homebrew/opt/llvm@${LLVM_VERSION}/bin
@@ -118,8 +135,16 @@ fi
 # -Dvulkan-drivers=swrast   => builds VK software rasterizer
 # -Dgallium-drivers=llvmpipe is needed for GL >= 4.1 pipe-screen (see src/gallium/auxiliary/target-helpers/inline_sw_helper.h)
 CXX=${LOCAL_CXX} CC=${LOCAL_CC} PATH=${LOCAL_PATH} LDFLAGS=${LOCAL_LDFLAGS} CPPFLAGS=${LOCAL_CPPFLAGS} \
-   meson setup --wipe builddir/ -Dprefix="$(pwd)/out" -Dglx=xlib -Dosmesa=true -Dgallium-drivers=llvmpipe,swrast -Dvulkan-drivers=swrast
+   meson setup --wipe builddir/ -Dprefix="${MESA_DIR}/out" -Dglx=xlib -Dosmesa=true -Dgallium-drivers=llvmpipe,swrast -Dvulkan-drivers=swrast
 CXX=${LOCAL_CXX} CC=${LOCAL_CC} PATH=${LOCAL_PATH} LDFLAGS=${LOCAL_LDFLAGS} CPPFLAGS=${LOCAL_CPPFLAGS} \
    meson install -C builddir/
 
+# Disable python venv
+deactivate
+
 popd
+
+if [[ "$GITHUB_WORKFLOW" ]]; then
+    set +e
+fi
+set +x

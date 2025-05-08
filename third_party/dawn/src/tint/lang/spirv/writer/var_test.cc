@@ -513,10 +513,9 @@ TEST_F(SpirvWriterTest, SamplerVar_Load) {
 }
 
 TEST_F(SpirvWriterTest, TextureVar) {
-    auto* v = b.Var(
-        "v", ty.ptr(core::AddressSpace::kHandle,
-                    ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()),
-                    core::Access::kRead));
+    auto* v = b.Var("v", ty.ptr(core::AddressSpace::kHandle,
+                                ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()),
+                                core::Access::kRead));
     v->SetBindingPoint(0, 0);
     mod.root_block->Append(v);
 
@@ -533,10 +532,9 @@ TEST_F(SpirvWriterTest, TextureVar) {
 }
 
 TEST_F(SpirvWriterTest, TextureVar_Load) {
-    auto* v = b.Var(
-        "v", ty.ptr(core::AddressSpace::kHandle,
-                    ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32()),
-                    core::Access::kRead));
+    auto* v = b.Var("v", ty.ptr(core::AddressSpace::kHandle,
+                                ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()),
+                                core::Access::kRead));
     v->SetBindingPoint(0, 0);
     mod.root_block->Append(v);
 
@@ -554,9 +552,7 @@ TEST_F(SpirvWriterTest, TextureVar_Load) {
 TEST_F(SpirvWriterTest, ReadOnlyStorageTextureVar) {
     auto format = core::TexelFormat::kRgba8Unorm;
     auto* v = b.Var("v", ty.ptr(core::AddressSpace::kHandle,
-                                ty.Get<core::type::StorageTexture>(
-                                    core::type::TextureDimension::k2d, format, read,
-                                    core::type::StorageTexture::SubtypeFor(format, ty)),
+                                ty.storage_texture(core::type::TextureDimension::k2d, format, read),
                                 core::Access::kRead));
     v->SetBindingPoint(0, 0);
     mod.root_block->Append(v);
@@ -576,11 +572,10 @@ TEST_F(SpirvWriterTest, ReadOnlyStorageTextureVar) {
 
 TEST_F(SpirvWriterTest, ReadWriteStorageTextureVar) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* v = b.Var("v", ty.ptr(core::AddressSpace::kHandle,
-                                ty.Get<core::type::StorageTexture>(
-                                    core::type::TextureDimension::k2d, format, read_write,
-                                    core::type::StorageTexture::SubtypeFor(format, ty)),
-                                core::Access::kRead));
+    auto* v =
+        b.Var("v", ty.ptr(core::AddressSpace::kHandle,
+                          ty.storage_texture(core::type::TextureDimension::k2d, format, read_write),
+                          core::Access::kRead));
     v->SetBindingPoint(0, 0);
     mod.root_block->Append(v);
 
@@ -599,11 +594,10 @@ TEST_F(SpirvWriterTest, ReadWriteStorageTextureVar) {
 
 TEST_F(SpirvWriterTest, WriteOnlyStorageTextureVar) {
     auto format = core::TexelFormat::kRgba8Unorm;
-    auto* v = b.Var("v", ty.ptr(core::AddressSpace::kHandle,
-                                ty.Get<core::type::StorageTexture>(
-                                    core::type::TextureDimension::k2d, format, write,
-                                    core::type::StorageTexture::SubtypeFor(format, ty)),
-                                core::Access::kRead));
+    auto* v =
+        b.Var("v", ty.ptr(core::AddressSpace::kHandle,
+                          ty.storage_texture(core::type::TextureDimension::k2d, format, write),
+                          core::Access::kRead));
     v->SetBindingPoint(0, 0);
     mod.root_block->Append(v);
 

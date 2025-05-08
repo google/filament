@@ -276,14 +276,19 @@ void DumpMemoryStatistics(WGPUDevice device, MemoryDump* dump) {
     FromAPI(device)->DumpMemoryStatistics(dump);
 }
 
-uint64_t ComputeEstimatedMemoryUsage(WGPUDevice device) {
+MemoryUsageInfo ComputeEstimatedMemoryUsageInfo(WGPUDevice device) {
     auto deviceLock(FromAPI(device)->GetScopedLock());
     return FromAPI(device)->ComputeEstimatedMemoryUsage();
 }
 
-void ReduceMemoryUsage(WGPUDevice device) {
+AllocatorMemoryInfo GetAllocatorMemoryInfo(WGPUDevice device) {
     auto deviceLock(FromAPI(device)->GetScopedLock());
-    FromAPI(device)->ReduceMemoryUsage();
+    return FromAPI(device)->GetAllocatorMemoryInfo();
+}
+
+bool ReduceMemoryUsage(WGPUDevice device) {
+    auto deviceLock(FromAPI(device)->GetScopedLock());
+    return FromAPI(device)->ReduceMemoryUsage();
 }
 
 void PerformIdleTasks(const wgpu::Device& device) {

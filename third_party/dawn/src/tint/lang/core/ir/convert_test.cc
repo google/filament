@@ -49,8 +49,8 @@ TEST_F(IR_ConvertTest, Results) {
     auto* c = b.Convert(mod.Types().i32(), 1_u);
 
     EXPECT_EQ(c->Results().Length(), 1u);
-    EXPECT_TRUE(c->Result(0)->Is<InstructionResult>());
-    EXPECT_EQ(c->Result(0)->Instruction(), c);
+    EXPECT_TRUE(c->Result()->Is<InstructionResult>());
+    EXPECT_EQ(c->Result()->Instruction(), c);
 }
 
 TEST_F(IR_ConvertTest, Clone) {
@@ -59,8 +59,8 @@ TEST_F(IR_ConvertTest, Clone) {
     auto* new_c = clone_ctx.Clone(c);
 
     EXPECT_NE(c, new_c);
-    EXPECT_NE(c->Result(0), new_c->Result(0));
-    EXPECT_EQ(mod.Types().f32(), new_c->Result(0)->Type());
+    EXPECT_NE(c->Result(), new_c->Result());
+    EXPECT_EQ(mod.Types().f32(), new_c->Result()->Type());
 
     auto args = new_c->Args();
     EXPECT_EQ(1u, args.Length());

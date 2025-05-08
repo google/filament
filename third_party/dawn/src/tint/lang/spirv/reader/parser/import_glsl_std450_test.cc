@@ -291,8 +291,8 @@ TEST_P(GlslStd450OneParamTest, SignedToSigned) {
 INSTANTIATE_TEST_SUITE_P(SpirvParser,
                          GlslStd450OneParamTest,
                          ::testing::Values(GlslStd450Params{"SAbs", "abs"},
-                                           GlslStd450Params{"FindSMsb", "findSMsb"},
-                                           GlslStd450Params{"FindUMsb", "findUMsb"}));
+                                           GlslStd450Params{"FindSMsb", "find_s_msb"},
+                                           GlslStd450Params{"FindUMsb", "find_u_msb"}));
 
 using GlslStd450TwoParamTest = SpirvParserTestWithParam<GlslStd450Params>;
 
@@ -410,10 +410,10 @@ TEST_P(GlslStd450TwoParamTest, MixedToSigned) {
 
 INSTANTIATE_TEST_SUITE_P(SpirvParser,
                          GlslStd450TwoParamTest,
-                         ::testing::Values(GlslStd450Params{"SMax", "smax"},
-                                           GlslStd450Params{"SMin", "smin"},
-                                           GlslStd450Params{"UMax", "umax"},
-                                           GlslStd450Params{"UMin", "umin"}));
+                         ::testing::Values(GlslStd450Params{"SMax", "s_max"},
+                                           GlslStd450Params{"SMin", "s_min"},
+                                           GlslStd450Params{"UMax", "u_max"},
+                                           GlslStd450Params{"UMin", "u_min"}));
 
 using GlslStd450ThreeParamTest = SpirvParserTestWithParam<GlslStd450Params>;
 
@@ -531,8 +531,8 @@ TEST_P(GlslStd450ThreeParamTest, MixedToSigned) {
 
 INSTANTIATE_TEST_SUITE_P(SpirvParser,
                          GlslStd450ThreeParamTest,
-                         ::testing::Values(GlslStd450Params{"SClamp", "sclamp"},
-                                           GlslStd450Params{"UClamp", "uclamp"}));
+                         ::testing::Values(GlslStd450Params{"SClamp", "s_clamp"},
+                                           GlslStd450Params{"UClamp", "u_clamp"}));
 
 TEST_F(SpirvParserTest, FindILsb) {
     EXPECT_IR(Preamble() + R"(
@@ -548,12 +548,12 @@ TEST_F(SpirvParserTest, FindILsb) {
               R"(
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:u32 = spirv.findILsb<u32> 10i
-    %3:vec2<u32> = spirv.findILsb<u32> vec2<i32>(10i, 20i)
-    %4:i32 = spirv.findILsb<i32> 10u
-    %5:vec2<i32> = spirv.findILsb<i32> vec2<u32>(10u, 20u)
-    %6:vec2<u32> = spirv.findILsb<u32> vec2<u32>(10u, 20u)
-    %7:vec2<i32> = spirv.findILsb<i32> vec2<i32>(10i, 20i)
+    %2:u32 = spirv.find_i_lsb<u32> 10i
+    %3:vec2<u32> = spirv.find_i_lsb<u32> vec2<i32>(10i, 20i)
+    %4:i32 = spirv.find_i_lsb<i32> 10u
+    %5:vec2<i32> = spirv.find_i_lsb<i32> vec2<u32>(10u, 20u)
+    %6:vec2<u32> = spirv.find_i_lsb<u32> vec2<u32>(10u, 20u)
+    %7:vec2<i32> = spirv.find_i_lsb<i32> vec2<i32>(10i, 20i)
     ret
   }
 }
@@ -603,7 +603,7 @@ TEST_F(SpirvParserTest, FaceForward_Scalar) {
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
     %2:f32 = add 50.0f, 50.0f
-    %3:f32 = spirv.faceForward %2, 60.0f, 70.0f
+    %3:f32 = spirv.face_forward %2, 60.0f, 70.0f
     ret
   }
 }
@@ -620,7 +620,7 @@ TEST_F(SpirvParserTest, FaceForward_Vector) {
               R"(
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:vec2<f32> = spirv.faceForward vec2<f32>(50.0f, 60.0f), vec2<f32>(60.0f, 50.0f), vec2<f32>(70.0f, 60.0f)
+    %2:vec2<f32> = spirv.face_forward vec2<f32>(50.0f, 60.0f), vec2<f32>(60.0f, 50.0f), vec2<f32>(70.0f, 60.0f)
     %3:vec2<f32> = let %2
     ret
   }
@@ -714,7 +714,7 @@ TEST_F(SpirvParserTest, Modf_Scalar) {
               R"(
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:ptr<function, f32, read_write> = var
+    %2:ptr<function, f32, read_write> = var undef
     %3:f32 = spirv.modf 50.0f, %2
     ret
   }
@@ -732,7 +732,7 @@ TEST_F(SpirvParserTest, Modf_Vector) {
               R"(
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:ptr<function, vec2<f32>, read_write> = var
+    %2:ptr<function, vec2<f32>, read_write> = var undef
     %3:vec2<f32> = spirv.modf vec2<f32>(50.0f, 60.0f), %2
     ret
   }
@@ -750,7 +750,7 @@ TEST_F(SpirvParserTest, Frexp_ScalarSigned) {
               R"(
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:ptr<function, i32, read_write> = var
+    %2:ptr<function, i32, read_write> = var undef
     %3:f32 = spirv.frexp 50.0f, %2
     ret
   }
@@ -768,7 +768,7 @@ TEST_F(SpirvParserTest, Frexp_ScalarUnSigned) {
               R"(
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:ptr<function, u32, read_write> = var
+    %2:ptr<function, u32, read_write> = var undef
     %3:f32 = spirv.frexp 50.0f, %2
     ret
   }
@@ -786,7 +786,7 @@ TEST_F(SpirvParserTest, Frexp_VectorUnSigned) {
               R"(
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:ptr<function, vec2<u32>, read_write> = var
+    %2:ptr<function, vec2<u32>, read_write> = var undef
     %3:vec2<f32> = spirv.frexp vec2<f32>(50.0f, 60.0f), %2
     ret
   }

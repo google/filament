@@ -60,6 +60,9 @@ set(DAWN_SRC_DIR "${Dawn_SOURCE_DIR}/src" CACHE PATH "Directory that contains so
 set(DAWN_INCLUDE_DIR "${Dawn_SOURCE_DIR}/include" CACHE PATH "Directory that contains public headers for dawn")
 set(DAWN_TEMPLATE_DIR "${DAWN_GENERATOR_DIR}/templates" CACHE PATH "Directory that contains templates for generators")
 
+# Emscripten.cmake toolchain sets this variable to `0`; otherwise, it's undefined, so set it to 1.
+set_if_not_defined(EMSCRIPTEN 0 "1 if building with Emscripten")
+
 ################################################################################
 # Configuration options
 ################################################################################
@@ -71,7 +74,6 @@ set(ENABLE_NULL ON)
 set(ENABLE_OPENGLES OFF)
 set(ENABLE_DESKTOP_GL OFF)
 set(ENABLE_VULKAN OFF)
-set(ENABLE_EMSCRIPTEN OFF)
 set(ENABLE_SPIRV_VALIDATION OFF)
 set(USE_WAYLAND OFF)
 set(USE_X11 OFF)
@@ -79,10 +81,9 @@ set(USE_WINDOWS_UI OFF)
 set(BUILD_SAMPLES OFF)
 set(BUILD_TESTS OFF)
 set(TARGET_MACOS OFF)
-if (CMAKE_SYSTEM_NAME MATCHES "Emscripten")
+if (EMSCRIPTEN)
   # Only the samples are supported for Emscripten at the moment.
   # TODO(crbug.com/42240181): Make dawn_end2end_tests work too.
-  set(ENABLE_EMSCRIPTEN ON)
   set(BUILD_SAMPLES ON)
   set(BUILD_TESTS ON)
   set(ENABLE_NULL OFF)
@@ -117,7 +118,7 @@ endif()
 
 # GLFW is not supported in UWP
 set(DAWN_SUPPORTS_GLFW_FOR_WINDOWING OFF)
-if (NOT ENABLE_EMSCRIPTEN AND ((WIN32 AND NOT WINDOWS_STORE) OR (UNIX AND NOT ANDROID)))
+if (NOT EMSCRIPTEN AND ((WIN32 AND NOT WINDOWS_STORE) OR (UNIX AND NOT ANDROID)))
     set(DAWN_SUPPORTS_GLFW_FOR_WINDOWING ON)
 endif()
 
@@ -141,20 +142,13 @@ option(DAWN_ENABLE_OPENGLES "Enable compilation of the OpenGL ES backend" ${ENAB
 option(DAWN_ENABLE_VULKAN "Enable compilation of the Vulkan backend" ${ENABLE_VULKAN})
 option(DAWN_ENABLE_SPIRV_VALIDATION "Enable validation of SPIR-V" ${ENABLE_SPIRV_VALIDATION})
 
-# Optional path to Emscripten toolchain to allow for building WASM.
-option(DAWN_EMSCRIPTEN_TOOLCHAIN "Directory in which to find Emscripten toolchain" "")
-set(DAWN_ENABLE_EMSCRIPTEN OFF)
-if (NOT ${DAWN_EMSCRIPTEN_TOOLCHAIN} STREQUAL "" AND ENABLE_EMSCRIPTEN)
-    set(DAWN_ENABLE_EMSCRIPTEN ON)
-endif()
-
+message(STATUS "Dawn building using Emscripten toolchain: ${EMSCRIPTEN}")
 message(STATUS "Dawn build D3D11 backend: ${DAWN_ENABLE_D3D11}")
 message(STATUS "Dawn build D3D12 backend: ${DAWN_ENABLE_D3D12}")
 message(STATUS "Dawn build Metal backend: ${DAWN_ENABLE_METAL}")
 message(STATUS "Dawn build Vulkan backend: ${DAWN_ENABLE_VULKAN}")
 message(STATUS "Dawn build OpenGL backend: ${DAWN_ENABLE_DESKTOP_GL}")
 message(STATUS "Dawn build OpenGL ES backend: ${DAWN_ENABLE_OPENGLES}")
-message(STATUS "Dawn build Emscripten: ${DAWN_ENABLE_EMSCRIPTEN}")
 message(STATUS "Dawn build Null backend: ${DAWN_ENABLE_NULL}")
 message(STATUS "")
 message(STATUS "Dawn enable SPIR-V validation: ${DAWN_ENABLE_SPIRV_VALIDATION}")
@@ -220,7 +214,7 @@ option(TINT_ENABLE_INSTALL "Enable install step for Tint libraries" OFF)
 option(TINT_BUILD_CMD_TOOLS "Build the Tint command line tools" ON)
 
 if (DAWN_BUILD_SAMPLES)
-  if (NOT DAWN_USE_GLFW AND NOT DAWN_ENABLE_EMSCRIPTEN)
+  if (NOT DAWN_USE_GLFW AND NOT EMSCRIPTEN)
     message(SEND_ERROR "Dawn samples require GLFW or Emscripten")
   endif()
 endif()
@@ -248,7 +242,7 @@ option(TINT_BUILD_BENCHMARKS "Build Tint benchmarks" OFF)
 option(TINT_BUILD_TESTS "Build tests" ON)
 option(TINT_BUILD_AS_OTHER_OS "Override OS detection to force building of *_other.cc files" OFF)
 
-if (DAWN_ENABLE_EMSCRIPTEN)
+if (EMSCRIPTEN)
   # Skip tint tests in emscripten build
   set(TINT_BUILD_TESTS OFF)
   # Skip GLSL validation in Emscripten
@@ -337,16 +331,6 @@ option(DAWN_BUILD_MONOLITHIC_LIBRARY "Bundle all dawn components into a single s
 
 message(STATUS "Dawn fetch dependencies: ${DAWN_FETCH_DEPENDENCIES}")
 message(STATUS "Dawn build monolithic library: ${DAWN_BUILD_MONOLITHIC_LIBRARY}")
-message(STATUS "")
-
-# Optional path to Emscripten toolchain to allow for building WASM.
-set_if_not_defined(DAWN_EMSCRIPTEN_TOOLCHAIN "" "Directory in which to find Emscripten toolchain")
-set(DAWN_ENABLE_EMSCRIPTEN OFF)
-if (NOT ${DAWN_EMSCRIPTEN_TOOLCHAIN} STREQUAL "" AND ENABLE_EMSCRIPTEN)
-    set(DAWN_ENABLE_EMSCRIPTEN ON)
-endif()
-
-message(STATUS "Dawn Emscripten toolchain: ${DAWN_EMSCRIPTEN_TOOLCHAIN}")
 message(STATUS "")
 
 # Much of the backend code is shared among desktop OpenGL and OpenGL ES
@@ -476,7 +460,7 @@ add_subdirectory(src/tint)
 
 set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
 
-if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR DAWN_ENABLE_NULL OR DAWN_ENABLE_DESKTOP_GL OR DAWN_ENABLE_OPENGLES OR DAWN_ENABLE_VULKAN OR DAWN_ENABLE_EMSCRIPTEN)
+if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12 OR DAWN_ENABLE_METAL OR DAWN_ENABLE_NULL OR DAWN_ENABLE_DESKTOP_GL OR DAWN_ENABLE_OPENGLES OR DAWN_ENABLE_VULKAN OR EMSCRIPTEN)
     add_subdirectory(generator)
     # Note that we must add Emscripten directory first to ensure the correct
     # headers will be exported upwards.

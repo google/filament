@@ -112,6 +112,10 @@ class BuiltinFn final : public Castable<BuiltinFn, CallTarget> {
     /// @returns true if builtin is a subgroup builtin (defined in the extension `subgroups`).
     bool IsSubgroup() const;
 
+    /// @returns true if builtin is a subgroup matrix builtin (defined in the extension
+    /// `subgroup_matrix`).
+    bool IsSubgroupMatrix() const;
+
     /// @returns true if builtin is a quadSwap builtin
     bool IsQuadSwap() const;
 

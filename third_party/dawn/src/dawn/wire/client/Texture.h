@@ -38,6 +38,8 @@ class Device;
 
 class Texture final : public ObjectBase {
   public:
+    static WGPUTexture CreateError(Device* device, const WGPUTextureDescriptor* descriptor);
+
     Texture(const ObjectBaseParams& params, const WGPUTextureDescriptor* descriptor);
     ~Texture() override;
 

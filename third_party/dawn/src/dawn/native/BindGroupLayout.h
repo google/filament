@@ -68,7 +68,7 @@ class BindGroupLayoutBase final : public ApiObjectBase {
     const Ref<BindGroupLayoutInternalBase> mInternalLayout;
 
     // Non-0 if this BindGroupLayout was created as part of a default PipelineLayout.
-    const PipelineCompatibilityToken mPipelineCompatibilityToken = PipelineCompatibilityToken(0);
+    const PipelineCompatibilityToken mPipelineCompatibilityToken = kExplicitPCT;
 };
 
 }  // namespace dawn::native

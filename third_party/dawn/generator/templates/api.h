@@ -40,10 +40,10 @@
 #define WGPU_BREAKING_CHANGE_STRING_VIEW_LABELS
 #define WGPU_BREAKING_CHANGE_STRING_VIEW_OUTPUT_STRUCTS
 #define WGPU_BREAKING_CHANGE_STRING_VIEW_CALLBACKS
-#define WGPU_BREAKING_CHANGE_FUTURE_CALLBACK_TYPES
-#define WGPU_BREAKING_CHANGE_LOGGING_CALLBACK_TYPE
+#define WGPU_BREAKING_CHANGE_INSTANCE_DROPPED_RENAME
 
 {% set API = metadata.c_prefix %}
+{% set api = API.lower() %}
 #if defined({{API}}_SHARED_LIBRARY)
 #    if defined(_WIN32)
 #        if defined({{API}}_IMPLEMENTATION)
@@ -78,21 +78,26 @@
 #define {{API}}_NULLABLE
 #endif
 
-#define WGPU_BREAKING_CHANGE_DROP_DESCRIPTOR
-
 #include <stdint.h>
 #include <stddef.h>
+#include <math.h>
 
 #if defined(__cplusplus)
+#  define _{{api}}_ENUM_ZERO_INIT(type) type(0)
+#  define _{{api}}_STRUCT_ZERO_INIT {}
 #  if __cplusplus >= 201103L
-#    define {{API}}_MAKE_INIT_STRUCT(type, value) (type value)
+#    define _{{api}}_MAKE_INIT_STRUCT(type, value) (type value)
 #  else
-#    define {{API}}_MAKE_INIT_STRUCT(type, value) value
+#    define _{{api}}_MAKE_INIT_STRUCT(type, value) value
 #  endif
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
-#  define {{API}}_MAKE_INIT_STRUCT(type, value) ((type) value)
 #else
-#  define {{API}}_MAKE_INIT_STRUCT(type, value) value
+#  define _{{api}}_ENUM_ZERO_INIT(type) (type)0
+#  define _{{api}}_STRUCT_ZERO_INIT {0}
+#  if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#    define _{{api}}_MAKE_INIT_STRUCT(type, value) ((type) value)
+#  else
+#    define _{{api}}_MAKE_INIT_STRUCT(type, value) value
+#  endif
 #endif
 
 {% for constant in by_category["constant"] %}
@@ -144,9 +149,9 @@ typedef uint32_t {{API}}Bool;
 {% for type in by_category["callback function"] %}
     typedef {{as_cType(type.return_type.name)}} (*{{as_cType(type.name)}})(
         {%- for arg in type.arguments -%}
-            {% if arg.type.category == "structure" %}struct {% endif %}{{as_annotated_cType(arg)}}{{", "}}
+        {% if arg.type.category == "structure" %}struct {% endif %}{{as_annotated_cType(arg)}}{{", "}}
         {%- endfor -%}
-    void* userdata1, void* userdata2) {{API}}_FUNCTION_ATTRIBUTE;
+    {{API}}_NULLABLE void* userdata1, {{API}}_NULLABLE void* userdata2) {{API}}_FUNCTION_ATTRIBUTE;
 {% endfor %}
 
 typedef struct {{API}}ChainedStruct {
@@ -155,22 +160,82 @@ typedef struct {{API}}ChainedStruct {
 } {{API}}ChainedStruct {{API}}_STRUCTURE_ATTRIBUTE;
 
 {% macro render_c_default_value(member) -%}
-    {%- if member.annotation in ["*", "const*"] and member.optional or member.default_value == "nullptr" -%}
+    {%- if member.annotation in ["*", "const*", "const*const*"] -%}
+        //* Pointer types should always default to NULL.
         NULL
-    {%- elif member.type.category == "object" and member.optional -%}
+    {%- elif member.type.category == "object" -%}
+        //* Object types should always default to NULL.
         NULL
-    {%- elif member.type.category == "callback function" -%}
+    {%- elif member.type.category in ["callback function", "function pointer"] -%}
+        //* Callback function types should always default to NULL.
         NULL
-    {%- elif member.type.category in ["enum", "bitmask"] and member.default_value != None -%}
-        {{as_cEnum(member.type.name, Name(member.default_value))}}
-    {%- elif member.default_value != None -%}
-        {{member.default_value}}
-    {%- elif member.type.category == "structure" and member.annotation == "value" -%}
-        {{API}}_{{member.type.name.SNAKE_CASE()}}_INIT
+    {%- elif member.type.category == "enum" -%}
+        {%- if member.type.hasUndefined -%}
+            //* For enums that have an undefined value, instead of using the
+            //* default, just put undefined.
+            {{as_cEnum(member.type.name, Name("undefined"))}}
+        {%- elif member.default_value != None -%}
+            //* Enum types are either their default values, or zero-init.
+            {{as_cEnum(member.type.name, Name(member.default_value))}}
+        {%- else -%}
+            _{{api}}_ENUM_ZERO_INIT({{as_cType(member.type.name)}})
+        {%- endif -%}
+    {%- elif member.type.category == "bitmask" -%}
+        {%- if member.default_value != None -%}
+            {{as_cEnum(member.type.name, Name(member.default_value))}}
+        {%- else -%}
+            //* Bitmask types should currently always default to "none" if not
+            //* explicitly set.
+            {{as_cEnum(member.type.name, Name("none"))}}
+        {%- endif -%}
+    {%- elif member.type.category in ["structure", "callback info"] -%}
+        //* Structure types, must be by value here, otherwise, they should have
+        //* been caught as a pointer type.
+        {{- assert(member.annotation == "value") -}}
+        {%- if member.default_value == "zero" -%}
+            //* Special case for structures to use zero init instead of default
+            //* struct init.
+            _{{api}}_STRUCT_ZERO_INIT
+        {%- else -%}
+            {{API}}_{{member.type.name.SNAKE_CASE()}}_INIT
+        {%- endif -%}
+    {%- elif member.type.category == "native" -%}
+        //* Defaults in native types are either directly specified, or
+        //* explicitly defined per type, except for booleans, which we need to
+        //* convert into literals.
+        {%- if member.default_value != None and member.type.name.get() != "bool" -%}
+            //* Check to see if the default value is a known constant.
+            {%- set constant = find_by_name(by_category["constant"], member.default_value) -%}
+            {%- if constant -%}
+                {{API}}_{{constant.name.SNAKE_CASE()}}
+            {%- else -%}
+                {{member.default_value}}
+            {%- endif -%}
+        {%- else -%}
+            {%- if "int" in member.type.name.get() or member.type.name.get() == "size_t" -%}
+                0
+            {%- elif member.type.name.get() == "float" -%}
+                0.f
+            {%- elif member.type.name.get() == "double" -%}
+                0.
+            {%- elif member.type.name.get() == "bool" -%}
+                //* Explicitly use literals 0 and 1 for booleans.
+                {%- if member.default_value == "true" -%}
+                    1
+                {%- else -%}
+                    0
+                {%- endif -%}
+            {%- elif "void" in member.type.name.get() -%}
+                //* For members, void types are always pointers. We should
+                //* probably update the json file to make it more consistent
+                //* for these types by using annotations.
+                NULL
+            {%- else -%}
+                {{- assert(false, 'Unknown type "' + member.type.name.get() + '" with annotations "' + member.annotation + '" when trying to render default value.') -}}
+            {%- endif -%}
+        {%- endif -%}
     {%- else -%}
-        {{- assert(member.json_data.get("no_default", false) == false) -}}
-        {{- assert(member.default_value == None) -}}
-        {}
+        {{- assert(false, 'Unknown type "' + member.type.name.get() + '" with annotations "' + member.annotation + '" when trying to render default value.') -}}
     {%- endif -%}
 {% endmacro %}
 {% macro nullable_annotation(record) -%}
@@ -179,25 +244,25 @@ typedef struct {{API}}ChainedStruct {
     {%- endif %}
 {%- endmacro %}
 
-#define {{API}}_COMMA ,
+#define _{{api}}_COMMA ,
 
 {% for type in by_category["callback info"] %}
     typedef struct {{as_cType(type.name)}} {
-        {{API}}ChainedStruct* nextInChain;
+        {{API}}ChainedStruct * nextInChain;
         {% for member in type.members %}
             {{as_annotated_cType(member)}};
         {% endfor %}
-        void* userdata1;
-        void* userdata2;
+        {{API}}_NULLABLE void* userdata1;
+        {{API}}_NULLABLE void* userdata2;
     } {{as_cType(type.name)}} {{API}}_STRUCTURE_ATTRIBUTE;
 
-    #define {{API}}_{{type.name.SNAKE_CASE()}}_INIT {{API}}_MAKE_INIT_STRUCT({{as_cType(type.name)}}, { \
-        /*.nextInChain=*/NULL {{API}}_COMMA \
+    #define {{API}}_{{type.name.SNAKE_CASE()}}_INIT _{{api}}_MAKE_INIT_STRUCT({{as_cType(type.name)}}, { \
+        /*.nextInChain=*/NULL _{{api}}_COMMA \
         {% for member in type.members %}
-            /*.{{as_varName(member.name)}}=*/{{render_c_default_value(member)}} {{API}}_COMMA \
+            /*.{{as_varName(member.name)}}=*/{{render_c_default_value(member)}} _{{api}}_COMMA \
         {% endfor %}
-        /*.userdata1=*/NULL {{API}}_COMMA \
-        /*.userdata2=*/NULL {{API}}_COMMA \
+        /*.userdata1=*/NULL _{{api}}_COMMA \
+        /*.userdata2=*/NULL _{{api}}_COMMA \
     })
 
 {% endfor %}
@@ -208,7 +273,7 @@ typedef struct {{API}}ChainedStruct {
     {% endfor %}
     typedef struct {{as_cType(type.name)}} {
         {% if type.extensible %}
-            {{API}}ChainedStruct* nextInChain;
+            {{API}}ChainedStruct * nextInChain;
         {% endif %}
         {% if type.chained %}
             {{API}}ChainedStruct chain;
@@ -218,15 +283,18 @@ typedef struct {{API}}ChainedStruct {
         {% endfor %}
     } {{as_cType(type.name)}} {{API}}_STRUCTURE_ATTRIBUTE;
 
-    #define {{API}}_{{type.name.SNAKE_CASE()}}_INIT {{API}}_MAKE_INIT_STRUCT({{as_cType(type.name)}}, { \
+    #define {{API}}_{{type.name.SNAKE_CASE()}}_INIT _{{api}}_MAKE_INIT_STRUCT({{as_cType(type.name)}}, { \
         {% if type.extensible %}
-            /*.nextInChain=*/NULL {{API}}_COMMA \
+            /*.nextInChain=*/NULL _{{api}}_COMMA \
         {% endif %}
         {% if type.chained %}
-            /*.chain=*/{/*.nextInChain*/NULL {{API}}_COMMA /*.sType*/{{API}}SType_{{type.name.CamelCase()}}} {{API}}_COMMA \
+            /*.chain=*/_{{api}}_MAKE_INIT_STRUCT({{API}}ChainedStruct, { \
+                /*.next=*/NULL _{{api}}_COMMA \
+                /*.sType=*/{{API}}SType_{{type.name.CamelCase()}} _{{api}}_COMMA \
+            }) _{{api}}_COMMA \
         {% endif %}
         {% for member in type.members %}
-            /*.{{as_varName(member.name)}}=*/{{render_c_default_value(member)}} {{API}}_COMMA \
+            /*.{{as_varName(member.name)}}=*/{{render_c_default_value(member)}} _{{api}}_COMMA \
         {% endfor %}
     })
 

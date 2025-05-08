@@ -511,6 +511,39 @@ OpControlBarrier %workgroup %device %acquire_release_subgroup
           "Vulkan-supported storage class if Memory Semantics is not None"));
 }
 
+TEST_F(ValidateBarriers, OpControlBarrierVulkanAcquireRelease) {
+  const std::string body = R"(
+OpControlBarrier %workgroup %device %acquire_release
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body), SPV_ENV_VULKAN_1_0);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpControlBarrier-04650"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "ControlBarrier: expected Memory Semantics to include a "
+          "Vulkan-supported storage class if Memory Semantics is not None"));
+}
+
+TEST_F(ValidateBarriers, OpControlBarrierVulkanWorkgroupMemory) {
+  const std::string body = R"(
+OpControlBarrier %workgroup %workgroup %workgroup_memory
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body), SPV_ENV_VULKAN_1_0);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpControlBarrier-10609"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "ControlBarrier: Vulkan specification requires non-zero "
+          "Memory Semantics to have one of the following bits set: Acquire, "
+          "Release, AcquireRelease or SequentiallyConsistent"));
+}
+
 TEST_F(ValidateBarriers, OpControlBarrierSubgroupExecutionFragment1p1) {
   const std::string body = R"(
 OpControlBarrier %subgroup %subgroup %acquire_release_workgroup
@@ -687,9 +720,8 @@ OpControlBarrier %subgroup %workgroup %acquire_release_workgroup
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("OpControlBarrier requires one of the following "
-                        "Execution "
-                        "Models: TessellationControl, GLCompute, Kernel, "
-                        "MeshNV or TaskNV"));
+                        "Execution Models: TessellationControl, GLCompute, "
+                        "Kernel, MeshNV or TaskNV"));
 }
 
 TEST_F(ValidateBarriers, OpMemoryBarrierSuccess) {
@@ -1396,8 +1428,9 @@ OpReturn
 OpFunctionEnd
 )";
 
-  CompileSuccessfully(text);
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Memory Semantics Volatile can only be used with "
                         "atomic instructions"));
@@ -1423,8 +1456,9 @@ OpReturn
 OpFunctionEnd
 )";
 
-  CompileSuccessfully(text);
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Memory Semantics Volatile can only be used with "
                         "atomic instructions"));
@@ -1452,8 +1486,8 @@ OpReturn
 OpFunctionEnd
 )";
 
-  CompileSuccessfully(text);
-  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
 }
 
 TEST_F(ValidateBarriers, CooperativeMatrixNonConstantSemantics) {
@@ -1478,8 +1512,9 @@ OpReturn
 OpFunctionEnd
 )";
 
-  CompileSuccessfully(text);
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Memory Semantics must be a constant instruction when "
                         "CooperativeMatrixNV capability is present"));

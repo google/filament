@@ -137,8 +137,6 @@ public:
   TEST_METHOD(IllegalSampleOffset4)
   TEST_METHOD(NoFunctionParam)
   TEST_METHOD(I8Type)
-  TEST_METHOD(EmptyStructInBuffer)
-  TEST_METHOD(BigStructInBuffer)
 
   // TODO: enable this.
   // TEST_METHOD(TGSMRaceCond)
@@ -1808,14 +1806,6 @@ TEST_F(ValidationTest, I8Type) {
       "  %m8 = alloca i8",
       "I8 can only be used as immediate value for intrinsic",
       /*bRegex*/ true);
-}
-
-TEST_F(ValidationTest, EmptyStructInBuffer) {
-  TestCheck(L"..\\CodeGenHLSL\\EmptyStructInBuffer.hlsl");
-}
-
-TEST_F(ValidationTest, BigStructInBuffer) {
-  TestCheck(L"..\\CodeGenHLSL\\BigStructInBuffer.hlsl");
 }
 
 // TODO: enable this.

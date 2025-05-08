@@ -166,7 +166,7 @@ This document is part of the <a href="https://github.com/google/filament">Filame
 </p><ul>
 <li class="minus"><a href="https://github.com/romainguy">Romain Guy</a>, <a href="https://twitter.com/romainguy">@romainguy</a>
 </li>
-<li class="minus"><a href="https://github.com/pixelflinger">Mathias Agopian</a>, <a href="https://twitter.com/darthmoosious">@darthmoosious</a></li></ul>
+<li class="minus"><a href="https://github.com/pixelflinger">Mathias Agopian</a>, <a href="https://bsky.app/profile/pixelflinger.bsky.social">@pixelflinger</a></li></ul>
 
 <p></p>
 <a class="target" name="overview">&nbsp;</a><a class="target" name="overview">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Overview</h1>
@@ -259,26 +259,27 @@ in <a href="#table_standardproperties">table&nbsp;1</a>.
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Property </th><th style="text-align:left"> Definition </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:left"> Diffuse albedo for non-metallic surfaces, and specular color for metallic surfaces </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">metallic</strong> </td><td style="text-align:left"> Whether a surface appears to be dielectric (0.0) or conductor (1.0). Often used as a binary value (0 or 1) </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">roughness</strong> </td><td style="text-align:left"> Perceived smoothness (1.0) or roughness (0.0) of a surface. Smooth surfaces exhibit sharp reflections </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">metallic</strong> </td><td style="text-align:left"> Whether a surface appears to be dielectric (0.0) or conductor (1.0). Often used as a binary value (0 or 1) </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">reflectance</strong> </td><td style="text-align:left"> Fresnel reflectance at normal incidence for dielectric surfaces. This directly controls the strength of the reflections </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">sheenColor</strong> </td><td style="text-align:left"> Strength of the sheen layer </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">sheenRoughness</strong> </td><td style="text-align:left"> Perceived smoothness or roughness of the sheen layer </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">ambientOcclusion</strong> </td><td style="text-align:left"> Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0 </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoat</strong> </td><td style="text-align:left"> Strength of the clear coat layer </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoatRoughness</strong> </td><td style="text-align:left"> Perceived smoothness or roughness of the clear coat layer </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">clearCoatNormal</strong> </td><td style="text-align:left"> A detail normal used to perturb the clear coat layer using <em class="underscore">bump mapping</em> (<em class="underscore">normal mapping</em>) </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">anisotropy</strong> </td><td style="text-align:left"> Amount of anisotropy in either the tangent or bitangent direction </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">anisotropyDirection</strong> </td><td style="text-align:left"> Local surface direction in tangent space </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">ambientOcclusion</strong> </td><td style="text-align:left"> Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0 </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">normal</strong> </td><td style="text-align:left"> A detail normal used to perturb the surface using <em class="underscore">bump mapping</em> (<em class="underscore">normal mapping</em>) </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">bentNormal</strong> </td><td style="text-align:left"> A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">clearCoatNormal</strong> </td><td style="text-align:left"> A detail normal used to perturb the clear coat layer using <em class="underscore">bump mapping</em> (<em class="underscore">normal mapping</em>) </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:left"> Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:left"> Additional color that can be blended with the result of the lighting computations. See <code>postLightingBlending</code> </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">ior</strong> </td><td style="text-align:left"> Index of refraction, either for refractive objects or as an alternative to reflectance </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">transmission</strong> </td><td style="text-align:left"> Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">absorption</strong> </td><td style="text-align:left"> Absorption factor for refractive objects </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">microThickness</strong> </td><td style="text-align:left"> Thickness of the thin layer of refractive objects </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">thickness</strong> </td><td style="text-align:left"> Thickness of the solid volume of refractive objects </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">sheenColor</strong> </td><td style="text-align:left"> Strength of the sheen layer </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">sheenRoughness</strong> </td><td style="text-align:left"> Perceived smoothness or roughness of the sheen layer </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:left"> Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">normal</strong> </td><td style="text-align:left"> A detail normal used to perturb the surface using <em class="underscore">bump mapping</em> (<em class="underscore">normal mapping</em>) </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:left"> Additional color that can be blended with the result of the lighting computations. See <code>postLightingBlending</code> </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">absorption</strong> </td><td style="text-align:left"> Absorption factor for refractive objects </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">transmission</strong> </td><td style="text-align:left"> Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">ior</strong> </td><td style="text-align:left"> Index of refraction, either for refractive objects or as an alternative to reflectance </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">microThickness</strong> </td><td style="text-align:left"> Thickness of the thin layer of refractive objects </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">bentNormal</strong> </td><td style="text-align:left"> A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">shadowStrength</strong> </td><td style="text-align:left"> Strength factor between 0 and 1 for all shadows received by this material </td></tr>
 </tbody></table><center><div class="tablecaption"><a class="target" name="table_standardproperties">&nbsp;</a><b style="font-style:normal;">Table&nbsp;1:</b> Properties of the standard model</div></center></div>
 
 <p></p><p>
@@ -1486,10 +1487,13 @@ non-shader data.
 </p><dl><dt>Type</dt><dd><p>     array of parameter objects
 
 </p></dd><dt>Value</dt><dd><p>      Each entry is an object with the properties <code>name</code> and <code>type</code>, both of <code>string</code> type. The
-      name must be a valid GLSL identifier. Entries also have an optional <code>precision</code>, which can be
+      name must be a valid GLSL identifier. Entries have an optional <code>precision</code>, which can be
       one of <code>default</code> (best precision for the platform, typically <code>high</code> on desktop, <code>medium</code> on
       mobile), <code>low</code>, <code>medium</code>, <code>high</code>. The type must be one of the types described in
-      <a href="#table_materialparamstypes">table&nbsp;14</a>.
+      <a href="#table_materialparamstypes">table&nbsp;14</a>. For Android external textures, entries also have an optional 
+      transformName parameter to specify the name of the material parameter that will be 
+      used to expose the transform matrix associated with the external sampler. In iOS and Vulkan,
+      this will always be identity. 
 
 </p></dd></dl><div class="table">
 <table class="table"><tbody><tr><th style="text-align:left"> Type </th><th style="text-align:left"> Description </th></tr>
@@ -1752,7 +1756,13 @@ non-shader data.
       when selecting any shading model that is not <code>unlit</code>. See the shader sections of this document
       for more information on how to access these attributes from the shaders.
 
-</p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
+</p></dd></dl><div class="admonition note"><div class="admonition-title"> Interaction with custom variables</div>
+
+<p></p><p>
+
+    When the <code>color</code> attribute is specified, only four custom variables are available instead of five.</p></div>
+
+<p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    parameters : [</span>
 <span class="line">        {</span>
 <span class="line">           type : sampler2d,</span>
@@ -1779,7 +1789,7 @@ non-shader data.
 
 </p><dl><dt>Type</dt><dd><p>     array of <code>string</code>
 
-</p></dd><dt>Value</dt><dd><p>      Up to 4 strings, each must be a valid GLSL identifier.
+</p></dd><dt>Value</dt><dd><p>      Up to 5 strings, each must be a valid GLSL identifier.
 
 </p></dd><dt>Description</dt><dd><p>      Defines custom interpolants (or variables) that are output by the material's vertex shader.
       Each entry of the array defines the name of an  interpolant. The full name in the fragment
@@ -1794,7 +1804,14 @@ non-shader data.
       particular if <code>default</code> is specified the default precision is used is the fragment shader
       (<code>mediump</code>) and in the vertex shader (<code>highp</code>).
 
-</p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
+</p></dd></dl><div class="admonition warning"><div class="admonition-title"> Interaction with required attributes</div>
+
+<p></p><p>
+
+    If the <code>color</code> attribute is specified in the <code>required</code> list, then only four variables can be used
+    instead of five.</p></div>
+
+<p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    name : Skybox,</span>
 <span class="line">    parameters : [</span>
 <span class="line">        {</span>

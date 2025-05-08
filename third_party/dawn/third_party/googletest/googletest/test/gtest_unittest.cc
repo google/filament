@@ -63,13 +63,30 @@ TEST(CommandLineFlagsTest, CanBeAccessedInCodeOnceGTestHIsIncluded) {
 #include <memory>
 #include <ostream>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "gtest/gtest-spi.h"
 #include "src/gtest-internal-inl.h"
+
+struct ConvertibleGlobalType {
+  // The inner enable_if is to ensure invoking is_constructible doesn't fail.
+  // The outer enable_if is to ensure the overload resolution doesn't encounter
+  // an ambiguity.
+  template <
+      class T,
+      std::enable_if_t<
+          false, std::enable_if_t<std::is_constructible<T>::value, int>> = 0>
+  operator T() const;  // NOLINT(google-explicit-constructor)
+};
+void operator<<(ConvertibleGlobalType&, int);
+static_assert(sizeof(decltype(std::declval<ConvertibleGlobalType&>()
+                              << 1)(*)()) > 0,
+              "error in operator<< overload resolution");
 
 namespace testing {
 namespace internal {
@@ -172,7 +189,7 @@ class TestEventListenersAccessor {
   }
 
   static void SuppressEventForwarding(TestEventListeners* listeners) {
-    listeners->SuppressEventForwarding();
+    listeners->SuppressEventForwarding(true);
   }
 };
 
@@ -211,7 +228,6 @@ using testing::TestPartResult;
 using testing::TestPartResultArray;
 using testing::TestProperty;
 using testing::TestResult;
-using testing::TestSuite;
 using testing::TimeInMillis;
 using testing::UnitTest;
 using testing::internal::AlwaysFalse;
@@ -227,7 +243,6 @@ using testing::internal::FloatingPoint;
 using testing::internal::ForEach;
 using testing::internal::FormatEpochTimeInMillisAsIso8601;
 using testing::internal::FormatTimeInMillisAsSeconds;
-using testing::internal::GetCurrentOsStackTraceExceptTop;
 using testing::internal::GetElementOr;
 using testing::internal::GetNextRandomSeed;
 using testing::internal::GetRandomSeedFromFlag;
@@ -244,8 +259,6 @@ using testing::internal::IsNotContainer;
 using testing::internal::kMaxRandomSeed;
 using testing::internal::kTestTypeIdInGoogleTest;
 using testing::internal::NativeArray;
-using testing::internal::OsStackTraceGetter;
-using testing::internal::OsStackTraceGetterInterface;
 using testing::internal::ParseFlag;
 using testing::internal::RelationToSourceCopy;
 using testing::internal::RelationToSourceReference;
@@ -259,7 +272,6 @@ using testing::internal::StreamableToString;
 using testing::internal::String;
 using testing::internal::TestEventListenersAccessor;
 using testing::internal::TestResultAccessor;
-using testing::internal::UnitTestImpl;
 using testing::internal::WideStringToUtf8;
 using testing::internal::edit_distance::CalculateOptimalEdits;
 using testing::internal::edit_distance::CreateUnifiedDiff;
@@ -270,7 +282,7 @@ using testing::internal::CaptureStdout;
 using testing::internal::GetCapturedStdout;
 #endif
 
-#if GTEST_IS_THREADSAFE
+#ifdef GTEST_IS_THREADSAFE
 using testing::internal::ThreadWithParam;
 #endif
 
@@ -410,11 +422,14 @@ TEST(FormatTimeInMillisAsSecondsTest, FormatsNegativeNumber) {
   EXPECT_EQ("-1234567.89", FormatTimeInMillisAsSeconds(-1234567890));
 }
 
+// TODO: b/287046337 - In emscripten, local time zone modification is not
+// supported.
+#if !defined(__EMSCRIPTEN__)
 // Tests FormatEpochTimeInMillisAsIso8601().  The correctness of conversion
 // for particular dates below was verified in Python using
 // datetime.datetime.fromutctimestamp(<timestamp>/1000).
 
-// FormatEpochTimeInMillisAsIso8601 depends on the current timezone, so we
+// FormatEpochTimeInMillisAsIso8601 depends on the local timezone, so we
 // have to set up a particular timezone to obtain predictable results.
 class FormatEpochTimeInMillisAsIso8601Test : public Test {
  public:
@@ -433,9 +448,8 @@ class FormatEpochTimeInMillisAsIso8601Test : public Test {
     }
     GTEST_DISABLE_MSC_DEPRECATED_POP_()
 
-    // Set up the time zone for FormatEpochTimeInMillisAsIso8601 to use.  We
-    // cannot use the local time zone because the function's output depends
-    // on the time zone.
+    // Set the local time zone for FormatEpochTimeInMillisAsIso8601 to be
+    // a fixed time zone for reproducibility purposes.
     SetTimeZone("UTC+00");
   }
 
@@ -448,7 +462,7 @@ class FormatEpochTimeInMillisAsIso8601Test : public Test {
     // tzset() distinguishes between the TZ variable being present and empty
     // and not being present, so we have to consider the case of time_zone
     // being NULL.
-#if defined(_MSC_VER) || GTEST_OS_WINDOWS_MINGW
+#if defined(_MSC_VER) || defined(GTEST_OS_WINDOWS_MINGW)
     // ...Unless it's MSVC, whose standard library's _putenv doesn't
     // distinguish between an empty and a missing variable.
     const std::string env_var =
@@ -458,7 +472,7 @@ class FormatEpochTimeInMillisAsIso8601Test : public Test {
     tzset();
     GTEST_DISABLE_MSC_WARNINGS_POP_()
 #else
-#if GTEST_OS_LINUX_ANDROID && __ANDROID_API__ < 21
+#if defined(GTEST_OS_LINUX_ANDROID) && __ANDROID_API__ < 21
     // Work around KitKat bug in tzset by setting "UTC" before setting "UTC+00".
     // See https://github.com/android/ndk/issues/1604.
     setenv("TZ", "UTC", 1);
@@ -501,6 +515,8 @@ TEST_F(FormatEpochTimeInMillisAsIso8601Test, Prints24HourTime) {
 TEST_F(FormatEpochTimeInMillisAsIso8601Test, PrintsEpochStart) {
   EXPECT_EQ("1970-01-01T00:00:00.000", FormatEpochTimeInMillisAsIso8601(0));
 }
+
+#endif  // __EMSCRIPTEN__
 
 #ifdef __BORLANDC__
 // Silences warnings: "Condition is always true", "Unreachable code"
@@ -1090,7 +1106,7 @@ TEST(StringTest, CaseInsensitiveWideCStringEquals) {
   EXPECT_TRUE(String::CaseInsensitiveWideCStringEquals(L"FOOBAR", L"foobar"));
 }
 
-#if GTEST_OS_WINDOWS
+#ifdef GTEST_OS_WINDOWS
 
 // Tests String::ShowWideCString().
 TEST(StringTest, ShowWideCString) {
@@ -1099,7 +1115,7 @@ TEST(StringTest, ShowWideCString) {
   EXPECT_STREQ("foo", String::ShowWideCString(L"foo").c_str());
 }
 
-#if GTEST_OS_WINDOWS_MOBILE
+#ifdef GTEST_OS_WINDOWS_MOBILE
 TEST(StringTest, AnsiAndUtf16Null) {
   EXPECT_EQ(NULL, String::AnsiToUtf16(NULL));
   EXPECT_EQ(NULL, String::Utf16ToAnsi(NULL));
@@ -1189,7 +1205,7 @@ TEST_F(ScopedFakeTestPartResultReporterTest, DeprecatedConstructor) {
   EXPECT_EQ(1, results.size());
 }
 
-#if GTEST_IS_THREADSAFE
+#ifdef GTEST_IS_THREADSAFE
 
 class ScopedFakeTestPartResultReporterWithThreadsTest
     : public ScopedFakeTestPartResultReporterTest {
@@ -1347,7 +1363,7 @@ TEST_F(ExpectNonfatalFailureTest, AcceptsMacroThatExpandsToUnprotectedComma) {
       "");
 }
 
-#if GTEST_IS_THREADSAFE
+#ifdef GTEST_IS_THREADSAFE
 
 typedef ScopedFakeTestPartResultReporterWithThreadsTest
     ExpectFailureWithThreadsTest;
@@ -1676,7 +1692,7 @@ TEST_F(GTestFlagSaverTest, VerifyGTestFlags) { VerifyAndModifyFlags(); }
 // value.  If the value argument is "", unsets the environment
 // variable.  The caller must ensure that both arguments are not NULL.
 static void SetEnv(const char* name, const char* value) {
-#if GTEST_OS_WINDOWS_MOBILE
+#ifdef GTEST_OS_WINDOWS_MOBILE
   // Environment variables are not supported on Windows CE.
   return;
 #elif defined(__BORLANDC__) || defined(__SunOS_5_8) || defined(__SunOS_5_9)
@@ -1699,7 +1715,7 @@ static void SetEnv(const char* name, const char* value) {
   // We cast away the 'const' since that would work for both variants.
   putenv(const_cast<char*>(added_env[name]->c_str()));
   delete prev_env;
-#elif GTEST_OS_WINDOWS  // If we are on Windows proper.
+#elif defined(GTEST_OS_WINDOWS)  // If we are on Windows proper.
   _putenv((Message() << name << "=" << value).GetString().c_str());
 #else
   if (*value == '\0') {
@@ -1710,7 +1726,7 @@ static void SetEnv(const char* name, const char* value) {
 #endif  // GTEST_OS_WINDOWS_MOBILE
 }
 
-#if !GTEST_OS_WINDOWS_MOBILE
+#ifndef GTEST_OS_WINDOWS_MOBILE
 // Environment variables are not supported on Windows CE.
 
 using testing::internal::Int32FromGTestEnv;
@@ -1819,7 +1835,7 @@ TEST(ParseInt32FlagTest, ParsesAndReturnsValidValue) {
 // Tests that Int32FromEnvOrDie() parses the value of the var or
 // returns the correct default.
 // Environment variables are not supported on Windows CE.
-#if !GTEST_OS_WINDOWS_MOBILE
+#ifndef GTEST_OS_WINDOWS_MOBILE
 TEST(Int32FromEnvOrDieTest, ParsesAndReturnsValidValue) {
   EXPECT_EQ(333, Int32FromEnvOrDie(GTEST_FLAG_PREFIX_UPPER_ "UnsetVar", 333));
   SetEnv(GTEST_FLAG_PREFIX_UPPER_ "UnsetVar", "123");
@@ -1892,7 +1908,7 @@ TEST_F(ShouldShardTest, ReturnsFalseWhenTotalShardIsOne) {
 // Tests that sharding is enabled if total_shards > 1 and
 // we are not in a death test subprocess.
 // Environment variables are not supported on Windows CE.
-#if !GTEST_OS_WINDOWS_MOBILE
+#ifndef GTEST_OS_WINDOWS_MOBILE
 TEST_F(ShouldShardTest, WorksWhenShardEnvVarsAreValid) {
   SetEnv(index_var_, "4");
   SetEnv(total_var_, "22");
@@ -2147,7 +2163,7 @@ class UnitTestRecordPropertyTestEnvironment : public Environment {
 };
 
 // This will test property recording outside of any test or test case.
-static Environment* record_property_env GTEST_ATTRIBUTE_UNUSED_ =
+[[maybe_unused]] static Environment* record_property_env =
     AddGlobalTestEnvironment(new UnitTestRecordPropertyTestEnvironment);
 
 // This group of tests is for predicate assertions (ASSERT_PRED*, etc)
@@ -2854,6 +2870,8 @@ TEST_F(FloatTest, LargeDiff) {
 // This ensures that no overflow occurs when comparing numbers whose
 // absolute value is very large.
 TEST_F(FloatTest, Infinity) {
+  EXPECT_FLOAT_EQ(values_.infinity, values_.infinity);
+  EXPECT_FLOAT_EQ(-values_.infinity, -values_.infinity);
   EXPECT_FLOAT_EQ(values_.infinity, values_.close_to_infinity);
   EXPECT_FLOAT_EQ(-values_.infinity, -values_.close_to_infinity);
   EXPECT_NONFATAL_FAILURE(EXPECT_FLOAT_EQ(values_.infinity, -values_.infinity),
@@ -2878,6 +2896,11 @@ TEST_F(FloatTest, NaN) {
   EXPECT_NONFATAL_FAILURE(EXPECT_FLOAT_EQ(v.nan1, v.nan1), "v.nan1");
   EXPECT_NONFATAL_FAILURE(EXPECT_FLOAT_EQ(v.nan1, v.nan2), "v.nan2");
   EXPECT_NONFATAL_FAILURE(EXPECT_FLOAT_EQ(1.0, v.nan1), "v.nan1");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(1.0f, v.nan1, 1.0f), "v.nan1");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(1.0f, v.nan1, v.infinity), "v.nan1");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(v.infinity, v.nan1, 1.0f), "v.nan1");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(v.infinity, v.nan1, v.infinity),
+                          "v.nan1");
 
   EXPECT_FATAL_FAILURE(ASSERT_FLOAT_EQ(v.nan1, v.infinity), "v.infinity");
 }
@@ -2901,11 +2924,28 @@ TEST_F(FloatTest, Commutative) {
 
 // Tests EXPECT_NEAR.
 TEST_F(FloatTest, EXPECT_NEAR) {
+  static const FloatTest::TestValues& v = this->values_;
+
   EXPECT_NEAR(-1.0f, -1.1f, 0.2f);
   EXPECT_NEAR(2.0f, 3.0f, 1.0f);
+  EXPECT_NEAR(v.infinity, v.infinity, 0.0f);
+  EXPECT_NEAR(-v.infinity, -v.infinity, 0.0f);
+  EXPECT_NEAR(0.0f, 1.0f, v.infinity);
+  EXPECT_NEAR(v.infinity, -v.infinity, v.infinity);
+  EXPECT_NEAR(-v.infinity, v.infinity, v.infinity);
   EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(1.0f, 1.5f, 0.25f),  // NOLINT
                           "The difference between 1.0f and 1.5f is 0.5, "
                           "which exceeds 0.25f");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(v.infinity, -v.infinity, 0.0f),  // NOLINT
+                          "The difference between v.infinity and -v.infinity "
+                          "is inf, which exceeds 0.0f");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(-v.infinity, v.infinity, 0.0f),  // NOLINT
+                          "The difference between -v.infinity and v.infinity "
+                          "is inf, which exceeds 0.0f");
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_NEAR(v.infinity, v.close_to_infinity, v.further_from_infinity),
+      "The difference between v.infinity and v.close_to_infinity is inf, which "
+      "exceeds v.further_from_infinity");
 }
 
 // Tests ASSERT_NEAR.
@@ -3012,6 +3052,8 @@ TEST_F(DoubleTest, LargeDiff) {
 // This ensures that no overflow occurs when comparing numbers whose
 // absolute value is very large.
 TEST_F(DoubleTest, Infinity) {
+  EXPECT_DOUBLE_EQ(values_.infinity, values_.infinity);
+  EXPECT_DOUBLE_EQ(-values_.infinity, -values_.infinity);
   EXPECT_DOUBLE_EQ(values_.infinity, values_.close_to_infinity);
   EXPECT_DOUBLE_EQ(-values_.infinity, -values_.close_to_infinity);
   EXPECT_NONFATAL_FAILURE(EXPECT_DOUBLE_EQ(values_.infinity, -values_.infinity),
@@ -3031,6 +3073,12 @@ TEST_F(DoubleTest, NaN) {
   EXPECT_NONFATAL_FAILURE(EXPECT_DOUBLE_EQ(v.nan1, v.nan1), "v.nan1");
   EXPECT_NONFATAL_FAILURE(EXPECT_DOUBLE_EQ(v.nan1, v.nan2), "v.nan2");
   EXPECT_NONFATAL_FAILURE(EXPECT_DOUBLE_EQ(1.0, v.nan1), "v.nan1");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(1.0, v.nan1, 1.0), "v.nan1");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(1.0, v.nan1, v.infinity), "v.nan1");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(v.infinity, v.nan1, 1.0), "v.nan1");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(v.infinity, v.nan1, v.infinity),
+                          "v.nan1");
+
   EXPECT_FATAL_FAILURE(ASSERT_DOUBLE_EQ(v.nan1, v.infinity), "v.infinity");
 }
 
@@ -3053,11 +3101,28 @@ TEST_F(DoubleTest, Commutative) {
 
 // Tests EXPECT_NEAR.
 TEST_F(DoubleTest, EXPECT_NEAR) {
+  static const DoubleTest::TestValues& v = this->values_;
+
   EXPECT_NEAR(-1.0, -1.1, 0.2);
   EXPECT_NEAR(2.0, 3.0, 1.0);
+  EXPECT_NEAR(v.infinity, v.infinity, 0.0);
+  EXPECT_NEAR(-v.infinity, -v.infinity, 0.0);
+  EXPECT_NEAR(0.0, 1.0, v.infinity);
+  EXPECT_NEAR(v.infinity, -v.infinity, v.infinity);
+  EXPECT_NEAR(-v.infinity, v.infinity, v.infinity);
   EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(1.0, 1.5, 0.25),  // NOLINT
                           "The difference between 1.0 and 1.5 is 0.5, "
                           "which exceeds 0.25");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(v.infinity, -v.infinity, 0.0),
+                          "The difference between v.infinity and -v.infinity "
+                          "is inf, which exceeds 0.0");
+  EXPECT_NONFATAL_FAILURE(EXPECT_NEAR(-v.infinity, v.infinity, 0.0),
+                          "The difference between -v.infinity and v.infinity "
+                          "is inf, which exceeds 0.0");
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_NEAR(v.infinity, v.close_to_infinity, v.further_from_infinity),
+      "The difference between v.infinity and v.close_to_infinity is inf, which "
+      "exceeds v.further_from_infinity");
   // At this magnitude adjacent doubles are 512.0 apart, so this triggers a
   // slightly different failure reporting path.
   EXPECT_NONFATAL_FAILURE(
@@ -3316,11 +3381,7 @@ TEST_F(SingleEvaluationTest, OtherCases) {
 
 #if GTEST_HAS_RTTI
 
-#ifdef _MSC_VER
-#define ERROR_DESC "class std::runtime_error"
-#else
 #define ERROR_DESC "std::runtime_error"
-#endif
 
 #else  // GTEST_HAS_RTTI
 
@@ -3926,7 +3987,7 @@ TEST(AssertionTest, NamedEnum) {
 enum {
   kCaseA = -1,
 
-#if GTEST_OS_LINUX
+#ifdef GTEST_OS_LINUX
 
   // We want to test the case where the size of the anonymous enum is
   // larger than sizeof(int), to make sure our implementation of the
@@ -3949,7 +4010,7 @@ enum {
 };
 
 TEST(AssertionTest, AnonymousEnum) {
-#if GTEST_OS_LINUX
+#ifdef GTEST_OS_LINUX
 
   EXPECT_EQ(static_cast<int>(kCaseA), static_cast<int>(kCaseB));
 
@@ -3983,7 +4044,7 @@ TEST(AssertionTest, AnonymousEnum) {
 
 #endif  // !GTEST_OS_MAC && !defined(__SUNPRO_CC)
 
-#if GTEST_OS_WINDOWS
+#ifdef GTEST_OS_WINDOWS
 
 static HRESULT UnexpectedHRESULTFailure() { return E_UNEXPECTED; }
 
@@ -4105,7 +4166,7 @@ TEST(ExpectThrowTest, DoesNotGenerateUnreachableCodeWarning) {
 
   EXPECT_THROW(throw 1, int);
   EXPECT_NONFATAL_FAILURE(EXPECT_THROW(n++, int), "");
-  EXPECT_NONFATAL_FAILURE(EXPECT_THROW(throw 1, const char*), "");
+  EXPECT_NONFATAL_FAILURE(EXPECT_THROW(throw n, const char*), "");
   EXPECT_NO_THROW(n++);
   EXPECT_NONFATAL_FAILURE(EXPECT_NO_THROW(throw 1), "");
   EXPECT_ANY_THROW(throw 1);
@@ -4160,8 +4221,8 @@ TEST(AssertionSyntaxTest, ExceptionAssertionsBehavesLikeSingleStatement) {
 #endif
 TEST(AssertionSyntaxTest, NoFatalFailureAssertionsBehavesLikeSingleStatement) {
   if (AlwaysFalse())
-    EXPECT_NO_FATAL_FAILURE(FAIL()) << "This should never be executed. "
-                                    << "It's a compilation test only.";
+    EXPECT_NO_FATAL_FAILURE(FAIL())
+        << "This should never be executed. " << "It's a compilation test only.";
   else
     ;  // NOLINT
 
@@ -4343,7 +4404,7 @@ TEST(AssertionWithMessageTest, ASSERT_TRUE) {
       "(null)(null)");
 }
 
-#if GTEST_OS_WINDOWS
+#ifdef GTEST_OS_WINDOWS
 // Tests using wide strings in assertion messages.
 TEST(AssertionWithMessageTest, WideStringMessage) {
   EXPECT_NONFATAL_FAILURE(
@@ -4955,7 +5016,7 @@ TEST(ComparisonAssertionTest, AcceptsUnprintableArgs) {
 // both in a TEST and in a TEST_F.
 class Foo {
  public:
-  Foo() {}
+  Foo() = default;
 
  private:
   int Bar() const { return 1; }
@@ -6178,12 +6239,12 @@ TEST_F(ParseFlagsTest, FilterBad) {
 
   const char* argv2[] = {"foo.exe", "--gtest_filter", nullptr};
 
-#if GTEST_HAS_ABSL && GTEST_HAS_DEATH_TEST
+#if defined(GTEST_HAS_ABSL) && defined(GTEST_HAS_DEATH_TEST)
   // Invalid flag arguments are a fatal error when using the Abseil Flags.
   EXPECT_EXIT(GTEST_TEST_PARSING_FLAGS_(argv, argv2, Flags::Filter(""), true),
               testing::ExitedWithCode(1),
               "ERROR: Missing the value for the flag 'gtest_filter'");
-#elif !GTEST_HAS_ABSL
+#elif !defined(GTEST_HAS_ABSL)
   GTEST_TEST_PARSING_FLAGS_(argv, argv2, Flags::Filter(""), true);
 #else
   static_cast<void>(argv);
@@ -6197,12 +6258,12 @@ TEST_F(ParseFlagsTest, OutputEmpty) {
 
   const char* argv2[] = {"foo.exe", "--gtest_output", nullptr};
 
-#if GTEST_HAS_ABSL && GTEST_HAS_DEATH_TEST
+#if defined(GTEST_HAS_ABSL) && defined(GTEST_HAS_DEATH_TEST)
   // Invalid flag arguments are a fatal error when using the Abseil Flags.
   EXPECT_EXIT(GTEST_TEST_PARSING_FLAGS_(argv, argv2, Flags(), true),
               testing::ExitedWithCode(1),
               "ERROR: Missing the value for the flag 'gtest_output'");
-#elif !GTEST_HAS_ABSL
+#elif !defined(GTEST_HAS_ABSL)
   GTEST_TEST_PARSING_FLAGS_(argv, argv2, Flags(), true);
 #else
   static_cast<void>(argv);
@@ -6210,7 +6271,7 @@ TEST_F(ParseFlagsTest, OutputEmpty) {
 #endif
 }
 
-#if GTEST_HAS_ABSL
+#ifdef GTEST_HAS_ABSL
 TEST_F(ParseFlagsTest, AbseilPositionalFlags) {
   const char* argv[] = {"foo.exe", "--gtest_throw_on_failure=1", "--",
                         "--other_flag", nullptr};
@@ -6224,7 +6285,16 @@ TEST_F(ParseFlagsTest, AbseilPositionalFlags) {
 }
 #endif
 
-#if GTEST_OS_WINDOWS
+TEST_F(ParseFlagsTest, UnrecognizedFlags) {
+  const char* argv[] = {"foo.exe", "--gtest_filter=abcd", "--other_flag",
+                        nullptr};
+
+  const char* argv2[] = {"foo.exe", "--other_flag", nullptr};
+
+  GTEST_TEST_PARSING_FLAGS_(argv, argv2, Flags::Filter("abcd"), false);
+}
+
+#ifdef GTEST_OS_WINDOWS
 // Tests parsing wide strings.
 TEST_F(ParseFlagsTest, WideStrings) {
   const wchar_t* argv[] = {L"foo.exe",
@@ -6614,7 +6684,7 @@ TEST(ColoredOutputTest, UsesColorsWhenStdoutIsTty) {
 TEST(ColoredOutputTest, UsesColorsWhenTermSupportsColors) {
   GTEST_FLAG_SET(color, "auto");
 
-#if GTEST_OS_WINDOWS && !GTEST_OS_WINDOWS_MINGW
+#if defined(GTEST_OS_WINDOWS) && !defined(GTEST_OS_WINDOWS_MINGW)
   // On Windows, we ignore the TERM variable as it's usually not set.
 
   SetEnv("TERM", "dumb");
@@ -6650,6 +6720,9 @@ TEST(ColoredOutputTest, UsesColorsWhenTermSupportsColors) {
   SetEnv("TERM", "xterm-kitty");      // TERM supports colors.
   EXPECT_TRUE(ShouldUseColor(true));  // Stdout is a TTY.
 
+  SetEnv("TERM", "alacritty");        // TERM supports colors.
+  EXPECT_TRUE(ShouldUseColor(true));  // Stdout is a TTY.
+
   SetEnv("TERM", "xterm-256color");   // TERM supports colors.
   EXPECT_TRUE(ShouldUseColor(true));  // Stdout is a TTY.
 
@@ -6681,8 +6754,8 @@ TEST(ColoredOutputTest, UsesColorsWhenTermSupportsColors) {
 
 // Verifies that StaticAssertTypeEq works in a namespace scope.
 
-static bool dummy1 GTEST_ATTRIBUTE_UNUSED_ = StaticAssertTypeEq<bool, bool>();
-static bool dummy2 GTEST_ATTRIBUTE_UNUSED_ =
+[[maybe_unused]] static bool dummy1 = StaticAssertTypeEq<bool, bool>();
+[[maybe_unused]] static bool dummy2 =
     StaticAssertTypeEq<const int, const int>();
 
 // Verifies that StaticAssertTypeEq works in a class.
@@ -6980,7 +7053,7 @@ TEST(EventListenerTest, SuppressEventForwarding) {
 
 // Tests that events generated by Google Test are not forwarded in
 // death test subprocesses.
-TEST(EventListenerDeathTest, EventsNotForwardedInDeathTestSubprecesses) {
+TEST(EventListenerDeathTest, EventsNotForwardedInDeathTestSubprocesses) {
   EXPECT_DEATH_IF_SUPPORTED(
       {
         GTEST_CHECK_(TestEventListenersAccessor::EventForwardingEnabled(
@@ -7456,22 +7529,6 @@ TEST(NativeArrayTest, WorksForTwoDimensionalArray) {
   NativeArray<char[3]> na(a, 2, RelationToSourceReference());
   ASSERT_EQ(2U, na.size());
   EXPECT_EQ(a, na.begin());
-}
-
-// IndexSequence
-TEST(IndexSequence, MakeIndexSequence) {
-  using testing::internal::IndexSequence;
-  using testing::internal::MakeIndexSequence;
-  EXPECT_TRUE(
-      (std::is_same<IndexSequence<>, MakeIndexSequence<0>::type>::value));
-  EXPECT_TRUE(
-      (std::is_same<IndexSequence<0>, MakeIndexSequence<1>::type>::value));
-  EXPECT_TRUE(
-      (std::is_same<IndexSequence<0, 1>, MakeIndexSequence<2>::type>::value));
-  EXPECT_TRUE((
-      std::is_same<IndexSequence<0, 1, 2>, MakeIndexSequence<3>::type>::value));
-  EXPECT_TRUE(
-      (std::is_base_of<IndexSequence<0, 1, 2>, MakeIndexSequence<3>>::value));
 }
 
 // ElemFromList

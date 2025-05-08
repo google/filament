@@ -32,7 +32,7 @@ import (
 
 	"dawn.googlesource.com/dawn/tools/src/cts/expectations"
 	"dawn.googlesource.com/dawn/tools/src/cts/result"
-	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParse(t *testing.T) {
@@ -498,12 +498,7 @@ crbug.com/456 [ Mac ] ghi_jkl [ PASS ]
 		if err != nil {
 			errMsg = err.Error()
 		}
-		if diff := cmp.Diff(errMsg, test.expectErr); diff != "" {
-			t.Errorf("'%v': Parse() error %v", test.name, diff)
-			continue
-		}
-		if diff := cmp.Diff(got, test.expect); diff != "" {
-			t.Errorf("'%v': Parse() was not as expected:\n%v", test.name, diff)
-		}
+		require.Equal(t, test.expectErr, errMsg)
+		require.Equal(t, test.expect, got)
 	}
 }

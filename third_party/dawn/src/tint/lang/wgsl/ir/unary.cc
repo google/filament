@@ -43,7 +43,7 @@ Unary::Unary(Id id, core::ir::InstructionResult* result, core::UnaryOp op, core:
 Unary::~Unary() = default;
 
 Unary* Unary::Clone(core::ir::CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     auto* val = ctx.Remap(Val());
     return ctx.ir.CreateInstruction<Unary>(new_result, Op(), val);
 }

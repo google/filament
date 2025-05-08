@@ -40,6 +40,7 @@
 #include "dawn/native/ApplyClearColorValueWithDrawHelper.h"
 #include "dawn/native/BindGroup.h"
 #include "dawn/native/BlitBufferToDepthStencil.h"
+#include "dawn/native/BlitBufferToTexture.h"
 #include "dawn/native/BlitDepthToDepth.h"
 #include "dawn/native/BlitTextureToBuffer.h"
 #include "dawn/native/Buffer.h"
@@ -58,6 +59,7 @@
 #include "dawn/native/RenderPassEncoder.h"
 #include "dawn/native/RenderPassWorkaroundsHelper.h"
 #include "dawn/native/RenderPipeline.h"
+#include "dawn/native/ValidationUtils.h"
 #include "dawn/native/ValidationUtils_autogen.h"
 #include "dawn/native/utils/WGPUHelpers.h"
 #include "dawn/platform/DawnPlatform.h"
@@ -573,9 +575,7 @@ MaybeError ValidateRenderPassColorAttachment(DeviceBase* device,
 
     const dawn::native::Color& clearValue = colorAttachment.clearValue;
     if (colorAttachment.loadOp == wgpu::LoadOp::Clear) {
-        DAWN_INVALID_IF(std::isnan(clearValue.r) || std::isnan(clearValue.g) ||
-                            std::isnan(clearValue.b) || std::isnan(clearValue.a),
-                        "Color clear value (%s) contains a NaN.", &clearValue);
+        DAWN_TRY(ValidateColor("clearValue", clearValue));
     } else if (colorAttachment.loadOp == wgpu::LoadOp::ExpandResolveTexture) {
         DAWN_INVALID_IF(colorAttachment.resolveTarget == nullptr,
                         "%s is used without resolve target.", wgpu::LoadOp::ExpandResolveTexture);
@@ -724,10 +724,7 @@ MaybeError ValidateRenderPassPLS(DeviceBase* device,
 
         const dawn::native::Color& clearValue = attachment.clearValue;
         if (attachment.loadOp == wgpu::LoadOp::Clear) {
-            DAWN_INVALID_IF(std::isnan(clearValue.r) || std::isnan(clearValue.g) ||
-                                std::isnan(clearValue.b) || std::isnan(clearValue.a),
-                            "storageAttachments[%i].clearValue (%s) contains a NaN.", i,
-                            &clearValue);
+            DAWN_TRY(ValidateColor("clearValue", clearValue));
         }
 
         DAWN_TRY(
@@ -754,7 +751,7 @@ ResultOrError<UnpackedPtr<RenderPassDescriptor>> ValidateRenderPassDescriptor(
         descriptor->colorAttachmentCount > maxColorAttachments,
         "Color attachment count (%u) exceeds the maximum number of color attachments (%u).%s",
         descriptor->colorAttachmentCount, maxColorAttachments,
-        DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter(), maxColorAttachments,
+        DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter()->GetLimits().v1, maxColorAttachments,
                                     descriptor->colorAttachmentCount));
 
     auto colorAttachments = ityp::SpanFromUntyped<ColorAttachmentIndex>(
@@ -943,7 +940,13 @@ MaybeError EncodeTimestampsToNanosecondsConversion(CommandEncoder* encoder,
 
 bool ShouldUseTextureToBufferBlit(const DeviceBase* device,
                                   const Format& format,
-                                  const Aspect& aspect) {
+                                  const Aspect& aspect,
+                                  const Extent3D& copySize) {
+    // Noop copy, do not use blit.
+    if (copySize.width == 0 || copySize.height == 0 || copySize.depthOrArrayLayers == 0) {
+        return false;
+    }
+
     // Snorm
     if (format.IsSnorm() && device->IsToggleEnabled(Toggle::UseBlitForSnormTextureToBufferCopy)) {
         return true;
@@ -1621,6 +1624,18 @@ void CommandEncoder::APICopyBufferToTexture(const TexelCopyBufferInfo* source,
                                  "copying from %s to stencil aspect of %s using blit workaround.",
                                  source->buffer, dst.texture.Get());
                 return {};
+            } else if (GetDevice()->IsToggleEnabled(Toggle::UseBlitForB2T) &&
+                       IsBufferToTextureBlitSupported(source->buffer, dst, *copySize)) {
+                // This function might create new resources. Need to lock the Device.
+                // TODO(crbug.com/dawn/1618): In future, all temp resources should be created at
+                // Command Submit time, so the locking would be removed from here at that point.
+                auto deviceLock(GetDevice()->GetScopedLock());
+                DAWN_TRY_CONTEXT(BlitBufferToTexture(GetDevice(), this, source->buffer, srcLayout,
+                                                     dst, *copySize),
+                                 "copying buffer %s to %s using blit workaround.", source->buffer,
+                                 dst.texture.Get());
+
+                return {};
             }
 
             CopyBufferToTextureCmd* copy =
@@ -1685,17 +1700,11 @@ void CommandEncoder::APICopyTextureToBuffer(const TexelCopyTextureInfo* sourceOr
             TexelCopyBufferLayout dstLayout = destination->layout;
             ApplyDefaultTexelCopyBufferLayoutOptions(&dstLayout, blockInfo, *copySize);
 
-            if (copySize->width == 0 || copySize->height == 0 ||
-                copySize->depthOrArrayLayers == 0) {
-                // Noop copy but is valid, simply skip encoding any command.
-                return {};
-            }
-
             auto format = source.texture->GetFormat();
             auto aspect = ConvertAspect(format, source.aspect);
 
             // Workaround to use compute pass to emulate texture to buffer copy
-            if (ShouldUseTextureToBufferBlit(GetDevice(), format, aspect)) {
+            if (ShouldUseTextureToBufferBlit(GetDevice(), format, aspect, *copySize)) {
                 // This function might create new resources. Need to lock the Device.
                 // TODO(crbug.com/dawn/1618): In future, all temp resources should be created at
                 // Command Submit time, so the locking would be removed from here at that point.

@@ -121,7 +121,7 @@ Result ValidateUsingDXC(const std::string& dxc_path,
         return result;
     }
     // Avoid ASAN false positives when unloading DLL: https://github.com/google/sanitizers/issues/89
-#if !defined(TINT_ASAN_ENABLED)
+#if !DAWN_ASAN_ENABLED()
     TINT_DEFER({ FreeLibrary(dxcLib); });
 #endif
 
@@ -135,7 +135,7 @@ Result ValidateUsingDXC(const std::string& dxc_path,
         return result;
     }
     // Avoid ASAN false positives when unloading DLL: https://github.com/google/sanitizers/issues/89
-#if !defined(TINT_ASAN_ENABLED)
+#if !DAWN_ASAN_ENABLED()
     TINT_DEFER({ dlclose(dxcLib); });
 #endif
 

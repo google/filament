@@ -59,11 +59,13 @@ struct Options {
 
     std::string input_filename;
     std::string output_filename;
-    std::string io_dirname;
+    std::string input_dirname;
+    std::string output_dirname;
 
     bool dump_ir = false;
     bool dump_proto = false;
     bool verbose = false;
+    bool batch_mode = false;
 };
 
 bool ParseArgs(tint::VectorRef<std::string_view> arguments, Options* opts) {
@@ -79,11 +81,6 @@ bool ParseArgs(tint::VectorRef<std::string_view> arguments, Options* opts) {
         },
         ShortName{"col"}, Default{tint::ColorModeDefault()});
     TINT_DEFER(opts->printer = CreatePrinter(*col.value));
-
-    auto& output = options.Add<StringOption>(
-        "output-filename", "Output file name, only usable if single input file provided",
-        ShortName{"o"}, Parameter{"name"});
-    TINT_DEFER(opts->output_filename = output.value.value_or(""));
 
     auto& dump_ir = options.Add<BoolOption>("dump-ir", "Writes the IR form of input to stdout",
                                             Alias{"emit-ir"}, Default{false});
@@ -102,14 +99,16 @@ bool ParseArgs(tint::VectorRef<std::string_view> arguments, Options* opts) {
 
     auto show_usage = [&] {
         std::cout
-            << R"(Usage: ir_fuzz_as [options] [-o|--output-filename] <output-file> <input-file> or tint [options] <io-dir>
-If a single WGSL file is provided, the suffix of the input file is not checked, and
-'-o|--output-filename' must be provided.
+            << R"(Usage: ir_fuzz_as [options] '<input-file> <output-file>' or '<input-dir> <output-dir>'
+The first form takes in a single WGSL shader via <input-file> and produces the corresponding IR test
+binary in <output-file>.
 
-If a directory is provided, the files it contains will be scanned and any .wgsl files will have a
-corresponding .tirb file generated.
+In the second form, the input and output arguments are directories. The files it contained in
+<input-dir> will be scanned and any .wgsl files will have acorresponding .tirb file generated in
+<output-dir>.
 
-Passing in '-o|--output-filename' when providing a directory will cause a failure.
+If you are wanting to generate human readable IR from a WGSL file, either --emit-ir should be added
+to options, or the tint CLI used
 
 Options:
 )";
@@ -128,17 +127,25 @@ Options:
     }
 
     auto args = result.Get();
-    if (args.Length() > 1) {
-        std::cerr << "More than one input arg specified: "
+    if (args.Length() != 2) {
+        std::cerr << "Expected exactly 2 args, found: "
                   << tint::Join(Transform(args, tint::Quote), ", ") << "\n";
         return false;
     }
-    if (args.Length() == 1) {
-        if (is_directory(std::filesystem::path{args[0]})) {
-            opts->io_dirname = args[0];
-        } else {
-            opts->input_filename = args[0];
-        }
+
+    if (is_directory(std::filesystem::path{args[0]}) &&
+        is_directory(std::filesystem::path{args[1]})) {
+        opts->input_dirname = args[0];
+        opts->output_dirname = args[1];
+        opts->batch_mode = true;
+    } else if ((!is_directory(std::filesystem::path{args[0]}) &&
+                !is_directory(std::filesystem::path{args[1]}))) {
+        opts->input_filename = args[0];
+        opts->output_filename = args[1];
+        opts->batch_mode = false;
+    } else {
+        std::cerr << "Expected args to either both be directories or both be files\n";
+        return false;
     }
 
     return true;
@@ -170,22 +177,23 @@ tint::Result<tint::core::ir::Module> GenerateIrModule(const tint::Program& progr
         return tint::Failure{"Unsupported enable used in shader"};
     }
 
-    auto transformed = tint::wgsl::ApplySubstituteOverrides(program);
-    auto& src = transformed ? transformed.value() : program;
-    if (!src.IsValid()) {
-        return tint::Failure{src.Diagnostics()};
-    }
+    auto cfg = tint::wgsl::SubstituteOverridesConfig(program);
 
-    auto ir = tint::wgsl::reader::ProgramToLoweredIR(src);
+    auto ir = tint::wgsl::reader::ProgramToLoweredIR(program);
     if (ir != tint::Success) {
         return ir.Failure();
+    }
+
+    auto substituteOverridesResult = tint::core::ir::transform::SubstituteOverrides(ir.Get(), cfg);
+    if (substituteOverridesResult != tint::Success) {
+        return substituteOverridesResult.Failure();
     }
 
     if (auto val = tint::core::ir::Validate(ir.Get()); val != tint::Success) {
         return val.Failure();
     }
 
-    return ir;
+    return ir.Move();
 }
 
 /// @returns a fuzzer test case protobuf for the given program.
@@ -289,42 +297,23 @@ int main(int argc, const char** argv) {
         return EXIT_FAILURE;
     }
 
-    if (!options.input_filename.empty() && !options.io_dirname.empty()) {
-        std::cerr << "Somehow both input_filename '" << options.input_filename
-                  << ", and io_dirname '" << options.io_dirname
-                  << "' were set after parsing arguments\n";
-        return EXIT_FAILURE;
-    }
-
-    if (options.output_filename.empty() && !options.dump_ir && !options.dump_proto &&
-        options.io_dirname.empty()) {
-        std::cerr << "None of --output-name, --dump-ir, --dump-proto, or <io-dir> were provided, "
-                     "so no output would be generated...\n";
-        return EXIT_FAILURE;
-    }
-
-    if (!options.input_filename.empty()) {
+    if (!options.batch_mode) {
         if (!ProcessFile(options)) {
             return EXIT_FAILURE;
         }
     } else {
-        tint::Vector<std::string, 8> wgsl_filenames;
-
-        // Need to collect the WGSL filenames and then process them in a second phase, so that the
-        // contents of the directory isn't changing during the iteration.
-        for (auto const& io_entry :
-             std::filesystem::directory_iterator{std::filesystem::path{options.io_dirname}}) {
-            const std::string entry_filename = io_entry.path().string();
-            if (entry_filename.substr(entry_filename.size() - 5) == ".wgsl") {
-                wgsl_filenames.Push(std::move(entry_filename));
+        for (auto const& input_entry :
+             std::filesystem::directory_iterator{std::filesystem::path{options.input_dirname}}) {
+            const std::string input_path = input_entry.path().string();
+            if (input_path.substr(input_path.size() - 5) != ".wgsl") {
+                continue;
             }
-        }
 
-        for (auto const& input_filename : wgsl_filenames) {
-            const auto output_filename =
-                std::string(input_filename.substr(0, input_filename.size() - 5)) + ".tirb";
-            options.input_filename = input_filename;
-            options.output_filename = output_filename;
+            options.input_filename = input_entry.path().string();
+
+            auto output_entry = std::filesystem::path{options.output_dirname} /
+                                input_entry.path().filename().replace_extension(".tirb");
+            options.output_filename = output_entry.string();
 
             ProcessFile(options);  // Ignoring the return value, so that one bad file doesn't cause
                                    // the processing batch to stop.

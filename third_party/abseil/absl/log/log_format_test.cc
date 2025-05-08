@@ -78,7 +78,7 @@ TEST(LogFormatTest, NoMessage) {
                          TextPrefix(AsString(EndsWith(absl::StrCat(
                              " log_format_test.cc:", log_line, "] ")))),
                          TextMessage(IsEmpty()),
-                         ENCODED_MESSAGE(EqualsProto(R"pb()pb")))));
+                         ENCODED_MESSAGE(HasValues(IsEmpty())))));
 
   test_sink.StartCapturingLogs();
   do_log();
@@ -98,9 +98,9 @@ TYPED_TEST(CharLogFormatTest, Printable) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("x")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "x" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)), TextMessage(Eq("x")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("x"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -114,11 +114,11 @@ TYPED_TEST(CharLogFormatTest, Unprintable) {
   comparison_stream << value;
 
   EXPECT_CALL(
-      test_sink, Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                            TextMessage(Eq("\xee")),
-                            ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                               str: "\xee"
-                                                             })pb")))));
+      test_sink,
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("\xee")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("\xee"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -139,9 +139,10 @@ TYPED_TEST(UnsignedIntLogFormatTest, Positive) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("224")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "224" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("224")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("224"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -158,9 +159,9 @@ TYPED_TEST(UnsignedIntLogFormatTest, BitfieldPositive) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("42")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "42" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)), TextMessage(Eq("42")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("42"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value.bits;
@@ -181,9 +182,10 @@ TYPED_TEST(SignedIntLogFormatTest, Positive) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("224")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "224" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("224")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("224"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -197,11 +199,11 @@ TYPED_TEST(SignedIntLogFormatTest, Negative) {
   comparison_stream << value;
 
   EXPECT_CALL(
-      test_sink, Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                            TextMessage(Eq("-112")),
-                            ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                               str: "-112"
-                                                             })pb")))));
+      test_sink,
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("-112")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("-112"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -218,9 +220,9 @@ TYPED_TEST(SignedIntLogFormatTest, BitfieldPositive) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("21")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "21" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)), TextMessage(Eq("21")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("21"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value.bits;
@@ -237,9 +239,10 @@ TYPED_TEST(SignedIntLogFormatTest, BitfieldNegative) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("-21")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "-21" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("-21")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("-21"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value.bits;
@@ -278,9 +281,10 @@ TYPED_TEST(UnsignedEnumLogFormatTest, Positive) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("224")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "224" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("224")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("224"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -297,9 +301,9 @@ TYPED_TEST(UnsignedEnumLogFormatTest, BitfieldPositive) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("42")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "42" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)), TextMessage(Eq("42")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("42"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value.bits;
@@ -337,9 +341,10 @@ TYPED_TEST(SignedEnumLogFormatTest, Positive) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("224")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "224" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("224")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("224"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -353,11 +358,11 @@ TYPED_TEST(SignedEnumLogFormatTest, Negative) {
   comparison_stream << value;
 
   EXPECT_CALL(
-      test_sink, Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                            TextMessage(Eq("-112")),
-                            ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                               str: "-112"
-                                                             })pb")))));
+      test_sink,
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("-112")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("-112"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -374,9 +379,9 @@ TYPED_TEST(SignedEnumLogFormatTest, BitfieldPositive) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("21")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "21" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)), TextMessage(Eq("21")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("21"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value.bits;
@@ -393,9 +398,10 @@ TYPED_TEST(SignedEnumLogFormatTest, BitfieldNegative) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("-21")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "-21" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("-21")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("-21"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value.bits;
@@ -412,9 +418,8 @@ TEST(FloatLogFormatTest, Positive) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("6.02e+23")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "6.02e+23"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("6.02e+23"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -430,9 +435,8 @@ TEST(FloatLogFormatTest, Negative) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("-6.02e+23")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "-6.02e+23"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("-6.02e+23"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -448,9 +452,8 @@ TEST(FloatLogFormatTest, NegativeExponent) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("6.02e-23")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "6.02e-23"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("6.02e-23"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -466,9 +469,8 @@ TEST(DoubleLogFormatTest, Positive) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("6.02e+23")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "6.02e+23"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("6.02e+23"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -484,9 +486,8 @@ TEST(DoubleLogFormatTest, Negative) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("-6.02e+23")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "-6.02e+23"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("-6.02e+23"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -502,9 +503,8 @@ TEST(DoubleLogFormatTest, NegativeExponent) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("6.02e-23")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "6.02e-23"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("6.02e-23"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -524,9 +524,9 @@ TYPED_TEST(FloatingPointLogFormatTest, Zero) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("0")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "0" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)), TextMessage(Eq("0")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("0"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -541,9 +541,9 @@ TYPED_TEST(FloatingPointLogFormatTest, Integer) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("1")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "1" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)), TextMessage(Eq("1")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("1"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -558,9 +558,10 @@ TYPED_TEST(FloatingPointLogFormatTest, Infinity) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(AnyOf(Eq("inf"), Eq("Inf"))),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "inf" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(AnyOf(Eq("inf"), Eq("Inf"))),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("inf"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -574,11 +575,11 @@ TYPED_TEST(FloatingPointLogFormatTest, NegativeInfinity) {
   comparison_stream << value;
 
   EXPECT_CALL(
-      test_sink, Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                            TextMessage(AnyOf(Eq("-inf"), Eq("-Inf"))),
-                            ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                               str: "-inf"
-                                                             })pb")))));
+      test_sink,
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(AnyOf(Eq("-inf"), Eq("-Inf"))),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("-inf"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -593,9 +594,10 @@ TYPED_TEST(FloatingPointLogFormatTest, NaN) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(AnyOf(Eq("nan"), Eq("NaN"))),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "nan" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(AnyOf(Eq("nan"), Eq("NaN"))),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("nan"))))))));
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
 }
@@ -608,15 +610,25 @@ TYPED_TEST(FloatingPointLogFormatTest, NegativeNaN) {
   auto comparison_stream = ComparisonStream();
   comparison_stream << value;
 
-  EXPECT_CALL(
-      test_sink,
-      Send(AllOf(
-          TextMessage(MatchesOstream(comparison_stream)),
-          TextMessage(AnyOf(Eq("-nan"), Eq("nan"), Eq("NaN"), Eq("-nan(ind)"))),
-          ENCODED_MESSAGE(
-              AnyOf(EqualsProto(R"pb(value { str: "-nan" })pb"),
-                    EqualsProto(R"pb(value { str: "nan" })pb"),
-                    EqualsProto(R"pb(value { str: "-nan(ind)" })pb"))))));
+  // On RISC-V, don't expect that formatting -NaN produces the same string as
+  // streaming it. #ifdefing out just the relevant line breaks the MSVC build,
+  // so duplicate the entire EXPECT_CALL.
+#ifdef __riscv
+  EXPECT_CALL(test_sink,
+              Send(AllOf(TextMessage(AnyOf(Eq("-nan"), Eq("nan"), Eq("NaN"),
+                                           Eq("-nan(ind)"))),
+                         ENCODED_MESSAGE(HasValues(ElementsAre(AnyOf(
+                             ValueWithStr(Eq("-nan")), ValueWithStr(Eq("nan")),
+                             ValueWithStr(Eq("-nan(ind)")))))))));
+#else
+  EXPECT_CALL(test_sink,
+              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                         TextMessage(AnyOf(Eq("-nan"), Eq("nan"), Eq("NaN"),
+                                           Eq("-nan(ind)"))),
+                         ENCODED_MESSAGE(HasValues(ElementsAre(AnyOf(
+                             ValueWithStr(Eq("-nan")), ValueWithStr(Eq("nan")),
+                             ValueWithStr(Eq("-nan(ind)")))))))));
+#endif
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
 }
@@ -650,15 +662,13 @@ TYPED_TEST(VoidPtrLogFormatTest, NonNull) {
   auto comparison_stream = ComparisonStream();
   comparison_stream << value;
 
-  EXPECT_CALL(
-      test_sink,
-      Send(AllOf(
-          TextMessage(MatchesOstream(comparison_stream)),
-          TextMessage(
-              AnyOf(Eq("0xdeadbeef"), Eq("DEADBEEF"), Eq("00000000DEADBEEF"))),
-          ENCODED_MESSAGE(AnyOf(
-              EqualsProto(R"pb(value { str: "0xdeadbeef" })pb"),
-              EqualsProto(R"pb(value { str: "00000000DEADBEEF" })pb"))))));
+  EXPECT_CALL(test_sink,
+              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                         TextMessage(AnyOf(Eq("0xdeadbeef"), Eq("DEADBEEF"),
+                                           Eq("00000000DEADBEEF"))),
+                         ENCODED_MESSAGE(HasValues(ElementsAre(
+                             AnyOf(ValueWithStr(Eq("0xdeadbeef")),
+                                   ValueWithStr(Eq("00000000DEADBEEF")))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -681,11 +691,11 @@ TYPED_TEST(VolatilePtrLogFormatTest, Null) {
   comparison_stream << value;
 
   EXPECT_CALL(
-      test_sink, Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                            TextMessage(Eq("false")),
-                            ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                               str: "false"
-                                                             })pb")))));
+      test_sink,
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("false")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("false"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -699,11 +709,11 @@ TYPED_TEST(VolatilePtrLogFormatTest, NonNull) {
   comparison_stream << value;
 
   EXPECT_CALL(
-      test_sink, Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                            TextMessage(Eq("true")),
-                            ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                               str: "true"
-                                                             })pb")))));
+      test_sink,
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("true")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("true"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -728,8 +738,8 @@ TYPED_TEST(CharPtrLogFormatTest, Null) {
       test_sink,
       Send(AllOf(
           // `MatchesOstream` deliberately omitted since we deliberately differ.
-          TextMessage(Eq("(null)")),
-          ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "(null)" })pb")))));
+          TextMessage(Eq("(null)")), ENCODED_MESSAGE(HasValues(ElementsAre(
+                                         ValueWithStr(Eq("(null)"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -744,11 +754,11 @@ TYPED_TEST(CharPtrLogFormatTest, NonNull) {
   comparison_stream << value;
 
   EXPECT_CALL(
-      test_sink, Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                            TextMessage(Eq("value")),
-                            ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                               str: "value"
-                                                             })pb")))));
+      test_sink,
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("value")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("value"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -762,11 +772,11 @@ TEST(BoolLogFormatTest, True) {
   comparison_stream << value;
 
   EXPECT_CALL(
-      test_sink, Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                            TextMessage(Eq("true")),
-                            ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                               str: "true"
-                                                             })pb")))));
+      test_sink,
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("true")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("true"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -780,11 +790,11 @@ TEST(BoolLogFormatTest, False) {
   comparison_stream << value;
 
   EXPECT_CALL(
-      test_sink, Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                            TextMessage(Eq("false")),
-                            ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                               str: "false"
-                                                             })pb")))));
+      test_sink,
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("false")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("false"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -799,9 +809,8 @@ TEST(LogFormatTest, StringLiteral) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("value")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            literal: "value"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithLiteral(Eq("value"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << "value";
@@ -815,11 +824,11 @@ TEST(LogFormatTest, CharArray) {
   comparison_stream << value;
 
   EXPECT_CALL(
-      test_sink, Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                            TextMessage(Eq("value")),
-                            ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                               str: "value"
-                                                             })pb")))));
+      test_sink,
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("value")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("value"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -840,9 +849,8 @@ TEST(LogFormatTest, Custom) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("CustomClass{}")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "CustomClass{}"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(ElementsAre(
+                             ValueWithStr(Eq("CustomClass{}"))))))));
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
 }
@@ -864,12 +872,11 @@ TEST(LogFormatTest, CustomNonCopyable) {
   auto comparison_stream = ComparisonStream();
   comparison_stream << value;
 
-  EXPECT_CALL(
-      test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("CustomClassNonCopyable{}")),
-                 ENCODED_MESSAGE(EqualsProto(
-                     R"pb(value { str: "CustomClassNonCopyable{}" })pb")))));
+  EXPECT_CALL(test_sink,
+              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                         TextMessage(Eq("CustomClassNonCopyable{}")),
+                         ENCODED_MESSAGE(HasValues(ElementsAre(
+                             ValueWithStr(Eq("CustomClassNonCopyable{}"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value;
@@ -892,9 +899,9 @@ TEST(LogFormatTest, AbslStringifyExample) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(
-          TextMessage(Eq("(10, 20)")), TextMessage(Eq(absl::StrCat(p))),
-          ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "(10, 20)" })pb")))));
+      Send(AllOf(TextMessage(Eq("(10, 20)")), TextMessage(Eq(absl::StrCat(p))),
+                 ENCODED_MESSAGE(
+                     HasValues(ElementsAre(ValueWithStr(Eq("(10, 20)"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << p;
@@ -923,9 +930,9 @@ TEST(LogFormatTest, CustomWithAbslStringifyAndOstream) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(
-          TextMessage(Eq("(10, 20)")), TextMessage(Eq(absl::StrCat(p))),
-          ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "(10, 20)" })pb")))));
+      Send(AllOf(TextMessage(Eq("(10, 20)")), TextMessage(Eq(absl::StrCat(p))),
+                 ENCODED_MESSAGE(
+                     HasValues(ElementsAre(ValueWithStr(Eq("(10, 20)"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << p;
@@ -946,8 +953,9 @@ TEST(LogFormatTest, AbslStringifyStreamsNothing) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(Eq("77")), TextMessage(Eq(absl::StrCat(p, 77))),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "77" })pb")))));
+      Send(AllOf(
+          TextMessage(Eq("77")), TextMessage(Eq(absl::StrCat(p, 77))),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("77"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << p << 77;
@@ -971,10 +979,9 @@ TEST(LogFormatTest, AbslStringifyMultipleAppend) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(
-          TextMessage(Eq("(10, 20)")), TextMessage(Eq(absl::StrCat(p))),
-          ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "(" }
-                                           value { str: "10, 20)" })pb")))));
+      Send(AllOf(TextMessage(Eq("(10, 20)")), TextMessage(Eq(absl::StrCat(p))),
+                 ENCODED_MESSAGE(HasValues(ElementsAre(
+                     ValueWithStr(Eq("(")), ValueWithStr(Eq("10, 20)"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << p;
@@ -989,15 +996,14 @@ TEST(ManipulatorLogFormatTest, BoolAlphaTrue) {
                     << std::boolalpha << value << " "    //
                     << std::noboolalpha << value;
 
-  EXPECT_CALL(test_sink,
-              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                         TextMessage(Eq("1 true 1")),
-                         ENCODED_MESSAGE(EqualsProto(
-                             R"pb(value { str: "1" }
-                                  value { literal: " " }
-                                  value { str: "true" }
-                                  value { literal: " " }
-                                  value { str: "1" })pb")))));
+  EXPECT_CALL(
+      test_sink,
+      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                 TextMessage(Eq("1 true 1")),
+                 ENCODED_MESSAGE(HasValues(ElementsAre(
+                     ValueWithStr(Eq("1")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("true")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("1"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::noboolalpha << value << " "  //
@@ -1014,15 +1020,14 @@ TEST(ManipulatorLogFormatTest, BoolAlphaFalse) {
                     << std::boolalpha << value << " "    //
                     << std::noboolalpha << value;
 
-  EXPECT_CALL(test_sink,
-              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                         TextMessage(Eq("0 false 0")),
-                         ENCODED_MESSAGE(EqualsProto(
-                             R"pb(value { str: "0" }
-                                  value { literal: " " }
-                                  value { str: "false" }
-                                  value { literal: " " }
-                                  value { str: "0" })pb")))));
+  EXPECT_CALL(
+      test_sink,
+      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                 TextMessage(Eq("0 false 0")),
+                 ENCODED_MESSAGE(HasValues(ElementsAre(
+                     ValueWithStr(Eq("0")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("false")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("0"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::noboolalpha << value << " "  //
@@ -1043,11 +1048,10 @@ TEST(ManipulatorLogFormatTest, ShowPoint) {
       test_sink,
       Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                  TextMessage(Eq("77 77.0000 77")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "77" }
-                                                  value { literal: " " }
-                                                  value { str: "77.0000" }
-                                                  value { literal: " " }
-                                                  value { str: "77" })pb")))));
+                 ENCODED_MESSAGE(HasValues(ElementsAre(
+                     ValueWithStr(Eq("77")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("77.0000")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("77"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::noshowpoint << value << " "  //
@@ -1064,15 +1068,13 @@ TEST(ManipulatorLogFormatTest, ShowPos) {
                     << std::showpos << value << " "    //
                     << std::noshowpos << value;
 
-  EXPECT_CALL(
-      test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("77 +77 77")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "77" }
-                                                  value { literal: " " }
-                                                  value { str: "+77" }
-                                                  value { literal: " " }
-                                                  value { str: "77" })pb")))));
+  EXPECT_CALL(test_sink,
+              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                         TextMessage(Eq("77 +77 77")),
+                         ENCODED_MESSAGE(HasValues(ElementsAre(
+                             ValueWithStr(Eq("77")), ValueWithLiteral(Eq(" ")),
+                             ValueWithStr(Eq("+77")), ValueWithLiteral(Eq(" ")),
+                             ValueWithStr(Eq("77"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::noshowpos << value << " "  //
@@ -1089,15 +1091,14 @@ TEST(ManipulatorLogFormatTest, UppercaseFloat) {
                     << std::uppercase << value << " "    //
                     << std::nouppercase << value;
 
-  EXPECT_CALL(test_sink,
-              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                         TextMessage(Eq("7.7e+07 7.7E+07 7.7e+07")),
-                         ENCODED_MESSAGE(EqualsProto(
-                             R"pb(value { str: "7.7e+07" }
-                                  value { literal: " " }
-                                  value { str: "7.7E+07" }
-                                  value { literal: " " }
-                                  value { str: "7.7e+07" })pb")))));
+  EXPECT_CALL(
+      test_sink,
+      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                 TextMessage(Eq("7.7e+07 7.7E+07 7.7e+07")),
+                 ENCODED_MESSAGE(HasValues(ElementsAre(
+                     ValueWithStr(Eq("7.7e+07")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("7.7E+07")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("7.7e+07"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::nouppercase << value << " "  //
@@ -1113,11 +1114,11 @@ TEST(ManipulatorLogFormatTest, Hex) {
   comparison_stream << std::hex << value;
 
   EXPECT_CALL(
-      test_sink, Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                            TextMessage(Eq("0x77")),
-                            ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                               str: "0x77"
-                                                             })pb")))));
+      test_sink,
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("0x77")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("0x77"))))))));
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::hex << value;
 }
@@ -1131,9 +1132,10 @@ TEST(ManipulatorLogFormatTest, Oct) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("077")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "077" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)),
+          TextMessage(Eq("077")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("077"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::oct << value;
@@ -1148,9 +1150,9 @@ TEST(ManipulatorLogFormatTest, Dec) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("77")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "77" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)), TextMessage(Eq("77")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("77"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::hex << std::dec << value;
@@ -1170,11 +1172,10 @@ TEST(ManipulatorLogFormatTest, ShowbaseHex) {
       test_sink,
       Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                  TextMessage(Eq("77 0x77 77")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "77" }
-                                                  value { literal: " " }
-                                                  value { str: "0x77" }
-                                                  value { literal: " " }
-                                                  value { str: "77" })pb")))));
+                 ENCODED_MESSAGE(HasValues(ElementsAre(
+                     ValueWithStr(Eq("77")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("0x77")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("77"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::hex                         //
@@ -1193,15 +1194,13 @@ TEST(ManipulatorLogFormatTest, ShowbaseOct) {
                     << std::showbase << value << " "    //
                     << std::noshowbase << value;
 
-  EXPECT_CALL(
-      test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("77 077 77")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "77" }
-                                                  value { literal: " " }
-                                                  value { str: "077" }
-                                                  value { literal: " " }
-                                                  value { str: "77" })pb")))));
+  EXPECT_CALL(test_sink,
+              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                         TextMessage(Eq("77 077 77")),
+                         ENCODED_MESSAGE(HasValues(ElementsAre(
+                             ValueWithStr(Eq("77")), ValueWithLiteral(Eq(" ")),
+                             ValueWithStr(Eq("077")), ValueWithLiteral(Eq(" ")),
+                             ValueWithStr(Eq("77"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::oct                         //
@@ -1221,15 +1220,14 @@ TEST(ManipulatorLogFormatTest, UppercaseHex) {
       << std::uppercase << value << " "    //
       << std::nouppercase << value;
 
-  EXPECT_CALL(test_sink,
-              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                         TextMessage(Eq("0xbeef 0XBEEF 0xbeef")),
-                         ENCODED_MESSAGE(EqualsProto(
-                             R"pb(value { str: "0xbeef" }
-                                  value { literal: " " }
-                                  value { str: "0XBEEF" }
-                                  value { literal: " " }
-                                  value { str: "0xbeef" })pb")))));
+  EXPECT_CALL(
+      test_sink,
+      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                 TextMessage(Eq("0xbeef 0XBEEF 0xbeef")),
+                 ENCODED_MESSAGE(HasValues(ElementsAre(
+                     ValueWithStr(Eq("0xbeef")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("0XBEEF")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("0xbeef"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::hex                          //
@@ -1245,13 +1243,11 @@ TEST(ManipulatorLogFormatTest, FixedFloat) {
   auto comparison_stream = ComparisonStream();
   comparison_stream << std::fixed << value;
 
-  EXPECT_CALL(
-      test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("77000000.000000")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                    str: "77000000.000000"
-                                                  })pb")))));
+  EXPECT_CALL(test_sink,
+              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                         TextMessage(Eq("77000000.000000")),
+                         ENCODED_MESSAGE(HasValues(ElementsAre(
+                             ValueWithStr(Eq("77000000.000000"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::fixed << value;
@@ -1267,9 +1263,8 @@ TEST(ManipulatorLogFormatTest, ScientificFloat) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("7.700000e+07")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "7.700000e+07"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("7.700000e+07"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::scientific << value;
@@ -1295,11 +1290,9 @@ TEST(ManipulatorLogFormatTest, FixedAndScientificFloat) {
       Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                  TextMessage(AnyOf(Eq("0x1.25bb50p+26"), Eq("0x1.25bb5p+26"),
                                    Eq("0x1.25bb500000000p+26"))),
-                 ENCODED_MESSAGE(
-                     AnyOf(EqualsProto(R"pb(value { str: "0x1.25bb5p+26" })pb"),
-                           EqualsProto(R"pb(value {
-                                              str: "0x1.25bb500000000p+26"
-                                            })pb"))))));
+                 ENCODED_MESSAGE(HasValues(ElementsAre(
+                     AnyOf(ValueWithStr(Eq("0x1.25bb5p+26")),
+                           ValueWithStr(Eq("0x1.25bb500000000p+26")))))))));
 
   test_sink.StartCapturingLogs();
 
@@ -1328,11 +1321,9 @@ TEST(ManipulatorLogFormatTest, HexfloatFloat) {
       Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                  TextMessage(AnyOf(Eq("0x1.25bb50p+26"), Eq("0x1.25bb5p+26"),
                                    Eq("0x1.25bb500000000p+26"))),
-                 ENCODED_MESSAGE(
-                     AnyOf(EqualsProto(R"pb(value { str: "0x1.25bb5p+26" })pb"),
-                           EqualsProto(R"pb(value {
-                                              str: "0x1.25bb500000000p+26"
-                                            })pb"))))));
+                 ENCODED_MESSAGE(HasValues(ElementsAre(
+                     AnyOf(ValueWithStr(Eq("0x1.25bb5p+26")),
+                           ValueWithStr(Eq("0x1.25bb500000000p+26")))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::hexfloat << value;
@@ -1349,9 +1340,8 @@ TEST(ManipulatorLogFormatTest, DefaultFloatFloat) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("7.7e+07")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "7.7e+07"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("7.7e+07"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::hexfloat << std::defaultfloat << value;
@@ -1363,11 +1353,11 @@ TEST(ManipulatorLogFormatTest, Ends) {
   auto comparison_stream = ComparisonStream();
   comparison_stream << std::ends;
 
-  EXPECT_CALL(
-      test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq(absl::string_view("\0", 1))),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "\0" })pb")))));
+  EXPECT_CALL(test_sink,
+              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                         TextMessage(Eq(absl::string_view("\0", 1))),
+                         ENCODED_MESSAGE(HasValues(ElementsAre(
+                             ValueWithStr(Eq(absl::string_view("\0", 1)))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::ends;
@@ -1384,7 +1374,7 @@ TEST(ManipulatorLogFormatTest, Endl) {
       Send(AllOf(
           TextMessage(MatchesOstream(comparison_stream)),
           TextMessage(Eq("\n")),
-          ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "\n" })pb")))));
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("\n"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::endl;
@@ -1408,10 +1398,9 @@ TEST(ManipulatorLogFormatTest, SetIosFlags) {
           // `std::setiosflags` and `std::resetiosflags` aren't manipulators.
           // We're unable to distinguish their return type(s) from arbitrary
           // user-defined types and thus don't suppress the empty str value.
-          ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "0x77" }
-                                           value { literal: " " }
-                                           value { str: "119" }
-          )pb")))));
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("0x77")),
+                                                ValueWithLiteral(Eq(" ")),
+                                                ValueWithStr(Eq("119"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::resetiosflags(std::ios_base::basefield)
@@ -1435,10 +1424,9 @@ TEST(ManipulatorLogFormatTest, SetBase) {
                  // `std::setbase` isn't a manipulator.  We're unable to
                  // distinguish its return type from arbitrary user-defined
                  // types and thus don't suppress the empty str value.
-                 ENCODED_MESSAGE(EqualsProto(
-                     R"pb(value { str: "0x77" }
-                          value { literal: " " }
-                          value { str: "119" })pb")))));
+                 ENCODED_MESSAGE(HasValues(ElementsAre(
+                     ValueWithStr(Eq("0x77")), ValueWithLiteral(Eq(" ")),
+                     ValueWithStr(Eq("119"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::setbase(16) << value << " "  //
@@ -1454,13 +1442,13 @@ TEST(ManipulatorLogFormatTest, SetPrecision) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(
-          TextMessage(MatchesOstream(comparison_stream)),
-          TextMessage(Eq("6.022e+23")),
-          // `std::setprecision` isn't a manipulator.  We're unable to
-          // distinguish its return type from arbitrary user-defined
-          // types and thus don't suppress the empty str value.
-          ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "6.022e+23" })pb")))));
+      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                 TextMessage(Eq("6.022e+23")),
+                 // `std::setprecision` isn't a manipulator.  We're unable to
+                 // distinguish its return type from arbitrary user-defined
+                 // types and thus don't suppress the empty str value.
+                 ENCODED_MESSAGE(
+                     HasValues(ElementsAre(ValueWithStr(Eq("6.022e+23"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::setprecision(4) << value;
@@ -1473,12 +1461,11 @@ TEST(ManipulatorLogFormatTest, SetPrecisionOverflow) {
   auto comparison_stream = ComparisonStream();
   comparison_stream << std::setprecision(200) << value;
 
-  EXPECT_CALL(
-      test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("602214085700000015187968")),
-                 ENCODED_MESSAGE(EqualsProto(
-                     R"pb(value { str: "602214085700000015187968" })pb")))));
+  EXPECT_CALL(test_sink,
+              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                         TextMessage(Eq("602214085700000015187968")),
+                         ENCODED_MESSAGE(HasValues(ElementsAre(
+                             ValueWithStr(Eq("602214085700000015187968"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::setprecision(200) << value;
@@ -1493,13 +1480,13 @@ TEST(ManipulatorLogFormatTest, SetW) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(
-          TextMessage(MatchesOstream(comparison_stream)),
-          TextMessage(Eq("      77")),
-          // `std::setw` isn't a manipulator.  We're unable to
-          // distinguish its return type from arbitrary user-defined
-          // types and thus don't suppress the empty str value.
-          ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "      77" })pb")))));
+      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                 TextMessage(Eq("      77")),
+                 // `std::setw` isn't a manipulator.  We're unable to
+                 // distinguish its return type from arbitrary user-defined
+                 // types and thus don't suppress the empty str value.
+                 ENCODED_MESSAGE(
+                     HasValues(ElementsAre(ValueWithStr(Eq("      77"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::setw(8) << value;
@@ -1515,9 +1502,8 @@ TEST(ManipulatorLogFormatTest, Left) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("-77     ")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "-77     "
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("-77     "))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::left << std::setw(8) << value;
@@ -1533,9 +1519,8 @@ TEST(ManipulatorLogFormatTest, Right) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("     -77")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "     -77"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("     -77"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::right << std::setw(8) << value;
@@ -1551,9 +1536,8 @@ TEST(ManipulatorLogFormatTest, Internal) {
   EXPECT_CALL(test_sink,
               Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
                          TextMessage(Eq("-     77")),
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "-     77"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("-     77"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::internal << std::setw(8) << value;
@@ -1573,9 +1557,8 @@ TEST(ManipulatorLogFormatTest, SetFill) {
                          // unable to distinguish its return
                          // type from arbitrary user-defined types and
                          // thus don't suppress the empty str value.
-                         ENCODED_MESSAGE(EqualsProto(R"pb(value {
-                                                            str: "00000077"
-                                                          })pb")))));
+                         ENCODED_MESSAGE(HasValues(
+                             ElementsAre(ValueWithStr(Eq("00000077"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::setfill('0') << std::setw(8) << value;
@@ -1593,13 +1576,13 @@ TEST(ManipulatorLogFormatTest, FromCustom) {
   auto comparison_stream = ComparisonStream();
   comparison_stream << value << " " << 0x77;
 
-  EXPECT_CALL(test_sink,
-              Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                         TextMessage(Eq("FromCustomClass{} 0x77")),
-                         ENCODED_MESSAGE(EqualsProto(
-                             R"pb(value { str: "FromCustomClass{}" }
-                                  value { literal: " " }
-                                  value { str: "0x77" })pb")))));
+  EXPECT_CALL(
+      test_sink,
+      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
+                 TextMessage(Eq("FromCustomClass{} 0x77")),
+                 ENCODED_MESSAGE(HasValues(ElementsAre(
+                     ValueWithStr(Eq("FromCustomClass{}")),
+                     ValueWithLiteral(Eq(" ")), ValueWithStr(Eq("0x77"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value << " " << 0x77;
@@ -1617,9 +1600,9 @@ TEST(ManipulatorLogFormatTest, CustomClassStreamsNothing) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(TextMessage(MatchesOstream(comparison_stream)),
-                 TextMessage(Eq("77")),
-                 ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "77" })pb")))));
+      Send(AllOf(
+          TextMessage(MatchesOstream(comparison_stream)), TextMessage(Eq("77")),
+          ENCODED_MESSAGE(HasValues(ElementsAre(ValueWithStr(Eq("77"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << value << 77;
@@ -1642,9 +1625,9 @@ TEST(ManipulatorLogFormatTest, IOManipsDoNotAffectAbslStringify) {
 
   EXPECT_CALL(
       test_sink,
-      Send(AllOf(
-          TextMessage(Eq("(10, 20)")), TextMessage(Eq(absl::StrCat(p))),
-          ENCODED_MESSAGE(EqualsProto(R"pb(value { str: "(10, 20)" })pb")))));
+      Send(AllOf(TextMessage(Eq("(10, 20)")), TextMessage(Eq(absl::StrCat(p))),
+                 ENCODED_MESSAGE(
+                     HasValues(ElementsAre(ValueWithStr(Eq("(10, 20)"))))))));
 
   test_sink.StartCapturingLogs();
   LOG(INFO) << std::hex << p;

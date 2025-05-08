@@ -50,6 +50,7 @@ set(private_headers
     "BindGroupTracker.h"
     "BindingInfo.h"
     "BlitBufferToDepthStencil.h"
+    "BlitBufferToTexture.h"
     "BlitColorToColorWithDraw.h"
     "BlitDepthToDepth.h"
     "BlitTextureToBuffer.h"
@@ -149,6 +150,7 @@ set(private_headers
     "Toggles.h"
     "UsageValidationMode.h"
     "utils/WGPUHelpers.h"
+    "ValidationUtils.h"
     "VisitableMembers.h"
     "WaitAnySystemEvent.h"
     "webgpu_absl_format.h"
@@ -166,6 +168,7 @@ set(sources
     "BindGroupLayoutInternal.cpp"
     "BindingInfo.cpp"
     "BlitBufferToDepthStencil.cpp"
+    "BlitBufferToTexture.cpp"
     "BlitColorToColorWithDraw.cpp"
     "BlitDepthToDepth.cpp"
     "BlitTextureToBuffer.cpp"
@@ -249,6 +252,7 @@ set(sources
     "TintUtils.cpp"
     "Toggles.cpp"
     "utils/WGPUHelpers.cpp"
+    "ValidationUtils.cpp"
     "webgpu_absl_format.cpp"
 )
 
@@ -319,7 +323,6 @@ if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12)
         "d3d/SharedFenceD3D.h"
         "d3d/SharedTextureMemoryD3D.h"
         "d3d/SwapChainD3D.h"
-        "d3d/TextureD3D.h"
         "d3d/UtilsD3D.h"
     )
     list(APPEND sources
@@ -335,7 +338,6 @@ if (DAWN_ENABLE_D3D11 OR DAWN_ENABLE_D3D12)
         "d3d/SharedFenceD3D.cpp"
         "d3d/SharedTextureMemoryD3D.cpp"
         "d3d/SwapChainD3D.cpp"
-        "d3d/TextureD3D.cpp"
         "d3d/UtilsD3D.cpp"
     )
     list(APPEND conditional_private_platform_depends dxguid.lib)

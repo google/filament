@@ -46,7 +46,7 @@ Convert::Convert(Id id, InstructionResult* result, Value* value) : Base(id) {
 Convert::~Convert() = default;
 
 Convert* Convert::Clone(CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     auto* val = ctx.Remap(Args()[0]);
     return ctx.ir.CreateInstruction<Convert>(new_result, val);
 }

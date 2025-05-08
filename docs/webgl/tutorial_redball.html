@@ -10,7 +10,7 @@
 textures.</p>
 <p>For starters, create a text file called <code>redball.html</code> and copy over the HTML that we used in the
 <a href="tutorial_triangle.html">previous tutorial</a>. Change the last script tag from <code>triangle.js</code> to <code>redball.js</code>.</p>
-<p>Next you&#x27;ll need to get a couple command-line tools: <code>matc</code> and <code>cmgen</code>. You can find these in the
+<p>Next you'll need to get a couple command-line tools: <code>matc</code> and <code>cmgen</code>. You can find these in the
 appropriate <a href="//github.com/google/filament/releases">Filament release</a>. You should choose the
 archive that corresponds to your development machine rather than the one for web, and the version
 that matches the <code>unpkg.com/filament@x.x.x</code> url in the script tag of <code>redball.html</code> (you may check
@@ -19,7 +19,7 @@ out the last available release of <a href="https://www.npmjs.com/package/filamen
 <p>The <code>matc</code> tool consumes a text file containing a high-level description of a PBR material, and
 produces a binary material package that contains shader code and associated metadata. For more
 information, see the official document describing the <a href="https://google.github.io/filament/Materials.md.html">Filament Material System</a>.</p>
-<p>Let&#x27;s try out <code>matc</code>. Create the following file in your favorite text editor and call it
+<p>Let's try out <code>matc</code>. Create the following file in your favorite text editor and call it
 <code>plastic.mat</code>.</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>material {
     name : Lit,
@@ -44,16 +44,16 @@ fragment {
 </pre></div>
 
 <p>Next, invoke <code>matc</code> as follows.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>matc -a opengl -p mobile -o plastic.filamat plastic.mat
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>matc<span style="color: #BBB"> </span>-a<span style="color: #BBB"> </span>opengl<span style="color: #BBB"> </span>-p<span style="color: #BBB"> </span>mobile<span style="color: #BBB"> </span>-o<span style="color: #BBB"> </span>plastic.filamat<span style="color: #BBB"> </span>plastic.mat
 </pre></div>
 
-<p>You should now have a material archive in your working directory, which we&#x27;ll use later in the
+<p>You should now have a material archive in your working directory, which we'll use later in the
 tutorial.</p>
 <h2>Bake environment map</h2>
-<p>Next we&#x27;ll use Filament&#x27;s <code>cmgen</code> tool to consume a HDR environment map in latlong format, and
+<p>Next we'll use Filament's <code>cmgen</code> tool to consume a HDR environment map in latlong format, and
 produce two cubemap files: a mipmapped IBL and a blurry skybox.</p>
 <p>Download <a href="//github.com/google/filament/blob/main/third_party/environments/pillars_2k.hdr">pillars_2k.hdr</a>, then invoke the following command in your terminal.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>cmgen -x pillars_2k --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=256</span> --extract-blur<span style="color: #666666">=0</span>.1 pillars_2k.hdr
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>cmgen<span style="color: #BBB"> </span>-x<span style="color: #BBB"> </span>pillars_2k<span style="color: #BBB"> </span>--format<span style="color: #666">=</span>ktx<span style="color: #BBB"> </span>--size<span style="color: #666">=256</span><span style="color: #BBB"> </span>--extract-blur<span style="color: #666">=0</span>.1<span style="color: #BBB"> </span>pillars_2k.hdr
 </pre></div>
 
 <p>You should now have a <code>pillars_2k</code> folder containing a couple KTX files for the IBL and skybox, as
@@ -61,84 +61,84 @@ well as a text file with spherical harmonics coefficients. You can discard the t
 IBL KTX contains these coefficients in its metadata.</p>
 <h2>Create JavaScript</h2>
 <p>Next, create <code>redball.js</code> with the following content.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>environ<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #BA2121">&#39;pillars_2k&#39;</span>;<span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>ibl_url<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #BA2121">`</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">_ibl.ktx`</span>;<span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>sky_url<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #BA2121">`</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">_skybox.ktx`</span>;<span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>filamat_url<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #BA2121">&#39;plastic.filamat&#39;</span><span style="color: #bbbbbb"></span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>environ<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #BA2121">&#39;pillars_2k&#39;</span>;
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>ibl_url<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #BA2121">`</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">_ibl.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>sky_url<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #BA2121">`</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">_skybox.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>filamat_url<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #BA2121">&#39;plastic.filamat&#39;</span>
 
-Filament.init([<span style="color: #bbbbbb"> </span>filamat_url,<span style="color: #bbbbbb"> </span>ibl_url,<span style="color: #bbbbbb"> </span>sky_url<span style="color: #bbbbbb"> </span>],<span style="color: #bbbbbb"> </span>()<span style="color: #bbbbbb"> </span>=&gt;<span style="color: #bbbbbb"> </span>{<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #3D7B7B; font-style: italic">// Create some global aliases to enums for convenience.</span><span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #008000">window</span>.VertexAttribute<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.VertexAttribute;<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #008000">window</span>.AttributeType<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.VertexBuffer$AttributeType;<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #008000">window</span>.PrimitiveType<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.RenderableManager$PrimitiveType;<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #008000">window</span>.IndexType<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.IndexBuffer$IndexType;<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #008000">window</span>.Fov<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.Camera$Fov;<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #008000">window</span>.LightType<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.LightManager$Type;<span style="color: #bbbbbb"></span>
+Filament.init([<span style="color: #BBB"> </span>filamat_url,<span style="color: #BBB"> </span>ibl_url,<span style="color: #BBB"> </span>sky_url<span style="color: #BBB"> </span>],<span style="color: #BBB"> </span>()<span style="color: #BBB"> </span>=&gt;<span style="color: #BBB"> </span>{
+<span style="color: #BBB">  </span><span style="color: #3D7B7B; font-style: italic">// Create some global aliases to enums for convenience.</span>
+<span style="color: #BBB">  </span><span style="color: #008000">window</span>.VertexAttribute<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.VertexAttribute;
+<span style="color: #BBB">  </span><span style="color: #008000">window</span>.AttributeType<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.VertexBuffer$AttributeType;
+<span style="color: #BBB">  </span><span style="color: #008000">window</span>.PrimitiveType<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.RenderableManager$PrimitiveType;
+<span style="color: #BBB">  </span><span style="color: #008000">window</span>.IndexType<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.IndexBuffer$IndexType;
+<span style="color: #BBB">  </span><span style="color: #008000">window</span>.Fov<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.Camera$Fov;
+<span style="color: #BBB">  </span><span style="color: #008000">window</span>.LightType<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.LightManager$Type;
 
-<span style="color: #bbbbbb">  </span><span style="color: #3D7B7B; font-style: italic">// Obtain the canvas DOM object and pass it to the App.</span><span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>canvas<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000">document</span>.getElementsByTagName(<span style="color: #BA2121">&#39;canvas&#39;</span>)[<span style="color: #666666">0</span>];<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #008000">window</span>.app<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #AA22FF; font-weight: bold">new</span><span style="color: #bbbbbb"> </span>App(canvas);<span style="color: #bbbbbb"></span>
-}<span style="color: #bbbbbb"> </span>);<span style="color: #bbbbbb"></span>
+<span style="color: #BBB">  </span><span style="color: #3D7B7B; font-style: italic">// Obtain the canvas DOM object and pass it to the App.</span>
+<span style="color: #BBB">  </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>canvas<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #008000">document</span>.getElementsByTagName(<span style="color: #BA2121">&#39;canvas&#39;</span>)[<span style="color: #666">0</span>];
+<span style="color: #BBB">  </span><span style="color: #008000">window</span>.app<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #A2F; font-weight: bold">new</span><span style="color: #BBB"> </span>App(canvas);
+}<span style="color: #BBB"> </span>);
 
-<span style="color: #008000; font-weight: bold">class</span><span style="color: #bbbbbb"> </span>App<span style="color: #bbbbbb"> </span>{<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #008000; font-weight: bold">constructor</span>(canvas)<span style="color: #bbbbbb"> </span>{<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.canvas<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>canvas;<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>engine<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.Engine.create(canvas);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>scene<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>engine.createScene();<span style="color: #bbbbbb"></span>
+<span style="color: #008000; font-weight: bold">class</span><span style="color: #BBB"> </span>App<span style="color: #BBB"> </span>{
+<span style="color: #BBB">  </span><span style="color: #008000; font-weight: bold">constructor</span>(canvas)<span style="color: #BBB"> </span>{
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.canvas<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>canvas;
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>engine<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #008000; font-weight: bold">this</span>.engine<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.Engine.create(canvas);
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>scene<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>engine.createScene();
 
-<span style="color: #bbbbbb">    </span><span style="color: #3D7B7B; font-style: italic">// TODO: create material</span><span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #3D7B7B; font-style: italic">// TODO: create sphere</span><span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #3D7B7B; font-style: italic">// TODO: create lights</span><span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #3D7B7B; font-style: italic">// TODO: create IBL</span><span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #3D7B7B; font-style: italic">// TODO: create skybox</span><span style="color: #bbbbbb"></span>
+<span style="color: #BBB">    </span><span style="color: #3D7B7B; font-style: italic">// TODO: create material</span>
+<span style="color: #BBB">    </span><span style="color: #3D7B7B; font-style: italic">// TODO: create sphere</span>
+<span style="color: #BBB">    </span><span style="color: #3D7B7B; font-style: italic">// TODO: create lights</span>
+<span style="color: #BBB">    </span><span style="color: #3D7B7B; font-style: italic">// TODO: create IBL</span>
+<span style="color: #BBB">    </span><span style="color: #3D7B7B; font-style: italic">// TODO: create skybox</span>
 
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.swapChain<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>engine.createSwapChain();<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.renderer<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>engine.createRenderer();<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.camera<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>engine.createCamera(Filament.EntityManager.get().create());<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.view<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>engine.createView();<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.view.setCamera(<span style="color: #008000; font-weight: bold">this</span>.camera);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.view.setScene(scene);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.resize();<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.render<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.render.bind(<span style="color: #008000; font-weight: bold">this</span>);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.resize<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.resize.bind(<span style="color: #008000; font-weight: bold">this</span>);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000">window</span>.addEventListener(<span style="color: #BA2121">&#39;resize&#39;</span>,<span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.resize);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000">window</span>.requestAnimationFrame(<span style="color: #008000; font-weight: bold">this</span>.render);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>}<span style="color: #bbbbbb"></span>
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.swapChain<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>engine.createSwapChain();
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.renderer<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>engine.createRenderer();
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.camera<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>engine.createCamera(Filament.EntityManager.get().create());
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.view<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>engine.createView();
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.view.setCamera(<span style="color: #008000; font-weight: bold">this</span>.camera);
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.view.setScene(scene);
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.resize();
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.render<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #008000; font-weight: bold">this</span>.render.bind(<span style="color: #008000; font-weight: bold">this</span>);
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.resize<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #008000; font-weight: bold">this</span>.resize.bind(<span style="color: #008000; font-weight: bold">this</span>);
+<span style="color: #BBB">    </span><span style="color: #008000">window</span>.addEventListener(<span style="color: #BA2121">&#39;resize&#39;</span>,<span style="color: #BBB"> </span><span style="color: #008000; font-weight: bold">this</span>.resize);
+<span style="color: #BBB">    </span><span style="color: #008000">window</span>.requestAnimationFrame(<span style="color: #008000; font-weight: bold">this</span>.render);
+<span style="color: #BBB">  </span>}
 
-<span style="color: #bbbbbb">  </span>render()<span style="color: #bbbbbb"> </span>{<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>eye<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>[<span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">4</span>],<span style="color: #bbbbbb"> </span>center<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>[<span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>],<span style="color: #bbbbbb"> </span>up<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>[<span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">1</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>];<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>radians<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000">Date</span>.now()<span style="color: #bbbbbb"> </span><span style="color: #666666">/</span><span style="color: #bbbbbb"> </span><span style="color: #666666">10000</span>;<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span>vec3.rotateY(eye,<span style="color: #bbbbbb"> </span>eye,<span style="color: #bbbbbb"> </span>center,<span style="color: #bbbbbb"> </span>radians);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.camera.lookAt(eye,<span style="color: #bbbbbb"> </span>center,<span style="color: #bbbbbb"> </span>up);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.renderer.render(<span style="color: #008000; font-weight: bold">this</span>.swapChain,<span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.view);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000">window</span>.requestAnimationFrame(<span style="color: #008000; font-weight: bold">this</span>.render);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>}<span style="color: #bbbbbb"></span>
+<span style="color: #BBB">  </span>render()<span style="color: #BBB"> </span>{
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>eye<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>[<span style="color: #666">0</span>,<span style="color: #BBB"> </span><span style="color: #666">0</span>,<span style="color: #BBB"> </span><span style="color: #666">4</span>],<span style="color: #BBB"> </span>center<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>[<span style="color: #666">0</span>,<span style="color: #BBB"> </span><span style="color: #666">0</span>,<span style="color: #BBB"> </span><span style="color: #666">0</span>],<span style="color: #BBB"> </span>up<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>[<span style="color: #666">0</span>,<span style="color: #BBB"> </span><span style="color: #666">1</span>,<span style="color: #BBB"> </span><span style="color: #666">0</span>];
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>radians<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #008000">Date</span>.now()<span style="color: #BBB"> </span><span style="color: #666">/</span><span style="color: #BBB"> </span><span style="color: #666">10000</span>;
+<span style="color: #BBB">    </span>vec3.rotateY(eye,<span style="color: #BBB"> </span>eye,<span style="color: #BBB"> </span>center,<span style="color: #BBB"> </span>radians);
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.camera.lookAt(eye,<span style="color: #BBB"> </span>center,<span style="color: #BBB"> </span>up);
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.renderer.render(<span style="color: #008000; font-weight: bold">this</span>.swapChain,<span style="color: #BBB"> </span><span style="color: #008000; font-weight: bold">this</span>.view);
+<span style="color: #BBB">    </span><span style="color: #008000">window</span>.requestAnimationFrame(<span style="color: #008000; font-weight: bold">this</span>.render);
+<span style="color: #BBB">  </span>}
 
-<span style="color: #bbbbbb">  </span>resize()<span style="color: #bbbbbb"> </span>{<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>dpr<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000">window</span>.devicePixelRatio;<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>width<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.canvas.width<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000">window</span>.innerWidth<span style="color: #bbbbbb"> </span><span style="color: #666666">*</span><span style="color: #bbbbbb"> </span>dpr;<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>height<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.canvas.height<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000">window</span>.innerHeight<span style="color: #bbbbbb"> </span><span style="color: #666666">*</span><span style="color: #bbbbbb"> </span>dpr;<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.view.setViewport([<span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span>width,<span style="color: #bbbbbb"> </span>height]);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.camera.setProjectionFov(<span style="color: #666666">45</span>,<span style="color: #bbbbbb"> </span>width<span style="color: #bbbbbb"> </span><span style="color: #666666">/</span><span style="color: #bbbbbb"> </span>height,<span style="color: #bbbbbb"> </span><span style="color: #666666">1.0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">10.0</span>,<span style="color: #bbbbbb"> </span>Fov.VERTICAL);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>}<span style="color: #bbbbbb"></span>
-}<span style="color: #bbbbbb"></span>
+<span style="color: #BBB">  </span>resize()<span style="color: #BBB"> </span>{
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>dpr<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #008000">window</span>.devicePixelRatio;
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>width<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #008000; font-weight: bold">this</span>.canvas.width<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #008000">window</span>.innerWidth<span style="color: #BBB"> </span><span style="color: #666">*</span><span style="color: #BBB"> </span>dpr;
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>height<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #008000; font-weight: bold">this</span>.canvas.height<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #008000">window</span>.innerHeight<span style="color: #BBB"> </span><span style="color: #666">*</span><span style="color: #BBB"> </span>dpr;
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.view.setViewport([<span style="color: #666">0</span>,<span style="color: #BBB"> </span><span style="color: #666">0</span>,<span style="color: #BBB"> </span>width,<span style="color: #BBB"> </span>height]);
+<span style="color: #BBB">    </span><span style="color: #008000; font-weight: bold">this</span>.camera.setProjectionFov(<span style="color: #666">45</span>,<span style="color: #BBB"> </span>width<span style="color: #BBB"> </span><span style="color: #666">/</span><span style="color: #BBB"> </span>height,<span style="color: #BBB"> </span><span style="color: #666">1.0</span>,<span style="color: #BBB"> </span><span style="color: #666">10.0</span>,<span style="color: #BBB"> </span>Fov.VERTICAL);
+<span style="color: #BBB">  </span>}
+}
 </pre></div>
 
 <p>The above boilerplate should be familiar to you from the previous tutorial, although it loads in a
 new set of assets. We also added some animation to the camera.</p>
-<p>Next let&#x27;s create a material instance from the package that we built at the beginning the tutorial.
+<p>Next let's create a material instance from the package that we built at the beginning the tutorial.
 Replace the <strong>create material</strong> comment with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>material<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>engine.createMaterial(filamat_url);<span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>matinstance<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>material.createInstance();<span style="color: #bbbbbb"></span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>material<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>engine.createMaterial(filamat_url);
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>matinstance<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>material.createInstance();
 
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>red<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>[<span style="color: #666666">0.8</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0.0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0.0</span>];<span style="color: #bbbbbb"></span>
-matinstance.setColor3Parameter(<span style="color: #BA2121">&#39;baseColor&#39;</span>,<span style="color: #bbbbbb"> </span>Filament.RgbType.sRGB,<span style="color: #bbbbbb"> </span>red);<span style="color: #bbbbbb"></span>
-matinstance.setFloatParameter(<span style="color: #BA2121">&#39;roughness&#39;</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0.5</span>);<span style="color: #bbbbbb"></span>
-matinstance.setFloatParameter(<span style="color: #BA2121">&#39;clearCoat&#39;</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">1.0</span>);<span style="color: #bbbbbb"></span>
-matinstance.setFloatParameter(<span style="color: #BA2121">&#39;clearCoatRoughness&#39;</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0.3</span>);<span style="color: #bbbbbb"></span>
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>red<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>[<span style="color: #666">0.8</span>,<span style="color: #BBB"> </span><span style="color: #666">0.0</span>,<span style="color: #BBB"> </span><span style="color: #666">0.0</span>];
+matinstance.setColor3Parameter(<span style="color: #BA2121">&#39;baseColor&#39;</span>,<span style="color: #BBB"> </span>Filament.RgbType.sRGB,<span style="color: #BBB"> </span>red);
+matinstance.setFloatParameter(<span style="color: #BA2121">&#39;roughness&#39;</span>,<span style="color: #BBB"> </span><span style="color: #666">0.5</span>);
+matinstance.setFloatParameter(<span style="color: #BA2121">&#39;clearCoat&#39;</span>,<span style="color: #BBB"> </span><span style="color: #666">1.0</span>);
+matinstance.setFloatParameter(<span style="color: #BA2121">&#39;clearCoatRoughness&#39;</span>,<span style="color: #BBB"> </span><span style="color: #666">0.3</span>);
 </pre></div>
 
-<p>The next step is to create a renderable for the sphere. To help with this, we&#x27;ll use the <code>IcoSphere</code>
+<p>The next step is to create a renderable for the sphere. To help with this, we'll use the <code>IcoSphere</code>
 utility class, whose constructor takes a LOD. Its job is to subdivide an icosadedron, producing
 three arrays:</p>
 <ul>
@@ -147,137 +147,137 @@ three arrays:</p>
 as quaternions.</li>
 <li><code>icosphere.triangles</code> Uint16Array with triangle indices.</li>
 </ul>
-<p>Let&#x27;s go ahead use these arrays to build the vertex buffer and index buffer. Replace <strong>create
+<p>Let's go ahead use these arrays to build the vertex buffer and index buffer. Replace <strong>create
 sphere</strong> with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>renderable<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.EntityManager.get().create();<span style="color: #bbbbbb"></span>
-scene.addEntity(renderable);<span style="color: #bbbbbb"></span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>renderable<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.EntityManager.get().create();
+scene.addEntity(renderable);
 
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>icosphere<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #AA22FF; font-weight: bold">new</span><span style="color: #bbbbbb"> </span>Filament.IcoSphere(<span style="color: #666666">5</span>);<span style="color: #bbbbbb"></span>
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>icosphere<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #A2F; font-weight: bold">new</span><span style="color: #BBB"> </span>Filament.IcoSphere(<span style="color: #666">5</span>);
 
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>vb<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.VertexBuffer.Builder()<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.vertexCount(icosphere.vertices.length<span style="color: #bbbbbb"> </span><span style="color: #666666">/</span><span style="color: #bbbbbb"> </span><span style="color: #666666">3</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.bufferCount(<span style="color: #666666">2</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.attribute(VertexAttribute.POSITION,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span>AttributeType.FLOAT3,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.attribute(VertexAttribute.TANGENTS,<span style="color: #bbbbbb"> </span><span style="color: #666666">1</span>,<span style="color: #bbbbbb"> </span>AttributeType.SHORT4,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.normalized(VertexAttribute.TANGENTS)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.build(engine);<span style="color: #bbbbbb"></span>
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>vb<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.VertexBuffer.Builder()
+<span style="color: #BBB">  </span>.vertexCount(icosphere.vertices.length<span style="color: #BBB"> </span><span style="color: #666">/</span><span style="color: #BBB"> </span><span style="color: #666">3</span>)
+<span style="color: #BBB">  </span>.bufferCount(<span style="color: #666">2</span>)
+<span style="color: #BBB">  </span>.attribute(VertexAttribute.POSITION,<span style="color: #BBB"> </span><span style="color: #666">0</span>,<span style="color: #BBB"> </span>AttributeType.FLOAT3,<span style="color: #BBB"> </span><span style="color: #666">0</span>,<span style="color: #BBB"> </span><span style="color: #666">0</span>)
+<span style="color: #BBB">  </span>.attribute(VertexAttribute.TANGENTS,<span style="color: #BBB"> </span><span style="color: #666">1</span>,<span style="color: #BBB"> </span>AttributeType.SHORT4,<span style="color: #BBB"> </span><span style="color: #666">0</span>,<span style="color: #BBB"> </span><span style="color: #666">0</span>)
+<span style="color: #BBB">  </span>.normalized(VertexAttribute.TANGENTS)
+<span style="color: #BBB">  </span>.build(engine);
 
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>ib<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.IndexBuffer.Builder()<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.indexCount(icosphere.triangles.length)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.bufferType(IndexType.USHORT)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.build(engine);<span style="color: #bbbbbb"></span>
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>ib<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.IndexBuffer.Builder()
+<span style="color: #BBB">  </span>.indexCount(icosphere.triangles.length)
+<span style="color: #BBB">  </span>.bufferType(IndexType.USHORT)
+<span style="color: #BBB">  </span>.build(engine);
 
-vb.setBufferAt(engine,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span>icosphere.vertices);<span style="color: #bbbbbb"></span>
-vb.setBufferAt(engine,<span style="color: #bbbbbb"> </span><span style="color: #666666">1</span>,<span style="color: #bbbbbb"> </span>icosphere.tangents);<span style="color: #bbbbbb"></span>
-ib.setBuffer(engine,<span style="color: #bbbbbb"> </span>icosphere.triangles);<span style="color: #bbbbbb"></span>
+vb.setBufferAt(engine,<span style="color: #BBB"> </span><span style="color: #666">0</span>,<span style="color: #BBB"> </span>icosphere.vertices);
+vb.setBufferAt(engine,<span style="color: #BBB"> </span><span style="color: #666">1</span>,<span style="color: #BBB"> </span>icosphere.tangents);
+ib.setBuffer(engine,<span style="color: #BBB"> </span>icosphere.triangles);
 
-Filament.RenderableManager.Builder(<span style="color: #666666">1</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.boundingBox({<span style="color: #bbbbbb"> </span>center<span style="color: #666666">:</span><span style="color: #bbbbbb"> </span>[<span style="color: #666666">-1</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">-1</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">-1</span>],<span style="color: #bbbbbb"> </span>halfExtent<span style="color: #666666">:</span><span style="color: #bbbbbb"> </span>[<span style="color: #666666">1</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">1</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">1</span>]<span style="color: #bbbbbb"> </span>})<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.material(<span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span>matinstance)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.geometry(<span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span>PrimitiveType.TRIANGLES,<span style="color: #bbbbbb"> </span>vb,<span style="color: #bbbbbb"> </span>ib)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.build(engine,<span style="color: #bbbbbb"> </span>renderable);<span style="color: #bbbbbb"></span>
+Filament.RenderableManager.Builder(<span style="color: #666">1</span>)
+<span style="color: #BBB">  </span>.boundingBox({<span style="color: #BBB"> </span>center<span style="color: #666">:</span><span style="color: #BBB"> </span>[<span style="color: #666">-1</span>,<span style="color: #BBB"> </span><span style="color: #666">-1</span>,<span style="color: #BBB"> </span><span style="color: #666">-1</span>],<span style="color: #BBB"> </span>halfExtent<span style="color: #666">:</span><span style="color: #BBB"> </span>[<span style="color: #666">1</span>,<span style="color: #BBB"> </span><span style="color: #666">1</span>,<span style="color: #BBB"> </span><span style="color: #666">1</span>]<span style="color: #BBB"> </span>})
+<span style="color: #BBB">  </span>.material(<span style="color: #666">0</span>,<span style="color: #BBB"> </span>matinstance)
+<span style="color: #BBB">  </span>.geometry(<span style="color: #666">0</span>,<span style="color: #BBB"> </span>PrimitiveType.TRIANGLES,<span style="color: #BBB"> </span>vb,<span style="color: #BBB"> </span>ib)
+<span style="color: #BBB">  </span>.build(engine,<span style="color: #BBB"> </span>renderable);
 </pre></div>
 
-<p>At this point, the app is rendering a sphere, but it is black so it doesn&#x27;t show up. To prove that
+<p>At this point, the app is rendering a sphere, but it is black so it doesn't show up. To prove that
 the sphere is there, you can try changing the background color to blue via <code>setClearColor</code>, like we
 did in the first tutorial.</p>
 <h2>Add lighting</h2>
 <p>In this section we will create some directional light sources, as well as an image-based light (IBL)
 defined by one of the KTX files we built at the start of the demo. First, replace the <strong>create
 lights</strong> comment with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>sunlight<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.EntityManager.get().create();<span style="color: #bbbbbb"></span>
-scene.addEntity(sunlight);<span style="color: #bbbbbb"></span>
-Filament.LightManager.Builder(LightType.SUN)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.color([<span style="color: #666666">0.98</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0.92</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0.89</span>])<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.intensity(<span style="color: #666666">110000.0</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.direction([<span style="color: #666666">0.6</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">-1.0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">-0.8</span>])<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.sunAngularRadius(<span style="color: #666666">1.9</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.sunHaloSize(<span style="color: #666666">10.0</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.sunHaloFalloff(<span style="color: #666666">80.0</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.build(engine,<span style="color: #bbbbbb"> </span>sunlight);<span style="color: #bbbbbb"></span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>sunlight<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.EntityManager.get().create();
+scene.addEntity(sunlight);
+Filament.LightManager.Builder(LightType.SUN)
+<span style="color: #BBB">  </span>.color([<span style="color: #666">0.98</span>,<span style="color: #BBB"> </span><span style="color: #666">0.92</span>,<span style="color: #BBB"> </span><span style="color: #666">0.89</span>])
+<span style="color: #BBB">  </span>.intensity(<span style="color: #666">110000.0</span>)
+<span style="color: #BBB">  </span>.direction([<span style="color: #666">0.6</span>,<span style="color: #BBB"> </span><span style="color: #666">-1.0</span>,<span style="color: #BBB"> </span><span style="color: #666">-0.8</span>])
+<span style="color: #BBB">  </span>.sunAngularRadius(<span style="color: #666">1.9</span>)
+<span style="color: #BBB">  </span>.sunHaloSize(<span style="color: #666">10.0</span>)
+<span style="color: #BBB">  </span>.sunHaloFalloff(<span style="color: #666">80.0</span>)
+<span style="color: #BBB">  </span>.build(engine,<span style="color: #BBB"> </span>sunlight);
 
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>backlight<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.EntityManager.get().create();<span style="color: #bbbbbb"></span>
-scene.addEntity(backlight);<span style="color: #bbbbbb"></span>
-Filament.LightManager.Builder(LightType.DIRECTIONAL)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">        </span>.direction([<span style="color: #666666">-1</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">1</span>])<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">        </span>.intensity(<span style="color: #666666">50000.0</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">        </span>.build(engine,<span style="color: #bbbbbb"> </span>backlight);<span style="color: #bbbbbb"></span>
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>backlight<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.EntityManager.get().create();
+scene.addEntity(backlight);
+Filament.LightManager.Builder(LightType.DIRECTIONAL)
+<span style="color: #BBB">        </span>.direction([<span style="color: #666">-1</span>,<span style="color: #BBB"> </span><span style="color: #666">0</span>,<span style="color: #BBB"> </span><span style="color: #666">1</span>])
+<span style="color: #BBB">        </span>.intensity(<span style="color: #666">50000.0</span>)
+<span style="color: #BBB">        </span>.build(engine,<span style="color: #BBB"> </span>backlight);
 </pre></div>
 
 <p>The <code>SUN</code> light source is similar to the <code>DIRECTIONAL</code> light source, but has some extra
 parameters because Filament will automatically draw a disk into the skybox.</p>
 <p>Next we need to create an <code>IndirectLight</code> object from the KTX IBL. One way of doing this is the
-following (don&#x27;t type this out, there&#x27;s an easier way).</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>format<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.PixelDataFormat.RGB;<span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>datatype<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.PixelDataType.UINT_10F_11F_11F_REV;<span style="color: #bbbbbb"></span>
+following (don't type this out, there's an easier way).</p>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>format<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.PixelDataFormat.RGB;
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>datatype<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.PixelDataType.UINT_10F_11F_11F_REV;
 
-<span style="color: #3D7B7B; font-style: italic">// Create a Texture object for the mipmapped cubemap.</span><span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>ibl_package<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.Buffer(Filament.assets[ibl_url]);<span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>iblktx<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #AA22FF; font-weight: bold">new</span><span style="color: #bbbbbb"> </span>Filament.Ktx1Bundle(ibl_package);<span style="color: #bbbbbb"></span>
+<span style="color: #3D7B7B; font-style: italic">// Create a Texture object for the mipmapped cubemap.</span>
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>ibl_package<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.Buffer(Filament.assets[ibl_url]);
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>iblktx<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #A2F; font-weight: bold">new</span><span style="color: #BBB"> </span>Filament.Ktx1Bundle(ibl_package);
 
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>ibltex<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.Texture.Builder()<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.width(iblktx.info().pixelWidth)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.height(iblktx.info().pixelHeight)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.levels(iblktx.getNumMipLevels())<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.sampler(Filament.Texture$Sampler.SAMPLER_CUBEMAP)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.format(Filament.Texture$InternalFormat.RGBA8)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.build(engine);<span style="color: #bbbbbb"></span>
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>ibltex<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.Texture.Builder()
+<span style="color: #BBB">  </span>.width(iblktx.info().pixelWidth)
+<span style="color: #BBB">  </span>.height(iblktx.info().pixelHeight)
+<span style="color: #BBB">  </span>.levels(iblktx.getNumMipLevels())
+<span style="color: #BBB">  </span>.sampler(Filament.Texture$Sampler.SAMPLER_CUBEMAP)
+<span style="color: #BBB">  </span>.format(Filament.Texture$InternalFormat.RGBA8)
+<span style="color: #BBB">  </span>.build(engine);
 
-<span style="color: #008000; font-weight: bold">for</span><span style="color: #bbbbbb"> </span>(<span style="color: #008000; font-weight: bold">let</span><span style="color: #bbbbbb"> </span>level<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>;<span style="color: #bbbbbb"> </span>level<span style="color: #bbbbbb"> </span><span style="color: #666666">&lt;</span><span style="color: #bbbbbb"> </span>iblktx.getNumMipLevels();<span style="color: #bbbbbb"> </span><span style="color: #666666">++</span>level)<span style="color: #bbbbbb"> </span>{<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>uint8array<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>iblktx.getCubeBlob(level).getBytes();<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>pixelbuffer<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.PixelBuffer(uint8array,<span style="color: #bbbbbb"> </span>format,<span style="color: #bbbbbb"> </span>datatype);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>ibltex.setImageCube(engine,<span style="color: #bbbbbb"> </span>level,<span style="color: #bbbbbb"> </span>pixelbuffer);<span style="color: #bbbbbb"></span>
-}<span style="color: #bbbbbb"></span>
+<span style="color: #008000; font-weight: bold">for</span><span style="color: #BBB"> </span>(<span style="color: #008000; font-weight: bold">let</span><span style="color: #BBB"> </span>level<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #666">0</span>;<span style="color: #BBB"> </span>level<span style="color: #BBB"> </span><span style="color: #666">&lt;</span><span style="color: #BBB"> </span>iblktx.getNumMipLevels();<span style="color: #BBB"> </span><span style="color: #666">++</span>level)<span style="color: #BBB"> </span>{
+<span style="color: #BBB">  </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>uint8array<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>iblktx.getCubeBlob(level).getBytes();
+<span style="color: #BBB">  </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>pixelbuffer<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.PixelBuffer(uint8array,<span style="color: #BBB"> </span>format,<span style="color: #BBB"> </span>datatype);
+<span style="color: #BBB">  </span>ibltex.setImageCube(engine,<span style="color: #BBB"> </span>level,<span style="color: #BBB"> </span>pixelbuffer);
+}
 
-<span style="color: #3D7B7B; font-style: italic">// Parse the spherical harmonics metadata.</span><span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>shstring<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>iblktx.getMetadata(<span style="color: #BA2121">&#39;sh&#39;</span>);<span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>shfloats<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>shstring.split(<span style="color: #A45A77">/\s/</span>,<span style="color: #bbbbbb"> </span><span style="color: #666666">9</span><span style="color: #bbbbbb"> </span><span style="color: #666666">*</span><span style="color: #bbbbbb"> </span><span style="color: #666666">3</span>).map(<span style="color: #008000">parseFloat</span>);<span style="color: #bbbbbb"></span>
+<span style="color: #3D7B7B; font-style: italic">// Parse the spherical harmonics metadata.</span>
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>shstring<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>iblktx.getMetadata(<span style="color: #BA2121">&#39;sh&#39;</span>);
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>shfloats<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>shstring.split(<span style="color: #A45A77">/\s/</span>,<span style="color: #BBB"> </span><span style="color: #666">9</span><span style="color: #BBB"> </span><span style="color: #666">*</span><span style="color: #BBB"> </span><span style="color: #666">3</span>).map(<span style="color: #008000">parseFloat</span>);
 
-<span style="color: #3D7B7B; font-style: italic">// Build the IBL object and insert it into the scene.</span><span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>indirectLight<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.IndirectLight.Builder()<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.reflections(ibltex)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.irradianceSh(<span style="color: #666666">3</span>,<span style="color: #bbbbbb"> </span>shfloats)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.intensity(<span style="color: #666666">50000.0</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.build(engine);<span style="color: #bbbbbb"></span>
+<span style="color: #3D7B7B; font-style: italic">// Build the IBL object and insert it into the scene.</span>
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>indirectLight<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.IndirectLight.Builder()
+<span style="color: #BBB">  </span>.reflections(ibltex)
+<span style="color: #BBB">  </span>.irradianceSh(<span style="color: #666">3</span>,<span style="color: #BBB"> </span>shfloats)
+<span style="color: #BBB">  </span>.intensity(<span style="color: #666">50000.0</span>)
+<span style="color: #BBB">  </span>.build(engine);
 
-scene.setIndirectLight(indirectLight);<span style="color: #bbbbbb"></span>
+scene.setIndirectLight(indirectLight);
 </pre></div>
 
 <p>Filament provides a JavaScript utility to make this simpler,
 simply replace the <strong>create IBL</strong> comment with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>indirectLight<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>engine.createIblFromKtx1(ibl_url);<span style="color: #bbbbbb"></span>
-indirectLight.setIntensity(<span style="color: #666666">50000</span>);<span style="color: #bbbbbb"></span>
-scene.setIndirectLight(indirectLight);<span style="color: #bbbbbb"></span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>indirectLight<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>engine.createIblFromKtx1(ibl_url);
+indirectLight.setIntensity(<span style="color: #666">50000</span>);
+scene.setIndirectLight(indirectLight);
 </pre></div>
 
 <h2>Add background</h2>
 <p>At this point you can run the demo and you should see a red plastic ball against a black background.
 Without a skybox, the reflections on the ball are not representative of its surroundings.
-Here&#x27;s one way to create a texture for the skybox:</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>sky_package<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.Buffer(Filament.assets[sky_url]);<span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>skyktx<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #AA22FF; font-weight: bold">new</span><span style="color: #bbbbbb"> </span>Filament.Ktx1Bundle(sky_package);<span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>skytex<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.Texture.Builder()<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.width(skyktx.info().pixelWidth)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.height(skyktx.info().pixelHeight)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.levels(<span style="color: #666666">1</span>)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.sampler(Filament.Texture$Sampler.SAMPLER_CUBEMAP)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.format(Filament.Texture$InternalFormat.RGBA8)<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">  </span>.build(engine);<span style="color: #bbbbbb"></span>
+Here's one way to create a texture for the skybox:</p>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>sky_package<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.Buffer(Filament.assets[sky_url]);
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>skyktx<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span><span style="color: #A2F; font-weight: bold">new</span><span style="color: #BBB"> </span>Filament.Ktx1Bundle(sky_package);
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>skytex<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.Texture.Builder()
+<span style="color: #BBB">  </span>.width(skyktx.info().pixelWidth)
+<span style="color: #BBB">  </span>.height(skyktx.info().pixelHeight)
+<span style="color: #BBB">  </span>.levels(<span style="color: #666">1</span>)
+<span style="color: #BBB">  </span>.sampler(Filament.Texture$Sampler.SAMPLER_CUBEMAP)
+<span style="color: #BBB">  </span>.format(Filament.Texture$InternalFormat.RGBA8)
+<span style="color: #BBB">  </span>.build(engine);
 
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>uint8array<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>skyktx.getCubeBlob(<span style="color: #666666">0</span>).getBytes();<span style="color: #bbbbbb"></span>
-<span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>pixelbuffer<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>Filament.PixelBuffer(uint8array,<span style="color: #bbbbbb"> </span>format,<span style="color: #bbbbbb"> </span>datatype);<span style="color: #bbbbbb"></span>
-skytex.setImageCube(engine,<span style="color: #bbbbbb"> </span><span style="color: #666666">0</span>,<span style="color: #bbbbbb"> </span>pixelbuffer);<span style="color: #bbbbbb"></span>
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>uint8array<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>skyktx.getCubeBlob(<span style="color: #666">0</span>).getBytes();
+<span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>pixelbuffer<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>Filament.PixelBuffer(uint8array,<span style="color: #BBB"> </span>format,<span style="color: #BBB"> </span>datatype);
+skytex.setImageCube(engine,<span style="color: #BBB"> </span><span style="color: #666">0</span>,<span style="color: #BBB"> </span>pixelbuffer);
 </pre></div>
 
 <p>Filament provides a Javascript utility to make this easier.
 Replace <strong>create skybox</strong> with the following.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>skybox<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>engine.createSkyFromKtx1(sky_url);<span style="color: #bbbbbb"></span>
-scene.setSkybox(skybox);<span style="color: #bbbbbb"></span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #BBB"> </span>skybox<span style="color: #BBB"> </span><span style="color: #666">=</span><span style="color: #BBB"> </span>engine.createSkyFromKtx1(sky_url);
+scene.setSkybox(skybox);
 </pre></div>
 
-<p>That&#x27;s it, we now have a shiny red ball floating in an environment! The complete JavaScript file is
+<p>That's it, we now have a shiny red ball floating in an environment! The complete JavaScript file is
 available <a href="tutorial_redball.js">here</a>.</p>
-<p>In the <a href="tutorial_suzanne.html">next tutorial</a>, we&#x27;ll take a closer look at textures and interaction.</p>
+<p>In the <a href="tutorial_suzanne.html">next tutorial</a>, we'll take a closer look at textures and interaction.</p>
 
 </body>
 </html>

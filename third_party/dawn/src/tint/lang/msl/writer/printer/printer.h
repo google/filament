@@ -28,13 +28,9 @@
 #ifndef SRC_TINT_LANG_MSL_WRITER_PRINTER_PRINTER_H_
 #define SRC_TINT_LANG_MSL_WRITER_PRINTER_PRINTER_H_
 
-#include <string>
-#include <unordered_map>
-#include <vector>
-
 #include "src/tint/lang/msl/writer/common/options.h"
 #include "src/tint/lang/msl/writer/common/output.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations
 namespace tint::core::ir {

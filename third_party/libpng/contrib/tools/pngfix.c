@@ -1,6 +1,6 @@
 /* pngfix.c
  *
- * Copyright (c) 2014-2017 John Cunningham Bowler
+ * Copyright (c) 2014-2017,2024 John Cunningham Bowler
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -19,19 +19,6 @@
 #include <assert.h>
 
 #define implies(x,y) assert(!(x) || (y))
-
-#ifdef __GNUC__
-   /* This is used to fix the error:
-    *
-    * pngfix.c:
-    * In function 'zlib_advance':
-    * pngfix.c:181:13: error: assuming signed overflow does not
-    *   occur when simplifying conditional to constant [-Werror=strict-overflow]
-    */
-#  define FIX_GCC volatile
-#else
-#  define FIX_GCC
-#endif
 
 #define PROGRAM_NAME "pngfix"
 
@@ -146,11 +133,6 @@
 /* Is it safe to copy? */
 #define SAFE_TO_COPY(chunk) (((chunk) & PNG_U32(0,0,0,32)) != 0)
 
-/* Fix ups for builds with limited read support */
-#ifndef PNG_ERROR_TEXT_SUPPORTED
-#  define png_error(a,b) png_err(a)
-#endif
-
 /********************************* UTILITIES **********************************/
 /* UNREACHED is a value to cause an assert to fail. Because of the way the
  * assert macro is written the string "UNREACHED" is produced in the error
@@ -218,7 +200,7 @@ uarb_inc(uarb num, int in_digits, png_int_32 add)
     * in_digits+1 if add is known to be in the range -65535..65535.
     */
 {
-   FIX_GCC int out_digits = 0;
+   int out_digits = 0;
 
    while (out_digits < in_digits)
    {
@@ -263,7 +245,7 @@ uarb_add32(uarb num, int in_digits, png_uint_32 add)
 }
 
 static int
-uarb_mult_digit(uarb acc, int a_digits, uarb num, FIX_GCC int n_digits,
+uarb_mult_digit(uarb acc, int a_digits, uarb num, int n_digits,
    png_uint_16 val)
    /* Primitive one-digit multiply - 'val' must be 0..65535. Note that this
     * primitive is a multiply and accumulate - the result of *num * val is added
@@ -336,7 +318,7 @@ uarb_shift(uarb inout, int ndigits, unsigned int right_shift)
     * 1..15
     */
 {
-   FIX_GCC int i = ndigits;
+   int i = ndigits;
    png_uint_16 carry = 0;
 
    assert(right_shift >= 1 && right_shift <= 15);
@@ -351,7 +333,7 @@ uarb_shift(uarb inout, int ndigits, unsigned int right_shift)
       inout[i] = temp;
 
       /* The shift may reduce ndigits */
-      if (i == ndigits-1 && temp == 0)
+      if (i+1 == ndigits && temp == 0)
          ndigits = i;
    }
 
@@ -867,7 +849,7 @@ struct file
     * signature (in length,type).
     *
     * When a chunk control structure is instantiated these values are copied
-    * into the structure and can then be overritten with the data for the next
+    * into the structure and can then be overwritten with the data for the next
     * chunk.
     */
    fpos_t         data_pos;      /* Position of first byte of chunk data */
@@ -1005,10 +987,18 @@ file_end(struct file *file)
 
    if (file->out != NULL)
    {
-      /* NOTE: this is bitwise |, all the following functions must execute and
-       * must succeed.
+      /* On some systems 'fclose' deletes the FILE struct (making it
+       * inaccessbile).  There is no guarantee that fclose returns an error
+       * code from fflush or, indeed, from the FILE error indicator.  There is
+       * also no explicit (or clear) guarantee in the standard that anything
+       * other than a read or write operation sets the error indicator; fflush
+       * is not a read or write operation, so both conditions must be checked
+       * to ensure the close succeeded and in ANSI-C conformant code they must
+       * be checked before the fclose call.
        */
-      if (ferror(file->out) | fflush(file->out) | fclose(file->out))
+      const int err = fflush(file->out) || ferror(file->out);
+
+      if (fclose(file->out) || err)
       {
          perror(file->out_name);
          emit_error(file, READ_ERROR_CODE, "output write error");
@@ -4054,3 +4044,4 @@ main(void)
    return 77;
 }
 #endif /* PNG_SETJMP_SUPPORTED */
+/* vi: set textwidth=80 shiftwidth=3 softtabstop=-1 expandtab: */

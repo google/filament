@@ -62,7 +62,7 @@ TEST_F(IR_ArrayLengthFromUniformTest, NoModify_UserFunction) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %arrayLength = func(%arr:ptr<storage, array<i32>, read_write>):u32 {
@@ -104,7 +104,7 @@ TEST_F(IR_ArrayLengthFromUniformTest, DirectUse) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -118,8 +118,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var @binding_point(1, 2)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var undef @binding_point(1, 2)
 }
 
 %foo = func():u32 {
@@ -155,7 +155,7 @@ TEST_F(IR_ArrayLengthFromUniformTest, DirectUse_NonZeroIndex) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -169,8 +169,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 2>, read> = var @binding_point(1, 2)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 2>, read> = var undef @binding_point(1, 2)
 }
 
 %foo = func():u32 {
@@ -206,7 +206,7 @@ TEST_F(IR_ArrayLengthFromUniformTest, DirectUse_NotInMap) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 1)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 1)
 }
 
 %foo = func():u32 {
@@ -220,7 +220,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 1)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 1)
 }
 
 %foo = func():u32 {
@@ -262,7 +262,7 @@ MyStruct = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, MyStruct, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, MyStruct, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -281,8 +281,8 @@ MyStruct = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, MyStruct, read_write> = var @binding_point(0, 0)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var @binding_point(1, 2)
+  %buffer:ptr<storage, MyStruct, read_write> = var undef @binding_point(0, 0)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var undef @binding_point(1, 2)
 }
 
 %foo = func():u32 {
@@ -338,7 +338,7 @@ MyStruct = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, MyStruct, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, MyStruct, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -362,8 +362,8 @@ MyStruct = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, MyStruct, read_write> = var @binding_point(0, 0)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var @binding_point(1, 2)
+  %buffer:ptr<storage, MyStruct, read_write> = var undef @binding_point(0, 0)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var undef @binding_point(1, 2)
 }
 
 %foo = func():u32 {
@@ -401,7 +401,7 @@ TEST_F(IR_ArrayLengthFromUniformTest, ViaLet) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -416,8 +416,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var @binding_point(1, 2)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var undef @binding_point(1, 2)
 }
 
 %foo = func():u32 {
@@ -462,7 +462,7 @@ TEST_F(IR_ArrayLengthFromUniformTest, ViaParameter) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %bar = func(%param:ptr<storage, array<i32>, read_write>):u32 {
@@ -482,8 +482,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var @binding_point(1, 2)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var undef @binding_point(1, 2)
 }
 
 %bar = func(%param:ptr<storage, array<i32>, read_write>, %tint_array_length:u32):u32 {
@@ -541,7 +541,7 @@ TEST_F(IR_ArrayLengthFromUniformTest, ViaParameterChain) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func(%param_zoo:ptr<storage, array<i32>, read_write>):u32 {
@@ -567,8 +567,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var @binding_point(1, 2)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var undef @binding_point(1, 2)
 }
 
 %foo = func(%param_zoo:ptr<storage, array<i32>, read_write>, %tint_array_length:u32):u32 {
@@ -627,7 +627,7 @@ TEST_F(IR_ArrayLengthFromUniformTest, ViaParameter_NotInMap) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %bar = func(%param:ptr<storage, array<i32>, read_write>):u32 {
@@ -647,7 +647,7 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %bar = func(%param:ptr<storage, array<i32>, read_write>, %tint_array_length:u32):u32 {
@@ -697,7 +697,7 @@ TEST_F(IR_ArrayLengthFromUniformTest, ViaParameter_MultipleCallsSameParameter) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %bar = func(%param:ptr<storage, array<i32>, read_write>):u32 {
@@ -721,8 +721,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var @binding_point(1, 2)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var undef @binding_point(1, 2)
 }
 
 %bar = func(%param:ptr<storage, array<i32>, read_write>, %tint_array_length:u32):u32 {
@@ -778,7 +778,7 @@ TEST_F(IR_ArrayLengthFromUniformTest, ViaParameter_MultipleCallsDifferentParamet
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
 }
 
 %bar = func(%param_a:ptr<storage, array<i32>, read_write>, %param_b:ptr<storage, array<i32>, read_write>, %param_c:ptr<storage, array<i32>, read_write>):u32 {
@@ -802,8 +802,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var @binding_point(1, 2)
+  %buffer:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var undef @binding_point(1, 2)
 }
 
 %bar = func(%param_a:ptr<storage, array<i32>, read_write>, %param_b:ptr<storage, array<i32>, read_write>, %param_c:ptr<storage, array<i32>, read_write>, %tint_array_length:u32, %tint_array_length_1:u32, %tint_array_length_2:u32):u32 {  # %tint_array_length_1: 'tint_array_length', %tint_array_length_2: 'tint_array_length'
@@ -875,7 +875,7 @@ MyStruct = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, MyStruct, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, MyStruct, read_write> = var undef @binding_point(0, 0)
 }
 
 %bar = func(%param:ptr<storage, array<i32>, read_write>):u32 {
@@ -904,8 +904,8 @@ MyStruct = struct @align(4) {
 }
 
 $B1: {  # root
-  %buffer:ptr<storage, MyStruct, read_write> = var @binding_point(0, 0)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var @binding_point(1, 2)
+  %buffer:ptr<storage, MyStruct, read_write> = var undef @binding_point(0, 0)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var undef @binding_point(1, 2)
 }
 
 %bar = func(%param:ptr<storage, array<i32>, read_write>, %tint_array_length:u32):u32 {
@@ -952,7 +952,7 @@ TEST_F(IR_ArrayLengthFromUniformTest, ElementStrideLargerThanSize) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<vec3<i32>>, read_write> = var @binding_point(0, 0)
+  %buffer:ptr<storage, array<vec3<i32>>, read_write> = var undef @binding_point(0, 0)
 }
 
 %foo = func():u32 {
@@ -966,8 +966,8 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer:ptr<storage, array<vec3<i32>>, read_write> = var @binding_point(0, 0)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var @binding_point(1, 2)
+  %buffer:ptr<storage, array<vec3<i32>>, read_write> = var undef @binding_point(0, 0)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 1>, read> = var undef @binding_point(1, 2)
 }
 
 %foo = func():u32 {
@@ -1019,11 +1019,11 @@ TEST_F(IR_ArrayLengthFromUniformTest, MultipleVars) {
 
     auto* src = R"(
 $B1: {  # root
-  %buffer_a:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
-  %buffer_b:ptr<storage, array<i32>, read_write> = var @binding_point(0, 1)
-  %buffer_c:ptr<storage, array<i32>, read_write> = var @binding_point(1, 0)
-  %buffer_d:ptr<storage, array<i32>, read_write> = var @binding_point(1, 1)
-  %buffer_e:ptr<storage, array<i32>, read_write> = var @binding_point(2, 3)
+  %buffer_a:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
+  %buffer_b:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 1)
+  %buffer_c:ptr<storage, array<i32>, read_write> = var undef @binding_point(1, 0)
+  %buffer_d:ptr<storage, array<i32>, read_write> = var undef @binding_point(1, 1)
+  %buffer_e:ptr<storage, array<i32>, read_write> = var undef @binding_point(2, 3)
 }
 
 %foo = func():void {
@@ -1041,12 +1041,12 @@ $B1: {  # root
 
     auto* expect = R"(
 $B1: {  # root
-  %buffer_a:ptr<storage, array<i32>, read_write> = var @binding_point(0, 0)
-  %buffer_b:ptr<storage, array<i32>, read_write> = var @binding_point(0, 1)
-  %buffer_c:ptr<storage, array<i32>, read_write> = var @binding_point(1, 0)
-  %buffer_d:ptr<storage, array<i32>, read_write> = var @binding_point(1, 1)
-  %buffer_e:ptr<storage, array<i32>, read_write> = var @binding_point(2, 3)
-  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 2>, read> = var @binding_point(1, 2)
+  %buffer_a:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 0)
+  %buffer_b:ptr<storage, array<i32>, read_write> = var undef @binding_point(0, 1)
+  %buffer_c:ptr<storage, array<i32>, read_write> = var undef @binding_point(1, 0)
+  %buffer_d:ptr<storage, array<i32>, read_write> = var undef @binding_point(1, 1)
+  %buffer_e:ptr<storage, array<i32>, read_write> = var undef @binding_point(2, 3)
+  %tint_storage_buffer_sizes:ptr<uniform, array<vec4<u32>, 2>, read> = var undef @binding_point(1, 2)
 }
 
 %foo = func():void {

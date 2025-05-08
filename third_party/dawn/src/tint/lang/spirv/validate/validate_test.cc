@@ -70,7 +70,7 @@ TEST(SpirvValidateTest, Invalid) {
     };
     auto res = Validate(spirv, SPV_ENV_VULKAN_1_3);
     ASSERT_NE(res, Success);
-    auto got = res.Failure().reason.Str();
+    auto got = res.Failure().reason;
     EXPECT_THAT(got, testing::HasSubstr("spirv error: SPIR-V failed validation."));
     EXPECT_THAT(got, testing::HasSubstr("error: Initializer type must match"));
 }

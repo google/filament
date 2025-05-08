@@ -65,6 +65,8 @@ enum class PipelineStageUsage {
 enum StructFlag {
     /// The structure is a block-decorated structure (for SPIR-V or GLSL).
     kBlock,
+    /// The structure requires explicit layout decorations for SPIR-V.
+    kSpirvExplicitLayout,
 };
 
 /// An alias to tint::EnumSet<StructFlag>
@@ -77,7 +79,8 @@ class Struct : public Castable<Struct, Type> {
     /// Note: this constructs an empty structure, which should only be used find a struct with the
     /// same name in a type::Manager.
     /// @param name the name of the structure
-    explicit Struct(Symbol name);
+    /// @param is_wgsl_internal `true` if the structure is an internally defined structure in WGSL
+    Struct(Symbol name, bool is_wgsl_internal);
 
     /// Constructor
     /// @param name the name of the structure
@@ -85,12 +88,14 @@ class Struct : public Castable<Struct, Type> {
     /// @param align the byte alignment of the structure
     /// @param size the byte size of the structure
     /// @param size_no_padding size of the members without the end of structure
+    /// @param is_wgsl_internal `true` if the structure is an internally defined structure in WGSL
     /// alignment padding
     Struct(Symbol name,
            VectorRef<const StructMember*> members,
            uint32_t align,
            uint32_t size,
-           uint32_t size_no_padding);
+           uint32_t size_no_padding,
+           bool is_wgsl_internal = false);
 
     /// Destructor
     ~Struct() override;
@@ -188,6 +193,9 @@ class Struct : public Castable<Struct, Type> {
     /// @copydoc Type::Element
     const Type* Element(uint32_t index) const override;
 
+    /// @returns `true` if this struct is internally defined in WGSL
+    bool IsWgslInternal() const { return is_wgsl_internal_; }
+
     /// @param ctx the clone context
     /// @returns a clone of this type
     Struct* Clone(CloneContext& ctx) const override;
@@ -198,6 +206,7 @@ class Struct : public Castable<Struct, Type> {
     const uint32_t align_;
     const uint32_t size_;
     const uint32_t size_no_padding_;
+    const bool is_wgsl_internal_;
     core::type::StructFlags struct_flags_;
     Hashset<core::AddressSpace, 1> address_space_usage_;
     Hashset<PipelineStageUsage, 1> pipeline_stage_uses_;

@@ -57,12 +57,16 @@ class GPUCommandEncoder final : public interop::GPUCommandEncoder {
                      interop::Interface<interop::GPUBuffer> buffer,
                      interop::GPUSize64 offset,
                      std::optional<interop::GPUSize64> size) override;
+    void copyBufferToBuffer(Napi::Env env,
+                            interop::Interface<interop::GPUBuffer> source,
+                            interop::Interface<interop::GPUBuffer> destination,
+                            std::optional<interop::GPUSize64> size) override;
     void copyBufferToBuffer(Napi::Env,
                             interop::Interface<interop::GPUBuffer> source,
                             interop::GPUSize64 sourceOffset,
                             interop::Interface<interop::GPUBuffer> destination,
                             interop::GPUSize64 destinationOffset,
-                            interop::GPUSize64 size) override;
+                            std::optional<interop::GPUSize64> size) override;
     void copyBufferToTexture(Napi::Env,
                              interop::GPUTexelCopyBufferInfo source,
                              interop::GPUTexelCopyTextureInfo destination,

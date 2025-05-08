@@ -27,6 +27,7 @@ float4 main() : SV_Target
 // CHECK:   [[x:%[0-9]+]] = OpSampledImage %type_sampled_image [[tex]] [[smp]]
   return Textures[0].Sample(TheStruct.Sampler, float2(0, 0))
 // CHECK: [[tex:%[0-9]+]] = OpLoad %type_2d_image %TheStruct_Texture
+// CHECK: [[smp:%[0-9]+]] = OpLoad %type_sampler %TheStruct_Sampler
 // CHECK:   [[x:%[0-9]+]] = OpSampledImage %type_sampled_image [[tex]] [[smp]]
        + TheStruct.Texture.Sample(TheStruct.Sampler, float2(0, 0));
 }

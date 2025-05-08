@@ -116,7 +116,7 @@ class MissingGeneratorOptionsError(RuntimeError):
     def __init__(self, msg=None):
         full_msg = 'Missing generator options object self.genOpts'
         if msg:
-            full_msg += ': ' + msg
+            full_msg += f": {msg}"
         super().__init__(full_msg)
 
 
@@ -126,7 +126,7 @@ class MissingRegistryError(RuntimeError):
     def __init__(self, msg=None):
         full_msg = 'Missing Registry object self.registry'
         if msg:
-            full_msg += ': ' + msg
+            full_msg += f": {msg}"
         super().__init__(full_msg)
 
 
@@ -136,7 +136,7 @@ class MissingGeneratorOptionsConventionsError(RuntimeError):
     def __init__(self, msg=None):
         full_msg = 'Missing Conventions object self.genOpts.conventions'
         if msg:
-            full_msg += ': ' + msg
+            full_msg += f": {msg}"
         super().__init__(full_msg)
 
 
@@ -338,7 +338,7 @@ class OutputGenerator:
         )
 
         if name in bad and True:
-            print('breakName {}: {}'.format(name, msg))
+            print(f'breakName {name}: {msg}')
             pdb.set_trace()
 
     def __init__(self, errFile=sys.stderr, warnFile=sys.stderr, diagFile=sys.stdout):
@@ -399,7 +399,7 @@ class OutputGenerator:
                 write('DIAG:', *args, file=self.diagFile)
         else:
             raise UserWarning(
-                '*** FATAL ERROR in Generator.logMsg: unknown level:' + level)
+                f"*** FATAL ERROR in Generator.logMsg: unknown level:{level}")
 
     def enumToValue(self, elem, needsNum, bitwidth = 32,
                     forceSuffix = False, parent_for_alias_dereference=None):
@@ -452,20 +452,20 @@ class OutputGenerator:
             #     value += enuminfo.type
             if forceSuffix:
               if bitwidth == 64:
-                value = value + 'ULL'
+                value = f"{value}ULL"
               else:
-                value = value + 'U'
+                value = f"{value}U"
             self.logMsg('diag', 'Enum', name, '-> value [', numVal, ',', value, ']')
             return [numVal, value]
         if 'bitpos' in elem.keys():
             value = elem.get('bitpos')
             bitpos = int(value, 0)
             numVal = 1 << bitpos
-            value = '0x%08x' % numVal
+            value = f'0x{numVal:08x}'
             if bitwidth == 64 or bitpos >= 32:
-              value = value + 'ULL'
+              value = f"{value}ULL"
             elif forceSuffix:
-              value = value + 'U'
+              value = f"{value}U"
             self.logMsg('diag', 'Enum', name, '-> bitpos [', numVal, ',', value, ']')
             return [numVal, value]
         if 'offset' in elem.keys():
@@ -655,12 +655,12 @@ class OutputGenerator:
         flagTypeName = groupElem.get('name')
 
         # Prefix
-        body = "// Flag bits for " + flagTypeName + "\n"
+        body = f"// Flag bits for {flagTypeName}\n"
 
         if bitwidth == 64:
-            body += "typedef VkFlags64 %s;\n" % flagTypeName;
+            body += f"typedef VkFlags64 {flagTypeName};\n";
         else:
-            body += "typedef VkFlags %s;\n" % flagTypeName;
+            body += f"typedef VkFlags {flagTypeName};\n";
 
         # Maximum allowable value for a flag (unsigned 64-bit integer)
         maxValidValue = 2**(64) - 1
@@ -697,25 +697,25 @@ class OutputGenerator:
             if self.isEnumRequired(elem):
                 protect = elem.get('protect')
                 if protect is not None:
-                    body += '#ifdef {}\n'.format(protect)
+                    body += f'#ifdef {protect}\n'
 
                 body += self.deprecationComment(elem, indent = 0)
 
                 if usedefine:
-                    decl += "#define {} {}\n".format(name, strVal)
+                    decl += f"#define {name} {strVal}\n"
                 elif self.misracppstyle():
-                    decl += "static constexpr {} {} {{{}}};\n".format(flagTypeName, name, strVal)
+                    decl += f"static constexpr {flagTypeName} {name} {{{strVal}}};\n"
                 else:
                     # Some C compilers only allow initializing a 'static const' variable with a literal value.
                     # So initializing an alias from another 'static const' value would fail to compile.
                     # Work around this by chasing the aliases to get the actual value.
                     while numVal is None:
-                        alias = self.registry.tree.find("enums/enum[@name='" + strVal + "']")
+                        alias = self.registry.tree.find(f"enums/enum[@name='{strVal}']")
                         if alias is not None:
                             (numVal, strVal) = self.enumToValue(alias, True, bitwidth, True)
                         else:
-                            self.logMsg('error', 'No such alias {} for enum {}'.format(strVal, name))
-                    decl += "static const {} {} = {};\n".format(flagTypeName, name, strVal)
+                            self.logMsg('error', f'No such alias {strVal} for enum {name}')
+                    decl += f"static const {flagTypeName} {name} = {strVal};\n"
 
                 if numVal is not None:
                     body += decl
@@ -743,7 +743,7 @@ class OutputGenerator:
         expandSuffix = ''
         expandSuffixMatch = re.search(r'[A-Z][A-Z]+$', groupName)
         if expandSuffixMatch:
-            expandSuffix = '_' + expandSuffixMatch.group()
+            expandSuffix = f"_{expandSuffixMatch.group()}"
             # Strip off the suffix from the prefix
             expandPrefix = expandName.rsplit(expandSuffix, 1)[0]
 
@@ -792,12 +792,12 @@ class OutputGenerator:
 
                 protect = elem.get('protect')
                 if protect is not None:
-                    decl += '#ifdef {}\n'.format(protect)
+                    decl += f'#ifdef {protect}\n'
 
 
                 decl += self.genRequirements(name, mustBeFound = False, indent = 2)
                 decl += self.deprecationComment(elem, indent = 2)
-                decl += '    {} = {},'.format(name, strVal)
+                decl += f'    {name} = {strVal},'
 
                 if protect is not None:
                     decl += '\n#endif'
@@ -868,8 +868,8 @@ class OutputGenerator:
             if typeStr != "float":
                 number += 'U'
             strVal = "~" if invert else ""
-            strVal += "static_cast<" + typeStr + ">(" + number + ")"
-            body = 'static constexpr ' + typeStr.ljust(9) + name.ljust(33) + ' {' + strVal + '};'
+            strVal += f"static_cast<{typeStr}>({number})"
+            body = f"static constexpr {typeStr.ljust(9)}{name.ljust(33)} {{{strVal}}};"
         elif enuminfo.elem.get('type') and not alias:
             # Generate e.g.: #define x (~0ULL)
             typeStr = enuminfo.elem.get('type');
@@ -884,10 +884,10 @@ class OutputGenerator:
             strVal = "~" if invert else ""
             strVal += number
             if paren:
-                strVal = "(" + strVal + ")";
-            body = '#define ' + name.ljust(33) + ' ' + strVal;
+                strVal = f"({strVal})";
+            body = f"#define {name.ljust(33)} {strVal}";
         else:
-            body = '#define ' + name.ljust(33) + ' ' + strVal
+            body = f"#define {name.ljust(33)} {strVal}"
 
         return body
 
@@ -1102,7 +1102,7 @@ class OutputGenerator:
         """Make the function-pointer typedef name for a command."""
         if self.genOpts is None:
             raise MissingGeneratorOptionsError()
-        return '(' + self.genOpts.apientryp + 'PFN_' + name + tail + ')'
+        return f"({self.genOpts.apientryp}PFN_{name}{tail})"
 
     def makeCParamDecl(self, param, aligncol):
         """Return a string which is an indented, formatted
@@ -1135,14 +1135,14 @@ class OutputGenerator:
                 # This works around a problem where very long type names -
                 # longer than the alignment column - would run into the tail
                 # text.
-                paramdecl = paramdecl.ljust(aligncol - 1) + ' '
+                paramdecl = f"{paramdecl.ljust(aligncol - 1)} "
                 newLen = len(paramdecl)
                 self.logMsg('diag', 'Adjust length of parameter decl from', oldLen, 'to', newLen, ':', paramdecl)
 
             if (self.misracppstyle() and prefix.find('const ') != -1):
                 # Change pointer type order from e.g. "const void *" to "void const *".
                 # If the string starts with 'const', reorder it to be after the first type.
-                paramdecl += prefix.replace('const ', '') + text + ' const' + tail
+                paramdecl += f"{prefix.replace('const ', '') + text} const{tail}"
             else:
                 paramdecl += prefix + text + tail
 
@@ -1169,7 +1169,7 @@ class OutputGenerator:
 
         # Allow for missing <name> tag
         newLen = 0
-        paramdecl = '    ' + noneStr(param.text)
+        paramdecl = f"    {noneStr(param.text)}"
         for elem in param:
             text = noneStr(elem.text)
             tail = noneStr(elem.tail)
@@ -1400,7 +1400,7 @@ class OutputGenerator:
                             # Change pointer type order from e.g. "const void *" to "void const *".
                             # If the string starts with 'const', reorder it to be after the first type.
                             if (prefix.find('const ') != -1):
-                                param += prefix.replace('const ', '') + t + ' const '
+                                param += f"{prefix.replace('const ', '') + t} const "
                             else:
                                 param += prefix + t
                             # Clear prefix for subsequent iterations

@@ -299,9 +299,9 @@ TEST_F(WireArgumentTests, StructureOfValuesArgument) {
                          apiDevice, MatchesLambda([](const WGPUSamplerDescriptor* desc) -> bool {
                              return desc->nextInChain == nullptr &&
                                     desc->magFilter == WGPUFilterMode_Linear &&
-                                    desc->minFilter == WGPUFilterMode_Nearest &&
+                                    desc->minFilter == WGPUFilterMode_Undefined &&
                                     desc->mipmapFilter == WGPUMipmapFilterMode_Linear &&
-                                    desc->addressModeU == WGPUAddressMode_ClampToEdge &&
+                                    desc->addressModeU == WGPUAddressMode_Undefined &&
                                     desc->addressModeV == WGPUAddressMode_Repeat &&
                                     desc->addressModeW == WGPUAddressMode_MirrorRepeat &&
                                     desc->compare == WGPUCompareFunction_Never &&

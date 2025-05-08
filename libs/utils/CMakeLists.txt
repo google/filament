@@ -37,6 +37,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation-impl.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/StaticString.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Systrace.h
         ${PUBLIC_HDR_DIR}/${TARGET}/sstream.h
@@ -111,6 +112,7 @@ if (ANDROID)
     target_link_libraries(${TARGET} PUBLIC log)
     target_link_libraries(${TARGET} PRIVATE dl)
     target_link_libraries(${TARGET} PUBLIC android)
+    target_link_libraries(${TARGET} PUBLIC perfetto)
 endif()
 
 if (WIN32)

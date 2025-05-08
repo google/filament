@@ -117,7 +117,7 @@ class TextureBuiltinTest : public SpirvWriterTestWithParam<TextureBuiltinTestCas
                                                TestElementType texel_type) {
         switch (type) {
             case kSampledTexture:
-                return ty.Get<core::type::SampledTexture>(dim, MakeScalarType(texel_type));
+                return ty.sampled_texture(dim, MakeScalarType(texel_type));
             case kMultisampledTexture:
                 return ty.Get<core::type::MultisampledTexture>(dim, MakeScalarType(texel_type));
             case kDepthTexture:
@@ -139,9 +139,7 @@ class TextureBuiltinTest : public SpirvWriterTestWithParam<TextureBuiltinTestCas
                     default:
                         return nullptr;
                 }
-                return ty.Get<core::type::StorageTexture>(
-                    dim, format, core::Access::kWrite,
-                    core::type::StorageTexture::SubtypeFor(format, ty));
+                return ty.storage_texture(dim, format, core::Access::kWrite);
         }
         return nullptr;
     }
@@ -1904,8 +1902,7 @@ INSTANTIATE_TEST_SUITE_P(SpirvWriterTest,
 ////////////////////////////////////////////////////////////////
 
 TEST_F(SpirvWriterTest, TextureSampleBaseClampToEdge_2d_f32) {
-    auto* texture_ty =
-        ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32());
+    auto* texture_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
 
     Vector<core::ir::FunctionParam*, 4> args;
     args.Push(b.FunctionParam("texture", texture_ty));
@@ -1940,9 +1937,8 @@ TEST_F(SpirvWriterTest, TextureSampleBaseClampToEdge_2d_f32) {
 
 TEST_F(SpirvWriterTest, Bgra8Unorm_textureStore) {
     auto format = core::TexelFormat::kBgra8Unorm;
-    auto* texture_ty = ty.Get<core::type::StorageTexture>(
-        core::type::TextureDimension::k2d, format, core::Access::kWrite,
-        core::type::StorageTexture::SubtypeFor(format, ty));
+    auto* texture_ty =
+        ty.storage_texture(core::type::TextureDimension::k2d, format, core::Access::kWrite);
 
     auto* texture = b.FunctionParam("texture", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<u32>());
@@ -1968,8 +1964,7 @@ TEST_F(SpirvWriterTest, Bgra8Unorm_textureStore) {
 ////////////////////////////////////////////////////////////////
 
 TEST_F(SpirvWriterTest, TextureDimensions_WithRobustness) {
-    auto* texture_ty =
-        ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32());
+    auto* texture_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
 
     auto* texture = b.FunctionParam("texture", texture_ty);
     auto* level = b.FunctionParam("level", ty.i32());
@@ -1992,8 +1987,7 @@ TEST_F(SpirvWriterTest, TextureDimensions_WithRobustness) {
 }
 
 TEST_F(SpirvWriterTest, TextureLoad_WithRobustness) {
-    auto* texture_ty =
-        ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32());
+    auto* texture_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
 
     auto* texture = b.FunctionParam("texture", texture_ty);
     auto* coords = b.FunctionParam("coords", ty.vec2<u32>());

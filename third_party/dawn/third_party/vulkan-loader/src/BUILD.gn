@@ -77,15 +77,31 @@ config("vulkan_loader_config") {
     "LOADER_USE_UNSAFE_FILE_SEARCH=1",
   ]
 
+  cflags = []
   if (is_win) {
-    cflags = [ "/wd4201" ]
+    cflags += [ "/wd4201" ]
   }
   if (is_linux || is_chromeos) {
-    # assume secure_getenv() is available
     defines += [
+      # Enables `readlink()` and `strtok_r()`.
+      "_GNU_SOURCE",
+
+      # assume secure_getenv() is available
       "HAVE_SECURE_GETENV",
       "LOADER_ENABLE_LINUX_SORT",
     ]
+  }
+  if (is_clang) {
+    # Vulkan-Hpp uses `vk::PFN_...` function pointer types, which are different
+    # from the C-styled `PFN_...` function pointers.
+    # 
+    # These types are guaranteed to be identical during Vulkan-Hpp compile time.
+    # However, UBsan's function sanitizer treats them as different types and
+    # triggers a runtime error when these functions are called.
+    #
+    # Thus, we need to disable the function sanitizer so that Vulkan
+    # applications created using Vulkan-Hpp can run correctly.
+    cflags += [ "-fno-sanitize=function" ]
   }
 }
 
@@ -260,8 +276,10 @@ if (!is_android) {
       frameworks = [ "CoreFoundation.framework" ]
     }
     public_deps = [ "$vulkan_headers_dir:vulkan_headers" ]
-    configs -= [ "//build/config/compiler:chromium_code" ]
-    configs += [ "//build/config/compiler:no_chromium_code" ]
+    if (build_with_chromium) {
+      configs -= [ "//build/config/compiler:chromium_code" ]
+      configs += [ "//build/config/compiler:no_chromium_code" ]
+    }
     configs += [ ":vulkan_internal_config" ]
     public_configs = [ ":vulkan_loader_config" ]
     configs -= vulkan_undefine_configs

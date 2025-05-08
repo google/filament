@@ -117,13 +117,20 @@ class Device final : public DeviceBase {
 
     float GetTimestampPeriodInNS() const override;
 
+    AllocatorMemoryInfo GetAllocatorMemoryInfo() const override;
+
     void SetLabelImpl() override;
+    bool ReduceMemoryUsageImpl() override;
     void PerformIdleTasksImpl() override;
 
     void OnDebugMessage(std::string message);
 
     // Used to associate this device with validation layer messages.
     const char* GetDebugPrefix() { return mDebugPrefix.c_str(); }
+
+    bool CanAddStorageUsageToBufferWithoutSideEffects(wgpu::BufferUsage storageUsage,
+                                                      wgpu::BufferUsage originalUsage,
+                                                      size_t bufferSize) const override;
 
   private:
     Device(AdapterBase* adapter,
@@ -169,8 +176,7 @@ class Device final : public DeviceBase {
     ResultOrError<Ref<SharedFenceBase>> ImportSharedFenceImpl(
         const SharedFenceDescriptor* baseDescriptor) override;
 
-    ResultOrError<VulkanDeviceKnobs> CreateDevice(wgpu::FeatureLevel featureLevel,
-                                                  VkPhysicalDevice vkPhysicalDevice);
+    ResultOrError<VulkanDeviceKnobs> CreateDevice(VkPhysicalDevice vkPhysicalDevice);
 
     MaybeError CheckDebugLayerAndGenerateErrors();
     void AppendDebugLayerMessages(ErrorData* error) override;
@@ -203,6 +209,8 @@ class Device final : public DeviceBase {
     std::vector<std::string> mDebugMessages;
 
     Ref<PipelineCache> mMonolithicPipelineCache;
+
+    bool mSupportsMappableStorageBuffer = false;
 
     MaybeError ImportExternalImage(const ExternalImageDescriptorVk* descriptor,
                                    ExternalMemoryHandle memoryHandle,

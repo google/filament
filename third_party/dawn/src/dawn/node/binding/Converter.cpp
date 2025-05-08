@@ -1518,6 +1518,9 @@ bool Converter::Convert(wgpu::FeatureName& out, interop::GPUFeatureName in) {
         case interop::GPUFeatureName::kSubgroups:
             out = wgpu::FeatureName::Subgroups;
             return true;
+        case interop::GPUFeatureName::kCoreFeaturesAndLimits:
+            out = wgpu::FeatureName::CoreFeaturesAndLimits;
+            return true;
         case interop::GPUFeatureName::kMultiDrawIndirect:
             out = wgpu::FeatureName::MultiDrawIndirect;
             return true;
@@ -1529,6 +1532,9 @@ bool Converter::Convert(wgpu::FeatureName& out, interop::GPUFeatureName in) {
             return true;
         case interop::GPUFeatureName::kClipDistances:
             out = wgpu::FeatureName::ClipDistances;
+            return true;
+        case interop::GPUFeatureName::kChromiumExperimentalSubgroupMatrix:
+            out = wgpu::FeatureName::ChromiumExperimentalSubgroupMatrix;
             return true;
         case interop::GPUFeatureName::kTextureCompressionAstcSliced3D:
         case interop::GPUFeatureName::kTextureCompressionBcSliced3D:
@@ -1557,10 +1563,12 @@ bool Converter::Convert(interop::GPUFeatureName& out, wgpu::FeatureName in) {
         CASE(TextureCompressionETC2, kTextureCompressionEtc2);
         CASE(TimestampQuery, kTimestampQuery);
         CASE(Subgroups, kSubgroups);
+        CASE(CoreFeaturesAndLimits, kCoreFeaturesAndLimits);
         CASE(MultiDrawIndirect, kMultiDrawIndirect);
         CASE(DualSourceBlending, kDualSourceBlending);
         CASE(ClipDistances, kClipDistances);
         CASE(ChromiumExperimentalImmediateData, kChromiumExperimentalImmediateData);
+        CASE(ChromiumExperimentalSubgroupMatrix, kChromiumExperimentalSubgroupMatrix);
 
 #undef CASE
 
@@ -1600,6 +1608,7 @@ bool Converter::Convert(interop::GPUFeatureName& out, wgpu::FeatureName in) {
         case wgpu::FeatureName::SharedFenceMTLSharedEvent:
         case wgpu::FeatureName::SharedFenceVkSemaphoreOpaqueFD:
         case wgpu::FeatureName::SharedFenceSyncFD:
+        case wgpu::FeatureName::SharedFenceEGLSync:
         case wgpu::FeatureName::SharedFenceVkSemaphoreZirconHandle:
         case wgpu::FeatureName::SharedTextureMemoryAHardwareBuffer:
         case wgpu::FeatureName::SharedTextureMemoryD3D11Texture2D:
@@ -1612,6 +1621,8 @@ bool Converter::Convert(interop::GPUFeatureName& out, wgpu::FeatureName in) {
         case wgpu::FeatureName::SharedTextureMemoryZirconHandle:
         case wgpu::FeatureName::StaticSamplers:
         case wgpu::FeatureName::SubgroupsF16:
+        case wgpu::FeatureName::TextureCompressionBCSliced3D:
+        case wgpu::FeatureName::TextureCompressionASTCSliced3D:
         case wgpu::FeatureName::TransientAttachments:
         case wgpu::FeatureName::YCbCrVulkanSamplers:
         case wgpu::FeatureName::DawnLoadResolveTexture:

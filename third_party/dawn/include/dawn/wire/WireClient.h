@@ -90,6 +90,8 @@ class DAWN_WIRE_EXPORT WireClient : public CommandHandler {
     void ReclaimSurfaceReservation(const ReservedSurface& reservation);
     void ReclaimInstanceReservation(const ReservedInstance& reservation);
 
+    Handle GetWireHandle(WGPUDevice device) const;
+
     // Disconnects the client.
     // Commands allocated after this point will not be sent.
     void Disconnect();

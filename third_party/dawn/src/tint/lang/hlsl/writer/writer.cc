@@ -38,7 +38,6 @@
 #include "src/tint/lang/hlsl/writer/printer/printer.h"
 #include "src/tint/lang/hlsl/writer/raise/raise.h"
 #include "src/tint/lang/wgsl/ast/pipeline_stage.h"
-#include "src/tint/utils/ice/ice.h"
 
 namespace tint::hlsl::writer {
 
@@ -53,7 +52,7 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
     // Check for unsupported module-scope variable address spaces and types.
     for (auto* inst : *ir.root_block) {
         auto* var = inst->As<core::ir::Var>();
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         if (ptr->AddressSpace() == core::AddressSpace::kPushConstant) {
             return Failure("push constants are not supported by the HLSL backend");
         }
@@ -86,19 +85,19 @@ Result<Output> Generate(core::ir::Module& ir, const Options& options) {
 
 Result<Output> Generate(const Program& program, const Options& options) {
     if (!program.IsValid()) {
-        return Failure{program.Diagnostics()};
+        return Failure{program.Diagnostics().Str()};
     }
 
     // Sanitize the program.
     auto sanitized_result = Sanitize(program, options);
     if (!sanitized_result.program.IsValid()) {
-        return Failure{sanitized_result.program.Diagnostics()};
+        return Failure{sanitized_result.program.Diagnostics().Str()};
     }
 
     // Generate the HLSL code.
     auto impl = std::make_unique<ASTPrinter>(sanitized_result.program);
     if (!impl->Generate()) {
-        return Failure{impl->Diagnostics()};
+        return Failure{impl->Diagnostics().Str()};
     }
 
     Output output;

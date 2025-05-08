@@ -68,7 +68,6 @@ tint_target_add_dependencies(tint_lang_spirv_writer_common lib
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
-  tint_utils_result
   tint_utils_rtti
   tint_utils_text
 )
@@ -115,7 +114,6 @@ tint_target_add_dependencies(tint_lang_spirv_writer_common_test test
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
-  tint_utils_result
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text

@@ -99,6 +99,31 @@ fn main() -> @builtin(position) vec4<f32> {
     EXPECT_EQ(expect, str(got));
 }
 
+TEST_F(SubstituteOverrideTest, OverrideNotInFile) {
+    auto* src = R"(
+@vertex
+fn main() -> @builtin(position) vec4<f32> {
+  return vec4<f32>();
+}
+)";
+
+    auto* expect = R"(
+@vertex
+fn main() -> @builtin(position) vec4<f32> {
+  return vec4<f32>();
+}
+)";
+
+    SubstituteOverride::Config cfg;
+    cfg.map.insert({OverrideId{99}, 42.0});
+
+    DataMap data;
+    data.Add<SubstituteOverride::Config>(cfg);
+    auto got = Run<SubstituteOverride>(src, data);
+
+    EXPECT_EQ(expect, str(got));
+}
+
 TEST_F(SubstituteOverrideTest, ImplicitId) {
     auto* src = R"(
 enable f16;

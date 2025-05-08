@@ -68,10 +68,6 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 
-// TODO: crbug.com/1491724 - Remove include below when other third_party
-// libraries stop silently rely on it.
-#include "absl/strings/str_cat.h"
-
 namespace absl {
 ABSL_NAMESPACE_BEGIN
 
@@ -653,7 +649,7 @@ class ABSL_ATTRIBUTE_TRIVIAL_ABI Status final {
 
   // Converts between StatusRep* and the external uintptr_t representation used
   // by rep_. See rep_ for details.
-  static uintptr_t PointerToRep(status_internal::StatusRep* r);
+  static uintptr_t PointerToRep(absl::Nonnull<status_internal::StatusRep*> r);
   static absl::Nonnull<const status_internal::StatusRep*> RepToPointer(
       uintptr_t r);
 

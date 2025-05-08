@@ -408,7 +408,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             num_wg_var->SetBindingPoint(group, 0);
         }
         auto* load = builder.Load(num_wg_var);
-        return load->Result(0);
+        return load->Result();
     }
 
     /// @copydoc ShaderIO::BackendState::GetInput
@@ -416,12 +416,12 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
         if (subgroup_invocation_id_index == idx) {
             return builder
                 .Call<hlsl::ir::BuiltinCall>(ty.u32(), hlsl::BuiltinFn::kWaveGetLaneIndex)
-                ->Result(0);
+                ->Result();
         }
         if (subgroup_size_index == idx) {
             return builder
                 .Call<hlsl::ir::BuiltinCall>(ty.u32(), hlsl::BuiltinFn::kWaveGetLaneCount)
-                ->Result(0);
+                ->Result();
         }
         if (num_workgroups_index == idx) {
             return GetInputForNumWorkgroups(builder);
@@ -429,7 +429,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
 
         auto index = input_indices[idx];
 
-        core::ir::Value* v = builder.Access(inputs[idx].type, input_param, u32(index))->Result(0);
+        core::ir::Value* v = builder.Access(inputs[idx].type, input_param, u32(index))->Result();
 
         if (inputs[idx].attributes.builtin == core::BuiltinValue::kPosition) {
             // If this is an input position builtin we need to invert the 'w' component of the
@@ -437,21 +437,21 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             auto* w = builder.Access(ty.f32(), v, 3_u);
             auto* div = builder.Divide(ty.f32(), 1.0_f, w);
             auto* swizzle = builder.Swizzle(ty.vec3<f32>(), v, {0, 1, 2});
-            v = builder.Construct(ty.vec4<f32>(), swizzle, div)->Result(0);
+            v = builder.Construct(ty.vec4<f32>(), swizzle, div)->Result();
         } else if (config.first_index_offset_binding.has_value() &&
                    inputs[idx].attributes.builtin == core::BuiltinValue::kVertexIndex) {
             // Apply vertex_index offset
             TINT_ASSERT(tint_first_index_offset);
             auto* vertex_index_offset =
                 builder.Access(ty.ptr<uniform, u32>(), tint_first_index_offset, 0_u);
-            v = builder.Add<u32>(v, builder.Load(vertex_index_offset))->Result(0);
+            v = builder.Add<u32>(v, builder.Load(vertex_index_offset))->Result();
         } else if (config.first_index_offset_binding.has_value() &&
                    inputs[idx].attributes.builtin == core::BuiltinValue::kInstanceIndex) {
             // Apply instance_index offset
             TINT_ASSERT(tint_first_index_offset);
             auto* instance_index_offset =
                 builder.Access(ty.ptr<uniform, u32>(), tint_first_index_offset, 1_u);
-            v = builder.Add<u32>(v, builder.Load(instance_index_offset))->Result(0);
+            v = builder.Add<u32>(v, builder.Load(instance_index_offset))->Result();
         }
 
         return v;
@@ -470,13 +470,12 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             // Create a vector and copy array elements to it
             Vector<core::ir::Value*, 4> init;
             for (size_t i = 0; i < dst_vec_ty->Elements().count; ++i) {
-                init.Push(
-                    builder.Access<f32>(src_array, u32(src_array_first_index + i))->Result(0));
+                init.Push(builder.Access<f32>(src_array, u32(src_array_first_index + i))->Result());
             }
-            dst_value = builder.Construct(dst_vec_ty, std::move(init))->Result(0);
+            dst_value = builder.Construct(dst_vec_ty, std::move(init))->Result();
         } else {
             TINT_ASSERT(outputs[output_index].type->As<core::type::Scalar>());
-            dst_value = builder.Access<f32>(src_array, u32(src_array_first_index))->Result(0);
+            dst_value = builder.Access<f32>(src_array, u32(src_array_first_index))->Result();
         }
         return dst_value;
     }
@@ -518,7 +517,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
         }
 
         TINT_ASSERT(output_values.Length() == output_struct->Members().Length());
-        return builder.Construct(output_struct, std::move(output_values))->Result(0);
+        return builder.Construct(output_struct, std::move(output_values))->Result();
     }
 };
 }  // namespace

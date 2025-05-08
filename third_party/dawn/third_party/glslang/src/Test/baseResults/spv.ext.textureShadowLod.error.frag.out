@@ -1,6 +1,0 @@
-spv.ext.textureShadowLod.error.frag
-ERROR: 0:11: 'textureLod(..., float lod)' : required extension not requested: GL_EXT_texture_shadow_lod
-ERROR: 1 compilation errors.  No code generated.
-
-
-SPIR-V is not generated for failed compile or link

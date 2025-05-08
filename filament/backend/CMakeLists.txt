@@ -6,6 +6,18 @@ set(PUBLIC_HDR_DIR include)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 
 # ==================================================================================================
+# Compilation options
+# ==================================================================================================
+#
+set(BACKEND_SANITIZATION "" CACHE STRING "Sanitization option")
+set_property(CACHE BACKEND_SANITIZATION PROPERTY STRINGS ";ASAN")
+
+set(BACKEND_SANITIZERS)
+if (BACKEND_SANITIZATION STREQUAL "ASAN")
+    set(BACKEND_SANITIZERS -fsanitize=address)
+endif()
+
+# ==================================================================================================
 # Sources and headers
 # ==================================================================================================
 set(PUBLIC_HDRS
@@ -177,29 +189,6 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             include/backend/platforms/VulkanPlatform.h
-            src/vulkan/VulkanDescriptorSetCache.cpp
-            src/vulkan/VulkanDescriptorSetCache.h
-            src/vulkan/VulkanDescriptorSetLayoutCache.cpp
-            src/vulkan/VulkanDescriptorSetLayoutCache.h
-            src/vulkan/VulkanPipelineLayoutCache.cpp
-            src/vulkan/VulkanPipelineLayoutCache.h
-            src/vulkan/memory/ResourceManager.cpp
-            src/vulkan/memory/ResourceManager.h
-            src/vulkan/memory/ResourcePointer.h
-            src/vulkan/memory/Resource.cpp
-            src/vulkan/memory/Resource.h
-            src/vulkan/platform/VulkanPlatform.cpp
-            src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
-            src/vulkan/platform/VulkanPlatformSwapChainImpl.h
-            src/vulkan/utils/Conversion.cpp
-            src/vulkan/utils/Conversion.h
-            src/vulkan/utils/Definitions.h
-            src/vulkan/utils/Helper.h
-            src/vulkan/utils/Image.h
-            src/vulkan/utils/Image.cpp
-            src/vulkan/utils/Spirv.h
-            src/vulkan/utils/Spirv.cpp
-            src/vulkan/utils/StaticVector.h
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
@@ -210,29 +199,56 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanConstants.h
             src/vulkan/VulkanContext.cpp
             src/vulkan/VulkanContext.h
+            src/vulkan/VulkanDescriptorSetCache.cpp
+            src/vulkan/VulkanDescriptorSetCache.h
+            src/vulkan/VulkanDescriptorSetLayoutCache.cpp
+            src/vulkan/VulkanDescriptorSetLayoutCache.h
             src/vulkan/VulkanDriver.cpp
             src/vulkan/VulkanDriver.h
             src/vulkan/VulkanDriverFactory.h
+            src/vulkan/VulkanExternalImageManager.cpp
+            src/vulkan/VulkanExternalImageManager.h
             src/vulkan/VulkanFboCache.cpp
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp
             src/vulkan/VulkanHandles.h
-            src/vulkan/VulkanMemory.h
             src/vulkan/VulkanMemory.cpp
+            src/vulkan/VulkanMemory.h
             src/vulkan/VulkanPipelineCache.cpp
             src/vulkan/VulkanPipelineCache.h
+            src/vulkan/VulkanPipelineLayoutCache.cpp
+            src/vulkan/VulkanPipelineLayoutCache.h
             src/vulkan/VulkanQueryManager.cpp
             src/vulkan/VulkanQueryManager.h
+            src/vulkan/VulkanReadPixels.cpp
+            src/vulkan/VulkanReadPixels.h
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp
             src/vulkan/VulkanStagePool.h
             src/vulkan/VulkanSwapChain.cpp
             src/vulkan/VulkanSwapChain.h
-            src/vulkan/VulkanReadPixels.cpp
-            src/vulkan/VulkanReadPixels.h
             src/vulkan/VulkanTexture.cpp
             src/vulkan/VulkanTexture.h
+            src/vulkan/VulkanYcbcrConversionCache.cpp
+            src/vulkan/VulkanYcbcrConversionCache.h
+            src/vulkan/memory/Resource.cpp
+            src/vulkan/memory/Resource.h
+            src/vulkan/memory/ResourceManager.cpp
+            src/vulkan/memory/ResourceManager.h
+            src/vulkan/memory/ResourcePointer.h
+            src/vulkan/platform/VulkanPlatform.cpp
+            src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
+            src/vulkan/platform/VulkanPlatformSwapChainImpl.h
+            src/vulkan/utils/Conversion.cpp
+            src/vulkan/utils/Conversion.h
+            src/vulkan/utils/Definitions.h
+            src/vulkan/utils/Helper.h
+            src/vulkan/utils/Image.cpp
+            src/vulkan/utils/Image.h
+            src/vulkan/utils/Spirv.cpp
+            src/vulkan/utils/Spirv.h
+            src/vulkan/utils/StaticVector.h
     )
     if (LINUX OR WIN32)
         list(APPEND SRCS src/vulkan/platform/VulkanPlatformLinuxWindows.cpp)
@@ -253,6 +269,13 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUConstants.h
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
+            src/webgpu/WebGPUHandles.cpp
+            src/webgpu/WebGPUHandles.h
+            src/webgpu/WebGPUPipelineCreation.cpp
+            src/webgpu/WebGPUPipelineCreation.h
+            src/webgpu/WebGPUSwapChain.cpp
+            src/webgpu/WebGPUSwapChain.h
+            src/webgpu/WGPUProgram.cpp
     )
     if (WIN32)
         list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)
@@ -301,6 +324,11 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 # add this subproject to the Filament folder
 set_target_properties(${TARGET} PROPERTIES FOLDER Filament)
+
+# we need to export the headers properly for backend.lib on windows
+if (WIN32 AND FILAMENT_SUPPORTS_WEBGPU)
+    target_compile_definitions(${TARGET} PRIVATE "WGPU_IMPLEMENTATION")
+endif()
 
 # ==================================================================================================
 # Expose a header-only target to minimize dependencies.
@@ -456,6 +484,7 @@ target_compile_options(${TARGET} PRIVATE
         ${OSMESA_COMPILE_FLAGS}
         $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
+        ${BACKEND_SANITIZERS}
 )
 
 if (FILAMENT_SUPPORTS_METAL)
@@ -465,6 +494,8 @@ endif()
 if (FILAMENT_SUPPORTS_WEBGPU)
     target_compile_definitions(${TARGET} PRIVATE $<$<BOOL:${FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING}>:FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING>)
 endif()
+
+target_link_options(${TARGET} PRIVATE ${BACKEND_SANITIZERS})
 
 target_link_libraries(${TARGET} PRIVATE
         ${OSMESA_LINKER_FLAGS}
@@ -494,7 +525,12 @@ if (APPLE OR LINUX)
         test/ShaderGenerator.cpp
         test/TrianglePrimitive.cpp
         test/Arguments.cpp
+        test/ImageExpectations.cpp
         test/Lifetimes.cpp
+        test/PlatformRunner.cpp
+        test/Shader.cpp
+        test/SharedShaders.cpp
+        test/Skip.cpp
         test/test_FeedbackLoops.cpp
         test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp
@@ -510,6 +546,7 @@ if (APPLE OR LINUX)
         test/test_Handles.cpp
     )
     set(BACKEND_TEST_LIBS
+        absl::str_format
         backend
         getopt
         gtest
@@ -517,6 +554,9 @@ if (APPLE OR LINUX)
         filamat
         SPIRV
         spirv-cross-glsl)
+    # Create input/output directories for test result images.
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/actual_images)
+    file(COPY test/expected_images DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/images)
 endif()
 
 # TODO: Disabling IOS test due to breakage wrt glslang update
@@ -525,7 +565,9 @@ if (APPLE AND NOT IOS)
     list(APPEND BACKEND_TEST_SRC
          test/test_RenderExternalImage.cpp)
     add_library(backend_test STATIC ${BACKEND_TEST_SRC})
-    target_link_libraries(backend_test PRIVATE ${BACKEND_TEST_LIBS})
+    target_link_libraries(backend_test PUBLIC ${BACKEND_TEST_LIBS})
+    target_compile_options(backend_test PRIVATE ${BACKEND_SANITIZERS})
+    target_link_options(backend_test PRIVATE ${BACKEND_SANITIZERS})
 
     set(BACKEND_TEST_DEPS
             OSDependent
@@ -564,6 +606,7 @@ if (APPLE AND NOT IOS)
        # linker from removing "unused" symbols.
        target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
        set_target_properties(backend_test_mac PROPERTIES FOLDER Tests)
+       target_link_options(backend_test_mac PRIVATE ${BACKEND_SANITIZERS})
 
        # This is needed after XCode 15.3
        set_target_properties(backend_test_mac PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
@@ -573,6 +616,8 @@ endif()
 
 if (LINUX)
     add_executable(backend_test_linux test/linux_runner.cpp ${BACKEND_TEST_SRC})
+    target_compile_options(backend_test_linux PRIVATE ${BACKEND_SANITIZERS})
+    target_link_options(backend_test_linux PRIVATE ${BACKEND_SANITIZERS})
     target_link_libraries(backend_test_linux PRIVATE ${BACKEND_TEST_LIBS})
     set_target_properties(backend_test_linux PROPERTIES FOLDER Tests)
 endif()

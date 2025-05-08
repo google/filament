@@ -274,6 +274,8 @@ public:
       SpirvOptions; // All SPIR-V CodeGen-related options
 #endif
   // SPIRV Change Ends
+
+  bool GenMetal = false; // OPT_metal
 };
 
 /// Use this class to capture, convert and handle the lifetime for the

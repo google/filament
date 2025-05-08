@@ -152,10 +152,20 @@ struct AdditionalExtensionUnpacker<Root, UnpackedPtrT, detail::AdditionalExtensi
                                           result.mBitset,
                                           next,
                                           &duplicate)) {
-                        return DAWN_VALIDATION_ERROR(
-                            "Unexpected chained struct of type %s found on %s chain.",
-                            next->sType, "{{T}}"
-                        );
+                        if (next->sType == wgpu::SType::DawnInjectedInvalidSType) {
+                            // TODO(crbug.com/399470698): Need to reinterpret cast to base C type
+                            // for now because in/out typing are differentiated in C++ bindings.
+                            auto* ext = reinterpret_cast<const WGPUDawnInjectedInvalidSType*>(next);
+                            return DAWN_VALIDATION_ERROR(
+                                "Unexpected chained struct of type %s found on %s chain.",
+                                wgpu::SType(ext->invalidSType), "{{T}}"
+                            );
+                        } else {
+                            return DAWN_VALIDATION_ERROR(
+                                "Unexpected chained struct of type %s found on %s chain.",
+                                next->sType, "{{T}}"
+                            );
+                        }
                     }
                     break;
                 }

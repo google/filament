@@ -17,7 +17,6 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 #define TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 
-#include "VulkanConstants.h"
 #include "vulkan/utils/Image.h"
 #include "vulkan/utils/Definitions.h"
 
@@ -29,8 +28,6 @@
 #include <utils/Slice.h>
 
 #include <bluevk/BlueVK.h>
-
-#include <memory>
 
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaPool)
@@ -73,19 +70,24 @@ struct VulkanRenderPass {
 // context are stored in VulkanPlatform.
 struct VulkanContext {
 public:
-    inline uint32_t selectMemoryType(uint32_t flags, VkFlags reqs) const {
-        if ((reqs & VK_MEMORY_PROPERTY_PROTECTED_BIT) != 0) {
-            assert_invariant(isProtectedMemorySupported() == true);
-        }
+    static uint32_t selectMemoryType(VkPhysicalDeviceMemoryProperties const& memoryProperties,
+            uint32_t flags, VkFlags reqs) {
         for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
             if (flags & 1) {
-                if ((mMemoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {
+                if ((memoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {
                     return i;
                 }
             }
             flags >>= 1;
         }
         return (uint32_t) VK_MAX_MEMORY_TYPES;
+    }
+
+    inline uint32_t selectMemoryType(uint32_t flags, VkFlags reqs) const {
+        if ((reqs & VK_MEMORY_PROPERTY_PROTECTED_BIT) != 0) {
+            assert_invariant(isProtectedMemorySupported());
+        }
+        return selectMemoryType(mMemoryProperties, flags, reqs);
     }
 
     inline fvkutils::VkFormatList const& getAttachmentDepthStencilFormats() const {
@@ -121,7 +123,7 @@ public:
     }
 
     inline bool isMultiviewEnabled() const noexcept {
-        return mMultiviewEnabled;
+        return mPhysicalDeviceVk11Features.multiview == VK_TRUE;
     }
 
     inline bool isClipDistanceSupported() const noexcept {
@@ -140,10 +142,17 @@ public:
         return mPortabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
     }
 
+    inline bool isUnifiedMemoryArchitecture() const noexcept {
+        return mIsUnifiedMemoryArchitecture;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+    };
+    VkPhysicalDeviceVulkan11Features mPhysicalDeviceVk11Features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
     };
     VkPhysicalDeviceFeatures2 mPhysicalDeviceFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -157,9 +166,9 @@ private:
     };
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
-    bool mMultiviewEnabled = false;
     bool mLazilyAllocatedMemorySupported = false;
     bool mProtectedMemorySupported = false;
+    bool mIsUnifiedMemoryArchitecture = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;

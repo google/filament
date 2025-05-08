@@ -173,7 +173,6 @@ TEST_P(DestroyTest, TextureSubmitDestroySubmit) {
 
 // Attempting to set an object label after it has been destroyed should not cause an error.
 TEST_P(DestroyTest, DestroyObjectThenSetLabel) {
-    DAWN_TEST_UNSUPPORTED_IF(UsesWire());
     std::string label = "test";
     wgpu::BufferDescriptor descriptor;
     descriptor.size = 4;
@@ -185,7 +184,6 @@ TEST_P(DestroyTest, DestroyObjectThenSetLabel) {
 
 // Attempting to set a device label after it has been destroyed should not cause an error.
 TEST_P(DestroyTest, DestroyDeviceThenSetLabel) {
-    DAWN_TEST_UNSUPPORTED_IF(UsesWire());
     std::string label = "test";
     device.Destroy();
     device.SetLabel(label.c_str());
@@ -194,11 +192,50 @@ TEST_P(DestroyTest, DestroyDeviceThenSetLabel) {
 // Test device destroy before submit.
 TEST_P(DestroyTest, DestroyDeviceBeforeSubmit) {
     // TODO(crbug.com/dawn/628) Add more comprehensive tests with destroy and backends.
-    DAWN_TEST_UNSUPPORTED_IF(UsesWire());
     wgpu::CommandBuffer commands = CreateTriangleCommandBuffer();
 
     DestroyDevice();
     queue.Submit(1, &commands);
+}
+
+TEST_P(DestroyTest, DestroyDeviceUnmapsBuffers) {
+    // TODO(crbug.com/403313307): Need to fix wire client to unmap buffers on device destroy.
+    DAWN_TEST_UNSUPPORTED_IF(UsesWire());
+
+    wgpu::BufferDescriptor desc{.size = 8};
+
+    desc.usage = wgpu::BufferUsage::CopySrc;
+    desc.mappedAtCreation = true;
+    wgpu::Buffer nonMappableMappedAtCreation = device.CreateBuffer(&desc);
+
+    desc.usage = wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::MapWrite;
+    desc.mappedAtCreation = true;
+    wgpu::Buffer mappableMappedAtCreation = device.CreateBuffer(&desc);
+
+    desc.usage = wgpu::BufferUsage::MapWrite;
+    desc.mappedAtCreation = false;
+    wgpu::Buffer mappedAsync = device.CreateBuffer(&desc);
+    bool mapped = false;
+    wgpu::Future f =
+        mappedAsync.MapAsync(wgpu::MapMode::Write, 0, 8, wgpu::CallbackMode::WaitAnyOnly,
+                             [&](wgpu::MapAsyncStatus status, wgpu::StringView) {
+                                 ASSERT_EQ(wgpu::MapAsyncStatus::Success, status);
+                                 mapped = true;
+                             });
+    while (instance.WaitAny(f, 0) == wgpu::WaitStatus::TimedOut) {
+        WaitABit();
+    }
+    ASSERT_TRUE(mapped);
+
+    EXPECT_EQ(wgpu::BufferMapState::Mapped, nonMappableMappedAtCreation.GetMapState());
+    EXPECT_EQ(wgpu::BufferMapState::Mapped, mappableMappedAtCreation.GetMapState());
+    EXPECT_EQ(wgpu::BufferMapState::Mapped, mappedAsync.GetMapState());
+
+    DestroyDevice();
+
+    EXPECT_EQ(wgpu::BufferMapState::Unmapped, nonMappableMappedAtCreation.GetMapState());
+    EXPECT_EQ(wgpu::BufferMapState::Unmapped, mappableMappedAtCreation.GetMapState());
+    EXPECT_EQ(wgpu::BufferMapState::Unmapped, mappedAsync.GetMapState());
 }
 
 // Regression test for crbug.com/1276928 where a lingering BGL reference in Vulkan with at least one

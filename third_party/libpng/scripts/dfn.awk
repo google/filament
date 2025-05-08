@@ -75,12 +75,12 @@ $1 ~ /^PNG_DFN_END_SORT/{
    if (lineno == "") lineno=NR
 
    if (sub(/^[^"]*PNG_DFN *"/,"",line) != 1) {
-	print "line", lineno ": processing failed:"
-	print orig
-	err=1
-       next
+      print "line", lineno ": processing failed:"
+      print orig
+      err=1
+      next
    } else {
-	++out_count
+      ++out_count
    }
 
    # Now examine quotes within the value:
@@ -94,7 +94,7 @@ $1 ~ /^PNG_DFN_END_SORT/{
    #   #define first_name John
    #   #define last_name Smith
    #
-   #	PNG_DFN"#define name @'@" first_name "@ @" last_name "@@'"
+   #   PNG_DFN"#define name @'@" first_name "@ @" last_name "@@'"
    #
    # Might get C preprocessed to:
    #
@@ -102,7 +102,7 @@ $1 ~ /^PNG_DFN_END_SORT/{
    #
    # Which this script reduces to:
    #
-   #	#define name "John Smith"
+   #   #define name "John Smith"
    #
    while (1) {
       # While there is an @" remove it and the next "@
@@ -195,7 +195,7 @@ $1 ~ /^PNG_DFN_END_SORT/{
 
 END{
    if (out_count > 0 || err > 0)
-	exit err
+      exit err
 
    print "no definition lines found"
    exit 1

@@ -60,6 +60,14 @@ override c11: f16 = 0.0h;            // type: float16
 override c12: f16 = 0.0h;            // default override
 @id(1000) override c13: f16 = 4.0h;  // default
 
+override u01: f16 = 0.0h;            // default override
+@id(2000) override u02: f16 = 0.0h;  // default override
+
+override u10: f32;
+override u11: i32;
+override u12: u32;
+override u13: f16;
+
 @compute @workgroup_size(1) fn main() {
     // make sure the overridable constants are not optimized out
     _ = u32(c0);
@@ -148,6 +156,16 @@ TEST_F(ComputePipelineOverridableConstantsValidationTest, ConstantsIdentifierLoo
         TestCreatePipeline(constants);
     }
     {
+        // Valid: in module but unused by entry point.
+        std::vector<wgpu::ConstantEntry> constants{{nullptr, "u01", 0}};
+        TestCreatePipeline(constants);
+    }
+    {
+        // Valid: in module but unused by entry point.
+        std::vector<wgpu::ConstantEntry> constants{{nullptr, "2000", 0}};
+        TestCreatePipeline(constants);
+    }
+    {
         // Error: set the same constant twice
         std::vector<wgpu::ConstantEntry> constants{
             {nullptr, "c0", 0},
@@ -161,7 +179,7 @@ TEST_F(ComputePipelineOverridableConstantsValidationTest, ConstantsIdentifierLoo
         TestCreatePipeline(constants);
     }
     {
-        // Error: c10 already has a constant numeric id specified
+        // Error: c13 already has a constant numeric id specified
         std::vector<wgpu::ConstantEntry> constants{{nullptr, "c13", 0}};
         ASSERT_DEVICE_ERROR(TestCreatePipeline(constants));
     }
@@ -378,6 +396,87 @@ TEST_F(ComputePipelineOverridableConstantsValidationTest, OutofRangeValue) {
         // Error: one ULP lower than lowest f16 representable value
         std::vector<wgpu::ConstantEntry> constants{
             {nullptr, "c11",
+             std::nextafter<double>(-65504.0, std::numeric_limits<double>::lowest())}};
+        ASSERT_DEVICE_ERROR(TestCreatePipeline(constants));
+    }
+}
+
+// Test that values that are not representable by WGSL type i32/u32/f16/f32 for unused overrides are
+// errors
+TEST_F(ComputePipelineOverridableConstantsValidationTest, UnusedOutofRangeValue) {
+    SetUpShadersWithDefaultValueConstants();
+    {
+        // Error: 1.79769e+308 cannot be represented by f32
+        std::vector<wgpu::ConstantEntry> constants{
+            {nullptr, "u10", std::numeric_limits<double>::max()}};
+        ASSERT_DEVICE_ERROR(TestCreatePipeline(constants));
+    }
+    {
+        // Valid: max f32 representable value
+        std::vector<wgpu::ConstantEntry> constants{
+            {nullptr, "u10", std::numeric_limits<float>::max()}};
+        TestCreatePipeline(constants);
+    }
+    {
+        // Error: one ULP higher than max f32 representable value
+        std::vector<wgpu::ConstantEntry> constants{
+            {nullptr, "u10",
+             std::nextafter<double>(std::numeric_limits<float>::max(),
+                                    std::numeric_limits<double>::max())}};
+        ASSERT_DEVICE_ERROR(TestCreatePipeline(constants));
+    }
+    {
+        // Valid: lowest f32 representable value
+        std::vector<wgpu::ConstantEntry> constants{
+            {nullptr, "u10", std::numeric_limits<float>::lowest()}};
+        TestCreatePipeline(constants);
+    }
+    {
+        // Error: one ULP lower than lowest f32 representable value
+        std::vector<wgpu::ConstantEntry> constants{
+            {nullptr, "u10",
+             std::nextafter<double>(std::numeric_limits<float>::lowest(),
+                                    std::numeric_limits<double>::lowest())}};
+        ASSERT_DEVICE_ERROR(TestCreatePipeline(constants));
+    }
+    {
+        // Error: i32 out of range
+        std::vector<wgpu::ConstantEntry> constants{
+            {nullptr, "u11", static_cast<double>(std::numeric_limits<int32_t>::max()) + 1.0}};
+        ASSERT_DEVICE_ERROR(TestCreatePipeline(constants));
+    }
+    {
+        // Error: i32 out of range (negative)
+        std::vector<wgpu::ConstantEntry> constants{
+            {nullptr, "u11", static_cast<double>(std::numeric_limits<int32_t>::lowest()) - 1.0}};
+        ASSERT_DEVICE_ERROR(TestCreatePipeline(constants));
+    }
+    {
+        // Error: u32 out of range
+        std::vector<wgpu::ConstantEntry> constants{
+            {nullptr, "u12", static_cast<double>(std::numeric_limits<uint32_t>::max()) + 1.0}};
+        ASSERT_DEVICE_ERROR(TestCreatePipeline(constants));
+    }
+    {
+        // Valid: max f16 representable value
+        std::vector<wgpu::ConstantEntry> constants{{nullptr, "c11", 65504.0}};
+        TestCreatePipeline(constants);
+    }
+    {
+        // Error: one ULP higher than max f16 representable value
+        std::vector<wgpu::ConstantEntry> constants{
+            {nullptr, "u13", std::nextafter<double>(65504.0, std::numeric_limits<double>::max())}};
+        ASSERT_DEVICE_ERROR(TestCreatePipeline(constants));
+    }
+    {
+        // Valid: lowest f16 representable value
+        std::vector<wgpu::ConstantEntry> constants{{nullptr, "u13", -65504.0}};
+        TestCreatePipeline(constants);
+    }
+    {
+        // Error: one ULP lower than lowest f16 representable value
+        std::vector<wgpu::ConstantEntry> constants{
+            {nullptr, "u13",
              std::nextafter<double>(-65504.0, std::numeric_limits<double>::lowest())}};
         ASSERT_DEVICE_ERROR(TestCreatePipeline(constants));
     }

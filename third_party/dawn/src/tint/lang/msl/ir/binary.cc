@@ -47,7 +47,7 @@ Binary::Binary(Instruction::Id id,
 Binary::~Binary() = default;
 
 Binary* Binary::Clone(core::ir::CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     auto* new_rhs = ctx.Remap(RHS());
     auto* new_lhs = ctx.Remap(LHS());
     return ctx.ir.CreateInstruction<Binary>(new_result, Op(), new_lhs, new_rhs);

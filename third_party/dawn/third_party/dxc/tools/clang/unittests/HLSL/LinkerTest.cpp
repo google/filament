@@ -526,6 +526,11 @@ TEST_F(LinkerTest, RunLinkMatArrayParam) {
   Link(L"main", L"ps_6_0", pLinker, {libName, libName2},
        {"alloca [24 x float]", "getelementptr [12 x float], [12 x float]*"},
        {});
+
+  Link(L"main", L"ps_6_9", pLinker, {libName, libName2},
+       {"alloca [2 x <12 x float>]",
+        "getelementptr [12 x float], [12 x float]*"},
+       {});
 }
 
 TEST_F(LinkerTest, RunLinkMatParam) {

@@ -2098,6 +2098,7 @@ void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer, const m
 
     glstream->user_thread.pending = mPlatform.transformAcquiredImage({
             hwbuffer, cb, userData, handler });
+    glstream->user_thread.transform = transform;
 
     if (glstream->user_thread.pending.image != nullptr) {
         // If there's no pending image, do nothing. Note that GL_OES_EGL_image does not let you pass
@@ -2434,6 +2435,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
             return mContext.bugs.disable_blit_into_texture_array;
         case Workaround::POWER_VR_SHADER_WORKAROUNDS:
             return mContext.bugs.powervr_shader_workarounds;
+        case Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL:
+            return mContext.bugs.disable_depth_precache_for_default_material;
         default:
             return false;
     }

@@ -31,6 +31,7 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <string>
+#include <vector>
 
 #include "dawn/native/DawnNative.h"
 #include "src/dawn/node/interop/NodeAPI.h"
@@ -50,6 +51,11 @@ class GPUAdapterInfo final : public interop::GPUAdapterInfo {
     std::string getDescription(Napi::Env) override;
     uint32_t getSubgroupMinSize(Napi::Env) override;
     uint32_t getSubgroupMaxSize(Napi::Env) override;
+    bool getIsFallbackAdapter(Napi::Env) override;
+
+    using SubgroupMatrixConfigs =
+        interop::FrozenArray<interop::Interface<interop::GPUSubgroupMatrixConfig>>;
+    SubgroupMatrixConfigs getSubgroupMatrixConfigs(Napi::Env) override;
 
   private:
     std::string vendor_;
@@ -58,6 +64,8 @@ class GPUAdapterInfo final : public interop::GPUAdapterInfo {
     std::string description_;
     uint32_t subgroup_min_size_;
     uint32_t subgroup_max_size_;
+    bool is_fallback_adapter_;
+    std::vector<wgpu::SubgroupMatrixConfig> subgroup_matrix_configs_;
 };
 
 }  // namespace wgpu::binding

@@ -1,0 +1,133 @@
+# basic.dfa
+#  Build time configuration of libpng
+#
+# Author: John Bowler
+# Copyright: (c) John Bowler, 2024
+# Usage rights:
+#  To the extent possible under law, the author has waived all copyright and
+#  related or neighboring rights to this work.  This work is published from:
+#  United States.
+#
+# Build libpng with basic read and write support.  This enables the lowest
+# level libpng read and write APIs - the "row-by-row" ones.
+#
+# Support is enabled only for those transformations that are observed to be
+# required by widely used apps or are in the v3 specification.
+#
+
+everything = off
+
+# The sequential read code is enabled here; the progressive code can be used
+# instead but there is no point enabling both.
+
+option READ on
+option SEQUENTIAL_READ on
+option EASY_ACCESS on
+option SET_USER_LIMITS on
+option INFO_IMAGE on
+option READ_16BIT on
+
+# Errors: these can be disabled but then there won't be any error messages
+# just failures and the error messages are really needed for apps:
+option WARNINGS on
+option ERROR_TEXT on
+option BENIGN_READ_ERRORS on
+
+# Required for many display programs such as web browsers:
+option PROGRESSIVE_READ on
+
+# Switch on the write code - this makes a minimalist encoder but with
+# interlace support turned on; otherwise png_read_png..png_write_png will
+# fail on an interlaced image.
+option WRITE on
+option WRITE_INTERLACING on
+option WRITE_16BIT on
+
+# Usages of the 'fixed' APIs are relatively rare but they do occur
+# one or the other for both the API and the internal math.
+
+#Fixed point:
+option FIXED_POINT on
+
+#Floating point:
+option FLOATING_POINT on
+option FLOATING_ARITHMETIC on
+
+# Basic error handling, IO and user memory support.  The latter allows the
+# application program to provide its own implementations of 'malloc' and 'free'.
+option SETJMP on
+option STDIO on
+option USER_MEM on
+
+# Gamma handling: this needs to be on for the gamma handling
+option READ_GAMMA on
+
+# The supported chunks
+chunk bKGD on
+chunk cHRM on
+chunk eXIf on
+chunk gAMA on
+chunk iCCP on
+chunk iTXt on
+chunk pHYs on
+chunk sBIT on
+chunk sRGB on
+chunk tEXt on
+chunk tIME on
+chunk tRNS on
+chunk zTXt on
+
+# These don't seem to be used anywhere:
+# chunk pCAL
+# chunk sCAL
+# chunk sPLT
+
+# The rest of this is app dependent: none of these options are required for
+# read/write of the full range of PNG files and the normal chunk handling on
+# read.
+option WRITE_CUSTOMIZE_ZTXT_COMPRESSION on
+option WRITE_CUSTOMIZE_COMPRESSION on
+
+option READ_EXPAND on
+option READ_FILLER on
+option READ_GRAY_TO_RGB on
+option READ_INVERT on
+option READ_PACK on
+option READ_RGB_TO_GRAY on
+option READ_SCALE_16_TO_8 on
+option READ_SHIFT on
+option READ_STRIP_16_TO_8 on
+option READ_STRIP_ALPHA on
+option READ_SWAP on
+
+option CONVERT_tIME on
+
+# optipng
+option IO_STATE on
+option STORE_UNKNOWN_CHUNKS on
+option HANDLE_AS_UNKNOWN on
+
+# pngcrush
+option READ_USER_TRANSFORM on
+option WRITE_FLUSH on
+
+# pnmtopng
+chunk hIST on
+
+# cairo
+option WRITE_PACKSWAP on
+option WRITE_USER_TRANSFORM on
+
+# graphicsmagick
+option READ_USER_CHUNKS on
+
+# Qt5.15 qtgui (gentoo package split) Qt6.6 qtbase
+option READ_BGR on
+option WRITE_BGR on
+option READ_SWAP_ALPHA on
+option WRITE_SWAP_ALPHA on
+chunk oFFs on
+
+# ghostscript-gpl
+option WRITE_INVERT_ALPHA on
+option WRITE_INVERT on

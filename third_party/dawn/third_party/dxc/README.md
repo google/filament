@@ -34,6 +34,16 @@ Development kits containing only the dxc.exe driver app, the dxcompiler.dll, and
 
 As an example of community contribution, this project can also target the [SPIR-V](https://www.khronos.org/registry/spir-v/) intermediate representation. Please see the [doc](docs/SPIR-V.rst) for how HLSL features are mapped to SPIR-V, and the [wiki](https://github.com/microsoft/DirectXShaderCompiler/wiki/SPIR%E2%80%90V-CodeGen) page for how to build, use, and contribute to the SPIR-V CodeGen.
 
+### Metal CodeGen
+
+When built from source DXC can utilize the [Metal Shader
+Converter](https://developer.apple.com/metal/shader-converter/) if it is
+available during build and configuration time. This allows DXC to generate Metal
+shader libraries directly using the `-metal` flag.
+
+Note: DXC cannot currently disassemble Metal shaders so the `-Fc` flag cannot be
+used in conjunction with the `-Fo` flag.
+
 ## Building Sources
 
 See the full documentation for [Building and testing DXC](docs/BuildingAndTestingDXC.rst) for detailed instructions.

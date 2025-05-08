@@ -31,12 +31,19 @@
 #include "dawn/tests/MockCallback.h"
 #include "dawn/tests/StringViewMatchers.h"
 #include "dawn/tests/unittests/validation/ValidationTest.h"
+#include "dawn/utils/BinarySemaphore.h"
 #include "gmock/gmock.h"
+
+namespace dawn {
+namespace {
 
 using testing::_;
 using testing::EmptySizedString;
+using testing::HasSubstr;
 using testing::MockCppCallback;
 using testing::NonEmptySizedString;
+using testing::SizedStringMatches;
+using utils::BinarySemaphore;
 
 class ErrorScopeValidationTest : public ValidationTest {
   protected:
@@ -138,12 +145,89 @@ TEST_F(ErrorScopeValidationTest, UnhandledErrorsMatchUncapturedErrorCallback) {
     FlushWireAndProcessEvents();
 }
 
+// Test that an error that happens in another thread is NOT caught.
+TEST_F(ErrorScopeValidationTest, ThreadLocalError) {
+    // Thread local error scope is only implemented on native.
+    DAWN_SKIP_TEST_IF(UsesWire());
+
+    // ThreadA pushes the scope, yields to ThreadB to cause an error, and then tries to pop the
+    // scope.
+    BinarySemaphore semA, semB;
+    auto threadA = [&] {
+        device.PushErrorScope(wgpu::ErrorFilter::Validation);
+        semA.Release();
+        semB.Acquire();
+        EXPECT_CALL(mPopErrorScopeCb,
+                    Call(wgpu::PopErrorScopeStatus::Success, wgpu::ErrorType::NoError, _))
+            .Times(1);
+        device.PopErrorScope(wgpu::CallbackMode::AllowSpontaneous, mPopErrorScopeCb.Callback());
+    };
+    auto threadB = [&] {
+        semA.Acquire();
+        wgpu::BufferDescriptor desc = {};
+        desc.usage = static_cast<wgpu::BufferUsage>(UINT64_MAX);
+        ASSERT_DEVICE_ERROR(device.CreateBuffer(&desc));
+        semB.Release();
+    };
+
+    std::thread tA(threadA);
+    std::thread tB(threadB);
+    tA.join();
+    tB.join();
+}
+
+// Test that an error that happens in a thread is only caught by that thread.
+TEST_F(ErrorScopeValidationTest, ThreadLocalErrorOnlyOneThread) {
+    // Thread local error scope is only implemented on native.
+    DAWN_SKIP_TEST_IF(UsesWire());
+
+    // ThreadA pushes the scope, yields to ThreadB to push scope, then error happens on ThreadA. We
+    // first pop from ThreadB which should not see an error, then pop from ThreadA which should see
+    // the error.
+    BinarySemaphore semA, semB;
+    auto threadA = [&] {
+        device.PushErrorScope(wgpu::ErrorFilter::Validation);
+        semA.Release();
+        semB.Acquire();
+
+        wgpu::BufferDescriptor desc = {};
+        desc.usage = static_cast<wgpu::BufferUsage>(UINT64_MAX);
+        device.CreateBuffer(&desc);
+        semA.Release();
+        semB.Acquire();
+
+        EXPECT_CALL(mPopErrorScopeCb,
+                    Call(wgpu::PopErrorScopeStatus::Success, wgpu::ErrorType::Validation, _))
+            .Times(1);
+        device.PopErrorScope(wgpu::CallbackMode::AllowSpontaneous, mPopErrorScopeCb.Callback());
+    };
+    auto threadB = [&] {
+        semA.Acquire();
+
+        device.PushErrorScope(wgpu::ErrorFilter::Validation);
+        semB.Release();
+        semA.Acquire();
+
+        EXPECT_CALL(mPopErrorScopeCb,
+                    Call(wgpu::PopErrorScopeStatus::Success, wgpu::ErrorType::NoError, _))
+            .Times(1);
+        device.PopErrorScope(wgpu::CallbackMode::AllowSpontaneous, mPopErrorScopeCb.Callback());
+        semB.Release();
+    };
+
+    std::thread tA(threadA);
+    std::thread tB(threadB);
+    tA.join();
+    tB.join();
+}
+
 // Check that push/popping error scopes must be balanced.
 TEST_F(ErrorScopeValidationTest, PushPopBalanced) {
     // No error scopes to pop.
     {
-        EXPECT_CALL(mPopErrorScopeCb, Call(wgpu::PopErrorScopeStatus::EmptyStack,
-                                           wgpu::ErrorType::NoError, EmptySizedString()))
+        EXPECT_CALL(mPopErrorScopeCb,
+                    Call(wgpu::PopErrorScopeStatus::Error, wgpu::ErrorType::NoError,
+                         SizedStringMatches(HasSubstr("No error scopes"))))
             .Times(1);
         device.PopErrorScope(wgpu::CallbackMode::AllowProcessEvents, mPopErrorScopeCb.Callback());
         FlushWireAndProcessEvents();
@@ -158,8 +242,9 @@ TEST_F(ErrorScopeValidationTest, PushPopBalanced) {
         device.PopErrorScope(wgpu::CallbackMode::AllowProcessEvents, mPopErrorScopeCb.Callback());
         FlushWireAndProcessEvents();
 
-        EXPECT_CALL(mPopErrorScopeCb, Call(wgpu::PopErrorScopeStatus::EmptyStack,
-                                           wgpu::ErrorType::NoError, EmptySizedString()))
+        EXPECT_CALL(mPopErrorScopeCb,
+                    Call(wgpu::PopErrorScopeStatus::Error, wgpu::ErrorType::NoError,
+                         SizedStringMatches(HasSubstr("No error scopes"))))
             .Times(1);
         device.PopErrorScope(wgpu::CallbackMode::AllowProcessEvents, mPopErrorScopeCb.Callback());
         FlushWireAndProcessEvents();
@@ -206,3 +291,6 @@ TEST_F(ErrorScopeValidationTest, ShutdownStackOverflow) {
         device.PushErrorScope(wgpu::ErrorFilter::Validation);
     }
 }
+
+}  // anonymous namespace
+}  // namespace dawn

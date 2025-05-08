@@ -127,7 +127,7 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<pixel_local, PixelLocal, read_write> = var
+  %pl:ptr<pixel_local, PixelLocal, read_write> = var undef
 }
 
 %main = @fragment func(%3:params):vec4<f32> [@location(0)] {
@@ -167,7 +167,7 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<pixel_local, PixelLocal, read_write> = var
+  %pl:ptr<pixel_local, PixelLocal, read_write> = var undef
 }
 
 %main = @fragment func(%3:params):vec4<f32> [@location(0)] {
@@ -194,8 +194,8 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<private, PixelLocal, read_write> = var
-  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var @binding_point(7, 10)
+  %pl:ptr<private, PixelLocal, read_write> = var undef
+  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var undef @binding_point(7, 10)
 }
 
 %main = @fragment func(%4:params):vec4<f32> [@location(0)] {
@@ -253,7 +253,7 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<pixel_local, PixelLocal, read_write> = var
+  %pl:ptr<pixel_local, PixelLocal, read_write> = var undef
 }
 
 %main = @fragment func(%3:params):vec4<f32> [@location(0)] {
@@ -286,8 +286,8 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<private, PixelLocal, read_write> = var
-  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var @binding_point(7, 10)
+  %pl:ptr<private, PixelLocal, read_write> = var undef
+  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var undef @binding_point(7, 10)
 }
 
 %main = @fragment func(%4:params):vec4<f32> [@location(0)] {
@@ -352,7 +352,7 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<pixel_local, PixelLocal, read_write> = var
+  %pl:ptr<pixel_local, PixelLocal, read_write> = var undef
 }
 
 %main = @fragment func(%3:params):vec4<f32> [@location(0)] {
@@ -386,8 +386,8 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<private, PixelLocal, read_write> = var
-  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var @binding_point(7, 10)
+  %pl:ptr<private, PixelLocal, read_write> = var undef
+  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var undef @binding_point(7, 10)
 }
 
 %main = @fragment func(%4:params):vec4<f32> [@location(0)] {
@@ -448,7 +448,7 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<pixel_local, PixelLocal, read_write> = var
+  %pl:ptr<pixel_local, PixelLocal, read_write> = var undef
 }
 
 %main = @fragment func(%3:params):vec4<f32> [@location(0)] {
@@ -477,8 +477,8 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<private, PixelLocal, read_write> = var
-  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var @binding_point(7, 10)
+  %pl:ptr<private, PixelLocal, read_write> = var undef
+  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var undef @binding_point(7, 10)
 }
 
 %main = @fragment func(%4:params):vec4<f32> [@location(0)] {
@@ -550,7 +550,7 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<pixel_local, PixelLocal, read_write> = var
+  %pl:ptr<pixel_local, PixelLocal, read_write> = var undef
 }
 
 %main0 = @fragment func(%3:params):vec4<f32> [@location(0)] {
@@ -597,8 +597,8 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<private, PixelLocal, read_write> = var
-  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var @binding_point(7, 10)
+  %pl:ptr<private, PixelLocal, read_write> = var undef
+  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var undef @binding_point(7, 10)
 }
 
 %main0 = @fragment func(%4:params):vec4<f32> [@location(0)] {
@@ -699,7 +699,7 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<pixel_local, PixelLocal, read_write> = var
+  %pl:ptr<pixel_local, PixelLocal, read_write> = var undef
 }
 
 %main = @fragment func(%3:params):vec4<f32> [@location(0)] {
@@ -728,10 +728,10 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<private, PixelLocal, read_write> = var
-  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var @binding_point(7, 10)
-  %pixel_local_b:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32sint>, read> = var @binding_point(7, 12)
-  %pixel_local_c:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32float>, read> = var @binding_point(7, 14)
+  %pl:ptr<private, PixelLocal, read_write> = var undef
+  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var undef @binding_point(7, 10)
+  %pixel_local_b:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32sint>, read> = var undef @binding_point(7, 12)
+  %pixel_local_c:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32float>, read> = var undef @binding_point(7, 14)
 }
 
 %main = @fragment func(%6:params):vec4<f32> [@location(0)] {
@@ -806,7 +806,7 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<pixel_local, PixelLocal, read_write> = var
+  %pl:ptr<pixel_local, PixelLocal, read_write> = var undef
 }
 
 %main = @fragment func(%3:params):vec4<f32> [@location(0)] {
@@ -835,10 +835,10 @@ params = struct @align(16) {
 }
 
 $B1: {  # root
-  %pl:ptr<private, PixelLocal, read_write> = var
-  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32float>, read> = var @binding_point(7, 10)
-  %pixel_local_b:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var @binding_point(7, 12)
-  %pixel_local_c:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32sint>, read> = var @binding_point(7, 14)
+  %pl:ptr<private, PixelLocal, read_write> = var undef
+  %pixel_local_a:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32float>, read> = var undef @binding_point(7, 10)
+  %pixel_local_b:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32uint>, read> = var undef @binding_point(7, 12)
+  %pixel_local_c:ptr<handle, hlsl.rasterizer_ordered_texture_2d<r32sint>, read> = var undef @binding_point(7, 14)
 }
 
 %main = @fragment func(%6:params):vec4<f32> [@location(0)] {

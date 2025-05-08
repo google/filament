@@ -44,7 +44,7 @@ Bitcast::Bitcast(Id id, InstructionResult* result, Value* val) : Base(id) {
 Bitcast::~Bitcast() = default;
 
 Bitcast* Bitcast::Clone(CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     auto* val = ctx.Remap(Val());
     return ctx.ir.CreateInstruction<Bitcast>(new_result, val);
 }

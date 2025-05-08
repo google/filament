@@ -46,8 +46,8 @@ TEST_F(IR_HlslBuiltinCallTest, Clone) {
     auto* new_b = clone_ctx.Clone(builtin);
 
     EXPECT_NE(builtin, new_b);
-    EXPECT_NE(builtin->Result(0), new_b->Result(0));
-    EXPECT_EQ(mod.Types().u32(), new_b->Result(0)->Type());
+    EXPECT_NE(builtin->Result(), new_b->Result());
+    EXPECT_EQ(mod.Types().u32(), new_b->Result()->Type());
 
     EXPECT_EQ(BuiltinFn::kF32Tof16, new_b->Func());
 

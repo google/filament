@@ -50,7 +50,7 @@ TEST_F(HlslWriterPromoteInitializersTest, NoStructInitializers) {
     auto* src = R"(
 %foo = @fragment func():void {
   $B1: {
-    %a:ptr<function, i32, read_write> = var, 0i
+    %a:ptr<function, i32, read_write> = var 0i
     ret
   }
 }
@@ -81,7 +81,7 @@ S = struct @align(4) {
 
 %foo = @fragment func():void {
   $B1: {
-    %a:ptr<function, S, read_write> = var, S(1i)
+    %a:ptr<function, S, read_write> = var S(1i)
     ret
   }
 }
@@ -104,7 +104,7 @@ TEST_F(HlslWriterPromoteInitializersTest, ArrayInVarNoChange) {
     auto* src = R"(
 %foo = @fragment func():void {
   $B1: {
-    %a:ptr<function, array<i32, 2>, read_write> = var, array<i32, 2>(0i)
+    %a:ptr<function, array<i32, 2>, read_write> = var array<i32, 2>(0i)
     ret
   }
 }
@@ -290,7 +290,7 @@ S = struct @align(4) {
 }
 
 $B1: {  # root
-  %a:ptr<private, S, read_write> = var, S(1i)
+  %a:ptr<private, S, read_write> = var S(1i)
 }
 
 )";
@@ -304,7 +304,7 @@ S = struct @align(4) {
 $B1: {  # root
   %1:S = construct 1i
   %2:S = let %1
-  %a:ptr<private, S, read_write> = var, %2
+  %a:ptr<private, S, read_write> = var %2
 }
 
 )";
@@ -332,7 +332,7 @@ S = struct @align(4) {
 }
 
 $B1: {  # root
-  %a:ptr<private, S, read_write> = var, S(1i)
+  %a:ptr<private, S, read_write> = var S(1i)
 }
 
 )";
@@ -348,7 +348,7 @@ S = struct @align(4) {
 $B1: {  # root
   %1:S = construct 1i, 1i, 1i
   %2:S = let %1
-  %a:ptr<private, S, read_write> = var, %2
+  %a:ptr<private, S, read_write> = var %2
 }
 
 )";
@@ -364,7 +364,7 @@ TEST_F(HlslWriterPromoteInitializersTest, ModuleScopedArray) {
 
     auto* src = R"(
 $B1: {  # root
-  %a:ptr<private, array<i32, 2>, read_write> = var, array<i32, 2>(0i)
+  %a:ptr<private, array<i32, 2>, read_write> = var array<i32, 2>(0i)
 }
 
 )";
@@ -373,7 +373,7 @@ $B1: {  # root
     auto* expect = R"(
 $B1: {  # root
   %1:array<i32, 2> = let array<i32, 2>(0i)
-  %a:ptr<private, array<i32, 2>, read_write> = var, %1
+  %a:ptr<private, array<i32, 2>, read_write> = var %1
 }
 
 )";
@@ -416,7 +416,7 @@ S = struct @align(4) {
 }
 
 $B1: {  # root
-  %a:ptr<private, S, read_write> = var, S(A(1i, B(1.0f)))
+  %a:ptr<private, S, read_write> = var S(A(1i, B(1.0f)))
 }
 
 )";
@@ -443,7 +443,7 @@ $B1: {  # root
   %4:A = let %3
   %5:S = construct %4
   %6:S = let %5
-  %a:ptr<private, S, read_write> = var, %6
+  %a:ptr<private, S, read_write> = var %6
 }
 
 )";
@@ -467,7 +467,7 @@ S = struct @align(4) {
 }
 
 $B1: {  # root
-  %a:ptr<private, S, read_write> = var, S(array<i32, 3>(0i))
+  %a:ptr<private, S, read_write> = var S(array<i32, 3>(0i))
 }
 
 )";
@@ -481,7 +481,7 @@ S = struct @align(4) {
 $B1: {  # root
   %1:S = construct array<i32, 3>(0i)
   %2:S = let %1
-  %a:ptr<private, S, read_write> = var, %2
+  %a:ptr<private, S, read_write> = var %2
 }
 
 )";
@@ -536,11 +536,11 @@ C = struct @align(4) {
 }
 
 $B1: {  # root
-  %a:ptr<private, A, read_write> = var, A(array<i32, 2>(9i, 10i))
-  %b:ptr<private, B, read_write> = var, B(array<array<i32, 4>, 1>(array<i32, 4>(5i, 6i, 7i, 8i)))
-  %c:ptr<private, C, read_write> = var, C(A(array<i32, 2>(1i, 2i)))
-  %d:ptr<private, array<i32, 2>, read_write> = var, array<i32, 2>(11i, 12i)
-  %e:ptr<private, array<array<array<i32, 3>, 2>, 1>, read_write> = var, array<array<array<i32, 3>, 2>, 1>(array<array<i32, 3>, 2>(array<i32, 3>(1i, 2i, 3i), array<i32, 3>(4i, 5i, 6i)))
+  %a:ptr<private, A, read_write> = var A(array<i32, 2>(9i, 10i))
+  %b:ptr<private, B, read_write> = var B(array<array<i32, 4>, 1>(array<i32, 4>(5i, 6i, 7i, 8i)))
+  %c:ptr<private, C, read_write> = var C(A(array<i32, 2>(1i, 2i)))
+  %d:ptr<private, array<i32, 2>, read_write> = var array<i32, 2>(11i, 12i)
+  %e:ptr<private, array<array<array<i32, 3>, 2>, 1>, read_write> = var array<array<array<i32, 3>, 2>, 1>(array<array<i32, 3>, 2>(array<i32, 3>(1i, 2i, 3i), array<i32, 3>(4i, 5i, 6i)))
 }
 
 )";
@@ -562,19 +562,19 @@ C = struct @align(4) {
 $B1: {  # root
   %1:A = construct array<i32, 2>(9i, 10i)
   %2:A = let %1
-  %a:ptr<private, A, read_write> = var, %2
+  %a:ptr<private, A, read_write> = var %2
   %4:B = construct array<array<i32, 4>, 1>(array<i32, 4>(5i, 6i, 7i, 8i))
   %5:B = let %4
-  %b:ptr<private, B, read_write> = var, %5
+  %b:ptr<private, B, read_write> = var %5
   %7:A = construct array<i32, 2>(1i, 2i)
   %8:A = let %7
   %9:C = construct %8
   %10:C = let %9
-  %c:ptr<private, C, read_write> = var, %10
+  %c:ptr<private, C, read_write> = var %10
   %12:array<i32, 2> = let array<i32, 2>(11i, 12i)
-  %d:ptr<private, array<i32, 2>, read_write> = var, %12
+  %d:ptr<private, array<i32, 2>, read_write> = var %12
   %14:array<array<array<i32, 3>, 2>, 1> = let array<array<array<i32, 3>, 2>, 1>(array<array<i32, 3>, 2>(array<i32, 3>(1i, 2i, 3i), array<i32, 3>(4i, 5i, 6i)))
-  %e:ptr<private, array<array<array<i32, 3>, 2>, 1>, read_write> = var, %14
+  %e:ptr<private, array<array<array<i32, 3>, 2>, 1>, read_write> = var %14
 }
 
 )";

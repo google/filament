@@ -49,6 +49,7 @@ cc_library(
     "source.h",
   ],
   deps = [
+    "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/ice",
     "//src/tint/utils/macros",
@@ -70,6 +71,7 @@ cc_library(
     "source_test.cc",
   ],
   deps = [
+    "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",
     "//src/tint/utils/ice",

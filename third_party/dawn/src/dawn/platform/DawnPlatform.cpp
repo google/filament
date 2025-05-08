@@ -62,8 +62,7 @@ uint64_t Platform::AddTraceEvent(char phase,
                                  const uint64_t* argValues,
                                  unsigned char flags) {
     // AddTraceEvent cannot be called if events are disabled.
-    DAWN_ASSERT(false);
-    return 0;
+    DAWN_UNREACHABLE();
 }
 
 void Platform::HistogramCustomCounts(const char* name,

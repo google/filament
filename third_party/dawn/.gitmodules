@@ -4,23 +4,27 @@
 	gclient-condition = dawn_standalone
 [submodule "third_party/clang-format/script"]
 	path = third_party/clang-format/script
-	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/clang/tools/clang-format
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/clang/tools/clang-format.git
 	gclient-condition = dawn_standalone
 [submodule "third_party/depot_tools"]
 	path = third_party/depot_tools
-	url = https://chromium.googlesource.com/chromium/tools/depot_tools
+	url = https://chromium.googlesource.com/chromium/tools/depot_tools.git
 	gclient-condition = dawn_standalone
 [submodule "third_party/libc++/src"]
 	path = third_party/libc++/src
-	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxx
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxx.git
 	gclient-condition = dawn_standalone
 [submodule "third_party/libc++abi/src"]
 	path = third_party/libc++abi/src
-	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxxabi
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxxabi.git
+	gclient-condition = dawn_standalone
+[submodule "third_party/llvm-libc/src"]
+	path = third_party/llvm-libc/src
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libc.git
 	gclient-condition = dawn_standalone
 [submodule "third_party/libdrm/src"]
 	path = third_party/libdrm/src
-	url = https://chromium.googlesource.com/chromiumos/third_party/libdrm
+	url = https://chromium.googlesource.com/chromiumos/third_party/libdrm.git
 	gclient-condition = dawn_standalone and host_os == "linux"
 [submodule "build"]
 	path = build
@@ -30,17 +34,13 @@
 	path = tools/clang
 	url = https://chromium.googlesource.com/chromium/src/tools/clang
 	gclient-condition = dawn_standalone
-[submodule "tools/rust"]
-	path = tools/rust
-	url = https://chromium.googlesource.com/chromium/src/tools/rust
-	gclient-condition = dawn_standalone and checkout_rust
 [submodule "testing"]
 	path = testing
 	url = https://chromium.googlesource.com/chromium/src/testing
 	gclient-condition = dawn_standalone
 [submodule "third_party/libFuzzer/src"]
 	path = third_party/libFuzzer/src
-	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/compiler-rt/lib/fuzzer
+	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/compiler-rt/lib/fuzzer.git
 	gclient-condition = dawn_standalone
 [submodule "third_party/googletest"]
 	path = third_party/googletest
@@ -48,11 +48,11 @@
 	gclient-condition = dawn_standalone
 [submodule "third_party/catapult"]
 	path = third_party/catapult
-	url = https://chromium.googlesource.com/catapult
+	url = https://chromium.googlesource.com/catapult.git
 	gclient-condition = dawn_standalone
 [submodule "third_party/google_benchmark/src"]
 	path = third_party/google_benchmark/src
-	url = https://chromium.googlesource.com/external/github.com/google/benchmark
+	url = https://chromium.googlesource.com/external/github.com/google/benchmark.git
 	gclient-condition = dawn_standalone
 [submodule "third_party/jinja2"]
 	path = third_party/jinja2
@@ -142,17 +142,21 @@
 	path = third_party/webgpu-cts
 	url = https://chromium.googlesource.com/external/github.com/gpuweb/cts
 	gclient-condition = build_with_chromium
+[submodule "third_party/emsdk"]
+	path = third_party/emsdk
+	url = https://github.com/emscripten-core/emsdk.git
+	gclient-condition = dawn_wasm
 [submodule "third_party/node-api-headers"]
 	path = third_party/node-api-headers
-	url = https://github.com/nodejs/node-api-headers
+	url = https://github.com/nodejs/node-api-headers.git
 	gclient-condition = dawn_node
 [submodule "third_party/node-addon-api"]
 	path = third_party/node-addon-api
-	url = https://github.com/nodejs/node-addon-api
+	url = https://github.com/nodejs/node-addon-api.git
 	gclient-condition = dawn_node
 [submodule "third_party/gpuweb"]
 	path = third_party/gpuweb
-	url = https://github.com/gpuweb/gpuweb
+	url = https://github.com/gpuweb/gpuweb.git
 	gclient-condition = dawn_node
 [submodule "third_party/protobuf"]
 	path = third_party/protobuf
@@ -164,20 +168,17 @@
 	gclient-condition = dawn_standalone
 [submodule "third_party/libprotobuf-mutator/src"]
 	path = third_party/libprotobuf-mutator/src
-	url = https://chromium.googlesource.com/external/github.com/google/libprotobuf-mutator
+	url = https://chromium.googlesource.com/external/github.com/google/libprotobuf-mutator.git
 	gclient-condition = dawn_standalone
 [submodule "third_party/jsoncpp"]
 	path = third_party/jsoncpp
-	url = https://github.com/open-source-parsers/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git
 	gclient-condition = dawn_standalone
 [submodule "third_party/langsvr"]
 	path = third_party/langsvr
-	url = https://github.com/google/langsvr
+	url = https://github.com/google/langsvr.git
 	gclient-condition = dawn_standalone
 [submodule "third_party/partition_alloc"]
 	path = third_party/partition_alloc
-	url = https://chromium.googlesource.com/chromium/src/base/allocator/partition_allocator
+	url = https://chromium.googlesource.com/chromium/src/base/allocator/partition_allocator.git
 	gclient-condition = dawn_standalone
-[submodule "third_party/llvm-libc/src"]
-	path = third_party/llvm-libc/src
-	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libc.git

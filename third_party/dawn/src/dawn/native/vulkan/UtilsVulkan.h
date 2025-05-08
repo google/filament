@@ -29,6 +29,7 @@
 #define SRC_DAWN_NATIVE_VULKAN_UTILSVULKAN_H_
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "dawn/common/StackAllocated.h"
@@ -135,7 +136,7 @@ void SetDebugNameInternal(Device* device,
                           VkObjectType objectType,
                           uint64_t objectHandle,
                           const char* prefix,
-                          std::string label);
+                          std::string_view label);
 
 // The majority of Vulkan handles are "non-dispatchable". Dawn wraps these by overriding
 // VK_DEFINE_NON_DISPATCHABLE_HANDLE to add some capabilities like making null comparisons
@@ -145,7 +146,7 @@ template <typename Tag, typename HandleType>
 void SetDebugName(Device* device,
                   detail::VkHandle<Tag, HandleType> objectHandle,
                   const char* prefix,
-                  std::string label = "") {
+                  std::string_view label = {}) {
     uint64_t handle;
     if constexpr (std::is_same_v<HandleType, uint64_t>) {
         handle = objectHandle.GetHandle();
@@ -163,7 +164,7 @@ void SetDebugName(Device* device,
                   VkObjectType objectType,
                   HandleType objectHandle,
                   const char* prefix,
-                  std::string label = "") {
+                  std::string_view label = {}) {
     SetDebugNameInternal(device, objectType, reinterpret_cast<uint64_t>(objectHandle), prefix,
                          label);
 }

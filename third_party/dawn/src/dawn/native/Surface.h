@@ -83,7 +83,8 @@ class Surface final : public ErrorMonad {
         WaylandSurface,
         WindowsHWND,
         WindowsCoreWindow,
-        WindowsSwapChainPanel,
+        WindowsUWPSwapChainPanel,
+        WindowsWinUISwapChainPanel,
         XlibWindow,
     };
     Type GetType() const;
@@ -107,8 +108,11 @@ class Surface final : public ErrorMonad {
     // Valid to call if the type is WindowsCoreWindow
     IUnknown* GetCoreWindow() const;
 
-    // Valid to call if the type is WindowsSwapChainPanel
-    IUnknown* GetSwapChainPanel() const;
+    // Valid to call if the type is WindowsUWPSwapChainPanel
+    IUnknown* GetUWPSwapChainPanel() const;
+
+    // Valid to call if the type is WindowsWinUISwapChainPanel
+    IUnknown* GetWinUISwapChainPanel() const;
 
     // Valid to call if the type is WindowsXlib
     void* GetXDisplay() const;
@@ -169,8 +173,11 @@ class Surface final : public ErrorMonad {
     // WindowsCoreWindow
     ComPtr<IUnknown> mCoreWindow;
 
-    // WindowsSwapChainPanel
-    ComPtr<IUnknown> mSwapChainPanel;
+    // WindowsUWPSwapChainPanel
+    ComPtr<IUnknown> mUWPSwapChainPanel;
+
+    // WindowsWinUISwapChainPanel
+    ComPtr<IUnknown> mWinUISwapChainPanel;
 #endif  // defined(DAWN_USE_WINDOWS_UI)
 
     // Xlib

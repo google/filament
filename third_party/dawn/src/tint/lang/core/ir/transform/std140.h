@@ -28,10 +28,8 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_STD140_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_STD140_H_
 
-#include <string>
-
 #include "src/tint/lang/core/ir/validator.h"
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

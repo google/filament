@@ -24,21 +24,8 @@
 #include <cstdint>
 
 // Platform specific includes and defines
-#if defined(__APPLE__)
-    #include <Cocoa/Cocoa.h>
-    #import <QuartzCore/CAMetalLayer.h>
-#elif defined(FILAMENT_IOS)
-    // Metal is not available when building for the iOS simulator on Desktop.
-    #define METAL_AVAILABLE __has_include(<QuartzCore/CAMetalLayer.h>)
-    #if METAL_AVAILABLE
-        #import <Metal/Metal.h>
-        #import <QuartzCore/CAMetalLayer.h>
-    #endif
-    // is this needed?
-    #define METALVIEW_TAG 255
-#else
-    #error Not a supported Apple + WebGPU platform
-#endif
+#include <Cocoa/Cocoa.h>
+#import <QuartzCore/CAMetalLayer.h>
 
 /**
  * Apple (Mac OS and IOS) specific implementation aspects of the WebGPU backend
@@ -46,14 +33,19 @@
 
 namespace filament::backend {
 
+wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
+    // Both IOS and MacOS expects CAMetalLayer.
+    CAMetalLayer* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
+    return wgpu::Extent2D{
+        .width = static_cast<uint32_t>(metalLayer.drawableSize.width),
+        .height = static_cast<uint32_t>(metalLayer.drawableSize.height)
+    };
+}
+
 wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags*/) {
     wgpu::Surface surface = nullptr;
-#if defined(__APPLE__)
-    auto nsView = (__bridge NSView*) nativeWindow;
-    FILAMENT_CHECK_POSTCONDITION(nsView) << "Unable to obtain Metal-backed NSView.";
-    [nsView setWantsLayer:YES];
-    id metalLayer = [CAMetalLayer layer];
-    [nsView setLayer:metalLayer];
+    // Both IOS and MacOS expects CAMetalLayer.
+    CAMetalLayer* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
     wgpu::SurfaceSourceMetalLayer surfaceSourceMetalLayer{};
     surfaceSourceMetalLayer.layer = (__bridge void*) metalLayer;
     wgpu::SurfaceDescriptor surfaceDescriptor = {
@@ -62,19 +54,6 @@ wgpu::Surface WebGPUPlatform::createSurface(void* nativeWindow, uint64_t /*flags
     };
     surface = mInstance.CreateSurface(&surfaceDescriptor);
     FILAMENT_CHECK_POSTCONDITION(surface != nullptr) << "Unable to create Metal-backed surface.";
-#elif defined(FILAMENT_IOS)
-    CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
-    wgpu::SurfaceSourceMetalLayer surfaceSourceMetalLayer{};
-    surfaceSourceMetalLayer.layer = (__bridge void*) metalLayer;
-    wgpu::SurfaceDescriptor surfaceDescriptor = {
-        .nextInChain = &surfaceSourceMetalLayer,
-        .label = "metal_surface",
-    };
-    surface = mInstance.CreateSurface(&surfaceDescriptor);
-    FILAMENT_CHECK_POSTCONDITION(surface != nullptr) << "Unable to create Metal-backed surface.";
-#else
-    #error Not a supported Apple + WebGPU platform
-#endif
     return surface;
 }
 

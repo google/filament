@@ -28,7 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_COMBINE_ACCESS_INSTRUCTIONS_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_COMBINE_ACCESS_INSTRUCTIONS_H_
 
-#include "src/tint/utils/result/result.h"
+#include "src/tint/utils/result.h"
 
 // Forward declarations.
 namespace tint::core::ir {

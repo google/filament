@@ -21,6 +21,10 @@ add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libutils.a)
 
+add_library(perfetto STATIC IMPORTED)
+set_target_properties(perfetto PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libperfetto.a)
+
 add_library(ibl-lite STATIC IMPORTED)
 set_target_properties(ibl-lite PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libibl-lite.a)
@@ -123,6 +127,7 @@ target_link_libraries(filament-jni
     PRIVATE android
     PRIVATE jnigraphics
     PRIVATE utils
+    PRIVATE perfetto
 
     # libgeometry is PUBLIC because gltfio uses it.
     PUBLIC geometry
@@ -141,6 +146,7 @@ target_include_directories(filament-jni PRIVATE
         ${FILAMENT_DIR}/include
         ../../filament/backend/include
         ../../third_party/robin-map
+        ../../third_party/perfetto
         ../../libs/utils/include)
 
 # Force a relink when the version script is changed:

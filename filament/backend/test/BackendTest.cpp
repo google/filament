@@ -43,26 +43,33 @@ using namespace image;
 namespace test {
 
 Backend BackendTest::sBackend = Backend::NOOP;
+OperatingSystem BackendTest::sOperatingSystem = OperatingSystem::OTHER;
 bool BackendTest::sIsMobilePlatform = false;
+std::vector<std::string> BackendTest::sFailedImages;
 
-void BackendTest::init(Backend backend, bool isMobilePlatform) {
+void BackendTest::init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform) {
     sBackend = backend;
+    sOperatingSystem = operatingSystem;
     sIsMobilePlatform = isMobilePlatform;
 }
 
 BackendTest::BackendTest() : commandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE,
         CONFIG_COMMAND_BUFFERS_SIZE, /*mPaused=*/false) {
     initializeDriver();
+    mImageExpectations.emplace(getDriverApi());
 }
 
 BackendTest::~BackendTest() {
-    // Note: Don't terminate the driver for OpenGL, as it wipes away the context and removes the buffer from the screen.
-    if (sBackend == Backend::OPENGL) {
-        return;
-    }
+    // Ensure all graphics commands and callbacks are finished.
     flushAndWait();
-    driver->terminate();
-    delete driver;
+    mImageExpectations->evaluate();
+    // Note: Don't terminate the driver for OpenGL, as it wipes away the context and removes the buffer from the screen.
+    if (sBackend != Backend::OPENGL) {
+        driver->terminate();
+        delete driver;
+    }
+
+    recordFailedImages();
 }
 
 void BackendTest::initializeDriver() {
@@ -154,49 +161,32 @@ void BackendTest::renderTriangle(
     api.endRenderPass();
 }
 
-void BackendTest::readPixelsAndAssertHash(const char* testName, size_t width, size_t height,
-        Handle<HwRenderTarget> rt, uint32_t expectedHash, bool exportScreenshot) {
-    void* buffer = calloc(1, width * height * 4);
+bool BackendTest::matchesEnvironment(Backend backend) {
+    return sBackend == backend;
+}
 
-    struct Capture {
-        uint32_t expectedHash;
-        char* name;
-        bool exportScreenshot;
-        size_t width, height;
-    };
-    auto* c = new Capture();
-    c->expectedHash = expectedHash;
-    c->name = strdup(testName);
-    c->exportScreenshot = exportScreenshot;
-    c->width = width;
-    c->height = height;
+bool BackendTest::matchesEnvironment(OperatingSystem operatingSystem) {
+    return sOperatingSystem == operatingSystem;
+}
 
-    PixelBufferDescriptor pbd(buffer, width * height * 4, PixelDataFormat::RGBA, PixelDataType::UBYTE,
-            1, 0, 0, width, [](void* buffer, size_t size, void* user) {
-                auto* c = (Capture*)user;
+void BackendTest::markImageAsFailure(std::string failedImageName) {
+    sFailedImages.emplace_back(std::move(failedImageName));
+}
 
-                // Export a screenshot, if requested.
-                if (c->exportScreenshot) {
-#ifndef FILAMENT_IOS
-                    LinearImage image(c->width, c->height, 4);
-                    image = toLinearWithAlpha<uint8_t>(c->width, c->height, c->width * 4,
-                            (uint8_t*) buffer);
-                    const std::string png = std::string(c->name) + ".png";
-                    std::ofstream outputStream(png.c_str(), std::ios::binary | std::ios::trunc);
-                    ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
-                            png);
-#endif
-                }
-
-                // Hash the contents of the buffer and check that they match.
-                uint32_t hash = utils::hash::murmur3((const uint32_t*) buffer, size / 4, 0);
-                ASSERT_EQ(hash, c->expectedHash) << c->name << " failed: hashes do not match." << std::endl;
-
-                free(buffer);
-                free(c->name);
-                free(c);
-            }, (void*)c);
-    getDriverApi().readPixels(rt, 0, 0, width, height, std::move(pbd));
+void BackendTest::recordFailedImages() {
+    if (!sFailedImages.empty()) {
+        std::string failedImages;
+        for (auto& failedTestImageName: sFailedImages) {
+            if (failedImages.empty()) {
+                failedImages = failedTestImageName;
+            } else {
+                failedImages.append(",");
+                failedImages.append(failedTestImageName);
+            }
+        }
+        RecordProperty("FailedImages", failedImages);
+    }
+    sFailedImages.clear();
 }
 
 class Environment : public ::testing::Environment {
@@ -210,8 +200,8 @@ public:
     }
 };
 
-void initTests(Backend backend, bool isMobile, int& argc, char* argv[]) {
-    BackendTest::init(backend, isMobile);
+void initTests(Backend backend, OperatingSystem operatingSystem, bool isMobile, int& argc, char* argv[]) {
+    BackendTest::init(backend, operatingSystem, isMobile);
     ::testing::InitGoogleTest(&argc, argv);
     ::testing::AddGlobalTestEnvironment(new Environment);
 }

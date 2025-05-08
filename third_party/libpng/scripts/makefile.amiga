@@ -26,8 +26,6 @@ LN= slink
 RM= delete quiet
 # library (.lib) file creation command
 AR= oml
-# make directory command
-MKDIR= makedir
 
 # Pre-built configuration
 # See scripts/pnglibconf.mak for more options

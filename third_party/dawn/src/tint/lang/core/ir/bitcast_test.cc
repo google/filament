@@ -45,7 +45,7 @@ TEST_F(IR_BitcastTest, Bitcast) {
     auto* inst = b.Bitcast(mod.Types().i32(), 4_i);
 
     ASSERT_TRUE(inst->Is<ir::Bitcast>());
-    ASSERT_NE(inst->Result(0)->Type(), nullptr);
+    ASSERT_NE(inst->Result()->Type(), nullptr);
 
     auto args = inst->Args();
     ASSERT_EQ(args.Length(), 1u);
@@ -59,8 +59,8 @@ TEST_F(IR_BitcastTest, Result) {
     auto* a = b.Bitcast(mod.Types().i32(), 4_i);
 
     EXPECT_EQ(a->Results().Length(), 1u);
-    EXPECT_TRUE(a->Result(0)->Is<InstructionResult>());
-    EXPECT_EQ(a, a->Result(0)->Instruction());
+    EXPECT_TRUE(a->Result()->Is<InstructionResult>());
+    EXPECT_EQ(a, a->Result()->Instruction());
 }
 
 TEST_F(IR_BitcastTest, Bitcast_Usage) {
@@ -89,7 +89,7 @@ TEST_F(IR_BitcastTest, Clone) {
 
     EXPECT_NE(inst, n);
 
-    EXPECT_EQ(mod.Types().i32(), n->Result(0)->Type());
+    EXPECT_EQ(mod.Types().i32(), n->Result()->Type());
 
     auto new_val = n->Val()->As<Constant>()->Value();
     ASSERT_TRUE(new_val->Is<core::constant::Scalar<i32>>());

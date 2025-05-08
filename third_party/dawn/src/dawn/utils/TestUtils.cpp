@@ -61,11 +61,13 @@ uint32_t GetMinimumBytesPerRow(wgpu::TextureFormat format,
     return Align(bytesPerBlock * (width / blockWidth), textureBytesPerRowAlignment);
 }
 
-TextureDataCopyLayout GetTextureDataCopyLayoutForTextureAtLevel(wgpu::TextureFormat format,
-                                                                wgpu::Extent3D textureSizeAtLevel0,
-                                                                uint32_t mipmapLevel,
-                                                                wgpu::TextureDimension dimension,
-                                                                uint32_t rowsPerImage) {
+TextureDataCopyLayout GetTextureDataCopyLayoutForTextureAtLevel(
+    wgpu::TextureFormat format,
+    wgpu::Extent3D textureSizeAtLevel0,
+    uint32_t mipmapLevel,
+    wgpu::TextureDimension dimension,
+    uint32_t rowsPerImage,
+    uint32_t textureBytesPerRowAlignment) {
     // Compressed texture formats not supported in this function yet.
     DAWN_ASSERT(dawn::utils::GetTextureFormatBlockWidth(format) == 1);
 
@@ -80,7 +82,8 @@ TextureDataCopyLayout GetTextureDataCopyLayoutForTextureAtLevel(wgpu::TextureFor
             std::max(textureSizeAtLevel0.depthOrArrayLayers >> mipmapLevel, 1u);
     }
 
-    layout.bytesPerRow = GetMinimumBytesPerRow(format, layout.mipSize.width);
+    layout.bytesPerRow =
+        GetMinimumBytesPerRow(format, layout.mipSize.width, textureBytesPerRowAlignment);
 
     if (rowsPerImage == wgpu::kCopyStrideUndefined) {
         rowsPerImage = layout.mipSize.height;

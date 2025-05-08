@@ -46,7 +46,7 @@ Construct::Construct(Id id, InstructionResult* result, VectorRef<Value*> argumen
 Construct::~Construct() = default;
 
 Construct* Construct::Clone(CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     auto args = ctx.Remap<Construct::kDefaultNumOperands>(Args());
     return ctx.ir.CreateInstruction<Construct>(new_result, args);
 }

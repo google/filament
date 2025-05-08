@@ -1,7 +1,7 @@
 # Assertions Reference
 
 This page lists the assertion macros provided by GoogleTest for verifying code
-behavior. To use them, include the header `gtest/gtest.h`.
+behavior. To use them, add `#include <gtest/gtest.h>`.
 
 The majority of the macros listed below come as a pair with an `EXPECT_` variant
 and an `ASSERT_` variant. Upon failure, `EXPECT_` macros generate nonfatal
@@ -88,7 +88,7 @@ For example, the following code verifies that the string `value1` starts with
 10:
 
 ```cpp
-#include "gmock/gmock.h"
+#include <gmock/gmock.h>
 
 using ::testing::AllOf;
 using ::testing::Gt;
@@ -276,7 +276,8 @@ Units in the Last Place (ULPs). To learn more about ULPs, see the article
 `ASSERT_FLOAT_EQ(`*`val1`*`,`*`val2`*`)`
 
 Verifies that the two `float` values *`val1`* and *`val2`* are approximately
-equal, to within 4 ULPs from each other.
+equal, to within 4 ULPs from each other. Infinity and the largest finite float
+value are considered to be one ULP apart.
 
 ### EXPECT_DOUBLE_EQ {#EXPECT_DOUBLE_EQ}
 
@@ -284,7 +285,8 @@ equal, to within 4 ULPs from each other.
 `ASSERT_DOUBLE_EQ(`*`val1`*`,`*`val2`*`)`
 
 Verifies that the two `double` values *`val1`* and *`val2`* are approximately
-equal, to within 4 ULPs from each other.
+equal, to within 4 ULPs from each other. Infinity and the largest finite double
+value are considered to be one ULP apart.
 
 ### EXPECT_NEAR {#EXPECT_NEAR}
 
@@ -293,6 +295,11 @@ equal, to within 4 ULPs from each other.
 
 Verifies that the difference between *`val1`* and *`val2`* does not exceed the
 absolute error bound *`abs_error`*.
+
+If *`val`* and *`val2`* are both infinity of the same sign, the difference is
+considered to be 0. Otherwise, if either value is infinity, the difference is
+considered to be infinity. All non-NaN values (including infinity) are
+considered to not exceed an *`abs_error`* of infinity.
 
 ## Exception Assertions {#exceptions}
 
@@ -515,7 +522,7 @@ Verifies that *`expression`* is a success `HRESULT`.
 ### EXPECT_HRESULT_FAILED {#EXPECT_HRESULT_FAILED}
 
 `EXPECT_HRESULT_FAILED(`*`expression`*`)` \
-`EXPECT_HRESULT_FAILED(`*`expression`*`)`
+`ASSERT_HRESULT_FAILED(`*`expression`*`)`
 
 Verifies that *`expression`* is a failure `HRESULT`.
 

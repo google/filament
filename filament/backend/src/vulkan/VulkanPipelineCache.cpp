@@ -35,7 +35,12 @@ using namespace bluevk;
 namespace filament::backend {
 
 VulkanPipelineCache::VulkanPipelineCache(VkDevice device)
-        : mDevice(device) {}
+    : mDevice(device) {
+    VkPipelineCacheCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+    };
+    bluevk::vkCreatePipelineCache(mDevice, &createInfo, VKALLOC, &mPipelineCache);
+}
 
 void VulkanPipelineCache::bindLayout(VkPipelineLayout layout) noexcept {
     mPipelineRequirements.layout = layout;
@@ -61,8 +66,12 @@ void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
     // If an error occurred, allow higher levels to handle it gracefully.
     assert_invariant(cacheEntry != nullptr && "Failed to create/find pipeline");
 
-    mBoundPipeline = mPipelineRequirements;
-    vkCmdBindPipeline(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cacheEntry->handle);
+
+    static PipelineEqual equal;
+    if (!equal(mBoundPipeline, mPipelineRequirements)) {
+        mBoundPipeline = mPipelineRequirements;
+        vkCmdBindPipeline(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cacheEntry->handle);
+    }
 }
 
 VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() noexcept {
@@ -215,7 +224,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     PipelineCacheEntry cacheEntry = {
         .lastUsed = mCurrentTime,
     };
-    VkResult error = vkCreateGraphicsPipelines(mDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo,
+    VkResult error = vkCreateGraphicsPipelines(mDevice, mPipelineCache, 1, &pipelineCreateInfo,
             VKALLOC, &cacheEntry.handle);
     assert_invariant(error == VK_SUCCESS);
     if (error != VK_SUCCESS) {
@@ -271,6 +280,8 @@ void VulkanPipelineCache::terminate() noexcept {
     }
     mPipelines.clear();
     mBoundPipeline = {};
+
+    vkDestroyPipelineCache(mDevice, mPipelineCache, VKALLOC);
 }
 
 void VulkanPipelineCache::gc() noexcept {

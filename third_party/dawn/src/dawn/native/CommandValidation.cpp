@@ -229,10 +229,10 @@ MaybeError ValidateWriteBuffer(const DeviceBase* device,
                                uint64_t size) {
     DAWN_TRY(device->ValidateObject(buffer));
 
-    DAWN_INVALID_IF(bufferOffset % 4 != 0, "BufferOffset (%u) is not a multiple of 4.",
-                    bufferOffset);
-
-    DAWN_INVALID_IF(size % 4 != 0, "Size (%u) is not a multiple of 4.", size);
+    // DAWN_INVALID_IF(bufferOffset % 4 != 0, "BufferOffset (%u) is not a multiple of 4.",
+    //                 bufferOffset);
+    //
+    // DAWN_INVALID_IF(size % 4 != 0, "Size (%u) is not a multiple of 4.", size);
 
     uint64_t bufferSize = buffer->GetSize();
     DAWN_INVALID_IF(bufferOffset > bufferSize || size > (bufferSize - bufferOffset),
@@ -715,8 +715,8 @@ MaybeError ValidateColorAttachmentBytesPerSample(DeviceBase* device,
         "Total color attachment bytes per sample (%u) exceeds maximum (%u) with formats "
         "(%s).%s",
         totalByteSize, maxColorAttachmentBytesPerSample, TextureFormatsToString(formats),
-        DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter(), maxColorAttachmentBytesPerSample,
-                                    totalByteSize));
+        DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter()->GetLimits().v1,
+                                    maxColorAttachmentBytesPerSample, totalByteSize));
 
     return {};
 }

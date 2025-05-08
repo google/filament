@@ -61,6 +61,7 @@
 #define ABSL_STRINGS_CORD_H_
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -68,16 +69,14 @@
 #include <iterator>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 #include "absl/base/attributes.h"
 #include "absl/base/config.h"
 #include "absl/base/internal/endian.h"
-#include "absl/base/internal/per_thread_tls.h"
 #include "absl/base/macros.h"
 #include "absl/base/nullability.h"
 #include "absl/base/optimization.h"
-#include "absl/base/port.h"
-#include "absl/container/inlined_vector.h"
 #include "absl/crc/internal/crc_cord_state.h"
 #include "absl/functional/function_ref.h"
 #include "absl/meta/type_traits.h"
@@ -88,14 +87,13 @@
 #include "absl/strings/internal/cord_rep_btree.h"
 #include "absl/strings/internal/cord_rep_btree_reader.h"
 #include "absl/strings/internal/cord_rep_crc.h"
-#include "absl/strings/internal/cordz_functions.h"
+#include "absl/strings/internal/cord_rep_flat.h"
 #include "absl/strings/internal/cordz_info.h"
-#include "absl/strings/internal/cordz_statistics.h"
 #include "absl/strings/internal/cordz_update_scope.h"
 #include "absl/strings/internal/cordz_update_tracker.h"
-#include "absl/strings/internal/resize_uninitialized.h"
 #include "absl/strings/internal/string_constant.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/compare.h"
 #include "absl/types/optional.h"
 
 namespace absl {
@@ -640,7 +638,6 @@ class Cord {
     bool operator==(const CharIterator& other) const;
     bool operator!=(const CharIterator& other) const;
     reference operator*() const;
-    pointer operator->() const;
 
     friend Cord;
 
@@ -771,7 +768,7 @@ class Cord {
 
   // Cord::Find()
   //
-  // Returns an iterator to the first occurrance of the substring `needle`.
+  // Returns an iterator to the first occurrence of the substring `needle`.
   //
   // If the substring `needle` does not occur, `Cord::char_end()` is returned.
   CharIterator Find(absl::string_view needle) const;
@@ -848,6 +845,38 @@ class Cord {
   friend class CordTestPeer;
   friend bool operator==(const Cord& lhs, const Cord& rhs);
   friend bool operator==(const Cord& lhs, absl::string_view rhs);
+
+#ifdef __cpp_impl_three_way_comparison
+
+  // Cords support comparison with other Cords and string_views via operator<
+  // and others; here we provide a wrapper for the C++20 three-way comparison
+  // <=> operator.
+
+  static inline std::strong_ordering ConvertCompareResultToStrongOrdering(
+      int c) {
+    if (c == 0) {
+      return std::strong_ordering::equal;
+    } else if (c < 0) {
+      return std::strong_ordering::less;
+    } else {
+      return std::strong_ordering::greater;
+    }
+  }
+
+  friend inline std::strong_ordering operator<=>(const Cord& x, const Cord& y) {
+    return ConvertCompareResultToStrongOrdering(x.Compare(y));
+  }
+
+  friend inline std::strong_ordering operator<=>(const Cord& lhs,
+                                                 absl::string_view rhs) {
+    return ConvertCompareResultToStrongOrdering(lhs.Compare(rhs));
+  }
+
+  friend inline std::strong_ordering operator<=>(absl::string_view lhs,
+                                                 const Cord& rhs) {
+    return ConvertCompareResultToStrongOrdering(-rhs.Compare(lhs));
+  }
+#endif
 
   friend absl::Nullable<const CordzInfo*> GetCordzInfoForTesting(
       const Cord& cord);
@@ -946,15 +975,9 @@ class Cord {
 
     bool IsSame(const InlineRep& other) const { return data_ == other.data_; }
 
+    // Copies the inline contents into `dst`. Assumes the cord is not empty.
     void CopyTo(absl::Nonnull<std::string*> dst) const {
-      // memcpy is much faster when operating on a known size. On most supported
-      // platforms, the small string optimization is large enough that resizing
-      // to 15 bytes does not cause a memory allocation.
-      absl::strings_internal::STLStringResizeUninitialized(dst, kMaxInline);
-      data_.copy_max_inline_to(&(*dst)[0]);
-      // erase is faster than resize because the logic for memory allocation is
-      // not needed.
-      dst->erase(inline_size());
+      data_.CopyInlineToString(dst);
     }
 
     // Copies the inline contents into `dst`. Assumes the cord is not empty.
@@ -1624,10 +1647,6 @@ inline bool Cord::CharIterator::operator!=(const CharIterator& other) const {
 
 inline Cord::CharIterator::reference Cord::CharIterator::operator*() const {
   return *chunk_iterator_->data();
-}
-
-inline Cord::CharIterator::pointer Cord::CharIterator::operator->() const {
-  return chunk_iterator_->data();
 }
 
 inline Cord Cord::AdvanceAndRead(absl::Nonnull<CharIterator*> it,

@@ -1,9 +1,8 @@
-
 #if 0 /* in case someone actually tries to compile this */
 
 /* example.c - an example of using libpng
  *
- * Maintained 2018 Cosmin Truta
+ * Maintained 2018-2024 Cosmin Truta
  * Maintained 1998-2016 Glenn Randers-Pehrson
  * Maintained 1996-1997 Andreas Dilger
  * Written 1995-1996 Guy Eric Schalnat, Group 42, Inc.
@@ -259,9 +258,9 @@ int check_if_png(char *file_name, FILE **fp)
       return 0;
 
    /* Compare the first PNG_BYTES_TO_CHECK bytes of the signature.
-    * Return nonzero (true) if they match.
+    * Return true if they match.
     */
-   return(!png_sig_cmp(buf, 0, PNG_BYTES_TO_CHECK));
+   return png_sig_cmp(buf, 0, PNG_BYTES_TO_CHECK) == 0;
 }
 
 /* Read a PNG file.  You may want to return an error code if the read
@@ -281,7 +280,7 @@ void read_png(char *file_name) /* We need to open the file */
    FILE *fp;
 
    if ((fp = fopen(file_name, "rb")) == NULL)
-      return (ERROR);
+      return ERROR;
 
 #else no_open_file /* prototype 2 */
 void read_png(FILE *fp, int sig_read) /* File is already open */
@@ -304,7 +303,7 @@ void read_png(FILE *fp, int sig_read) /* File is already open */
    if (png_ptr == NULL)
    {
       fclose(fp);
-      return (ERROR);
+      return ERROR;
    }
 
    /* Allocate/initialize the memory for image information.  REQUIRED. */
@@ -313,7 +312,7 @@ void read_png(FILE *fp, int sig_read) /* File is already open */
    {
       fclose(fp);
       png_destroy_read_struct(&png_ptr, NULL, NULL);
-      return (ERROR);
+      return ERROR;
    }
 
    /* Set error handling if you are using the setjmp/longjmp method (this is
@@ -326,7 +325,7 @@ void read_png(FILE *fp, int sig_read) /* File is already open */
       png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
       fclose(fp);
       /* If we get here, we had a problem reading the file. */
-      return (ERROR);
+      return ERROR;
    }
 
    /* One of the following I/O initialization methods is REQUIRED. */
@@ -585,7 +584,7 @@ void read_png(FILE *fp, int sig_read) /* File is already open */
    fclose(fp);
 
    /* That's it! */
-   return (OK);
+   return OK;
 }
 
 /* Progressively read a file */
@@ -604,18 +603,18 @@ initialize_png_reader(png_structp *png_ptr, png_infop *info_ptr)
    if (*png_ptr == NULL)
    {
       *info_ptr = NULL;
-      return (ERROR);
+      return ERROR;
    }
    *info_ptr = png_create_info_struct(png_ptr);
    if (*info_ptr == NULL)
    {
       png_destroy_read_struct(png_ptr, info_ptr, NULL);
-      return (ERROR);
+      return ERROR;
    }
    if (setjmp(png_jmpbuf((*png_ptr))))
    {
       png_destroy_read_struct(png_ptr, info_ptr, NULL);
-      return (ERROR);
+      return ERROR;
    }
 
    /* You will need to provide all three function callbacks,
@@ -632,7 +631,7 @@ initialize_png_reader(png_structp *png_ptr, png_infop *info_ptr)
     */
    png_set_progressive_read_fn(*png_ptr, (void *)stream_data,
        info_callback, row_callback, end_callback);
-   return (OK);
+   return OK;
 }
 
 int
@@ -643,7 +642,7 @@ process_data(png_structp *png_ptr, png_infop *info_ptr,
    {
       /* Free the png_ptr and info_ptr memory on error. */
       png_destroy_read_struct(png_ptr, info_ptr, NULL);
-      return (ERROR);
+      return ERROR;
    }
 
    /* Give chunks of data as they arrive from the data stream
@@ -657,7 +656,7 @@ process_data(png_structp *png_ptr, png_infop *info_ptr,
     * callback, if you aren't already displaying them there.
     */
    png_process_data(*png_ptr, *info_ptr, buffer, length);
-   return (OK);
+   return OK;
 }
 
 info_callback(png_structp png_ptr, png_infop info)
@@ -747,7 +746,7 @@ void write_png(char *file_name /* , ... other image information ... */)
    /* Open the file */
    fp = fopen(file_name, "wb");
    if (fp == NULL)
-      return (ERROR);
+      return ERROR;
 
    /* Create and initialize the png_struct with the desired error handler
     * functions.  If you want to use the default stderr and longjump method,
@@ -760,7 +759,7 @@ void write_png(char *file_name /* , ... other image information ... */)
    if (png_ptr == NULL)
    {
       fclose(fp);
-      return (ERROR);
+      return ERROR;
    }
 
    /* Allocate/initialize the image information data.  REQUIRED. */
@@ -769,7 +768,7 @@ void write_png(char *file_name /* , ... other image information ... */)
    {
       fclose(fp);
       png_destroy_write_struct(&png_ptr,  NULL);
-      return (ERROR);
+      return ERROR;
    }
 
    /* Set up error handling.  REQUIRED if you aren't supplying your own
@@ -780,7 +779,7 @@ void write_png(char *file_name /* , ... other image information ... */)
       /* If we get here, we had a problem writing the file. */
       fclose(fp);
       png_destroy_write_struct(&png_ptr, &info_ptr);
-      return (ERROR);
+      return ERROR;
    }
 
    /* One of the following I/O initialization functions is REQUIRED. */
@@ -1035,7 +1034,7 @@ void write_png(char *file_name /* , ... other image information ... */)
    fclose(fp);
 
    /* That's it! */
-   return (OK);
+   return OK;
 }
 
 #endif /* if 0 */

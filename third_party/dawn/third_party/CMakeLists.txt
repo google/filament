@@ -72,7 +72,7 @@ endif()
 
 if ((DAWN_BUILD_TESTS OR TINT_BUILD_TESTS) AND NOT TARGET gmock)
     set(gtest_force_shared_crt ON CACHE BOOL "Controls whether a shared run-time library should be used even when Google Test is built as static library" FORCE)
-    if (${DAWN_ENABLE_EMSCRIPTEN})
+    if (EMSCRIPTEN)
         # For Emscripten builds, we need to disable pthreads.
         set(gtest_disable_pthreads ON)
     endif()
@@ -89,7 +89,7 @@ endif()
 ################################################################################
 # End of Emscripten enabled third party directories
 ################################################################################
-if (${DAWN_ENABLE_EMSCRIPTEN})
+if (EMSCRIPTEN)
     return()
 endif()
 

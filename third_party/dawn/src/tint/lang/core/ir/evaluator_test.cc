@@ -32,6 +32,7 @@
 #include "src/tint/lang/core/ir/evaluator.h"
 #include "src/tint/lang/core/ir/instruction.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
+#include "src/tint/lang/core/type/u32.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 using namespace tint::core::fluent_types;     // NOLINT
@@ -119,6 +120,131 @@ TEST_F(IR_EvaluatorTest, ConstructArray_Access) {
     EXPECT_EQ(2, c->Value()->ValueAs<int32_t>());
 }
 
+TEST_F(IR_EvaluatorTest, NestedStruct_AccessSuccess) {
+    auto* S = ty.Struct(mod.symbols.New("S"), {{mod.symbols.New("data"), ty.array<u32, 4>()}});
+
+    auto* arr = b.Var("struct", ty.ptr(storage, S));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 0_i, 3_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_EQ(res, Success);
+}
+
+TEST_F(IR_EvaluatorTest, NestedStruct_AccessFailArray) {
+    auto* S = ty.Struct(mod.symbols.New("S"), {{mod.symbols.New("data"), ty.array<u32, 4>()}});
+
+    auto* arr = b.Var("struct", ty.ptr(storage, S));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 0_i, 4_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason.Str(), R"(error: index 4 out of bounds [0..3])");
+}
+
+TEST_F(IR_EvaluatorTest, NestedStruct_AccessFailMember) {
+    auto* S = ty.Struct(mod.symbols.New("S"), {{mod.symbols.New("data"), ty.array<u32, 4>()}});
+
+    auto* arr = b.Var("struct", ty.ptr(storage, S));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 1_i, 3_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_NE(res, Success);
+    EXPECT_EQ(res.Failure().reason.Str(), R"(error: index 1 out of bounds [0..0])");
+}
+
+TEST_F(IR_EvaluatorTest, ArrayBounds_OutOfBoundsAccess) {
+    auto* arr = b.Var("arr", ty.ptr(storage, ty.array<u32>()));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, -1_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_NE(res, Success);
+
+    EXPECT_EQ(res.Failure().reason.Str(), R"(error: index -1 out of bounds)");
+}
+
+TEST_F(IR_EvaluatorTest, ArrayBounds_OverflowBoundsAccess) {
+    auto* arr = b.Var("arr", ty.ptr(storage, ty.array<u32, 3>()));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 3_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_NE(res, Success);
+
+    EXPECT_EQ(res.Failure().reason.Str(), R"(error: index 3 out of bounds [0..2])");
+}
+
+TEST_F(IR_EvaluatorTest, ArrayBounds_NestedOverflowBoundsAccess) {
+    auto* arr = b.Var("arr", ty.ptr(storage, ty.array<array<u32, 3>, 5>()));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 3_i, 3_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_NE(res, Success);
+
+    EXPECT_EQ(res.Failure().reason.Str(), R"(error: index 3 out of bounds [0..2])");
+}
+
+TEST_F(IR_EvaluatorTest, ArrayBounds_NestedoundsAccessSuccess) {
+    auto* arr = b.Var("arr", ty.ptr(storage, ty.array<array<u32, 3>, 5>()));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 4_i, 2_i);
+    auto res = Eval(b, inst);
+    ASSERT_EQ(res, Success);
+}
+
+TEST_F(IR_EvaluatorTest, ArrayBounds_DoubleNestedOverflowBoundsAccess) {
+    auto* arr = b.Var("arr", ty.ptr(storage, ty.array<array<array<u32, 3>, 5>, 7>()));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 3_i, 3_i, 3_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_NE(res, Success);
+
+    EXPECT_EQ(res.Failure().reason.Str(), R"(error: index 3 out of bounds [0..2])");
+}
+
+TEST_F(IR_EvaluatorTest, ArrayBounds_DoubleNestedBoundsAccessSuccess) {
+    auto* arr = b.Var("arr", ty.ptr(storage, ty.array<array<array<u32, 3>, 5>, 7>()));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 6_i, 4_i, 2_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_EQ(res, Success);
+}
+
+TEST_F(IR_EvaluatorTest, ArrayBounds_DoubleNestedEarlyOverflowBoundsAccess) {
+    auto* arr = b.Var("arr", ty.ptr(storage, ty.array<array<array<u32, 3>, 5>, 7>()));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 7_i, 3_i, 3_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_NE(res, Success);
+
+    EXPECT_EQ(res.Failure().reason.Str(), R"(error: index 7 out of bounds [0..6])");
+}
+
+TEST_F(IR_EvaluatorTest, ArrayBounds_DoubleNestedMidOverflowBoundsAccess) {
+    auto* arr = b.Var("arr", ty.ptr(storage, ty.array<array<array<u32, 3>, 5>, 7>()));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 3_i, 5_i, 3_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_NE(res, Success);
+
+    EXPECT_EQ(res.Failure().reason.Str(), R"(error: index 5 out of bounds [0..4])");
+}
+
+TEST_F(IR_EvaluatorTest, ArrayBounds_NestedVecOverflowBoundsAccess) {
+    auto* arr = b.Var("arr", ty.ptr(storage, ty.array<vec3<u32>, 7>()));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 3_i, 3_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_NE(res, Success);
+
+    EXPECT_EQ(res.Failure().reason.Str(), R"(error: index 3 out of bounds [0..2])");
+}
+
+TEST_F(IR_EvaluatorTest, ArrayBounds_NestedVecBoundsAccessSuccess) {
+    auto* arr = b.Var("arr", ty.ptr(storage, ty.array<vec3<u32>, 7>()));
+    auto* inst = b.Access(ty.ptr<storage, u32>(), arr, 3_i, 2_i);
+    auto res = Eval(b, inst);
+
+    ASSERT_EQ(res, Success);
+}
+
 TEST_F(IR_EvaluatorTest, ConstructStruct_Access) {
     auto* S = ty.Struct(mod.symbols.New("S"),
                         {{mod.symbols.New("a"), ty.i32()}, {mod.symbols.New("b"), ty.f32()}});
@@ -165,7 +291,7 @@ TEST_F(IR_EvaluatorTest, Convert) {
     auto* obj = b.Construct(ty.i32(), 1_i);
     auto* inst = b.Convert(ty.u32(), obj);
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_NE(val, nullptr);
@@ -175,10 +301,26 @@ TEST_F(IR_EvaluatorTest, Convert) {
     EXPECT_EQ(1u, c->Value()->ValueAs<uint32_t>());
 }
 
+TEST_F(IR_EvaluatorTest, ConstExprIfSimple) {
+    auto* constexpr_if = b.ConstExprIf(true);
+    constexpr_if->SetResult(b.InstructionResult(ty.bool_()));
+    b.Append(constexpr_if->True(), [&] { b.ExitIf(constexpr_if, true); });
+    b.Append(constexpr_if->False(), [&] { b.ExitIf(constexpr_if, false); });
+    auto res = Eval(b, constexpr_if);
+    ASSERT_EQ(res, Success) << res.Failure();
+
+    auto* val = res.Get();
+    ASSERT_NE(val, nullptr);
+    auto* c = val->As<core::ir::Constant>();
+    ASSERT_NE(c, nullptr);
+    ASSERT_EQ(ty.bool_(), c->Type());
+    EXPECT_EQ(true, c->Value()->ValueAs<bool>());
+}
+
 TEST_F(IR_EvaluatorTest, BuiltinCall) {
     auto* inst = b.Call(ty.i32(), core::BuiltinFn::kAbs, -1_i);
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_NE(val, nullptr);
@@ -194,7 +336,7 @@ TEST_F(IR_EvaluatorTest, MultiExpression) {
     auto* inst = b.Swizzle(ty.i32(), cons, {1});
 
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_NE(val, nullptr);
@@ -207,7 +349,7 @@ TEST_F(IR_EvaluatorTest, NonConstBuiltinCall) {
     auto* inst = b.Call(ty.f32(), core::BuiltinFn::kDpdx, 2.0_f);
 
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_EQ(val, nullptr);
@@ -218,7 +360,7 @@ TEST_F(IR_EvaluatorTest, NonConstBuiltinCallArg) {
     auto* inst = b.Call(ty.f32(), core::BuiltinFn::kAbs, dpdx);
 
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_EQ(val, nullptr);
@@ -229,7 +371,7 @@ TEST_F(IR_EvaluatorTest, NonConstCallInsideUnary) {
     auto* inst = b.Unary(core::UnaryOp::kNegation, ty.f32(), dpdx);
 
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_EQ(val, nullptr);
@@ -240,7 +382,7 @@ TEST_F(IR_EvaluatorTest, NonConstCallInsideBinaryRHS) {
     auto* inst = b.Add(ty.f32(), 1.0_f, dpdx);
 
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_EQ(val, nullptr);
@@ -251,7 +393,7 @@ TEST_F(IR_EvaluatorTest, NonConstCallInsideBinaryLHS) {
     auto* inst = b.Add(ty.f32(), dpdx, 1.0_f);
 
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_EQ(val, nullptr);
@@ -263,7 +405,7 @@ TEST_F(IR_EvaluatorTest, NonConstCallInsideSwizzle) {
     auto* inst = b.Swizzle(ty.f32(), dpdx, {1});
 
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_EQ(val, nullptr);
@@ -274,7 +416,7 @@ TEST_F(IR_EvaluatorTest, NonConstCallInsideConstruct) {
     auto* inst = b.Construct(ty.vec2<f32>(), dpdx, 2_f);
 
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_EQ(val, nullptr);
@@ -285,7 +427,7 @@ TEST_F(IR_EvaluatorTest, NonConstCallInsideConvert) {
     auto* inst = b.Convert(ty.u32(), dpdx);
 
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_EQ(val, nullptr);
@@ -296,7 +438,7 @@ TEST_F(IR_EvaluatorTest, NonConstCallInsideBitcast) {
     auto* inst = b.Bitcast(ty.u32(), dpdx);
 
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_EQ(val, nullptr);
@@ -308,7 +450,7 @@ TEST_F(IR_EvaluatorTest, NonConstCallInsideAccessObject) {
     auto* inst = b.Access(ty.f32(), dpdx, 0_u);
 
     auto res = Eval(b, inst);
-    ASSERT_EQ(res, Success) << res.Failure().reason.Str();
+    ASSERT_EQ(res, Success) << res.Failure();
 
     auto* val = res.Get();
     ASSERT_EQ(val, nullptr);

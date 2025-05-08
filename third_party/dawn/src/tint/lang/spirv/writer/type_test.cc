@@ -164,9 +164,20 @@ TEST_F(SpirvWriterTest, Type_Mat4x2h) {
     EXPECT_INST("%mat4v2half = OpTypeMatrix %v2half 4");
 }
 
+TEST_F(SpirvWriterTest, Type_Array_NoExplicitLayout) {
+    b.Append(b.ir.root_block, [&] {  //
+        b.Var<private_, array<f32, 4>>("v");
+    });
+
+    ASSERT_TRUE(Generate()) << Error() << output_;
+    EXPECT_INST("%_arr_float_uint_4 = OpTypeArray %float %uint_4");
+    EXPECT_THAT(output_, testing::Not(testing::HasSubstr("OpDecorate %_arr_float_uint_4")));
+}
+
 TEST_F(SpirvWriterTest, Type_Array_DefaultStride) {
     b.Append(b.ir.root_block, [&] {  //
-        b.Var<private_, array<f32, 4>, read_write>("v");
+        auto* v = b.Var<storage, array<f32, 4>>("v");
+        v->SetBindingPoint(0, 0);
     });
 
     ASSERT_TRUE(Generate()) << Error() << output_;
@@ -176,7 +187,8 @@ TEST_F(SpirvWriterTest, Type_Array_DefaultStride) {
 
 TEST_F(SpirvWriterTest, Type_Array_ExplicitStride) {
     b.Append(b.ir.root_block, [&] {  //
-        b.Var("v", ty.ptr<private_, read_write>(ty.array<f32, 4>(16)));
+        auto* v = b.Var("v", ty.ptr<storage>(ty.array<f32, 4>(16)));
+        v->SetBindingPoint(0, 0);
     });
 
     ASSERT_TRUE(Generate()) << Error() << output_;
@@ -186,7 +198,8 @@ TEST_F(SpirvWriterTest, Type_Array_ExplicitStride) {
 
 TEST_F(SpirvWriterTest, Type_Array_NestedArray) {
     b.Append(b.ir.root_block, [&] {  //
-        b.Var<private_, array<array<f32, 64>, 4>, read_write>("v");
+        auto* v = b.Var<storage, array<array<f32, 64>, 4>>("v");
+        v->SetBindingPoint(0, 0);
     });
 
     ASSERT_TRUE(Generate()) << Error() << output_;
@@ -218,7 +231,7 @@ TEST_F(SpirvWriterTest, Type_RuntimeArray_ExplicitStride) {
     EXPECT_INST("%_runtimearr_float = OpTypeRuntimeArray %float");
 }
 
-TEST_F(SpirvWriterTest, Type_Struct) {
+TEST_F(SpirvWriterTest, Type_Struct_NoExplicitLayout) {
     auto* str =
         ty.Struct(mod.symbols.New("MyStruct"), {
                                                    {mod.symbols.Register("a"), ty.f32()},
@@ -226,6 +239,25 @@ TEST_F(SpirvWriterTest, Type_Struct) {
                                                });
     b.Append(b.ir.root_block, [&] {  //
         b.Var("v", ty.ptr<private_, read_write>(str));
+    });
+
+    ASSERT_TRUE(Generate()) << Error() << output_;
+    EXPECT_INST("OpMemberName %MyStruct 0 \"a\"");
+    EXPECT_INST("OpMemberName %MyStruct 1 \"b\"");
+    EXPECT_INST("OpName %MyStruct \"MyStruct\"");
+    EXPECT_INST("%MyStruct = OpTypeStruct %float %v4int");
+    EXPECT_THAT(output_, testing::Not(testing::HasSubstr("OpMemberDecorate %MyStruct")));
+}
+
+TEST_F(SpirvWriterTest, Type_Struct) {
+    auto* str =
+        ty.Struct(mod.symbols.New("MyStruct"), {
+                                                   {mod.symbols.Register("a"), ty.f32()},
+                                                   {mod.symbols.Register("b"), ty.vec4<i32>()},
+                                               });
+    b.Append(b.ir.root_block, [&] {  //
+        auto* v = b.Var("v", ty.ptr<storage>(str));
+        v->SetBindingPoint(0, 0);
     });
 
     ASSERT_TRUE(Generate()) << Error() << output_;
@@ -246,15 +278,17 @@ TEST_F(SpirvWriterTest, Type_Struct_MatrixLayout) {
             {mod.symbols.Register("arr"), ty.array(ty.array(ty.mat2x4<f16>(), 4), 4)},
         });
     b.Append(b.ir.root_block, [&] {  //
-        b.Var("v", ty.ptr<private_, read_write>(str));
+        auto* v = b.Var("v", ty.ptr<storage>(str));
+        v->SetBindingPoint(0, 0);
     });
 
     ASSERT_TRUE(Generate()) << Error() << output_;
-    EXPECT_INST("OpMemberDecorate %MyStruct 0 ColMajor");
-    EXPECT_INST("OpMemberDecorate %MyStruct 0 MatrixStride 16");
-    EXPECT_INST("OpMemberDecorate %MyStruct 1 ColMajor");
-    EXPECT_INST("OpMemberDecorate %MyStruct 1 MatrixStride 8");
-    EXPECT_INST("%MyStruct = OpTypeStruct %mat3v3float %_arr__arr_mat2v4half_uint_4_uint_4");
+    EXPECT_INST("OpMemberDecorate %MyStruct_tint_explicit_layout 0 ColMajor");
+    EXPECT_INST("OpMemberDecorate %MyStruct_tint_explicit_layout 0 MatrixStride 16");
+    EXPECT_INST("OpMemberDecorate %MyStruct_tint_explicit_layout 1 ColMajor");
+    EXPECT_INST("OpMemberDecorate %MyStruct_tint_explicit_layout 1 MatrixStride 8");
+    EXPECT_INST(
+        R"(%MyStruct_tint_explicit_layout = OpTypeStruct %mat3v3float %_arr__arr_mat2v4half_uint_4_uint_4)");
 }
 
 TEST_F(SpirvWriterTest, Type_Atomic) {
@@ -304,12 +338,12 @@ TEST_F(SpirvWriterTest, Type_Samplers_Dedup) {
 
 TEST_F(SpirvWriterTest, Type_StorageTexture_Dedup) {
     b.Append(b.ir.root_block, [&] {
-        auto* v1 = b.Var("v1", ty.ptr<handle, read_write>(ty.Get<core::type::StorageTexture>(
+        auto* v1 = b.Var("v1", ty.ptr<handle, read_write>(ty.storage_texture(
                                    core::type::TextureDimension::k2dArray,
-                                   core::TexelFormat::kR32Uint, core::Access::kRead, ty.u32())));
-        auto* v2 = b.Var("v2", ty.ptr<handle, read_write>(ty.Get<core::type::StorageTexture>(
+                                   core::TexelFormat::kR32Uint, core::Access::kRead)));
+        auto* v2 = b.Var("v2", ty.ptr<handle, read_write>(ty.storage_texture(
                                    core::type::TextureDimension::k2dArray,
-                                   core::TexelFormat::kR32Uint, core::Access::kWrite, ty.u32())));
+                                   core::TexelFormat::kR32Uint, core::Access::kWrite)));
         v1->SetBindingPoint(0, 1);
         v2->SetBindingPoint(0, 2);
     });
@@ -333,8 +367,8 @@ using Type_SampledTexture = SpirvWriterTestWithParam<TextureCase>;
 TEST_P(Type_SampledTexture, Emit) {
     auto params = GetParam();
     b.Append(b.ir.root_block, [&] {
-        auto* v = b.Var("v", ty.ptr<handle, read_write>(ty.Get<core::type::SampledTexture>(
-                                 params.dim, MakeScalarType(params.format))));
+        auto* v = b.Var("v", ty.ptr<handle, read_write>(
+                                 ty.sampled_texture(params.dim, MakeScalarType(params.format))));
         v->SetBindingPoint(0, 0);
     });
 
@@ -405,8 +439,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_F(SpirvWriterTest, Type_DepthTexture_DedupWithSampledTexture) {
     b.Append(b.ir.root_block, [&] {
-        auto* v1 = b.Var("v1", ty.ptr<handle, read_write>(
-                                   ty.Get<core::type::SampledTexture>(Dim::k2d, ty.f32())));
+        auto* v1 = b.Var("v1", ty.ptr<handle, read_write>(ty.sampled_texture(Dim::k2d, ty.f32())));
         auto* v2 =
             b.Var("v2", ty.ptr<handle, read_write>(ty.Get<core::type::DepthTexture>(Dim::k2d)));
         v1->SetBindingPoint(0, 1);
@@ -468,10 +501,8 @@ using Type_StorageTexture = SpirvWriterTestWithParam<StorageTextureCase>;
 TEST_P(Type_StorageTexture, Emit) {
     auto params = GetParam();
     b.Append(b.ir.root_block, [&] {
-        auto* v =
-            b.Var("v", ty.ptr<handle, read_write>(ty.Get<core::type::StorageTexture>(
-                           params.dim, params.format, core::Access::kWrite,
-                           core::type::StorageTexture::SubtypeFor(params.format, mod.Types()))));
+        auto* v = b.Var("v", ty.ptr<handle, read_write>(ty.storage_texture(
+                                 params.dim, params.format, core::Access::kWrite)));
         v->SetBindingPoint(0, 0);
     });
 
@@ -541,8 +572,8 @@ TEST_F(SpirvWriterTest, Type_SubgroupMatrix) {
     EXPECT_INST("OpCapability CooperativeMatrixKHR");
     EXPECT_INST("OpExtension \"SPV_KHR_cooperative_matrix\"");
     EXPECT_INST("%3 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_4 %uint_8 %uint_0");
-    EXPECT_INST("%13 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_8 %uint_4 %uint_1");
-    EXPECT_INST("%18 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_2 %uint_2 %uint_2");
+    EXPECT_INST("%14 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_8 %uint_4 %uint_1");
+    EXPECT_INST("%19 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_2 %uint_2 %uint_2");
 }
 
 // Test that we can emit multiple types.

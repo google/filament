@@ -63,8 +63,20 @@ BENCHMARK(CoreDiagnosticRuleParser);
 
 void ChromiumDiagnosticRuleParser(::benchmark::State& state) {
     const char* kStrings[] = {
-        "unreahaXgge_code", "unreahale_Xodu",    "unrea3hable_code",  "unreachable_code",
-        "unrEachable_code", "uPPrTTacable_code", "uneddchaxxle_code",
+        "sbgroup_ggatrix_uniformXty",
+        "suVroup_matrx_uniforXitu",
+        "subgroup_ma3rix_uniformity",
+        "subgroup_matrix_uniformity",
+        "subgroup_matrix_uniformitE",
+        "subgroup_atrix_uniTTPormity",
+        "suxxdgroup_matri_uniformity",
+        "44nreachable_code",
+        "unreaVVhabSSe_code",
+        "unre22chabR_Rode",
+        "unreachable_code",
+        "nFeachable_9ode",
+        "unrachable_code",
+        "VnreacaRRlH_OOode",
     };
     for (auto _ : state) {
         for (auto* str : kStrings) {

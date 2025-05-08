@@ -41,6 +41,8 @@
 #include <utils/algorithm.h>
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/StaticString.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
@@ -152,10 +154,20 @@ Texture::Builder& Texture::Builder::name(const char* name, size_t const len) noe
     return BuilderNameMixin::name(name, len);
 }
 
+Texture::Builder& Texture::Builder::name(StaticString const& name) noexcept {
+    return BuilderNameMixin::name(name);
+}
+
 Texture* Texture::Builder::build(Engine& engine) {
     if (mImpl->mTarget != SamplerType::SAMPLER_EXTERNAL) {
         FILAMENT_CHECK_PRECONDITION(Texture::isTextureFormatSupported(engine, mImpl->mFormat))
-                << "Texture format " << uint16_t(mImpl->mFormat) << " not supported on this platform";
+                << "Texture format " << uint16_t(mImpl->mFormat)
+                << " not supported on this platform, texture name="
+                << getNameOrDefault().c_str_safe();
+
+        FILAMENT_CHECK_PRECONDITION(mImpl->mWidth > 0 && mImpl->mHeight > 0)
+                << "Texture has invalid dimensions: (" << mImpl->mWidth << ", " << mImpl->mHeight
+                << "), texture name=" << getNameOrDefault().c_str_safe();
     }
     const bool isProtectedTexturesSupported =
             downcast(engine).getDriverApi().isProtectedTexturesSupported();

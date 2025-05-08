@@ -55,4 +55,9 @@ public:
 
 } // namespace filament::backend
 
+#if !defined(NDEBUG)
+utils::io::ostream& operator<<(utils::io::ostream& out,
+        const filament::backend::BufferObjectStreamDescriptor& b);
+#endif
+
 #endif // TNT_FILAMENT_BACKEND_BUFFEROBJECTSTREAMDESCRIPTOR_H

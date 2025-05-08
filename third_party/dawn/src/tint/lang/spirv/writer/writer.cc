@@ -42,6 +42,15 @@
 namespace tint::spirv::writer {
 
 Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& options) {
+    // Check optionally supported types against their required options.
+    for (auto* ty : ir.Types()) {
+        if (ty->Is<core::type::SubgroupMatrix>()) {
+            if (!options.use_vulkan_memory_model) {
+                return Failure("using subgroup matrices requires the Vulkan Memory Model");
+            }
+        }
+    }
+
     // If a remapped entry point name is provided, it must not be empty, and must not contain
     // embedded null characters.
     if (!options.remapped_entry_point_name.empty()) {
@@ -67,7 +76,7 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
     uint32_t user_push_constant_size = 0;
     for (auto* inst : *ir.root_block) {
         auto* var = inst->As<core::ir::Var>();
-        auto* ptr = var->Result(0)->Type()->As<core::type::Pointer>();
+        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         if (ptr->AddressSpace() == core::AddressSpace::kPixelLocal) {
             return Failure("pixel_local address space is not supported by the SPIR-V backend");
         }

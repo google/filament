@@ -86,6 +86,29 @@ TEST(ChainUtilsTests, ValidateAndUnpackUnexpected) {
     }
 }
 
+// Inject invalid chain extensions cause an error.
+TEST(ChainUtilsTests, ValidateAndUnpackInjected) {
+    {
+        // TextureViewDescriptor (as of when this test was written) does not have any valid chains
+        // in the JSON nor via additional extensions.
+        TextureViewDescriptor desc;
+        DawnInjectedInvalidSType chain;
+        chain.invalidSType = wgpu::SType::ShaderSourceWGSL;
+        desc.nextInChain = &chain;
+        EXPECT_THAT(ValidateAndUnpack(&desc).AcquireError()->GetFormattedMessage(),
+                    HasSubstr("ShaderSourceWGSL"));
+    }
+    {
+        // InstanceDescriptor has at least 1 valid chain extension.
+        InstanceDescriptor desc;
+        DawnInjectedInvalidSType chain;
+        chain.invalidSType = wgpu::SType::ShaderSourceWGSL;
+        desc.nextInChain = &chain;
+        EXPECT_THAT(ValidateAndUnpack(&desc).AcquireError()->GetFormattedMessage(),
+                    HasSubstr("ShaderSourceWGSL"));
+    }
+}
+
 // Nominal unpacking valid descriptors should return the expected descriptors in the unpacked type.
 TEST(ChainUtilsTests, ValidateAndUnpack) {
     // DawnTogglesDescriptor is a valid extension for InstanceDescriptor.

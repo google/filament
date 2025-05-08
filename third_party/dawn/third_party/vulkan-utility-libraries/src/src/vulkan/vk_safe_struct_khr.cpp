@@ -7740,6 +7740,69 @@ void safe_VkDisplayPlaneCapabilities2KHR::initialize(const safe_VkDisplayPlaneCa
     capabilities = copy_src->capabilities;
     pNext = SafePnextCopy(copy_src->pNext);
 }
+
+safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR::safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR(
+    const VkPhysicalDeviceShaderBfloat16FeaturesKHR* in_struct, [[maybe_unused]] PNextCopyState* copy_state, bool copy_pnext)
+    : sType(in_struct->sType),
+      shaderBFloat16Type(in_struct->shaderBFloat16Type),
+      shaderBFloat16DotProduct(in_struct->shaderBFloat16DotProduct),
+      shaderBFloat16CooperativeMatrix(in_struct->shaderBFloat16CooperativeMatrix) {
+    if (copy_pnext) {
+        pNext = SafePnextCopy(in_struct->pNext, copy_state);
+    }
+}
+
+safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR::safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR()
+    : sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_BFLOAT16_FEATURES_KHR),
+      pNext(nullptr),
+      shaderBFloat16Type(),
+      shaderBFloat16DotProduct(),
+      shaderBFloat16CooperativeMatrix() {}
+
+safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR::safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR(
+    const safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR& copy_src) {
+    sType = copy_src.sType;
+    shaderBFloat16Type = copy_src.shaderBFloat16Type;
+    shaderBFloat16DotProduct = copy_src.shaderBFloat16DotProduct;
+    shaderBFloat16CooperativeMatrix = copy_src.shaderBFloat16CooperativeMatrix;
+    pNext = SafePnextCopy(copy_src.pNext);
+}
+
+safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR& safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR::operator=(
+    const safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR& copy_src) {
+    if (&copy_src == this) return *this;
+
+    FreePnextChain(pNext);
+
+    sType = copy_src.sType;
+    shaderBFloat16Type = copy_src.shaderBFloat16Type;
+    shaderBFloat16DotProduct = copy_src.shaderBFloat16DotProduct;
+    shaderBFloat16CooperativeMatrix = copy_src.shaderBFloat16CooperativeMatrix;
+    pNext = SafePnextCopy(copy_src.pNext);
+
+    return *this;
+}
+
+safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR::~safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR() { FreePnextChain(pNext); }
+
+void safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR::initialize(const VkPhysicalDeviceShaderBfloat16FeaturesKHR* in_struct,
+                                                                [[maybe_unused]] PNextCopyState* copy_state) {
+    FreePnextChain(pNext);
+    sType = in_struct->sType;
+    shaderBFloat16Type = in_struct->shaderBFloat16Type;
+    shaderBFloat16DotProduct = in_struct->shaderBFloat16DotProduct;
+    shaderBFloat16CooperativeMatrix = in_struct->shaderBFloat16CooperativeMatrix;
+    pNext = SafePnextCopy(in_struct->pNext, copy_state);
+}
+
+void safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR::initialize(const safe_VkPhysicalDeviceShaderBfloat16FeaturesKHR* copy_src,
+                                                                [[maybe_unused]] PNextCopyState* copy_state) {
+    sType = copy_src->sType;
+    shaderBFloat16Type = copy_src->shaderBFloat16Type;
+    shaderBFloat16DotProduct = copy_src->shaderBFloat16DotProduct;
+    shaderBFloat16CooperativeMatrix = copy_src->shaderBFloat16CooperativeMatrix;
+    pNext = SafePnextCopy(copy_src->pNext);
+}
 #ifdef VK_ENABLE_BETA_EXTENSIONS
 
 safe_VkPhysicalDevicePortabilitySubsetFeaturesKHR::safe_VkPhysicalDevicePortabilitySubsetFeaturesKHR(

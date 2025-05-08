@@ -9,20 +9,32 @@ on:
     - main
 
 jobs:
-  build-desktop:
-    name: build-desktop
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [macos-14-xlarge, ubuntu-22.04-16core]
-
+  build-desktop-mac:
+    name: build-mac
+    runs-on: macos-14-xlarge
     steps:
       - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/mac-prereq
       - name: Run build script
         run: |
-          WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
-          cd build/$WORKFLOW_OS && printf "y" | ./build.sh presubmit
+          cd build/mac && printf "y" | ./build.sh presubmit
+      - name: Test material parser
+        run: |
+          out/cmake-release/filament/test/test_material_parser
+
+  build-desktop-linux:
+    name: build-linux
+    runs-on: ubuntu-22.04-16core
+    steps:
+      - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/linux-prereq
+      - name: Run build script
+        run: |
+          cd build/linux && printf "y" | ./build.sh presubmit
       - name: Test material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
@@ -33,6 +45,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
       - name: Run build script
         run: |
           build\windows\build-github.bat presubmit
@@ -40,10 +54,13 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-16core'
 
     steps:
       - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/linux-prereq
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
@@ -60,6 +77,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/mac-prereq
       - name: Run build script
         run: |
           cd build/ios && printf "y" | ./build.sh presubmit
@@ -69,17 +89,21 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-16core'
 
     steps:
       - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/linux-prereq
+      - uses: ./.github/actions/web-prereq
       - name: Run build script
         run: |
           cd build/web && printf "y" | ./build.sh presubmit
 
   validate-docs:
     name: validate-docs
-    runs-on: ubuntu-22.04-4core
+    runs-on: 'ubuntu-24.04-4core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -95,18 +119,22 @@ jobs:
     runs-on: macos-14-xlarge
     steps:
       - uses: actions/checkout@v4.1.6
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
-      - name: Set up Python
-        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
-      - name: Install python prereqs
-        run: pip install mako setuptools pyyaml
-      - name: Run script
+          fetch-depth: 0
+      - uses: ./.github/actions/mac-prereq
+      - name: Cache Mesa and deps
+        id: mesa-cache
+        uses: actions/cache@v4
+        with:
+          path: mesa
+          key: ${{ runner.os }}-mesa-deps-2-${{ vars.MESA_VERSION }}
+      - name: Prerequisites
+        id: prereqs
         run: |
-          bash test/renderdiff/test.sh
+          bash test/utils/get_mesa.sh
+          pip install tifffile numpy
+      - name: Run Test
+        run: bash test/renderdiff/test.sh
       - uses: actions/upload-artifact@v4
         with:
           name: presubmit-renderdiff-result
@@ -114,11 +142,34 @@ jobs:
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
-    runs-on: ubuntu-22.04-8core
-
+    runs-on: 'ubuntu-24.04-8core'
     steps:
       - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/linux-prereq
       - name: Run build script
-        run: source ./build/linux/ci-common.sh && ./build.sh -W debug test_filamat filament
+        run: ./build.sh -W debug test_filamat filament
       - name: Run test
         run: ./out/cmake-debug/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
+
+  code-correctness:
+    name: code-correctness
+    runs-on: 'macos-14-xlarge'
+    steps:
+      - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/mac-prereq
+      - name: Install clang-tidy and deps
+        run: |
+          pip install pyyaml
+          brew install llvm@${GITHUB_LLVM_VERSION}
+          sudo ln -s "$(brew --prefix llvm)@${GITHUB_LLVM_VERSION}/bin/clang-tidy" "/usr/local/bin/clang-tidy"
+      - name: Run build script
+        # We need to build before clang-tidy can run analysis
+        run: |
+          # This will build for all three desktop backends on mac
+          ./build.sh -p desktop debug gltf_viewer
+      - name: Run test
+        run: bash test/code-correctness/test.sh

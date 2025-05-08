@@ -71,7 +71,7 @@ TEST_F(IR_ValueTest, Usages) {
     auto* i2 = b.Construct(ty.i32(), 2_i);
     auto* i3 = b.Construct(ty.i32(), 3_i);
 
-    auto* target = b.Let(ty.i32())->Result(0);
+    auto* target = b.Let(ty.i32())->Result();
 
     target->AddUsage(Usage{i2, 3});
     target->AddUsage(Usage{i2, 2});
@@ -95,7 +95,7 @@ TEST_F(IR_ValueDeathTest, Destroy_HasSource) {
         {
             Module mod;
             Builder b{mod};
-            auto* val = b.Add(mod.Types().i32(), 1_i, 2_i)->Result(0);
+            auto* val = b.Add(mod.Types().i32(), 1_i, 2_i)->Result();
             val->Destroy();
         },
         "internal compiler error");

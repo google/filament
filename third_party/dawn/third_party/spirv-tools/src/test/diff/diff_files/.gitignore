@@ -1,3 +1,0 @@
-# To aid debugging no-dbg variants, the temporary files used to strip debug information are placed
-# in a hidden directory and aren't removed after generation.
-.no_dbg/

@@ -27,8 +27,8 @@
 
 #include "src/tint/lang/core/ir/transform/single_entry_point.h"
 
-#include <utility>
-
+#include "src/tint/lang/core/ir/block.h"
+#include "src/tint/lang/core/ir/instruction_result.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/referenced_functions.h"
 #include "src/tint/lang/core/ir/referenced_module_decls.h"
@@ -38,7 +38,7 @@ namespace tint::core::ir::transform {
 
 namespace {
 
-Result<SuccessType> Run(ir::Module& ir, std::string_view entry_point_name) {
+void Run(ir::Module& ir, std::string_view entry_point_name) {
     // Find the entry point.
     ir::Function* entry_point = nullptr;
     for (auto& func : ir.functions) {
@@ -82,13 +82,14 @@ Result<SuccessType> Run(ir::Module& ir, std::string_view entry_point_name) {
         auto prev = inst->prev;
         if (!referenced_vars.Contains(inst)) {
             // There shouldn't be any remaining references to the variable.
-            TINT_ASSERT(inst->Result(0)->NumUsages() == 0);
+            if (inst->Result()->NumUsages() != 0) {
+                TINT_ICE() << " Unexpected usages remain when applying single entry point IR for  '"
+                           << entry_point_name << "' ";
+            }
             inst->Destroy();
         }
         inst = prev;
     }
-
-    return Success;
 }
 
 }  // namespace
@@ -100,7 +101,9 @@ Result<SuccessType> SingleEntryPoint(Module& ir, std::string_view entry_point_na
         return result.Failure();
     }
 
-    return Run(ir, entry_point_name);
+    Run(ir, entry_point_name);
+
+    return Success;
 }
 
 }  // namespace tint::core::ir::transform

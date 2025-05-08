@@ -29,8 +29,42 @@ on:
     types: [created]
 
 jobs:
-  build-desktop:
-    name: build-desktop
+  build-linux:
+    name: build-linux
+    runs-on: ubuntu-22.04-32core
+    if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
+
+    steps:
+      - name: Decide Git ref
+        id: git_ref
+        run: |
+          REF=${RELEASE_TAG:-${GITHUB_REF}}
+          TAG=${REF##*/}
+          echo "ref=${REF}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4.1.6
+        with:
+          ref: ${{ steps.git_ref.outputs.ref }}
+      - uses: ./.github/actions/linux-prereq
+      - name: Run build script
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+        run: |
+          cd build/linux && printf "y" | ./build.sh release
+          cd ../..
+          mv out/filament-release-linux.tgz out/filament-${TAG}-linux.tgz
+      - uses: actions/github-script@v6
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+        with:
+          script: |
+            const upload = require('./build/common/upload-release-assets');
+            const { TAG } = process.env;
+            const globber = await glob.create('out/*.tgz');
+            await upload({ github, context }, await globber.glob(), TAG);
+
+  build-mac:
+    name: build-mac
     runs-on: ${{ matrix.os }}
     if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
 
@@ -49,15 +83,14 @@ jobs:
       - uses: actions/checkout@v4.1.6
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
+      - uses: ./.github/actions/mac-prereq
       - name: Run build script
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         run: |
-          WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
-          cd build/$WORKFLOW_OS && printf "y" | ./build.sh release
+          cd build/mac && printf "y" | ./build.sh release
           cd ../..
-          if [ -f out/filament-release-darwin.tgz ]; then mv out/filament-release-darwin.tgz out/filament-${TAG}-mac.tgz; fi;
-          if [ -f out/filament-release-linux.tgz ]; then mv out/filament-release-linux.tgz out/filament-${TAG}-linux.tgz; fi;
+          mv out/filament-release-darwin.tgz out/filament-${TAG}-mac.tgz
       - uses: actions/github-script@v6
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
@@ -70,7 +103,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'web'
 
     steps:
@@ -84,6 +117,8 @@ jobs:
       - uses: actions/checkout@v4.1.6
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
+      - uses: ./.github/actions/linux-prereq
+      - uses: ./.github/actions/web-prereq
       - name: Run build script
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
@@ -103,7 +138,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'android'
 
     steps:
@@ -121,6 +156,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      - uses: ./.github/actions/linux-prereq
       - name: Run build script
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
@@ -171,6 +207,7 @@ jobs:
       - uses: actions/checkout@v4.1.6
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
+      - uses: ./.github/actions/mac-prereq
       - name: Run build script
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}

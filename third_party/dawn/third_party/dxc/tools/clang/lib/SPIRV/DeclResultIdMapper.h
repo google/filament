@@ -559,6 +559,11 @@ public:
     return value;
   }
 
+  SpirvVariable *getMSOutIndicesBuiltin() {
+    assert(msOutIndicesBuiltin && "Variable usage before decl parsing.");
+    return msOutIndicesBuiltin;
+  }
+
   /// Decorate with spirv intrinsic attributes with lamda function variable
   /// check
   void decorateWithIntrinsicAttrs(
@@ -1014,6 +1019,25 @@ private:
   /// creating that stage variable, so that we don't need to query them again
   /// for reading and writing.
   llvm::DenseMap<const ValueDecl *, SpirvVariable *> stageVarInstructions;
+
+  /// Special case for the Indices builtin:
+  /// - this builtin has a different layout in HLSL & SPIR-V, meaning it
+  /// requires
+  ///   the same kind of handling as classic stageVarInstructions:
+  ///   -> load into a HLSL compatible tmp
+  ///   -> write back into the SPIR-V compatible layout.
+  /// - but the builtin is shared across invocations (not only lanes).
+  ///   -> we must only write/read from the indices requested by the user.
+  /// - the variable can be passed to other functions as a out param
+  ///   -> we cannot copy-in/copy-out because shared across invocations.
+  ///   -> we cannot pass a simple pointer: layout differences between
+  ///   HLSL/SPIR-V.
+  ///
+  /// All this means we must keep track of the builtin, and each assignment to
+  /// this will have to handle the layout differences. The easiest solution is
+  /// to keep this builtin global to the module if present.
+  SpirvVariable *msOutIndicesBuiltin = nullptr;
+
   /// Vector of all defined resource variables.
   llvm::SmallVector<ResourceVar, 8> resourceVars;
   /// Mapping from {RW|Append|Consume}StructuredBuffers to their

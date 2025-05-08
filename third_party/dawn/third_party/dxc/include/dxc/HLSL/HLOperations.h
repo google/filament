@@ -398,6 +398,10 @@ const unsigned kAnnotateHandleResourceTypeOpIdx = 3;
 const unsigned kTraceRayRayDescOpIdx = 7;
 const unsigned kTraceRayPayLoadOpIdx = 8;
 
+// AllocateRayQuery
+const unsigned kAllocateRayQueryRayFlagsIdx = 1;
+const unsigned kAllocateRayQueryRayQueryFlagsIdx = 2;
+
 // CallShader.
 const unsigned kCallShaderPayloadOpIdx = 2;
 

@@ -99,6 +99,7 @@ class TrimCapabilitiesPass : public Pass {
       spv::Capability::RayTraversalPrimitiveCullingKHR,
       spv::Capability::Shader,
       spv::Capability::ShaderClockKHR,
+      spv::Capability::StorageBuffer16BitAccess,
       spv::Capability::StorageImageReadWithoutFormat,
       spv::Capability::StorageImageWriteWithoutFormat,
       spv::Capability::StorageInputOutput16,
@@ -106,6 +107,7 @@ class TrimCapabilitiesPass : public Pass {
       spv::Capability::StorageUniform16,
       spv::Capability::StorageUniformBufferBlock16,
       spv::Capability::VulkanMemoryModelDeviceScope,
+      spv::Capability::QuadControlKHR,
       // clang-format on
   };
 

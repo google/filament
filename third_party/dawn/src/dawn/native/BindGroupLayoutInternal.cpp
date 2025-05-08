@@ -103,7 +103,8 @@ MaybeError ValidateBindGroupLayoutEntry(DeviceBase* device,
 
         // The kInternalStorageBufferBinding is used internally and not a value
         // in wgpu::BufferBindingType.
-        if (buffer.type == kInternalStorageBufferBinding) {
+        if (buffer.type == kInternalStorageBufferBinding ||
+            buffer.type == kInternalReadOnlyStorageBufferBinding) {
             DAWN_INVALID_IF(!allowInternalBinding, "Internal binding types are disallowed");
         } else {
             DAWN_TRY(ValidateBufferBindingType(buffer.type));
@@ -676,7 +677,7 @@ void BindGroupLayoutInternalBase::DestroyImpl() {
 }
 
 ObjectType BindGroupLayoutInternalBase::GetType() const {
-    return ObjectType::BindGroupLayout;
+    return ObjectType::BindGroupLayoutInternal;
 }
 
 const BindingInfo& BindGroupLayoutInternalBase::GetBindingInfo(BindingIndex bindingIndex) const {
@@ -700,6 +701,8 @@ BindingIndex BindGroupLayoutInternalBase::GetBindingIndex(BindingNumber bindingN
     DAWN_ASSERT(it != mBindingMap.end());
     return it->second;
 }
+
+void BindGroupLayoutInternalBase::ReduceMemoryUsage() {}
 
 size_t BindGroupLayoutInternalBase::ComputeContentHash() {
     ObjectContentHasher recorder;
@@ -842,6 +845,7 @@ bool BindGroupLayoutInternalBase::IsStorageBufferBinding(BindingIndex bindingInd
         case wgpu::BufferBindingType::Uniform:
             return false;
         case kInternalStorageBufferBinding:
+        case kInternalReadOnlyStorageBufferBinding:
         case wgpu::BufferBindingType::Storage:
         case wgpu::BufferBindingType::ReadOnlyStorage:
             return true;

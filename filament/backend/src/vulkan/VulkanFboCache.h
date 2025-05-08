@@ -106,8 +106,11 @@ public:
     // Evicts old unused Vulkan objects. Call this once per frame.
     void gc() noexcept;
 
+    // Frees all Framebuffer objects. Call this every time a the swapchain is resized
+    void resetFramebuffers() noexcept;
+
     // Frees all Vulkan objects. Call this during shutdown before the device is destroyed.
-    void reset() noexcept;
+    void terminate() noexcept;
 
 private:
     VkDevice mDevice;

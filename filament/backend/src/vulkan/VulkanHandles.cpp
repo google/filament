@@ -30,6 +30,7 @@
 
 #include <backend/platforms/VulkanPlatform.h>
 
+#include <utils/compiler.h> // UTILS_FALLTHROUGH
 #include <utils/Panic.h>    // ASSERT_POSTCONDITION
 
 using namespace bluevk;
@@ -89,8 +90,9 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
                 }
                 break;
             }
-            // TODO: properly handle external sampler
             case DescriptorType::SAMPLER_EXTERNAL:
+                fromStageFlags(binding.stageFlags, binding.binding, mask.externalSampler);
+                UTILS_FALLTHROUGH;
             case DescriptorType::SAMPLER: {
                 fromStageFlags(binding.stageFlags, binding.binding, mask.sampler);
                 break;
@@ -147,11 +149,18 @@ void VulkanDescriptorSet::acquire(fvkmemory::resource_ptr<VulkanBufferObject> ob
     mResources.push_back(obj);
 }
 
-VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(DescriptorSetLayout const& layout)
+VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(DescriptorSetLayout&& layout,
+        VkDescriptorSetLayout vkLayout)
     : bitmask(fromBackendLayout(layout)),
-      count(Count::fromLayoutBitmask(bitmask)) {}
+      count(Count::fromLayoutBitmask(bitmask)),
+      mVkLayout(vkLayout) {}
 
-PushConstantDescription::PushConstantDescription(backend::Program const& program) noexcept {
+VulkanDescriptorSetLayout::Bitmask VulkanDescriptorSetLayout::Bitmask::fromLayoutDescription(
+        DescriptorSetLayout const& layout) {
+    return fromBackendLayout(layout);
+}
+
+PushConstantDescription::PushConstantDescription(backend::Program const& program) {
     mRangeCount = 0;
     for (auto stage : { ShaderStage::VERTEX, ShaderStage::FRAGMENT, ShaderStage::COMPUTE }) {
         auto const& constants = program.getPushConstants(stage);

@@ -181,8 +181,10 @@ TEST_F(ExternalTextureTest, CreateExternalTextureValidation) {
     // Creating an external texture from a texture without TextureUsage::TextureBinding should
     // fail.
     {
-        wgpu::TextureDescriptor textureDescriptor = CreateTextureDescriptor();
-        textureDescriptor.mipLevelCount = 2;
+        wgpu::TextureDescriptor textureDescriptor = {};
+        textureDescriptor.usage = wgpu::TextureUsage::RenderAttachment;
+        textureDescriptor.size = {kWidth, kHeight, kDefaultDepth};
+        textureDescriptor.format = kDefaultTextureFormat;
         wgpu::Texture internalTexture = device.CreateTexture(&textureDescriptor);
 
         wgpu::ExternalTextureDescriptor externalDesc = CreateDefaultExternalTextureDescriptor();
@@ -584,20 +586,28 @@ TEST_F(ExternalTextureTest, SubmitDereferencedExternalTextureInRenderPass) {
     }
 }
 
-// Ensure that bind group validation catches external textures mimatched from the BGL.
+// Ensure that bind group validation catches mismatched entries for BGL external texture entries.
 TEST_F(ExternalTextureTest, BindGroupDoesNotMatchLayout) {
     wgpu::TextureDescriptor textureDescriptor = CreateTextureDescriptor();
     wgpu::Texture texture = device.CreateTexture(&textureDescriptor);
+    wgpu::TextureView textureView = texture.CreateView();
 
     wgpu::ExternalTextureDescriptor externalDesc = CreateDefaultExternalTextureDescriptor();
-    externalDesc.plane0 = texture.CreateView();
+    externalDesc.plane0 = textureView;
     wgpu::ExternalTexture externalTexture = device.CreateExternalTexture(&externalDesc);
 
-    // Control case should succeed.
+    // Control case for external texture should succeed.
     {
         wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
             device, {{0, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout}});
         utils::MakeBindGroup(device, bgl, {{0, externalTexture}});
+    }
+
+    // Control case for texture view should succeed.
+    {
+        wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
+            device, {{0, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout}});
+        utils::MakeBindGroup(device, bgl, {{0, textureView}});
     }
 
     // Bind group creation should fail when an external texture is not present in the
@@ -609,9 +619,14 @@ TEST_F(ExternalTextureTest, BindGroupDoesNotMatchLayout) {
     }
 }
 
+class ExternalTextureTestSafe : public ExternalTextureTest {
+  protected:
+    bool AllowUnsafeAPIs() override { return false; }
+};
+
 // Regression test for crbug.com/1343099 where BindGroup validation let other binding types be used
 // for external texture bindings.
-TEST_F(ExternalTextureTest, TextureViewBindingDoesntMatch) {
+TEST_F(ExternalTextureTestSafe, TextureViewBindingDoesntMatch) {
     wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
         device, {{0, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout}});
 
@@ -719,7 +734,7 @@ TEST_F(ExternalTextureTest, CreateExternalTextureWithErrorCropOriginOrSize) {
 
 // Test create external texture with too large apparent size results in error.
 TEST_F(ExternalTextureTest, CreateExternalTextureWithApparentSizeTooLarge) {
-    wgpu::SupportedLimits limits;
+    wgpu::Limits limits;
     device.GetLimits(&limits);
 
     // Control case should succeed.
@@ -731,8 +746,7 @@ TEST_F(ExternalTextureTest, CreateExternalTextureWithApparentSizeTooLarge) {
         externalDesc.plane0 = texture.CreateView();
         externalDesc.cropOrigin = {0, 0};
         externalDesc.cropSize = {texture.GetWidth(), texture.GetHeight()};
-        externalDesc.apparentSize = {limits.limits.maxTextureDimension2D,
-                                     limits.limits.maxTextureDimension2D};
+        externalDesc.apparentSize = {limits.maxTextureDimension2D, limits.maxTextureDimension2D};
         device.CreateExternalTexture(&externalDesc);
     }
 
@@ -745,8 +759,8 @@ TEST_F(ExternalTextureTest, CreateExternalTextureWithApparentSizeTooLarge) {
         externalDesc.plane0 = texture.CreateView();
         externalDesc.cropOrigin = {0, 0};
         externalDesc.cropSize = {texture.GetWidth(), texture.GetHeight()};
-        externalDesc.apparentSize = {limits.limits.maxTextureDimension2D + 1,
-                                     limits.limits.maxTextureDimension2D};
+        externalDesc.apparentSize = {limits.maxTextureDimension2D + 1,
+                                     limits.maxTextureDimension2D};
         ASSERT_DEVICE_ERROR(device.CreateExternalTexture(&externalDesc));
     }
 
@@ -759,8 +773,8 @@ TEST_F(ExternalTextureTest, CreateExternalTextureWithApparentSizeTooLarge) {
         externalDesc.plane0 = texture.CreateView();
         externalDesc.cropOrigin = {0, 0};
         externalDesc.cropSize = {texture.GetWidth(), texture.GetHeight()};
-        externalDesc.apparentSize = {limits.limits.maxTextureDimension2D,
-                                     limits.limits.maxTextureDimension2D + 1};
+        externalDesc.apparentSize = {limits.maxTextureDimension2D,
+                                     limits.maxTextureDimension2D + 1};
         ASSERT_DEVICE_ERROR(device.CreateExternalTexture(&externalDesc));
     }
 }
@@ -801,6 +815,131 @@ TEST_F(ExternalTextureTest, SubmitExternalTextureWithDestroyedPlane) {
     }
 
     // Destroying the plane0 backed texture should result in an error.
+    {
+        texture.Destroy();
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+        {
+            pass.SetBindGroup(0, bindGroup);
+            pass.End();
+        }
+
+        wgpu::CommandBuffer commands = encoder.Finish();
+        ASSERT_DEVICE_ERROR(queue.Submit(1, &commands));
+    }
+}
+
+// Ensure that bind group validation catches invalid texture views.
+TEST_F(ExternalTextureTest, TextureViewValidation) {
+    wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout}});
+
+    // A texture view from a 2D, single-subresource texture should succeed.
+    {
+        wgpu::TextureDescriptor textureDescriptor = CreateTextureDescriptor();
+        wgpu::Texture texture = device.CreateTexture(&textureDescriptor);
+
+        wgpu::TextureView textureView = texture.CreateView();
+        utils::MakeBindGroup(device, bgl, {{0, textureView}});
+    }
+
+    // A texture view from a non-2D texture should fail.
+    {
+        wgpu::TextureDescriptor textureDescriptor = CreateTextureDescriptor();
+        textureDescriptor.dimension = wgpu::TextureDimension::e3D;
+        textureDescriptor.usage = wgpu::TextureUsage::TextureBinding;
+        wgpu::Texture internalTexture = device.CreateTexture(&textureDescriptor);
+
+        wgpu::TextureView textureView = internalTexture.CreateView();
+        ASSERT_DEVICE_ERROR(utils::MakeBindGroup(device, bgl, {{0, textureView}}));
+    }
+
+    // A texture view from a texture with mip count > 1 should fail.
+    {
+        wgpu::TextureDescriptor textureDescriptor = CreateTextureDescriptor();
+        textureDescriptor.mipLevelCount = 2;
+        wgpu::Texture internalTexture = device.CreateTexture(&textureDescriptor);
+
+        wgpu::TextureView textureView = internalTexture.CreateView();
+        ASSERT_DEVICE_ERROR(utils::MakeBindGroup(device, bgl, {{0, textureView}}));
+    }
+
+    // A texture view from a texture without TextureUsage::TextureBinding should
+    // fail.
+    {
+        wgpu::TextureDescriptor textureDescriptor = CreateTextureDescriptor();
+        textureDescriptor.usage = wgpu::TextureUsage::RenderAttachment;
+        wgpu::Texture internalTexture = device.CreateTexture(&textureDescriptor);
+
+        wgpu::TextureView textureView = internalTexture.CreateView();
+        ASSERT_DEVICE_ERROR(utils::MakeBindGroup(device, bgl, {{0, textureView}}));
+    }
+
+    // A texture view from a multisampled texture should fail.
+    {
+        wgpu::TextureDescriptor textureDescriptor = CreateTextureDescriptor();
+        textureDescriptor.sampleCount = 4;
+        wgpu::Texture internalTexture = device.CreateTexture(&textureDescriptor);
+
+        wgpu::TextureView textureView = internalTexture.CreateView();
+        ASSERT_DEVICE_ERROR(utils::MakeBindGroup(device, bgl, {{0, textureView}}));
+    }
+}
+
+// Ensure that bind group validation catches invalid texture views for non supported context
+// formats.
+TEST_F(ExternalTextureTest, TextureViewValidationForNonSupportedContextFormats) {
+    wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout}});
+
+    for (wgpu::TextureFormat format : utils::kFormatsInCoreSpec) {
+        if (!utils::IsRenderableFormat(device, format)) {
+            continue;
+        }
+        wgpu::TextureDescriptor textureDescriptor = CreateTextureDescriptor(format);
+        wgpu::Texture texture = device.CreateTexture(&textureDescriptor);
+        if (utils::IsSupportedContextFormat(format)) {
+            utils::MakeBindGroup(device, bgl, {{0, texture.CreateView()}});
+        } else {
+            ASSERT_DEVICE_ERROR(utils::MakeBindGroup(device, bgl, {{0, texture.CreateView()}}));
+        }
+    }
+}
+
+// Test that submitting a texture view with a destroyed texture results in error.
+TEST_F(ExternalTextureTest, SubmitTextureViewWithDestroyedTexture) {
+    wgpu::TextureDescriptor textureDescriptor = CreateTextureDescriptor();
+    wgpu::Texture texture = device.CreateTexture(&textureDescriptor);
+
+    wgpu::TextureView textureView = texture.CreateView();
+
+    // Create a bind group that contains the texture view.
+    wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout}});
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, bgl, {{0, textureView}});
+
+    // Create another texture to use as a color attachment.
+    wgpu::TextureDescriptor renderTextureDescriptor = CreateTextureDescriptor();
+    wgpu::Texture renderTexture = device.CreateTexture(&renderTextureDescriptor);
+    wgpu::TextureView renderView = renderTexture.CreateView();
+
+    utils::ComboRenderPassDescriptor renderPass({renderView}, nullptr);
+
+    // Control case should succeed.
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass);
+        {
+            pass.SetBindGroup(0, bindGroup);
+            pass.End();
+        }
+
+        wgpu::CommandBuffer commands = encoder.Finish();
+
+        queue.Submit(1, &commands);
+    }
+
+    // Destroying the texture should result in an error.
     {
         texture.Destroy();
         wgpu::CommandEncoder encoder = device.CreateCommandEncoder();

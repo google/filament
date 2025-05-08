@@ -522,22 +522,22 @@ If not already installed, install the following 32-bit development libraries:
 
 `gcc-multilib gcc-multilib g++-multilib libc6:i386 libc6-dev-i386 libgcc-s1:i386 libwayland-dev:i386 libxrandr-dev:i386`
 
-This list may vary depending on your distribution and which windowing systems
-you are building for.
+This list may vary depending on your distribution and which windowing systems you are building for.
 
-Set up your environment for building 32-bit targets:
+Set up your environment for building 32-bit targets when configuring your build:
 
-    export CFLAGS=-m32
-    export CXXFLAGS=-m32
-    export LDFLAGS=-m32
-    export ASFLAGS=--32
+      cmake ... -D CMAKE_CXX_FLAGS=-m32 -D CMAKE_C_FLAGS=-m32
+
+However, you may find that pkg-config picks incorrect libraries. This is due to a CMake implementation issue:
+https://gitlab.kitware.com/cmake/cmake/-/issues/25317
 
 Your PKG_CONFIG configuration may be different, depending on your distribution.
 
+You can the `PKG_CONFIG_PATH` environment variable to address this issue.
+
 Finally, build the repository normally as explained above.
 
-These notes are taken from the Github Actions workflow `linux-32` which is run
-regularly as a part of CI.
+These notes are taken from the Github Actions workflow `linux-32` which is run regularly as a part of CI.
 
 ## Building on MacOS
 

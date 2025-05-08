@@ -228,7 +228,7 @@ TEST_F(SpirvWriterTest, Switch_Phi_SingleValue) {
     auto* func = b.Function("foo", ty.i32());
     b.Append(func->Block(), [&] {
         auto* s = b.Switch(42_i);
-        s->SetResults(b.InstructionResult(ty.i32()));
+        s->SetResult(b.InstructionResult(ty.i32()));
         auto* case_a = b.Case(s, Vector{b.Constant(1_i), nullptr});
         b.Append(case_a, [&] {  //
             b.ExitSwitch(s, 10_i);
@@ -262,7 +262,7 @@ TEST_F(SpirvWriterTest, Switch_Phi_SingleValue_CaseReturn) {
     auto* func = b.Function("foo", ty.i32());
     b.Append(func->Block(), [&] {
         auto* s = b.Switch(42_i);
-        s->SetResults(b.InstructionResult(ty.i32()));
+        s->SetResult(b.InstructionResult(ty.i32()));
         auto* case_a = b.Case(s, Vector{b.Constant(1_i), nullptr});
         b.Append(case_a, [&] {  //
             b.Return(func, 10_i);
@@ -380,11 +380,11 @@ TEST_F(SpirvWriterTest, Switch_Phi_NestedIf) {
     auto* func = b.Function("foo", ty.i32());
     b.Append(func->Block(), [&] {
         auto* s = b.Switch(42_i);
-        s->SetResults(b.InstructionResult(ty.i32()));
+        s->SetResult(b.InstructionResult(ty.i32()));
         auto* case_a = b.Case(s, Vector{b.Constant(1_i), nullptr});
         b.Append(case_a, [&] {  //
             auto* inner = b.If(true);
-            inner->SetResults(b.InstructionResult(ty.i32()));
+            inner->SetResult(b.InstructionResult(ty.i32()));
             b.Append(inner->True(), [&] {  //
                 b.ExitIf(inner, 10_i);
             });
@@ -392,7 +392,7 @@ TEST_F(SpirvWriterTest, Switch_Phi_NestedIf) {
                 b.ExitIf(inner, 20_i);
             });
 
-            b.ExitSwitch(s, inner->Result(0));
+            b.ExitSwitch(s, inner->Result());
         });
 
         auto* case_b = b.Case(s, Vector{b.Constant(2_i)});
@@ -431,7 +431,7 @@ TEST_F(SpirvWriterTest, Switch_Phi_NestedSwitch) {
     auto* func = b.Function("foo", ty.i32());
     b.Append(func->Block(), [&] {
         auto* outer = b.Switch(42_i);
-        outer->SetResults(b.InstructionResult(ty.i32()));
+        outer->SetResult(b.InstructionResult(ty.i32()));
         auto* case_a = b.Case(outer, Vector{b.Constant(1_i), nullptr});
         b.Append(case_a, [&] {  //
             auto* inner = b.Switch(42_i);

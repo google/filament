@@ -106,6 +106,72 @@ TEST_F(WGSLParserTest, AssignmentStmt_Parses_ToMember) {
     EXPECT_EQ(mem->member->symbol, p->builder().Symbols().Get("b"));
 }
 
+TEST_F(WGSLParserTest, AssignmentStmt_SuffixIncrement) {
+    auto p = parser("a++");
+    auto e = p->variable_updating_statement();
+    EXPECT_TRUE(e.matched);
+    EXPECT_FALSE(e.errored);
+    EXPECT_FALSE(p->has_error()) << p->error();
+    ASSERT_NE(e.value, nullptr);
+
+    auto* a = e->As<ast::IncrementDecrementStatement>();
+    ASSERT_NE(a, nullptr);
+    ASSERT_NE(a->lhs, nullptr);
+    ASSERT_TRUE(a->increment);
+
+    EXPECT_EQ(a->source.range.begin.line, 1u);
+    EXPECT_EQ(a->source.range.begin.column, 2u);
+    EXPECT_EQ(a->source.range.end.line, 1u);
+    EXPECT_EQ(a->source.range.end.column, 4u);
+
+    ASSERT_TRUE(a->lhs->Is<ast::IdentifierExpression>());
+    auto* ident_expr = a->lhs->As<ast::IdentifierExpression>();
+    EXPECT_EQ(ident_expr->identifier->symbol, p->builder().Symbols().Get("a"));
+}
+
+TEST_F(WGSLParserTest, AssignmentStmt_SuffixDecrement) {
+    auto p = parser("a--");
+    auto e = p->variable_updating_statement();
+    EXPECT_TRUE(e.matched);
+    EXPECT_FALSE(e.errored);
+    EXPECT_FALSE(p->has_error()) << p->error();
+    ASSERT_NE(e.value, nullptr);
+
+    auto* a = e->As<ast::IncrementDecrementStatement>();
+    ASSERT_NE(a, nullptr);
+    ASSERT_NE(a->lhs, nullptr);
+    ASSERT_FALSE(a->increment);
+
+    EXPECT_EQ(a->source.range.begin.line, 1u);
+    EXPECT_EQ(a->source.range.begin.column, 2u);
+    EXPECT_EQ(a->source.range.end.line, 1u);
+    EXPECT_EQ(a->source.range.end.column, 4u);
+
+    ASSERT_TRUE(a->lhs->Is<ast::IdentifierExpression>());
+    auto* ident_expr = a->lhs->As<ast::IdentifierExpression>();
+    EXPECT_EQ(ident_expr->identifier->symbol, p->builder().Symbols().Get("a"));
+}
+
+TEST_F(WGSLParserTest, AssignmentStmt_PerfixIncrementFails) {
+    auto p = parser("++a");
+    auto e = p->variable_updating_statement();
+    EXPECT_FALSE(e.matched);
+    EXPECT_TRUE(e.errored);
+    EXPECT_TRUE(p->has_error());
+    EXPECT_EQ(e.value, nullptr);
+    EXPECT_EQ(p->error(), "1:1: prefix increment and decrement operators are not supported");
+}
+
+TEST_F(WGSLParserTest, AssignmentStmt_PerfixDecrementFails) {
+    auto p = parser("--a");
+    auto e = p->variable_updating_statement();
+    EXPECT_FALSE(e.matched);
+    EXPECT_TRUE(e.errored);
+    EXPECT_TRUE(p->has_error());
+    EXPECT_EQ(e.value, nullptr);
+    EXPECT_EQ(p->error(), "1:1: prefix increment and decrement operators are not supported");
+}
+
 TEST_F(WGSLParserTest, AssignmentStmt_Parses_ToPhony) {
     auto p = parser("_ = 123i");
     auto e = p->variable_updating_statement();
@@ -152,16 +218,94 @@ TEST_F(WGSLParserTest, AssignmentStmt_Phony_IncrementFails) {
     EXPECT_EQ(p->error(), "1:3: expected '=' for assignment");
 }
 
-TEST_F(WGSLParserTest, AssignmentStmt_Phony_EqualIncrementFails) {
-    auto p = parser("_ = ++");
+TEST_F(WGSLParserTest, AssignmentStmt_Phony_EqualPrefixIncrementFails) {
+    auto p = parser("_ = ++a");
     auto e = p->variable_updating_statement();
     EXPECT_FALSE(e.matched);
     EXPECT_TRUE(e.errored);
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(e.value, nullptr);
-    EXPECT_EQ(
-        p->error(),
-        "1:5: prefix increment and decrement operators are reserved for a future WGSL version");
+    EXPECT_EQ(p->error(), "1:5: prefix increment and decrement operators are not supported");
+}
+
+TEST_F(WGSLParserTest, AssignmentStmt_Phony_EqualPrefixDecrement) {
+    // This is valid since (--a) is parsed as (-(-(a))).
+    auto p = parser("_ = --a");
+    auto e = p->variable_updating_statement();
+    EXPECT_TRUE(e.matched);
+    EXPECT_FALSE(e.errored);
+    EXPECT_FALSE(p->has_error()) << p->error();
+    ASSERT_NE(e.value, nullptr);
+
+    auto* a = e->As<ast::AssignmentStatement>();
+    ASSERT_NE(a, nullptr);
+    ASSERT_NE(a->lhs, nullptr);
+    ASSERT_NE(a->rhs, nullptr);
+
+    EXPECT_EQ(a->source.range.begin.line, 1u);
+    EXPECT_EQ(a->source.range.begin.column, 3u);
+    EXPECT_EQ(a->source.range.end.line, 1u);
+    EXPECT_EQ(a->source.range.end.column, 4u);
+
+    ASSERT_TRUE(a->lhs->Is<ast::PhonyExpression>());
+
+    // The RHS of phony assignment should be a nested Negation unary expression.
+    ASSERT_TRUE(a->rhs->Is<ast::UnaryOpExpression>());
+    // The outer should be a nNegation of inner unary expression.
+    auto* outer = a->rhs->As<ast::UnaryOpExpression>();
+    ASSERT_EQ(outer->op, core::UnaryOp::kNegation);
+    ASSERT_TRUE(outer->expr->Is<ast::UnaryOpExpression>());
+    // The inner unary expression should be Negation of identifier `a`.
+    auto* inner = outer->expr->As<ast::UnaryOpExpression>();
+    ASSERT_EQ(inner->op, core::UnaryOp::kNegation);
+    ASSERT_TRUE(inner->expr->Is<ast::IdentifierExpression>());
+    auto* ident_expr = inner->expr->As<ast::IdentifierExpression>();
+    EXPECT_EQ(ident_expr->identifier->symbol, p->builder().Symbols().Get("a"));
+}
+
+// When parsing as variable updating statement, `_ = a++` will only be parsed as `_ = a`, and the
+// last kPlusPlus token will be stay unused, as it will never be a part of a valid variable updating
+// statement. However, in this case no error would be raised by variable_updating_statement().
+TEST_F(WGSLParserTest, AssignmentStmt_Phony_EqualSuffixIncrementNotUsed) {
+    auto p = parser("_ = a++");
+    auto e = p->variable_updating_statement();
+    // Parser will left the last kPlusPlus token unused.
+    EXPECT_EQ(p->last_source().range.begin.line, 1u);
+    EXPECT_EQ(p->last_source().range.begin.column, 5u);
+    EXPECT_EQ(p->last_source().range.end.line, 1u);
+    EXPECT_EQ(p->last_source().range.end.column, 6u);
+
+    // The parsed part `_ = a` is valid.
+    EXPECT_TRUE(e.matched);
+    EXPECT_FALSE(e.errored);
+    EXPECT_FALSE(p->has_error()) << p->error();
+    ASSERT_NE(e.value, nullptr);
+
+    auto* a = e->As<ast::AssignmentStatement>();
+    ASSERT_NE(a, nullptr);
+    ASSERT_NE(a->lhs, nullptr);
+    ASSERT_NE(a->rhs, nullptr);
+
+    EXPECT_EQ(a->source.range.begin.line, 1u);
+    EXPECT_EQ(a->source.range.begin.column, 3u);
+    EXPECT_EQ(a->source.range.end.line, 1u);
+    EXPECT_EQ(a->source.range.end.column, 4u);
+
+    ASSERT_TRUE(a->lhs->Is<ast::PhonyExpression>());
+
+    ASSERT_TRUE(a->rhs->Is<ast::IdentifierExpression>());
+    auto* ident_expr = a->rhs->As<ast::IdentifierExpression>();
+    EXPECT_EQ(ident_expr->identifier->symbol, p->builder().Symbols().Get("a"));
+}
+
+TEST_F(WGSLParserTest, AssignmentStmt_Phony_EqualSuffixDecrementFails) {
+    auto p = parser("_ = a--");
+    auto e = p->variable_updating_statement();
+    EXPECT_FALSE(e.matched);
+    EXPECT_TRUE(e.errored);
+    EXPECT_TRUE(p->has_error());
+    EXPECT_EQ(e.value, nullptr);
+    EXPECT_EQ(p->error(), "1:8: unable to parse right side of - expression");
 }
 
 struct CompoundData {

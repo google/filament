@@ -330,25 +330,39 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey const& config) noexcept
     mRenderPassCache[config] = {renderPass, mCurrentTime};
 
 #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
-    FVK_LOGD << "Created render pass " << renderPass << " with "
-        << "samples = " << int(config.samples) << ", "
-        << "depth = " << (hasDepth ? 1 : 0) << ", "
-        << "colorAttachmentCount[0] = " << subpasses[0].colorAttachmentCount
-        << utils::io::endl;
-    #endif
+    FVK_LOGD << "Created render pass " << renderPass << " with ";
+    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; ++i) {
+        FVK_LOGD << (int) config.colorFormat[i] << " ";
+    }
+    FVK_LOGD << ", "
+             << "depth = " << config.depthFormat << ", "
+             << "initialDepthLayout = " << (int) config.initialDepthLayout << ", "
+             << "samples = " << int(config.samples) << ", "
+             << "needsResolveMask = " << int(config.needsResolveMask) << ", "
+             << "usesLazilyAllocatedMemory = " << int(config.usesLazilyAllocatedMemory) << ", "
+             << "viewCount = " << int(config.viewCount) << ", "
+             << "colorAttachmentCount[0] = " << subpasses[0].colorAttachmentCount
+             << utils::io::endl;
+#endif
 
     return renderPass;
 }
 
-void VulkanFboCache::reset() noexcept {
-    for (auto pair : mFramebufferCache) {
+void VulkanFboCache::resetFramebuffers() noexcept {
+    for (const auto& pair: mFramebufferCache) {
         mRenderPassRefCount[pair.first.renderPass]--;
         vkDestroyFramebuffer(mDevice, pair.second.handle, VKALLOC);
     }
     mFramebufferCache.clear();
-    for (auto pair : mRenderPassCache) {
+}
+
+void VulkanFboCache::terminate() noexcept {
+    resetFramebuffers();
+
+    for (const auto& pair: mRenderPassCache) {
         vkDestroyRenderPass(mDevice, pair.second.handle, VKALLOC);
     }
+    mRenderPassRefCount.clear();
     mRenderPassCache.clear();
 }
 

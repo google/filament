@@ -58,16 +58,6 @@ std::vector<std::string> parse_env_var_list(std::string const& var) {
     return items;
 }
 
-std::vector<std::filesystem::path> get_folder_contents(std::vector<fs::FolderManager>* folders,
-                                                       std::filesystem::path folder_name) noexcept {
-    for (auto& folder : *folders) {
-        if (folder.location() == folder_name) {
-            return folder.get_files();
-        }
-    }
-    return {};
-}
-
 #if defined(WIN32)
 
 D3DKMT_Adapter& D3DKMT_Adapter::add_driver_manifest_path(std::filesystem::path const& src) { return add_path(src, driver_paths); }
@@ -190,6 +180,8 @@ void PlatformShim::remove_known_path(std::filesystem::path const& path) { known_
 void PlatformShim::add_manifest([[maybe_unused]] ManifestCategory category, [[maybe_unused]] std::filesystem::path const& path) {}
 void PlatformShim::add_unsecured_manifest([[maybe_unused]] ManifestCategory category,
                                           [[maybe_unused]] std::filesystem::path const& path) {}
+
+void PlatformShim::set_app_package_path(std::filesystem::path const& path) {}
 
 void parse_and_add_env_var_override(std::vector<std::string>& paths, std::string env_var_contents) {
     auto parsed_paths = parse_env_var_list(env_var_contents);

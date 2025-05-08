@@ -27,9 +27,12 @@
 
 #include "src/tint/lang/core/constant/splat.h"
 
-#include "src/tint/lang/core/constant/helper_test.h"
+#include "gtest/gtest.h"
 #include "src/tint/lang/core/constant/scalar.h"
 #include "src/tint/lang/core/fluent_types.h"
+#include "src/tint/lang/core/type/f32.h"
+#include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/vector.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 using namespace tint::core::fluent_types;     // NOLINT
@@ -37,10 +40,11 @@ using namespace tint::core::fluent_types;     // NOLINT
 namespace tint::core::constant {
 namespace {
 
-using ConstantTest_Splat = TestHelper;
+using ConstantTest_Splat = testing::Test;
 
 TEST_F(ConstantTest_Splat, AllZero) {
-    auto* vec3f = create<core::type::Vector>(create<core::type::F32>(), 3u);
+    Manager constants;
+    auto* vec3f = constants.types.vec(constants.types.f32(), 3u);
 
     auto* fPos0 = constants.Get(0_f);
     auto* fNeg0 = constants.Get(-0_f);
@@ -56,7 +60,8 @@ TEST_F(ConstantTest_Splat, AllZero) {
 }
 
 TEST_F(ConstantTest_Splat, AnyZero) {
-    auto* vec3f = create<core::type::Vector>(create<core::type::F32>(), 3u);
+    Manager constants;
+    auto* vec3f = constants.types.vec(constants.types.f32(), 3u);
 
     auto* fPos0 = constants.Get(0_f);
     auto* fNeg0 = constants.Get(-0_f);
@@ -72,7 +77,8 @@ TEST_F(ConstantTest_Splat, AnyZero) {
 }
 
 TEST_F(ConstantTest_Splat, Index) {
-    auto* vec3f = create<core::type::Vector>(create<core::type::F32>(), 3u);
+    Manager constants;
+    auto* vec3f = constants.types.vec(constants.types.f32(), 3u);
 
     auto* f1 = constants.Get(1_f);
     auto* sp = constants.Splat(vec3f, f1);
@@ -88,7 +94,8 @@ TEST_F(ConstantTest_Splat, Index) {
 }
 
 TEST_F(ConstantTest_Splat, Clone) {
-    auto* vec2i = create<core::type::Vector>(create<core::type::I32>(), 2u);
+    Manager constants;
+    auto* vec2i = constants.types.vec(constants.types.i32(), 2u);
     auto* val = constants.Get(12_i);
     auto* sp = constants.Splat(vec2i, val);
 

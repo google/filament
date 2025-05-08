@@ -296,10 +296,6 @@ TEST_P(ReadOnlyDepthAttachmentTests, SampleFromAttachment) {
     // TODO(dawn:2163): The texture reads zeroes, maybe ANGLE's TextureStorageD3D11 is missing a
     // copy between the storages?
     DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
-    // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 4 OpenGLES
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
-    // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 6 OpenGLES
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
 
     TestSpec spec;
     spec.readonlyAspects = wgpu::TextureAspect::DepthOnly;
@@ -458,10 +454,6 @@ TEST_P(ReadOnlyDepthAndStencilAttachmentTests, SampleDepthModifyStencil) {
     // TODO(dawn:2163): The texture reads zeroes, maybe ANGLE's TextureStorageD3D11 is missing a
     // copy between the storages?
     DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
-    // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 4 OpenGLES
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
-    // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 6 OpenGLES
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
 
     // Depth/stencil tests are true, the depth is correctly sampled from the depthClearValue.
     // The stencil is written to the value of the stencil ref.
@@ -491,10 +483,6 @@ TEST_P(ReadOnlyDepthAndStencilAttachmentTests, BothReadOnlySampleDepth) {
     // TODO(dawn:2163): The texture reads zeroes, maybe ANGLE's TextureStorageD3D11 is missing a
     // copy between the storages?
     DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
-    // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 4 OpenGLES
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
-    // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 6 OpenGLES
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
 
     // Sample the depth while using both depth an stencil testing.
 

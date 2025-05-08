@@ -1,0 +1,4 @@
+// UNSUPPORTED: metal
+
+// RUN:not %dxc %S/Inputs/smoke.hlsl  /T ps_6_0 -metal 2>&1 | FileCheck %s
+// CHECK:Metal CodeGen not available

@@ -44,8 +44,6 @@ Ref<ExternalTextureMock> ExternalTextureMock::Create(DeviceMock* device,
                                                      const ExternalTextureDescriptor* descriptor) {
     Ref<ExternalTextureMock> externalTexture =
         AcquireRef(new NiceMock<ExternalTextureMock>(device, descriptor));
-
-    externalTexture->Initialize(device, descriptor).AcquireSuccess();
     return externalTexture;
 }
 

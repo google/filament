@@ -1,0 +1,309 @@
+# Copyright 2025 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("../../../scripts/dawn_overrides_with_defaults.gni")
+
+if (is_win) {
+  _exe = ".exe"
+} else {
+  _exe = ""
+}
+
+# Directory in which to find node-addon-api
+dawn_node_addon_api_dir = "$dawn_root/third_party/node-addon-api"
+
+# Directory in which to find node-api-headers
+dawn_node_api_headers_dir = "$dawn_root/third_party/node-api-headers"
+
+# Path to the webgpu.idl definition file
+dawn_webgpu_idl_path = "$dawn_root/third_party/gpuweb/webgpu.idl"
+
+# Golang executable for running the IDL generator
+dawn_go_executable = "$dawn_root/tools/golang/bin/go${_exe}"
+
+# TODO(amaiorano): Figure out why path_exists doesn't work
+# assert(path_exists(dawn_node_addon_api_dir) && path_exists(dawn_node_api_headers_dir) && path_exists(dawn_webgpu_idl_path), "dawn_build_node_bindings missing dependencies. Please follow the 'Fetch dependencies' instructions at: ./src/dawn/node/README.md")
+
+dawn_node_gen_dir = target_gen_dir
+interop_gen_dir = "$dawn_node_gen_dir/src/dawn/node/interop"
+
+# TODO(amaiorano): Move run_built_binary.py to a common dir
+run_built_binary_script =
+    "$dawn_root/third_party/gn/dxc/build/run_built_binary.py"
+
+config("common_config") {
+  warning_flags = []
+  if (is_clang) {
+    warning_flags += [
+      "-Wno-error",  # TODO(amaiorano): For now, allow warnings
+      "-Wno-extra-semi",
+      "-Wno-shadow",
+      "-Wno-unused-variable",
+      "-Wno-implicit-fallthrough",
+      "-Wno-unused-but-set-variable",
+    ]
+  } else {
+    # MSVC
+    warning_flags += [
+      "/W0",  # Suppress most warnings
+    ]
+  }
+
+  cflags_c = warning_flags
+  cflags_cc = warning_flags
+}
+
+template("idlgen") {
+  assert(defined(invoker.template), "must set 'template'")
+  assert(defined(invoker.output), "must set 'output'")
+  assert(defined(invoker.idls), "must set 'idls'")
+
+  action(target_name) {
+    idlgen_tool_dir = "$dawn_root/tools/src/cmd/idlgen"
+    inputs = [
+               "$idlgen_tool_dir/main.go",
+               invoker.template,
+             ] + invoker.idls
+    if (defined(invoker.depends)) {
+      inputs += invoker.depends
+    }
+    outputs = [ invoker.output ]
+
+    idls = []
+    foreach(i, invoker.idls) {
+      idls += [ rebase_path(i, root_build_dir) ]
+    }
+
+    script = run_built_binary_script
+    args = [
+             "",
+             rebase_path(dawn_go_executable, root_build_dir),
+             "run",
+             rebase_path("$idlgen_tool_dir/main.go", root_build_dir),
+             "--template",
+             rebase_path(invoker.template, root_build_dir),
+             "--output",
+             rebase_path(invoker.output, root_build_dir),
+           ] + idls
+  }
+}
+
+idlgen("idlgen_webgpu_h") {
+  template = "interop/WebGPU.h.tmpl"
+  idls = [
+    "interop/Browser.idl",
+    dawn_webgpu_idl_path,
+    "interop/DawnExtensions.idl",
+  ]
+  depends = [ "interop/WebGPUCommon.tmpl" ]
+  output = "$interop_gen_dir/WebGPU.h"
+}
+idlgen("idlgen_webgpu_cpp") {
+  template = "interop/WebGPU.cpp.tmpl"
+  idls = [
+    "interop/Browser.idl",
+    dawn_webgpu_idl_path,
+    "interop/DawnExtensions.idl",
+  ]
+  depends = [ "interop/WebGPUCommon.tmpl" ]
+  output = "$interop_gen_dir/WebGPU.cpp"
+}
+
+static_library("dawn_node_interop") {
+  public_configs = [ ":common_config" ]
+  sources = [
+    "$interop_gen_dir/WebGPU.cpp",
+    "$interop_gen_dir/WebGPU.h",
+    "interop/Core.cpp",
+    "interop/Core.h",
+  ]
+  include_dirs = [
+    "${dawn_node_addon_api_dir}",
+    "${dawn_node_api_headers_dir}/include",
+    "${dawn_node_gen_dir}",
+  ]
+  deps = [
+    ":idlgen_webgpu_cpp",
+    ":idlgen_webgpu_h",
+    "$dawn_root/include/dawn:cpp_headers",
+  ]
+}
+
+static_library("dawn_node_binding") {
+  public_configs = [ ":common_config" ]
+  if (is_win) {
+    # Use multibyte character set so that Win32 functions map the ANSI ones, not the UNICODE ones.
+    configs -= [ "//build/config/win:unicode" ]
+  }
+  sources = [
+    "binding/AsyncRunner.cpp",
+    "binding/AsyncRunner.h",
+    "binding/Converter.cpp",
+    "binding/Converter.h",
+    "binding/Errors.cpp",
+    "binding/Errors.h",
+    "binding/Flags.cpp",
+    "binding/Flags.h",
+    "binding/GPU.cpp",
+    "binding/GPU.h",
+    "binding/GPUAdapter.cpp",
+    "binding/GPUAdapter.h",
+    "binding/GPUAdapterInfo.cpp",
+    "binding/GPUAdapterInfo.h",
+    "binding/GPUBindGroup.cpp",
+    "binding/GPUBindGroup.h",
+    "binding/GPUBindGroupLayout.cpp",
+    "binding/GPUBindGroupLayout.h",
+    "binding/GPUBuffer.cpp",
+    "binding/GPUBuffer.h",
+    "binding/GPUCommandBuffer.cpp",
+    "binding/GPUCommandBuffer.h",
+    "binding/GPUCommandEncoder.cpp",
+    "binding/GPUCommandEncoder.h",
+    "binding/GPUComputePassEncoder.cpp",
+    "binding/GPUComputePassEncoder.h",
+    "binding/GPUComputePipeline.cpp",
+    "binding/GPUComputePipeline.h",
+    "binding/GPUDevice.cpp",
+    "binding/GPUDevice.h",
+    "binding/GPUPipelineLayout.cpp",
+    "binding/GPUPipelineLayout.h",
+    "binding/GPUQuerySet.cpp",
+    "binding/GPUQuerySet.h",
+    "binding/GPUQueue.cpp",
+    "binding/GPUQueue.h",
+    "binding/GPURenderBundle.cpp",
+    "binding/GPURenderBundle.h",
+    "binding/GPURenderBundleEncoder.cpp",
+    "binding/GPURenderBundleEncoder.h",
+    "binding/GPURenderPassEncoder.cpp",
+    "binding/GPURenderPassEncoder.h",
+    "binding/GPURenderPipeline.cpp",
+    "binding/GPURenderPipeline.h",
+    "binding/GPUSampler.cpp",
+    "binding/GPUSampler.h",
+    "binding/GPUShaderModule.cpp",
+    "binding/GPUShaderModule.h",
+    "binding/GPUSupportedFeatures.cpp",
+    "binding/GPUSupportedFeatures.h",
+    "binding/GPUSupportedLimits.cpp",
+    "binding/GPUSupportedLimits.h",
+    "binding/GPUTexture.cpp",
+    "binding/GPUTexture.h",
+    "binding/GPUTextureView.cpp",
+    "binding/GPUTextureView.h",
+    "binding/IteratorHelper.h",
+    "binding/Split.cpp",
+    "binding/Split.h",
+    "binding/TogglesLoader.cpp",
+    "binding/TogglesLoader.h",
+  ]
+  include_dirs = [
+    "${dawn_node_addon_api_dir}",
+    "${dawn_node_api_headers_dir}/include",
+    "${dawn_node_gen_dir}",
+  ]
+  deps = [
+    ":dawn_node_interop",
+    "$dawn_root/src/dawn/native:native",
+  ]
+}
+
+action("gen_napi_symbols") {
+  script = "gen_napi_symbols.py"
+  args = [ rebase_path("$dawn_root/third_party/node-api-headers/symbols.js",
+                       root_build_dir) ]
+  if (is_win) {
+    args +=
+        [ rebase_path("$dawn_node_gen_dir/NapiSymbols.def", root_build_dir) ]
+    outputs = [ "$dawn_node_gen_dir/NapiSymbols.def" ]
+  } else {
+    args += [ rebase_path("$dawn_node_gen_dir/NapiSymbols.h", root_build_dir) ]
+    outputs = [ "$dawn_node_gen_dir/NapiSymbols.h" ]
+  }
+}
+
+if (is_win) {
+  import("//build/config/clang/clang.gni")
+  action("napi_symbols_lib") {
+    inputs = [ "$dawn_node_gen_dir/NapiSymbols.def" ]
+    outputs = [ "$dawn_node_gen_dir/NapiSymbols.lib" ]
+    script = run_built_binary_script
+    linker = rebase_path("$clang_base_path/bin/lld-link${_exe}", root_build_dir)
+    args = [
+      "",
+      linker,
+      "/DEF:" + rebase_path(inputs[0], root_build_dir),
+      "/OUT:" + rebase_path(outputs[0], root_build_dir),
+    ]
+    deps = [ ":gen_napi_symbols" ]
+  }
+}
+
+copy("copy_index_js") {
+  sources = [ "$dawn_root/src/dawn/node/index.js" ]
+  outputs = [ "$root_build_dir/index.js" ]
+}
+copy("copy_cts_js") {
+  sources = [ "$dawn_root/src/dawn/node/cts.js" ]
+  outputs = [ "$root_build_dir/cts.js" ]
+}
+
+shared_library("dawn_node") {
+  output_name = "dawn"
+  output_extension = "node"
+  output_prefix_override = true  # dawn.node, not libdawn.node
+  sources = [ "Module.cpp" ]
+  deps = [
+    ":copy_cts_js",
+    ":copy_index_js",
+    ":dawn_node_binding",
+    ":gen_napi_symbols",
+    "$dawn_root/src/dawn:proc",
+  ]
+  if (is_win) {
+    deps += [ ":napi_symbols_lib" ]
+    ldflags =
+        [ rebase_path("$dawn_node_gen_dir/NapiSymbols.lib", root_build_dir) ]
+  } else {
+    # Don't pass '-z,defs' linker arg when compiling weak symbols
+    configs -= [ "//build/config/compiler:no_unresolved_symbols" ]
+
+    # TODO(crbug.com/404499678): GN build doesn't like when weak functions have a definition
+    defines = [ "NAPI_SYMBOL_WEAK_DECL_ONLY" ]
+    if (is_mac) {
+      # On mac, make undefined weak functions dynamic to bind with node functions at runtime
+      ldflags = [ "-Wl,-undefined,dynamic_lookup" ]
+    }
+    sources += [ "NapiSymbols.cpp" ]
+  }
+  include_dirs = [
+    "${dawn_node_addon_api_dir}",
+    "${dawn_node_api_headers_dir}/include",
+    "${dawn_node_gen_dir}",
+  ]
+}

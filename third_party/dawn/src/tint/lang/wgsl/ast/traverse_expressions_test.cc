@@ -35,8 +35,6 @@ using ::testing::ElementsAre;
 using namespace tint::core::number_suffixes;  // NOLINT
 using namespace tint::core::fluent_types;     // NOLINT
 
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
-
 namespace tint::ast {
 namespace {
 
@@ -114,7 +112,7 @@ TEST_F(TraverseExpressionsTest, Depth) {
     auto* root = Mul(i[0], i[1]);
 
     size_t j = 0;
-    size_t depths[] = {0, 1, 2, 2, 1, 2, 2};
+    constexpr std::array<size_t, 7> depths = {0, 1, 2, 2, 1, 2, 2};
     {
         TraverseExpressions<TraverseOrder::LeftToRight>(  //
             root, [&](const Expression* expr, size_t depth) {
@@ -286,5 +284,3 @@ TEST_F(TraverseExpressionsTest, Stop) {
 
 }  // namespace
 }  // namespace tint::ast
-
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);

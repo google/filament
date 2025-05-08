@@ -603,7 +603,7 @@ public:
      * extension will be derived from the shader stage. For example, mymaterial_0x0e.frag,
      * mymaterial_0x18.vert, etc.
      */
-    MaterialBuilder& saveRawVariants(bool saveVariants) noexcept;
+    MaterialBuilder& saveRawVariants(bool saveRawVariants) noexcept;
 
     //! If true, will include debugging information in generated SPIRV.
     MaterialBuilder& generateDebugInfo(bool generateDebugInfo) noexcept;
@@ -635,7 +635,7 @@ public:
      * Build the material. If you are using the Filament engine with this library, you should use
      * the job system provided by Engine.
      */
-    Package build(utils::JobSystem& jobSystem) noexcept;
+    Package build(utils::JobSystem& jobSystem);
 
 public:
     // The methods and types below are for internal use
@@ -809,7 +809,7 @@ private:
     // Multiple calls to findProperties accumulate the property sets across fragment
     // and vertex shaders in mProperties.
     bool findProperties(filament::backend::ShaderStage type,
-            MaterialBuilder::PropertyList& allProperties,
+            MaterialBuilder::PropertyList const& allProperties,
             CodeGenParams const& semanticCodeGenParams) noexcept;
 
     bool runSemanticAnalysis(MaterialInfo* inOutInfo,

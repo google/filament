@@ -16,7 +16,7 @@ This document contains the instructions for building this repository on Linux, m
 
 ## Requirements
 
-1. CMake >= 3.17.2
+1. CMake >= 3.22.1
 2. C++ >= c++17 compiler. See platform-specific sections below for supported compiler versions.
 3. Python >= 3.8
 

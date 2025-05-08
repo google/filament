@@ -346,29 +346,25 @@ VkStencilOp VulkanStencilOp(wgpu::StencilOperation op) {
 Ref<RenderPipeline> RenderPipeline::CreateUninitialized(
     Device* device,
     const UnpackedPtr<RenderPipelineDescriptor>& descriptor) {
-    // Possible required internal immediate constants for RenderPipelineVk:
-    // - ClampFragDepth
-    const ImmediateConstantMask requiredInternalConstants = GetImmediateConstantBlockBits(
-        offsetof(RenderImmediateConstants, clampFragDepth), sizeof(ClampFragDepthArgs));
-
-    return AcquireRef(new RenderPipeline(device, descriptor, requiredInternalConstants));
+    return AcquireRef(new RenderPipeline(device, descriptor));
 }
 
 MaybeError RenderPipeline::InitializeImpl() {
     Device* device = ToBackend(GetDevice());
     PipelineLayout* layout = ToBackend(GetLayout());
 
-    // Vulkan devices need cache UUID field to be serialized into pipeline cache keys.
-    StreamIn(&mCacheKey, device->GetDeviceInfo().properties.pipelineCacheUUID);
-
-    // Set immediate constant status
-    mPipelineMask |=
-        GetImmediateConstantBlockBits(offsetof(RenderImmediateConstants, userConstants),
-                                      GetLayout()->GetImmediateDataRangeByteSize());
+    // The cache key is only used for storing VkPipelineCache objects in BlobStore. That's not
+    // done with the monolithic pipeline cache so it's unnecessary work and memory usage.
+    bool buildCacheKey =
+        !device->GetTogglesState().IsEnabled(Toggle::VulkanMonolithicPipelineCache);
+    if (buildCacheKey) {
+        // Vulkan devices need cache UUID field to be serialized into pipeline cache keys.
+        StreamIn(&mCacheKey, device->GetDeviceInfo().properties.pipelineCacheUUID);
+    }
 
     // Gather list of internal immediate constants used by this pipeline
     if (UsesFragDepth() && !HasUnclippedDepth()) {
-        mPipelineMask |= GetImmediateConstantBlockBits(
+        mImmediateMask |= GetImmediateConstantBlockBits(
             offsetof(RenderImmediateConstants, clampFragDepth), sizeof(ClampFragDepthArgs));
     }
 
@@ -378,15 +374,17 @@ MaybeError RenderPipeline::InitializeImpl() {
     uint32_t stageCount = 0;
 
     auto AddShaderStage = [&](SingleShaderStage stage, VkShaderStageFlagBits vkStage,
-                              bool clampFragDepth, bool emitPointSize) -> MaybeError {
+                              bool emitPointSize) -> MaybeError {
         const ProgrammableStage& programmableStage = GetStage(stage);
         ShaderModule::ModuleAndSpirv moduleAndSpirv;
         DAWN_TRY_ASSIGN(moduleAndSpirv, ToBackend(programmableStage.module)
                                             ->GetHandleAndSpirv(stage, programmableStage, layout,
-                                                                clampFragDepth, emitPointSize));
+                                                                emitPointSize, GetImmediateMask()));
         mHasInputAttachment = mHasInputAttachment || moduleAndSpirv.hasInputAttachment;
-        // Record cache key for each shader since it will become inaccessible later on.
-        StreamIn(&mCacheKey, stream::Iterable(moduleAndSpirv.spirv, moduleAndSpirv.wordCount));
+        if (buildCacheKey) {
+            // Record cache key for each shader since it will become inaccessible later on.
+            StreamIn(&mCacheKey, stream::Iterable(moduleAndSpirv.spirv, moduleAndSpirv.wordCount));
+        }
 
         VkPipelineShaderStageCreateInfo* shaderStage = &shaderStages[stageCount];
         shaderStage->module = moduleAndSpirv.module;
@@ -404,14 +402,12 @@ MaybeError RenderPipeline::InitializeImpl() {
 
     // Add the vertex stage that's always present.
     DAWN_TRY(AddShaderStage(SingleShaderStage::Vertex, VK_SHADER_STAGE_VERTEX_BIT,
-                            /*clampFragDepth*/ false,
                             GetPrimitiveTopology() == wgpu::PrimitiveTopology::PointList));
 
     // Add the fragment stage if present.
     if (GetStageMask() & wgpu::ShaderStage::Fragment) {
-        bool clampFragDepth = UsesFragDepth() && !HasUnclippedDepth();
         DAWN_TRY(AddShaderStage(SingleShaderStage::Fragment, VK_SHADER_STAGE_FRAGMENT_BIT,
-                                clampFragDepth, /*emitPointSize*/ false));
+                                /*emitPointSize*/ false));
     }
 
     PipelineVertexInputStateCreateInfoTemporaryAllocations tempAllocations;
@@ -570,12 +566,12 @@ MaybeError RenderPipeline::InitializeImpl() {
 
         query.SetSampleCount(GetSampleCount());
 
-        StreamIn(&mCacheKey, query);
+        if (buildCacheKey) {
+            StreamIn(&mCacheKey, query);
+        }
         DAWN_TRY_ASSIGN(renderPassInfo, device->GetRenderPassCache()->GetRenderPass(query));
     }
-
-    // TODO(crbug.com/366291600): Add internal immediate data size when needed.
-    DAWN_TRY(InitializeBase(layout, kClampFragDepthArgsSize));
+    DAWN_TRY(PipelineVk::InitializeBase(layout, mImmediateMask));
 
     // The create info chains in a bunch of things created on the stack here or inside state
     // objects.
@@ -608,8 +604,10 @@ MaybeError RenderPipeline::InitializeImpl() {
     //   That also means mHasInputAttachment would be removed in future.
     createInfo.subpass = mHasInputAttachment ? 0 : renderPassInfo.mainSubpass;
 
-    // Record cache key information now since createInfo is not stored.
-    StreamIn(&mCacheKey, createInfo, layout->GetCacheKey());
+    if (buildCacheKey) {
+        // Record cache key information now since createInfo is not stored.
+        StreamIn(&mCacheKey, createInfo, layout->GetCacheKey());
+    }
 
     // Try to see if we have anything in the blob cache.
     platform::metrics::DawnHistogramTimer cacheTimer(GetDevice()->GetPlatform());

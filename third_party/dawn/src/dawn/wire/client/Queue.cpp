@@ -57,7 +57,7 @@ class WorkDoneEvent : public TrackedEvent {
   private:
     void CompleteImpl(FutureID futureID, EventCompletionType completionType) override {
         if (completionType == EventCompletionType::Shutdown) {
-            mStatus = WGPUQueueWorkDoneStatus_InstanceDropped;
+            mStatus = WGPUQueueWorkDoneStatus_CallbackCancelled;
         }
         void* userdata1 = mUserdata1.ExtractAsDangling();
         void* userdata2 = mUserdata2.ExtractAsDangling();

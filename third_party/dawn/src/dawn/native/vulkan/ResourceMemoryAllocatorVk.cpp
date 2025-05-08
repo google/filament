@@ -54,30 +54,59 @@ constexpr uint64_t kMaxSizeForSubAllocation = 4ull * 1024ull * 1024ull;  // 4MiB
 constexpr uint64_t kBuddyHeapsSize = 2 * kMaxSizeForSubAllocation;
 
 bool IsMemoryKindMappable(MemoryKind memoryKind) {
-    switch (memoryKind) {
-        case MemoryKind::LinearReadMappable:
-        case MemoryKind::LinearWriteMappable:
-            return true;
+    return memoryKind & (MemoryKind::ReadMappable | MemoryKind::WriteMappable);
+}
 
-        case MemoryKind::LazilyAllocated:
-        case MemoryKind::Linear:
-        case MemoryKind::Opaque:
-            return false;
+VkMemoryPropertyFlags GetRequiredMemoryPropertyFlags(MemoryKind memoryKind, bool mappable) {
+    VkMemoryPropertyFlags vkFlags = 0;
 
-        default:
-            DAWN_UNREACHABLE();
+    // Mappable resource must be host visible and host coherent.
+    if (mappable) {
+        vkFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        vkFlags |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     }
+
+    // DEVICE_LOCAL_BIT must be set when MemoryKind::DeviceLocal is required.
+    if (memoryKind & MemoryKind::DeviceLocal) {
+        vkFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    }
+
+    // HOST_CACHED_BIT must be set when MemoryKind::HostCached is required.
+    if (memoryKind & MemoryKind::HostCached) {
+        vkFlags |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+    }
+
+    return vkFlags;
 }
 
 }  // anonymous namespace
+
+bool SupportsBufferMapExtendedUsages(const VulkanDeviceInfo& deviceInfo) {
+    // On Vulkan the memory type of the mappable buffers with extended usages must have all below
+    // memory property flags.
+    constexpr VkMemoryPropertyFlags kMapExtendedUsageMemoryPropertyFlags =
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+    for (const auto& memoryType : deviceInfo.memoryTypes) {
+        if ((memoryType.propertyFlags & kMapExtendedUsageMemoryPropertyFlags) ==
+            kMapExtendedUsageMemoryPropertyFlags) {
+            return true;
+        }
+    }
+    return false;
+}
 
 // SingleTypeAllocator is a combination of a BuddyMemoryAllocator and its client and can
 // service suballocation requests, but for a single Vulkan memory type.
 
 class ResourceMemoryAllocator::SingleTypeAllocator : public ResourceHeapAllocator {
   public:
-    SingleTypeAllocator(Device* device, size_t memoryTypeIndex, VkDeviceSize memoryHeapSize)
+    SingleTypeAllocator(Device* device,
+                        size_t memoryTypeIndex,
+                        VkDeviceSize memoryHeapSize,
+                        ResourceMemoryAllocator* memoryAllocator)
         : mDevice(device),
+          mResourceMemoryAllocator(memoryAllocator),
           mMemoryTypeIndex(memoryTypeIndex),
           mMemoryHeapSize(memoryHeapSize),
           mPooledMemoryAllocator(this),
@@ -124,15 +153,17 @@ class ResourceMemoryAllocator::SingleTypeAllocator : public ResourceHeapAllocato
                                   "vkAllocateMemory"));
 
         DAWN_ASSERT(allocatedMemory != VK_NULL_HANDLE);
-        return {std::make_unique<ResourceHeap>(allocatedMemory, mMemoryTypeIndex)};
+        mResourceMemoryAllocator->RecordHeapAllocation(size);
+        return {std::make_unique<ResourceHeap>(allocatedMemory, mMemoryTypeIndex, size)};
     }
 
     void DeallocateResourceHeap(std::unique_ptr<ResourceHeapBase> allocation) override {
-        mDevice->GetFencedDeleter()->DeleteWhenUnused(ToBackend(allocation.get())->GetMemory());
+        mResourceMemoryAllocator->DeallocateResourceHeap(ToBackend(allocation.get()));
     }
 
   private:
     raw_ptr<Device> mDevice;
+    raw_ptr<ResourceMemoryAllocator> mResourceMemoryAllocator;
     size_t mMemoryTypeIndex;
     VkDeviceSize mMemoryHeapSize;
     PooledResourceMemoryAllocator mPooledMemoryAllocator;
@@ -147,7 +178,7 @@ ResourceMemoryAllocator::ResourceMemoryAllocator(Device* device) : mDevice(devic
 
     for (size_t i = 0; i < info.memoryTypes.size(); i++) {
         mAllocatorsPerType.emplace_back(std::make_unique<SingleTypeAllocator>(
-            mDevice, i, info.memoryHeaps[info.memoryTypes[i].heapIndex].size));
+            mDevice, i, info.memoryHeaps[info.memoryTypes[i].heapIndex].size, this));
     }
 }
 
@@ -196,6 +227,7 @@ ResultOrError<ResourceMemoryAllocation> ResourceMemoryAllocator::Allocate(
         DAWN_TRY_ASSIGN(subAllocation, mAllocatorsPerType[memoryType]->AllocateMemory(
                                            requirements.size, alignment));
         if (subAllocation.GetInfo().mMethod != AllocationMethod::kInvalid) {
+            mTotalUsedMemory += requirements.size;
             return subAllocation;
         }
     }
@@ -214,8 +246,10 @@ ResultOrError<ResourceMemoryAllocation> ResourceMemoryAllocator::Allocate(
             { mAllocatorsPerType[memoryType]->DeallocateResourceHeap(std::move(resourceHeap)); });
     }
 
+    mTotalUsedMemory += size;
     AllocationInfo info;
     info.mMethod = AllocationMethod::kDirect;
+    info.mRequestedSize = size;
     return ResourceMemoryAllocation(info, /*offset*/ 0, resourceHeap.release(),
                                     static_cast<uint8_t*>(mappedPointer));
 }
@@ -231,8 +265,13 @@ void ResourceMemoryAllocator::Deallocate(ResourceMemoryAllocation* allocation) {
         // deleter will make sure the resources are freed before the memory.
         case AllocationMethod::kDirect: {
             ResourceHeap* heap = ToBackend(allocation->GetResourceHeap());
+            // Track the direct allocation that will be deallocated for both allocated and used
+            // memory sizes.
+            DAWN_ASSERT(mTotalUsedMemory >= allocation->GetInfo().mRequestedSize);
+            mUsedMemoryToDecrement[mDevice->GetFencedDeleter()->GetCurrentDeletionSerial()] +=
+                allocation->GetInfo().mRequestedSize;
             allocation->Invalidate();
-            mDevice->GetFencedDeleter()->DeleteWhenUnused(heap->GetMemory());
+            DeallocateResourceHeap(heap);
             delete heap;
             break;
         }
@@ -241,10 +280,15 @@ void ResourceMemoryAllocator::Deallocate(ResourceMemoryAllocation* allocation) {
         // happen just after that aliases the old one and would require a barrier.
         // TODO(crbug.com/dawn/851): Maybe we can produce the correct barriers to reduce the
         // latency to reclaim memory.
-        case AllocationMethod::kSubAllocated:
-            mSubAllocationsToDelete.Enqueue(*allocation,
-                                            mDevice->GetQueue()->GetPendingCommandSerial());
+        case AllocationMethod::kSubAllocated: {
+            ExecutionSerial deletionSerial =
+                mDevice->GetFencedDeleter()->GetCurrentDeletionSerial();
+            mSubAllocationsToDelete.Enqueue(*allocation, deletionSerial);
+            // Track suballocation that will be deallocated for used memory sizes.
+            DAWN_ASSERT(mTotalUsedMemory >= allocation->GetInfo().mRequestedSize);
+            mUsedMemoryToDecrement[deletionSerial] += allocation->GetInfo().mRequestedSize;
             break;
+        }
 
         default:
             DAWN_UNREACHABLE();
@@ -256,21 +300,62 @@ void ResourceMemoryAllocator::Deallocate(ResourceMemoryAllocation* allocation) {
     allocation->Invalidate();
 }
 
+ExecutionSerial ResourceMemoryAllocator::GetLastPendingDeletionSerial() {
+    ExecutionSerial lastSerial = kBeginningOfGPUTime;
+    auto GetLastSubmitted = [&lastSerial](auto& queue) {
+        if (!queue.Empty()) {
+            lastSerial = std::max(lastSerial, queue.LastSerial());
+        }
+    };
+    GetLastSubmitted(mSubAllocationsToDelete);
+    return lastSerial;
+}
+
+void ResourceMemoryAllocator::RecordHeapAllocation(VkDeviceSize size) {
+    mTotalAllocatedMemory += size;
+}
+
+void ResourceMemoryAllocator::DeallocateResourceHeap(ResourceHeap* heap) {
+    DAWN_ASSERT(mTotalAllocatedMemory >= heap->GetSize());
+    MutexProtected<FencedDeleter>& fencedDeleter = mDevice->GetFencedDeleter();
+    mAllocatedMemoryToDecrement[fencedDeleter->GetCurrentDeletionSerial()] += heap->GetSize();
+    fencedDeleter->DeleteWhenUnused(heap->GetMemory());
+}
+
 void ResourceMemoryAllocator::Tick(ExecutionSerial completedSerial) {
     for (const ResourceMemoryAllocation& allocation :
          mSubAllocationsToDelete.IterateUpTo(completedSerial)) {
         DAWN_ASSERT(allocation.GetInfo().mMethod == AllocationMethod::kSubAllocated);
         size_t memoryType = ToBackend(allocation.GetResourceHeap())->GetMemoryType();
-
         mAllocatorsPerType[memoryType]->DeallocateMemory(allocation);
     }
-
     mSubAllocationsToDelete.ClearUpTo(completedSerial);
+
+    auto it = mUsedMemoryToDecrement.begin();
+    while (it != mUsedMemoryToDecrement.end() && it->first <= completedSerial) {
+        // Track the direct allocation memory as used memory that will be deallocated.
+        DAWN_ASSERT(mTotalUsedMemory >= it->second);
+        mTotalUsedMemory -= it->second;
+        it++;
+    }
+    // Erase the map serials up to the completed serial.
+    mUsedMemoryToDecrement.erase(mUsedMemoryToDecrement.begin(), it);
+
+    it = mAllocatedMemoryToDecrement.begin();
+    while (it != mAllocatedMemoryToDecrement.end() && it->first <= completedSerial) {
+        // Track the direct allocation memory as used memory that will be deallocated.
+        DAWN_ASSERT(mTotalAllocatedMemory >= it->second);
+        mTotalAllocatedMemory -= it->second;
+        it++;
+    }
+    // Erase the map serials up to the completed serial.
+    mAllocatedMemoryToDecrement.erase(mAllocatedMemoryToDecrement.begin(), it);
 }
 
 int ResourceMemoryAllocator::FindBestTypeIndex(VkMemoryRequirements requirements, MemoryKind kind) {
     const VulkanDeviceInfo& info = mDevice->GetDeviceInfo();
     bool mappable = IsMemoryKindMappable(kind);
+    VkMemoryPropertyFlags vkRequiredFlags = GetRequiredMemoryPropertyFlags(kind, mappable);
 
     // Find a suitable memory type for this allocation
     int bestType = -1;
@@ -280,15 +365,8 @@ int ResourceMemoryAllocator::FindBestTypeIndex(VkMemoryRequirements requirements
             continue;
         }
 
-        // Mappable resource must be host visible
-        if (mappable &&
-            (info.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
-            continue;
-        }
-
-        // Mappable must also be host coherent.
-        if (mappable &&
-            (info.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0) {
+        // Memory type must have all the required memory properties.
+        if ((info.memoryTypes[i].propertyFlags & vkRequiredFlags) != vkRequiredFlags) {
             continue;
         }
 
@@ -332,7 +410,7 @@ int ResourceMemoryAllocator::FindBestTypeIndex(VkMemoryRequirements requirements
             info.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
         bool bestHostCached =
             info.memoryTypes[bestType].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
-        if (kind == MemoryKind::LinearReadMappable && currentHostCached != bestHostCached) {
+        if ((kind & MemoryKind::ReadMappable) && currentHostCached != bestHostCached) {
             if (currentHostCached) {
                 bestType = static_cast<int>(i);
             }
@@ -355,6 +433,14 @@ void ResourceMemoryAllocator::DestroyPool() {
     for (auto& alloc : mAllocatorsPerType) {
         alloc->DestroyPool();
     }
+}
+
+uint64_t ResourceMemoryAllocator::GetTotalUsedMemory() const {
+    return mTotalUsedMemory;
+}
+
+uint64_t ResourceMemoryAllocator::GetTotalAllocatedMemory() const {
+    return mTotalAllocatedMemory;
 }
 
 }  // namespace dawn::native::vulkan

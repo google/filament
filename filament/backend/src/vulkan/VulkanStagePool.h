@@ -22,6 +22,7 @@
 
 #include <map>
 #include <unordered_set>
+#include <vector>
 
 namespace filament::backend {
 
@@ -73,10 +74,10 @@ private:
     std::multimap<uint32_t, VulkanStage const*> mFreeStages;
 
     // Simple unordered set for stashing a list of in-use stages that can be reclaimed later.
-    std::unordered_set<VulkanStage const*> mUsedStages;
+    std::vector<VulkanStage const*> mUsedStages;
 
     std::unordered_set<VulkanStageImage const*> mFreeImages;
-    std::unordered_set<VulkanStageImage const*> mUsedImages;
+    std::vector<VulkanStageImage const*> mUsedImages;
 
     // Store the current "time" (really just a frame count) and LRU eviction parameters.
     uint64_t mCurrentFrame = 0;

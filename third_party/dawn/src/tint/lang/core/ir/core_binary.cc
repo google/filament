@@ -43,7 +43,7 @@ CoreBinary::CoreBinary(Id id, InstructionResult* result, BinaryOp op, Value* lhs
 CoreBinary::~CoreBinary() = default;
 
 CoreBinary* CoreBinary::Clone(CloneContext& ctx) {
-    auto* new_result = ctx.Clone(Result(0));
+    auto* new_result = ctx.Clone(Result());
     auto* lhs = ctx.Remap(LHS());
     auto* rhs = ctx.Remap(RHS());
     return ctx.ir.CreateInstruction<CoreBinary>(new_result, Op(), lhs, rhs);

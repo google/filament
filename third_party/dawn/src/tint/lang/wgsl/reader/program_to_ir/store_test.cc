@@ -45,7 +45,7 @@ TEST_F(ProgramToIRStoreTest, EmitStatement_Assign) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
-  %a:ptr<private, u32, read_write> = var
+  %a:ptr<private, u32, read_write> = var undef
 }
 
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {

@@ -90,7 +90,7 @@ class ShaderModule::CompilationInfoEvent final : public TrackedEvent {
     void CompleteImpl(FutureID futureID, EventCompletionType completionType) override {
         WGPUCompilationInfo* compilationInfo = nullptr;
         if (completionType == EventCompletionType::Shutdown) {
-            mStatus = WGPUCompilationInfoRequestStatus_InstanceDropped;
+            mStatus = WGPUCompilationInfoRequestStatus_CallbackCancelled;
         } else {
             compilationInfo = &(*mShader->mCompilationInfo);
         }

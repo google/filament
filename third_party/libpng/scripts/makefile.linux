@@ -1,5 +1,5 @@
 # makefile for libpng.a and libpng16.so on Linux ELF with gcc
-# Copyright (C) 2020-2022 Cosmin Truta
+# Copyright (C) 2018-2025 Cosmin Truta
 # Copyright (C) 1998, 1999, 2002, 2006, 2008, 2010-2014 Greg Roelofs and
 # Glenn Randers-Pehrson
 # Copyright (C) 1996, 1997 Andreas Dilger
@@ -18,30 +18,28 @@ LIBSOMAJ=$(LIBNAME).so.$(PNGMAJ)
 
 # Utilities:
 CC=gcc
-AR_RC=ar rc
+AR=ar
 RANLIB=ranlib
-MKDIR_P=mkdir -p
 LN_SF=ln -sf
 CP=cp
 RM_F=rm -f
 
-# Where the zlib library and include files are located.
-#ZLIBLIB=/usr/local/lib
-#ZLIBINC=/usr/local/include
-ZLIBLIB=../zlib
-ZLIBINC=../zlib
-
 # Compiler and linker flags
-NOHWOPT=-DPNG_ARM_NEON_OPT=0 -DPNG_MIPS_MSA_OPT=0 \
-	-DPNG_POWERPC_VSX_OPT=0 -DPNG_INTEL_SSE_OPT=0
-WARNMORE=-Wwrite-strings -Wpointer-arith -Wshadow \
-	-Wmissing-declarations -Wtraditional -Wcast-align \
-	-Wstrict-prototypes -Wmissing-prototypes # -Wconversion
-DEFS=$(NOHWOPT)
-CPPFLAGS=-I$(ZLIBINC) $(DEFS) # -DPNG_DEBUG=5
-CFLAGS=-O3 -funroll-loops -Wall -Wextra -Wundef # $(WARNMORE) -g
-LDFLAGS=-L. -Wl,-rpath,. -L$(ZLIBLIB) -Wl,-rpath,$(ZLIBLIB) -lpng16 -lz -lm # -g
-LDFLAGS_A=-L$(ZLIBLIB) -Wl,-rpath,$(ZLIBLIB) libpng.a -lz -lm # -g
+NOHWOPT = -DPNG_ARM_NEON_OPT=0 -DPNG_MIPS_MSA_OPT=0 \
+          -DPNG_POWERPC_VSX_OPT=0 -DPNG_INTEL_SSE_OPT=0
+STDC = -pedantic-errors
+WARN = -Wall -Wextra -Wundef
+WARNMORE = -Wcast-align -Wconversion -Wshadow -Wpointer-arith -Wwrite-strings \
+           -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes
+LOCAL_CPPFLAGS = $(NOHWOPT)
+CPPFLAGS = # -DPNG_DEBUG=5
+ALL_CPPFLAGS = $(LOCAL_CPPFLAGS) $(CPPFLAGS)
+LOCAL_CFLAGS = $(STDC) $(WARN) # $(WARNMORE)
+CFLAGS = -O3 -funroll-loops # -g
+ALL_CFLAGS = $(LOCAL_CFLAGS) $(CFLAGS)
+ARFLAGS = rc
+LDFLAGS = -L. -Wl,-rpath,. -lpng16 -lz -lm # -g
+LDFLAGS_A = libpng.a -lz -lm # -g
 
 # Pre-built configuration
 # See scripts/pnglibconf.mak for more options
@@ -57,10 +55,10 @@ OBJSDLL = $(OBJS:.o=.pic.o)
 .SUFFIXES:      .c .o .pic.o
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(ALL_CPPFLAGS) $(ALL_CFLAGS) -o $@ $*.c
 
 .c.pic.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -fPIC -o $@ $*.c
+	$(CC) -c $(ALL_CPPFLAGS) $(ALL_CFLAGS) -fPIC -o $@ $*.c
 
 all: libpng.a $(LIBSO) pngtest pngtest-static
 
@@ -68,7 +66,7 @@ pnglibconf.h: $(PNGLIBCONF_H_PREBUILT)
 	$(CP) $(PNGLIBCONF_H_PREBUILT) $@
 
 libpng.a: $(OBJS)
-	$(AR_RC) $@ $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
 	$(RANLIB) $@
 
 $(LIBSO): $(LIBSOMAJ)

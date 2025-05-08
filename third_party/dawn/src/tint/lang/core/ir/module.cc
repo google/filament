@@ -124,7 +124,7 @@ Symbol Module::NameOf(const Instruction* inst) const {
     if (inst->Results().Length() != 1) {
         return Symbol{};
     }
-    return NameOf(inst->Result(0));
+    return NameOf(inst->Result());
 }
 
 Symbol Module::NameOf(const Value* value) const {
@@ -133,7 +133,12 @@ Symbol Module::NameOf(const Value* value) const {
 
 void Module::SetName(Instruction* inst, std::string_view name) {
     TINT_ASSERT(inst->Results().Length() == 1);
-    SetName(inst->Result(0), name);
+    SetName(inst->Result(), name);
+}
+
+void Module::SetName(Instruction* inst, Symbol name) {
+    TINT_ASSERT(inst->Results().Length() == 1);
+    SetName(inst->Result(), name);
 }
 
 void Module::SetName(Value* value, std::string_view name) {
@@ -152,7 +157,7 @@ void Module::ClearName(Value* value) {
 
 void Module::SetSource(Instruction* inst, Source src) {
     TINT_ASSERT(inst->Results().Length() == 1);
-    SetSource(inst->Result(0), src);
+    SetSource(inst->Result(), src);
 }
 
 void Module::SetSource(Value* value, Source src) {
@@ -163,7 +168,7 @@ Source Module::SourceOf(const Instruction* inst) const {
     if (inst->Results().Length() != 1) {
         return Source{};
     }
-    return SourceOf(inst->Result(0));
+    return SourceOf(inst->Result());
 }
 
 Source Module::SourceOf(const Value* value) const {

@@ -75,13 +75,11 @@ func (p *parser) parse(out *ast.AST) error {
 		case tok.Attr:
 			attributes = append(attributes, p.attributes()...)
 		case tok.Enum:
-			if len(attributes) > 0 {
-				p.err = fmt.Errorf("%v unexpected attribute", attributes[0].Source)
-			}
 			if len(implicitParams) > 0 {
 				p.err = fmt.Errorf("%v unexpected implicitParams", implicitParams[0].Source)
 			}
-			out.Enums = append(out.Enums, p.enumDecl())
+			out.Enums = append(out.Enums, p.enumDecl(attributes))
+			attributes = nil
 		case tok.Match:
 			if len(attributes) > 0 {
 				p.err = fmt.Errorf("%v unexpected attribute", attributes[0].Source)
@@ -138,10 +136,11 @@ func (p *parser) parse(out *ast.AST) error {
 	return nil
 }
 
-func (p *parser) enumDecl() ast.EnumDecl {
+func (p *parser) enumDecl(decos ast.Attributes) ast.EnumDecl {
 	p.expect(tok.Enum, "enum declaration")
 	name := p.expect(tok.Identifier, "enum name")
-	e := ast.EnumDecl{Source: name.Source, Name: string(name.Runes)}
+	e := ast.EnumDecl{Source: name.Source, Name: string(name.Runes), Attributes: decos}
+
 	p.expect(tok.Lbrace, "enum declaration")
 	for p.err == nil && p.match(tok.Rbrace) == nil {
 		e.Entries = append(e.Entries, p.enumEntry())

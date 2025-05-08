@@ -30,18 +30,22 @@
 #include <utility>
 
 #include "dawn/native/D3D11Backend.h"
+#include "dawn/native/Format.h"
 #include "dawn/native/d3d/D3DError.h"
 #include "dawn/native/d3d/KeyedMutex.h"
 #include "dawn/native/d3d/UtilsD3D.h"
 #include "dawn/native/d3d11/DeviceD3D11.h"
+#include "dawn/native/d3d11/DeviceInfoD3D11.h"
 #include "dawn/native/d3d11/TextureD3D11.h"
 
 namespace dawn::native::d3d11 {
 
 namespace {
 
-ResultOrError<SharedTextureMemoryProperties>
-PropertiesFromD3D11Texture(Device* device, ID3D11Texture2D* d3d11Texture, bool isSharedWithHandle) {
+ResultOrError<SharedTextureMemoryProperties> PropertiesFromD3D11Texture(
+    Device* device,
+    const ComPtr<ID3D11Texture2D>& d3d11Texture,
+    bool isSharedWithHandle) {
     D3D11_TEXTURE2D_DESC desc;
     d3d11Texture->GetDesc(&desc);
     DAWN_INVALID_IF(isSharedWithHandle && desc.ArraySize != 1,
@@ -58,11 +62,30 @@ PropertiesFromD3D11Texture(Device* device, ID3D11Texture2D* d3d11Texture, bool i
                     "Resource Height (%u) exceeds maxTextureDimension2D (%u).", desc.Height,
                     limits.v1.maxTextureDimension2D);
 
+    wgpu::TextureFormat wgpuFormat;
+    DAWN_TRY_ASSIGN(wgpuFormat, d3d::FromUncompressedColorDXGITextureFormat(desc.Format));
+    if (isSharedWithHandle) {
+        const Format* format = nullptr;
+        DAWN_TRY_ASSIGN(format, device->GetInternalFormat(wgpuFormat));
+        DAWN_INVALID_IF(format->IsMultiPlanar() &&
+                            !device->GetDeviceInfo().supportsSharedResourceCapabilityTier2,
+                        "Resource Format (%s) with HANDLE is only supported if the D3D11 device "
+                        "supports D3D11_SHARED_RESOURCE_TIER_2",
+                        wgpuFormat);
+
+        if (device->IsToggleEnabled(Toggle::D3D11DisableFence)) {
+            ComPtr<IDXGIKeyedMutex> dxgiKeyedMutex;
+            HRESULT hr = d3d11Texture.As(&dxgiKeyedMutex);
+            DAWN_INVALID_IF(FAILED(hr),
+                            "Shared Resource must be created with a keyed mutex when D3D11 Fences "
+                            "are disabled.");
+        }
+    }
+
     SharedTextureMemoryProperties properties;
     properties.size = {static_cast<uint32_t>(desc.Width), static_cast<uint32_t>(desc.Height),
                        desc.ArraySize};
-
-    DAWN_TRY_ASSIGN(properties.format, d3d::FromUncompressedColorDXGITextureFormat(desc.Format));
+    properties.format = wgpuFormat;
 
     // The usages that the underlying D3D11 texture supports are partially
     // dependent on its creation flags. Note that the SharedTextureMemory
@@ -94,7 +117,7 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
     DAWN_INVALID_IF(descriptor->handle == nullptr, "shared HANDLE is missing.");
 
     ComPtr<ID3D11Resource> d3d11Resource;
-    DAWN_TRY(CheckHRESULT(device->GetD3D11Device5()->OpenSharedResource1(
+    DAWN_TRY(CheckHRESULT(device->GetD3D11Device3()->OpenSharedResource1(
                               descriptor->handle, IID_PPV_ARGS(&d3d11Resource)),
                           "D3D11 open shared handle"));
 
@@ -108,7 +131,7 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
         CheckHRESULT(d3d11Resource.As(&d3d11Texture), "Cannot get ID3D11Texture2D from texture"));
 
     SharedTextureMemoryProperties properties;
-    DAWN_TRY_ASSIGN(properties, PropertiesFromD3D11Texture(device, d3d11Texture.Get(),
+    DAWN_TRY_ASSIGN(properties, PropertiesFromD3D11Texture(device, d3d11Texture,
                                                            /*isSharedWithHandle=*/true));
 
     auto result =
@@ -135,7 +158,7 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
                     device);
 
     SharedTextureMemoryProperties properties;
-    DAWN_TRY_ASSIGN(properties, PropertiesFromD3D11Texture(device, descriptor->texture.Get(),
+    DAWN_TRY_ASSIGN(properties, PropertiesFromD3D11Texture(device, descriptor->texture,
                                                            /*isSharedWithHandle=*/false));
 
     auto result =

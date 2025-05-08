@@ -1,0 +1,7 @@
+name: 'Set up dependency versions'
+runs:
+  using: "composite"
+  steps:
+    - name: Set up dependency versions
+      shell: bash
+      run: cat ./build/common/versions >> $GITHUB_ENV

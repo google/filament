@@ -292,7 +292,7 @@ absl_cc_library(
     absl::hash_container_defaults
     absl::raw_hash_map
     absl::algorithm_container
-    absl::memory
+    absl::type_traits
   PUBLIC
 )
 
@@ -306,8 +306,10 @@ absl_cc_test(
   DEPS
     absl::any
     absl::check
+    absl::config
     absl::flat_hash_map
     absl::hash_generator_testing
+    absl::hash_policy_testing
     absl::test_allocator
     absl::type_traits
     absl::unordered_map_constructor_test
@@ -331,6 +333,7 @@ absl_cc_library(
     absl::algorithm_container
     absl::core_headers
     absl::memory
+    absl::type_traits
   PUBLIC
 )
 
@@ -347,6 +350,8 @@ absl_cc_test(
     absl::config
     absl::container_memory
     absl::flat_hash_set
+    absl::hash
+    absl::hash_container_defaults
     absl::hash_generator_testing
     absl::memory
     absl::strings
@@ -373,6 +378,7 @@ absl_cc_library(
     absl::raw_hash_map
     absl::algorithm_container
     absl::memory
+    absl::type_traits
   PUBLIC
 )
 
@@ -384,7 +390,8 @@ absl_cc_test(
   COPTS
     ${ABSL_TEST_COPTS}
   DEPS
-    absl::hash_generator_testing
+    absl::config
+    absl::hash_policy_testing
     absl::node_hash_map
     absl::tracked
     absl::unordered_map_constructor_test
@@ -409,6 +416,7 @@ absl_cc_library(
     absl::raw_hash_set
     absl::algorithm_container
     absl::memory
+    absl::type_traits
   PUBLIC
 )
 
@@ -422,7 +430,10 @@ absl_cc_test(
     "-DUNORDERED_SET_CXX17"
   DEPS
     absl::hash_generator_testing
+    absl::hash_policy_testing
+    absl::memory
     absl::node_hash_set
+    absl::type_traits
     absl::unordered_set_constructor_test
     absl::unordered_set_lookup_test
     absl::unordered_set_members_test
@@ -738,6 +749,7 @@ absl_cc_library(
     ${ABSL_DEFAULT_COPTS}
   DEPS
     absl::bits
+    absl::common_policy_traits
     absl::compressed_tuple
     absl::config
     absl::container_common
@@ -746,6 +758,7 @@ absl_cc_library(
     absl::dynamic_annotations
     absl::endian
     absl::hash
+    absl::hash_function_defaults
     absl::hash_policy_traits
     absl::hashtable_debug_hooks
     absl::hashtablez_sampler
@@ -781,10 +794,13 @@ absl_cc_test(
     absl::hashtablez_sampler
     absl::log
     absl::memory
+    absl::node_hash_set
+    absl::optional
     absl::prefetch
     absl::raw_hash_set
     absl::strings
     absl::test_allocator
+    absl::test_instance_tracker
     absl::type_traits
     GTest::gmock_main
 )

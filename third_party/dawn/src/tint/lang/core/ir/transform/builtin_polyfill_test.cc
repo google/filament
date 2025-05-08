@@ -2050,8 +2050,7 @@ TEST_F(IR_BuiltinPolyfillTest, InsertBits_Full_Vec4I32) {
 }
 
 TEST_F(IR_BuiltinPolyfillTest, TextureSampleBaseClampToEdge_2d_f32_NoPolyfill) {
-    auto* texture_ty =
-        ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32());
+    auto* texture_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
     Build(core::BuiltinFn::kTextureSampleBaseClampToEdge, ty.vec4<f32>(),
           Vector{texture_ty, ty.sampler(), ty.vec2<f32>()});
     auto* src = R"(
@@ -2200,8 +2199,7 @@ TEST_F(IR_BuiltinPolyfillTest, Radians_Vec4F16) {
 }
 
 TEST_F(IR_BuiltinPolyfillTest, TextureSampleBaseClampToEdge_2d_f32) {
-    auto* texture_ty =
-        ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32());
+    auto* texture_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
     Build(core::BuiltinFn::kTextureSampleBaseClampToEdge, ty.vec4<f32>(),
           Vector{texture_ty, ty.sampler(), ty.vec2<f32>()});
     auto* src = R"(
@@ -2235,8 +2233,7 @@ TEST_F(IR_BuiltinPolyfillTest, TextureSampleBaseClampToEdge_2d_f32) {
 }
 
 TEST_F(IR_BuiltinPolyfillTest, TextureSampleBiasClampNonArray) {
-    auto* texture_ty =
-        ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2d, ty.f32());
+    auto* texture_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
     Build(core::BuiltinFn::kTextureSampleBias, ty.vec4<f32>(),
           Vector{texture_ty, ty.sampler(), ty.vec2<f32>(), ty.f32()});
 
@@ -2267,8 +2264,7 @@ TEST_F(IR_BuiltinPolyfillTest, TextureSampleBiasClampNonArray) {
 }
 
 TEST_F(IR_BuiltinPolyfillTest, TextureSampleBiasClampWithArray) {
-    auto* texture_ty =
-        ty.Get<core::type::SampledTexture>(core::type::TextureDimension::k2dArray, ty.f32());
+    auto* texture_ty = ty.sampled_texture(core::type::TextureDimension::k2dArray, ty.f32());
     Build(core::BuiltinFn::kTextureSampleBias, ty.vec4<f32>(),
           Vector{texture_ty, ty.sampler(), ty.vec2<f32>(), ty.i32(), ty.f32()});
 

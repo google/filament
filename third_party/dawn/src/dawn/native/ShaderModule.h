@@ -145,19 +145,25 @@ MaybeError ValidateCompatibilityWithPipelineLayout(DeviceBase* device,
 
 // Return extent3D with workgroup size dimension info if it is valid.
 // width = x, height = y, depthOrArrayLength = z.
-ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(const tint::Program& program,
-                                                          const char* entryPointName,
-                                                          const LimitsForCompilationRequest& limits,
-                                                          const AdapterBase* adapter);
+ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(
+    const tint::Program& program,
+    const char* entryPointName,
+    bool usesSubgroupMatrix,
+    uint32_t maxSubgroupSize,
+    const LimitsForCompilationRequest& limits,
+    const LimitsForCompilationRequest& adaterSupportedlimits);
 
 // Return extent3D with workgroup size dimension info if it is valid.
 // width = x, height = y, depthOrArrayLength = z.
-ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(uint32_t x,
-                                                          uint32_t y,
-                                                          uint32_t z,
-                                                          size_t workgroupStorageSize,
-                                                          const LimitsForCompilationRequest& limits,
-                                                          const AdapterBase* adapter);
+ResultOrError<Extent3D> ValidateComputeStageWorkgroupSize(
+    uint32_t x,
+    uint32_t y,
+    uint32_t z,
+    size_t workgroupStorageSize,
+    bool usesSubgroupMatrix,
+    uint32_t maxSubgroupSize,
+    const LimitsForCompilationRequest& limits,
+    const LimitsForCompilationRequest& adaterSupportedlimits);
 
 RequiredBufferSizes ComputeRequiredBufferSizesForLayout(const EntryPointMetadata& entryPoint,
                                                         const PipelineLayoutBase* layout);
@@ -259,6 +265,9 @@ struct EntryPointMetadata {
         // Then it is required for the pipeline stage to have a constant record to initialize a
         // value
         bool isInitialized;
+
+        // Set to true if the override is used in the entry point
+        bool isUsed = true;
     };
 
     using OverridesMap = absl::flat_hash_map<std::string, Override>;
@@ -289,6 +298,7 @@ struct EntryPointMetadata {
     bool usesVertexIndex = false;
     bool usesTextureLoadWithDepthTexture = false;
     bool usesDepthTextureWithNonComparisonSampler = false;
+    bool usesSubgroupMatrix = false;
 
     // Immediate Data block byte size
     uint32_t immediateDataRangeByteSize = 0;
@@ -344,14 +354,18 @@ class ShaderModuleBase : public RefCountedWithExternalCount<ApiObjectBase>,
     using ScopedUseTintProgram = APIRef<ShaderModuleBase>;
     ScopedUseTintProgram UseTintProgram();
 
-    Ref<TintProgram> GetTintProgram() const;
-    Ref<TintProgram> GetTintProgramForTesting() const;
-    int GetTintProgramRecreateCountForTesting() const;
+    // Get tintProgram, (re)create it if necessary.
+    Ref<TintProgram> GetTintProgram();
 
     Future APIGetCompilationInfo(const WGPUCompilationInfoCallbackInfo& callbackInfo);
 
     void InjectCompilationMessages(std::unique_ptr<OwnedCompilationMessages> compilationMessages);
     OwnedCompilationMessages* GetCompilationMessages() const;
+
+    // Return nullable tintProgram directly without any recreation, can be used for testing the
+    // releasing/recreation behaviors.
+    Ref<TintProgram> GetNullableTintProgramForTesting() const;
+    int GetTintProgramRecreateCountForTesting() const;
 
   protected:
     void DestroyImpl() override;
@@ -379,7 +393,8 @@ class ShaderModuleBase : public RefCountedWithExternalCount<ApiObjectBase>,
     PerStage<size_t> mEntryPointCounts;
 
     struct TintData {
-        Ref<TintProgram> tintProgram;
+        // tintProgram is nullable so that it can be lazily (re)generated right before actual using.
+        Ref<TintProgram> tintProgram = nullptr;
         int tintProgramRecreateCount = 0;
     };
     MutexProtected<TintData> mTintData;

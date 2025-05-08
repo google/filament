@@ -633,12 +633,14 @@ typedef struct VkuDeviceDispatchTable_ {
     PFN_vkDestroyPrivateDataSlotEXT DestroyPrivateDataSlotEXT;
     PFN_vkSetPrivateDataEXT SetPrivateDataEXT;
     PFN_vkGetPrivateDataEXT GetPrivateDataEXT;
+#ifdef VK_ENABLE_BETA_EXTENSIONS
     PFN_vkCreateCudaModuleNV CreateCudaModuleNV;
     PFN_vkGetCudaModuleCacheNV GetCudaModuleCacheNV;
     PFN_vkCreateCudaFunctionNV CreateCudaFunctionNV;
     PFN_vkDestroyCudaModuleNV DestroyCudaModuleNV;
     PFN_vkDestroyCudaFunctionNV DestroyCudaFunctionNV;
     PFN_vkCmdCudaLaunchKernelNV CmdCudaLaunchKernelNV;
+#endif  // VK_ENABLE_BETA_EXTENSIONS
 #ifdef VK_USE_PLATFORM_METAL_EXT
     PFN_vkExportMetalObjectsEXT ExportMetalObjectsEXT;
 #endif  // VK_USE_PLATFORM_METAL_EXT
@@ -779,6 +781,7 @@ typedef struct VkuDeviceDispatchTable_ {
     PFN_vkGetMemoryMetalHandleEXT GetMemoryMetalHandleEXT;
     PFN_vkGetMemoryMetalHandlePropertiesEXT GetMemoryMetalHandlePropertiesEXT;
 #endif  // VK_USE_PLATFORM_METAL_EXT
+    PFN_vkCmdEndRendering2EXT CmdEndRendering2EXT;
     PFN_vkCreateAccelerationStructureKHR CreateAccelerationStructureKHR;
     PFN_vkDestroyAccelerationStructureKHR DestroyAccelerationStructureKHR;
     PFN_vkCmdBuildAccelerationStructuresKHR CmdBuildAccelerationStructuresKHR;
@@ -1275,12 +1278,14 @@ static inline void vkuInitDeviceDispatchTable(VkDevice device, VkuDeviceDispatch
     table->DestroyPrivateDataSlotEXT = (PFN_vkDestroyPrivateDataSlotEXT)gdpa(device, "vkDestroyPrivateDataSlotEXT");
     table->SetPrivateDataEXT = (PFN_vkSetPrivateDataEXT)gdpa(device, "vkSetPrivateDataEXT");
     table->GetPrivateDataEXT = (PFN_vkGetPrivateDataEXT)gdpa(device, "vkGetPrivateDataEXT");
+#ifdef VK_ENABLE_BETA_EXTENSIONS
     table->CreateCudaModuleNV = (PFN_vkCreateCudaModuleNV)gdpa(device, "vkCreateCudaModuleNV");
     table->GetCudaModuleCacheNV = (PFN_vkGetCudaModuleCacheNV)gdpa(device, "vkGetCudaModuleCacheNV");
     table->CreateCudaFunctionNV = (PFN_vkCreateCudaFunctionNV)gdpa(device, "vkCreateCudaFunctionNV");
     table->DestroyCudaModuleNV = (PFN_vkDestroyCudaModuleNV)gdpa(device, "vkDestroyCudaModuleNV");
     table->DestroyCudaFunctionNV = (PFN_vkDestroyCudaFunctionNV)gdpa(device, "vkDestroyCudaFunctionNV");
     table->CmdCudaLaunchKernelNV = (PFN_vkCmdCudaLaunchKernelNV)gdpa(device, "vkCmdCudaLaunchKernelNV");
+#endif  // VK_ENABLE_BETA_EXTENSIONS
 #ifdef VK_USE_PLATFORM_METAL_EXT
     table->ExportMetalObjectsEXT = (PFN_vkExportMetalObjectsEXT)gdpa(device, "vkExportMetalObjectsEXT");
 #endif  // VK_USE_PLATFORM_METAL_EXT
@@ -1421,6 +1426,7 @@ static inline void vkuInitDeviceDispatchTable(VkDevice device, VkuDeviceDispatch
     table->GetMemoryMetalHandleEXT = (PFN_vkGetMemoryMetalHandleEXT)gdpa(device, "vkGetMemoryMetalHandleEXT");
     table->GetMemoryMetalHandlePropertiesEXT = (PFN_vkGetMemoryMetalHandlePropertiesEXT)gdpa(device, "vkGetMemoryMetalHandlePropertiesEXT");
 #endif  // VK_USE_PLATFORM_METAL_EXT
+    table->CmdEndRendering2EXT = (PFN_vkCmdEndRendering2EXT)gdpa(device, "vkCmdEndRendering2EXT");
     table->CreateAccelerationStructureKHR = (PFN_vkCreateAccelerationStructureKHR)gdpa(device, "vkCreateAccelerationStructureKHR");
     table->DestroyAccelerationStructureKHR = (PFN_vkDestroyAccelerationStructureKHR)gdpa(device, "vkDestroyAccelerationStructureKHR");
     table->CmdBuildAccelerationStructuresKHR = (PFN_vkCmdBuildAccelerationStructuresKHR)gdpa(device, "vkCmdBuildAccelerationStructuresKHR");

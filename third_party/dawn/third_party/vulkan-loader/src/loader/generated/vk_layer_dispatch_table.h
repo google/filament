@@ -2,9 +2,9 @@
 // See loader_extension_generator.py for modifications
 
 /*
- * Copyright (c) 2015-2022 The Khronos Group Inc.
- * Copyright (c) 2015-2022 Valve Corporation
- * Copyright (c) 2015-2022 LunarG, Inc.
+ * Copyright (c) 2015-2025 The Khronos Group Inc.
+ * Copyright (c) 2015-2025 Valve Corporation
+ * Copyright (c) 2015-2025 LunarG, Inc.
  * Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * Copyright (c) 2023-2023 RasterGrid Kft.
  *
@@ -22,6 +22,7 @@
  *
  * Author: Mark Lobodzinski <mark@lunarg.com>
  * Author: Mark Young <marky@lunarg.com>
+ * Author: Charles Giessen <charles@lunarg.com>
  */
 
 // clang-format off
@@ -858,7 +859,11 @@ typedef struct VkLayerDispatchTable_ {
     PFN_vkCmdCopyAccelerationStructureNV CmdCopyAccelerationStructureNV;
     PFN_vkCmdTraceRaysNV CmdTraceRaysNV;
     PFN_vkCreateRayTracingPipelinesNV CreateRayTracingPipelinesNV;
+
+    // ---- VK_KHR_ray_tracing_pipeline extension commands
     PFN_vkGetRayTracingShaderGroupHandlesKHR GetRayTracingShaderGroupHandlesKHR;
+
+    // ---- VK_NV_ray_tracing extension commands
     PFN_vkGetRayTracingShaderGroupHandlesNV GetRayTracingShaderGroupHandlesNV;
     PFN_vkGetAccelerationStructureHandleNV GetAccelerationStructureHandleNV;
     PFN_vkCmdWriteAccelerationStructuresPropertiesNV CmdWriteAccelerationStructuresPropertiesNV;
@@ -964,12 +969,24 @@ typedef struct VkLayerDispatchTable_ {
     PFN_vkGetPrivateDataEXT GetPrivateDataEXT;
 
     // ---- VK_NV_cuda_kernel_launch extension commands
+#if defined(VK_ENABLE_BETA_EXTENSIONS)
     PFN_vkCreateCudaModuleNV CreateCudaModuleNV;
+#endif // VK_ENABLE_BETA_EXTENSIONS
+#if defined(VK_ENABLE_BETA_EXTENSIONS)
     PFN_vkGetCudaModuleCacheNV GetCudaModuleCacheNV;
+#endif // VK_ENABLE_BETA_EXTENSIONS
+#if defined(VK_ENABLE_BETA_EXTENSIONS)
     PFN_vkCreateCudaFunctionNV CreateCudaFunctionNV;
+#endif // VK_ENABLE_BETA_EXTENSIONS
+#if defined(VK_ENABLE_BETA_EXTENSIONS)
     PFN_vkDestroyCudaModuleNV DestroyCudaModuleNV;
+#endif // VK_ENABLE_BETA_EXTENSIONS
+#if defined(VK_ENABLE_BETA_EXTENSIONS)
     PFN_vkDestroyCudaFunctionNV DestroyCudaFunctionNV;
+#endif // VK_ENABLE_BETA_EXTENSIONS
+#if defined(VK_ENABLE_BETA_EXTENSIONS)
     PFN_vkCmdCudaLaunchKernelNV CmdCudaLaunchKernelNV;
+#endif // VK_ENABLE_BETA_EXTENSIONS
 
     // ---- VK_EXT_metal_objects extension commands
 #if defined(VK_USE_PLATFORM_METAL_EXT)
@@ -1200,6 +1217,9 @@ typedef struct VkLayerDispatchTable_ {
 #if defined(VK_USE_PLATFORM_METAL_EXT)
     PFN_vkGetMemoryMetalHandlePropertiesEXT GetMemoryMetalHandlePropertiesEXT;
 #endif // VK_USE_PLATFORM_METAL_EXT
+
+    // ---- VK_EXT_fragment_density_map_offset extension commands
+    PFN_vkCmdEndRendering2EXT CmdEndRendering2EXT;
 
     // ---- VK_KHR_acceleration_structure extension commands
     PFN_vkCreateAccelerationStructureKHR CreateAccelerationStructureKHR;

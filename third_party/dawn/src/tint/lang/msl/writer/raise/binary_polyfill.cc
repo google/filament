@@ -27,8 +27,6 @@
 
 #include "src/tint/lang/msl/writer/raise/binary_polyfill.h"
 
-#include <utility>
-
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/msl/ir/builtin_call.h"
@@ -104,7 +102,7 @@ struct State {
         // MSL does not have boolean overloads for `&` and `|`, so it promotes the operands to
         // integers. Make this explicit in the IR and then convert the result of the binary
         // instruction back to a boolean.
-        auto* result_ty = binary->Result(0)->Type();
+        auto* result_ty = binary->Result()->Type();
         auto* int_ty = ty.MatchWidth(ty.u32(), result_ty);
         b.InsertBefore(binary, [&] {
             auto* int_lhs = b.Convert(int_ty, binary->LHS());
@@ -121,7 +119,7 @@ struct State {
         // MSL does not define the behavior of signed integer overflow, so bitcast the operands to
         // unsigned integers, perform the operation, and then bitcast the result back to a signed
         // integer.
-        auto* signed_result_ty = binary->Result(0)->Type();
+        auto* signed_result_ty = binary->Result()->Type();
         auto* unsigned_result_ty = ty.MatchWidth(ty.u32(), signed_result_ty);
         auto* unsigned_lhs_ty = ty.MatchWidth(ty.u32(), binary->LHS()->Type());
         auto* unsigned_rhs_ty = ty.MatchWidth(ty.u32(), binary->RHS()->Type());
@@ -130,7 +128,7 @@ struct State {
             auto* uint_rhs = b.Bitcast(unsigned_rhs_ty, binary->RHS());
             auto* uint_binary = b.Binary(binary->Op(), unsigned_result_ty, uint_lhs, uint_rhs);
             auto* bitcast = b.Bitcast(signed_result_ty, uint_binary);
-            binary->Result(0)->ReplaceAllUsesWith(bitcast->Result(0));
+            binary->Result()->ReplaceAllUsesWith(bitcast->Result());
         });
         binary->Destroy();
     }
@@ -141,14 +139,14 @@ struct State {
         // Left-shifting a negative integer is undefined behavior in C++14 and therefore potentially
         // in MSL too, so we bitcast to an unsigned integer, perform the shift, and bitcast the
         // result back to a signed integer.
-        auto* signed_ty = binary->Result(0)->Type();
+        auto* signed_ty = binary->Result()->Type();
         auto* unsigned_ty = ty.MatchWidth(ty.u32(), signed_ty);
         b.InsertBefore(binary, [&] {
             auto* unsigned_lhs = b.Bitcast(unsigned_ty, binary->LHS());
             auto* unsigned_binary =
                 b.Binary(binary->Op(), unsigned_ty, unsigned_lhs, binary->RHS());
             auto* bitcast = b.Bitcast(signed_ty, unsigned_binary);
-            binary->Result(0)->ReplaceAllUsesWith(bitcast->Result(0));
+            binary->Result()->ReplaceAllUsesWith(bitcast->Result());
         });
         binary->Destroy();
     }

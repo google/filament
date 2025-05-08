@@ -163,7 +163,7 @@ class ValidationTest : public testing::Test {
 
     const dawn::native::ToggleInfo* GetToggleInfo(const char* name) const;
     bool HasToggleEnabled(const char* toggle) const;
-    wgpu::SupportedLimits GetSupportedLimits() const;
+    wgpu::Limits GetSupportedLimits() const;
     dawn::utils::WireHelper* GetWireHelper() const;
 
   protected:
@@ -173,7 +173,7 @@ class ValidationTest : public testing::Test {
     // Override these appropriately for different tests.
     virtual bool AllowUnsafeAPIs();
     virtual std::vector<wgpu::FeatureName> GetRequiredFeatures();
-    virtual wgpu::RequiredLimits GetRequiredLimits(const wgpu::SupportedLimits&);
+    virtual wgpu::Limits GetRequiredLimits(const wgpu::Limits&);
     virtual std::vector<const char*> GetEnabledToggles();
     virtual std::vector<const char*> GetDisabledToggles();
 
