@@ -885,7 +885,6 @@ wgpu::TextureAspect WGPUTexture::inferWGPUTextureViewAspect(const wgpu::TextureF
         if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::TextureBinding)) {
             return wgpu::TextureAspect::DepthOnly;
         }
-        return wgpu::TextureAspect::All;
     }
 
     return wgpu::TextureAspect::All;
