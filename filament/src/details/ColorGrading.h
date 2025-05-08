@@ -52,7 +52,7 @@ private:
     bool mIsOneDimensional;
     bool mIsLDR;
 
-    void initializeSettings(Settings& settings, const Builder& builder) noexcept;
+    static void initializeSettings(const Builder& builder, Settings& settings) noexcept;
 };
 
 FILAMENT_DOWNCAST(ColorGrading)

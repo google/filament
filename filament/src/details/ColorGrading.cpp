@@ -987,7 +987,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         });
 
     // Initialize settings from builder
-    initializeSettings(mSettings, builder);
+    initializeSettings(builder, mSettings);
 }
 
 FColorGrading::~FColorGrading() noexcept = default;
@@ -997,7 +997,7 @@ void FColorGrading::terminate(FEngine& engine) {
     driver.destroyTexture(mLutHandle);
 }
 
-void FColorGrading::initializeSettings(Settings& settings, const Builder& builder) noexcept {
+void FColorGrading::initializeSettings(const Builder& builder, Settings& settings) noexcept {
     settings.lutFormat = builder->format;
     settings.lutDimensions = builder->dimension;
     settings.toneMapper = builder->toneMapper;
