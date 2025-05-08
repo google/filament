@@ -180,8 +180,8 @@ public:
     const wgpu::Texture& getTexture() const { return mTexture; }
     const wgpu::TextureView& getTexView() const { return mTexView; }
 
-    // Public to allow checking for support of a texture format
     static wgpu::TextureFormat fToWGPUTextureFormat(const filament::backend::TextureFormat& fUsage);
+    static wgpu::TextureAspect inferWGPUTextureViewAspect(const wgpu::TextureFormat& format, const wgpu::TextureUsage& usage);
 
 private:
     wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
@@ -195,6 +195,7 @@ private:
     uint32_t mArrayLayerCount = 1;
     wgpu::TextureView mTexView = nullptr;
     wgpu::TextureUsage fToWGPUTextureUsage(const filament::backend::TextureUsage& fUsage);
+
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
