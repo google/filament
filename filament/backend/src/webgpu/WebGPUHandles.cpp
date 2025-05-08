@@ -857,32 +857,31 @@ wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(const TextureFormat& fUsag
 wgpu::TextureAspect WGPUTexture::inferWGPUTextureViewAspect(const wgpu::TextureFormat& format,
         const wgpu::TextureUsage& usage) {
 
-    if (format == wgpu::TextureFormat::Depth32Float ||
-        format == wgpu::TextureFormat::Depth24Plus ||
-        format == wgpu::TextureFormat::Depth16Unorm) {
-        if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::RenderAttachment) ||
-            static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::TextureBinding) ||
-            static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::StorageBinding)) {
+    if (format == wgpu::TextureFormat::Depth32Float || format == wgpu::TextureFormat::Depth24Plus ||
+            format == wgpu::TextureFormat::Depth16Unorm) {
+        if (static_cast<uint32_t>(usage) &
+                        static_cast<uint32_t>(wgpu::TextureUsage::RenderAttachment) ||
+                static_cast<uint32_t>(usage) &
+                        static_cast<uint32_t>(wgpu::TextureUsage::TextureBinding) ||
+                static_cast<uint32_t>(usage) &
+                        static_cast<uint32_t>(wgpu::TextureUsage::StorageBinding)) {
             return wgpu::TextureAspect::DepthOnly;
-        } else if (static_cast<uint32_t>(usage) & (static_cast<uint32_t>(wgpu::TextureUsage::CopySrc) | static_cast<uint32_t>(wgpu::TextureUsage::CopyDst))) {
-            return wgpu::TextureAspect::All;
         }
-        return wgpu::TextureAspect::DepthOnly;
     }
 
     if (format == wgpu::TextureFormat::Stencil8) {
-        if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::RenderAttachment) ||
-            static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::StorageBinding)) {
+        if (static_cast<uint32_t>(usage) &
+                        static_cast<uint32_t>(wgpu::TextureUsage::RenderAttachment) ||
+                static_cast<uint32_t>(usage) &
+                        static_cast<uint32_t>(wgpu::TextureUsage::StorageBinding)) {
             return wgpu::TextureAspect::StencilOnly;
-        } else if (static_cast<uint32_t>(usage) & (static_cast<uint32_t>(wgpu::TextureUsage::CopySrc) | static_cast<uint32_t>(wgpu::TextureUsage::CopyDst))) {
-            return wgpu::TextureAspect::All;
         }
-        return wgpu::TextureAspect::StencilOnly;
     }
 
     if (format == wgpu::TextureFormat::Depth24PlusStencil8 ||
-        format == wgpu::TextureFormat::Depth32FloatStencil8) {
-        if (static_cast<uint32_t>(usage) & static_cast<uint32_t>(wgpu::TextureUsage::TextureBinding)) {
+            format == wgpu::TextureFormat::Depth32FloatStencil8) {
+        if (static_cast<uint32_t>(usage) &
+                static_cast<uint32_t>(wgpu::TextureUsage::TextureBinding)) {
             return wgpu::TextureAspect::DepthOnly;
         }
     }
