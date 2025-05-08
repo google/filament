@@ -80,18 +80,25 @@ static constexpr std::initializer_list<DescriptorSetLayoutBinding> perRenderable
 };
 
 // used for post-processing passes
-static DescriptorSetLayout const postProcessDescriptorSetLayout{ postProcessDescriptorSetLayoutList };
+static DescriptorSetLayout const postProcessDescriptorSetLayout{ utils::StaticString("postProcess"),
+    postProcessDescriptorSetLayoutList };
 
 // used to generate shadow-maps
-static DescriptorSetLayout const depthVariantDescriptorSetLayout{ depthVariantDescriptorSetLayoutList };
+static DescriptorSetLayout const depthVariantDescriptorSetLayout{
+    utils::StaticString("depthVariant"), depthVariantDescriptorSetLayoutList
+};
 
-static DescriptorSetLayout const ssrVariantDescriptorSetLayout{ ssrVariantDescriptorSetLayoutList };
+static DescriptorSetLayout const ssrVariantDescriptorSetLayout{ utils::StaticString("ssrVariant"),
+    ssrVariantDescriptorSetLayoutList };
 
 // Used for generating the color pass (i.e. the main pass). This is in fact a template that gets
 // declined into 8 different layouts, based on variants.
-static DescriptorSetLayout perViewDescriptorSetLayout = { perViewDescriptorSetLayoutList };
+static DescriptorSetLayout perViewDescriptorSetLayout = { utils::StaticString("perView"),
+    perViewDescriptorSetLayoutList };
 
-static DescriptorSetLayout perRenderableDescriptorSetLayout = { perRenderableDescriptorSetLayoutList };
+static DescriptorSetLayout perRenderableDescriptorSetLayout = {
+    utils::StaticString("perRenderable"), perRenderableDescriptorSetLayoutList
+};
 
 DescriptorSetLayout const& getPostProcessLayout() noexcept {
     return postProcessDescriptorSetLayout;

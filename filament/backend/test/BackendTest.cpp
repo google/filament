@@ -45,6 +45,7 @@ namespace test {
 Backend BackendTest::sBackend = Backend::NOOP;
 OperatingSystem BackendTest::sOperatingSystem = OperatingSystem::OTHER;
 bool BackendTest::sIsMobilePlatform = false;
+std::vector<std::string> BackendTest::sFailedImages;
 
 void BackendTest::init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform) {
     sBackend = backend;
@@ -63,11 +64,12 @@ BackendTest::~BackendTest() {
     flushAndWait();
     mImageExpectations->evaluate();
     // Note: Don't terminate the driver for OpenGL, as it wipes away the context and removes the buffer from the screen.
-    if (sBackend == Backend::OPENGL) {
-        return;
+    if (sBackend != Backend::OPENGL) {
+        driver->terminate();
+        delete driver;
     }
-    driver->terminate();
-    delete driver;
+
+    recordFailedImages();
 }
 
 void BackendTest::initializeDriver() {
@@ -167,8 +169,24 @@ bool BackendTest::matchesEnvironment(OperatingSystem operatingSystem) {
     return sOperatingSystem == operatingSystem;
 }
 
-bool BackendTest::matchesEnvironment(OperatingSystem operatingSystem, Backend backend) {
-    return matchesEnvironment(operatingSystem) && matchesEnvironment(backend);
+void BackendTest::markImageAsFailure(std::string failedImageName) {
+    sFailedImages.emplace_back(std::move(failedImageName));
+}
+
+void BackendTest::recordFailedImages() {
+    if (!sFailedImages.empty()) {
+        std::string failedImages;
+        for (auto& failedTestImageName: sFailedImages) {
+            if (failedImages.empty()) {
+                failedImages = failedTestImageName;
+            } else {
+                failedImages.append(",");
+                failedImages.append(failedTestImageName);
+            }
+        }
+        RecordProperty("FailedImages", failedImages);
+    }
+    sFailedImages.clear();
 }
 
 class Environment : public ::testing::Environment {
