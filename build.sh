@@ -151,7 +151,7 @@ function print_fgviewer_help {
 }
 
 # Unless explicitly specified, NDK version will be selected as highest available version within same major release chain
-FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/android/ndk.version | cut -f 1 -d ".")}
+FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/common/versions | grep GITHUB_NDK_VERSION | cut -f 1 -d ".")}
 
 # Requirements
 CMAKE_MAJOR=3
