@@ -214,9 +214,9 @@ public class ColorGrading {
          *
          * The default tone mapping operator is {@link ToneMapper.ACESLegacy}.
          *
-         * The specified tone mapper must have a lifecycle that exceeds the lifetime of
-         * this builder. Since the build(Engine&) method is synchronous, it is safe to
-         * delete the tone mapper object after that finishes executing.
+         * The copy of the specified tone mapper is set to this builder. It is safe to delete
+         * the original tone mapper object while the copied one is held by the built ColorGrading
+         * object.
          *
          * @param toneMapper The tone mapping operator to apply to the HDR color buffer
          *
