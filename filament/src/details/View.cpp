@@ -38,11 +38,12 @@
 #include <private/filament/UibStructs.h>
 #include <private/filament/EngineEnums.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Profiler.h>
 #include <utils/Slice.h>
-#include <utils/Systrace.h>
 #include <utils/Zip2Iterator.h>
 
 #include <math/scalar.h>
@@ -339,7 +340,7 @@ bool FView::isSkyboxVisible() const noexcept {
 
 void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
         FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     mHasShadowing = false;
     mNeedsShadowMap = false;
@@ -413,8 +414,8 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
 }
 
 void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexcept {
-    SYSTRACE_CALL();
-    SYSTRACE_CONTEXT();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FScene* const scene = mScene;
     auto const& lightData = scene->getLightData();
@@ -428,7 +429,8 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
     }
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
-    SYSTRACE_VALUE32("visibleLights", lightData.size() - FScene::DIRECTIONAL_LIGHTS_COUNT);
+    FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT,
+            "visibleLights", lightData.size() - FScene::DIRECTIONAL_LIGHTS_COUNT);
 
     /*
      * Exposure
@@ -501,8 +503,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         filament::Viewport const viewport, CameraInfo cameraInfo,
         float4 const& userTime, bool const needsAlphaChannel) noexcept {
 
-        SYSTRACE_CALL();
-        SYSTRACE_CONTEXT();
+        FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+        FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     JobSystem& js = engine.getJobSystem();
 
@@ -650,7 +652,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         // TODO: we need to compare performance of doing this partitioning vs not doing it.
         //       and rely on checking visibility in the loops
 
-        SYSTRACE_NAME_BEGIN("Partitioning");
+        FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, "Partitioning");
 
         // calculate the sorting key for all elements, based on their visibility
         uint8_t const* layers = renderableData.data<FScene::LAYERS>();
@@ -692,7 +694,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
         mSpotLightShadowCasters = merged;
 
-        SYSTRACE_NAME_END();
+        FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
         // TODO: when any spotlight is used, `merged` ends-up being the whole list. However,
         //       some of the items will end-up not being visible by any light. Can we do better?
@@ -858,7 +860,7 @@ UTILS_NOINLINE
 void FView::prepareUpscaler(float2 const scale,
         TemporalAntiAliasingOptions const& taaOptions,
         DynamicResolutionOptions const& dsrOptions) const noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     float bias = 0.0f;
     float2 derivativesScale{ 1.0f };
     if (dsrOptions.enabled && dsrOptions.quality >= QualityLevel::HIGH) {
@@ -874,14 +876,14 @@ void FView::prepareUpscaler(float2 const scale,
 }
 
 void FView::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     getColorPassDescriptorSet().prepareCamera(engine, cameraInfo);
 }
 
 void FView::prepareViewport(
         const filament::Viewport& physicalViewport,
         const filament::Viewport& logicalViewport) const noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     // TODO: we should pass viewport.{left|bottom} to the backend, so it can offset the
     //       scissor properly.
     getColorPassDescriptorSet().prepareViewport(physicalViewport, logicalViewport);
@@ -954,7 +956,7 @@ void FView::commitFroxels(DriverApi& driverApi) const noexcept {
 UTILS_NOINLINE
 void FView::prepareVisibleRenderables(JobSystem& js,
         Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     if (UTILS_LIKELY(isFrustumCullingEnabled())) {
         cullRenderables(js, renderableData, frustum, VISIBLE_RENDERABLE_BIT);
     } else {
@@ -965,7 +967,7 @@ void FView::prepareVisibleRenderables(JobSystem& js,
 
 void FView::cullRenderables(JobSystem&,
         FScene::RenderableSoa& renderableData, Frustum const& frustum, size_t bit) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();
     float3 const* worldAABBExtent = renderableData.data<FScene::WORLD_AABB_EXTENT>();
@@ -993,7 +995,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
         Slice<float> scratch,
         mat4f const& viewMatrix, Frustum const& frustum,
         FScene::LightSoa& lightData) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     assert_invariant(lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT);
 
     auto const* UTILS_RESTRICT sphereArray     = lightData.data<FScene::POSITION_RADIUS>();

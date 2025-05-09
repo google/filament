@@ -29,9 +29,10 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/JobSystem.h>
 #include <utils/Mutex.h>
-#include <utils/Systrace.h>
 
 #include <cmath>
 #include <cstdlib>
@@ -656,7 +657,7 @@ struct Config {
 // we force TSAN off to silence the warning.
 UTILS_NO_SANITIZE_THREAD
 FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     DriverApi& driver = engine.getDriverApi();
 
