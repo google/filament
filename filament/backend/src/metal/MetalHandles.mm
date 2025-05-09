@@ -1382,6 +1382,9 @@ id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDe
                 break;
         }
     }
+    if (arguments.count == 0) {
+        return nil;
+    }
     return [device newArgumentEncoderWithArguments:arguments];
 }
 
@@ -1442,6 +1445,9 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
 
     id<MTLArgumentEncoder> encoder =
             layout->getArgumentEncoder(context.device, stage, textureTypes);
+    if (!encoder) {
+        return nil;
+    }
 
     {
         ScopedAllocationTimer timer("descriptor_set");

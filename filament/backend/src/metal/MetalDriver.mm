@@ -721,15 +721,25 @@ const char* toString(DescriptorFlags flags) {
 
 void MetalDriver::createDescriptorSetLayoutR(
         Handle<HwDescriptorSetLayout> dslh, DescriptorSetLayout&& info) {
+#if FILAMENT_METAL_DEBUG_LOG == 1
+    const char* labelStr = "";
+    std::visit([&labelStr](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, utils::CString> || std::is_same_v<T, utils::StaticString>) {
+            labelStr = arg.c_str();
+        }
+    }, info.label);
     std::sort(info.bindings.begin(), info.bindings.end(),
             [](const auto& a, const auto& b) { return a.binding < b.binding; });
-    DEBUG_LOG("createDescriptorSetLayoutR(dslh = %d, info = {\n", dslh.getId());
+    DEBUG_LOG("createDescriptorSetLayoutR(dslh = %d, info = { label = %s,\n", dslh.getId(),
+            labelStr);
     for (size_t i = 0; i < info.bindings.size(); i++) {
         DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s},\n",
                 info.bindings[i].binding, toString(info.bindings[i].type), info.bindings[i].count,
                 toString(info.bindings[i].stageFlags), toString(info.bindings[i].flags));
     }
     DEBUG_LOG("})\n");
+#endif
     construct_handle<MetalDescriptorSetLayout>(dslh, std::move(info));
 }
 

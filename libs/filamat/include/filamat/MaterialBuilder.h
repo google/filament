@@ -254,6 +254,7 @@ public:
     using FeatureLevel = filament::backend::FeatureLevel;
     using StereoscopicType = filament::backend::StereoscopicType;
     using ShaderStage = filament::backend::ShaderStage;
+    using ShaderStageFlags = filament::backend::ShaderStageFlags;
 
     enum class VariableQualifier : uint8_t {
         OUT
@@ -322,9 +323,9 @@ public:
      */
     MaterialBuilder& parameter(const char* name, SamplerType samplerType,
             SamplerFormat format = SamplerFormat::FLOAT,
-            ParameterPrecision precision = ParameterPrecision::DEFAULT,
-            bool multisample = false,
-            const char* transformName = "") noexcept;
+            ParameterPrecision precision = ParameterPrecision::DEFAULT, bool multisample = false,
+            const char* transformName = "",
+            ShaderStageFlags stages = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS) noexcept;
 
     MaterialBuilder& buffer(filament::BufferInterfaceBlock bib) noexcept;
 
@@ -656,8 +657,10 @@ public:
         Parameter() noexcept: parameterType(INVALID) {}
 
         // Sampler
-        Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p, bool ms, const char* tn)
-                : name(paramName), size(1), precision(p), samplerType(t), format(f), parameterType(SAMPLER), multisample(ms), transformName(tn) { }
+        Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p,
+                bool ms, const char* tn, ShaderStageFlags s)
+            : name(paramName), size(1), precision(p), samplerType(t), format(f),
+              parameterType(SAMPLER), multisample(ms), transformName(tn), stages(s) { }
 
         // Uniform
         Parameter(const char* paramName, UniformType t, size_t typeSize, ParameterPrecision p)
@@ -676,6 +679,7 @@ public:
         SamplerFormat format;
         bool multisample;
         utils::CString transformName;
+        ShaderStageFlags stages;
         enum {
             INVALID,
             UNIFORM,

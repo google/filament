@@ -175,4 +175,15 @@ std::unordered_map<std::string, ConstantType>& Enums::getMap<ConstantType>() noe
     return mStringToConstantType;
 };
 
+std::unordered_map<std::string, ShaderStageType> Enums::mStringToShaderStageType = {
+        { "fragment", ShaderStageType::FRAGMENT },
+        { "vertex",   ShaderStageType::VERTEX },
+        { "compute",  ShaderStageType::COMPUTE },
+};
+
+template <>
+std::unordered_map<std::string, ShaderStageType>& Enums::getMap<ShaderStageType>() noexcept {
+    return mStringToShaderStageType;
+};
+
 } // namespace filamat

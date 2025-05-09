@@ -233,7 +233,7 @@ void MaterialDescriptorSetLayoutChunk::flatten(Flattener& f) {
         } else {
             f.writeUint8(uint8_t(DescriptorType::SAMPLER));
         }
-        f.writeUint8(uint8_t(ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT));
+        f.writeUint8(uint8_t(entry.stages));
         f.writeUint8(entry.binding);
         f.writeUint8(uint8_t(DescriptorFlags::NONE));
         f.writeUint16(0);

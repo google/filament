@@ -302,7 +302,8 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, UniformType const 
 
 
 MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
-        SamplerFormat format, ParameterPrecision precision, bool multisample, const char* transformName) noexcept {
+        SamplerFormat format, ParameterPrecision precision, bool multisample,
+        const char* transformName, ShaderStageFlags stages) noexcept {
     FILAMENT_CHECK_PRECONDITION(!multisample ||
             (format != SamplerFormat::SHADOW &&
                     (samplerType == SamplerType::SAMPLER_2D ||
@@ -311,7 +312,7 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType sample
                " as long as type is not SHADOW";
 
     FILAMENT_CHECK_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT) << "Too many parameters";
-    mParameters[mParameterCount++] = { name, samplerType, format, precision, multisample, transformName };
+    mParameters[mParameterCount++] = { name, samplerType, format, precision, multisample, transformName, stages };
     return *this;
 }
 
@@ -637,8 +638,8 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         auto const& param = mParameters[i];
         assert_invariant(!param.isSubpass());
         if (param.isSampler()) {
-            sbb.add({ param.name.data(), param.name.size() },
-                    binding, param.samplerType, param.format, param.precision, param.multisample);
+            sbb.add({ param.name.data(), param.name.size() }, binding, param.samplerType,
+                    param.format, param.precision, param.multisample, param.stages);
             if (!param.transformName.empty()) {
                 ibb.add({{{ param.transformName.data(), param.transformName.size() }, uint8_t(binding),
                           0, UniformType::MAT3, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 }});

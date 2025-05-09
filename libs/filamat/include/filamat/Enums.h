@@ -35,6 +35,7 @@ using OutputTarget = MaterialBuilder::OutputTarget;
 using OutputQualifier = MaterialBuilder::VariableQualifier;
 using OutputType = MaterialBuilder::OutputType;
 using ConstantType = MaterialBuilder::ConstantType;
+using ShaderStageType = MaterialBuilder::ShaderStageFlags;
 
 // Convenience methods to convert std::string to Enum and also iterate over Enum values.
 class Enums {
@@ -79,6 +80,7 @@ private:
     static std::unordered_map<std::string, OutputQualifier> mStringToOutputQualifier;
     static std::unordered_map<std::string, OutputType> mStringToOutputType;
     static std::unordered_map<std::string, ConstantType> mStringToConstantType;
+    static std::unordered_map<std::string, ShaderStageType> mStringToShaderStageType;
 };
 
 template<typename T>
