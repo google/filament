@@ -318,6 +318,13 @@ if (WIN32 AND FILAMENT_SUPPORTS_WEBGPU)
     target_compile_definitions(${TARGET} PRIVATE "WGPU_IMPLEMENTATION")
 endif()
 
+# enable OpenGL init warnings for the optimized build
+if(FILAMENT_ENABLE_INIT_GL_WARNINGS_FOR_OPTIMIZED_BUILD)
+    target_compile_definitions(${TARGET} PRIVATE "FILAMENT_ENABLE_INIT_GL_WARNINGS_FOR_OPTIMIZED_BUILD")
+endif()
+
+
+
 # ==================================================================================================
 # Expose a header-only target to minimize dependencies.
 # ==================================================================================================
