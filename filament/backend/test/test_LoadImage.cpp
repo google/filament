@@ -308,7 +308,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         Shader shader(api, cleanup, ShaderConfig{
            .vertexShader = mVertexShader,
            .fragmentShader= fragment,
-           .uniforms = {{"test_tex", DescriptorType::SAMPLER_FLOAT, samplerInfo}}
+           .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
         });
 
         // Create a Texture.
@@ -372,7 +372,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
             getSamplerTypeName(textureFormat), fragmentTemplate);
     Shader shader(api, cleanup, ShaderConfig{
         .vertexShader = mVertexShader, .fragmentShader = fragment, .uniforms = {{
-            "test_tex", DescriptorType::SAMPLER_FLOAT, samplerInfo
+            "test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
     }}});
 
     // Create a texture.
@@ -447,7 +447,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     Shader shader(api, cleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
-        .uniforms = {{"test_tex", DescriptorType::SAMPLER_FLOAT, samplerInfo}}
+        .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
     });
 
     // Create a texture with 3 mip levels.
@@ -508,7 +508,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     Shader shader(api, cleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
-        .uniforms = {{"test_tex", DescriptorType::SAMPLER_FLOAT, samplerInfo}}
+        .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_ARRAY_FLOAT, samplerInfo}}
     });
 
     // Create a texture.

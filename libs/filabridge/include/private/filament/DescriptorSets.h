@@ -47,6 +47,8 @@ utils::CString getDescriptorName(
         DescriptorSetBindingPoints set,
         backend::descriptor_binding_t binding) noexcept;
 
+backend::DescriptorType getDescriptorType(backend::SamplerType type, backend::SamplerFormat format);
+
 } // namespace filament::descriptor_sets
 
 

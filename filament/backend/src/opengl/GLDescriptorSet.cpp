@@ -96,10 +96,25 @@ GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle ds
                 break;
             }
 
-            case DescriptorType::SAMPLER_FLOAT:
-            case DescriptorType::SAMPLER_INT:
-            case DescriptorType::SAMPLER_UINT:
-            case DescriptorType::SAMPLER_DEPTH:
+            case DescriptorType::SAMPLER_2D_FLOAT:
+            case DescriptorType::SAMPLER_2D_INT:
+            case DescriptorType::SAMPLER_2D_UINT:
+            case DescriptorType::SAMPLER_2D_DEPTH:
+            case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+            case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_INT:
+            case DescriptorType::SAMPLER_CUBE_UINT:
+            case DescriptorType::SAMPLER_CUBE_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_3D_FLOAT:
+            case DescriptorType::SAMPLER_3D_INT:
+            case DescriptorType::SAMPLER_3D_UINT:
             case DescriptorType::SAMPLER_EXTERNAL:
                 if (UTILS_UNLIKELY(gl.isES2())) {
                     desc.emplace<SamplerGLES2>();
