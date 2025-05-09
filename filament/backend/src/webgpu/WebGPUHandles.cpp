@@ -502,7 +502,6 @@ size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {
     return mEntriesByBindingWithDynamicOffsets.count();
 }
 
-// From createTextureR
 WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
         uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
         wgpu::Device const& device) noexcept {
@@ -516,6 +515,7 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     // First, the texture aspect, starting with the defaults/basic configuration
     mUsage = fToWGPUTextureUsage(usage);
     mFormat = fToWGPUTextureFormat(format);
+    mAspect = fToWGPUTextureViewAspect(usage, format);
     wgpu::TextureDescriptor textureDescriptor{
         .label = getUserTextureLabel(target),
         .usage = mUsage,
@@ -565,7 +565,7 @@ WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount
     mTexView = makeTextureView(baseLevel, levelCount, target);
 }
 
-wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(const TextureUsage& fUsage) {
+wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(TextureUsage const& fUsage) {
     wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
 
     // Basing this mapping off of VulkanTexture.cpp's getUsage func and suggestions from Gemini
@@ -614,8 +614,8 @@ wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(const TextureUsage& fUsage) 
     return retUsage;
 }
 
-wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(const TextureFormat& fUsage) {
-    switch (fUsage) {
+wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFormat) {
+    switch (fFormat) {
         case filament::backend::TextureFormat::R8:
             return wgpu::TextureFormat::R8Unorm;
         case filament::backend::TextureFormat::R8_SNORM:
@@ -854,34 +854,35 @@ wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(const TextureFormat& fUsag
     }
 }
 
-wgpu::TextureAspect WGPUTexture::inferWGPUTextureViewAspect(const wgpu::TextureFormat& format,
-        const wgpu::TextureUsage& usage) {
+wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fUsage,
+        TextureFormat const& fFormat) {
 
-    if (format == wgpu::TextureFormat::Depth32Float || format == wgpu::TextureFormat::Depth24Plus ||
-            format == wgpu::TextureFormat::Depth16Unorm) {
-        if (static_cast<uint32_t>(usage) &
-                        static_cast<uint32_t>(wgpu::TextureUsage::RenderAttachment) ||
-                static_cast<uint32_t>(usage) &
-                        static_cast<uint32_t>(wgpu::TextureUsage::TextureBinding) ||
-                static_cast<uint32_t>(usage) &
-                        static_cast<uint32_t>(wgpu::TextureUsage::StorageBinding)) {
-            return wgpu::TextureAspect::DepthOnly;
-        }
+    const bool isDepth = any(fUsage & TextureUsage::DEPTH_ATTACHMENT);
+    const bool isStencil = any(fUsage & TextureUsage::STENCIL_ATTACHMENT);
+    const bool isColor = any(fUsage & TextureUsage::COLOR_ATTACHMENT);
+    const bool isSample = (fUsage == TextureUsage::SAMPLEABLE);
+
+    if (isDepth && !isColor && !isStencil) {
+        return wgpu::TextureAspect::DepthOnly;
     }
 
-    if (format == wgpu::TextureFormat::Stencil8) {
-        if (static_cast<uint32_t>(usage) &
-                        static_cast<uint32_t>(wgpu::TextureUsage::RenderAttachment) ||
-                static_cast<uint32_t>(usage) &
-                        static_cast<uint32_t>(wgpu::TextureUsage::StorageBinding)) {
-            return wgpu::TextureAspect::StencilOnly;
-        }
+    if (isStencil && !isColor && !isDepth) {
+        return wgpu::TextureAspect::StencilOnly;
     }
 
-    if (format == wgpu::TextureFormat::Depth24PlusStencil8 ||
-            format == wgpu::TextureFormat::Depth32FloatStencil8) {
-        if (static_cast<uint32_t>(usage) &
-                static_cast<uint32_t>(wgpu::TextureUsage::TextureBinding)) {
+    if (fFormat == filament::backend::TextureFormat::DEPTH32F ||
+            fFormat == filament::backend::TextureFormat::DEPTH24 ||
+            fFormat == filament::backend::TextureFormat::DEPTH16) {
+        return wgpu::TextureAspect::DepthOnly;
+    }
+
+    if (fFormat == filament::backend::TextureFormat::STENCIL8) {
+        return wgpu::TextureAspect::StencilOnly;
+    }
+
+    if (fFormat == filament::backend::TextureFormat::DEPTH24_STENCIL8 ||
+            fFormat == filament::backend::TextureFormat::DEPTH32F_STENCIL8) {
+        if (isSample) {
             return wgpu::TextureAspect::DepthOnly;
         }
     }
@@ -900,7 +901,7 @@ wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const u
         // TODO: check if this baseArrayLayer assumption is correct
         .baseArrayLayer = 0,
         .arrayLayerCount = mArrayLayerCount,
-        .aspect = inferWGPUTextureViewAspect(mFormat, mUsage),
+        .aspect = mAspect,
         .usage = mUsage
     };
 
