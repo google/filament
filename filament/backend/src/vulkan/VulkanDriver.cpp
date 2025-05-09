@@ -622,7 +622,7 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
     auto& commands = mCommands.get();
     // Unlike uploaded textures or swapchains, we need to explicit transition this
     // texture into the read layout.
-    texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::READ_ONLY);
+    texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::FRAG_READ);
 
     if (imgData.external.valid()) {
         mExternalImageManager.addExternallySampledTexture(texture, externalImage);

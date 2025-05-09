@@ -495,7 +495,8 @@ void VulkanRenderTarget::emitBarriersEndRenderPass(VulkanCommandBuffer& commands
             }
         } else {
             texture->setLayout(range, VulkanFboCache::FINAL_COLOR_ATTACHMENT_LAYOUT);
-            if (!texture->transitionLayout(&commands, range, VulkanLayout::READ_WRITE)) {
+            if (texture->isSampleable() &&
+                    !texture->transitionLayout(&commands, range, VulkanLayout::FRAG_READ)) {
                 texture->attachmentToSamplerBarrier(&commands, range);
             }
         }
