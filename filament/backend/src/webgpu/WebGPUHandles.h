@@ -194,7 +194,8 @@ private:
     wgpu::TextureFormat mFormat = wgpu::TextureFormat::Undefined;
     uint32_t mArrayLayerCount = 1;
     wgpu::TextureView mTexView = nullptr;
-    wgpu::TextureUsage fToWGPUTextureUsage(const filament::backend::TextureUsage& fUsage);
+    wgpu::TextureUsage fToWGPUTextureUsage(const filament::backend::TextureUsage& fUsage,
+            const bool supportsTransientAttachment);
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {

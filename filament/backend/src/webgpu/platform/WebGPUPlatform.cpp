@@ -100,9 +100,11 @@ wgpu::Adapter WebGPUPlatform::requestAdapter(wgpu::Surface const& surface) {
 wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     // TODO consider passing limits
     constexpr std::array optionalFeatures = { wgpu::FeatureName::DepthClipControl,
-        wgpu::FeatureName::Depth32FloatStencil8, wgpu::FeatureName::CoreFeaturesAndLimits };
+        wgpu::FeatureName::Depth32FloatStencil8, wgpu::FeatureName::CoreFeaturesAndLimits,
+        wgpu::FeatureName::TransientAttachments };
 
-    constexpr std::array requiredFeatures = { wgpu::FeatureName::TransientAttachments };
+    // Currently no required features, but logic to check them is available
+    constexpr std::array<wgpu::FeatureName, 0> requiredFeatures = {};
 
     wgpu::SupportedFeatures supportedFeatures;
     adapter.GetFeatures(&supportedFeatures);

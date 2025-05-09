@@ -514,7 +514,7 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
                     "the spec. See https://www.w3.org/TR/webgpu/#texture-creation or "
                     "https://gpuweb.github.io/gpuweb/#multisample-state");
     // First, the texture aspect, starting with the defaults/basic configuration
-    mUsage = fToWGPUTextureUsage(usage);
+    mUsage = fToWGPUTextureUsage(usage, device.HasFeature(wgpu::FeatureName::TransientAttachments));
     mFormat = fToWGPUTextureFormat(format);
     wgpu::TextureDescriptor textureDescriptor{
         .label = getUserTextureLabel(target),
@@ -566,7 +566,8 @@ WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount
     mTexView = makeTextureView(baseLevel, levelCount, target);
 }
 
-wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(const TextureUsage& fUsage) {
+wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(const TextureUsage& fUsage,
+        const bool supportsTransientAttachment) {
     wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
 
     // Basing this mapping off of VulkanTexture.cpp's getUsage func and suggestions from Gemini
@@ -592,6 +593,7 @@ wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(const TextureUsage& fUsage) 
     // This is from Vulkan logic- if there are any issues try disabling this first, allows perf
     // benefit though
     const bool useTransientAttachment =
+            supportsTransientAttachment &&
             // Usage consists of attachment flags only.
             none(fUsage & ~TextureUsage::ALL_ATTACHMENTS) &&
             // Usage contains at least one attachment flag.
