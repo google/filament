@@ -542,6 +542,13 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         } else if (strstr(renderer, "Intel")) {
             // Intel GPU
             bugs->vao_doesnt_store_element_array_buffer_binding = true;
+
+            if (strstr(renderer, "Mesa")) {
+                // Mesa Intel driver on Linux/Android
+                // Renderer of the form [Mesa Intel(R) HD Graphics 505 (APL 3)]
+                // b/405252622
+                bugs->disable_invalidate_framebuffer = true;
+            }
         } else if (strstr(renderer, "PowerVR")) {
             // PowerVR GPU
             // On PowerVR (Rogue GE8320) glFlush doesn't seem to do anything, in particular,
