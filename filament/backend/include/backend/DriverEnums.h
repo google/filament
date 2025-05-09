@@ -258,29 +258,91 @@ enum class TextureType : uint8_t {
     return "UNKNOWN";
 }
 
-enum class DescriptorType : uint8_t {
-    SAMPLER_FLOAT,
-    SAMPLER_INT,
-    SAMPLER_UINT,
-    SAMPLER_DEPTH,
-    SAMPLER_EXTERNAL,
-    UNIFORM_BUFFER,
-    SHADER_STORAGE_BUFFER,
-    INPUT_ATTACHMENT,
-};
+ enum class DescriptorType : uint8_t {
+     SAMPLER_2D_FLOAT,
+     SAMPLER_2D_INT,
+     SAMPLER_2D_UINT,
+     SAMPLER_2D_DEPTH,
+
+     SAMPLER_2D_ARRAY_FLOAT,
+     SAMPLER_2D_ARRAY_INT,
+     SAMPLER_2D_ARRAY_UINT,
+     SAMPLER_2D_ARRAY_DEPTH,
+
+     SAMPLER_CUBE_FLOAT,
+     SAMPLER_CUBE_INT,
+     SAMPLER_CUBE_UINT,
+     SAMPLER_CUBE_DEPTH,
+
+     SAMPLER_CUBE_ARRAY_FLOAT,
+     SAMPLER_CUBE_ARRAY_INT,
+     SAMPLER_CUBE_ARRAY_UINT,
+     SAMPLER_CUBE_ARRAY_DEPTH,
+
+     SAMPLER_3D_FLOAT,
+     SAMPLER_3D_INT,
+     SAMPLER_3D_UINT,
+
+     SAMPLER_EXTERNAL,
+     UNIFORM_BUFFER,
+     SHADER_STORAGE_BUFFER,
+     INPUT_ATTACHMENT,
+ };
+
+ constexpr bool isDepthDescriptor(DescriptorType const type) noexcept {
+     switch (type) {
+         case DescriptorType::SAMPLER_2D_DEPTH:
+         case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+         case DescriptorType::SAMPLER_CUBE_DEPTH:
+         case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+             return true;
+         default: ;
+     }
+     return false;
+ }
+
+ constexpr bool isFloatDescriptor(DescriptorType const type) noexcept {
+     switch (type) {
+         case DescriptorType::SAMPLER_2D_FLOAT:
+         case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+         case DescriptorType::SAMPLER_CUBE_FLOAT:
+         case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+         case DescriptorType::SAMPLER_3D_FLOAT:
+             return true;
+         default: ;
+     }
+     return false;
+ }
 
 constexpr std::string_view to_string(DescriptorType type) noexcept {
+    #define DESCRIPTOR_TYPE_CASE(TYPE)  case DescriptorType::TYPE: return #TYPE;
     switch (type) {
-        case DescriptorType::SAMPLER_FLOAT:         return "SAMPLER_FLOAT";
-        case DescriptorType::SAMPLER_INT:           return "SAMPLER_INT";
-        case DescriptorType::SAMPLER_UINT:          return "SAMPLER_UINT";
-        case DescriptorType::SAMPLER_DEPTH:         return "SAMPLER_DEPTH";
-        case DescriptorType::SAMPLER_EXTERNAL:      return "SAMPLER_EXTERNAL";
-        case DescriptorType::UNIFORM_BUFFER:        return "UNIFORM_BUFFER";
-        case DescriptorType::SHADER_STORAGE_BUFFER: return "SHADER_STORAGE_BUFFER";
-        case DescriptorType::INPUT_ATTACHMENT:      return "INPUT_ATTACHMENT";
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_3D_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_3D_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_3D_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_EXTERNAL)
+        DESCRIPTOR_TYPE_CASE(UNIFORM_BUFFER)
+        DESCRIPTOR_TYPE_CASE(SHADER_STORAGE_BUFFER)
+        DESCRIPTOR_TYPE_CASE(INPUT_ATTACHMENT)
     }
     return "UNKNOWN";
+    #undef DESCRIPTOR_TYPE_CASE
 }
 
 enum class DescriptorFlags : uint8_t {
@@ -500,6 +562,24 @@ enum class SamplerType : uint8_t {
     SAMPLER_CUBEMAP_ARRAY,  //!< Cube map array texture (feature level 2)
 };
 
+constexpr std::string_view to_string(SamplerType const type) noexcept {
+    switch (type) {
+        case SamplerType::SAMPLER_2D:
+            return "SAMPLER_2D";
+        case SamplerType::SAMPLER_2D_ARRAY:
+            return "SAMPLER_2D_ARRAY";
+        case SamplerType::SAMPLER_CUBEMAP:
+            return "SAMPLER_CUBEMAP";
+        case SamplerType::SAMPLER_EXTERNAL:
+            return "SAMPLER_EXTERNAL";
+        case SamplerType::SAMPLER_3D:
+            return "SAMPLER_3D";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return "SAMPLER_CUBEMAP_ARRAY";
+    }
+    return "Unknown";
+}
+
 //! Subpass type
 enum class SubpassType : uint8_t {
     SUBPASS_INPUT
@@ -512,6 +592,20 @@ enum class SamplerFormat : uint8_t {
     FLOAT = 2,      //!< float sampler
     SHADOW = 3      //!< shadow sampler (PCF)
 };
+
+constexpr std::string_view to_string(SamplerFormat const format) noexcept {
+    switch (format) {
+        case SamplerFormat::INT:
+            return "INT";
+        case SamplerFormat::UINT:
+            return "UINT";
+        case SamplerFormat::FLOAT:
+            return "FLOAT";
+        case SamplerFormat::SHADOW:
+            return "SHADOW";
+    }
+    return "Unknown";
+}
 
 /**
  * Supported element types

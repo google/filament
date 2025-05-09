@@ -156,16 +156,16 @@ void DescriptorSet::setSampler(
             << "descriptor " << +binding << " is not a sampler";
 
     FILAMENT_CHECK_PRECONDITION(
-            params.compareMode == SamplerCompareMode::NONE || type == DescriptorType::SAMPLER_DEPTH)
+            !(params.compareMode == SamplerCompareMode::COMPARE_TO_TEXTURE && !isDepthDescriptor(type)))
             << "descriptor " << +binding
             << " is not of type DEPTH, but sampler is in COMPARE_TO_TEXTURE mode";
 
     FILAMENT_CHECK_PRECONDITION(
-            !params.isFiltered() ||
-            type == DescriptorType::SAMPLER_FLOAT ||
-            params.compareMode == SamplerCompareMode::COMPARE_TO_TEXTURE)
+            !(params.isFiltered() &&
+            isDepthDescriptor(type) &&
+            params.compareMode != SamplerCompareMode::COMPARE_TO_TEXTURE))
             << "descriptor " << +binding
-            << " is of type DEPTH, but sampler is filtered and not in COMPARE_TO_TEXTURE mode";
+            << " is of type filtered DEPTH, but sampler not in COMPARE_TO_TEXTURE mode";
 
     if (mDescriptors[binding].texture.th != th || mDescriptors[binding].texture.params != params) {
         mDirty.set(binding);
@@ -184,25 +184,47 @@ DescriptorSet DescriptorSet::duplicate(DescriptorSetLayout const& layout) const 
 bool DescriptorSet::isTextureCompatibleWithDescriptor(
     backend::TextureType t, backend::DescriptorType d) noexcept {
     using namespace backend;
-    switch (t) {
-        case TextureType::FLOAT:
-            return d == DescriptorType::SAMPLER_FLOAT;
-        case TextureType::INT:
-            return d == DescriptorType::SAMPLER_INT;
-        case TextureType::UINT:
-            return d == DescriptorType::SAMPLER_UINT;
-        case TextureType::DEPTH:
-            // Depth textures can be used as an unfiltered float sampler
-                return d == DescriptorType::SAMPLER_DEPTH || d == DescriptorType::SAMPLER_FLOAT;
-        case TextureType::STENCIL:
-            // in filament stencil can't be sampled.
-                return false;
-        case TextureType::DEPTH_STENCIL:
+
+    switch (d) {
+        case DescriptorType::SAMPLER_2D_FLOAT:
+        case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_3D_FLOAT:
             // DEPTH_STENCIL is treated as accessing the depth component. OpenGL 4.3
-                // allows to specify which one, but not filament.
-                    // Depth textures can be used as an unfiltered float sampler
-                        return d == DescriptorType::SAMPLER_DEPTH || d == DescriptorType::SAMPLER_FLOAT;
+            // allows to specify which one, but not filament.
+            // Depth textures can be used as an unfiltered float sampler
+            return t == TextureType::FLOAT || t == TextureType::DEPTH || t == TextureType::DEPTH_STENCIL;
+
+        case DescriptorType::SAMPLER_2D_INT:
+        case DescriptorType::SAMPLER_2D_ARRAY_INT:
+        case DescriptorType::SAMPLER_CUBE_INT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+        case DescriptorType::SAMPLER_3D_INT:
+            return t == TextureType::INT;
+
+        case DescriptorType::SAMPLER_2D_UINT:
+        case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+        case DescriptorType::SAMPLER_CUBE_UINT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+        case DescriptorType::SAMPLER_3D_UINT:
+            return t == TextureType::UINT;
+
+        case DescriptorType::SAMPLER_2D_DEPTH:
+        case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            // DEPTH_STENCIL is treated as accessing the depth component. OpenGL 4.3
+            // allows to specify which one, but not filament.
+            return t == TextureType::DEPTH || t == TextureType::DEPTH_STENCIL;
+
+        case DescriptorType::SAMPLER_EXTERNAL:
+        case DescriptorType::UNIFORM_BUFFER:
+        case DescriptorType::SHADER_STORAGE_BUFFER:
+        case DescriptorType::INPUT_ATTACHMENT:
+            return false;
     }
+
     // should never happen
     return false;
 }
