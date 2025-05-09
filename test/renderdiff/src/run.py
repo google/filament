@@ -14,9 +14,14 @@
 
 import sys
 import os
+import json
+import glob
+import shutil
 
-from utils import execute, ArgParseImpl
+from utils import execute, ArgParseImpl, mkdir_p, mv_f
 from parse_test_json import parse_test_config_from_path
+from golden_manager import GoldenManager
+from image_diff import same_image
 
 def important_print(msg):
   lines = msg.split('\n')
@@ -28,13 +33,21 @@ def important_print(msg):
     print(information)
   print('-' * (max_len + 8))
 
-def render_test(gltf_viewer, test_config, output_dir,
-                opengl_lib=None, vk_icd=None):
+RESULT_OK = 'ok'
+RESULT_FAILED_TO_RENDER = 'failed-to-render'
+RESULT_FAILED_IMAGE_DIFF = 'failed-image-diff'
+RESULT_FAILED_NO_GOLDEN = 'failed-no-golden'
+
+def run_test(gltf_viewer,
+             test_config,
+             output_dir,
+             opengl_lib=None,
+             vk_icd=None):
   assert os.path.isdir(output_dir), f"output directory {output_dir} does not exist"
   assert os.access(gltf_viewer, os.X_OK)
 
   named_output_dir = os.path.join(output_dir, test_config.name)
-  execute(f'mkdir -p {named_output_dir}')
+  mkdir_p(named_output_dir)
 
   results = []
   for test in test_config.tests:
@@ -60,43 +73,45 @@ def render_test(gltf_viewer, test_config, output_dir,
 
         important_print(f'Rendering {test_desc}')
 
-        res, _ = execute(f'{gltf_viewer} -a {backend} --batch={test_json_path} -e {model_path} --headless',
-                env=env, capture_output=False)
+        out_code, _ = execute(
+          f'{gltf_viewer} -a {backend} --batch={test_json_path} -e {model_path} --headless',
+          env=env, capture_output=False
+        )
 
-        if res == 0:
-          execute(f'mv -f {test.name}0.tif {named_output_dir}/{out_name}.tif', capture_output=False)
-          execute(f'mv -f {test.name}0.json {named_output_dir}/{test.name}.json', capture_output=False)
+        result = ''
+        if out_code == 0:
+          result = RESULT_OK
+          out_tif_basename = f'{out_name}.tif'
+          out_tif_name = f'{named_output_dir}/{out_tif_basename}'
+          mv_f(f'{test.name}0.tif', out_tif_name)
+          mv_f(f'{test.name}0.json', f'{named_output_dir}/{test.name}.json')
         else:
-          important_print(f'{test_desc} failed with error={res}')
-        print('')
+          result = RESULT_FAILED_TO_RENDER
+          important_print(f'{test_desc} rendering failed with error={out_code}')
 
-        results.append((out_name, res))
-  return results
+        results.append({
+          'name': out_name,
+          'result': result,
+          'result_code': out_code,
+        })
+  return named_output_dir, results
 
-GOLDENS_DIR = 'renderdiff_goldens'
+def compare_goldens(render_results, output_dir, goldens):
+  for result in render_results:
+    if result['result'] != RESULT_OK:
+      continue
 
-# We pull the goldens from the filament-assets repo
-def pull_goldens(output_dir):
-  assert os.path.isdir(output_dir), f"output directory {output_dir} does not exist"
-  golden_dir = os.path.join(output_dir, "golden")
-  assets_dir = os.path.join(output_dir, "filament-assets")
+    out_tif_basename = f"{result['name']}.tif"
+    out_tif_name = f'{output_dir}/{out_tif_basename}'
+    golden_path = goldens.get(out_tif_basename)
+    if not golden_path:
+      result['result'] = RESULT_FAILED_NO_GOLDEN
+      result['result_code'] = 1
+    elif not same_image(golden_path, out_tif_name):
+      result['result'] = RESULT_FAILED_IMAGE_DIFF
+      result['result_code'] = 1
 
-  if not os.path.exists(assets_dir):
-    execute('git clone --depth 1 git@github.com:google/filament-assets.git', cwd=output_dir)
-  else:
-    execute('git fetch', cwd=assets_dir)
-    execute('git checkout main ', cwd=assets_dir)
-    execute('git rebase', cwd=assets_dir)
-
-  if os.path.exists(golden_dir):
-    execute('rm -f goldens/*', cwd=output_dir)
-  execute(f'cp filament-assets/{GOLDENS_DIR}/* goldens', cwd=output_dir)
-
-def push_goldens(output_dir, test_name, filter_func=lambda a:True):
-  for test in test_config.tests:
-    for backend in test_config.backends:
-      for model in test.models:
-        pass
+  return render_results
 
 if __name__ == "__main__":
   parser = ArgParseImpl()
@@ -105,12 +120,43 @@ if __name__ == "__main__":
   parser.add_argument('--output_dir', help='Output Directory', required=True)
   parser.add_argument('--opengl_lib', help='Path to the folder containing OpenGL driver lib (for LD_LIBRARY_PATH)')
   parser.add_argument('--vk_icd', help='Path to VK ICD file')
+  parser.add_argument('--golden_branch', help='Branch of the golden repo to compare against')
 
   args, _ = parser.parse_known_args(sys.argv[1:])
   test = parse_test_config_from_path(args.test)
-  render_result = render_test(args.gltf_viewer, test, args.output_dir, opengl_lib=args.opengl_lib, vk_icd=args.vk_icd)
 
-  failed = [f'   {tname}' for tname, res in render_result if res != 0]
-  success_count = len(render_result) - len(failed  )
-  important_print(f'Successfully rendered {success_count} / {len(render_result)}' +
+  output_dir, results = \
+    run_test(args.gltf_viewer,
+             test,
+             args.output_dir,
+             opengl_lib=args.opengl_lib,
+             vk_icd=args.vk_icd)
+
+  do_compare = False
+  # The presence of this argument indicates comparison against a set of goldens.
+  if args.golden_branch:
+    # prepare goldens working directory
+    tmp_golden_dir = '/tmp/renderdiff-goldens'
+    mkdir_p(tmp_golden_dir)
+
+    # Download the golden repo into the current working directory
+    golden_manager = GoldenManager(os.getcwd())
+    golden_manager.download_to(tmp_golden_dir, branch=args.golden_branch)
+
+    goldens = {
+      os.path.basename(fpath) : fpath for fpath in \
+      glob.glob(f'{os.path.join(tmp_golden_dir, test.name)}/**/*.tif', recursive=True)
+    }
+    results = compare_goldens(results, output_dir, goldens)
+    do_compare = True
+
+  with open(f'{output_dir}/results.json', 'w') as f:
+    f.write(json.dumps(results))
+
+  shutil.copy2(args.test, f'{output_dir}/test.json')
+
+  failed = [f"   {k['name']}" for k in results if k['result'] != RESULT_OK]
+  success_count = len(results) - len(failed)
+  op = 'tested' if do_compare else 'rendered'
+  important_print(f'Successfully {op} {success_count} / {len(results)}' +
                   ('\nFailed:\n' + ('\n'.join(failed)) if len(failed) > 0 else ''))
