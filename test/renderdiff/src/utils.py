@@ -16,6 +16,7 @@ import subprocess
 import os
 import argparse
 import sys
+import pathlib
 
 def execute(cmd,
             cwd=None,
@@ -66,3 +67,42 @@ class ArgParseImpl(argparse.ArgumentParser):
     sys.stderr.write('error: %s\n' % message)
     self.print_help()
     sys.exit(1)
+
+
+PROMPT_YES = 'y'
+PROMPT_NO = 'n'
+PROMPT_YES_NO = f'{PROMPT_YES}{PROMPT_NO}'
+
+class GetCh:
+  def __init__(self):
+    pass
+
+  def __call__(self):
+    import sys, tty, termios
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+      tty.setraw(sys.stdin.fileno())
+      ch = sys.stdin.read(1)
+    finally:
+      termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return ch
+
+getch = GetCh()
+
+def prompt_helper(prompt_str, keys=PROMPT_YES_NO):
+  while True:
+    print(f'{prompt_str}: [' + ', '.join(keys) + '] => ', end='', flush=True)
+    val = getch()
+    print(val)
+    if val in keys or ord(val) == 3: # If user pressed Ctrl+c
+      if ord(val) == 3:
+        exit(1)
+    return val
+
+def mkdir_p(path_str):
+  pathlib.Path(path_str).mkdir(parents=True, exist_ok=True)
+
+def mv_f(src_str, dst_str):
+  src = pathlib.Path(src_str)
+  src.replace(dst_str)
