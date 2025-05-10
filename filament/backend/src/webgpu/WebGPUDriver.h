@@ -93,6 +93,8 @@ private:
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WGPURenderTarget* mDefaultRenderTarget = nullptr;
+
+    tsl::robin_map<uint32_t, wgpu::RenderPipeline> mPipelineMap;
     /*
      * Driver interface
      */

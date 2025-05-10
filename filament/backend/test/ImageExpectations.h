@@ -35,6 +35,8 @@ do {                                                                \
         screenshotParams);                                          \
 } while (0)
 
+namespace test {
+
 /**
  * Stores user-provided configuration values for an image expectation
  */
@@ -54,6 +56,7 @@ public:
     static std::string expectedDirectoryPath();
     std::string expectedFileName() const;
     std::string expectedFilePath() const;
+    const std::string filePrefix() const;
 
 private:
     int mWidth;
@@ -152,5 +155,7 @@ private:
     // Store expectations in unique pointers because they are self referential.
     std::vector<std::unique_ptr<ImageExpectation>> mExpectations;
 };
+
+} // namespace test
 
 #endif //TNT_IMAGE_EXPECTATIONS_H

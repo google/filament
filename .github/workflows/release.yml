@@ -65,12 +65,8 @@ jobs:
 
   build-mac:
     name: build-mac
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-14-xlarge
     if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
-
-    strategy:
-      matrix:
-        os: [macos-14-xlarge, ubuntu-22.04-32core]
 
     steps:
       - name: Decide Git ref
@@ -118,6 +114,7 @@ jobs:
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/linux-prereq
+      - uses: ./.github/actions/web-prereq
       - name: Run build script
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}

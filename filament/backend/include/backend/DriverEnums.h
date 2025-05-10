@@ -30,6 +30,7 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
+#include <utils/StaticString.h>
 
 #include <math/vec4.h>
 
@@ -1139,6 +1140,7 @@ struct ExternalSamplerDatum {
 static_assert(sizeof(ExternalSamplerDatum) == 12);
 
 struct DescriptorSetLayout {
+    std::variant<utils::StaticString, utils::CString, std::monostate> label;
     utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
 
 //  TODO: uncomment when needed

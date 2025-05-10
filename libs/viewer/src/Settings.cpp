@@ -700,7 +700,8 @@ constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noe
 }
 
 ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine) {
-    ToneMapper* toneMapper = createToneMapper(settings);
+    ToneMapper* toneMapperRaw = createToneMapper(settings);
+    std::shared_ptr<ToneMapper> toneMapper(toneMapperRaw);
     ColorGrading *colorGrading = ColorGrading::Builder()
             .quality(settings.quality)
             .exposure(settings.exposure)
@@ -723,7 +724,6 @@ ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* e
             .gamutMapping(settings.gamutMapping)
             .outputColorSpace(settings.colorspace)
             .build(*engine);
-    delete toneMapper;
     return colorGrading;
 }
 

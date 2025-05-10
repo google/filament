@@ -631,6 +631,21 @@ fvkutils::VkFormatList findBlittableDepthStencilFormats(VkPhysicalDevice device)
     return ret;
 }
 
+/**
+ *  Check if the GPU has a unified memory architecture.
+ */
+bool hasUnifiedMemoryArchitecture(VkPhysicalDeviceMemoryProperties memoryProperties) noexcept {
+    // Try to identify if the platform is running on a Unified Memory Architecture by inspecting the
+    // memory heap flags, if they are all VK_MEMORY_HEAP_DEVICE_LOCAL_BIT it's UMA, otherwise not
+    // enough information to make a decision, so default to false.
+    for (uint32_t i = 0; i < memoryProperties.memoryHeapCount; ++i) {
+        if ((memoryProperties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 }// anonymous namespace
 
 using SwapChainPtr = VulkanPlatform::SwapChainPtr;
@@ -863,6 +878,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
             break;
         }
     }
+
+    context.mIsUnifiedMemoryArchitecture = hasUnifiedMemoryArchitecture(context.mMemoryProperties);
 
 #ifdef NDEBUG
     // If we are in release build, we should not have turned on debug extensions

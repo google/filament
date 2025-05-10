@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#include <utils/Hash.h>
 #include "webgpu/WebGPUDriver.h"
 
 #include "WebGPUPipelineCreation.h"
@@ -916,6 +916,14 @@ void WebGPUDriver::blit(
 }
 
 void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
+    // TODO Investigate implications of this hash more closely. Vulkan has a whole class
+    // VulkanPipelineCache to handle this, may be missing nuance
+    static auto pipleineStateHasher = utils::hash::MurmurHashFn<filament::backend::PipelineState>();
+    auto hash = pipleineStateHasher(pipelineState);
+    if(mPipelineMap.find(hash) != mPipelineMap.end()){
+        mRenderPassEncoder.SetPipeline(mPipelineMap[hash]);
+        return;
+    }
     const auto* program = handleCast<WGPUProgram>(pipelineState.program);
     assert_invariant(program);
     assert_invariant(program->computeShaderModule == nullptr &&
@@ -952,7 +960,7 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
             *vertexBufferInfo, layout, pipelineState.rasterState, pipelineState.stencilState,
             pipelineState.polygonOffset, pipelineState.primitiveType, mSwapChain->getColorFormat(),
             mSwapChain->getDepthFormat());
-    // TODO: uncomment once we have a valid pipeline to set
+    mPipelineMap[hash] = pipeline;
     mRenderPassEncoder.SetPipeline(pipeline);
 }
 
