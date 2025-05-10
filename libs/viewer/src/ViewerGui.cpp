@@ -839,6 +839,8 @@ void ViewerGui::updateUserInterface() {
         ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
         ImGui::Checkbox("Bent Normals", &ssao.bentNormals);
         ImGui::Checkbox("High quality upsampling", &upsampling);
+        ImGui::SliderFloat("Radius", &ssao.radius, 0.1f, 10.0f);
+        ImGui::SliderFloat("Power", &ssao.power, 1.0f, 8.0f);
 
         switch (ssao.aoType) {
             case AmbientOcclusionOptions::AmbientOcclusionType::SAO: {
@@ -850,10 +852,8 @@ void ViewerGui::updateUserInterface() {
                 int sliceCount = ssao.gtao.sampleSliceCount;
                 int stepsPerSlice = ssao.gtao.sampleStepsPerSlice;
 
-                ImGui::SliderFloat("Radius", &ssao.radius, 0.1f, 10.0f);
                 ImGui::SliderInt("Slice Count", &sliceCount, 1, 10);
                 ImGui::SliderInt("Steps Per Slice", &stepsPerSlice, 1, 4);
-                ImGui::SliderFloat("Power", &ssao.power, 1.0f, 8.0f);
 
                 ssao.gtao.sampleSliceCount = static_cast<uint8_t>(sliceCount);
                 ssao.gtao.sampleStepsPerSlice = static_cast<uint8_t>(stepsPerSlice);
